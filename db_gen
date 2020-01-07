@@ -276,3 +276,5 @@ if new_sdf == True:
     #     fileout.write("\n")
         fileout.close()
 else: print('No new com files were generated.')
+
+print('test')
