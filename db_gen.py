@@ -1,14 +1,6 @@
-import glob,os
-import numpy as np
-import pandas as pd
-from pandas import DataFrame
-from rdkit import Chem,DataStructs
-from rdkit.Chem import rdChemReactions,AllChem,Lipinski,Descriptors
-import openbabel as ob
-
 # From a single sdf file containing all the molecules, this generates one individual
 # sdf file for each molecule. This is useful to generate RDKit-optimized 3D structures
-
+"""
 # set working directory
 w_dir = 'C:\Google Drive\Rob Paton CSU\Project Pd Lily\Arene auto generation'
 
@@ -276,6 +268,88 @@ if new_sdf == True:
     #     fileout.write("\n")
         fileout.close()
 else: print('No new com files were generated.')
+"""
 
-print('test')
-print('test-shree')
+from db_gen_PATHS import *
+
+if __name__ == "__main__":
+
+    parser = argparse.ArgumentParser(description="Generate conformers depending on type of optimization (change parameters in db_gen_PATHS.py file).")
+    parser.add_argument("input",help="Input smi file pr SDF files")
+    parser.add_argument("-v","--verbose",action="store_true",default=False, help="verbose output")
+
+    args = parser.parse_args()
+
+    #checking if .smi or .sdf
+    if os.path.splitext(args.input)[1] == '.smi':
+        smifile = open(args.input)
+        root = os.path.splitext(args.input)[0]
+
+        for line in smifile:
+            toks = line.split()
+            smi = toks[0]
+            name = ''.join(toks[1:])
+
+            if len(name) == 0: name = root
+
+            pieces = smi.split('.')
+            if len(pieces) > 1:
+                smi = max(pieces, key=len) #take largest component by length
+                print("Taking largest component: %s\t%s" % (smi,name))
+
+            # finally converts each line to a rdkit mol object
+            mol = Chem.MolFromSmiles(smi)
+            #print(Chem.MolToSmiles(mol))
+            #doing confomer genertion for each mol object
+            conformer_generation(mol,name,args)
+
+    else:
+        IDs = []
+        sdffile = args.input
+        root = os.path.splitext(args.input)[0]
+
+        f = open(sdffile,"r")
+        readlines = f.readlines()
+        for i in range(len(readlines)):
+            if readlines[i].find('>  <ID>') > -1:
+                ID = readlines[i+1].split()[0]
+            #if readlines[i].find('>  <NAME>') > -1:
+                #name = readlines[i+1].split()[0]
+                IDs.append(ID)
+        suppl = Chem.SDMolSupplier(sdffile)
+        i=0
+        for mol in suppl:
+            name = IDs[i]
+            #doing confomer genertion for each mol object
+            conformer_generation(mol,name,args)
+            i += 1
+
+    #creating the com files from the sdf files created read *_confs.sdf
+    #READING THE SDF
+    sdf_to_gjf_files = glob.glob('*_confs.sdf')
+
+    for lot in level_of_theory:
+        for bs in basis_set:
+            folder = 'gaussian/' + str(lot) + '-' + str(bs)
+
+            try:
+                os.makedirs(folder)
+            except OSError:
+                if  os.path.isdir(folder):
+                    pass
+                else:
+                    raise
+
+            #writing the com files
+            for file in sdf_to_gjf_files:
+                name = os.path.splitext(file)[0]
+                write_gaussian_input_file(file,name,lot, bs)
+
+                """
+                #################################needs to be edited#############
+                #checking if genecp needed
+                gjf_files = glob.glob('{}_confs_*.com'.format{name})
+                for file in gjf_files:
+                    genecp_for_files(file)
+                ################################################################
+                """
