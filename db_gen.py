@@ -271,11 +271,14 @@ else: print('No new com files were generated.')
 """
 
 from db_gen_PATHS import *
+from output_analysis import *
 
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Generate conformers depending on type of optimization (change parameters in db_gen_PATHS.py file).")
     parser.add_argument("input",help="Input smi file pr SDF files")
+    parser.add_argument("-a","--analysis",action="store_true",default=False,
+                        help="Fix and analyze Gaussian output files")
     parser.add_argument("-v","--verbose",action="store_true",default=False, help="verbose output")
 
     args = parser.parse_args()
@@ -357,3 +360,12 @@ if __name__ == "__main__":
                     genecp_for_files(file)
                 ################################################################
                 """
+                
+    if args.analysis == True:
+        # Sets the folder and find the log files to analyze
+        # This variable should be defined way before in the code
+        w_dir = 'C:\Google Drive\Rob Paton CSU\Project Pd Lily\Arene auto generation'
+        os.chdir(w_dir+'\LOG_files\In process')
+        log_files = glob.glob('*.log')
+
+        output_analyzer(log_files)

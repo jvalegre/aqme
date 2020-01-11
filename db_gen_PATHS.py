@@ -8,6 +8,9 @@
 * ALL THE TEMPLATES ARE SET HERE AS WELL. (EX: template for gaussian input)
 
 """
+
+# Since there are many imports, we could save some CPU time if we moved
+# some of these import inside the functions that need them
 import glob,os
 import numpy as np
 import pandas as pd
