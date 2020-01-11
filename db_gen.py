@@ -281,17 +281,20 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     #checking if .smi or .sdf
+# check if it's working with *.smi (if it isn't, we need to change this a little bit)
     if os.path.splitext(args.input)[1] == '.smi':
         smifile = open(args.input)
         root = os.path.splitext(args.input)[0]
 
         for line in smifile:
+# we'll be using .csv files, pandas dataframes are easier to work with
+# (i.e. you do read_csv rather than a for loop of a file)
             toks = line.split()
             smi = toks[0]
             name = ''.join(toks[1:])
 
             if len(name) == 0: name = root
-
+# we need to talk about this
             pieces = smi.split('.')
             if len(pieces) > 1:
                 smi = max(pieces, key=len) #take largest component by length
@@ -303,6 +306,7 @@ if __name__ == "__main__":
             #doing confomer genertion for each mol object
             conformer_generation(mol,name,args)
 
+# better to do an elif like: elif os.path.splitext(args.input)[1] == '.sdf':
     else:
         IDs = []
         sdffile = args.input
