@@ -270,6 +270,12 @@ if new_sdf == True:
 else: print('No new com files were generated.')
 """
 
+'''
+### ADD DESCRIPTION
+Authors: Shree Sowndarya S. V., Juan V. Alegre Requena,
+please report any bugs to svss@colostate.edu or juanvi89@hotmail.com.
+'''
+
 from db_gen_PATHS import *
 from output_analysis import *
 
@@ -277,6 +283,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Generate conformers depending on type of optimization (change parameters in db_gen_PATHS.py file).")
     parser.add_argument("input",help="Input smi file pr SDF files")
+### create --type and as options put: job, analysis
     parser.add_argument("-a","--analysis",action="store_true",default=False,
                         help="Fix and analyze Gaussian output files")
     parser.add_argument("-v","--verbose",action="store_true",default=False, help="verbose output")
@@ -284,32 +291,33 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     #checking if .smi or .sdf
-# check if it's working with *.smi (if it isn't, we need to change this a little bit)
+### check if it's working with *.smi (if it isn't, we need to change this a little bit)
+### compatible with chemdraw cdx files, and if you do so, use generic names
     if os.path.splitext(args.input)[1] == '.smi':
         smifile = open(args.input)
         root = os.path.splitext(args.input)[0]
 
         for line in smifile:
-# we'll be using .csv files, pandas dataframes are easier to work with
-# (i.e. you do read_csv rather than a for loop of a file)
+### we'll be using .csv files, pandas dataframes are easier to work with
+### (i.e. you do read_csv rather than a for loop of a file)
             toks = line.split()
             smi = toks[0]
             name = ''.join(toks[1:])
 
+"""
             if len(name) == 0: name = root
-# we need to talk about this
             pieces = smi.split('.')
             if len(pieces) > 1:
                 smi = max(pieces, key=len) #take largest component by length
                 print("Taking largest component: %s\t%s" % (smi,name))
-
+"""
             # finally converts each line to a rdkit mol object
             mol = Chem.MolFromSmiles(smi)
             #print(Chem.MolToSmiles(mol))
             #doing confomer genertion for each mol object
             conformer_generation(mol,name,args)
 
-# better to do an elif like: elif os.path.splitext(args.input)[1] == '.sdf':
+### better to do an elif like: elif os.path.splitext(args.input)[1] == '.sdf':
     else:
         IDs = []
         sdffile = args.input
@@ -331,8 +339,8 @@ if __name__ == "__main__":
             conformer_generation(mol,name,args)
             i += 1
 
-    #creating the com files from the sdf files created read *_confs.sdf
-    #READING THE SDF
+    # creating the com files from the sdf files created read *_confs.sdf
+    # READING THE SDF
     sdf_to_gjf_files = glob.glob('*_confs.sdf')
 
     for lot in level_of_theory:
@@ -360,7 +368,7 @@ if __name__ == "__main__":
                     genecp_for_files(file)
                 ################################################################
                 """
-                
+
     if args.analysis == True:
         # Sets the folder and find the log files to analyze
         # This variable should be defined way before in the code
