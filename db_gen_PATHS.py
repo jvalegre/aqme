@@ -27,14 +27,18 @@ from confgen_noargs import *
 "TYPE OF OPTIMIZATION"
 # Options: xTB, AN1  Default : RDKIT optimizaiton
 ANI1ccx = False
-xTB = False
+xtb = True
+
+" OPTIMIZATION REQUIRED OR NOT"
+opt_ax = True # switch to off for single point only
+opt_precision_ax = 1E-3 # toggle for optimization convergence
 
 " DEFAULT PARAMETERS FOR RDKIT GENERATION AND FILTERS"
 max_torsions = 5 #Skip any molecules with more than this many torsions (default 5)
 max_MolWt = 500
 heavyonly = True
 sample = 100 #number of conformers to sample to get non-torsional differences (default 100)
-nodihedrals = False #turn to TRUE if no dihydral scan is needed.
+nodihedrals = True #turn to TRUE if no dihydral scan is needed.
 
 " DEFAULT PARAMETERS FOR RDKIT OPTIMIZATION "
 ff = "MMFF" #can use MMFF ro UFF
@@ -61,8 +65,8 @@ level_of_theory = ['M06-2X']
 
 "DEFAULT PARAMTERS FOR GAUSSIAN OPTIMIZATION"
 chk = False
-nprocs=18
-mem='40GB'
+nprocs=24
+mem='96GB'
 input = 'opt freq=noraman scrf=(smd, solvent=chloroform)'
 
 " MAIN FUCNTION WORKING WITH MOL OBJECT TO CREATE CONFORMERS"
@@ -77,6 +81,7 @@ def conformer_generation(mol,name,args):
 
             # the multiple minimization returns a list of separate mol objects
             conformers, energies = mult_min(mol, name, args)
+            print(energies)
 
             #only print if within predefined energy window
             if len(conformers) > 0:
@@ -94,6 +99,11 @@ def conformer_generation(mol,name,args):
                 write_confs = 0
                 for cid in sortedcids:
                     if ANI1ccx == True:
+                        if (energies[cid] - glob_min) < ewin / 2625.5:
+                            sdwriter.write(conformers[cid])
+                            write_confs += 1
+
+                    elif xtb == True:
                         if (energies[cid] - glob_min) < ewin / 2625.5:
                             sdwriter.write(conformers[cid])
                             write_confs += 1
