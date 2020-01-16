@@ -222,7 +222,8 @@ def mult_min(mol, name,args):
 							aniE = ani_energy.item() #Hartree
 							if args.verbose: print("ANI Final E:", aniE,'eH', ase_molecule.get_potential_energy(),'eV') #Hartree, eV
 							###############################################################################
-
+### INCLUDE THE OPTIONS TO SOTRE MOLECULAR Descriptors
+### CHECK THIS WEBPAGE: https://github.com/grimme-lab/xtb/tree/master/python
 						elif db_gen_PATHS.xtb == True:
 							ase_molecule = ase.Atoms(elements, positions=coordinates.tolist()[0], calculator=GFN2()) #define ase molecule using GFN2 Calculator
 							if db_gen_PATHS.opt_ax == True:
