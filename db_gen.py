@@ -402,4 +402,4 @@ if __name__ == "__main__":
 				os.chdir(w_dir)
 				log_files = glob.glob('*.log')
 
-				output_analyzer(log_files, w_dir, lot, bs)
+				output_analyzer(log_files, w_dir, lot, bs, chk, nprocs, mem, input)

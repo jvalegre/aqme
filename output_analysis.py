@@ -12,7 +12,7 @@ How this works:
 - Place all the output files to analyze in folder XXX
 '''
 
-def output_analyzer(log_files,w_dir,lot,bs):
+def output_analyzer(log_files, w_dir, lot, bs, chk, nprocs, mem, input):
 
     # Atom IDs
     periodictable = ["","H","He","Li","Be","B","C","N","O","F","Ne","Na","Mg","Al","Si","P","S","Cl","Ar","K","Ca","Sc","Ti","V","Cr","Mn","Fe","Co","Ni","Cu","Zn","Ga","Ge","As","Se","Br","Kr","Rb","Sr","Y","Zr",
@@ -131,25 +131,50 @@ def output_analyzer(log_files,w_dir,lot,bs):
         # This part places the calculations in different folders depending on the type of
         # termination and number of imag. freqs
         source = w_dir+file
+
         if IM_FREQS > 0:
             destination = w_dir+'Imaginary frequencies/'+file
-            os.makedirs(destination)
-            shutil.move(source, destination)
+            try:
+                os.makedirs(destination)
+                shutil.move(source, destination)
+            except OSError:
+                if  os.path.isdir(destination):
+                    pass
+                else:
+                    raise
 
         if IM_FREQS == 0 and TERMINATION == "normal":
             destination = w_dir+'Finished/'+file
-            os.makedirs(destination)
-            shutil.move(source, destination)
+            try:
+                os.makedirs(destination)
+                shutil.move(source, destination)
+            except OSError:
+                if  os.path.isdir(destination):
+                    pass
+                else:
+                    raise
 
         if IM_FREQS == 0 and TERMINATION == "error":
             destination = w_dir+'Failed_Error/'+file
-            os.makedirs(destination)
-            shutil.move(source, destination)
+            try:
+                os.makedirs(destination)
+                shutil.move(source, destination)
+            except OSError:
+                if  os.path.isdir(destination):
+                    pass
+                else:
+                    raise
 
         if IM_FREQS == 0 and TERMINATION == "unfinished":
             destination = w_dir+'Failed_Unfinished/'+file
-            os.makedirs(destination)
-            dest = shutil.move(source, destination)
+            try:
+                os.makedirs(destination)
+                shutil.move(source, destination)
+            except OSError:
+                if  os.path.isdir(destination):
+                    pass
+                else:
+                    raise
 
         if IM_FREQS > 0 or TERMINATION != "normal":
             # Settings for the com files

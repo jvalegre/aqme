@@ -59,15 +59,19 @@ possible_atoms = ['N', 'P', 'As', 'C', 'Si', 'Ge', 'B', 'H', 'S', 'O', 'Se', 'F'
 genecp_atoms = ['I']
 
 "DEFINTION OF BASIS SET AND LEVEL OF THEORY"
-basis_set = ['6-31g**','6-31+g**','def2tzvp']
-basis_set_genecp_atoms = 'LANL2DZ'
-level_of_theory = ['M062X']
+dictionary_bs = {'M062X-D3': [['m062x']['6-31g** emp=d3','6-31+g** emp=d3','def2tzvp emp=d3']],
+                  'wb97xd': [['wb97xd']['6-31g**']], 'B3LYP-D3BJ': [['B3LYP']['6-31+g** emp=d3bj']]}
+### from dictionary to pandas
+dictionary_bs_genecp = {'M062X-D3': [['m062x']['LANL2DZ','LANL2DZ','LANL2DZ']],
+                  'wb97xd': [['wb97xd']['LANL2TZ']], 'B3LYP-D3BJ': [['B3LYP']['LANL2DZ']]}
+# basis_set_genecp_atoms = 'LANL2DZ'
+# level_of_theory = ['M062X']
+input = 'opt freq=noraman scrf=(smd, solvent=chloroform)'
 
 "DEFAULT PARAMTERS FOR GAUSSIAN OPTIMIZATION"
 chk = False
 nprocs=24
 mem='96GB'
-input = 'opt freq=noraman scrf=(smd, solvent=chloroform)'
 
 " MAIN FUCNTION WORKING WITH MOL OBJECT TO CREATE CONFORMERS"
 def conformer_generation(mol,name,args):
