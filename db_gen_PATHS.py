@@ -27,7 +27,7 @@ from confgen_noargs import *
 "TYPE OF OPTIMIZATION"
 # Options: xTB, AN1  Default : RDKIT optimizaiton
 ANI1ccx = False
-xtb = True
+xtb = False
 
 " OPTIMIZATION REQUIRED OR NOT"
 opt_ax = True # switch to off for single point only
@@ -59,9 +59,9 @@ possible_atoms = ['N', 'P', 'As', 'C', 'Si', 'Ge', 'B', 'H', 'S', 'O', 'Se', 'F'
 genecp_atoms = ['I']
 
 "DEFINTION OF BASIS SET AND LEVEL OF THEORY"
-basis_set = ['6-31g**']
+basis_set = ['6-31g**','6-31+g**','def2tzvp']
 basis_set_genecp_atoms = 'LANL2DZ'
-level_of_theory = ['M06-2X']
+level_of_theory = ['M062X']
 
 "DEFAULT PARAMTERS FOR GAUSSIAN OPTIMIZATION"
 chk = False

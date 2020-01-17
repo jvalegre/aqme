@@ -282,13 +282,14 @@ from output_analysis import *
 if __name__ == "__main__":
 
 	parser = argparse.ArgumentParser(description="Generate conformers depending on type of optimization (change parameters in db_gen_PATHS.py file).")
-	parser.add_argument("input",help="Input smi file pr SDF files")
+	parser.add_argument("--input",help="Input smi file pr SDF files")
 	parser.add_argument("-c","--compute",action="store_true",default=False,
 						help="Create input files for Gaussian")
 	parser.add_argument("-a","--analysis",action="store_true",default=False,
 						help="Fix and analyze Gaussian output files")
+	#pass the argument for path for the gaussian folder.
+	parser.add_argument("--path", help="Path for analysis where the gaussian folder created is present")
 	parser.add_argument("-v","--verbose",action="store_true",default=False, help="verbose output")
-
 	args = parser.parse_args()
 
 ### check if it's working with *.smi (if it isn't, we need to change this a little bit)
@@ -395,9 +396,10 @@ if __name__ == "__main__":
 
 	if args.analysis == True:
 		# Sets the folder and find the log files to analyze
-		# This variable should be defined way before in the code
-		w_dir = 'C:\Google Drive\Rob Paton CSU\Project Pd Lily\Arene auto generation'
-		os.chdir(w_dir+'\LOG_files\In process')
-		log_files = glob.glob('*.log')
+		for lot in level_of_theory:
+			for bs in basis_set:
+				w_dir = args.path + str(lot) + '-' + str(bs)+'/'
+				os.chdir(w_dir)
+				log_files = glob.glob('*.log')
 
-		output_analyzer(log_files)
+				output_analyzer(log_files, w_dir, lot, bs)

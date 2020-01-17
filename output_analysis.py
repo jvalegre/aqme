@@ -12,12 +12,19 @@ How this works:
 - Place all the output files to analyze in folder XXX
 '''
 
-def output_analyzer(log_files):
+def output_analyzer(log_files,w_dir,lot,bs):
 
     # Atom IDs
     periodictable = ["","H","He","Li","Be","B","C","N","O","F","Ne","Na","Mg","Al","Si","P","S","Cl","Ar","K","Ca","Sc","Ti","V","Cr","Mn","Fe","Co","Ni","Cu","Zn","Ga","Ge","As","Se","Br","Kr","Rb","Sr","Y","Zr",
         "Nb","Mo","Tc","Ru","Rh","Pd","Ag","Cd","In","Sn","Sb","Te","I","Xe","Cs","Ba","La","Ce","Pr","Nd","Pm","Sm","Eu","Gd","Tb","Dy","Ho","Er","Tm","Yb","Lu","Hf","Ta","W","Re","Os","Ir","Pt","Au","Hg","Tl",
         "Pb","Bi","Po","At","Rn","Fr","Ra","Ac","Th","Pa","U","Np","Pu","Am","Cm","Bk","Cf","Es","Fm","Md","No","Lr","Rf","Db","Sg","Bh","Hs","Mt","Ds","Rg","Uub","Uut","Uuq","Uup","Uuh","Uus","Uuo"]
+
+    #made it global for all functions
+    rms = 10000
+    #defined the variable stop_rms, standor
+    stop_rms = 0
+    standor = 0
+    NATOMS =0
 
     for file in log_files:
         outfile = open(file,"r")
@@ -40,7 +47,6 @@ def output_analyzer(log_files):
                 CHARGE = int(outlines[i].split()[2])
                 MULT = int(outlines[i].split()[5].rstrip("\n"))
 
-        rms = 10000
         for i in range(0,len(outlines)):
             if TERMINATION == "normal":
                 # Sets where the final coordinates are inside the file
@@ -124,29 +130,33 @@ def output_analyzer(log_files):
 
         # This part places the calculations in different folders depending on the type of
         # termination and number of imag. freqs
-        source = w_dir+'\LOG_files\In process\\'+file
+        source = w_dir+file
         if IM_FREQS > 0:
-            destination = w_dir+'\LOG_files\Failed\Imaginary frequencies\\'+file
+            destination = w_dir+'Imaginary frequencies/'+file
+            os.makedirs(destination)
             shutil.move(source, destination)
 
         if IM_FREQS == 0 and TERMINATION == "normal":
-            destination = w_dir+'\LOG_files\Finished\\'+file
+            destination = w_dir+'Finished/'+file
+            os.makedirs(destination)
             shutil.move(source, destination)
 
         if IM_FREQS == 0 and TERMINATION == "error":
-            destination = w_dir+r'\LOG_files\Failed\Error\\'+file
+            destination = w_dir+'Failed_Error/'+file
+            os.makedirs(destination)
             shutil.move(source, destination)
 
         if IM_FREQS == 0 and TERMINATION == "unfinished":
-            destination = w_dir+r'\LOG_files\Failed\Unfinished\\'+file
+            destination = w_dir+'Failed_Unfinished/'+file
+            os.makedirs(destination)
             dest = shutil.move(source, destination)
 
         if IM_FREQS > 0 or TERMINATION != "normal":
             # Settings for the com files
-            n_of_processors = '36'
-            memory = '30GB'
-            functional = 'wb97xd'
-            basis_set = '6-31g(d)'
+            n_of_processors = '24'
+            memory = '96GB'
+            functional = lot
+            basis_set = bs
             basis_set_I = 'LANL2DZ'
             # Options for genecp
             ecp_list,ecp_I = [],False

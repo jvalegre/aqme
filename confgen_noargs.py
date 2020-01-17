@@ -17,8 +17,8 @@ device = torch.device('cpu')
 model = torchani.models.ANI1ccx()
 from ase.units import kJ,mol,Hartree,kcal
 
-import xtb
-from xtb import GFN2
+#import xtb
+#from xtb import GFN2
 
 " DEFINITION OF THE TYPE OF OUTPUT"
 output = '.sdf'
@@ -247,7 +247,6 @@ def mult_min(mol, name,args):
 					pmol = PropertyMol.PropertyMol(mol)
 					outmols.append(pmol); c_converged.append(converged); c_energy.append(energy)
 					conf += 1
-					print(outmols)
 
 				else: print("x  Conformer", (i+1), "is a duplicate of", dup_id)
 			else:
