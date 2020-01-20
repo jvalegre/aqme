@@ -27,7 +27,7 @@ from confgen_noargs import *
 "TYPE OF OPTIMIZATION"
 # Options: xTB, AN1  Default : RDKIT optimizaiton
 ANI1ccx = False
-xtb = False
+xtb = True
 
 " OPTIMIZATION REQUIRED OR NOT"
 opt_ax = True # switch to off for single point only
@@ -59,14 +59,14 @@ possible_atoms = ['N', 'P', 'As', 'C', 'Si', 'Ge', 'B', 'H', 'S', 'O', 'Se', 'F'
 genecp_atoms = ['I']
 
 "DEFINTION OF BASIS SET AND LEVEL OF THEORY"
-dictionary_bs = {'M062X-D3': [['m062x']['6-31g** emp=d3','6-31+g** emp=d3','def2tzvp emp=d3']],
-                  'wb97xd': [['wb97xd']['6-31g**']], 'B3LYP-D3BJ': [['B3LYP']['6-31+g** emp=d3bj']]}
+#dict_bs = {'M062X': ['6-31g**','6-31+g**','def2tzvp'], 'wb97xd': ['6-31g**','6-31+g**','def2tzvp'], 'B3LYP': ['6-31g** EmpiricalDispersion=GD3BJ', '6-31+g** EmpiricalDispersion=GD3BJ','def2tzvp EmpiricalDispersion=GD3BJ'  ]}
 ### from dictionary to pandas
-dictionary_bs_genecp = {'M062X-D3': [['m062x']['LANL2DZ','LANL2DZ','LANL2DZ']],
-                  'wb97xd': [['wb97xd']['LANL2TZ']], 'B3LYP-D3BJ': [['B3LYP']['LANL2DZ']]}
+#dict_bs_genecp = {'M062X-D3': ['LANL2DZ','LANL2DZ','LANL2DZ'],'wb97xd': ['LANL2TZ'], 'B3LYP': ['LANL2DZ']}
 # basis_set_genecp_atoms = 'LANL2DZ'
-# level_of_theory = ['M062X']
-input = 'opt freq=noraman scrf=(smd, solvent=chloroform)'
+basis_set = ['6-31g**', '6-31+g**', 'def2tzvp']
+level_of_theory = [ 'wb97xd', 'b3lyp-d3']
+d3bj = True #now only set for b3lyp
+input = 'opt freq=noraman' #add solvent if needed
 
 "DEFAULT PARAMTERS FOR GAUSSIAN OPTIMIZATION"
 chk = False
@@ -161,16 +161,30 @@ def write_gaussian_input_file(file, name,lot, bs):
 
     #chk option
     if chk == True:
-        header = [
-            '%chk={}.chk'.format(name),
-            '%MEM={}'.format(mem),
-            '%nprocshared={}'.format(nprocs),
-            '# {0}/{1} '.format(lot, bs) + input]
+        if lot == 'b3lyp' and d3bj == True:
+            header = [
+                '%chk={}.chk'.format(name),
+                '%MEM={}'.format(mem),
+                '%nprocshared={}'.format(nprocs),
+                '# {0}/{1} '.format(lot, bs) + input + 'EmpiricalDispersion=GD3BJ']
+        else:
+            header = [
+                '%chk={}.chk'.format(name),
+                '%MEM={}'.format(mem),
+                '%nprocshared={}'.format(nprocs),
+                '# {0}/{1} '.format(lot, bs) + input ]
+
     else:
-        header = [
-            '%MEM={}'.format(mem),
-            '%nprocshared={}'.format(nprocs),
-            '# {0}/{1} '.format(lot, bs) + input]
+        if lot == 'b3lyp' and d3bj == True:
+            header = [
+                '%MEM={}'.format(mem),
+                '%nprocshared={}'.format(nprocs),
+                '# {0}/{1} '.format(lot, bs) + input + ' EmpiricalDispersion=GD3BJ']
+        else:
+            header = [
+                '%MEM={}'.format(mem),
+                '%nprocshared={}'.format(nprocs),
+                '# {0}/{1} '.format(lot, bs) + input ]
 
 
     subprocess.run(

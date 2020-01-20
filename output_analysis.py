@@ -198,6 +198,8 @@ def output_analyzer(log_files, w_dir, lot, bs, chk, nprocs, mem, input):
             solvent = ''
             keywords_opt = functional+'/'+genecp+' '+solvent+' opt=(calcfc,maxstep=5) freq=noraman '
 
+            print(os.getcwd())
+
             fileout = open(file.split(".")[0]+'.com', "w")
             fileout.write("%mem="+memory+"\n")
             fileout.write("%nprocshared="+n_of_processors+"\n")

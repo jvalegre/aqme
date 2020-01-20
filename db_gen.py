@@ -332,13 +332,13 @@ if __name__ == "__main__":
 					#if readlines[i].find('>  <NAME>') > -1:
 					#name = readlines[i+1].split()[0]
 					IDs.append(ID)
-					suppl = Chem.SDMolSupplier(sdffile)
-					i=0
-					for mol in suppl:
-						name = IDs[i]
-						#doing confomer genertion for each mol object
-						conformer_generation(mol,name,args)
-						i += 1
+			suppl = Chem.SDMolSupplier(sdffile)
+			i=0
+			for mol in suppl:
+				name = IDs[i]
+				#doing confomer genertion for each mol object
+				conformer_generation(mol,name,args)
+				i += 1
 
 		#provide a .csv file with one columns SMILES and code_name
 		elif os.path.splitext(args.input)[1] == '.csv':
@@ -385,14 +385,14 @@ if __name__ == "__main__":
 					name = os.path.splitext(file)[0]
 					write_gaussian_input_file(file,name,lot, bs)
 
-					"""
+				"""
 					#################################needs to be edited#############
 					#checking if genecp needed
 					gjf_files = glob.glob('{}_confs_*.com'.format{name})
 					for file in gjf_files:
 						genecp_for_files(file)
 					################################################################
-					"""
+				"""
 
 	if args.analysis == True:
 		# Sets the folder and find the log files to analyze
