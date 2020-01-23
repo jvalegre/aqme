@@ -317,7 +317,7 @@ if __name__ == "__main__":
 					"""
 					# finally converts each line to a rdkit mol object
 				mol = Chem.MolFromSmiles(smi)
-					#print(Chem.MolToSmiles(mol))
+				print(Chem.MolToSmiles(mol))
 					#doing confomer genertion for each mol object
 				conformer_generation(mol,name,args)
 

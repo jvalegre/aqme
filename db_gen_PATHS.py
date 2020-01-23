@@ -141,14 +141,14 @@ def filters(mol):
         # Second filter: molecular weight
         if Descriptors.MolWt(mol) < max_MolWt:
             # Third filter: this filters salts off (2 separated components)
-            if len(Chem.MolToSmiles(mol).split('.')) == 1:
-                for atom in mol.GetAtoms():
-                    #Fourth filter: atoms outside the scope chosen in 'possible_atoms'
-                    if atom.GetSymbol() not in possible_atoms:
-                        valid_structure = False
-                    elif atom.GetSymbol() in genecp_atoms:
-                        genecp = True
-            else: valid_structure = False
+            #if len(Chem.MolToSmiles(mol).split('.')) == 1:
+            for atom in mol.GetAtoms():
+                #Fourth filter: atoms outside the scope chosen in 'possible_atoms'
+                if atom.GetSymbol() not in possible_atoms:
+                    valid_structure = False
+                elif atom.GetSymbol() in genecp_atoms:
+                    genecp = True
+            #else: valid_structure = False
         else: valid_structure = False
     else: valid_structure = False
     return valid_structure

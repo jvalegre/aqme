@@ -17,8 +17,8 @@ device = torch.device('cpu')
 model = torchani.models.ANI1ccx()
 from ase.units import kJ,mol,Hartree,kcal
 
-#import xtb
-#from xtb import GFN2
+import xtb
+from xtb import GFN2
 
 " DEFINITION OF THE TYPE OF OUTPUT"
 output = '.sdf'
@@ -103,6 +103,14 @@ def summ_search(mol, name,args):
 
 		cenergy = []
 		for i, conf in enumerate(cids):
+
+			#identify the atoms and decide Force Field
+			for atom in mol.GetAtoms():
+				if atom.GetAtomicNum() > 36: #upto Kr for MMFF, if not use UFF
+					db_gen_PATHS.ff = "UFF"
+
+			print("UFF is used because there are atoms that MMFF doesn't recognise")
+
 			if db_gen_PATHS.ff == "MMFF":
 				GetFF = Chem.MMFFGetMoleculeForceField(mol, Chem.MMFFGetMoleculeProperties(mol),confId=conf)
 			elif db_gen_PATHS.ff == "UFF":
