@@ -289,8 +289,9 @@ if __name__ == "__main__":
 						help="Fix and analyze Gaussian output files")
 	parser.add_argument("-b","--boltz",action="store_true",default=False,
 						help="Boltzmann factor for each conformers from Gaussian output files")
+	parser.add_argument("-d","--combine",action="store_true",default=False, help="Combine files of differnt molecules including boltzmann weighted energies")
 	#pass the argument for path for the gaussian folder.
-	parser.add_argument("--path", help="Path for analysis/boltzmann factor where the gaussian folder created is present")
+	parser.add_argument("--path", help="Path for analysis/boltzmann factor/combining files where the gaussian folder created is present")
 	parser.add_argument("-v","--verbose",action="store_true",default=False, help="verbose output")
 	args = parser.parse_args()
 
@@ -420,3 +421,13 @@ if __name__ == "__main__":
 					#print(log_files)
 					val = ' '.join(log_files)
 					boltz_calculation(val,i)
+
+	if args.combine == True:
+		#combines the files and gives the boltzmann weighted energies
+		for lot in level_of_theory:
+			for bs in basis_set:
+				w_dir = args.path + str(lot) + '-' + str(bs) + '/Finished'
+				os.chdir(w_dir)
+				#read the csv log_files
+				csv_files = glob.glob('Goodvibes*.csv')
+				combine_files(csv_files, lot, bs, args)

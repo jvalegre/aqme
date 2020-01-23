@@ -76,6 +76,9 @@ mem='96GB'
 " MOLECULES now, for eg., molecule list, for later can use as total no. of molecules"
 molecules = [12,14,42,63,70,58,91,100]
 
+"THERMODYNAMIC DATA CALCULATED FROM GOODVIBES"
+columns = ['E', 'ZPE', 'H', 'T.S', 'T.qh-S', 'G(T)', 'qh-G(T)']
+
 " MAIN FUCNTION WORKING WITH MOL OBJECT TO CREATE CONFORMERS"
 def conformer_generation(mol,name,args):
     valid_structure = filters(mol)
@@ -227,3 +230,39 @@ def boltz_calculation(val,i):
     #need to have good vibes
     cmd = 'python' +  ' -m' + ' goodvibes' + ' --csv' + ' --boltz ' +'--output ' + str(i) + ' ' + val
     os.system(cmd)
+
+"COMBINING FILES FOR DIFFERENT MOLECULES"
+
+def combine_files(csv_files, lot, bs, args):
+    files = []
+    #combine all the csv_files
+    for f in csv_files:
+        df = pd.read_csv(f, skiprows = 14)
+        #dropping the ************* line
+        df = df.drop(df.index[0])
+        df.iloc[-1] = np.nan
+        #print(df)
+
+        #print(columns)
+        for col in columns:
+            #print(df.at[df.index[-1], col])
+            #print(df['Boltz'])
+            df.at[df.index[-1], col] = np.sum(df[col] * df['Boltz'])
+
+        files.append(df)
+
+    final_file = pd.concat(files, axis=0, ignore_index=True)
+
+    #combined_csv = pd.concat([pd.read_csv(f, skiprows = 14, skipfooter = 1) for f in csv_files ])
+    #change directory to write all files in one place
+    destination = args.path+'All csv files/'
+    try:
+        os.makedirs(destination)
+    except OSError:
+        if  os.path.isdir(destination):
+            pass
+        else:
+            raise
+    os.chdir(destination)
+    #export to csv
+    final_file.to_csv( str(lot) + '-' + str(bs)+ '_all_molecules.csv', index=False, encoding='utf-8-sig')
