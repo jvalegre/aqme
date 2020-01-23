@@ -12,7 +12,7 @@ How this works:
 - Place all the output files to analyze in folder XXX
 '''
 
-def output_analyzer(log_files, w_dir, lot, bs, chk, nprocs, mem, input):
+def output_analyzer(log_files, w_dir, lot, bs, nprocs, mem):
 
     # Atom IDs
     periodictable = ["","H","He","Li","Be","B","C","N","O","F","Ne","Na","Mg","Al","Si","P","S","Cl","Ar","K","Ca","Sc","Ti","V","Cr","Mn","Fe","Co","Ni","Cu","Zn","Ga","Ge","As","Se","Br","Kr","Rb","Sr","Y","Zr",
@@ -25,6 +25,8 @@ def output_analyzer(log_files, w_dir, lot, bs, chk, nprocs, mem, input):
     stop_rms = 0
     standor = 0
     NATOMS =0
+
+    print(log_files)
 
     for file in log_files:
         outfile = open(file,"r")
@@ -133,54 +135,64 @@ def output_analyzer(log_files, w_dir, lot, bs, chk, nprocs, mem, input):
         source = w_dir+file
 
         if IM_FREQS > 0:
-            destination = w_dir+'Imaginary frequencies/'+file
+            destination = w_dir+'Imaginary frequencies/'
             try:
                 os.makedirs(destination)
                 shutil.move(source, destination)
             except OSError:
                 if  os.path.isdir(destination):
-                    pass
+                    shutil.move(source, destination)
                 else:
                     raise
 
         if IM_FREQS == 0 and TERMINATION == "normal":
-            destination = w_dir+'Finished/'+file
+            destination = w_dir+'Finished/'
             try:
                 os.makedirs(destination)
                 shutil.move(source, destination)
             except OSError:
                 if  os.path.isdir(destination):
-                    pass
+                    shutil.move(source, destination)
                 else:
                     raise
 
         if IM_FREQS == 0 and TERMINATION == "error":
-            destination = w_dir+'Failed_Error/'+file
+            destination = w_dir+'Failed_Error/'
             try:
                 os.makedirs(destination)
                 shutil.move(source, destination)
             except OSError:
                 if  os.path.isdir(destination):
-                    pass
+                    shutil.move(source, destination)
                 else:
                     raise
 
         if IM_FREQS == 0 and TERMINATION == "unfinished":
-            destination = w_dir+'Failed_Unfinished/'+file
+            destination = w_dir+'Failed_Unfinished/'
             try:
                 os.makedirs(destination)
                 shutil.move(source, destination)
             except OSError:
                 if  os.path.isdir(destination):
-                    pass
+                    shutil.move(source, destination)
                 else:
                     raise
 
         if IM_FREQS > 0 or TERMINATION != "normal":
+
+            # creating new folder with new input gaussian files
+            new_gaussian_input_files = w_dir+'New Gaussian Input Files'
+            try:
+                os.makedirs(new_gaussian_input_files)
+            except OSError:
+                if  os.path.isdir(new_gaussian_input_files):
+                    shutil.move(source, destination)
+                else:
+                    raise
+
+            os.chdir(new_gaussian_input_files)
+            print('Creating new files')
             # Settings for the com files
-            n_of_processors = '24'
-            memory = '96GB'
-            functional = lot
             basis_set = bs
             basis_set_I = 'LANL2DZ'
             # Options for genecp
@@ -196,13 +208,11 @@ def output_analyzer(log_files, w_dir, lot, bs, chk, nprocs, mem, input):
             if ecp_I == True:
                 genecp = 'genecp'
             solvent = ''
-            keywords_opt = functional+'/'+genecp+' '+solvent+' opt=(calcfc,maxstep=5) freq=noraman '
-
-            print(os.getcwd())
+            keywords_opt = lot +'/'+ genecp+' '+ solvent +' Opt freq=noraman '
 
             fileout = open(file.split(".")[0]+'.com', "w")
-            fileout.write("%mem="+memory+"\n")
-            fileout.write("%nprocshared="+n_of_processors+"\n")
+            fileout.write("%mem="+str(mem)+"\n")
+            fileout.write("%nprocshared="+str(nprocs)+"\n")
             fileout.write("# "+keywords_opt+"\n")
             fileout.write("\n")
             fileout.write(name+"\n")
@@ -227,3 +237,6 @@ def output_analyzer(log_files, w_dir, lot, bs, chk, nprocs, mem, input):
                 fileout.write('I 0\n')
                 fileout.write(basis_set_I+'\n\n')
             fileout.close()
+
+        #changing directory back to where all files are from new files created.
+        os.chdir(w_dir)

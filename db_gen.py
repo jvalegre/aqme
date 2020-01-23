@@ -287,8 +287,10 @@ if __name__ == "__main__":
 						help="Create input files for Gaussian")
 	parser.add_argument("-a","--analysis",action="store_true",default=False,
 						help="Fix and analyze Gaussian output files")
+	parser.add_argument("-b","--boltz",action="store_true",default=False,
+						help="Boltzmann factor for each conformers from Gaussian output files")
 	#pass the argument for path for the gaussian folder.
-	parser.add_argument("--path", help="Path for analysis where the gaussian folder created is present")
+	parser.add_argument("--path", help="Path for analysis/boltzmann factor where the gaussian folder created is present")
 	parser.add_argument("-v","--verbose",action="store_true",default=False, help="verbose output")
 	args = parser.parse_args()
 
@@ -402,4 +404,19 @@ if __name__ == "__main__":
 				os.chdir(w_dir)
 				log_files = glob.glob('*.log')
 
-				output_analyzer(log_files, w_dir, lot, bs, chk, nprocs, mem, input)
+				output_analyzer(log_files, w_dir, lot, bs, nprocs, mem)
+
+	#once all files are finished are in the Finished folder
+	if args.boltz == True:
+		# Sets the folder and find the log files to analyze
+		for lot in level_of_theory:
+			for bs in basis_set:
+				w_dir = args.path + str(lot) + '-' + str(bs)+'/'+'Finished'
+				os.chdir(w_dir)
+				#can change molecules to a range as files will have codes in a continous manner
+				for i in molecules:
+					#grab all the corresponding files make sure to renamme
+					log_files = glob.glob('OX_'+ str(i)+ '_confs_' + '*.log')
+					#print(log_files)
+					val = ' '.join(log_files)
+					boltz_calculation(val,i)

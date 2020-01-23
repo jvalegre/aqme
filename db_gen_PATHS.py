@@ -64,14 +64,17 @@ genecp_atoms = ['I']
 #dict_bs_genecp = {'M062X-D3': ['LANL2DZ','LANL2DZ','LANL2DZ'],'wb97xd': ['LANL2TZ'], 'B3LYP': ['LANL2DZ']}
 # basis_set_genecp_atoms = 'LANL2DZ'
 basis_set = ['6-31g**', '6-31+g**', 'def2tzvp']
-level_of_theory = [ 'wb97xd', 'b3lyp-d3']
+level_of_theory = [ 'M062X', 'wb97xd', 'b3lyp-d3']
 d3bj = True #now only set for b3lyp
-input = 'opt freq=noraman' #add solvent if needed
+input = 'opt freq=noraman SCRF=(Solvent=Chloroform)' #add solvent if needed
 
 "DEFAULT PARAMTERS FOR GAUSSIAN OPTIMIZATION"
 chk = False
 nprocs=24
 mem='96GB'
+
+" MOLECULES now, for eg., molecule list, for later can use as total no. of molecules"
+molecules = [12,14,42,63,70,58,91,100]
 
 " MAIN FUCNTION WORKING WITH MOL OBJECT TO CREATE CONFORMERS"
 def conformer_generation(mol,name,args):
@@ -218,4 +221,9 @@ def genecp_for_files(file):
 
 ##############################################################################
 
-" WRITING TO EXCEL FILE "
+" CALCULATION OF BOLTZMANN FACTORS "
+
+def boltz_calculation(val,i):
+    #need to have good vibes
+    cmd = 'python' +  ' -m' + ' goodvibes' + ' --csv' + ' --boltz ' +'--output ' + str(i) + ' ' + val
+    os.system(cmd)
