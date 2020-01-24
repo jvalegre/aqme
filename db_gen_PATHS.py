@@ -27,7 +27,7 @@ from confgen_noargs import *
 "TYPE OF OPTIMIZATION"
 # Options: xTB, AN1  Default : RDKIT optimizaiton
 ANI1ccx = False
-xtb = True
+xtb = False
 
 " OPTIMIZATION REQUIRED OR NOT"
 opt_ax = True # switch to off for single point only
@@ -64,6 +64,7 @@ genecp_atoms = ['I']
 #dict_bs_genecp = {'M062X-D3': ['LANL2DZ','LANL2DZ','LANL2DZ'],'wb97xd': ['LANL2TZ'], 'B3LYP': ['LANL2DZ']}
 # basis_set_genecp_atoms = 'LANL2DZ'
 basis_set = ['6-31g**', '6-31+g**', 'def2tzvp']
+basis_set_I = 'LANL2DZ'
 level_of_theory = [ 'M062X', 'wb97xd', 'b3lyp-d3']
 d3bj = True #now only set for b3lyp
 input = 'opt freq=noraman SCRF=(Solvent=Chloroform)' #add solvent if needed
@@ -81,188 +82,201 @@ columns = ['E', 'ZPE', 'H', 'T.S', 'T.qh-S', 'G(T)', 'qh-G(T)']
 
 " MAIN FUCNTION WORKING WITH MOL OBJECT TO CREATE CONFORMERS"
 def conformer_generation(mol,name,args):
-    valid_structure = filters(mol)
-    if valid_structure:
-        if args.verbose: print("o  Input Molecule:", name)
+	valid_structure = filters(mol)
+	if valid_structure:
+		if args.verbose: print("o  Input Molecule:", name)
 
-        try:
-            # the conformational search
-            summ_search(mol, name,args)
+		try:
+			# the conformational search
+			summ_search(mol, name,args)
 
-            # the multiple minimization returns a list of separate mol objects
-            conformers, energies = mult_min(mol, name, args)
-            print(energies)
+			# the multiple minimization returns a list of separate mol objects
+			conformers, energies = mult_min(mol, name, args)
+			print(energies)
 
-            #only print if within predefined energy window
-            if len(conformers) > 0:
-                # list in energy order
-                cids = list(range(len(conformers)))
-                sortedcids = sorted(cids, key = lambda cid: energies[cid])
+			#only print if within predefined energy window
+			if len(conformers) > 0:
+				# list in energy order
+				cids = list(range(len(conformers)))
+				sortedcids = sorted(cids, key = lambda cid: energies[cid])
 
-                #print(name, *sorted(energies), sep = ", ")
-                print("o ", name, ":", np.array(sorted(energies)))
-                #print(["{0:0.2f}".format(i) for i in sorted(energies)])
+				#print(name, *sorted(energies), sep = ", ")
+				print("o ", name, ":", np.array(sorted(energies)))
+				#print(["{0:0.2f}".format(i) for i in sorted(energies)])
 
-                sdwriter = Chem.SDWriter(name+final_output)
-                glob_min = min(energies)
+				sdwriter = Chem.SDWriter(name+final_output)
+				glob_min = min(energies)
 
-                write_confs = 0
-                for cid in sortedcids:
-                    if ANI1ccx == True:
-                        if (energies[cid] - glob_min) < ewin / 2625.5:
-                            sdwriter.write(conformers[cid])
-                            write_confs += 1
+				write_confs = 0
+				for cid in sortedcids:
+					if ANI1ccx == True:
+						if (energies[cid] - glob_min) < ewin / 2625.5:
+							sdwriter.write(conformers[cid])
+							write_confs += 1
 
-                    elif xtb == True:
-                        if (energies[cid] - glob_min) < ewin / 2625.5:
-                            sdwriter.write(conformers[cid])
-                            write_confs += 1
+					elif xtb == True:
+						if (energies[cid] - glob_min) < ewin / 2625.5:
+							sdwriter.write(conformers[cid])
+							write_confs += 1
 
-                    else:
-                        if (energies[cid] - glob_min) < ewin:
-                            sdwriter.write(conformers[cid])
-                            write_confs += 1
+					else:
+						if (energies[cid] - glob_min) < ewin:
+							sdwriter.write(conformers[cid])
+							write_confs += 1
 
 
-                if args.verbose == True: print("o  Wrote", write_confs, "conformers to file", name+final_output, "\n")
-                sdwriter.close()
-            else: print("x  No conformers found!\n")
+				if args.verbose == True: print("o  Wrote", write_confs, "conformers to file", name+final_output, "\n")
+				sdwriter.close()
+			else: print("x  No conformers found!\n")
 
-        except (KeyboardInterrupt, SystemExit):
-            raise
-        except Exception as e: print(traceback.print_exc())
-    else: print("ERROR: The structure is not valid")
+		except (KeyboardInterrupt, SystemExit):
+			raise
+		except Exception as e: print(traceback.print_exc())
+	else: print("ERROR: The structure is not valid")
 
 " FILTER TO BE APPLIED FOR SMILES"
 def filters(mol):
-    valid_structure = True
-    # First filter: number of rotatable bonds
-    if Lipinski.NumRotatableBonds(mol) < max_torsions:
-        # Second filter: molecular weight
-        if Descriptors.MolWt(mol) < max_MolWt:
-            # Third filter: this filters salts off (2 separated components)
-            #if len(Chem.MolToSmiles(mol).split('.')) == 1:
-            for atom in mol.GetAtoms():
-                #Fourth filter: atoms outside the scope chosen in 'possible_atoms'
-                if atom.GetSymbol() not in possible_atoms:
-                    valid_structure = False
-                elif atom.GetSymbol() in genecp_atoms:
-                    genecp = True
-            #else: valid_structure = False
-        else: valid_structure = False
-    else: valid_structure = False
-    return valid_structure
+	valid_structure = True
+	# First filter: number of rotatable bonds
+	if Lipinski.NumRotatableBonds(mol) < max_torsions:
+		# Second filter: molecular weight
+		if Descriptors.MolWt(mol) < max_MolWt:
+			# Third filter: this filters salts off (2 separated components)
+			#if len(Chem.MolToSmiles(mol).split('.')) == 1:
+			for atom in mol.GetAtoms():
+				#Fourth filter: atoms outside the scope chosen in 'possible_atoms'
+				if atom.GetSymbol() not in possible_atoms:
+					valid_structure = False
+			#else: valid_structure = False
+		else: valid_structure = False
+	else: valid_structure = False
+	return valid_structure
 
 
 " MAIN FUNCTION TO CREATE GAUSSIAN JOBS"
 def write_gaussian_input_file(file, name,lot, bs):
+	#defining genecp
+	genecp = 'gen'
 
-    #pathto change to
-    path_write_gjf_files = 'gaussian/' + str(lot) + '-' + str(bs)
-    os.chdir(path_write_gjf_files)
+	#reading the sdf to check for I atom_symbol
+	suppl = Chem.SDMolSupplier(file)
+	for mol in suppl:
+		for atom in mol.GetAtoms():
+			if atom.GetSymbol() in genecp_atoms:
+				genecp = 'genecp'
 
-    path_for_file = '../../'
+	#pathto change to
+	path_write_gjf_files = 'gaussian/' + str(lot) + '-' + str(bs)
+	print(path_write_gjf_files)
+	os.chdir(path_write_gjf_files)
 
-    gjf = '{0}_.gjf'.format(name)
+	path_for_file = '../../'
 
-    #chk option
-    if chk == True:
-        if lot == 'b3lyp' and d3bj == True:
-            header = [
-                '%chk={}.chk'.format(name),
-                '%MEM={}'.format(mem),
-                '%nprocshared={}'.format(nprocs),
-                '# {0}/{1} '.format(lot, bs) + input + 'EmpiricalDispersion=GD3BJ']
-        else:
-            header = [
-                '%chk={}.chk'.format(name),
-                '%MEM={}'.format(mem),
-                '%nprocshared={}'.format(nprocs),
-                '# {0}/{1} '.format(lot, bs) + input ]
+	com = '{0}_.com'.format(name)
 
-    else:
-        if lot == 'b3lyp' and d3bj == True:
-            header = [
-                '%MEM={}'.format(mem),
-                '%nprocshared={}'.format(nprocs),
-                '# {0}/{1} '.format(lot, bs) + input + ' EmpiricalDispersion=GD3BJ']
-        else:
-            header = [
-                '%MEM={}'.format(mem),
-                '%nprocshared={}'.format(nprocs),
-                '# {0}/{1} '.format(lot, bs) + input ]
+	#chk option
+	if chk == True:
+		if lot == 'b3lyp' and d3bj == True:
+			header = [
+				'%chk={}.chk'.format(name),
+				'%MEM={}'.format(mem),
+				'%nprocshared={}'.format(nprocs),
+				'# {0}'.format(lot)+ '/'+ genecp + ' '+ input + 'EmpiricalDispersion=GD3BJ']
+		else:
+			header = [
+				'%chk={}.chk'.format(name),
+				'%MEM={}'.format(mem),
+				'%nprocshared={}'.format(nprocs),
+				'# {0}'.format(lot)+ '/'+ genecp + ' '+ input ]
+
+	else:
+		if lot == 'b3lyp' and d3bj == True:
+			header = [
+				'%MEM={}'.format(mem),
+				'%nprocshared={}'.format(nprocs),
+				'# {0}'.format(lot)+ '/'+ genecp + ' '+ input + 'EmpiricalDispersion=GD3BJ']
+		else:
+			header = [
+				'%MEM={}'.format(mem),
+				'%nprocshared={}'.format(nprocs),
+				'# {0}'.format(lot)+ '/'+ genecp + ' '+ input ]
 
 
-    subprocess.run(
-          ['obabel', '-isdf', path_for_file+file, '-ogjf', '-O'+gjf,'-m', '-xk', '\n'.join(header)])
+	subprocess.run(
+		  ['obabel', '-isdf', path_for_file+file, '-ocom', '-O'+com,'-m', '-xk', '\n'.join(header)])
 
-    os.chdir(path_for_file)
+	#adding the basis set at the end of the FILES
+	#grab all the com FILES
+	com_files = glob.glob('{0}_*.com'.format(name))
 
-#################################needes to be edited###################
-" GENECP added to the INPUT FILES "
-def genecp_for_files(file):
+	for file in com_files:
+		ecp_list,ecp_I = [],False
+		read_lines = open(file,"r").readlines()
+		fileout = open(file, "a")
+		# Detect if there are I atoms to use genecp or not (to use gen)
+		for i in range(4,len(read_lines)):
+			if read_lines[i].split(' ')[0] not in ecp_list and read_lines[i].split(' ')[0] in possible_atoms:
+				ecp_list.append(read_lines[i].split(' ')[0])
+			if read_lines[i].split(' ')[0] == 'I':
+			   ecp_I = True
 
-    ecp_list,ecp_I = [],False
-    read_lines = open(file,"r").readlines()
-    # Detect if there are I atoms to use genecp or not (to use gen)
-    for i in range(4,len(read_lines)):
-        if read_lines[i].split(' ')[0] not in ecp_list and read_lines[i].split(' ')[0] in possible_atoms:
-            ecp_list.append(read_lines[i].split(' ')[0])
-        if read_lines[i].split(' ')[0] == 'I':
-           ecp_I = True
-    if ecp_I == False:
-        genecp = 'gen'
-    if ecp_I == True:
-        genecp = 'genecp'
+		for i in range(len(ecp_list)):
+			if ecp_list[i] != 'I':
+				fileout.write(ecp_list[i]+' ')
+		fileout.write('0\n')
+		fileout.write(bs+'\n')
+		fileout.write('****\n')
+		if ecp_I == False:
+			fileout.write('\n')
+		else:
+			fileout.write('I     0\n')
+			fileout.write(basis_set_I+'\n')
+			fileout.write('****\n\n')
+			fileout.write('I 0\n')
+			fileout.write(basis_set_I+'\n\n')
 
-    with open(file, 'a+') as file:
-        file.append('\nI     0\n')
-        fileout.append(basis_set_genecp_atoms+'\n')
-        fileout.append('****\n\n')
-        fileout.append('I 0\n')
-        fileout.append(basis_set_genecp_atoms+'\n\n')
+	os.chdir(path_for_file)
 
-##############################################################################
 
 " CALCULATION OF BOLTZMANN FACTORS "
 
 def boltz_calculation(val,i):
-    #need to have good vibes
-    cmd = 'python' +  ' -m' + ' goodvibes' + ' --csv' + ' --boltz ' +'--output ' + str(i) + ' ' + val
-    os.system(cmd)
+	#need to have good vibes
+	cmd = 'python' +  ' -m' + ' goodvibes' + ' --csv' + ' --boltz ' +'--output ' + str(i) + ' ' + val
+	os.system(cmd)
 
 "COMBINING FILES FOR DIFFERENT MOLECULES"
 
 def combine_files(csv_files, lot, bs, args):
-    files = []
-    #combine all the csv_files
-    for f in csv_files:
-        df = pd.read_csv(f, skiprows = 14)
-        #dropping the ************* line
-        df = df.drop(df.index[0])
-        df.iloc[-1] = np.nan
-        #print(df)
+	files = []
+	#combine all the csv_files
+	for f in csv_files:
+		df = pd.read_csv(f, skiprows = 14)
+		#dropping the ************* line
+		df = df.drop(df.index[0])
+		df.iloc[-1] = np.nan
+		#print(df)
 
-        #print(columns)
-        for col in columns:
-            #print(df.at[df.index[-1], col])
-            #print(df['Boltz'])
-            df.at[df.index[-1], col] = np.sum(df[col] * df['Boltz'])
+		#print(columns)
+		for col in columns:
+			#print(df.at[df.index[-1], col])
+			#print(df['Boltz'])
+			df.at[df.index[-1], col] = np.sum(df[col] * df['Boltz'])
 
-        files.append(df)
+		files.append(df)
 
-    final_file = pd.concat(files, axis=0, ignore_index=True)
+	final_file = pd.concat(files, axis=0, ignore_index=True)
 
-    #combined_csv = pd.concat([pd.read_csv(f, skiprows = 14, skipfooter = 1) for f in csv_files ])
-    #change directory to write all files in one place
-    destination = args.path+'All csv files/'
-    try:
-        os.makedirs(destination)
-    except OSError:
-        if  os.path.isdir(destination):
-            pass
-        else:
-            raise
-    os.chdir(destination)
-    #export to csv
-    final_file.to_csv( str(lot) + '-' + str(bs)+ '_all_molecules.csv', index=False, encoding='utf-8-sig')
+	#combined_csv = pd.concat([pd.read_csv(f, skiprows = 14, skipfooter = 1) for f in csv_files ])
+	#change directory to write all files in one place
+	destination = args.path+'All csv files/'
+	try:
+		os.makedirs(destination)
+	except OSError:
+		if  os.path.isdir(destination):
+			pass
+		else:
+			raise
+	os.chdir(destination)
+	#export to csv
+	final_file.to_csv( str(lot) + '-' + str(bs)+ '_all_molecules.csv', index=False, encoding='utf-8-sig')

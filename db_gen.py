@@ -388,14 +388,6 @@ if __name__ == "__main__":
 					name = os.path.splitext(file)[0]
 					write_gaussian_input_file(file,name,lot, bs)
 
-				"""
-					#################################needs to be edited#############
-					#checking if genecp needed
-					gjf_files = glob.glob('{}_confs_*.com'.format{name})
-					for file in gjf_files:
-						genecp_for_files(file)
-					################################################################
-				"""
 
 	if args.analysis == True:
 		# Sets the folder and find the log files to analyze
