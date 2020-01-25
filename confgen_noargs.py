@@ -6,7 +6,8 @@ from rdkit.Chem import AllChem as Chem
 from rdkit.Chem import rdMolTransforms, PropertyMol
 from rdkit.Geometry import Point3D
 
-import db_gen_PATHS
+import db_gen_functions
+import db_gen_variables
 
 ### TORCHANI IMPORTS
 import ase
@@ -84,21 +85,21 @@ def summ_search(mol, name,args):
 	mol = Chem.AddHs(mol)
 	mol.SetProp("_Name",name);
 
-	if db_gen_PATHS.nodihedrals == False: rotmatches = getDihedralMatches(mol, db_gen_PATHS.heavyonly)
+	if db_gen_variables.nodihedrals == False: rotmatches = getDihedralMatches(mol, db_gen_variables.heavyonly)
 	else: rotmatches = []
 
-	if len(rotmatches) > db_gen_PATHS.max_torsions:
+	if len(rotmatches) > db_gen_variables.max_torsions:
 		print("x  Too many torsions (%d). Skipping %s" %(len(rotmatches),(name+output)))
 	else:
-		if db_gen_PATHS.etkdg:
-			cids = Chem.EmbedMultipleConfs(mol, db_gen_PATHS.sample, Chem.ETKDG(),randomSeed=db_gen_PATHS.seed)
+		if db_gen_variables.etkdg:
+			cids = Chem.EmbedMultipleConfs(mol, db_gen_variables.sample, Chem.ETKDG(),randomSeed=db_gen_variables.seed)
 		else:
-			cids = Chem.EmbedMultipleConfs(mol, db_gen_PATHS.sample,randomSeed=db_gen_PATHS.seed)
+			cids = Chem.EmbedMultipleConfs(mol, db_gen_variables.sample,randomSeed=db_gen_variables.seed)
 		if args.verbose:
 			print("o ", len(cids),"conformers initially sampled")
 
 		#energy minimize all to get more realistic results
-		if args.verbose: print("o  Optimizing", len(cids), "initial conformers with", db_gen_PATHS.ff)
+		if args.verbose: print("o  Optimizing", len(cids), "initial conformers with", db_gen_variables.ff)
 		if args.verbose: print("o  Found", len(rotmatches), "rotatable torsions")
 
 		cenergy = []
@@ -107,15 +108,15 @@ def summ_search(mol, name,args):
 			#identify the atoms and decide Force Field
 			for atom in mol.GetAtoms():
 				if atom.GetAtomicNum() > 36: #upto Kr for MMFF, if not use UFF
-					db_gen_PATHS.ff = "UFF"
+					db_gen_variables.ff = "UFF"
 
-			print("UFF is used because there are atoms that MMFF doesn't recognise")
+			#print("UFF is used because there are atoms that MMFF doesn't recognise")
 
-			if db_gen_PATHS.ff == "MMFF":
+			if db_gen_variables.ff == "MMFF":
 				GetFF = Chem.MMFFGetMoleculeForceField(mol, Chem.MMFFGetMoleculeProperties(mol),confId=conf)
-			elif db_gen_PATHS.ff == "UFF":
+			elif db_gen_variables.ff == "UFF":
 				GetFF = Chem.UFFGetMoleculeForceField(mol)
-			else: print('   Force field {} not supported!'.format(db_gen_PATHS.ff)); sys.exit()
+			else: print('   Force field {} not supported!'.format(db_gen_variables.ff)); sys.exit()
 
 			GetFF.Initialize()
 			converged = GetFF.Minimize()
@@ -124,7 +125,7 @@ def summ_search(mol, name,args):
 			#    print("-   conformer", (i+1), "optimized: ", args.ff, "energy", GetFF.CalcEnergy())
 
 		#reduce to unique set
-		if args.verbose: print("o  Removing duplicate conformers ( RMSD <", db_gen_PATHS.rms_threshold, ")")
+		if args.verbose: print("o  Removing duplicate conformers ( RMSD <", db_gen_variables.rms_threshold, ")")
 		sortedcids = sorted(cids,key = lambda cid: cenergy[cid])
 		selectedcids = []
 		for i, conf in enumerate(sortedcids):
@@ -134,20 +135,20 @@ def summ_search(mol, name,args):
 				rdMolTransforms.SetDihedralRad(mol.GetConformer(conf),*m,value=0)
 			#check rmsd
 			for seenconf in selectedcids:
-				rms = get_conf_RMS(mol,seenconf,conf, db_gen_PATHS.heavyonly)
-				if rms < db_gen_PATHS.rms_threshold:
+				rms = get_conf_RMS(mol,seenconf,conf, db_gen_variables.heavyonly)
+				if rms < db_gen_variables.rms_threshold:
 					break
 			else: #loop completed normally - no break, included empty
 				selectedcids.append(conf)
 
 		#now exhaustively drive torsions of selected conformers
 		if args.verbose: print("o ", len(selectedcids),"unique (ignoring torsions) starting conformers remain")
-		n_confs = int(len(selectedcids) * (360 / db_gen_PATHS.degree) ** len(rotmatches))
+		n_confs = int(len(selectedcids) * (360 / db_gen_variables.degree) ** len(rotmatches))
 		if args.verbose: print("o  Systematic generation of", n_confs, "confomers")
 
 		total = 0
 		for conf in selectedcids:
-			total += genConformer_r(mol, conf, 0, rotmatches, db_gen_PATHS.degree, sdwriter)
+			total += genConformer_r(mol, conf, 0, rotmatches, db_gen_variables.degree, sdwriter)
 		if args.verbose: print("o  %d total conformations generated"%total)
 
 	sdwriter.close()
@@ -162,7 +163,7 @@ def mult_min(mol, name,args):
 
 	c_converged, c_energy, outmols = [], [], []
 	ani_energy,xtb_energy = 0,0
-	if db_gen_PATHS.ANI1ccx == True or db_gen_PATHS.xtb == True: SQM_energy, SQM_cartesians = [], []
+	if db_gen_variables.ANI1ccx == True or db_gen_variables.xtb == True: SQM_energy, SQM_cartesians = [], []
 
 	globmin = None
 
@@ -170,11 +171,11 @@ def mult_min(mol, name,args):
 		conf = 1
 		if mol is not None:
 
-			if db_gen_PATHS.ff == "MMFF":
+			if db_gen_variables.ff == "MMFF":
 				GetFF = Chem.MMFFGetMoleculeForceField(mol, Chem.MMFFGetMoleculeProperties(mol))
-			elif db_gen_PATHS.ff == "UFF":
+			elif db_gen_variables.ff == "UFF":
 				GetFF = Chem.UFFGetMoleculeForceField(mol)
-			else: print(('   Force field {} not supported!'.format(db_gen_PATHS.ff))); sys.exit()
+			else: print(('   Force field {} not supported!'.format(db_gen_variables.ff))); sys.exit()
 
 			GetFF.Initialize()
 			converged = GetFF.Minimize(maxIts=1000)
@@ -184,14 +185,14 @@ def mult_min(mol, name,args):
 			if globmin == None: globmin = energy
 			if energy < globmin: globmin = energy
 
-			if converged == 0 and (energy - globmin) < db_gen_PATHS.ewin:
+			if converged == 0 and (energy - globmin) < db_gen_variables.ewin:
 				#if args.verbose: print('   minimization converged!')
 				unique, dup_id = 0, None
 				#print("Conformer", (i+1), "optimized with", args.ff, "Energy:", energy)
 				for j,seenmol in enumerate(outmols):
-					if abs(energy - c_energy[j]) < db_gen_PATHS.energy_threshold:
+					if abs(energy - c_energy[j]) < db_gen_variables.energy_threshold:
 						#print((i+1), energy, (j+1), c_energy[j], getPMIDIFF(mol,seenmol))
-						if getPMIDIFF(mol, seenmol) < db_gen_PATHS.rms_threshold * 25:
+						if getPMIDIFF(mol, seenmol) < db_gen_variables.rms_threshold * 25:
 							#print("o  Conformer", (i+1), "matches conformer", (j+1))
 							unique += 1
 							dup_id = (j+1)
@@ -199,19 +200,19 @@ def mult_min(mol, name,args):
 				if unique == 0:
 					if args.verbose == True: print("-  Conformer", (i+1), "is unique")
 
-					if db_gen_PATHS.ANI1ccx == True or db_gen_PATHS.xtb == True:
+					if db_gen_variables.ANI1ccx == True or db_gen_variables.xtb == True:
 						cartesians = mol.GetConformers()[0].GetPositions()
 						elements = ''
 						for atom in mol.GetAtoms(): elements += atom.GetSymbol()
 
 						coordinates = torch.tensor([cartesians.tolist()], requires_grad=True, device=device)
 
-						if db_gen_PATHS.ANI1ccx == True:
+						if db_gen_variables.ANI1ccx == True:
 							species = model.species_to_tensor(elements).to(device).unsqueeze(0)
 							_, ani_energy = model((species, coordinates))
 							if args.verbose: print("ANI Initial E:",ani_energy.item(),'eH') #Hartree
 
-							if db_gen_PATHS.opt_ax == True:
+							if db_gen_variables.opt_ax == True:
 								ase_molecule = ase.Atoms(elements, positions=coordinates.tolist()[0], calculator=model.ase())
 								### make a function for constraints and optimization
 								if constraints != None:
@@ -220,7 +221,7 @@ def mult_min(mol, name,args):
 									ase_molecule.set_constraint(fb)
 
 								opt = ase.optimize.BFGS(ase_molecule)
-								opt.run(fmax=float(db_gen_PATHS.opt_precision_ax))
+								opt.run(fmax=float(db_gen_variables.opt_precision_ax))
 								species_coords = ase_molecule.get_positions().tolist()
 								coordinates = torch.tensor([species_coords], requires_grad=True, device=device)
 
@@ -232,12 +233,12 @@ def mult_min(mol, name,args):
 							###############################################################################
 ### INCLUDE THE OPTIONS TO SOTRE MOLECULAR Descriptors
 ### CHECK THIS WEBPAGE: https://github.com/grimme-lab/xtb/tree/master/python
-						elif db_gen_PATHS.xtb == True:
+						elif db_gen_variables.xtb == True:
 							ase_molecule = ase.Atoms(elements, positions=coordinates.tolist()[0], calculator=GFN2()) #define ase molecule using GFN2 Calculator
-							if db_gen_PATHS.opt_ax == True:
+							if db_gen_variables.opt_ax == True:
 								if args.verbose: print("Initial XTB energy", ase_molecule.get_potential_energy()/Hartree,'Eh',ase_molecule.get_potential_energy(),'eV') #Hartree, eV
 								optimizer = ase.optimize.BFGS(ase_molecule)
-								optimizer.run(fmax=float(db_gen_PATHS.opt_precision_ax))
+								optimizer.run(fmax=float(db_gen_variables.opt_precision_ax))
 								species_coords = ase_molecule.get_positions().tolist()
 								coordinates = torch.tensor([species_coords], requires_grad=True, device=device)
 							###############################################################################
@@ -246,8 +247,8 @@ def mult_min(mol, name,args):
 							if args.verbose: print("Final XTB E:",xtb_energy/Hartree,'Eh',xtb_energy,'eV') #Hartree, eV
 							###############################################################################
 
-						if db_gen_PATHS.ANI1ccx == True or db_gen_PATHS.xtb == True:#save Eh and coordinates to write to SDF
-							if db_gen_PATHS.xtb == True:SQM_energy.append(xtb_energy/Hartree)
+						if db_gen_variables.ANI1ccx == True or db_gen_variables.xtb == True:#save Eh and coordinates to write to SDF
+							if db_gen_variables.xtb == True:SQM_energy.append(xtb_energy/Hartree)
 							else:SQM_energy.append(ani_energy.item())
 							cartesians = np.array(coordinates.tolist()[0])
 							SQM_cartesians.append(cartesians)
@@ -259,7 +260,7 @@ def mult_min(mol, name,args):
 
 				else: print("x  Conformer", (i+1), "is a duplicate of", dup_id)
 			else:
-				print("x  Minimization of conformer", (i+1), " not converged / energy too high!", converged, (energy - globmin), db_gen_PATHS.ewin)
+				print("x  Minimization of conformer", (i+1), " not converged / energy too high!", converged, (energy - globmin), db_gen_variables.ewin)
 			#pass
 		else:
 			pass #print("No molecules to optimize")
@@ -269,7 +270,7 @@ def mult_min(mol, name,args):
 	cids = list(range(len(outmols)))
 	sortedcids = sorted(cids, key = lambda cid: c_energy[cid])
 
-	if db_gen_PATHS.ANI1ccx == True or db_gen_PATHS.xtb == True:
+	if db_gen_variables.ANI1ccx == True or db_gen_variables.xtb == True:
 		for conf in cids:
 			c_energy[conf] = SQM_energy[conf]
 			c = outmols[conf].GetConformer()
@@ -279,7 +280,7 @@ def mult_min(mol, name,args):
 				c.SetAtomPosition(j,Point3D(x,y,z))
 
 			for j in range(0,conf):
-				if abs(c_energy[conf] - c_energy[j]) < db_gen_PATHS.energy_threshold / 2625.5 and getPMIDIFF(outmols[conf], outmols[j]) <  db_gen_PATHS.rms_threshold:
+				if abs(c_energy[conf] - c_energy[j]) < db_gen_variables.energy_threshold / 2625.5 and getPMIDIFF(outmols[conf], outmols[j]) <  db_gen_variables.rms_threshold:
 					print("It appears ",conf, "is the same as", j)
 
 	for i, cid in enumerate(sortedcids):
