@@ -18,7 +18,7 @@ if __name__ == "__main__":
 	parser.add_argument("-r","--resubmit",action="store_true",default=False,
 						help="Resubmit Gaussian input files")
 	parser.add_argument("-s","--secondrun",action="store_true",default=False,
-											help="Set rue for second run analysis")
+											help="Set true for second run analysis")
 	parser.add_argument("-b","--boltz",action="store_true",default=False,
 						help="Boltzmann factor for each conformers from Gaussian output files")
 	parser.add_argument("-d","--combine",action="store_true",default=False, help="Combine files of differnt molecules including boltzmann weighted energies")
@@ -121,6 +121,7 @@ if __name__ == "__main__":
 					write_gaussian_input_file(file,name,lot, bs)
 
 
+
 	if args.analysis == True:
 		# Sets the folder and find the log files to analyze
 		for lot in level_of_theory:
@@ -131,11 +132,14 @@ if __name__ == "__main__":
 					log_files = glob.glob('*.log')
 
 				else:
-					w_dir = args.path + str(lot) + '-' + str(bs)+'/New Gaussian Input Files'
-					os.chdir(w_dir)
-					log_files = glob.glob('*.log')
+					w_dir = args.path + str(lot) + '-' + str(bs)+'/New Gaussian Input Files/'
+					if os.path.isdir(w_dir):
+						os.chdir(w_dir)
+						log_files = glob.glob('*.log')
 
-				output_analyzer(log_files, w_dir, lot, bs, nprocs, mem, args)
+						output_analyzer(log_files, w_dir, lot, bs, nprocs, mem, args)
+					else:
+						pass
 
 	#adding the part to check for resubmission of the newly created gaussian files.
 	if args.resubmit == True:

@@ -20,6 +20,8 @@ import subprocess
 
 from confgen_noargs import *
 
+from db_gen_variables import *
+
 
 " FUCNTION WORKING WITH MOL OBJECT TO CREATE CONFORMERS"
 def conformer_generation(mol,name,args):
@@ -185,236 +187,236 @@ def write_gaussian_input_file(file, name,lot, bs):
 " DEFINTION OF OUTPUT ANALYSER"
 def output_analyzer(log_files, w_dir, lot, bs, nprocs, mem, args):
 
-    # Atom IDs
-    periodictable = ["","H","He","Li","Be","B","C","N","O","F","Ne","Na","Mg","Al","Si","P","S","Cl","Ar","K","Ca","Sc","Ti","V","Cr","Mn","Fe","Co","Ni","Cu","Zn","Ga","Ge","As","Se","Br","Kr","Rb","Sr","Y","Zr",
-        "Nb","Mo","Tc","Ru","Rh","Pd","Ag","Cd","In","Sn","Sb","Te","I","Xe","Cs","Ba","La","Ce","Pr","Nd","Pm","Sm","Eu","Gd","Tb","Dy","Ho","Er","Tm","Yb","Lu","Hf","Ta","W","Re","Os","Ir","Pt","Au","Hg","Tl",
-        "Pb","Bi","Po","At","Rn","Fr","Ra","Ac","Th","Pa","U","Np","Pu","Am","Cm","Bk","Cf","Es","Fm","Md","No","Lr","Rf","Db","Sg","Bh","Hs","Mt","Ds","Rg","Uub","Uut","Uuq","Uup","Uuh","Uus","Uuo"]
+	# Atom IDs
+	periodictable = ["","H","He","Li","Be","B","C","N","O","F","Ne","Na","Mg","Al","Si","P","S","Cl","Ar","K","Ca","Sc","Ti","V","Cr","Mn","Fe","Co","Ni","Cu","Zn","Ga","Ge","As","Se","Br","Kr","Rb","Sr","Y","Zr",
+		"Nb","Mo","Tc","Ru","Rh","Pd","Ag","Cd","In","Sn","Sb","Te","I","Xe","Cs","Ba","La","Ce","Pr","Nd","Pm","Sm","Eu","Gd","Tb","Dy","Ho","Er","Tm","Yb","Lu","Hf","Ta","W","Re","Os","Ir","Pt","Au","Hg","Tl",
+		"Pb","Bi","Po","At","Rn","Fr","Ra","Ac","Th","Pa","U","Np","Pu","Am","Cm","Bk","Cf","Es","Fm","Md","No","Lr","Rf","Db","Sg","Bh","Hs","Mt","Ds","Rg","Uub","Uut","Uuq","Uup","Uuh","Uus","Uuo"]
 
-    #made it global for all functions
-    rms = 10000
-    #defined the variable stop_rms, standor
-    stop_rms = 0
-    standor = 0
-    NATOMS =0
+	#made it global for all functions
+	rms = 10000
+	#defined the variable stop_rms, standor
+	stop_rms = 0
+	standor = 0
+	NATOMS =0
 
-    #print(log_files)
+	#print(log_files)
 
-    for file in log_files:
-        outfile = open(file,"r")
-        outlines = outfile.readlines()
-        ATOMTYPES, CARTESIANS = [],[]
-        FREQS, REDMASS, FORCECONST, NORMALMODE = [],[],[],[]; IM_FREQS = 0
-        freqs_so_far = 0
-        TERMINATION = "unfinished"
-        for i in range(0,len(outlines)):
-            # Get the name of the compound (specified in the title)
-            if outlines[i].find('Symbolic Z-matrix:') > -1:
-                name = outlines[i-2].split()[0]
-            # Determine the kind of job termination
-            if outlines[i].find("Normal termination") > -1:
-                TERMINATION = "normal"
-            elif outlines[i].find("Error termination") > -1:
-                TERMINATION = "error"
-            # Determine charge and multiplicity
-            if outlines[i].find("Charge = ") > -1:
-                CHARGE = int(outlines[i].split()[2])
-                MULT = int(outlines[i].split()[5].rstrip("\n"))
+	for file in log_files:
+		outfile = open(file,"r")
+		outlines = outfile.readlines()
+		ATOMTYPES, CARTESIANS = [],[]
+		FREQS, REDMASS, FORCECONST, NORMALMODE = [],[],[],[]; IM_FREQS = 0
+		freqs_so_far = 0
+		TERMINATION = "unfinished"
+		for i in range(0,len(outlines)):
+			# Get the name of the compound (specified in the title)
+			if outlines[i].find('Symbolic Z-matrix:') > -1:
+				name = outlines[i-2].split()[0]
+			# Determine the kind of job termination
+			if outlines[i].find("Normal termination") > -1:
+				TERMINATION = "normal"
+			elif outlines[i].find("Error termination") > -1:
+				TERMINATION = "error"
+			# Determine charge and multiplicity
+			if outlines[i].find("Charge = ") > -1:
+				CHARGE = int(outlines[i].split()[2])
+				MULT = int(outlines[i].split()[5].rstrip("\n"))
 
-        for i in range(0,len(outlines)):
-            if TERMINATION == "normal":
-                # Sets where the final coordinates are inside the file
-                if outlines[i].find("Input orientation") > -1: standor = i
-                if outlines[i].find("Standard orientation") > -1: standor = i
-                if outlines[i].find("Distance matrix") > -1 or outlines[i].find("Rotational constants") >-1:
-                    if outlines[i-1].find("-------") > -1:
-                        NATOMS = i-standor-6
-                # Get the frequencies and identifies negative frequencies
-                if outlines[i].find(" Frequencies -- ") > -1:
-                    nfreqs = len(outlines[i].split())
-                    for j in range(2, nfreqs):
-                        FREQS.append(float(outlines[i].split()[j]))
-                        NORMALMODE.append([])
-                        if float(outlines[i].split()[j]) < 0.0: IM_FREQS += 1
-                    for j in range(3, nfreqs+1): REDMASS.append(float(outlines[i+1].split()[j]))
-                    for j in range(3, nfreqs+1): FORCECONST.append(float(outlines[i+2].split()[j]))
-                    for j in range(0,NATOMS):
-                        for k in range(0, nfreqs-2):
-                            NORMALMODE[(freqs_so_far + k)].append([float(outlines[i+5+j].split()[3*k+2]), float(outlines[i+5+j].split()[3*k+3]), float(outlines[i+5+j].split()[3*k+4])])
-                    freqs_so_far = freqs_so_far + nfreqs - 2
-            if TERMINATION != "normal":
-                if outlines[i].find('Cartesian Forces:  Max') > -1:
-                    if float(outlines[i].split()[5]) < rms:
-                        rms = float(outlines[i].split()[5])
-                        stop_rms = i
+		for i in range(0,len(outlines)):
+			if TERMINATION == "normal":
+				# Sets where the final coordinates are inside the file
+				if outlines[i].find("Input orientation") > -1: standor = i
+				if outlines[i].find("Standard orientation") > -1: standor = i
+				if outlines[i].find("Distance matrix") > -1 or outlines[i].find("Rotational constants") >-1:
+					if outlines[i-1].find("-------") > -1:
+						NATOMS = i-standor-6
+				# Get the frequencies and identifies negative frequencies
+				if outlines[i].find(" Frequencies -- ") > -1:
+					nfreqs = len(outlines[i].split())
+					for j in range(2, nfreqs):
+						FREQS.append(float(outlines[i].split()[j]))
+						NORMALMODE.append([])
+						if float(outlines[i].split()[j]) < 0.0: IM_FREQS += 1
+					for j in range(3, nfreqs+1): REDMASS.append(float(outlines[i+1].split()[j]))
+					for j in range(3, nfreqs+1): FORCECONST.append(float(outlines[i+2].split()[j]))
+					for j in range(0,NATOMS):
+						for k in range(0, nfreqs-2):
+							NORMALMODE[(freqs_so_far + k)].append([float(outlines[i+5+j].split()[3*k+2]), float(outlines[i+5+j].split()[3*k+3]), float(outlines[i+5+j].split()[3*k+4])])
+					freqs_so_far = freqs_so_far + nfreqs - 2
+			if TERMINATION != "normal":
+				if outlines[i].find('Cartesian Forces:  Max') > -1:
+					if float(outlines[i].split()[5]) < rms:
+						rms = float(outlines[i].split()[5])
+						stop_rms = i
 
-        if TERMINATION == "normal":
-            # Get the coordinates for jobs that finished well with and without imag. freqs
-            try: standor
-            except NameError: pass
-            else:
-                for i in range (standor+5,standor+5+NATOMS):
-                    massno = int(outlines[i].split()[1])
-                    if massno < len(periodictable):
-                        atom_symbol = periodictable[massno]
-                    else: atom_symbol = "XX"
-                    ATOMTYPES.append(atom_symbol)
-                    CARTESIANS.append([float(outlines[i].split()[3]), float(outlines[i].split()[4]), float(outlines[i].split()[5])])
+		if TERMINATION == "normal":
+			# Get the coordinates for jobs that finished well with and without imag. freqs
+			try: standor
+			except NameError: pass
+			else:
+				for i in range (standor+5,standor+5+NATOMS):
+					massno = int(outlines[i].split()[1])
+					if massno < len(periodictable):
+						atom_symbol = periodictable[massno]
+					else: atom_symbol = "XX"
+					ATOMTYPES.append(atom_symbol)
+					CARTESIANS.append([float(outlines[i].split()[3]), float(outlines[i].split()[4]), float(outlines[i].split()[5])])
 
-        if TERMINATION != "normal":
-            # Get the coordinates for jobs that did not finished or finished with an error
-            for i in range(0,stop_rms):
-                # Sets where the final coordinates are inside the file
-                if outlines[i].find("Input orientation") > -1: standor = i
-                if outlines[i].find("Standard orientation") > -1: standor = i
-                if outlines[i].find("Distance matrix") > -1 or outlines[i].find("Rotational constants") >-1:
-                    if outlines[i-1].find("-------") > -1:
-                        NATOMS = i-standor-6
-            for i in range (standor+5,standor+5+NATOMS):
-                massno = int(outlines[i].split()[1])
-                if massno < len(periodictable):
-                    atom_symbol = periodictable[massno]
-                else: atom_symbol = "XX"
-                ATOMTYPES.append(atom_symbol)
-                CARTESIANS.append([float(outlines[i].split()[3]), float(outlines[i].split()[4]), float(outlines[i].split()[5])])
+		if TERMINATION != "normal":
+			# Get the coordinates for jobs that did not finished or finished with an error
+			for i in range(0,stop_rms):
+				# Sets where the final coordinates are inside the file
+				if outlines[i].find("Input orientation") > -1: standor = i
+				if outlines[i].find("Standard orientation") > -1: standor = i
+				if outlines[i].find("Distance matrix") > -1 or outlines[i].find("Rotational constants") >-1:
+					if outlines[i-1].find("-------") > -1:
+						NATOMS = i-standor-6
+			for i in range (standor+5,standor+5+NATOMS):
+				massno = int(outlines[i].split()[1])
+				if massno < len(periodictable):
+					atom_symbol = periodictable[massno]
+				else: atom_symbol = "XX"
+				ATOMTYPES.append(atom_symbol)
+				CARTESIANS.append([float(outlines[i].split()[3]), float(outlines[i].split()[4]), float(outlines[i].split()[5])])
 
-        # This part fixes jobs with imaginary freqs
-        if IM_FREQS > 0:
-            # Multiplies the imaginary normal mode vector by this amount (from -1 to 1).
-            amplitude = 0.2 # default in pyQRC
-            shift = []
+		# This part fixes jobs with imaginary freqs
+		if IM_FREQS > 0:
+			# Multiplies the imaginary normal mode vector by this amount (from -1 to 1).
+			amplitude = 0.2 # default in pyQRC
+			shift = []
 
-            # Save the original Cartesian coordinates before they are altered
-            orig_carts = []
-            for atom in range(0,NATOMS):
-                orig_carts.append([CARTESIANS[atom][0], CARTESIANS[atom][1], CARTESIANS[atom][2]])
+			# Save the original Cartesian coordinates before they are altered
+			orig_carts = []
+			for atom in range(0,NATOMS):
+				orig_carts.append([CARTESIANS[atom][0], CARTESIANS[atom][1], CARTESIANS[atom][2]])
 
-            # could get rid of atomic units here, if zpe_rat definition is changed
-            for mode, wn in enumerate(FREQS):
-                # Either moves along any and all imaginary freqs, or a specific mode requested by the user
-                if FREQS[mode] < 0.0:
-                    shift.append(amplitude)
-                else: shift.append(0.0)
+			# could get rid of atomic units here, if zpe_rat definition is changed
+			for mode, wn in enumerate(FREQS):
+				# Either moves along any and all imaginary freqs, or a specific mode requested by the user
+				if FREQS[mode] < 0.0:
+					shift.append(amplitude)
+				else: shift.append(0.0)
 
-            # The starting geometry is displaced along the each normal mode according to the random shift
-                for atom in range(0,NATOMS):
-                    for coord in range(0,3):
-                        CARTESIANS[atom][coord] = CARTESIANS[atom][coord] + NORMALMODE[mode][atom][coord] * shift[mode]
-        outfile.close()
+			# The starting geometry is displaced along the each normal mode according to the random shift
+				for atom in range(0,NATOMS):
+					for coord in range(0,3):
+						CARTESIANS[atom][coord] = CARTESIANS[atom][coord] + NORMALMODE[mode][atom][coord] * shift[mode]
+		outfile.close()
 
-        # This part places the calculations in different folders depending on the type of
-        # termination and number of imag. freqs
-        source = w_dir+file
+		# This part places the calculations in different folders depending on the type of
+		# termination and number of imag. freqs
+		source = w_dir+file
 
-        if IM_FREQS == 0 and TERMINATION == "normal":
-            #only if normally terminated move to the finished folder of first run.
-            if args.secondrun != True:
-                destination = w_dir+'Finished/'
-            else:
-                destination = w_dir+'../Finished/'
-            try:
-                os.makedirs(destination)
-                shutil.move(source, destination)
-            except OSError:
-                if  os.path.isdir(destination):
-                    shutil.move(source, destination)
-                else:
-                    raise
+		if IM_FREQS == 0 and TERMINATION == "normal":
+			#only if normally terminated move to the finished folder of first run.
+			if args.secondrun != True:
+				destination = w_dir+'Finished/'
+			else:
+				destination = w_dir+'../Finished/'
+			try:
+				os.makedirs(destination)
+				shutil.move(source, destination)
+			except OSError:
+				if  os.path.isdir(destination):
+					shutil.move(source, destination)
+				else:
+					raise
 
-        if IM_FREQS > 0:
-            destination = w_dir+'Imaginary frequencies/'
-            try:
-                os.makedirs(destination)
-                shutil.move(source, destination)
-            except OSError:
-                if  os.path.isdir(destination):
-                    shutil.move(source, destination)
-                else:
-                    raise
+		if IM_FREQS > 0:
+			destination = w_dir+'Imaginary frequencies/'
+			try:
+				os.makedirs(destination)
+				shutil.move(source, destination)
+			except OSError:
+				if  os.path.isdir(destination):
+					shutil.move(source, destination)
+				else:
+					raise
 
-        if IM_FREQS == 0 and TERMINATION == "error":
-            destination = w_dir+'Failed_Error/'
-            try:
-                os.makedirs(destination)
-                shutil.move(source, destination)
-            except OSError:
-                if  os.path.isdir(destination):
-                    shutil.move(source, destination)
-                else:
-                    raise
+		if IM_FREQS == 0 and TERMINATION == "error":
+			destination = w_dir+'Failed_Error/'
+			try:
+				os.makedirs(destination)
+				shutil.move(source, destination)
+			except OSError:
+				if  os.path.isdir(destination):
+					shutil.move(source, destination)
+				else:
+					raise
 
-        if IM_FREQS == 0 and TERMINATION == "unfinished":
-            destination = w_dir+'Failed_Unfinished/'
-            try:
-                os.makedirs(destination)
-                shutil.move(source, destination)
-            except OSError:
-                if  os.path.isdir(destination):
-                    shutil.move(source, destination)
-                else:
-                    raise
+		if IM_FREQS == 0 and TERMINATION == "unfinished":
+			destination = w_dir+'Failed_Unfinished/'
+			try:
+				os.makedirs(destination)
+				shutil.move(source, destination)
+			except OSError:
+				if  os.path.isdir(destination):
+					shutil.move(source, destination)
+				else:
+					raise
 
-        if IM_FREQS > 0 or TERMINATION != "normal":
+		if IM_FREQS > 0 or TERMINATION != "normal":
 
-            # creating new folder with new input gaussian files
-            new_gaussian_input_files = w_dir+'New Gaussian Input Files'
-            try:
-                os.makedirs(new_gaussian_input_files)
-            except OSError:
-                if  os.path.isdir(new_gaussian_input_files):
-                    shutil.move(source, destination)
-                else:
-                    raise
+			# creating new folder with new input gaussian files
+			new_gaussian_input_files = w_dir+'New Gaussian Input Files'
+			try:
+				os.makedirs(new_gaussian_input_files)
+			except OSError:
+				if  os.path.isdir(new_gaussian_input_files):
+					shutil.move(source, destination)
+				else:
+					raise
 
-            os.chdir(new_gaussian_input_files)
-            print('Creating new files')
-            # Settings for the com files
-            basis_set = bs
-            basis_set_I = 'LANL2DZ'
-            # Options for genecp
-            ecp_list,ecp_I = [],False
-            possible_atoms = ['N', 'P', 'As', 'C', 'Si', 'Ge', 'B', 'H', 'S', 'O', 'Se', 'F', 'Br', 'Cl', 'I']
-            for i in range(len(ATOMTYPES)):
-                if ATOMTYPES[i] not in ecp_list and ATOMTYPES[i] in possible_atoms:
-                    ecp_list.append(ATOMTYPES[i])
-                if ATOMTYPES[i] == 'I':
-                   ecp_I = True
-            if ecp_I == False:
-                genecp = 'gen'
-            if ecp_I == True:
-                genecp = 'genecp'
-            solvent = ''
-            keywords_opt = lot +'/'+ genecp+' '+ solvent +' Opt freq=noraman '
+			os.chdir(new_gaussian_input_files)
+			print('Creating new files')
+			# Settings for the com files
+			basis_set = bs
+			basis_set_I = 'LANL2DZ'
+			# Options for genecp
+			ecp_list,ecp_I = [],False
+			possible_atoms = ['N', 'P', 'As', 'C', 'Si', 'Ge', 'B', 'H', 'S', 'O', 'Se', 'F', 'Br', 'Cl', 'I']
+			for i in range(len(ATOMTYPES)):
+				if ATOMTYPES[i] not in ecp_list and ATOMTYPES[i] in possible_atoms:
+					ecp_list.append(ATOMTYPES[i])
+				if ATOMTYPES[i] == 'I':
+				   ecp_I = True
+			if ecp_I == False:
+				genecp = 'gen'
+			if ecp_I == True:
+				genecp = 'genecp'
+			solvent = ''
+			keywords_opt = lot +'/'+ genecp+' '+ solvent +' Opt freq=noraman '
 
-            fileout = open(file.split(".")[0]+'.com', "w")
-            fileout.write("%mem="+str(mem)+"\n")
-            fileout.write("%nprocshared="+str(nprocs)+"\n")
-            fileout.write("# "+keywords_opt+"\n")
-            fileout.write("\n")
-            fileout.write(name+"\n")
-            fileout.write("\n")
-            fileout.write(str(CHARGE)+' '+str(MULT)+'\n')
-            for atom in range(0,NATOMS):
-                fileout.write('{0:>2} {1:12.8f} {2:12.8f} {3:12.8f}'.format(ATOMTYPES[atom], CARTESIANS[atom][0],  CARTESIANS[atom][1],  CARTESIANS[atom][2]))
-                fileout.write("\n")
-            fileout.write("\n")
-            for i in range(len(ecp_list)):
-                if ecp_list[i] != 'I':
-                    fileout.write(ecp_list[i]+' ')
-            fileout.write('0\n')
-            fileout.write(basis_set+'\n')
-            fileout.write('****\n')
-            if ecp_I == False:
-                fileout.write('\n')
-            else:
-                fileout.write('I     0\n')
-                fileout.write(basis_set_I+'\n')
-                fileout.write('****\n\n')
-                fileout.write('I 0\n')
-                fileout.write(basis_set_I+'\n\n')
-            fileout.close()
+			fileout = open(file.split(".")[0]+'.com', "w")
+			fileout.write("%mem="+str(mem)+"\n")
+			fileout.write("%nprocshared="+str(nprocs)+"\n")
+			fileout.write("# "+keywords_opt+"\n")
+			fileout.write("\n")
+			fileout.write(name+"\n")
+			fileout.write("\n")
+			fileout.write(str(CHARGE)+' '+str(MULT)+'\n')
+			for atom in range(0,NATOMS):
+				fileout.write('{0:>2} {1:12.8f} {2:12.8f} {3:12.8f}'.format(ATOMTYPES[atom], CARTESIANS[atom][0],  CARTESIANS[atom][1],  CARTESIANS[atom][2]))
+				fileout.write("\n")
+			fileout.write("\n")
+			for i in range(len(ecp_list)):
+				if ecp_list[i] != 'I':
+					fileout.write(ecp_list[i]+' ')
+			fileout.write('0\n')
+			fileout.write(basis_set+'\n')
+			fileout.write('****\n')
+			if ecp_I == False:
+				fileout.write('\n')
+			else:
+				fileout.write('I     0\n')
+				fileout.write(basis_set_I+'\n')
+				fileout.write('****\n\n')
+				fileout.write('I 0\n')
+				fileout.write(basis_set_I+'\n\n')
+			fileout.close()
 
-        #changing directory back to where all files are from new files created.
-        os.chdir(w_dir)
+		#changing directory back to where all files are from new files created.
+		os.chdir(w_dir)
 
 " CALCULATION OF BOLTZMANN FACTORS "
 def boltz_calculation(val,i):
@@ -424,28 +426,49 @@ def boltz_calculation(val,i):
 
 "COMBINING FILES FOR DIFFERENT MOLECULES"
 def combine_files(csv_files, lot, bs, args):
+	#final dataframe with only the boltzmann averaged values
+	final_file_avg_thermo_data = pd.DataFrame(columns=columns)
+	compare_G = pd.DataFrame(columns=['Structure_of_min_conf','min_qh-G(T)','boltz_avg_qh-G(T)'])
+
 	files = []
 	#combine all the csv_files
 	for f in csv_files:
+
 		df = pd.read_csv(f, skiprows = 14)
+		# df['Structure']= df['Structure'].astype(str)
+		df = df.rename(columns={"   Structure": "Structure"})
+
 		#dropping the ************* line
 		df = df.drop(df.index[0])
 		df.iloc[-1] = np.nan
-		#print(df)
 
-		#print(columns)
+		name_of_min_conf  = ''
+		min_G = 0
+		boltz_avg = 0
+
 		for col in columns:
-			#print(df.at[df.index[-1], col])
-			#print(df['Boltz'])
-			df.at[df.index[-1], col] = np.sum(df[col] * df['Boltz'])
+			if col == 'Structure':
+				#identifyin the minmum energy if the conformers
+				min_G = df['qh-G(T)'].min()
+				#getting the name of the structure of the min G
+				idx_name_of_min_conf = df['qh-G(T)'].idxmin() - 1
+				name_of_min_conf = df.iloc[idx_name_of_min_conf]['Structure']
+				#df.at[df.index[-1], col] = name_of_min_conf
+			elif col != 'Structure':
+				boltz_avg = np.sum(df[col] * df['Boltz'])
+				df.at[df.index[-1], col] = boltz_avg
+				if col == 'qh-G(T)':
+					compare_G = compare_G.append({'Structure_of_min_conf': name_of_min_conf,'min_qh-G(T)': min_G,'boltz_avg_qh-G(T)': boltz_avg}, ignore_index=True)
+
+		final_file_avg_thermo_data = final_file_avg_thermo_data.append({'Structure':name_of_min_conf , 'E': df.iloc[-1]['E'] , 'ZPE': df.iloc[-1]['ZPE'], 'H':df.iloc[-1]['H'] , 'T.S':df.iloc[-1]['T.S'] , 'T.qh-S':df.iloc[-1]['T.qh-S'] , 'G(T)': df.iloc[-1]['G(T)'], 'qh-G(T)':df.iloc[-1]['qh-G(T)'] },ignore_index=True)
 
 		files.append(df)
 
-	final_file = pd.concat(files, axis=0, ignore_index=True)
+	final_file_all_data = pd.concat(files, axis=0, ignore_index=True)
 
 	#combined_csv = pd.concat([pd.read_csv(f, skiprows = 14, skipfooter = 1) for f in csv_files ])
 	#change directory to write all files in one place
-	destination = args.path+'All csv files/'
+	destination = args.path+'All csv files/'+ str(lot)+ str(bs)
 	try:
 		os.makedirs(destination)
 	except OSError:
@@ -454,5 +477,8 @@ def combine_files(csv_files, lot, bs, args):
 		else:
 			raise
 	os.chdir(destination)
+
 	#export to csv
-	final_file.to_csv( str(lot) + '-' + str(bs)+ '_all_molecules.csv', index=False, encoding='utf-8-sig')
+	final_file_all_data.to_csv( str(lot) + '-' + str(bs)+ '_all_molecules_all data.csv', index=False, encoding='utf-8-sig')
+	final_file_avg_thermo_data.to_csv( str(lot) + '-' + str(bs)+ '_all_molecules_avg_thermo_data.csv', index=False, encoding='utf-8-sig')
+	compare_G.to_csv( str(lot) + '-' + str(bs)+ '_all_molecules_compare_G(T).csv', index=False, encoding='utf-8-sig')
