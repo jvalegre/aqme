@@ -432,6 +432,7 @@ def combine_files(csv_files, lot, bs, args):
 
 	files = []
 	#combine all the csv_files
+
 	for f in csv_files:
 
 		df = pd.read_csv(f, skiprows = 14)
@@ -441,10 +442,6 @@ def combine_files(csv_files, lot, bs, args):
 		#dropping the ************* line
 		df = df.drop(df.index[0])
 		df.iloc[-1] = np.nan
-
-		name_of_min_conf  = ''
-		min_G = 0
-		boltz_avg = 0
 
 		for col in columns:
 			if col == 'Structure':
@@ -468,7 +465,7 @@ def combine_files(csv_files, lot, bs, args):
 
 	#combined_csv = pd.concat([pd.read_csv(f, skiprows = 14, skipfooter = 1) for f in csv_files ])
 	#change directory to write all files in one place
-	destination = args.path+'All csv files/'+ str(lot)+ str(bs)
+	destination = args.path+'All csv files/'+ str(lot)+ '-'+ str(bs)
 	try:
 		os.makedirs(destination)
 	except OSError:

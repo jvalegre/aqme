@@ -61,4 +61,4 @@ mem='96GB'
 molecules = [12,14,42,63,70,58,91,100]
 
 "THERMODYNAMIC DATA CALCULATED FROM GOODVIBES"
-columns = ['E', 'ZPE', 'H', 'T.S', 'T.qh-S', 'G(T)', 'qh-G(T)']
+columns = ['Structure', 'E', 'ZPE', 'H', 'T.S', 'T.qh-S', 'G(T)', 'qh-G(T)']
