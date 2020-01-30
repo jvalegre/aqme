@@ -58,7 +58,7 @@ nprocs=24
 mem='96GB'
 
 " MOLECULES now, for eg., molecule list, for later can use as total no. of molecules"
-molecules = [12,14,42,63,70,58,91,100]
+molecules = [9,13,14,25,55]
 
 "THERMODYNAMIC DATA CALCULATED FROM GOODVIBES"
 columns = ['Structure', 'E', 'ZPE', 'H', 'T.S', 'T.qh-S', 'G(T)', 'qh-G(T)']

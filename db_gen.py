@@ -130,6 +130,7 @@ if __name__ == "__main__":
 					w_dir = args.path + str(lot) + '-' + str(bs)+'/'
 					os.chdir(w_dir)
 					log_files = glob.glob('*.log')
+					output_analyzer(log_files, w_dir, lot, bs, nprocs, mem, args)
 
 				else:
 					w_dir = args.path + str(lot) + '-' + str(bs)+'/New Gaussian Input Files/'
@@ -164,7 +165,7 @@ if __name__ == "__main__":
 				#can change molecules to a range as files will have codes in a continous manner
 				for i in molecules:
 					#grab all the corresponding files make sure to renamme
-					log_files = glob.glob('OX_'+ str(i)+ '_confs_' + '*.log')
+					log_files = glob.glob('RE_'+ str(i)+ '_confs_' + '*.log')
 					#print(log_files)
 					val = ' '.join(log_files)
 					boltz_calculation(val,i)

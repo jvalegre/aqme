@@ -192,16 +192,15 @@ def output_analyzer(log_files, w_dir, lot, bs, nprocs, mem, args):
 		"Nb","Mo","Tc","Ru","Rh","Pd","Ag","Cd","In","Sn","Sb","Te","I","Xe","Cs","Ba","La","Ce","Pr","Nd","Pm","Sm","Eu","Gd","Tb","Dy","Ho","Er","Tm","Yb","Lu","Hf","Ta","W","Re","Os","Ir","Pt","Au","Hg","Tl",
 		"Pb","Bi","Po","At","Rn","Fr","Ra","Ac","Th","Pa","U","Np","Pu","Am","Cm","Bk","Cf","Es","Fm","Md","No","Lr","Rf","Db","Sg","Bh","Hs","Mt","Ds","Rg","Uub","Uut","Uuq","Uup","Uuh","Uus","Uuo"]
 
-	#made it global for all functions
-	rms = 10000
-	#defined the variable stop_rms, standor
-	stop_rms = 0
-	standor = 0
-	NATOMS =0
-
-	#print(log_files)
-
 	for file in log_files:
+
+		#made it global for all functions
+		rms = 10000
+		#defined the variable stop_rms, standor
+		stop_rms = 0
+		standor = 0
+		NATOMS = 0
+
 		outfile = open(file,"r")
 		outlines = outfile.readlines()
 		ATOMTYPES, CARTESIANS = [],[]
@@ -317,7 +316,7 @@ def output_analyzer(log_files, w_dir, lot, bs, nprocs, mem, args):
 				os.makedirs(destination)
 				shutil.move(source, destination)
 			except OSError:
-				if  os.path.isdir(destination):
+				if  os.path.isdir(destination) and not os.path.exists(destination+file):
 					shutil.move(source, destination)
 				else:
 					raise
@@ -328,7 +327,7 @@ def output_analyzer(log_files, w_dir, lot, bs, nprocs, mem, args):
 				os.makedirs(destination)
 				shutil.move(source, destination)
 			except OSError:
-				if  os.path.isdir(destination):
+				if  os.path.isdir(destination) and not os.path.exists(destination+file):
 					shutil.move(source, destination)
 				else:
 					raise
@@ -339,7 +338,7 @@ def output_analyzer(log_files, w_dir, lot, bs, nprocs, mem, args):
 				os.makedirs(destination)
 				shutil.move(source, destination)
 			except OSError:
-				if  os.path.isdir(destination):
+				if  os.path.isdir(destination) and not os.path.exists(destination+file):
 					shutil.move(source, destination)
 				else:
 					raise
@@ -350,7 +349,7 @@ def output_analyzer(log_files, w_dir, lot, bs, nprocs, mem, args):
 				os.makedirs(destination)
 				shutil.move(source, destination)
 			except OSError:
-				if  os.path.isdir(destination):
+				if  os.path.isdir(destination) and not os.path.exists(destination+file):
 					shutil.move(source, destination)
 				else:
 					raise
@@ -359,11 +358,12 @@ def output_analyzer(log_files, w_dir, lot, bs, nprocs, mem, args):
 
 			# creating new folder with new input gaussian files
 			new_gaussian_input_files = w_dir+'New Gaussian Input Files'
+
 			try:
 				os.makedirs(new_gaussian_input_files)
 			except OSError:
 				if  os.path.isdir(new_gaussian_input_files):
-					shutil.move(source, destination)
+					os.chdir(new_gaussian_input_files)
 				else:
 					raise
 
