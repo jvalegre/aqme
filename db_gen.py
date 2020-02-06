@@ -11,17 +11,13 @@ if __name__ == "__main__":
 
 	parser = argparse.ArgumentParser(description="Generate conformers depending on type of optimization (change parameters in db_gen_PATHS.py file).")
 	parser.add_argument("--input",help="Input smi file pr SDF files")
-	parser.add_argument("-c","--compute",action="store_true",default=False,
-						help="Create input files for Gaussian")
-	parser.add_argument("-a","--analysis",action="store_true",default=False,
-						help="Fix and analyze Gaussian output files")
-	parser.add_argument("-r","--resubmit",action="store_true",default=False,
-						help="Resubmit Gaussian input files")
-	parser.add_argument("-s","--secondrun",action="store_true",default=False,
-											help="Set true for second run analysis")
-	parser.add_argument("-b","--boltz",action="store_true",default=False,
-						help="Boltzmann factor for each conformers from Gaussian output files")
-	parser.add_argument("-d","--combine",action="store_true",default=False, help="Combine files of differnt molecules including boltzmann weighted energies")
+	parser.add_argument("-c","--compute", action="store_true", default=False, help="Create input files for Gaussian")
+	parser.add_argument("-a","--analysis", action="store_true", default=False, help="Fix and analyze Gaussian output files")
+	parser.add_argument("-r","--resubmit", action="store_true", default=False, help="Resubmit Gaussian input files")
+	parser.add_argument("-s","--secondrun", action="store_true", default=False, help="Set true for second run analysis")
+	parser.add_argument("-n","--nmr",action="store_true",default=False, help="Create Files for Single Point which includes NMR calculation after DFT Optimization")
+	parser.add_argument("-b","--boltz", action="store_true", default=False, help="Boltzmann factor for each conformers from Gaussian output files")
+	parser.add_argument("-d","--combine", action="store_true", default=False, help="Combine files of differnt molecules including boltzmann weighted energies")
 	#pass the argument for path for the gaussian folder.
 	parser.add_argument("--path", help="Path for analysis/boltzmann factor/combining files where the gaussian folder created is present")
 	parser.add_argument("-v","--verbose",action="store_true",default=False, help="verbose output")
@@ -105,22 +101,35 @@ if __name__ == "__main__":
 
 		for lot in level_of_theory:
 			for bs in basis_set:
-				folder = 'gaussian/' + str(lot) + '-' + str(bs)
+				if single_point ==  True:
+					folder = 'sp/' + str(lot) + '-' + str(bs)
 
-				try:
-					os.makedirs(folder)
-				except OSError:
-					if  os.path.isdir(folder):
-						pass
-					else:
-						raise
+					try:
+						os.makedirs(folder)
+					except OSError:
+						if  os.path.isdir(folder):
+							pass
+						else:
+							raise
 
-					#writing the com files
-				for file in sdf_to_gjf_files:
-					name = os.path.splitext(file)[0]
-					write_gaussian_input_file(file,name,lot, bs)
+						#writing the com files
+					for file in sdf_to_gjf_files:
+						name = os.path.splitext(file)[0]
+						write_gaussian_input_file(file,name,lot, bs)
+				else:
+					folder = 'gaussian/' + str(lot) + '-' + str(bs)
 
-
+					try:
+						os.makedirs(folder)
+					except OSError:
+						if  os.path.isdir(folder):
+							pass
+						else:
+							raise
+						#writing the com files
+					for file in sdf_to_gjf_files:
+						name = os.path.splitext(file)[0]
+						write_gaussian_input_file(file,name,lot, bs)
 
 	if args.analysis == True:
 		# Sets the folder and find the log files to analyze
@@ -133,11 +142,10 @@ if __name__ == "__main__":
 					output_analyzer(log_files, w_dir, lot, bs, nprocs, mem, args)
 
 				else:
-					w_dir = args.path + str(lot) + '-' + str(bs)+'/New Gaussian Input Files/'
+					w_dir = args.path + str(lot) + '-' + str(bs)+'/New_Gaussian_Input_Files/'
 					if os.path.isdir(w_dir):
 						os.chdir(w_dir)
 						log_files = glob.glob('*.log')
-
 						output_analyzer(log_files, w_dir, lot, bs, nprocs, mem, args)
 					else:
 						pass
@@ -147,11 +155,24 @@ if __name__ == "__main__":
 		#chceck if ech level of theory has a folder New gaussin FILES
 		for lot in level_of_theory:
 			for bs in basis_set:
-				w_dir = args.path + str(lot) + '-' + str(bs)+'/New Gaussian Input Files'
+				w_dir = args.path + str(lot) + '-' + str(bs)+'/New_Gaussian_Input_Files'
 				if  os.path.isdir(w_dir):
 					os.chdir(w_dir)
 					cmd = 'qsub_summit' + ' *.com'
 					os.system(cmd)
+				else:
+					pass
+
+	#adding the part to check for resubmission of the newly created gaussian files.
+	if args.nmr == True:
+		#chceck if ech level of theory has a folder New gaussin FILES
+		for lot in level_of_theory:
+			for bs in basis_set:
+				w_dir = args.path + str(lot) + '-' + str(bs)+'/Finished'
+				if os.path.isdir(w_dir):
+					os.chdir(w_dir)
+					log_files = glob.glob('*.log')
+					output_analyzer(log_files, w_dir, lot, bs, nprocs, mem, args)
 				else:
 					pass
 

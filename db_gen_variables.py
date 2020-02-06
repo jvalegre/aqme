@@ -11,10 +11,17 @@
 # Options: xTB, AN1  Default : RDKIT optimizaiton
 ANI1ccx = False
 xtb = False
+enso = False
 
 " OPTIMIZATION REQUIRED OR NOT"
 opt_ax = True # switch to off for single point only
 opt_precision_ax = 1E-3 # toggle for optimization convergence
+
+" SINGLE POINTS vs  FULL OPTIMIZATION"
+single_point = False
+
+" ONLY LOWEST ENERGY CONFORMER REQUIRED"
+lowest_only = True
 
 " DEFAULT PARAMETERS FOR RDKIT GENERATION AND FILTERS"
 max_torsions = 5 #Skip any molecules with more than this many torsions (default 5)
@@ -48,9 +55,11 @@ genecp_atoms = ['I']
 # basis_set_genecp_atoms = 'LANL2DZ'
 basis_set = ['6-31g**', '6-31+g**', 'def2tzvp']
 basis_set_I = 'LANL2DZ'
-level_of_theory = [ 'M062X', 'wb97xd', 'b3lyp-d3']
+level_of_theory = [ 'M062X', 'wb97xd', 'b3lyp']
 d3bj = True #now only set for b3lyp
-input = 'opt freq=noraman SCRF=(Solvent=Chloroform)' #add solvent if needed
+solvent = 'Acetonitrile'
+input = 'opt freq=noraman SCRF=(Solvent={0})'.format(solvent) #add solvent if needed
+input_sp = 'SCRF=(Solvent={0}) nmr=giao'.format(solvent)  #input for single point
 
 "DEFAULT PARAMTERS FOR GAUSSIAN OPTIMIZATION"
 chk = False

@@ -107,45 +107,81 @@ def write_gaussian_input_file(file, name,lot, bs):
 			if atom.GetSymbol() in genecp_atoms:
 				genecp = 'genecp'
 
-	#pathto change to
-	path_write_gjf_files = 'gaussian/' + str(lot) + '-' + str(bs)
-	print(path_write_gjf_files)
-	os.chdir(path_write_gjf_files)
+	if single_point == True:
+		#pathto change to
+		path_write_gjf_files = 'sp/' + str(lot) + '-' + str(bs)
+		print(path_write_gjf_files)
+		os.chdir(path_write_gjf_files)
+	else:
+		#pathto change to
+		path_write_gjf_files = 'gaussian/' + str(lot) + '-' + str(bs)
+		print(path_write_gjf_files)
+		os.chdir(path_write_gjf_files)
 
 	path_for_file = '../../'
 
 	com = '{0}_.com'.format(name)
+	com_low = '{0}_low.com'.format(name)
 
 	#chk option
 	if chk == True:
 		if lot == 'b3lyp' and d3bj == True:
-			header = [
-				'%chk={}.chk'.format(name),
-				'%MEM={}'.format(mem),
-				'%nprocshared={}'.format(nprocs),
-				'# {0}'.format(lot)+ '/'+ genecp + ' '+ input + 'EmpiricalDispersion=GD3BJ']
+			if single_point == True:
+				header = [
+					'%chk={}.chk'.format(name),
+					'%MEM={}'.format(mem),
+					'%nprocshared={}'.format(nprocs),
+					'# {0}'.format(lot)+ '/'+ genecp + ' '+ input_sp + 'EmpiricalDispersion=GD3BJ']
+			else:
+				header = [
+					'%chk={}.chk'.format(name),
+					'%MEM={}'.format(mem),
+					'%nprocshared={}'.format(nprocs),
+					'# {0}'.format(lot)+ '/'+ genecp + ' '+ input + 'EmpiricalDispersion=GD3BJ']
 		else:
-			header = [
-				'%chk={}.chk'.format(name),
-				'%MEM={}'.format(mem),
-				'%nprocshared={}'.format(nprocs),
-				'# {0}'.format(lot)+ '/'+ genecp + ' '+ input ]
+			if single_point == True:
+				header = [
+					'%chk={}.chk'.format(name),
+					'%MEM={}'.format(mem),
+					'%nprocshared={}'.format(nprocs),
+					'# {0}'.format(lot)+ '/'+ genecp + ' '+ input_sp ]
+			else:
+				header = [
+					'%chk={}.chk'.format(name),
+					'%MEM={}'.format(mem),
+					'%nprocshared={}'.format(nprocs),
+					'# {0}'.format(lot)+ '/'+ genecp + ' '+ input ]
 
 	else:
 		if lot == 'b3lyp' and d3bj == True:
-			header = [
-				'%MEM={}'.format(mem),
-				'%nprocshared={}'.format(nprocs),
-				'# {0}'.format(lot)+ '/'+ genecp + ' '+ input + 'EmpiricalDispersion=GD3BJ']
+			if single_point == True:
+					header = [
+						'%MEM={}'.format(mem),
+						'%nprocshared={}'.format(nprocs),
+						'# {0}'.format(lot)+ '/'+ genecp + ' '+ input_sp + 'EmpiricalDispersion=GD3BJ']
+			else:
+				header = [
+					'%MEM={}'.format(mem),
+					'%nprocshared={}'.format(nprocs),
+					'# {0}'.format(lot)+ '/'+ genecp + ' '+ input + 'EmpiricalDispersion=GD3BJ']
 		else:
-			header = [
-				'%MEM={}'.format(mem),
-				'%nprocshared={}'.format(nprocs),
-				'# {0}'.format(lot)+ '/'+ genecp + ' '+ input ]
+			if single_point == True:
+				header = [
+					'%MEM={}'.format(mem),
+					'%nprocshared={}'.format(nprocs),
+					'# {0}'.format(lot)+ '/'+ genecp + ' '+ input_sp ]
+			else:
+				header = [
+					'%MEM={}'.format(mem),
+					'%nprocshared={}'.format(nprocs),
+					'# {0}'.format(lot)+ '/'+ genecp + ' '+ input ]
 
-
-	subprocess.run(
-		  ['obabel', '-isdf', path_for_file+file, '-ocom', '-O'+com,'-m', '-xk', '\n'.join(header)])
+	if lowest_only == True:
+		subprocess.run(
+			  ['obabel', '-isdf', path_for_file+file, '-ocom', '-O'+com_low,'-l' , '1', '-xk', '\n'.join(header)]) #takes the lowest conformer which is the first in the file
+	else:
+		subprocess.run(
+			  ['obabel', '-isdf', path_for_file+file, '-ocom', '-O'+com,'-m', '-xk', '\n'.join(header)])
 
 	#adding the basis set at the end of the FILES
 	#grab all the com FILES
@@ -184,7 +220,7 @@ def write_gaussian_input_file(file, name,lot, bs):
 
 	os.chdir(path_for_file)
 
-" DEFINTION OF OUTPUT ANALYSER"
+" DEFINTION OF OUTPUT ANALYSER and NMR FILES CREATOR"
 def output_analyzer(log_files, w_dir, lot, bs, nprocs, mem, args):
 
 	# Atom IDs
@@ -207,28 +243,38 @@ def output_analyzer(log_files, w_dir, lot, bs, nprocs, mem, args):
 		FREQS, REDMASS, FORCECONST, NORMALMODE = [],[],[],[]; IM_FREQS = 0
 		freqs_so_far = 0
 		TERMINATION = "unfinished"
+		###stop=0
+		### Change to reverse
 		for i in range(0,len(outlines)):
+			###if stop == 3: break
 			# Get the name of the compound (specified in the title)
 			if outlines[i].find('Symbolic Z-matrix:') > -1:
 				name = outlines[i-2].split()[0]
+				###stop=stop+1
 			# Determine the kind of job termination
 			if outlines[i].find("Normal termination") > -1:
 				TERMINATION = "normal"
+				###stop=stop+1
 			elif outlines[i].find("Error termination") > -1:
 				TERMINATION = "error"
+				###stop=stop+1
 			# Determine charge and multiplicity
 			if outlines[i].find("Charge = ") > -1:
 				CHARGE = int(outlines[i].split()[2])
 				MULT = int(outlines[i].split()[5].rstrip("\n"))
+				###stop=stop+1
 
+
+		###reverse
 		for i in range(0,len(outlines)):
 			if TERMINATION == "normal":
 				# Sets where the final coordinates are inside the file
-				if outlines[i].find("Input orientation") > -1: standor = i
+				###if outlines[i].find("Input orientation") > -1: standor = i
 				if outlines[i].find("Standard orientation") > -1: standor = i
 				if outlines[i].find("Distance matrix") > -1 or outlines[i].find("Rotational constants") >-1:
 					if outlines[i-1].find("-------") > -1:
 						NATOMS = i-standor-6
+						###break
 				# Get the frequencies and identifies negative frequencies
 				if outlines[i].find(" Frequencies -- ") > -1:
 					nfreqs = len(outlines[i].split())
@@ -263,6 +309,7 @@ def output_analyzer(log_files, w_dir, lot, bs, nprocs, mem, args):
 
 		if TERMINATION != "normal":
 			# Get the coordinates for jobs that did not finished or finished with an error
+			###reverse copy from above
 			for i in range(0,stop_rms):
 				# Sets where the final coordinates are inside the file
 				if outlines[i].find("Input orientation") > -1: standor = i
@@ -270,6 +317,7 @@ def output_analyzer(log_files, w_dir, lot, bs, nprocs, mem, args):
 				if outlines[i].find("Distance matrix") > -1 or outlines[i].find("Rotational constants") >-1:
 					if outlines[i-1].find("-------") > -1:
 						NATOMS = i-standor-6
+			###no change after this
 			for i in range (standor+5,standor+5+NATOMS):
 				massno = int(outlines[i].split()[1])
 				if massno < len(periodictable):
@@ -306,7 +354,7 @@ def output_analyzer(log_files, w_dir, lot, bs, nprocs, mem, args):
 		# termination and number of imag. freqs
 		source = w_dir+file
 
-		if IM_FREQS == 0 and TERMINATION == "normal":
+		if IM_FREQS == 0 and TERMINATION == "normal" and args.nmr != True:
 			#only if normally terminated move to the finished folder of first run.
 			if args.secondrun != True:
 				destination = w_dir+'Finished/'
@@ -368,7 +416,7 @@ def output_analyzer(log_files, w_dir, lot, bs, nprocs, mem, args):
 					raise
 
 			os.chdir(new_gaussian_input_files)
-			print('Creating new files')
+			print('Creating new gaussian input files')
 			# Settings for the com files
 			basis_set = bs
 			basis_set_I = 'LANL2DZ'
@@ -384,8 +432,79 @@ def output_analyzer(log_files, w_dir, lot, bs, nprocs, mem, args):
 				genecp = 'gen'
 			if ecp_I == True:
 				genecp = 'genecp'
-			solvent = ''
-			keywords_opt = lot +'/'+ genecp+' '+ solvent +' Opt freq=noraman '
+			solvent_input = 'SCRF=(Solvent={0})'.format(solvent)
+			if lot == 'b3lyp' and d3bj == True:
+				keywords_opt = lot +'/'+ genecp+' '+ solvent_input +' Opt freq=noraman ' + 'EmpiricalDispersion=GD3BJ'
+			else:
+				keywords_opt = lot +'/'+ genecp+' '+ solvent_input +' Opt freq=noraman '
+
+			fileout = open(file.split(".")[0]+'.com', "w")
+			fileout.write("%mem="+str(mem)+"\n")
+			fileout.write("%nprocshared="+str(nprocs)+"\n")
+			fileout.write("# "+keywords_opt+"\n")
+			fileout.write("\n")
+			fileout.write(name+"\n")
+			fileout.write("\n")
+			fileout.write(str(CHARGE)+' '+str(MULT)+'\n')
+			for atom in range(0,NATOMS):
+				fileout.write('{0:>2} {1:12.8f} {2:12.8f} {3:12.8f}'.format(ATOMTYPES[atom], CARTESIANS[atom][0],  CARTESIANS[atom][1],  CARTESIANS[atom][2]))
+				fileout.write("\n")
+			fileout.write("\n")
+			for i in range(len(ecp_list)):
+				if ecp_list[i] != 'I':
+					fileout.write(ecp_list[i]+' ')
+			fileout.write('0\n')
+			fileout.write(basis_set+'\n')
+			fileout.write('****\n')
+			if ecp_I == False:
+				fileout.write('\n')
+			else:
+				fileout.write('I     0\n')
+				fileout.write(basis_set_I+'\n')
+				fileout.write('****\n\n')
+				fileout.write('I 0\n')
+				fileout.write(basis_set_I+'\n\n')
+			fileout.close()
+
+		#changing directory back to where all files are from new files created.
+		os.chdir(w_dir)
+
+		#adding in the NMR componenet only to the finished files after reading from normally finished log files
+		if args.nmr == True:
+
+			# creating new folder with new input gaussian files
+			nmr_gaussian_input_files = w_dir+'/NMR_Gaussian_input_files'
+
+			try:
+				os.makedirs(nmr_gaussian_input_files)
+			except OSError:
+				if  os.path.isdir(nmr_gaussian_input_files):
+					os.chdir(nmr_gaussian_input_files)
+				else:
+					raise
+
+			os.chdir(nmr_gaussian_input_files)
+			print('Creating new NMR files')
+			# Settings for the com files
+			basis_set = bs
+			basis_set_I = 'LANL2DZ'
+			# Options for genecp
+			ecp_list,ecp_I = [],False
+			possible_atoms = ['N', 'P', 'As', 'C', 'Si', 'Ge', 'B', 'H', 'S', 'O', 'Se', 'F', 'Br', 'Cl', 'I']
+			for i in range(len(ATOMTYPES)):
+				if ATOMTYPES[i] not in ecp_list and ATOMTYPES[i] in possible_atoms:
+					ecp_list.append(ATOMTYPES[i])
+				if ATOMTYPES[i] == 'I':
+				   ecp_I = True
+			if ecp_I == False:
+				genecp = 'gen'
+			if ecp_I == True:
+				genecp = 'genecp'
+			solvent_input = 'SCRF=(Solvent={0})'.format(solvent)
+			if lot == 'b3lyp' and d3bj == True:
+				keywords_opt = lot +'/'+ genecp+' '+ solvent_input + 'EmpiricalDispersion=GD3BJ' + ' nmr=giao'
+			else:
+				keywords_opt = lot +'/'+ genecp+' '+ solvent_input + ' nmr=giao'
 
 			fileout = open(file.split(".")[0]+'.com', "w")
 			fileout.write("%mem="+str(mem)+"\n")
