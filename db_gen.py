@@ -114,8 +114,15 @@ if __name__ == "__main__":
 
 						#writing the com files
 					for file in sdf_to_gjf_files:
+						energies = []
+						f = open(file,"r")
+						readlines = f.readlines()
+						for i in range(len(readlines)):
+							if readlines[i].find('>  <Energy>') > -1:
+								energies.aappend(float(readlines[i+1].split()[0]))
+						f.close()
 						name = os.path.splitext(file)[0]
-						write_gaussian_input_file(file,name,lot, bs)
+						write_gaussian_input_file(file,name,lot, bs, energies)
 				else:
 					folder = 'gaussian/' + str(lot) + '-' + str(bs)
 
@@ -128,8 +135,16 @@ if __name__ == "__main__":
 							raise
 						#writing the com files
 					for file in sdf_to_gjf_files:
+						energies = []
+						f = open(file,"r")
+						readlines = f.readlines()
+						for i in range(len(readlines)):
+							if readlines[i].find('>  <Energy>') > -1:
+								energies.append(float(readlines[i+1].split()[0]))
+						f.close()
+						print(energies)
 						name = os.path.splitext(file)[0]
-						write_gaussian_input_file(file,name,lot, bs)
+						write_gaussian_input_file(file,name,lot, bs, energies)
 
 	if args.analysis == True:
 		# Sets the folder and find the log files to analyze

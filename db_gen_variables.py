@@ -21,7 +21,9 @@ opt_precision_ax = 1E-3 # toggle for optimization convergence
 single_point = False
 
 " ONLY LOWEST ENERGY CONFORMER REQUIRED"
-lowest_only = True
+lowest_only = False
+lowest_n  = True # for a given threshold of energy_threshold_for_gaussian
+energy_threshold_for_gaussian = 6.0 #in kJ/ mol
 
 " DEFAULT PARAMETERS FOR RDKIT GENERATION AND FILTERS"
 max_torsions = 5 #Skip any molecules with more than this many torsions (default 5)
@@ -65,6 +67,7 @@ input_sp = 'SCRF=(Solvent={0}) nmr=giao'.format(solvent)  #input for single poin
 chk = False
 nprocs=24
 mem='96GB'
+
 
 " MOLECULES now, for eg., molecule list, for later can use as total no. of molecules"
 molecules = [9,13,14,25,55]

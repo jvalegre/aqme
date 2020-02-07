@@ -96,7 +96,7 @@ def filters(mol):
 	return valid_structure
 
 " MAIN FUNCTION TO CREATE GAUSSIAN JOBS"
-def write_gaussian_input_file(file, name,lot, bs):
+def write_gaussian_input_file(file, name,lot, bs, energies):
 	#defining genecp
 	genecp = 'gen'
 
@@ -179,6 +179,20 @@ def write_gaussian_input_file(file, name,lot, bs):
 	if lowest_only == True:
 		subprocess.run(
 			  ['obabel', '-isdf', path_for_file+file, '-ocom', '-O'+com_low,'-l' , '1', '-xk', '\n'.join(header)]) #takes the lowest conformer which is the first in the file
+	elif lowest_n == True:
+		no_to_write = 0
+		if len(energies) != 1:
+			for i in range(len(energies)):
+				energy_diff = energies[i] - energies[0]
+				if energy_diff < energy_threshold_for_gaussian:
+					no_to_write +=1
+			subprocess.run(
+				 ['obabel', '-isdf', path_for_file+file, '-f', '1', '-l' , str(no_to_write), '-osdf', '-Otemp.sdf'])
+			subprocess.run(
+				  ['obabel', '-isdf', 'temp.sdf', '-ocom', '-O'+com,'-m', '-xk', '\n'.join(header)])
+		else:
+			subprocess.run(
+				  ['obabel', '-isdf', path_for_file+file, '-ocom', '-O'+com,'-m', '-xk', '\n'.join(header)])
 	else:
 		subprocess.run(
 			  ['obabel', '-isdf', path_for_file+file, '-ocom', '-O'+com,'-m', '-xk', '\n'.join(header)])
@@ -214,9 +228,9 @@ def write_gaussian_input_file(file, name,lot, bs):
 			fileout.write(basis_set_I+'\n\n')
 		fileout.close()
 
-		#submitting the gaussian file on summit
-		cmd = 'qsub_summit' + file
-		os.system(cmd)
+		# #submitting the gaussian file on summit
+		# cmd = 'qsub_summit' + file
+		# os.system(cmd)
 
 	os.chdir(path_for_file)
 
