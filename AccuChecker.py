@@ -22,14 +22,10 @@ and so on)
 
 Add one hot encoding:
 Here is basic one hot encoding.
-
 The data contains several descriptors, and the regressions are first run on a train/test 70:30 split using the descriptors. The best RF model is R2 0.89 and RMSE 0.4 kcal/mol – pretty good!
-
 The y-scramble and then x-scramble are run, and the regressions are much worse – so far so good!
-
 BUT – the final regression uses no descriptors, just one hot encoding. The best RF model is R2 0.88 and RMSE 0.4 kcal/mol !!!
-
 To support a descriptor-based model it is necessary to show the failure of the one hot regression on a test or other external prediction set.
 
-
+Add filter for duplicates in the database
 """
