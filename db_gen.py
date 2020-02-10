@@ -76,7 +76,7 @@ if __name__ == "__main__":
 			csv_smiles = pd.read_csv(args.input)
 			for i in range(len(csv_smiles)):
 				#assigning names and smi i  each loop
-				name = csv_smiles.loc[i, 'code_name']
+				name = csv_smiles.loc[i, 'Ir_cat']
 				smi = csv_smiles.loc[i, 'SMILES']
 				mol = Chem.MolFromSmiles(smi)
 				conformer_generation(mol,name,args)
@@ -99,8 +99,9 @@ if __name__ == "__main__":
 
 		sdf_to_gjf_files = glob.glob('*_confs.sdf')
 
+
 		for lot in level_of_theory:
-			for bs in basis_set:
+			for bs,bs_gcp in zip(basis_set,basis_set_genecp_atoms):
 				if single_point ==  True:
 					folder = 'sp/' + str(lot) + '-' + str(bs)
 
@@ -122,7 +123,7 @@ if __name__ == "__main__":
 								energies.aappend(float(readlines[i+1].split()[0]))
 						f.close()
 						name = os.path.splitext(file)[0]
-						write_gaussian_input_file(file,name,lot, bs, energies)
+						write_gaussian_input_file(file,name,lot, bs, bs_gcp, energies)
 				else:
 					folder = 'gaussian/' + str(lot) + '-' + str(bs)
 
@@ -144,24 +145,24 @@ if __name__ == "__main__":
 						f.close()
 						print(energies)
 						name = os.path.splitext(file)[0]
-						write_gaussian_input_file(file,name,lot, bs, energies)
+						write_gaussian_input_file(file,name,lot, bs, bs_gcp, energies)
 
 	if args.analysis == True:
 		# Sets the folder and find the log files to analyze
 		for lot in level_of_theory:
-			for bs in basis_set:
+			for bs,bs_gcp in zip(basis_set,basis_set_genecp_atoms):
 				if args.secondrun != True:
 					w_dir = args.path + str(lot) + '-' + str(bs)+'/'
 					os.chdir(w_dir)
 					log_files = glob.glob('*.log')
-					output_analyzer(log_files, w_dir, lot, bs, nprocs, mem, args)
+					output_analyzer(log_files, w_dir, lot, bs, bs_gcp, nprocs, mem, args)
 
 				else:
 					w_dir = args.path + str(lot) + '-' + str(bs)+'/New_Gaussian_Input_Files/'
 					if os.path.isdir(w_dir):
 						os.chdir(w_dir)
 						log_files = glob.glob('*.log')
-						output_analyzer(log_files, w_dir, lot, bs, nprocs, mem, args)
+						output_analyzer(log_files, w_dir, lot, bs, bs_gcp, nprocs, mem, args)
 					else:
 						pass
 
@@ -182,12 +183,12 @@ if __name__ == "__main__":
 	if args.nmr == True:
 		#chceck if ech level of theory has a folder New gaussin FILES
 		for lot in level_of_theory:
-			for bs in basis_set:
+			for bs,bs_gcp in zip(basis_set,basis_set_genecp_atoms):
 				w_dir = args.path + str(lot) + '-' + str(bs)+'/Finished'
 				if os.path.isdir(w_dir):
 					os.chdir(w_dir)
 					log_files = glob.glob('*.log')
-					output_analyzer(log_files, w_dir, lot, bs, nprocs, mem, args)
+					output_analyzer(log_files, w_dir, lot, bs,bs_gcp, nprocs, mem, args)
 				else:
 					pass
 

@@ -26,6 +26,7 @@ from db_gen_variables import *
 " FUCNTION WORKING WITH MOL OBJECT TO CREATE CONFORMERS"
 def conformer_generation(mol,name,args):
 	valid_structure = filters(mol)
+	print(valid_structure)
 	if valid_structure:
 		if args.verbose: print("o  Input Molecule:", name)
 
@@ -96,7 +97,7 @@ def filters(mol):
 	return valid_structure
 
 " MAIN FUNCTION TO CREATE GAUSSIAN JOBS"
-def write_gaussian_input_file(file, name,lot, bs, energies):
+def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies):
 	#defining genecp
 	genecp = 'gen'
 
@@ -202,30 +203,36 @@ def write_gaussian_input_file(file, name,lot, bs, energies):
 	com_files = glob.glob('{0}_*.com'.format(name))
 
 	for file in com_files:
-		ecp_list,ecp_I = [],False
+		ecp_list,ecp_genecp_atoms = [],False
 		read_lines = open(file,"r").readlines()
 		fileout = open(file, "a")
 		# Detect if there are I atoms to use genecp or not (to use gen)
 		for i in range(4,len(read_lines)):
 			if read_lines[i].split(' ')[0] not in ecp_list and read_lines[i].split(' ')[0] in possible_atoms:
 				ecp_list.append(read_lines[i].split(' ')[0])
-			if read_lines[i].split(' ')[0] == 'I':
-			   ecp_I = True
+			if read_lines[i].split(' ')[0] in genecp_atoms:
+			   ecp_genecp_atoms = True
 
 		for i in range(len(ecp_list)):
-			if ecp_list[i] != 'I':
+			if ecp_list[i] not in genecp_atoms:
 				fileout.write(ecp_list[i]+' ')
 		fileout.write('0\n')
 		fileout.write(bs+'\n')
 		fileout.write('****\n')
-		if ecp_I == False:
+		if ecp_genecp_atoms == False:
 			fileout.write('\n')
 		else:
-			fileout.write('I     0\n')
-			fileout.write(basis_set_I+'\n')
+			for i in range(len(ecp_list)):
+				if ecp_list[i] in genecp_atoms:
+					fileout.write(ecp_list[i]+' ')
+			fileout.write('0\n')
+			fileout.write(bs_gcp+'\n')
 			fileout.write('****\n\n')
-			fileout.write('I 0\n')
-			fileout.write(basis_set_I+'\n\n')
+			for i in range(len(ecp_list)):
+				if ecp_list[i] in genecp_atoms:
+					fileout.write(ecp_list[i]+' ')
+			fileout.write('0\n')
+			fileout.write(bs_gcp+'\n\n')
 		fileout.close()
 
 		# #submitting the gaussian file on summit
@@ -235,7 +242,7 @@ def write_gaussian_input_file(file, name,lot, bs, energies):
 	os.chdir(path_for_file)
 
 " DEFINTION OF OUTPUT ANALYSER and NMR FILES CREATOR"
-def output_analyzer(log_files, w_dir, lot, bs, nprocs, mem, args):
+def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, nprocs, mem, args):
 
 	# Atom IDs
 	periodictable = ["","H","He","Li","Be","B","C","N","O","F","Ne","Na","Mg","Al","Si","P","S","Cl","Ar","K","Ca","Sc","Ti","V","Cr","Mn","Fe","Co","Ni","Cu","Zn","Ga","Ge","As","Se","Br","Kr","Rb","Sr","Y","Zr",
@@ -431,26 +438,24 @@ def output_analyzer(log_files, w_dir, lot, bs, nprocs, mem, args):
 
 			os.chdir(new_gaussian_input_files)
 			print('Creating new gaussian input files')
-			# Settings for the com files
-			basis_set = bs
-			basis_set_I = 'LANL2DZ'
+
 			# Options for genecp
-			ecp_list,ecp_I = [],False
-			possible_atoms = ['N', 'P', 'As', 'C', 'Si', 'Ge', 'B', 'H', 'S', 'O', 'Se', 'F', 'Br', 'Cl', 'I']
+			ecp_list,ecp_genecp_atoms = [],False
+
 			for i in range(len(ATOMTYPES)):
 				if ATOMTYPES[i] not in ecp_list and ATOMTYPES[i] in possible_atoms:
 					ecp_list.append(ATOMTYPES[i])
-				if ATOMTYPES[i] == 'I':
-				   ecp_I = True
-			if ecp_I == False:
+				if ATOMTYPES[i] in genecp_atoms:
+				   ecp_genecp_atoms = True
+			if ecp_genecp_atoms == False:
 				genecp = 'gen'
-			if ecp_I == True:
+			if ecp_genecp_atoms == True:
 				genecp = 'genecp'
-			solvent_input = 'SCRF=(Solvent={0})'.format(solvent)
+
 			if lot == 'b3lyp' and d3bj == True:
-				keywords_opt = lot +'/'+ genecp+' '+ solvent_input +' Opt freq=noraman ' + 'EmpiricalDispersion=GD3BJ'
+				keywords_opt = lot +'/'+ genecp+' '+ input + 'EmpiricalDispersion=GD3BJ'
 			else:
-				keywords_opt = lot +'/'+ genecp+' '+ solvent_input +' Opt freq=noraman '
+				keywords_opt = lot +'/'+ genecp+' '+ input
 
 			fileout = open(file.split(".")[0]+'.com', "w")
 			fileout.write("%mem="+str(mem)+"\n")
@@ -465,19 +470,25 @@ def output_analyzer(log_files, w_dir, lot, bs, nprocs, mem, args):
 				fileout.write("\n")
 			fileout.write("\n")
 			for i in range(len(ecp_list)):
-				if ecp_list[i] != 'I':
+				if ecp_list[i] not in genecp_atoms:
 					fileout.write(ecp_list[i]+' ')
 			fileout.write('0\n')
-			fileout.write(basis_set+'\n')
+			fileout.write(bs+'\n')
 			fileout.write('****\n')
-			if ecp_I == False:
+			if ecp_genecp_atoms == False:
 				fileout.write('\n')
 			else:
-				fileout.write('I     0\n')
-				fileout.write(basis_set_I+'\n')
+				for i in range(len(ecp_list)):
+					if ecp_list[i] in genecp_atoms:
+						fileout.write(ecp_list[i]+' ')
+				fileout.write('0\n')
+				fileout.write(bs_gcp+'\n')
 				fileout.write('****\n\n')
-				fileout.write('I 0\n')
-				fileout.write(basis_set_I+'\n\n')
+				for i in range(len(ecp_list)):
+					if ecp_list[i] in genecp_atoms:
+						fileout.write(ecp_list[i]+' ')
+				fileout.write('0\n')
+				fileout.write(bs_gcp+'\n\n')
 			fileout.close()
 
 		#changing directory back to where all files are from new files created.
@@ -501,18 +512,18 @@ def output_analyzer(log_files, w_dir, lot, bs, nprocs, mem, args):
 			print('Creating new NMR files')
 			# Settings for the com files
 			basis_set = bs
-			basis_set_I = 'LANL2DZ'
+			basis_set_genecp_atoms = 'LANL2DZ'
 			# Options for genecp
-			ecp_list,ecp_I = [],False
+			ecp_list,ecp_genecp_atoms = [],False
 			possible_atoms = ['N', 'P', 'As', 'C', 'Si', 'Ge', 'B', 'H', 'S', 'O', 'Se', 'F', 'Br', 'Cl', 'I']
 			for i in range(len(ATOMTYPES)):
 				if ATOMTYPES[i] not in ecp_list and ATOMTYPES[i] in possible_atoms:
 					ecp_list.append(ATOMTYPES[i])
 				if ATOMTYPES[i] == 'I':
-				   ecp_I = True
-			if ecp_I == False:
+				   ecp_genecp_atoms = True
+			if ecp_genecp_atoms == False:
 				genecp = 'gen'
-			if ecp_I == True:
+			if ecp_genecp_atoms == True:
 				genecp = 'genecp'
 			solvent_input = 'SCRF=(Solvent={0})'.format(solvent)
 			if lot == 'b3lyp' and d3bj == True:
@@ -538,14 +549,14 @@ def output_analyzer(log_files, w_dir, lot, bs, nprocs, mem, args):
 			fileout.write('0\n')
 			fileout.write(basis_set+'\n')
 			fileout.write('****\n')
-			if ecp_I == False:
+			if ecp_genecp_atoms == False:
 				fileout.write('\n')
 			else:
 				fileout.write('I     0\n')
-				fileout.write(basis_set_I+'\n')
+				fileout.write(basis_set_genecp_atoms+'\n')
 				fileout.write('****\n\n')
 				fileout.write('I 0\n')
-				fileout.write(basis_set_I+'\n\n')
+				fileout.write(basis_set_genecp_atoms+'\n\n')
 			fileout.close()
 
 		#changing directory back to where all files are from new files created.

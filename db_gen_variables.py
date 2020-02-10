@@ -10,7 +10,7 @@
 "TYPE OF OPTIMIZATION"
 # Options: xTB, AN1  Default : RDKIT optimizaiton
 ANI1ccx = False
-xtb = False
+xtb = True
 enso = False
 
 " OPTIMIZATION REQUIRED OR NOT"
@@ -22,8 +22,8 @@ single_point = False
 
 " ONLY LOWEST ENERGY CONFORMER REQUIRED"
 lowest_only = False
-lowest_n  = True # for a given threshold of energy_threshold_for_gaussian
-energy_threshold_for_gaussian = 6.0 #in kJ/ mol
+lowest_n  = False # for a given threshold of energy_threshold_for_gaussian
+energy_threshold_for_gaussian = 2.0 #in kJ/ mol
 
 " DEFAULT PARAMETERS FOR RDKIT GENERATION AND FILTERS"
 max_torsions = 5 #Skip any molecules with more than this many torsions (default 5)
@@ -47,27 +47,27 @@ energy_threshold = 0.05 #energy difference between unique conformers
 ewin = 40 #energy window to print conformers
 
 " DEFINITION OF ATOMS"
-possible_atoms = ['N', 'P', 'As', 'C', 'Si', 'Ge', 'B', 'H', 'S', 'O', 'Se', 'F', 'Br', 'Cl', 'I']
-genecp_atoms = ['I']
+possible_atoms = ['N', 'P', 'As', 'C', 'Si', 'Ge', 'B', 'H', 'S', 'O', 'Se', 'F', 'Br', 'Cl', 'I', 'Ir']
+genecp_atoms = ['I','Ir']
 
 "DEFINTION OF BASIS SET AND LEVEL OF THEORY"
 #dict_bs = {'M062X': ['6-31g**','6-31+g**','def2tzvp'], 'wb97xd': ['6-31g**','6-31+g**','def2tzvp'], 'B3LYP': ['6-31g** EmpiricalDispersion=GD3BJ', '6-31+g** EmpiricalDispersion=GD3BJ','def2tzvp EmpiricalDispersion=GD3BJ'  ]}
 ### from dictionary to pandas
 #dict_bs_genecp = {'M062X-D3': ['LANL2DZ','LANL2DZ','LANL2DZ'],'wb97xd': ['LANL2TZ'], 'B3LYP': ['LANL2DZ']}
 # basis_set_genecp_atoms = 'LANL2DZ'
-basis_set = ['6-31g**', '6-31+g**', 'def2tzvp']
-basis_set_I = 'LANL2DZ'
-level_of_theory = [ 'M062X', 'wb97xd', 'b3lyp']
+basis_set = ['LANL2DZ', 'LANL2TZ', '6-31g*']
+basis_set_genecp_atoms = ['LANL2DZ','LANL2TZ','LANL2DZ']
+level_of_theory = ['wb97xd']
 d3bj = True #now only set for b3lyp
 solvent = 'Acetonitrile'
-input = 'opt freq=noraman SCRF=(Solvent={0})'.format(solvent) #add solvent if needed
+input = 'opt freq=noraman'
+# input = 'opt freq=noraman SCRF=(Solvent={0})'.format(solvent) #add solvent if needed
 input_sp = 'SCRF=(Solvent={0}) nmr=giao'.format(solvent)  #input for single point
 
 "DEFAULT PARAMTERS FOR GAUSSIAN OPTIMIZATION"
 chk = False
 nprocs=24
 mem='96GB'
-
 
 " MOLECULES now, for eg., molecule list, for later can use as total no. of molecules"
 molecules = [9,13,14,25,55]
