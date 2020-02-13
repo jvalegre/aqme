@@ -19,6 +19,7 @@ from ase.units import kJ,mol,Hartree,kcal
 
 #import xtb
 #from xtb import GFN2
+output = '.sdf'
 final_output = '_confs.sdf'
 
 def get_conf_RMS(mol, c1,c2, heavy):

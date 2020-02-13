@@ -8,11 +8,11 @@
 
 " INPUT FILE"
 input ='smi.smi'
-path = '/Users/shreesowndarya/github/DBtoML/DBcg/gaussian1/'
+path = ''
 
 "GENERAL OPTIONS FOR COMMANDLINE"
 verbose = False
-compute = False
+compute = True
 analysis = False
 resubmit = False
 secondrun = False
@@ -23,7 +23,7 @@ combine = False
 "TYPE OF OPTIMIZATION"
 # Options: xTB, AN1  Default : RDKIT optimizaiton
 ANI1ccx = False
-xtb = False
+xtb = True
 #enso = False need to add in
 
 " SINGLE POINTS vs  FULL OPTIMIZATION"
@@ -62,16 +62,16 @@ energy_threshold_for_gaussian = 2.0 #in kJ/ mol
 genecp_atoms = ['I','Ir']
 
 "DEFINTION OF BASIS SET AND LEVEL OF THEORY AND SOLVENT"
-basis_set = ['6-31g**']
+basis_set = ['6-31g*']
 basis_set_genecp_atoms = ['LANL2DZ']
-level_of_theory = ['b3lyp']
+level_of_theory = ['M062X','wB97XD']
 
 #dispersion correction to be added or not
 dispersion_correction = False
 empirical_dispersion = 'D3BJ'
 
 # Specify the solvation model. Options: gas_phase or any solvation model (i.e. SMD, IEFPCM, CPCM)
-solvent_model = 'SMD'
+solvent_model = 'gas_phase'
 solvent_name = 'Acetonitrile'
 
 "DEFAULT PARAMTERS FOR GAUSSIAN OPTIMIZATION"
