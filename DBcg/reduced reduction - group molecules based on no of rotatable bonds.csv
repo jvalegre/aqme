@@ -1,9 +1,0 @@
-﻿Name,code_name,SMILES,no_of_rot_bonds,no_of_atoms
-"1,2-Dichloroethane",RE_9,ClCCCl,1,8
-"N,N-Dimethylformamide",RE_55,CN(C)C=O,2,12
-ethyl 2-bromoacetate,RE_13,CCOC(=O)CBr,3,14
-3-Methylbutyraldehyde,RE_25,CC(C)CC=O,4,16
-(Diacetoxy)iodobenzene,RE_78,CC(=O)O[IH2](OC(C)=O)c1ccccc1,5,28
-diethyl 2-bromoacetate,RE_14,CCOC(=O)C(Br)C(=O)OCC,6,23
-Tetrabutylammonium iodide,RE_74,CCCC[N+](CCCC)(CCCC)CCCC.[I-],16,54
-Tetrabutylammonium acetate,RE_59,CC(=O)[O-].CCCC[N+](CCCC)(CCCC)CCCC,17,60
