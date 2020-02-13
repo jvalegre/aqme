@@ -5,7 +5,20 @@
 
 * OTHER variables USED THROUGHOUT THE PROGRAM ARE ALSO SET HERE.
 """
-##add imports for xTB
+
+" INPUT FILE"
+input ='smi.smi'
+path = ''
+
+"GENERAL OPTIONS FOR COMMANDLINE"
+verbose = False
+compute = True
+analysis = False
+resubmit = False
+secondrun = False
+nmr = False
+boltz = False
+combine = False
 
 "TYPE OF OPTIMIZATION"
 # Options: xTB, AN1  Default : RDKIT optimizaiton
@@ -13,17 +26,9 @@ ANI1ccx = False
 xtb = False
 #enso = False need to add in
 
-" OPTIMIZATION REQUIRED OR NOT"
-opt_ax = True # switch to off for single point only
-opt_precision_ax = 1E-3 # toggle for optimization convergence
-
 " SINGLE POINTS vs  FULL OPTIMIZATION"
 single_point = False
 
-" ONLY LOWEST ENERGY CONFORMER REQUIRED"
-lowest_only = False
-lowest_n  = False # for a given threshold of energy_threshold_for_gaussian
-energy_threshold_for_gaussian = 2.0 #in kJ/ mol
 
 " DEFAULT PARAMETERS FOR RDKIT GENERATION AND FILTERS"
 max_torsions = 5 #Skip any molecules with more than this many torsions (default 5)
@@ -45,9 +50,15 @@ constraints = None
 rms_threshold = 0.25 #cutoff for considering sampled conformers the same (default 0.25)
 energy_threshold = 0.05 #energy difference between unique conformers
 ewin = 40 #energy window to print conformers
+convergence = 1.0 #Adjust convergence criteria of ANI and xtb optimizations (set at 0.005)
+time = False #request run time
+
+" ONLY LOWEST ENERGY CONFORMER REQUIRED"
+lowest_only = False
+lowest_n  = False # for a given threshold of energy_threshold_for_gaussian
+energy_threshold_for_gaussian = 2.0 #in kJ/ mol
 
 " DEFINITION OF ATOMS"
-possible_atoms = ['N', 'P', 'As', 'C', 'Si', 'Ge', 'B', 'H', 'S', 'O', 'Se', 'F', 'Br', 'Cl', 'I', 'Ir']
 genecp_atoms = ['I','Ir']
 
 "DEFINTION OF BASIS SET AND LEVEL OF THEORY AND SOLVENT"
@@ -63,35 +74,14 @@ empirical_dispersion = 'D3BJ'
 solvent_model = 'SMD'
 solvent_name = 'Acetonitrile'
 
-#definition of input lines
-if dispersion_correction == True:
-    if solvent_model == 'gas_phase':
-        input = 'opt freq=noraman EmpiricalDispersion=G{0}'.format(empirical_dispersion)
-        input_sp = 'nmr=giao EmpiricalDispersion=G{0}'.format(empirical_dispersion)  #input for single point nmr
-    else :
-        input = 'opt freq=noraman SCRF=({0},Solvent={1}) EmpiricalDispersion=G{2}'.format(solvent_model, solvent_name,empirical_dispersion ) #add solvent if needed
-        input_sp = 'SCRF=({0},Solvent={1}) nmr=giao EmpiricalDispersion=G{2}'.format(solvent_model, solvent_name, empirical_dispersion)  ##add solvent if needed
-else:
-    if solvent_model == 'gas_phase':
-        input = 'opt freq=noraman '
-        input_sp = 'nmr=giao ' #input for single point nmr
-    else :
-        input = 'opt freq=noraman SCRF=({0},Solvent={1})'.format(solvent_model, solvent_name) #add solvent if needed
-        input_sp = 'SCRF=({0},Solvent={1}) nmr=giao'.format(solvent_model, solvent_name)  ##add solvent if needed
-
-
 "DEFAULT PARAMTERS FOR GAUSSIAN OPTIMIZATION"
 chk = False
 nprocs=24
 mem='96GB'
 
 "TURN ON SUBMISSION OF JOBS"
-QSUB = False
+qsub = False
 submission_command = 'qsub_summit'
 
 " MOLECULES now, for eg., molecule list, for later can use as total no. of molecules it is need in the boltz part to read in specific molecules"
 maxnumber = 100 #max number in your database
-prefix = 'RE' #name syntax = prefix_maxnumber_confs_confsnumber.sdf
-
-"THERMODYNAMIC DATA CALCULATED FROM GOODVIBES"
-columns = ['Structure', 'E', 'ZPE', 'H', 'T.S', 'T.qh-S', 'G(T)', 'qh-G(T)']
