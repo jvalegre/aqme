@@ -12,7 +12,7 @@ How this works:
 - Place all the output files to analyze in folder XXX
 '''
 
-def output_analyzer(log_files, w_dir, lot, bs, nprocs, mem):
+def output_analyzer(log_files, w_dir, lot, bs, nprocs, mem, args):
 
     # Atom IDs
     periodictable = ["","H","He","Li","Be","B","C","N","O","F","Ne","Na","Mg","Al","Si","P","S","Cl","Ar","K","Ca","Sc","Ti","V","Cr","Mn","Fe","Co","Ni","Cu","Zn","Ga","Ge","As","Se","Br","Kr","Rb","Sr","Y","Zr",
@@ -26,7 +26,7 @@ def output_analyzer(log_files, w_dir, lot, bs, nprocs, mem):
     standor = 0
     NATOMS =0
 
-    print(log_files)
+    #print(log_files)
 
     for file in log_files:
         outfile = open(file,"r")
@@ -134,8 +134,12 @@ def output_analyzer(log_files, w_dir, lot, bs, nprocs, mem):
         # termination and number of imag. freqs
         source = w_dir+file
 
-        if IM_FREQS > 0:
-            destination = w_dir+'Imaginary frequencies/'
+        if IM_FREQS == 0 and TERMINATION == "normal":
+            #only if normally terminated move to the finished folder of first run.
+            if args.secondrun != True:
+                destination = w_dir+'Finished/'
+            else:
+                destination = w_dir+'../Finished/'
             try:
                 os.makedirs(destination)
                 shutil.move(source, destination)
@@ -145,8 +149,8 @@ def output_analyzer(log_files, w_dir, lot, bs, nprocs, mem):
                 else:
                     raise
 
-        if IM_FREQS == 0 and TERMINATION == "normal":
-            destination = w_dir+'Finished/'
+        if IM_FREQS > 0:
+            destination = w_dir+'Imaginary frequencies/'
             try:
                 os.makedirs(destination)
                 shutil.move(source, destination)
