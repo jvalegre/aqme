@@ -8,15 +8,17 @@ please report any bugs to svss@colostate.edu or juanvi89@hotmail.com.
 from db_gen_functions import *
 
 possible_atoms = ["H","He","Li","Be","B","C","N","O","F","Ne","Na","Mg","Al","Si","P","S","Cl","Ar","K","Ca","Sc","Ti","V","Cr","Mn","Fe","Co","Ni","Cu","Zn","Ga","Ge","As","Se","Br","Kr","Rb","Sr","Y","Zr",
-    "Nb","Mo","Tc","Ru","Rh","Pd","Ag","Cd","In","Sn","Sb","Te","I","Xe","Cs","Ba","La","Ce","Pr","Nd","Pm","Sm","Eu","Gd","Tb","Dy","Ho","Er","Tm","Yb","Lu","Hf","Ta","W","Re","Os","Ir","Pt","Au","Hg","Tl",
-    "Pb","Bi","Po","At","Rn","Fr","Ra","Ac","Th","Pa","U","Np","Pu","Am","Cm","Bk","Cf","Es","Fm","Md","No","Lr","Rf","Db","Sg","Bh","Hs","Mt","Ds","Rg","Uub","Uut","Uuq","Uup","Uuh","Uus","Uuo"]
+	"Nb","Mo","Tc","Ru","Rh","Pd","Ag","Cd","In","Sn","Sb","Te","I","Xe","Cs","Ba","La","Ce","Pr","Nd","Pm","Sm","Eu","Gd","Tb","Dy","Ho","Er","Tm","Yb","Lu","Hf","Ta","W","Re","Os","Ir","Pt","Au","Hg","Tl",
+	"Pb","Bi","Po","At","Rn","Fr","Ra","Ac","Th","Pa","U","Np","Pu","Am","Cm","Bk","Cf","Es","Fm","Md","No","Lr","Rf","Db","Sg","Bh","Hs","Mt","Ds","Rg","Uub","Uut","Uuq","Uup","Uuh","Uus","Uuo"]
 columns = ['Structure', 'E', 'ZPE', 'H', 'T.S', 'T.qh-S', 'G(T)', 'qh-G(T)']
 
 if __name__ == "__main__":
 
 	parser = argparse.ArgumentParser(description="Generate conformers depending on type of optimization (change parameters in db_gen_PATHS.py file).")
 
-	parser.add_argument("input",help="Input smi file pr SDF files")
+	parser.add_argument("--var",dest="var",action="store_true",default=False,help="If providing a Variable files")
+	parser.add_argument("--varfile",dest="varfile",help="Variable file")
+	parser.add_argument("--input",help="Input smi file pr SDF files")
 	parser.add_argument("-m","--maxnumber", help="Number of compounds", type=int, metavar="maxnumber")
 
 	parser.add_argument("-w","--compute", action="store_true", default=False, help="Create input files for Gaussian")
@@ -72,17 +74,13 @@ if __name__ == "__main__":
 
 	args = parser.parse_args()
 
-
-	# level_of_theory = [str(item) for item in args.level_of_theory.split(' ')]
-	# basis_set = [str(item) for item in args.basis_set.split(' ')]
-	# basis_set_genecp_atoms = [str(item) for item in args.basis_set_genecp_atoms.split(' ')]
-
-	  ### If the input file is python format then we will assume it contains variables ... ###
-	if os.path.splitext(args.input)[1] == '.py':
-	   print("o  READING VARIABLES FROM", args.input)
-	   print(os.path.splitext(args.input)[0])
-	   db_gen_variables = os.path.splitext(args.input)[0]
-	   import db_gen_variables as args
+	### If the input file is python format then we will assume it contains variables ... ###
+	if args.var == True:
+		if os.path.splitext(args.varfile)[1] == '.py':
+		   print("o  READING VARIABLES FROM", args.varfile)
+		   print(os.path.splitext(args.varfile)[0])
+		   db_gen_variables = os.path.splitext(args.varfile)[0]
+		   import db_gen_variables as args
 
 	if args.time: start_time = time.time()
 
@@ -224,17 +222,17 @@ if __name__ == "__main__":
 			for bs in args.basis_set:
 				for bs_gcp in args.basis_set_genecp_atoms:
 					if args.secondrun != True:
-						w_dir = args.path + str(lot) + '-' + str(bs)+'/'
+						w_dir = args.path + str(lot) + '-' + str(bs) +'/'
 						os.chdir(w_dir)
 						log_files = glob.glob('*.log')
-						output_analyzer(log_files, w_dir, lot, bs, bs_gcp, nprocs, mem, args)
+						output_analyzer(log_files, w_dir, lot, bs, bs_gcp, args)
 
 					else:
-						w_dir = args.path + str(lot) + '-' + str(bs)+'/New_Gaussian_Input_Files/'
+						w_dir = args.path + str(lot) + '-' + str(bs) +'/New_Gaussian_Input_Files/'
 						if os.path.isdir(w_dir):
 							os.chdir(w_dir)
 							log_files = glob.glob('*.log')
-							output_analyzer(log_files, w_dir, lot, bs, bs_gcp, nprocs, mem, args)
+							output_analyzer(log_files, w_dir, lot, bs, bs_gcp, args)
 						else:
 							pass
 
@@ -243,7 +241,7 @@ if __name__ == "__main__":
 		#chceck if ech level of theory has a folder New gaussin FILES
 		for lot in args.level_of_theory:
 			for bs in args.basis_set:
-				w_dir = args.path + str(lot) + '-' + str(bs)+'/New_Gaussian_Input_Files'
+				w_dir = args.path + str(lot) + '-' + str(bs) +'/New_Gaussian_Input_Files'
 				if  os.path.isdir(w_dir):
 					os.chdir(w_dir)
 					cmd = submission_command + ' *.com'
@@ -257,11 +255,11 @@ if __name__ == "__main__":
 		for lot in args.level_of_theory:
 			for bs in args.basis_set:
 				for bs_gcp in args.basis_set_genecp_atoms:
-					w_dir = args.path + str(lot) + '-' + str(bs)+'/Finished'
+					w_dir = args.path + str(lot) + '-' + str(bs) +'/Finished'
 					if os.path.isdir(w_dir):
 						os.chdir(w_dir)
 						log_files = glob.glob('*.log')
-						output_analyzer(log_files, w_dir, lot, bs,bs_gcp, nprocs, mem, args)
+						output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args)
 					else:
 						pass
 
@@ -270,13 +268,13 @@ if __name__ == "__main__":
 		# Sets the folder and find the log files to analyze
 		for lot in args.level_of_theory:
 			for bs in args.basis_set:
-				w_dir = args.path + str(lot) + '-' + str(bs)+'/'+'Finished'
+				w_dir = args.path + str(lot) + '-' + str(bs) +'/'+'Finished'
 				os.chdir(w_dir)
 				#can change molecules to a range as files will have codes in a continous manner
 				for i in range(args.maxnumber):
 					#grab all the corresponding files make sure to renamme prefix when working with differnet files
 					try:
-						log_files = glob.glob(comp + '_' + str(i)+'_'+'*.log')
+						log_files = glob.glob(comp + '_' + str(i)+'-'+'*.log')
 					except:
 						pass
 					#print(log_files)

@@ -234,7 +234,9 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args):
 	os.chdir(path_for_file)
 
 " DEFINTION OF OUTPUT ANALYSER and NMR FILES CREATOR"
-def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, nprocs, mem, args):
+def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args):
+
+	print(w_dir)
 
 	#definition of input lines
 	if args.dispersion_correction == True:
@@ -444,6 +446,7 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, nprocs, mem, args):
 					raise
 
 			os.chdir(new_gaussian_input_files)
+			print("vrbbtbtwrb")
 			print('Creating new gaussian input files')
 
 			# Options for genecp
@@ -459,14 +462,14 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, nprocs, mem, args):
 			if ecp_genecp_atoms == True:
 				genecp = 'genecp'
 
-			if single_point == True:
+			if args.single_point == True:
 				keywords_opt = lot +'/'+ genecp+' '+ input_sp
 			else:
 				keywords_opt = lot +'/'+ genecp+' '+ input
 
 			fileout = open(file.split(".")[0]+'.com', "w")
-			fileout.write("%mem="+str(mem)+"\n")
-			fileout.write("%nprocshared="+str(nprocs)+"\n")
+			fileout.write("%mem="+str(args.mem)+"\n")
+			fileout.write("%nprocshared="+str(args.nprocs)+"\n")
 			fileout.write("# "+keywords_opt+"\n")
 			fileout.write("\n")
 			fileout.write(name+"\n")
@@ -534,8 +537,8 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, nprocs, mem, args):
 			keywords_opt = lot +'/'+ genecp+' '+ ' nmr=giao'
 
 			fileout = open(file.split(".")[0]+'.com', "w")
-			fileout.write("%mem="+str(mem)+"\n")
-			fileout.write("%nprocshared="+str(nprocs)+"\n")
+			fileout.write("%mem="+str(args.mem)+"\n")
+			fileout.write("%nprocshared="+str(args.nprocs)+"\n")
 			fileout.write("# "+keywords_opt+"\n")
 			fileout.write("\n")
 			fileout.write(name+"\n")
@@ -628,6 +631,6 @@ def combine_files(csv_files, lot, bs, args):
 	os.chdir(destination)
 
 	#export to csv
-	final_file_all_data.to_csv( str(lot) + '-' + str(bs)+ '_all_molecules_all data.csv', index=False, encoding='utf-8-sig')
-	final_file_avg_thermo_data.to_csv( str(lot) + '-' + str(bs)+ '_all_molecules_avg_thermo_data.csv', index=False, encoding='utf-8-sig')
-	compare_G.to_csv( str(lot) + '-' + str(bs)+ '_all_molecules_compare_G(T).csv', index=False, encoding='utf-8-sig')
+	final_file_all_data.to_csv( str(lot) + '-' + str(bs) + '_all_molecules_all data.csv', index=False, encoding='utf-8-sig')
+	final_file_avg_thermo_data.to_csv( str(lot) + '-' + str(bs) + '_all_molecules_avg_thermo_data.csv', index=False, encoding='utf-8-sig')
+	compare_G.to_csv( str(lot) + '-' + str(bs) + '_all_molecules_compare_G(T).csv', index=False, encoding='utf-8-sig')

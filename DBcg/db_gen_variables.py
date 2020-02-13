@@ -8,16 +8,16 @@
 
 " INPUT FILE"
 input ='smi.smi'
-path = ''
+path = '/Users/shreesowndarya/github/DBtoML/DBcg/gaussian1/'
 
 "GENERAL OPTIONS FOR COMMANDLINE"
 verbose = False
-compute = True
+compute = False
 analysis = False
 resubmit = False
 secondrun = False
 nmr = False
-boltz = False
+boltz = True
 combine = False
 
 "TYPE OF OPTIMIZATION"
@@ -62,9 +62,9 @@ energy_threshold_for_gaussian = 2.0 #in kJ/ mol
 genecp_atoms = ['I','Ir']
 
 "DEFINTION OF BASIS SET AND LEVEL OF THEORY AND SOLVENT"
-basis_set = ['LANL2DZ', 'LANL2TZ', '6-31g*']
-basis_set_genecp_atoms = ['LANL2DZ','LANL2TZ','LANL2DZ']
-level_of_theory = ['wb97xd']
+basis_set = ['6-31g**']
+basis_set_genecp_atoms = ['LANL2DZ']
+level_of_theory = ['b3lyp']
 
 #dispersion correction to be added or not
 dispersion_correction = False

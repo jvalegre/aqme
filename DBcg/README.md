@@ -8,6 +8,7 @@ As of now, all files are created and analyzed by the program (user only required
 Allows for creation of different input files by varying the following:
 1. Level of Theory
 2. Basis Set (accounts for transition metals by invoking genecp)
+2. Basis Set genecp atoms (only one type can be specified as of now)
 3. Solvation
 4. Full optimization vs Single Point Calculations(all single points do an NMR calculation).
 5. Automatic submission of .com files once they are created if run on summit.
@@ -31,35 +32,6 @@ Limitations:
 1. Salts or complexes with more than one molecule wont work. (RDkit doesn't know how to handle multiple molecules, need to figure out this!)
 2. Transition states don't work (need to figure how to generalise templates)
 
-
-Steps involved in running the db_gen.py script
-
-#pass the respective file as the first argument
-1. Running the compute job for either csv, smi, sdf, cdx
-python /DBcg/db_gen.py --compute --input example.smi
-
-#PWD : location in which the program is run
-#now after the above step all jobs would have been submitted.
-2. Check for any non normal termination using the output analysis
-python /DBcg/db_gen.py --analysis --path $(PWD)/gaussian/
-
-##resubmit the gaussian jobs if the didnt normally terminate
-3. Resubmit gaussian jobs if they didnt terminate normally
-python /DBcg/db_gen.py --resubmit --path $(PWD)/gaussian/
-
-##once resubmission is completed analyse the NEWLY CREATED Files and moves the normally terminated to the finished folder
-4. sheck for any non normal termination using the output analysis after the second run
-python /DBcg/db_gen.py --analysis --secondrun --path $(PWD)/gaussian/
-
-##creating the NMR input files from finished log files i.e., for doing NMR after DFT optimization
-5. Carry out NMR of DFT optimised files
-python /DBcg/db_gen.py --nmr --path $(PWD)/gaussian/
-
-##carrying out the boltzmann from goodvibes
-##note change the name of the log files accoring to your description in the reading of log files part
-4. Get the boltzmann contribution for each molecule in the database
-python /DBcg/db_gen.py --boltz --path $(PWD)/gaussian/
-
-##combing all the energies for all molecules and printing the output in one csv_file
-5. Combine all the results for molecules in the data base
-python //DBcg/db_gen.py --combine --path $(PWD)/gaussian/
+Possible methods of invoking the script:
+1.  python db_gen.py --var --varfile db_gen_variables.py (from a file of .py format)
+2. python db_gen.py args (command line arguments)
