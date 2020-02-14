@@ -30,7 +30,7 @@ Analysis for Boltzmann averaging and combining files
 
 
 ## Possible methods of invoking the script:
-1. python -m DBGEN --compute --input FILENAME.smi --varfile db_gen_variables.py (it reads all the variables from a file of .py format)
+1. python -m DBGEN --compute --input FILENAME.smi --varfile params.py (it reads all the variables from a file of .py format)
 2. python -m DBGEN --compute --input FILENAME.smi args (command line arguments)
 
 
@@ -49,6 +49,10 @@ python -m DBGEN --compute --input FILENAME.sdf
 #### (3) Multiple SMILES or SDF files:
 python -m DBGEN --compute --input \*.smi
 
+#### (4) Multiple SDF files with paramaters adjusted for a certain DFT level:
+python -m DBGEN --compute --varfile params.py --input \*.sdf
+
+*** *First, make sure you edit the params.py with the level of theory and type of calculation that you want
 
 ## To Do list:
 1. Add ENSO conformer generation
