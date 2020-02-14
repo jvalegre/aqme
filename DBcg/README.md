@@ -37,6 +37,7 @@ Examples:
 (1) File with SMILES:
 python -m DBGEN --compute --input FILENAME.smi
 (where FILENAME.smi has the format /SMILES NAME/:
+
 CCCCC pentane
 CCCCCC hexane
 
