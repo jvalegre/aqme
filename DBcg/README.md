@@ -23,17 +23,32 @@ Analysis for Boltzmann averaging and combining files
 1. Respective files for each molecule are grabbed and outputs for each molecule are written to a .csv files
 2. All the .csv for each molecule are grabbed and all thermodynamic data are written to three different .csv (all data, average data, comparison of lowest vs avg G)
 
-To Do list:
-1. Add ENSO conformer generation
-2. Automatic the work flow including the job running on the cluster.
-3. Check how runtime scales with number of atoms and rotatable bonds. Provide some examples.
-
 Limitations:
 1. Salts or complexes with more than one molecule wont work. (RDkit doesn't know how to handle multiple molecules, need to figure out this!)
 2. Transition states don't work (need to figure how to generalise templates)
 
+
 Possible methods of invoking the script:
-1.  python -m DBGEN --varfile db_gen_variables.py (from a file of .py format)
-2. python -m DBGEN args (command line arguments)
+1. python -m DBGEN --compute --input FILENAME.smi --varfile db_gen_variables.py (it reads all the variables from a file of .py format)
+2. python -m DBGEN --compute --input FILENAME.smi args (command line arguments)
+
+Examples:
+(1) File with SMILES:
+python -m DBGEN --compute --input FILENAME.smi
+(where FILENAME.smi has the format /SMILES NAME/:
+CCCCC pentane
+CCCCCC hexane
+
+(2) SDF file with 3D molecules:
+python -m DBGEN --compute --input FILENAME.sdf
+(where FILENAME.sdf contains all the molecules to use)
+
+(3) Multiple SMILES or SDF files:
+python -m DBGEN --compute --input \*.smi
+
+To Do list:
+1. Add ENSO conformer generation
+2. Automatic the work flow including the job running on the cluster.
+3. Check how runtime scales with number of atoms and rotatable bonds. Provide some examples.
 
 N.B. this requires the location of the DBGEN directory to be added to the $PYTHONPATH environment variable
