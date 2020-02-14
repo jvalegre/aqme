@@ -53,7 +53,7 @@ python -m DBGEN --compute --input \*.smi
 #### (4) Multiple SDF files with paramaters adjusted for a certain DFT level:
 python -m DBGEN --compute --varfile params.py --input \*.sdf
 
-*** First, make sure you edit the params.py with the level of theory and type of calculation that you want
+*** First, make sure that (1) you have the params.py file in the folder you are running the script and (2) you edit the params.py with the level of theory and type of calculation that you want
 
 ## To Do list:
 1. Add ENSO conformer generation
