@@ -33,6 +33,7 @@ Possible methods of invoking the script:
 2. python -m DBGEN --compute --input FILENAME.smi args (command line arguments)
 
 Examples:
+
 (1) File with SMILES:
 python -m DBGEN --compute --input FILENAME.smi
 (where FILENAME.smi has the format /SMILES NAME/:
