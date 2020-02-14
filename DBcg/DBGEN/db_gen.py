@@ -12,14 +12,13 @@ possible_atoms = ["H","He","Li","Be","B","C","N","O","F","Ne","Na","Mg","Al","Si
 	"Pb","Bi","Po","At","Rn","Fr","Ra","Ac","Th","Pa","U","Np","Pu","Am","Cm","Bk","Cf","Es","Fm","Md","No","Lr","Rf","Db","Sg","Bh","Hs","Mt","Ds","Rg","Uub","Uut","Uuq","Uup","Uuh","Uus","Uuo"]
 columns = ['Structure', 'E', 'ZPE', 'H', 'T.S', 'T.qh-S', 'G(T)', 'qh-G(T)']
 
-if __name__ == "__main__":
-
+def main():
 	parser = argparse.ArgumentParser(description="Generate conformers depending on type of optimization (change parameters in db_gen_PATHS.py file).")
 
-	parser.add_argument("--var",dest="var",action="store_true",default=False,help="If providing a Variable files")
-	parser.add_argument("--varfile",dest="varfile",help="Variable file")
-	parser.add_argument("--input",help="Input smi file pr SDF files")
+	parser.add_argument("--varfile",dest="varfile",default=None,help="Parameters in python format")
+	parser.add_argument("--input",help="Molecular structure")
 	parser.add_argument("-m","--maxnumber", help="Number of compounds", type=int, metavar="maxnumber")
+	parser.add_argument("--prefix", help="Prefix for naming files", default=None, metavar="prefix")
 
 	parser.add_argument("-w","--compute", action="store_true", default=False, help="Create input files for Gaussian")
 	parser.add_argument("-a","--analysis", action="store_true", default=False, help="Fix and analyze Gaussian output files")
@@ -53,7 +52,7 @@ if __name__ == "__main__":
 
 	#arguments for gaussian files Creation
 	parser.add_argument("-l", "--level_of_theory",help="Level of Theory", default=['wB97xd'], dest="level_of_theory", type=str, nargs='*')
-	parser.add_argument("--basis_set",  help="Basis Set", default=['6-31g**'], dest="basis_set", type=str, nargs='*')
+	parser.add_argument("--basis_set",  help="Basis Set", default=['6-31g*'], dest="basis_set", type=str, nargs='*')
 	parser.add_argument("--basis_set_genecp_atoms",default=['LANL2DZ'], help="Basis Set genecp: The length has to be the same as basis_set", dest="basis_set_genecp_atoms", type=str, nargs='?')
 	parser.add_argument("--genecp_atoms",  help="genecp atoms",default=[], dest="genecp_atoms",type=str, nargs='*')
 	parser.add_argument("--single_point",action="store_true", default=False, help="Request only single point calculation")
@@ -74,69 +73,62 @@ if __name__ == "__main__":
 
 	args = parser.parse_args()
 
+	if args.varfile != None: args.var = True
+	if args.time: start_time = time.time()
+
 	### If the input file is python format then we will assume it contains variables ... ###
 	if args.var == True:
 		if os.path.splitext(args.varfile)[1] == '.py':
-		   print("o  READING VARIABLES FROM", args.varfile)
-		   print(os.path.splitext(args.varfile)[0])
-		   db_gen_variables = os.path.splitext(args.varfile)[0]
-		   import db_gen_variables as args
-
-	if args.time: start_time = time.time()
+			db_gen_variables = os.path.splitext(args.varfile)[0]
+			print("\no  IMPORTING VARIABLES FROM", args.varfile)
+			args = __import__(db_gen_variables)
 
 ### check if it's working with *.smi (if it isn't, we need to change this a little bit)
 ### no it isnt working for *.smi, same or .sdf. We can add that feature in the end.
-	if args.compute == True:
-		#checking if .smi
-		if os.path.splitext(args.input)[1] == '.smi':
-			smifile = open(args.input)
-			root = os.path.splitext(args.input)[0]
 
-			m = 0
-			for line in smifile:
+	if args.compute == True: # this will perform conformational analysis and create inputs for Gaussian
+
+		# input file format specified
+		[file_name, file_format] = os.path.splitext(args.input)
+
+		if file_format not in ['.smi', '.sdf', '.cdx', '.csv']:
+			print("\nx  INPUT FILETYPE NOT CURRENTLY SUPPORTED!"); sys.exit()
+		else:
+			mol_objects = [] # a list of mol objects that will be populated
+
+		if file_format == '.smi': # SMILES input specified
+			smifile = open(args.input)
+
+			for i, line in enumerate(smifile):
 				toks = line.split()
 				smi = toks[0]
-				name = 'comp_'+str(m)+'_'+''.join(toks[1:])
+				if args.prefix == None: name = ''.join(toks[1:])
+				else: name = args.prefix+str(i)+'_'+''.join(toks[1:])
 
-				"""
-				if len(name) == 0: name = root
-				pieces = smi.split('.')
-				if len(pieces) > 1:
-					smi = max(pieces, key=len) #take largest component by length
-					print("Taking largest component: %s\t%s" % (smi,name))
-					"""
-					# finally converts each line to a rdkit mol object
+				# Converts each line to a rdkit mol object
+				if args.verbose: print("   -> Input Molecule {} from {}".format(smi, args.input))
 				mol = Chem.MolFromSmiles(smi)
-				print(Chem.MolToSmiles(mol))
-					#doing confomer genertion for each mol object
-				conformer_generation(mol,name,args)
-				m += 1
-					#checking if .sdf
-		elif os.path.splitext(args.input)[1] == '.sdf':
-			IDs = []
-			sdffile = args.input
-			root = os.path.splitext(args.input)[0]
+				mol_objects.append([mol, name])
 
+		elif file_format == '.sdf': # SDF input specified
+			sdffile = open(args.input)
+			IDs = []
 			f = open(sdffile,"r")
 			readlines = f.readlines()
-			for i in range(len(readlines)):
-				if readlines[i].find('>  <ID>') > -1:
-					ID = readlines[i+1].split()[0]
-					#if readlines[i].find('>  <NAME>') > -1:
-					#name = readlines[i+1].split()[0]
-					IDs.append(ID)
-			suppl = Chem.SDMolSupplier(sdffile)
-			i=0
-			m=0
-			for mol in suppl:
-				name = 'comp_'+str(m)+'_'+IDs[i]
-				#doing confomer genertion for each mol object
-				conformer_generation(mol,name,args)
-				i += 1
-				m += 1
 
-		#provide a .csv file with one columns SMILES and code_name
-		elif os.path.splitext(args.input)[1] == '.csv':
+			for i, line in enumerate(readlines):
+				if line.find('>  <ID>') > -1:
+					ID = readlines[i+1].split()[0]
+					IDs.append(ID)
+
+			suppl = Chem.SDMolSupplier(sdffile)
+
+			for i, mol in enumerate(suppl):
+				if args.prefix == None: name = IDs[i]
+				else: name = args.prefix+str(m)+'_'+IDs[i]
+				mol_objects.append([mol, name])
+
+		elif os.path.splitext(args.input)[1] == '.csv': # CSV file with one columns SMILES and code_name
 			csv_smiles = pd.read_csv(args.input)
 			m = 0
 			for i in range(len(csv_smiles)):
@@ -144,77 +136,64 @@ if __name__ == "__main__":
 				name = 'comp_'+str(m)+'_'+csv_smiles.loc[i, 'Ir_cat']
 				smi = csv_smiles.loc[i, 'SMILES']
 				mol = Chem.MolFromSmiles(smi)
-				conformer_generation(mol,name,args)
+				mol_objects.append([mol, name])
 				m += 1
 
-		#checking if .cdx
-		elif os.path.splitext(args.input)[1] == '.cdx':
+		elif os.path.splitext(args.input)[1] == '.cdx': # CDX file
 			#converting to smiles from chemdraw
 			subprocess.run(['obabel', '-icdx', args.input, '-osmi', '-O', 'cdx.smi'])
 			smifile = open('cdx.smi',"r")
 
-			m=0
-			for line in smifile:
-				name = 'comp' + str(m)+'_'
+			for i, line in enumerate(smifile):
+				name = 'comp' + str(i)+'_'
 				mol = Chem.MolFromSmiles(line)
-				conformer_generation(mol,name,args)
-				m += 1
+				mol_objects.append([mol, name])
 
-			# creating the com files from the sdf files created read *_confs.sdf
-			# READING THE SDF
+		for [mol, name] in mol_objects: # Run confomer generation for each mol object
+			conformer_generation(mol,name,args)
 
-		sdf_to_gjf_files = glob.glob('*_confs.sdf')
+		# creating the com files from the sdf files created read *_confs.sdf
+		conf_files = [name+'_confs.sdf' for mol,name in mol_objects]
 
+		# names for directories created
+		sp_dir = 'sp'
+		g_dir = 'gaussian'
 
 		for lot in args.level_of_theory:
 			for bs in args.basis_set:
 				for bs_gcp in args.basis_set_genecp_atoms:
-					if args.single_point ==  True:
-						folder = 'sp/' + str(lot) + '-' + str(bs)
 
-						try:
-							os.makedirs(folder)
+					if args.single_point ==  True: # only create this directory if single point calculation is requested
+						folder = sp_dir + '/' + str(lot) + '-' + str(bs)
+						print("\no  PREPARING SINGLE POINT INPUTS in {}".format(folder))
+						try: os.makedirs(folder)
 						except OSError:
-							if  os.path.isdir(folder):
-								pass
-							else:
-								raise
+							if  os.path.isdir(folder): pass
+							else: raise
 
-							#writing the com files
-						for file in sdf_to_gjf_files:
-							energies = []
-							f = open(file,"r")
-							readlines = f.readlines()
-							for i in range(len(readlines)):
-								if readlines[i].find('>  <Energy>') > -1:
-									energies.append(float(readlines[i+1].split()[0]))
-							f.close()
-							name = os.path.splitext(file)[0]
-							write_gaussian_input_file(file,name,lot, bs, bs_gcp, energies, args)
-					else:
+						#writing the com files
+						for file in conf_files: # check conf_file exists, parse energies and then write dft input
+							if os.path.exists(file):
+								if args.verbose: print("   -> Converting from {}".format(file))
+								energies = read_energies(file)
+								name = os.path.splitext(file)[0]
+								write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args)
 
-						folder = 'gaussian/' + str(lot) + '-' + str(bs)
-
-
-						try:
-							os.makedirs(folder)
+					else: # else create the directory for optimizations
+						folder = g_dir + '/' + str(lot) + '-' + str(bs)
+						print("\no  PREPARING GAUSSIAN INPUTS in {}".format(folder))
+						try: os.makedirs(folder)
 						except OSError:
-							if  os.path.isdir(folder):
-								pass
-							else:
-								raise
-							#writing the com files
-						for file in sdf_to_gjf_files:
-							energies = []
-							f = open(file,"r")
-							readlines = f.readlines()
-							for i in range(len(readlines)):
-								if readlines[i].find('>  <Energy>') > -1:
-									energies.append(float(readlines[i+1].split()[0]))
-							f.close()
-							print(energies)
-							name = os.path.splitext(file)[0]
-							write_gaussian_input_file(file,name,lot, bs, bs_gcp, energies, args)
+							if  os.path.isdir(folder): pass
+							else: raise
+
+						#writing the com files
+						for file in conf_files: # check conf_file exists, parse energies and then write dft input
+							if os.path.exists(file):
+								if args.verbose: print("   -> Converting from {}".format(file))
+								energies = read_energies(file)
+								name = os.path.splitext(file)[0]
+								write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args)
 
 	if args.analysis == True:
 		# Sets the folder and find the log files to analyze
@@ -277,7 +256,6 @@ if __name__ == "__main__":
 						log_files = glob.glob(comp + '_' + str(i)+'-'+'*.log')
 					except:
 						pass
-					#print(log_files)
 					val = ' '.join(log_files)
 					boltz_calculation(val,i)
 
@@ -290,3 +268,6 @@ if __name__ == "__main__":
 				#read the csv log_files
 				csv_files = glob.glob('Goodvibes*.csv')
 				combine_files(csv_files, lot, bs, args)
+
+if __name__ == "__main__":
+    main()

@@ -33,5 +33,7 @@ Limitations:
 2. Transition states don't work (need to figure how to generalise templates)
 
 Possible methods of invoking the script:
-1.  python db_gen.py --var --varfile db_gen_variables.py (from a file of .py format)
-2. python db_gen.py args (command line arguments)
+1.  python -m DBGEN --varfile db_gen_variables.py (from a file of .py format)
+2. python -m DBGEN args (command line arguments)
+
+N.B. this requires the location of the DBGEN directory to be added to the $PYTHONPATH environment variable

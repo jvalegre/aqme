@@ -17,8 +17,8 @@ device = torch.device('cpu')
 model = torchani.models.ANI1ccx()
 from ase.units import kJ,mol,Hartree,kcal
 
-#import xtb
-#from xtb import GFN2
+import xtb
+from xtb import GFN2
 output = '.sdf'
 final_output = '_confs.sdf'
 
@@ -97,7 +97,9 @@ def summ_search(mol, name,args):
 
 		#energy minimize all to get more realistic results
 		if args.verbose: print("o  Optimizing", len(cids), "initial conformers with", args.ff)
-		if args.verbose: print("o  Found", len(rotmatches), "rotatable torsions")
+		if args.verbose:
+			if args.nodihedrals == False: print("o  Found", len(rotmatches), "rotatable torsions")
+			else: print("o  Systematic torsion rotation is set to OFF")
 
 		cenergy = []
 		for i, conf in enumerate(cids):
@@ -128,8 +130,9 @@ def summ_search(mol, name,args):
 		for i, conf in enumerate(sortedcids):
 
 			#set torsions to zero
-			for m in rotmatches:
-				rdMolTransforms.SetDihedralRad(mol.GetConformer(conf),*m,value=0)
+			if len(rotmatches) != 0:
+				for m in rotmatches:
+					rdMolTransforms.SetDihedralRad(mol.GetConformer(conf),*m,value=0)
 			#check rmsd
 			for seenconf in selectedcids:
 				rms = get_conf_RMS(mol,seenconf,conf, args.heavyonly)
@@ -139,14 +142,14 @@ def summ_search(mol, name,args):
 				selectedcids.append(conf)
 
 		#now exhaustively drive torsions of selected conformers
-		if args.verbose: print("o ", len(selectedcids),"unique (ignoring torsions) starting conformers remain")
+		if args.verbose: print("o ", len(selectedcids),"unique conformers remain")
 		n_confs = int(len(selectedcids) * (360 / args.degree) ** len(rotmatches))
-		if args.verbose: print("o  Systematic generation of", n_confs, "confomers")
+		if args.verbose and len(rotmatches) != 0: print("o  Systematic generation of", n_confs, "confomers")
 
 		total = 0
 		for conf in selectedcids:
 			total += genConformer_r(mol, conf, 0, rotmatches, args.degree, sdwriter)
-		if args.verbose: print("o  %d total conformations generated"%total)
+		if args.verbose and len(rotmatches) != 0: print("o  %d total conformations generated"%total)
 
 	sdwriter.close()
 

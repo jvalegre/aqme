@@ -7,23 +7,24 @@
 """
 
 " INPUT FILE"
-input ='smi.smi'
+input ='example.smi'
 path = ''
 
 "GENERAL OPTIONS FOR COMMANDLINE"
-verbose = False
+verbose = True
 compute = True
 analysis = False
 resubmit = False
 secondrun = False
 nmr = False
-boltz = True
+boltz = False
 combine = False
+prefix = None
 
 "TYPE OF OPTIMIZATION"
 # Options: xTB, AN1  Default : RDKIT optimizaiton
 ANI1ccx = False
-xtb = True
+xtb = False
 #enso = False need to add in
 
 " SINGLE POINTS vs  FULL OPTIMIZATION"
@@ -31,11 +32,11 @@ single_point = False
 
 
 " DEFAULT PARAMETERS FOR RDKIT GENERATION AND FILTERS"
-max_torsions = 5 #Skip any molecules with more than this many torsions (default 5)
+max_torsions = 4 #Skip any molecules with more than this many torsions (default 5)
 max_MolWt = 1000
 heavyonly = True
 sample = 100 #number of conformers to sample to get non-torsional differences (default 100)
-nodihedrals = True #turn to TRUE if no dihydral scan is needed.
+nodihedrals = False #turn to TRUE if no dihydral scan is needed.
 
 " DEFAULT PARAMETERS FOR RDKIT OPTIMIZATION "
 ff = "MMFF" #can use MMFF ro UFF
@@ -54,17 +55,17 @@ convergence = 1.0 #Adjust convergence criteria of ANI and xtb optimizations (set
 time = False #request run time
 
 " ONLY LOWEST ENERGY CONFORMER REQUIRED"
-lowest_only = False
+lowest_only = True
 lowest_n  = False # for a given threshold of energy_threshold_for_gaussian
-energy_threshold_for_gaussian = 2.0 #in kJ/ mol
+energy_threshold_for_gaussian = 10  #in kJ/ mol
 
 " DEFINITION OF ATOMS"
-genecp_atoms = ['I','Ir']
+genecp_atoms = ['I','Br']
 
 "DEFINTION OF BASIS SET AND LEVEL OF THEORY AND SOLVENT"
-basis_set = ['6-31g*']
+basis_set = ['6-31G*']
 basis_set_genecp_atoms = ['LANL2DZ']
-level_of_theory = ['M062X','wB97XD']
+level_of_theory = ['wB97XD']
 
 #dispersion correction to be added or not
 dispersion_correction = False
@@ -85,3 +86,4 @@ submission_command = 'qsub_summit'
 
 " MOLECULES now, for eg., molecule list, for later can use as total no. of molecules it is need in the boltz part to read in specific molecules"
 maxnumber = 100 #max number in your database
+

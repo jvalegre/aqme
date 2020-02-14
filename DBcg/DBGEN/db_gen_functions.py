@@ -14,7 +14,7 @@ import numpy as np
 import pandas as pd
 
 from rdkit import Chem,DataStructs
-from rdkit.Chem import rdChemReactions,AllChem,Lipinski,Descriptors
+from rdkit.Chem import PropertyMol, rdChemReactions,AllChem,Lipinski,Descriptors
 import openbabel as ob
 import subprocess
 
@@ -25,9 +25,9 @@ from db_gen import possible_atoms, columns
 " FUCNTION WORKING WITH MOL OBJECT TO CREATE CONFORMERS"
 def conformer_generation(mol,name,args):
 	valid_structure = filters(mol, args)
-	print(valid_structure)
+	#print(valid_structure)
 	if valid_structure:
-		if args.verbose: print("o  Input Molecule:", name)
+		if args.verbose: print("\n   ----- {} -----".format(name))
 
 		try:
 			# the conformational search
@@ -35,7 +35,7 @@ def conformer_generation(mol,name,args):
 
 			# the multiple minimization returns a list of separate mol objects
 			conformers, energies = mult_min(mol, name, args)
-			print(energies)
+			#print(energies)
 
 			#only print if within predefined energy window
 			if len(conformers) > 0:
@@ -43,8 +43,9 @@ def conformer_generation(mol,name,args):
 				cids = list(range(len(conformers)))
 				sortedcids = sorted(cids, key = lambda cid: energies[cid])
 
+				np.set_printoptions(precision=3)
 				#print(name, *sorted(energies), sep = ", ")
-				print("o ", name, ":", np.array(sorted(energies)))
+				print("o  Final energies:", np.array(sorted(energies)))
 				#print(["{0:0.2f}".format(i) for i in sorted(energies)])
 
 				sdwriter = Chem.SDWriter(name+final_output)
@@ -68,11 +69,11 @@ def conformer_generation(mol,name,args):
 							write_confs += 1
 
 
-				if args.verbose == True: print("o  Wrote", write_confs, "conformers to file", name+final_output, "\n")
+				if args.verbose == True: print("   ----- {} conformers written to {} -----".format(write_confs, name+final_output))
 				sdwriter.close()
 			else: print("x  No conformers found!\n")
 
-		except (KeyboardInterrupt, SystemExit):
+		except (KeyboaddInterrupt, SystemExit):
 			raise
 		except Exception as e: print(traceback.print_exc())
 	else: print("ERROR: The structure is not valid")
@@ -96,6 +97,16 @@ def filters(mol,args):
 		else: valid_structure = False
 	else: valid_structure = False
 	return valid_structure
+
+def read_energies(file): # parses the energies from sdf files - then used to filter conformers
+	energies = []
+	f = open(file,"r")
+	readlines = f.readlines()
+	for i in range(len(readlines)):
+		if readlines[i].find('>  <Energy>') > -1:
+			energies.append(float(readlines[i+1].split()[0]))
+	f.close()
+	return energies
 
 " MAIN FUNCTION TO CREATE GAUSSIAN JOBS"
 def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args):
@@ -129,12 +140,12 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args):
 	if args.single_point == True:
 		#pathto change to
 		path_write_gjf_files = 'sp/' + str(lot) + '-' + str(bs)
-		print(path_write_gjf_files)
+		#print(path_write_gjf_files)
 		os.chdir(path_write_gjf_files)
 	else:
 		#pathto change to
 		path_write_gjf_files = 'gaussian/' + str(lot) + '-' + str(bs)
-		print(path_write_gjf_files)
+		#print(path_write_gjf_files)
 		os.chdir(path_write_gjf_files)
 
 	path_for_file = '../../'
