@@ -50,6 +50,8 @@ python -m DBGEN --compute --input FILENAME.sdf
 #### (3) Multiple SMILES or SDF files:
 python -m DBGEN --compute --input \*.smi
 
+python -m DBGEN --compute --input \*.sdf
+
 #### (4) Multiple SDF files with paramaters adjusted for a certain DFT level:
 python -m DBGEN --compute --varfile params.py --input \*.sdf
 
