@@ -40,6 +40,7 @@ python -m DBGEN --compute --input FILENAME.smi
 (where FILENAME.smi has the format /SMILES NAME/:
 
 CCCCC pentane
+
 CCCCCC hexane
 
 #### (2) SDF file with 3D molecules:
@@ -52,7 +53,7 @@ python -m DBGEN --compute --input \*.smi
 #### (4) Multiple SDF files with paramaters adjusted for a certain DFT level:
 python -m DBGEN --compute --varfile params.py --input \*.sdf
 
-*** *First, make sure you edit the params.py with the level of theory and type of calculation that you want
+*** First, make sure you edit the params.py with the level of theory and type of calculation that you want
 
 ## To Do list:
 1. Add ENSO conformer generation
