@@ -7,9 +7,14 @@ please report any bugs to svss@colostate.edu or juanvi89@hotmail.com.
 
 from db_gen_functions import *
 
-possible_atoms = ["H","He","Li","Be","B","C","N","O","F","Ne","Na","Mg","Al","Si","P","S","Cl","Ar","K","Ca","Sc","Ti","V","Cr","Mn","Fe","Co","Ni","Cu","Zn","Ga","Ge","As","Se","Br","Kr","Rb","Sr","Y","Zr",
-	"Nb","Mo","Tc","Ru","Rh","Pd","Ag","Cd","In","Sn","Sb","Te","I","Xe","Cs","Ba","La","Ce","Pr","Nd","Pm","Sm","Eu","Gd","Tb","Dy","Ho","Er","Tm","Yb","Lu","Hf","Ta","W","Re","Os","Ir","Pt","Au","Hg","Tl",
-	"Pb","Bi","Po","At","Rn","Fr","Ra","Ac","Th","Pa","U","Np","Pu","Am","Cm","Bk","Cf","Es","Fm","Md","No","Lr","Rf","Db","Sg","Bh","Hs","Mt","Ds","Rg","Uub","Uut","Uuq","Uup","Uuh","Uus","Uuo"]
+possible_atoms = ["", "H", "He", "Li", "Be", "B", "C", "N", "O", "F", "Ne", "Na", "Mg", "Al", "Si",
+                 "P", "S", "Cl", "Ar", "K", "Ca", "Sc", "Ti", "V", "Cr", "Mn", "Fe", "Co", "Ni", "Cu", "Zn",
+                 "Ga", "Ge", "As", "Se", "Br", "Kr", "Rb", "Sr", "Y", "Zr", "Nb", "Mo", "Tc", "Ru", "Rh", "Pd",
+                 "Ag", "Cd", "In", "Sn", "Sb", "Te", "I", "Xe", "Cs", "Ba", "La", "Ce", "Pr", "Nd", "Pm", "Sm",
+                 "Eu", "Gd", "Tb", "Dy", "Ho", "Er", "Tm", "Yb", "Lu", "Hf", "Ta", "W", "Re", "Os", "Ir", "Pt",
+                 "Au", "Hg", "Tl", "Pb", "Bi", "Po", "At", "Rn", "Fr", "Ra", "Ac", "Th", "Pa", "U", "Np", "Pu",
+                 "Am", "Cm", "Bk", "Cf", "Es", "Fm", "Md", "No", "Lr", "Rf", "Db", "Sg", "Bh", "Hs", "Mt", "Ds",
+                 "Rg", "Uub", "Uut", "Uuq", "Uup", "Uuh", "Uus", "Uuo"]
 columns = ['Structure', 'E', 'ZPE', 'H', 'T.S', 'T.qh-S', 'G(T)', 'qh-G(T)']
 
 def main():
@@ -55,6 +60,7 @@ def main():
 	parser.add_argument("--basis_set",  help="Basis Set", default=['6-31g*'], dest="basis_set", type=str, nargs='*')
 	parser.add_argument("--basis_set_genecp_atoms",default=['LANL2DZ'], help="Basis Set genecp: The length has to be the same as basis_set", dest="basis_set_genecp_atoms", type=str, nargs='?')
 	parser.add_argument("--genecp_atoms",  help="genecp atoms",default=[], dest="genecp_atoms",type=str, nargs='*')
+	parser.add_argument("--frequencies",action="store_true", default=False, help="Request only optimization without any frequency calculation")
 	parser.add_argument("--single_point",action="store_true", default=False, help="Request only single point calculation")
 	parser.add_argument("--lowest_only", action="store_true", default=False, help="Lowest conformer to write for gaussian")
 	parser.add_argument("--lowest_n", action="store_true", default=False, help="Lowest Number of conformers to write for gaussian")
@@ -72,6 +78,7 @@ def main():
 	parser.add_argument("--submission_command",  help="Queueing system that the submission is done on", default="qsub_summit", metavar="submission_command", type=str)
 
 	args = parser.parse_args()
+
 
 	if args.varfile != None: args.var = True
 	if args.time: start_time = time.time()
@@ -91,7 +98,7 @@ def main():
 		# input file format specified
 		[file_name, file_format] = os.path.splitext(args.input)
 
-		if file_format not in ['.smi', '.sdf', '.cdx', '.csv']:
+		if file_format not in ['.smi', '.sdf', '.cdx', '.csv','.com']:
 			print("\nx  INPUT FILETYPE NOT CURRENTLY SUPPORTED!"); sys.exit()
 		else:
 			mol_objects = [] # a list of mol objects that will be populated
@@ -120,6 +127,7 @@ def main():
 				if line.find('>  <ID>') > -1:
 					ID = readlines[i+1].split()[0]
 					IDs.append(ID)
+				else: IDs.append(i)
 
 			suppl = Chem.SDMolSupplier(sdffile)
 
@@ -133,7 +141,8 @@ def main():
 			m = 0
 			for i in range(len(csv_smiles)):
 				#assigning names and smi i  each loop
-				name = 'comp_'+str(m)+'_'+csv_smiles.loc[i, 'Ir_cat']
+				if args.prefix == None: name = csv_smiles.loc[i, 'code_name']
+				else: name = 'comp_'+str(m)+'_'+csv_smiles.loc[i, 'code_name']
 				smi = csv_smiles.loc[i, 'SMILES']
 				mol = Chem.MolFromSmiles(smi)
 				mol_objects.append([mol, name])
@@ -147,6 +156,48 @@ def main():
 			for i, line in enumerate(smifile):
 				name = 'comp' + str(i)+'_'
 				mol = Chem.MolFromSmiles(line)
+				mol_objects.append([mol, name])
+
+		elif os.path.splitext(args.input)[1] == '.com': # COM file
+			#converting to sdf from comfile to preserve geometry
+
+			comfile = open(args.input,"r")
+			comlines = comfile.readlines()
+
+			for i in range(0,len(comlines)):
+				if comlines[i][0].isdigit() and len(comlines[i-1].strip()) == 0:standor_initial = i+1
+				if len(comlines[i].strip()) == 0:standor_final = i
+
+			xyzfile = open(os.path.splitext(args.input)[0]+'.xyz',"w")
+
+			xyzfile.write(str(standor_final - standor_initial))
+			xyzfile.write('\n')
+			xyzfile.write(os.path.splitext(args.input)[0])
+			xyzfile.write('\n')
+			for i in range(standor_initial, standor_final):
+				xyzfile.write(comlines[i])
+
+			xyzfile.close()
+			comfile.close()
+
+			subprocess.run(['obabel', '-ixyz', os.path.splitext(args.input)[0]+'.xyz', '-osdf', '-O', os.path.splitext(args.input)[0]+'.sdf'])
+
+			sdffile = os.path.splitext(args.input)[0]+'.sdf'
+			IDs = []
+			f = open(sdffile,"r")
+			readlines = f.readlines()
+
+			for i, line in enumerate(readlines):
+				if line.find('>  <ID>') > -1:
+					ID = readlines[i+1].split()[0]
+					IDs.append(ID)
+				else: IDs.append(os.path.splitext(args.input)[0])
+
+			suppl = Chem.SDMolSupplier(sdffile)
+
+			for i, mol in enumerate(suppl):
+				if args.prefix == None: name = IDs[i]
+				else: name = args.prefix+str(m)+'_'+IDs[i]
 				mol_objects.append([mol, name])
 
 		for [mol, name] in mol_objects: # Run confomer generation for each mol object

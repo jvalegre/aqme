@@ -20,11 +20,13 @@ import subprocess
 
 from confgen import *
 
-from db_gen import possible_atoms, columns
+from db_gen import columns,possible_atoms
+
 
 " FUCNTION WORKING WITH MOL OBJECT TO CREATE CONFORMERS"
 def conformer_generation(mol,name,args):
 	valid_structure = filters(mol, args)
+	print(valid_structure)
 	#print(valid_structure)
 	if valid_structure:
 		if args.verbose: print("\n   ----- {} -----".format(name))
@@ -93,9 +95,14 @@ def filters(mol,args):
 				#Fourth filter: atoms outside the scope chosen in 'possible_atoms'
 				if atom.GetSymbol() not in possible_atoms:
 					valid_structure = False
+					if args.verbose == True: print(" Exiting as atom isn't in atoms in the periodic table")
 			#else: valid_structure = False
-		else: valid_structure = False
-	else: valid_structure = False
+		else:
+			valid_structure = False
+			if args.verbose == True: print(" Exiting as total molar mass > 1000")
+	else:
+		valid_structure = False
+		if args.verbose == True: print(" Exiting as number of rotatable bonds > 10")
 	return valid_structure
 
 def read_energies(file): # parses the energies from sdf files - then used to filter conformers
@@ -112,20 +119,36 @@ def read_energies(file): # parses the energies from sdf files - then used to fil
 def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args):
 
 	#definition of input lines
-	if args.dispersion_correction == True:
-	    if args.solvent_model == 'gas_phase':
-	        input = 'opt freq=noraman EmpiricalDispersion=G{0}'.format(args.empirical_dispersion)
-	        input_sp = 'nmr=giao EmpiricalDispersion=G{0}'.format(args.empirical_dispersion)  #input for single point nmr
-	    else :
-	        input = 'opt freq=noraman SCRF=({0},Solvent={1}) EmpiricalDispersion=G{2}'.format(args.solvent_model, args.solvent_name,args.empirical_dispersion ) #add solvent if needed
-	        input_sp = 'SCRF=({0},Solvent={1}) nmr=giao EmpiricalDispersion=G{2}'.format(args.solvent_model, args.solvent_name, args.empirical_dispersion)  ##add solvent if needed
+	if args.frequencies == True:
+		if args.dispersion_correction == True:
+		    if args.solvent_model == 'gas_phase':
+		        input = 'opt freq=noraman EmpiricalDispersion=G{0}'.format(args.empirical_dispersion)
+		        input_sp = 'nmr=giao EmpiricalDispersion=G{0}'.format(args.empirical_dispersion)  #input for single point nmr
+		    else :
+		        input = 'opt freq=noraman SCRF=({0},Solvent={1}) EmpiricalDispersion=G{2}'.format(args.solvent_model, args.solvent_name,args.empirical_dispersion ) #add solvent if needed
+		        input_sp = 'SCRF=({0},Solvent={1}) nmr=giao EmpiricalDispersion=G{2}'.format(args.solvent_model, args.solvent_name, args.empirical_dispersion)  ##add solvent if needed
+		else:
+		    if args.solvent_model == 'gas_phase':
+		        input = 'opt freq=noraman '
+		        input_sp = 'nmr=giao ' #input for single point nmr
+		    else :
+		        input = 'opt freq=noraman SCRF=({0},Solvent={1})'.format(args.solvent_model, args.solvent_name) #add solvent if needed
+		        input_sp = 'SCRF=({0},Solvent={1}) nmr=giao'.format(args.solvent_model, args.solvent_name)  ##add solvent if needed
 	else:
-	    if args.solvent_model == 'gas_phase':
-	        input = 'opt freq=noraman '
-	        input_sp = 'nmr=giao ' #input for single point nmr
-	    else :
-	        input = 'opt freq=noraman SCRF=({0},Solvent={1})'.format(args.solvent_model, args.solvent_name) #add solvent if needed
-	        input_sp = 'SCRF=({0},Solvent={1}) nmr=giao'.format(args.solvent_model, args.solvent_name)  ##add solvent if needed
+		if args.dispersion_correction == True:
+		    if args.solvent_model == 'gas_phase':
+		        input = 'opt EmpiricalDispersion=G{0}'.format(args.empirical_dispersion)
+		        input_sp = 'nmr=giao EmpiricalDispersion=G{0}'.format(args.empirical_dispersion)  #input for single point nmr
+		    else :
+		        input = 'opt SCRF=({0},Solvent={1}) EmpiricalDispersion=G{2}'.format(args.solvent_model, args.solvent_name,args.empirical_dispersion ) #add solvent if needed
+		        input_sp = 'SCRF=({0},Solvent={1}) nmr=giao EmpiricalDispersion=G{2}'.format(args.solvent_model, args.solvent_name, args.empirical_dispersion)  ##add solvent if needed
+		else:
+		    if args.solvent_model == 'gas_phase':
+		        input = 'opt '
+		        input_sp = 'nmr=giao ' #input for single point nmr
+		    else :
+		        input = 'opt SCRF=({0},Solvent={1})'.format(args.solvent_model, args.solvent_name) #add solvent if needed
+		        input_sp = 'SCRF=({0},Solvent={1}) nmr=giao'.format(args.solvent_model, args.solvent_name)  ##add solvent if needed
 
 	#defining genecp
 	genecp = 'gen'
@@ -153,96 +176,146 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args):
 	com = '{0}_.com'.format(name)
 	com_low = '{0}_low.com'.format(name)
 
-	#chk option
-	if args.chk == True:
-		if args.single_point == True:
-			header = [
-				'%chk={}.chk'.format(name),
-				'%MEM={}'.format(args.mem),
-				'%nprocshared={}'.format(args.nprocs),
-				'# {0}'.format(lot)+ '/'+ genecp + ' '+ input_sp ]
-		else:
-			header = [
+	if genecp =='genecp':
+		#chk option
+		if args.chk == True:
+			if args.single_point == True:
+				header = [
 					'%chk={}.chk'.format(name),
+					'%MEM={}'.format(args.mem),
+					'%nprocshared={}'.format(args.nprocs),
+					'# {0}'.format(lot)+ '/'+ genecp + ' '+ input_sp ]
+			else:
+				header = [
+						'%chk={}.chk'.format(name),
+						'%MEM={}'.format(args.mem),
+						'%nprocshared={}'.format(args.nprocs),
+						'# {0}'.format(lot)+ '/'+ genecp + ' '+ input ]
+
+		else:
+			if args.single_point == True:
+				header = [
+					'%MEM={}'.format(args.mem),
+					'%nprocshared={}'.format(args.nprocs),
+					'# {0}'.format(lot)+ '/'+ genecp + ' '+ input_sp ]
+			else:
+				header = [
 					'%MEM={}'.format(args.mem),
 					'%nprocshared={}'.format(args.nprocs),
 					'# {0}'.format(lot)+ '/'+ genecp + ' '+ input ]
 
-	else:
-		if args.single_point == True:
-			header = [
-				'%MEM={}'.format(args.mem),
-				'%nprocshared={}'.format(args.nprocs),
-				'# {0}'.format(lot)+ '/'+ genecp + ' '+ input_sp ]
-		else:
-			header = [
-				'%MEM={}'.format(args.mem),
-				'%nprocshared={}'.format(args.nprocs),
-				'# {0}'.format(lot)+ '/'+ genecp + ' '+ input ]
-
-	if args.lowest_only == True:
-		subprocess.run(
-			  ['obabel', '-isdf', path_for_file+file, '-ocom', '-O'+com_low,'-l' , '1', '-xk', '\n'.join(header)]) #takes the lowest conformer which is the first in the file
-	elif args.lowest_n == True:
-		no_to_write = 0
-		if len(energies) != 1:
-			for i in range(len(energies)):
-				energy_diff = energies[i] - energies[0]
-				if energy_diff < args.energy_threshold_for_gaussian:
-					no_to_write +=1
+		if args.lowest_only == True:
 			subprocess.run(
-				 ['obabel', '-isdf', path_for_file+file, '-f', '1', '-l' , str(no_to_write), '-osdf', '-Otemp.sdf'])
-			subprocess.run(
-				  ['obabel', '-isdf', 'temp.sdf', '-ocom', '-O'+com,'-m', '-xk', '\n'.join(header)])
+				  ['obabel', '-isdf', path_for_file+file, '-ocom', '-O'+com_low,'-l' , '1', '-xk', '\n'.join(header)]) #takes the lowest conformer which is the first in the file
+		elif args.lowest_n == True:
+			no_to_write = 0
+			if len(energies) != 1:
+				for i in range(len(energies)):
+					energy_diff = energies[i] - energies[0]
+					if energy_diff < args.energy_threshold_for_gaussian:
+						no_to_write +=1
+				subprocess.run(
+					 ['obabel', '-isdf', path_for_file+file, '-f', '1', '-l' , str(no_to_write), '-osdf', '-Otemp.sdf'])
+				subprocess.run(
+					  ['obabel', '-isdf', 'temp.sdf', '-ocom', '-O'+com,'-m', '-xk', '\n'.join(header)])
+			else:
+				subprocess.run(
+					  ['obabel', '-isdf', path_for_file+file, '-ocom', '-O'+com,'-m', '-xk', '\n'.join(header)])
 		else:
 			subprocess.run(
 				  ['obabel', '-isdf', path_for_file+file, '-ocom', '-O'+com,'-m', '-xk', '\n'.join(header)])
+
+		#adding the basis set at the end of the FILES
+		#grab all the com FILES
+		com_files = glob.glob('{0}_*.com'.format(name))
+
+		for file in com_files:
+			ecp_list,ecp_genecp_atoms = [],False
+			read_lines = open(file,"r").readlines()
+			fileout = open(file, "a")
+			# Detect if there are I atoms to use genecp or not (to use gen)
+			for i in range(4,len(read_lines)):
+				if read_lines[i].split(' ')[0] not in ecp_list and read_lines[i].split(' ')[0] in possible_atoms:
+					ecp_list.append(read_lines[i].split(' ')[0])
+				if read_lines[i].split(' ')[0] in args.genecp_atoms:
+				   ecp_genecp_atoms = True
+
+			for i in range(len(ecp_list)):
+				if ecp_list[i] not in args.genecp_atoms:
+					fileout.write(ecp_list[i]+' ')
+			fileout.write('0\n')
+			fileout.write(bs+'\n')
+			fileout.write('****\n')
+			if ecp_genecp_atoms == False:
+				fileout.write('\n')
+			else:
+				for i in range(len(ecp_list)):
+					if ecp_list[i] in args.genecp_atoms:
+						fileout.write(ecp_list[i]+' ')
+				fileout.write('0\n')
+				fileout.write(bs_gcp+'\n')
+				fileout.write('****\n\n')
+				for i in range(len(ecp_list)):
+					if ecp_list[i] in args.genecp_atoms:
+						fileout.write(ecp_list[i]+' ')
+				fileout.write('0\n')
+				fileout.write(bs_gcp+'\n\n')
+			fileout.close()
+
+			#submitting the gaussian file on summit
+			if args.qsub == True:
+				os.system(submission_command + file)
+
+		os.chdir(path_for_file)
+
 	else:
-		subprocess.run(
-			  ['obabel', '-isdf', path_for_file+file, '-ocom', '-O'+com,'-m', '-xk', '\n'.join(header)])
+		#chk option
+		if args.chk == True:
+			if args.single_point == True:
+				header = [
+					'%chk={}.chk'.format(name),
+					'%MEM={}'.format(args.mem),
+					'%nprocshared={}'.format(args.nprocs),
+					'# {0}'.format(lot)+ '/'+ bs + ' '+ input_sp ]
+			else:
+				header = [
+						'%chk={}.chk'.format(name),
+						'%MEM={}'.format(args.mem),
+						'%nprocshared={}'.format(args.nprocs),
+						'# {0}'.format(lot)+ '/'+ bs + ' '+ input ]
 
-	#adding the basis set at the end of the FILES
-	#grab all the com FILES
-	com_files = glob.glob('{0}_*.com'.format(name))
-
-	for file in com_files:
-		ecp_list,ecp_genecp_atoms = [],False
-		read_lines = open(file,"r").readlines()
-		fileout = open(file, "a")
-		# Detect if there are I atoms to use genecp or not (to use gen)
-		for i in range(4,len(read_lines)):
-			if read_lines[i].split(' ')[0] not in ecp_list and read_lines[i].split(' ')[0] in possible_atoms:
-				ecp_list.append(read_lines[i].split(' ')[0])
-			if read_lines[i].split(' ')[0] in args.genecp_atoms:
-			   ecp_genecp_atoms = True
-
-		for i in range(len(ecp_list)):
-			if ecp_list[i] not in args.genecp_atoms:
-				fileout.write(ecp_list[i]+' ')
-		fileout.write('0\n')
-		fileout.write(bs+'\n')
-		fileout.write('****\n')
-		if ecp_genecp_atoms == False:
-			fileout.write('\n')
 		else:
-			for i in range(len(ecp_list)):
-				if ecp_list[i] in args.genecp_atoms:
-					fileout.write(ecp_list[i]+' ')
-			fileout.write('0\n')
-			fileout.write(bs_gcp+'\n')
-			fileout.write('****\n\n')
-			for i in range(len(ecp_list)):
-				if ecp_list[i] in args.genecp_atoms:
-					fileout.write(ecp_list[i]+' ')
-			fileout.write('0\n')
-			fileout.write(bs_gcp+'\n\n')
-		fileout.close()
+			if args.single_point == True:
+				header = [
+					'%MEM={}'.format(args.mem),
+					'%nprocshared={}'.format(args.nprocs),
+					'# {0}'.format(lot)+ '/'+ bs + ' '+ input_sp ]
+			else:
+				header = [
+					'%MEM={}'.format(args.mem),
+					'%nprocshared={}'.format(args.nprocs),
+					'# {0}'.format(lot)+ '/'+ bs + ' '+ input ]
 
-		#submitting the gaussian file on summit
-		if args.qsub == True:
-			os.system(submission_command + file)
-
-	os.chdir(path_for_file)
+		if args.lowest_only == True:
+			subprocess.run(
+				  ['obabel', '-isdf', path_for_file+file, '-ocom', '-O'+com_low,'-l' , '1', '-xk', '\n'.join(header)]) #takes the lowest conformer which is the first in the file
+		elif args.lowest_n == True:
+			no_to_write = 0
+			if len(energies) != 1:
+				for i in range(len(energies)):
+					energy_diff = energies[i] - energies[0]
+					if energy_diff < args.energy_threshold_for_gaussian:
+						no_to_write +=1
+				subprocess.run(
+					 ['obabel', '-isdf', path_for_file+file, '-f', '1', '-l' , str(no_to_write), '-osdf', '-Otemp.sdf'])
+				subprocess.run(
+					  ['obabel', '-isdf', 'temp.sdf', '-ocom', '-O'+com,'-m', '-xk', '\n'.join(header)])
+			else:
+				subprocess.run(
+					  ['obabel', '-isdf', path_for_file+file, '-ocom', '-O'+com,'-m', '-xk', '\n'.join(header)])
+		else:
+			subprocess.run(
+				  ['obabel', '-isdf', path_for_file+file, '-ocom', '-O'+com,'-m', '-xk', '\n'.join(header)])
 
 " DEFINTION OF OUTPUT ANALYSER and NMR FILES CREATOR"
 def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args):
@@ -264,11 +337,6 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args):
 	    else :
 	        input = 'opt freq=noraman SCRF=({0},Solvent={1})'.format(args.solvent_model, args.solvent_name) #add solvent if needed
 	        input_sp = 'SCRF=({0},Solvent={1}) nmr=giao'.format(args.solvent_model, args.solvent_name)  ##add solvent if needed
-
-	# Atom IDs
-	periodictable = ["","H","He","Li","Be","B","C","N","O","F","Ne","Na","Mg","Al","Si","P","S","Cl","Ar","K","Ca","Sc","Ti","V","Cr","Mn","Fe","Co","Ni","Cu","Zn","Ga","Ge","As","Se","Br","Kr","Rb","Sr","Y","Zr",
-		"Nb","Mo","Tc","Ru","Rh","Pd","Ag","Cd","In","Sn","Sb","Te","I","Xe","Cs","Ba","La","Ce","Pr","Nd","Pm","Sm","Eu","Gd","Tb","Dy","Ho","Er","Tm","Yb","Lu","Hf","Ta","W","Re","Os","Ir","Pt","Au","Hg","Tl",
-		"Pb","Bi","Po","At","Rn","Fr","Ra","Ac","Th","Pa","U","Np","Pu","Am","Cm","Bk","Cf","Es","Fm","Md","No","Lr","Rf","Db","Sg","Bh","Hs","Mt","Ds","Rg","Uub","Uut","Uuq","Uup","Uuh","Uus","Uuo"]
 
 	for file in log_files:
 
@@ -343,8 +411,8 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args):
 			else:
 				for i in range (standor+5,standor+5+NATOMS):
 					massno = int(outlines[i].split()[1])
-					if massno < len(periodictable):
-						atom_symbol = periodictable[massno]
+					if massno < len(possible_atoms):
+						atom_symbol = possible_atoms[massno]
 					else: atom_symbol = "XX"
 					ATOMTYPES.append(atom_symbol)
 					CARTESIANS.append([float(outlines[i].split()[3]), float(outlines[i].split()[4]), float(outlines[i].split()[5])])
@@ -362,8 +430,8 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args):
 			###no change after this
 			for i in range (standor+5,standor+5+NATOMS):
 				massno = int(outlines[i].split()[1])
-				if massno < len(periodictable):
-					atom_symbol = periodictable[massno]
+				if massno < len(possible_atoms):
+					atom_symbol = possible_atoms[massno]
 				else: atom_symbol = "XX"
 				ATOMTYPES.append(atom_symbol)
 				CARTESIANS.append([float(outlines[i].split()[3]), float(outlines[i].split()[4]), float(outlines[i].split()[5])])
