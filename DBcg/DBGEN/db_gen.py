@@ -79,12 +79,13 @@ def main():
 
 	args = parser.parse_args()
 
+	var = False
 
-	if args.varfile != None: args.var = True
+	if args.varfile != None: var = True
 	if args.time: start_time = time.time()
 
 	### If the input file is python format then we will assume it contains variables ... ###
-	if args.var == True:
+	if var == True:
 		if os.path.splitext(args.varfile)[1] == '.py':
 			db_gen_variables = os.path.splitext(args.varfile)[0]
 			print("\no  IMPORTING VARIABLES FROM", args.varfile)
@@ -164,17 +165,19 @@ def main():
 			comfile = open(args.input,"r")
 			comlines = comfile.readlines()
 
+			emptylines=[]
+
 			for i in range(0,len(comlines)):
-				if comlines[i][0].isdigit() and len(comlines[i-1].strip()) == 0:standor_initial = i+1
-				if len(comlines[i].strip()) == 0:standor_final = i
+				print(i)
+				if len(comlines[i].strip()) == 0: emptylines.append(i)
 
 			xyzfile = open(os.path.splitext(args.input)[0]+'.xyz',"w")
 
-			xyzfile.write(str(standor_final - standor_initial))
+			xyzfile.write(str(emptylines[2]- (emptylines[1]+2)))
 			xyzfile.write('\n')
 			xyzfile.write(os.path.splitext(args.input)[0])
 			xyzfile.write('\n')
-			for i in range(standor_initial, standor_final):
+			for i in range((emptylines[1]+2), emptylines[2]):
 				xyzfile.write(comlines[i])
 
 			xyzfile.close()
@@ -304,9 +307,9 @@ def main():
 				for i in range(args.maxnumber):
 					#grab all the corresponding files make sure to renamme prefix when working with differnet files
 					try:
-						log_files = glob.glob(comp + '_' + str(i)+'-'+'*.log')
-					except:
-						pass
+						log_files = glob.glob('comp' + '_' + str(i)+'_'+'*.log')
+						#print(log_files)
+					except:print('-------Error in identifying files for boltzmann calculation------')
 					val = ' '.join(log_files)
 					boltz_calculation(val,i)
 

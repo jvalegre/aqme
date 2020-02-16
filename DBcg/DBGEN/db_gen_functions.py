@@ -26,7 +26,7 @@ from db_gen import columns,possible_atoms
 " FUCNTION WORKING WITH MOL OBJECT TO CREATE CONFORMERS"
 def conformer_generation(mol,name,args):
 	valid_structure = filters(mol, args)
-	print(valid_structure)
+	#print(valid_structure)
 	#print(valid_structure)
 	if valid_structure:
 		if args.verbose: print("\n   ----- {} -----".format(name))

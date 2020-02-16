@@ -30,7 +30,7 @@ Analysis for Boltzmann averaging and combining files
 
 
 ## Possible methods of invoking the script:
-1. python -m DBGEN --compute --input FILENAME.smi --varfile params.py (it reads all the variables from a file of .py format)
+1. python -m DBGEN --varfile params.py (it reads all the variables from a file of .py format)
 2. python -m DBGEN --compute --input FILENAME.smi args (command line arguments)
 
 
