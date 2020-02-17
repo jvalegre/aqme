@@ -59,8 +59,9 @@ python -m DBGEN --compute --varfile params.py --input \*.sdf
 
 ## To Do list:
 1. Add ENSO conformer generation
-2. Automatic the work flow including the job running on the cluster.
+2. Automate the work flow including the job running on the cluster.
 3. Check how runtime scales with number of atoms and rotatable bonds. Provide some examples.
+4. Make the program work with multiple molecules in the same calc (i.e. noncovalent complexes)
 
 
 N.B. this requires the location of the DBGEN directory to be added to the $PYTHONPATH environment variable
