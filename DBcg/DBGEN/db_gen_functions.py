@@ -525,7 +525,7 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args):
 					raise
 
 			os.chdir(new_gaussian_input_files)
-			print("vrbbtbtwrb")
+
 			print('Creating new gaussian input files')
 
 			# Options for genecp
