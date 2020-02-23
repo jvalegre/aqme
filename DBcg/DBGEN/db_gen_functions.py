@@ -18,10 +18,17 @@ from rdkit.Chem import PropertyMol, rdChemReactions,AllChem,Lipinski,Descriptors
 import openbabel as ob
 import subprocess
 
-from confgen import *
+from DBGEN.confgen import *
 
-from db_gen import columns,possible_atoms
-
+possible_atoms = ["", "H", "He", "Li", "Be", "B", "C", "N", "O", "F", "Ne", "Na", "Mg", "Al", "Si",
+				 "P", "S", "Cl", "Ar", "K", "Ca", "Sc", "Ti", "V", "Cr", "Mn", "Fe", "Co", "Ni", "Cu", "Zn",
+				 "Ga", "Ge", "As", "Se", "Br", "Kr", "Rb", "Sr", "Y", "Zr", "Nb", "Mo", "Tc", "Ru", "Rh", "Pd",
+				 "Ag", "Cd", "In", "Sn", "Sb", "Te", "I", "Xe", "Cs", "Ba", "La", "Ce", "Pr", "Nd", "Pm", "Sm",
+				 "Eu", "Gd", "Tb", "Dy", "Ho", "Er", "Tm", "Yb", "Lu", "Hf", "Ta", "W", "Re", "Os", "Ir", "Pt",
+				 "Au", "Hg", "Tl", "Pb", "Bi", "Po", "At", "Rn", "Fr", "Ra", "Ac", "Th", "Pa", "U", "Np", "Pu",
+				 "Am", "Cm", "Bk", "Cf", "Es", "Fm", "Md", "No", "Lr", "Rf", "Db", "Sg", "Bh", "Hs", "Mt", "Ds",
+				 "Rg", "Uub", "Uut", "Uuq", "Uup", "Uuh", "Uus", "Uuo"]
+columns = ['Structure', 'E', 'ZPE', 'H', 'T.S', 'T.qh-S', 'G(T)', 'qh-G(T)']
 
 " FUCNTION WORKING WITH MOL OBJECT TO CREATE CONFORMERS"
 def conformer_generation(mol,name,args):
@@ -105,6 +112,7 @@ def filters(mol,args):
 		if args.verbose == True: print(" Exiting as number of rotatable bonds > 10")
 	return valid_structure
 
+"PARSES THE ENERGIES FROM SDF FILES"
 def read_energies(file): # parses the energies from sdf files - then used to filter conformers
 	energies = []
 	f = open(file,"r")
@@ -121,34 +129,34 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args):
 	#definition of input lines
 	if args.frequencies == True:
 		if args.dispersion_correction == True:
-		    if args.solvent_model == 'gas_phase':
-		        input = 'opt freq=noraman EmpiricalDispersion=G{0}'.format(args.empirical_dispersion)
-		        input_sp = 'nmr=giao EmpiricalDispersion=G{0}'.format(args.empirical_dispersion)  #input for single point nmr
-		    else :
-		        input = 'opt freq=noraman SCRF=({0},Solvent={1}) EmpiricalDispersion=G{2}'.format(args.solvent_model, args.solvent_name,args.empirical_dispersion ) #add solvent if needed
-		        input_sp = 'SCRF=({0},Solvent={1}) nmr=giao EmpiricalDispersion=G{2}'.format(args.solvent_model, args.solvent_name, args.empirical_dispersion)  ##add solvent if needed
+			if args.solvent_model == 'gas_phase':
+				input = 'opt freq=noraman EmpiricalDispersion=G{0}'.format(args.empirical_dispersion)
+				input_sp = 'nmr=giao EmpiricalDispersion=G{0}'.format(args.empirical_dispersion)  #input for single point nmr
+			else :
+				input = 'opt freq=noraman SCRF=({0},Solvent={1}) EmpiricalDispersion=G{2}'.format(args.solvent_model, args.solvent_name,args.empirical_dispersion ) #add solvent if needed
+				input_sp = 'SCRF=({0},Solvent={1}) nmr=giao EmpiricalDispersion=G{2}'.format(args.solvent_model, args.solvent_name, args.empirical_dispersion)  ##add solvent if needed
 		else:
-		    if args.solvent_model == 'gas_phase':
-		        input = 'opt freq=noraman '
-		        input_sp = 'nmr=giao ' #input for single point nmr
-		    else :
-		        input = 'opt freq=noraman SCRF=({0},Solvent={1})'.format(args.solvent_model, args.solvent_name) #add solvent if needed
-		        input_sp = 'SCRF=({0},Solvent={1}) nmr=giao'.format(args.solvent_model, args.solvent_name)  ##add solvent if needed
+			if args.solvent_model == 'gas_phase':
+				input = 'opt freq=noraman '
+				input_sp = 'nmr=giao ' #input for single point nmr
+			else :
+				input = 'opt freq=noraman SCRF=({0},Solvent={1})'.format(args.solvent_model, args.solvent_name) #add solvent if needed
+				input_sp = 'SCRF=({0},Solvent={1}) nmr=giao'.format(args.solvent_model, args.solvent_name)  ##add solvent if needed
 	else:
 		if args.dispersion_correction == True:
-		    if args.solvent_model == 'gas_phase':
-		        input = 'opt EmpiricalDispersion=G{0}'.format(args.empirical_dispersion)
-		        input_sp = 'nmr=giao EmpiricalDispersion=G{0}'.format(args.empirical_dispersion)  #input for single point nmr
-		    else :
-		        input = 'opt SCRF=({0},Solvent={1}) EmpiricalDispersion=G{2}'.format(args.solvent_model, args.solvent_name,args.empirical_dispersion ) #add solvent if needed
-		        input_sp = 'SCRF=({0},Solvent={1}) nmr=giao EmpiricalDispersion=G{2}'.format(args.solvent_model, args.solvent_name, args.empirical_dispersion)  ##add solvent if needed
+			if args.solvent_model == 'gas_phase':
+				input = 'opt EmpiricalDispersion=G{0}'.format(args.empirical_dispersion)
+				input_sp = 'nmr=giao EmpiricalDispersion=G{0}'.format(args.empirical_dispersion)  #input for single point nmr
+			else :
+				input = 'opt SCRF=({0},Solvent={1}) EmpiricalDispersion=G{2}'.format(args.solvent_model, args.solvent_name,args.empirical_dispersion ) #add solvent if needed
+				input_sp = 'SCRF=({0},Solvent={1}) nmr=giao EmpiricalDispersion=G{2}'.format(args.solvent_model, args.solvent_name, args.empirical_dispersion)  ##add solvent if needed
 		else:
-		    if args.solvent_model == 'gas_phase':
-		        input = 'opt '
-		        input_sp = 'nmr=giao ' #input for single point nmr
-		    else :
-		        input = 'opt SCRF=({0},Solvent={1})'.format(args.solvent_model, args.solvent_name) #add solvent if needed
-		        input_sp = 'SCRF=({0},Solvent={1}) nmr=giao'.format(args.solvent_model, args.solvent_name)  ##add solvent if needed
+			if args.solvent_model == 'gas_phase':
+				input = 'opt '
+				input_sp = 'nmr=giao ' #input for single point nmr
+			else :
+				input = 'opt SCRF=({0},Solvent={1})'.format(args.solvent_model, args.solvent_name) #add solvent if needed
+				input_sp = 'SCRF=({0},Solvent={1}) nmr=giao'.format(args.solvent_model, args.solvent_name)  ##add solvent if needed
 
 	#defining genecp
 	genecp = 'gen'
@@ -264,7 +272,7 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args):
 
 			#submitting the gaussian file on summit
 			if args.qsub == True:
-				os.system(submission_command + file)
+				os.system(args.submission_command + file)
 
 		os.chdir(path_for_file)
 
@@ -317,26 +325,76 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args):
 			subprocess.run(
 				  ['obabel', '-isdf', path_for_file+file, '-ocom', '-O'+com,'-m', '-xk', '\n'.join(header)])
 
+		#submitting the gaussian file on summit
+		if args.qsub == True:
+			os.system(args.submission_command + file)
+
+		os.chdir(path_for_file)
+
+"CHECKS THE FOLDER OF FINAL LOG FILES"
+def check_for_final_folder(w_dir):
+	dir_found = False
+	while dir_found == False:
+		temp_dir = w_dir+'New_Gaussian_Input_Files/'
+		if os.path.isdir(temp_dir):
+			w_dir = temp_dir
+		else:
+			dir_found =True
+	return w_dir
+
+" CHECKS THE FINISHED FOLDER TO MOVE NORMAL TERMINATED LOG FILES"
+def finished_folder(w_dir):
+	gaussian_path = w_dir+'../../gaussian/'
+	if os.path.isdir(gaussian_path):
+		w_dir = w_dir+'/Finished'
+	else:
+		dir_found = False
+		final_folder = '/Finished'
+		while dir_found == False:
+			temp_dir = w_dir+'../'
+			if os.path.isdir(temp_dir+final_folder):
+				w_dir = w_dir+'/Finished'
+				dir_found = True
+			else:
+				w_dir = temp_dir
+	return w_dir
+
 " DEFINTION OF OUTPUT ANALYSER and NMR FILES CREATOR"
 def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args):
 
-	print(w_dir)
+	#print(w_dir)
 
 	#definition of input lines
-	if args.dispersion_correction == True:
-	    if args.solvent_model == 'gas_phase':
-	        input = 'opt freq=noraman EmpiricalDispersion=G{0}'.format(args.empirical_dispersion)
-	        input_sp = 'nmr=giao EmpiricalDispersion=G{0}'.format(args.empirical_dispersion)  #input for single point nmr
-	    else :
-	        input = 'opt freq=noraman SCRF=({0},Solvent={1}) EmpiricalDispersion=G{2}'.format(args.solvent_model, args.solvent_name,args.empirical_dispersion ) #add solvent if needed
-	        input_sp = 'SCRF=({0},Solvent={1}) nmr=giao EmpiricalDispersion=G{2}'.format(args.solvent_model, args.solvent_name, args.empirical_dispersion)  ##add solvent if needed
+	if args.frequencies == True:
+		if args.dispersion_correction == True:
+			if args.solvent_model == 'gas_phase':
+				input = 'opt freq=noraman EmpiricalDispersion=G{0}'.format(args.empirical_dispersion)
+				input_sp = 'nmr=giao EmpiricalDispersion=G{0}'.format(args.empirical_dispersion)  #input for single point nmr
+			else :
+				input = 'opt freq=noraman SCRF=({0},Solvent={1}) EmpiricalDispersion=G{2}'.format(args.solvent_model, args.solvent_name,args.empirical_dispersion ) #add solvent if needed
+				input_sp = 'SCRF=({0},Solvent={1}) nmr=giao EmpiricalDispersion=G{2}'.format(args.solvent_model, args.solvent_name, args.empirical_dispersion)  ##add solvent if needed
+		else:
+			if args.solvent_model == 'gas_phase':
+				input = 'opt freq=noraman '
+				input_sp = 'nmr=giao ' #input for single point nmr
+			else :
+				input = 'opt freq=noraman SCRF=({0},Solvent={1})'.format(args.solvent_model, args.solvent_name) #add solvent if needed
+				input_sp = 'SCRF=({0},Solvent={1}) nmr=giao'.format(args.solvent_model, args.solvent_name)  ##add solvent if needed
 	else:
-	    if args.solvent_model == 'gas_phase':
-	        input = 'opt freq=noraman '
-	        input_sp = 'nmr=giao ' #input for single point nmr
-	    else :
-	        input = 'opt freq=noraman SCRF=({0},Solvent={1})'.format(args.solvent_model, args.solvent_name) #add solvent if needed
-	        input_sp = 'SCRF=({0},Solvent={1}) nmr=giao'.format(args.solvent_model, args.solvent_name)  ##add solvent if needed
+		if args.dispersion_correction == True:
+			if args.solvent_model == 'gas_phase':
+				input = 'opt EmpiricalDispersion=G{0}'.format(args.empirical_dispersion)
+				input_sp = 'nmr=giao EmpiricalDispersion=G{0}'.format(args.empirical_dispersion)  #input for single point nmr
+			else :
+				input = 'opt SCRF=({0},Solvent={1}) EmpiricalDispersion=G{2}'.format(args.solvent_model, args.solvent_name,args.empirical_dispersion ) #add solvent if needed
+				input_sp = 'SCRF=({0},Solvent={1}) nmr=giao EmpiricalDispersion=G{2}'.format(args.solvent_model, args.solvent_name, args.empirical_dispersion)  ##add solvent if needed
+		else:
+			if args.solvent_model == 'gas_phase':
+				input = 'opt '
+				input_sp = 'nmr=giao ' #input for single point nmr
+			else :
+				input = 'opt SCRF=({0},Solvent={1})'.format(args.solvent_model, args.solvent_name) #add solvent if needed
+				input_sp = 'SCRF=({0},Solvent={1}) nmr=giao'.format(args.solvent_model, args.solvent_name)  ##add solvent if needed
 
 	for file in log_files:
 
@@ -465,11 +523,10 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args):
 		source = w_dir+file
 
 		if IM_FREQS == 0 and TERMINATION == "normal" and args.nmr != True:
+
 			#only if normally terminated move to the finished folder of first run.
-			if args.secondrun != True:
-				destination = w_dir+'Finished/'
-			else:
-				destination = w_dir+'../Finished/'
+			destination = finished_folder(w_dir)
+
 			try:
 				os.makedirs(destination)
 				shutil.move(source, destination)
@@ -514,7 +571,7 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args):
 
 		if IM_FREQS > 0 or TERMINATION != "normal":
 			# creating new folder with new input gaussian files
-			new_gaussian_input_files = w_dir+'New Gaussian Input Files'
+			new_gaussian_input_files = w_dir+'New_Gaussian_Input_Files'
 
 			try:
 				os.makedirs(new_gaussian_input_files)
@@ -541,44 +598,64 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args):
 			if ecp_genecp_atoms == True:
 				genecp = 'genecp'
 
-			if args.single_point == True:
-				keywords_opt = lot +'/'+ genecp+' '+ input_sp
-			else:
-				keywords_opt = lot +'/'+ genecp+' '+ input
+			if genecp == 'genecp':
+				if args.single_point == True:
+					keywords_opt = lot +'/'+ genecp+' '+ input_sp
+				else:
+					keywords_opt = lot +'/'+ genecp+' '+ input
 
-			fileout = open(file.split(".")[0]+'.com', "w")
-			fileout.write("%mem="+str(args.mem)+"\n")
-			fileout.write("%nprocshared="+str(args.nprocs)+"\n")
-			fileout.write("# "+keywords_opt+"\n")
-			fileout.write("\n")
-			fileout.write(name+"\n")
-			fileout.write("\n")
-			fileout.write(str(CHARGE)+' '+str(MULT)+'\n')
-			for atom in range(0,NATOMS):
-				fileout.write('{0:>2} {1:12.8f} {2:12.8f} {3:12.8f}'.format(ATOMTYPES[atom], CARTESIANS[atom][0],  CARTESIANS[atom][1],  CARTESIANS[atom][2]))
+				fileout = open(file.split(".")[0]+'.com', "w")
+				fileout.write("%mem="+str(args.mem)+"\n")
+				fileout.write("%nprocshared="+str(args.nprocs)+"\n")
+				fileout.write("# "+keywords_opt+"\n")
 				fileout.write("\n")
-			fileout.write("\n")
-			for i in range(len(ecp_list)):
-				if ecp_list[i] not in args.genecp_atoms:
-					fileout.write(ecp_list[i]+' ')
-			fileout.write('0\n')
-			fileout.write(bs+'\n')
-			fileout.write('****\n')
-			if ecp_genecp_atoms == False:
-				fileout.write('\n')
+				fileout.write(name+"\n")
+				fileout.write("\n")
+				fileout.write(str(CHARGE)+' '+str(MULT)+'\n')
+				for atom in range(0,NATOMS):
+					fileout.write('{0:>2} {1:12.8f} {2:12.8f} {3:12.8f}'.format(ATOMTYPES[atom], CARTESIANS[atom][0],  CARTESIANS[atom][1],  CARTESIANS[atom][2]))
+					fileout.write("\n")
+				fileout.write("\n")
+				for i in range(len(ecp_list)):
+					if ecp_list[i] not in args.genecp_atoms:
+						fileout.write(ecp_list[i]+' ')
+				fileout.write('0\n')
+				fileout.write(bs+'\n')
+				fileout.write('****\n')
+				if ecp_genecp_atoms == False:
+					fileout.write('\n')
+				else:
+					for i in range(len(ecp_list)):
+						if ecp_list[i] in args.genecp_atoms:
+							fileout.write(ecp_list[i]+' ')
+					fileout.write('0\n')
+					fileout.write(bs_gcp+'\n')
+					fileout.write('****\n\n')
+					for i in range(len(ecp_list)):
+						if ecp_list[i] in args.genecp_atoms:
+							fileout.write(ecp_list[i]+' ')
+					fileout.write('0\n')
+					fileout.write(bs_gcp+'\n\n')
+				fileout.close()
 			else:
-				for i in range(len(ecp_list)):
-					if ecp_list[i] in args.genecp_atoms:
-						fileout.write(ecp_list[i]+' ')
-				fileout.write('0\n')
-				fileout.write(bs_gcp+'\n')
-				fileout.write('****\n\n')
-				for i in range(len(ecp_list)):
-					if ecp_list[i] in args.genecp_atoms:
-						fileout.write(ecp_list[i]+' ')
-				fileout.write('0\n')
-				fileout.write(bs_gcp+'\n\n')
-			fileout.close()
+				if args.single_point == True:
+					keywords_opt = lot +'/'+ bs +' '+ input_sp
+				else:
+					keywords_opt = lot +'/'+ bs +' '+ input
+
+				fileout = open(file.split(".")[0]+'.com', "w")
+				fileout.write("%mem="+str(args.mem)+"\n")
+				fileout.write("%nprocshared="+str(args.nprocs)+"\n")
+				fileout.write("# "+keywords_opt+"\n")
+				fileout.write("\n")
+				fileout.write(name+"\n")
+				fileout.write("\n")
+				fileout.write(str(CHARGE)+' '+str(MULT)+'\n')
+				for atom in range(0,NATOMS):
+					fileout.write('{0:>2} {1:12.8f} {2:12.8f} {3:12.8f}'.format(ATOMTYPES[atom], CARTESIANS[atom][0],  CARTESIANS[atom][1],  CARTESIANS[atom][2]))
+					fileout.write("\n")
+				fileout.write("\n")
+				fileout.close()
 
 		#changing directory back to where all files are from new files created.
 		os.chdir(w_dir)
@@ -613,41 +690,57 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args):
 			if ecp_genecp_atoms == True:
 				genecp = 'genecp'
 
-			keywords_opt = lot +'/'+ genecp+' '+ ' nmr=giao'
+			if genecp =='genecp':
+				keywords_opt = lot +'/'+ genecp+' '+ ' nmr=giao'
 
-			fileout = open(file.split(".")[0]+'.com', "w")
-			fileout.write("%mem="+str(args.mem)+"\n")
-			fileout.write("%nprocshared="+str(args.nprocs)+"\n")
-			fileout.write("# "+keywords_opt+"\n")
-			fileout.write("\n")
-			fileout.write(name+"\n")
-			fileout.write("\n")
-			fileout.write(str(CHARGE)+' '+str(MULT)+'\n')
-			for atom in range(0,NATOMS):
-				fileout.write('{0:>2} {1:12.8f} {2:12.8f} {3:12.8f}'.format(ATOMTYPES[atom], CARTESIANS[atom][0],  CARTESIANS[atom][1],  CARTESIANS[atom][2]))
+				fileout = open(file.split(".")[0]+'.com', "w")
+				fileout.write("%mem="+str(args.mem)+"\n")
+				fileout.write("%nprocshared="+str(args.nprocs)+"\n")
+				fileout.write("# "+keywords_opt+"\n")
 				fileout.write("\n")
-			fileout.write("\n")
-			for i in range(len(ecp_list)):
-				if ecp_list[i] not in args.genecp_atoms:
-					fileout.write(ecp_list[i]+' ')
-			fileout.write('0\n')
-			fileout.write(bs+'\n')
-			fileout.write('****\n')
-			if ecp_genecp_atoms == False:
-				fileout.write('\n')
+				fileout.write(name+"\n")
+				fileout.write("\n")
+				fileout.write(str(CHARGE)+' '+str(MULT)+'\n')
+				for atom in range(0,NATOMS):
+					fileout.write('{0:>2} {1:12.8f} {2:12.8f} {3:12.8f}'.format(ATOMTYPES[atom], CARTESIANS[atom][0],  CARTESIANS[atom][1],  CARTESIANS[atom][2]))
+					fileout.write("\n")
+				fileout.write("\n")
+				for i in range(len(ecp_list)):
+					if ecp_list[i] not in args.genecp_atoms:
+						fileout.write(ecp_list[i]+' ')
+				fileout.write('0\n')
+				fileout.write(bs+'\n')
+				fileout.write('****\n')
+				if ecp_genecp_atoms == False:
+					fileout.write('\n')
+				else:
+					for i in range(len(ecp_list)):
+						if ecp_list[i] in args.genecp_atoms:
+							fileout.write(ecp_list[i]+' ')
+					fileout.write('0\n')
+					fileout.write(bs_gcp+'\n')
+					fileout.write('****\n\n')
+					for i in range(len(ecp_list)):
+						if ecp_list[i] in args.genecp_atoms:
+							fileout.write(ecp_list[i]+' ')
+					fileout.write('0\n')
+					fileout.write(bs_gcp+'\n\n')
+				fileout.close()
 			else:
-				for i in range(len(ecp_list)):
-					if ecp_list[i] in args.genecp_atoms:
-						fileout.write(ecp_list[i]+' ')
-				fileout.write('0\n')
-				fileout.write(bs_gcp+'\n')
-				fileout.write('****\n\n')
-				for i in range(len(ecp_list)):
-					if ecp_list[i] in args.genecp_atoms:
-						fileout.write(ecp_list[i]+' ')
-				fileout.write('0\n')
-				fileout.write(bs_gcp+'\n\n')
-			fileout.close()
+				keywords_opt = lot +'/'+ bs +' '+ ' nmr=giao'
+
+				fileout = open(file.split(".")[0]+'.com', "w")
+				fileout.write("%mem="+str(args.mem)+"\n")
+				fileout.write("%nprocshared="+str(args.nprocs)+"\n")
+				fileout.write("# "+keywords_opt+"\n")
+				fileout.write("\n")
+				fileout.write(name+"\n")
+				fileout.write("\n")
+				fileout.write(str(CHARGE)+' '+str(MULT)+'\n')
+				for atom in range(0,NATOMS):
+					fileout.write('{0:>2} {1:12.8f} {2:12.8f} {3:12.8f}'.format(ATOMTYPES[atom], CARTESIANS[atom][0],  CARTESIANS[atom][1],  CARTESIANS[atom][2]))
+					fileout.write("\n")
+				fileout.write("\n")
 
 		#changing directory back to where all files are from new files created.
 		os.chdir(w_dir)

@@ -5,17 +5,7 @@ Authors: Shree Sowndarya S. V., Juan V. Alegre Requena,
 please report any bugs to svss@colostate.edu or juanvi89@hotmail.com.
 '''
 
-from db_gen_functions import *
-
-possible_atoms = ["", "H", "He", "Li", "Be", "B", "C", "N", "O", "F", "Ne", "Na", "Mg", "Al", "Si",
-                 "P", "S", "Cl", "Ar", "K", "Ca", "Sc", "Ti", "V", "Cr", "Mn", "Fe", "Co", "Ni", "Cu", "Zn",
-                 "Ga", "Ge", "As", "Se", "Br", "Kr", "Rb", "Sr", "Y", "Zr", "Nb", "Mo", "Tc", "Ru", "Rh", "Pd",
-                 "Ag", "Cd", "In", "Sn", "Sb", "Te", "I", "Xe", "Cs", "Ba", "La", "Ce", "Pr", "Nd", "Pm", "Sm",
-                 "Eu", "Gd", "Tb", "Dy", "Ho", "Er", "Tm", "Yb", "Lu", "Hf", "Ta", "W", "Re", "Os", "Ir", "Pt",
-                 "Au", "Hg", "Tl", "Pb", "Bi", "Po", "At", "Rn", "Fr", "Ra", "Ac", "Th", "Pa", "U", "Np", "Pu",
-                 "Am", "Cm", "Bk", "Cf", "Es", "Fm", "Md", "No", "Lr", "Rf", "Db", "Sg", "Bh", "Hs", "Mt", "Ds",
-                 "Rg", "Uub", "Uut", "Uuq", "Uup", "Uuh", "Uus", "Uuo"]
-columns = ['Structure', 'E', 'ZPE', 'H', 'T.S', 'T.qh-S', 'G(T)', 'qh-G(T)']
+from DBGEN.db_gen_functions import *
 
 def main():
 	parser = argparse.ArgumentParser(description="Generate conformers depending on type of optimization (change parameters in db_gen_PATHS.py file).")
@@ -28,7 +18,7 @@ def main():
 	parser.add_argument("-w","--compute", action="store_true", default=False, help="Create input files for Gaussian")
 	parser.add_argument("-a","--analysis", action="store_true", default=False, help="Fix and analyze Gaussian output files")
 	parser.add_argument("-r","--resubmit", action="store_true", default=False, help="Resubmit Gaussian input files")
-	parser.add_argument("-s","--secondrun", action="store_true", default=False, help="Set true for second run analysis")
+
 	parser.add_argument("-n","--nmr",action="store_true",default=False, help="Create Files for Single Point which includes NMR calculation after DFT Optimization")
 	parser.add_argument("-b","--boltz", action="store_true", default=False, help="Boltzmann factor for each conformers from Gaussian output files")
 	parser.add_argument("-f","--combine", action="store_true", default=False, help="Combine files of differnt molecules including boltzmann weighted energies")
@@ -254,33 +244,26 @@ def main():
 		for lot in args.level_of_theory:
 			for bs in args.basis_set:
 				for bs_gcp in args.basis_set_genecp_atoms:
-					if args.secondrun != True:
-						w_dir = args.path + str(lot) + '-' + str(bs) +'/'
-						os.chdir(w_dir)
-						log_files = glob.glob('*.log')
-						output_analyzer(log_files, w_dir, lot, bs, bs_gcp, args)
-
-					else:
-						w_dir = args.path + str(lot) + '-' + str(bs) +'/New_Gaussian_Input_Files/'
-						if os.path.isdir(w_dir):
-							os.chdir(w_dir)
-							log_files = glob.glob('*.log')
-							output_analyzer(log_files, w_dir, lot, bs, bs_gcp, args)
-						else:
-							pass
+					w_dir = args.path + str(lot) + '-' + str(bs) +'/'
+					#check if New_Gaussian_Input_Files folder exists
+					w_dir = check_for_final_folder(w_dir)
+					#print(w_dir)
+					os.chdir(w_dir)
+					log_files = glob.glob('*.log')
+					output_analyzer(log_files, w_dir, lot, bs, bs_gcp, args)
 
 	#adding the part to check for resubmission of the newly created gaussian files.
 	if args.resubmit == True:
 		#chceck if ech level of theory has a folder New gaussin FILES
 		for lot in args.level_of_theory:
 			for bs in args.basis_set:
-				w_dir = args.path + str(lot) + '-' + str(bs) +'/New_Gaussian_Input_Files'
-				if  os.path.isdir(w_dir):
-					os.chdir(w_dir)
-					cmd = submission_command + ' *.com'
+				w_dir = args.path + str(lot) + '-' + str(bs) +'/'
+				#check if New_Gaussian_Input_Files folder exists
+				w_dir = check_for_final_folder(w_dir)
+				os.chdir(w_dir)
+				cmd = args.submission_command + ' *.com'
+				if args.qsub == True:
 					os.system(cmd)
-				else:
-					pass
 
 	#adding the part to check for resubmission of the newly created gaussian files.
 	if args.nmr == True:
@@ -307,11 +290,15 @@ def main():
 				for i in range(args.maxnumber):
 					#grab all the corresponding files make sure to renamme prefix when working with differnet files
 					try:
-						log_files = glob.glob('comp' + '_' + str(i)+'_'+'*.log')
+						log_files = glob.glob('OX' + '_' + str(i)+'_'+'*.log')
+						if len(log_files) != 0:
+							val = ' '.join(log_files)
+							boltz_calculation(val,i)
+						else:
+							print(' Files for {} are not there!'.format(i))
 						#print(log_files)
-					except:print('-------Error in identifying files for boltzmann calculation------')
-					val = ' '.join(log_files)
-					boltz_calculation(val,i)
+					except:
+						pass
 
 	if args.combine == True:
 		#combines the files and gives the boltzmann weighted energies
@@ -324,4 +311,4 @@ def main():
 				combine_files(csv_files, lot, bs, args)
 
 if __name__ == "__main__":
-    main()
+	main()

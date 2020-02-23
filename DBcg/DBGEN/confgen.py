@@ -6,7 +6,7 @@ from rdkit.Chem import AllChem as Chem
 from rdkit.Chem import rdMolTransforms, PropertyMol
 from rdkit.Geometry import Point3D
 
-import db_gen_functions
+import DBGEN.db_gen_functions
 
 ### TORCHANI IMPORTS
 import ase
