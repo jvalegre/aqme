@@ -343,24 +343,24 @@ def check_for_final_folder(w_dir):
 	return w_dir
 
 " CHECKS THE FINISHED FOLDER TO MOVE NORMAL TERMINATED LOG FILES"
-def finished_folder(w_dir):
-	gaussian_path = w_dir+'../../gaussian/'
-	if os.path.isdir(gaussian_path):
-		w_dir = w_dir+'/Finished'
-	else:
-		dir_found = False
-		final_folder = '/Finished'
-		while dir_found == False:
-			temp_dir = w_dir+'../'
-			if os.path.isdir(temp_dir+final_folder):
-				w_dir = w_dir+'/Finished'
-				dir_found = True
-			else:
-				w_dir = temp_dir
-	return w_dir
+# def finished_folder(w_dir):
+# 	gaussian_path = w_dir+'../../gaussian/'
+# 	if os.path.isdir(gaussian_path):
+# 		w_dir = w_dir+'/Finished'
+# 	else:
+# 		dir_found = False
+# 		final_folder = '/Finished'
+# 		while dir_found == False:
+# 			temp_dir = w_dir+'../'
+# 			if os.path.isdir(temp_dir+final_folder):
+# 				w_dir = w_dir+'/Finished'
+# 				dir_found = True
+# 			else:
+# 				w_dir = temp_dir
+# 	return w_dir
 
 " DEFINTION OF OUTPUT ANALYSER and NMR FILES CREATOR"
-def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args):
+def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin):
 
 	#print(w_dir)
 
@@ -525,7 +525,8 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args):
 		if IM_FREQS == 0 and TERMINATION == "normal" and args.nmr != True:
 
 			#only if normally terminated move to the finished folder of first run.
-			destination = finished_folder(w_dir)
+			# destination = finished_folder(w_dir)
+			destination = w_dir_fin
 
 			try:
 				os.makedirs(destination)

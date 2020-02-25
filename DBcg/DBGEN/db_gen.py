@@ -247,10 +247,12 @@ def main():
 					w_dir = args.path + str(lot) + '-' + str(bs) +'/'
 					#check if New_Gaussian_Input_Files folder exists
 					w_dir = check_for_final_folder(w_dir)
+					#assign the path to the finished directory.
+					w_dir_fin = args.path + str(lot) + '-' + str(bs) +'/Finished'
 					#print(w_dir)
 					os.chdir(w_dir)
 					log_files = glob.glob('*.log')
-					output_analyzer(log_files, w_dir, lot, bs, bs_gcp, args)
+					output_analyzer(log_files, w_dir, lot, bs, bs_gcp, args, w_dir_fin)
 
 	#adding the part to check for resubmission of the newly created gaussian files.
 	if args.resubmit == True:
