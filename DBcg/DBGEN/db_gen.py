@@ -10,18 +10,28 @@ from DBGEN.db_gen_functions import *
 def main():
 	parser = argparse.ArgumentParser(description="Generate conformers depending on type of optimization (change parameters in db_gen_PATHS.py file).")
 
+	#INput details
 	parser.add_argument("--varfile",dest="varfile",default=None,help="Parameters in python format")
 	parser.add_argument("--input",help="Molecular structure")
+
+	parser.add_argument("-oct", action="store_true", default=False, help="If studying Octahydral Complexes")
+	parser.add_argument("--metal",  help="If Octahydral complex specify the metal involed", default="Ir", dest="metal", type=str)
+	parser.add_argument("--oct_spin",  help="If Octahydral complex specify the complex spin involed", default="1", dest="oct_spin", type=int)
+	parser.add_argument("--oct_oxi",  help="If Octahydral complex specify the metal oxidation state involed", default="3", dest="oct_oxi", type=int)
+
 	parser.add_argument("-m","--maxnumber", help="Number of compounds", type=int, metavar="maxnumber")
 	parser.add_argument("--prefix", help="Prefix for naming files", default=None, metavar="prefix")
 
+	#work the script has to do
 	parser.add_argument("-w","--compute", action="store_true", default=False, help="Create input files for Gaussian")
 	parser.add_argument("-a","--analysis", action="store_true", default=False, help="Fix and analyze Gaussian output files")
 	parser.add_argument("-r","--resubmit", action="store_true", default=False, help="Resubmit Gaussian input files")
 
+	#Post analysis
 	parser.add_argument("-n","--nmr",action="store_true",default=False, help="Create Files for Single Point which includes NMR calculation after DFT Optimization")
 	parser.add_argument("-b","--boltz", action="store_true", default=False, help="Boltzmann factor for each conformers from Gaussian output files")
 	parser.add_argument("-f","--combine", action="store_true", default=False, help="Combine files of differnt molecules including boltzmann weighted energies")
+
 	#pass the argument for path for the gaussian folder.
 	parser.add_argument("--path", help="Path for analysis/boltzmann factor/combining files where the gaussian folder created is present")
 	parser.add_argument("-v","--verbose",action="store_true",default=False, help="verbose output")
@@ -94,16 +104,27 @@ def main():
 		else:
 			mol_objects = [] # a list of mol objects that will be populated
 
+		# first check if octahydral of not
+
 		if file_format == '.smi': # SMILES input specified
 			smifile = open(args.input)
 
 			for i, line in enumerate(smifile):
 				toks = line.split()
-				smi = toks[0]
+
+				if args.oct == True:
+					#find metal and replace with I+ for octahydral
+					smi = toks[0].replace(args.metal,'I+')
+					print(smi)
+					#Ir+ exixted then we need to change back to I+
+					smi = smi.replace('I++','I+')
+					print(smi)
+				else: smi = toks[0]
+
 				if args.prefix == None: name = ''.join(toks[1:])
 				else: name = args.prefix+str(i)+'_'+''.join(toks[1:])
 
-				# Converts each line to a rdkit mol object
+					# Converts each line to a rdkit mol object
 				if args.verbose: print("   -> Input Molecule {} from {}".format(smi, args.input))
 				mol = Chem.MolFromSmiles(smi)
 				mol_objects.append([mol, name])
@@ -119,6 +140,10 @@ def main():
 					ID = readlines[i+1].split()[0]
 					IDs.append(ID)
 				else: IDs.append(i)
+				if args.oct == True:
+						#changing name for Metal
+					if line.find(args.metal) > -1:
+						readlines[i].split()[0] = 'I'
 
 			suppl = Chem.SDMolSupplier(sdffile)
 
@@ -134,23 +159,36 @@ def main():
 				#assigning names and smi i  each loop
 				if args.prefix == None: name = csv_smiles.loc[i, 'code_name']
 				else: name = 'comp_'+str(m)+'_'+csv_smiles.loc[i, 'code_name']
+
 				smi = csv_smiles.loc[i, 'SMILES']
+				if args.oct == True:
+						#find metal and replace with I+ for octahydral
+					smi = smi.replace(args.metal,'I+')
+						#Ir+ exixted then we need to change back to I+
+					smi = smi.replace('I++','I+')
+
 				mol = Chem.MolFromSmiles(smi)
 				mol_objects.append([mol, name])
 				m += 1
 
 		elif os.path.splitext(args.input)[1] == '.cdx': # CDX file
-			#converting to smiles from chemdraw
+				#converting to smiles from chemdraw
 			subprocess.run(['obabel', '-icdx', args.input, '-osmi', '-O', 'cdx.smi'])
 			smifile = open('cdx.smi',"r")
 
 			for i, line in enumerate(smifile):
 				name = 'comp' + str(i)+'_'
+				if args.oct == True:
+					#find metal and replace with I+ for octahydral
+					line = line.replace(args.metal,'I+')
+					#Ir+ exixted then we need to change back to I+
+					line = line.replace('I++','I+')
+
 				mol = Chem.MolFromSmiles(line)
 				mol_objects.append([mol, name])
 
 		elif os.path.splitext(args.input)[1] == '.com': # COM file
-			#converting to sdf from comfile to preserve geometry
+				#converting to sdf from comfile to preserve geometry
 
 			comfile = open(args.input,"r")
 			comlines = comfile.readlines()
@@ -186,6 +224,11 @@ def main():
 					IDs.append(ID)
 				else: IDs.append(os.path.splitext(args.input)[0])
 
+				if args.oct == True:
+						#changing name for Metal
+					if line.find(args.metal) > -1:
+						readlines[i].split()[0] = 'I'
+
 			suppl = Chem.SDMolSupplier(sdffile)
 
 			for i, mol in enumerate(suppl):
@@ -198,6 +241,23 @@ def main():
 
 		# creating the com files from the sdf files created read *_confs.sdf
 		conf_files = [name+'_confs.sdf' for mol,name in mol_objects]
+
+		if args.oct == True:
+			conf_files = glob.glob('*_confs.sdf')
+			for file in conf_files:
+				suppl = Chem.SDMolSupplier(file, removeHs = False)
+				w = Chem.SDWriter(file.split('.')[0]+'_'+args.metal+'.sdf')
+				for mol in suppl:
+					for atom in mol.GetAtoms():
+						if atom.GetSymbol() == 'I' and len(atom.GetBonds()) == 6:
+							for el in elements:
+								if el.symbol == args.metal:
+									atomic_number = el.number
+							atom.SetAtomicNum(atomic_number)
+					w.write(mol)
+				w.close()
+			# conf_files = glob.glob('*_confs_'+args.metal+'.sdf')
+			conf_files = [name+'_confs_'+args.metal+'.sdf' for mol,name in mol_objects]
 
 		# names for directories created
 		sp_dir = 'sp'
@@ -238,6 +298,7 @@ def main():
 								energies = read_energies(file)
 								name = os.path.splitext(file)[0]
 								write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args)
+
 
 	if args.analysis == True:
 		# Sets the folder and find the log files to analyze

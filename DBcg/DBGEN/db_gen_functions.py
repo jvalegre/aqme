@@ -12,9 +12,10 @@
 import glob, os, shutil, sys, time
 import numpy as np
 import pandas as pd
+from periodictable import elements
 
 from rdkit import Chem,DataStructs
-from rdkit.Chem import PropertyMol, rdChemReactions,AllChem,Lipinski,Descriptors
+from rdkit.Chem import PropertyMol, rdChemReactions,AllChem,Lipinski,Descriptors, rdchem
 import openbabel as ob
 import subprocess
 
@@ -29,6 +30,11 @@ possible_atoms = ["", "H", "He", "Li", "Be", "B", "C", "N", "O", "F", "Ne", "Na"
 				 "Am", "Cm", "Bk", "Cf", "Es", "Fm", "Md", "No", "Lr", "Rf", "Db", "Sg", "Bh", "Hs", "Mt", "Ds",
 				 "Rg", "Uub", "Uut", "Uuq", "Uup", "Uuh", "Uus", "Uuo"]
 columns = ['Structure', 'E', 'ZPE', 'H', 'T.S', 'T.qh-S', 'G(T)', 'qh-G(T)']
+
+C_group = ['C', 'Se', 'Ge']
+N_group = ['N', 'P', 'As']
+O_group = ['O', 'S', 'Se']
+Cl_group = ['Cl', 'Br', 'I']
 
 " FUCNTION WORKING WITH MOL OBJECT TO CREATE CONFORMERS"
 def conformer_generation(mol,name,args):
@@ -82,7 +88,7 @@ def conformer_generation(mol,name,args):
 				sdwriter.close()
 			else: print("x  No conformers found!\n")
 
-		except (KeyboaddInterrupt, SystemExit):
+		except (KeyboardInterrupt, SystemExit):
 			raise
 		except Exception as e: print(traceback.print_exc())
 	else: print("ERROR: The structure is not valid")
@@ -122,6 +128,41 @@ def read_energies(file): # parses the energies from sdf files - then used to fil
 			energies.append(float(readlines[i+1].split()[0]))
 	f.close()
 	return energies
+
+def oct_rules_get_charge(mol, args):
+	#get the neighbours of metal atoms
+	for atom in mol.GetAtoms():
+		if atom.GetSymbol() == args.metal:
+			neighbours = atom.GetNeighbors()
+	if len(neighbours) == 0 :
+		if args.verbose: print("x Metal Not found!")
+
+	args.charge = args.oct_oxi
+
+	for atom in neighbours:
+		#print(atom.GetSymbol(), atom.GetTotalValence())
+		#Carbon list
+		if atom.GetTotalValence()== 4 and atom.GetSymbol() in C_group:
+			args.charge = args.charge - 1
+		#Nitrogen list
+		if atom.GetTotalValence() == 3 and atom.GetSymbol() in N_group:
+
+			args.charge = args.charge - 1
+		elif atom.GetTotalValence() == 4 and atom.GetSymbol() in N_group:
+			args.charge = args.charge - 0
+		#Oxygen list
+		if atom.GetTotalValence() == 2 and atom.GetSymbol() in O_group:
+			args.charge = args.charge - 1
+		elif atom.GetTotalValence() == 3 and atom.GetSymbol() in O_group:
+			args.charge = args.charge - 0
+		#halogen list
+		if atom.GetTotalValence() == 1 and atom.GetSymbol() in Cl_group:
+			args.charge = args.charge - 1
+		elif atom.GetTotalValence() == 2 and atom.GetSymbol() in Cl_group:
+			args.charge = args.charge - 0
+
+	return args.charge
+
 
 " MAIN FUNCTION TO CREATE GAUSSIAN JOBS"
 def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args):
@@ -163,10 +204,11 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args):
 
 	#reading the sdf to check for I atom_symbol
 	suppl = Chem.SDMolSupplier(file)
-	for mol in suppl:
-		for atom in mol.GetAtoms():
-			if atom.GetSymbol() in args.genecp_atoms:
-				genecp = 'genecp'
+	for atom in suppl[0].GetAtoms():
+		if atom.GetSymbol() in args.genecp_atoms:
+			genecp = 'genecp'
+	if args.oct ==True:
+		args.charge = oct_rules_get_charge(suppl[0],args)
 
 	if args.single_point == True:
 		#pathto change to
@@ -240,6 +282,18 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args):
 		for file in com_files:
 			ecp_list,ecp_genecp_atoms = [],False
 			read_lines = open(file,"r").readlines()
+
+			#change charge and multiplicity for Octahydrasl
+			if args.oct == True:
+				for i in range(0,len(read_lines)):
+					if len(read_lines[i].strip()) == 0:
+						read_lines[i+3] = str(args.charge)+' '+ str(args.oct_spin)+'\n'
+						break
+				out = open(file, 'w')
+				out.writelines(read_lines)
+				out.close()
+				read_lines = open(file,"r").readlines()
+
 			fileout = open(file, "a")
 			# Detect if there are I atoms to use genecp or not (to use gen)
 			for i in range(4,len(read_lines)):
@@ -324,6 +378,21 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args):
 		else:
 			subprocess.run(
 				  ['obabel', '-isdf', path_for_file+file, '-ocom', '-O'+com,'-m', '-xk', '\n'.join(header)])
+
+		com_files = glob.glob('{0}_*.com'.format(name))
+
+		for file in com_files:
+			read_lines = open(file,"r").readlines()
+			#change charge and multiplicity for Octahydrasl
+			if args.oct == True:
+				for i in range(0,len(read_lines)):
+					if len(read_lines[i].strip()) == 0:
+						read_lines[i+3] = str(args.charge)+' '+ str(args.oct_spin)+'\n'
+						break
+				out = open(file, 'w')
+				out.writelines(read_lines)
+				out.close()
+				read_lines = open(file,"r").readlines
 
 		#submitting the gaussian file on summit
 		if args.qsub == True:

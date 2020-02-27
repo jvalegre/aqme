@@ -3,7 +3,7 @@ from __future__ import print_function
 import argparse, math, os, sys, traceback
 import numpy as np
 from rdkit.Chem import AllChem as Chem
-from rdkit.Chem import rdMolTransforms, PropertyMol
+from rdkit.Chem import rdMolTransforms, PropertyMol, rdchem
 from rdkit.Geometry import Point3D
 
 import DBGEN.db_gen_functions
@@ -206,10 +206,19 @@ def mult_min(mol, name,args):
 				if unique == 0:
 					if args.verbose == True: print("-  Conformer", (i+1), "is unique")
 
+
 					if args.ANI1ccx == True or args.xtb == True:
 						cartesians = mol.GetConformers()[0].GetPositions()
 						elements = ''
-						for atom in mol.GetAtoms(): elements += atom.GetSymbol()
+						for atom in mol.GetAtoms():
+							#converting to metal for optimization in xtb
+							if args.oct == True and atom.GetSymbol() == 'I' and len(atom.GetBonds()) == 6:
+								if args.verbose == True: print("----Converted atom back to Metal for xTB optimization----")
+								elements += args.metal
+							else:
+								elements += atom.GetSymbol()
+
+						print(elements)
 
 						coordinates = torch.tensor([cartesians.tolist()], requires_grad=True, device=device)
 
