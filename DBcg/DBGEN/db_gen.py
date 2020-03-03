@@ -15,15 +15,16 @@ def main():
 	parser.add_argument("--input",help="Molecular structure")
 
 	parser.add_argument("-oct", action="store_true", default=False, help="If studying Octahydral Complexes")
-	parser.add_argument("--metal",  help="If Octahydral complex specify the metal involed", default="Ir", dest="metal", type=str)
-	parser.add_argument("--oct_spin",  help="If Octahydral complex specify the complex spin involed", default="1", dest="oct_spin", type=int)
-	parser.add_argument("--oct_oxi",  help="If Octahydral complex specify the metal oxidation state involed", default="3", dest="oct_oxi", type=int)
+	parser.add_argument("--metal",  help="If Octahedral complex specify the metal involed", default="Ir", dest="metal", type=str)
+	parser.add_argument("--oct_spin",  help="If Octahedral complex specify the complex spin involed", default="1", dest="oct_spin", type=int)
+	parser.add_argument("--oct_oxi",  help="If Octahedral complex specify the metal oxidation state involed", default="3", dest="oct_oxi", type=int)
 
 	parser.add_argument("-m","--maxnumber", help="Number of compounds", type=int, metavar="maxnumber")
 	parser.add_argument("--prefix", help="Prefix for naming files", default=None, metavar="prefix")
 
 	#work the script has to do
-	parser.add_argument("-w","--compute", action="store_true", default=False, help="Create input files for Gaussian")
+	parser.add_argument("-w","--compute", action="store_true", default=False, help="Create conformers")
+	parser.add_argument("--write_gauss", action="store_true", default=False, help="Create input files for Gaussian")
 	parser.add_argument("-a","--analysis", action="store_true", default=False, help="Fix and analyze Gaussian output files")
 	parser.add_argument("-r","--resubmit", action="store_true", default=False, help="Resubmit Gaussian input files")
 
@@ -54,12 +55,15 @@ def main():
 	parser.add_argument("--rms_threshold", help="cutoff for considering sampled conformers the same (default 0.25)", default=0.25, type=float, metavar="R")
 	parser.add_argument("--energy_threshold", dest="energy_threshold",action="store",default=0.05, help="energy difference between unique conformers")
 	parser.add_argument("--max_MolWt", help="Max. molecular weight of molecule", default=1000, type=int, metavar="max_MolWt")
+	parser.add_argument("--large_sys", action="store_true",default=False, help="Large systems for xtb optimizations")
+	parser.add_argument("--STACKSIZE", help="STACKSIZE for optimization of large systems", default="500m")
 
 	#arguments for gaussian files Creation
 	parser.add_argument("-l", "--level_of_theory",help="Level of Theory", default=['wB97xd'], dest="level_of_theory", type=str, nargs='*')
 	parser.add_argument("--basis_set",  help="Basis Set", default=['6-31g*'], dest="basis_set", type=str, nargs='*')
 	parser.add_argument("--basis_set_genecp_atoms",default=['LANL2DZ'], help="Basis Set genecp: The length has to be the same as basis_set", dest="basis_set_genecp_atoms", type=str, nargs='?')
 	parser.add_argument("--genecp_atoms",  help="genecp atoms",default=[], dest="genecp_atoms",type=str, nargs='*')
+	parser.add_argument("--max_cycle_opt", help="Number of cycles for DFT optimization", default="300", type=int, dest="max_cycle_opt")
 	parser.add_argument("--frequencies",action="store_true", default=False, help="Request only optimization without any frequency calculation")
 	parser.add_argument("--single_point",action="store_true", default=False, help="Request only single point calculation")
 	parser.add_argument("--lowest_only", action="store_true", default=False, help="Lowest conformer to write for gaussian")
@@ -115,17 +119,22 @@ def main():
 				if args.oct == True:
 					#find metal and replace with I+ for octahydral
 					smi = toks[0].replace(args.metal,'I+')
-					print(smi)
 					#Ir+ exixted then we need to change back to I+
 					smi = smi.replace('I++','I+')
-					print(smi)
+
 				else: smi = toks[0]
+
+				#taking largest component for salts
+				pieces = smi.split('.')
+				if len(pieces) > 1:
+					smi = max(pieces, key=len) #take largest component by length
+					print("Taking largest component: %s\t%s" % (smi,name))
 
 				if args.prefix == None: name = ''.join(toks[1:])
 				else: name = args.prefix+str(i)+'_'+''.join(toks[1:])
 
 					# Converts each line to a rdkit mol object
-				if args.verbose: print("   -> Input Molecule {} from {}".format(smi, args.input))
+				if args.verbose: print("   -> Input Molecule {} is {}".format(i, smi))
 				mol = Chem.MolFromSmiles(smi)
 				mol_objects.append([mol, name])
 
@@ -161,12 +170,19 @@ def main():
 				else: name = 'comp_'+str(m)+'_'+csv_smiles.loc[i, 'code_name']
 
 				smi = csv_smiles.loc[i, 'SMILES']
+				#checking for salts
+				pieces = smi.split('.')
+				if len(pieces) > 1:
+					smi = max(pieces, key=len) #take largest component by length
+					print("Taking largest component: %s\t%s" % (smi,name))
+
 				if args.oct == True:
 						#find metal and replace with I+ for octahydral
 					smi = smi.replace(args.metal,'I+')
 						#Ir+ exixted then we need to change back to I+
 					smi = smi.replace('I++','I+')
 
+				if args.verbose: print("   -> Input Molecule {} is {}".format(i, smi))
 				mol = Chem.MolFromSmiles(smi)
 				mol_objects.append([mol, name])
 				m += 1
@@ -239,8 +255,11 @@ def main():
 		for [mol, name] in mol_objects: # Run confomer generation for each mol object
 			conformer_generation(mol,name,args)
 
+	if args.write_gauss == True:
+
 		# creating the com files from the sdf files created read *_confs.sdf
-		conf_files = [name+'_confs.sdf' for mol,name in mol_objects]
+		conf_files = glob.glob('*_confs_.sdf')
+		# conf_files = [name+'_confs.sdf' for mol,name in mol_objects]
 
 		if args.oct == True:
 			conf_files = glob.glob('*_confs.sdf')
@@ -256,8 +275,8 @@ def main():
 							atom.SetAtomicNum(atomic_number)
 					w.write(mol)
 				w.close()
-			# conf_files = glob.glob('*_confs_'+args.metal+'.sdf')
-			conf_files = [name+'_confs_'+args.metal+'.sdf' for mol,name in mol_objects]
+			conf_files = glob.glob('*_confs_'+args.metal+'.sdf')
+			# conf_files = [name+'_confs_'+args.metal+'.sdf' for mol,name in mol_objects]
 
 		# names for directories created
 		sp_dir = 'sp'
@@ -312,6 +331,7 @@ def main():
 					w_dir_fin = args.path + str(lot) + '-' + str(bs) +'/Finished'
 					#print(w_dir)
 					os.chdir(w_dir)
+					print(w_dir)
 					log_files = glob.glob('*.log')
 					output_analyzer(log_files, w_dir, lot, bs, bs_gcp, args, w_dir_fin)
 

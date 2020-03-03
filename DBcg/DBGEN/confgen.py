@@ -1,6 +1,6 @@
 #!/usr/bin/python
 from __future__ import print_function
-import argparse, math, os, sys, traceback
+import argparse, math, os, sys, traceback,subprocess
 import numpy as np
 from rdkit.Chem import AllChem as Chem
 from rdkit.Chem import rdMolTransforms, PropertyMol, rdchem
@@ -17,8 +17,8 @@ device = torch.device('cpu')
 model = torchani.models.ANI1ccx()
 from ase.units import kJ,mol,Hartree,kcal
 
-#import xtb
-#from xtb import GFN2
+import xtb
+from xtb import GFN2
 output = '.sdf'
 final_output = '_confs.sdf'
 
@@ -173,6 +173,11 @@ def mult_min(mol, name,args):
 
 	globmin = None
 
+	# if large system increase stck size
+	if args.large_sys == True:
+		os.environ['OMP_STACKSIZE'] = args.STACKSIZE
+		if args.verbose == True: print('The Stack size has been updated for larger molecules to {0}'.format(os.environ['OMP_STACKSIZE']))
+
 	for i,mol in enumerate(inmols):
 		conf = 1
 		if mol is not None:
@@ -218,7 +223,7 @@ def mult_min(mol, name,args):
 							else:
 								elements += atom.GetSymbol()
 
-						print(elements)
+						if args.verbose == True:print(elements)
 
 						coordinates = torch.tensor([cartesians.tolist()], requires_grad=True, device=device)
 

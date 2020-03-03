@@ -137,31 +137,30 @@ def oct_rules_get_charge(mol, args):
 	if len(neighbours) == 0 :
 		if args.verbose: print("x Metal Not found!")
 
-	args.charge = args.oct_oxi
+	charge = args.oct_oxi
 
 	for atom in neighbours:
 		#print(atom.GetSymbol(), atom.GetTotalValence())
 		#Carbon list
 		if atom.GetTotalValence()== 4 and atom.GetSymbol() in C_group:
-			args.charge = args.charge - 1
+			charge = charge - 1
 		#Nitrogen list
 		if atom.GetTotalValence() == 3 and atom.GetSymbol() in N_group:
-
-			args.charge = args.charge - 1
+			charge = charge - 1
 		elif atom.GetTotalValence() == 4 and atom.GetSymbol() in N_group:
-			args.charge = args.charge - 0
+			charge = charge - 0
 		#Oxygen list
 		if atom.GetTotalValence() == 2 and atom.GetSymbol() in O_group:
-			args.charge = args.charge - 1
+			charge = charge - 1
 		elif atom.GetTotalValence() == 3 and atom.GetSymbol() in O_group:
-			args.charge = args.charge - 0
+			charge = charge - 0
 		#halogen list
 		if atom.GetTotalValence() == 1 and atom.GetSymbol() in Cl_group:
-			args.charge = args.charge - 1
+			charge = charge - 1
 		elif atom.GetTotalValence() == 2 and atom.GetSymbol() in Cl_group:
-			args.charge = args.charge - 0
+			charge = charge - 0
 
-	return args.charge
+	return charge
 
 
 " MAIN FUNCTION TO CREATE GAUSSIAN JOBS"
@@ -171,32 +170,32 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args):
 	if args.frequencies == True:
 		if args.dispersion_correction == True:
 			if args.solvent_model == 'gas_phase':
-				input = 'opt freq=noraman EmpiricalDispersion=G{0}'.format(args.empirical_dispersion)
+				input = 'opt=(maxcycles={0}) freq=noraman EmpiricalDispersion=G{1}'.format(args.max_cycle_opt,args.empirical_dispersion)
 				input_sp = 'nmr=giao EmpiricalDispersion=G{0}'.format(args.empirical_dispersion)  #input for single point nmr
 			else :
-				input = 'opt freq=noraman SCRF=({0},Solvent={1}) EmpiricalDispersion=G{2}'.format(args.solvent_model, args.solvent_name,args.empirical_dispersion ) #add solvent if needed
+				input = 'opt=(maxcycles={0}) freq=noraman SCRF=({1},Solvent={2}) EmpiricalDispersion=G{3}'.format(args.max_cycle_opt, args.solvent_model, args.solvent_name,args.empirical_dispersion ) #add solvent if needed
 				input_sp = 'SCRF=({0},Solvent={1}) nmr=giao EmpiricalDispersion=G{2}'.format(args.solvent_model, args.solvent_name, args.empirical_dispersion)  ##add solvent if needed
 		else:
 			if args.solvent_model == 'gas_phase':
-				input = 'opt freq=noraman '
+				input = 'opt=(maxcycles={0}) freq=noraman'.format(args.max_cycle_opt)
 				input_sp = 'nmr=giao ' #input for single point nmr
 			else :
-				input = 'opt freq=noraman SCRF=({0},Solvent={1})'.format(args.solvent_model, args.solvent_name) #add solvent if needed
+				input = 'opt=(maxcycles={0}) freq=noraman SCRF=({1},Solvent={2})'.format(args.max_cycle_opt,args.solvent_model, args.solvent_name) #add solvent if needed
 				input_sp = 'SCRF=({0},Solvent={1}) nmr=giao'.format(args.solvent_model, args.solvent_name)  ##add solvent if needed
 	else:
 		if args.dispersion_correction == True:
 			if args.solvent_model == 'gas_phase':
-				input = 'opt EmpiricalDispersion=G{0}'.format(args.empirical_dispersion)
+				input = 'opt=(maxcycles={0}) EmpiricalDispersion=G{1}'.format(args.max_cycle_opt,args.empirical_dispersion)
 				input_sp = 'nmr=giao EmpiricalDispersion=G{0}'.format(args.empirical_dispersion)  #input for single point nmr
 			else :
-				input = 'opt SCRF=({0},Solvent={1}) EmpiricalDispersion=G{2}'.format(args.solvent_model, args.solvent_name,args.empirical_dispersion ) #add solvent if needed
+				input = 'opt=(maxcycles={0}) SCRF=({1},Solvent={2}) EmpiricalDispersion=G{3}'.format(args.max_cycle_opt,args.solvent_model, args.solvent_name,args.empirical_dispersion ) #add solvent if needed
 				input_sp = 'SCRF=({0},Solvent={1}) nmr=giao EmpiricalDispersion=G{2}'.format(args.solvent_model, args.solvent_name, args.empirical_dispersion)  ##add solvent if needed
 		else:
 			if args.solvent_model == 'gas_phase':
-				input = 'opt '
+				input = 'opt=(maxcycles={0})'.format(args.max_cycle_opt)
 				input_sp = 'nmr=giao ' #input for single point nmr
 			else :
-				input = 'opt SCRF=({0},Solvent={1})'.format(args.solvent_model, args.solvent_name) #add solvent if needed
+				input = 'opt=(maxcycles={0}) SCRF=({1},Solvent={2})'.format(args.max_cycle_opt,args.solvent_model, args.solvent_name) #add solvent if needed
 				input_sp = 'SCRF=({0},Solvent={1}) nmr=giao'.format(args.solvent_model, args.solvent_name)  ##add solvent if needed
 
 	#defining genecp
@@ -208,7 +207,7 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args):
 		if atom.GetSymbol() in args.genecp_atoms:
 			genecp = 'genecp'
 	if args.oct ==True:
-		args.charge = oct_rules_get_charge(suppl[0],args)
+		charge = oct_rules_get_charge(suppl[0],args)
 
 	if args.single_point == True:
 		#pathto change to
@@ -287,7 +286,7 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args):
 			if args.oct == True:
 				for i in range(0,len(read_lines)):
 					if len(read_lines[i].strip()) == 0:
-						read_lines[i+3] = str(args.charge)+' '+ str(args.oct_spin)+'\n'
+						read_lines[i+3] = str(charge)+' '+ str(args.oct_spin)+'\n'
 						break
 				out = open(file, 'w')
 				out.writelines(read_lines)
@@ -387,7 +386,7 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args):
 			if args.oct == True:
 				for i in range(0,len(read_lines)):
 					if len(read_lines[i].strip()) == 0:
-						read_lines[i+3] = str(args.charge)+' '+ str(args.oct_spin)+'\n'
+						read_lines[i+3] = str(charge)+' '+ str(args.oct_spin)+'\n'
 						break
 				out = open(file, 'w')
 				out.writelines(read_lines)
@@ -437,32 +436,32 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin):
 	if args.frequencies == True:
 		if args.dispersion_correction == True:
 			if args.solvent_model == 'gas_phase':
-				input = 'opt freq=noraman EmpiricalDispersion=G{0}'.format(args.empirical_dispersion)
+				input = 'opt=(maxcycles={0}) freq=noraman EmpiricalDispersion=G{1}'.format(args.max_cycle_opt,args.empirical_dispersion)
 				input_sp = 'nmr=giao EmpiricalDispersion=G{0}'.format(args.empirical_dispersion)  #input for single point nmr
 			else :
-				input = 'opt freq=noraman SCRF=({0},Solvent={1}) EmpiricalDispersion=G{2}'.format(args.solvent_model, args.solvent_name,args.empirical_dispersion ) #add solvent if needed
+				input = 'opt=(maxcycles={0}) freq=noraman SCRF=({1},Solvent={2}) EmpiricalDispersion=G{3}'.format(args.max_cycle_opt, args.solvent_model, args.solvent_name,args.empirical_dispersion ) #add solvent if needed
 				input_sp = 'SCRF=({0},Solvent={1}) nmr=giao EmpiricalDispersion=G{2}'.format(args.solvent_model, args.solvent_name, args.empirical_dispersion)  ##add solvent if needed
 		else:
 			if args.solvent_model == 'gas_phase':
-				input = 'opt freq=noraman '
+				input = 'opt=(maxcycles={0}) freq=noraman'.format(args.max_cycle_opt)
 				input_sp = 'nmr=giao ' #input for single point nmr
 			else :
-				input = 'opt freq=noraman SCRF=({0},Solvent={1})'.format(args.solvent_model, args.solvent_name) #add solvent if needed
+				input = 'opt=(maxcycles={0}) freq=noraman SCRF=({1},Solvent={2})'.format(args.max_cycle_opt,args.solvent_model, args.solvent_name) #add solvent if needed
 				input_sp = 'SCRF=({0},Solvent={1}) nmr=giao'.format(args.solvent_model, args.solvent_name)  ##add solvent if needed
 	else:
 		if args.dispersion_correction == True:
 			if args.solvent_model == 'gas_phase':
-				input = 'opt EmpiricalDispersion=G{0}'.format(args.empirical_dispersion)
+				input = 'opt=(maxcycles={0}) EmpiricalDispersion=G{1}'.format(args.max_cycle_opt,args.empirical_dispersion)
 				input_sp = 'nmr=giao EmpiricalDispersion=G{0}'.format(args.empirical_dispersion)  #input for single point nmr
 			else :
-				input = 'opt SCRF=({0},Solvent={1}) EmpiricalDispersion=G{2}'.format(args.solvent_model, args.solvent_name,args.empirical_dispersion ) #add solvent if needed
+				input = 'opt=(maxcycles={0}) SCRF=({1},Solvent={2}) EmpiricalDispersion=G{3}'.format(args.max_cycle_opt,args.solvent_model, args.solvent_name,args.empirical_dispersion ) #add solvent if needed
 				input_sp = 'SCRF=({0},Solvent={1}) nmr=giao EmpiricalDispersion=G{2}'.format(args.solvent_model, args.solvent_name, args.empirical_dispersion)  ##add solvent if needed
 		else:
 			if args.solvent_model == 'gas_phase':
-				input = 'opt '
+				input = 'opt=(maxcycles={0})'.format(args.max_cycle_opt)
 				input_sp = 'nmr=giao ' #input for single point nmr
 			else :
-				input = 'opt SCRF=({0},Solvent={1})'.format(args.solvent_model, args.solvent_name) #add solvent if needed
+				input = 'opt=(maxcycles={0}) SCRF=({1},Solvent={2})'.format(args.max_cycle_opt,args.solvent_model, args.solvent_name) #add solvent if needed
 				input_sp = 'SCRF=({0},Solvent={1}) nmr=giao'.format(args.solvent_model, args.solvent_name)  ##add solvent if needed
 
 	for file in log_files:
