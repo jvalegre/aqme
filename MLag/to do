@@ -16,3 +16,8 @@ To include:
   practically constant)
 - Option for De Novo structures based on reinforcement learning to
   either get molecules in the lower range or in the higher range
+- To get the best RMSE, let the USER specify a variable with a % of test,
+  then calculate the RMSE on that % of test two times with different
+  random seeds, and make an averaged RMSE
+- Show R2, Q2, RMSE, etc from the test as an average of 5 measurements with
+  5 different random seeds
