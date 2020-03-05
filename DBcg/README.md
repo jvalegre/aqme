@@ -28,6 +28,14 @@ Analysis for Boltzmann averaging and combining files
 1. Salts or complexes with more than one molecule wont work. (RDkit doesn't know how to handle multiple molecules, need to figure out this!)
 2. Transition states don't work (need to figure how to generalise templates)
 
+## Using octahedral, trigonal bipyramidal, square-planar and square-based pyramidal structures
+*** EXPLAIN BETTER!***
+RDKit uses iodine to generate:
+Octahedral I+ complex (coordination number 6), XXX I+ complex (coordination number 5), Tetrahedral I+ complex (coordination number 4)
+\*\*Otherwise, RDKit gives error of coordination if you use the central metals directly.
+
+Then, the code replaces the central I for the metal that you choose with the oxidation state and multiplicity that you want. After this replacement, it runs xTB and then you get a geometry that looks like what you would expect for that complex (i.e. you start from a I+ tetrahedral complex from RDKIT, you replace I+ for Pd and run xTB, then xTB gives you a square-planar geometry with Pd). This "cleaned up" geometry is then used to create the final COM input file.
+
 
 ## Possible methods of invoking the script:
 1. python -m DBGEN --varfile params.py (it reads all the variables from a file of .py format)
