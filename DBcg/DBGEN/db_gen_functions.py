@@ -12,11 +12,11 @@
 import glob, os, shutil, sys, time
 import numpy as np
 import pandas as pd
-from periodictable import elements
+from periodictable import elements as elementspt
 
 from rdkit import Chem,DataStructs
 from rdkit.Chem import PropertyMol, rdChemReactions,AllChem,Lipinski,Descriptors, rdchem
-import openbabel as ob
+from openbabel import openbabel as ob
 import subprocess
 
 from DBGEN.confgen import *
@@ -30,7 +30,6 @@ possible_atoms = ["", "H", "He", "Li", "Be", "B", "C", "N", "O", "F", "Ne", "Na"
 				 "Am", "Cm", "Bk", "Cf", "Es", "Fm", "Md", "No", "Lr", "Rf", "Db", "Sg", "Bh", "Hs", "Mt", "Ds",
 				 "Rg", "Uub", "Uut", "Uuq", "Uup", "Uuh", "Uus", "Uuo"]
 columns = ['Structure', 'E', 'ZPE', 'H', 'T.S', 'T.qh-S', 'G(T)', 'qh-G(T)']
-
 C_group = ['C', 'Se', 'Ge']
 N_group = ['N', 'P', 'As']
 O_group = ['O', 'S', 'Se']
@@ -129,40 +128,6 @@ def read_energies(file): # parses the energies from sdf files - then used to fil
 	f.close()
 	return energies
 
-def oct_rules_get_charge(mol, args):
-	#get the neighbours of metal atoms
-	for atom in mol.GetAtoms():
-		if atom.GetSymbol() == args.metal:
-			neighbours = atom.GetNeighbors()
-	if len(neighbours) == 0 :
-		if args.verbose: print("x Metal Not found!")
-
-	charge = args.oct_oxi
-
-	for atom in neighbours:
-		#print(atom.GetSymbol(), atom.GetTotalValence())
-		#Carbon list
-		if atom.GetTotalValence()== 4 and atom.GetSymbol() in C_group:
-			charge = charge - 1
-		#Nitrogen list
-		if atom.GetTotalValence() == 3 and atom.GetSymbol() in N_group:
-			charge = charge - 1
-		elif atom.GetTotalValence() == 4 and atom.GetSymbol() in N_group:
-			charge = charge - 0
-		#Oxygen list
-		if atom.GetTotalValence() == 2 and atom.GetSymbol() in O_group:
-			charge = charge - 1
-		elif atom.GetTotalValence() == 3 and atom.GetSymbol() in O_group:
-			charge = charge - 0
-		#halogen list
-		if atom.GetTotalValence() == 1 and atom.GetSymbol() in Cl_group:
-			charge = charge - 1
-		elif atom.GetTotalValence() == 2 and atom.GetSymbol() in Cl_group:
-			charge = charge - 0
-
-	return charge
-
-
 " MAIN FUNCTION TO CREATE GAUSSIAN JOBS"
 def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args):
 
@@ -206,8 +171,8 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args):
 	for atom in suppl[0].GetAtoms():
 		if atom.GetSymbol() in args.genecp_atoms:
 			genecp = 'genecp'
-	if args.oct ==True:
-		charge = oct_rules_get_charge(suppl[0],args)
+	if args.metal_complex ==True:
+		charge = rules_get_charge(suppl[0],args)
 
 	if args.single_point == True:
 		#pathto change to
@@ -283,10 +248,10 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args):
 			read_lines = open(file,"r").readlines()
 
 			#change charge and multiplicity for Octahydrasl
-			if args.oct == True:
+			if args.metal_complex == True:
 				for i in range(0,len(read_lines)):
 					if len(read_lines[i].strip()) == 0:
-						read_lines[i+3] = str(charge)+' '+ str(args.oct_spin)+'\n'
+						read_lines[i+3] = str(charge)+' '+ str(args.complex_spin)+'\n'
 						break
 				out = open(file, 'w')
 				out.writelines(read_lines)
@@ -383,10 +348,10 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args):
 		for file in com_files:
 			read_lines = open(file,"r").readlines()
 			#change charge and multiplicity for Octahydrasl
-			if args.oct == True:
+			if args.metal_complex == True:
 				for i in range(0,len(read_lines)):
 					if len(read_lines[i].strip()) == 0:
-						read_lines[i+3] = str(charge)+' '+ str(args.oct_spin)+'\n'
+						read_lines[i+3] = str(charge)+' '+ str(args.complex_spin)+'\n'
 						break
 				out = open(file, 'w')
 				out.writelines(read_lines)
@@ -479,6 +444,7 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin):
 		FREQS, REDMASS, FORCECONST, NORMALMODE = [],[],[],[]; IM_FREQS = 0
 		freqs_so_far = 0
 		TERMINATION = "unfinished"
+		ERRORTYPE = 'unknown'
 		###stop=0
 		### Change to reverse
 		for i in range(0,len(outlines)):
@@ -493,13 +459,16 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin):
 				###stop=stop+1
 			elif outlines[i].find("Error termination") > -1:
 				TERMINATION = "error"
+				if outlines[i-1].find("Atomic number out of range") > -1:
+					ERRORTYPE = "atomicbasiserror"
+				if outlines[i-3].find("SCF Error SCF Error SCF Error SCF Error SCF Error SCF Error SCF Error SCF Error") > -1:
+					ERRORTYPE = "SCFerror"
 				###stop=stop+1
 			# Determine charge and multiplicity
 			if outlines[i].find("Charge = ") > -1:
 				CHARGE = int(outlines[i].split()[2])
 				MULT = int(outlines[i].split()[5].rstrip("\n"))
 				###stop=stop+1
-
 
 		###reverse
 		for i in range(0,len(outlines)):
@@ -546,7 +515,11 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin):
 		if TERMINATION != "normal":
 			# Get the coordinates for jobs that did not finished or finished with an error
 			###reverse copy from above
-			for i in range(0,stop_rms):
+			if stop_rms == 0:
+				last_line = len(outlines)
+			else:
+				last_line = stop_rms
+			for i in range(0,last_line):
 				# Sets where the final coordinates are inside the file
 				if outlines[i].find("Input orientation") > -1: standor = i
 				if outlines[i].find("Standard orientation") > -1: standor = i
@@ -617,7 +590,12 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin):
 					raise
 
 		if IM_FREQS == 0 and TERMINATION == "error":
-			destination = w_dir+'Failed_Error/'
+			if stop_rms == 0 and ERRORTYPE == "atomicbasiserror":
+				destination = w_dir+'Failed_Error/Atomic_Basis_error'
+			elif stop_rms == 0 and ERRORTYPE == "SCFerror":
+				destination = w_dir+'Failed_Error/SCF_error'
+			else:
+				destination = w_dir+'Failed_Error/Unknown_Error'
 			try:
 				os.makedirs(destination)
 				shutil.move(source, destination)
@@ -638,7 +616,9 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin):
 				else:
 					raise
 
-		if IM_FREQS > 0 or TERMINATION != "normal":
+
+		if IM_FREQS > 0 or TERMINATION != "normal" and not os.path.exists(w_dir+'Failed_Error/Unknown_Error/'+file) and not os.path.exists(w_dir+'Failed_Error/Atomic_Basis_error/'+file):
+
 			# creating new folder with new input gaussian files
 			new_gaussian_input_files = w_dir+'New_Gaussian_Input_Files'
 
@@ -652,7 +632,7 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin):
 
 			os.chdir(new_gaussian_input_files)
 
-			print('Creating new gaussian input files')
+			print('-> Creating new gaussian input files for {0}/{1} file {2}'.format(lot,bs,name))
 
 			# Options for genecp
 			ecp_list,ecp_genecp_atoms = [],False
@@ -668,10 +648,16 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin):
 				genecp = 'genecp'
 
 			if genecp == 'genecp':
-				if args.single_point == True:
-					keywords_opt = lot +'/'+ genecp+' '+ input_sp
+				if ERRORTYPE == 'SCFerror':
+					if args.single_point == True:
+						keywords_opt = lot +'/'+ genecp+' '+ input_sp + 'SCF=QC'
+					else:
+						keywords_opt = lot +'/'+ genecp+' '+ input + 'SCF=QC'
 				else:
-					keywords_opt = lot +'/'+ genecp+' '+ input
+					if args.single_point == True:
+						keywords_opt = lot +'/'+ genecp+' '+ input_sp
+					else:
+						keywords_opt = lot +'/'+ genecp+' '+ input
 
 				fileout = open(file.split(".")[0]+'.com', "w")
 				fileout.write("%mem="+str(args.mem)+"\n")
@@ -679,7 +665,6 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin):
 				fileout.write("# "+keywords_opt+"\n")
 				fileout.write("\n")
 				fileout.write(name+"\n")
-				fileout.write("\n")
 				fileout.write(str(CHARGE)+' '+str(MULT)+'\n')
 				for atom in range(0,NATOMS):
 					fileout.write('{0:>2} {1:12.8f} {2:12.8f} {3:12.8f}'.format(ATOMTYPES[atom], CARTESIANS[atom][0],  CARTESIANS[atom][1],  CARTESIANS[atom][2]))
@@ -707,10 +692,16 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin):
 					fileout.write(bs_gcp+'\n\n')
 				fileout.close()
 			else:
-				if args.single_point == True:
-					keywords_opt = lot +'/'+ bs +' '+ input_sp
+				if ERRORTYPE == 'SCFerror':
+					if args.single_point == True:
+						keywords_opt = lot +'/'+ genecp+' '+ input_sp + 'SCF=QC'
+					else:
+						keywords_opt = lot +'/'+ genecp+' '+ input + 'SCF=QC'
 				else:
-					keywords_opt = lot +'/'+ bs +' '+ input
+					if args.single_point == True:
+						keywords_opt = lot +'/'+ bs +' '+ input_sp
+					else:
+						keywords_opt = lot +'/'+ bs +' '+ input
 
 				fileout = open(file.split(".")[0]+'.com', "w")
 				fileout.write("%mem="+str(args.mem)+"\n")
@@ -718,7 +709,6 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin):
 				fileout.write("# "+keywords_opt+"\n")
 				fileout.write("\n")
 				fileout.write(name+"\n")
-				fileout.write("\n")
 				fileout.write(str(CHARGE)+' '+str(MULT)+'\n')
 				for atom in range(0,NATOMS):
 					fileout.write('{0:>2} {1:12.8f} {2:12.8f} {3:12.8f}'.format(ATOMTYPES[atom], CARTESIANS[atom][0],  CARTESIANS[atom][1],  CARTESIANS[atom][2]))
@@ -768,7 +758,6 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin):
 				fileout.write("# "+keywords_opt+"\n")
 				fileout.write("\n")
 				fileout.write(name+"\n")
-				fileout.write("\n")
 				fileout.write(str(CHARGE)+' '+str(MULT)+'\n')
 				for atom in range(0,NATOMS):
 					fileout.write('{0:>2} {1:12.8f} {2:12.8f} {3:12.8f}'.format(ATOMTYPES[atom], CARTESIANS[atom][0],  CARTESIANS[atom][1],  CARTESIANS[atom][2]))
@@ -831,7 +820,9 @@ def combine_files(csv_files, lot, bs, args):
 
 	for f in csv_files:
 
-		df = pd.read_csv(f, skiprows = 14)
+		print(f)
+
+		df = pd.read_csv(f, skiprows = 16)
 		# df['Structure']= df['Structure'].astype(str)
 		df = df.rename(columns={"   Structure": "Structure"})
 

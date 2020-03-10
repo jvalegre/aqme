@@ -5,8 +5,11 @@ import numpy as np
 from rdkit.Chem import AllChem as Chem
 from rdkit.Chem import rdMolTransforms, PropertyMol, rdchem
 from rdkit.Geometry import Point3D
+from periodictable import elements as elementspt
 
 import DBGEN.db_gen_functions
+
+
 
 ### TORCHANI IMPORTS
 import ase
@@ -72,6 +75,70 @@ def genConformer_r(mol, conf, i, matches, degree, sdwriter):
 			total += genConformer_r(mol, conf, i+1, matches, degree, sdwriter)
 			deg += degree
 		return total
+
+def rules_get_charge(mol, args):
+	C_group = ['C', 'Se', 'Ge']
+	N_group = ['N', 'P', 'As']
+	O_group = ['O', 'S', 'Se']
+	Cl_group = ['Cl', 'Br', 'I']
+	#get the neighbours of metal atoms
+	for atom in mol.GetAtoms():
+		if atom.GetSymbol() == args.metal:
+			neighbours = atom.GetNeighbors()
+	if len(neighbours) == 0 :
+		if args.verbose: print("x Metal Not found!")
+
+	charge = args.m_oxi
+
+	if os.path.splitext(args.input)[1] == '.com' or os.path.splitext(args.input)[1] == '.sdf':
+		for atom in neighbours:
+			#print(atom.GetSymbol(), atom.GetTotalValence())
+			#Carbon list
+			if atom.GetTotalValence()== 4 and atom.GetSymbol() in C_group:
+				charge = charge - 1
+			if atom.GetTotalValence()== 3 and atom.GetSymbol() in C_group:
+				charge = charge - 0
+			#Nitrogen list
+			if len(atom.GetBonds()) == 3 and atom.GetSymbol() in N_group:
+				charge = charge - 0
+			if atom.GetTotalValence() == 2 and atom.GetSymbol() in N_group:
+				charge = charge - 1
+			#Oxygen list
+			if atom.GetTotalValence() == 2 and atom.GetSymbol() in O_group:
+				charge = charge - 1
+			elif atom.GetTotalValence() == 3 and atom.GetSymbol() in O_group:
+				charge = charge - 0
+			#halogen list
+			if atom.GetTotalValence() == 0 and atom.GetSymbol() in Cl_group:
+				charge = charge - 1
+			elif atom.GetTotalValence() == 1 and atom.GetSymbol() in Cl_group:
+				charge = charge - 0
+			print(atom.GetSymbol(),len(atom.GetBonds()),charge )
+			if args.verbose == True: print('-> Accounted for aromaticity in the complex.')
+	else:
+		for atom in neighbours:
+			#print(atom.GetSymbol(), atom.GetTotalValence())
+			#Carbon list
+			if atom.GetTotalValence()== 4 and atom.GetSymbol() in C_group:
+				charge = charge - 1
+			#Nitrogen list
+			if atom.GetTotalValence() == 3 and atom.GetSymbol() in N_group:
+				charge = charge - 1
+			elif atom.GetTotalValence() == 4 and atom.GetSymbol() in N_group:
+				charge = charge - 0
+			#Oxygen list
+			if atom.GetTotalValence() == 2 and atom.GetSymbol() in O_group:
+				charge = charge - 1
+			elif atom.GetTotalValence() == 3 and atom.GetSymbol() in O_group:
+				charge = charge - 0
+			#halogen list
+			if atom.GetTotalValence() == 1 and atom.GetSymbol() in Cl_group:
+				charge = charge - 1
+			elif atom.GetTotalValence() == 2 and atom.GetSymbol() in Cl_group:
+				charge = charge - 0
+
+			print(atom.GetSymbol(),atom.GetTotalValence(),charge )
+	return charge
 
 def summ_search(mol, name,args):
 	'''embeds core conformers, then optimizes and filters based on RMSD. Finally the rotatable torsions are systematically rotated'''
@@ -157,7 +224,7 @@ def mult_min(mol, name,args):
 	'''optimizes a bunch of molecules and then checks for unique conformers and then puts in order of energy'''
 
 	opt = True # switch to off for single point only
-	opt_precision = 0.005 # toggle for optimization convergence
+	opt_precision = 0.05 # toggle for optimization convergence
 
 	#adjust opt convergence criteria (args.convergence defaults to 1.0)
 	opt_precision = opt_precision * args.convergence
@@ -176,7 +243,7 @@ def mult_min(mol, name,args):
 	# if large system increase stck size
 	if args.large_sys == True:
 		os.environ['OMP_STACKSIZE'] = args.STACKSIZE
-		if args.verbose == True: print('The Stack size has been updated for larger molecules to {0}'.format(os.environ['OMP_STACKSIZE']))
+		if args.verbose == True: print('---- The Stack size has been updated for larger molecules to {0} ----'.format(os.environ['OMP_STACKSIZE']))
 
 	for i,mol in enumerate(inmols):
 		conf = 1
@@ -209,21 +276,25 @@ def mult_min(mol, name,args):
 							dup_id = (j+1)
 
 				if unique == 0:
+
 					if args.verbose == True: print("-  Conformer", (i+1), "is unique")
 
+					#setting the metal back instead of I
+					if args.metal_complex == True:
+						for atom in mol.GetAtoms():
+							if atom.GetSymbol() == 'I' and (len(atom.GetBonds()) == 6 or len(atom.GetBonds()) == 5 or len(atom.GetBonds()) == 4 or len(atom.GetBonds()) == 3):
+								for el in elementspt:
+									if el.symbol == args.metal:
+										atomic_number = el.number
+								atom.SetAtomicNum(atomic_number)
 
 					if args.ANI1ccx == True or args.xtb == True:
 						cartesians = mol.GetConformers()[0].GetPositions()
 						elements = ''
 						for atom in mol.GetAtoms():
-							#converting to metal for optimization in xtb
-							if args.oct == True and atom.GetSymbol() == 'I' and len(atom.GetBonds()) == 6:
-								if args.verbose == True: print("----Converted atom back to Metal for xTB optimization----")
-								elements += args.metal
-							else:
-								elements += atom.GetSymbol()
+							elements += atom.GetSymbol()
 
-						if args.verbose == True:print(elements)
+						if args.verbose == True: print('---- The elements are the following {0} ----'.format(elements))
 
 						coordinates = torch.tensor([cartesians.tolist()], requires_grad=True, device=device)
 
@@ -254,7 +325,15 @@ def mult_min(mol, name,args):
 ### INCLUDE THE OPTIONS TO SOTRE MOLECULAR Descriptors
 ### CHECK THIS WEBPAGE: https://github.com/grimme-lab/xtb/tree/master/python
 						elif args.xtb == True:
-							ase_molecule = ase.Atoms(elements, positions=coordinates.tolist()[0], calculator=GFN2()) #define ase molecule using GFN2 Calculator
+							if args.metal_complex == True:
+								#passing charges metal present
+								ase_molecule = ase.Atoms(elements, positions=coordinates.tolist()[0],calculator=GFN2()) #define ase molecule using GFN2 Calculator
+								for atom in ase_molecule:
+									if atom.symbol == args.metal:
+										atom.charge = rules_get_charge(mol,args)
+										if args.verbose == True: print('---- The Overall charge considered is  {0} ----'.format(atom.charge))
+							else:
+								ase_molecule = ase.Atoms(elements, positions=coordinates.tolist()[0], calculator=GFN2()) #define ase molecule using GFN2 Calculator
 							if opt == True:
 								if args.verbose: print("Initial XTB energy", ase_molecule.get_potential_energy()/Hartree,'Eh',ase_molecule.get_potential_energy(),'eV') #Hartree, eV
 								optimizer = ase.optimize.BFGS(ase_molecule)

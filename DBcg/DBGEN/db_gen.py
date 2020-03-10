@@ -14,10 +14,10 @@ def main():
 	parser.add_argument("--varfile",dest="varfile",default=None,help="Parameters in python format")
 	parser.add_argument("--input",help="Molecular structure")
 
-	parser.add_argument("-oct", action="store_true", default=False, help="If studying Octahydral Complexes")
-	parser.add_argument("--metal",  help="If Octahedral complex specify the metal involed", default="Ir", dest="metal", type=str)
-	parser.add_argument("--oct_spin",  help="If Octahedral complex specify the complex spin involed", default="1", dest="oct_spin", type=int)
-	parser.add_argument("--oct_oxi",  help="If Octahedral complex specify the metal oxidation state involed", default="3", dest="oct_oxi", type=int)
+	parser.add_argument("--metal_complex", action="store_true", default=False, help="If studying Metal Complexes of coordination number 4,5 or 6")
+	parser.add_argument("--metal",  help="If metal complex, specify the metal involed", default="Ir", dest="metal", type=str)
+	parser.add_argument("--complex_spin",  help="If metal complex, specify the complex spin involed", default="1", dest="complex_spin", type=int)
+	parser.add_argument("--m_oxi",  help="If metal complex, specify the metal oxidation state involed", default="3", dest="m_oxi", type=int)
 
 	parser.add_argument("-m","--maxnumber", help="Number of compounds", type=int, metavar="maxnumber")
 	parser.add_argument("--prefix", help="Prefix for naming files", default=None, metavar="prefix")
@@ -116,7 +116,7 @@ def main():
 			for i, line in enumerate(smifile):
 				toks = line.split()
 
-				if args.oct == True:
+				if args.metal_complex == True:
 					#find metal and replace with I+ for octahydral
 					smi = toks[0].replace(args.metal,'I+')
 					#Ir+ exixted then we need to change back to I+
@@ -139,7 +139,7 @@ def main():
 				mol_objects.append([mol, name])
 
 		elif file_format == '.sdf': # SDF input specified
-			sdffile = open(args.input)
+			sdffile = args.input
 			IDs = []
 			f = open(sdffile,"r")
 			readlines = f.readlines()
@@ -148,15 +148,25 @@ def main():
 				if line.find('>  <ID>') > -1:
 					ID = readlines[i+1].split()[0]
 					IDs.append(ID)
-				else: IDs.append(i)
-				if args.oct == True:
-						#changing name for Metal
-					if line.find(args.metal) > -1:
-						readlines[i].split()[0] = 'I'
+				else: IDs.append(str(i))
 
 			suppl = Chem.SDMolSupplier(sdffile)
 
 			for i, mol in enumerate(suppl):
+				#FInding the metal and replacing it for RDkit embedding
+				if args.metal_complex == True:
+					#changing name for Metal
+					for atom in mol.GetAtoms():
+						if atom.GetSymbol() == args.metal:
+							for el in elementspt:
+								if el.symbol == 'I':
+									atomic_number = el.number
+							atom.SetAtomicNum(atomic_number)
+							if len(atom.GetNeighbors()) == 4:
+								atom.SetFormalCharge(-1)
+							if len(atom.GetNeighbors()) == 6:
+								atom.SetFormalCharge(1)
+
 				if args.prefix == None: name = IDs[i]
 				else: name = args.prefix+str(m)+'_'+IDs[i]
 				mol_objects.append([mol, name])
@@ -176,10 +186,10 @@ def main():
 					smi = max(pieces, key=len) #take largest component by length
 					print("Taking largest component: %s\t%s" % (smi,name))
 
-				if args.oct == True:
-						#find metal and replace with I+ for octahydral
+				if args.metal_complex == True:
+					#find metal and replace with I+ for octahydral
 					smi = smi.replace(args.metal,'I+')
-						#Ir+ exixted then we need to change back to I+
+					#Ir+ exixted then we need to change back to I+
 					smi = smi.replace('I++','I+')
 
 				if args.verbose: print("   -> Input Molecule {} is {}".format(i, smi))
@@ -194,7 +204,7 @@ def main():
 
 			for i, line in enumerate(smifile):
 				name = 'comp' + str(i)+'_'
-				if args.oct == True:
+				if args.metal_complex == True:
 					#find metal and replace with I+ for octahydral
 					line = line.replace(args.metal,'I+')
 					#Ir+ exixted then we need to change back to I+
@@ -212,7 +222,6 @@ def main():
 			emptylines=[]
 
 			for i in range(0,len(comlines)):
-				print(i)
 				if len(comlines[i].strip()) == 0: emptylines.append(i)
 
 			xyzfile = open(os.path.splitext(args.input)[0]+'.xyz',"w")
@@ -227,9 +236,17 @@ def main():
 			xyzfile.close()
 			comfile.close()
 
-			subprocess.run(['obabel', '-ixyz', os.path.splitext(args.input)[0]+'.xyz', '-osdf', '-O', os.path.splitext(args.input)[0]+'.sdf'])
+			# subprocess.run(['obabel', '-ixyz', os.path.splitext(args.input)[0]+'.xyz', '-osdf', '-O', os.path.splitext(args.input)[0]+'.sdf'])
+
+			obConversion = ob.OBConversion()
+			obConversion.SetInAndOutFormats("com", "sdf")
+
+			mol = ob.OBMol()
+			obConversion.ReadFile(mol,os.path.splitext(args.input)[0]+'.com')
+			obConversion.WriteFile(mol, os.path.splitext(args.input)[0]+'.sdf')
 
 			sdffile = os.path.splitext(args.input)[0]+'.sdf'
+
 			IDs = []
 			f = open(sdffile,"r")
 			readlines = f.readlines()
@@ -240,14 +257,23 @@ def main():
 					IDs.append(ID)
 				else: IDs.append(os.path.splitext(args.input)[0])
 
-				if args.oct == True:
-						#changing name for Metal
-					if line.find(args.metal) > -1:
-						readlines[i].split()[0] = 'I'
-
 			suppl = Chem.SDMolSupplier(sdffile)
 
 			for i, mol in enumerate(suppl):
+				#FInding the metal and replacing it for RDkit embedding
+				if args.metal_complex == True:
+					#changing name for Metal
+					for atom in mol.GetAtoms():
+						if atom.GetSymbol() == args.metal:
+							for el in elementspt:
+								if el.symbol == 'I':
+									atomic_number = el.number
+							atom.SetAtomicNum(atomic_number)
+							if len(atom.GetNeighbors()) == 4:
+								atom.SetFormalCharge(-1)
+							if len(atom.GetNeighbors()) == 6:
+								atom.SetFormalCharge(1)
+
 				if args.prefix == None: name = IDs[i]
 				else: name = args.prefix+str(m)+'_'+IDs[i]
 				mol_objects.append([mol, name])
@@ -258,25 +284,8 @@ def main():
 	if args.write_gauss == True:
 
 		# creating the com files from the sdf files created read *_confs.sdf
-		conf_files = glob.glob('*_confs_.sdf')
+		conf_files = glob.glob('*_confs.sdf')
 		# conf_files = [name+'_confs.sdf' for mol,name in mol_objects]
-
-		if args.oct == True:
-			conf_files = glob.glob('*_confs.sdf')
-			for file in conf_files:
-				suppl = Chem.SDMolSupplier(file, removeHs = False)
-				w = Chem.SDWriter(file.split('.')[0]+'_'+args.metal+'.sdf')
-				for mol in suppl:
-					for atom in mol.GetAtoms():
-						if atom.GetSymbol() == 'I' and len(atom.GetBonds()) == 6:
-							for el in elements:
-								if el.symbol == args.metal:
-									atomic_number = el.number
-							atom.SetAtomicNum(atomic_number)
-					w.write(mol)
-				w.close()
-			conf_files = glob.glob('*_confs_'+args.metal+'.sdf')
-			# conf_files = [name+'_confs_'+args.metal+'.sdf' for mol,name in mol_objects]
 
 		# names for directories created
 		sp_dir = 'sp'
@@ -373,7 +382,7 @@ def main():
 				for i in range(args.maxnumber):
 					#grab all the corresponding files make sure to renamme prefix when working with differnet files
 					try:
-						log_files = glob.glob('OX' + '_' + str(i)+'_'+'*.log')
+						log_files = glob.glob('OX' + '_' + str(i)+'_'+'confs_1.log')
 						if len(log_files) != 0:
 							val = ' '.join(log_files)
 							boltz_calculation(val,i)
