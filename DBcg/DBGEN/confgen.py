@@ -3,7 +3,7 @@ from __future__ import print_function
 import argparse, math, os, sys, traceback,subprocess
 import numpy as np
 from rdkit.Chem import AllChem as Chem
-from rdkit.Chem import rdMolTransforms, PropertyMol, rdchem
+from rdkit.Chem import rdMolTransforms, PropertyMol, rdchem, rdDistGeom
 from rdkit.Geometry import Point3D
 from periodictable import elements as elementspt
 
@@ -81,64 +81,45 @@ def rules_get_charge(mol, args):
 	N_group = ['N', 'P', 'As']
 	O_group = ['O', 'S', 'Se']
 	Cl_group = ['Cl', 'Br', 'I']
-	#get the neighbours of metal atoms
+
+	#get the neighbours of metal atom
 	for atom in mol.GetAtoms():
 		if atom.GetSymbol() == args.metal:
 			neighbours = atom.GetNeighbors()
 	if len(neighbours) == 0 :
 		if args.verbose: print("x Metal Not found!")
 
-	charge = args.m_oxi
+	args.charge = args.m_oxi
 
-	if os.path.splitext(args.input)[1] == '.com' or os.path.splitext(args.input)[1] == '.sdf':
-		for atom in neighbours:
-			#print(atom.GetSymbol(), atom.GetTotalValence())
-			#Carbon list
-			if atom.GetTotalValence()== 4 and atom.GetSymbol() in C_group:
-				charge = charge - 1
-			if atom.GetTotalValence()== 3 and atom.GetSymbol() in C_group:
-				charge = charge - 0
-			#Nitrogen list
-			if len(atom.GetBonds()) == 3 and atom.GetSymbol() in N_group:
-				charge = charge - 0
-			if atom.GetTotalValence() == 2 and atom.GetSymbol() in N_group:
-				charge = charge - 1
-			#Oxygen list
-			if atom.GetTotalValence() == 2 and atom.GetSymbol() in O_group:
-				charge = charge - 1
-			elif atom.GetTotalValence() == 3 and atom.GetSymbol() in O_group:
-				charge = charge - 0
-			#halogen list
-			if atom.GetTotalValence() == 0 and atom.GetSymbol() in Cl_group:
-				charge = charge - 1
-			elif atom.GetTotalValence() == 1 and atom.GetSymbol() in Cl_group:
-				charge = charge - 0
-			print(atom.GetSymbol(),len(atom.GetBonds()),charge )
-			if args.verbose == True: print('-> Accounted for aromaticity in the complex.')
-	else:
-		for atom in neighbours:
-			#print(atom.GetSymbol(), atom.GetTotalValence())
-			#Carbon list
-			if atom.GetTotalValence()== 4 and atom.GetSymbol() in C_group:
-				charge = charge - 1
-			#Nitrogen list
-			if atom.GetTotalValence() == 3 and atom.GetSymbol() in N_group:
-				charge = charge - 1
-			elif atom.GetTotalValence() == 4 and atom.GetSymbol() in N_group:
-				charge = charge - 0
-			#Oxygen list
-			if atom.GetTotalValence() == 2 and atom.GetSymbol() in O_group:
-				charge = charge - 1
-			elif atom.GetTotalValence() == 3 and atom.GetSymbol() in O_group:
-				charge = charge - 0
-			#halogen list
-			if atom.GetTotalValence() == 1 and atom.GetSymbol() in Cl_group:
-				charge = charge - 1
-			elif atom.GetTotalValence() == 2 and atom.GetSymbol() in Cl_group:
-				charge = charge - 0
+	for atom in neighbours:
+		#Carbon list
+		if atom.GetSymbol() in C_group:
+			if atom.GetTotalValence()== 4:
+				args.charge = args.charge - 1
+			if atom.GetTotalValence()== 3:
+				args.charge = args.charge - 0
+		#Nitrogen list
+		if atom.GetSymbol() in N_group:
+			if atom.GetTotalValence() == 3:
+				args.charge = args.charge - 1
+			if atom.GetTotalValence() == 4:
+				args.charge = args.charge - 0
+		#Oxygen list
+		if atom.GetSymbol() in O_group:
+			if atom.GetTotalValence() == 2:
+				args.charge = args.charge - 1
+			if atom.GetTotalValence() == 3:
+				args.charge = args.charge - 0
+		#halogen list
+		if atom.GetSymbol() in Cl_group:
+			if atom.GetTotalValence() == 1:
+				args.charge = args.charge - 1
+			if atom.GetTotalValence() == 2:
+				args.charge = args.charge - 0
 
-			print(atom.GetSymbol(),atom.GetTotalValence(),charge )
-	return charge
+		print(atom.GetSymbol(),len(atom.GetBonds()),args.charge)
+
+	return args.charge
 
 def summ_search(mol, name,args):
 	'''embeds core conformers, then optimizes and filters based on RMSD. Finally the rotatable torsions are systematically rotated'''
@@ -156,13 +137,20 @@ def summ_search(mol, name,args):
 		print("x  Too many torsions (%d). Skipping %s" %(len(rotmatches),(name+output)))
 	else:
 		if args.etkdg:
-			cids = Chem.EmbedMultipleConfs(mol, args.sample, Chem.ETKDG(),randomSeed=args.seed)
+			cids = rdDistGeom.EmbedMultipleConfs(mol, args.sample, rdDistGeom.ETKDG(),randomSeed=args.seed)
 		else:
-			cids = Chem.EmbedMultipleConfs(mol, args.sample,randomSeed=args.seed)
+			cids = rdDistGeom.EmbedMultipleConfs(mol, args.sample, randomSeed=args.seed)
+		if len(cids) == 0:
+			cids = rdDistGeom.EmbedMultipleConfs(mol, args.sample, randomSeed=args.seed, useRandomCoords=True)
 		if args.verbose:
 			print("o ", len(cids),"conformers initially sampled")
 
 		#energy minimize all to get more realistic results
+		#identify the atoms and decide Force Field
+		for atom in mol.GetAtoms():
+			if atom.GetAtomicNum() > 36: #upto Kr for MMFF, if not use UFF
+				args.ff = "UFF"
+				#print("UFF is used because there are atoms that MMFF doesn't recognise")
 		if args.verbose: print("o  Optimizing", len(cids), "initial conformers with", args.ff)
 		if args.verbose:
 			if args.nodihedrals == False: print("o  Found", len(rotmatches), "rotatable torsions")
@@ -170,13 +158,6 @@ def summ_search(mol, name,args):
 
 		cenergy = []
 		for i, conf in enumerate(cids):
-
-			#identify the atoms and decide Force Field
-			for atom in mol.GetAtoms():
-				if atom.GetAtomicNum() > 36: #upto Kr for MMFF, if not use UFF
-					args.ff = "UFF"
-
-					#print("UFF is used because there are atoms that MMFF doesn't recognise")
 
 			if args.ff == "MMFF":
 				GetFF = Chem.MMFFGetMoleculeForceField(mol, Chem.MMFFGetMoleculeProperties(mol),confId=conf)
@@ -282,17 +263,25 @@ def mult_min(mol, name,args):
 					#setting the metal back instead of I
 					if args.metal_complex == True:
 						for atom in mol.GetAtoms():
-							if atom.GetSymbol() == 'I' and (len(atom.GetBonds()) == 6 or len(atom.GetBonds()) == 5 or len(atom.GetBonds()) == 4 or len(atom.GetBonds()) == 3):
+							if atom.GetSymbol() == 'I' and (len(atom.GetBonds()) == 6 or len(atom.GetBonds()) == 5 or len(atom.GetBonds()) == 4 or len(atom.GetBonds()) == 3 or len(atom.GetBonds()) == 2):
 								for el in elementspt:
 									if el.symbol == args.metal:
 										atomic_number = el.number
 								atom.SetAtomicNum(atomic_number)
 
+					#removing the Ba atom if NCI complexes
+					if args.nci_complex == True:
+						for atom in mol.GetAtoms():
+							if atom.GetSymbol() =='I':
+								atom.SetAtomicNum(1)
+
 					if args.ANI1ccx == True or args.xtb == True:
-						cartesians = mol.GetConformers()[0].GetPositions()
+
 						elements = ''
 						for atom in mol.GetAtoms():
 							elements += atom.GetSymbol()
+
+						cartesians = mol.GetConformers()[0].GetPositions()
 
 						if args.verbose == True: print('---- The elements are the following {0} ----'.format(elements))
 
@@ -330,7 +319,13 @@ def mult_min(mol, name,args):
 								ase_molecule = ase.Atoms(elements, positions=coordinates.tolist()[0],calculator=GFN2()) #define ase molecule using GFN2 Calculator
 								for atom in ase_molecule:
 									if atom.symbol == args.metal:
-										atom.charge = rules_get_charge(mol,args)
+										#will update only for cdx, smi, and csv formats.
+										if os.path.splitext(args.input)[1] == '.csv' or os.path.splitext(args.input)[1] == '.cdx' or os.path.splitext(args.input)[1] == '.smi':
+											atom.charge = rules_get_charge(mol,args)
+											if args.verbose == True: print('---- The Overall charge is reworked with rules for .smi, .csv, .cdx')
+										else:
+											atom.charge = args.charge
+											if args.verbose == True: print('---- The Overall charge is read from the .com file')
 										if args.verbose == True: print('---- The Overall charge considered is  {0} ----'.format(atom.charge))
 							else:
 								ase_molecule = ase.Atoms(elements, positions=coordinates.tolist()[0], calculator=GFN2()) #define ase molecule using GFN2 Calculator

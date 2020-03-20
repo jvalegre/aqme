@@ -103,7 +103,7 @@ def main():
 		# input file format specified
 		[file_name, file_format] = os.path.splitext(args.input)
 
-		if file_format not in ['.smi', '.sdf', '.cdx', '.csv','.com']:
+		if file_format not in ['.smi', '.sdf', '.cdx', '.csv','.com','.gjf']:
 			print("\nx  INPUT FILETYPE NOT CURRENTLY SUPPORTED!"); sys.exit()
 		else:
 			mol_objects = [] # a list of mol objects that will be populated
@@ -136,7 +136,133 @@ def main():
 					# Converts each line to a rdkit mol object
 				if args.verbose: print("   -> Input Molecule {} is {}".format(i, smi))
 				mol = Chem.MolFromSmiles(smi)
+				#Chem.Kekulize(mol)
 				mol_objects.append([mol, name])
+
+		elif os.path.splitext(args.input)[1] == '.csv': # CSV file with one columns SMILES and code_name
+			csv_smiles = pd.read_csv(args.input)
+			m = 0
+			for i in range(len(csv_smiles)):
+				#assigning names and smi i  each loop
+				if args.prefix == None: name = csv_smiles.loc[i, 'code_name']
+				else: name = 'comp_'+str(m)+'_'+csv_smiles.loc[i, 'code_name']
+
+				smi = csv_smiles.loc[i, 'SMILES']
+				#checking for salts
+				pieces = smi.split('.')
+				if len(pieces) > 1:
+					smi = max(pieces, key=len) #take largest component by length
+					print("Taking largest component: %s\t%s" % (smi,name))
+
+				if args.metal_complex == True:
+					#find metal and replace with I+ for octahydral
+					smi = smi.replace(args.metal,'I+')
+					#Ir+ exixted then we need to change back to I+
+					smi = smi.replace('I++','I+')
+
+				if args.verbose: print("   -> Input Molecule {} is {}".format(i, smi))
+				mol = Chem.MolFromSmiles(smi)
+				Chem.Kekulize(mol)
+				mol_objects.append([mol, name])
+				m += 1
+
+		elif os.path.splitext(args.input)[1] == '.cdx': # CDX file
+				#converting to smiles from chemdraw
+			subprocess.run(['obabel', '-icdx', args.input, '-osmi', '-O', 'cdx.smi'])
+			smifile = open('cdx.smi',"r")
+
+			for i, line in enumerate(smifile):
+				name = 'comp' + str(i)+'_'
+				if args.metal_complex == True:
+					#find metal and replace with I+ for octahydral
+					line = line.replace(args.metal,'I+')
+					#Ir+ exixted then we need to change back to I+
+					line = line.replace('I++','I+')
+
+				mol = Chem.MolFromSmiles(line)
+				#Chem.Kekulize(mol)
+				mol_objects.append([mol, name])
+
+		elif os.path.splitext(args.input)[1] == '.com' or os.path.splitext(args.input)[1] == '.gjf': # COM file
+				#converting to sdf from comfile to preserve geometry
+
+			comfile = open(args.input,"r")
+			comlines = comfile.readlines()
+
+			emptylines=[]
+
+			for i in range(0,len(comlines)):
+				if len(comlines[i].strip()) == 0: emptylines.append(i)
+
+			#assigning the charges
+			args.charge = comlines[(emptylines[1]+1)].split(' ')[0]
+
+			xyzfile = open(os.path.splitext(args.input)[0]+'.xyz',"w")
+			xyzfile.write(str(emptylines[2]- (emptylines[1]+2)))
+			xyzfile.write('\n')
+			xyzfile.write(os.path.splitext(args.input)[0])
+			xyzfile.write('\n')
+			for i in range((emptylines[1]+2), emptylines[2]):
+				xyzfile.write(comlines[i])
+
+			xyzfile.close()
+			comfile.close()
+
+			subprocess.run(['obabel', '-ixyz', os.path.splitext(args.input)[0]+'.xyz', '-osdf', '-O', os.path.splitext(args.input)[0]+'.sdf'])
+
+			# obConversion = ob.OBConversion()
+			# obConversion.SetInAndOutFormats("com", "sdf")
+			#
+			# mol = ob.OBMol()
+			# obConversion.ReadFile(mol,os.path.splitext(args.input)[0]+'.com')
+			# obConversion.WriteFile(mol, os.path.splitext(args.input)[0]+'.sdf')
+
+			sdffile = os.path.splitext(args.input)[0]+'.sdf'
+
+			IDs = []
+			f = open(sdffile,"r")
+			readlines = f.readlines()
+
+			for i, line in enumerate(readlines):
+				if line.find('>  <ID>') > -1:
+					ID = readlines[i+1].split()[0]
+					IDs.append(ID)
+				else: IDs.append(os.path.splitext(args.input)[0])
+
+			suppl = Chem.SDMolSupplier(sdffile)
+
+			for mol in suppl:
+				print(len(mol.GetAtoms()))
+				#FInding the metal and replacing it for RDkit embedding
+				if args.metal_complex == True:
+					#changing name for Metal
+					for atom in mol.GetAtoms():
+						print(atom.GetSymbol())
+						if atom.GetSymbol() == args.metal:
+							for el in elementspt:
+								if el.symbol == 'I':
+									atomic_number = el.number
+							atom.SetAtomicNum(atomic_number)
+							if len(atom.GetNeighbors()) == 2:
+								atom.SetFormalCharge(-3)
+							if len(atom.GetNeighbors()) == 3:
+								atom.SetFormalCharge(-2)
+							if len(atom.GetNeighbors()) == 4:
+								atom.SetFormalCharge(-1)
+							if len(atom.GetNeighbors()) == 5:
+								atom.SetFormalCharge(0)
+							if len(atom.GetNeighbors()) == 6:
+								atom.SetFormalCharge(1)
+							if len(atom.GetNeighbors()) == 7:
+								atom.SetFormalCharge(2)
+							if len(atom.GetNeighbors()) == 8:
+								atom.SetFormalCharge(3)
+
+				if args.prefix == None: name = IDs[i]
+				else: name = args.prefix+str(m)+'_'+IDs[i]
+				mol_objects.append([mol, name])
+
+#------------------ Check for metals ----------------------------------------------
 
 		elif file_format == '.sdf': # SDF input specified
 			sdffile = args.input
@@ -171,121 +297,12 @@ def main():
 				else: name = args.prefix+str(m)+'_'+IDs[i]
 				mol_objects.append([mol, name])
 
-		elif os.path.splitext(args.input)[1] == '.csv': # CSV file with one columns SMILES and code_name
-			csv_smiles = pd.read_csv(args.input)
-			m = 0
-			for i in range(len(csv_smiles)):
-				#assigning names and smi i  each loop
-				if args.prefix == None: name = csv_smiles.loc[i, 'code_name']
-				else: name = 'comp_'+str(m)+'_'+csv_smiles.loc[i, 'code_name']
-
-				smi = csv_smiles.loc[i, 'SMILES']
-				#checking for salts
-				pieces = smi.split('.')
-				if len(pieces) > 1:
-					smi = max(pieces, key=len) #take largest component by length
-					print("Taking largest component: %s\t%s" % (smi,name))
-
-				if args.metal_complex == True:
-					#find metal and replace with I+ for octahydral
-					smi = smi.replace(args.metal,'I+')
-					#Ir+ exixted then we need to change back to I+
-					smi = smi.replace('I++','I+')
-
-				if args.verbose: print("   -> Input Molecule {} is {}".format(i, smi))
-				mol = Chem.MolFromSmiles(smi)
-				mol_objects.append([mol, name])
-				m += 1
-
-		elif os.path.splitext(args.input)[1] == '.cdx': # CDX file
-				#converting to smiles from chemdraw
-			subprocess.run(['obabel', '-icdx', args.input, '-osmi', '-O', 'cdx.smi'])
-			smifile = open('cdx.smi',"r")
-
-			for i, line in enumerate(smifile):
-				name = 'comp' + str(i)+'_'
-				if args.metal_complex == True:
-					#find metal and replace with I+ for octahydral
-					line = line.replace(args.metal,'I+')
-					#Ir+ exixted then we need to change back to I+
-					line = line.replace('I++','I+')
-
-				mol = Chem.MolFromSmiles(line)
-				mol_objects.append([mol, name])
-
-		elif os.path.splitext(args.input)[1] == '.com': # COM file
-				#converting to sdf from comfile to preserve geometry
-
-			comfile = open(args.input,"r")
-			comlines = comfile.readlines()
-
-			emptylines=[]
-
-			for i in range(0,len(comlines)):
-				if len(comlines[i].strip()) == 0: emptylines.append(i)
-
-			xyzfile = open(os.path.splitext(args.input)[0]+'.xyz',"w")
-
-			xyzfile.write(str(emptylines[2]- (emptylines[1]+2)))
-			xyzfile.write('\n')
-			xyzfile.write(os.path.splitext(args.input)[0])
-			xyzfile.write('\n')
-			for i in range((emptylines[1]+2), emptylines[2]):
-				xyzfile.write(comlines[i])
-
-			xyzfile.close()
-			comfile.close()
-
-			# subprocess.run(['obabel', '-ixyz', os.path.splitext(args.input)[0]+'.xyz', '-osdf', '-O', os.path.splitext(args.input)[0]+'.sdf'])
-
-			obConversion = ob.OBConversion()
-			obConversion.SetInAndOutFormats("com", "sdf")
-
-			mol = ob.OBMol()
-			obConversion.ReadFile(mol,os.path.splitext(args.input)[0]+'.com')
-			obConversion.WriteFile(mol, os.path.splitext(args.input)[0]+'.sdf')
-
-			sdffile = os.path.splitext(args.input)[0]+'.sdf'
-
-			IDs = []
-			f = open(sdffile,"r")
-			readlines = f.readlines()
-
-			for i, line in enumerate(readlines):
-				if line.find('>  <ID>') > -1:
-					ID = readlines[i+1].split()[0]
-					IDs.append(ID)
-				else: IDs.append(os.path.splitext(args.input)[0])
-
-			suppl = Chem.SDMolSupplier(sdffile)
-
-			for i, mol in enumerate(suppl):
-				#FInding the metal and replacing it for RDkit embedding
-				if args.metal_complex == True:
-					#changing name for Metal
-					for atom in mol.GetAtoms():
-						if atom.GetSymbol() == args.metal:
-							for el in elementspt:
-								if el.symbol == 'I':
-									atomic_number = el.number
-							atom.SetAtomicNum(atomic_number)
-							if len(atom.GetNeighbors()) == 4:
-								atom.SetFormalCharge(-1)
-							if len(atom.GetNeighbors()) == 6:
-								atom.SetFormalCharge(1)
-
-				if args.prefix == None: name = IDs[i]
-				else: name = args.prefix+str(m)+'_'+IDs[i]
-				mol_objects.append([mol, name])
+#------------------------------------------------------------------------------------------
 
 		for [mol, name] in mol_objects: # Run confomer generation for each mol object
 			conformer_generation(mol,name,args)
 
-	if args.write_gauss == True:
-
-		# creating the com files from the sdf files created read *_confs.sdf
-		conf_files = glob.glob('*_confs.sdf')
-		# conf_files = [name+'_confs.sdf' for mol,name in mol_objects]
+		conf_files = [name+'_confs.sdf' for mol,name in mol_objects]
 
 		# names for directories created
 		sp_dir = 'sp'
@@ -372,6 +389,25 @@ def main():
 						pass
 
 	#once all files are finished are in the Finished folder
+	if args.dup == True:
+		# Sets the folder and find the log files to analyze
+		for lot in args.level_of_theory:
+			for bs in args.basis_set:
+				w_dir = args.path + str(lot) + '-' + str(bs) +'/'+'Finished'
+				os.chdir(w_dir)
+				#can change molecules to a range as files will have codes in a continous manner
+				try:
+					log_files = glob.glob('*.log')
+					if len(log_files) != 0:
+						val = ' '.join(log_files)
+						dup_calculation(val)
+					else:
+						print(' Files for are not there!')
+					#print(log_files)
+				except:
+					pass
+
+	#once all files are finished are in the Finished folder
 	if args.boltz == True:
 		# Sets the folder and find the log files to analyze
 		for lot in args.level_of_theory:
@@ -382,7 +418,7 @@ def main():
 				for i in range(args.maxnumber):
 					#grab all the corresponding files make sure to renamme prefix when working with differnet files
 					try:
-						log_files = glob.glob('OX' + '_' + str(i)+'_'+'confs_1.log')
+						log_files = glob.glob('RE' + '_' + str(i)+'_'+'confs_low.log')
 						if len(log_files) != 0:
 							val = ' '.join(log_files)
 							boltz_calculation(val,i)

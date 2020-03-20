@@ -30,10 +30,6 @@ possible_atoms = ["", "H", "He", "Li", "Be", "B", "C", "N", "O", "F", "Ne", "Na"
 				 "Am", "Cm", "Bk", "Cf", "Es", "Fm", "Md", "No", "Lr", "Rf", "Db", "Sg", "Bh", "Hs", "Mt", "Ds",
 				 "Rg", "Uub", "Uut", "Uuq", "Uup", "Uuh", "Uus", "Uuo"]
 columns = ['Structure', 'E', 'ZPE', 'H', 'T.S', 'T.qh-S', 'G(T)', 'qh-G(T)']
-C_group = ['C', 'Se', 'Ge']
-N_group = ['N', 'P', 'As']
-O_group = ['O', 'S', 'Se']
-Cl_group = ['Cl', 'Br', 'I']
 
 " FUCNTION WORKING WITH MOL OBJECT TO CREATE CONFORMERS"
 def conformer_generation(mol,name,args):
@@ -171,8 +167,13 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args):
 	for atom in suppl[0].GetAtoms():
 		if atom.GetSymbol() in args.genecp_atoms:
 			genecp = 'genecp'
-	if args.metal_complex ==True:
-		charge = rules_get_charge(suppl[0],args)
+
+	if args.metal_complex == True and os.path.splitext(args.input)[1] != '.com' and os.path.splitext(args.input)[1] != '.gjf':
+		args.charge = rules_get_charge(suppl[0],args)
+		if args.verbose == True: print('---- The Overall charge is reworked with rules for .smi, .csv, .cdx for writing the .com files of conformers')
+
+	if args.metal_complex == True and os.path.splitext(args.input)[1] == '.com' or os.path.splitext(args.input)[1] == '.gjf':
+		if args.verbose == True: print('---- The Overall charge is read from the .com file is used to write new .com files of conformers ---')
 
 	if args.single_point == True:
 		#pathto change to
@@ -251,7 +252,7 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args):
 			if args.metal_complex == True:
 				for i in range(0,len(read_lines)):
 					if len(read_lines[i].strip()) == 0:
-						read_lines[i+3] = str(charge)+' '+ str(args.complex_spin)+'\n'
+						read_lines[i+3] = str(args.charge)+' '+ str(args.complex_spin)+'\n'
 						break
 				out = open(file, 'w')
 				out.writelines(read_lines)
@@ -351,7 +352,7 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args):
 			if args.metal_complex == True:
 				for i in range(0,len(read_lines)):
 					if len(read_lines[i].strip()) == 0:
-						read_lines[i+3] = str(charge)+' '+ str(args.complex_spin)+'\n'
+						read_lines[i+3] = str(args.charge)+' '+ str(args.complex_spin)+'\n'
 						break
 				out = open(file, 'w')
 				out.writelines(read_lines)
@@ -807,6 +808,12 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin):
 def boltz_calculation(val,i):
 	#need to have good vibes
 	cmd = 'python' +  ' -m' + ' goodvibes' + ' --csv' + ' --boltz ' +'--output ' + str(i) + ' ' + val
+	os.system(cmd)
+
+" CHECKING FOR DUPLICATES"
+def dup_calculation(val):
+	#need to have good vibes
+	cmd = 'python' +  ' -m' + ' goodvibes' + ' --dup ' +'--output ' + ' ' + val
 	os.system(cmd)
 
 "COMBINING FILES FOR DIFFERENT MOLECULES"
