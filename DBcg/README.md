@@ -1,4 +1,4 @@
-![](logos/DBGEN logo.tif)
+![](Logos/DBGEN%20logo.tif)
 
 
 # DBGEN
