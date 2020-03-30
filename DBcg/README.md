@@ -1,4 +1,7 @@
-# DBcg
+![](logos/DBGEN logo.tif)
+
+
+# DBGEN
 ## Description
 Conformer generator followed by generation of .com files for Gaussian starting from smiles, sdf, csv or cdx files.
 The program allows for two round of optimizations if error terminated in the first round.
