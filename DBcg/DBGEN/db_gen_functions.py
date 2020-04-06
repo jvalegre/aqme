@@ -31,11 +31,345 @@ possible_atoms = ["", "H", "He", "Li", "Be", "B", "C", "N", "O", "F", "Ne", "Na"
 				 "Rg", "Uub", "Uut", "Uuq", "Uup", "Uuh", "Uus", "Uuo"]
 columns = ['Structure', 'E', 'ZPE', 'H', 'T.S', 'T.qh-S', 'G(T)', 'qh-G(T)']
 
+"TEMPLATE GENERATION FOR SQUAREPLANAR AND SQUAREPYRIMIDAL "
+def template_embed_sp(molecule,temp,name_input):
+	mol_objects = [] # a list of mol objects that will be populated
+    #creating templates with neighbouring atoms for temp 1
+
+    for atom in molecule.GetAtoms():
+        if atom.GetSymbol() == 'Pd':
+            neighbours = atom.GetNeighbors()
+            for i in neighbours:
+                print(i.GetSymbol())
+    number_of_neighbours = len(neighbours)
+    print(number_of_neighbours)
+
+    if number_of_neighbours == 4:
+        #three cases for square planar
+        for name in range(3):
+            #assigning neighbours
+            for atom in molecule.GetAtoms():
+                if atom.GetSymbol() == 'Pd':
+                    neighbours = atom.GetNeighbors()
+            #assugning order of replacement
+            if name == 0:
+                j = [1,2,3]
+            elif name == 1:
+                j = [2,3,1]
+            elif name == 2:
+                j = [3,1,2]
+            #checking for same atom neighbours and assigning in the templates for all mols in suppl!
+            for mol_1 in temp:
+                print('neighbpures')
+                for i in neighbours:
+                    print(i.GetSymbol())
+                print('neighbpures')
+                for atom in mol_1.GetAtoms():
+                    print(atom.GetSymbol()+'mol_1 atom')
+                    if atom.GetSymbol() == 'F':
+                            mol_1 = Chem.RWMol(mol_1)
+                            idx = atom.GetIdx()
+                            mol_1.RemoveAtom(idx)
+                            mol_1 = mol_1.GetMol()
+
+                for atom in mol_1.GetAtoms():
+                    print(atom.GetSymbol()+'after remove F from mol_1')
+                    if atom.GetSymbol() == 'Pd':
+                        atom.SetAtomicNum(46)
+                        #atom.SetFormalCharge(-1)
+                    if atom.GetSymbol() == 'At':
+                        atom.SetAtomicNum(neighbours[0].GetAtomicNum())
+                    if atom.GetSymbol() == 'I':
+                        atom.SetAtomicNum(neighbours[j[0]].GetAtomicNum())
+                    if atom.GetSymbol() == 'Cl':
+                        atom.SetAtomicNum(neighbours[j[1]].GetAtomicNum())
+                    if atom.GetSymbol() == 'Br':
+                        atom.SetAtomicNum(neighbours[j[2]].GetAtomicNum())
+
+                #print to see if it is changed
+                for atom in mol_1.GetAtoms():
+                    print(atom.GetSymbol())
+
+                #embedding of the molecule onto the core
+
+                #assigning and embedding onto the core
+                num_atom_match = molecule.GetSubstructMatch(mol_1)
+                #print(len(num_atom_match))
+
+                #add H's to molecule
+                molecule = Chem.AddHs(molecule)
+
+                #definition of coordmap, the coreconfID(the firstone =-1)
+                coordMap = {}
+                coreConfId=-1
+                randomseed=-1
+                force_constant=10000
+
+                # Choosing the type of force field
+                ff = "UFF"
+
+                # Force field parameters
+                if ff == "MMFF":
+                        GetFF = lambda x,confId=-1:AllChem.MMFFGetMoleculeForceField(x,AllChem.MMFFGetMoleculeProperties(x),confId=confId)
+                elif ff == "UFF":
+                        GetFF = lambda x,confId=-1:AllChem.UFFGetMoleculeForceField(x)
+                else: print('   Force field {} not supported!'.format(options.ff)); sys.exit()
+                getForceField=GetFF
+
+
+                # This part selects which atoms from molecule are the atoms of the core
+                try:
+                    coreConf = mol_1.GetConformer(coreConfId)
+                except:
+                    pass
+                for k, idxI in enumerate(num_atom_match):
+                    core_mol_1 = coreConf.GetAtomPosition(k)
+                    coordMap[idxI] = core_mol_1
+                print(coordMap)
+
+                # This is the original version, if it doesn't work without coordMap I'll come back to it later
+                ci = AllChem.EmbedMolecule(molecule, coordMap=coordMap, randomSeed=randomseed)
+                if ci < 0:    print('Could not embed molecule.')
+
+                #algin molecule to the core
+                algMap = [(k, l) for l, k in enumerate(num_atom_match)]
+
+                useTethers = True
+                # In this part, the constrained optimization takes place
+                if not useTethers:
+                    # clean up the conformation
+                    ff = getForceField(molecule, confId=0)
+                    for k, idxI in enumerate(num_atom_match):
+                        for l in range(k + 1, len(num_atom_match)):
+                            idxJ = num_atom_match[l]
+                            d = coordMap[idxI].Distance(coordMap[idxJ])
+                            ff.AddDistanceConstraint(idxI, idxJ, d, d, force_constant)
+                    ff.Initialize()
+                    n = 4
+                    more = ff.Minimize()
+                    while more and n:
+                        more = ff.Minimize()
+                        n -= 1
+                    energy = ff.CalcEnergy()
+                    # rotate the embedded conformation onto the core_mol:
+                    rms = rdMolAlign.AlignMol(molecule, mol_1, atomMap=algMap)
+                else:
+                    # rotate the embedded conformation onto the core_mol:
+                    try:
+                        rms = rdMolAlign.AlignMol(molecule, mol_1, atomMap=algMap)
+                        ff = getForceField(molecule, confId=0)
+                        conf = mol_1.GetConformer()
+                        for k in range(mol_1.GetNumAtoms()):
+                            p = conf.GetAtomPosition(k)
+                            q = molecule.GetConformer().GetAtomPosition(k)
+                            pIdx = ff.AddExtraPoint(p.x, p.y, p.z, fixed=True) - 1
+                            ff.AddDistanceConstraint(pIdx, num_atom_match[k], 0, 0, force_constant)
+                        ff.Initialize()
+                        n = 4
+                        more = ff.Minimize(energyTol=1e-5, forceTol=1e-4)
+                        while more and n:
+                            more = ff.Minimize(energyTol=1e-5, forceTol=1e-4)
+                            n -= 1
+                        # realign
+                        energy = ff.CalcEnergy()
+                        rms = rdMolAlign.AlignMol(molecule, mol_1, atomMap=algMap)
+                    except:
+                    	break
+
+            #writing to mol_object file
+			name_final = name_input + str(name)
+            mol_objects.append([molecule, name_final])
+#--------------------------------------------------------------------------------------------#
+    if number_of_neighbours == 5:
+        #fifteen cases for square pyrimidal
+        for name_1 in range(5):
+
+            for name_2 in range(3):
+                #assigning neighbours
+                for atom in molecule.GetAtoms():
+                    if atom.GetSymbol() == 'Pd':
+                        neighbours = atom.GetNeighbors()
+
+                #assugning order of replacement for the top
+                if name_1 == 0:
+                    k = 4
+                elif name_1== 1:
+                    k = 3
+                elif name_1 == 2:
+                    k = 2
+                elif name_1== 3:
+                    k = 1
+                elif name_1 == 4:
+                    k = 0
+
+                #assugning order of replacement for the plane
+                if name_2 == 0 and k == 4:
+                    j = [1,2,3]
+                elif name_2 == 1 and k == 4:
+                    j = [2,3,1]
+                elif name_2 == 2 and k == 4:
+                    j = [3,1,2]
+
+                #assugning order of replacement for the plane
+                if name_2 == 0 and k == 3:
+                    j = [1,2,4]
+                elif name_2 == 1 and k == 3:
+                    j = [2,4,1]
+                elif name_2 == 2 and k == 3:
+                    j = [4,1,2]
+
+                #assugning order of replacement for the plane
+                if name_2 == 0 and k == 2:
+                    j = [1,4,3]
+                elif name_2 == 1 and k == 2:
+                    j = [4,3,1]
+                elif name_2 == 2 and k == 2:
+                    j = [4,1,3]
+
+                #assugning order of replacement for the plane
+                if name_2 == 0 and k == 1:
+                    j = [4,2,3]
+                elif name_2 == 1 and k == 1:
+                    j = [2,3,4]
+                elif name_2 == 2 and k == 1:
+                    j = [3,4,2]
+
+
+                #checking for same atom neighbours and assigning in the templates for all mols in suppl!
+                for mol_1 in temp:
+
+                    print('neighbpures')
+                    for i in neighbours:
+                        print(i.GetSymbol())
+                    print('neighbpures')
+
+                    for atom in mol_1.GetAtoms():
+                        print(atom.GetSymbol()+'after remove F from mol_1')
+                        if atom.GetSymbol() == 'Pd':
+                            atom.SetAtomicNum(46)
+                            #atom.SetFormalCharge(-1)
+                        if k!= 0:
+                            if atom.GetSymbol() == 'At':
+                                atom.SetAtomicNum(neighbours[0].GetAtomicNum())
+                            if atom.GetSymbol() == 'I':
+                                atom.SetAtomicNum(neighbours[j[0]].GetAtomicNum())
+                            if atom.GetSymbol() == 'Cl':
+                                atom.SetAtomicNum(neighbours[j[1]].GetAtomicNum())
+                            if atom.GetSymbol() == 'Br':
+                                atom.SetAtomicNum(neighbours[j[2]].GetAtomicNum())
+                            if atom.GetSymbol() == 'F':
+                                atom.SetAtomicNum(neighbours[k].GetAtomicNum())
+                        if k == 0:
+                            if atom.GetSymbol() == 'At':
+                                atom.SetAtomicNum(neighbours[4].GetAtomicNum())
+                            if atom.GetSymbol() == 'I':
+                                atom.SetAtomicNum(neighbours[j[0]].GetAtomicNum())
+                            if atom.GetSymbol() == 'Cl':
+                                atom.SetAtomicNum(neighbours[j[1]].GetAtomicNum())
+                            if atom.GetSymbol() == 'Br':
+                                atom.SetAtomicNum(neighbours[j[2]].GetAtomicNum())
+                            if atom.GetSymbol() == 'F':
+                                atom.SetAtomicNum(neighbours[0].GetAtomicNum())
+
+                    #print to see if it is changed
+                    for atom in mol_1.GetAtoms():
+                        print(atom.GetSymbol())
+
+                    #embedding of the molecule onto the core
+
+                    #assigning and embedding onto the core
+                    num_atom_match = molecule.GetSubstructMatch(mol_1)
+                    #print(len(num_atom_match))
+
+                    #add H's to molecule
+                    molecule = Chem.AddHs(molecule)
+
+                    #definition of coordmap, the coreconfID(the firstone =-1)
+                    coordMap = {}
+                    coreConfId=-1
+                    randomseed=-1
+                    force_constant=10000
+
+                    # Choosing the type of force field
+                    ff = "UFF"
+
+                    # Force field parameters
+                    if ff == "MMFF":
+                            GetFF = lambda x,confId=-1:AllChem.MMFFGetMoleculeForceField(x,AllChem.MMFFGetMoleculeProperties(x),confId=confId)
+                    elif ff == "UFF":
+                            GetFF = lambda x,confId=-1:AllChem.UFFGetMoleculeForceField(x)
+                    else: print('   Force field {} not supported!'.format(options.ff)); sys.exit()
+                    getForceField=GetFF
+
+
+                    # This part selects which atoms from molecule are the atoms of the core
+                    try:
+                        coreConf = mol_1.GetConformer(coreConfId)
+                    except:
+                        pass
+                    for k, idxI in enumerate(num_atom_match):
+                        core_mol_1 = coreConf.GetAtomPosition(k)
+                        coordMap[idxI] = core_mol_1
+                    print(coordMap)
+
+                    # This is the original version, if it doesn't work without coordMap I'll come back to it later
+                    ci = AllChem.EmbedMolecule(molecule, coordMap=coordMap, randomSeed=randomseed)
+                    if ci < 0:    print('Could not embed molecule.')
+
+                    #algin molecule to the core
+                    algMap = [(k, l) for l, k in enumerate(num_atom_match)]
+
+                    useTethers = True
+                    # In this part, the constrained optimization takes place
+                    if not useTethers:
+                        # clean up the conformation
+                        ff = getForceField(molecule, confId=0)
+                        for k, idxI in enumerate(num_atom_match):
+                            for l in range(k + 1, len(num_atom_match)):
+                                idxJ = num_atom_match[l]
+                                d = coordMap[idxI].Distance(coordMap[idxJ])
+                                ff.AddDistanceConstraint(idxI, idxJ, d, d, force_constant)
+                        ff.Initialize()
+                        n = 4
+                        more = ff.Minimize()
+                        while more and n:
+                            more = ff.Minimize()
+                            n -= 1
+                        energy = ff.CalcEnergy()
+                        # rotate the embedded conformation onto the core_mol:
+                        rms = rdMolAlign.AlignMol(molecule, mol_1, atomMap=algMap)
+                    else:
+                        # rotate the embedded conformation onto the core_mol:
+                        try:
+                            rms = rdMolAlign.AlignMol(molecule, mol_1, atomMap=algMap)
+                            ff = getForceField(molecule, confId=0)
+                            conf = mol_1.GetConformer()
+                            for k in range(mol_1.GetNumAtoms()):
+                                p = conf.GetAtomPosition(k)
+                                q = molecule.GetConformer().GetAtomPosition(k)
+                                pIdx = ff.AddExtraPoint(p.x, p.y, p.z, fixed=True) - 1
+                                ff.AddDistanceConstraint(pIdx, num_atom_match[k], 0, 0, force_constant)
+                            ff.Initialize()
+                            n = 4
+                            more = ff.Minimize(energyTol=1e-5, forceTol=1e-4)
+                            while more and n:
+                                more = ff.Minimize(energyTol=1e-5, forceTol=1e-4)
+                                n -= 1
+                            # realign
+                            energy = ff.CalcEnergy()
+                            rms = rdMolAlign.AlignMol(molecule, mol_1, atomMap=algMap)
+                        except:
+                            break
+
+                #writing to mol_object file
+				name_final = name_input + str(name)
+	            mol_objects.append([molecule, name_final])
+
+	return mol_objects
+
 " FUCNTION WORKING WITH MOL OBJECT TO CREATE CONFORMERS"
 def conformer_generation(mol,name,args):
 	valid_structure = filters(mol, args)
-	#print(valid_structure)
-	#print(valid_structure)
 	if valid_structure:
 		if args.verbose: print("\n   ----- {} -----".format(name))
 
@@ -81,6 +415,25 @@ def conformer_generation(mol,name,args):
 
 				if args.verbose == True: print("   ----- {} conformers written to {} -----".format(write_confs, name+final_output))
 				sdwriter.close()
+
+				#applying rule to get the necessary conformers only
+				if args.exp_rules == True:
+					if args.verbose == True: print("   ----- Applying experimental rules to write the new confs file -----")
+
+					allmols = Chem.SDMolSupplier(name+final_output, removeHs=False)
+					if inmols is None:
+						print("Could not open ", name+final_output)
+						sys.exit(-1)
+
+					sdwriter = Chem.SDWriter(name+exp_rules_output_ext)
+
+					for mol in allmols:
+						check_mol = True
+						check_mol = exp_rules_output(mol,args)
+						if check_mol == True:
+							sdwriter.write(mol)
+					sdwriter.close()
+
 			else: print("x  No conformers found!\n")
 
 		except (KeyboardInterrupt, SystemExit):
@@ -89,6 +442,81 @@ def conformer_generation(mol,name,args):
 	else: print("ERROR: The structure is not valid")
 
 	if args.time: print("Execution time: %s seconds" % (round(time.time() - start_time,2)))
+
+" RULES TO GET EXPERIMENTAL CONFORMERS"
+def exp_rules_output(mol, args):
+	conf = mol.GetConformer(-1)
+	check_mol = True
+	for atom in mol.GetAtoms():
+		print(atom.GetSymbol())
+		if atom.GetSymbol() == args.metal:
+			metal_idx = atom.GetIdx()
+			print(metal_idx)
+			neighbours = atom.GetNeighbors()
+			print(neighbours)
+
+	c_count = 0
+	n_count = 0
+	other_count = 0
+	c_idx = []
+	n_idx = []
+	other_idx = []
+	for atom in neighbours:
+		if atom.GetSymbol() == 'C':
+			c_count += 1
+			c_idx.append(atom.GetIdx())
+		elif atom.GetSymbol() =='N':
+			n_count += 1
+			n_idx.append(atom.GetIdx())
+		else:
+			other_count += 1
+			other_idx.append(atom.GetIdx())
+	print(c_idx)
+	print(n_idx)
+	print(other_idx)
+	angle = 0
+	#3C and 3N shpuld be trans Case 1
+	if c_count == 3 and n_count == 3:
+		for i in range(c_count):
+			if i !=2:
+				angle = rdMolTransforms.GetAngleDeg(conf,c_idx[i],metal_idx,c_idx[i+1])
+				if 180 - args.angle_off <= angle <= 180 + args.angle_off:
+					check_mol = False
+			else:
+				rdMolTransforms.GetAngleDeg(conf,c_idx[i],metal_idx,c_idx[0])
+				if 180 - args.angle_off <= angle <= 180 + args.angle_off:
+					check_mol = False
+	# case 2: iother atoms present
+	if c_count == 2:
+		#case A
+		if n_count ==4:
+			N_metal_N = 0
+			for i in range(n_count):
+				for j in range(i,n_count):
+					angle = rdMolTransforms.GetAngleDeg(conf,n_idx[i],metal_idx,n_idx[j])
+					if 180 - args.angle_off <= angle <= 180 + args.angle_off:
+						N_metal_N +=1
+			if N_metal_N == 2:
+				check_mol = False
+		#case B
+		if n_count == 3 and other_count == 1:
+			#finding the N which is not in the ring
+			for i in range(n_count):
+				if not mol.GetAtomWithIdx(n_idx[i]).IsInRingSize(6):
+					n_idx = n_idx.pop(i)
+					print(n_idx)
+			for i in range(n_count-1):
+				angle = rdMolTransforms.GetAngleDeg(conf,n_idx[i],metal_idx,n_idx[i+1])
+				if 90 - args.angle_off <= angle <= 90 + args.angle_off:
+					check_mol = False
+		#case C
+		if n_count == 2 and other_count == 2:
+
+			for i in range(n_count-1):
+				angle = rdMolTransforms.GetAngleDeg(conf,n_idx[i],metal_idx,n_idx[i+1])
+				if not 180 - args.angle_off <= angle <= 180 + args.angle_off:
+					check_mol = False
+	return check_mol
 
 " FILTER TO BE APPLIED FOR SMILES"
 def filters(mol,args):
@@ -811,10 +1239,31 @@ def boltz_calculation(val,i):
 	os.system(cmd)
 
 " CHECKING FOR DUPLICATES"
-def dup_calculation(val):
+def dup_calculation(val,w_dir):
 	#need to have good vibes
-	cmd = 'python' +  ' -m' + ' goodvibes' + ' --dup ' +'--output ' + ' ' + val
+	cmd = 'python' +  ' -m' + ' goodvibes' + ' --dup ' + ' ' + val + '>' + ' ' + 'duplicate_files_checked.txt'
 	os.system(cmd)
+
+	#reading the txt files to get the DUPLICATES
+	dup_file_list = []
+	dupfile = open('duplicate_files_checked.txt',"r")
+	duplines = dupfile.readlines()
+
+	for i in range(0,len(duplines)):
+		if duplines[i].find('duplicate') > -1:
+			dup_file_list.append(duplines[i].split(' ')[1])
+
+	#move the files to specific directory
+	destination = w_dir+'Duplicates/'
+	for source in dup_file_list:
+		try:
+			os.makedirs(destination)
+			shutil.move(source, destination)
+		except OSError:
+			if  os.path.isdir(destination) and not os.path.exists(destination+file):
+				shutil.move(source, destination)
+			else:
+				raise
 
 "COMBINING FILES FOR DIFFERENT MOLECULES"
 def combine_files(csv_files, lot, bs, args):

@@ -20,10 +20,11 @@ device = torch.device('cpu')
 model = torchani.models.ANI1ccx()
 from ase.units import kJ,mol,Hartree,kcal
 
-import xtb
-from xtb import GFN2
+#import xtb
+#from xtb import GFN2
 output = '.sdf'
 final_output = '_confs.sdf'
+exp_rules_output_ext = '_confs_rules.sdf'
 
 def get_conf_RMS(mol, c1,c2, heavy):
 	'''generate RMS distance between two molecules (ignoring hydrogens)'''
@@ -110,14 +111,14 @@ def rules_get_charge(mol, args):
 				args.charge = args.charge - 1
 			if atom.GetTotalValence() == 3:
 				args.charge = args.charge - 0
-		#halogen list
+		#Halogen list
 		if atom.GetSymbol() in Cl_group:
 			if atom.GetTotalValence() == 1:
 				args.charge = args.charge - 1
 			if atom.GetTotalValence() == 2:
 				args.charge = args.charge - 0
 
-		print(atom.GetSymbol(),len(atom.GetBonds()),args.charge)
+		print('The neighbour atoms are {0}, with valence {1}, and total charge is {2}'.format(atom.GetSymbol(),atom.GetTotalValence(),args.charge))
 
 	return args.charge
 
@@ -141,7 +142,8 @@ def summ_search(mol, name,args):
 		else:
 			cids = rdDistGeom.EmbedMultipleConfs(mol, args.sample, randomSeed=args.seed)
 		if len(cids) == 0:
-			cids = rdDistGeom.EmbedMultipleConfs(mol, args.sample, randomSeed=args.seed, useRandomCoords=True)
+			print("o  conformers initially sampled with random coordinates")
+			cids = rdDistGeom.EmbedMultipleConfs(mol, args.sample, randomSeed=args.seed, useRandomCoords=True, boxSizeMult=10.0, numZeroFail=1000, ignoreSmoothingFailures=True)
 		if args.verbose:
 			print("o ", len(cids),"conformers initially sampled")
 
@@ -269,6 +271,23 @@ def mult_min(mol, name,args):
 										atomic_number = el.number
 								atom.SetAtomicNum(atomic_number)
 
+					#removinf the H's from metal
+					# if args.metal_complex == True and args.complex_type =='squareplanar':
+					# 	print('--- Removing Hs on metal ----')
+					# 	idx = []
+					# 	mol = Chem.RWMol(mol)
+					# 	for atom in mol.GetAtoms():
+					# 		if atom.GetSymbol() == args.metal:
+					# 			neighbours = atom.GetNeighbors()
+					# 			for atom in neighbours:
+					# 				print(atom.GetSymbol())
+					# 				if atom.GetSymbol() == 'H':
+					# 					idx.append(atom.GetIdx())
+					# 	for idx in sorted(idx, reverse=True):
+					# 		mol.RemoveAtom(idx)
+					# 		print(mol.GetAtomWithIdx(idx).GetSymbol())
+					# 	print(mol.GetNumAtoms())
+
 					#removing the Ba atom if NCI complexes
 					if args.nci_complex == True:
 						for atom in mol.GetAtoms():
@@ -322,10 +341,10 @@ def mult_min(mol, name,args):
 										#will update only for cdx, smi, and csv formats.
 										if os.path.splitext(args.input)[1] == '.csv' or os.path.splitext(args.input)[1] == '.cdx' or os.path.splitext(args.input)[1] == '.smi':
 											atom.charge = rules_get_charge(mol,args)
-											if args.verbose == True: print('---- The Overall charge is reworked with rules for .smi, .csv, .cdx')
+											if args.verbose == True: print('---- The Overall charge is reworked with rules for .smi, .csv, .cdx ----')
 										else:
 											atom.charge = args.charge
-											if args.verbose == True: print('---- The Overall charge is read from the .com file')
+											if args.verbose == True: print('---- The Overall charge is read from the .com file ----')
 										if args.verbose == True: print('---- The Overall charge considered is  {0} ----'.format(atom.charge))
 							else:
 								ase_molecule = ase.Atoms(elements, positions=coordinates.tolist()[0], calculator=GFN2()) #define ase molecule using GFN2 Calculator
