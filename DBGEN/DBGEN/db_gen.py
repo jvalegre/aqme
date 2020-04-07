@@ -28,10 +28,16 @@ def main():
 	parser.add_argument("-a","--analysis", action="store_true", default=False, help="Fix and analyze Gaussian output files")
 	parser.add_argument("-r","--resubmit", action="store_true", default=False, help="Resubmit Gaussian input files")
 
+
 	#Post analysis
+	parser.add_argument("--dup",action="store_true",default=False, help="Remove Duplicates after DFT optimization")
 	parser.add_argument("-n","--nmr",action="store_true",default=False, help="Create Files for Single Point which includes NMR calculation after DFT Optimization")
 	parser.add_argument("-b","--boltz", action="store_true", default=False, help="Boltzmann factor for each conformers from Gaussian output files")
 	parser.add_argument("-f","--combine", action="store_true", default=False, help="Combine files of differnt molecules including boltzmann weighted energies")
+
+	#aaply exp rules
+	parser.add_argument("--exp_rules", action="store_true", default=False, help="Experimental rules applied to make Gaussian input files")
+	parser.add_argument("--angle_off", type=float,help="Any limit to set for check rules",default=30)
 
 	#pass the argument for path for the gaussian folder.
 	parser.add_argument("--path", help="Path for analysis/boltzmann factor/combining files where the gaussian folder created is present")
@@ -116,19 +122,52 @@ def main():
 			for i, line in enumerate(smifile):
 				toks = line.split()
 
-				if args.metal_complex == True:
+				if args.metal_complex == True and  args.complex_coord == 6:
 					#find metal and replace with I+ for octahydral
 					smi = toks[0].replace(args.metal,'I+')
 					#Ir+ exixted then we need to change back to I+
 					smi = smi.replace('I++','I+')
 
-				else: smi = toks[0]
+					#taking largest component for salts
+					pieces = smi.split('.')
+					if len(pieces) > 1:
+						smi = max(pieces, key=len) #take largest component by length
 
-				#taking largest component for salts
-				pieces = smi.split('.')
-				if len(pieces) > 1:
-					smi = max(pieces, key=len) #take largest component by length
-					print("Taking largest component: %s\t%s" % (smi,name))
+				elif args.metal_complex == True and args.complex_coord == 5:
+					#find metal and replace with I+ for octahydral
+					smi = toks[0].replace(args.metal,'I')
+					#Ir+ exixted then we need to change back to I+
+					smi = smi.replace('I+','I')
+
+				elif args.metal_complex == True and args.complex_coord == 4:
+					#find metal and replace with I+ for octahydral
+					smi = toks[0].replace(args.metal,'I-')
+					#Ir+ exixted then we need to change back to I+
+					smi = smi.replace('I-+','I-')
+
+					#taking largest component for salts
+					pieces = smi.split('.')
+					if len(pieces) > 1:
+						smi = max(pieces, key=len) #take largest component by length
+
+					#taking largest component for salts
+					pieces = smi.split('.')
+					if len(pieces) > 1:
+						smi = max(pieces, key=len) #take largest component by length
+
+				# elif args.metal_complex == True and  args.complex_coord == 7:
+				# 	#find metal and replace with I+ for octahydral
+				# 	smi = toks[0].replace(args.metal,'I+2')
+				# 	#Ir+ exixted then we need to change back to I+
+				# 	smi = smi.replace('I+2+','I+2')
+				#
+				# elif args.metal_complex == True and  args.complex_coord == 8:
+				# 	#find metal and replace with I+ for octahydral
+				# 	smi = toks[0].replace(args.metal,'I+3')
+				# 	#Ir+ exixted then we need to change back to I+
+				# 	smi = smi.replace('I+3+','I+3')
+
+				else: smi = toks[0]
 
 				if args.prefix == None: name = ''.join(toks[1:])
 				else: name = args.prefix+str(i)+'_'+''.join(toks[1:])
@@ -136,8 +175,13 @@ def main():
 					# Converts each line to a rdkit mol object
 				if args.verbose: print("   -> Input Molecule {} is {}".format(i, smi))
 				mol = Chem.MolFromSmiles(smi)
-				#Chem.Kekulize(mol)
-				mol_objects.append([mol, name])
+				# get manually for square planar and SQUAREPYRIMIDAL
+				if complex_type = 'squareplanar' or complex_type = 'squarepyrimidal':
+					file_template = 'template-4-and-5.sdf'
+					temp = Chem.SDMolSupplier(file_template)
+					mol_objects = template_embed_sp(mol,temp,name)
+				else:
+					mol_objects.append([mol, name])
 
 		elif os.path.splitext(args.input)[1] == '.csv': # CSV file with one columns SMILES and code_name
 			csv_smiles = pd.read_csv(args.input)
@@ -149,21 +193,60 @@ def main():
 
 				smi = csv_smiles.loc[i, 'SMILES']
 				#checking for salts
-				pieces = smi.split('.')
-				if len(pieces) > 1:
-					smi = max(pieces, key=len) #take largest component by length
-					print("Taking largest component: %s\t%s" % (smi,name))
 
-				if args.metal_complex == True:
+				if args.metal_complex == True and args.complex_coord == 6:
 					#find metal and replace with I+ for octahydral
 					smi = smi.replace(args.metal,'I+')
 					#Ir+ exixted then we need to change back to I+
 					smi = smi.replace('I++','I+')
 
+					#taking the largest piece
+					pieces = smi.split('.')
+					if len(pieces) > 1:
+						smi = max(pieces, key=len) #take largest component by length
+
+				elif args.metal_complex == True and args.complex_coord == 4:
+					#find metal and replace with I+ for octahydral
+					smi = toks[0].replace(args.metal,'I-')
+					#Ir+ exixted then we need to change back to I+
+					smi = smi.replace('I-+','I-')
+
+					#taking largest component for salts
+					pieces = smi.split('.')
+					if len(pieces) > 1:
+						smi = max(pieces, key=len) #take largest component by length
+
+				elif args.metal_complex == True and args.complex_coord == 5:
+					#find metal and replace with I+ for octahydral
+					smi = toks[0].replace(args.metal,'I')
+					#Ir+ exixted then we need to change back to I+
+					smi = smi.replace('I+','I')
+
+					#taking largest component for salts
+					pieces = smi.split('.')
+					if len(pieces) > 1:
+						smi = max(pieces, key=len) #take largest component by length
+
+				# if args.metal_complex == True and  args.complex_coord == 7:
+				# 	#find metal and replace with I+ for octahydral
+				# 	smi = toks[0].replace(args.metal,'I+2')
+				# 	#Ir+ exixted then we need to change back to I+
+				# 	smi = smi.replace('I+2+','I+2')
+				#
+				# if args.metal_complex == True and  args.complex_coord == 8:
+				# 	#find metal and replace with I+ for octahydral
+				# 	smi = toks[0].replace(args.metal,'I+3')
+				# 	#Ir+ exixted then we need to change back to I+
+				# 	smi = smi.replace('I+3+','I+3')
+
 				if args.verbose: print("   -> Input Molecule {} is {}".format(i, smi))
 				mol = Chem.MolFromSmiles(smi)
-				Chem.Kekulize(mol)
-				mol_objects.append([mol, name])
+				if complex_type = 'squareplanar' or complex_type = 'squarepyrimidal':
+					file_template = 'template-4-and-5.sdf'
+					temp = Chem.SDMolSupplier(file_template)
+					mol_objects = template_embed_sp(mol,temp,name)
+				else:
+					mol_objects.append([mol, name])
 				m += 1
 
 		elif os.path.splitext(args.input)[1] == '.cdx': # CDX file
@@ -173,15 +256,31 @@ def main():
 
 			for i, line in enumerate(smifile):
 				name = 'comp' + str(i)+'_'
-				if args.metal_complex == True:
+				if args.metal_complex == True and args.complex_coord == 6 :
 					#find metal and replace with I+ for octahydral
 					line = line.replace(args.metal,'I+')
 					#Ir+ exixted then we need to change back to I+
 					line = line.replace('I++','I+')
 
+				elif args.metal_complex == True and args.complex_coord == 4:
+					#find metal and replace with I+ for octahydral
+					line = line.replace(args.metal,'I-')
+					#Ir+ exixted then we need to change back to I+
+					line = line.replace('I-+','I+')
+
+				elif args.metal_complex == True and args.complex_coord == 5:
+					#find metal and replace with I+ for octahydral
+					line = line.replace(args.metal,'I')
+					#Ir+ exixted then we need to change back to I+
+					line = line.replace('I+','I')
+
 				mol = Chem.MolFromSmiles(line)
-				#Chem.Kekulize(mol)
-				mol_objects.append([mol, name])
+				if complex_type = 'squareplanar' or complex_type = 'squarepyrimidal':
+					file_template = 'template-4-and-5.sdf'
+					temp = Chem.SDMolSupplier(file_template)
+					mol_objects = template_embed_sp(mol,temp,name)
+				else:
+					mol_objects.append([mol, name])
 
 		elif os.path.splitext(args.input)[1] == '.com' or os.path.splitext(args.input)[1] == '.gjf': # COM file
 				#converting to sdf from comfile to preserve geometry
@@ -232,16 +331,14 @@ def main():
 			suppl = Chem.SDMolSupplier(sdffile)
 
 			for mol in suppl:
-				print(len(mol.GetAtoms()))
 				#FInding the metal and replacing it for RDkit embedding
 				if args.metal_complex == True:
+					for el in elementspt:
+						if el.symbol == 'I':
+							atomic_number = el.number
 					#changing name for Metal
 					for atom in mol.GetAtoms():
-						print(atom.GetSymbol())
-						if atom.GetSymbol() == args.metal:
-							for el in elementspt:
-								if el.symbol == 'I':
-									atomic_number = el.number
+						if atom.GetSymbol() in args.metal:
 							atom.SetAtomicNum(atomic_number)
 							if len(atom.GetNeighbors()) == 2:
 								atom.SetFormalCharge(-3)
@@ -260,7 +357,12 @@ def main():
 
 				if args.prefix == None: name = IDs[i]
 				else: name = args.prefix+str(m)+'_'+IDs[i]
-				mol_objects.append([mol, name])
+				if complex_type = 'squareplanar' or complex_type = 'squarepyrimidal':
+					file_template = 'template-4-and-5.sdf'
+					temp = Chem.SDMolSupplier(file_template)
+					mol_objects = template_embed_sp(mol,temp,name)
+				else:
+					mol_objects.append([mol, name])
 
 #------------------ Check for metals ----------------------------------------------
 
@@ -295,7 +397,12 @@ def main():
 
 				if args.prefix == None: name = IDs[i]
 				else: name = args.prefix+str(m)+'_'+IDs[i]
-				mol_objects.append([mol, name])
+				if complex_type = 'squareplanar' or complex_type = 'squarepyrimidal':
+					file_template = 'template-4-and-5.sdf'
+					temp = Chem.SDMolSupplier(file_template)
+					mol_objects = template_embed_sp(mol,temp,name)
+				else:
+					mol_objects.append([mol, name])
 
 #------------------------------------------------------------------------------------------
 
@@ -344,6 +451,27 @@ def main():
 								name = os.path.splitext(file)[0]
 								write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args)
 
+	if args.exp_rules == True:
+
+		if args.verbose == True: print("   ----- Applying experimental rules to write the new confs file -----")
+
+		conf_files = glob.glob('*.sdf')
+
+		for file in conf_files:
+			print('vfodbobnoigbogibgoi')
+			allmols = Chem.SDMolSupplier(file, removeHs=False)
+			if allmols is None:
+				print("Could not open ", file)
+				sys.exit(-1)
+
+			sdwriter = Chem.SDWriter(file.split('.')[0]+exp_rules_output_ext)
+
+			for mol in allmols:
+				check_mol = True
+				check_mol = exp_rules_output(mol,args)
+				if check_mol == True:
+					sdwriter.write(mol)
+			sdwriter.close()
 
 	if args.analysis == True:
 		# Sets the folder and find the log files to analyze
@@ -400,7 +528,7 @@ def main():
 					log_files = glob.glob('*.log')
 					if len(log_files) != 0:
 						val = ' '.join(log_files)
-						dup_calculation(val)
+						dup_calculation(val,w_dir)
 					else:
 						print(' Files for are not there!')
 					#print(log_files)
