@@ -34,8 +34,6 @@ columns = ['Structure', 'E', 'ZPE', 'H', 'T.S', 'T.qh-S', 'G(T)', 'qh-G(T)']
 "TEMPLATE GENERATION FOR SQUAREPLANAR AND SQUAREPYRIMIDAL "
 def template_embed_sp(molecule,temp,name_input):
 	mol_objects = [] # a list of mol objects that will be populated
-    #creating templates with neighbouring atoms for temp 1
-
     for atom in molecule.GetAtoms():
         if atom.GetSymbol() == 'Pd':
             neighbours = atom.GetNeighbors()

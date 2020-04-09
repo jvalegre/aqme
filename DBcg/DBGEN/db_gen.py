@@ -14,10 +14,17 @@ def main():
 	parser.add_argument("--varfile",dest="varfile",default=None,help="Parameters in python format")
 	parser.add_argument("--input",help="Molecular structure")
 
+	#metal complex
 	parser.add_argument("--metal_complex", action="store_true", default=False, help="If studying Metal Complexes of coordination number 4,5 or 6")
 	parser.add_argument("--metal",  help="If metal complex, specify the metal involed", default="Ir", dest="metal", type=str)
 	parser.add_argument("--complex_spin",  help="If metal complex, specify the complex spin involed", default="1", dest="complex_spin", type=int)
+	parser.add_argument("--complex_coord",  help="If metal complex, specify the complex coordination involed", default="6", dest="complex_coord", type=int)
+	parser.add_argument("--complex_type",  help="If metal complex, specify the complex type involed", default="octahedral", dest="complex_type", type=str)
 	parser.add_argument("--m_oxi",  help="If metal complex, specify the metal oxidation state involed", default="3", dest="m_oxi", type=int)
+	parser.add_argument("--charge",  help="If metal complex,charge of metal complex. Will automatically update for metals", default="0", dest="charge", type=int)
+
+	#NCI complex
+	parser.add_argument("--nci_complex", action="store_true", default=False, help="If studying NCI Complexes")
 
 	parser.add_argument("-m","--maxnumber", help="Number of compounds", type=int, metavar="maxnumber")
 	parser.add_argument("--prefix", help="Prefix for naming files", default=None, metavar="prefix")
@@ -179,7 +186,8 @@ def main():
 				if complex_type = 'squareplanar' or complex_type = 'squarepyrimidal':
 					file_template = 'template-4-and-5.sdf'
 					temp = Chem.SDMolSupplier(file_template)
-					mol_objects = template_embed_sp(mol,temp,name)
+					mol_objects_from_template = template_embed_sp(mol,temp,name)
+					mol_objects.append(mol_objects_from_template)
 				else:
 					mol_objects.append([mol, name])
 
@@ -244,7 +252,8 @@ def main():
 				if complex_type = 'squareplanar' or complex_type = 'squarepyrimidal':
 					file_template = 'template-4-and-5.sdf'
 					temp = Chem.SDMolSupplier(file_template)
-					mol_objects = template_embed_sp(mol,temp,name)
+					mol_objects_from_template = template_embed_sp(mol,temp,name)
+					mol_objects.append(mol_objects_from_template)
 				else:
 					mol_objects.append([mol, name])
 				m += 1
@@ -278,7 +287,8 @@ def main():
 				if complex_type = 'squareplanar' or complex_type = 'squarepyrimidal':
 					file_template = 'template-4-and-5.sdf'
 					temp = Chem.SDMolSupplier(file_template)
-					mol_objects = template_embed_sp(mol,temp,name)
+					mol_objects_from_template = template_embed_sp(mol,temp,name)
+					mol_objects.append(mol_objects_from_template)
 				else:
 					mol_objects.append([mol, name])
 
@@ -360,7 +370,8 @@ def main():
 				if complex_type = 'squareplanar' or complex_type = 'squarepyrimidal':
 					file_template = 'template-4-and-5.sdf'
 					temp = Chem.SDMolSupplier(file_template)
-					mol_objects = template_embed_sp(mol,temp,name)
+					mol_objects_from_template = template_embed_sp(mol,temp,name)
+					mol_objects.append(mol_objects_from_template)
 				else:
 					mol_objects.append([mol, name])
 
@@ -400,7 +411,8 @@ def main():
 				if complex_type = 'squareplanar' or complex_type = 'squarepyrimidal':
 					file_template = 'template-4-and-5.sdf'
 					temp = Chem.SDMolSupplier(file_template)
-					mol_objects = template_embed_sp(mol,temp,name)
+					mol_objects_from_template = template_embed_sp(mol,temp,name)
+					mol_objects.append(mol_objects_from_template)
 				else:
 					mol_objects.append([mol, name])
 

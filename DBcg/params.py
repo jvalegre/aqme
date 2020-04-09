@@ -7,35 +7,52 @@
 """
 
 " INPUT FILE"
-input ='example.smi'
-path = ''
+input ='example.smi' #input files
+path ='' #path to guassian folder when we do analysis
+
+" EXP RULES"
+exp_rules = False # aply some experimental rules to the outputs
+angle_off = 30
+
+
+" IF METAL COMPLEX"
+metal_complex= True # specify  true if metal complex
+metal = ['Au'] # specify the metal
+complex_coord = 4 # specify the complex coordination number
+complex_type = 'squareplanar' # specify the following square planar, square pyrimidal (otheriwse defaults to octahedral, Td)
+m_oxi = 1 # will have to be changed for respective metals
+complex_spin = 1 # will have to be changed for respective metals
+charge = 0 #will automaticallu change for metal comples. default is for orgaincs.
+
+" IF NCI COMPLEX"
+nci_complex= True # specify  true if NCI complex
 
 "GENERAL OPTIONS FOR COMMANDLINE"
 verbose = True
-compute = True
+compute = False
+write_gauss = False
 analysis = False
 resubmit = False
-secondrun = False
 nmr = False
-boltz = False
-combine = False
+dup = True
+boltz = True
+combine = True
 prefix = None
 
 "TYPE OF OPTIMIZATION"
 # Options: xTB, AN1  Default : RDKIT optimizaiton
 ANI1ccx = False
 xtb = False
-#enso = False need to add in
 
-" SINGLE POINTS vs  FULL OPTIMIZATION"
+" SINGLE POINTS vs FULL OPTIMIZATION WITH or WITHOUT FREQUENCIES"
 single_point = False
-
+frequencies = True
 
 " DEFAULT PARAMETERS FOR RDKIT GENERATION AND FILTERS"
-max_torsions = 4 #Skip any molecules with more than this many torsions (default 5)
+max_torsions = 20 #Skip any molecules with more than this many torsions (default 5)
 max_MolWt = 1000
 heavyonly = True
-sample = 100 #number of conformers to sample to get non-torsional differences (default 100)
+sample = 10 #number of conformers to sample to get non-torsional differences (default 100)
 nodihedrals = False #turn to TRUE if no dihydral scan is needed.
 
 " DEFAULT PARAMETERS FOR RDKIT OPTIMIZATION "
@@ -47,29 +64,34 @@ degree = 30 #Amount, in degrees, to enumerate torsions by (default 30.0)
 " DEFAULT PARAMETERS FOR ANI1ccx OPTIMIZATION "
 constraints = None
 
+" DEFAULT PARAMETERS FOR xTB OPTIMIZATION "
+large_sys = False
+STACKSIZE = '1G' #set for large system
+
 "DEFAULT PARAMTERS FOR UNIQUE CONFORMER SELECTION"
 rms_threshold = 0.25 #cutoff for considering sampled conformers the same (default 0.25)
 energy_threshold = 0.05 #energy difference between unique conformers
-ewin = 40 #energy window to print conformers
+ewin = 10 #energy window to print conformers
 convergence = 1.0 #Adjust convergence criteria of ANI and xtb optimizations (set at 0.005)
 time = False #request run time
 
 " ONLY LOWEST ENERGY CONFORMER REQUIRED"
-lowest_only = True
+lowest_only = False
 lowest_n  = False # for a given threshold of energy_threshold_for_gaussian
 energy_threshold_for_gaussian = 10  #in kJ/ mol
 
 " DEFINITION OF ATOMS"
-genecp_atoms = ['I','Br']
+genecp_atoms = ['I','Ir']
 
 "DEFINTION OF BASIS SET AND LEVEL OF THEORY AND SOLVENT"
-basis_set = ['6-31G*']
+basis_set = ['6-31G**','6-31+g**','def2tzvp']
 basis_set_genecp_atoms = ['LANL2DZ']
-level_of_theory = ['wB97XD']
+level_of_theory = ['wB97XD','M062X','b3lyp']
+max_cycle_opt = 100 #eefault is 300
 
 #dispersion correction to be added or not
 dispersion_correction = False
-empirical_dispersion = 'D3BJ'
+empirical_dispersion = 'GD3BJ'
 
 # Specify the solvation model. Options: gas_phase or any solvation model (i.e. SMD, IEFPCM, CPCM)
 solvent_model = 'gas_phase'
@@ -77,13 +99,12 @@ solvent_name = 'Acetonitrile'
 
 "DEFAULT PARAMTERS FOR GAUSSIAN OPTIMIZATION"
 chk = False
-nprocs=24
-mem='96GB'
+nprocs=36
+mem='60GB'
 
 "TURN ON SUBMISSION OF JOBS"
 qsub = False
 submission_command = 'qsub_summit'
 
 " MOLECULES now, for eg., molecule list, for later can use as total no. of molecules it is need in the boltz part to read in specific molecules"
-maxnumber = 100 #max number in your database
-
+maxnumber = 103 #max number in your database
