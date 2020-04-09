@@ -15,9 +15,11 @@ import pandas as pd
 from periodictable import elements as elementspt
 
 from rdkit import Chem,DataStructs
-from rdkit.Chem import PropertyMol, rdChemReactions,AllChem,Lipinski,Descriptors, rdchem
+from rdkit.Chem import PropertyMol, rdChemReactions,AllChem,Lipinski,Descriptors, rdchem, rdDistGeom,rdMolAlign
 from openbabel import openbabel as ob
 import subprocess
+
+
 
 from DBGEN.confgen import *
 
@@ -32,22 +34,33 @@ possible_atoms = ["", "H", "He", "Li", "Be", "B", "C", "N", "O", "F", "Ne", "Na"
 columns = ['Structure', 'E', 'ZPE', 'H', 'T.S', 'T.qh-S', 'G(T)', 'qh-G(T)']
 
 "TEMPLATE GENERATION FOR SQUAREPLANAR AND SQUAREPYRIMIDAL "
-def template_embed_sp(molecule,temp,name_input):
+def template_embed_sp(molecule,temp,name_input,args):
 	mol_objects = [] # a list of mol objects that will be populated
+	name_return = []
+
+	#setting the metal back instead of I
+	if args.metal_complex == True:
+		for atom in molecule.GetAtoms():
+			if atom.GetSymbol() == 'I' and (len(atom.GetBonds()) == 6 or len(atom.GetBonds()) == 5 or len(atom.GetBonds()) == 4 or len(atom.GetBonds()) == 3 or len(atom.GetBonds()) == 2):
+				for el in elementspt:
+					if el.symbol == args.metal:
+						atomic_number = el.number
+				atom.SetAtomicNum(atomic_number)
+
 	for atom in molecule.GetAtoms():
-		if atom.GetSymbol() == 'Pd':
+		if atom.GetSymbol() == args.metal:
 			neighbours = atom.GetNeighbors()
 			for i in neighbours:
 				print(i.GetSymbol())
 	number_of_neighbours = len(neighbours)
-	print(number_of_neighbours)
+	#print(number_of_neighbours)
 
 	if number_of_neighbours == 4:
 		#three cases for square planar
 		for name in range(3):
 			#assigning neighbours
 			for atom in molecule.GetAtoms():
-				if atom.GetSymbol() == 'Pd':
+				if atom.GetSymbol() == args.metal:
 					neighbours = atom.GetNeighbors()
 			#assugning order of replacement
 			if name == 0:
@@ -58,10 +71,10 @@ def template_embed_sp(molecule,temp,name_input):
 				j = [3,1,2]
 			#checking for same atom neighbours and assigning in the templates for all mols in suppl!
 			for mol_1 in temp:
-				print('neighbpures')
-				for i in neighbours:
-					print(i.GetSymbol())
-				print('neighbpures')
+				#print('neighbpures')
+				# for i in neighbours:
+				# 	print(i.GetSymbol())
+				#print('neighbpures')
 				for atom in mol_1.GetAtoms():
 					print(atom.GetSymbol()+'mol_1 atom')
 					if atom.GetSymbol() == 'F':
@@ -70,23 +83,30 @@ def template_embed_sp(molecule,temp,name_input):
 						mol_1.RemoveAtom(idx)
 						mol_1 = mol_1.GetMol()
 
+				site_1,site_2,site_3,site_4  = 0,0,0,0
 				for atom in mol_1.GetAtoms():
-					print(atom.GetSymbol()+'after remove F from mol_1')
+					#print(atom.GetSymbol()+'after remove F from mol_1')
 					if atom.GetSymbol() == 'Pd':
-						atom.SetAtomicNum(46)
-						#atom.SetFormalCharge(-1)
-					if atom.GetSymbol() == 'At':
+						for el in elementspt:
+							if el.symbol == args.metal:
+								atomic_number = el.number
+						atom.SetAtomicNum(atomic_number)
+					if atom.GetSymbol() == 'At' and site_1 == 0:
 						atom.SetAtomicNum(neighbours[0].GetAtomicNum())
-					if atom.GetSymbol() == 'I':
+						site_1 = 1
+					if atom.GetSymbol() == 'I' and site_2 == 0:
 						atom.SetAtomicNum(neighbours[j[0]].GetAtomicNum())
-					if atom.GetSymbol() == 'Cl':
+						site_2 = 1
+					if atom.GetSymbol() == 'Cl' and site_3 == 0:
 						atom.SetAtomicNum(neighbours[j[1]].GetAtomicNum())
-					if atom.GetSymbol() == 'Br':
+						site_3 = 1
+					if atom.GetSymbol() == 'Br' and site_4 == 0 :
 						atom.SetAtomicNum(neighbours[j[2]].GetAtomicNum())
+						site_4 = 1
 
 				#print to see if it is changed
-				for atom in mol_1.GetAtoms():
-					print(atom.GetSymbol())
+				# for atom in mol_1.GetAtoms():
+				# 	print(atom.GetSymbol())
 
 				#embedding of the molecule onto the core
 
@@ -122,7 +142,7 @@ def template_embed_sp(molecule,temp,name_input):
 				for k, idxI in enumerate(num_atom_match):
 					core_mol_1 = coreConf.GetAtomPosition(k)
 					coordMap[idxI] = core_mol_1
-				print(coordMap)
+				# print(coordMap)
 
 				# This is the original version, if it doesn't work without coordMap I'll come back to it later
 				ci = AllChem.EmbedMolecule(molecule, coordMap=coordMap, randomSeed=randomseed)
@@ -175,7 +195,13 @@ def template_embed_sp(molecule,temp,name_input):
 
 			#writing to mol_object file
 			name_final = name_input + str(name)
-			mol_objects.append([molecule, name_final])
+			mol_objects.append(molecule)
+			name_return.append(name_final)
+
+			# #writing to sdf file
+			# sdwriter = Chem.SDWriter(str(name)+output)
+			# sdwriter.write(molecule)
+			# sdwriter.close()
 #--------------------------------------------------------------------------------------------#
 	if number_of_neighbours == 5:
 		#fifteen cases for square pyrimidal
@@ -183,7 +209,7 @@ def template_embed_sp(molecule,temp,name_input):
 			for name_2 in range(3):
 				#assigning neighbours
 				for atom in molecule.GetAtoms():
-					if atom.GetSymbol() == 'Pd':
+					if atom.GetSymbol() == args.metal:
 						neighbours = atom.GetNeighbors()
 
 				#assugning order of replacement for the top
@@ -230,44 +256,66 @@ def template_embed_sp(molecule,temp,name_input):
 				elif name_2 == 2 and k == 1:
 					j = [3,4,2]
 
+				#assugning order of replacement for the plane
+				if name_2 == 0 and k == 0:
+					j = [1,2,3]
+				elif name_2 == 1 and k == 0:
+					j = [2,3,1]
+				elif name_2 == 2 and k == 0:
+					j = [3,1,2]
+
 				#checking for same atom neighbours and assigning in the templates for all mols in suppl!
 				for mol_1 in temp:
-					print('neighbpures')
-					for i in neighbours:
-						print(i.GetSymbol())
-					print('neighbpures')
+					# print('neighbpures')
+					# for i in neighbours:
+					# 	print(i.GetSymbol())
+					# print('neighbpures')
 
+
+					site_1,site_2,site_3,site_4,site_5  = 0,0,0,0,0
 					for atom in mol_1.GetAtoms():
-						print(atom.GetSymbol()+'after remove F from mol_1')
+						#print(atom.GetSymbol()+'no remove F from mol_1')
 						if atom.GetSymbol() == 'Pd':
-							atom.SetAtomicNum(46)
-							#atom.SetFormalCharge(-1)
+							for el in elementspt:
+								if el.symbol == args.metal:
+									atomic_number = el.number
+							atom.SetAtomicNum(atomic_number)
 						if k!= 0:
-							if atom.GetSymbol() == 'At':
+							if atom.GetSymbol() == 'At' and site_1 == 0:
 								atom.SetAtomicNum(neighbours[0].GetAtomicNum())
-							elif atom.GetSymbol() == 'I':
+								site_1 = 1
+							elif atom.GetSymbol() == 'I' and site_2 == 0:
 								atom.SetAtomicNum(neighbours[j[0]].GetAtomicNum())
-							elif atom.GetSymbol() == 'Cl':
+								site_2 = 1
+							elif atom.GetSymbol() == 'Cl' and site_3 == 0:
 								atom.SetAtomicNum(neighbours[j[1]].GetAtomicNum())
-							elif atom.GetSymbol() == 'Br':
+								site_3 = 1
+							elif atom.GetSymbol() == 'Br' and site_4 == 0:
 								atom.SetAtomicNum(neighbours[j[2]].GetAtomicNum())
-							elif atom.GetSymbol() == 'F':
+								site_4 = 1
+							elif atom.GetSymbol() == 'F' and site_5 == 0:
 								atom.SetAtomicNum(neighbours[k].GetAtomicNum())
+								site_5 = 1
 						elif k == 0:
-							if atom.GetSymbol() == 'At':
+							if atom.GetSymbol() == 'At' and site_1 == 0:
 								atom.SetAtomicNum(neighbours[4].GetAtomicNum())
-							elif atom.GetSymbol() == 'I':
+								site_1 = 1
+							elif atom.GetSymbol() == 'I' and site_2 == 0:
 								atom.SetAtomicNum(neighbours[j[0]].GetAtomicNum())
-							elif atom.GetSymbol() == 'Cl':
+								site_2 = 1
+							elif atom.GetSymbol() == 'Cl' and site_3 == 0:
 								atom.SetAtomicNum(neighbours[j[1]].GetAtomicNum())
-							elif atom.GetSymbol() == 'Br':
+								site_3 = 1
+							elif atom.GetSymbol() == 'Br' and site_4 == 0:
 								atom.SetAtomicNum(neighbours[j[2]].GetAtomicNum())
-							elif atom.GetSymbol() == 'F':
+								site_4 = 1
+							elif atom.GetSymbol() == 'F' and site_5 == 0:
 								atom.SetAtomicNum(neighbours[0].GetAtomicNum())
+								site_5 = 1
 
 					#print to see if it is changed
-					for atom in mol_1.GetAtoms():
-						print(atom.GetSymbol())
+					# for atom in mol_1.GetAtoms():
+					# 	print(atom.GetSymbol())
 
 					#embedding of the molecule onto the core
 
@@ -284,6 +332,23 @@ def template_embed_sp(molecule,temp,name_input):
 					randomseed=-1
 					force_constant=10000
 
+					# This part selects which atoms from molecule are the atoms of the core
+					try:
+						coreConf = mol_1.GetConformer(coreConfId)
+					except:
+						pass
+					for k, idxI in enumerate(num_atom_match):
+						core_mol_1 = coreConf.GetAtomPosition(k)
+						coordMap[idxI] = core_mol_1
+					#print(coordMap)
+
+					# This is the original version, if it doesn't work without coordMap I'll come back to it later
+					ci = AllChem.EmbedMolecule(molecule, coordMap=coordMap, randomSeed=randomseed)
+					if ci < 0:    print('Could not embed molecule.')
+
+					#algin molecule to the core
+					algMap = [(k, l) for l, k in enumerate(num_atom_match)]
+
 					# Choosing the type of force field
 					ff = "UFF"
 
@@ -294,23 +359,6 @@ def template_embed_sp(molecule,temp,name_input):
 						GetFF = lambda x,confId=-1:AllChem.UFFGetMoleculeForceField(x)
 					else: print('   Force field {} not supported!'.format(options.ff)); sys.exit()
 					getForceField=GetFF
-
-					# This part selects which atoms from molecule are the atoms of the core
-					try:
-						coreConf = mol_1.GetConformer(coreConfId)
-					except:
-						pass
-					for k, idxI in enumerate(num_atom_match):
-						core_mol_1 = coreConf.GetAtomPosition(k)
-						coordMap[idxI] = core_mol_1
-					print(coordMap)
-
-					# This is the original version, if it doesn't work without coordMap I'll come back to it later
-					ci = AllChem.EmbedMolecule(molecule, coordMap=coordMap, randomSeed=randomseed)
-					if ci < 0:    print('Could not embed molecule.')
-
-					#algin molecule to the core
-					algMap = [(k, l) for l, k in enumerate(num_atom_match)]
 
 					useTethers = True
 					# In this part, the constrained optimization takes place
@@ -355,10 +403,16 @@ def template_embed_sp(molecule,temp,name_input):
 							break
 
 				#writing to mol_object file
-				name_final = name_input + str(name)
-				mol_objects.append([molecule, name_final])
+				name_final = name_input + str(name_1)+ str(name_2)
+				mol_objects.append(molecule)
+				name_return.append(name_final)
 
-	return mol_objects
+				# #writing to sdf file
+				# sdwriter = Chem.SDWriter(str(name_1)+str(name_2)+output)
+				# sdwriter.write(molecule)
+				# sdwriter.close()
+
+	return mol_objects, name_return
 
 " FUCNTION WORKING WITH MOL OBJECT TO CREATE CONFORMERS"
 def conformer_generation(mol,name,args):
@@ -438,78 +492,101 @@ def conformer_generation(mol,name,args):
 
 " RULES TO GET EXPERIMENTAL CONFORMERS"
 def exp_rules_output(mol, args):
-	conf = mol.GetConformer(-1)
-	check_mol = True
+	passing = True
+	ligand_links = []
+	atom_indexes = []
 	for atom in mol.GetAtoms():
-		print(atom.GetSymbol())
-		if atom.GetSymbol() == args.metal:
-			metal_idx = atom.GetIdx()
-			print(metal_idx)
-			neighbours = atom.GetNeighbors()
-			print(neighbours)
-
-	c_count = 0
-	n_count = 0
-	other_count = 0
-	c_idx = []
-	n_idx = []
-	other_idx = []
-	for atom in neighbours:
-		if atom.GetSymbol() == 'C':
-			c_count += 1
-			c_idx.append(atom.GetIdx())
-		elif atom.GetSymbol() =='N':
-			n_count += 1
-			n_idx.append(atom.GetIdx())
-		else:
-			other_count += 1
-			other_idx.append(atom.GetIdx())
-	print(c_idx)
-	print(n_idx)
-	print(other_idx)
-	angle = 0
-	#3C and 3N shpuld be trans Case 1
-	if c_count == 3 and n_count == 3:
-		for i in range(c_count):
-			if i !=2:
-				angle = rdMolTransforms.GetAngleDeg(conf,c_idx[i],metal_idx,c_idx[i+1])
-				if 180 - args.angle_off <= angle <= 180 + args.angle_off:
-					check_mol = False
-			else:
-				rdMolTransforms.GetAngleDeg(conf,c_idx[i],metal_idx,c_idx[0])
-				if 180 - args.angle_off <= angle <= 180 + args.angle_off:
-					check_mol = False
-	# case 2: iother atoms present
-	if c_count == 2:
-		#case A
-		if n_count ==4:
-			N_metal_N = 0
-			for i in range(n_count):
-				for j in range(i,n_count):
-					angle = rdMolTransforms.GetAngleDeg(conf,n_idx[i],metal_idx,n_idx[j])
-					if 180 - args.angle_off <= angle <= 180 + args.angle_off:
-						N_metal_N +=1
-			if N_metal_N == 2:
-				check_mol = False
-		#case B
-		if n_count == 3 and other_count == 1:
-			#finding the N which is not in the ring
-			for i in range(n_count):
-				if not mol.GetAtomWithIdx(n_idx[i]).IsInRingSize(6):
-					n_idx = n_idx.pop(i)
-					print(n_idx)
-			for i in range(n_count-1):
-				angle = rdMolTransforms.GetAngleDeg(conf,n_idx[i],metal_idx,n_idx[i+1])
-				if 90 - args.angle_off <= angle <= 90 + args.angle_off:
-					check_mol = False
-		#case C
-		if n_count == 2 and other_count == 2:
-
-			for i in range(n_count-1):
-				angle = rdMolTransforms.GetAngleDeg(conf,n_idx[i],metal_idx,n_idx[i+1])
-				if not 180 - args.angle_off <= angle <= 180 + args.angle_off:
-					check_mol = False
-	return check_mol
+		# Finds the Ir atom and gets the atom types and indexes of all its neighbours
+		if atom.GetAtomicNum() == 77:
+			Ir_idx = atom.GetIdx()
+			for x in atom.GetNeighbors():
+				ligand_links.append(x.GetSymbol())
+				atom_indexes.append(x.GetIdx())
+	# I need to get the only 3D conformer generated in that mol object for rdMolTransforms
+	mol_conf = mol.GetConformer(0)
+	# This part will identify the pairs of C and N atoms that are part of the same Ph_Py ligand.
+	# The shape of the atom pairs is '[[C1_ATOM_NUMBER, N1_ATOM_NUMBER],[C2, N2],...]'.
+	# This information is required for the subsequent filtering process based on angles
+	if len(atom_indexes) == 6:
+		ligand_atoms = []
+		for i in range(len(atom_indexes)):
+			# This is a filter that excludes molecules that fell apart during DFT geometry
+			# optimization (i.e. a N atom from one of the ligands separated from Ir). The
+			# max distance allowed can be tuned in length_filter
+			bond_length = Chem.rdMolTransforms.GetBondLength(mol_conf,Ir_idx,atom_indexes[i])
+			length_filter = 2.25
+			if bond_length > length_filter:
+				passing = False
+				break
+			for j in range(len(atom_indexes)):
+				# Avoid combinations of the same atom with itself
+				if atom_indexes[i] != atom_indexes[j]:
+					# We know that the ligands never have 2 carbon atoms bonding the Ir atom. We
+					# only use atom_indexes[i] for C atoms, and atom_indexes[j] for the potential
+					# N atoms that are part of the same Ph_Py ligand
+					if ligand_links[i] == 'C' and atom_indexes[j] != 'C':
+						# This part detects the Ir-C bond and breaks it, breaking the Ph_Py ring
+						bond = mol.GetBondBetweenAtoms(atom_indexes[i], Ir_idx)
+						new_mol = Chem.FragmentOnBonds(mol, [bond.GetIdx()],addDummies=True, dummyLabels=[(atom_indexes[i], Ir_idx)])
+						# Now, identify whether or not the initial 5-membered ring formed between
+						# [-Ir-C-C-C-N-] is broken when we break the Ir-C bond. This works
+						# because Ph_Py units bind Ir in the same way always, through 1 C and 1 N
+						# that are in the same position, forming a 5-membered ring.
+						# If this ring is broken, atom_indexes[j] will not be part of a
+						# 5-membered ring (atom.IsInRingSize(5) == False) which means that
+						# this atom was initially inside the same ligand as the
+						# parent C of atom_indexes[i])
+						if new_mol.GetAtomWithIdx(atom_indexes[j]).IsInRingSize(5) == False:
+							# This will append pairs of atoms indexes in the form:
+							# '[idx for C, idx for N]', where the couples are C and N atoms that
+							# are part of the same Ph_Py ligand
+							ligand_atoms.append([atom_indexes[i],atom_indexes[j]])
+							break
+						else:
+							# An additional filter just in case the N is part of a 5-membered
+							# ring besides the 5-membered ring that forms with Ir
+							bond_2 = mol.GetBondBetweenAtoms(atom_indexes[j], Ir_idx)
+							new_mol_2 = Chem.FragmentOnBonds(mol, [bond_2.GetIdx()],addDummies=True, dummyLabels=[(atom_indexes[j], Ir_idx)])
+							if new_mol_2.GetAtomWithIdx(atom_indexes[i]).IsInRingSize(5) == False:
+								ligand_atoms.append([atom_indexes[i],atom_indexes[j]])
+								break
+		if passing == True:
+			# This stop variable and the breaks inside the inner loops will make that if there
+			# is one angle that does not meet the criteria for valid conformers, the outter (i)
+			# and inner (j) loops will stop simultaneously (saves time since the molecule is
+			# already an invalid geometry, it does not make sense to keep iterating)
+			stop = False
+			# For complexes with 3 Ph_Py ligands:
+			if len(ligand_atoms) == 3:
+				for i in range(len(ligand_atoms)):
+					if stop != True:
+						for j in range(len(ligand_atoms)):
+							# the i<=j part avoids repeating atoms, the i != j part avoid angles
+							# containing the same number twice (i.e. 4-16-4, this angle will fail)
+							if i <= j and i != j:
+								# Calculate the angle between 2 N atoms from different Ph_Py ligands.
+								# When there are 3 Ph_Py ligands, no 2 N atoms must be in 180 degrees
+								angle = rdMolTransforms.GetAngleDeg(mol_conf,ligand_atoms[i][1],Ir_idx,ligand_atoms[j][1])
+								if (180 - args.angle_off) <= angle <= (180 + args.angle_off):
+									passing = False
+									break
+			# For complexes with 2 Ph_Py ligands + 1 ligand that is not Ph_Py
+			if len(ligand_atoms) == 2:
+				# Since there are only 2 N atoms, we do not need to include a nested loop
+					angle = rdMolTransforms.GetAngleDeg(mol_conf,ligand_atoms[0][1],Ir_idx,ligand_atoms[1][1])
+					# Calculate the angle between 2 N atoms from different Ph_Py ligands.
+					# When there are 2 Ph_Py ligands, the 2 N atoms from the 2 Ph_Py ligands
+					# must be in 180 degrees
+					if (180 - args.angle_off) <= angle <= (180 + args.angle_off):
+						pass
+					else:
+						passing = False
+	# This is a second filter that excludes molecules that fell apart during DFT geometry
+	# optimization (i.e. a N atom from one of the ligands separated from Ir). In this case,
+	# it filters off molecules that the SDF only detects 5 Ir neighbours
+	else:
+		passing = False
+	return passing
 
 " FILTER TO BE APPLIED FOR SMILES"
 def filters(mol,args):
@@ -797,23 +874,6 @@ def check_for_final_folder(w_dir):
 			dir_found =True
 	return w_dir
 
-" CHECKS THE FINISHED FOLDER TO MOVE NORMAL TERMINATED LOG FILES"
-# def finished_folder(w_dir):
-# 	gaussian_path = w_dir+'../../gaussian/'
-# 	if os.path.isdir(gaussian_path):
-# 		w_dir = w_dir+'/Finished'
-# 	else:
-# 		dir_found = False
-# 		final_folder = '/Finished'
-# 		while dir_found == False:
-# 			temp_dir = w_dir+'../'
-# 			if os.path.isdir(temp_dir+final_folder):
-# 				w_dir = w_dir+'/Finished'
-# 				dir_found = True
-# 			else:
-# 				w_dir = temp_dir
-# 	return w_dir
-
 " DEFINTION OF OUTPUT ANALYSER and NMR FILES CREATOR"
 def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin):
 
@@ -867,43 +927,53 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin):
 		freqs_so_far = 0
 		TERMINATION = "unfinished"
 		ERRORTYPE = 'unknown'
-		###stop=0
-		### Change to reverse
-		for i in range(0,len(outlines)):
-			###if stop == 3: break
+		stop=0
+		#Change to reverse
+		for i in reversed(range(0,len(outlines))):
+			if stop == 3: break
 			# Get the name of the compound (specified in the title)
 			if outlines[i].find('Symbolic Z-matrix:') > -1:
 				name = outlines[i-2]
-				###stop=stop+1
+				stop=stop+1
 			# Determine the kind of job termination
 			if outlines[i].find("Normal termination") > -1:
 				TERMINATION = "normal"
-				###stop=stop+1
+				stop=stop+1
 			elif outlines[i].find("Error termination") > -1:
 				TERMINATION = "error"
 				if outlines[i-1].find("Atomic number out of range") > -1:
 					ERRORTYPE = "atomicbasiserror"
 				if outlines[i-3].find("SCF Error SCF Error SCF Error SCF Error SCF Error SCF Error SCF Error SCF Error") > -1:
 					ERRORTYPE = "SCFerror"
-				###stop=stop+1
+				stop=stop+1
 			# Determine charge and multiplicity
 			if outlines[i].find("Charge = ") > -1:
 				CHARGE = int(outlines[i].split()[2])
 				MULT = int(outlines[i].split()[5].rstrip("\n"))
-				###stop=stop+1
+				stop=stop+1
+		#print(TERMINATION)
 
 		###reverse
-		for i in range(0,len(outlines)):
+		stop_get_details_stand_or = 0
+		stop_get_details_dis_rot = 0
+		stop_get_details_freq = 0
+		for i in reversed(range(0,len(outlines))):
 			if TERMINATION == "normal":
+				if stop_get_details_stand_or == 1 and stop_get_details_dis_rot == 1 and stop_get_details_freq == 1:
+					break
 				# Sets where the final coordinates are inside the file
 				###if outlines[i].find("Input orientation") > -1: standor = i
-				if outlines[i].find("Standard orientation") > -1: standor = i
-				if outlines[i].find("Distance matrix") > -1 or outlines[i].find("Rotational constants") >-1:
+				if outlines[i].find("Standard orientation") > -1 and stop_get_details_stand_or !=1 :
+					standor = i
+					NATOMS = disrotor-i-6
+					print(NATOMS)
+					stop_get_details_stand_or += 1
+				if stop_get_details_dis_rot !=1 and (outlines[i].find("Distance matrix") > -1 or outlines[i].find("Rotational constants") >-1) :
 					if outlines[i-1].find("-------") > -1:
-						NATOMS = i-standor-6
-						###break
+						disrotor = i
+						stop_get_details_dis_rot += 1
 				# Get the frequencies and identifies negative frequencies
-				if outlines[i].find(" Frequencies -- ") > -1:
+				if outlines[i].find(" Frequencies -- ") > -1 and stop_get_details_freq != 1:
 					nfreqs = len(outlines[i].split())
 					for j in range(2, nfreqs):
 						FREQS.append(float(outlines[i].split()[j]))
@@ -915,6 +985,7 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin):
 						for k in range(0, nfreqs-2):
 							NORMALMODE[(freqs_so_far + k)].append([float(outlines[i+5+j].split()[3*k+2]), float(outlines[i+5+j].split()[3*k+3]), float(outlines[i+5+j].split()[3*k+4])])
 					freqs_so_far = freqs_so_far + nfreqs - 2
+					stop_get_details_freq += 1
 			if TERMINATION != "normal":
 				if outlines[i].find('Cartesian Forces:  Max') > -1:
 					if float(outlines[i].split()[5]) < rms:
@@ -926,7 +997,7 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin):
 			try: standor
 			except NameError: pass
 			else:
-				for i in range (standor+5,standor+5+NATOMS):
+				for i in range(standor+5,standor+5+NATOMS):
 					massno = int(outlines[i].split()[1])
 					if massno < len(possible_atoms):
 						atom_symbol = possible_atoms[massno]
@@ -934,20 +1005,30 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin):
 					ATOMTYPES.append(atom_symbol)
 					CARTESIANS.append([float(outlines[i].split()[3]), float(outlines[i].split()[4]), float(outlines[i].split()[5])])
 
+
 		if TERMINATION != "normal":
-			# Get the coordinates for jobs that did not finished or finished with an error
-			###reverse copy from above
+			# Get he coordinates for jobs that did not finished or finished with an error
 			if stop_rms == 0:
 				last_line = len(outlines)
+				print('lastline')
 			else:
 				last_line = stop_rms
-			for i in range(0,last_line):
+				print('stoprms')
+			stop_get_details_stand_or = 0
+			stop_get_details_dis_rot = 0
+			for i in reversed(range(0,last_line)):
+				if stop_get_details_stand_or == 1 and stop_get_details_dis_rot == 1 and stop_get_details_freq == 1:
+					break
 				# Sets where the final coordinates are inside the file
-				if outlines[i].find("Input orientation") > -1: standor = i
-				if outlines[i].find("Standard orientation") > -1: standor = i
-				if outlines[i].find("Distance matrix") > -1 or outlines[i].find("Rotational constants") >-1:
+				if outlines[i].find("Standard orientation") > -1 and stop_get_details_stand_or != 1:
+					standor = i
+					NATOMS = disrotor-i-6
+					stop_get_details_stand_or += 1
+				if stop_get_details_stand_or != 1 and (outlines[i].find("Distance matrix") > -1 or outlines[i].find("Rotational constants") >-1):
 					if outlines[i-1].find("-------") > -1:
-						NATOMS = i-standor-6
+						print(i)
+						disrotor = i
+						stop_get_details_dis_rot += 1
 			###no change after this
 			for i in range (standor+5,standor+5+NATOMS):
 				massno = int(outlines[i].split()[1])

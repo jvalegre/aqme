@@ -183,11 +183,17 @@ def main():
 				if args.verbose: print("   -> Input Molecule {} is {}".format(i, smi))
 				mol = Chem.MolFromSmiles(smi)
 				# get manually for square planar and SQUAREPYRIMIDAL
-				if complex_type == 'squareplanar' or complex_type == 'squarepyrimidal':
+				if args.complex_type == 'squareplanar' or args.complex_type == 'squarepyrimidal':
 					file_template = 'template-4-and-5.sdf'
 					temp = Chem.SDMolSupplier(file_template)
-					mol_objects_from_template = template_embed_sp(mol,temp,name)
-					mol_objects.append(mol_objects_from_template)
+					mol_objects_from_template,name = template_embed_sp(mol,temp,name,args)
+					# changing back to # I
+					for molecule in mol_objects_from_template:
+						for atom in molecule.GetAtoms():
+							if atom.GetSymbol() == args.metal:
+								atom.SetAtomicNum(53)
+					for i in range(len(mol_objects_from_template)):
+						mol_objects.append([mol_objects_from_template[i],name[i]])
 				else:
 					mol_objects.append([mol, name])
 
@@ -249,10 +255,10 @@ def main():
 
 				if args.verbose: print("   -> Input Molecule {} is {}".format(i, smi))
 				mol = Chem.MolFromSmiles(smi)
-				if complex_type == 'squareplanar' or complex_type == 'squarepyrimidal':
+				if args.complex_type == 'squareplanar' or args.complex_type == 'squarepyrimidal':
 					file_template = 'template-4-and-5.sdf'
 					temp = Chem.SDMolSupplier(file_template)
-					mol_objects_from_template = template_embed_sp(mol,temp,name)
+					mol_objects_from_template = template_embed_sp(mol,temp,name,args)
 					mol_objects.append(mol_objects_from_template)
 				else:
 					mol_objects.append([mol, name])
@@ -284,10 +290,10 @@ def main():
 					line = line.replace('I+','I')
 
 				mol = Chem.MolFromSmiles(line)
-				if complex_type == 'squareplanar' or complex_type == 'squarepyrimidal':
+				if args.complex_type == 'squareplanar' or args.complex_type == 'squarepyrimidal':
 					file_template = 'template-4-and-5.sdf'
 					temp = Chem.SDMolSupplier(file_template)
-					mol_objects_from_template = template_embed_sp(mol,temp,name)
+					mol_objects_from_template = template_embed_sp(mol,temp,name,args)
 					mol_objects.append(mol_objects_from_template)
 				else:
 					mol_objects.append([mol, name])
@@ -367,10 +373,10 @@ def main():
 
 				if args.prefix == None: name = IDs[i]
 				else: name = args.prefix+str(m)+'_'+IDs[i]
-				if complex_type == 'squareplanar' or complex_type == 'squarepyrimidal':
+				if args.complex_type == 'squareplanar' or args.complex_type == 'squarepyrimidal':
 					file_template = 'template-4-and-5.sdf'
 					temp = Chem.SDMolSupplier(file_template)
-					mol_objects_from_template = template_embed_sp(mol,temp,name)
+					mol_objects_from_template = template_embed_sp(mol,temp,name,args)
 					mol_objects.append(mol_objects_from_template)
 				else:
 					mol_objects.append([mol, name])
@@ -408,10 +414,10 @@ def main():
 
 				if args.prefix == None: name = IDs[i]
 				else: name = args.prefix+str(m)+'_'+IDs[i]
-				if complex_type == 'squareplanar' or complex_type == 'squarepyrimidal':
+				if args.complex_type == 'squareplanar' or args.complex_type == 'squarepyrimidal':
 					file_template = 'template-4-and-5.sdf'
 					temp = Chem.SDMolSupplier(file_template)
-					mol_objects_from_template = template_embed_sp(mol,temp,name)
+					mol_objects_from_template = template_embed_sp(mol,temp,name,args)
 					mol_objects.append(mol_objects_from_template)
 				else:
 					mol_objects.append([mol, name])
@@ -470,7 +476,6 @@ def main():
 		conf_files = glob.glob('*.sdf')
 
 		for file in conf_files:
-			print('vfodbobnoigbogibgoi')
 			allmols = Chem.SDMolSupplier(file, removeHs=False)
 			if allmols is None:
 				print("Could not open ", file)

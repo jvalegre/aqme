@@ -7,7 +7,7 @@
 """
 
 " INPUT FILE"
-input ='example.smi' #input files
+input ='smi.smi' #input files
 path ='' #path to guassian folder when we do analysis
 
 " EXP RULES"
@@ -17,32 +17,32 @@ angle_off = 30
 
 " IF METAL COMPLEX"
 metal_complex= True # specify  true if metal complex
-metal = ['Au'] # specify the metal
-complex_coord = 4 # specify the complex coordination number
-complex_type = 'squareplanar' # specify the following square planar, square pyrimidal (otheriwse defaults to octahedral, Td)
-m_oxi = 1 # will have to be changed for respective metals
+metal = 'Ir' # specify the metal
+complex_coord = 6 # specify the complex coordination number
+complex_type = 'octahedral' # specify the following square planar, square pyrimidal (otheriwse defaults to octahedral, Td)
+m_oxi = 3 # will have to be changed for respective metals
 complex_spin = 1 # will have to be changed for respective metals
 charge = 0 #will automaticallu change for metal comples. default is for orgaincs.
 
 " IF NCI COMPLEX"
-nci_complex= True # specify  true if NCI complex
+nci_complex = False # specify  true if NCI complex
 
 "GENERAL OPTIONS FOR COMMANDLINE"
 verbose = True
-compute = False
+compute = True
 write_gauss = False
 analysis = False
 resubmit = False
 nmr = False
-dup = True
-boltz = True
-combine = True
+dup = False
+boltz = False
+combine = False
 prefix = None
 
 "TYPE OF OPTIMIZATION"
 # Options: xTB, AN1  Default : RDKIT optimizaiton
 ANI1ccx = False
-xtb = False
+xtb = True
 
 " SINGLE POINTS vs FULL OPTIMIZATION WITH or WITHOUT FREQUENCIES"
 single_point = False
@@ -84,9 +84,9 @@ energy_threshold_for_gaussian = 10  #in kJ/ mol
 genecp_atoms = ['I','Ir']
 
 "DEFINTION OF BASIS SET AND LEVEL OF THEORY AND SOLVENT"
-basis_set = ['6-31G**','6-31+g**','def2tzvp']
+basis_set = ['def2tzvp']
 basis_set_genecp_atoms = ['LANL2DZ']
-level_of_theory = ['wB97XD','M062X','b3lyp']
+level_of_theory = ['wB97XD']
 max_cycle_opt = 100 #eefault is 300
 
 #dispersion correction to be added or not
