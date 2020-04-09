@@ -258,8 +258,14 @@ def main():
 				if args.complex_type == 'squareplanar' or args.complex_type == 'squarepyrimidal':
 					file_template = 'template-4-and-5.sdf'
 					temp = Chem.SDMolSupplier(file_template)
-					mol_objects_from_template = template_embed_sp(mol,temp,name,args)
-					mol_objects.append(mol_objects_from_template)
+					mol_objects_from_template,name = template_embed_sp(mol,temp,name,args)
+					# changing back to # I
+					for molecule in mol_objects_from_template:
+						for atom in molecule.GetAtoms():
+							if atom.GetSymbol() == args.metal:
+								atom.SetAtomicNum(53)
+					for i in range(len(mol_objects_from_template)):
+						mol_objects.append([mol_objects_from_template[i],name[i]])
 				else:
 					mol_objects.append([mol, name])
 				m += 1
@@ -293,8 +299,14 @@ def main():
 				if args.complex_type == 'squareplanar' or args.complex_type == 'squarepyrimidal':
 					file_template = 'template-4-and-5.sdf'
 					temp = Chem.SDMolSupplier(file_template)
-					mol_objects_from_template = template_embed_sp(mol,temp,name,args)
-					mol_objects.append(mol_objects_from_template)
+					mol_objects_from_template,name = template_embed_sp(mol,temp,name,args)
+					# changing back to # I
+					for molecule in mol_objects_from_template:
+						for atom in molecule.GetAtoms():
+							if atom.GetSymbol() == args.metal:
+								atom.SetAtomicNum(53)
+					for i in range(len(mol_objects_from_template)):
+						mol_objects.append([mol_objects_from_template[i],name[i]])
 				else:
 					mol_objects.append([mol, name])
 
@@ -376,8 +388,14 @@ def main():
 				if args.complex_type == 'squareplanar' or args.complex_type == 'squarepyrimidal':
 					file_template = 'template-4-and-5.sdf'
 					temp = Chem.SDMolSupplier(file_template)
-					mol_objects_from_template = template_embed_sp(mol,temp,name,args)
-					mol_objects.append(mol_objects_from_template)
+					mol_objects_from_template,name = template_embed_sp(mol,temp,name,args)
+					# changing back to # I
+					for molecule in mol_objects_from_template:
+						for atom in molecule.GetAtoms():
+							if atom.GetSymbol() == args.metal:
+								atom.SetAtomicNum(53)
+					for i in range(len(mol_objects_from_template)):
+						mol_objects.append([mol_objects_from_template[i],name[i]])
 				else:
 					mol_objects.append([mol, name])
 
