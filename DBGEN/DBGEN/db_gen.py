@@ -183,7 +183,7 @@ def main():
 				if args.verbose: print("   -> Input Molecule {} is {}".format(i, smi))
 				mol = Chem.MolFromSmiles(smi)
 				# get manually for square planar and SQUAREPYRIMIDAL
-				if complex_type = 'squareplanar' or complex_type = 'squarepyrimidal':
+				if complex_type == 'squareplanar' or complex_type == 'squarepyrimidal':
 					file_template = 'template-4-and-5.sdf'
 					temp = Chem.SDMolSupplier(file_template)
 					mol_objects_from_template = template_embed_sp(mol,temp,name)
@@ -249,7 +249,7 @@ def main():
 
 				if args.verbose: print("   -> Input Molecule {} is {}".format(i, smi))
 				mol = Chem.MolFromSmiles(smi)
-				if complex_type = 'squareplanar' or complex_type = 'squarepyrimidal':
+				if complex_type == 'squareplanar' or complex_type == 'squarepyrimidal':
 					file_template = 'template-4-and-5.sdf'
 					temp = Chem.SDMolSupplier(file_template)
 					mol_objects_from_template = template_embed_sp(mol,temp,name)
@@ -284,7 +284,7 @@ def main():
 					line = line.replace('I+','I')
 
 				mol = Chem.MolFromSmiles(line)
-				if complex_type = 'squareplanar' or complex_type = 'squarepyrimidal':
+				if complex_type == 'squareplanar' or complex_type == 'squarepyrimidal':
 					file_template = 'template-4-and-5.sdf'
 					temp = Chem.SDMolSupplier(file_template)
 					mol_objects_from_template = template_embed_sp(mol,temp,name)
@@ -367,7 +367,7 @@ def main():
 
 				if args.prefix == None: name = IDs[i]
 				else: name = args.prefix+str(m)+'_'+IDs[i]
-				if complex_type = 'squareplanar' or complex_type = 'squarepyrimidal':
+				if complex_type == 'squareplanar' or complex_type == 'squarepyrimidal':
 					file_template = 'template-4-and-5.sdf'
 					temp = Chem.SDMolSupplier(file_template)
 					mol_objects_from_template = template_embed_sp(mol,temp,name)
@@ -408,7 +408,7 @@ def main():
 
 				if args.prefix == None: name = IDs[i]
 				else: name = args.prefix+str(m)+'_'+IDs[i]
-				if complex_type = 'squareplanar' or complex_type = 'squarepyrimidal':
+				if complex_type == 'squareplanar' or complex_type == 'squarepyrimidal':
 					file_template = 'template-4-and-5.sdf'
 					temp = Chem.SDMolSupplier(file_template)
 					mol_objects_from_template = template_embed_sp(mol,temp,name)
