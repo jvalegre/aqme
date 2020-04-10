@@ -16,7 +16,7 @@ angle_off = 30
 
 
 " IF METAL COMPLEX"
-metal_complex= True # specify  true if metal complex
+metal_complex= False # specify  true if metal complex
 metal = 'Ir' # specify the metal
 complex_coord = 6 # specify the complex coordination number
 complex_type = 'octahedral' # specify the following square planar, square pyrimidal (otheriwse defaults to octahedral, Td)
@@ -52,8 +52,8 @@ frequencies = True
 max_torsions = 20 #Skip any molecules with more than this many torsions (default 5)
 max_MolWt = 1000
 heavyonly = True
-sample = 10 #number of conformers to sample to get non-torsional differences (default 100)
-nodihedrals = False #turn to TRUE if no dihydral scan is needed.
+sample = 100 #number of conformers to sample to get non-torsional differences (default 100)
+nodihedrals = True #turn to TRUE if no dihydral scan is needed.
 
 " DEFAULT PARAMETERS FOR RDKIT OPTIMIZATION "
 ff = "MMFF" #can use MMFF ro UFF
@@ -69,24 +69,25 @@ large_sys = False
 STACKSIZE = '1G' #set for large system
 
 "DEFAULT PARAMTERS FOR UNIQUE CONFORMER SELECTION"
-rms_threshold = 0.25 #cutoff for considering sampled conformers the same (default 0.25)
-energy_threshold = 0.05 #energy difference between unique conformers
-ewin = 10 #energy window to print conformers
+rms_threshold = 0.25 #cutoff for considering sampled conformers the same (default 0.25) for RDKit and xTB duplicate filters
+energy_threshold = 0.1 #energy difference between unique conformers for RDKit and xTB duplicate filters
+ewin = 100 #energy window to print conformers for RDKit and xTB duplicate filters
 convergence = 1.0 #Adjust convergence criteria of ANI and xtb optimizations (set at 0.005)
 time = False #request run time
 
 " ONLY LOWEST ENERGY CONFORMER REQUIRED"
 lowest_only = False
 lowest_n  = False # for a given threshold of energy_threshold_for_gaussian
-energy_threshold_for_gaussian = 10  #in kJ/ mol
+energy_threshold_for_gaussian = 100  #in kJ/ mol, from all the conformers generated after xTB optimization
+                                    # lowest_n must be True to apply this energy threshold
 
 " DEFINITION OF ATOMS"
-genecp_atoms = ['I','Ir']
+genecp_atoms = []
 
 "DEFINTION OF BASIS SET AND LEVEL OF THEORY AND SOLVENT"
-basis_set = ['def2tzvp']
+basis_set = ['6-31G(d,p)']
 basis_set_genecp_atoms = ['LANL2DZ']
-level_of_theory = ['wB97XD']
+level_of_theory = ['b3lyp']
 max_cycle_opt = 100 #eefault is 300
 
 #dispersion correction to be added or not
@@ -94,8 +95,8 @@ dispersion_correction = False
 empirical_dispersion = 'GD3BJ'
 
 # Specify the solvation model. Options: gas_phase or any solvation model (i.e. SMD, IEFPCM, CPCM)
-solvent_model = 'gas_phase'
-solvent_name = 'Acetonitrile'
+solvent_model = 'IEFPCM'
+solvent_name = 'Chloroform'
 
 "DEFAULT PARAMTERS FOR GAUSSIAN OPTIMIZATION"
 chk = False
