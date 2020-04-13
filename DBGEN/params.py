@@ -18,8 +18,6 @@ angle_off = 30
 " IF METAL COMPLEX"
 metal_complex= False # specify  sstrue if metal complex
 metal = '' # specify the smetal
-metal_complex= False # specify  true if metal complex
-metal = 'Ir' # specify the metal
 complex_coord = 6 # specify the complex coordination number
 complex_type = '' # specify the following square planar, square pyrimidal (otheriwse defaults to octahedral, Td)
 m_oxi = 3 # will have to be changed for respective metals
