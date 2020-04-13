@@ -76,10 +76,13 @@ python -m DBGEN --compute --input \*.sdf
 
 # Installation
 
-(1) Install the python modules above (they are widely used modules, you can use "pip install" or "conda install")    
-(2) Download DBGEN folder (there is a DBGEN subfolder inside)
-(3a) If you don't use DBGEN as a module through your PYTHONPATH, you can run the program from the DBGEN main folder 
-(3b) You can run DBGEN from other folders if you add the location of the DBGEN directory to the $PYTHONPATH environment variable
+    (1) Install the python modules above (they are widely used modules, you can use "pip install" or "conda install") 
+    
+    (2) Download DBGEN folder (there is a DBGEN subfolder inside)
+    
+    (3a) If you don't use DBGEN as a module through your PYTHONPATH, you can run the program from the DBGEN main folder 
+    
+    (3b) You can run DBGEN from other folders if you add the location of the DBGEN directory to the $PYTHONPATH environment variable
 
 ## Requirements
 (1) Python 3
