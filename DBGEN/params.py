@@ -16,10 +16,10 @@ angle_off = 30
 
 
 " IF METAL COMPLEX"
-metal_complex= True # specify  true if metal complex
-metal = 'Ir' # specify the metal
+metal_complex= False # specify  sstrue if metal complex
+metal = '' # specify the smetal
 complex_coord = 6 # specify the complex coordination number
-complex_type = 'octahedral' # specify the following square planar, square pyrimidal (otheriwse defaults to octahedral, Td)
+complex_type = '' # specify the following square planar, square pyrimidal (otheriwse defaults to octahedral, Td)
 m_oxi = 3 # will have to be changed for respective metals
 complex_spin = 1 # will have to be changed for respective metals
 charge = 0 #will automaticallu change for metal comples. default is for orgaincs.
@@ -33,7 +33,7 @@ compute = True
 write_gauss = False
 analysis = False
 resubmit = False
-nmr = False
+sp = False # write with nmr input line.
 dup = False
 boltz = False
 combine = False

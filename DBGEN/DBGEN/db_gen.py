@@ -448,8 +448,8 @@ def main():
 		conf_files = [name+'_confs.sdf' for mol,name in mol_objects]
 
 		# names for directories created
-		sp_dir = 'sp'
-		g_dir = 'gaussian'
+		sp_dir = 'generated_sp_files'
+		g_dir = 'generated_gaussian_files'
 
 		for lot in args.level_of_theory:
 			for bs in args.basis_set:
@@ -487,6 +487,30 @@ def main():
 								name = os.path.splitext(file)[0]
 								write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args)
 
+		#moving all the sdf files to a separate folder after writing gaussian files
+		all_xtb_conf_files = glob.glob('*_confs.sdf')
+		destination_xtb = 'xTB_generated_SDF_files'
+		for file in all_xtb_conf_files:
+			try:
+				os.makedirs(destination_xtb)
+				shutil.move(file, destination_xtb)
+			except OSError:
+				if  os.path.isdir(destination_xtb) and not os.path.exists(destination_xtb+file):
+					shutil.move(file, destination_xtb)
+				else:
+					raise
+		all_rdkit_conf_files = glob.glob('*.sdf')
+		destination_rdkit = 'RDKit_generated_SDF_files'
+		for file in all_rdkit_conf_files:
+			try:
+				os.makedirs(destination_rdkit)
+				shutil.move(file, destination_rdkit)
+			except OSError:
+				if  os.path.isdir(destination_rdkit) and not os.path.exists(destination_rdkit+file):
+					shutil.move(file, destination_rdkit)
+				else:
+					raise
+
 	if args.exp_rules == True:
 
 		if args.verbose == True: print("   ----- Applying experimental rules to write the new confs file -----")
@@ -509,20 +533,28 @@ def main():
 			sdwriter.close()
 
 	if args.analysis == True:
-		# Sets the folder and find the log files to analyze
-		for lot in args.level_of_theory:
-			for bs in args.basis_set:
-				for bs_gcp in args.basis_set_genecp_atoms:
-					w_dir = args.path + str(lot) + '-' + str(bs) +'/'
-					#check if New_Gaussian_Input_Files folder exists
-					w_dir = check_for_final_folder(w_dir)
-					#assign the path to the finished directory.
-					w_dir_fin = args.path + str(lot) + '-' + str(bs) +'/Finished'
-					#print(w_dir)
-					os.chdir(w_dir)
-					print(w_dir)
-					log_files = glob.glob('*.log')
-					output_analyzer(log_files, w_dir, lot, bs, bs_gcp, args, w_dir_fin)
+		if os.path.isdir(args.path):
+			# Sets the folder and find the log files to analyze
+			for lot in args.level_of_theory:
+				for bs in args.basis_set:
+					for bs_gcp in args.basis_set_genecp_atoms:
+						w_dir = args.path + str(lot) + '-' + str(bs) +'/'
+						#check if New_Gaussian_Input_Files folder exists
+						w_dir = check_for_final_folder(w_dir)
+						#assign the path to the finished directory.
+						w_dir_fin = args.path + str(lot) + '-' + str(bs) +'/finished'
+						#print(w_dir)
+						os.chdir(w_dir)
+						print(w_dir)
+						log_files = glob.glob('*.log')
+						output_analyzer(log_files, w_dir, lot, bs, bs_gcp, args, w_dir_fin)
+		#adding in for general analysis
+		#need to specify the lot, bs as arguments for each analysis
+		else:
+			log_files = glob.glob('*.log')
+			w_dir = os.getcwd()
+			w_dir_fin = w_dir+'/finished'
+			output_analyzer(log_files, w_dir, lot, bs, bs_gcp, args, w_dir_fin)
 
 	#adding the part to check for resubmission of the newly created gaussian files.
 	if args.resubmit == True:
@@ -537,33 +569,19 @@ def main():
 				if args.qsub == True:
 					os.system(cmd)
 
-	#adding the part to check for resubmission of the newly created gaussian files.
-	if args.nmr == True:
-		#chceck if ech level of theory has a folder New gaussin FILES
-		for lot in args.level_of_theory:
-			for bs in args.basis_set:
-				for bs_gcp in args.basis_set_genecp_atoms:
-					w_dir = args.path + str(lot) + '-' + str(bs) +'/Finished'
-					if os.path.isdir(w_dir):
-						os.chdir(w_dir)
-						log_files = glob.glob('*.log')
-						output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args)
-					else:
-						pass
-
 	#once all files are finished are in the Finished folder
 	if args.dup == True:
 		# Sets the folder and find the log files to analyze
 		for lot in args.level_of_theory:
 			for bs in args.basis_set:
-				w_dir = args.path + str(lot) + '-' + str(bs) +'/'+'Finished'
+				w_dir = args.path + str(lot) + '-' + str(bs) +'/'+'finished'
 				os.chdir(w_dir)
 				#can change molecules to a range as files will have codes in a continous manner
 				try:
 					log_files = glob.glob('*.log')
 					if len(log_files) != 0:
 						val = ' '.join(log_files)
-						dup_calculation(val,w_dir)
+						dup_calculation(val,w_dir,args)
 					else:
 						print(' Files for are not there!')
 					#print(log_files)
@@ -575,7 +593,7 @@ def main():
 		# Sets the folder and find the log files to analyze
 		for lot in args.level_of_theory:
 			for bs in args.basis_set:
-				w_dir = args.path + str(lot) + '-' + str(bs) +'/'+'Finished'
+				w_dir = args.path + str(lot) + '-' + str(bs) +'/'+'finished'
 				os.chdir(w_dir)
 				#can change molecules to a range as files will have codes in a continous manner
 				for i in range(args.maxnumber):
@@ -595,7 +613,7 @@ def main():
 		#combines the files and gives the boltzmann weighted energies
 		for lot in args.level_of_theory:
 			for bs in args.basis_set:
-				w_dir = args.path + str(lot) + '-' + str(bs) + '/Finished'
+				w_dir = args.path + str(lot) + '-' + str(bs) + '/finished'
 				os.chdir(w_dir)
 				#read the csv log_files
 				csv_files = glob.glob('Goodvibes*.csv')

@@ -1,7 +1,7 @@
 """
 
 * In this file, the paths to helper programs are collected.
-* You must make sure that all the variables are correct before launching db_gen.py.
+* You mus t make sure that all the variables are correct before launching db_gen.py.
 
 * OTHER functions USED THROUGHOUT THE PROGRAM ARE ALSO SET HERE.
 
@@ -124,7 +124,12 @@ def template_embed_sp(molecule,temp,name_input,args):
 				force_constant=10000
 
 				# Choosing the type of force field
-				ff = "UFF"
+				for atom in molecule.GetAtoms():
+					if atom.GetAtomicNum() > 36: #upto Kr for MMFF, if not use UFF
+						args.ff = "UFF"
+
+				#making the ff definition general
+				ff = args.ff
 
 				# Force field parameters
 				if ff == "MMFF":
@@ -162,7 +167,8 @@ def template_embed_sp(molecule,temp,name_input,args):
 							d = coordMap[idxI].Distance(coordMap[idxJ])
 							ff.AddDistanceConstraint(idxI, idxJ, d, d, force_constant)
 					ff.Initialize()
-					n = 4
+					#reassignned n from 4 to 10 for better embed and minimzation
+					n = 10
 					more = ff.Minimize()
 					while more and n:
 						more = ff.Minimize()
@@ -349,8 +355,13 @@ def template_embed_sp(molecule,temp,name_input,args):
 					#algin molecule to the core
 					algMap = [(k, l) for l, k in enumerate(num_atom_match)]
 
+
 					# Choosing the type of force field
-					ff = "UFF"
+					for atom in molecule.GetAtoms():
+						if atom.GetAtomicNum() > 36: #upto Kr for MMFF, if not use UFF
+							args.ff = "UFF"
+					# making a general force field detection
+					ff = args.ff
 
 					# Force field parameters
 					if ff == "MMFF":
@@ -371,7 +382,8 @@ def template_embed_sp(molecule,temp,name_input,args):
 								d = coordMap[idxI].Distance(coordMap[idxJ])
 								ff.AddDistanceConstraint(idxI, idxJ, d, d, force_constant)
 						ff.Initialize()
-						n = 4
+						#renamed n to 10 for better embed and minimization
+						n = 10
 						more = ff.Minimize()
 						while more and n:
 							more = ff.Minimize()
@@ -487,6 +499,20 @@ def conformer_generation(mol,name,args):
 			raise
 		except Exception as e: print(traceback.print_exc())
 	else: print("ERROR: The structure is not valid")
+
+	#removing the xtb files
+	if os.path.exists("gfn2.out"):
+		os.remove("gfn2.out")
+	else:
+		print("The file gfn2.out does not exist")
+	if os.path.exists("wbo"):
+		os.remove("wbo")
+	else:
+		print("The file wbo does not exist")
+	if os.path.exists("xtbrestart"):
+		os.remove("xtbrestart")
+	else:
+		print("The file xtbrestart does not exist")
 
 	if args.time: print("Execution time: %s seconds" % (round(time.time() - start_time,2)))
 
@@ -629,33 +655,33 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args):
 	if args.frequencies == True:
 		if args.dispersion_correction == True:
 			if args.solvent_model == 'gas_phase':
-				input = 'opt=(maxcycles={0}) freq=noraman EmpiricalDispersion=G{1}'.format(args.max_cycle_opt,args.empirical_dispersion)
-				input_sp = 'nmr=giao EmpiricalDispersion=G{0}'.format(args.empirical_dispersion)  #input for single point nmr
+				input = 'opt=(maxcycles={0}) freq=noraman empiricaldispersion=G{1}'.format(args.max_cycle_opt,args.empirical_dispersion)
+				input_sp = 'nmr=giao empiricaldispersion=G{0}'.format(args.empirical_dispersion)  #input for single point nmr
 			else :
-				input = 'opt=(maxcycles={0}) freq=noraman SCRF=({1},Solvent={2}) EmpiricalDispersion=G{3}'.format(args.max_cycle_opt, args.solvent_model, args.solvent_name,args.empirical_dispersion ) #add solvent if needed
-				input_sp = 'SCRF=({0},Solvent={1}) nmr=giao EmpiricalDispersion=G{2}'.format(args.solvent_model, args.solvent_name, args.empirical_dispersion)  ##add solvent if needed
+				input = 'opt=(maxcycles={0}) freq=noraman scrf=({1},solvent={2}) empiricaldispersion=G{3}'.format(args.max_cycle_opt, args.solvent_model, args.solvent_name,args.empirical_dispersion ) #add solvent if needed
+				input_sp = 'scrf=({0},solvent={1}) nmr=giao empiricaldispersion=G{2}'.format(args.solvent_model, args.solvent_name, args.empirical_dispersion)  ##add solvent if needed
 		else:
 			if args.solvent_model == 'gas_phase':
 				input = 'opt=(maxcycles={0}) freq=noraman'.format(args.max_cycle_opt)
 				input_sp = 'nmr=giao ' #input for single point nmr
 			else :
-				input = 'opt=(maxcycles={0}) freq=noraman SCRF=({1},Solvent={2})'.format(args.max_cycle_opt,args.solvent_model, args.solvent_name) #add solvent if needed
-				input_sp = 'SCRF=({0},Solvent={1}) nmr=giao'.format(args.solvent_model, args.solvent_name)  ##add solvent if needed
+				input = 'opt=(maxcycles={0}) freq=noraman scrf=({1},solvent={2})'.format(args.max_cycle_opt,args.solvent_model, args.solvent_name) #add solvent if needed
+				input_sp = 'scrf=({0},solvent={1}) nmr=giao'.format(args.solvent_model, args.solvent_name)  ##add solvent if needed
 	else:
 		if args.dispersion_correction == True:
 			if args.solvent_model == 'gas_phase':
-				input = 'opt=(maxcycles={0}) EmpiricalDispersion=G{1}'.format(args.max_cycle_opt,args.empirical_dispersion)
-				input_sp = 'nmr=giao EmpiricalDispersion=G{0}'.format(args.empirical_dispersion)  #input for single point nmr
+				input = 'opt=(maxcycles={0}) empiricaldispersion=G{1}'.format(args.max_cycle_opt,args.empirical_dispersion)
+				input_sp = 'nmr=giao empiricaldispersion=G{0}'.format(args.empirical_dispersion)  #input for single point nmr
 			else :
-				input = 'opt=(maxcycles={0}) SCRF=({1},Solvent={2}) EmpiricalDispersion=G{3}'.format(args.max_cycle_opt,args.solvent_model, args.solvent_name,args.empirical_dispersion ) #add solvent if needed
-				input_sp = 'SCRF=({0},Solvent={1}) nmr=giao EmpiricalDispersion=G{2}'.format(args.solvent_model, args.solvent_name, args.empirical_dispersion)  ##add solvent if needed
+				input = 'opt=(maxcycles={0}) scrf=({1},solvent={2}) empiricaldispersion=G{3}'.format(args.max_cycle_opt,args.solvent_model, args.solvent_name,args.empirical_dispersion ) #add solvent if needed
+				input_sp = 'scrf=({0},solvent={1}) nmr=giao empiricaldispersion=G{2}'.format(args.solvent_model, args.solvent_name, args.empirical_dispersion)  ##add solvent if needed
 		else:
 			if args.solvent_model == 'gas_phase':
 				input = 'opt=(maxcycles={0})'.format(args.max_cycle_opt)
 				input_sp = 'nmr=giao ' #input for single point nmr
 			else :
-				input = 'opt=(maxcycles={0}) SCRF=({1},Solvent={2})'.format(args.max_cycle_opt,args.solvent_model, args.solvent_name) #add solvent if needed
-				input_sp = 'SCRF=({0},Solvent={1}) nmr=giao'.format(args.solvent_model, args.solvent_name)  ##add solvent if needed
+				input = 'opt=(maxcycles={0}) scrf=({1},solvent={2})'.format(args.max_cycle_opt,args.solvent_model, args.solvent_name) #add solvent if needed
+				input_sp = 'scrf=({0},solvent={1}) nmr=giao'.format(args.solvent_model, args.solvent_name)  ##add solvent if needed
 
 	#defining genecp
 	genecp = 'gen'
@@ -675,12 +701,12 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args):
 
 	if args.single_point == True:
 		#pathto change to
-		path_write_gjf_files = 'sp/' + str(lot) + '-' + str(bs)
+		path_write_gjf_files = 'generated_sp_files/' + str(lot) + '-' + str(bs)
 		#print(path_write_gjf_files)
 		os.chdir(path_write_gjf_files)
 	else:
 		#pathto change to
-		path_write_gjf_files = 'gaussian/' + str(lot) + '-' + str(bs)
+		path_write_gjf_files = 'generated_gaussian_files/' + str(lot) + '-' + str(bs)
 		#print(path_write_gjf_files)
 		os.chdir(path_write_gjf_files)
 
@@ -695,25 +721,25 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args):
 			if args.single_point == True:
 				header = [
 					'%chk={}.chk'.format(name),
-					'%MEM={}'.format(args.mem),
+					'%mem={}'.format(args.mem),
 					'%nprocshared={}'.format(args.nprocs),
 					'# {0}'.format(lot)+ '/'+ genecp + ' '+ input_sp ]
 			else:
 				header = [
 						'%chk={}.chk'.format(name),
-						'%MEM={}'.format(args.mem),
+						'%mem={}'.format(args.mem),
 						'%nprocshared={}'.format(args.nprocs),
 						'# {0}'.format(lot)+ '/'+ genecp + ' '+ input ]
 
 		else:
 			if args.single_point == True:
 				header = [
-					'%MEM={}'.format(args.mem),
+					'%mem={}'.format(args.mem),
 					'%nprocshared={}'.format(args.nprocs),
 					'# {0}'.format(lot)+ '/'+ genecp + ' '+ input_sp ]
 			else:
 				header = [
-					'%MEM={}'.format(args.mem),
+					'%mem={}'.format(args.mem),
 					'%nprocshared={}'.format(args.nprocs),
 					'# {0}'.format(lot)+ '/'+ genecp + ' '+ input ]
 
@@ -745,6 +771,17 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args):
 		for file in com_files:
 			ecp_list,ecp_genecp_atoms = [],False
 			read_lines = open(file,"r").readlines()
+
+			#chaanging the name of the files to the way they are in xTB Sdfs
+			#getting the title line
+			for i in range(0,len(read_lines)):
+				if len(read_lines[i].strip()) == 0:
+					title_line = read_lines[i+1]
+					title_line = title_line.lstrip()
+					rename_file_name = title_line.replace(" ", "_") + '.com'
+					break
+
+			rename_file_name = rename_file_name.strip()+'.com'
 
 			#change charge and multiplicity for Octahydrasl
 			if args.metal_complex == True:
@@ -787,9 +824,12 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args):
 				fileout.write(bs_gcp+'\n\n')
 			fileout.close()
 
+			#change file by moving to new file
+			os.rename(file,rename_file_name)
+
 			#submitting the gaussian file on summit
 			if args.qsub == True:
-				os.system(args.submission_command + file)
+				os.system(args.submission_command + rename_file_name)
 
 		os.chdir(path_for_file)
 
@@ -799,25 +839,25 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args):
 			if args.single_point == True:
 				header = [
 					'%chk={}.chk'.format(name),
-					'%MEM={}'.format(args.mem),
+					'%mem={}'.format(args.mem),
 					'%nprocshared={}'.format(args.nprocs),
 					'# {0}'.format(lot)+ '/'+ bs + ' '+ input_sp ]
 			else:
 				header = [
 						'%chk={}.chk'.format(name),
-						'%MEM={}'.format(args.mem),
+						'%mem={}'.format(args.mem),
 						'%nprocshared={}'.format(args.nprocs),
 						'# {0}'.format(lot)+ '/'+ bs + ' '+ input ]
 
 		else:
 			if args.single_point == True:
 				header = [
-					'%MEM={}'.format(args.mem),
+					'%mem={}'.format(args.mem),
 					'%nprocshared={}'.format(args.nprocs),
 					'# {0}'.format(lot)+ '/'+ bs + ' '+ input_sp ]
 			else:
 				header = [
-					'%MEM={}'.format(args.mem),
+					'%mem={}'.format(args.mem),
 					'%nprocshared={}'.format(args.nprocs),
 					'# {0}'.format(lot)+ '/'+ bs + ' '+ input ]
 
@@ -846,6 +886,18 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args):
 
 		for file in com_files:
 			read_lines = open(file,"r").readlines()
+
+			#chaanging the name of the files to the way they are in xTB Sdfs
+			#getting the title line
+			for i in range(0,len(read_lines)):
+				if len(read_lines[i].strip()) == 0:
+					title_line = read_lines[i+1]
+					title_line = title_line.lstrip()
+					rename_file_name = title_line.replace(" ", "_")
+					break
+
+			rename_file_name = rename_file_name.strip()+'.com'
+
 			#change charge and multiplicity for Octahydrasl
 			if args.metal_complex == True:
 				for i in range(0,len(read_lines)):
@@ -855,11 +907,13 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args):
 				out = open(file, 'w')
 				out.writelines(read_lines)
 				out.close()
-				read_lines = open(file,"r").readlines
 
-		#submitting the gaussian file on summit
-		if args.qsub == True:
-			os.system(args.submission_command + file)
+			#change file by moving to new file
+			os.rename(file,rename_file_name)
+
+			#submitting the gaussian file on summit
+			if args.qsub == True:
+				os.system(args.submission_command + rename_file_name)
 
 		os.chdir(path_for_file)
 
@@ -883,33 +937,33 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin):
 	if args.frequencies == True:
 		if args.dispersion_correction == True:
 			if args.solvent_model == 'gas_phase':
-				input = 'opt=(maxcycles={0}) freq=noraman EmpiricalDispersion=G{1}'.format(args.max_cycle_opt,args.empirical_dispersion)
-				input_sp = 'nmr=giao EmpiricalDispersion=G{0}'.format(args.empirical_dispersion)  #input for single point nmr
+				input = 'opt=(maxcycles={0}) freq=noraman empiricaldispersion=G{1}'.format(args.max_cycle_opt,args.empirical_dispersion)
+				input_sp = 'nmr=giao empiricaldispersion=G{0}'.format(args.empirical_dispersion)  #input for single point nmr
 			else :
-				input = 'opt=(maxcycles={0}) freq=noraman SCRF=({1},Solvent={2}) EmpiricalDispersion=G{3}'.format(args.max_cycle_opt, args.solvent_model, args.solvent_name,args.empirical_dispersion ) #add solvent if needed
-				input_sp = 'SCRF=({0},Solvent={1}) nmr=giao EmpiricalDispersion=G{2}'.format(args.solvent_model, args.solvent_name, args.empirical_dispersion)  ##add solvent if needed
+				input = 'opt=(maxcycles={0}) freq=noraman scrf=({1},solvent={2}) empiricaldispersion=G{3}'.format(args.max_cycle_opt, args.solvent_model, args.solvent_name,args.empirical_dispersion ) #add solvent if needed
+				input_sp = 'scrf=({0},solvent={1}) nmr=giao empiricaldispersion=G{2}'.format(args.solvent_model, args.solvent_name, args.empirical_dispersion)  ##add solvent if needed
 		else:
 			if args.solvent_model == 'gas_phase':
 				input = 'opt=(maxcycles={0}) freq=noraman'.format(args.max_cycle_opt)
 				input_sp = 'nmr=giao ' #input for single point nmr
 			else :
-				input = 'opt=(maxcycles={0}) freq=noraman SCRF=({1},Solvent={2})'.format(args.max_cycle_opt,args.solvent_model, args.solvent_name) #add solvent if needed
-				input_sp = 'SCRF=({0},Solvent={1}) nmr=giao'.format(args.solvent_model, args.solvent_name)  ##add solvent if needed
+				input = 'opt=(maxcycles={0}) freq=noraman scrf=({1},solvent={2})'.format(args.max_cycle_opt,args.solvent_model, args.solvent_name) #add solvent if needed
+				input_sp = 'scrf=({0},solvent={1}) nmr=giao'.format(args.solvent_model, args.solvent_name)  ##add solvent if needed
 	else:
 		if args.dispersion_correction == True:
 			if args.solvent_model == 'gas_phase':
-				input = 'opt=(maxcycles={0}) EmpiricalDispersion=G{1}'.format(args.max_cycle_opt,args.empirical_dispersion)
-				input_sp = 'nmr=giao EmpiricalDispersion=G{0}'.format(args.empirical_dispersion)  #input for single point nmr
+				input = 'opt=(maxcycles={0}) empiricaldispersion=G{1}'.format(args.max_cycle_opt,args.empirical_dispersion)
+				input_sp = 'nmr=giao empiricaldispersion=G{0}'.format(args.empirical_dispersion)  #input for single point nmr
 			else :
-				input = 'opt=(maxcycles={0}) SCRF=({1},Solvent={2}) EmpiricalDispersion=G{3}'.format(args.max_cycle_opt,args.solvent_model, args.solvent_name,args.empirical_dispersion ) #add solvent if needed
-				input_sp = 'SCRF=({0},Solvent={1}) nmr=giao EmpiricalDispersion=G{2}'.format(args.solvent_model, args.solvent_name, args.empirical_dispersion)  ##add solvent if needed
+				input = 'opt=(maxcycles={0}) scrf=({1},solvent={2}) empiricaldispersion=G{3}'.format(args.max_cycle_opt,args.solvent_model, args.solvent_name,args.empirical_dispersion ) #add solvent if needed
+				input_sp = 'scrf=({0},solvent={1}) nmr=giao empiricaldispersion=G{2}'.format(args.solvent_model, args.solvent_name, args.empirical_dispersion)  ##add solvent if needed
 		else:
 			if args.solvent_model == 'gas_phase':
 				input = 'opt=(maxcycles={0})'.format(args.max_cycle_opt)
 				input_sp = 'nmr=giao ' #input for single point nmr
 			else :
-				input = 'opt=(maxcycles={0}) SCRF=({1},Solvent={2})'.format(args.max_cycle_opt,args.solvent_model, args.solvent_name) #add solvent if needed
-				input_sp = 'SCRF=({0},Solvent={1}) nmr=giao'.format(args.solvent_model, args.solvent_name)  ##add solvent if needed
+				input = 'opt=(maxcycles={0}) scrf=({1},solvent={2})'.format(args.max_cycle_opt,args.solvent_model, args.solvent_name) #add solvent if needed
+				input_sp = 'scrf=({0},solvent={1}) nmr=giao'.format(args.solvent_model, args.solvent_name)  ##add solvent if needed
 
 	for file in log_files:
 
@@ -1066,7 +1120,7 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin):
 		# termination and number of imag. freqs
 		source = w_dir+file
 
-		if IM_FREQS == 0 and TERMINATION == "normal" and args.nmr != True:
+		if IM_FREQS == 0 and TERMINATION == "normal":
 
 			#only if normally terminated move to the finished folder of first run.
 			# destination = finished_folder(w_dir)
@@ -1082,7 +1136,7 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin):
 					raise
 
 		if IM_FREQS > 0:
-			destination = w_dir+'Imaginary_frequencies/'
+			destination = w_dir+'imaginary_frequencies/'
 			try:
 				os.makedirs(destination)
 				shutil.move(source, destination)
@@ -1094,11 +1148,11 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin):
 
 		if IM_FREQS == 0 and TERMINATION == "error":
 			if stop_rms == 0 and ERRORTYPE == "atomicbasiserror":
-				destination = w_dir+'Failed_Error/Atomic_Basis_error'
+				destination = w_dir+'failed_Error/atomic_basis_error'
 			elif stop_rms == 0 and ERRORTYPE == "SCFerror":
-				destination = w_dir+'Failed_Error/SCF_error'
+				destination = w_dir+'failed_error/SCF_error'
 			else:
-				destination = w_dir+'Failed_Error/Unknown_Error'
+				destination = w_dir+'failed_error/unknown_error'
 			try:
 				os.makedirs(destination)
 				shutil.move(source, destination)
@@ -1109,7 +1163,7 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin):
 					raise
 
 		if IM_FREQS == 0 and TERMINATION == "unfinished":
-			destination = w_dir+'Failed_Unfinished/'
+			destination = w_dir+'failed_unfinished/'
 			try:
 				os.makedirs(destination)
 				shutil.move(source, destination)
@@ -1120,10 +1174,10 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin):
 					raise
 
 
-		if IM_FREQS > 0 or TERMINATION != "normal" and not os.path.exists(w_dir+'Failed_Error/Unknown_Error/'+file) and not os.path.exists(w_dir+'Failed_Error/Atomic_Basis_error/'+file):
+		if IM_FREQS > 0 or TERMINATION != "normal" and not os.path.exists(w_dir+'failed_error/unknown_error/'+file) and not os.path.exists(w_dir+'failed_error/atomic_basis_error/'+file):
 
 			# creating new folder with new input gaussian files
-			new_gaussian_input_files = w_dir+'New_Gaussian_Input_Files'
+			new_gaussian_input_files = w_dir+'new_gaussian_input_files'
 
 			try:
 				os.makedirs(new_gaussian_input_files)
@@ -1223,21 +1277,21 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin):
 		os.chdir(w_dir)
 
 		#adding in the NMR componenet only to the finished files after reading from normally finished log files
-		if args.nmr == True:
+		if args.sp == True and TERMINATION == "normal":
 
 			# creating new folder with new input gaussian files
-			nmr_gaussian_input_files = w_dir+'/NMR_Gaussian_input_files'
+			single_point_input_files = w_dir+'/single_point_input_files'
 
 			try:
-				os.makedirs(nmr_gaussian_input_files)
+				os.makedirs(single_point_input_files)
 			except OSError:
-				if  os.path.isdir(nmr_gaussian_input_files):
-					os.chdir(nmr_gaussian_input_files)
+				if  os.path.isdir(single_point_input_files):
+					os.chdir(single_point_input_files)
 				else:
 					raise
 
-			os.chdir(nmr_gaussian_input_files)
-			print('Creating new NMR files')
+			os.chdir(single_point_input_files)
+			print('Creating new single point files files for {0}/{1} file {2}'.format(lot,bs,name))
 
 			# Options for genecp
 			ecp_list,ecp_genecp_atoms = [],False
@@ -1253,7 +1307,7 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin):
 				genecp = 'genecp'
 
 			if genecp =='genecp':
-				keywords_opt = lot +'/'+ genecp+' '+ ' nmr=giao'
+				keywords_opt = lot +'/'+ genecp+' '+ input_sp
 
 				fileout = open(file.split(".")[0]+'.com', "w")
 				fileout.write("%mem="+str(args.mem)+"\n")
@@ -1288,7 +1342,7 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin):
 					fileout.write(bs_gcp+'\n\n')
 				fileout.close()
 			else:
-				keywords_opt = lot +'/'+ bs +' '+ ' nmr=giao'
+				keywords_opt = lot +'/'+ bs +' '+ input_sp
 
 				fileout = open(file.split(".")[0]+'.com', "w")
 				fileout.write("%mem="+str(args.mem)+"\n")
@@ -1313,7 +1367,7 @@ def boltz_calculation(val,i):
 	os.system(cmd)
 
 " CHECKING FOR DUPLICATES"
-def dup_calculation(val,w_dir):
+def dup_calculation(val,w_dir, agrs):
 	#need to have good vibes
 	cmd = 'python' +  ' -m' + ' goodvibes' + ' --dup ' + ' ' + val + '>' + ' ' + 'duplicate_files_checked.txt'
 	os.system(cmd)
