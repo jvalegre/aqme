@@ -75,4 +75,30 @@ python -m DBGEN --compute --varfile params.py --input \*.sdf
 4. Make the program work with multiple molecules in the same calc (i.e. noncovalent complexes)
 
 
+# Installation
+## Requirements
+(1) Anaconda with python 3
+(2) Python moldules:
+    NumPy
+    periodictable
+    pandas
+    openbabel
+    
+      * If you use the compute option (conformer generation)
+      RDKit 
+    
+      ** If you use xTB optimizations (mandatory for metal complexes)
+      xTB (only if xTB is used for conformer generation)
+    
+      ** If you use AN1 optimizations
+      ase
+      ase.optimize
+      torch
+      torchani
+      argparse
+
+(1) Install the python modules above    
+(1) Download DBGEN folder (there is a DBGEN subfolder inside)
+(2)
+
 N.B. this requires the location of the DBGEN directory to be added to the $PYTHONPATH environment variable
