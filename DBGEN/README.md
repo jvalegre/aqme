@@ -76,7 +76,7 @@ python -m DBGEN --compute --input \*.sdf
 
 # Installation
 
-    (1) Install the python modules above (they are widely used modules, you can use "pip install" or "conda install") 
+    (1) Install the python modules below (they are widely used modules, you can use "pip install" or "conda install") 
     
     (2) Download DBGEN folder (there is a DBGEN subfolder inside)
     
