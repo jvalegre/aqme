@@ -64,7 +64,7 @@ python -m DBGEN --compute --input \*.smi
 python -m DBGEN --compute --input \*.sdf
 
 #### (4) Multiple SDF files with paramaters adjusted for a certain DFT level:
-python -m DBGEN --compute --varfile params.py --input \*.sdf
+python -m DBGEN --compute --input \*.sdf
 
 *** First, make sure that (1) you have the params.py file in the folder you are running the script and (2) you edit the params.py with the level of theory and type of calculation that you want
 
@@ -74,31 +74,44 @@ python -m DBGEN --compute --varfile params.py --input \*.sdf
 3. Check how runtime scales with number of atoms and rotatable bonds. Provide some examples.
 4. Make the program work with multiple molecules in the same calc (i.e. noncovalent complexes)
 
-
 # Installation
+
+(1) Install the python modules above (they are widely used modules, you can use "pip install" or "conda install")    
+(2) Download DBGEN folder (there is a DBGEN subfolder inside)
+(3a) If you don't use DBGEN as a module through your PYTHONPATH, you can run the program from the DBGEN main folder 
+(3b) You can run DBGEN from other folders if you add the location of the DBGEN directory to the $PYTHONPATH environment variable
+
 ## Requirements
-(1) Anaconda with python 3
-(2) Python moldules:
-    NumPy
-    periodictable
-    pandas
-    openbabel
-    
-      * If you use the compute option (conformer generation)
-      RDKit 
-    
-      ** If you use xTB optimizations (mandatory for metal complexes)
-      xTB (only if xTB is used for conformer generation)
-    
-      ** If you use AN1 optimizations
-      ase
-      ase.optimize
-      torch
-      torchani
-      argparse
+(1) Python 3
 
-(1) Install the python modules above    
-(1) Download DBGEN folder (there is a DBGEN subfolder inside)
-(2)
+(2) Python modules:
 
-N.B. this requires the location of the DBGEN directory to be added to the $PYTHONPATH environment variable
+    (a) General:
+    
+        NumPy
+        periodictable
+        pandas
+        openbabel
+    
+     (b) If you use the compute option (conformer generation):
+     
+        RDKit 
+    
+        (b.1) If you use xTB optimizations (mandatory for metal complexes):
+        
+            xTB (only if xTB is used for conformer generation)
+    
+        (b.2) If you use AN1 optimizations:
+        
+            ase
+            ase.optimize
+            torch
+            torchani
+            argparse
+        
+     (c) If you use the analyze option (post-processing of output files):
+     
+     (c) If you use the analyze option (post-processing of output files):
+     
+     
+
