@@ -615,11 +615,13 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args):
 			genecp = 'genecp'
 
 	if args.metal_complex == True and os.path.splitext(args.input)[1] != '.com' and os.path.splitext(args.input)[1] != '.gjf':
-		args.charge = rules_get_charge(suppl[0],args)
-		if args.verbose == True: print('---- The Overall charge is reworked with rules for .smi, .csv, .cdx for writing the .com files of conformers')
+		args.charge, neighbours = rules_get_charge(suppl[0],args)
+		if len(neighbours) != 0:
+			if args.verbose == True: print('---- The Overall charge is reworked with rules for .smi, .csv, .cdx for writing the .com files of conformers')
 
 	if args.metal_complex == True and os.path.splitext(args.input)[1] == '.com' or os.path.splitext(args.input)[1] == '.gjf':
-		if args.verbose == True: print('---- The Overall charge is read from the .com file is used to write new .com files of conformers ---')
+		if len(neighbours) != 0:
+			if args.verbose == True: print('---- The Overall charge is read from the .com file is used to write new .com files of conformers ---')
 
 	if args.single_point == True:
 		#pathto change to

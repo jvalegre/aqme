@@ -491,7 +491,7 @@ def main():
 		#moving all the sdf files to a separate folder after writing gaussian files
 		src = os.getcwd()
 		all_xtb_conf_files = glob.glob('*_confs.sdf')
-		destination_xtb = src +'/xTB_generated_SDF_files'
+		destination_xtb = src +'/energy_minimised_generated_SDF_files'
 		for file in all_xtb_conf_files:
 			try:
 				os.makedirs(destination_xtb)

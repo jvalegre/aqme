@@ -122,7 +122,7 @@ def rules_get_charge(mol, args):
 
 			print('The neighbour atoms are {0}, with valence {1}, and total charge is {2}'.format(atom.GetSymbol(),atom.GetTotalValence(),args.charge))
 
-	return args.charge
+	return args.charge, neighbours
 
 def summ_search(mol, name,args, coord_Map = None,alg_Map=None,mol_template=None):
 	'''embeds core conformers, then optimizes and filters based on RMSD. Finally the rotatable torsions are systematically rotated'''
@@ -141,18 +141,23 @@ def summ_search(mol, name,args, coord_Map = None,alg_Map=None,mol_template=None)
 	else:
 		if coord_Map == None and alg_Map == None and mol_template == None:
 			if args.etkdg:
-				cids = rdDistGeom.EmbedMultipleConfs(mol, args.sample, rdDistGeom.ETKDG(),randomSeed=args.seed)
+				ps = Chem.ETKDG()
+				ps.randomSeed = args.seed
+				cids = rdDistGeom.EmbedMultipleConfs(mol, args.sample, params=ps)
 			else:
 				cids = rdDistGeom.EmbedMultipleConfs(mol, args.sample, randomSeed=args.seed)
 			if len(cids) == 0:
 				print("o  conformers initially sampled with random coordinates")
-				cids = rdDistGeom.EmbedMultipleConfs(mol, args.sample, randomSeed=args.seed, useRandomCoords=True, boxSizeMult=10.0, numZeroFail=1000)
+				cids = rdDistGeom.EmbedMultipleConfs(mol, args.sample, randomSeed=args.seed, useRandomCoords=True, boxSizeMult=10.0,ignoreSmoothingFailures=True, numZeroFail=1000)
 			if args.verbose:
 				print("o ", len(cids),"conformers initially sampled")
 		# case of embed for templates
 		else:
 			if args.etkdg:
-				cids = rdDistGeom.EmbedMultipleConfs(mol, args.sample, rdDistGeom.ETKDG(),randomSeed=args.seed, coordMap = coord_Map)
+				ps = Chem.ETKDG()
+				ps.randomSeed = args.seed
+				ps.coordMap = coord_Map
+				cids = rdDistGeom.EmbedMultipleConfs(mol, args.sample, params=ps)
 			else:
 				cids = rdDistGeom.EmbedMultipleConfs(mol, args.sample, randomSeed=args.seed,ignoreSmoothingFailures=True, coordMap = coord_Map)
 			if len(cids) == 0:
@@ -383,8 +388,9 @@ def mult_min(mol, name,args):
 									if atom.symbol == args.metal:
 										#will update only for cdx, smi, and csv formats.
 										if os.path.splitext(args.input)[1] == '.csv' or os.path.splitext(args.input)[1] == '.cdx' or os.path.splitext(args.input)[1] == '.smi':
-											atom.charge = rules_get_charge(mol,args)
-											if args.verbose == True: print('---- The Overall charge is reworked with rules for .smi, .csv, .cdx ----')
+											atom.charge, neighbours = rules_get_charge(mol,args)
+											if len(neighbours) != 0:
+												if args.verbose == True: print('---- The Overall charge is reworked with rules for .smi, .csv, .cdx ----')
 										else:
 											atom.charge = args.charge
 											if args.verbose == True: print('---- The Overall charge is read from the .com file ----')
