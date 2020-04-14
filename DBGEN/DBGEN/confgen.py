@@ -3,7 +3,7 @@ from __future__ import print_function
 import argparse, math, os, sys, traceback,subprocess
 import numpy as np
 from rdkit.Chem import AllChem as Chem
-from rdkit.Chem import rdMolTransforms, PropertyMol, rdchem, rdDistGeom
+from rdkit.Chem import rdMolTransforms, PropertyMol, rdchem, rdDistGeom, rdMolAlign
 from rdkit.Geometry import Point3D
 from periodictable import elements as elementspt
 
@@ -83,46 +83,48 @@ def rules_get_charge(mol, args):
 	O_group = ['O', 'S', 'Se']
 	Cl_group = ['Cl', 'Br', 'I']
 
+	neighbours = []
 	#get the neighbours of metal atom
 	for atom in mol.GetAtoms():
 		if atom.GetSymbol() == args.metal:
 			neighbours = atom.GetNeighbors()
+
 	if len(neighbours) == 0 :
-		if args.verbose: print("x Metal Not found!")
+		if args.verbose: print("x Metal Not found! It is an organic molecule.")
+		#no update in charge as it is an organic molecule
+	else:
+		args.charge = args.m_oxi
+		for atom in neighbours:
+			#Carbon list
+			if atom.GetSymbol() in C_group:
+				if atom.GetTotalValence()== 4:
+					args.charge = args.charge - 1
+				if atom.GetTotalValence()== 3:
+					args.charge = args.charge - 0
+			#Nitrogen list
+			if atom.GetSymbol() in N_group:
+				if atom.GetTotalValence() == 3:
+					args.charge = args.charge - 1
+				if atom.GetTotalValence() == 4:
+					args.charge = args.charge - 0
+			#Oxygen list
+			if atom.GetSymbol() in O_group:
+				if atom.GetTotalValence() == 2:
+					args.charge = args.charge - 1
+				if atom.GetTotalValence() == 3:
+					args.charge = args.charge - 0
+			#Halogen list
+			if atom.GetSymbol() in Cl_group:
+				if atom.GetTotalValence() == 1:
+					args.charge = args.charge - 1
+				if atom.GetTotalValence() == 2:
+					args.charge = args.charge - 0
 
-	args.charge = args.m_oxi
-
-	for atom in neighbours:
-		#Carbon list
-		if atom.GetSymbol() in C_group:
-			if atom.GetTotalValence()== 4:
-				args.charge = args.charge - 1
-			if atom.GetTotalValence()== 3:
-				args.charge = args.charge - 0
-		#Nitrogen list
-		if atom.GetSymbol() in N_group:
-			if atom.GetTotalValence() == 3:
-				args.charge = args.charge - 1
-			if atom.GetTotalValence() == 4:
-				args.charge = args.charge - 0
-		#Oxygen list
-		if atom.GetSymbol() in O_group:
-			if atom.GetTotalValence() == 2:
-				args.charge = args.charge - 1
-			if atom.GetTotalValence() == 3:
-				args.charge = args.charge - 0
-		#Halogen list
-		if atom.GetSymbol() in Cl_group:
-			if atom.GetTotalValence() == 1:
-				args.charge = args.charge - 1
-			if atom.GetTotalValence() == 2:
-				args.charge = args.charge - 0
-
-		print('The neighbour atoms are {0}, with valence {1}, and total charge is {2}'.format(atom.GetSymbol(),atom.GetTotalValence(),args.charge))
+			print('The neighbour atoms are {0}, with valence {1}, and total charge is {2}'.format(atom.GetSymbol(),atom.GetTotalValence(),args.charge))
 
 	return args.charge
 
-def summ_search(mol, name,args):
+def summ_search(mol, name,args, coord_Map = None,alg_Map=None,mol_template=None):
 	'''embeds core conformers, then optimizes and filters based on RMSD. Finally the rotatable torsions are systematically rotated'''
 
 	sdwriter = Chem.SDWriter(name+output)
@@ -137,15 +139,27 @@ def summ_search(mol, name,args):
 	if len(rotmatches) > args.max_torsions:
 		print("x  Too many torsions (%d). Skipping %s" %(len(rotmatches),(name+output)))
 	else:
-		if args.etkdg:
-			cids = rdDistGeom.EmbedMultipleConfs(mol, args.sample, rdDistGeom.ETKDG(),randomSeed=args.seed)
+		if coord_Map == None and alg_Map == None and mol_template == None:
+			if args.etkdg:
+				cids = rdDistGeom.EmbedMultipleConfs(mol, args.sample, rdDistGeom.ETKDG(),randomSeed=args.seed)
+			else:
+				cids = rdDistGeom.EmbedMultipleConfs(mol, args.sample, randomSeed=args.seed)
+			if len(cids) == 0:
+				print("o  conformers initially sampled with random coordinates")
+				cids = rdDistGeom.EmbedMultipleConfs(mol, args.sample, randomSeed=args.seed, useRandomCoords=True, boxSizeMult=10.0, numZeroFail=1000)
+			if args.verbose:
+				print("o ", len(cids),"conformers initially sampled")
+		# case of embed for templates
 		else:
-			cids = rdDistGeom.EmbedMultipleConfs(mol, args.sample, randomSeed=args.seed)
-		if len(cids) == 0:
-			print("o  conformers initially sampled with random coordinates")
-			cids = rdDistGeom.EmbedMultipleConfs(mol, args.sample, randomSeed=args.seed, useRandomCoords=True, boxSizeMult=10.0, numZeroFail=1000, ignoreSmoothingFailures=True)
-		if args.verbose:
-			print("o ", len(cids),"conformers initially sampled")
+			if args.etkdg:
+				cids = rdDistGeom.EmbedMultipleConfs(mol, args.sample, rdDistGeom.ETKDG(),randomSeed=args.seed, coordMap = coord_Map)
+			else:
+				cids = rdDistGeom.EmbedMultipleConfs(mol, args.sample, randomSeed=args.seed,ignoreSmoothingFailures=True, coordMap = coord_Map)
+			if len(cids) == 0:
+				print("o  conformers initially sampled with random coordinates")
+				cids = rdDistGeom.EmbedMultipleConfs(mol, args.sample, randomSeed=args.seed, useRandomCoords=True, boxSizeMult=10.0, numZeroFail=1000,ignoreSmoothingFailures=True, coordMap = coord_Map)
+			if args.verbose:
+				print("o ", len(cids),"conformers initially sampled")
 
 		#energy minimize all to get more realistic results
 		#identify the atoms and decide Force Field
@@ -160,18 +174,47 @@ def summ_search(mol, name,args):
 
 		cenergy = []
 		for i, conf in enumerate(cids):
+			if coord_Map == None and alg_Map == None and mol_template == None:
+				if args.ff == "MMFF":
+					GetFF = Chem.MMFFGetMoleculeForceField(mol, Chem.MMFFGetMoleculeProperties(mol),confId=conf)
+				elif args.ff == "UFF":
+					GetFF = Chem.UFFGetMoleculeForceField(mol)
+				else: print('   Force field {} not supported!'.format(args.ff)); sys.exit()
 
-			if args.ff == "MMFF":
-				GetFF = Chem.MMFFGetMoleculeForceField(mol, Chem.MMFFGetMoleculeProperties(mol),confId=conf)
-			elif args.ff == "UFF":
-				GetFF = Chem.UFFGetMoleculeForceField(mol)
-			else: print('   Force field {} not supported!'.format(args.ff)); sys.exit()
+				GetFF.Initialize()
+				converged = GetFF.Minimize()
+				cenergy.append(GetFF.CalcEnergy())
+				#if args.verbose:
+				#    print("-   conformer", (i+1), "optimized: ", args.ff, "energy", GetFF.CalcEnergy())
+			#id template realign before doing calculations
+			else:
+				num_atom_match = mol.GetSubstructMatch(mol_template)
+				# Force field parameters
+				if args.ff == "MMFF":
+					GetFF = lambda x,confId=-1:Chem.MMFFGetMoleculeForceField(x,AllChem.MMFFGetMoleculeProperties(x),confId=confId)
+				elif args.ff == "UFF":
+					GetFF = lambda x,confId=-1:Chem.UFFGetMoleculeForceField(x)
+				else: print('   Force field {} not supported!'.format(options.ff)); sys.exit()
+				getForceField=GetFF
 
-			GetFF.Initialize()
-			converged = GetFF.Minimize()
-			cenergy.append(GetFF.CalcEnergy())
-			#if args.verbose:
-			#    print("-   conformer", (i+1), "optimized: ", args.ff, "energy", GetFF.CalcEnergy())
+				rms = rdMolAlign.AlignMol(mol, mol_template, atomMap=alg_Map)
+				ff_temp = GetFF(mol, confId=conf)
+				conf = mol_template.GetConformer()
+				for k in range(mol_template.GetNumAtoms()):
+					p = conf.GetAtomPosition(k)
+					q = mol.GetConformer().GetAtomPosition(k)
+					pIdx = ff_temp.AddExtraPoint(p.x, p.y, p.z, fixed=True) - 1
+					ff_temp.AddDistanceConstraint(pIdx, num_atom_match[k], 0, 0, 10000)
+				ff_temp.Initialize()
+				n = 4
+				more = ff_temp.Minimize(energyTol=1e-5, forceTol=1e-4)
+				while more and n:
+					more = ff_temp.Minimize(energyTol=1e-5, forceTol=1e-4)
+					n -= 1
+				# realign
+				energy = ff_temp.CalcEnergy()
+				rms = rdMolAlign.AlignMol(mol, mol_template, atomMap=alg_Map)
+				cenergy.append(energy)
 
 		#reduce to unique set
 		if args.verbose: print("o  Removing duplicate conformers ( RMSD <", args.rms_threshold, ")")

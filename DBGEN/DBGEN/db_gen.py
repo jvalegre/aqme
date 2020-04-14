@@ -186,14 +186,9 @@ def main():
 				if args.complex_type == 'squareplanar' or args.complex_type == 'squarepyrimidal':
 					file_template = 'template-4-and-5.sdf'
 					temp = Chem.SDMolSupplier(file_template)
-					mol_objects_from_template,name = template_embed_sp(mol,temp,name,args)
-					# changing back to # I
-					for molecule in mol_objects_from_template:
-						for atom in molecule.GetAtoms():
-							if atom.GetSymbol() == args.metal:
-								atom.SetAtomicNum(53)
+					mol_objects_from_template,name, coord_Map, alg_Map, mol_template = template_embed_sp(mol,temp,name,args)
 					for i in range(len(mol_objects_from_template)):
-						mol_objects.append([mol_objects_from_template[i],name[i]])
+						mol_objects.append([mol_objects_from_template[i],name[i],coord_Map[i],alg_Map[i],mol_template[i]])
 				else:
 					mol_objects.append([mol, name])
 
@@ -441,11 +436,17 @@ def main():
 					mol_objects.append([mol, name])
 
 #------------------------------------------------------------------------------------------
+		if args.complex_type == 'squareplanar' or args.complex_type == 'squarepyrimidal':
+			for [mol, name, coord_Map,alg_Map,mol_template] in mol_objects: # Run confomer generation for each mol object
+				conformer_generation(mol,name,args,coord_Map,alg_Map,mol_template)
+		else:
+			for [mol, name] in mol_objects: # Run confomer generation for each mol object
+				conformer_generation(mol,name,args)
 
-		for [mol, name] in mol_objects: # Run confomer generation for each mol object
-			conformer_generation(mol,name,args)
-
-		conf_files = [name+'_confs.sdf' for mol,name in mol_objects]
+		if args.complex_type == 'squareplanar' or args.complex_type == 'squarepyrimidal':
+			conf_files = [name+'_confs.sdf' for mol,name,coord_Map,alg_Map,mol_template in mol_objects]
+		else:
+			conf_files = [name+'_confs.sdf' for mol,name in mol_objects]
 
 		# names for directories created
 		sp_dir = 'generated_sp_files'
@@ -488,15 +489,16 @@ def main():
 								write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args)
 
 		#moving all the sdf files to a separate folder after writing gaussian files
+		src = os.getcwd()
 		all_xtb_conf_files = glob.glob('*_confs.sdf')
-		destination_xtb = 'xTB_generated_SDF_files'
+		destination_xtb = src +'/xTB_generated_SDF_files'
 		for file in all_xtb_conf_files:
 			try:
 				os.makedirs(destination_xtb)
-				shutil.move(file, destination_xtb)
+				shutil.move(os.path.join(src, file), os.path.join(destination_xtb, file))
 			except OSError:
-				if  os.path.isdir(destination_xtb) and not os.path.exists(destination_xtb+file):
-					shutil.move(file, destination_xtb)
+				if  os.path.isdir(destination_xtb):
+					shutil.move(os.path.join(src, file), os.path.join(destination_xtb, file))
 				else:
 					raise
 		all_rdkit_conf_files = glob.glob('*.sdf')
@@ -504,10 +506,10 @@ def main():
 		for file in all_rdkit_conf_files:
 			try:
 				os.makedirs(destination_rdkit)
-				shutil.move(file, destination_rdkit)
+				shutil.move(os.path.join(src, file), os.path.join(destination_rdkit, file))
 			except OSError:
-				if  os.path.isdir(destination_rdkit) and not os.path.exists(destination_rdkit+file):
-					shutil.move(file, destination_rdkit)
+				if  os.path.isdir(destination_rdkit):
+					shutil.move(os.path.join(src, file), os.path.join(destination_rdkit, file))
 				else:
 					raise
 
