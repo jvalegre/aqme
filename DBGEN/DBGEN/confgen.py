@@ -147,7 +147,7 @@ def summ_search(mol, name,args, coord_Map = None,alg_Map=None,mol_template=None)
 				cids = rdDistGeom.EmbedMultipleConfs(mol, args.sample, params=ps)
 			else:
 				cids = rdDistGeom.EmbedMultipleConfs(mol, args.sample,ignoreSmoothingFailures=True, randomSeed=args.seed)
-			if len(cids) == 0:
+			if len(cids) == 0 or len(cids) == 1 and args.sample != 1:
 				print("o  conformers initially sampled with random coordinates")
 				cids = rdDistGeom.EmbedMultipleConfs(mol, args.sample, randomSeed=args.seed, useRandomCoords=True, boxSizeMult=10.0,ignoreSmoothingFailures=True, numZeroFail=1000)
 			if args.verbose:
@@ -162,7 +162,7 @@ def summ_search(mol, name,args, coord_Map = None,alg_Map=None,mol_template=None)
 				cids = rdDistGeom.EmbedMultipleConfs(mol, args.sample, params=ps)
 			else:
 				cids = rdDistGeom.EmbedMultipleConfs(mol, args.sample, randomSeed=args.seed,ignoreSmoothingFailures=True, coordMap = coord_Map)
-			if len(cids) == 0:
+			if len(cids) == 0 or len(cids) == 1 and args.sample != 1:
 				print("o  conformers initially sampled with random coordinates")
 				cids = rdDistGeom.EmbedMultipleConfs(mol, args.sample, randomSeed=args.seed, useRandomCoords=True, boxSizeMult=10.0, numZeroFail=1000,ignoreSmoothingFailures=True, coordMap = coord_Map)
 			if args.verbose:
