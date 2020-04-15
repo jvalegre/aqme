@@ -60,7 +60,7 @@ def getDihedralMatches(mol, heavy):
 				uniqmatches.append((a,b,c,d))
 	return uniqmatches
 
-def genConformer_r(mol, conf, i, matches, degree, sdwriter):
+def genConformer_r(mol, conf, i, matches, degree, sdwriter,args):
 	'''recursively enumerate all angles for rotatable dihedrals.  i is
 	which dihedral we are enumerating by degree to output conformers to out'''
 	if i >= len(matches): #base case, torsions should be set in conf
@@ -73,7 +73,18 @@ def genConformer_r(mol, conf, i, matches, degree, sdwriter):
 		while deg < 360.0:
 			rad = math.pi*deg / 180.0
 			rdMolTransforms.SetDihedralRad(mol.GetConformer(conf),*matches[i],value=rad)
-			total += genConformer_r(mol, conf, i+1, matches, degree, sdwriter)
+			#recalculating energies after rotation
+			if args.ff == "MMFF":
+				GetFF = Chem.MMFFGetMoleculeForceField(mol, Chem.MMFFGetMoleculeProperties(mol),confId=conf)
+			elif args.ff == "UFF":
+				GetFF = Chem.UFFGetMoleculeForceField(mol)
+			else: print('   Force field {} not supported!'.format(args.ff)); sys.exit()
+			GetFF.Initialize()
+			converged = GetFF.Minimize()
+			energy = GetFF.CalcEnergy()
+			mol.SetProp("Energy",energy)
+
+			total += genConformer_r(mol, conf, i+1, matches, degree, sdwriter,args)
 			deg += degree
 		return total
 
@@ -131,7 +142,8 @@ def summ_search(mol, name,args, coord_Map = None,alg_Map=None,mol_template=None)
 
 	Chem.SanitizeMol(mol)
 	mol = Chem.AddHs(mol)
-	mol.SetProp("_Name",name);
+	mol.SetProp("_Name",name)
+
 
 	if args.nodihedrals == False: rotmatches = getDihedralMatches(mol, args.heavyonly)
 	else: rotmatches = []
@@ -162,7 +174,7 @@ def summ_search(mol, name,args, coord_Map = None,alg_Map=None,mol_template=None)
 				cids = rdDistGeom.EmbedMultipleConfs(mol, args.sample, params=ps)
 			else:
 				cids = rdDistGeom.EmbedMultipleConfs(mol, args.sample, randomSeed=args.seed,ignoreSmoothingFailures=True, coordMap = coord_Map)
-			if len(cids) == 0 or len(cids) == 1 and args.sample != 1:
+			if len(cids) == 0 or len(cids) == 1 and args.sample != 1 :
 				print("o  conformers initially sampled with random coordinates")
 				cids = rdDistGeom.EmbedMultipleConfs(mol, args.sample, randomSeed=args.seed, useRandomCoords=True, boxSizeMult=10.0, numZeroFail=1000,ignoreSmoothingFailures=True, coordMap = coord_Map)
 			if args.verbose:
@@ -179,7 +191,7 @@ def summ_search(mol, name,args, coord_Map = None,alg_Map=None,mol_template=None)
 			if args.nodihedrals == False: print("o  Found", len(rotmatches), "rotatable torsions")
 			else: print("o  Systematic torsion rotation is set to OFF")
 
-		cenergy = []
+		cenergy,outmols = [],[]
 		for i, conf in enumerate(cids):
 			if coord_Map == None and alg_Map == None and mol_template == None:
 				if args.ff == "MMFF":
@@ -191,6 +203,8 @@ def summ_search(mol, name,args, coord_Map = None,alg_Map=None,mol_template=None)
 				GetFF.Initialize()
 				converged = GetFF.Minimize()
 				cenergy.append(GetFF.CalcEnergy())
+
+
 				#if args.verbose:
 				#    print("-   conformer", (i+1), "optimized: ", args.ff, "energy", GetFF.CalcEnergy())
 			#id template realign before doing calculations
@@ -223,19 +237,25 @@ def summ_search(mol, name,args, coord_Map = None,alg_Map=None,mol_template=None)
 				rms = rdMolAlign.AlignMol(mol, mol_template, atomMap=alg_Map)
 				cenergy.append(energy)
 
+			pmol = PropertyMol.PropertyMol(mol)
+			outmols.append(pmol)
+
+		for i, cid in enumerate(cids):
+			outmols[cid].SetProp('Energy', cenergy[cid])
+
 		#reduce to unique set
 		if args.verbose: print("o  Removing duplicate conformers ( RMSD <", args.rms_threshold, ")")
+		cids = list(range(len(outmols)))
 		sortedcids = sorted(cids,key = lambda cid: cenergy[cid])
 		selectedcids = []
 		for i, conf in enumerate(sortedcids):
-
 			#set torsions to zero
 			if len(rotmatches) != 0:
 				for m in rotmatches:
-					rdMolTransforms.SetDihedralRad(mol.GetConformer(conf),*m,value=0)
+					rdMolTransforms.SetDihedralRad(outmols[conf].GetConformer(),*m,value=0)
 			#check rmsd
 			for seenconf in selectedcids:
-				rms = get_conf_RMS(mol,seenconf,conf, args.heavyonly)
+				rms = get_conf_RMS(outmols[conf],seenconf,conf, args.heavyonly)
 				if rms < args.rms_threshold:
 					break
 			else: #loop completed normally - no break, included empty
@@ -248,7 +268,7 @@ def summ_search(mol, name,args, coord_Map = None,alg_Map=None,mol_template=None)
 
 		total = 0
 		for conf in selectedcids:
-			total += genConformer_r(mol, conf, 0, rotmatches, args.degree, sdwriter)
+			total += genConformer_r(outmols[conf], conf, 0, rotmatches, args.degree, sdwriter,args)
 		if args.verbose and len(rotmatches) != 0: print("o  %d total conformations generated"%total)
 
 	sdwriter.close()

@@ -675,7 +675,7 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args):
 			if len(energies) != 1:
 				for i in range(len(energies)):
 					energy_diff = energies[i] - energies[0]
-					if energy_diff < args.energy_threshold_for_gaussian:
+					if energy_diff < args.energy_threshold_for_gaussian/2625.5:
 						no_to_write +=1
 				subprocess.run(
 					 ['obabel', '-isdf', path_for_file+file, '-f', '1', '-l' , str(no_to_write), '-osdf', '-Otemp.sdf'])
@@ -793,7 +793,7 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args):
 			if len(energies) != 1:
 				for i in range(len(energies)):
 					energy_diff = energies[i] - energies[0]
-					if energy_diff < args.energy_threshold_for_gaussian:
+					if energy_diff < args.energy_threshold_for_gaussian/2625.5:
 						no_to_write +=1
 				subprocess.run(
 					 ['obabel', '-isdf', path_for_file+file, '-f', '1', '-l' , str(no_to_write), '-osdf', '-Otemp.sdf'])
