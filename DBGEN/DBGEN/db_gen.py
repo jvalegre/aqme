@@ -129,7 +129,7 @@ def main():
 			for i, line in enumerate(smifile):
 				toks = line.split()
 
-				if args.metal_complex == True and  args.complex_coord == 6:
+				if args.metal_complex == True and  args.complex_coord == 6 and  args.complex_coord == 2:
 					#find metal and replace with I+ for octahydral
 					smi = toks[0].replace(args.metal,'I+')
 					#Ir+ exixted then we need to change back to I+
@@ -140,22 +140,22 @@ def main():
 					if len(pieces) > 1:
 						smi = max(pieces, key=len) #take largest component by length
 
-				elif args.metal_complex == True and args.complex_coord == 5:
+				elif args.metal_complex == True and args.complex_coord == 5 and args.complex_coord == 3:
 					#find metal and replace with I+ for octahydral
 					smi = toks[0].replace(args.metal,'I')
 					#Ir+ exixted then we need to change back to I+
 					smi = smi.replace('I+','I')
+
+					#taking largest component for salts
+					pieces = smi.split('.')
+					if len(pieces) > 1:
+						smi = max(pieces, key=len) #take largest component by length
 
 				elif args.metal_complex == True and args.complex_coord == 4:
 					#find metal and replace with I+ for octahydral
 					smi = toks[0].replace(args.metal,'I-')
 					#Ir+ exixted then we need to change back to I+
 					smi = smi.replace('I-+','I-')
-
-					#taking largest component for salts
-					pieces = smi.split('.')
-					if len(pieces) > 1:
-						smi = max(pieces, key=len) #take largest component by length
 
 					#taking largest component for salts
 					pieces = smi.split('.')
