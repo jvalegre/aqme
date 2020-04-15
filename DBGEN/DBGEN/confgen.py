@@ -60,9 +60,10 @@ def getDihedralMatches(mol, heavy):
 				uniqmatches.append((a,b,c,d))
 	return uniqmatches
 
-def genConformer_r(mol, conf, i, matches, degree, sdwriter,args):
+def genConformer_r(mol, conf, i, matches, degree, sdwriter,args,name):
 	'''recursively enumerate all angles for rotatable dihedrals.  i is
 	which dihedral we are enumerating by degree to output conformers to out'''
+	rotation_count = 1
 	if i >= len(matches): #base case, torsions should be set in conf
 		sdwriter.write(mol,conf)
 		return 1
@@ -83,8 +84,9 @@ def genConformer_r(mol, conf, i, matches, degree, sdwriter,args):
 			converged = GetFF.Minimize()
 			energy = GetFF.CalcEnergy()
 			mol.SetProp("Energy",energy)
-
-			total += genConformer_r(mol, conf, i+1, matches, degree, sdwriter,args)
+			mol.SetProp('_Name',name+' - conformer from rotation - ' + str(rotation_count))
+			rotation_count +=1
+			total += genConformer_r(mol, conf, i+1, matches, degree, sdwriter,args,name)
 			deg += degree
 		return total
 
@@ -241,6 +243,7 @@ def summ_search(mol, name,args, coord_Map = None,alg_Map=None,mol_template=None)
 			outmols.append(pmol)
 
 		for i, cid in enumerate(cids):
+			outmols[cid].SetProp('_Name', name + ' conformer ' + str(i+1))
 			outmols[cid].SetProp('Energy', cenergy[cid])
 
 		#reduce to unique set
@@ -268,7 +271,7 @@ def summ_search(mol, name,args, coord_Map = None,alg_Map=None,mol_template=None)
 
 		total = 0
 		for conf in selectedcids:
-			total += genConformer_r(outmols[conf], conf, 0, rotmatches, args.degree, sdwriter,args)
+			total += genConformer_r(outmols[conf], conf, 0, rotmatches, args.degree, sdwriter,args,outmols[conf].GetProp('_Name'))
 		if args.verbose and len(rotmatches) != 0: print("o  %d total conformations generated"%total)
 
 	sdwriter.close()
