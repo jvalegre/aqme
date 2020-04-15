@@ -143,9 +143,10 @@ def summ_search(mol, name,args, coord_Map = None,alg_Map=None,mol_template=None)
 			if args.etkdg:
 				ps = Chem.ETKDG()
 				ps.randomSeed = args.seed
+				ps.ignoreSmoothingFailures=True
 				cids = rdDistGeom.EmbedMultipleConfs(mol, args.sample, params=ps)
 			else:
-				cids = rdDistGeom.EmbedMultipleConfs(mol, args.sample, randomSeed=args.seed)
+				cids = rdDistGeom.EmbedMultipleConfs(mol, args.sample,ignoreSmoothingFailures=True randomSeed=args.seed)
 			if len(cids) == 0:
 				print("o  conformers initially sampled with random coordinates")
 				cids = rdDistGeom.EmbedMultipleConfs(mol, args.sample, randomSeed=args.seed, useRandomCoords=True, boxSizeMult=10.0,ignoreSmoothingFailures=True, numZeroFail=1000)
@@ -157,6 +158,7 @@ def summ_search(mol, name,args, coord_Map = None,alg_Map=None,mol_template=None)
 				ps = Chem.ETKDG()
 				ps.randomSeed = args.seed
 				ps.coordMap = coord_Map
+				ps.ignoreSmoothingFailures=True
 				cids = rdDistGeom.EmbedMultipleConfs(mol, args.sample, params=ps)
 			else:
 				cids = rdDistGeom.EmbedMultipleConfs(mol, args.sample, randomSeed=args.seed,ignoreSmoothingFailures=True, coordMap = coord_Map)
