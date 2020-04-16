@@ -282,10 +282,6 @@ def mult_min(mol, name,args):
 	'''optimizes a bunch of molecules and then checks for unique conformers and then puts in order of energy'''
 
 	opt = True # switch to off for single point only
-	opt_precision = 0.05 # toggle for optimization convergence
-
-	#adjust opt convergence criteria (args.convergence defaults to 1.0)
-	opt_precision = opt_precision * args.convergence
 
 	inmols = Chem.SDMolSupplier(name+output, removeHs=False)
 	if inmols is None:
@@ -314,7 +310,7 @@ def mult_min(mol, name,args):
 			else: print(('   Force field {} not supported!'.format(args.ff))); sys.exit()
 
 			GetFF.Initialize()
-			converged = GetFF.Minimize(maxIts=1000)
+			converged = GetFF.Minimize(maxIts=args.opt_steps_RDKit)
 			energy = GetFF.CalcEnergy()
 			# append to list
 			#if args.verbose: print("   conformer", (i+1), energy)
@@ -394,17 +390,23 @@ def mult_min(mol, name,args):
 									ase_molecule.set_distance(0,1,2.0)
 									ase_molecule.set_constraint(fb)
 
-								optimizer = ase.optimize.BFGS(ase_molecule)
-								optimizer.run(fmax=float(opt_precision))
-								species_coords = ase_molecule.get_positions().tolist()
-								coordinates = torch.tensor([species_coords], requires_grad=True, device=device)
+								optimizer = ase.optimize.BFGS(ase_molecule, trajectory='ANI1_opt.traj')
+								optimizer.run(fmax=args.opt_fmax, steps=args.opt_steps)
+								if len(ase.io.Trajectory('xTB_opt.traj', mode='r')) != (args.opt_steps+1):
+									species_coords = ase_molecule.get_positions().tolist()
+									coordinates = torch.tensor([species_coords], requires_grad=True, device=device)
+									SQM_energy.append(ani_energy.item())
+									cartesians = np.array(coordinates.tolist()[0])
+									SQM_cartesians.append(cartesians)
 
-							###############################################################################
-							# Now let's compute energy:
-							_, ani_energy = model((species, coordinates))
-							aniE = ani_energy.item() #Hartree
-							if args.verbose: print("ANI Final E:", aniE,'eH', ase_molecule.get_potential_energy(),'eV') #Hartree, eV
-							###############################################################################
+									###############################################################################
+									# Now let's compute energy:
+									_, ani_energy = model((species, coordinates))
+									aniE = ani_energy.item() #Hartree
+									if args.verbose: print("ANI Final E:", aniE,'eH', ase_molecule.get_potential_energy(),'eV') #Hartree, eV
+									###############################################################################
+								else:
+									print('ANI1 optimization could not converge (discarding conformer).')
 ### INCLUDE THE OPTIONS TO SOTRE MOLECULAR Descriptors
 ### CHECK THIS WEBPAGE: https://github.com/grimme-lab/xtb/tree/master/python
 						elif args.xtb == True:
@@ -426,22 +428,22 @@ def mult_min(mol, name,args):
 								ase_molecule = ase.Atoms(elements, positions=coordinates.tolist()[0], calculator=GFN2()) #define ase molecule using GFN2 Calculator
 							if opt == True:
 								if args.verbose: print("Initial XTB energy", ase_molecule.get_potential_energy()/Hartree,'Eh',ase_molecule.get_potential_energy(),'eV') #Hartree, eV
-								optimizer = ase.optimize.BFGS(ase_molecule)
-								optimizer.run(fmax=float(opt_precision))
-								species_coords = ase_molecule.get_positions().tolist()
-								coordinates = torch.tensor([species_coords], requires_grad=True, device=device)
-							###############################################################################
-							# Now let's compute energy:
-							xtb_energy = ase_molecule.get_potential_energy()
-							if args.verbose: print("Final XTB E:",xtb_energy/Hartree,'Eh',xtb_energy,'eV') #Hartree, eV
-							###############################################################################
+								optimizer = ase.optimize.BFGS(ase_molecule, trajectory='xTB_opt.traj')
+								optimizer.run(fmax=args.opt_fmax, steps=args.opt_steps)
+								if len(ase.io.Trajectory('xTB_opt.traj', mode='r')) != (args.opt_steps+1):
+									species_coords = ase_molecule.get_positions().tolist()
+									coordinates = torch.tensor([species_coords], requires_grad=True, device=device)
 
-						if args.ANI1ccx == True or args.xtb == True:#save Eh and coordinates to write to SDF
-							if args.xtb == True:SQM_energy.append(xtb_energy/Hartree)
-							else:SQM_energy.append(ani_energy.item())
-							cartesians = np.array(coordinates.tolist()[0])
-							SQM_cartesians.append(cartesians)
-
+									###############################################################################
+									# Now let's compute energy:
+									xtb_energy = ase_molecule.get_potential_energy()
+									SQM_energy.append(xtb_energy/Hartree)
+									cartesians = np.array(coordinates.tolist()[0])
+									SQM_cartesians.append(cartesians)
+									if args.verbose: print("Final XTB E:",xtb_energy/Hartree,'Eh',xtb_energy,'eV') #Hartree, eV
+									###############################################################################
+								else:
+									print('xTB optimization could not converge (discarding conformer).')
 
 					pmol = PropertyMol.PropertyMol(mol)
 					outmols.append(pmol); c_converged.append(converged); c_energy.append(energy)
@@ -460,20 +462,38 @@ def mult_min(mol, name,args):
 	sortedcids = sorted(cids, key = lambda cid: c_energy[cid])
 
 	if args.ANI1ccx == True or args.xtb == True:
-		for conf in cids:
-			c_energy[conf] = SQM_energy[conf]
-			c = outmols[conf].GetConformer()
-			for j in range(outmols[conf].GetNumAtoms()):
-				#print(cartesians[i])
-				[x,y,z] = SQM_cartesians[conf][j]
-				c.SetAtomPosition(j,Point3D(x,y,z))
+		if len(SQM_energy) > 0:
+			for conf in cids:
+				c_energy[conf] = SQM_energy[conf]
+				c = outmols[conf].GetConformer()
+				for j in range(outmols[conf].GetNumAtoms()):
+					#print(cartesians[i])
+					[x,y,z] = SQM_cartesians[conf][j]
+					c.SetAtomPosition(j,Point3D(x,y,z))
 
-			for j in range(0,conf):
-				if abs(c_energy[conf] - c_energy[j]) < args.energy_threshold / 2625.5 and getPMIDIFF(outmols[conf], outmols[j]) <  args.rms_threshold:
-					print("It appears ",conf, "is the same as", j)
+				for j in range(0,conf):
+					if abs(c_energy[conf] - c_energy[j]) < args.energy_threshold / 2625.5 and getPMIDIFF(outmols[conf], outmols[j]) <  args.rms_threshold:
+						print("It appears ",conf, "is the same as", j)
 
-	for i, cid in enumerate(sortedcids):
-		outmols[cid].SetProp('_Name', name + ' conformer ' + str(i+1))
-		outmols[cid].SetProp('Energy', c_energy[cid])
+			for i, cid in enumerate(sortedcids):
+					outmols[cid].SetProp('_Name', name + ' conformer ' + str(i+1))
+					outmols[cid].SetProp('Energy', c_energy[cid])
 
-	return outmols, c_energy
+			return outmols, c_energy
+
+		else:
+			if args.xtb == True:
+				print('\n WARNING! No conformers converged during xTB optimization.')
+
+			elif args.ANI1ccx == True:
+				print('\n WARNING! No conformers converged during ANI1 optimization.')
+
+
+			return 'FAIL', 0
+
+	else:
+		for i, cid in enumerate(sortedcids):
+				outmols[cid].SetProp('_Name', name + ' conformer ' + str(i+1))
+				outmols[cid].SetProp('Energy', c_energy[cid])
+
+		return outmols, c_energy

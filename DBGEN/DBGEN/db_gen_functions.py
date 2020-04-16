@@ -360,10 +360,9 @@ def conformer_generation(mol,name,args,coord_Map=None,alg_Map=None,mol_template=
 
 			# the multiple minimization returns a list of separate mol objects
 			conformers, energies = mult_min(mol, name, args)
-			#print(energies)
 
 			#only print if within predefined energy window
-			if len(conformers) > 0:
+			if len(conformers) > 0 and conformers != 'FAIL':
 				# list in energy order
 				cids = list(range(len(conformers)))
 				sortedcids = sorted(cids, key = lambda cid: energies[cid])
@@ -415,7 +414,7 @@ def conformer_generation(mol,name,args,coord_Map=None,alg_Map=None,mol_template=
 							sdwriter.write(mol)
 					sdwriter.close()
 
-			else: print("x  No conformers found!\n")
+			else: print("\nx  WARNING! No conformers found!\n")
 
 		except (KeyboardInterrupt, SystemExit):
 			raise
@@ -425,16 +424,19 @@ def conformer_generation(mol,name,args,coord_Map=None,alg_Map=None,mol_template=
 	#removing the xtb files
 	if os.path.exists("gfn2.out"):
 		os.remove("gfn2.out")
-	else:
-		print("The file gfn2.out does not exist")
+
+	if os.path.exists("xTB_opt.traj"):
+		os.remove("xTB_opt.traj")
+
+	if os.path.exists("ANI1_opt.traj"):
+		os.remove("ANI1_opt.traj")
+
 	if os.path.exists("wbo"):
 		os.remove("wbo")
-	else:
-		print("The file wbo does not exist")
+
 	if os.path.exists("xtbrestart"):
 		os.remove("xtbrestart")
-	else:
-		print("The file xtbrestart does not exist")
+
 
 	if args.time: print("Execution time: %s seconds" % (round(time.time() - start_time,2)))
 
