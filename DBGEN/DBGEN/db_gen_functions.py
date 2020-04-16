@@ -297,7 +297,7 @@ def template_embed_optimize(molecule_embed,mol_1,args):
 	# print(coordMap)
 
 	# This is the original version, if it doesn't work without coordMap I'll come back to it later
-	ci = AllChem.EmbedMolecule(molecule_embed, coordMap=coordMap, randomSeed=randomseed)
+	ci = AllChem.EmbedMolecule(molecule_embed, coordMap=coordMap, randomSeed=randomseed, numThreads=0)
 	if ci < 0:    print('Could not embed molecule.')
 
 	#algin molecule to the core
