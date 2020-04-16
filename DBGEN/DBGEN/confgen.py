@@ -158,12 +158,13 @@ def summ_search(mol, name,args, coord_Map = None,alg_Map=None,mol_template=None)
 				ps = Chem.ETKDG()
 				ps.randomSeed = args.seed
 				ps.ignoreSmoothingFailures=True
+				ps.numThreads = 0
 				cids = rdDistGeom.EmbedMultipleConfs(mol, args.sample, params=ps)
 			else:
-				cids = rdDistGeom.EmbedMultipleConfs(mol, args.sample,ignoreSmoothingFailures=True, randomSeed=args.seed)
+				cids = rdDistGeom.EmbedMultipleConfs(mol, args.sample,ignoreSmoothingFailures=True, randomSeed=args.seed,numThreads = 0)
 			if len(cids) == 0 or len(cids) == 1 and args.sample != 1:
 				print("o  conformers initially sampled with random coordinates")
-				cids = rdDistGeom.EmbedMultipleConfs(mol, args.sample, randomSeed=args.seed, useRandomCoords=True, boxSizeMult=10.0,ignoreSmoothingFailures=True, numZeroFail=1000)
+				cids = rdDistGeom.EmbedMultipleConfs(mol, args.sample, randomSeed=args.seed, useRandomCoords=True, boxSizeMult=10.0,ignoreSmoothingFailures=True, numZeroFail=1000, numThreads = 0)
 			if args.verbose:
 				print("o ", len(cids),"conformers initially sampled")
 		# case of embed for templates
@@ -173,12 +174,13 @@ def summ_search(mol, name,args, coord_Map = None,alg_Map=None,mol_template=None)
 				ps.randomSeed = args.seed
 				ps.coordMap = coord_Map
 				ps.ignoreSmoothingFailures=True
+				ps.numThreads = 0
 				cids = rdDistGeom.EmbedMultipleConfs(mol, args.sample, params=ps)
 			else:
-				cids = rdDistGeom.EmbedMultipleConfs(mol, args.sample, randomSeed=args.seed,ignoreSmoothingFailures=True, coordMap = coord_Map)
+				cids = rdDistGeom.EmbedMultipleConfs(mol, args.sample, randomSeed=args.seed,ignoreSmoothingFailures=True, coordMap = coord_Map,numThreads = 0)
 			if len(cids) == 0 or len(cids) == 1 and args.sample != 1 :
 				print("o  conformers initially sampled with random coordinates")
-				cids = rdDistGeom.EmbedMultipleConfs(mol, args.sample, randomSeed=args.seed, useRandomCoords=True, boxSizeMult=10.0, numZeroFail=1000,ignoreSmoothingFailures=True, coordMap = coord_Map)
+				cids = rdDistGeom.EmbedMultipleConfs(mol, args.sample, randomSeed=args.seed, useRandomCoords=True, boxSizeMult=10.0, numZeroFail=1000,ignoreSmoothingFailures=True, coordMap = coord_Map,numThreads = 0)
 			if args.verbose:
 				print("o ", len(cids),"conformers initially sampled")
 
