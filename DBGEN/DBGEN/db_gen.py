@@ -6,7 +6,7 @@ please report any bugs to svss@colostate.edu or juanvi89@hotmail.com.
 '''
 
 from DBGEN.db_gen_functions import *
-from DBGEN.Template import *
+#rom DBGEN.Template import *
 
 def main():
 	parser = argparse.ArgumentParser(description="Generate conformers depending on type of optimization (change parameters in db_gen_PATHS.py file).")
