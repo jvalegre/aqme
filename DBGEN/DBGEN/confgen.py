@@ -29,7 +29,7 @@ exp_rules_output_ext = '_confs_rules.sdf'
 def get_conf_RMS(mol, c1,c2, heavy):
 	'''generate RMS distance between two molecules (ignoring hydrogens)'''
 	if heavy == True: mol = Chem.RemoveHs(mol)
-	rms = Chem.GetBestRMS(mol,mol,c1,c2)
+	rms = Chem.AlignMol(mol,mol,c1,c2)
 	return rms
 
 def getPMIDIFF(mol1, mol2):
@@ -258,11 +258,11 @@ def summ_search(mol, name,args, coord_Map = None,alg_Map=None,mol_template=None)
 			if len(rotmatches) != 0:
 				for m in rotmatches:
 					rdMolTransforms.SetDihedralRad(outmols[conf].GetConformer(),*m,value=0)
-			#check rmsd
-			for seenconf in selectedcids:
-				rms = get_conf_RMS(outmols[conf],seenconf,conf, args.heavyonly)
-				if rms < args.rms_threshold:
-					break
+				#check rmsd
+				for seenconf in selectedcids:
+					rms = get_conf_RMS(outmols[conf],seenconf,conf, args.heavyonly)
+					if rms < args.rms_threshold:
+						break
 			else: #loop completed normally - no break, included empty
 				selectedcids.append(conf)
 
@@ -324,7 +324,7 @@ def mult_min(mol, name,args):
 				for j,seenmol in enumerate(outmols):
 					if abs(energy - c_energy[j]) < args.energy_threshold:
 						#print((i+1), energy, (j+1), c_energy[j], getPMIDIFF(mol,seenmol))
-						if getPMIDIFF(mol, seenmol) < args.rms_threshold * 25:
+						if getPMIDIFF(mol, seenmol) < args.rms_threshold :
 							#print("o  Conformer", (i+1), "matches conformer", (j+1))
 							unique += 1
 							dup_id = (j+1)
