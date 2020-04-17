@@ -29,7 +29,7 @@ exp_rules_output_ext = '_confs_rules.sdf'
 def get_conf_RMS(mol, c1,c2, heavy):
 	'''generate RMS distance between two molecules (ignoring hydrogens)'''
 	if heavy == True: mol = Chem.RemoveHs(mol)
-	rms = Chem.GetBestRMS(mol,mol,c1,c2)
+	rms = Chem.AlignMol(mol,mol,c1,c2)
 	return rms
 
 def getPMIDIFF(mol1, mol2):

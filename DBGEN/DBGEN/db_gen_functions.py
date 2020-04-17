@@ -349,7 +349,7 @@ def template_embed_optimize(molecule_embed,mol_1,args):
 	return molecule_embed, coordMap, algMap
 
 " FUCNTION WORKING WITH MOL OBJECT TO CREATE CONFORMERS"
-def conformer_generation(mol,name,args,coord_Map=None,alg_Map=None,mol_template=None):
+def conformer_generation(mol,name,start_time,args,coord_Map=None,alg_Map=None,mol_template=None):
 	valid_structure = filters(mol, args)
 	if valid_structure:
 		if args.verbose: print("\n   ----- {} -----".format(name))
@@ -438,7 +438,7 @@ def conformer_generation(mol,name,args,coord_Map=None,alg_Map=None,mol_template=
 		os.remove("xtbrestart")
 
 
-	if args.time: print("Execution time: %s seconds" % (round(time.time() - start_time,2)))
+	if args.time: print("\n Execution time: %s seconds" % (round(time.time() - start_time,2)))
 
 " RULES TO GET EXPERIMENTAL CONFORMERS"
 def exp_rules_output(mol, args):

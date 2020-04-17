@@ -102,7 +102,10 @@ def main():
 	var = False
 
 	if args.varfile != None: var = True
-	if args.time: start_time = time.time()
+
+	# This will be used only if time = True in params.py
+	start_time = time.time()
+
 
 	### If the input file is python format then we will assume it contains variables ... ###
 	if var == True:
@@ -440,10 +443,10 @@ def main():
 #------------------------------------------------------------------------------------------
 		if args.complex_type == 'squareplanar' or args.complex_type == 'squarepyrimidal':
 			for [mol, name, coord_Map,alg_Map,mol_template] in mol_objects: # Run confomer generation for each mol object
-				conformer_generation(mol,name,args,coord_Map,alg_Map,mol_template)
+				conformer_generation(mol,name,start_time,args,coord_Map,alg_Map,mol_template)
 		else:
 			for [mol, name] in mol_objects: # Run confomer generation for each mol object
-				conformer_generation(mol,name,args)
+				conformer_generation(mol,name,start_time,args)
 
 		if args.complex_type == 'squareplanar' or args.complex_type == 'squarepyrimidal':
 			conf_files = [name+'_confs.sdf' for mol,name,coord_Map,alg_Map,mol_template in mol_objects]
