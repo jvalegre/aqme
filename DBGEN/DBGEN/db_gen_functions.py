@@ -356,7 +356,7 @@ def conformer_generation(mol,name,start_time,args,coord_Map=None,alg_Map=None,mo
 		try:
 			# the conformational search
 
-			conformers, energies = summ_search(mol, name,args,coord_Map,alg_Map,mol_template)
+			summ_search(mol, name,args,coord_Map,alg_Map,mol_template)
 
 			#only print if within predefined energy window
 			if len(conformers) > 0 and conformers != 'FAIL':
