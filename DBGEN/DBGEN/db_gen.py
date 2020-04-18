@@ -29,6 +29,10 @@ def main():
 
 	parser.add_argument("-m","--maxnumber", help="Number of compounds", type=int, metavar="maxnumber")
 	parser.add_argument("--prefix", help="Prefix for naming files", default=None, metavar="prefix")
+	parser.add_argument("--rdkit_output", help="Name for RDKit generated SDF files", default="_RDKit.sdf", dest="rdkit_output", type=str)
+	parser.add_argument("--xtb_output", help="Name for xTB generated SDF files", default="_xTB.sdf", dest="xtb_output", type=str)
+	parser.add_argument("--ani1_output", help="Name for ANI1 generated SDF files", default="_ANI1ccx.sdf", dest="ani1_output", type=str)
+	parser.add_argument("--exp_rules_output_ext", help="Name for output SDF files after experimental rules", default="_confs_rules.sdf", dest="exp_rules_output_ext", type=str)
 
 	#work the script has to do
 	parser.add_argument("-w","--compute", action="store_true", default=False, help="Create conformers")
@@ -57,6 +61,7 @@ def main():
 	parser.add_argument("--ewin", action="store",default=40.0, help="energy window to print conformers (kJ/mol)", type=float)
 	parser.add_argument("--opt_fmax", action="store",default=0.05, help="fmax value used in xTB and AN1 optimizations", type=float)
 	parser.add_argument("--opt_steps", action="store",default=1000, help="max cycles used in xTB and AN1 optimizations", type=int)
+	parser.add_argument("--max_matches_RMSD", action="store",default=1000000, help="max iterations to find optimal RMSD in RDKit duplicate filter", type=int)
 	parser.add_argument("--opt_steps_RDKit", action="store",default=1000, help="max cycles used in RDKit optimizations", type=int)
 	parser.add_argument("--time","-t",action='store_true',default=False,help="request program runtime")
 	parser.add_argument("--heavyonly", help="only consider torsion angles involving heavy (non H) elements (default=True)", default=True, metavar="heavyonly")
@@ -80,8 +85,9 @@ def main():
 	parser.add_argument("--basis_set_genecp_atoms",default=['LANL2DZ'], help="Basis Set genecp: The length has to be the same as basis_set", dest="basis_set_genecp_atoms", type=str, nargs='?')
 	parser.add_argument("--genecp_atoms",  help="genecp atoms",default=[], dest="genecp_atoms",type=str, nargs='*')
 	parser.add_argument("--max_cycle_opt", help="Number of cycles for DFT optimization", default="300", type=int, dest="max_cycle_opt")
-	parser.add_argument("--frequencies",action="store_true", default=False, help="Request only optimization without any frequency calculation")
-	parser.add_argument("--single_point",action="store_true", default=False, help="Request only single point calculation")
+	parser.add_argument("--frequencies",action="store_true", default=False, help="If false, request only optimization without any frequency calculation")
+	parser.add_argument("--single_point_only",action="store_true", default=False, help="Request only single point calculation")
+	parser.add_argument("--conformer_generation",action="store_true", default=False, help="Request conformer generation")
 	parser.add_argument("--lowest_only", action="store_true", default=False, help="Lowest conformer to write for gaussian")
 	parser.add_argument("--lowest_n", action="store_true", default=False, help="Lowest Number of conformers to write for gaussian")
 	parser.add_argument("--energy_threshold_for_gaussian", help="cutoff for considering sampled conformers for gaussian input", default="4.0", type=float, dest="energy_threshold_for_gaussian")
@@ -105,7 +111,6 @@ def main():
 
 	# This will be used only if time = True in params.py
 	start_time = time.time()
-
 
 	### If the input file is python format then we will assume it contains variables ... ###
 	if var == True:
@@ -441,12 +446,14 @@ def main():
 					mol_objects.append([mol, name])
 
 #------------------------------------------------------------------------------------------
-		if args.complex_type == 'squareplanar' or args.complex_type == 'squarepyrimidal':
-			for [mol, name, coord_Map,alg_Map,mol_template] in mol_objects: # Run confomer generation for each mol object
-				conformer_generation(mol,name,start_time,args,coord_Map,alg_Map,mol_template)
-		else:
-			for [mol, name] in mol_objects: # Run confomer generation for each mol object
-				conformer_generation(mol,name,start_time,args)
+
+		if args.conformer_generation == True: # switch to off for single point only
+			if args.complex_type == 'squareplanar' or args.complex_type == 'squarepyrimidal':
+				for [mol, name, coord_Map,alg_Map,mol_template] in mol_objects: # Run confomer generation for each mol object
+					conformer_generation(mol,name,start_time,args,coord_Map,alg_Map,mol_template)
+			else:
+				for [mol, name] in mol_objects: # Run confomer generation for each mol object
+					conformer_generation(mol,name,start_time,args)
 
 		if args.complex_type == 'squareplanar' or args.complex_type == 'squarepyrimidal':
 			conf_files = [name+'_confs.sdf' for mol,name,coord_Map,alg_Map,mol_template in mol_objects]
@@ -461,7 +468,7 @@ def main():
 			for bs in args.basis_set:
 				for bs_gcp in args.basis_set_genecp_atoms:
 
-					if args.single_point ==  True: # only create this directory if single point calculation is requested
+					if args.single_point_only ==  True: # only create this directory if single point calculation is requested
 						folder = sp_dir + '/' + str(lot) + '-' + str(bs)
 						print("\no  PREPARING SINGLE POINT INPUTS in {}".format(folder))
 						try: os.makedirs(folder)

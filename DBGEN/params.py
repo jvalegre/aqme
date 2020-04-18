@@ -9,6 +9,12 @@
 input ='smi.smi' # input files
 path ='' # path to guassian folder when we do analysis
 
+" OUTPUT FILE NAMES "
+rdkit_output = '_RDKit.sdf'
+xtb_output = '_xTB.sdf'
+ani1_output = '_ANI1ccx.sdf'
+exp_rules_output_ext = '_confs_rules.sdf'
+
 " GENERAL OPTIONS FOR COMMANDLINE "
 verbose = True
 compute = True
@@ -35,9 +41,12 @@ charge = 0 # final charge of the molecule (used in xTB optimization and input in
 " DEFAULT PARAMTERS FOR UNIQUE CONFORMER SELECTION FOR RDKIT, XTB AND ANI1 "
 
 rms_threshold = 0.5 #cutoff for considering sampled conformers the same (default 0.25) for RDKit and xTB duplicate filters
-energy_threshold = 1 #energy difference between unique conformers for RDKit and xTB duplicate filters
+energy_threshold = 0.5 # energy difference in kcal/mol between unique conformers for RDKit and xTB duplicate filters
+max_matches_RMSD = 1000000 # max iterations to find optimal RMSD in RDKit duplicate filter
+                            # The higher the number the longer the duplicate filter takes but
+                            # the more duplicates are filtered off
 ewin = 1000 #energy window to print conformers for RDKit and xTB duplicate filters
-time = False #request run time
+time = True #request run time
 
 " TYPE OF OPTIMIZATION "
 # Options: xTB, ANI1ccx (if True is selected).  Default : RDKit optimizaiton
@@ -45,8 +54,9 @@ ANI1ccx = False
 xtb = True
 
 " SINGLE POINTS vs FULL OPTIMIZATION WITH or WITHOUT FREQUENCIES "
-single_point = False
+conformer_generation = True
 frequencies = True
+single_point_only = False
 
 " FILTERS FOR RDKIT OPTIMIZATION "
 max_torsions = 20 # Skip any molecules with more than this many torsions (default 5)
@@ -107,7 +117,7 @@ basis_set_genecp_atoms = ['LANL2DZ']
 level_of_theory = ['wb97xd']
 max_cycle_opt = 100 #eefault is 300
 
-" DISPERSION CORRECTION FOR COM FILES " 
+" DISPERSION CORRECTION FOR COM FILES "
 dispersion_correction = False
 empirical_dispersion = 'GD3BJ'
 

@@ -20,7 +20,6 @@ from openbabel import openbabel as ob
 import subprocess
 
 
-
 from DBGEN.confgen import *
 
 possible_atoms = ["", "H", "He", "Li", "Be", "B", "C", "N", "O", "F", "Ne", "Na", "Mg", "Al", "Si",
@@ -356,45 +355,11 @@ def conformer_generation(mol,name,start_time,args,coord_Map=None,alg_Map=None,mo
 
 		try:
 			# the conformational search
-			summ_search(mol, name,args,coord_Map,alg_Map,mol_template)
 
-			# the multiple minimization returns a list of separate mol objects
-			conformers, energies = mult_min(mol, name, args)
+			conformers, energies = summ_search(mol, name,args,coord_Map,alg_Map,mol_template)
 
 			#only print if within predefined energy window
 			if len(conformers) > 0 and conformers != 'FAIL':
-				# list in energy order
-				cids = list(range(len(conformers)))
-				sortedcids = sorted(cids, key = lambda cid: energies[cid])
-
-				np.set_printoptions(precision=3)
-				#print(name, *sorted(energies), sep = ", ")
-				print("o  Final energies:", np.array(sorted(energies)))
-				#print(["{0:0.2f}".format(i) for i in sorted(energies)])
-
-				sdwriter = Chem.SDWriter(name+final_output)
-				glob_min = min(energies)
-
-				write_confs = 0
-				for cid in sortedcids:
-					if args.ANI1ccx == True:
-						if (energies[cid] - glob_min) < args.ewin / 2625.5:
-							sdwriter.write(conformers[cid])
-							write_confs += 1
-
-					elif args.xtb == True:
-						if (energies[cid] - glob_min) < args.ewin / 2625.5:
-							sdwriter.write(conformers[cid])
-							write_confs += 1
-
-					else:
-						if (energies[cid] - glob_min) < args.ewin:
-							sdwriter.write(conformers[cid])
-							write_confs += 1
-
-
-				if args.verbose == True: print("   ----- {} conformers written to {} -----".format(write_confs, name+final_output))
-				sdwriter.close()
 
 				#applying rule to get the necessary conformers only
 				if args.exp_rules == True:

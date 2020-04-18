@@ -22,14 +22,11 @@ from ase.units import kJ,mol,Hartree,kcal
 
 import xtb
 from xtb import GFN2
-output = '.sdf'
-final_output = '_confs.sdf'
-exp_rules_output_ext = '_confs_rules.sdf'
 
-def get_conf_RMS(mol, c1,c2, heavy):
+def get_conf_RMS(mol, c1, c2, heavy, max_matches_RMSD):
 	'''generate RMS distance between two molecules (ignoring hydrogens)'''
 	if heavy == True: mol = Chem.RemoveHs(mol)
-	rms = Chem.AlignMol(mol,mol,c1,c2)
+	rms = Chem.GetBestRMS(mol,mol,c1,c2,maxMatches=max_matches_RMSD)
 	return rms
 
 def getPMIDIFF(mol1, mol2):
@@ -65,7 +62,6 @@ def genConformer_r(mol, conf, i, matches, degree, sdwriter,args,name):
 	which dihedral we are enumerating by degree to output conformers to out'''
 	rotation_count = 1
 	if i >= len(matches): #base case, torsions should be set in conf
-		sdwriter.write(mol,conf)
 		return 1
 	else:
 		#incr = math.pi*degree / 180.0
@@ -81,7 +77,7 @@ def genConformer_r(mol, conf, i, matches, degree, sdwriter,args,name):
 				GetFF = Chem.UFFGetMoleculeForceField(mol)
 			else: print('   Force field {} not supported!'.format(args.ff)); sys.exit()
 			GetFF.Initialize()
-			converged = GetFF.Minimize()
+			converged = GetFF.Minimize(maxIts=args.opt_steps_RDKit)
 			energy = GetFF.CalcEnergy()
 			mol.SetProp("Energy",energy)
 			mol.SetProp('_Name',name+' - conformer from rotation - ' + str(rotation_count))
@@ -140,18 +136,15 @@ def rules_get_charge(mol, args):
 def summ_search(mol, name,args, coord_Map = None,alg_Map=None,mol_template=None):
 	'''embeds core conformers, then optimizes and filters based on RMSD. Finally the rotatable torsions are systematically rotated'''
 
-	sdwriter = Chem.SDWriter(name+output)
-
 	Chem.SanitizeMol(mol)
 	mol = Chem.AddHs(mol)
 	mol.SetProp("_Name",name)
-
 
 	if args.nodihedrals == False: rotmatches = getDihedralMatches(mol, args.heavyonly)
 	else: rotmatches = []
 
 	if len(rotmatches) > args.max_torsions:
-		print("x  Too many torsions (%d). Skipping %s" %(len(rotmatches),(name+output)))
+		print("x  Too many torsions (%d). Skipping %s" %(len(rotmatches),(name+args.rdkit_output)))
 	else:
 		if coord_Map == None and alg_Map == None and mol_template == None:
 			if args.etkdg:
@@ -205,9 +198,8 @@ def summ_search(mol, name,args, coord_Map = None,alg_Map=None,mol_template=None)
 				else: print('   Force field {} not supported!'.format(args.ff)); sys.exit()
 
 				GetFF.Initialize()
-				converged = GetFF.Minimize()
+				converged = GetFF.Minimize(maxIts=args.opt_steps_RDKit)
 				cenergy.append(GetFF.CalcEnergy())
-
 
 				#if args.verbose:
 				#    print("-   conformer", (i+1), "optimized: ", args.ff, "energy", GetFF.CalcEnergy())
@@ -237,7 +229,7 @@ def summ_search(mol, name,args, coord_Map = None,alg_Map=None,mol_template=None)
 					more = ff_temp.Minimize(energyTol=1e-5, forceTol=1e-4)
 					n -= 1
 				# realign
-				energy = ff_temp.CalcEnergy()
+				energy = ff_temp.CalcEnergy() # this reaturns the energy in kcal/mol
 				rms = rdMolAlign.AlignMol(mol, mol_template, atomMap=alg_Map)
 				cenergy.append(energy)
 
@@ -249,251 +241,234 @@ def summ_search(mol, name,args, coord_Map = None,alg_Map=None,mol_template=None)
 			outmols[cid].SetProp('Energy', cenergy[cid])
 
 		#reduce to unique set
-		if args.verbose: print("o  Removing duplicate conformers ( RMSD <", args.rms_threshold, ")")
+		if args.verbose: print("o  Removing duplicate conformers ( RMSD <", args.rms_threshold, "and E difference <",args.energy_threshold,"kcal/mol)")
 		cids = list(range(len(outmols)))
 		sortedcids = sorted(cids,key = lambda cid: cenergy[cid])
 		selectedcids = []
+
 		for i, conf in enumerate(sortedcids):
-			#set torsions to zero
-			if len(rotmatches) != 0:
-				for m in rotmatches:
-					rdMolTransforms.SetDihedralRad(outmols[conf].GetConformer(),*m,value=0)
-				#check rmsd
-				for seenconf in selectedcids:
-					rms = get_conf_RMS(outmols[conf],seenconf,conf, args.heavyonly)
-					if rms < args.rms_threshold:
-						break
-			else: #loop completed normally - no break, included empty
+			# This keeps track of whether or not your conformer is unique
+			excluded_conf = False
+			# include the first conformer in the list to start the filtering process
+			if i == 0:
 				selectedcids.append(conf)
+			# check rmsd
+			for seenconf in selectedcids:
+				rms = get_conf_RMS(outmols[conf],seenconf,conf, args.heavyonly, args.max_matches_RMSD)
+				E_diff = abs(cenergy[conf] - cenergy[seenconf]) # in kcal/mol
+				if rms < args.rms_threshold and E_diff < (args.energy_threshold ):
+					excluded_conf = True
+					break
+			if excluded_conf == False:
+				if conf not in selectedcids:
+					selectedcids.append(conf)
 
-		#now exhaustively drive torsions of selected conformers
+		unique_mols, unique_energies = [],[]
+		for id in selectedcids:
+			unique_mols.append(outmols[id])
+			unique_energies.append(cenergy[id])
+
 		if args.verbose: print("o ", len(selectedcids),"unique conformers remain")
-		n_confs = int(len(selectedcids) * (360 / args.degree) ** len(rotmatches))
-		if args.verbose and len(rotmatches) != 0: print("o  Systematic generation of", n_confs, "confomers")
 
-		total = 0
-		for conf in selectedcids:
-			total += genConformer_r(outmols[conf], conf, 0, rotmatches, args.degree, sdwriter,args,outmols[conf].GetProp('_Name'))
-		if args.verbose and len(rotmatches) != 0: print("o  %d total conformations generated"%total)
+		if len(rotmatches) != 0:
+			# now exhaustively drive torsions of selected conformers
+			n_confs = int(len(selectedcids) * (360 / args.degree) ** len(rotmatches))
+			if args.verbose and len(rotmatches) != 0: print("o  Systematic generation of", n_confs, "confomers")
 
-	sdwriter.close()
+			total = 0
+			for conf in selectedcids:
+				total += genConformer_r(unique_mols[conf], conf, 0, rotmatches, args.degree, sdwriter,args,unique_mols[conf].GetProp('_Name'))
+			if args.verbose and len(rotmatches) != 0: print("o  %d total conformations generated"%total)
 
-def mult_min(mol, name,args):
-	'''optimizes a bunch of molecules and then checks for unique conformers and then puts in order of energy'''
+		# only use RDKit for optimization
+		if args.ANI1ccx != True and args.xtb != True:
+			sdwriter = Chem.SDWriter(name+args.rdkit_output)
+			for mol in unique_mols:
+				sdwriter.write(mol)
+			sdwriter.close()
 
-	opt = True # switch to off for single point only
+			return unique_mols, unique_energies
 
-	inmols = Chem.SDMolSupplier(name+output, removeHs=False)
-	if inmols is None:
-		print("Could not open ", name+output)
-		sys.exit(-1)
+		# Calculates geometries and energies with xTB or ANI1
+		if args.ANI1ccx == True or args.xtb == True:
 
-	c_converged, c_energy, outmols = [], [], []
-	ani_energy,xtb_energy = 0,0
-	if args.ANI1ccx == True or args.xtb == True: SQM_energy, SQM_cartesians = [], []
+			ani_energy,xtb_energy = 0,0
 
-	globmin = None
+			# lists containing energies, coordinates and mols generated by xTB and ANI1
+			SQM_energy, SQM_cartesians, SQM_mols = [], [], []
 
-	# if large system increase stck size
-	if args.large_sys == True:
-		os.environ['OMP_STACKSIZE'] = args.STACKSIZE
-		if args.verbose == True: print('---- The Stack size has been updated for larger molecules to {0} ----'.format(os.environ['OMP_STACKSIZE']))
+			globmin = None
 
-	for i,mol in enumerate(inmols):
-		conf = 1
-		if mol is not None:
+			# if large system increase stck size
+			if args.large_sys == True:
+				os.environ['OMP_STACKSIZE'] = args.STACKSIZE
+				if args.verbose == True: print('---- The Stack size has been updated for larger molecules to {0} ----'.format(os.environ['OMP_STACKSIZE']))
 
-			if args.ff == "MMFF":
-				GetFF = Chem.MMFFGetMoleculeForceField(mol, Chem.MMFFGetMoleculeProperties(mol))
-			elif args.ff == "UFF":
-				GetFF = Chem.UFFGetMoleculeForceField(mol)
-			else: print(('   Force field {} not supported!'.format(args.ff))); sys.exit()
+			for i,mol in enumerate(unique_mols):
+				#setting the metal back instead of I
+				if args.metal_complex == True:
+					for atom in mol.GetAtoms():
+						if atom.GetSymbol() == 'I' and (len(atom.GetBonds()) == 6 or len(atom.GetBonds()) == 5 or len(atom.GetBonds()) == 4 or len(atom.GetBonds()) == 3 or len(atom.GetBonds()) == 2):
+							for el in elementspt:
+								if el.symbol == args.metal:
+									atomic_number = el.number
+							atom.SetAtomicNum(atomic_number)
 
-			GetFF.Initialize()
-			converged = GetFF.Minimize(maxIts=args.opt_steps_RDKit)
-			energy = GetFF.CalcEnergy()
-			# append to list
-			#if args.verbose: print("   conformer", (i+1), energy)
-			if globmin == None: globmin = energy
-			if energy < globmin: globmin = energy
+				#removinf the H's from metal
+				# if args.metal_complex == True and args.complex_type =='squareplanar':
+				# 	print('--- Removing Hs on metal ----')
+				# 	idx = []
+				# 	mol = Chem.RWMol(mol)
+				# 	for atom in mol.GetAtoms():
+				# 		if atom.GetSymbol() == args.metal:
+				# 			neighbours = atom.GetNeighbors()
+				# 			for atom in neighbours:
+				# 				print(atom.GetSymbol())
+				# 				if atom.GetSymbol() == 'H':
+				# 					idx.append(atom.GetIdx())
+				# 	for idx in sorted(idx, reverse=True):
+				# 		mol.RemoveAtom(idx)
+				# 		print(mol.GetAtomWithIdx(idx).GetSymbol())
+				# 	print(mol.GetNumAtoms())
 
-			if converged == 0 and (energy - globmin) < args.ewin:
-				#if args.verbose: print('   minimization converged!')
-				unique, dup_id = 0, None
-				#print("Conformer", (i+1), "optimized with", args.ff, "Energy:", energy)
-				for j,seenmol in enumerate(outmols):
-					if abs(energy - c_energy[j]) < args.energy_threshold:
-						#print((i+1), energy, (j+1), c_energy[j], getPMIDIFF(mol,seenmol))
-						if getPMIDIFF(mol, seenmol) < args.rms_threshold :
-							#print("o  Conformer", (i+1), "matches conformer", (j+1))
-							unique += 1
-							dup_id = (j+1)
+				# removing the Ba atom if NCI complexes
+				if args.nci_complex == True:
+					for atom in mol.GetAtoms():
+						if atom.GetSymbol() =='I':
+							atom.SetAtomicNum(1)
 
-				if unique == 0:
+				elements = ''
+				for atom in mol.GetAtoms():
+					elements += atom.GetSymbol()
 
-					if args.verbose == True: print("-  Conformer", (i+1), "is unique")
+				cartesians = mol.GetConformers()[0].GetPositions()
 
-					#setting the metal back instead of I
-					if args.metal_complex == True:
-						for atom in mol.GetAtoms():
-							if atom.GetSymbol() == 'I' and (len(atom.GetBonds()) == 6 or len(atom.GetBonds()) == 5 or len(atom.GetBonds()) == 4 or len(atom.GetBonds()) == 3 or len(atom.GetBonds()) == 2):
-								for el in elementspt:
-									if el.symbol == args.metal:
-										atomic_number = el.number
-								atom.SetAtomicNum(atomic_number)
+				if args.verbose == True: print('---- The elements are the following {0} ----'.format(elements))
 
-					#removinf the H's from metal
-					# if args.metal_complex == True and args.complex_type =='squareplanar':
-					# 	print('--- Removing Hs on metal ----')
-					# 	idx = []
-					# 	mol = Chem.RWMol(mol)
-					# 	for atom in mol.GetAtoms():
-					# 		if atom.GetSymbol() == args.metal:
-					# 			neighbours = atom.GetNeighbors()
-					# 			for atom in neighbours:
-					# 				print(atom.GetSymbol())
-					# 				if atom.GetSymbol() == 'H':
-					# 					idx.append(atom.GetIdx())
-					# 	for idx in sorted(idx, reverse=True):
-					# 		mol.RemoveAtom(idx)
-					# 		print(mol.GetAtomWithIdx(idx).GetSymbol())
-					# 	print(mol.GetNumAtoms())
+				coordinates = torch.tensor([cartesians.tolist()], requires_grad=True, device=device)
 
-					#removing the Ba atom if NCI complexes
-					if args.nci_complex == True:
-						for atom in mol.GetAtoms():
-							if atom.GetSymbol() =='I':
-								atom.SetAtomicNum(1)
+				if args.ANI1ccx == True:
+					final_output = args.ani1_output
+					species = model.species_to_tensor(elements).to(device).unsqueeze(0)
+					_, ani_energy = model((species, coordinates))
+					if args.verbose: print("ANI Initial E:",ani_energy.item()*627.509,'kcal/mol')
 
-					if args.ANI1ccx == True or args.xtb == True:
+					ase_molecule = ase.Atoms(elements, positions=coordinates.tolist()[0], calculator=model.ase())
+					### make a function for constraints and optimization
+					if constraints != None:
+						fb = ase.constraints.FixBondLength(0, 1)
+						ase_molecule.set_distance(0,1,2.0)
+						ase_molecule.set_constraint(fb)
 
-						elements = ''
-						for atom in mol.GetAtoms():
-							elements += atom.GetSymbol()
+					optimizer = ase.optimize.BFGS(ase_molecule, trajectory='ANI1_opt.traj')
+					optimizer.run(fmax=args.opt_fmax, steps=args.opt_steps)
+					if len(ase.io.Trajectory('xTB_opt.traj', mode='r')) != (args.opt_steps+1):
+						species_coords = ase_molecule.get_positions().tolist()
+						coordinates = torch.tensor([species_coords], requires_grad=True, device=device)
+						SQM_energy.append(ani_energy.item())
+						cartesians = np.array(coordinates.tolist()[0])
+						SQM_cartesians.append(cartesians)
 
-						cartesians = mol.GetConformers()[0].GetPositions()
-
-						if args.verbose == True: print('---- The elements are the following {0} ----'.format(elements))
-
-						coordinates = torch.tensor([cartesians.tolist()], requires_grad=True, device=device)
-
-						if args.ANI1ccx == True:
-							species = model.species_to_tensor(elements).to(device).unsqueeze(0)
-							_, ani_energy = model((species, coordinates))
-							if args.verbose: print("ANI Initial E:",ani_energy.item(),'eH') #Hartree
-
-							if opt == True:
-								ase_molecule = ase.Atoms(elements, positions=coordinates.tolist()[0], calculator=model.ase())
-								### make a function for constraints and optimization
-								if constraints != None:
-									fb = ase.constraints.FixBondLength(0, 1)
-									ase_molecule.set_distance(0,1,2.0)
-									ase_molecule.set_constraint(fb)
-
-								optimizer = ase.optimize.BFGS(ase_molecule, trajectory='ANI1_opt.traj')
-								optimizer.run(fmax=args.opt_fmax, steps=args.opt_steps)
-								if len(ase.io.Trajectory('xTB_opt.traj', mode='r')) != (args.opt_steps+1):
-									species_coords = ase_molecule.get_positions().tolist()
-									coordinates = torch.tensor([species_coords], requires_grad=True, device=device)
-									SQM_energy.append(ani_energy.item())
-									cartesians = np.array(coordinates.tolist()[0])
-									SQM_cartesians.append(cartesians)
-
-									###############################################################################
-									# Now let's compute energy:
-									_, ani_energy = model((species, coordinates))
-									aniE = ani_energy.item() #Hartree
-									if args.verbose: print("ANI Final E:", aniE,'eH', ase_molecule.get_potential_energy(),'eV') #Hartree, eV
-									###############################################################################
-								else:
-									print('ANI1 optimization could not converge (discarding conformer).')
-### INCLUDE THE OPTIONS TO SOTRE MOLECULAR Descriptors
+						###############################################################################
+						# Now let's compute energy:
+						_, ani_energy = model((species, coordinates))
+						aniE = ani_energy.item() #Hartree
+						if args.verbose: print("ANI Final E:", aniE*627.509,'kcal/mol')
+						###############################################################################
+					else:
+						print('ANI1 optimization could not converge (discarding conformer).')
+### INCLUDE THE OPTIONS TO STORE MOLECULAR Descriptors
 ### CHECK THIS WEBPAGE: https://github.com/grimme-lab/xtb/tree/master/python
-						elif args.xtb == True:
-							if args.metal_complex == True:
-								#passing charges metal present
-								ase_molecule = ase.Atoms(elements, positions=coordinates.tolist()[0],calculator=GFN2()) #define ase molecule using GFN2 Calculator
-								for atom in ase_molecule:
-									if atom.symbol == args.metal:
-										#will update only for cdx, smi, and csv formats.
-										if os.path.splitext(args.input)[1] == '.csv' or os.path.splitext(args.input)[1] == '.cdx' or os.path.splitext(args.input)[1] == '.smi':
-											atom.charge, neighbours = rules_get_charge(mol,args)
-											if len(neighbours) != 0:
-												if args.verbose == True: print('---- The Overall charge is reworked with rules for .smi, .csv, .cdx ----')
-										else:
-											atom.charge = args.charge
-											if args.verbose == True: print('---- The Overall charge is read from the .com file ----')
-										if args.verbose == True: print('---- The Overall charge considered is  {0} ----'.format(atom.charge))
-							else:
-								ase_molecule = ase.Atoms(elements, positions=coordinates.tolist()[0], calculator=GFN2()) #define ase molecule using GFN2 Calculator
-							if opt == True:
-								if args.verbose: print("Initial XTB energy", ase_molecule.get_potential_energy()/Hartree,'Eh',ase_molecule.get_potential_energy(),'eV') #Hartree, eV
-								optimizer = ase.optimize.BFGS(ase_molecule, trajectory='xTB_opt.traj')
-								optimizer.run(fmax=args.opt_fmax, steps=args.opt_steps)
-								if len(ase.io.Trajectory('xTB_opt.traj', mode='r')) != (args.opt_steps+1):
-									species_coords = ase_molecule.get_positions().tolist()
-									coordinates = torch.tensor([species_coords], requires_grad=True, device=device)
-
-									###############################################################################
-									# Now let's compute energy:
-									xtb_energy = ase_molecule.get_potential_energy()
-									SQM_energy.append(xtb_energy/Hartree)
-									cartesians = np.array(coordinates.tolist()[0])
-									SQM_cartesians.append(cartesians)
-									if args.verbose: print("Final XTB E:",xtb_energy/Hartree,'Eh',xtb_energy,'eV') #Hartree, eV
-									###############################################################################
+				elif args.xtb == True:
+					final_output = args.xtb_output
+					if args.metal_complex == True:
+						#passing charges metal present
+						ase_molecule = ase.Atoms(elements, positions=coordinates.tolist()[0],calculator=GFN2()) #define ase molecule using GFN2 Calculator
+						for atom in ase_molecule:
+							if atom.symbol == args.metal:
+								#will update only for cdx, smi, and csv formats.
+								if os.path.splitext(args.input)[1] == '.csv' or os.path.splitext(args.input)[1] == '.cdx' or os.path.splitext(args.input)[1] == '.smi':
+									atom.charge, neighbours = rules_get_charge(mol,args)
+									if len(neighbours) != 0:
+										if args.verbose == True: print('---- The Overall charge is reworked with rules for .smi, .csv, .cdx ----')
 								else:
-									print('xTB optimization could not converge (discarding conformer).')
+									atom.charge = args.charge
+									if args.verbose == True: print('---- The Overall charge is read from the .com file ----')
+								if args.verbose == True: print('---- The Overall charge considered is  {0} ----'.format(atom.charge))
+					else:
+						ase_molecule = ase.Atoms(elements, positions=coordinates.tolist()[0], calculator=GFN2()) #define ase molecule using GFN2 Calculator
 
-					pmol = PropertyMol.PropertyMol(mol)
-					outmols.append(pmol); c_converged.append(converged); c_energy.append(energy)
-					conf += 1
+					if args.verbose: print("Initial XTB energy", (ase_molecule.get_potential_energy()/Hartree)*627.509,'kcal/mol')
+					optimizer = ase.optimize.BFGS(ase_molecule, trajectory='xTB_opt.traj')
+					optimizer.run(fmax=args.opt_fmax, steps=args.opt_steps)
+					if len(ase.io.Trajectory('xTB_opt.traj', mode='r')) != (args.opt_steps+1):
+						species_coords = ase_molecule.get_positions().tolist()
+						coordinates = torch.tensor([species_coords], requires_grad=True, device=device)
 
-				else: print("x  Conformer", (i+1), "is a duplicate of", dup_id)
+						###############################################################################
+						# Now let's compute energy:
+						xtb_energy = ase_molecule.get_potential_energy()
+						SQM_energy.append((xtb_energy/Hartree)*627.509) # gets the energy in kcal/mol
+						cartesians = np.array(coordinates.tolist()[0])
+						SQM_cartesians.append(cartesians)
+						if args.verbose: print("Final XTB E:",(xtb_energy/Hartree)*627.509,'kcal/mol')
+						###############################################################################
+					else:
+						print('xTB optimization could not converge (discarding conformer).')
+
+				pmol = PropertyMol.PropertyMol(mol)
+				SQM_mols.append(pmol)
+			if len(SQM_energy) == 0:
+				if args.xtb == True:
+					print('\n WARNING! No conformers converged during xTB optimization.')
+
+				elif args.ANI1ccx == True:
+					print('\n WARNING! No conformers converged during ANI1 optimization.')
+
+				return 'FAIL', 0
+
 			else:
-				print("x  Minimization of conformer", (i+1), " not converged / energy too high!", converged, (energy - globmin), args.ewin)
-			#pass
-		else:
-			pass #print("No molecules to optimize")
+				### THIS SHOULD BE A FUNCTION SINCE IT'S REPEATED TWICE
+				cids = list(range(len(SQM_mols)))
+				SQM_sortedcids = sorted(cids,key = lambda cid: SQM_energy[cid])
+				SQM_selectedcids = []
 
+				for i, conf in enumerate(SQM_sortedcids):
+					# This keeps track of whether or not your conformer is unique
+					excluded_conf = False
+					# include the first conformer in the list to start the filtering process
+					if i == 0:
+						SQM_selectedcids.append(conf)
+					# check rmsd
+					for seenconf in SQM_selectedcids:
+						rms = get_conf_RMS(SQM_mols[conf],seenconf,conf, args.heavyonly, args.max_matches_RMSD)
+						E_diff = abs(SQM_energy[conf] - SQM_energy[seenconf]) # in kcal/mol
+						if rms < args.rms_threshold and E_diff < (args.energy_threshold ):
+							excluded_conf = True
+							break
+					if excluded_conf == False:
+						if conf not in SQM_selectedcids:
+							SQM_selectedcids.append(conf)
 
-	# if SQM energy exists, overwrite RDKIT energies and geometries
-	cids = list(range(len(outmols)))
-	sortedcids = sorted(cids, key = lambda cid: c_energy[cid])
+				post_outmols, post_energy = [],[]
+				for id in SQM_selectedcids:
+					# change mol objects with optimized x,y,z from xTB
+					c = SQM_mols[id].GetConformer()
+					for j in range(SQM_mols[id].GetNumAtoms()):
+						[x,y,z] = SQM_cartesians[id][j]
+						c.SetAtomPosition(j,Point3D(x,y,z))
+					post_outmols.append(SQM_mols[id])
+					post_energy.append(SQM_energy[id])
 
-	if args.ANI1ccx == True or args.xtb == True:
-		if len(SQM_energy) > 0:
-			for conf in cids:
-				c_energy[conf] = SQM_energy[conf]
-				c = outmols[conf].GetConformer()
-				for j in range(outmols[conf].GetNumAtoms()):
-					#print(cartesians[i])
-					[x,y,z] = SQM_cartesians[conf][j]
-					c.SetAtomPosition(j,Point3D(x,y,z))
+				if args.verbose: print("o ", len(SQM_selectedcids),"unique conformers remain")
 
-				for j in range(0,conf):
-					if abs(c_energy[conf] - c_energy[j]) < args.energy_threshold / 2625.5 and getPMIDIFF(outmols[conf], outmols[j]) <  args.rms_threshold:
-						print("It appears ",conf, "is the same as", j)
+				for i, cid in enumerate(SQM_selectedcids):
+					SQM_mols[cid].SetProp('_Name', name + ' conformer ' + str(i+1))
+					SQM_mols[cid].SetProp('Energy', SQM_energy[cid])
 
-			for i, cid in enumerate(sortedcids):
-					outmols[cid].SetProp('_Name', name + ' conformer ' + str(i+1))
-					outmols[cid].SetProp('Energy', c_energy[cid])
+				sdwriter = Chem.SDWriter(name+final_output)
+				for mol in post_outmols:
+					sdwriter.write(mol)
+				sdwriter.close()
 
-			return outmols, c_energy
-
-		else:
-			if args.xtb == True:
-				print('\n WARNING! No conformers converged during xTB optimization.')
-
-			elif args.ANI1ccx == True:
-				print('\n WARNING! No conformers converged during ANI1 optimization.')
-
-
-			return 'FAIL', 0
-
-	else:
-		for i, cid in enumerate(sortedcids):
-				outmols[cid].SetProp('_Name', name + ' conformer ' + str(i+1))
-				outmols[cid].SetProp('Energy', c_energy[cid])
-
-		return outmols, c_energy
+				return post_outmols, post_energy
