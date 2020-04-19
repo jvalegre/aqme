@@ -23,10 +23,10 @@ from ase.units import kJ,mol,Hartree,kcal
 import xtb
 from xtb import GFN2
 
-def get_conf_RMS(mol, c1, c2, heavy, max_matches_RMSD):
+def get_conf_RMS(mol1, mol2, c1, c2, heavy, max_matches_RMSD):
 	'''generate RMS distance between two molecules (ignoring hydrogens)'''
 	if heavy == True: mol = Chem.RemoveHs(mol)
-	rms = Chem.GetBestRMS(mol,mol,c1,c2,maxMatches=max_matches_RMSD)
+	rms = Chem.GetBestRMS(mol1,mol2,c1,c2,maxMatches=max_matches_RMSD)
 	return rms
 
 def getPMIDIFF(mol1, mol2):
@@ -188,7 +188,7 @@ def summ_search(mol, name,args, coord_Map = None,alg_Map=None,mol_template=None)
 			if args.nodihedrals == False: print("o  Found", len(rotmatches), "rotatable torsions")
 			else: print("o  Systematic torsion rotation is set to OFF")
 
-		cenergy = []
+		cenergy,outmols = [],[]
 		for i, conf in enumerate(cids):
 			if coord_Map == None and alg_Map == None and mol_template == None:
 				if args.ff == "MMFF":
@@ -234,26 +234,27 @@ def summ_search(mol, name,args, coord_Map = None,alg_Map=None,mol_template=None)
 				rms = rdMolAlign.AlignMol(mol, mol_template,prbCid=conf, atomMap=alg_Map,reflect=True,maxIters=50)
 				cenergy.append(energy)
 
-		print("\n confs",mol.GetConformers())
-		# for i in cid:
-		# 	outmols[i] = mol.GetConformers()[i]
-		#
-		# outmols = []
-		# for XX in molXX:
-		# for i, cid in enumerate(cids):
-		# 	outmols[cid].SetProp('_Name', name + ' conformer ' + str(i+1))
-		# 	outmols[cid].SetProp('Energy', cenergy[cid])
-		#
-		# for i, cid in enumerate(cids):
-		# 	mol.GetConformers()[cid].SetProp('_Name', name + ' conformer ' + str(i+1))
-		# 	mol.GetConformers()[cid].SetProp('Energy', cenergy[cid])
+			# outmols is gonna be a list containing "args.sample" mol objects with "args.sample"
+			# conformers. We do this to SetProp (Name and Energy) to the different conformers
+			# and print in the SDF file. At the end, since all the mol objects has the same
+			# conformers, but the energies are different, we can print conformers to SDF files
+			# with the energies of the parent mol objects. We measured the computing time and
+			# it's the same as using only 1 parent mol object with 10 conformers, but we couldn'temp
+			# SetProp correctly
+			pmol = PropertyMol.PropertyMol(mol)
+			outmols.append(pmol)
+
+		for i, cid in enumerate(cids):
+			outmols[cid].SetProp('_Name', name + ' conformer ' + str(i+1))
+			outmols[cid].SetProp('Energy', cenergy[cid])
 
 		#reduce to unique set
 		if args.verbose: print("o  Removing duplicate conformers ( RMSD <", args.rms_threshold, "and E difference <",args.energy_threshold,"kcal/mol)")
-		cids = list(range(len(cenergy)))
+		cids = list(range(len(outmols)))
 		sortedcids = sorted(cids,key = lambda cid: cenergy[cid])
 		selectedcids = []
 
+		# As the RDKit filter, the get_conf_RMS is
 		for i, conf in enumerate(sortedcids):
 			# This keeps track of whether or not your conformer is unique
 			excluded_conf = False
@@ -262,7 +263,7 @@ def summ_search(mol, name,args, coord_Map = None,alg_Map=None,mol_template=None)
 				selectedcids.append(conf)
 			# check rmsd
 			for seenconf in selectedcids:
-				rms = get_conf_RMS(mol,seenconf,conf, args.heavyonly, args.max_matches_RMSD)
+				rms = get_conf_RMS(outmols[conf],outmols[conf],seenconf,conf, args.heavyonly, args.max_matches_RMSD)
 				E_diff = abs(cenergy[conf] - cenergy[seenconf]) # in kcal/mol
 				if rms < args.rms_threshold and E_diff < (args.energy_threshold ):
 					excluded_conf = True
@@ -289,13 +290,10 @@ def summ_search(mol, name,args, coord_Map = None,alg_Map=None,mol_template=None)
 		# 		total += genConformer_r(unique_mols[conf], conf, 0, rotmatches, args.degree, sdwriter,args,unique_mols[conf].GetProp('_Name'))
 		# 	if args.verbose and len(rotmatches) != 0: print("o  %d total conformations generated"%total)
 
-		# only use RDKit for optimization
-		if args.ANI1ccx != True and args.xtb != True:
-			print(mol)
-			sdwriter = Chem.SDWriter(name+args.rdkit_output)
-			for id in selectedcids:
-				sdwriter.write(mol,id)
-			sdwriter.close()
+		sdwriter = Chem.SDWriter(name+args.rdkit_output)
+		for id in selectedcids:
+			sdwriter.write(outmols[id],id)
+		sdwriter.close()
 
 		# Calculates geometries and energies with xTB or ANI1
 		if args.ANI1ccx == True or args.xtb == True:
@@ -311,10 +309,14 @@ def summ_search(mol, name,args, coord_Map = None,alg_Map=None,mol_template=None)
 			if args.large_sys == True:
 				os.environ['OMP_STACKSIZE'] = args.STACKSIZE
 				if args.verbose == True: print('---- The Stack size has been updated for larger molecules to {0} ----'.format(os.environ['OMP_STACKSIZE']))
-			# print(unique_mols[2].GetConformers()[0].GetPositions())
-			for conf in selectedcids:
-				# print(conf)
-				mol = outmols[conf]
+
+			inmols = Chem.SDMolSupplier(name+args.rdkit_output, removeHs=False)
+
+			if inmols is None:
+				print("Could not open ", name+output)
+				sys.exit(-1)
+
+			for mol in inmols:
 				#setting the metal back instead of I
 				if args.metal_complex == True:
 					for atom in mol.GetAtoms():
@@ -428,6 +430,7 @@ def summ_search(mol, name,args, coord_Map = None,alg_Map=None,mol_template=None)
 
 				pmol = PropertyMol.PropertyMol(mol)
 				SQM_mols.append(pmol)
+
 			if len(SQM_energy) == 0:
 				if args.xtb == True:
 					print('\n WARNING! No conformers converged during xTB optimization.')
@@ -435,30 +438,29 @@ def summ_search(mol, name,args, coord_Map = None,alg_Map=None,mol_template=None)
 				elif args.ANI1ccx == True:
 					print('\n WARNING! No conformers converged during ANI1 optimization.')
 
-				return 'FAIL', 0
 
 			else:
-				### THIS SHOULD BE A FUNCTION SINCE IT'S REPEATED TWICE
+				if args.verbose: print("o  Removing duplicate conformers ( RMSD <", args.rms_threshold, "and E difference <",args.energy_threshold,"kcal/mol)")
 				cids = list(range(len(SQM_mols)))
 				SQM_sortedcids = sorted(cids,key = lambda cid: SQM_energy[cid])
 				SQM_selectedcids = []
 
-				for i, conf in enumerate(SQM_sortedcids):
+				for i in SQM_sortedcids:
 					# This keeps track of whether or not your conformer is unique
 					excluded_conf = False
 					# include the first conformer in the list to start the filtering process
 					if i == 0:
-						SQM_selectedcids.append(conf)
+						SQM_selectedcids.append(i)
 					# check rmsd
-					for seenconf in SQM_selectedcids:
-						rms = get_conf_RMS(SQM_mols[conf],seenconf,conf, args.heavyonly, args.max_matches_RMSD)
-						E_diff = abs(SQM_energy[conf] - SQM_energy[seenconf]) # in kcal/mol
+					for j in SQM_selectedcids:
+						rms = get_conf_RMS(SQM_mols[i],SQM_mols[j],-1,-1, args.heavyonly, args.max_matches_RMSD)
+						E_diff = abs(SQM_energy[i] - SQM_energy[j]) # in kcal/mol
 						if rms < args.rms_threshold and E_diff < (args.energy_threshold ):
 							excluded_conf = True
 							break
 					if excluded_conf == False:
-						if conf not in SQM_selectedcids:
-							SQM_selectedcids.append(conf)
+						if i not in SQM_selectedcids:
+							SQM_selectedcids.append(i)
 
 				post_outmols, post_energy = [],[]
 				for id in SQM_selectedcids:
@@ -481,4 +483,4 @@ def summ_search(mol, name,args, coord_Map = None,alg_Map=None,mol_template=None)
 					sdwriter.write(mol)
 				sdwriter.close()
 
-				return post_outmols, post_energy
+				if len(post_outmols) == 0: print("\nx  WARNING! No conformers found!\n")

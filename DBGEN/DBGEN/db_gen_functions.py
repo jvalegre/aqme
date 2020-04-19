@@ -358,28 +358,23 @@ def conformer_generation(mol,name,start_time,args,coord_Map=None,alg_Map=None,mo
 
 			summ_search(mol, name,args,coord_Map,alg_Map,mol_template)
 
-			#only print if within predefined energy window
-			if len(conformers) > 0 and conformers != 'FAIL':
+			#applying rule to get the necessary conformers only
+			if args.exp_rules == True:
+				if args.verbose == True: print("   ----- Applying experimental rules to write the new confs file -----")
+				### do 2 cases, for RDKit only and RDKIt+xTB
+				allmols = Chem.SDMolSupplier(name+final_output, removeHs=False)
+				if allmols is None:
+					print("Could not open ", name+final_output)
+					sys.exit(-1)
 
-				#applying rule to get the necessary conformers only
-				if args.exp_rules == True:
-					if args.verbose == True: print("   ----- Applying experimental rules to write the new confs file -----")
+				sdwriter = Chem.SDWriter(name+exp_rules_output_ext)
 
-					allmols = Chem.SDMolSupplier(name+final_output, removeHs=False)
-					if inmols is None:
-						print("Could not open ", name+final_output)
-						sys.exit(-1)
-
-					sdwriter = Chem.SDWriter(name+exp_rules_output_ext)
-
-					for mol in allmols:
-						check_mol = True
-						check_mol = exp_rules_output(mol,args)
-						if check_mol == True:
-							sdwriter.write(mol)
-					sdwriter.close()
-
-			else: print("\nx  WARNING! No conformers found!\n")
+				for mol in allmols:
+					check_mol = True
+					check_mol = exp_rules_output(mol,args)
+					if check_mol == True:
+						sdwriter.write(mol)
+				sdwriter.close()
 
 		except (KeyboardInterrupt, SystemExit):
 			raise
