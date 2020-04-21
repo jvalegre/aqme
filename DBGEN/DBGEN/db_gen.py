@@ -175,7 +175,7 @@ def main():
 					if len(pieces) > 1:
 						smi = max(pieces, key=len) #take largest component by length
 
-				if args.prefix == None: name = ''.join(toks[1:])
+				if args.prefix == False: name = ''.join(toks[1:])
 				else: name = args.prefix+str(i)+'_'+''.join(toks[1:])
 
 				# Converts each line to a rdkit mol object
@@ -196,7 +196,7 @@ def main():
 			m = 0
 			for i in range(len(csv_smiles)):
 				#assigning names and smi i  each loop
-				if args.prefix == None: name = csv_smiles.loc[i, 'code_name']
+				if args.prefix == False: name = csv_smiles.loc[i, 'code_name']
 				else: name = 'comp_'+str(m)+'_'+csv_smiles.loc[i, 'code_name']
 
 				smi = csv_smiles.loc[i, 'SMILES']
@@ -378,7 +378,7 @@ def main():
 							if len(atom.GetNeighbors()) == 8:
 								atom.SetFormalCharge(3)
 
-				if args.prefix == None: name = IDs[i]
+				if args.prefix == False: name = IDs[i]
 				else: name = args.prefix+str(m)+'_'+IDs[i]
 				# get manually for square planar and SQUAREPYRIMIDAL
 				if args.complex_type == 'squareplanar' or args.complex_type == 'squarepyrimidal':
@@ -421,7 +421,7 @@ def main():
 							if len(atom.GetNeighbors()) == 6:
 								atom.SetFormalCharge(1)
 
-				if args.prefix == None: name = IDs[i]
+				if args.prefix == False: name = IDs[i]
 				else: name = args.prefix+str(m)+'_'+IDs[i]
 				if args.complex_type == 'squareplanar' or args.complex_type == 'squarepyrimidal':
 					file_template = 'template-4-and-5.sdf'
@@ -574,7 +574,7 @@ def main():
 			output_analyzer(log_files, w_dir, lot, bs, bs_gcp, args, w_dir_fin)
 
 	#adding the part to check for resubmission of the newly created gaussian files.
-	if args.resubmit == True:
+	if args.qsub == True:
 		#chceck if ech level of theory has a folder New gaussin FILES
 		for lot in args.level_of_theory:
 			for bs in args.basis_set:
