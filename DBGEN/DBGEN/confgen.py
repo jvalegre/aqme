@@ -150,9 +150,7 @@ def summ_search(mol, name,args, coord_Map = None,alg_Map=None,mol_template=None)
 		print("x  Too many torsions (%d). Skipping %s" %(len(rotmatches),(name+args.rdkit_output)))
 	else:
 		if coord_Map == None and alg_Map == None and mol_template == None:
-			if arg
-
-			s.etkdg:
+			if args.etkdg:
 				ps = Chem.ETKDG()
 				ps.randomSeed = args.seed
 				ps.ignoreSmoothingFailures=True
