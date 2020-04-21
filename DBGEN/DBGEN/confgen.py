@@ -22,6 +22,7 @@ from ase.units import kJ,mol,Hartree,kcal
 
 import xtb
 from xtb import GFN2
+from xtb.solvation import GBSA
 
 def get_conf_RMS(mol1, mol2, c1, c2, heavy, max_matches_RMSD):
 	'''generate RMS distance between two molecules (ignoring hydrogens)'''
@@ -29,12 +30,6 @@ def get_conf_RMS(mol1, mol2, c1, c2, heavy, max_matches_RMSD):
 	rms = Chem.GetBestRMS(mol1,mol2,c1,c2,maxMatches=max_matches_RMSD)
 	return rms
 
-def getPMIDIFF(mol1, mol2):
-	pmi1 = Chem.CalcPMI1(mol1) - Chem.CalcPMI1(mol2)
-	pmi2 = Chem.CalcPMI2(mol1) - Chem.CalcPMI2(mol2)
-	pmi3 = Chem.CalcPMI3(mol1) - Chem.CalcPMI3(mol2)
-	diff = (pmi1 **2 + pmi2 **2 + pmi3 **2) ** 0.5
-	return diff
 
 def getDihedralMatches(mol, heavy):
 	'''return list of atom indices of dihedrals'''
@@ -62,13 +57,17 @@ def genConformer_r(mol, conf, i, matches, degree, sdwriter,args,name):
 	which dihedral we are enumerating by degree to output conformers to out'''
 	rotation_count = 1
 	if i >= len(matches): #base case, torsions should be set in conf
+		sdwriter.write(mol,conf)
 		return 1
 	else:
+		#print(str(i)+'starting new else writing')
 		#incr = math.pi*degree / 180.0
 		total = 0
 		deg = 0
 		while deg < 360.0:
+			#print(matches[i])
 			rad = math.pi*deg / 180.0
+			#print(matches[i],rad)
 			rdMolTransforms.SetDihedralRad(mol.GetConformer(conf),*matches[i],value=rad)
 			#recalculating energies after rotation
 			if args.ff == "MMFF":
@@ -81,8 +80,12 @@ def genConformer_r(mol, conf, i, matches, degree, sdwriter,args,name):
 			energy = GetFF.CalcEnergy()
 			mol.SetProp("Energy",energy)
 			mol.SetProp('_Name',name+' - conformer from rotation - ' + str(rotation_count))
+			# print(energy)
+			# print('_Name',name+' - conformer from rotation - ' + str(rotation_count))
 			rotation_count +=1
+			#print(str(i)+'i')
 			total += genConformer_r(mol, conf, i+1, matches, degree, sdwriter,args,name)
+			#print(str(total)+'total')
 			deg += degree
 		return total
 
@@ -147,7 +150,9 @@ def summ_search(mol, name,args, coord_Map = None,alg_Map=None,mol_template=None)
 		print("x  Too many torsions (%d). Skipping %s" %(len(rotmatches),(name+args.rdkit_output)))
 	else:
 		if coord_Map == None and alg_Map == None and mol_template == None:
-			if args.etkdg:
+			if arg
+
+			s.etkdg:
 				ps = Chem.ETKDG()
 				ps.randomSeed = args.seed
 				ps.ignoreSmoothingFailures=True
@@ -209,29 +214,46 @@ def summ_search(mol, name,args, coord_Map = None,alg_Map=None,mol_template=None)
 				num_atom_match = mol.GetSubstructMatch(mol_template)
 				# Force field parameters
 				if args.ff == "MMFF":
-					GetFF = lambda mol,confId=conf:Chem.MMFFGetMoleculeForceField(mol,AllChem.MMFFGetMoleculeProperties(mol),confId=conf)
+					GetFF = lambda mol,confId=conf:Chem.MMFFGetMoleculeForceField(mol,Chem.MMFFGetMoleculeProperties(mol),confId=conf)
 				elif args.ff == "UFF":
 					GetFF = lambda mol,confId=conf:Chem.UFFGetMoleculeForceField(mol,confId=conf)
 				else: print('   Force field {} not supported!'.format(options.ff)); sys.exit()
 				getForceField=GetFF
 
-				rms = rdMolAlign.AlignMol(mol, mol_template, prbCid=conf, atomMap=alg_Map, reflect=True, maxIters=50)
-				ff_temp = GetFF(mol, confId=conf)
-				conf = mol_template.GetConformer()
-				for k in range(mol_template.GetNumAtoms()):
-					p = conf.GetAtomPosition(k)
-					q = mol.GetConformer().GetAtomPosition(k)
-					pIdx = ff_temp.AddExtraPoint(p.x, p.y, p.z, fixed=True) - 1
-					ff_temp.AddDistanceConstraint(pIdx, num_atom_match[k], 0, 0, 10000)
+				# clean up the conformation
+				ff_temp = getForceField(mol, confId=conf)
+				for k, idxI in enumerate(num_atom_match):
+					for l in range(k + 1, len(num_atom_match)):
+						idxJ = num_atom_match[l]
+						d = coord_Map[idxI].Distance(coord_Map[idxJ])
+						ff_temp.AddDistanceConstraint(idxI, idxJ, d, d, 10000)
 				ff_temp.Initialize()
+				#reassignned n from 4 to 10 for better embed and minimzation
 				n = 10
-				more = ff_temp.Minimize(energyTol=1e-6, forceTol=1e-5)
+				more = ff_temp.Minimize()
 				while more and n:
-					more = ff_temp.Minimize(energyTol=1e-6, forceTol=1e-5)
+					more = ff_temp.Minimize()
 					n -= 1
-				# realign
-				energy = ff_temp.CalcEnergy() # this reaturns the energy in kcal/mol
-				rms = rdMolAlign.AlignMol(mol, mol_template,prbCid=conf, atomMap=alg_Map,reflect=True,maxIters=50)
+				energy = ff_temp.CalcEnergy()
+				# rotate the embedded conformation onto the core_mol:
+				rms = rdMolAlign.AlignMol(mol, mol_template,prbCid=conf, atomMap=alg_Map,reflect=True,maxIters=100)
+				# elif len(num_atom_match) == 5:
+				# 	ff_temp = GetFF(mol, confId=conf)
+				# 	conf_temp = mol_template.GetConformer()
+				# 	for k in range(mol_template.GetNumAtoms()):
+				# 		p = conf_temp.GetAtomPosition(k)
+				# 		q = mol.GetConformer(conf).GetAtomPosition(k)
+				# 		pIdx = ff_temp.AddExtraPoint(p.x, p.y, p.z, fixed=True) - 1
+				# 		ff_temp.AddDistanceConstraint(pIdx, num_atom_match[k], 0, 0, 10000)
+				# 	ff_temp.Initialize()
+				# 	n = 10
+				# 	more = ff_temp.Minimize(energyTol=1e-6, forceTol=1e-5)
+				# 	while more and n:
+				# 		more = ff_temp.Minimize(energyTol=1e-6, forceTol=1e-5)
+				# 		n -= 1
+				# 	# realign
+				# 	energy = ff_temp.CalcEnergy()
+				# 	rms = rdMolAlign.AlignMol(mol, mol_template,prbCid=conf, atomMap=alg_Map,reflect=True,maxIters=50)
 				cenergy.append(energy)
 
 			# outmols is gonna be a list containing "args.sample" mol objects with "args.sample"
@@ -252,10 +274,26 @@ def summ_search(mol, name,args, coord_Map = None,alg_Map=None,mol_template=None)
 		if args.verbose: print("o  Removing duplicate conformers ( RMSD <", args.rms_threshold, "and E difference <",args.energy_threshold,"kcal/mol)")
 		cids = list(range(len(outmols)))
 		sortedcids = sorted(cids,key = lambda cid: cenergy[cid])
-		selectedcids = []
 
-		# As the RDKit filter, the get_conf_RMS is
+		selectedcids_initial, selectedcids = [],[]
+		# First RDKit filter, only based on E
 		for i, conf in enumerate(sortedcids):
+			# This keeps track of whether or not your conformer is unique
+			excluded_conf = False
+			# include the first conformer in the list to start the filtering process
+			if i == 0:
+				selectedcids_initial.append(conf)
+			# check rmsd
+			for seenconf in selectedcids_initial:
+				E_diff = abs(cenergy[conf] - cenergy[seenconf]) # in kcal/mol
+				if E_diff < args.initial_energy_threshold:
+					excluded_conf = True
+					break
+			if excluded_conf == False:
+				if conf not in selectedcids_initial:
+					selectedcids_initial.append(conf)
+		# As the RDKit filter, the get_conf_RMS is
+		for i, conf in enumerate(selectedcids_initial):
 			# This keeps track of whether or not your conformer is unique
 			excluded_conf = False
 			# include the first conformer in the list to start the filtering process
@@ -280,20 +318,57 @@ def summ_search(mol, name,args, coord_Map = None,alg_Map=None,mol_template=None)
 		# print(unique_mols[0:2].GetConformers()[0].GetPositions())
 		if args.verbose: print("o ", len(selectedcids),"unique conformers remain")
 
-		# if len(rotmatches) != 0:
-		# 	# now exhaustively drive torsions of selected conformers
-		# 	n_confs = int(len(selectedcids) * (360 / args.degree) ** len(rotmatches))
-		# 	if args.verbose and len(rotmatches) != 0: print("o  Systematic generation of", n_confs, "confomers")
-		#
-		# 	total = 0
-		# 	for conf in selectedcids:
-		# 		total += genConformer_r(unique_mols[conf], conf, 0, rotmatches, args.degree, sdwriter,args,unique_mols[conf].GetProp('_Name'))
-		# 	if args.verbose and len(rotmatches) != 0: print("o  %d total conformations generated"%total)
+		#if use the rotations constraint, then this block would write the corresponding SDF file.
+		if len(rotmatches) != 0:
+			#print(rotmatches)
+			sdwriter_rot = Chem.SDWriter(name+'_rotation_dihydral.sdf')
+			# now exhaustively drive torsions of selected conformers
+			n_confs = int(len(selectedcids) * (360 / args.degree) ** len(rotmatches))
+			if args.verbose and len(rotmatches) != 0: print("o  Systematic generation of", n_confs, "confomers")
 
-		sdwriter = Chem.SDWriter(name+args.rdkit_output)
-		for id in selectedcids:
-			sdwriter.write(outmols[id],id)
-		sdwriter.close()
+			total = 0
+			for conf in selectedcids:
+				#print(outmols[conf])
+				total += genConformer_r(outmols[conf], conf, 0, rotmatches, args.degree, sdwriter_rot,args,outmols[conf].GetProp('_Name'))
+			if args.verbose and len(rotmatches) != 0: print("o  %d total conformations generated"%total)
+			sdwriter_rot.close()
+
+			#doing a filter for the written molecule after rotations
+			rdmols = Chem.SDMolSupplier(name+'_rotation_dihydral.sdf', removeHs=False)
+
+			if rdmols is None:
+				print("Could not open after rotations ", name+'_temp.sdf')
+				sys.exit(-1)
+			sdwriter = Chem.SDWriter(name+args.rdkit_output)
+			rd_count = 0
+			rd_selectedcids =[]
+			for i in range(len(rdmols)):
+				# This keeps track of whether or not your conformer is unique
+				excluded_conf = False
+				# include the first conformer in the list to start the filtering process
+				if rd_count == 0:
+					rd_selectedcids.append(i)
+					sdwriter.write(rdmols[i])
+				# Only the first ID gets included
+				rd_count = 1
+				# check rmsd
+				for j in rd_selectedcids:
+					rms = get_conf_RMS(rdmols[i],rdmols[j],-1,-1, args.heavyonly, args.max_matches_RMSD)
+					E_diff = abs(float(rdmols[i].GetProp('Energy')) - float(rdmols[j].GetProp('Energy'))) # in kcal/mol
+					if rms < args.rms_threshold and E_diff < (args.energy_threshold ):
+						excluded_conf = True
+						break
+				if excluded_conf == False:
+					sdwriter.write(rdmols[i])
+					if i not in rd_selectedcids:
+						rd_selectedcids.append(i)
+			sdwriter.close()
+
+		else:
+			sdwriter = Chem.SDWriter(name+args.rdkit_output)
+			for id in selectedcids:
+				sdwriter.write(outmols[id],id)
+			sdwriter.close()
 
 		# Calculates geometries and energies with xTB or ANI1
 		if args.ANI1ccx == True or args.xtb == True:
@@ -325,23 +400,6 @@ def summ_search(mol, name,args, coord_Map = None,alg_Map=None,mol_template=None)
 								if el.symbol == args.metal:
 									atomic_number = el.number
 							atom.SetAtomicNum(atomic_number)
-
-				#removinf the H's from metal
-				# if args.metal_complex == True and args.complex_type =='squareplanar':
-				# 	print('--- Removing Hs on metal ----')
-				# 	idx = []
-				# 	mol = Chem.RWMol(mol)
-				# 	for atom in mol.GetAtoms():
-				# 		if atom.GetSymbol() == args.metal:
-				# 			neighbours = atom.GetNeighbors()
-				# 			for atom in neighbours:
-				# 				print(atom.GetSymbol())
-				# 				if atom.GetSymbol() == 'H':
-				# 					idx.append(atom.GetIdx())
-				# 	for idx in sorted(idx, reverse=True):
-				# 		mol.RemoveAtom(idx)
-				# 		print(mol.GetAtomWithIdx(idx).GetSymbol())
-				# 	print(mol.GetNumAtoms())
 
 				# removing the Ba atom if NCI complexes
 				if args.nci_complex == True:
@@ -395,7 +453,11 @@ def summ_search(mol, name,args, coord_Map = None,alg_Map=None,mol_template=None)
 					final_output = args.xtb_output
 					if args.metal_complex == True:
 						#passing charges metal present
-						ase_molecule = ase.Atoms(elements, positions=coordinates.tolist()[0],calculator=GFN2()) #define ase molecule using GFN2 Calculator
+						if args.solvent_xtb != '':
+							ase_molecule = ase.Atoms(elements, positions=coordinates.tolist()[0], calculator=GFN2()) #define ase molecule using GFN2 Calculator
+							#ase_molecule.set_calculator(GBSA(solvent=args.solvent_xtb, calculator=GFN2()))
+						else:
+							ase_molecule = ase.Atoms(elements, positions=coordinates.tolist()[0],calculator=GFN2()) #define ase molecule using GFN2 Calculator
 						for atom in ase_molecule:
 							if atom.symbol == args.metal:
 								#will update only for cdx, smi, and csv formats.
@@ -408,7 +470,12 @@ def summ_search(mol, name,args, coord_Map = None,alg_Map=None,mol_template=None)
 									if args.verbose == True: print('---- The Overall charge is read from the .com file ----')
 								if args.verbose == True: print('---- The Overall charge considered is  {0} ----'.format(atom.charge))
 					else:
-						ase_molecule = ase.Atoms(elements, positions=coordinates.tolist()[0], calculator=GFN2()) #define ase molecule using GFN2 Calculator
+						if args.solvent_xtb != '':
+							print('using solvent')
+							ase_molecule = ase.Atoms(elements, positions=coordinates.tolist()[0],calculator=GFN2()) #define ase molecule using GFN2 Calculator
+							#ase_molecule.set_calculator(GBSA(solvent=args.solvent_xtb, calculator=GFN2()))
+						else:
+							ase_molecule = ase.Atoms(elements, positions=coordinates.tolist()[0],calculator=GFN2()) #define ase molecule using GFN2 Calculator
 
 					if args.verbose: print("Initial XTB energy", (ase_molecule.get_potential_energy()/Hartree)*627.509,'kcal/mol')
 					optimizer = ase.optimize.BFGS(ase_molecule, trajectory='xTB_opt.traj')
@@ -445,12 +512,15 @@ def summ_search(mol, name,args, coord_Map = None,alg_Map=None,mol_template=None)
 				SQM_sortedcids = sorted(cids,key = lambda cid: SQM_energy[cid])
 				SQM_selectedcids = []
 
+				SQM_count = 0
 				for i in SQM_sortedcids:
 					# This keeps track of whether or not your conformer is unique
 					excluded_conf = False
 					# include the first conformer in the list to start the filtering process
-					if i == 0:
+					if SQM_count == 0:
 						SQM_selectedcids.append(i)
+					# Only the first ID gets included
+					SQM_count = 1
 					# check rmsd
 					for j in SQM_selectedcids:
 						rms = get_conf_RMS(SQM_mols[i],SQM_mols[j],-1,-1, args.heavyonly, args.max_matches_RMSD)

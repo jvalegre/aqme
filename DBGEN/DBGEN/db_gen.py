@@ -29,10 +29,6 @@ def main():
 
 	parser.add_argument("-m","--maxnumber", help="Number of compounds", type=int, metavar="maxnumber")
 	parser.add_argument("--prefix", help="Prefix for naming files", default=None, metavar="prefix")
-	parser.add_argument("--rdkit_output", help="Name for RDKit generated SDF files", default="_RDKit.sdf", dest="rdkit_output", type=str)
-	parser.add_argument("--xtb_output", help="Name for xTB generated SDF files", default="_xTB.sdf", dest="xtb_output", type=str)
-	parser.add_argument("--ani1_output", help="Name for ANI1 generated SDF files", default="_ANI1ccx.sdf", dest="ani1_output", type=str)
-	parser.add_argument("--exp_rules_output_ext", help="Name for output SDF files after experimental rules", default="_confs_rules.sdf", dest="exp_rules_output_ext", type=str)
 
 	#work the script has to do
 	parser.add_argument("-w","--compute", action="store_true", default=False, help="Create conformers")
@@ -61,7 +57,6 @@ def main():
 	parser.add_argument("--ewin", action="store",default=40.0, help="energy window to print conformers (kJ/mol)", type=float)
 	parser.add_argument("--opt_fmax", action="store",default=0.05, help="fmax value used in xTB and AN1 optimizations", type=float)
 	parser.add_argument("--opt_steps", action="store",default=1000, help="max cycles used in xTB and AN1 optimizations", type=int)
-	parser.add_argument("--max_matches_RMSD", action="store",default=1000000, help="max iterations to find optimal RMSD in RDKit duplicate filter", type=int)
 	parser.add_argument("--opt_steps_RDKit", action="store",default=1000, help="max cycles used in RDKit optimizations", type=int)
 	parser.add_argument("--time","-t",action='store_true',default=False,help="request program runtime")
 	parser.add_argument("--heavyonly", help="only consider torsion angles involving heavy (non H) elements (default=True)", default=True, metavar="heavyonly")
@@ -75,7 +70,9 @@ def main():
 	parser.add_argument("--seed", help="random seed (default 062609)", default="062609", type=int, metavar="s")
 	parser.add_argument("--rms_threshold", help="cutoff for considering sampled conformers the same (default 0.25)", default=0.25, type=float, metavar="R")
 	parser.add_argument("--energy_threshold", dest="energy_threshold",action="store",default=0.05, help="energy difference between unique conformers")
-	parser.add_argument("--max_MolWt", help="Max. molecular weight of molecule", default=1000, type=int, metavar="max_MolWt")
+	parser.add_argument("--initial_energy_threshold", dest="initial_energy_threshold",action="store",default=0.01, help="energy difference between unique conformers for the first filter of only E")
+	parser.add_argument
+	("--max_MolWt", help="Max. molecular weight of molecule", default=1000, type=int, metavar="max_MolWt")
 	parser.add_argument("--large_sys", action="store_true",default=False, help="Large systems for xtb optimizations")
 	parser.add_argument("--STACKSIZE", help="STACKSIZE for optimization of large systems", default="500m")
 
@@ -85,9 +82,8 @@ def main():
 	parser.add_argument("--basis_set_genecp_atoms",default=['LANL2DZ'], help="Basis Set genecp: The length has to be the same as basis_set", dest="basis_set_genecp_atoms", type=str, nargs='?')
 	parser.add_argument("--genecp_atoms",  help="genecp atoms",default=[], dest="genecp_atoms",type=str, nargs='*')
 	parser.add_argument("--max_cycle_opt", help="Number of cycles for DFT optimization", default="300", type=int, dest="max_cycle_opt")
-	parser.add_argument("--frequencies",action="store_true", default=False, help="If false, request only optimization without any frequency calculation")
-	parser.add_argument("--single_point_only",action="store_true", default=False, help="Request only single point calculation")
-	parser.add_argument("--conformer_generation",action="store_true", default=False, help="Request conformer generation")
+	parser.add_argument("--frequencies",action="store_true", default=False, help="Request only optimization without any frequency calculation")
+	parser.add_argument("--single_point",action="store_true", default=False, help="Request only single point calculation")
 	parser.add_argument("--lowest_only", action="store_true", default=False, help="Lowest conformer to write for gaussian")
 	parser.add_argument("--lowest_n", action="store_true", default=False, help="Lowest Number of conformers to write for gaussian")
 	parser.add_argument("--energy_threshold_for_gaussian", help="cutoff for considering sampled conformers for gaussian input", default="4.0", type=float, dest="energy_threshold_for_gaussian")
@@ -172,24 +168,18 @@ def main():
 					if len(pieces) > 1:
 						smi = max(pieces, key=len) #take largest component by length
 
-				# elif args.metal_complex == True and  args.complex_coord == 7:
-				# 	#find metal and replace with I+ for octahydral
-				# 	smi = toks[0].replace(args.metal,'I+2')
-				# 	#Ir+ exixted then we need to change back to I+
-				# 	smi = smi.replace('I+2+','I+2')
-				#
-				# elif args.metal_complex == True and  args.complex_coord == 8:
-				# 	#find metal and replace with I+ for octahydral
-				# 	smi = toks[0].replace(args.metal,'I+3')
-				# 	#Ir+ exixted then we need to change back to I+
-				# 	smi = smi.replace('I+3+','I+3')
 
-				else: smi = toks[0]
+				else:
+					smi = toks[0]
+					#taking largest component for salts
+					pieces = smi.split('.')
+					if len(pieces) > 1:
+						smi = max(pieces, key=len) #take largest component by length
 
 				if args.prefix == None: name = ''.join(toks[1:])
 				else: name = args.prefix+str(i)+'_'+''.join(toks[1:])
 
-					# Converts each line to a rdkit mol object
+				# Converts each line to a rdkit mol object
 				if args.verbose: print("   -> Input Molecule {} is {}".format(i, smi))
 				mol = Chem.MolFromSmiles(smi)
 				# get manually for square planar and SQUAREPYRIMIDAL
@@ -213,20 +203,30 @@ def main():
 				smi = csv_smiles.loc[i, 'SMILES']
 				#checking for salts
 
-				if args.metal_complex == True and args.complex_coord == 6:
+				if args.metal_complex == True and  (args.complex_coord == 6 or  args.complex_coord == 2):
 					#find metal and replace with I+ for octahydral
 					smi = smi.replace(args.metal,'I+')
 					#Ir+ exixted then we need to change back to I+
 					smi = smi.replace('I++','I+')
 
-					#taking the largest piece
+					#taking largest component for salts
+					pieces = smi.split('.')
+					if len(pieces) > 1:
+						smi = max(pieces, key=len) #take largest component by length
+
+				elif args.metal_complex == True and (args.complex_coord == 5 or args.complex_coord == 3):
+					#find metal and replace with I+ for octahydral
+					smi = smi.replace(args.metal,'I')
+					#Ir+ exixted then we need to change back to I+
+					smi = smi.replace('I+','I')
+					#taking largest component for salts
 					pieces = smi.split('.')
 					if len(pieces) > 1:
 						smi = max(pieces, key=len) #take largest component by length
 
 				elif args.metal_complex == True and args.complex_coord == 4:
 					#find metal and replace with I+ for octahydral
-					smi = toks[0].replace(args.metal,'I-')
+					smi = smi.replace(args.metal,'I-')
 					#Ir+ exixted then we need to change back to I+
 					smi = smi.replace('I-+','I-')
 
@@ -235,42 +235,22 @@ def main():
 					if len(pieces) > 1:
 						smi = max(pieces, key=len) #take largest component by length
 
-				elif args.metal_complex == True and args.complex_coord == 5:
-					#find metal and replace with I+ for octahydral
-					smi = toks[0].replace(args.metal,'I')
-					#Ir+ exixted then we need to change back to I+
-					smi = smi.replace('I+','I')
-
+				else:
 					#taking largest component for salts
 					pieces = smi.split('.')
 					if len(pieces) > 1:
 						smi = max(pieces, key=len) #take largest component by length
 
-				# if args.metal_complex == True and  args.complex_coord == 7:
-				# 	#find metal and replace with I+ for octahydral
-				# 	smi = toks[0].replace(args.metal,'I+2')
-				# 	#Ir+ exixted then we need to change back to I+
-				# 	smi = smi.replace('I+2+','I+2')
-				#
-				# if args.metal_complex == True and  args.complex_coord == 8:
-				# 	#find metal and replace with I+ for octahydral
-				# 	smi = toks[0].replace(args.metal,'I+3')
-				# 	#Ir+ exixted then we need to change back to I+
-				# 	smi = smi.replace('I+3+','I+3')
-
+				# Converts each line to a rdkit mol object
 				if args.verbose: print("   -> Input Molecule {} is {}".format(i, smi))
 				mol = Chem.MolFromSmiles(smi)
+				# get manually for square planar and SQUAREPYRIMIDAL
 				if args.complex_type == 'squareplanar' or args.complex_type == 'squarepyrimidal':
 					file_template = 'template-4-and-5.sdf'
 					temp = Chem.SDMolSupplier(file_template)
-					mol_objects_from_template,name = template_embed_sp(mol,temp,name,args)
-					# changing back to # I
-					for molecule in mol_objects_from_template:
-						for atom in molecule.GetAtoms():
-							if atom.GetSymbol() == args.metal:
-								atom.SetAtomicNum(53)
+					mol_objects_from_template,name, coord_Map, alg_Map, mol_template = template_embed_sp(mol,temp,name,args)
 					for i in range(len(mol_objects_from_template)):
-						mol_objects.append([mol_objects_from_template[i],name[i]])
+						mol_objects.append([mol_objects_from_template[i],name[i],coord_Map[i],alg_Map[i],mol_template[i]])
 				else:
 					mol_objects.append([mol, name])
 				m += 1
@@ -280,43 +260,61 @@ def main():
 			subprocess.run(['obabel', '-icdx', args.input, '-osmi', '-O', 'cdx.smi'])
 			smifile = open('cdx.smi',"r")
 
-			for i, line in enumerate(smifile):
+			for i, smi in enumerate(smifile):
 				name = 'comp' + str(i)+'_'
-				if args.metal_complex == True and args.complex_coord == 6 :
+				if args.metal_complex == True and  (args.complex_coord == 6 or  args.complex_coord == 2):
 					#find metal and replace with I+ for octahydral
-					line = line.replace(args.metal,'I+')
+					smi = smi.replace(args.metal,'I+')
 					#Ir+ exixted then we need to change back to I+
-					line = line.replace('I++','I+')
+					smi = smi.replace('I++','I+')
+
+					#taking largest component for salts
+					pieces = smi.split('.')
+					if len(pieces) > 1:
+						smi = max(pieces, key=len) #take largest component by length
+
+				elif args.metal_complex == True and (args.complex_coord == 5 or args.complex_coord == 3):
+					#find metal and replace with I+ for octahydral
+					smi = smi.replace(args.metal,'I')
+					#Ir+ exixted then we need to change back to I+
+					smi = smi.replace('I+','I')
+					#taking largest component for salts
+					pieces = smi.split('.')
+					if len(pieces) > 1:
+						smi = max(pieces, key=len) #take largest component by length
 
 				elif args.metal_complex == True and args.complex_coord == 4:
 					#find metal and replace with I+ for octahydral
-					line = line.replace(args.metal,'I-')
+					smi = smi.replace(args.metal,'I-')
 					#Ir+ exixted then we need to change back to I+
-					line = line.replace('I-+','I+')
+					smi = smi.replace('I-+','I-')
 
-				elif args.metal_complex == True and args.complex_coord == 5:
-					#find metal and replace with I+ for octahydral
-					line = line.replace(args.metal,'I')
-					#Ir+ exixted then we need to change back to I+
-					line = line.replace('I+','I')
+					#taking largest component for salts
+					pieces = smi.split('.')
+					if len(pieces) > 1:
+						smi = max(pieces, key=len) #take largest component by length
 
-				mol = Chem.MolFromSmiles(line)
+				else:
+					#taking largest component for salts
+					pieces = smi.split('.')
+					if len(pieces) > 1:
+						smi = max(pieces, key=len) #take largest component by length
+
+				# Converts each line to a rdkit mol object
+				if args.verbose: print("   -> Input Molecule {} is {}".format(i, smi))
+				mol = Chem.MolFromSmiles(smi)
+				# get manually for square planar and SQUAREPYRIMIDAL
 				if args.complex_type == 'squareplanar' or args.complex_type == 'squarepyrimidal':
 					file_template = 'template-4-and-5.sdf'
 					temp = Chem.SDMolSupplier(file_template)
-					mol_objects_from_template,name = template_embed_sp(mol,temp,name,args)
-					# changing back to # I
-					for molecule in mol_objects_from_template:
-						for atom in molecule.GetAtoms():
-							if atom.GetSymbol() == args.metal:
-								atom.SetAtomicNum(53)
+					mol_objects_from_template,name, coord_Map, alg_Map, mol_template = template_embed_sp(mol,temp,name,args)
 					for i in range(len(mol_objects_from_template)):
-						mol_objects.append([mol_objects_from_template[i],name[i]])
+						mol_objects.append([mol_objects_from_template[i],name[i],coord_Map[i],alg_Map[i],mol_template[i]])
 				else:
 					mol_objects.append([mol, name])
 
 		elif os.path.splitext(args.input)[1] == '.com' or os.path.splitext(args.input)[1] == '.gjf': # COM file
-				#converting to sdf from comfile to preserve geometry
+			#converting to sdf from comfile to preserve geometry
 
 			comfile = open(args.input,"r")
 			comlines = comfile.readlines()
@@ -341,13 +339,6 @@ def main():
 			comfile.close()
 
 			subprocess.run(['obabel', '-ixyz', os.path.splitext(args.input)[0]+'.xyz', '-osdf', '-O', os.path.splitext(args.input)[0]+'.sdf'])
-
-			# obConversion = ob.OBConversion()
-			# obConversion.SetInAndOutFormats("com", "sdf")
-			#
-			# mol = ob.OBMol()
-			# obConversion.ReadFile(mol,os.path.splitext(args.input)[0]+'.com')
-			# obConversion.WriteFile(mol, os.path.splitext(args.input)[0]+'.sdf')
 
 			sdffile = os.path.splitext(args.input)[0]+'.sdf'
 
@@ -390,17 +381,13 @@ def main():
 
 				if args.prefix == None: name = IDs[i]
 				else: name = args.prefix+str(m)+'_'+IDs[i]
+				# get manually for square planar and SQUAREPYRIMIDAL
 				if args.complex_type == 'squareplanar' or args.complex_type == 'squarepyrimidal':
 					file_template = 'template-4-and-5.sdf'
 					temp = Chem.SDMolSupplier(file_template)
-					mol_objects_from_template,name = template_embed_sp(mol,temp,name,args)
-					# changing back to # I
-					for molecule in mol_objects_from_template:
-						for atom in molecule.GetAtoms():
-							if atom.GetSymbol() == args.metal:
-								atom.SetAtomicNum(53)
+					mol_objects_from_template,name, coord_Map, alg_Map, mol_template = template_embed_sp(mol,temp,name,args)
 					for i in range(len(mol_objects_from_template)):
-						mol_objects.append([mol_objects_from_template[i],name[i]])
+						mol_objects.append([mol_objects_from_template[i],name[i],coord_Map[i],alg_Map[i],mol_template[i]])
 				else:
 					mol_objects.append([mol, name])
 
@@ -446,19 +433,22 @@ def main():
 					mol_objects.append([mol, name])
 
 #------------------------------------------------------------------------------------------
-
-		if args.conformer_generation == True: # switch to off for single point only
-			if args.complex_type == 'squareplanar' or args.complex_type == 'squarepyrimidal':
-				for [mol, name, coord_Map,alg_Map,mol_template] in mol_objects: # Run confomer generation for each mol object
-					conformer_generation(mol,name,start_time,args,coord_Map,alg_Map,mol_template)
-			else:
-				for [mol, name] in mol_objects: # Run confomer generation for each mol object
-					conformer_generation(mol,name,start_time,args)
-
 		if args.complex_type == 'squareplanar' or args.complex_type == 'squarepyrimidal':
-			conf_files = [name+'_confs.sdf' for mol,name,coord_Map,alg_Map,mol_template in mol_objects]
+			for [mol, name, coord_Map,alg_Map,mol_template] in mol_objects: # Run confomer generation for each mol object
+				conformer_generation(mol,name,start_time,args,coord_Map,alg_Map,mol_template)
 		else:
-			conf_files = [name+'_confs.sdf' for mol,name in mol_objects]
+			for [mol, name] in mol_objects: # Run confomer generation for each mol object
+				conformer_generation(mol,name,start_time,args)
+
+	if args.write_gauss == True:
+
+		#grad all the gaussian files
+		if args.xtb != True and args.ANI1ccx != True:
+			conf_files =  glob.glob('*_RDKit.sdf')
+		if args.xtb == True:
+			conf_files =  glob.glob('*_xTB.sdf')
+		if args.ANI1ccx == True:
+			conf_files =  glob.glob('*_ANI1ccx.sdf')
 
 		# names for directories created
 		sp_dir = 'generated_sp_files'
@@ -468,7 +458,7 @@ def main():
 			for bs in args.basis_set:
 				for bs_gcp in args.basis_set_genecp_atoms:
 
-					if args.single_point_only ==  True: # only create this directory if single point calculation is requested
+					if args.single_point ==  True: # only create this directory if single point calculation is requested
 						folder = sp_dir + '/' + str(lot) + '-' + str(bs)
 						print("\no  PREPARING SINGLE POINT INPUTS in {}".format(folder))
 						try: os.makedirs(folder)
@@ -502,18 +492,8 @@ def main():
 
 		#moving all the sdf files to a separate folder after writing gaussian files
 		src = os.getcwd()
-		all_xtb_conf_files = glob.glob('*_confs.sdf')
-		destination_xtb = src +'/energy_minimised_generated_SDF_files'
-		for file in all_xtb_conf_files:
-			try:
-				os.makedirs(destination_xtb)
-				shutil.move(os.path.join(src, file), os.path.join(destination_xtb, file))
-			except OSError:
-				if  os.path.isdir(destination_xtb):
-					shutil.move(os.path.join(src, file), os.path.join(destination_xtb, file))
-				else:
-					raise
-		all_rdkit_conf_files = glob.glob('*.sdf')
+		#grad all the gaussian files
+		all_rdkit_conf_files = glob.glob('*_RDKit.sdf')
 		destination_rdkit = 'RDKit_generated_SDF_files'
 		for file in all_rdkit_conf_files:
 			try:
@@ -524,6 +504,30 @@ def main():
 					shutil.move(os.path.join(src, file), os.path.join(destination_rdkit, file))
 				else:
 					raise
+		if args.xtb == True:
+			all_xtb_conf_files = glob.glob('*_xTB.sdf')
+			destination_xtb = src +'/xTB_minimised_generated_SDF_files'
+			for file in all_xtb_conf_files:
+				try:
+					os.makedirs(destination_xtb)
+					shutil.move(os.path.join(src, file), os.path.join(destination_xtb, file))
+				except OSError:
+					if  os.path.isdir(destination_xtb):
+						shutil.move(os.path.join(src, file), os.path.join(destination_xtb, file))
+					else:
+						raise
+		elif args.ANI1ccx == True:
+			all_ani_conf_files = glob.glob('*_ANI1ccx.sdf')
+			destination_ani = src +'/ANI1ccx_minimised_generated_SDF_files'
+			for file in all_ani_conf_files:
+				try:
+					os.makedirs(destination_ani)
+					shutil.move(os.path.join(src, file), os.path.join(destination_ani, file))
+				except OSError:
+					if  os.path.isdir(destination_ani):
+						shutil.move(os.path.join(src, file), os.path.join(destination_ani, file))
+					else:
+						raise
 
 	if args.exp_rules == True:
 
