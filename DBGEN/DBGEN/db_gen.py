@@ -71,8 +71,7 @@ def main():
 	parser.add_argument("--rms_threshold", help="cutoff for considering sampled conformers the same (default 0.25)", default=0.25, type=float, metavar="R")
 	parser.add_argument("--energy_threshold", dest="energy_threshold",action="store",default=0.05, help="energy difference between unique conformers")
 	parser.add_argument("--initial_energy_threshold", dest="initial_energy_threshold",action="store",default=0.01, help="energy difference between unique conformers for the first filter of only E")
-	parser.add_argument
-	("--max_MolWt", help="Max. molecular weight of molecule", default=1000, type=int, metavar="max_MolWt")
+	parser.add_argument("--max_MolWt", help="Max. molecular weight of molecule", default=1000, type=int, metavar="max_MolWt")
 	parser.add_argument("--large_sys", action="store_true",default=False, help="Large systems for xtb optimizations")
 	parser.add_argument("--STACKSIZE", help="STACKSIZE for optimization of large systems", default="500m")
 
