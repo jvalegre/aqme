@@ -157,7 +157,8 @@ def summ_search(mol, name,args, coord_Map = None,alg_Map=None,mol_template=None)
 				ps.numThreads = 0
 				cids = rdDistGeom.EmbedMultipleConfs(mol, args.sample, params=ps)
 			else:
-				cids = rdDistGeom.EmbedMultipleConfs(mol, args.sample,ignoreSmoothingFailures=True, randomSeed=args.seed,numThreads = 0)
+				cids = rdDistGeom.EmbedMultipleConfs(mol, args.sample,ignoreSmoothingFailures=True, rando
+				mSeed=args.seed,numThreads = 0)
 			if len(cids) == 0 or len(cids) == 1 and args.sample != 1:
 				print("o  conformers initially sampled with random coordinates")
 				cids = rdDistGeom.EmbedMultipleConfs(mol, args.sample, randomSeed=args.seed, useRandomCoords=True, boxSizeMult=10.0,ignoreSmoothingFailures=True, numZeroFail=1000, numThreads = 0)
@@ -337,6 +338,18 @@ def summ_search(mol, name,args, coord_Map = None,alg_Map=None,mol_template=None)
 			if rdmols is None:
 				print("Could not open after rotations ", name+'_temp.sdf')
 				sys.exit(-1)
+
+			for mol in rdmols:
+				#setting the metal back instead of I
+				if args.metal_complex == True:
+					for atom in mol.GetAtoms():
+						if atom.GetSymbol() == 'I' and (len(atom.GetBonds()) == 6 or len(atom.GetBonds()) == 5 or len(atom.GetBonds()) == 4 or len(atom.GetBonds()) == 3 or len(atom.GetBonds()) == 2):
+							for el in elementspt:
+								if el.symbol == args.metal:
+									atomic_number = el.number
+							atom.SetAtomicNum(atomic_number)
+
+
 			sdwriter = Chem.SDWriter(name+args.rdkit_output)
 			rd_count = 0
 			rd_selectedcids =[]
@@ -365,6 +378,14 @@ def summ_search(mol, name,args, coord_Map = None,alg_Map=None,mol_template=None)
 		else:
 			sdwriter = Chem.SDWriter(name+args.rdkit_output)
 			for id in selectedcids:
+				#setting the metal back instead of I
+				if args.metal_complex == True:
+					for atom in outmols[id].GetAtoms():
+						if atom.GetSymbol() == 'I' and (len(atom.GetBonds()) == 6 or len(atom.GetBonds()) == 5 or len(atom.GetBonds()) == 4 or len(atom.GetBonds()) == 3 or len(atom.GetBonds()) == 2):
+							for el in elementspt:
+								if el.symbol == args.metal:
+									atomic_number = el.number
+							atom.SetAtomicNum(atomic_number)
 				sdwriter.write(outmols[id],id)
 			sdwriter.close()
 
