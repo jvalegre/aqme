@@ -654,56 +654,25 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args):
 					'# {0}'.format(lot)+ '/'+ genecp + ' '+ input ]
 
 		if args.lowest_only == True:
-			try:
-				subprocess.run(
-					  ['obabel', '-isdf', path_for_file+file, '-ocom', '-O'+com_low,'-l' , '1', '-xk', '\n'.join(header)]) #takes the lowest conformer which is the first in the file
-			except:
-				subprocess.run(
-				  ['obabel', '-isdf', path_for_file+file, '-osdf', '-O'+com_low_sdf,'-l' , '1']) #takes the lowest conformer which is the first in the file
-				temp_sdf_files = glob.glob(name+'_low_*.sdf')
-				for file in temp_sdf_files:
-					generate_com_not_obabel(file, header)
+			subprocess.run(
+				  ['obabel', '-isdf', path_for_file+file, '-ocom', '-O'+com_low,'-l' , '1', '-xk', '\n'.join(header)]) #takes the lowest conformer which is the first in the file
 		elif args.lowest_n == True:
 			no_to_write = 0
 			if len(energies) != 1:
 				for i in range(len(energies)):
 					energy_diff = energies[i] - energies[0]
-					if energy_diff < args.energy_threshold_for_gaussian/2625.5:
+					if energy_diff < args.energy_threshold_for_gaussian: # thershold is in kcal/mol and energies are in kcal/mol as well
 						no_to_write +=1
-				try:
-					subprocess.run(
-						 ['obabel', '-isdf', path_for_file+file, '-f', '1', '-l' , str(no_to_write), '-osdf', '-Otemp.sdf'])
-					subprocess.run(
-						  ['obabel', '-isdf', 'temp.sdf', '-ocom', '-O'+com,'-m', '-xk', '\n'.join(header)])
-				except:
-					subprocess.run(
-						 ['obabel', '-isdf', path_for_file+file, '-f', '1', '-l' , str(no_to_write), '-osdf', '-Otemp.sdf'])
-					subprocess.run(
-						  ['obabel', '-isdf', 'temp.sdf', '-osdf', '-O'+com_sdf,'-m'])
-					temp_sdf_files = glob.glob(name+'_*.sdf')
-					for file in temp_sdf_files:
-						generate_com_not_obabel(file, header)
+				subprocess.run(
+					 ['obabel', '-isdf', path_for_file+file, '-f', '1', '-l' , str(no_to_write), '-osdf', '-Otemp.sdf'])
+				subprocess.run(
+					  ['obabel', '-isdf', 'temp.sdf', '-ocom', '-O'+com,'-m', '-xk', '\n'.join(header)])
 			else:
-				try:
-					subprocess.run(
-						  ['obabel', '-isdf', path_for_file+file, '-ocom', '-O'+com,'-m', '-xk', '\n'.join(header)])
-				except:
-					subprocess.run(
-					  ['obabel', '-isdf', path_for_file+file, '-osdf', '-O'+com_sdf,'-m']) #takes the lowest conformer which is the first in the file
-					temp_sdf_files = glob.glob(name+'_*.sdf')
-					for file in temp_sdf_files:
-						generate_com_not_obabel(file, header)
-		else:
-			try:
-				print('obabel')
 				subprocess.run(
 					  ['obabel', '-isdf', path_for_file+file, '-ocom', '-O'+com,'-m', '-xk', '\n'.join(header)])
-			except:
-				subprocess.run(
-				  ['obabel', '-isdf', path_for_file+file, '-osdf', '-O'+com_sdf,'-m']) #takes the lowest conformer which is the first in the file
-				temp_sdf_files = glob.glob(name+'_*.sdf')
-				for file in temp_sdf_files:
-					generate_com_not_obabel(file, header)
+		else:
+			subprocess.run(
+				  ['obabel', '-isdf', path_for_file+file, '-ocom', '-O'+com,'-m', '-xk', '\n'.join(header)])
 
 		#adding the basis set at the end of the FILES
 		#grab all the com FILES
@@ -719,7 +688,7 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args):
 				if len(read_lines[i].strip()) == 0:
 					title_line = read_lines[i+1]
 					title_line = title_line.lstrip()
-					rename_file_name = title_line.replace(" ", "_") + '.com'
+					rename_file_name = title_line.replace(" ", "_")
 					break
 
 			rename_file_name = rename_file_name.strip()+'.com'
@@ -803,55 +772,51 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args):
 					'# {0}'.format(lot)+ '/'+ bs + ' '+ input ]
 
 		if args.lowest_only == True:
-			try:
-				subprocess.run(
-					  ['obabel', '-isdf', path_for_file+file, '-ocom', '-O'+com_low,'-l' , '1', '-xk', '\n'.join(header)]) #takes the lowest conformer which is the first in the file
-			except:
-				subprocess.run(
-				  ['obabel', '-isdf', path_for_file+file, '-osdf', '-O'+com_low_sdf,'-l' , '1']) #takes the lowest conformer which is the first in the file
-				temp_sdf_files = glob.glob(name+'_low_*.sdf')
-				for file in temp_sdf_files:
-					generate_com_not_obabel(file, header)
+			subprocess.run(
+				  ['obabel', '-isdf', path_for_file+file, '-ocom', '-O'+com_low,'-l' , '1', '-xk', '\n'.join(header)]) #takes the lowest conformer which is the first in the file
+			# except:
+			# 	subprocess.run(
+			# 	  ['obabel', '-isdf', path_for_file+file, '-osdf', '-O'+com_low_sdf,'-l' , '1']) #takes the lowest conformer which is the first in the file
+			# 	temp_sdf_files = glob.glob(name+'_low_*.sdf')
+			# 	for file in temp_sdf_files:
+			# 		generate_com_not_obabel(file, header)
 		elif args.lowest_n == True:
 			no_to_write = 0
 			if len(energies) != 1:
 				for i in range(len(energies)):
 					energy_diff = energies[i] - energies[0]
-					if energy_diff < args.energy_threshold_for_gaussian/2625.5:
+					if energy_diff < args.energy_threshold_for_gaussian: # thershold is in kcal/mol and energies are in kcal/mol as well
 						no_to_write +=1
-				try:
-					subprocess.run(
-						 ['obabel', '-isdf', path_for_file+file, '-f', '1', '-l' , str(no_to_write), '-osdf', '-Otemp.sdf'])
-					subprocess.run(
-						  ['obabel', '-isdf', 'temp.sdf', '-ocom', '-O'+com,'-m', '-xk', '\n'.join(header)])
-				except:
-					subprocess.run(
-						 ['obabel', '-isdf', path_for_file+file, '-f', '1', '-l' , str(no_to_write), '-osdf', '-Otemp.sdf'])
-					subprocess.run(
-						  ['obabel', '-isdf', 'temp.sdf', '-osdf', '-O'+com_sdf,'-m'])
-					temp_sdf_files = glob.glob(name+'_*.sdf')
-					for file in temp_sdf_files:
-						generate_com_not_obabel(file, header)
+				subprocess.run(
+					 ['obabel', '-isdf', path_for_file+file, '-f', '1', '-l' , str(no_to_write), '-osdf', '-Otemp.sdf'])
+				subprocess.run(
+					  ['obabel', '-isdf', 'temp.sdf', '-ocom', '-O'+com,'-m', '-xk', '\n'.join(header)])
+				# except:
+				# 	subprocess.run(
+				# 		 ['obabel', '-isdf', path_for_file+file, '-f', '1', '-l' , str(no_to_write), '-osdf', '-Otemp.sdf'])
+				# 	subprocess.run(
+				# 		  ['obabel', '-isdf', 'temp.sdf', '-osdf', '-O'+com_sdf,'-m'])
+				# 	temp_sdf_files = glob.glob(name+'_*.sdf')
+				# 	for file in temp_sdf_files:
+				# 		generate_com_not_obabel(file, header)
 			else:
-				try:
-					subprocess.run(
-						  ['obabel', '-isdf', path_for_file+file, '-ocom', '-O'+com,'-m', '-xk', '\n'.join(header)])
-				except:
-					subprocess.run(
-					  ['obabel', '-isdf', path_for_file+file, '-osdf', '-O'+com_sdf,'-m']) #takes the lowest conformer which is the first in the file
-					temp_sdf_files = glob.glob(name+'_*.sdf')
-					for file in temp_sdf_files:
-						generate_com_not_obabel(file, header)
-		else:
-			try:
 				subprocess.run(
 					  ['obabel', '-isdf', path_for_file+file, '-ocom', '-O'+com,'-m', '-xk', '\n'.join(header)])
-			except:
-				subprocess.run(
-				  ['obabel', '-isdf', path_for_file+file, '-osdf', '-O'+com_sdf,'-m']) #takes the lowest conformer which is the first in the file
-				temp_sdf_files = glob.glob(name+'_*.sdf')
-				for file in temp_sdf_files:
-					generate_com_not_obabel(file, header)
+				# except:
+				# 	subprocess.run(
+				# 	  ['obabel', '-isdf', path_for_file+file, '-osdf', '-O'+com_sdf,'-m']) #takes the lowest conformer which is the first in the file
+				# 	temp_sdf_files = glob.glob(name+'_*.sdf')
+				# 	for file in temp_sdf_files:
+				# 		generate_com_not_obabel(file, header)
+		else:
+			subprocess.run(
+				  ['obabel', '-isdf', path_for_file+file, '-ocom', '-O'+com,'-m', '-xk', '\n'.join(header)])
+			# except:
+			# 	subprocess.run(
+			# 	  ['obabel', '-isdf', path_for_file+file, '-osdf', '-O'+com_sdf,'-m']) #takes the lowest conformer which is the first in the file
+			# 	temp_sdf_files = glob.glob(name+'_*.sdf')
+			# 	for file in temp_sdf_files:
+			# 		generate_com_not_obabel(file, header)
 
 		com_files = glob.glob('{0}_*.com'.format(name))
 
