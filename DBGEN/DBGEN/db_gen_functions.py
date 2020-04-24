@@ -6,20 +6,6 @@
 * OTHER functions USED THROUGHOUT THE PROGRAM ARE ALSO SET HERE.
 
 """
-
-# Since there are many imports, we could save some CPU time if we moved
-# some of these import inside the functions that need them
-import glob, os, shutil, sys, time,argparse
-import numpy as np
-import pandas as pd
-from periodictable import elements as elementspt
-
-from rdkit import Chem,DataStructs
-from rdkit.Chem import PropertyMol, rdChemReactions,AllChem,Lipinski,Descriptors, rdchem, rdDistGeom,rdMolAlign
-from openbabel import openbabel as ob
-import subprocess
-
-
 from DBGEN.confgen import *
 
 possible_atoms = ["", "H", "He", "Li", "Be", "B", "C", "N", "O", "F", "Ne", "Na", "Mg", "Al", "Si",

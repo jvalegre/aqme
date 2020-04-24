@@ -30,7 +30,7 @@ dup = False # if dup = True, analysis will also separate duplicate LOG files
 boltz = False # if boltz = True, analysis will calculate Bolztmann probabilities of each conformer
 combine = False # if boltz = True and combine = True, all the data from the CSV files created with boltz will be condensed in 3 CSV files
 
-" COMMONLY CHANGED PARAMETERS"
+" COMMON PARAMETERS TO EDIT "
 
 " (1) CHARGE FOR XTB OPTIMIZATION AND COM FILES "
 charge = 0 # final charge of the molecule (used in xTB optimization and input in the final COM input files)
@@ -55,30 +55,30 @@ single_point = False # do not include optimization
 " (4.1) ONLY LOWEST ENERGY CONFORMERS REQUIRED"
 lowest_only = False
 lowest_n  = False # for a given threshold of energy_threshold_for_gaussian
-energy_threshold_for_gaussian = 100  #in kcal/mol, from all the conformers generated after xTB optimization
+energy_threshold_for_gaussian = 100  # in kcal/mol, from all the conformers generated after xTB optimization
                                     # lowest_n must be True to apply this energy threshold
 
 " (4.2) DEFINITION OF A SECOND CATEGORY OF ATOMS SEPARATED IN GENECP "
-genecp_atoms = []
+genecp_atoms = [] # list of atoms included in the gen_ecp part
 
 " (4.3) DEFINTION OF BASIS SET AND LEVEL OF THEORY AND SOLVENT "
-basis_set = ['def2svp']
-basis_set_genecp_atoms = ['LANL2DZ']
-level_of_theory = ['wb97xd']
+basis_set = ['def2svp'] # basis set
+basis_set_genecp_atoms = ['LANL2DZ'] # functional for the genecp part
+level_of_theory = ['wb97xd'] # functional
 max_cycle_opt = 100 #eefault is 300
 
 " (4.4) DISPERSION CORRECTION FOR COM FILES "
-dispersion_correction = False
-empirical_dispersion = 'GD3BJ'
+dispersion_correction = False # include dispersion correction
+empirical_dispersion = 'GD3BJ' # type of dispersion correction
 
-" (4.5) SOLVATION MODEL. Options: gas_phase or any solvation model (i.e. SMD, IEFPCM, CPCM)"
-solvent_model = 'IEFPCM'
-solvent_name = 'Chloroform'
+" (4.5) SOLVATION MODEL "
+solvent_model = 'IEFPCM' # type of solvation model. Options: gas_phase or any solvation model (i.e. SMD, IEFPCM, CPCM)
+solvent_name = 'Chloroform' # solvent
 
-" (4.6) DEFAULT PARAMTERS FOR GAUSSIAN OPTIMIZATION "
-chk = False
-nprocs = 36
-mem='60GB'
+" (4.6) DEFAULT PARAMETERS FOR GAUSSIAN OPTIMIZATION "
+chk = False # include a %chk line at the beginning of the COM file
+nprocs = 36 # number of processors for the COM file in %nprocshared
+mem='60GB' # amount of memory for the COM file in %mem
 
 " (5) PERFORMANCE OF THE CODE "
 time = True #request run time
@@ -115,12 +115,13 @@ exp_rules_output_ext = '_confs_rules.sdf'
 
 " FOR UNIQUE CONFORMER SELECTION FOR RDKIT, XTB AND ANI1 "
 rms_threshold = 0.25 #cutoff for considering sampled conformers the same (default 0.25) for RDKit and xTB duplicate filters
-energy_threshold = 0.2 # energy difference in kcal/mol between unique conformers for RDKit and xTB duplicate filters
+energy_threshold = 0.25 # energy difference in kcal/mol between unique conformers for RDKit and xTB duplicate filters
 initial_energy_threshold = 0.01 # energy difference for the first RDKit filter based on E only
-max_matches_RMSD = 1000000 # max iterations to find optimal RMSD in RDKit duplicate filter
+max_matches_RMSD = 1000 # max iterations to find optimal RMSD in RDKit duplicate filter
                             # The higher the number the longer the duplicate filter takes but
                             # the more duplicates are filtered off
 heavyonly = False # If True, H from OH, NH, etc. will not be used to generate conformers (recommended: False with molecules that contain OH groups)
+auto_sample = 20 # final factor to multiply in the auto mode for the sample option (default 20)
 
 " FILTERS FOR RDKIT OPTIMIZATION "
 max_torsions = 20 # Skip any molecules with more than this many torsions (default 5)
@@ -129,12 +130,12 @@ max_MolWt = 10000 # Skip any molecules with molecular weights higher than this n
 
 " DIHEDRAL PROTOCOL FOR RDKIT OPTIMIZATION (SLOW SINCE IT SCANS MANY DIHEDRALS) "
 nodihedrals = True # turn to True if no dihedral scan is needed
-degree = 30 # Amount, in degrees, to enumerate torsions if nodihedrals is False
+degree = 30 # amount, in degrees, to enumerate torsions if nodihedrals is False
 
 " PARAMETERS FOR RDKIT OPTIMIZATION "
 ff = "MMFF" # force field used in the RDKit optimization. Options: MMFF or UFF
 etkdg = False # use new ETKDG knowledge-based method instead of distance geometry also needs to be present in RDKIT ENV
-seed = int("062609") #random seed (default 062609) for ETKDG
+seed = int("062609") # random seed (default 062609) for ETKDG
 opt_steps_RDKit = 1000
 
 " DEFAULT PARAMETERS FOR ANI1 and xTB OPTIMIZATION "
@@ -148,5 +149,5 @@ constraints = None
 large_sys = True
 STACKSIZE = '1G' #set for large system
 
-" MOLECULES now, for eg., molecule list, for later can use as total no. of molecules it is need in the boltz part to read in specific molecules"
+" NUMBER OF MOLECULES, for eg., molecule list, for later can use as total no. of molecules it is need in the boltz part to read in specific molecules"
 maxnumber = 100000 # max number of molecules to use

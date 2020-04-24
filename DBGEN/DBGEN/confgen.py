@@ -1,28 +1,17 @@
 #!/usr/bin/python
 from __future__ import print_function
-import argparse, math, os, sys, traceback,subprocess
+import argparse, math, os, sys, traceback, subprocess, glob, shutil, time
 import numpy as np
+import pandas as pd
+from rdkit import Chem,DataStructs
 from rdkit.Chem import AllChem as Chem
-from rdkit.Chem import rdMolTransforms, PropertyMol, rdchem, rdDistGeom, rdMolAlign
+from rdkit.Chem import rdMolTransforms, PropertyMol, rdchem, rdDistGeom, rdMolAlign, PropertyMol, rdChemReactions, Lipinski, Descriptors
 from rdkit.Geometry import Point3D
 from periodictable import elements as elementspt
+from openbabel import openbabel as ob
 
-import DBGEN.db_gen_functions
+from DBGEN.db_gen_functions import *
 
-
-
-### TORCHANI IMPORTS
-import ase
-import ase.optimize
-import torch, torchani
-os.environ['KMP_DUPLICATE_LIB_OK']='True'
-device = torch.device('cpu')
-model = torchani.models.ANI1ccx()
-from ase.units import kJ,mol,Hartree,kcal
-
-import xtb
-from xtb import GFN2
-from xtb.solvation import GBSA
 
 def get_conf_RMS(mol1, mol2, c1, c2, heavy, max_matches_RMSD):
 	'''generate RMS distance between two molecules (ignoring hydrogens)'''
@@ -30,6 +19,14 @@ def get_conf_RMS(mol1, mol2, c1, c2, heavy, max_matches_RMSD):
 	rms = Chem.GetBestRMS(mol1,mol2,c1,c2,maxMatches=max_matches_RMSD)
 	return rms
 
+"AUTO-SAMPLING DETECTS INITIAL NUMBER OF SAMPLES"
+def auto_sampling(auto_samples,mult_factor,mol):
+	auto_samples = 0
+	auto_samples += 3*(Lipinski.NumRotatableBonds(mol)) # x3, for C3 rotations
+	auto_samples += 3*(Lipinski.NHOHCount(mol)) # x3, for OH/NH rotations
+	auto_samples += 3*(Lipinski.NumSaturatedRings(mol)) # x3, for boat/chair/envelope confs
+	auto_samples = mult_factor*auto_samples
+	return auto_samples
 
 def getDihedralMatches(mol, heavy):
 	'''return list of atom indices of dihedrals'''
@@ -138,6 +135,10 @@ def rules_get_charge(mol, args):
 
 def summ_search(mol, name,args, coord_Map = None,alg_Map=None,mol_template=None):
 	'''embeds core conformers, then optimizes and filters based on RMSD. Finally the rotatable torsions are systematically rotated'''
+
+	# detects and applies auto-detection of initial number of conformers
+	if args.sample == 'auto':
+		args.sample = auto_sampling(args.sample,args.auto_sample,mol)
 
 	Chem.SanitizeMol(mol)
 	mol = Chem.AddHs(mol)
@@ -390,6 +391,21 @@ def summ_search(mol, name,args, coord_Map = None,alg_Map=None,mol_template=None)
 
 		# Calculates geometries and energies with xTB or ANI1
 		if args.ANI1ccx == True or args.xtb == True:
+
+			# imports only used by to xTB and ANI1
+			import ase
+			import ase.optimize
+			from ase.units import kJ,mol,Hartree,kcal
+			import torch
+			import xtb
+			from xtb import GFN2
+			from xtb.solvation import GBSA
+			os.environ['KMP_DUPLICATE_LIB_OK']='True'
+			device = torch.device('cpu')
+
+			if args.ANI1ccx == True:
+				import torchani
+				model = torchani.models.ANI1ccx()
 
 			ani_energy,xtb_energy = 0,0
 

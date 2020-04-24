@@ -1,12 +1,31 @@
-'''
-#ADD description
-DBcg v1.0.0
-Authors: Shree Sowndarya S. V., Juan V. Alegre Requena,
-please report any bugs to svss@colostate.edu or juanvi89@hotmail.com.
-'''
+"""######################################################################################
+#########################################################################################
+###																					  ###
+###  DBGEN is a tool that allows to carry out automated:							  ###
+###  (1) Conformational searches and creation of COM files using RDKit, xTB and ANI1  ###
+###  (2) LOG file processing (detects imaginary freqs and error terminations		  ###
+###      and creates new COM files)													  ###
+###  (3) Use LOG files to create new COM files with new keywords (i.e. single-point   ###
+###      corrections after geometry optimization)									  ###
+###  																				  ###
+#########################################################################################
+###  																				  ###
+###  Version: v1.0, Release date: 24-April-2020										  ###
+###  																				  ###
+#########################################################################################
+###  																				  ###
+###  Authors: Shree Sowndarya S. V., Juan V. Alegre Requena, Robert S. Paton		  ###
+###  																				  ###
+###  Please, report any bugs or suggestions to:										  ###
+###  svss@colostate.edu or juanvi89@hotmail.com  									  ###
+###																					  ###
+#########################################################################################
+######################################################################################"""
+
 
 from DBGEN.db_gen_functions import *
-#rom DBGEN.Template import *
+from DBGEN.confgen import *
+#from DBGEN.Template import *
 
 def main():
 	parser = argparse.ArgumentParser(description="Generate conformers depending on type of optimization (change parameters in db_gen_PATHS.py file).")
@@ -66,6 +85,7 @@ def main():
 	parser.add_argument("--etkdg", dest="etkdg",action="store_true",default=False, help="use new ETKDG knowledge-based method instead of distance geometry")
 	parser.add_argument("--max_torsions",type=int,help="Skip any molecules with more than this many torsions (default 5)",default=5)
 	parser.add_argument("--sample", help="number of conformers to sample to get non-torsional differences (default 100)", default=100, type=int, metavar="sample")
+	parser.add_argument("--auto_sample", help="final factor to multiply in the auto mode for the sample option (default 20)", default=20, type=int, metavar="auto_sample")
 	parser.add_argument("--ff", help="force field (MMFF or UFF)", default="MMFF", metavar="ff")
 	parser.add_argument("--seed", help="random seed (default 062609)", default="062609", type=int, metavar="s")
 	parser.add_argument("--rms_threshold", help="cutoff for considering sampled conformers the same (default 0.25)", default=0.25, type=float, metavar="R")
