@@ -440,14 +440,16 @@ def main():
 				conformer_generation(mol,name,start_time,args)
 
 	if args.write_gauss == True:
-
 		#grad all the gaussian files
 		if args.xtb != True and args.ANI1ccx != True:
 			conf_files =  glob.glob('*_RDKit.sdf')
-		if args.xtb == True:
+		elif args.xtb == True:
 			conf_files =  glob.glob('*_xTB.sdf')
-		if args.ANI1ccx == True:
+		elif args.ANI1ccx == True:
 			conf_files =  glob.glob('*_ANI1ccx.sdf')
+		else:
+			conf_files =  glob.glob('*.sdf')
+
 
 		# names for directories created
 		sp_dir = 'generated_sp_files'
@@ -570,7 +572,7 @@ def main():
 		else:
 			log_files = glob.glob('*.log')
 			w_dir = os.getcwd()
-			w_dir_fin = w_dir+'/finished'
+			w_dir_fin = w_dir+'/Finished'
 			output_analyzer(log_files, w_dir, lot, bs, bs_gcp, args, w_dir_fin)
 
 	#adding the part to check for resubmission of the newly created gaussian files.
