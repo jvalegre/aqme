@@ -18,11 +18,31 @@ possible_atoms = ["", "H", "He", "Li", "Be", "B", "C", "N", "O", "F", "Ne", "Na"
 				 "Rg", "Uub", "Uut", "Uuq", "Uup", "Uuh", "Uus", "Uuo"]
 columns = ['Structure', 'E', 'ZPE', 'H', 'T.S', 'T.qh-S', 'G(T)', 'qh-G(T)']
 
+"CLASS FOR LOGGING  "
+class Logger:
+    def __init__(self, filein, append):
+        suffix = 'dat'
+        self.log = open('{0}_{1}.{2}'.format(filein, append, suffix), 'w')
+
+    def write(self, message):
+        print(message, end='\n')
+        self.log.write(message+ "\n")
+
+    def fatal(self, message):
+        print(message, end='\n')
+        self.log.write(message + "\n")
+        self.finalize()
+        sys.exit(1)
+
+    def finalize(self):
+        self.log.close()
+
 "TEMPLATE GENERATION FOR SQUAREPLANAR AND SQUAREPYRIMIDAL "
-def template_embed_sp(molecule,temp,name_input,args):
+def template_embed_sp(molecule,temp,name_input,args,log):
 	mol_objects = [] # a list of mol objects that will be populated
 	name_return = []
 	coord_Map = []
+
 	alg_Map = []
 	mol_template = []
 
@@ -37,7 +57,7 @@ def template_embed_sp(molecule,temp,name_input,args):
 
 	number_of_neighbours = len(neighbours)
 
-	#print(number_of_neighbours)
+	#log.write(number_of_neighbours)
 	if number_of_neighbours == 4:
 		#three cases for square planar
 		for name in range(3):
@@ -55,7 +75,7 @@ def template_embed_sp(molecule,temp,name_input,args):
 			#checking for same atom neighbours and assigning in the templates for all mols in suppl!
 			for mol_1 in temp:
 				for atom in mol_1.GetAtoms():
-					#print(atom.GetSymbol()+'mol_1 atom')
+					#log.write(atom.GetSymbol()+'mol_1 atom')
 					if atom.GetSymbol() == 'F':
 						mol_1 = Chem.RWMol(mol_1)
 						idx = atom.GetIdx()
@@ -64,8 +84,8 @@ def template_embed_sp(molecule,temp,name_input,args):
 
 				site_1,site_2,site_3,site_4,metal_site  = 0,0,0,0,0
 				for atom in mol_1.GetAtoms():
-					#print(atom.GetIdx(), atom.GetSymbol())
-					#print(atom.GetSymbol()+'after remove F from mol_1')
+					#log.write(atom.GetIdx(), atom.GetSymbol())
+					#log.write(atom.GetSymbol()+'after remove F from mol_1')
 					if atom.GetIdx() == 4 and metal_site == 0:
 						atom.SetAtomicNum(14)
 						center_temp = atom.GetIdx()
@@ -83,12 +103,12 @@ def template_embed_sp(molecule,temp,name_input,args):
 						atom.SetAtomicNum(neighbours[j[2]].GetAtomicNum())
 						site_4 = 1
 
-				# #print to see if it is changed
+				# #log.write to see if it is changed
 				# for atom in mol_1.GetAtoms():
-				# 	print(atom.GetSymbol()+'match')
+				# 	log.write(atom.GetSymbol()+'match')
 
 				#embedding of the molecule onto the core
-				molecule_new, coordMap, algMap = template_embed_optimize(molecule,mol_1,args)
+				molecule_new, coordMap, algMap = template_embed_optimize(molecule,mol_1,args,log)
 
 				for atom in molecule_new.GetAtoms():
 					if atom.GetIdx() == center_idx:
@@ -179,8 +199,8 @@ def template_embed_sp(molecule,temp,name_input,args):
 				for mol_1 in temp:
 					site_1,site_2,site_3,site_4,site_5,metal_site  = 0,0,0,0,0,0
 					for atom in mol_1.GetAtoms():
-						# print(atom.GetSymbol(), atom.GetIdx())
-						#print(atom.GetSymbol()+'no remove F from mol_1')
+						# log.write(atom.GetSymbol(), atom.GetIdx())
+						#log.write(atom.GetSymbol()+'no remove F from mol_1')
 						if atom.GetIdx()  == 5 and metal_site == 0:
 							atom.SetAtomicNum(53)
 							center_temp = atom.GetIdx()
@@ -219,7 +239,7 @@ def template_embed_sp(molecule,temp,name_input,args):
 								site_5 = 1
 
 					#assigning and embedding onto the core
-					molecule_new, coordMap, algMap = template_embed_optimize(molecule,mol_1,args)
+					molecule_new, coordMap, algMap = template_embed_optimize(molecule,mol_1,args,log)
 
 					for atom in molecule_new.GetAtoms():
 						if atom.GetIdx() == center_idx:
@@ -247,12 +267,12 @@ def template_embed_sp(molecule,temp,name_input,args):
 	return mol_objects, name_return, coord_Map, alg_Map, mol_template
 
 "TEMPLATE EMBED OPTIMIZE"
-def template_embed_optimize(molecule_embed,mol_1,args):
+def template_embed_optimize(molecule_embed,mol_1,args,log):
 
 	#assigning and embedding onto the core
 	num_atom_match = molecule_embed.GetSubstructMatch(mol_1)
-	# print(len(num_atom_match))
-	# print('above match')
+	# log.write(len(num_atom_match))
+	# log.write('above match')
 
 	#add H's to molecule
 	molecule_embed = Chem.AddHs(molecule_embed)
@@ -276,7 +296,7 @@ def template_embed_optimize(molecule_embed,mol_1,args):
 		GetFF = lambda x,confId=-1:AllChem.MMFFGetMoleculeForceField(x,AllChem.MMFFGetMoleculeProperties(x),confId=confId)
 	elif ff == "UFF":
 		GetFF = lambda x,confId=-1:AllChem.UFFGetMoleculeForceField(x)
-	else: print('   Force field {} not supported!'.format(options.ff)); sys.exit()
+	else: log.write('   Force field {} not supported!'.format(options.ff)); sys.exit()
 	getForceField=GetFF
 
 
@@ -288,14 +308,14 @@ def template_embed_optimize(molecule_embed,mol_1,args):
 	for k, idxI in enumerate(num_atom_match):
 		core_mol_1 = coreConf.GetAtomPosition(k)
 		coordMap[idxI] = core_mol_1
-	# print(coordMap)
+	# log.write(coordMap)
 
 	# This is the original version, if it doesn't work without coordMap I'll come back to it late
 	if len(num_atom_match) == 5:
 		ci = AllChem.EmbedMolecule(molecule_embed, coordMap=coordMap, randomSeed=randomseed)
 	if len(num_atom_match) == 6:
 		ci = AllChem.EmbedMolecule(molecule_embed, coordMap=coordMap, randomSeed=randomseed,ignoreSmoothingFailures=True)
-	if ci < 0:    print('Could not embed molecule.')
+	if ci < 0:    log.write('Could not embed molecule.')
 
 	#algin molecule to the core
 	algMap = [(k, l) for l, k in enumerate(num_atom_match)]
@@ -343,38 +363,38 @@ def template_embed_optimize(molecule_embed,mol_1,args):
 
 " FUCNTION WORKING WITH MOL OBJECT TO CREATE CONFORMERS"
 
-def conformer_generation(mol,name,start_time,args,coord_Map=None,alg_Map=None,mol_template=None):
-	valid_structure = filters(mol, args)
+def conformer_generation(mol,name,start_time,args,log,coord_Map=None,alg_Map=None,mol_template=None):
+	valid_structure = filters(mol, args,log)
 	if valid_structure:
-		if args.verbose: print("\n   ----- {} -----".format(name))
+		if args.verbose: log.write("\n   ----- {} -----".format(name))
 
 		try:
 			# the conformational search
 
-			summ_search(mol, name,args,coord_Map,alg_Map,mol_template)
+			summ_search(mol, name,args,log,coord_Map,alg_Map,mol_template)
 
 			#applying rule to get the necessary conformers only
 			if args.exp_rules == True:
-				if args.verbose == True: print("   ----- Applying experimental rules to write the new confs file -----")
+				if args.verbose == True: log.write("   ----- Applying experimental rules to write the new confs file -----")
 				### do 2 cases, for RDKit only and RDKIt+xTB
 				allmols = Chem.SDMolSupplier(name+final_output, removeHs=False)
 				if allmols is None:
-					print("Could not open ", name+final_output)
+					log.write("Could not open ", name+final_output)
 					sys.exit(-1)
 
 				sdwriter = Chem.SDWriter(name+exp_rules_output_ext)
 
 				for mol in allmols:
 					check_mol = True
-					check_mol = exp_rules_output(mol,args)
+					check_mol = exp_rules_output(mol,args,log)
 					if check_mol == True:
 						sdwriter.write(mol)
 				sdwriter.close()
 
 		except (KeyboardInterrupt, SystemExit):
 			raise
-		except Exception as e: print(traceback.print_exc())
-	else: print("ERROR: The structure is not valid")
+		except Exception as e: log.write(traceback.print_exc())
+	else: log.write("ERROR: The structure is not valid")
 
 	#removing the xtb files
 	if os.path.exists("gfn2.out"):
@@ -393,10 +413,10 @@ def conformer_generation(mol,name,start_time,args,coord_Map=None,alg_Map=None,mo
 		os.remove("xtbrestart")
 
 
-	if args.time: print("\n Execution time: %s seconds" % (round(time.time() - start_time,2)))
+	if args.time: log.write("\n Execution time: %s seconds" % (round(time.time() - start_time,2)))
 
 " RULES TO GET EXPERIMENTAL CONFORMERS"
-def exp_rules_output(mol, args):
+def exp_rules_output(mol, args,log):
 	passing = True
 	ligand_links = []
 	atom_indexes = []
@@ -494,7 +514,7 @@ def exp_rules_output(mol, args):
 	return passing
 
 " FILTER TO BE APPLIED FOR SMILES"
-def filters(mol,args):
+def filters(mol,args,log):
 	valid_structure = True
 	# First filter: number of rotatable bonds-bonds
 	if Lipinski.NumRotatableBonds(mol) < args.num_rot_bonds:
@@ -506,18 +526,18 @@ def filters(mol,args):
 				#Fourth filter: atoms outside the scope chosen in 'possible_atoms'
 				if atom.GetSymbol() not in possible_atoms:
 					valid_structure = False
-					if args.verbose == True: print(" Exiting as atom isn't in atoms in the periodic table")
+					if args.verbose == True: log.write(" Exiting as atom isn't in atoms in the periodic table")
 			#else: valid_structure = False
 		else:
 			valid_structure = False
-			if args.verbose == True: print(" Exiting as total molar mass > 1000")
+			if args.verbose == True: log.write(" Exiting as total molar mass > 1000")
 	else:
 		valid_structure = False
-		if args.verbose == True: print(" Exiting as number of rotatable bonds > 10")
+		if args.verbose == True: log.write(" Exiting as number of rotatable bonds > 10")
 	return valid_structure
 
 "PARSES THE ENERGIES FROM SDF FILES"
-def read_energies(file): # parses the energies from sdf files - then used to filter conformers
+def read_energies(file,log): # parses the energies from sdf files - then used to filter conformers
 	energies = []
 	f = open(file,"r")
 	readlines = f.readlines()
@@ -528,7 +548,7 @@ def read_energies(file): # parses the energies from sdf files - then used to fil
 	return energies
 
 " MAIN FUNCTION TO CREATE GAUSSIAN JOBS"
-def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args):
+def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args,log):
 
 	#definition of input lines
 	if args.frequencies == True:
@@ -582,25 +602,25 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args):
 
 	if args.metal_complex == True and os.path.splitext(args.input)[1] != '.com' and os.path.splitext(args.input)[1] != '.gjf':
 		try:
-			args.charge, neighbours = rules_get_charge(suppl[0],args)
+			args.charge, neighbours = rules_get_charge(suppl[0],args,log)
 			if len(neighbours) != 0:
-				if args.verbose == True: print('---- The Overall charge is reworked with rules for .smi, .csv, .cdx for writing the .com files of conformers')
+				if args.verbose == True: log.write('---- The Overall charge is reworked with rules for .smi, .csv, .cdx for writing the .com files of conformers')
 		except:
-			print(' ----- The Overall charge could not be re-worked with the rules ---- ')
+			log.write(' ----- The Overall charge could not be re-worked with the rules ---- ')
 			pass
 	if args.metal_complex == True and os.path.splitext(args.input)[1] == '.com' or os.path.splitext(args.input)[1] == '.gjf':
 		if len(neighbours) != 0:
-			if args.verbose == True: print('---- The Overall charge is read from the .com file is used to write new .com files of conformers ---')
+			if args.verbose == True: log.write('---- The Overall charge is read from the .com file is used to write new .com files of conformers ---')
 
 	if args.single_point == True:
 		#pathto change to
 		path_write_gjf_files = 'generated_sp_files/' + str(lot) + '-' + str(bs)
-		#print(path_write_gjf_files)
+		#log.write(path_write_gjf_files)
 		os.chdir(path_write_gjf_files)
 	else:
 		#pathto change to
 		path_write_gjf_files = 'generated_gaussian_files/' + str(lot) + '-' + str(bs)
-		#print(path_write_gjf_files)
+		#log.write(path_write_gjf_files)
 		os.chdir(path_write_gjf_files)
 
 	path_for_file = '../../'
@@ -840,7 +860,7 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args):
 		os.chdir(path_for_file)
 
 "CHECKS THE FOLDER OF FINAL LOG FILES"
-def check_for_final_folder(w_dir):
+def check_for_final_folder(w_dir,log):
 	dir_found = False
 	while dir_found == False:
 		temp_dir = w_dir+'New_Gaussian_Input_Files/'
@@ -851,9 +871,9 @@ def check_for_final_folder(w_dir):
 	return w_dir
 
 " DEFINTION OF OUTPUT ANALYSER and NMR FILES CREATOR"
-def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin):
+def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin,log):
 
-	#print(w_dir)
+	#log.write(w_dir)
 
 	#definition of input lines
 	if args.frequencies == True:
@@ -927,7 +947,7 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin):
 				CHARGE = int(outlines[i].split()[2])
 				MULT = int(outlines[i].split()[5].rstrip("\n"))
 				stop=stop+1
-		#print(TERMINATION)
+		#log.write(TERMINATION)
 
 		###reverse
 		stop_get_details_stand_or = 0
@@ -942,7 +962,7 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin):
 				if outlines[i].find("Standard orientation") > -1 and stop_get_details_stand_or !=1 :
 					standor = i
 					NATOMS = disrotor-i-6
-					print(NATOMS)
+					#log.write(NATOMS)
 					stop_get_details_stand_or += 1
 				if stop_get_details_dis_rot !=1 and (outlines[i].find("Distance matrix") > -1 or outlines[i].find("Rotational constants") >-1) :
 					if outlines[i-1].find("-------") > -1:
@@ -986,10 +1006,10 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin):
 			# Get he coordinates for jobs that did not finished or finished with an error
 			if stop_rms == 0:
 				last_line = len(outlines)
-				print('lastline')
+				log.write('lastline')
 			else:
 				last_line = stop_rms
-				print('stoprms')
+				log.write('stoprms')
 			stop_get_details_stand_or = 0
 			stop_get_details_dis_rot = 0
 			for i in reversed(range(0,last_line)):
@@ -1002,7 +1022,7 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin):
 					stop_get_details_stand_or += 1
 				if stop_get_details_stand_or != 1 and (outlines[i].find("Distance matrix") > -1 or outlines[i].find("Rotational constants") >-1):
 					if outlines[i-1].find("-------") > -1:
-						print(i)
+						#log.write(i)
 						disrotor = i
 						stop_get_details_dis_rot += 1
 			###no change after this
@@ -1111,7 +1131,7 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin):
 
 			os.chdir(new_gaussian_input_files)
 
-			print('-> Creating new gaussian input files for {0}/{1} file {2}'.format(lot,bs,name))
+			log.write('-> Creating new gaussian input files for {0}/{1} file {2}'.format(lot,bs,name))
 
 			# Options for genecp
 			ecp_list,ecp_genecp_atoms = [],False
@@ -1213,7 +1233,7 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin):
 					raise
 
 			os.chdir(single_point_input_files)
-			print('Creating new single point files files for {0}/{1} file {2}'.format(lot,bs,name))
+			log.write('Creating new single point files files for {0}/{1} file {2}'.format(lot,bs,name))
 
 			# Options for genecp
 			ecp_list,ecp_genecp_atoms = [],False
@@ -1283,13 +1303,13 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin):
 		os.chdir(w_dir)
 
 " CALCULATION OF BOLTZMANN FACTORS "
-def boltz_calculation(val,i):
+def boltz_calculation(val,i,log):
 	#need to have good vibes
 	cmd = 'python' +  ' -m' + ' goodvibes' + ' --csv' + ' --boltz ' +'--output ' + str(i) + ' ' + val
 	os.system(cmd)
 
 " CHECKING FOR DUPLICATES"
-def dup_calculation(val,w_dir, agrs):
+def dup_calculation(val,w_dir, agrs,log):
 	#need to have good vibes
 	cmd = 'python' +  ' -m' + ' goodvibes' + ' --dup ' + ' ' + val + '>' + ' ' + 'duplicate_files_checked.txt'
 	os.system(cmd)
@@ -1316,7 +1336,7 @@ def dup_calculation(val,w_dir, agrs):
 				raise
 
 "COMBINING FILES FOR DIFFERENT MOLECULES"
-def combine_files(csv_files, lot, bs, args):
+def combine_files(csv_files, lot, bs, args,log):
 	#final dataframe with only the boltzmann averaged values
 	final_file_avg_thermo_data = pd.DataFrame(columns=columns)
 	compare_G = pd.DataFrame(columns=['Structure_of_min_conf','min_qh-G(T)','boltz_avg_qh-G(T)'])
@@ -1326,7 +1346,7 @@ def combine_files(csv_files, lot, bs, args):
 
 	for f in csv_files:
 
-		print(f)
+		log.write(f)
 
 		df = pd.read_csv(f, skiprows = 16)
 		# df['Structure']= df['Structure'].astype(str)

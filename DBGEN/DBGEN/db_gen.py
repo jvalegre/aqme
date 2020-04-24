@@ -33,6 +33,7 @@ def main():
 	#INput details
 	parser.add_argument("--varfile",dest="varfile",default=None,help="Parameters in python format")
 	parser.add_argument("--input",help="Molecular structure")
+	parser.add_argument("--output", dest="output", default="output", metavar="OUTPUT",help="Change the default name of the output file to DBGEN_\"output\".dat")
 
 	#metal complex
 	parser.add_argument("--metal_complex", action="store_true", default=False, help="If studying Metal Complexes of coordination number 4,5 or 6")
@@ -124,6 +125,9 @@ def main():
 
 	if args.varfile != None: var = True
 
+	#define the logging object
+	log = Logger("DBGEN", args.output)
+
 	# This will be used only if time = True in params.py
 	start_time = time.time()
 
@@ -131,7 +135,7 @@ def main():
 	if var == True:
 		if os.path.splitext(args.varfile)[1] == '.py':
 			db_gen_variables = os.path.splitext(args.varfile)[0]
-			print("\no  IMPORTING VARIABLES FROM", args.varfile)
+			log.write("\no  IMPORTING VARIABLES FROM" + args.varfile)
 			args = __import__(db_gen_variables)
 
 ### check if it's working with *.smi (if it isn't, we need to change this a little bit)
@@ -143,7 +147,7 @@ def main():
 		[file_name, file_format] = os.path.splitext(args.input)
 
 		if file_format not in ['.smi', '.sdf', '.cdx', '.csv','.com','.gjf']:
-			print("\nx  INPUT FILETYPE NOT CURRENTLY SUPPORTED!"); sys.exit()
+			log.write("\nx  INPUT FILETYPE NOT CURRENTLY SUPPORTED!"); sys.exit()
 		else:
 			mol_objects = [] # a list of mol objects that will be populated
 
@@ -199,7 +203,7 @@ def main():
 				else: name = args.prefix+str(i)+'_'+''.join(toks[1:])
 
 				# Converts each line to a rdkit mol object
-				if args.verbose: print("   -> Input Molecule {} is {}".format(i, smi))
+				if args.verbose: log.write("   -> Input Molecule {} is {}".format(i, smi))
 				mol = Chem.MolFromSmiles(smi)
 				# get manually for square planar and SQUAREPYRIMIDAL
 				if args.complex_type == 'squareplanar' or args.complex_type == 'squarepyrimidal':
@@ -261,7 +265,7 @@ def main():
 						smi = max(pieces, key=len) #take largest component by length
 
 				# Converts each line to a rdkit mol object
-				if args.verbose: print("   -> Input Molecule {} is {}".format(i, smi))
+				if args.verbose: log.write("   -> Input Molecule {} is {}".format(i, smi))
 				mol = Chem.MolFromSmiles(smi)
 				# get manually for square planar and SQUAREPYRIMIDAL
 				if args.complex_type == 'squareplanar' or args.complex_type == 'squarepyrimidal':
@@ -320,7 +324,7 @@ def main():
 						smi = max(pieces, key=len) #take largest component by length
 
 				# Converts each line to a rdkit mol object
-				if args.verbose: print("   -> Input Molecule {} is {}".format(i, smi))
+				if args.verbose: log.write("   -> Input Molecule {} is {}".format(i, smi))
 				mol = Chem.MolFromSmiles(smi)
 				# get manually for square planar and SQUAREPYRIMIDAL
 				if args.complex_type == 'squareplanar' or args.complex_type == 'squarepyrimidal':
@@ -454,10 +458,10 @@ def main():
 #------------------------------------------------------------------------------------------
 		if args.complex_type == 'squareplanar' or args.complex_type == 'squarepyrimidal':
 			for [mol, name, coord_Map,alg_Map,mol_template] in mol_objects: # Run confomer generation for each mol object
-				conformer_generation(mol,name,start_time,args,coord_Map,alg_Map,mol_template)
+				conformer_generation(mol,name,start_time,args,log,coord_Map,alg_Map,mol_template)
 		else:
 			for [mol, name] in mol_objects: # Run confomer generation for each mol object
-				conformer_generation(mol,name,start_time,args)
+				conformer_generation(mol,name,start_time,args,log)
 
 	if args.write_gauss == True:
 		#grad all the gaussian files
@@ -481,7 +485,7 @@ def main():
 
 					if args.single_point ==  True: # only create this directory if single point calculation is requested
 						folder = sp_dir + '/' + str(lot) + '-' + str(bs)
-						print("\no  PREPARING SINGLE POINT INPUTS in {}".format(folder))
+						log.write("\no  PREPARING SINGLE POINT INPUTS in {}".format(folder))
 						try: os.makedirs(folder)
 						except OSError:
 							if  os.path.isdir(folder): pass
@@ -490,14 +494,14 @@ def main():
 						#writing the com files
 						for file in conf_files: # check conf_file exists, parse energies and then write dft input
 							if os.path.exists(file):
-								if args.verbose: print("   -> Converting from {}".format(file))
-								energies = read_energies(file)
+								if args.verbose: log.write("   -> Converting from {}".format(file))
+								energies = read_energies(file,log)
 								name = os.path.splitext(file)[0]
-								write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args)
+								write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args,log)
 
 					else: # else create the directory for optimizations
 						folder = g_dir + '/' + str(lot) + '-' + str(bs)
-						print("\no  PREPARING GAUSSIAN INPUTS in {}".format(folder))
+						log.write("\no  PREPARING GAUSSIAN INPUTS in {}".format(folder))
 						try: os.makedirs(folder)
 						except OSError:
 							if  os.path.isdir(folder): pass
@@ -506,10 +510,10 @@ def main():
 						#writing the com files
 						for file in conf_files: # check conf_file exists, parse energies and then write dft input
 							if os.path.exists(file):
-								if args.verbose: print("   -> Converting from {}".format(file))
-								energies = read_energies(file)
+								if args.verbose: log.write("   -> Converting from {}".format(file))
+								energies = read_energies(file,log)
 								name = os.path.splitext(file)[0]
-								write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args)
+								write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args,log)
 
 		#moving all the sdf files to a separate folder after writing gaussian files
 		src = os.getcwd()
@@ -552,14 +556,14 @@ def main():
 
 	if args.exp_rules == True:
 
-		if args.verbose == True: print("   ----- Applying experimental rules to write the new confs file -----")
+		if args.verbose == True: log.write("   ----- Applying experimental rules to write the new confs file -----")
 
 		conf_files = glob.glob('*.sdf')
 
 		for file in conf_files:
 			allmols = Chem.SDMolSupplier(file, removeHs=False)
 			if allmols is None:
-				print("Could not open ", file)
+				log.write("Could not open ", file)
 				sys.exit(-1)
 
 			sdwriter = Chem.SDWriter(file.split('.')[0]+exp_rules_output_ext)
@@ -579,21 +583,21 @@ def main():
 					for bs_gcp in args.basis_set_genecp_atoms:
 						w_dir = args.path + str(lot) + '-' + str(bs) +'/'
 						#check if New_Gaussian_Input_Files folder exists
-						w_dir = check_for_final_folder(w_dir)
+						w_dir = check_for_final_folder(w_dir,log)
 						#assign the path to the finished directory.
 						w_dir_fin = args.path + str(lot) + '-' + str(bs) +'/finished'
-						#print(w_dir)
+						#log.write(w_dir)
 						os.chdir(w_dir)
-						print(w_dir)
+						log.write(w_dir)
 						log_files = glob.glob('*.log')
-						output_analyzer(log_files, w_dir, lot, bs, bs_gcp, args, w_dir_fin)
+						output_analyzer(log_files, w_dir, lot, bs, bs_gcp, args, w_dir_fin,log)
 		#adding in for general analysis
 		#need to specify the lot, bs as arguments for each analysis
 		else:
 			log_files = glob.glob('*.log')
 			w_dir = os.getcwd()
 			w_dir_fin = w_dir+'/Finished'
-			output_analyzer(log_files, w_dir, lot, bs, bs_gcp, args, w_dir_fin)
+			output_analyzer(log_files, w_dir, lot, bs, bs_gcp, args, w_dir_fin,log)
 
 	#adding the part to check for resubmission of the newly created gaussian files.
 	if args.qsub == True:
@@ -602,7 +606,7 @@ def main():
 			for bs in args.basis_set:
 				w_dir = args.path + str(lot) + '-' + str(bs) +'/'
 				#check if New_Gaussian_Input_Files folder exists
-				w_dir = check_for_final_folder(w_dir)
+				w_dir = check_for_final_folder(w_dir,log)
 				os.chdir(w_dir)
 				cmd = args.submission_command + ' *.com'
 				if args.qsub == True:
@@ -620,10 +624,10 @@ def main():
 					log_files = glob.glob('*.log')
 					if len(log_files) != 0:
 						val = ' '.join(log_files)
-						dup_calculation(val,w_dir,args)
+						dup_calculation(val,w_dir,args,log)
 					else:
-						print(' Files for are not there!')
-					#print(log_files)
+						log.write(' Files for are not there!')
+					#log.write(log_files)
 				except:
 					pass
 
@@ -641,10 +645,10 @@ def main():
 						log_files = glob.glob('RE' + '_' + str(i)+'_'+'confs_low.log')
 						if len(log_files) != 0:
 							val = ' '.join(log_files)
-							boltz_calculation(val,i)
+							boltz_calculation(val,i,log)
 						else:
-							print(' Files for {} are not there!'.format(i))
-						#print(log_files)
+							log.write(' Files for {} are not there!'.format(i))
+						#log.write(log_files)
 					except:
 						pass
 
@@ -656,7 +660,7 @@ def main():
 				os.chdir(w_dir)
 				#read the csv log_files
 				csv_files = glob.glob('Goodvibes*.csv')
-				combine_files(csv_files, lot, bs, args)
+				combine_files(csv_files, lot, bs, args,log)
 
 if __name__ == "__main__":
 	main()
