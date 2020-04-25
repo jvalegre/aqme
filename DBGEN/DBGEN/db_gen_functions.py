@@ -373,24 +373,6 @@ def conformer_generation(mol,name,start_time,args,log,coord_Map=None,alg_Map=Non
 
 			summ_search(mol, name,args,log,coord_Map,alg_Map,mol_template)
 
-			#applying rule to get the necessary conformers only
-			if args.exp_rules == True:
-				if args.verbose == True: log.write("   ----- Applying experimental rules to write the new confs file -----")
-				### do 2 cases, for RDKit only and RDKIt+xTB
-				allmols = Chem.SDMolSupplier(name+final_output, removeHs=False)
-				if allmols is None:
-					log.write("Could not open ", name+final_output)
-					sys.exit(-1)
-
-				sdwriter = Chem.SDWriter(name+exp_rules_output_ext)
-
-				for mol in allmols:
-					check_mol = True
-					check_mol = exp_rules_output(mol,args,log)
-					if check_mol == True:
-						sdwriter.write(mol)
-				sdwriter.close()
-
 		except (KeyboardInterrupt, SystemExit):
 			raise
 		except Exception as e: log.write(traceback.print_exc())
@@ -422,8 +404,11 @@ def exp_rules_output(mol, args,log):
 	atom_indexes = []
 	for atom in mol.GetAtoms():
 		# Finds the Ir atom and gets the atom types and indexes of all its neighbours
-		if atom.GetAtomicNum() == 77:
-			Ir_idx = atom.GetIdx()
+		for el in elementspt:
+			if el.symbol == args.metal:
+				atomic_number = el.number
+		if atom.GetAtomicNum() == atomic_number:
+			metal_idx = atom.GetIdx()
 			for x in atom.GetNeighbors():
 				ligand_links.append(x.GetSymbol())
 				atom_indexes.append(x.GetIdx())
@@ -432,13 +417,13 @@ def exp_rules_output(mol, args,log):
 	# This part will identify the pairs of C and N atoms that are part of the same Ph_Py ligand.
 	# The shape of the atom pairs is '[[C1_ATOM_NUMBER, N1_ATOM_NUMBER],[C2, N2],...]'.
 	# This information is required for the subsequent filtering process based on angles
-	if len(atom_indexes) == 6:
+	if len(atom_indexes) == args.complex_coord:
 		ligand_atoms = []
 		for i in range(len(atom_indexes)):
 			# This is a filter that excludes molecules that fell apart during DFT geometry
 			# optimization (i.e. a N atom from one of the ligands separated from Ir). The
 			# max distance allowed can be tuned in length_filter
-			bond_length = Chem.rdMolTransforms.GetBondLength(mol_conf,Ir_idx,atom_indexes[i])
+			bond_length = rdMolTransforms.GetBondLength(mol_conf,metal_idx,atom_indexes[i])
 			length_filter = 2.25
 			if bond_length > length_filter:
 				passing = False
@@ -451,8 +436,8 @@ def exp_rules_output(mol, args,log):
 					# N atoms that are part of the same Ph_Py ligand
 					if ligand_links[i] == 'C' and atom_indexes[j] != 'C':
 						# This part detects the Ir-C bond and breaks it, breaking the Ph_Py ring
-						bond = mol.GetBondBetweenAtoms(atom_indexes[i], Ir_idx)
-						new_mol = Chem.FragmentOnBonds(mol, [bond.GetIdx()],addDummies=True, dummyLabels=[(atom_indexes[i], Ir_idx)])
+						bond = mol.GetBondBetweenAtoms(atom_indexes[i], metal_idx)
+						new_mol = Chem.FragmentOnBonds(mol, [bond.GetIdx()],addDummies=True, dummyLabels=[(atom_indexes[i], metal_idx)])
 						# Now, identify whether or not the initial 5-membered ring formed between
 						# [-Ir-C-C-C-N-] is broken when we break the Ir-C bond. This works
 						# because Ph_Py units bind Ir in the same way always, through 1 C and 1 N
@@ -470,8 +455,8 @@ def exp_rules_output(mol, args,log):
 						else:
 							# An additional filter just in case the N is part of a 5-membered
 							# ring besides the 5-membered ring that forms with Ir
-							bond_2 = mol.GetBondBetweenAtoms(atom_indexes[j], Ir_idx)
-							new_mol_2 = Chem.FragmentOnBonds(mol, [bond_2.GetIdx()],addDummies=True, dummyLabels=[(atom_indexes[j], Ir_idx)])
+							bond_2 = mol.GetBondBetweenAtoms(atom_indexes[j], metal_idx)
+							new_mol_2 = Chem.FragmentOnBonds(mol, [bond_2.GetIdx()],addDummies=True, dummyLabels=[(atom_indexes[j], metal_idx)])
 							if new_mol_2.GetAtomWithIdx(atom_indexes[i]).IsInRingSize(5) == False:
 								ligand_atoms.append([atom_indexes[i],atom_indexes[j]])
 								break
@@ -491,14 +476,14 @@ def exp_rules_output(mol, args,log):
 							if i <= j and i != j:
 								# Calculate the angle between 2 N atoms from different Ph_Py ligands.
 								# When there are 3 Ph_Py ligands, no 2 N atoms must be in 180 degrees
-								angle = rdMolTransforms.GetAngleDeg(mol_conf,ligand_atoms[i][1],Ir_idx,ligand_atoms[j][1])
+								angle = rdMolTransforms.GetAngleDeg(mol_conf,ligand_atoms[i][1],metal_idx,ligand_atoms[j][1])
 								if (180 - args.angle_off) <= angle <= (180 + args.angle_off):
 									passing = False
 									break
 			# For complexes with 2 Ph_Py ligands + 1 ligand that is not Ph_Py
 			if len(ligand_atoms) == 2:
 				# Since there are only 2 N atoms, we do not need to include a nested loop
-					angle = rdMolTransforms.GetAngleDeg(mol_conf,ligand_atoms[0][1],Ir_idx,ligand_atoms[1][1])
+					angle = rdMolTransforms.GetAngleDeg(mol_conf,ligand_atoms[0][1],metal_idx,ligand_atoms[1][1])
 					# Calculate the angle between 2 N atoms from different Ph_Py ligands.
 					# When there are 2 Ph_Py ligands, the 2 N atoms from the 2 Ph_Py ligands
 					# must be in 180 degrees

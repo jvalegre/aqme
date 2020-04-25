@@ -315,7 +315,7 @@ def summ_search(mol, name,args,log, coord_Map = None,alg_Map=None,mol_template=N
 		# 	unique_energies.append(cenergy[id])
 
 		# log.write(unique_mols[0:2].GetConformers()[0].GetPositions())
-		if args.verbose: log.write("o "+ str(len(selectedcids))+"unique conformers remain")
+		if args.verbose: log.write("o "+ str(len(selectedcids))+" unique conformers remain")
 
 		#if use the rotations constraint, then this block would write the corresponding SDF file.
 		if len(rotmatches) != 0:
@@ -323,7 +323,7 @@ def summ_search(mol, name,args,log, coord_Map = None,alg_Map=None,mol_template=N
 			sdwriter_rot = Chem.SDWriter(name+'_rotation_dihydral.sdf')
 			# now exhaustively drive torsions of selected conformers
 			n_confs = int(len(selectedcids) * (360 / args.degree) ** len(rotmatches))
-			if args.verbose and len(rotmatches) != 0: log.write("o  Systematic generation of"+ str(n_confs)+ "confomers")
+			if args.verbose and len(rotmatches) != 0: log.write("o  Systematic generation of "+ str(n_confs)+ " confomers")
 
 			total = 0
 			for conf in selectedcids:
@@ -455,7 +455,7 @@ def summ_search(mol, name,args,log, coord_Map = None,alg_Map=None,mol_template=N
 					final_output = args.ani1_output
 					species = model.species_to_tensor(elements).to(device).unsqueeze(0)
 					_, ani_energy = model((species, coordinates))
-					if args.verbose: log.write("ANI Initial E:"+str(ani_energy.item()*627.509)+'kcal/mol')
+					if args.verbose: log.write("ANI Initial E: "+str(ani_energy.item()*627.509)+' kcal/mol')
 
 					ase_molecule = ase.Atoms(elements, positions=coordinates.tolist()[0], calculator=model.ase())
 					### make a function for constraints and optimization
@@ -477,7 +477,7 @@ def summ_search(mol, name,args,log, coord_Map = None,alg_Map=None,mol_template=N
 						# Now let's compute energy:
 						_, ani_energy = model((species, coordinates))
 						aniE = ani_energy.item() #Hartree
-						if args.verbose: log.write("ANI Final E:"+ str(aniE*627.509)+'kcal/mol')
+						if args.verbose: log.write("ANI Final E: "+ str(aniE*627.509)+' kcal/mol')
 						###############################################################################
 					else:
 						log.write('ANI1 optimization could not converge (discarding conformer).')
@@ -511,7 +511,7 @@ def summ_search(mol, name,args,log, coord_Map = None,alg_Map=None,mol_template=N
 						else:
 							ase_molecule = ase.Atoms(elements, positions=coordinates.tolist()[0],calculator=GFN2()) #define ase molecule using GFN2 Calculator
 
-					if args.verbose: log.write("Initial XTB energy"+ str((ase_molecule.get_potential_energy()/Hartree)*627.509)+'kcal/mol')
+					if args.verbose: log.write("Initial XTB energy "+ str((ase_molecule.get_potential_energy()/Hartree)*627.509)+' kcal/mol')
 					optimizer = ase.optimize.BFGS(ase_molecule, trajectory='xTB_opt.traj')
 					optimizer.run(fmax=args.opt_fmax, steps=args.opt_steps)
 					if len(ase.io.Trajectory('xTB_opt.traj', mode='r')) != (args.opt_steps+1):
@@ -524,7 +524,7 @@ def summ_search(mol, name,args,log, coord_Map = None,alg_Map=None,mol_template=N
 						SQM_energy.append((xtb_energy/Hartree)*627.509) # gets the energy in kcal/mol
 						cartesians = np.array(coordinates.tolist()[0])
 						SQM_cartesians.append(cartesians)
-						if args.verbose: log.write("Final XTB E:"+str((xtb_energy/Hartree)*627.509)+'kcal/mol')
+						if args.verbose: log.write("Final XTB E: "+str((xtb_energy/Hartree)*627.509)+' kcal/mol')
 						###############################################################################
 					else:
 						log.write('xTB optimization could not converge (discarding conformer).')
@@ -541,7 +541,7 @@ def summ_search(mol, name,args,log, coord_Map = None,alg_Map=None,mol_template=N
 
 
 			else:
-				if args.verbose: log.write("o  Removing duplicate conformers ( RMSD <"+ str(args.rms_threshold)+ "and E difference <"+str(args.energy_threshold)+"kcal/mol)")
+				if args.verbose: log.write("o  Removing duplicate conformers ( RMSD < "+ str(args.rms_threshold)+ " and E difference < "+str(args.energy_threshold)+" kcal/mol)")
 				cids = list(range(len(SQM_mols)))
 				SQM_sortedcids = sorted(cids,key = lambda cid: SQM_energy[cid])
 				SQM_selectedcids = []
@@ -576,7 +576,7 @@ def summ_search(mol, name,args,log, coord_Map = None,alg_Map=None,mol_template=N
 					post_outmols.append(SQM_mols[id])
 					post_energy.append(SQM_energy[id])
 
-				if args.verbose: log.write("o "+ str(len(SQM_selectedcids))+"unique conformers remain")
+				if args.verbose: log.write("o "+ str(len(SQM_selectedcids))+" unique conformers remain")
 
 				for i, cid in enumerate(SQM_selectedcids):
 					SQM_mols[cid].SetProp('_Name', name + ' conformer ' + str(i+1))

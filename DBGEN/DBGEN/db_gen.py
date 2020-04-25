@@ -463,9 +463,38 @@ def main():
 			for [mol, name] in mol_objects: # Run confomer generation for each mol object
 				conformer_generation(mol,name,start_time,args,log)
 
-	if args.write_gauss == True:
-		#grad all the gaussian files
+	#applying rule to get the necessary conformers only
+	if args.exp_rules == True:
+		if args.verbose == True: log.write("   ----- Applying experimental rules to write the new confs file -----")
+		### do 2 cases, for RDKit only and RDKIt+xTB
+		#grab all the gaussian files
 		if args.xtb != True and args.ANI1ccx != True:
+			conf_files =  glob.glob('*_RDKit.sdf')
+		elif args.xtb == True:
+			conf_files =  glob.glob('*_xTB.sdf')
+		elif args.ANI1ccx == True:
+			conf_files =  glob.glob('*_ANI1ccx.sdf')
+
+		for file in conf_files:
+			allmols = Chem.SDMolSupplier(file, removeHs=False)
+			if allmols is None:
+				log.write("Could not open "+ file)
+				sys.exit(-1)
+
+			sdwriter = Chem.SDWriter(file.split('.')[0]+args.exp_rules_output_ext)
+
+			for mol in allmols:
+				check_mol = True
+				check_mol = exp_rules_output(mol,args,log)
+				if check_mol == True:
+					sdwriter.write(mol)
+			sdwriter.close()
+
+	if args.write_gauss == True:
+		if args.exp_rules == True:
+			conf_files =  glob.glob('*_rules.sdf')
+		#grad all the gaussian files
+		elif args.xtb != True and args.ANI1ccx != True:
 			conf_files =  glob.glob('*_RDKit.sdf')
 		elif args.xtb == True:
 			conf_files =  glob.glob('*_xTB.sdf')
@@ -473,7 +502,6 @@ def main():
 			conf_files =  glob.glob('*_ANI1ccx.sdf')
 		else:
 			conf_files =  glob.glob('*.sdf')
-
 
 		# names for directories created
 		sp_dir = 'generated_sp_files'
@@ -553,27 +581,6 @@ def main():
 						shutil.move(os.path.join(src, file), os.path.join(destination_ani, file))
 					else:
 						raise
-
-	if args.exp_rules == True:
-
-		if args.verbose == True: log.write("   ----- Applying experimental rules to write the new confs file -----")
-
-		conf_files = glob.glob('*.sdf')
-
-		for file in conf_files:
-			allmols = Chem.SDMolSupplier(file, removeHs=False)
-			if allmols is None:
-				log.write("Could not open ", file)
-				sys.exit(-1)
-
-			sdwriter = Chem.SDWriter(file.split('.')[0]+exp_rules_output_ext)
-
-			for mol in allmols:
-				check_mol = True
-				check_mol = exp_rules_output(mol,args)
-				if check_mol == True:
-					sdwriter.write(mol)
-			sdwriter.close()
 
 	if args.analysis == True:
 		if os.path.isdir(args.path):
