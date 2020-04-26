@@ -136,16 +136,19 @@ def rules_get_charge(mol, args,log):
 def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None,alg_Map=None,mol_template=None):
 	'''embeds core conformers, then optimizes and filters based on RMSD. Finally the rotatable torsions are systematically rotated'''
 
-	# detects and applies auto-detection of initial number of conformers
-	if args.sample == 'auto':
-		args.sample = auto_sampling(args.sample,args.auto_sample,mol,log)
-
 	Chem.SanitizeMol(mol)
 	mol = Chem.AddHs(mol)
 	mol.SetProp("_Name",name)
 
+	# detects and applies auto-detection of initial number of conformers
+	if args.sample == 'auto':
+		initial_confs = auto_sampling(args.sample,args.auto_sample,mol,log)
+
+	else:
+		initial_confs = args.sample
+
 	dup_data.at[dup_data_idx, 'Molecule'] = name
-	dup_data.at[dup_data_idx, 'RDKIT-Initial-samples'] = args.sample
+	dup_data.at[dup_data_idx, 'RDKIT-Initial-samples'] = initial_confs
 
 	if args.nodihedrals == False: rotmatches = getDihedralMatches(mol, args.heavyonly,log)
 	else: rotmatches = []
@@ -159,12 +162,12 @@ def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None,alg_M
 				ps.randomSeed = args.seed
 				ps.ignoreSmoothingFailures=True
 				ps.numThreads = 0
-				cids = rdDistGeom.EmbedMultipleConfs(mol, args.sample, params=ps)
+				cids = rdDistGeom.EmbedMultipleConfs(mol, initial_confs, params=ps)
 			else:
-				cids = rdDistGeom.EmbedMultipleConfs(mol, args.sample,ignoreSmoothingFailures=True, randomSeed=args.seed,numThreads = 0)
-			if len(cids) == 0 or len(cids) == 1 and args.sample != 1:
+				cids = rdDistGeom.EmbedMultipleConfs(mol, initial_confs,ignoreSmoothingFailures=True, randomSeed=args.seed,numThreads = 0)
+			if len(cids) == 0 or len(cids) == 1 and initial_confs != 1:
 				log.write("o  conformers initially sampled with random coordinates")
-				cids = rdDistGeom.EmbedMultipleConfs(mol, args.sample, randomSeed=args.seed, useRandomCoords=True, boxSizeMult=10.0,ignoreSmoothingFailures=True, numZeroFail=1000, numThreads = 0)
+				cids = rdDistGeom.EmbedMultipleConfs(mol, initial_confs, randomSeed=args.seed, useRandomCoords=True, boxSizeMult=10.0,ignoreSmoothingFailures=True, numZeroFail=1000, numThreads = 0)
 			if args.verbose:
 				log.write("o "+ str(len(cids))+"conformers initially sampled")
 		# case of embed for templates
@@ -175,12 +178,12 @@ def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None,alg_M
 				ps.coordMap = coord_Map
 				ps.ignoreSmoothingFailures=True
 				ps.numThreads = 0
-				cids = rdDistGeom.EmbedMultipleConfs(mol, args.sample, params=ps)
+				cids = rdDistGeom.EmbedMultipleConfs(mol, initial_confs, params=ps)
 			else:
-				cids = rdDistGeom.EmbedMultipleConfs(mol, args.sample, randomSeed=args.seed,ignoreSmoothingFailures=True, coordMap = coord_Map,numThreads = 0)
-			if len(cids) == 0 or len(cids) == 1 and args.sample != 1 :
+				cids = rdDistGeom.EmbedMultipleConfs(mol, initial_confs, randomSeed=args.seed,ignoreSmoothingFailures=True, coordMap = coord_Map,numThreads = 0)
+			if len(cids) == 0 or len(cids) == 1 and initial_confs != 1 :
 				log.write("o  conformers initially sampled with random coordinates")
-				cids = rdDistGeom.EmbedMultipleConfs(mol, args.sample, randomSeed=args.seed, useRandomCoords=True, boxSizeMult=10.0, numZeroFail=1000,ignoreSmoothingFailures=True, coordMap = coord_Map,numThreads = 0)
+				cids = rdDistGeom.EmbedMultipleConfs(mol, initial_confs, randomSeed=args.seed, useRandomCoords=True, boxSizeMult=10.0, numZeroFail=1000,ignoreSmoothingFailures=True, coordMap = coord_Map,numThreads = 0)
 			if args.verbose:
 				log.write("o "+ str(len(cids))+"conformers initially sampled")
 
@@ -258,7 +261,7 @@ def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None,alg_M
 				# 	rms = rdMolAlign.AlignMol(mol, mol_template,prbCid=conf, atomMap=alg_Map,reflect=True,maxIters=50)
 				cenergy.append(energy)
 
-			# outmols is gonna be a list containing "args.sample" mol objects with "args.sample"
+			# outmols is gonna be a list containing "initial_confs" mol objects with "initial_confs"
 			# conformers. We do this to SetProp (Name and Energy) to the different conformers
 			# and log.write in the SDF file. At the end, since all the mol objects has the same
 			# conformers, but the energies are different, we can log.write conformers to SDF files
