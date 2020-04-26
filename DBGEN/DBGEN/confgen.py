@@ -133,7 +133,7 @@ def rules_get_charge(mol, args,log):
 
 	return args.charge, neighbours
 
-def summ_search(mol, name,args,log, coord_Map = None,alg_Map=None,mol_template=None):
+def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None,alg_Map=None,mol_template=None):
 	'''embeds core conformers, then optimizes and filters based on RMSD. Finally the rotatable torsions are systematically rotated'''
 
 	# detects and applies auto-detection of initial number of conformers
@@ -143,6 +143,9 @@ def summ_search(mol, name,args,log, coord_Map = None,alg_Map=None,mol_template=N
 	Chem.SanitizeMol(mol)
 	mol = Chem.AddHs(mol)
 	mol.SetProp("_Name",name)
+
+	dup_data.at[dup_data_idx, 'Molecule'] = name
+	dup_data.at[dup_data_idx, 'RDKIT-Initial-samples'] = args.sample
 
 	if args.nodihedrals == False: rotmatches = getDihedralMatches(mol, args.heavyonly,log)
 	else: rotmatches = []
@@ -274,7 +277,7 @@ def summ_search(mol, name,args,log, coord_Map = None,alg_Map=None,mol_template=N
 		cids = list(range(len(outmols)))
 		sortedcids = sorted(cids,key = lambda cid: cenergy[cid])
 
-		selectedcids_initial, selectedcids = [],[]
+		selectedcids_initial, selectedcids,eng_dup,eng_rms_dup  = [],[],0,0
 		# First RDKit filter, only based on E
 		for i, conf in enumerate(sortedcids):
 			# This keeps track of whether or not your conformer is unique
@@ -287,6 +290,7 @@ def summ_search(mol, name,args,log, coord_Map = None,alg_Map=None,mol_template=N
 				E_diff = abs(cenergy[conf] - cenergy[seenconf]) # in kcal/mol
 				if E_diff < args.initial_energy_threshold:
 					excluded_conf = True
+					eng_dup +=1
 					break
 			if excluded_conf == False:
 				if conf not in selectedcids_initial:
@@ -304,6 +308,7 @@ def summ_search(mol, name,args,log, coord_Map = None,alg_Map=None,mol_template=N
 				E_diff = abs(cenergy[conf] - cenergy[seenconf]) # in kcal/mol
 				if rms < args.rms_threshold and E_diff < (args.energy_threshold ):
 					excluded_conf = True
+					eng_rms_dup +=1
 					break
 			if excluded_conf == False:
 				if conf not in selectedcids:
@@ -316,6 +321,10 @@ def summ_search(mol, name,args,log, coord_Map = None,alg_Map=None,mol_template=N
 
 		# log.write(unique_mols[0:2].GetConformers()[0].GetPositions())
 		if args.verbose: log.write("o "+ str(len(selectedcids))+" unique conformers remain")
+
+		dup_data.at[dup_data_idx, 'RDKit-energy-duplicates'] = eng_dup
+		dup_data.at[dup_data_idx, 'RDKit-RMS-and-energy-duplicates'] = eng_rms_dup
+		dup_data.at[dup_data_idx, 'RDKIT-Unique-conformers'] = len(selectedcids)
 
 		#if use the rotations constraint, then this block would write the corresponding SDF file.
 		if len(rotmatches) != 0:
@@ -352,7 +361,7 @@ def summ_search(mol, name,args,log, coord_Map = None,alg_Map=None,mol_template=N
 
 			sdwriter = Chem.SDWriter(name+args.rdkit_output)
 			rd_count = 0
-			rd_selectedcids =[]
+			rd_selectedcids,rd_dup =[],0
 			for i in range(len(rdmols)):
 				# This keeps track of whether or not your conformer is unique
 				excluded_conf = False
@@ -368,12 +377,15 @@ def summ_search(mol, name,args,log, coord_Map = None,alg_Map=None,mol_template=N
 					E_diff = abs(float(rdmols[i].GetProp('Energy')) - float(rdmols[j].GetProp('Energy'))) # in kcal/mol
 					if rms < args.rms_threshold and E_diff < (args.energy_threshold ):
 						excluded_conf = True
+						rd_dup +=1
 						break
 				if excluded_conf == False:
 					sdwriter.write(rdmols[i])
 					if i not in rd_selectedcids:
 						rd_selectedcids.append(i)
 			sdwriter.close()
+
+			dup_data.at[dup_data_idx, 'RDKIT-Rotated-Unique-conformers'] = len(rd_selectedcids)
 
 		else:
 			sdwriter = Chem.SDWriter(name+args.rdkit_output)
@@ -391,6 +403,16 @@ def summ_search(mol, name,args,log, coord_Map = None,alg_Map=None,mol_template=N
 
 		# Calculates geometries and energies with xTB or ANI1
 		if args.ANI1ccx == True or args.xtb == True:
+			if args.xtb == True:
+				if args.nodihedrals == True:
+					dup_data.at[dup_data_idx, 'xTB-Initial-samples'] = len(selectedcids)
+				else:
+					dup_data.at[dup_data_idx, 'xTB-Initial-samples'] = len(rd_selectedcids)
+			elif args.ANI1ccx == True:
+				if args.nodihedrals == True:
+					dup_data.at[dup_data_idx, 'ANI1ccx-Initial-samples'] = len(selectedcids)
+				else:
+					dup_data.at[dup_data_idx, 'ANI1ccx-Initial-samples'] = len(rd_selectedcids)
 
 			# imports only used by to xTB and ANI1
 			import ase
@@ -546,7 +568,7 @@ def summ_search(mol, name,args,log, coord_Map = None,alg_Map=None,mol_template=N
 				SQM_sortedcids = sorted(cids,key = lambda cid: SQM_energy[cid])
 				SQM_selectedcids = []
 
-				SQM_count = 0
+				SQM_count,xa_dup = 0,0
 				for i in SQM_sortedcids:
 					# This keeps track of whether or not your conformer is unique
 					excluded_conf = False
@@ -561,6 +583,7 @@ def summ_search(mol, name,args,log, coord_Map = None,alg_Map=None,mol_template=N
 						E_diff = abs(SQM_energy[i] - SQM_energy[j]) # in kcal/mol
 						if rms < args.rms_threshold and E_diff < (args.energy_threshold ):
 							excluded_conf = True
+							xa_dup +=1
 							break
 					if excluded_conf == False:
 						if i not in SQM_selectedcids:
@@ -577,6 +600,14 @@ def summ_search(mol, name,args,log, coord_Map = None,alg_Map=None,mol_template=N
 					post_energy.append(SQM_energy[id])
 
 				if args.verbose: log.write("o "+ str(len(SQM_selectedcids))+" unique conformers remain")
+
+				if args.xtb == True:
+					dup_data.at[dup_data_idx, 'xTB-RMS-and-energy-duplicates'] = xa_dup
+					dup_data.at[dup_data_idx, 'xTB-Unique-conformers'] = len(SQM_selectedcids)
+				elif args.ANI1ccx == True:
+					dup_data.at[dup_data_idx, 'ANI1ccx-RMS-and-energy-duplicates'] = xa_dup
+					dup_data.at[dup_data_idx, 'ANI1ccx-Unique-conformers'] = len(SQM_selectedcids)
+
 
 				for i, cid in enumerate(SQM_selectedcids):
 					SQM_mols[cid].SetProp('_Name', name + ' conformer ' + str(i+1))

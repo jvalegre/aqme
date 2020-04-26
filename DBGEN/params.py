@@ -58,8 +58,9 @@ lowest_n  = False # for a given threshold of energy_threshold_for_gaussian
 energy_threshold_for_gaussian = 100  #in kcal/mol, from all the conformers generated after xTB optimization
                                     # lowest_n must be True to apply this energy threshold
 
-" (4.2) DEFINITION OF A SECOND CATEGORY OF ATOMS SEPARATED IN GENECP "
+" (4.2) DEFINITION OF A SECOND CATEGORY OF ATOMS SEPARATED IN GENECP OR GEN"
 genecp_atoms = ['Ir']
+gen_atoms = ['']
 
 " (4.3) DEFINTION OF BASIS SET AND LEVEL OF THEORY AND SOLVENT "
 basis_set = ['6-31+g(d,p)']
@@ -150,3 +151,6 @@ STACKSIZE = '1G' #set for large system
 
 " MOLECULES now, for eg., molecule list, for later can use as total no. of molecules it is need in the boltz part to read in specific molecules"
 maxnumber = 100000 # max number of molecules to use
+
+" CHARGE DEFAULT IF CANNOT BE CALCULATED"
+charge_default = 0

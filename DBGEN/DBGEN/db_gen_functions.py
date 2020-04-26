@@ -363,7 +363,7 @@ def template_embed_optimize(molecule_embed,mol_1,args,log):
 
 " FUCNTION WORKING WITH MOL OBJECT TO CREATE CONFORMERS"
 
-def conformer_generation(mol,name,start_time,args,log,coord_Map=None,alg_Map=None,mol_template=None):
+def conformer_generation(mol,name,start_time,args,log,dup_data,dup_data_idx,coord_Map=None,alg_Map=None,mol_template=None):
 	valid_structure = filters(mol, args,log)
 	if valid_structure:
 		if args.verbose: log.write("\n   ----- {} -----".format(name))
@@ -371,7 +371,7 @@ def conformer_generation(mol,name,start_time,args,log,coord_Map=None,alg_Map=Non
 		try:
 			# the conformational search
 
-			summ_search(mol, name,args,log,coord_Map,alg_Map,mol_template)
+			summ_search(mol, name,args,log,dup_data,dup_data_idx,coord_Map,alg_Map,mol_template)
 
 		except (KeyboardInterrupt, SystemExit):
 			raise
@@ -568,7 +568,7 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args,log):
 				input_sp = 'scrf=({0},solvent={1}) nmr=giao'.format(args.solvent_model, args.solvent_name)  ##add solvent if needed
 
 	#defining genecp
-	genecp = 'gen'
+	genecp = 'None'
 
 	try:
 		#reading the sdf to check for I atom_symbol
@@ -577,12 +577,19 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args,log):
 			if atom.GetSymbol() in args.genecp_atoms:
 				genecp = 'genecp'
 				break
+			elif atom.GetSymbol() in args.gen_atoms:
+				genecp = 'gen'
+				break
 	except:
 		read_lines = open(file,"r").readlines()
 		for line in range(len(read_lines)):
 			for atom in args.genecp_atoms:
 				if read_lines[line].find(atom)>-1:
 					genecp = 'genecp'
+					break
+			for atom in args.gen_atoms:
+				if read_lines[line].find(atom)>-1:
+					genecp = 'gen'
 					break
 
 	if args.metal_complex == True and os.path.splitext(args.input)[1] != '.com' and os.path.splitext(args.input)[1] != '.gjf':
@@ -591,7 +598,8 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args,log):
 			if len(neighbours) != 0:
 				if args.verbose == True: log.write('---- The Overall charge is reworked with rules for .smi, .csv, .cdx for writing the .com files of conformers')
 		except:
-			log.write(' ----- The Overall charge could not be re-worked with the rules ---- ')
+			args.charge = args.charge_default
+			log.write(' ----- The Overall charge could not be re-worked with the rules, hence writing the default charge 0 ---- ')
 			pass
 	if args.metal_complex == True and os.path.splitext(args.input)[1] == '.com' or os.path.splitext(args.input)[1] == '.gjf':
 		if len(neighbours) != 0:
@@ -616,7 +624,7 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args,log):
 	com_sdf = '{0}_.sdf'.format(name)
 	com_low_sdf = '{0}_low.sdf'.format(name)
 
-	if genecp =='genecp':
+	if genecp =='genecp' or genecp == 'gen':
 		#chk option
 		if args.chk == True:
 			if args.single_point == True:
@@ -670,7 +678,7 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args,log):
 		com_files = glob.glob('{0}_*.com'.format(name))
 
 		for file in com_files:
-			ecp_list,ecp_genecp_atoms = [],False
+			ecp_list,ecp_genecp_atoms,ecp_gen_atoms = [],False,False
 			read_lines = open(file,"r").readlines()
 
 			#chaanging the name of the files to the way they are in xTB Sdfs
@@ -702,27 +710,36 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args,log):
 					ecp_list.append(read_lines[i].split(' ')[0])
 				if read_lines[i].split(' ')[0] in args.genecp_atoms:
 				   ecp_genecp_atoms = True
+				if read_lines[i].split(' ')[0] in args.gen_atoms:
+				   ecp_gen_atoms = True
+
+			#error if both genecp and gen are
+			if ecp_genecp_atoms == True and ecp_gen_atoms == True:
+				sys.exit("ERROR: Can't use Gen and GenECP at the same time")
 
 			for i in range(len(ecp_list)):
-				if ecp_list[i] not in args.genecp_atoms:
+				if ecp_list[i] not in (args.genecp_atoms or args.gen_atoms):
 					fileout.write(ecp_list[i]+' ')
 			fileout.write('0\n')
 			fileout.write(bs+'\n')
 			fileout.write('****\n')
-			if ecp_genecp_atoms == False:
+			if ecp_genecp_atoms == False and ecp_gen_atoms == False :
 				fileout.write('\n')
 			else:
 				for i in range(len(ecp_list)):
-					if ecp_list[i] in args.genecp_atoms:
+					if ecp_list[i] in args.genecp_atoms :
+						fileout.write(ecp_list[i]+' ')
+					elif ecp_list[i] in args.gen_atoms :
 						fileout.write(ecp_list[i]+' ')
 				fileout.write('0\n')
 				fileout.write(bs_gcp+'\n')
 				fileout.write('****\n\n')
-				for i in range(len(ecp_list)):
-					if ecp_list[i] in args.genecp_atoms:
-						fileout.write(ecp_list[i]+' ')
-				fileout.write('0\n')
-				fileout.write(bs_gcp+'\n\n')
+				if ecp_genecp_atoms == True:
+					for i in range(len(ecp_list)):
+						if ecp_list[i] in args.genecp_atoms:
+							fileout.write(ecp_list[i]+' ')
+					fileout.write('0\n')
+					fileout.write(bs_gcp+'\n\n')
 			fileout.close()
 
 			#change file by moving to new file

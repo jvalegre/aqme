@@ -151,7 +151,21 @@ def main():
 		else:
 			mol_objects = [] # a list of mol objects that will be populated
 
-		# first check if octahydral of not
+		# writing the list of DUPLICATES
+		if args.nodihedrals == True:
+			if args.xtb != True and args.ANI1ccx != True:
+				dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples', 'RDKit-energy-duplicates','RDKit-RMS-and-energy-duplicates','RDKIT-Unique-conformers'])
+			elif args.xtb == True:
+				dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples', 'RDKit-energy-duplicates','RDKit-RMS-and-energy-duplicates','RDKIT-Unique-conformers','xTB-Initial-samples','xTB-RMS-and-energy-duplicates','xTB-Unique-conformers'])
+			elif args.ANI1ccx == True:
+				dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples', 'RDKit-energy-duplicates','RDKit-RMS-and-energy-duplicates','RDKIT-Unique-conformers','ANI1ccx-Initial-samples','ANI1ccx-RMS-and-energy-duplicates','ANI1ccx-Unique-conformers'])
+		else:
+			if args.xtb != True and args.ANI1ccx != True:
+				dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples', 'RDKit-energy-duplicates','RDKit-RMS-and-energy-duplicates','RDKIT-Unique-conformers','RDKIT-Rotated-Unique-conformers'])
+			elif args.xtb == True:
+				dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples', 'RDKit-energy-duplicates','RDKit-RMS-and-energy-duplicates','RDKIT-Unique-conformers','RDKIT-Rotated-Unique-conformers','xTB-Initial-samples','xTB-RMS-and-energy-duplicates','xTB-Unique-conformers'])
+			elif args.ANI1ccx == True:
+					dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples', 'RDKit-energy-duplicates','RDKit-RMS-and-energy-duplicates','RDKIT-Unique-conformers','RDKIT-Rotated-Unique-conformers','ANI1ccx-Initial-samples','ANI1ccx-RMS-and-energy-duplicates','ANI1ccx-Unique-conformers'])
 
 		if file_format == '.smi': # SMILES input specified
 			smifile = open(args.input)
@@ -458,10 +472,16 @@ def main():
 #------------------------------------------------------------------------------------------
 		if args.complex_type == 'squareplanar' or args.complex_type == 'squarepyrimidal':
 			for [mol, name, coord_Map,alg_Map,mol_template] in mol_objects: # Run confomer generation for each mol object
-				conformer_generation(mol,name,start_time,args,log,coord_Map,alg_Map,mol_template)
+				dup_data_idx = 0
+				conformer_generation(mol,name,start_time,args,log,dup_data,dup_data_idx,coord_Map,alg_Map,mol_template)
+				dup_data_idx += 1
+			dup_data.to_csv(args.input.split('.')[0]+'-Duplicates Data.csv',index=False)
 		else:
 			for [mol, name] in mol_objects: # Run confomer generation for each mol object
-				conformer_generation(mol,name,start_time,args,log)
+				dup_data_idx = 0
+				conformer_generation(mol,name,start_time,args,log,dup_data,dup_data_idx)
+				dup_data_idx += 1
+			dup_data.to_csv(args.input.split('.')[0]+'-Duplicates Data.csv',index=False)
 
 	#applying rule to get the necessary conformers only
 	if args.exp_rules == True:
@@ -583,7 +603,15 @@ def main():
 						raise
 
 	if args.analysis == True:
-		if os.path.isdir(args.path):
+		#adding in for general analysis
+		#need to specify the lot, bs as arguments for each analysis
+		if args.path == '':
+			log_files = glob.glob('*.log')
+			w_dir = os.getcwd()
+			w_dir_fin = w_dir+'/Finished'
+			output_analyzer(log_files, w_dir, lot, bs, bs_gcp, args, w_dir_fin,log)
+		#taking the coorct path
+		else:
 			# Sets the folder and find the log files to analyze
 			for lot in args.level_of_theory:
 				for bs in args.basis_set:
@@ -598,13 +626,7 @@ def main():
 						log.write(w_dir)
 						log_files = glob.glob('*.log')
 						output_analyzer(log_files, w_dir, lot, bs, bs_gcp, args, w_dir_fin,log)
-		#adding in for general analysis
-		#need to specify the lot, bs as arguments for each analysis
-		else:
-			log_files = glob.glob('*.log')
-			w_dir = os.getcwd()
-			w_dir_fin = w_dir+'/Finished'
-			output_analyzer(log_files, w_dir, lot, bs, bs_gcp, args, w_dir_fin,log)
+
 
 	#adding the part to check for resubmission of the newly created gaussian files.
 	if args.qsub == True:
