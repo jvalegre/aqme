@@ -378,22 +378,10 @@ def conformer_generation(mol,name,start_time,args,log,dup_data,dup_data_idx,coor
 		except Exception as e: log.write(traceback.print_exc())
 	else: log.write("ERROR: The structure is not valid")
 
-	#removing the xtb files
-	if os.path.exists("gfn2.out"):
-		os.remove("gfn2.out")
-
-	if os.path.exists("xTB_opt.traj"):
-		os.remove("xTB_opt.traj")
-
-	if os.path.exists("ANI1_opt.traj"):
-		os.remove("ANI1_opt.traj")
-
-	if os.path.exists("wbo"):
-		os.remove("wbo")
-
-	if os.path.exists("xtbrestart"):
-		os.remove("xtbrestart")
-
+	# removing temporary files
+	temp_files = ['gfn2.out', 'xTB_opt.traj', 'ANI1_opt.traj', 'wbo', 'xtbrestart']
+	for file in temp_files:
+		if os.path.exists(file): os.remove(file)
 
 	if args.time: log.write("\n Execution time: %s seconds" % (round(time.time() - start_time,2)))
 
