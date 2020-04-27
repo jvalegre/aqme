@@ -95,6 +95,7 @@ python -m DBGEN --compute --input \*.sdf
         periodictable
         pandas
         openbabel
+        pyyaml
     
      (b) If you use the compute option (conformer generation):
      
