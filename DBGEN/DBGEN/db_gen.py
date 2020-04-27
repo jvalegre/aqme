@@ -30,32 +30,30 @@ from DBGEN.confgen import *
 def main():
 	parser = argparse.ArgumentParser(description="Generate conformers depending on type of optimization (change parameters in db_gen_PATHS.py file).")
 
-	#INput details
-	parser.add_argument("--varfile",dest="varfile",default=None,help="Parameters in python format")
-	parser.add_argument("--input",help="Molecular structure")
-	parser.add_argument("--output", dest="output", default="output", metavar="OUTPUT",help="Change the default name of the output file to DBGEN_\"output\".dat")
+	#Input details
+	parser.add_argument("--varfile", dest="varfile", default=None, help="Parameters in YAML format")
+	parser.add_argument("-i", "--input", help="File containing molecular structure(s)")
+	parser.add_argument("--output", dest="output", default="output", metavar="OUTPUT", help="Change output filename to DBGEN_\"output\".dat")
 
 	#metal complex
-	parser.add_argument("--metal_complex", action="store_true", default=False, help="If studying Metal Complexes of coordination number 4,5 or 6")
-	parser.add_argument("--metal",  help="If metal complex, specify the metal involed", default="Ir", dest="metal", type=str)
-	parser.add_argument("--complex_spin",  help="If metal complex, specify the complex spin involed", default="1", dest="complex_spin", type=int)
-	parser.add_argument("--complex_coord",  help="If metal complex, specify the complex coordination involed", default="6", dest="complex_coord", type=int)
-	parser.add_argument("--complex_type",  help="If metal complex, specify the complex type involed", default="octahedral", dest="complex_type", type=str)
-	parser.add_argument("--m_oxi",  help="If metal complex, specify the metal oxidation state involed", default="3", dest="m_oxi", type=int)
-	parser.add_argument("--charge",  help="If metal complex,charge of metal complex. Will automatically update for metals", default="0", dest="charge", type=int)
+	parser.add_argument("--metal_complex", action="store_true", default=False, help="Request metal complex with coord. no. 4, 5 or 6")
+	parser.add_argument("--metal",  help="Specify metallic element", default="Ir", dest="metal", type=str)
+	parser.add_argument("--complex_spin",  help="Multiplicity of metal complex", default="1", dest="complex_spin", type=int)
+	parser.add_argument("--complex_coord", help="Coord. no. of metal complex", default="6", dest="complex_coord", type=int)
+	parser.add_argument("--complex_type",  help="Geometry about metal (e.g. octahedral)", default="octahedral", dest="complex_type", type=str)
+	parser.add_argument("--m_oxi",  help="Metal oxidation state", default="3", dest="m_oxi", type=int)
+	parser.add_argument("--charge",  help="Charge of metal complex. Will automatically update for metals", default="0", dest="charge", type=int)
 
 	#NCI complex
-	parser.add_argument("--nci_complex", action="store_true", default=False, help="If studying NCI Complexes")
-
-	parser.add_argument("-m","--maxnumber", help="Number of compounds", type=int, metavar="maxnumber")
+	parser.add_argument("--nci_complex", action="store_true", default=False, help="Request NCI complexes")
+	parser.add_argument("-m", "--maxnumber", help="Number of compounds", type=int, metavar="maxnumber")
 	parser.add_argument("--prefix", help="Prefix for naming files", default=None, metavar="prefix")
 
 	#work the script has to do
-	parser.add_argument("-w","--compute", action="store_true", default=False, help="Create conformers")
+	parser.add_argument("-w", "--compute", action="store_true", default=False, help="Perform conformational analysis")
 	parser.add_argument("--write_gauss", action="store_true", default=False, help="Create input files for Gaussian")
-	parser.add_argument("-a","--analysis", action="store_true", default=False, help="Fix and analyze Gaussian output files")
-	parser.add_argument("-r","--resubmit", action="store_true", default=False, help="Resubmit Gaussian input files")
-
+	parser.add_argument("-a", "--analysis", action="store_true", default=False, help="Fix and analyze Gaussian outputs")
+	parser.add_argument("-r", "--resubmit", action="store_true", default=False, help="Resubmit Gaussian input files")
 
 	#Post analysis
 	parser.add_argument("--dup",action="store_true",default=False, help="Remove Duplicates after DFT optimization")
@@ -121,22 +119,25 @@ def main():
 
 	args = parser.parse_args()
 
-	var = False
-
-	if args.varfile != None: var = True
-
 	#define the logging object
 	log = Logger("DBGEN", args.output)
 
-	# This will be used only if time = True in params.py
 	start_time = time.time()
 
-	### If the input file is python format then we will assume it contains variables ... ###
-	if var == True:
-		if os.path.splitext(args.varfile)[1] == '.py':
-			db_gen_variables = os.path.splitext(args.varfile)[0]
-			log.write("\no  IMPORTING VARIABLES FROM" + args.varfile)
-			args = __import__(db_gen_variables)
+	### Variables will be updated from YAML file ###
+	if args.varfile != None:
+		if os.path.exists(args.varfile):
+			if os.path.splitext(args.varfile)[1] == '.yaml':
+				log.write("\no  IMPORTING VARIABLES FROM " + args.varfile)
+				with open(args.varfile, 'r') as file:
+					param_list = yaml.load(file, Loader=yaml.FullLoader)
+	for param in param_list:
+		if hasattr(args, param):
+			if getattr(args, param) != param_list[param]:
+				log.write("o  RESET " + param + " from " + str(getattr(args, param)) + " to " + str(param_list[param]))
+				setattr(args, param, param_list[param])
+			else:
+				log.write("o  DEFAULT " + param + " : " + str(getattr(args, param)))
 
 ### check if it's working with *.smi (if it isn't, we need to change this a little bit)
 ### no it isnt working for *.smi, same or .sdf. We can add that feature in the end.
