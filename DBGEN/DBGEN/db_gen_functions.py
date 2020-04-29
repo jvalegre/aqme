@@ -293,9 +293,9 @@ def template_embed_optimize(molecule_embed,mol_1,args,log):
 
 	# Force field parameters
 	if ff == "MMFF":
-		GetFF = lambda x,confId=-1:AllChem.MMFFGetMoleculeForceField(x,AllChem.MMFFGetMoleculeProperties(x),confId=confId)
+		GetFF = lambda x,confId=-1:Chem.MMFFGetMoleculeForceField(x,Chem.MMFFGetMoleculeProperties(x),confId=confId)
 	elif ff == "UFF":
-		GetFF = lambda x,confId=-1:AllChem.UFFGetMoleculeForceField(x)
+		GetFF = lambda x,confId=-1:Chem.UFFGetMoleculeForceField(x)
 	else: log.write('   Force field {} not supported!'.format(options.ff)); sys.exit()
 	getForceField=GetFF
 
@@ -312,9 +312,9 @@ def template_embed_optimize(molecule_embed,mol_1,args,log):
 
 	# This is the original version, if it doesn't work without coordMap I'll come back to it late
 	if len(num_atom_match) == 5:
-		ci = AllChem.EmbedMolecule(molecule_embed, coordMap=coordMap, randomSeed=randomseed)
+		ci = Chem.EmbedMolecule(molecule_embed, coordMap=coordMap, randomSeed=randomseed)
 	if len(num_atom_match) == 6:
-		ci = AllChem.EmbedMolecule(molecule_embed, coordMap=coordMap, randomSeed=randomseed,ignoreSmoothingFailures=True)
+		ci = Chem.EmbedMolecule(molecule_embed, coordMap=coordMap, randomSeed=randomseed,ignoreSmoothingFailures=True)
 	if ci < 0:    log.write('Could not embed molecule.')
 
 	#algin molecule to the core
@@ -370,12 +370,15 @@ def conformer_generation(mol,name,start_time,args,log,dup_data,dup_data_idx,coor
 
 		try:
 			# the conformational search
-
-			summ_search(mol, name,args,log,dup_data,dup_data_idx,coord_Map,alg_Map,mol_template)
-
+			gen = summ_search(mol, name,args,log,dup_data,dup_data_idx,coord_Map,alg_Map,mol_template)
+			if gen != -1:
+				conformers, energies = mult_min(name, args, 'rdkit',log)
+				if args.ANI1ccx != False: conformers, energies = mult_min(name+'_'+'rdkit', args, 'ani',log)
+				if args.xtb != False: conformers, energies = mult_min(name+'_'+'rdkit', args, 'xtb',log)
+			else: pass
 		except (KeyboardInterrupt, SystemExit):
 			raise
-		except Exception as e: log.write(traceback.print_exc())
+		except Exception as e: print(traceback.print_exc())
 	else: log.write("ERROR: The structure is not valid")
 
 	# removing temporary files

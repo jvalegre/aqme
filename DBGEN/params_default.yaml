@@ -12,7 +12,7 @@ verbose : True
 # Compute : True and write_gauss : False --> generates conformers in SDF files only
 # Compute : False and write_gauss : True --> reads SDF files from the main DBGEN folder (all SDF files)
 compute : True
-write_gauss : True # writting Gaussian COM files after, look options of write_gauss below
+write_gauss : False # writting Gaussian COM files after, look options of write_gauss below
 
 # (2) ANALYSIS OF LOG FILES
 # if analysis is True, check all LOG files inside "generated_gaussian_files".
@@ -86,10 +86,10 @@ angle_off : 30 # margin of error to determine angles (i.e. if angle_off is 30, a
 # (7) OPTIONS FOR METALS, ATOMS WITH UNCOMMON HYBRIDIZATIONS AND NCI COMPLEXES
 # IF A METAL OR AN ATOM WITH UNCOMMON HYBRIDIZATION (i.e. pentacoordinated phosphorus) IS USED
 metal_complex : True # specify True to activate this option
-metal : 'Sn' # specify the metal(s) or atom(s) with uncommon hybridization, in the format 'A','B','C'...
-complex_coord : 5 # specify the coordination number of the atom
+metal : 'Ir' # specify the metal(s) or atom(s) with uncommon hybridization, in the format 'A','B','C'...
+complex_coord : 6 # specify the coordination number of the atom
 complex_type : '' # specify the following: square planar, square pyrimidal (otheriwse defaults to octahedral, Td)
-m_oxi : 4 # oxidation number of the atom (it is used to calculate the charge of the molecule)
+m_oxi : 3 # oxidation number of the atom (it is used to calculate the charge of the molecule)
 complex_spin : 1 # final spin of the molecule (the code does not calculate spin, it must be defined by the user)
 
 # (8) IF A NONCOVALENT COMPLEX IS USED
@@ -103,10 +103,7 @@ submission_command : 'qsub_summit' # name of the file containing the submission 
 # PRE-OPTIMIZED PARAMETERS - ONLY CHANGE THIS PART IF YOU KNOW WHAT YOU ARE DOING!
 
 # OUTPUT FILE NAMES
-rdkit_output : '_RDKit.sdf'
-xtb_output : '_xTB.sdf'
-ani1_output : '_ANI1ccx.sdf'
-exp_rules_output_ext : '_confs_rules.sdf'
+output : '.sdf'
 
 # FOR UNIQUE CONFORMER SELECTION FOR RDKIT, XTB AND ANI1
 rms_threshold : 0.25 #cutoff for considering sampled conformers the same (default 0.25) for RDKit and xTB duplicate filters

@@ -88,9 +88,11 @@ def main():
 	parser.add_argument("--ff", help="force field (MMFF or UFF)", default="MMFF", metavar="ff")
 	parser.add_argument("--seed", help="random seed (default 062609)", default="062609", type=int, metavar="s")
 	parser.add_argument("--rms_threshold", help="cutoff for considering sampled conformers the same (default 0.25)", default=0.25, type=float, metavar="R")
+	parser.add_argument("--max_matches_RMSD", help="iteration cutoff for considering  matches in sampled conformers the same (default 1000000 )", default=1000000 , type=float, metavar="max_matches_RMSD")
 	parser.add_argument("--energy_threshold", dest="energy_threshold",action="store",default=0.05, help="energy difference between unique conformers")
 	parser.add_argument("--initial_energy_threshold", dest="initial_energy_threshold",action="store",default=0.01, help="energy difference between unique conformers for the first filter of only E")
 	parser.add_argument("--max_MolWt", help="Max. molecular weight of molecule", default=1000, type=int, metavar="max_MolWt")
+	parser.add_argument("--num_rot_bonds", help="Max. number of rotatable bonds in a molecule", default=20, type=int, metavar="num_rot_bonds")
 	parser.add_argument("--large_sys", action="store_true",default=False, help="Large systems for xtb optimizations")
 	parser.add_argument("--STACKSIZE", help="STACKSIZE for optimization of large systems", default="500m")
 
@@ -222,9 +224,9 @@ def main():
 				mol = Chem.MolFromSmiles(smi)
 				# get manually for square planar and SQUAREPYRIMIDAL
 				if args.complex_type == 'squareplanar' or args.complex_type == 'squarepyrimidal':
-					file_template = 'template-4-and-5.sdf'
+					file_template = path.dirname(path.abspath(__file__)) +'/Template/template-4-and-5.sdf'
 					temp = Chem.SDMolSupplier(file_template)
-					mol_objects_from_template,name, coord_Map, alg_Map, mol_template = template_embed_sp(mol,temp,name,args)
+					mol_objects_from_template,name, coord_Map, alg_Map, mol_template = template_embed_sp(mol,temp,name,args,log)
 					for i in range(len(mol_objects_from_template)):
 						mol_objects.append([mol_objects_from_template[i],name[i],coord_Map[i],alg_Map[i],mol_template[i]])
 				else:
@@ -284,9 +286,9 @@ def main():
 				mol = Chem.MolFromSmiles(smi)
 				# get manually for square planar and SQUAREPYRIMIDAL
 				if args.complex_type == 'squareplanar' or args.complex_type == 'squarepyrimidal':
-					file_template = 'template-4-and-5.sdf'
+					file_template = path.dirname(path.abspath(__file__)) +'/Template/template-4-and-5.sdf'
 					temp = Chem.SDMolSupplier(file_template)
-					mol_objects_from_template,name, coord_Map, alg_Map, mol_template = template_embed_sp(mol,temp,name,args)
+					mol_objects_from_template,name, coord_Map, alg_Map, mol_template = template_embed_sp(mol,temp,name,args,log)
 					for i in range(len(mol_objects_from_template)):
 						mol_objects.append([mol_objects_from_template[i],name[i],coord_Map[i],alg_Map[i],mol_template[i]])
 				else:
@@ -343,9 +345,9 @@ def main():
 				mol = Chem.MolFromSmiles(smi)
 				# get manually for square planar and SQUAREPYRIMIDAL
 				if args.complex_type == 'squareplanar' or args.complex_type == 'squarepyrimidal':
-					file_template = 'template-4-and-5.sdf'
+					file_template = path.dirname(path.abspath(__file__)) +'/Template/template-4-and-5.sdf'
 					temp = Chem.SDMolSupplier(file_template)
-					mol_objects_from_template,name, coord_Map, alg_Map, mol_template = template_embed_sp(mol,temp,name,args)
+					mol_objects_from_template,name, coord_Map, alg_Map, mol_template = template_embed_sp(mol,temp,name,args,log)
 					for i in range(len(mol_objects_from_template)):
 						mol_objects.append([mol_objects_from_template[i],name[i],coord_Map[i],alg_Map[i],mol_template[i]])
 				else:
@@ -421,9 +423,9 @@ def main():
 				else: name = args.prefix+str(m)+'_'+IDs[i]
 				# get manually for square planar and SQUAREPYRIMIDAL
 				if args.complex_type == 'squareplanar' or args.complex_type == 'squarepyrimidal':
-					file_template = 'template-4-and-5.sdf'
+					file_template = path.dirname(path.abspath(__file__)) +'/Template/template-4-and-5.sdf'
 					temp = Chem.SDMolSupplier(file_template)
-					mol_objects_from_template,name, coord_Map, alg_Map, mol_template = template_embed_sp(mol,temp,name,args)
+					mol_objects_from_template,name, coord_Map, alg_Map, mol_template = template_embed_sp(mol,temp,name,args,log)
 					for i in range(len(mol_objects_from_template)):
 						mol_objects.append([mol_objects_from_template[i],name[i],coord_Map[i],alg_Map[i],mol_template[i]])
 				else:
@@ -463,9 +465,9 @@ def main():
 				if args.prefix == False: name = IDs[i]
 				else: name = args.prefix+str(m)+'_'+IDs[i]
 				if args.complex_type == 'squareplanar' or args.complex_type == 'squarepyrimidal':
-					file_template = 'template-4-and-5.sdf'
+					file_template = path.dirname(path.abspath(__file__)) +'/Template/template-4-and-5.sdf'
 					temp = Chem.SDMolSupplier(file_template)
-					mol_objects_from_template = template_embed_sp(mol,temp,name,args)
+					mol_objects_from_template = template_embed_sp(mol,temp,name,args,log)
 					mol_objects.append(mol_objects_from_template)
 				else:
 					mol_objects.append([mol, name])
@@ -518,9 +520,9 @@ def main():
 		elif args.xtb != True and args.ANI1ccx != True:
 			conf_files =  glob.glob('*_RDKit.sdf')
 		elif args.xtb == True:
-			conf_files =  glob.glob('*_xTB.sdf')
+			conf_files =  glob.glob('*_xtb.sdf')
 		elif args.ANI1ccx == True:
-			conf_files =  glob.glob('*_ANI1ccx.sdf')
+			conf_files =  glob.glob('*_ani.sdf')
 		else:
 			conf_files =  glob.glob('*.sdf')
 
@@ -579,7 +581,7 @@ def main():
 				else:
 					raise
 		if args.xtb == True:
-			all_xtb_conf_files = glob.glob('*_xTB.sdf')
+			all_xtb_conf_files = glob.glob('*_xtb.sdf')
 			destination_xtb = src +'/xTB_minimised_generated_SDF_files'
 			for file in all_xtb_conf_files:
 				try:
@@ -591,7 +593,7 @@ def main():
 					else:
 						raise
 		elif args.ANI1ccx == True:
-			all_ani_conf_files = glob.glob('*_ANI1ccx.sdf')
+			all_ani_conf_files = glob.glob('*_ani.sdf')
 			destination_ani = src +'/ANI1ccx_minimised_generated_SDF_files'
 			for file in all_ani_conf_files:
 				try:
@@ -627,7 +629,6 @@ def main():
 						log.write(w_dir)
 						log_files = glob.glob('*.log')
 						output_analyzer(log_files, w_dir, lot, bs, bs_gcp, args, w_dir_fin,log)
-
 
 	#adding the part to check for resubmission of the newly created gaussian files.
 	if args.qsub == True:
