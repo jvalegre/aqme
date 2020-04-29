@@ -67,7 +67,7 @@ def get_TFD(mol1, mol2, c1, c2, heavy):
 	return tfd
 
 "AUTO-SAMPLING DETECTS INITIAL NUMBER OF SAMPLES"
-def auto_sampling(auto_samples,mult_factor,mol,log):
+def auto_sampling(mult_factor,mol,log):
 	auto_samples = 0
 	auto_samples += 3*(Lipinski.NumRotatableBonds(mol)) # x3, for C3 rotations
 	auto_samples += 3*(Lipinski.NHOHCount(mol)) # x3, for OH/NH rotations
@@ -104,13 +104,6 @@ def genConformer_r(mol, conf, i, matches, degree, sdwriter,args,name,log):
 	which dihedral we are enumerating by degree to output conformers to out'''
 	rotation_count = 1
 	if i >= len(matches): #base case, torsions should be set in conf
-		if args.metal_complex == True:
-			for atom in mol.GetAtoms():
-				if atom.GetSymbol() == 'I' and (len(atom.GetBonds()) == 6 or len(atom.GetBonds()) == 5 or len(atom.GetBonds()) == 4 or len(atom.GetBonds()) == 3 or len(atom.GetBonds()) == 2):
-					for el in elementspt:
-						if el.symbol == args.metal:
-							atomic_number = el.number
-					atom.SetAtomicNum(atomic_number)
 		sdwriter.write(mol,conf)
 		return 1
 	else:
@@ -198,7 +191,7 @@ def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None,alg_M
 
 	# detects and applies auto-detection of initial number of conformers
 	if args.sample == 'auto':
-		initial_confs = int(auto_sampling(args.sample,args.auto_sample,mol,log))
+		initial_confs = int(auto_sampling(args.auto_sample,mol,log))
 
 	else:
 		initial_confs = int(args.sample)
@@ -345,15 +338,30 @@ def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None,alg_M
 		cids = list(range(len(outmols)))
 		sortedcids = sorted(cids,key = lambda cid: cenergy[cid])
 
-		selectedcids =[]
+		selectedcids,selectedcids_initial =[],[]
 		bar = IncrementalBar('o  Filtering ', max = len(sortedcids))
 		for i, conf in enumerate(sortedcids):
 			#set torsions to same value
 			for m in rotmatches:
 				rdMolTransforms.SetDihedralDeg(outmols[conf].GetConformer(conf),*m,180.0)
 
+			# This keeps track of whether or not your conformer is unique
+			excluded_conf = False
+			# include the first conformer in the list to start the filtering process
+			if i == 0:
+				selectedcids_initial.append(conf)
+			# check rmsd
+			for seenconf in selectedcids_initial:
+				E_diff = abs(cenergy[conf] - cenergy[seenconf]) # in kcal/mol
+				if E_diff < args.initial_energy_threshold:
+					excluded_conf = True
+					break
+			if excluded_conf == False:
+				if conf not in selectedcids_initial:
+					selectedcids_initial.append(conf)
+
 			#check rmsd
-			for j, seenconf in enumerate(selectedcids):
+			for j, seenconf in enumerate(selectedcids_initial):
 				if len(rotmatches) == 0:
 					if abs(cenergy[conf] - cenergy[seenconf]) < args.energy_threshold:
 						rms = get_conf_RMS(outmols[conf],outmols[conf],seenconf,conf, args.heavyonly, args.max_matches_RMSD,log)
@@ -405,19 +413,11 @@ def optimize(mol, args, program,log):
 
 	# rdkit optimization
 	if program == 'rdkit':
-		if args.metal_complex == True:
-			for atom in mol.GetAtoms():
-				if atom.GetSymbol() == 'I' and (len(atom.GetBonds()) == 6 or len(atom.GetBonds()) == 5 or len(atom.GetBonds()) == 4 or len(atom.GetBonds()) == 3 or len(atom.GetBonds()) == 2):
-					for el in elementspt:
-						if el.symbol == args.metal:
-							atomic_number = el.number
-					atom.SetAtomicNum(atomic_number)
 		if args.ff == "MMFF":
 			GetFF = Chem.MMFFGetMoleculeForceField(mol, Chem.MMFFGetMoleculeProperties(mol))
 		elif args.ff == "UFF":
 			GetFF = Chem.UFFGetMoleculeForceField(mol)
 		else: log.write(('   Force field {} not supported!'.format(args.ff))); sys.exit()
-
 		GetFF.Initialize()
 		# skips the optimization if it's been done already
 		if args.nodihedrals != True: converged = GetFF.Minimize(maxIts=10000)
@@ -429,16 +429,7 @@ def optimize(mol, args, program,log):
 		# if large system increase stck size
 		if args.large_sys == True:
 			os.environ['OMP_STACKSIZE'] = args.STACKSIZE
-			if args.verbose == True: log.write('---- The Stack size has been updated for larger molecules to {0} ----'.format(os.environ['OMP_STACKSIZE']))
-
-		#setting the metal back instead of I
-		if args.metal_complex == True:
-			for atom in mol.GetAtoms():
-				if atom.GetSymbol() == 'I' and (len(atom.GetBonds()) == 6 or len(atom.GetBonds()) == 5 or len(atom.GetBonds()) == 4 or len(atom.GetBonds()) == 3 or len(atom.GetBonds()) == 2):
-					for el in elementspt:
-						if el.symbol == args.metal:
-							atomic_number = el.number
-					atom.SetAtomicNum(atomic_number)
+			# if args.verbose == True: log.write('---- The Stack size has been updated for larger molecules to {0} ----'.format(os.environ['OMP_STACKSIZE']))
 
 		# removing the Ba atom if NCI complexes
 		if args.nci_complex == True:
@@ -452,7 +443,7 @@ def optimize(mol, args, program,log):
 
 		cartesians = mol.GetConformers()[0].GetPositions()
 		# log.write(cartesians[0:2])
-		if args.verbose == True: log.write('---- The elements are the following {0} ----'.format(elements))
+		if args.verbose == True: log.write('\no  The elements are the following {0} '.format(elements))
 
 		coordinates = torch.tensor([cartesians.tolist()], requires_grad=True, device=device)
 
@@ -491,11 +482,11 @@ def optimize(mol, args, program,log):
 						if os.path.splitext(args.input)[1] == '.csv' or os.path.splitext(args.input)[1] == '.cdx' or os.path.splitext(args.input)[1] == '.smi':
 							atom.charge, neighbours = rules_get_charge(mol,args,log)
 							if len(neighbours) != 0:
-								if args.verbose == True: log.write('---- The Overall charge is reworked with rules for .smi, .csv, .cdx ----')
+								if args.verbose == True: log.write('o  The Overall charge is reworked with rules for .smi, .csv, .cdx ')
 						else:
 							atom.charge = args.charge
-							if args.verbose == True: log.write('---- The Overall charge is read from the .com file ----')
-						if args.verbose == True: log.write('---- The Overall charge considered is  {0} ----'.format(atom.charge))
+							if args.verbose == True: log.write('o  The Overall charge is read from the .com file ')
+						if args.verbose == True: log.write('o  The Overall charge considered is  {0} '.format(atom.charge))
 			else:
 				ase_molecule = ase.Atoms(elements, positions=coordinates.tolist()[0],calculator=GFN2()) #define ase molecule using GFN2 Calculator
 			optimizer = ase.optimize.BFGS(ase_molecule, trajectory='xTB_opt.traj',logfile='xtb.opt')
@@ -565,6 +556,14 @@ def mult_min(name, args, program,log):
 			# optimize this structure and record the energy
 			mol, converged, energy = optimize(mol, args, program,log)
 			#if args.verbose: log.write("   conformer", (i+1), energy)
+
+			if args.metal_complex == True and program == 'rdkit':
+				for atom in mol.GetAtoms():
+					if atom.GetSymbol() == 'I' and (len(atom.GetBonds()) == 6 or len(atom.GetBonds()) == 5 or len(atom.GetBonds()) == 4 or len(atom.GetBonds()) == 3 or len(atom.GetBonds()) == 2):
+						for el in elementspt:
+							if el.symbol == args.metal:
+								atomic_number = el.number
+						atom.SetAtomicNum(atomic_number)
 
 			if globmin == None: globmin = energy
 			if energy < globmin: globmin = energy
