@@ -99,8 +99,9 @@ def main():
 	#arguments for gaussian files Creation
 	parser.add_argument("-l", "--level_of_theory",help="Level of Theory", default=['wB97xd'], dest="level_of_theory", type=str, nargs='*')
 	parser.add_argument("--basis_set",  help="Basis Set", default=['6-31g*'], dest="basis_set", type=str, nargs='*')
-	parser.add_argument("--basis_set_genecp_atoms",default=['LANL2DZ'], help="Basis Set genecp: The length has to be the same as basis_set", dest="basis_set_genecp_atoms", type=str, nargs='?')
+	parser.add_argument("--basis_set_genecp_atoms",default=['LANL2DZ'], help="Basis Set genecp/gen: The length has to be the same as basis_set", dest="basis_set_genecp_atoms", type=str, nargs='?')
 	parser.add_argument("--genecp_atoms",  help="genecp atoms",default=[], dest="genecp_atoms",type=str, nargs='*')
+	parser.add_argument("--gen_atoms",  help="gen atoms",default=[], dest="gen_atoms",type=str, nargs='*')
 	parser.add_argument("--max_cycle_opt", help="Number of cycles for DFT optimization", default="300", type=int, dest="max_cycle_opt")
 	parser.add_argument("--frequencies",action="store_true", default=False, help="Request only optimization without any frequency calculation")
 	parser.add_argument("--single_point",action="store_true", default=False, help="Request only single point calculation")
@@ -518,7 +519,7 @@ def main():
 			conf_files =  glob.glob('*_rules.sdf')
 		#grad all the gaussian files
 		elif args.xtb != True and args.ANI1ccx != True:
-			conf_files =  glob.glob('*_RDKit.sdf')
+			conf_files =  glob.glob('*_rdKit.sdf')
 		elif args.xtb == True:
 			conf_files =  glob.glob('*_xtb.sdf')
 		elif args.ANI1ccx == True:
@@ -569,7 +570,7 @@ def main():
 		#moving all the sdf files to a separate folder after writing gaussian files
 		src = os.getcwd()
 		#grad all the gaussian files
-		all_rdkit_conf_files = glob.glob('*_RDKit.sdf')
+		all_rdkit_conf_files = glob.glob('*_rdkit.sdf')
 		destination_rdkit = 'RDKit_generated_SDF_files'
 		for file in all_rdkit_conf_files:
 			try:
@@ -604,6 +605,17 @@ def main():
 						shutil.move(os.path.join(src, file), os.path.join(destination_ani, file))
 					else:
 						raise
+		all_name_conf_files = glob.glob('*.sdf')
+		destination_rdkit = 'RDKit_generated_SDF_files'
+		for file in all_name_conf_files:
+			try:
+				os.makedirs(destination_rdkit)
+				shutil.move(os.path.join(src, file), os.path.join(destination_rdkit, file))
+			except OSError:
+				if  os.path.isdir(destination_rdkit):
+					shutil.move(os.path.join(src, file), os.path.join(destination_rdkit, file))
+				else:
+					raise
 
 	if args.analysis == True:
 		#adding in for general analysis
