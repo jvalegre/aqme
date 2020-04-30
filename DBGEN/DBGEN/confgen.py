@@ -508,6 +508,14 @@ def optimize(mol, args, program,log):
 			if atom.GetSymbol() =='I':
 				atom.SetAtomicNum(1)
 
+	if args.metal_complex == True and args.nodihedrals == False:
+		for atom in mol.GetAtoms():
+			if atom.GetSymbol() == 'I' and (len(atom.GetBonds()) == 6 or len(atom.GetBonds()) == 5 or len(atom.GetBonds()) == 4 or len(atom.GetBonds()) == 3 or len(atom.GetBonds()) == 2):
+				for el in elementspt:
+					if el.symbol == args.metal:
+						atomic_number = el.number
+				atom.SetAtomicNum(atomic_number)
+
 	elements = ''
 	for atom in mol.GetAtoms():
 		elements += atom.GetSymbol()
@@ -627,14 +635,6 @@ def mult_min(name, args, program,log,dup_data,dup_data_idx):
 			# optimize this structure and record the energy
 			mol, converged, energy = optimize(mol, args, program,log)
 			#if args.verbose: log.write("   conformer", (i+1), energy)
-
-			if args.metal_complex == True and program == 'rdkit':
-				for atom in mol.GetAtoms():
-					if atom.GetSymbol() == 'I' and (len(atom.GetBonds()) == 6 or len(atom.GetBonds()) == 5 or len(atom.GetBonds()) == 4 or len(atom.GetBonds()) == 3 or len(atom.GetBonds()) == 2):
-						for el in elementspt:
-							if el.symbol == args.metal:
-								atomic_number = el.number
-						atom.SetAtomicNum(atomic_number)
 
 			if globmin == None: globmin = energy
 			if energy < globmin: globmin = energy
