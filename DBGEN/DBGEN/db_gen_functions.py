@@ -372,9 +372,12 @@ def conformer_generation(mol,name,start_time,args,log,dup_data,dup_data_idx,coor
 			# the conformational search
 			gen = summ_search(mol, name,args,log,dup_data,dup_data_idx,coord_Map,alg_Map,mol_template)
 			if gen != -1:
-				conformers, energies = mult_min(name, args, 'rdkit',log)
-				if args.ANI1ccx != False: conformers, energies = mult_min(name+'_'+'rdkit', args, 'ani',log)
-				if args.xtb != False: conformers, energies = mult_min(name+'_'+'rdkit', args, 'xtb',log)
+				if args.nodihedrals == True:
+					if args.ANI1ccx != False: conformers, energies = mult_min(name+'_'+'rdkit', args, 'ani',log,dup_data,dup_data_idx)
+					if args.xtb != False: conformers, energies = mult_min(name+'_'+'rdkit', args, 'xtb',log,dup_data,dup_data_idx)
+				else:
+					if args.ANI1ccx != False: conformers, energies = mult_min(name+'_'+'rdkit'+'_'+'rotated', args, 'ani',log,dup_data,dup_data_idx)
+					if args.xtb != False: conformers, energies = mult_min(name+'_'+'rdkit'+'_'+'rotated', args, 'xtb',log,dup_data,dup_data_idx)
 			else: pass
 		except (KeyboardInterrupt, SystemExit):
 			raise
