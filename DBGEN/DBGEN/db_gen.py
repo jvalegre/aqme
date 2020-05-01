@@ -567,44 +567,44 @@ def main():
 								name = os.path.splitext(file)[0]
 								write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args,log)
 
-	if args.write_gauss == False or args.write_gauss == True:
-		#moving all the sdf files to a separate folder after writing gaussian files
-		src = os.getcwd()
-		if args.xtb == True:
-			all_xtb_conf_files = glob.glob('*_xtb.sdf')
-			destination_xtb = src +'/xTB_minimised_generated_SDF_files'
-			for file in all_xtb_conf_files:
-				try:
-					os.makedirs(destination_xtb)
-					shutil.move(os.path.join(src, file), os.path.join(destination_xtb, file))
-				except OSError:
-					if  os.path.isdir(destination_xtb):
-						shutil.move(os.path.join(src, file), os.path.join(destination_xtb, file))
-					else:
-						raise
-		elif args.ANI1ccx == True:
-			all_ani_conf_files = glob.glob('*_ani.sdf')
-			destination_ani = src +'/ANI1ccx_minimised_generated_SDF_files'
-			for file in all_ani_conf_files:
-				try:
-					os.makedirs(destination_ani)
-					shutil.move(os.path.join(src, file), os.path.join(destination_ani, file))
-				except OSError:
-					if  os.path.isdir(destination_ani):
-						shutil.move(os.path.join(src, file), os.path.join(destination_ani, file))
-					else:
-						raise
-		all_name_conf_files = glob.glob('*.sdf')
-		destination_rdkit = 'RDKit_generated_SDF_files'
-		for file in all_name_conf_files:
+	#moving files arefter compute and write_gauss or only after compute
+	#moving all the sdf files to a separate folder after writing gaussian files
+	src = os.getcwd()
+	if args.xtb == True:
+		all_xtb_conf_files = glob.glob('*_xtb.sdf')
+		destination_xtb = src +'/xTB_minimised_generated_SDF_files'
+		for file in all_xtb_conf_files:
 			try:
-				os.makedirs(destination_rdkit)
-				shutil.move(os.path.join(src, file), os.path.join(destination_rdkit, file))
+				os.makedirs(destination_xtb)
+				shutil.move(os.path.join(src, file), os.path.join(destination_xtb, file))
 			except OSError:
-				if  os.path.isdir(destination_rdkit):
-					shutil.move(os.path.join(src, file), os.path.join(destination_rdkit, file))
+				if  os.path.isdir(destination_xtb):
+					shutil.move(os.path.join(src, file), os.path.join(destination_xtb, file))
 				else:
 					raise
+	elif args.ANI1ccx == True:
+		all_ani_conf_files = glob.glob('*_ani.sdf')
+		destination_ani = src +'/ANI1ccx_minimised_generated_SDF_files'
+		for file in all_ani_conf_files:
+			try:
+				os.makedirs(destination_ani)
+				shutil.move(os.path.join(src, file), os.path.join(destination_ani, file))
+			except OSError:
+				if  os.path.isdir(destination_ani):
+					shutil.move(os.path.join(src, file), os.path.join(destination_ani, file))
+				else:
+					raise
+	all_name_conf_files = glob.glob('*.sdf')
+	destination_rdkit = 'RDKit_generated_SDF_files'
+	for file in all_name_conf_files:
+		try:
+			os.makedirs(destination_rdkit)
+			shutil.move(os.path.join(src, file), os.path.join(destination_rdkit, file))
+		except OSError:
+			if  os.path.isdir(destination_rdkit):
+				shutil.move(os.path.join(src, file), os.path.join(destination_rdkit, file))
+			else:
+				raise
 
 	if args.analysis == True:
 		#adding in for general analysis
