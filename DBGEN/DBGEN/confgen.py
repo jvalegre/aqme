@@ -322,7 +322,7 @@ def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None,alg_M
 				#     # realign
 				#     energy = ff_temp.CalcEnergy()
 				#     rms = rdMolAlign.AlignMol(mol, mol_template,prbCid=conf, atomMap=alg_Map,reflect=True,maxIters=50)
-				cenergy.append(energy* 4.184)
+				cenergy.append(energy)
 
 			# outmols is gonna be a list containing "initial_confs" mol objects with "initial_confs"
 			# conformers. We do this to SetProp (Name and Energy) to the different conformers
@@ -344,7 +344,7 @@ def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None,alg_M
 		sortedcids = sorted(cids,key = lambda cid: cenergy[cid])
 
 		log.write("\n\no  Filters after intial embedding of "+str(initial_confs)+" conformers")
-		selectedcids,selectedcids_initial, eng_dup,eng_rms_dup =[],[],-1,0
+		selectedcids,selectedcids_initial, eng_dup,eng_rms_dup =[],[],-1,-1
 		bar = IncrementalBar('o  Filtering based on energy (pre-filter)', max = len(sortedcids))
 		for i, conf in enumerate(sortedcids):
 			# This keeps track of whether or not your conformer is unique
@@ -366,35 +366,32 @@ def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None,alg_M
 		bar.finish()
 
 
-		if args.verbose == True: log.write("o  "+str(eng_dup)+ " Duplicates removed  pre-energy filter (E < "+str(args.initial_energy_threshold))
+		if args.verbose == True: log.write("o  "+str(eng_dup)+ " Duplicates removed  pre-energy filter (E < "+str(args.initial_energy_threshold)+" kcal/mol )")
 
 
 		#reduce to unique set
-		if args.verbose: log.write("o  Removing duplicate conformers ( RMSD < "+ str(args.rms_threshold)+ " and E difference < "+str(args.energy_threshold)+" kJ/mol)")
+		if args.verbose: log.write("o  Removing duplicate conformers ( RMSD < "+ str(args.rms_threshold)+ " and E difference < "+str(args.energy_threshold)+" kcal/mol)")
 
 		bar = IncrementalBar('o  Filtering based on energy and rms', max = len(selectedcids_initial))
 		#check rmsd
-		for j, seenconf in enumerate(selectedcids_initial):
-			#set torsions to same value
-			for m in rotmatches:
-				rdMolTransforms.SetDihedralDeg(outmols[conf].GetConformer(conf),*m,180.0)
-
-			#check rmsd
-			for j, seenconf in enumerate(selectedcids):
-				if len(rotmatches) == 0:
-					if abs(cenergy[conf] - cenergy[seenconf]) < args.energy_threshold:
-						rms = get_conf_RMS(outmols[conf],outmols[conf],seenconf,conf, args.heavyonly, args.max_matches_RMSD,log)
-						eng_rms_dup += 1
-						if rms < args.rms_threshold:
-							break
-				else:
-					rms = rms = get_conf_RMS(outmols[conf],outmols[conf],seenconf,conf, args.heavyonly, args.max_matches_RMSD,log)
+		for i, conf in enumerate(selectedcids_initial):
+			# This keeps track of whether or not your conformer is unique
+			excluded_conf = False
+			# include the first conformer in the list to start the filtering process
+			if i == 0:
+				selectedcids.append(conf)
+			# check rmsd
+			for seenconf in selectedcids:
+				E_diff = abs(cenergy[conf] - cenergy[seenconf]) # in kcal/mol
+				if  E_diff < args.energy_threshold:
+					rms = get_conf_RMS(outmols[conf],outmols[conf],seenconf,conf, args.heavyonly, args.max_matches_RMSD,log)
 					if rms < args.rms_threshold:
+						excluded_conf = True
 						eng_rms_dup += 1
 						break
-
-			else: #loop completed normally - no break, included empty
-				selectedcids.append(conf)
+			if excluded_conf == False:
+				if conf not in selectedcids:
+					selectedcids.append(conf)
 			bar.next()
 		bar.finish()
 
@@ -406,7 +403,7 @@ def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None,alg_M
 
 		# log.write(unique_mols[0:2].GetConformers()[0].GetPositions())
 
-		if args.verbose == True: log.write("o  "+str(eng_rms_dup)+ " Duplicates removed (RMSD < "+str(args.rms_threshold)+" / E < "+str(args.energy_threshold)+") after rotation")
+		if args.verbose == True: log.write("o  "+str(eng_rms_dup)+ " Duplicates removed (RMSD < "+str(args.rms_threshold)+" / E < "+str(args.energy_threshold)+" kcal/mol) after rotation")
 		if args.verbose: log.write("o  "+ str(len(selectedcids))+" unique (ignoring torsions) starting conformers remain")
 
 		dup_data.at[dup_data_idx, 'RDKit-energy-duplicates'] = eng_dup
@@ -443,7 +440,7 @@ def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None,alg_M
 		sdwriter = Chem.SDWriter(name+'_'+'rdkit'+'_'+'rotated'+args.output)
 
 		rd_count = 0
-		rd_selectedcids,rd_dup =[],-1
+		rd_selectedcids,rd_dup_energy,rd_dup_rms_eng =[],-1,0
 		for i in range(len(rdmols)):
 			# This keeps track of whether or not your conformer is unique
 			excluded_conf = False
@@ -462,12 +459,16 @@ def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None,alg_M
 			rd_count = 1
 			# check rmsd
 			for j in rd_selectedcids:
-				rms = get_conf_RMS(rdmols[i],rdmols[j],-1,-1, args.heavyonly, args.max_matches_RMSD,log)
-				E_diff = abs(float(rdmols[i].GetProp('Energy')) - float(rdmols[j].GetProp('Energy'))) # in kcal/mol
-				if rms < args.rms_threshold and E_diff < (args.energy_threshold ):
+				if abs(float(rdmols[i].GetProp('Energy')) - float(rdmols[j].GetProp('Energy'))) < args.initial_energy_threshold: # comparison in kcal/mol
 					excluded_conf = True
-					rd_dup +=1
+					rd_dup_energy += 1
 					break
+				if abs(float(rdmols[i].GetProp('Energy')) - float(rdmols[j].GetProp('Energy'))) < args.energy_threshold: # in kcal/mol
+					rms = get_conf_RMS(rdmols[i],rdmols[j],-1,-1, args.heavyonly, args.max_matches_RMSD,log)
+					if rms < args.rms_threshold:
+						excluded_conf = True
+						rd_dup_rms_eng += 1
+						break
 			if excluded_conf == False:
 				if args.metal_complex == True:
 					for atom in rdmols[i].GetAtoms():
@@ -483,7 +484,8 @@ def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None,alg_M
 		bar.finish()
 		sdwriter.close()
 
-		if args.verbose == True: log.write("o  "+str( rd_dup)+ " Duplicates removed (RMSD < "+str(args.rms_threshold)+" / E < "+str(args.energy_threshold)+") after rotation")
+		if args.verbose == True: log.write("o  "+str(rd_dup_energy)+ " Duplicates removed initial energy ( E < "+str(args.initial_energy_threshold)+" kcal/mol )")
+		if args.verbose == True: log.write("o  "+str(rd_dup_rms_eng)+ " Duplicates removed (RMSD < "+str(args.rms_threshold)+" / E < "+str(args.energy_threshold)+" kcal/mol) after rotation")
 		if args.verbose == True: log.write("o  "+str(len(rd_selectedcids) )+ " unique (after torsions) conformers remain")
 
 
@@ -546,7 +548,7 @@ def optimize(mol, args, program,log):
 		###############################################################################
 		# Now let's compute energy:
 		_, ani_energy = model((species, coordinates))
-		sqm_energy = ani_energy.item() * mol_unit / kJ # Hartree to kJ/mol
+		sqm_energy = ani_energy.item() * 627.509 # Hartree to kcal/mol
 		#if args.verbose: log.write("o  ANI Final E:", ani_energy.item(),'eH', ase_molecule.get_potential_energy(),'eV') #Hartree, eV
 		###############################################################################
 
@@ -577,7 +579,7 @@ def optimize(mol, args, program,log):
 		###############################################################################
 		# Now let's compute energy:
 		xtb_energy = ase_molecule.get_potential_energy()
-		sqm_energy = xtb_energy / Hartree * mol_unit / kJ
+		sqm_energy = (xtb_energy / Hartree)* 627.509
 		#if args.verbose: log.write("o  Final XTB E:",xtb_energy/Hartree,'Eh',xtb_energy,'eV') #Hartree, eV
 		###############################################################################
 
@@ -621,7 +623,7 @@ def mult_min(name, args, program,log,dup_data,dup_data_idx):
 		log.write("Could not open "+ name+args.output)
 		sys.exit(-1)
 
-	globmin, n_dup, n_high = None, 0, 0
+	globmin, n_high,n_dup_energy, n_dup_rms_eng  = None, 0, 0, 0
 	c_converged, c_energy, outmols = [], [], []
 
 
@@ -639,40 +641,36 @@ def mult_min(name, args, program,log,dup_data,dup_data_idx):
 			if globmin == None: globmin = energy
 			if energy < globmin: globmin = energy
 
-			if converged == 0 and (energy - globmin) < args.ewin: # comparison in kJ/mol
+			if converged == 0 and (energy - globmin) < args.ewin: # comparison in kcal/mol
 
 				#if args.verbose: log.write('   minimization converged!')
-				unique, dup_id = 0, None
+				unique,dup_id = 0, None
 
 				# compare against all previous conformers located
 				for j,seenmol in enumerate(outmols):
+					if abs(energy - c_energy[j]) < args.initial_energy_threshold: # comparison in kcal/mol
+						unique += 1
+						dup_id = (j+1)
+						n_dup_energy += 1
+						break
 					#pmi_diff = get_PMIDIFF(mol, seenmol, 0, 0, args.heavyonly)
 					#tfd = TorsionFingerprints.GetTFDBetweenMolecules(mol, seenmol, useWeights=False)
 					#rms = get_RMS(mol, seenmol, 0, 0, args.heavyonly)
 					#log.write(rms, tfd, pmi_diff)
-					if abs(energy - c_energy[j]) < args.energy_threshold: # comparison in kJ/mol
+					if abs(energy - c_energy[j]) < args.energy_threshold: # comparison in kcal/mol
 						rms = get_conf_RMS(mol, seenmol, 0, 0, args.heavyonly, args.max_matches_RMSD,log)
 						if rms < args.rms_threshold:
-							if args.heavyonly != True:
-								rms = get_conf_RMS(mol, seenmol, 0, 0, args.heavyonly, args.max_matches_RMSD,log)
-								if rms < args.rms_threshold:
-									#log.write("o  Conformer", (i+1), "matches conformer", (j+1))
-									unique += 1
-									dup_id = (j+1)
-									break
-							else:
-								#log.write("o  Conformer", (i+1), "matches conformer", (j+1))
-								unique += 1
-								dup_id = (j+1)
-								break
+							#log.write("o  Conformer", (i+1), "matches conformer", (j+1))
+							unique += 1
+							dup_id = (j+1)
+							n_dup_rms_eng += 1
+							break
 
 				if unique == 0:
 					#if args.verbose == True: log.write("-  Conformer", (i+1), "is unique")
 					pmol = PropertyMol.PropertyMol(mol)
 					outmols.append(pmol); c_converged.append(converged); c_energy.append(energy)
 					conf += 1
-				else:
-					n_dup += 1
 					# if args.verbose == True:log.write("x  Conformer", (i+1), "is a duplicate of", dup_id)
 			else:
 				#if args.verbose == True: log.write("x  Minimization of conformer", (i+1), " not converged / energy too high!", converged, (energy - globmin), args.ewin)
@@ -681,8 +679,9 @@ def mult_min(name, args, program,log,dup_data,dup_data_idx):
 			pass #log.write("No molecules to optimize")
 
 	bar.finish()
-	if args.verbose == True: log.write("o  "+str( n_dup)+ " Duplicates removed (RMSD < "+str(args.rms_threshold)+" / E < "+str(args.energy_threshold)+")")
-	if args.verbose == True: log.write("o  "+str( n_high)+ " Conformers rejected based on energy ( E > "+str(args.ewin)+")")
+	if args.verbose == True: log.write("o  "+str( n_dup_energy)+ " Duplicates removed initial energy ( E < "+str(args.initial_energy_threshold)+" kcal/mol )")
+	if args.verbose == True: log.write("o  "+str( n_dup_rms_eng)+ " Duplicates removed (RMSD < "+str(args.rms_threshold)+" / E < "+str(args.energy_threshold)+" kcal/mol)")
+	if args.verbose == True: log.write("o  "+str( n_high)+ " Conformers rejected based on energy ( E > "+str(args.ewin)+" kcal/mol)")
 
 	# if SQM energy exists, overwrite RDKIT energies and geometries
 	cids = list(range(len(outmols)))
@@ -694,12 +693,14 @@ def mult_min(name, args, program,log,dup_data,dup_data_idx):
 
 	if program == 'xtb':
 		dup_data.at[dup_data_idx, 'xTB-Initial-samples'] = len(inmols)
-		dup_data.at[dup_data_idx, 'xTB-RMS-and-energy-duplicates'] = n_dup
+		dup_data.at[dup_data_idx, 'xTB-initial_energy_threshold'] = n_dup_energy
+		dup_data.at[dup_data_idx, 'xTB-RMS-and-energy-duplicates'] = n_dup_rms_eng
 		dup_data.at[dup_data_idx, 'xTB-Unique-conformers'] = len(sortedcids)
 
 	if program == 'ani':
 		dup_data.at[dup_data_idx, 'ANI1ccx-Initial-samples'] = len(inmols)
-		dup_data.at[dup_data_idx, 'ANI1ccx-RMS-and-energy-duplicates'] = n_dup
+		dup_data.at[dup_data_idx, 'ANI1ccx-initial_energy_threshold'] = n_dup_energy
+		dup_data.at[dup_data_idx, 'ANI1ccx-RMS-and-energy-duplicates'] = n_dup_rms_eng
 		dup_data.at[dup_data_idx, 'ANI1ccx-Unique-conformers'] = len(sortedcids)
 
 
