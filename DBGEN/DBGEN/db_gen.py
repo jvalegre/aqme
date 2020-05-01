@@ -475,14 +475,14 @@ def main():
 
 #------------------------------------------------------------------------------------------
 		if args.complex_type == 'squareplanar' or args.complex_type == 'squarepyrimidal':
+			dup_data_idx = 0
 			for [mol, name, coord_Map,alg_Map,mol_template] in mol_objects: # Run confomer generation for each mol object
-				dup_data_idx = 0
 				conformer_generation(mol,name,start_time,args,log,dup_data,dup_data_idx,coord_Map,alg_Map,mol_template)
 				dup_data_idx += 1
 			dup_data.to_csv(args.input.split('.')[0]+'-Duplicates Data.csv',index=False)
 		else:
+			dup_data_idx = 0
 			for [mol, name] in mol_objects: # Run confomer generation for each mol object
-				dup_data_idx = 0
 				conformer_generation(mol,name,start_time,args,log,dup_data,dup_data_idx)
 				dup_data_idx += 1
 			dup_data.to_csv(args.input.split('.')[0]+'-Duplicates Data.csv',index=False)
