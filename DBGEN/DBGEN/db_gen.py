@@ -158,18 +158,18 @@ def main():
 		# writing the list of DUPLICATES
 		if args.nodihedrals == True:
 			if args.xtb != True and args.ANI1ccx != True:
-				dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples', 'RDKit-energy-duplicates','RDKit-RMS-and-energy-duplicates','RDKIT-Unique-conformers'])
+				dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples', 'RDKit-energy-duplicates','RDKit-RMS-and-energy-duplicates','RDKIT-Unique-conformers','time (seconds)'])
 			elif args.xtb == True:
-				dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples', 'RDKit-energy-duplicates','RDKit-RMS-and-energy-duplicates','RDKIT-Unique-conformers','xTB-Initial-samples','xTB-initial_energy_threshold','xTB-RMS-and-energy-duplicates','xTB-Unique-conformers'])
+				dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples', 'RDKit-energy-duplicates','RDKit-RMS-and-energy-duplicates','RDKIT-Unique-conformers','xTB-Initial-samples','xTB-initial_energy_threshold','xTB-RMS-and-energy-duplicates','xTB-Unique-conformers','time (seconds)'])
 			elif args.ANI1ccx == True:
-				dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples', 'RDKit-energy-duplicates','RDKit-RMS-and-energy-duplicates','RDKIT-Unique-conformers','ANI1ccx-Initial-samples','ANI1ccx-initial_energy_threshold','ANI1ccx-RMS-and-energy-duplicates','ANI1ccx-Unique-conformers'])
+				dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples', 'RDKit-energy-duplicates','RDKit-RMS-and-energy-duplicates','RDKIT-Unique-conformers','ANI1ccx-Initial-samples','ANI1ccx-initial_energy_threshold','ANI1ccx-RMS-and-energy-duplicates','ANI1ccx-Unique-conformers','time (seconds)'])
 		else:
 			if args.xtb != True and args.ANI1ccx != True:
-				dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples', 'RDKit-energy-duplicates','RDKit-RMS-and-energy-duplicates','RDKIT-Unique-conformers','RDKIT-Rotated-conformers','RDKIT-Rotated-Unique-conformers'])
+				dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples', 'RDKit-energy-duplicates','RDKit-RMS-and-energy-duplicates','RDKIT-Unique-conformers','RDKIT-Rotated-conformers','RDKIT-Rotated-Unique-conformers','time (seconds)'])
 			elif args.xtb == True:
-				dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples', 'RDKit-energy-duplicates','RDKit-RMS-and-energy-duplicates','RDKIT-Unique-conformers','RDKIT-Rotated-conformers','RDKIT-Rotated-Unique-conformers','xTB-Initial-samples','xTB-initial_energy_threshold','xTB-RMS-and-energy-duplicates','xTB-Unique-conformers'])
+				dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples', 'RDKit-energy-duplicates','RDKit-RMS-and-energy-duplicates','RDKIT-Unique-conformers','RDKIT-Rotated-conformers','RDKIT-Rotated-Unique-conformers','xTB-Initial-samples','xTB-initial_energy_threshold','xTB-RMS-and-energy-duplicates','xTB-Unique-conformers','time (seconds)'])
 			elif args.ANI1ccx == True:
-					dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples', 'RDKit-energy-duplicates','RDKit-RMS-and-energy-duplicates','RDKIT-Unique-conformers','RDKIT-Rotated-conformers','RDKIT-Rotated-Unique-conformers','ANI1ccx-Initial-samples','ANI1ccx-initial_energy_threshold','ANI1ccx-RMS-and-energy-duplicates','ANI1ccx-Unique-conformers'])
+					dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples', 'RDKit-energy-duplicates','RDKit-RMS-and-energy-duplicates','RDKIT-Unique-conformers','RDKIT-Rotated-conformers','RDKIT-Rotated-Unique-conformers','ANI1ccx-Initial-samples','ANI1ccx-initial_energy_threshold','ANI1ccx-RMS-and-energy-duplicates','ANI1ccx-Unique-conformers','time (seconds)'])
 
 		if file_format == '.smi': # SMILES input specified
 			smifile = open(args.input)

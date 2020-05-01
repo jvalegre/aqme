@@ -389,7 +389,10 @@ def conformer_generation(mol,name,start_time,args,log,dup_data,dup_data_idx,coor
 	for file in temp_files:
 		if os.path.exists(file): os.remove(file)
 
-	if args.time: log.write("\n Execution time: %s seconds" % (round(time.time() - start_time,2)))
+	if args.time:
+		log.write("\n Execution time: %s seconds" % (round(time.time() - start_time,2)))
+		dup_data.at[dup_data_idx, 'time (seconds)'] = round(time.time() - start_time,2)
+
 
 " RULES TO GET EXPERIMENTAL CONFORMERS"
 def exp_rules_output(mol, args,log):
