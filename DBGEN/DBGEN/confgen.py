@@ -72,7 +72,10 @@ def auto_sampling(mult_factor,mol,log):
 	auto_samples += 3*(Lipinski.NumRotatableBonds(mol)) # x3, for C3 rotations
 	auto_samples += 3*(Lipinski.NHOHCount(mol)) # x3, for OH/NH rotations
 	auto_samples += 3*(Lipinski.NumSaturatedRings(mol)) # x3, for boat/chair/envelope confs
-	auto_samples = mult_factor*auto_samples
+	if auto_samples == 0:
+		auto_samples = mult_factor
+	else:
+		auto_samples = mult_factor*auto_samples
 	return auto_samples
 
 def getDihedralMatches(mol, heavy,log):
