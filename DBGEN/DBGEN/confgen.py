@@ -273,7 +273,7 @@ def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None,alg_M
 				GetFF.Initialize()
 				converged = GetFF.Minimize(maxIts=args.opt_steps_RDKit)
 				energy = GetFF.CalcEnergy()
-				cenergy.append(GetFF.CalcEnergy()* 4.184)
+				cenergy.append(GetFF.CalcEnergy())
 
 				#if args.verbose:
 				#    log.write("-   conformer", (i+1), "optimized: ", args.ff, "energy", GetFF.CalcEnergy())
@@ -375,6 +375,11 @@ def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None,alg_M
 		bar = IncrementalBar('o  Filtering based on energy and rms', max = len(selectedcids_initial))
 		#check rmsd
 		for i, conf in enumerate(selectedcids_initial):
+
+			#set torsions to same value
+			for m in rotmatches:
+				rdMolTransforms.SetDihedralDeg(outmols[conf].GetConformer(conf),*m,180.0)
+
 			# This keeps track of whether or not your conformer is unique
 			excluded_conf = False
 			# include the first conformer in the list to start the filtering process
@@ -524,7 +529,7 @@ def optimize(mol, args, program,log):
 
 	cartesians = mol.GetConformers()[0].GetPositions()
 	# log.write(cartesians[0:2])
-	if args.verbose == True: log.write('\no  The elements are the following {0} '.format(elements))
+	#if args.verbose == True: log.write('\no  The elements are the following {0} '.format(elements))
 
 	coordinates = torch.tensor([cartesians.tolist()], requires_grad=True, device=device)
 
