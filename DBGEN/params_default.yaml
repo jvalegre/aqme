@@ -60,7 +60,7 @@ genecp_atoms : [] # list of atoms included in the gen_ecp part
 basis_set : ['def2svp'] # basis set
 basis_set_genecp_atoms : ['LANL2DZ'] # functional for the genecp part
 level_of_theory : ['wb97xd'] # functional
-max_cycle_opt : 100 #eefault is 300
+max_cycle_opt : 100 #default is 300
 
 # (4.4) DISPERSION CORRECTION FOR COM FILES
 dispersion_correction : False # include dispersion correction

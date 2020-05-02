@@ -536,11 +536,11 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args,log):
 	if args.frequencies == True:
 		if args.dispersion_correction == True:
 			if args.solvent_model == 'gas_phase':
-				input = 'opt=(maxcycles={0}) freq=noraman empiricaldispersion=G{1}'.format(args.max_cycle_opt,args.empirical_dispersion)
-				input_sp = 'nmr=giao empiricaldispersion=G{0}'.format(args.empirical_dispersion)  #input for single point nmr
+				input = 'opt=(maxcycles={0}) freq=noraman empiricaldispersion={1}'.format(args.max_cycle_opt,args.empirical_dispersion)
+				input_sp = 'nmr=giao empiricaldispersion={0}'.format(args.empirical_dispersion)  #input for single point nmr
 			else :
-				input = 'opt=(maxcycles={0}) freq=noraman scrf=({1},solvent={2}) empiricaldispersion=G{3}'.format(args.max_cycle_opt, args.solvent_model, args.solvent_name,args.empirical_dispersion ) #add solvent if needed
-				input_sp = 'scrf=({0},solvent={1}) nmr=giao empiricaldispersion=G{2}'.format(args.solvent_model, args.solvent_name, args.empirical_dispersion)  ##add solvent if needed
+				input = 'opt=(maxcycles={0}) freq=noraman scrf=({1},solvent={2}) empiricaldispersion={3}'.format(args.max_cycle_opt, args.solvent_model, args.solvent_name,args.empirical_dispersion ) #add solvent if needed
+				input_sp = 'scrf=({0},solvent={1}) nmr=giao empiricaldispersion={2}'.format(args.solvent_model, args.solvent_name, args.empirical_dispersion)  ##add solvent if needed
 		else:
 			if args.solvent_model == 'gas_phase':
 				input = 'opt=(maxcycles={0}) freq=noraman'.format(args.max_cycle_opt)
@@ -551,11 +551,11 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args,log):
 	else:
 		if args.dispersion_correction == True:
 			if args.solvent_model == 'gas_phase':
-				input = 'opt=(maxcycles={0}) empiricaldispersion=G{1}'.format(args.max_cycle_opt,args.empirical_dispersion)
-				input_sp = 'nmr=giao empiricaldispersion=G{0}'.format(args.empirical_dispersion)  #input for single point nmr
+				input = 'opt=(maxcycles={0}) empiricaldispersion={1}'.format(args.max_cycle_opt,args.empirical_dispersion)
+				input_sp = 'nmr=giao empiricaldispersion={0}'.format(args.empirical_dispersion)  #input for single point nmr
 			else :
-				input = 'opt=(maxcycles={0}) scrf=({1},solvent={2}) empiricaldispersion=G{3}'.format(args.max_cycle_opt,args.solvent_model, args.solvent_name,args.empirical_dispersion ) #add solvent if needed
-				input_sp = 'scrf=({0},solvent={1}) nmr=giao empiricaldispersion=G{2}'.format(args.solvent_model, args.solvent_name, args.empirical_dispersion)  ##add solvent if needed
+				input = 'opt=(maxcycles={0}) scrf=({1},solvent={2}) empiricaldispersion={3}'.format(args.max_cycle_opt,args.solvent_model, args.solvent_name,args.empirical_dispersion ) #add solvent if needed
+				input_sp = 'scrf=({0},solvent={1}) nmr=giao empiricaldispersion={2}'.format(args.solvent_model, args.solvent_name, args.empirical_dispersion)  ##add solvent if needed
 		else:
 			if args.solvent_model == 'gas_phase':
 				input = 'opt=(maxcycles={0})'.format(args.max_cycle_opt)
@@ -878,11 +878,11 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin,log):
 	if args.frequencies == True:
 		if args.dispersion_correction == True:
 			if args.solvent_model == 'gas_phase':
-				input = 'opt=(maxcycles={0}) freq=noraman empiricaldispersion=G{1}'.format(args.max_cycle_opt,args.empirical_dispersion)
-				input_sp = 'nmr=giao empiricaldispersion=G{0}'.format(args.empirical_dispersion)  #input for single point nmr
+				input = 'opt=(maxcycles={0}) freq=noraman empiricaldispersion={1}'.format(args.max_cycle_opt,args.empirical_dispersion)
+				input_sp = 'nmr=giao empiricaldispersion={0}'.format(args.empirical_dispersion)  #input for single point nmr
 			else :
-				input = 'opt=(maxcycles={0}) freq=noraman scrf=({1},solvent={2}) empiricaldispersion=G{3}'.format(args.max_cycle_opt, args.solvent_model, args.solvent_name,args.empirical_dispersion ) #add solvent if needed
-				input_sp = 'scrf=({0},solvent={1}) nmr=giao empiricaldispersion=G{2}'.format(args.solvent_model, args.solvent_name, args.empirical_dispersion)  ##add solvent if needed
+				input = 'opt=(maxcycles={0}) freq=noraman scrf=({1},solvent={2}) empiricaldispersion={3}'.format(args.max_cycle_opt, args.solvent_model, args.solvent_name,args.empirical_dispersion ) #add solvent if needed
+				input_sp = 'scrf=({0},solvent={1}) nmr=giao empiricaldispersion={2}'.format(args.solvent_model, args.solvent_name, args.empirical_dispersion)  ##add solvent if needed
 		else:
 			if args.solvent_model == 'gas_phase':
 				input = 'opt=(maxcycles={0}) freq=noraman'.format(args.max_cycle_opt)
@@ -893,11 +893,11 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin,log):
 	else:
 		if args.dispersion_correction == True:
 			if args.solvent_model == 'gas_phase':
-				input = 'opt=(maxcycles={0}) empiricaldispersion=G{1}'.format(args.max_cycle_opt,args.empirical_dispersion)
-				input_sp = 'nmr=giao empiricaldispersion=G{0}'.format(args.empirical_dispersion)  #input for single point nmr
+				input = 'opt=(maxcycles={0}) empiricaldispersion={1}'.format(args.max_cycle_opt,args.empirical_dispersion)
+				input_sp = 'nmr=giao empiricaldispersion={0}'.format(args.empirical_dispersion)  #input for single point nmr
 			else :
-				input = 'opt=(maxcycles={0}) scrf=({1},solvent={2}) empiricaldispersion=G{3}'.format(args.max_cycle_opt,args.solvent_model, args.solvent_name,args.empirical_dispersion ) #add solvent if needed
-				input_sp = 'scrf=({0},solvent={1}) nmr=giao empiricaldispersion=G{2}'.format(args.solvent_model, args.solvent_name, args.empirical_dispersion)  ##add solvent if needed
+				input = 'opt=(maxcycles={0}) scrf=({1},solvent={2}) empiricaldispersion={3}'.format(args.max_cycle_opt,args.solvent_model, args.solvent_name,args.empirical_dispersion ) #add solvent if needed
+				input_sp = 'scrf=({0},solvent={1}) nmr=giao empiricaldispersion={2}'.format(args.solvent_model, args.solvent_name, args.empirical_dispersion)  ##add solvent if needed
 		else:
 			if args.solvent_model == 'gas_phase':
 				input = 'opt=(maxcycles={0})'.format(args.max_cycle_opt)
