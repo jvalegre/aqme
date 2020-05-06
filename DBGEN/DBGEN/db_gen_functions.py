@@ -37,6 +37,31 @@ class Logger:
     def finalize(self):
         self.log.close()
 
+" SUBSTITUTION WITH I"
+def substituted_mol(smi,args,log):
+	mol = Chem.MolFromSmiles(smi)
+	for atom in mol.GetAtoms():
+		if atom.GetSymbol() in args.metal:
+			args.metal_sym.append(atom.GetSymbol() )
+			atom.SetAtomicNum(53)
+			if len(atom.GetNeighbors()) == 2:
+				atom.SetFormalCharge(-3)
+			if len(atom.GetNeighbors()) == 3:
+				atom.SetFormalCharge(-2)
+			if len(atom.GetNeighbors()) == 4:
+				atom.SetFormalCharge(-1)
+			if len(atom.GetNeighbors()) == 5:
+				atom.SetFormalCharge(0)
+			if len(atom.GetNeighbors()) == 6:
+				atom.SetFormalCharge(1)
+			if len(atom.GetNeighbors()) == 7:
+				atom.SetFormalCharge(2)
+			if len(atom.GetNeighbors()) == 8:
+				atom.SetFormalCharge(3)
+			args.metal_idx.append(atom.GetIdx())
+			args.complex_coord.append(len(atom.GetNeighbors()))
+	return mol,args.metal_idx,args.complex_coord,args.metal_sym
+
 "TEMPLATE GENERATION FOR SQUAREPLANAR AND SQUAREPYRIMIDAL "
 def template_embed_sp(molecule,temp,name_input,args,log):
 	mol_objects = [] # a list of mol objects that will be populated
@@ -393,7 +418,6 @@ def conformer_generation(mol,name,start_time,args,log,dup_data,dup_data_idx,coor
 		log.write("\n Execution time: %s seconds" % (round(time.time() - start_time,2)))
 		dup_data.at[dup_data_idx, 'time (seconds)'] = round(time.time() - start_time,2)
 
-
 " RULES TO GET EXPERIMENTAL CONFORMERS"
 def exp_rules_output(mol, args,log):
 	passing = True
@@ -530,7 +554,20 @@ def read_energies(file,log): # parses the energies from sdf files - then used to
 	return energies
 
 " MAIN FUNCTION TO CREATE GAUSSIAN JOBS"
-def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args,log):
+def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args,log,charge_data):
+
+	#find location of molecule and respective scharges
+	name_list = name.split('_')
+	if 'xtb' or 'ani' in name_list:
+		name_molecule = name[:-4]
+	if 'rdKit' in name_list:
+		name_molecule = name[:-6]
+	if 'rdKit_rotated' in name_list:
+		name_molecule = name[:-14]
+
+	for i in range(len(charge_data)):
+		if charge_data.loc[i,'Molecule'] == name_molecule:
+			charge_com = charge_data.loc[i,'Overall charge']
 
 	#definition of input lines
 	if args.frequencies == True:
@@ -588,19 +625,6 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args,log):
 				if read_lines[line].find(atom)>-1:
 					genecp = 'gen'
 					break
-
-	if args.metal_complex == True and os.path.splitext(args.input)[1] != '.com' and os.path.splitext(args.input)[1] != '.gjf':
-		try:
-			args.charge, neighbours = rules_get_charge(suppl[0],args,log)
-			if len(neighbours) != 0:
-				if args.verbose == True: log.write('---- The Overall charge is reworked with rules for .smi, .csv, .cdx for writing the .com files of conformers')
-		except:
-			args.charge = args.charge_default
-			log.write(' ----- The Overall charge could not be re-worked with the rules, hence writing the default charge 0 ---- ')
-			pass
-	if args.metal_complex == True and os.path.splitext(args.input)[1] == '.com' or os.path.splitext(args.input)[1] == '.gjf':
-		if len(neighbours) != 0:
-			if args.verbose == True: log.write('---- The Overall charge is read from the .com file is used to write new .com files of conformers ---')
 
 	if args.single_point == True:
 		#pathto change to
@@ -693,7 +717,7 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args,log):
 			if args.metal_complex == True:
 				for i in range(0,len(read_lines)):
 					if len(read_lines[i].strip()) == 0:
-						read_lines[i+3] = str(args.charge)+' '+ str(args.complex_spin)+'\n'
+						read_lines[i+3] = str(charge_com)+' '+ str(args.complex_spin)+'\n'
 						break
 				out = open(file, 'w')
 				out.writelines(read_lines)
@@ -843,7 +867,7 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args,log):
 			if args.metal_complex == True:
 				for i in range(0,len(read_lines)):
 					if len(read_lines[i].strip()) == 0:
-						read_lines[i+3] = str(args.charge)+' '+ str(args.complex_spin)+'\n'
+						read_lines[i+3] = str(charge_com)+' '+ str(args.complex_spin)+'\n'
 						break
 				out = open(file, 'w')
 				out.writelines(read_lines)

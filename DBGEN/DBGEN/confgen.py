@@ -110,9 +110,10 @@ def genConformer_r(mol, conf, i, matches, degree, sdwriter,args,name,log):
 		#setting the metal back instead of I
 		if args.metal_complex == True and args.nodihedrals == True:
 			for atom in mol.GetAtoms():
-				if atom.GetSymbol() == 'I' and (len(atom.GetBonds()) == 6 or len(atom.GetBonds()) == 5 or len(atom.GetBonds()) == 4 or len(atom.GetBonds()) == 3 or len(atom.GetBonds()) == 2):
+				if atom.GetIdx() in args.metal_idx:
+					re_symbol = args.metal_sym[args.metal_idx.index(atom.GetIdx())]
 					for el in elementspt:
-						if el.symbol == args.metal:
+						if el.symbol == re_symbol:
 							atomic_number = el.number
 					atom.SetAtomicNum(atomic_number)
 		sdwriter.write(mol,conf)
@@ -144,52 +145,56 @@ def genConformer_r(mol, conf, i, matches, degree, sdwriter,args,name,log):
 			deg += degree
 		return total
 
-def rules_get_charge(mol, args,log):
+def rules_get_charge(mol,args,log):
 	C_group = ['C', 'Se', 'Ge']
 	N_group = ['N', 'P', 'As']
 	O_group = ['O', 'S', 'Se']
 	Cl_group = ['Cl', 'Br', 'I']
 
+	charge = np.empty(len(args.metal_idx), dtype=int)
 	neighbours = []
 	#get the neighbours of metal atom
 	for atom in mol.GetAtoms():
-		if atom.GetSymbol() == args.metal:
+		if atom.GetIdx() in args.metal_idx:
+			#print(atom.GetSymbol())
+			charge_idx = args.metal_idx.index(atom.GetIdx())
+			#
 			neighbours = atom.GetNeighbors()
 
-	if len(neighbours) == 0 :
-		if args.verbose: log.write("x Metal Not found! It is an organic molecule.")
+			charge[charge_idx] = args.m_oxi[charge_idx]
+
+			for atom in neighbours:
+				#Carbon list
+				if atom.GetSymbol() in C_group:
+					if atom.GetTotalValence()== 4:
+						charge[charge_idx] = charge[charge_idx] - 1
+					if atom.GetTotalValence()== 3:
+						charge[charge_idx] = charge[charge_idx] - 0
+				#Nitrogen list
+				if atom.GetSymbol() in N_group:
+					if atom.GetTotalValence() == 3:
+						charge[charge_idx] = charge[charge_idx] - 1
+					if atom.GetTotalValence() == 4:
+						charge[charge_idx] = charge[charge_idx] - 0
+				#Oxygen list
+				if atom.GetSymbol() in O_group:
+					if atom.GetTotalValence() == 2:
+						charge[charge_idx] = charge[charge_idx] - 1
+					if atom.GetTotalValence() == 3:
+						charge[charge_idx] = charge[charge_idx] - 0
+				#Halogen list
+				if atom.GetSymbol() in Cl_group:
+					if atom.GetTotalValence() == 1:
+						charge[charge_idx] = charge[charge_idx] - 1
+					if atom.GetTotalValence() == 2:
+						charge[charge_idx] = charge[charge_idx] - 0
+
+	if len(neighbours) == 0:
+		#if args.verbose: print("x Metal Not found! It is an organic molecule.")
 		#no update in charge as it is an organic molecule
+		return args.charge_default
 	else:
-		args.charge = args.m_oxi
-		for atom in neighbours:
-			#Carbon list
-			if atom.GetSymbol() in C_group:
-				if atom.GetTotalValence()== 4:
-					args.charge = args.charge - 1
-				if atom.GetTotalValence()== 3:
-					args.charge = args.charge - 0
-			#Nitrogen list
-			if atom.GetSymbol() in N_group:
-				if atom.GetTotalValence() == 3:
-					args.charge = args.charge - 1
-				if atom.GetTotalValence() == 4:
-					args.charge = args.charge - 0
-			#Oxygen list
-			if atom.GetSymbol() in O_group:
-				if atom.GetTotalValence() == 2:
-					args.charge = args.charge - 1
-				if atom.GetTotalValence() == 3:
-					args.charge = args.charge - 0
-			#Halogen list
-			if atom.GetSymbol() in Cl_group:
-				if atom.GetTotalValence() == 1:
-					args.charge = args.charge - 1
-				if atom.GetTotalValence() == 2:
-					args.charge = args.charge - 0
-
-			# log.write('The neighbour atoms are {0}, with valence {1}, and total charge is {2}'.format(atom.GetSymbol(),atom.GetTotalValence(),args.charge))
-
-	return args.charge, neighbours
+		return charge
 
 def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None,alg_Map=None,mol_template=None):
 	'''embeds core conformers, then optimizes and filters based on RMSD. Finally the rotatable torsions are systematically rotated'''
@@ -251,6 +256,7 @@ def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None,alg_M
 
 		#energy minimize all to get more realistic results
 		#identify the atoms and decide Force Field
+
 		for atom in mol.GetAtoms():
 			if atom.GetAtomicNum() > 36: #upto Kr for MMFF, if not use UFF
 				args.ff = "UFF"
@@ -503,7 +509,7 @@ def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None,alg_M
 
 	return status
 
-def optimize(mol, args, program,log):
+def optimize(mol, args, program,log,dup_data,dup_data_idx):
 
 	#setup non rdkit energy calculations
 
@@ -520,15 +526,25 @@ def optimize(mol, args, program,log):
 
 	if args.metal_complex == True and args.nodihedrals == False:
 		for atom in mol.GetAtoms():
-			if atom.GetSymbol() == 'I' and (len(atom.GetBonds()) == 6 or len(atom.GetBonds()) == 5 or len(atom.GetBonds()) == 4 or len(atom.GetBonds()) == 3 or len(atom.GetBonds()) == 2):
+			if atom.GetIdx() in args.metal_idx:
+				re_symbol = args.metal_sym[args.metal_idx.index(atom.GetIdx())]
 				for el in elementspt:
-					if el.symbol == args.metal:
+					if el.symbol == re_symbol:
 						atomic_number = el.number
 				atom.SetAtomicNum(atomic_number)
 
 	elements = ''
-	for atom in mol.GetAtoms():
+	ase_metal = []
+	ase_metal_idx = []
+	for i,atom in enumerate(mol.GetAtoms()):
+		if atom.GetIdx() in args.metal_idx:
+			ase_metal.append(i)
+			ase_metal_idx.append(atom.GetIdx())
 		elements += atom.GetSymbol()
+
+	args.charge = rules_get_charge(mol,args,log)
+	dup_data.at[dup_data_idx, 'Overall charge'] = np.sum(args.charge)
+
 
 	cartesians = mol.GetConformers()[0].GetPositions()
 	# log.write(cartesians[0:2])
@@ -565,17 +581,17 @@ def optimize(mol, args, program,log):
 		if args.metal_complex == True:
 			#passing charges metal present
 			ase_molecule = ase.Atoms(elements, positions=coordinates.tolist()[0],calculator=GFN2()) #define ase molecule using GFN2 Calculator
-			for atom in ase_molecule:
-				if atom.symbol == args.metal:
-					#will update only for cdx, smi, and csv formats.
-					if os.path.splitext(args.input)[1] == '.csv' or os.path.splitext(args.input)[1] == '.cdx' or os.path.splitext(args.input)[1] == '.smi':
-						atom.charge, neighbours = rules_get_charge(mol,args,log)
-						if len(neighbours) != 0:
-							if args.verbose == True: log.write('o  The Overall charge is reworked with rules for .smi, .csv, .cdx ')
-					else:
-						atom.charge = args.charge
-						if args.verbose == True: log.write('o  The Overall charge is read from the .com file ')
-					if args.verbose == True: log.write('o  The Overall charge considered is  {0} '.format(atom.charge))
+			if os.path.splitext(args.input)[1] == '.csv' or os.path.splitext(args.input)[1] == '.cdx' or os.path.splitext(args.input)[1] == '.smi':
+				for i,atom in enumerate(ase_molecule):
+					if i in ase_metal:
+						ase_charge = args.charge[args.metal_idx.index(ase_metal_idx[ase_metal.index(i)])]
+						print(ase_charge,atom)
+						#will update only for cdx, smi, and csv formats.
+						atom.charge = ase_charge
+				if args.verbose == True: log.write('o  The Overall charge is reworked with rules for .smi, .csv, .cdx ')
+			else:
+				atom.charge = args.charge_default
+				if args.verbose == True: log.write('o  The Overall charge is read from the .com file ')
 		else:
 			ase_molecule = ase.Atoms(elements, positions=coordinates.tolist()[0],calculator=GFN2()) #define ase molecule using GFN2 Calculator
 		optimizer = ase.optimize.BFGS(ase_molecule, trajectory='xTB_opt.traj',logfile='xtb.opt')
@@ -643,7 +659,7 @@ def mult_min(name, args, program,log,dup_data,dup_data_idx):
 		conf = 1
 		if mol is not None:
 			# optimize this structure and record the energy
-			mol, converged, energy = optimize(mol, args, program,log)
+			mol, converged, energy = optimize(mol, args, program,log,dup_data,dup_data_idx)
 			#if args.verbose: log.write("   conformer", (i+1), energy)
 
 			if globmin == None: globmin = energy

@@ -28,8 +28,9 @@ combine : False # if boltz : True and combine : True, all the data from the CSV 
 # COMMON PARAMETERS TO EDIT
 
 # (1) CHARGE FOR XTB OPTIMIZATION AND COM FILES
-charge : 0 # final charge of the molecule (used in xTB optimization and input in the final COM input files)
+charge : [] # final charge of the molecule (used in xTB optimization automatically updated for each metal atom if not charge_default is written)
 # If metal_complex : True, the script will recalculate the charge
+charge_default : 0 #used to write the default if cannot be calculated for metal atom
 
 # (2) TYPE OF OPTIMIZATION
 # Options: xTB, ANI1ccx (if True is selected).  Default : RDKit optimizaiton
@@ -86,10 +87,8 @@ angle_off : 30 # margin of error to determine angles (i.e. if angle_off is 30, a
 # (7) OPTIONS FOR METALS, ATOMS WITH UNCOMMON HYBRIDIZATIONS AND NCI COMPLEXES
 # IF A METAL OR AN ATOM WITH UNCOMMON HYBRIDIZATION (i.e. pentacoordinated phosphorus) IS USED
 metal_complex : True # specify True to activate this option
-metal : 'Ir' # specify the metal(s) or atom(s) with uncommon hybridization, in the format 'A','B','C'...
-complex_coord : 6 # specify the coordination number of the atom
-complex_type : '' # specify the following: square planar, square pyrimidal (otheriwse defaults to octahedral, Td)
-m_oxi : 3 # oxidation number of the atom (it is used to calculate the charge of the molecule)
+metal : ['Pd','Ir'] # specify the metal(s) or atom(s) with uncommon hybridization, in the format 'A','B','C'...
+m_oxi : [4,6] # oxidation number of the atom (it is used to calculate the charge of the molecule)
 complex_spin : 1 # final spin of the molecule (the code does not calculate spin, it must be defined by the user)
 
 # (8) IF A NONCOVALENT COMPLEX IS USED
@@ -140,6 +139,11 @@ constraints : None
 # DEFAULT PARAMETERS ONLY FOR xTB OPTIMIZATION
 large_sys : True
 STACKSIZE : '1G' #set for large system
+
+#METAL VARIABLEs CALCULATED IN THE program
+complex_coord : [] # specify the coordination number of the metal atom
+metal_idx : []
+metal_sym : []
 
 # NUMBER OF MOLECULES, for eg., molecule list, for later can use as total no. of molecules it is need in the boltz part to read in specific molecules"
 maxnumber : 100000 # max number of molecules to use

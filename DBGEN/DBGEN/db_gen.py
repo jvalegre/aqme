@@ -37,12 +37,15 @@ def main():
 
 	#metal complex
 	parser.add_argument("--metal_complex", action="store_true", default=False, help="Request metal complex with coord. no. 4, 5 or 6")
-	parser.add_argument("--metal",  help="Specify metallic element", default="Ir", dest="metal", type=str)
+	parser.add_argument("--metal",  help="Specify metallic element", default=["Ir"], dest="metal", type=str)
 	parser.add_argument("--complex_spin",  help="Multiplicity of metal complex", default="1", dest="complex_spin", type=int)
-	parser.add_argument("--complex_coord", help="Coord. no. of metal complex", default="6", dest="complex_coord", type=int)
+	parser.add_argument("--complex_coord", help="Coord. no. of metal complex (automatically updates)", default=[], dest="complex_coord", type=int)
 	parser.add_argument("--complex_type",  help="Geometry about metal (e.g. octahedral)", default="octahedral", dest="complex_type", type=str)
-	parser.add_argument("--m_oxi",  help="Metal oxidation state", default="3", dest="m_oxi", type=int)
-	parser.add_argument("--charge",  help="Charge of metal complex. Will automatically update for metals", default="0", dest="charge", type=int)
+	parser.add_argument("--m_oxi",  help="Metal oxidation state", default=["3"], dest="m_oxi", type=int)
+	parser.add_argument("--metal_idx",  help="Metal index (automatically updates)", default=[], dest="metal_idx", type=int)
+	parser.add_argument("--charge",  help="Charge of metal complex (automatically updates)", default=[], dest="charge", type=int)
+	parser.add_argument("--charge_default",  help="Charge default to be considered", default="0", dest="charge_default", type=int)
+	parser.add_argument("--metal_sym",  help="Symbols of metals to be considered from list (automatically updates)", default=[], dest="metal_sym", type=str)
 
 	#NCI complex
 	parser.add_argument("--nci_complex", action="store_true", default=False, help="Request NCI complexes")
@@ -158,143 +161,105 @@ def main():
 		# writing the list of DUPLICATES
 		if args.nodihedrals == True:
 			if args.xtb != True and args.ANI1ccx != True:
-				dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples', 'RDKit-energy-duplicates','RDKit-RMS-and-energy-duplicates','RDKIT-Unique-conformers','time (seconds)'])
+				dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples', 'RDKit-energy-duplicates','RDKit-RMS-and-energy-duplicates','RDKIT-Unique-conformers','time (seconds)','Overall charge'])
 			elif args.xtb == True:
-				dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples', 'RDKit-energy-duplicates','RDKit-RMS-and-energy-duplicates','RDKIT-Unique-conformers','xTB-Initial-samples','xTB-initial_energy_threshold','xTB-RMS-and-energy-duplicates','xTB-Unique-conformers','time (seconds)'])
+				dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples', 'RDKit-energy-duplicates','RDKit-RMS-and-energy-duplicates','RDKIT-Unique-conformers','xTB-Initial-samples','xTB-initial_energy_threshold','xTB-RMS-and-energy-duplicates','xTB-Unique-conformers','time (seconds)','Overall charge'])
 			elif args.ANI1ccx == True:
-				dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples', 'RDKit-energy-duplicates','RDKit-RMS-and-energy-duplicates','RDKIT-Unique-conformers','ANI1ccx-Initial-samples','ANI1ccx-initial_energy_threshold','ANI1ccx-RMS-and-energy-duplicates','ANI1ccx-Unique-conformers','time (seconds)'])
+				dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples', 'RDKit-energy-duplicates','RDKit-RMS-and-energy-duplicates','RDKIT-Unique-conformers','ANI1ccx-Initial-samples','ANI1ccx-initial_energy_threshold','ANI1ccx-RMS-and-energy-duplicates','ANI1ccx-Unique-conformers','time (seconds)','Overall charge'])
 		else:
 			if args.xtb != True and args.ANI1ccx != True:
-				dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples', 'RDKit-energy-duplicates','RDKit-RMS-and-energy-duplicates','RDKIT-Unique-conformers','RDKIT-Rotated-conformers','RDKIT-Rotated-Unique-conformers','time (seconds)'])
+				dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples', 'RDKit-energy-duplicates','RDKit-RMS-and-energy-duplicates','RDKIT-Unique-conformers','RDKIT-Rotated-conformers','RDKIT-Rotated-Unique-conformers','time (seconds)','Overall charge'])
 			elif args.xtb == True:
-				dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples', 'RDKit-energy-duplicates','RDKit-RMS-and-energy-duplicates','RDKIT-Unique-conformers','RDKIT-Rotated-conformers','RDKIT-Rotated-Unique-conformers','xTB-Initial-samples','xTB-initial_energy_threshold','xTB-RMS-and-energy-duplicates','xTB-Unique-conformers','time (seconds)'])
+				dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples', 'RDKit-energy-duplicates','RDKit-RMS-and-energy-duplicates','RDKIT-Unique-conformers','RDKIT-Rotated-conformers','RDKIT-Rotated-Unique-conformers','xTB-Initial-samples','xTB-initial_energy_threshold','xTB-RMS-and-energy-duplicates','xTB-Unique-conformers','time (seconds)','Overall charge'])
 			elif args.ANI1ccx == True:
-					dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples', 'RDKit-energy-duplicates','RDKit-RMS-and-energy-duplicates','RDKIT-Unique-conformers','RDKIT-Rotated-conformers','RDKIT-Rotated-Unique-conformers','ANI1ccx-Initial-samples','ANI1ccx-initial_energy_threshold','ANI1ccx-RMS-and-energy-duplicates','ANI1ccx-Unique-conformers','time (seconds)'])
+					dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples', 'RDKit-energy-duplicates','RDKit-RMS-and-energy-duplicates','RDKIT-Unique-conformers','RDKIT-Rotated-conformers','RDKIT-Rotated-Unique-conformers','ANI1ccx-Initial-samples','ANI1ccx-initial_energy_threshold','ANI1ccx-RMS-and-energy-duplicates','ANI1ccx-Unique-conformers','time (seconds)','Overall charge'])
+
+		ori_ff = args.ff
 
 		if file_format == '.smi': # SMILES input specified
 			smifile = open(args.input)
 
 			for i, line in enumerate(smifile):
+				args.ff = ori_ff
 				toks = line.split()
 
-				if args.metal_complex == True and  (args.complex_coord == 6 or  args.complex_coord == 2):
-					#find metal and replace with I+ for octahydral
-					smi = toks[0].replace(args.metal,'I+')
-					#Ir+ exixted then we need to change back to I+
-					smi = smi.replace('I++','I+')
+				#editing part
+				smi = toks[0]
 
-					#taking largest component for salts
-					pieces = smi.split('.')
-					if len(pieces) > 1:
-						smi = max(pieces, key=len) #take largest component by length
-
-				elif args.metal_complex == True and (args.complex_coord == 5 or args.complex_coord == 3):
-					#find metal and replace with I+ for octahydral
-					smi = toks[0].replace(args.metal,'I')
-					#Ir+ exixted then we need to change back to I+
-					smi = smi.replace('I+','I')
-					#taking largest component for salts
-					pieces = smi.split('.')
-					if len(pieces) > 1:
-						smi = max(pieces, key=len) #take largest component by length
-
-				elif args.metal_complex == True and args.complex_coord == 4:
-					#find metal and replace with I+ for octahydral
-					smi = toks[0].replace(args.metal,'I-')
-					#Ir+ exixted then we need to change back to I+
-					smi = smi.replace('I-+','I-')
-
-					#taking largest component for salts
-					pieces = smi.split('.')
-					if len(pieces) > 1:
-						smi = max(pieces, key=len) #take largest component by length
-
-
-				else:
-					smi = toks[0]
-					#taking largest component for salts
-					pieces = smi.split('.')
-					if len(pieces) > 1:
-						smi = max(pieces, key=len) #take largest component by length
+				#taking largest component for salts
+				pieces = smi.split('.')
+				if len(pieces) > 1:
+					smi = max(pieces, key=len) #take largest component by length
 
 				if args.prefix == False: name = ''.join(toks[1:])
 				else: name = args.prefix+str(i)+'_'+''.join(toks[1:])
 
 				# Converts each line to a rdkit mol object
 				if args.verbose: log.write("   -> Input Molecule {} is {}".format(i, smi))
-				mol = Chem.MolFromSmiles(smi)
+
+				if args.metal_complex == True:
+					mol,args.metal_idx,args.complex_coord,args.metal_sym = substituted_mol(smi,args,log)
+				else:
+					mol = Chem.MolFromSmiles(smi)
+
 				# get manually for square planar and SQUAREPYRIMIDAL
 				if args.complex_type == 'squareplanar' or args.complex_type == 'squarepyrimidal':
-					file_template = path.dirname(path.abspath(__file__)) +'/Template/template-4-and-5.sdf'
-					temp = Chem.SDMolSupplier(file_template)
-					mol_objects_from_template,name, coord_Map, alg_Map, mol_template = template_embed_sp(mol,temp,name,args,log)
-					for i in range(len(mol_objects_from_template)):
-						mol_objects.append([mol_objects_from_template[i],name[i],coord_Map[i],alg_Map[i],mol_template[i]])
+					if len(args.metal_idx) == 1:
+						file_template = path.dirname(path.abspath(__file__)) +'/Template/template-4-and-5.sdf'
+						temp = Chem.SDMolSupplier(file_template)
+						mol_objects_from_template,name, coord_Map, alg_Map, mol_template = template_embed_sp(mol,temp,name,args,log)
+						for i in range(len(mol_objects_from_template)):
+							mol_objects.append([mol_objects_from_template[i],name[i],coord_Map[i],alg_Map[i],mol_template[i]])
+						for [mol, name, coord_Map,alg_Map,mol_template] in mol_objects:
+							conformer_generation(mol,name,start_time,args,log,dup_data,i,coord_Map,alg_Map,mol_template)
+					else:
+						log.write("x  Cannot use templates for complexes involving more than 1 metal.")
+						sys.exit()
 				else:
-					mol_objects.append([mol, name])
+					conformer_generation(mol,name,start_time,args,log,dup_data,i)
+			dup_data.to_csv(args.input.split('.')[0]+'-Duplicates Data.csv',index=False)
 
 		elif os.path.splitext(args.input)[1] == '.csv': # CSV file with one columns SMILES and code_name
 			csv_smiles = pd.read_csv(args.input)
 			m = 0
 			for i in range(len(csv_smiles)):
+				args.ff = ori_ff
 				#assigning names and smi i  each loop
 				if args.prefix == False: name = csv_smiles.loc[i, 'code_name']
 				else: name = 'comp_'+str(m)+'_'+csv_smiles.loc[i, 'code_name']
 
 				smi = csv_smiles.loc[i, 'SMILES']
 				#checking for salts
-
-				if args.metal_complex == True and  (args.complex_coord == 6 or  args.complex_coord == 2):
-					#find metal and replace with I+ for octahydral
-					smi = smi.replace(args.metal,'I+')
-					#Ir+ exixted then we need to change back to I+
-					smi = smi.replace('I++','I+')
-
-					#taking largest component for salts
-					pieces = smi.split('.')
-					if len(pieces) > 1:
-						smi = max(pieces, key=len) #take largest component by length
-
-				elif args.metal_complex == True and (args.complex_coord == 5 or args.complex_coord == 3):
-					#find metal and replace with I+ for octahydral
-					smi = smi.replace(args.metal,'I')
-					#Ir+ exixted then we need to change back to I+
-					smi = smi.replace('I+','I')
-					#taking largest component for salts
-					pieces = smi.split('.')
-					if len(pieces) > 1:
-						smi = max(pieces, key=len) #take largest component by length
-
-				elif args.metal_complex == True and args.complex_coord == 4:
-					#find metal and replace with I+ for octahydral
-					smi = smi.replace(args.metal,'I-')
-					#Ir+ exixted then we need to change back to I+
-					smi = smi.replace('I-+','I-')
-
-					#taking largest component for salts
-					pieces = smi.split('.')
-					if len(pieces) > 1:
-						smi = max(pieces, key=len) #take largest component by length
-
-				else:
-					#taking largest component for salts
-					pieces = smi.split('.')
-					if len(pieces) > 1:
-						smi = max(pieces, key=len) #take largest component by length
+				#taking largest component for salts
+				pieces = smi.split('.')
+				if len(pieces) > 1:
+					smi = max(pieces, key=len) #take largest component by length
 
 				# Converts each line to a rdkit mol object
 				if args.verbose: log.write("   -> Input Molecule {} is {}".format(i, smi))
-				mol = Chem.MolFromSmiles(smi)
+
+				if args.metal_complex == True:
+					mol,args.metal_idx,args.complex_coord,args.metal_sym = substituted_mol(smi,args,log)
+				else:
+					mol = Chem.MolFromSmiles(smi)
+
 				# get manually for square planar and SQUAREPYRIMIDAL
 				if args.complex_type == 'squareplanar' or args.complex_type == 'squarepyrimidal':
-					file_template = path.dirname(path.abspath(__file__)) +'/Template/template-4-and-5.sdf'
-					temp = Chem.SDMolSupplier(file_template)
-					mol_objects_from_template,name, coord_Map, alg_Map, mol_template = template_embed_sp(mol,temp,name,args,log)
-					for i in range(len(mol_objects_from_template)):
-						mol_objects.append([mol_objects_from_template[i],name[i],coord_Map[i],alg_Map[i],mol_template[i]])
+					if len(args.metal_idx) == 1:
+						file_template = path.dirname(path.abspath(__file__)) +'/Template/template-4-and-5.sdf'
+						temp = Chem.SDMolSupplier(file_template)
+						mol_objects_from_template,name, coord_Map, alg_Map, mol_template = template_embed_sp(mol,temp,name,args,log)
+						for i in range(len(mol_objects_from_template)):
+							mol_objects.append([mol_objects_from_template[i],name[i],coord_Map[i],alg_Map[i],mol_template[i]])
+						for [mol, name, coord_Map,alg_Map,mol_template] in mol_objects:
+							conformer_generation(mol,name,start_time,args,log,dup_data,i,coord_Map,alg_Map,mol_template)
+					else:
+						log.write("x  Cannont use templates for complexes invovling more than 1 metal.")
+						sys.exit()
 				else:
-					mol_objects.append([mol, name])
+					conformer_generation(mol,name,start_time,args,log,dup_data,i)
 				m += 1
+			dup_data.to_csv(args.input.split('.')[0]+'-Duplicates Data.csv',index=False)
 
 		elif os.path.splitext(args.input)[1] == '.cdx': # CDX file
 				#converting to smiles from chemdraw
@@ -302,61 +267,40 @@ def main():
 			smifile = open('cdx.smi',"r")
 
 			for i, smi in enumerate(smifile):
+				args.ff = ori_ff
 				name = 'comp' + str(i)+'_'
-				if args.metal_complex == True and  (args.complex_coord == 6 or  args.complex_coord == 2):
-					#find metal and replace with I+ for octahydral
-					smi = smi.replace(args.metal,'I+')
-					#Ir+ exixted then we need to change back to I+
-					smi = smi.replace('I++','I+')
 
-					#taking largest component for salts
-					pieces = smi.split('.')
-					if len(pieces) > 1:
-						smi = max(pieces, key=len) #take largest component by length
-
-				elif args.metal_complex == True and (args.complex_coord == 5 or args.complex_coord == 3):
-					#find metal and replace with I+ for octahydral
-					smi = smi.replace(args.metal,'I')
-					#Ir+ exixted then we need to change back to I+
-					smi = smi.replace('I+','I')
-					#taking largest component for salts
-					pieces = smi.split('.')
-					if len(pieces) > 1:
-						smi = max(pieces, key=len) #take largest component by length
-
-				elif args.metal_complex == True and args.complex_coord == 4:
-					#find metal and replace with I+ for octahydral
-					smi = smi.replace(args.metal,'I-')
-					#Ir+ exixted then we need to change back to I+
-					smi = smi.replace('I-+','I-')
-
-					#taking largest component for salts
-					pieces = smi.split('.')
-					if len(pieces) > 1:
-						smi = max(pieces, key=len) #take largest component by length
-
-				else:
-					#taking largest component for salts
-					pieces = smi.split('.')
-					if len(pieces) > 1:
-						smi = max(pieces, key=len) #take largest component by length
+				#taking largest component for salts
+				pieces = smi.split('.')
+				if len(pieces) > 1:
+					smi = max(pieces, key=len) #take largest component by length
 
 				# Converts each line to a rdkit mol object
 				if args.verbose: log.write("   -> Input Molecule {} is {}".format(i, smi))
-				mol = Chem.MolFromSmiles(smi)
+
+				if args.metal_complex == True:
+					mol,args.metal_idx,args.complex_coord,args.metal_sym = substituted_mol(smi,args,log)
+				else:
+					mol = Chem.MolFromSmiles(smi)
+
 				# get manually for square planar and SQUAREPYRIMIDAL
 				if args.complex_type == 'squareplanar' or args.complex_type == 'squarepyrimidal':
-					file_template = path.dirname(path.abspath(__file__)) +'/Template/template-4-and-5.sdf'
-					temp = Chem.SDMolSupplier(file_template)
-					mol_objects_from_template,name, coord_Map, alg_Map, mol_template = template_embed_sp(mol,temp,name,args,log)
-					for i in range(len(mol_objects_from_template)):
-						mol_objects.append([mol_objects_from_template[i],name[i],coord_Map[i],alg_Map[i],mol_template[i]])
+					if len(args.metal_idx) == 1:
+						file_template = path.dirname(path.abspath(__file__)) +'/Template/template-4-and-5.sdf'
+						temp = Chem.SDMolSupplier(file_template)
+						mol_objects_from_template,name, coord_Map, alg_Map, mol_template = template_embed_sp(mol,temp,name,args,log)
+						for i in range(len(mol_objects_from_template)):
+							mol_objects.append([mol_objects_from_template[i],name[i],coord_Map[i],alg_Map[i],mol_template[i]])
+					else:
+						log.write("x  Cannont use templates for complexes invovling more than 1 metal.")
+						sys.exit()
 				else:
 					mol_objects.append([mol, name])
 
 		elif os.path.splitext(args.input)[1] == '.com' or os.path.splitext(args.input)[1] == '.gjf': # COM file
 			#converting to sdf from comfile to preserve geometry
 
+			#### ADD args.ff = ori_ff
 			comfile = open(args.input,"r")
 			comlines = comfile.readlines()
 
@@ -366,7 +310,7 @@ def main():
 				if len(comlines[i].strip()) == 0: emptylines.append(i)
 
 			#assigning the charges
-			args.charge = comlines[(emptylines[1]+1)].split(' ')[0]
+			args.charge_default = comlines[(emptylines[1]+1)].split(' ')[0]
 
 			xyzfile = open(os.path.splitext(args.input)[0]+'.xyz',"w")
 			xyzfile.write(str(emptylines[2]- (emptylines[1]+2)))
@@ -435,6 +379,9 @@ def main():
 #------------------ Check for metals ----------------------------------------------
 
 		elif file_format == '.sdf': # SDF input specified
+
+
+			#### ADD args.ff = ori_ff
 			sdffile = args.input
 			IDs = []
 			f = open(sdffile,"r")
@@ -474,18 +421,18 @@ def main():
 					mol_objects.append([mol, name])
 
 #------------------------------------------------------------------------------------------
-		if args.complex_type == 'squareplanar' or args.complex_type == 'squarepyrimidal':
-			dup_data_idx = 0
-			for [mol, name, coord_Map,alg_Map,mol_template] in mol_objects: # Run confomer generation for each mol object
-				conformer_generation(mol,name,start_time,args,log,dup_data,dup_data_idx,coord_Map,alg_Map,mol_template)
-				dup_data_idx += 1
-			dup_data.to_csv(args.input.split('.')[0]+'-Duplicates Data.csv',index=False)
-		else:
-			dup_data_idx = 0
-			for [mol, name] in mol_objects: # Run confomer generation for each mol object
-				conformer_generation(mol,name,start_time,args,log,dup_data,dup_data_idx)
-				dup_data_idx += 1
-			dup_data.to_csv(args.input.split('.')[0]+'-Duplicates Data.csv',index=False)
+		# if args.complex_type == 'squareplanar' or args.complex_type == 'squarepyrimidal':
+		# 	dup_data_idx = 0
+		# 	for [mol, name, coord_Map,alg_Map,mol_template] in mol_objects: # Run confomer generation for each mol object
+		# 		conformer_generation(mol,name,start_time,args,log,dup_data,dup_data_idx,coord_Map,alg_Map,mol_template)
+		# 		dup_data_idx += 1
+		# 	dup_data.to_csv(args.input.split('.')[0]+'-Duplicates Data.csv',index=False)
+		# else:
+		# 	dup_data_idx = 0
+		# 	for [mol, name] in mol_objects: # Run confomer generation for each mol object
+		# 		conformer_generation(mol,name,start_time,args,log,dup_data,dup_data_idx)
+		# 		dup_data_idx += 1
+		# 	dup_data.to_csv(args.input.split('.')[0]+'-Duplicates Data.csv',index=False)
 
 	#applying rule to get the necessary conformers only
 	if args.exp_rules == True:
@@ -518,7 +465,7 @@ def main():
 		if args.exp_rules == True:
 			conf_files =  glob.glob('*_rules.sdf')
 		#grad all the gaussian files
-		elif args.xtb != True and args.ANI1ccx != True:
+		elif args.xtb != True and args.ANI1ccx != True and args.nodihedrals == True:
 			conf_files =  glob.glob('*_rdKit.sdf')
 		elif args.xtb == True:
 			conf_files =  glob.glob('*_xtb.sdf')
@@ -530,6 +477,9 @@ def main():
 		# names for directories created
 		sp_dir = 'generated_sp_files'
 		g_dir = 'generated_gaussian_files'
+
+		#read in dup_data to get the overall charge of MOLECULES
+		charge_data = pd.read_csv(args.input.split('.')[0]+'-Duplicates Data.csv', usecols=['Molecule','Overall charge'])
 
 		for lot in args.level_of_theory:
 			for bs in args.basis_set:
@@ -549,7 +499,7 @@ def main():
 								if args.verbose: log.write("   -> Converting from {}".format(file))
 								energies = read_energies(file,log)
 								name = os.path.splitext(file)[0]
-								write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args,log)
+								write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args,log,charge_data)
 
 					else: # else create the directory for optimizations
 						folder = g_dir + '/' + str(lot) + '-' + str(bs)
@@ -565,7 +515,7 @@ def main():
 								if args.verbose: log.write("   -> Converting from {}".format(file))
 								energies = read_energies(file,log)
 								name = os.path.splitext(file)[0]
-								write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args,log)
+								write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args,log,charge_data)
 
 	#moving files arefter compute and write_gauss or only after compute
 	#moving all the sdf files to a separate folder after writing gaussian files
