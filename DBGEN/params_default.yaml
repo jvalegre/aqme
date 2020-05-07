@@ -12,7 +12,7 @@ verbose : True
 # Compute : True and write_gauss : False --> generates conformers in SDF files only
 # Compute : False and write_gauss : True --> reads SDF files from the main DBGEN folder (all SDF files)
 compute : True
-write_gauss : False # writting Gaussian COM files after, look options of write_gauss below
+write_gauss : True # writting Gaussian COM files after, look options of write_gauss below
 
 # (2) ANALYSIS OF LOG FILES
 # if analysis is True, check all LOG files inside "generated_gaussian_files".
@@ -86,9 +86,9 @@ angle_off : 30 # margin of error to determine angles (i.e. if angle_off is 30, a
 
 # (7) OPTIONS FOR METALS, ATOMS WITH UNCOMMON HYBRIDIZATIONS AND NCI COMPLEXES
 # IF A METAL OR AN ATOM WITH UNCOMMON HYBRIDIZATION (i.e. pentacoordinated phosphorus) IS USED
-metal_complex : True # specify True to activate this option
-metal : ['Pd','Ir'] # specify the metal(s) or atom(s) with uncommon hybridization, in the format 'A','B','C'...
-m_oxi : [4,6] # oxidation number of the atom (it is used to calculate the charge of the molecule)
+metal_complex : False # specify True to activate this option
+metal : [] # specify the metal(s) or atom(s) with uncommon hybridization, in the format 'A','B','C'...
+m_oxi : [] # oxidation number of the atom (it is used to calculate the charge of the molecule)
 complex_spin : 1 # final spin of the molecule (the code does not calculate spin, it must be defined by the user)
 
 # (8) IF A NONCOVALENT COMPLEX IS USED

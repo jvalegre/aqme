@@ -33,7 +33,8 @@ def main():
 	#Input details
 	parser.add_argument("--varfile", dest="varfile", default=None, help="Parameters in YAML format")
 	parser.add_argument("-i", "--input", help="File containing molecular structure(s)")
-	parser.add_argument("--output", dest="output", default="output", metavar="OUTPUT", help="Change output filename to DBGEN_\"output\".dat")
+	parser.add_argument("--output_name", dest="output_name", default="output", metavar="output_name", help="Change output filename to DBGEN_\"output\".dat")
+	parser.add_argument("--output", dest="output", default=".sdf", metavar="output", help="The extension of the SDF files written")
 
 	#metal complex
 	parser.add_argument("--metal_complex", action="store_true", default=False, help="Request metal complex with coord. no. 4, 5 or 6")
@@ -126,7 +127,7 @@ def main():
 	args = parser.parse_args()
 
 	#define the logging object
-	log = Logger("DBGEN", args.output)
+	log = Logger("DBGEN", args.output_name)
 
 	start_time = time.time()
 
@@ -181,6 +182,10 @@ def main():
 
 			for i, line in enumerate(smifile):
 				args.ff = ori_ff
+				args.metal_idx = []
+				args.complex_coord = []
+				args.metal_sym = []
+
 				toks = line.split()
 
 				#editing part
@@ -224,6 +229,9 @@ def main():
 			m = 0
 			for i in range(len(csv_smiles)):
 				args.ff = ori_ff
+				args.metal_idx = []
+				args.complex_coord = []
+				args.metal_sym = []
 				#assigning names and smi i  each loop
 				if args.prefix == False: name = csv_smiles.loc[i, 'code_name']
 				else: name = 'comp_'+str(m)+'_'+csv_smiles.loc[i, 'code_name']
@@ -440,11 +448,11 @@ def main():
 		### do 2 cases, for RDKit only and RDKIt+xTB
 		#grab all the gaussian files
 		if args.xtb != True and args.ANI1ccx != True:
-			conf_files =  glob.glob('*_RDKit.sdf')
+			conf_files =  glob.glob('*_rdkit.sdf')
 		elif args.xtb == True:
-			conf_files =  glob.glob('*_xTB.sdf')
+			conf_files =  glob.glob('*_xtb.sdf')
 		elif args.ANI1ccx == True:
-			conf_files =  glob.glob('*_ANI1ccx.sdf')
+			conf_files =  glob.glob('*_ani.sdf')
 
 		for file in conf_files:
 			allmols = Chem.SDMolSupplier(file, removeHs=False)

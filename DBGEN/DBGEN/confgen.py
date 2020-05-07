@@ -585,10 +585,10 @@ def optimize(mol, args, program,log,dup_data,dup_data_idx):
 				for i,atom in enumerate(ase_molecule):
 					if i in ase_metal:
 						ase_charge = args.charge[args.metal_idx.index(ase_metal_idx[ase_metal.index(i)])]
-						print(ase_charge,atom)
+						# print(ase_charge,atom)
 						#will update only for cdx, smi, and csv formats.
 						atom.charge = ase_charge
-				if args.verbose == True: log.write('o  The Overall charge is reworked with rules for .smi, .csv, .cdx ')
+				# if args.verbose == True: log.write('o  The Overall charge is reworked with rules for .smi, .csv, .cdx ')
 			else:
 				atom.charge = args.charge_default
 				if args.verbose == True: log.write('o  The Overall charge is read from the .com file ')
