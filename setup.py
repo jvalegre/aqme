@@ -18,8 +18,8 @@ setup(
   author='Shree Sowndarya S. V., Juan V. Alegre Requena, Robert S. Paton',
   author_email='svss@colostate.edu',
   keywords=['conformers', 'cheminformatics', 'computational chemistry', 'metal complexes', 'DFT'],
-  url = 'https://github.com/jvalegre/DBGEN',   
-  download_url = 'https://github.com/jvalegre/DBGEN/archive/v_1.0.tar.gz',    
+  url = 'https://github.com/jvalegre/RotaConfort',   
+  download_url = 'https://github.com/jvalegre/RotaConfort/archive/v_1.0.tar.gz',    
   classifiers=[
     'Development Status :: 3 - Alpha',      # Chose either "3 - Alpha", "4 - Beta" or "5 - Production/Stable" as the current state of your package
     'Intended Audience :: Developers',      # Define that your audience are developers
