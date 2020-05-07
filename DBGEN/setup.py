@@ -11,14 +11,27 @@ setup(
   name='DBGEN',
   packages=['DBGEN'],
   version='1.0',
-  description='Conformer generation followed DFT analysis',
+  license='MIT',
+  description='Conformer generation and post-processing of DFT output files',
   long_description=long_description,
   long_description_content_type='text/markdown',
-  author='',
-  author_email='robert.paton@colostate.edu',
-  keywords=['compchem', 'informatics'],
-  classifiers=[],
-  install_requires=["numpy","pandas"],
+  author='Shree Sowndarya S. V., Juan V. Alegre Requena, Robert S. Paton',
+  author_email='svss@colostate.edu',
+  keywords=['conformers', 'cheminformatics', 'computational chemistry', 'metal complexes', 'DFT'],
+  url = 'https://github.com/jvalegre/DBGEN',   
+  download_url = 'https://github.com/jvalegre/DBGEN/archive/v_10.tar.gz',    
+  classifiers=[
+    'Development Status :: 3 - Alpha',      # Chose either "3 - Alpha", "4 - Beta" or "5 - Production/Stable" as the current state of your package
+    'Intended Audience :: Cheminformaticians',      # Define that your audience are developers
+    'Topic :: Software Development :: Build Tools',
+    'License :: OSI Approved :: MIT License',   # Again, pick a license
+    'Programming Language :: Python :: 3',      #Specify which pyhton versions that you want to support
+    'Programming Language :: Python :: 3.4',
+    'Programming Language :: Python :: 3.5',
+    'Programming Language :: Python :: 3.6',
+    'Programming Language :: Python :: 3.7',
+  ],
+  install_requires=["numpy","pandas","rdkit","openbabel"],
   python_requires='>=3.0',
   include_package_data=True,
 )
