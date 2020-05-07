@@ -9,7 +9,7 @@ with io.open(path.join(this_directory, 'README.md'), encoding='utf-8') as f:
 
 setup(
   name='RotaConfort',
-  packages=['RotaConfort'],
+  packages=['DBGEN'],
   version='1.0',
   license='MIT',
   description='Conformer generation and post-processing of DFT output files',
