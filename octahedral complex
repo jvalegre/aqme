@@ -1,5 +1,0 @@
-(1) Replace octahedral Ir in the smiles for I+
-(2) Optimize with RDKit
-(3) Change the I atom for a Ir atom in the generated sdf RDKit file
-(4a) Use xTB to optimize the Ir complex OR
-(4b) Use a low level DFT to optimize the geometry (something like LANL2DZ) 
