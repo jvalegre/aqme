@@ -1,7 +1,7 @@
 """######################################################################################
 #########################################################################################
 ###																					  ###
-###  DBGEN is a tool that allows to carry out automated:							  ###
+###  RotaConfort is a tool that allows to carry out automated:						  ###
 ###  (1) Conformational searches and creation of COM files using RDKit, xTB and ANI1  ###
 ###  (2) LOG file processing (detects imaginary freqs and error terminations		  ###
 ###      and creates new COM files)													  ###
