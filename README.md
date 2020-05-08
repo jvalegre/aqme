@@ -1,5 +1,6 @@
 ![](Logos/DBGEN%20logo.tif)
 [![Build Status](https://travis-ci.com/jvalegre/pyCONFORT.svg?branch=master)](https://travis-ci.com/jvalegre/pyCONFORT)
+[![CodeFactor](https://www.codefactor.io/repository/github/jvalegre/pyconfort/badge/master)](https://www.codefactor.io/repository/github/jvalegre/pyconfort/overview/master)
 
 
 # DBGEN
