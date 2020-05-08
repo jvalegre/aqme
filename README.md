@@ -1,5 +1,7 @@
 ![](Logos/DBGEN%20logo.tif)
 
+[![Build Status](https://travis-ci.com/github/jvalegre/pyCONFORT)](https://travis-ci.org/jvalegre/pyCONFORT)
+
 
 # DBGEN
 ## Description
