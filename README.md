@@ -2,8 +2,10 @@
 [![Build Status](https://travis-ci.com/jvalegre/pyCONFORT.svg?branch=master)](https://travis-ci.com/jvalegre/pyCONFORT)
 [![PyPI version](https://badge.fury.io/py/pyconfort.svg)](https://badge.fury.io/py/pyconfort)
 ![Size](https://img.shields.io/github/repo-size/jvalegre/pyCONFORT)
+![Contributors](https://img.shields.io/github/contributors/jvalegre/pyCONFORT)
 [![CodeFactor](https://www.codefactor.io/repository/github/jvalegre/pyconfort/badge/master)](https://www.codefactor.io/repository/github/jvalegre/pyconfort/overview/master)
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/047e9c6001a84713a82e180669e14c98)](https://www.codacy.com/manual/jvalegre/pyCONFORT?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=jvalegre/pyCONFORT&amp;utm_campaign=Badge_Grade)
+![GitHub Downloads](https://img.shields.io/github/downloads/jvalegre/pyCONFORT/total?style=social)
 
 
 
