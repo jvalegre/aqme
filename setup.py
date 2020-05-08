@@ -10,7 +10,7 @@ with io.open(path.join(this_directory, 'README.md'), encoding='utf-8') as f:
 setup(
   name='rotaconfort',
   packages=['DBGEN'],
-  version='1.0',
+  version='1.2',
   license='MIT',
   description='Conformer generation and post-processing of DFT output files',
   long_description=long_description,
@@ -31,7 +31,7 @@ setup(
     'Programming Language :: Python :: 3.6',
     'Programming Language :: Python :: 3.7',
   ],
-  install_requires=['numpy','pandas','rdkit','openbabel','periodictable','progress','warnings','yaml'],
+  install_requires=['numpy','pandas','progress','yaml'],
   python_requires='>=3.0',
   include_package_data=True,
 )
