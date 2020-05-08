@@ -21,8 +21,7 @@ build:
 requirements:
   host:
     - python
-    - numpy
-    - pandas
+
   run:
     - python
 

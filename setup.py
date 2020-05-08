@@ -31,7 +31,7 @@ setup(
     'Programming Language :: Python :: 3.6',
     'Programming Language :: Python :: 3.7',
   ],
-  install_requires=['numpy','pandas'],
+  install_requires=[],
   python_requires='>=3.0',
   include_package_data=True,
 )
