@@ -3,7 +3,7 @@
 [![PyPI version](https://badge.fury.io/py/pyconfort.svg)](https://badge.fury.io/py/pyconfort)
 [![CodeFactor](https://www.codefactor.io/repository/github/jvalegre/pyconfort/badge/master)](https://www.codefactor.io/repository/github/jvalegre/pyconfort/overview/master)
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/047e9c6001a84713a82e180669e14c98)](https://www.codacy.com/manual/jvalegre/pyCONFORT?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=jvalegre/pyCONFORT&amp;utm_campaign=Badge_Grade)
-[![Size]https://img.shields.io/github/repo-size/jvalegre/pyCONFORT]
+[![Size](https://img.shields.io/github/repo-size/jvalegre/pyCONFORT)]
 
 
 # DBGEN
