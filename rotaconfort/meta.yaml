@@ -20,12 +20,7 @@ build:
 
 requirements:
   host:
-    - numpy
-    - pandas
-    - pip
-    - progress
     - python
-    - yaml
   run:
     - python
 
