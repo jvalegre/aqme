@@ -8,11 +8,11 @@ with io.open(path.join(this_directory, 'README.md'), encoding='utf-8') as f:
     long_description = f.read()
 
 setup(
-  name='rotaconfort',
+  name='pyconfort',
   packages=['DBGEN'],
-  version='1.0.3',
+  version='1.0.0',
   license='MIT',
-  description='Conformer generation and post-processing of DFT output files',
+  description='Python-based conformer generation and post-processing of DFT output files',
   long_description=long_description,
   long_description_content_type='text/markdown',
   author='Shree Sowndarya S. V., Juan V. Alegre Requena, Robert S. Paton',
