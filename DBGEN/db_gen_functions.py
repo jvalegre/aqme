@@ -560,9 +560,9 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args,log,cha
 	name_list = name.split('_')
 	if 'xtb' or 'ani' in name_list:
 		name_molecule = name[:-4]
-	if 'rdKit' in name_list:
+	if 'rdkit' in name_list:
 		name_molecule = name[:-6]
-	if 'rdKit_rotated' in name_list:
+	if 'rdkit_rotated' in name_list:
 		name_molecule = name[:-14]
 
 	for i in range(len(charge_data)):
@@ -747,18 +747,29 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args,log,cha
 			if ecp_genecp_atoms == False and ecp_gen_atoms == False :
 				fileout.write('\n')
 			else:
-				for i in range(len(ecp_list)):
-					if ecp_list[i] in args.genecp_atoms :
-						fileout.write(ecp_list[i]+' ')
-					elif ecp_list[i] in args.gen_atoms :
-						fileout.write(ecp_list[i]+' ')
-				fileout.write('0\n')
-				fileout.write(bs_gcp+'\n')
-				fileout.write('****\n\n')
-				if ecp_genecp_atoms == True:
+				if len(bs_gcp.split('.')) > 1:
+					if bs_gcp.split('.')[1] == 'txt':
+						os.chdir(path_for_file)
+						read_lines = open(bs_gcp,"r").readlines()
+						os.chdir(path_write_gjf_files)
+						#chaanging the name of the files to the way they are in xTB Sdfs
+						#getting the title line
+						for line in read_lines:
+							fileout.write(line)
+						fileout.write('\n\n')
+				else:
 					for i in range(len(ecp_list)):
-						if ecp_list[i] in args.genecp_atoms:
+						if ecp_list[i] in args.genecp_atoms :
 							fileout.write(ecp_list[i]+' ')
+						elif ecp_list[i] in args.gen_atoms :
+							fileout.write(ecp_list[i]+' ')
+					fileout.write('0\n')
+					fileout.write(bs_gcp+'\n')
+					fileout.write('****\n\n')
+					if ecp_genecp_atoms == True:
+						for i in range(len(ecp_list)):
+							if ecp_list[i] in args.genecp_atoms:
+								fileout.write(ecp_list[i]+' ')
 					fileout.write('0\n')
 					fileout.write(bs_gcp+'\n\n')
 			fileout.close()

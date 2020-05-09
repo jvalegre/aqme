@@ -474,7 +474,7 @@ def main():
 			conf_files =  glob.glob('*_rules.sdf')
 		#grad all the gaussian files
 		elif args.xtb != True and args.ANI1ccx != True and args.nodihedrals == True:
-			conf_files =  glob.glob('*_rdKit.sdf')
+			conf_files =  glob.glob('*_rdkit.sdf')
 		elif args.xtb == True:
 			conf_files =  glob.glob('*_xtb.sdf')
 		elif args.ANI1ccx == True:
@@ -518,11 +518,14 @@ def main():
 							else: raise
 
 						#writing the com files
+						print(conf_files)
 						for file in conf_files: # check conf_file exists, parse energies and then write dft input
+
 							if os.path.exists(file):
 								if args.verbose: log.write("   -> Converting from {}".format(file))
 								energies = read_energies(file,log)
 								name = os.path.splitext(file)[0]
+
 								write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args,log,charge_data)
 
 	#moving files arefter compute and write_gauss or only after compute

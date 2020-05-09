@@ -1,121 +1,64 @@
-language: python
-osx_image: xcode9.4
-dist: trusty
+# adapted from https://github.com/rdkit/rdkit-tutorials/blob/master/.travis.yml
 
-matrix:
-  include:
-    - os: linux
-      python: 3.5
-      env: TOXENV=py35
-      install:
-        - ./.travis-install.sh
-        - pip install pytest
-        - python setup.py install
-      script:
-        - pytest -v
-    - os: linux
-      python: 3.6
-      env: TOXENV=py36
-      install:
-        - ./.travis-install.sh
-        - pip install pytest
-        - python setup.py install
-      script:
-        - pytest -v
-    - os: linux
-      python: 3.7
-      env: TOXENV=py37
-      dist: xenial
-      install:
-        - ./.travis-install.sh
-        - pip install pytest
-        - python setup.py install
-      script:
-        - pytest -v
-    - os: linux
-      python: 3.8
-      env: TOXENV=py38
-      dist: xenial
-      install:
-        - ./.travis-install.sh
-        - pip install pytest
-        - python setup.py install
-      script:
-        - pytest -v
-    - os: osx
-      language: generic
-      env: TOXENV=py36
-      install:
-        - ./.travis-install.sh
-        - pip3 install pytest
-        - python3 setup.py install
-      script:
-        - pytest -v
-    - os: osx
-      language: generic
-      env: TOXENV=py37
-      dist: xenial
-      install:
-        - ./.travis-install.sh
-        - pip3 install pytest
-        - python3 setup.py install
-      script:
-        - pytest -v
-    - os: osx
-      language: generic
-      env: TOXENV=py38
-      dist: xenial
-      install:
-        - ./.travis-install.sh
-        - pip3 install pytest
-        - python3 setup.py install
-      script:
-        - pytest -v
-    - os: windows
-      language: shell 
-      before_install:
-        - choco install python --version=3.6
-        - python --version
-        - python -m pip install --upgrade pip
-        - pip install --upgrade pytest
-        - pip install codecov
-        - pip install cython
-      env: PATH=/c/Python36:/c/Python36/Scripts:$PATH
-      install:
-        - ./.travis-install.sh
-        - pip install pytest
-        - python setup.py install
-      script:
-        - pytest -v
-    - os: windows
-      language: shell 
-      before_install:
-        - choco install python --version=3.7
-        - python --version
-        - python -m pip install --upgrade pip
-        - pip install --upgrade pytest
-        - pip install codecov
-        - pip install cython
-      env: PATH=/c/Python37:/c/Python37/Scripts:$PATH
-      install:
-        - ./.travis-install.sh
-        - pip install pytest
-        - python setup.py install
-      script:
-        - pytest -v
-    - os: windows
-      language: shell 
-      before_install:
-        - choco install python --version=3.8
-        - python --version
-        - python -m pip install --upgrade pip
-        - pip install --upgrade pytest
-        - pip install codecov
-        - pip install cython
-      env: PATH=/c/Python38:/c/Python38/Scripts:$PATH
-      install:
-        - ./.travis-install.sh
-        - pip install pytest
-        - python setup.py install
-      script:
-        - pytest -v
+language: python
+python:
+ - "3.5"
+
+# switch to new infrastructure
+sudo: false
+
+before_install:
+
+ # download and install miniconda
+ - wget http://repo.continuum.io/miniconda/Miniconda3-4.1.11-Linux-x86_64.sh -O miniconda.sh;
+ - bash miniconda.sh -b -p $HOME/conda
+ - export PATH="$HOME/conda/bin:$PATH"
+ - hash -r
+ - conda config --set always_yes yes --set changeps1 no
+ - conda update -q conda
+
+ # Useful for debugging any issues with conda
+ - conda info -a
+
+
+ # create and activate the build/test environment
+ - conda create -q -n tenv python=$TRAVIS_PYTHON_VERSION pip cmake
+ - source activate tenv
+
+
+# additional .debs we need:
+addons:
+ apt:
+  packages:
+    - build-essential
+    - openjdk-7-jdk
+    - swig
+    - libjpeg-dev
+
+install:
+  - conda install -c openbabel openbabel
+  - conda install pyyaml
+  - conda install pandas
+  
+ # install the most recent rdkit package from the RDKit anaconda channel.
+ - conda install -q -c rdkit rdkit
+
+
+
+before_script:
+
+ # RDKit
+
+ - export RDBASE=$CONDA_PREFIX/Library/share/RDKit
+
+ - echo $RDBASE
+
+
+
+script:
+
+ - export BASEDIR=`pwd`
+
+ - cd notebooks
+
+ - python ../testing/run_tests.py *.ipynb
