@@ -1,4 +1,4 @@
-"""######################################################################################
+"""#####################################################################################.
 #########################################################################################
 ###																					  ###
 ###  pyCONFORT is a tool that allows to carry out automated:						  ###
@@ -24,8 +24,11 @@
 
 from __future__ import print_function
 import argparse, yaml, os, sys, subprocess, glob, shutil, time
-
-from DBGEN.db_gen_functions import *
+import pandas as pd
+from rdkit import Chem
+from rdkit.Chem import AllChem as Chem
+from DBGEN.db_gen_functions import conformer_generation, substituted_mol, template_embed_sp, Logger, read_energies, write_gaussian_input_file, exp_rules_output
+from DBGEN.db_gen_functions import output_analyzer, check_for_final_folder, dup_calculation, combine_files, boltz_calculation
 
 def main():
 	parser = argparse.ArgumentParser(description="Generate conformers depending on type of optimization (change parameters in db_gen_PATHS.py file).")
@@ -608,7 +611,7 @@ def main():
 						dup_calculation(val,w_dir,args,log)
 					else:
 						log.write(' Files for are not there!')
-					#log.write(log_files)
+
 				except:
 					pass
 
@@ -629,7 +632,6 @@ def main():
 							boltz_calculation(val,i,log)
 						else:
 							log.write(' Files for {} are not there!'.format(i))
-						#log.write(log_files)
 					except:
 						pass
 

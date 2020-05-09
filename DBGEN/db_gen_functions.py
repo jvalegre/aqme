@@ -1,11 +1,11 @@
-"""**************************************************
+"""*************************************************.
 * This file stores all the functions used by db_gen *
 **************************************************"""
 
 import math, os, sys, traceback, subprocess, glob, shutil, time
-from rdkit import Chem,DataStructs
+from rdkit import Chem
 from rdkit.Chem import AllChem as Chem
-from rdkit.Chem import rdMolTransforms, PropertyMol, rdchem, rdDistGeom, rdMolAlign, PropertyMol, rdChemReactions, Lipinski, Descriptors
+from rdkit.Chem import rdMolTransforms, PropertyMol, rdDistGeom, rdMolAlign, PropertyMol, Lipinski, Descriptors
 from rdkit.Geometry import Point3D
 from periodictable import elements as elementspt
 from openbabel import openbabel as ob
@@ -13,7 +13,6 @@ import progress
 from progress.bar import IncrementalBar
 import numpy as np
 import pandas as pd
-import warnings
 
 # imports for xTB and ANI1
 try:
