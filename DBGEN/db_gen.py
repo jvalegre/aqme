@@ -518,7 +518,6 @@ def main():
 							else: raise
 
 						#writing the com files
-						print(conf_files)
 						for file in conf_files: # check conf_file exists, parse energies and then write dft input
 
 							if os.path.exists(file):
