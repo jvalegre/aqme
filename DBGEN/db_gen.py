@@ -1,7 +1,7 @@
 """######################################################################################
 #########################################################################################
 ###																					  ###
-###  RotaConfort is a tool that allows to carry out automated:						  ###
+###  pyCONFORT is a tool that allows to carry out automated:						  ###
 ###  (1) Conformational searches and creation of COM files using RDKit, xTB and ANI1  ###
 ###  (2) LOG file processing (detects imaginary freqs and error terminations		  ###
 ###      and creates new COM files)													  ###
@@ -22,10 +22,10 @@
 #########################################################################################
 ######################################################################################"""
 
+from __future__ import print_function
+import argparse, yaml, os, sys, subprocess, glob, shutil, time
 
 from DBGEN.db_gen_functions import *
-from DBGEN.confgen import *
-#from DBGEN.Template import *
 
 def main():
 	parser = argparse.ArgumentParser(description="Generate conformers depending on type of optimization (change parameters in db_gen_PATHS.py file).")
@@ -210,7 +210,7 @@ def main():
 				# get manually for square planar and SQUAREPYRIMIDAL
 				if args.complex_type == 'squareplanar' or args.complex_type == 'squarepyrimidal':
 					if len(args.metal_idx) == 1:
-						file_template = path.dirname(path.abspath(__file__)) +'/Template/template-4-and-5.sdf'
+						file_template = os.path.dirname(os.path.abspath(__file__)) +'/Template/template-4-and-5.sdf'
 						temp = Chem.SDMolSupplier(file_template)
 						mol_objects_from_template,name, coord_Map, alg_Map, mol_template = template_embed_sp(mol,temp,name,args,log)
 						for i in range(len(mol_objects_from_template)):
@@ -254,7 +254,7 @@ def main():
 				# get manually for square planar and SQUAREPYRIMIDAL
 				if args.complex_type == 'squareplanar' or args.complex_type == 'squarepyrimidal':
 					if len(args.metal_idx) == 1:
-						file_template = path.dirname(path.abspath(__file__)) +'/Template/template-4-and-5.sdf'
+						file_template = os.path.dirname(os.path.abspath(__file__)) +'/Template/template-4-and-5.sdf'
 						temp = Chem.SDMolSupplier(file_template)
 						mol_objects_from_template,name, coord_Map, alg_Map, mol_template = template_embed_sp(mol,temp,name,args,log)
 						for i in range(len(mol_objects_from_template)):
@@ -294,7 +294,7 @@ def main():
 				# get manually for square planar and SQUAREPYRIMIDAL
 				if args.complex_type == 'squareplanar' or args.complex_type == 'squarepyrimidal':
 					if len(args.metal_idx) == 1:
-						file_template = path.dirname(path.abspath(__file__)) +'/Template/template-4-and-5.sdf'
+						file_template = os.path.dirname(os.path.abspath(__file__)) +'/Template/template-4-and-5.sdf'
 						temp = Chem.SDMolSupplier(file_template)
 						mol_objects_from_template,name, coord_Map, alg_Map, mol_template = template_embed_sp(mol,temp,name,args,log)
 						for i in range(len(mol_objects_from_template)):
@@ -376,7 +376,7 @@ def main():
 				else: name = args.prefix+str(m)+'_'+IDs[i]
 				# get manually for square planar and SQUAREPYRIMIDAL
 				if args.complex_type == 'squareplanar' or args.complex_type == 'squarepyrimidal':
-					file_template = path.dirname(path.abspath(__file__)) +'/Template/template-4-and-5.sdf'
+					file_template = os.path.dirname(os.path.abspath(__file__)) +'/Template/template-4-and-5.sdf'
 					temp = Chem.SDMolSupplier(file_template)
 					mol_objects_from_template,name, coord_Map, alg_Map, mol_template = template_embed_sp(mol,temp,name,args,log)
 					for i in range(len(mol_objects_from_template)):
@@ -421,7 +421,7 @@ def main():
 				if args.prefix == False: name = IDs[i]
 				else: name = args.prefix+str(m)+'_'+IDs[i]
 				if args.complex_type == 'squareplanar' or args.complex_type == 'squarepyrimidal':
-					file_template = path.dirname(path.abspath(__file__)) +'/Template/template-4-and-5.sdf'
+					file_template = os.path.dirname(os.path.abspath(__file__)) +'/Template/template-4-and-5.sdf'
 					temp = Chem.SDMolSupplier(file_template)
 					mol_objects_from_template = template_embed_sp(mol,temp,name,args,log)
 					mol_objects.append(mol_objects_from_template)
