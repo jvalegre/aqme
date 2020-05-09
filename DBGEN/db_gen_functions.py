@@ -1,11 +1,6 @@
-"""
-
-* In this file, the paths to helper programs are collected.
-* You mus t make sure that all the variables are correct before launching db_gen.py.
-
-* OTHER functions USED THROUGHOUT THE PROGRAM ARE ALSO SET HERE.
-
-"""
+"""**************************************************
+* This file stores all the functions used by db_gen *
+**************************************************"""
 
 import math, os, sys, traceback, subprocess, glob, shutil, time
 from rdkit import Chem,DataStructs
@@ -20,7 +15,7 @@ import numpy as np
 import pandas as pd
 import warnings
 
-### TORCHANI IMPORTS
+# imports for xTB and ANI1
 try:
 	import ase
 	import ase.optimize
@@ -48,7 +43,7 @@ possible_atoms = ["", "H", "He", "Li", "Be", "B", "C", "N", "O", "F", "Ne", "Na"
 				 "Rg", "Uub", "Uut", "Uuq", "Uup", "Uuh", "Uus", "Uuo"]
 columns = ['Structure', 'E', 'ZPE', 'H', 'T.S', 'T.qh-S', 'G(T)', 'qh-G(T)']
 
-"CLASS FOR LOGGING  "
+# CLASS FOR LOGGING
 class Logger:
     def __init__(self, filein, append):
         suffix = 'dat'
@@ -67,7 +62,7 @@ class Logger:
     def finalize(self):
         self.log.close()
 
-" SUBSTITUTION WITH I"
+# SUBSTITUTION WITH I
 def substituted_mol(smi,args,log):
 	mol = Chem.MolFromSmiles(smi)
 	for atom in mol.GetAtoms():
@@ -90,9 +85,10 @@ def substituted_mol(smi,args,log):
 				atom.SetFormalCharge(3)
 			args.metal_idx.append(atom.GetIdx())
 			args.complex_coord.append(len(atom.GetNeighbors()))
+
 	return mol,args.metal_idx,args.complex_coord,args.metal_sym
 
-"TEMPLATE GENERATION FOR SQUAREPLANAR AND SQUAREPYRIMIDAL "
+# TEMPLATE GENERATION FOR SQUAREPLANAR AND SQUAREPYRIMIDAL
 def template_embed_sp(molecule,temp,name_input,args,log):
 	mol_objects = [] # a list of mol objects that will be populated
 	name_return = []
@@ -112,7 +108,6 @@ def template_embed_sp(molecule,temp,name_input,args,log):
 
 	number_of_neighbours = len(neighbours)
 
-	#log.write(number_of_neighbours)
 	if number_of_neighbours == 4:
 		#three cases for square planar
 		for name in range(3):
@@ -120,17 +115,18 @@ def template_embed_sp(molecule,temp,name_input,args,log):
 			for atom in molecule.GetAtoms():
 				if atom.GetIdx() == center_idx:
 					neighbours = atom.GetNeighbors()
-			#assugning order of replacement
+
+			#assigning order of replacement
 			if name == 0:
 				j = [1,2,3]
 			elif name == 1:
 				j = [2,3,1]
 			elif name == 2:
 				j = [3,1,2]
+
 			#checking for same atom neighbours and assigning in the templates for all mols in suppl!
 			for mol_1 in temp:
 				for atom in mol_1.GetAtoms():
-					#log.write(atom.GetSymbol()+'mol_1 atom')
 					if atom.GetSymbol() == 'F':
 						mol_1 = Chem.RWMol(mol_1)
 						idx = atom.GetIdx()
@@ -139,8 +135,6 @@ def template_embed_sp(molecule,temp,name_input,args,log):
 
 				site_1,site_2,site_3,site_4,metal_site  = 0,0,0,0,0
 				for atom in mol_1.GetAtoms():
-					#log.write(atom.GetIdx(), atom.GetSymbol())
-					#log.write(atom.GetSymbol()+'after remove F from mol_1')
 					if atom.GetIdx() == 4 and metal_site == 0:
 						atom.SetAtomicNum(14)
 						center_temp = atom.GetIdx()
@@ -157,10 +151,6 @@ def template_embed_sp(molecule,temp,name_input,args,log):
 					if atom.GetIdx() == 1 and site_4 == 0 :
 						atom.SetAtomicNum(neighbours[j[2]].GetAtomicNum())
 						site_4 = 1
-
-				# #log.write to see if it is changed
-				# for atom in mol_1.GetAtoms():
-				# 	log.write(atom.GetSymbol()+'match')
 
 				#embedding of the molecule onto the core
 				molecule_new, coordMap, algMap = template_embed_optimize(molecule,mol_1,args,log)
@@ -183,12 +173,6 @@ def template_embed_sp(molecule,temp,name_input,args,log):
 				alg_Map.append(algMap)
 				mol_template.append(mol_1)
 
-				# #writing to sdf file
-				# sdwriter = Chem.SDWriter(str(name)+output)
-				# sdwriter.write(molecule_new)
-				#
-				# sdwriter.close()
-
 	if number_of_neighbours == 5:
 		#fifteen cases for square pyrimidal
 		for name_1 in range(5):
@@ -198,7 +182,7 @@ def template_embed_sp(molecule,temp,name_input,args,log):
 					if atom.GetIdx() == center_idx:
 						neighbours = atom.GetNeighbors()
 
-				#assugning order of replacement for the top
+				# assigning order of replacement for the top
 				if name_1 == 0:
 					k = 4
 				elif name_1== 1:
@@ -210,7 +194,7 @@ def template_embed_sp(molecule,temp,name_input,args,log):
 				elif name_1 == 4:
 					k = 0
 
-				#assigning order of replacement for the plane
+				# assigning order of replacement for the plane
 				if name_2 == 0 and k == 4:
 					j = [1,2,3]
 				elif name_2 == 1 and k == 4:
@@ -218,7 +202,7 @@ def template_embed_sp(molecule,temp,name_input,args,log):
 				elif name_2 == 2 and k == 4:
 					j = [3,1,2]
 
-				#assugning order of replacement for the plane
+				# assigning order of replacement for the plane
 				if name_2 == 0 and k == 3:
 					j = [1,2,4]
 				elif name_2 == 1 and k == 3:
@@ -226,7 +210,7 @@ def template_embed_sp(molecule,temp,name_input,args,log):
 				elif name_2 == 2 and k == 3:
 					j = [4,1,2]
 
-				#assugning order of replacement for the plane
+				# assigning order of replacement for the plane
 				if name_2 == 0 and k == 2:
 					j = [1,4,3]
 				elif name_2 == 1 and k == 2:
@@ -234,7 +218,7 @@ def template_embed_sp(molecule,temp,name_input,args,log):
 				elif name_2 == 2 and k == 2:
 					j = [4,1,3]
 
-				#assugning order of replacement for the plane
+				# assigning order of replacement for the plane
 				if name_2 == 0 and k == 1:
 					j = [4,2,3]
 				elif name_2 == 1 and k == 1:
@@ -242,7 +226,7 @@ def template_embed_sp(molecule,temp,name_input,args,log):
 				elif name_2 == 2 and k == 1:
 					j = [3,4,2]
 
-				#assugning order of replacement for the plane
+				# assigning order of replacement for the plane
 				if name_2 == 0 and k == 0:
 					j = [1,2,3]
 				elif name_2 == 1 and k == 0:
@@ -254,8 +238,6 @@ def template_embed_sp(molecule,temp,name_input,args,log):
 				for mol_1 in temp:
 					site_1,site_2,site_3,site_4,site_5,metal_site  = 0,0,0,0,0,0
 					for atom in mol_1.GetAtoms():
-						# log.write(atom.GetSymbol(), atom.GetIdx())
-						#log.write(atom.GetSymbol()+'no remove F from mol_1')
 						if atom.GetIdx()  == 5 and metal_site == 0:
 							atom.SetAtomicNum(53)
 							center_temp = atom.GetIdx()
@@ -314,20 +296,13 @@ def template_embed_sp(molecule,temp,name_input,args,log):
 
 					mol_template.append(mol_1)
 
-					# #writing to sdf file
-					# sdwriter = Chem.SDWriter(str(name_1)+str(name_2)+'.sdf')
-					# sdwriter.write(molecule_new)
-					# sdwriter.close()
-
 	return mol_objects, name_return, coord_Map, alg_Map, mol_template
 
-"TEMPLATE EMBED OPTIMIZE"
+# TEMPLATE EMBED OPTIMIZE
 def template_embed_optimize(molecule_embed,mol_1,args,log):
 
 	#assigning and embedding onto the core
 	num_atom_match = molecule_embed.GetSubstructMatch(mol_1)
-	# log.write(len(num_atom_match))
-	# log.write('above match')
 
 	#add H's to molecule
 	molecule_embed = Chem.AddHs(molecule_embed)
@@ -354,7 +329,6 @@ def template_embed_optimize(molecule_embed,mol_1,args,log):
 	else: log.write('   Force field {} not supported!'.format(options.ff)); sys.exit()
 	getForceField=GetFF
 
-
 	# This part selects which atoms from molecule are the atoms of the core
 	try:
 		coreConf = mol_1.GetConformer(coreConfId)
@@ -363,7 +337,6 @@ def template_embed_optimize(molecule_embed,mol_1,args,log):
 	for k, idxI in enumerate(num_atom_match):
 		core_mol_1 = coreConf.GetAtomPosition(k)
 		coordMap[idxI] = core_mol_1
-	# log.write(coordMap)
 
 	# This is the original version, if it doesn't work without coordMap I'll come back to it late
 	if len(num_atom_match) == 5:
@@ -391,33 +364,10 @@ def template_embed_optimize(molecule_embed,mol_1,args,log):
 	energy = ff.CalcEnergy()
 	# rotate the embedded conformation onto the core_mol:
 	rms = rdMolAlign.AlignMol(molecule_embed, mol_1, atomMap=algMap,reflect=True,maxIters=100)
-	# else:
-	# 	# rotate the embedded conformation onto the core_mol:
-	# 	try:
-	# 		rms = rdMolAlign.AlignMol(molecule_embed, mol_1, atomMap=algMap,reflect=True,maxIters=100)
-	# 		ff = getForceField(molecule_embed, confId=-1)
-	# 		conf_temp = mol_1.GetConformer()
-	# 		for k in range(mol_1.GetNumAtoms()):
-	# 			p = conf_temp.GetAtomPosition(k)
-	# 			q = molecule_embed.GetConformer().GetAtomPosition(k)
-	# 			pIdx = ff.AddExtraPoint(p.x, p.y, p.z, fixed=True) - 1
-	# 			ff.AddDistanceConstraint(pIdx, num_atom_match[k], 0, 0, force_constant)
-	# 		ff.Initialize()
-	# 		n = 4
-	# 		more = ff.Minimize(energyTol=1e-5, forceTol=1e-4)
-	# 		while more and n:
-	# 			more = ff.Minimize(energyTol=1e-5, forceTol=1e-4)
-	# 			n -= 1
-	# 		# realign
-	# 		energy = ff.CalcEnergy()
-	# 		rms = rdMolAlign.AlignMol(molecule_embed, mol_1, atomMap=algMap,reflect=True,maxIters=100)
-	# 	except:
-	# 		pass
 
 	return molecule_embed, coordMap, algMap
 
-" FUCNTION WORKING WITH MOL OBJECT TO CREATE CONFORMERS"
-
+# FUCNTION WORKING WITH MOL OBJECT TO CREATE CONFORMERS
 def conformer_generation(mol,name,start_time,args,log,dup_data,dup_data_idx,coord_Map=None,alg_Map=None,mol_template=None):
 	valid_structure = filters(mol, args,log)
 	if valid_structure:
@@ -448,7 +398,7 @@ def conformer_generation(mol,name,start_time,args,log,dup_data,dup_data_idx,coor
 		log.write("\n Execution time: %s seconds" % (round(time.time() - start_time,2)))
 		dup_data.at[dup_data_idx, 'time (seconds)'] = round(time.time() - start_time,2)
 
-" RULES TO GET EXPERIMENTAL CONFORMERS"
+# RULES TO GET EXPERIMENTAL CONFORMERS
 def exp_rules_output(mol, args,log):
 	passing = True
 	ligand_links = []
@@ -549,7 +499,7 @@ def exp_rules_output(mol, args,log):
 		passing = False
 	return passing
 
-" FILTER TO BE APPLIED FOR SMILES"
+# FILTER TO BE APPLIED FOR SMILES
 def filters(mol,args,log):
 	valid_structure = True
 	# First filter: number of rotatable bonds-bonds
@@ -572,7 +522,7 @@ def filters(mol,args,log):
 		if args.verbose == True: log.write(" Exiting as number of rotatable bonds > 10")
 	return valid_structure
 
-"PARSES THE ENERGIES FROM SDF FILES"
+# PARSES THE ENERGIES FROM SDF FILES
 def read_energies(file,log): # parses the energies from sdf files - then used to filter conformers
 	energies = []
 	f = open(file,"r")
@@ -583,20 +533,17 @@ def read_energies(file,log): # parses the energies from sdf files - then used to
 	f.close()
 	return energies
 
-" MAIN FUNCTION TO CREATE GAUSSIAN JOBS"
+# MAIN FUNCTION TO CREATE GAUSSIAN JOBS
 def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args,log,charge_data):
 
 	#find location of molecule and respective scharges
 	name_list = name.split('_')
-	print(name_list)
 	if 'xtb' or 'ani' in name_list:
 		name_molecule = name[:-4]
 	if 'rdkit' in name_list:
 		name_molecule = name[:-6]
 	if 'rotated' in name_list:
 		name_molecule = name[:-8]
-
-	print(name_molecule)
 
 	for i in range(len(charge_data)):
 		if charge_data.loc[i,'Molecule'] == name_molecule:
@@ -926,7 +873,7 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args,log,cha
 
 		os.chdir(path_for_file)
 
-"CHECKS THE FOLDER OF FINAL LOG FILES"
+# CHECKS THE FOLDER OF FINAL LOG FILES
 def check_for_final_folder(w_dir,log):
 	dir_found = False
 	while dir_found == False:
@@ -937,7 +884,7 @@ def check_for_final_folder(w_dir,log):
 			dir_found =True
 	return w_dir
 
-" DEFINTION OF OUTPUT ANALYSER and NMR FILES CREATOR"
+# DEFINTION OF OUTPUT ANALYSER and NMR FILES CREATOR
 def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin,log):
 
 	#log.write(w_dir)
@@ -1369,13 +1316,13 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin,log):
 		#changing directory back to where all files are from new files created.
 		os.chdir(w_dir)
 
-" CALCULATION OF BOLTZMANN FACTORS "
+# CALCULATION OF BOLTZMANN FACTORS
 def boltz_calculation(val,i,log):
 	#need to have good vibes
 	cmd = 'python' +  ' -m' + ' goodvibes' + ' --csv' + ' --boltz ' +'--output ' + str(i) + ' ' + val
 	os.system(cmd)
 
-" CHECKING FOR DUPLICATES"
+# CHECKING FOR DUPLICATES
 def dup_calculation(val,w_dir, agrs,log):
 	#need to have good vibes
 	cmd = 'python' +  ' -m' + ' goodvibes' + ' --dup ' + ' ' + val + '>' + ' ' + 'duplicate_files_checked.txt'
@@ -1402,7 +1349,7 @@ def dup_calculation(val,w_dir, agrs,log):
 			else:
 				raise
 
-"COMBINING FILES FOR DIFFERENT MOLECULES"
+# COMBINING FILES FOR DIFFERENT MOLECULES
 def combine_files(csv_files, lot, bs, args,log):
 	#final dataframe with only the boltzmann averaged values
 	final_file_avg_thermo_data = pd.DataFrame(columns=columns)
@@ -1460,30 +1407,15 @@ def combine_files(csv_files, lot, bs, args,log):
 	final_file_avg_thermo_data.to_csv( str(lot) + '-' + str(bs) + '_all_molecules_avg_thermo_data.csv', index=False, encoding='utf-8-sig')
 	compare_G.to_csv( str(lot) + '-' + str(bs) + '_all_molecules_compare_G(T).csv', index=False, encoding='utf-8-sig')
 
+# CALCULATES RMSD between two molecules
 def get_conf_RMS(mol1, mol2, c1, c2, heavy, max_matches_RMSD,log):
-	'''generate RMS distance between two molecules (ignoring hydrogens)'''
 	if heavy == True:
 		 mol1 = Chem.RemoveHs(mol1)
 		 mol2 = Chem.RemoveHs(mol2)
 	rms = Chem.GetBestRMS(mol1,mol2,c1,c2,maxMatches=max_matches_RMSD)
 	return rms
 
-# def pre_filter(initial_confs,sortedcids,cenergy):
-#
-# 	return selectedcids
-
-def get_TFD(mol1, mol2, c1, c2, heavy):
-	if heavy == True:
-	   mol1 = Chem.RemoveHs(mol1)
-	   mol2 = Chem.RemoveHs(mol2)
-	tors_list, ring_tors_list = TorsionFingerprints.CalculateTorsionLists(mol1)
-	weights = TorsionFingerprints.CalculateTorsionWeights(mol1)
-	torsions1 = TorsionFingerprints.CalculateTorsionAngles(mol1, tors_list, ring_tors_list, confId=c1)
-	torsions2 = TorsionFingerprints.CalculateTorsionAngles(mol2, tors_list, ring_tors_list, confId=c2)
-	tfd = TorsionFingerprints.CalculateTFD(torsions1, torsions2, weights=weights)
-	return tfd
-
-"AUTO-SAMPLING DETECTS INITIAL NUMBER OF SAMPLES"
+# DETECTS INITIAL NUMBER OF SAMPLES AUTOMATICALLY
 def auto_sampling(mult_factor,mol,log):
 	auto_samples = 0
 	auto_samples += 3*(Lipinski.NumRotatableBonds(mol)) # x3, for C3 rotations
@@ -1495,8 +1427,8 @@ def auto_sampling(mult_factor,mol,log):
 		auto_samples = mult_factor*auto_samples
 	return auto_samples
 
+# DETECTS DIHEDRALS IN THE MOLECULE
 def getDihedralMatches(mol, heavy,log):
-	'''return list of atom indices of dihedrals'''
 	#this is rdkit's "strict" pattern
 	pattern = r"*~[!$(*#*)&!D1&!$(C(F)(F)F)&!$(C(Cl)(Cl)Cl)&!$(C(Br)(Br)Br)&!$(C([CH3])([CH3])[CH3])&!$([CD3](=[N,O,S])-!@[#7,O,S!D1])&!$([#7,O,S!D1]-!@[CD3]=[N,O,S])&!$([CD3](=[N+])-!@[#7!D1])&!$([#7!D1]-!@[CD3]=[N+])]-!@[!$(*#*)&!D1&!$(C(F)(F)F)&!$(C(Cl)(Cl)Cl)&!$(C(Br)(Br)Br)&!$(C([CH3])([CH3])[CH3])]~*"
 	qmol = Chem.MolFromSmarts(pattern)
@@ -1519,9 +1451,9 @@ def getDihedralMatches(mol, heavy,log):
 					uniqmatches.append((a,b,c,d))
 	return uniqmatches
 
+# IF NOT USING DIHEDRALS, THIS REPLACES I BACK TO THE METAL WHEN METAL = TRUE
+# AND WRITES THE RDKIT SDF FILES. WITH DIHEDRALS, IT OPTIMIZES THE ROTAMERS
 def genConformer_r(mol, conf, i, matches, degree, sdwriter,args,name,log):
-	'''recursively enumerate all angles for rotatable dihedrals.  i is
-	which dihedral we are enumerating by degree to output conformers to out'''
 	rotation_count = 1
 	if i >= len(matches): #base case, torsions should be set in conf
 		#setting the metal back instead of I
@@ -1562,6 +1494,7 @@ def genConformer_r(mol, conf, i, matches, degree, sdwriter,args,name,log):
 			deg += degree
 		return total
 
+# AUTOMATICALLY SETS THE CHARGE FOR METAL COMPLEXES
 def rules_get_charge(mol,args,log):
 	C_group = ['C', 'Se', 'Ge']
 	N_group = ['N', 'P', 'As']
@@ -1573,11 +1506,8 @@ def rules_get_charge(mol,args,log):
 	#get the neighbours of metal atom
 	for atom in mol.GetAtoms():
 		if atom.GetIdx() in args.metal_idx:
-			#print(atom.GetSymbol())
 			charge_idx = args.metal_idx.index(atom.GetIdx())
-			#
 			neighbours = atom.GetNeighbors()
-
 			charge[charge_idx] = args.m_oxi[charge_idx]
 
 			for atom in neighbours:
@@ -1607,15 +1537,13 @@ def rules_get_charge(mol,args,log):
 						charge[charge_idx] = charge[charge_idx] - 0
 
 	if len(neighbours) == 0:
-		#if args.verbose: print("x Metal Not found! It is an organic molecule.")
 		#no update in charge as it is an organic molecule
 		return args.charge_default
 	else:
 		return charge
 
+# EMBEDS, OPTIMIZES AND FILTERS RDKIT CONFORMERS
 def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None,alg_Map=None,mol_template=None):
-	'''embeds core conformers, then optimizes and filters based on RMSD. Finally the rotatable torsions are systematically rotated'''
-
 	sdwriter = Chem.SDWriter(name+'_'+'rdkit'+args.output)
 
 	Chem.SanitizeMol(mol)
@@ -1796,7 +1724,7 @@ def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None,alg_M
 
 
 		#reduce to unique set
-		if args.verbose: log.write("o  Removing duplicate conformers ( RMSD < "+ str(args.rms_threshold)+ " and E difference < "+str(args.energy_threshold)+" kcal/mol).")
+		if args.verbose: log.write("o  Removing duplicate conformers (RMSD < "+ str(args.rms_threshold)+ " and E difference < "+str(args.energy_threshold)+" kcal/mol).")
 
 		bar = IncrementalBar('o  Filtering based on energy and RMSD', max = len(selectedcids_initial))
 		#check rmsd
@@ -1826,16 +1754,8 @@ def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None,alg_M
 			bar.next()
 		bar.finish()
 
-
-		# unique_mols, unique_energies = [],[]
-		# for id in selectedcids:
-		#     unique_mols.append(outmols[id])
-		#     unique_energies.append(cenergy[id])
-
-		# log.write(unique_mols[0:2].GetConformers()[0].GetPositions())
-
-		if args.verbose == True: log.write("o  "+str(eng_rms_dup)+ " Duplicates removed (RMSD < "+str(args.rms_threshold)+" / E < "+str(args.energy_threshold)+" kcal/mol) after rotation")
-		if args.verbose: log.write("o  "+ str(len(selectedcids))+" unique (ignoring torsions) starting conformers remain")
+		if args.verbose == True: log.write("o  "+str(eng_rms_dup)+ " Duplicates removed (RMSD < "+str(args.rms_threshold)+" / E < "+str(args.energy_threshold)+" kcal/mol) after rotation.")
+		if args.verbose: log.write("o  "+ str(len(selectedcids))+" unique conformers remain.")
 
 		dup_data.at[dup_data_idx, 'RDKit-energy-duplicates'] = eng_dup
 		dup_data.at[dup_data_idx, 'RDKit-RMS-and-energy-duplicates'] = eng_rms_dup
@@ -1883,23 +1803,17 @@ def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None,alg_M
 			if rd_count == 0:
 				rd_selectedcids.append(i)
 				if args.metal_complex == True:
-					print('print')
-					print(rdmols[i])
 					for atom in rdmols[i].GetAtoms():
 						if atom.GetIdx() in args.metal_idx:
-							print(atom.GetIdx(), atom.GetSymbol())
 							re_symbol = args.metal_sym[args.metal_idx.index(atom.GetIdx())]
 							for el in elementspt:
 								if el.symbol == re_symbol:
 									atomic_number = el.number
-									print(atomic_number)
 							atom.SetAtomicNum(atomic_number)
-							print(atom.GetAtomicNum(),atom.GetSymbol(),atom.GetIdx())
 					for atom in rdmols[i].GetAtoms():
-						print(atom.GetAtomicNum(),atom.GetSymbol(),atom.GetIdx())
-					sdwriter_rd.write(rdmols[i],-1)
+						sdwriter_rd.write(rdmols[i])
 				else:
-					sdwriter_rd.write(rdmols[i],-1)
+					sdwriter_rd.write(rdmols[i])
 			# Only the first ID gets included
 			rd_count = 1
 			# check rmsd
@@ -1918,7 +1832,6 @@ def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None,alg_M
 				if args.metal_complex == True:
 					for atom in rdmols[i].GetAtoms():
 						if atom.GetIdx() in args.metal_idx:
-							print(atom.GetIdx())
 							re_symbol = args.metal_sym[args.metal_idx.index(atom.GetIdx())]
 							for el in elementspt:
 								if el.symbol == re_symbol:
@@ -1933,9 +1846,9 @@ def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None,alg_M
 		bar.finish()
 		sdwriter_rd.close()
 
-		if args.verbose == True: log.write("o  "+str(rd_dup_energy)+ " Duplicates removed initial energy ( E < "+str(args.initial_energy_threshold)+" kcal/mol )")
-		if args.verbose == True: log.write("o  "+str(rd_dup_rms_eng)+ " Duplicates removed (RMSD < "+str(args.rms_threshold)+" / E < "+str(args.energy_threshold)+" kcal/mol) after rotation")
-		if args.verbose == True: log.write("o  "+str(len(rd_selectedcids) )+ " unique (after torsions) conformers remain")
+		if args.verbose == True: log.write("o  "+str(rd_dup_energy)+ " Duplicates removed initial energy (E < "+str(args.initial_energy_threshold)+" kcal/mol).")
+		if args.verbose == True: log.write("o  "+str(rd_dup_rms_eng)+ " Duplicates removed (RMSD < "+str(args.rms_threshold)+" / E < "+str(args.energy_threshold)+" kcal/mol) after rotation.")
+		if args.verbose == True: log.write("o  "+str(len(rd_selectedcids) )+ " unique conformers remain.")
 
 
 		#filtering process after rotations
@@ -1944,10 +1857,8 @@ def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None,alg_M
 
 	return status
 
+# xTB AND ANI1 OPTIMIZATIONS
 def optimize(mol, args, program,log,dup_data,dup_data_idx):
-
-	#setup non rdkit energy calculations
-
 	# if large system increase stck size
 	if args.large_sys == True:
 		os.environ['OMP_STACKSIZE'] = args.STACKSIZE
@@ -2020,7 +1931,7 @@ def optimize(mol, args, program,log,dup_data,dup_data_idx):
 				for i,atom in enumerate(ase_molecule):
 					if i in ase_metal:
 						ase_charge = args.charge[args.metal_idx.index(ase_metal_idx[ase_metal.index(i)])]
-						# print(ase_charge,atom)
+
 						#will update only for cdx, smi, and csv formats.
 						atom.charge = ase_charge
 				# if args.verbose == True: log.write('o  The Overall charge is reworked with rules for .smi, .csv, .cdx ')
@@ -2053,6 +1964,7 @@ def optimize(mol, args, program,log,dup_data,dup_data_idx):
 
 	return mol, converged, energy
 
+# WRITE SDF FILES FOR xTB AND ANI1
 def write_confs(conformers, energies, name, args, program,log):
 	n_filter = 0
 	if len(conformers) > 0:
@@ -2074,9 +1986,8 @@ def write_confs(conformers, energies, name, args, program,log):
 		sdwriter.close()
 	else: log.write("x  No conformers found!")
 
+# xTB AND ANI1 OPTIMIZATION, FILTER AND WRITING SDF FILES
 def mult_min(name, args, program,log,dup_data,dup_data_idx):
-	'''optimizes a bunch of molecules and then checks for unique conformers and then puts in order of energy'''
-
 	inmols = Chem.SDMolSupplier(name+args.output, removeHs=False)
 	if inmols is None:
 		log.write("Could not open "+ name+args.output)

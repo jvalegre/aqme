@@ -120,24 +120,25 @@ def main():
 	parser.add_argument("--mem", help="Memory", default="96GB", type=str, dest="mem")
 	parser.add_argument("--chk", action="store_true", default=False, help="Create .chk files for Gaussian")
 
-	#submmsion of gaussion files
+	# submIssion of Gaussion files
 	parser.add_argument("--qsub", action="store_true", default=False, help="Submit Gaussian files")
 	parser.add_argument("--submission_command",  help="Queueing system that the submission is done on", default="qsub_summit", metavar="submission_command", type=str)
 
 	args = parser.parse_args()
 
-	#define the logging object
+	# Define the logging object
 	log = Logger("DBGEN", args.output_name)
 
 	start_time = time.time()
 
-	### Variables will be updated from YAML file ###
+	# Variables will be updated from YAML file
 	if args.varfile != None:
 		if os.path.exists(args.varfile):
 			if os.path.splitext(args.varfile)[1] == '.yaml':
 				log.write("\no  IMPORTING VARIABLES FROM " + args.varfile)
 				with open(args.varfile, 'r') as file:
 					param_list = yaml.load(file, Loader=yaml.FullLoader)
+
 	for param in param_list:
 		if hasattr(args, param):
 			if getattr(args, param) != param_list[param]:
@@ -428,20 +429,6 @@ def main():
 				else:
 					mol_objects.append([mol, name])
 
-#------------------------------------------------------------------------------------------
-		# if args.complex_type == 'squareplanar' or args.complex_type == 'squarepyrimidal':
-		# 	dup_data_idx = 0
-		# 	for [mol, name, coord_Map,alg_Map,mol_template] in mol_objects: # Run confomer generation for each mol object
-		# 		conformer_generation(mol,name,start_time,args,log,dup_data,dup_data_idx,coord_Map,alg_Map,mol_template)
-		# 		dup_data_idx += 1
-		# 	dup_data.to_csv(args.input.split('.')[0]+'-Duplicates Data.csv',index=False)
-		# else:
-		# 	dup_data_idx = 0
-		# 	for [mol, name] in mol_objects: # Run confomer generation for each mol object
-		# 		conformer_generation(mol,name,start_time,args,log,dup_data,dup_data_idx)
-		# 		dup_data_idx += 1
-		# 	dup_data.to_csv(args.input.split('.')[0]+'-Duplicates Data.csv',index=False)
-
 	#applying rule to get the necessary conformers only
 	if args.exp_rules == True:
 		if args.verbose == True: log.write("   ----- Applying experimental rules to write the new confs file -----")
@@ -513,7 +500,7 @@ def main():
 
 					else: # else create the directory for optimizations
 						folder = g_dir + '/' + str(lot) + '-' + str(bs)
-						log.write("\no  PREPARING GAUSSIAN INPUTS in {}".format(folder))
+						log.write("\no  Preparing Gaussian COM files in {}".format(folder))
 						try: os.makedirs(folder)
 						except OSError:
 							if  os.path.isdir(folder): pass
@@ -529,7 +516,7 @@ def main():
 
 								write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args,log,charge_data)
 
-	#moving files arefter compute and write_gauss or only after compute
+	#moving files after compute and write_gauss or only after compute
 	#moving all the sdf files to a separate folder after writing gaussian files
 	src = os.getcwd()
 	if args.xtb == True:
