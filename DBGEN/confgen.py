@@ -117,6 +117,11 @@ def genConformer_r(mol, conf, i, matches, degree, sdwriter,args,name,log):
 							atomic_number = el.number
 					atom.SetAtomicNum(atomic_number)
 		sdwriter.write(mol,conf)
+
+		#writing charges after RDKIT
+		args.charge = rules_get_charge(mol,args,log)
+		dup_data.at[dup_data_idx, 'Overall charge'] = np.sum(args.charge)
+
 		return 1
 	else:
 		#log.write(str(i)+'starting new else writing')
