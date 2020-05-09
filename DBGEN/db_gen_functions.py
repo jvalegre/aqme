@@ -558,12 +558,15 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args,log,cha
 
 	#find location of molecule and respective scharges
 	name_list = name.split('_')
+	print(name_list)
 	if 'xtb' or 'ani' in name_list:
 		name_molecule = name[:-4]
 	if 'rdkit' in name_list:
 		name_molecule = name[:-6]
-	if 'rdkit_rotated' in name_list:
-		name_molecule = name[:-14]
+	if 'rotated' in name_list:
+		name_molecule = name[:-8]
+
+	print(name_molecule)
 
 	for i in range(len(charge_data)):
 		if charge_data.loc[i,'Molecule'] == name_molecule:

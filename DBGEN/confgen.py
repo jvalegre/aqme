@@ -117,11 +117,6 @@ def genConformer_r(mol, conf, i, matches, degree, sdwriter,args,name,log):
 							atomic_number = el.number
 					atom.SetAtomicNum(atomic_number)
 		sdwriter.write(mol,conf)
-
-		#writing charges after RDKIT
-		args.charge = rules_get_charge(mol,args,log)
-		dup_data.at[dup_data_idx, 'Overall charge'] = np.sum(args.charge)
-
 		return 1
 	else:
 		#log.write(str(i)+'starting new else writing')
@@ -429,6 +424,10 @@ def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None,alg_M
 		dup_data.at[dup_data_idx, 'RDKit-RMS-and-energy-duplicates'] = eng_rms_dup
 		dup_data.at[dup_data_idx, 'RDKIT-Unique-conformers'] = len(selectedcids)
 
+		#writing charges after RDKIT
+		args.charge = rules_get_charge(mol,args,log)
+		dup_data.at[dup_data_idx, 'Overall charge'] = np.sum(args.charge)
+
 		# now exhaustively drive torsions of selected conformers
 		n_confs = int(len(selectedcids) * (360 / args.degree) ** len(rotmatches))
 		if args.verbose and len(rotmatches) != 0:
@@ -456,7 +455,7 @@ def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None,alg_M
 
 
 		bar = IncrementalBar('o  Filtering based on energy and rms after rotation of dihedrals', max = len(rdmols))
-		sdwriter = Chem.SDWriter(name+'_'+'rdkit'+'_'+'rotated'+args.output)
+		sdwriter_rd = Chem.SDWriter(name+'_'+'rdkit'+'_'+'rotated'+args.output)
 
 		rd_count = 0
 		rd_selectedcids,rd_dup_energy,rd_dup_rms_eng =[],-1,0
@@ -467,13 +466,23 @@ def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None,alg_M
 			if rd_count == 0:
 				rd_selectedcids.append(i)
 				if args.metal_complex == True:
+					print('print')
+					print(rdmols[i])
 					for atom in rdmols[i].GetAtoms():
-						if atom.GetSymbol() == 'I' and (len(atom.GetBonds()) == 6 or len(atom.GetBonds()) == 5 or len(atom.GetBonds()) == 4 or len(atom.GetBonds()) == 3 or len(atom.GetBonds()) == 2):
+						if atom.GetIdx() in args.metal_idx:
+							print(atom.GetIdx(), atom.GetSymbol())
+							re_symbol = args.metal_sym[args.metal_idx.index(atom.GetIdx())]
 							for el in elementspt:
-								if el.symbol == args.metal:
+								if el.symbol == re_symbol:
 									atomic_number = el.number
+									print(atomic_number)
 							atom.SetAtomicNum(atomic_number)
-				sdwriter.write(rdmols[i])
+							print(atom.GetAtomicNum(),atom.GetSymbol(),atom.GetIdx())
+					for atom in rdmols[i].GetAtoms():
+						print(atom.GetAtomicNum(),atom.GetSymbol(),atom.GetIdx())
+					sdwriter_rd.write(rdmols[i],-1)
+				else:
+					sdwriter_rd.write(rdmols[i],-1)
 			# Only the first ID gets included
 			rd_count = 1
 			# check rmsd
@@ -491,17 +500,21 @@ def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None,alg_M
 			if excluded_conf == False:
 				if args.metal_complex == True:
 					for atom in rdmols[i].GetAtoms():
-						if atom.GetSymbol() == 'I' and (len(atom.GetBonds()) == 6 or len(atom.GetBonds()) == 5 or len(atom.GetBonds()) == 4 or len(atom.GetBonds()) == 3 or len(atom.GetBonds()) == 2):
+						if atom.GetIdx() in args.metal_idx:
+							print(atom.GetIdx())
+							re_symbol = args.metal_sym[args.metal_idx.index(atom.GetIdx())]
 							for el in elementspt:
-								if el.symbol == args.metal:
+								if el.symbol == re_symbol:
 									atomic_number = el.number
 							atom.SetAtomicNum(atomic_number)
-				sdwriter.write(rdmols[i])
+					sdwriter_rd.write(rdmols[i],-1)
+				else:
+					sdwriter_rd.write(rdmols[i],-1)
 				if i not in rd_selectedcids:
 					rd_selectedcids.append(i)
 			bar.next()
 		bar.finish()
-		sdwriter.close()
+		sdwriter_rd.close()
 
 		if args.verbose == True: log.write("o  "+str(rd_dup_energy)+ " Duplicates removed initial energy ( E < "+str(args.initial_energy_threshold)+" kcal/mol )")
 		if args.verbose == True: log.write("o  "+str(rd_dup_rms_eng)+ " Duplicates removed (RMSD < "+str(args.rms_threshold)+" / E < "+str(args.energy_threshold)+" kcal/mol) after rotation")

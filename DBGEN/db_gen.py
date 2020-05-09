@@ -475,6 +475,8 @@ def main():
 		#grad all the gaussian files
 		elif args.xtb != True and args.ANI1ccx != True and args.nodihedrals == True:
 			conf_files =  glob.glob('*_rdkit.sdf')
+		elif args.xtb != True and args.ANI1ccx != True and args.nodihedrals == False:
+			conf_files =  glob.glob('*_rdkit_rotated.sdf')
 		elif args.xtb == True:
 			conf_files =  glob.glob('*_xtb.sdf')
 		elif args.ANI1ccx == True:
