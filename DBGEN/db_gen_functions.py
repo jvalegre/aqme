@@ -1,14 +1,15 @@
-"""*************************************************.
-* This file stores all the functions used by db_gen *
-**************************************************"""
+
+"""##################################################
+# This file stores all the functions used by db_gen #
+##################################################"""
 
 import math, os, sys, traceback, subprocess, glob, shutil, time
 from rdkit import Chem
 from rdkit.Chem import AllChem as Chem
-from rdkit.Chem import rdMolTransforms, PropertyMol, rdDistGeom, rdMolAlign, PropertyMol, Lipinski, Descriptors
+from rdkit.Chem import rdMolTransforms, PropertyMol, rdDistGeom, rdMolAlign, Lipinski, Descriptors
 from rdkit.Geometry import Point3D
 from periodictable import elements as elementspt
-from openbabel import openbabel as ob
+import openbabel as ob
 import progress
 from progress.bar import IncrementalBar
 import numpy as np
@@ -325,7 +326,9 @@ def template_embed_optimize(molecule_embed,mol_1,args,log):
 		GetFF = lambda x,confId=-1:Chem.MMFFGetMoleculeForceField(x,Chem.MMFFGetMoleculeProperties(x),confId=confId)
 	elif ff == "UFF":
 		GetFF = lambda x,confId=-1:Chem.UFFGetMoleculeForceField(x)
-	else: log.write('   Force field {} not supported!'.format(options.ff)); sys.exit()
+	else:
+		log.write('   Force field {} not supported!'.format(args.ff))
+		sys.exit()
 	getForceField=GetFF
 
 	# This part selects which atoms from molecule are the atoms of the core
@@ -621,9 +624,6 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args,log,cha
 	com = '{0}_.com'.format(name)
 	com_low = '{0}_low.com'.format(name)
 
-	com_sdf = '{0}_.sdf'.format(name)
-	com_low_sdf = '{0}_low.sdf'.format(name)
-
 	if genecp =='genecp' or genecp == 'gen':
 		#chk option
 		if args.chk == True:
@@ -793,12 +793,7 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args,log,cha
 		if args.lowest_only == True:
 			subprocess.run(
 				  ['obabel', '-isdf', path_for_file+file, '-ocom', '-O'+com_low,'-l' , '1', '-xk', '\n'.join(header)]) #takes the lowest conformer which is the first in the file
-			# except:
-			# 	subprocess.run(
-			# 	  ['obabel', '-isdf', path_for_file+file, '-osdf', '-O'+com_low_sdf,'-l' , '1']) #takes the lowest conformer which is the first in the file
-			# 	temp_sdf_files = glob.glob(name+'_low_*.sdf')
-			# 	for file in temp_sdf_files:
-			# 		generate_com_not_obabel(file, header)
+
 		elif args.lowest_n == True:
 			no_to_write = 0
 			if len(energies) != 1:
@@ -810,39 +805,21 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args,log,cha
 					 ['obabel', '-isdf', path_for_file+file, '-f', '1', '-l' , str(no_to_write), '-osdf', '-Otemp.sdf'])
 				subprocess.run(
 					  ['obabel', '-isdf', 'temp.sdf', '-ocom', '-O'+com,'-m', '-xk', '\n'.join(header)])
-				# except:
-				# 	subprocess.run(
-				# 		 ['obabel', '-isdf', path_for_file+file, '-f', '1', '-l' , str(no_to_write), '-osdf', '-Otemp.sdf'])
-				# 	subprocess.run(
-				# 		  ['obabel', '-isdf', 'temp.sdf', '-osdf', '-O'+com_sdf,'-m'])
-				# 	temp_sdf_files = glob.glob(name+'_*.sdf')
-				# 	for file in temp_sdf_files:
-				# 		generate_com_not_obabel(file, header)
+
 			else:
 				subprocess.run(
 					  ['obabel', '-isdf', path_for_file+file, '-ocom', '-O'+com,'-m', '-xk', '\n'.join(header)])
-				# except:
-				# 	subprocess.run(
-				# 	  ['obabel', '-isdf', path_for_file+file, '-osdf', '-O'+com_sdf,'-m']) #takes the lowest conformer which is the first in the file
-				# 	temp_sdf_files = glob.glob(name+'_*.sdf')
-				# 	for file in temp_sdf_files:
-				# 		generate_com_not_obabel(file, header)
+
 		else:
 			subprocess.run(
 				  ['obabel', '-isdf', path_for_file+file, '-ocom', '-O'+com,'-m', '-xk', '\n'.join(header)])
-			# except:
-			# 	subprocess.run(
-			# 	  ['obabel', '-isdf', path_for_file+file, '-osdf', '-O'+com_sdf,'-m']) #takes the lowest conformer which is the first in the file
-			# 	temp_sdf_files = glob.glob(name+'_*.sdf')
-			# 	for file in temp_sdf_files:
-			# 		generate_com_not_obabel(file, header)
 
 		com_files = glob.glob('{0}_*.com'.format(name))
 
 		for file in com_files:
 			read_lines = open(file,"r").readlines()
 
-			#chaanging the name of the files to the way they are in xTB Sdfs
+			#changing the name of the files to the way they are in xTB Sdfs
 			#getting the title line
 			for i in range(0,len(read_lines)):
 				if len(read_lines[i].strip()) == 0:
@@ -1376,7 +1353,7 @@ def combine_files(csv_files, lot, bs, args,log):
 				#getting the name of the structure of the min G
 				idx_name_of_min_conf = df['qh-G(T)'].idxmin() - 1
 				name_of_min_conf = df.iloc[idx_name_of_min_conf]['Structure']
-				#df.at[df.index[-1], col] = name_of_min_conf
+
 			elif col != 'Structure':
 				boltz_avg = np.sum(df[col] * df['Boltz'])
 				df.at[df.index[-1], col] = boltz_avg
@@ -1481,7 +1458,9 @@ def genConformer_r(mol, conf, i, matches, degree, sdwriter,args,name,log):
 				GetFF = Chem.MMFFGetMoleculeForceField(mol, Chem.MMFFGetMoleculeProperties(mol),confId=conf)
 			elif args.ff == "UFF":
 				GetFF = Chem.UFFGetMoleculeForceField(mol)
-			else: log.write('   Force field {} not supported!'.format(args.ff)); sys.exit()
+			else:
+				log.write('   Force field {} not supported!'.format(args.ff))
+				sys.exit()
 			GetFF.Initialize()
 			converged = GetFF.Minimize(maxIts=args.opt_steps_RDKit)
 			energy = GetFF.CalcEnergy()
@@ -1621,7 +1600,9 @@ def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None,alg_M
 					GetFF = Chem.MMFFGetMoleculeForceField(mol, Chem.MMFFGetMoleculeProperties(mol),confId=conf)
 				elif args.ff == "UFF":
 					GetFF = Chem.UFFGetMoleculeForceField(mol,confId=conf)
-				else: log.write('   Force field {} not supported!'.format(args.ff)); sys.exit()
+				else:
+					log.write('   Force field {} not supported!'.format(args.ff))
+					sys.exit()
 
 				GetFF.Initialize()
 				converged = GetFF.Minimize(maxIts=args.opt_steps_RDKit)
@@ -1638,7 +1619,9 @@ def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None,alg_M
 					GetFF = lambda mol,confId=conf:Chem.MMFFGetMoleculeForceField(mol,Chem.MMFFGetMoleculeProperties(mol),confId=conf)
 				elif args.ff == "UFF":
 					GetFF = lambda mol,confId=conf:Chem.UFFGetMoleculeForceField(mol,confId=conf)
-				else: log.write('   Force field {} not supported!'.format(options.ff)); sys.exit()
+				else:
+					log.write('   Force field {} not supported!'.format(args.ff))
+					sys.exit()
 				getForceField=GetFF
 
 				# clean up the conformation
@@ -1965,7 +1948,6 @@ def optimize(mol, args, program,log,dup_data,dup_data_idx):
 
 # WRITE SDF FILES FOR xTB AND ANI1
 def write_confs(conformers, energies, name, args, program,log):
-	n_filter = 0
 	if len(conformers) > 0:
 		# list in energy order
 		cids = list(range(len(conformers)))
@@ -1974,7 +1956,6 @@ def write_confs(conformers, energies, name, args, program,log):
 		#if args.verbose: log.write("o ", name, "Energies:", np.array(sorted(energies)))
 		name = name.split('_rdkit')[0]# a bit hacky
 		sdwriter = Chem.SDWriter(name+'_'+program+args.output)
-		glob_min = min(energies)
 
 		write_confs = 0
 		for cid in sortedcids:
@@ -2010,13 +1991,12 @@ def mult_min(name, args, program,log,dup_data,dup_data_idx):
 
 			if converged == 0 and (energy - globmin) < args.ewin: # comparison in kcal/mol
 
-				unique,dup_id = 0, None
+				unique = 0
 
 				# compare against all previous conformers located
 				for j,seenmol in enumerate(outmols):
 					if abs(energy - c_energy[j]) < args.initial_energy_threshold: # comparison in kcal/mol
 						unique += 1
-						dup_id = (j+1)
 						n_dup_energy += 1
 						break
 
@@ -2024,7 +2004,6 @@ def mult_min(name, args, program,log,dup_data,dup_data_idx):
 						rms = get_conf_RMS(mol, seenmol, 0, 0, args.heavyonly, args.max_matches_RMSD,log)
 						if rms < args.rms_threshold:
 							unique += 1
-							dup_id = (j+1)
 							n_dup_rms_eng += 1
 							break
 

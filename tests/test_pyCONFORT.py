@@ -3,9 +3,6 @@
 
 import os
 import pytest
-import math
-from rdkit import Chem
-from rdkit.Chem import AllChem as Chem
 from conftest import datapath
 
 # The target value is gonna be the number of conformers (n_conf). The other
