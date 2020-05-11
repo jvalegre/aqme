@@ -154,13 +154,15 @@ def main():
 ### check if it's working with *.smi (if it isn't, we need to change this a little bit)
 ### no it isnt working for *.smi, same or .sdf. We can add that feature in the end.
 
-	if args.compute == True: # this will perform conformational analysis and create inputs for Gaussian
+	# this will perform conformational analysis and create inputs for Gaussian
+	if args.compute == True:
 
 		# input file format specified
 		[file_name, file_format] = os.path.splitext(args.input)
 
 		if file_format not in ['.smi', '.sdf', '.cdx', '.csv','.com','.gjf']:
-			log.write("\nx  INPUT FILETYPE NOT CURRENTLY SUPPORTED!"); sys.exit()
+			log.write("\nx  INPUT FILETYPE NOT CURRENTLY SUPPORTED!")
+			sys.exit()
 		else:
 			mol_objects = [] # a list of mol objects that will be populated
 
@@ -180,9 +182,11 @@ def main():
 			elif args.ANI1ccx == True:
 					dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples', 'RDKit-energy-duplicates','RDKit-RMS-and-energy-duplicates','RDKIT-Unique-conformers','RDKIT-Rotated-conformers','RDKIT-Rotated-Unique-conformers','ANI1ccx-Initial-samples','ANI1ccx-initial_energy_threshold','ANI1ccx-RMS-and-energy-duplicates','ANI1ccx-Unique-conformers','time (seconds)','Overall charge'])
 
+		# sets up the chosen force field (this fixes some problems in case MMFF is replaced by UFF)
 		ori_ff = args.ff
 
-		if file_format == '.smi': # SMILES input specified
+		# SMILES input specified
+		if file_format == '.smi':
 			smifile = open(args.input)
 
 			for i, line in enumerate(smifile):
@@ -199,13 +203,17 @@ def main():
 				#taking largest component for salts
 				pieces = smi.split('.')
 				if len(pieces) > 1:
-					smi = max(pieces, key=len) #take largest component by length
+					# take largest component by length
+					smi = max(pieces, key=len)
 
-				if args.prefix == False: name = ''.join(toks[1:])
-				else: name = args.prefix+str(i)+'_'+''.join(toks[1:])
+				if args.prefix == False:
+					name = ''.join(toks[1:])
+				else:
+					name = args.prefix+str(i)+'_'+''.join(toks[1:])
 
 				# Converts each line to a rdkit mol object
-				if args.verbose: log.write("   -> Input Molecule {} is {}".format(i, smi))
+				if args.verbose:
+					log.write("   -> Input Molecule {} is {}".format(i, smi))
 
 				if args.metal_complex == True:
 					mol,args.metal_idx,args.complex_coord,args.metal_sym = substituted_mol(smi,args,log)
@@ -229,7 +237,8 @@ def main():
 					conformer_generation(mol,name,start_time,args,log,dup_data,i)
 			dup_data.to_csv(args.input.split('.')[0]+'-Duplicates Data.csv',index=False)
 
-		elif os.path.splitext(args.input)[1] == '.csv': # CSV file with one columns SMILES and code_name
+		# CSV file with one columns SMILES and code_name
+		elif os.path.splitext(args.input)[1] == '.csv':
 			csv_smiles = pd.read_csv(args.input)
 			m = 0
 			for i in range(len(csv_smiles)):
@@ -238,8 +247,10 @@ def main():
 				args.complex_coord = []
 				args.metal_sym = []
 				#assigning names and smi i  each loop
-				if args.prefix == False: name = csv_smiles.loc[i, 'code_name']
-				else: name = 'comp_'+str(m)+'_'+csv_smiles.loc[i, 'code_name']
+				if args.prefix == False:
+					name = csv_smiles.loc[i, 'code_name']
+				else:
+					name = 'comp_'+str(m)+'_'+csv_smiles.loc[i, 'code_name']
 
 				smi = csv_smiles.loc[i, 'SMILES']
 				#checking for salts
@@ -249,7 +260,8 @@ def main():
 					smi = max(pieces, key=len) #take largest component by length
 
 				# Converts each line to a rdkit mol object
-				if args.verbose: log.write("   -> Input Molecule {} is {}".format(i, smi))
+				if args.verbose:
+					log.write("   -> Input Molecule {} is {}".format(i, smi))
 
 				if args.metal_complex == True:
 					mol,args.metal_idx,args.complex_coord,args.metal_sym = substituted_mol(smi,args,log)
@@ -273,8 +285,8 @@ def main():
 					conformer_generation(mol,name,start_time,args,log,dup_data,i)
 				m += 1
 			dup_data.to_csv(args.input.split('.')[0]+'-Duplicates Data.csv',index=False)
-
-		elif os.path.splitext(args.input)[1] == '.cdx': # CDX file
+		# CDX file
+		elif os.path.splitext(args.input)[1] == '.cdx':
 				#converting to smiles from chemdraw
 			subprocess.run(['obabel', '-icdx', args.input, '-osmi', '-O', 'cdx.smi'])
 			smifile = open('cdx.smi',"r")
@@ -289,7 +301,8 @@ def main():
 					smi = max(pieces, key=len) #take largest component by length
 
 				# Converts each line to a rdkit mol object
-				if args.verbose: log.write("   -> Input Molecule {} is {}".format(i, smi))
+				if args.verbose:
+					log.write("   -> Input Molecule {} is {}".format(i, smi))
 
 				if args.metal_complex == True:
 					mol,args.metal_idx,args.complex_coord,args.metal_sym = substituted_mol(smi,args,log)
@@ -310,7 +323,8 @@ def main():
 				else:
 					mol_objects.append([mol, name])
 
-		elif os.path.splitext(args.input)[1] == '.com' or os.path.splitext(args.input)[1] == '.gjf': # COM file
+		# COM file
+		elif os.path.splitext(args.input)[1] == '.com' or os.path.splitext(args.input)[1] == '.gjf':
 			#converting to sdf from comfile to preserve geometry
 
 			#### ADD args.ff = ori_ff
@@ -320,7 +334,8 @@ def main():
 			emptylines=[]
 
 			for i in range(0,len(comlines)):
-				if len(comlines[i].strip()) == 0: emptylines.append(i)
+				if len(comlines[i].strip()) == 0:
+					emptylines.append(i)
 
 			#assigning the charges
 			args.charge_default = comlines[(emptylines[1]+1)].split(' ')[0]
@@ -348,7 +363,8 @@ def main():
 				if line.find('>  <ID>') > -1:
 					ID = readlines[i+1].split()[0]
 					IDs.append(ID)
-				else: IDs.append(os.path.splitext(args.input)[0])
+				else:
+					IDs.append(os.path.splitext(args.input)[0])
 
 			suppl = Chem.SDMolSupplier(sdffile)
 
@@ -377,8 +393,10 @@ def main():
 							if len(atom.GetNeighbors()) == 8:
 								atom.SetFormalCharge(3)
 
-				if args.prefix == False: name = IDs[i]
-				else: name = args.prefix+str(m)+'_'+IDs[i]
+				if args.prefix == False:
+					name = IDs[i]
+				else:
+					name = args.prefix+str(m)+'_'+IDs[i]
 				# get manually for square planar and SQUAREPYRIMIDAL
 				if args.complex_type == 'squareplanar' or args.complex_type == 'squarepyrimidal':
 					file_template = os.path.dirname(os.path.abspath(__file__)) +'/Template/template-4-and-5.sdf'
@@ -390,8 +408,8 @@ def main():
 					mol_objects.append([mol, name])
 
 #------------------ Check for metals ----------------------------------------------
-
-		elif file_format == '.sdf': # SDF input specified
+		# SDF input specified
+		elif file_format == '.sdf':
 
 
 			#### ADD args.ff = ori_ff
@@ -404,7 +422,8 @@ def main():
 				if line.find('>  <ID>') > -1:
 					ID = readlines[i+1].split()[0]
 					IDs.append(ID)
-				else: IDs.append(str(i))
+				else:
+					IDs.append(str(i))
 
 			suppl = Chem.SDMolSupplier(sdffile)
 
@@ -423,8 +442,10 @@ def main():
 							if len(atom.GetNeighbors()) == 6:
 								atom.SetFormalCharge(1)
 
-				if args.prefix == False: name = IDs[i]
-				else: name = args.prefix+str(m)+'_'+IDs[i]
+				if args.prefix == False:
+					name = IDs[i]
+				else:
+					name = args.prefix+str(m)+'_'+IDs[i]
 				if args.complex_type == 'squareplanar' or args.complex_type == 'squarepyrimidal':
 					file_template = os.path.dirname(os.path.abspath(__file__)) +'/Template/template-4-and-5.sdf'
 					temp = Chem.SDMolSupplier(file_template)
@@ -435,7 +456,8 @@ def main():
 
 	#applying rule to get the necessary conformers only
 	if args.exp_rules == True:
-		if args.verbose == True: log.write("   ----- Applying experimental rules to write the new confs file -----")
+		if args.verbose == True:
+			log.write("   ----- Applying experimental rules to write the new confs file -----")
 		### do 2 cases, for RDKit only and RDKIt+xTB
 		#grab all the gaussian files
 		if args.xtb != True and args.ANI1ccx != True:
@@ -485,36 +507,46 @@ def main():
 		for lot in args.level_of_theory:
 			for bs in args.basis_set:
 				for bs_gcp in args.basis_set_genecp_atoms:
-
-					if args.single_point ==  True: # only create this directory if single point calculation is requested
+					# only create this directory if single point calculation is requested
+					if args.single_point ==  True:
 						folder = sp_dir + '/' + str(lot) + '-' + str(bs)
 						log.write("\no  PREPARING SINGLE POINT INPUTS in {}".format(folder))
-						try: os.makedirs(folder)
+						try:
+							os.makedirs(folder)
 						except OSError:
-							if  os.path.isdir(folder): pass
-							else: raise
+							if os.path.isdir(folder):
+								pass
+							else:
+								raise
 
-						#writing the com files
-						for file in conf_files: # check conf_file exists, parse energies and then write dft input
+						# writing the com files
+						# check conf_file exists, parse energies and then write dft input
+						for file in conf_files:
 							if os.path.exists(file):
-								if args.verbose: log.write("   -> Converting from {}".format(file))
+								if args.verbose:
+									log.write("   -> Converting from {}".format(file))
 								energies = read_energies(file,log)
 								name = os.path.splitext(file)[0]
 								write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args,log,charge_data)
 
-					else: # else create the directory for optimizations
+								# else create the directory for optimizations
+					else:
 						folder = g_dir + '/' + str(lot) + '-' + str(bs)
 						log.write("\no  Preparing Gaussian COM files in {}".format(folder))
-						try: os.makedirs(folder)
+						try:
+							os.makedirs(folder)
 						except OSError:
-							if  os.path.isdir(folder): pass
-							else: raise
+							if  os.path.isdir(folder):
+								pass
+							else:
+								raise
 
-						#writing the com files
-						for file in conf_files: # check conf_file exists, parse energies and then write dft input
-
+						# writing the com files
+						# check conf_file exists, parse energies and then write dft input
+						for file in conf_files:
 							if os.path.exists(file):
-								if args.verbose: log.write("   -> Converting from {}".format(file))
+								if args.verbose:
+									log.write("   -> Converting from {}".format(file))
 								energies = read_energies(file,log)
 								name = os.path.splitext(file)[0]
 
@@ -567,7 +599,8 @@ def main():
 			w_dir = os.getcwd()
 			w_dir_fin = w_dir+'/Finished'
 			output_analyzer(log_files, w_dir, lot, bs, bs_gcp, args, w_dir_fin,log)
-		#taking the coorct path
+
+		#taking the path
 		else:
 			# Sets the folder and find the log files to analyze
 			for lot in args.level_of_theory:

@@ -26,7 +26,8 @@ try:
 
 	import xtb
 	from xtb import GFN2
-except: pass
+except:
+	pass
 
 hartree_to_kcal = 627.509
 
@@ -312,7 +313,7 @@ def template_embed_optimize(molecule_embed,mol_1,args,log):
 
 	# Choosing the type of force field
 	for atom in molecule_embed.GetAtoms():
-		if atom.GetAtomicNum() > 36: #upto Kr for MMFF, if not use UFF
+		if atom.GetAtomicNum() > 36: # up to Kr for MMFF, if not, the code will use UFF
 			args.ff = "UFF"
 
 	#making the ff definition general
@@ -342,7 +343,8 @@ def template_embed_optimize(molecule_embed,mol_1,args,log):
 		ci = Chem.EmbedMolecule(molecule_embed, coordMap=coordMap, randomSeed=randomseed)
 	if len(num_atom_match) == 6:
 		ci = Chem.EmbedMolecule(molecule_embed, coordMap=coordMap, randomSeed=randomseed,ignoreSmoothingFailures=True)
-	if ci < 0:    log.write('Could not embed molecule.')
+	if ci < 0:
+		log.write('Could not embed molecule.')
 
 	#algin molecule to the core
 	algMap = [(k, l) for l, k in enumerate(num_atom_match)]
@@ -370,7 +372,8 @@ def template_embed_optimize(molecule_embed,mol_1,args,log):
 def conformer_generation(mol,name,start_time,args,log,dup_data,dup_data_idx,coord_Map=None,alg_Map=None,mol_template=None):
 	valid_structure = filters(mol, args,log)
 	if valid_structure:
-		if args.verbose: log.write("\n   ----- {} -----".format(name))
+		if args.verbose:
+			log.write("\n   ----- {} -----".format(name))
 
 		try:
 			# the conformational search
@@ -386,15 +389,18 @@ def conformer_generation(mol,name,start_time,args,log,dup_data,dup_data_idx,coor
 						mult_min(name+'_'+'rdkit'+'_'+'rotated', args, 'ani',log,dup_data,dup_data_idx)
 					if args.xtb != False:
 						mult_min(name+'_'+'rdkit'+'_'+'rotated', args, 'xtb',log,dup_data,dup_data_idx)
-			else: pass
+			else:
+				pass
 		except (KeyboardInterrupt, SystemExit):
 			raise
-	else: log.write("ERROR: The structure is not valid")
+	else:
+		log.write("ERROR: The structure is not valid")
 
 	# removing temporary files
 	temp_files = ['gfn2.out', 'xTB_opt.traj', 'ANI1_opt.traj', 'wbo', 'xtbrestart']
 	for file in temp_files:
-		if os.path.exists(file): os.remove(file)
+		if os.path.exists(file):
+			os.remove(file)
 
 	if args.time:
 		log.write("\n Execution time: %s seconds" % (round(time.time() - start_time,2)))
@@ -514,14 +520,16 @@ def filters(mol,args,log):
 				#Fourth filter: atoms outside the scope chosen in 'possible_atoms'
 				if atom.GetSymbol() not in possible_atoms:
 					valid_structure = False
-					if args.verbose == True: log.write(" Exiting as atom isn't in atoms in the periodic table")
-			#else: valid_structure = False
+					if args.verbose == True:
+						log.write(" Exiting as atom isn't in atoms in the periodic table")
 		else:
 			valid_structure = False
-			if args.verbose == True: log.write(" Exiting as total molar mass > 1000")
+			if args.verbose == True:
+				log.write(" Exiting as total molar mass > 1000")
 	else:
 		valid_structure = False
-		if args.verbose == True: log.write(" Exiting as number of rotatable bonds > 10")
+		if args.verbose == True:
+			log.write(" Exiting as number of rotatable bonds > 10")
 	return valid_structure
 
 # PARSES THE ENERGIES FROM SDF FILES
@@ -614,9 +622,8 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args,log,cha
 		#log.write(path_write_gjf_files)
 		os.chdir(path_write_gjf_files)
 	else:
-		#pathto change to
+		#path to change to
 		path_write_gjf_files = 'generated_gaussian_files/' + str(lot) + '-' + str(bs)
-		#log.write(path_write_gjf_files)
 		os.chdir(path_write_gjf_files)
 
 	path_for_file = '../../'
@@ -909,14 +916,16 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin,log):
 		outfile = open(file,"r")
 		outlines = outfile.readlines()
 		ATOMTYPES, CARTESIANS = [],[]
-		FREQS, REDMASS, FORCECONST, NORMALMODE = [],[],[],[]; IM_FREQS = 0
+		FREQS, REDMASS, FORCECONST, NORMALMODE = [],[],[],[]
+		IM_FREQS = 0
 		freqs_so_far = 0
 		TERMINATION = "unfinished"
 		ERRORTYPE = 'unknown'
 		stop=0
 		#Change to reverse
 		for i in reversed(range(0,len(outlines))):
-			if stop == 3: break
+			if stop == 3:
+				break
 			# Get the name of the compound (specified in the title)
 			if outlines[i].find('Symbolic Z-matrix:') > -1:
 				name = outlines[i-2]
@@ -964,9 +973,12 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin,log):
 					for j in range(2, nfreqs):
 						FREQS.append(float(outlines[i].split()[j]))
 						NORMALMODE.append([])
-						if float(outlines[i].split()[j]) < 0.0: IM_FREQS += 1
-					for j in range(3, nfreqs+1): REDMASS.append(float(outlines[i+1].split()[j]))
-					for j in range(3, nfreqs+1): FORCECONST.append(float(outlines[i+2].split()[j]))
+						if float(outlines[i].split()[j]) < 0.0:
+							IM_FREQS += 1
+					for j in range(3, nfreqs+1):
+						REDMASS.append(float(outlines[i+1].split()[j]))
+					for j in range(3, nfreqs+1):
+						FORCECONST.append(float(outlines[i+2].split()[j]))
 					for j in range(0,NATOMS):
 						for k in range(0, nfreqs-2):
 							NORMALMODE[(freqs_so_far + k)].append([float(outlines[i+5+j].split()[3*k+2]), float(outlines[i+5+j].split()[3*k+3]), float(outlines[i+5+j].split()[3*k+4])])
@@ -980,14 +992,17 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin,log):
 
 		if TERMINATION == "normal":
 			# Get the coordinates for jobs that finished well with and without imag. freqs
-			try: standor
-			except NameError: pass
+			try:
+				standor
+			except NameError:
+				pass
 			else:
 				for i in range(standor+5,standor+5+NATOMS):
 					massno = int(outlines[i].split()[1])
 					if massno < len(possible_atoms):
 						atom_symbol = possible_atoms[massno]
-					else: atom_symbol = "XX"
+					else:
+						atom_symbol = "XX"
 					ATOMTYPES.append(atom_symbol)
 					CARTESIANS.append([float(outlines[i].split()[3]), float(outlines[i].split()[4]), float(outlines[i].split()[5])])
 
@@ -1020,7 +1035,8 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin,log):
 				massno = int(outlines[i].split()[1])
 				if massno < len(possible_atoms):
 					atom_symbol = possible_atoms[massno]
-				else: atom_symbol = "XX"
+				else:
+					atom_symbol = "XX"
 				ATOMTYPES.append(atom_symbol)
 				CARTESIANS.append([float(outlines[i].split()[3]), float(outlines[i].split()[4]), float(outlines[i].split()[5])])
 
@@ -1040,7 +1056,8 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin,log):
 				# Either moves along any and all imaginary freqs, or a specific mode requested by the user
 				if FREQS[mode] < 0.0:
 					shift.append(amplitude)
-				else: shift.append(0.0)
+				else:
+					shift.append(0.0)
 
 			# The starting geometry is displaced along the each normal mode according to the random shift
 				for atom in range(0,NATOMS):
@@ -1411,7 +1428,7 @@ def getDihedralMatches(mol, heavy,log):
 	#this is rdkit's "strict" pattern
 	pattern = r"*~[!$(*#*)&!D1&!$(C(F)(F)F)&!$(C(Cl)(Cl)Cl)&!$(C(Br)(Br)Br)&!$(C([CH3])([CH3])[CH3])&!$([CD3](=[N,O,S])-!@[#7,O,S!D1])&!$([#7,O,S!D1]-!@[CD3]=[N,O,S])&!$([CD3](=[N+])-!@[#7!D1])&!$([#7!D1]-!@[CD3]=[N+])]-!@[!$(*#*)&!D1&!$(C(F)(F)F)&!$(C(Cl)(Cl)Cl)&!$(C(Br)(Br)Br)&!$(C([CH3])([CH3])[CH3])]~*"
 	qmol = Chem.MolFromSmarts(pattern)
-	matches = mol.GetSubstructMatches(qmol);
+	matches = mol.GetSubstructMatches(qmol)
 
 	#these are all sets of 4 atoms, uniquify by middle two
 	uniqmatches = []
@@ -1434,7 +1451,7 @@ def getDihedralMatches(mol, heavy,log):
 # AND WRITES THE RDKIT SDF FILES. WITH DIHEDRALS, IT OPTIMIZES THE ROTAMERS
 def genConformer_r(mol, conf, i, matches, degree, sdwriter,args,name,log):
 	rotation_count = 1
-	if i >= len(matches): #base case, torsions should be set in conf
+	if i >= len(matches): # base case, torsions should be set in conf
 		#setting the metal back instead of I
 		if args.metal_complex == True and args.nodihedrals == True:
 			for atom in mol.GetAtoms():
@@ -1542,8 +1559,10 @@ def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None,alg_M
 	dup_data.at[dup_data_idx, 'Molecule'] = name
 	dup_data.at[dup_data_idx, 'RDKIT-Initial-samples'] = initial_confs
 
-	if args.nodihedrals == False: rotmatches = getDihedralMatches(mol, args.heavyonly,log)
-	else: rotmatches = []
+	if args.nodihedrals == False:
+		rotmatches = getDihedralMatches(mol, args.heavyonly,log)
+	else:
+		rotmatches = []
 
 	if len(rotmatches) > args.max_torsions:
 		log.write("x  Too many torsions (%d). Skipping %s" %(len(rotmatches),(name+args.output)))
@@ -1584,16 +1603,18 @@ def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None,alg_M
 		#identify the atoms and decide Force Field
 
 		for atom in mol.GetAtoms():
-			if atom.GetAtomicNum() > 36: #upto Kr for MMFF, if not use UFF
+			if atom.GetAtomicNum() > 36: #up to Kr for MMFF, if not the code will use UFF
 				args.ff = "UFF"
 				#log.write("UFF is used because there are atoms that MMFF doesn't recognise")
-		if args.verbose: log.write("o  Optimizing "+ str(len(cids))+ " initial conformers with "+ args.ff)
+		if args.verbose:
+			log.write("o  Optimizing "+ str(len(cids))+ " initial conformers with "+ args.ff)
 		if args.verbose:
 			if args.nodihedrals == False:
 				log.write("o  Found "+ str(len(rotmatches))+ " rotatable torsions")
 				# for [a,b,c,d] in rotmatches:
 				# 	log.write('  '+mol.GetAtomWithIdx(a).GetSymbol()+str(a+1)+ mol.GetAtomWithIdx(b).GetSymbol()+str(b+1)+ mol.GetAtomWithIdx(c).GetSymbol()+str(c+1)+mol.GetAtomWithIdx(d).GetSymbol()+str(d+1))
-			else: log.write("o  Systematic torsion rotation is set to OFF")
+			else:
+				log.write("o  Systematic torsion rotation is set to OFF")
 
 		cenergy,outmols = [],[]
 		bar = IncrementalBar('o  Minimizing', max = len(cids))
@@ -1703,11 +1724,13 @@ def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None,alg_M
 		bar.finish()
 
 
-		if args.verbose == True: log.write("o  "+str(eng_dup)+ " Duplicates removed  pre-energy filter (E < "+str(args.initial_energy_threshold)+" kcal/mol)")
+		if args.verbose == True:
+			log.write("o  "+str(eng_dup)+ " Duplicates removed  pre-energy filter (E < "+str(args.initial_energy_threshold)+" kcal/mol)")
 
 
 		#reduce to unique set
-		if args.verbose: log.write("o  Removing duplicate conformers (RMSD < "+ str(args.rms_threshold)+ " and E difference < "+str(args.energy_threshold)+" kcal/mol)")
+		if args.verbose:
+			log.write("o  Removing duplicate conformers (RMSD < "+ str(args.rms_threshold)+ " and E difference < "+str(args.energy_threshold)+" kcal/mol)")
 
 		bar = IncrementalBar('o  Filtering based on energy and RMSD', max = len(selectedcids_initial))
 		#check rmsd
@@ -1737,8 +1760,10 @@ def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None,alg_M
 			bar.next()
 		bar.finish()
 
-		if args.verbose == True: log.write("o  "+str(eng_rms_dup)+ " Duplicates removed (RMSD < "+str(args.rms_threshold)+" / E < "+str(args.energy_threshold)+" kcal/mol) after rotation")
-		if args.verbose: log.write("o  "+ str(len(selectedcids))+" unique conformers remain")
+		if args.verbose == True:
+			log.write("o  "+str(eng_rms_dup)+ " Duplicates removed (RMSD < "+str(args.rms_threshold)+" / E < "+str(args.energy_threshold)+" kcal/mol) after rotation")
+		if args.verbose:
+			log.write("o  "+ str(len(selectedcids))+" unique conformers remain")
 
 		dup_data.at[dup_data_idx, 'RDKit-energy-duplicates'] = eng_dup
 		dup_data.at[dup_data_idx, 'RDKit-RMS-and-energy-duplicates'] = eng_rms_dup
@@ -1762,7 +1787,8 @@ def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None,alg_M
 			total += genConformer_r(outmols[conf], conf, 0, rotmatches, args.degree, sdwriter ,args,outmols[conf].GetProp('_Name'),log)
 			bar.next()
 		bar.finish()
-		if args.verbose and len(rotmatches) != 0: log.write("o  %d total conformations generated"%total)
+		if args.verbose and len(rotmatches) != 0:
+			log.write("o  %d total conformations generated"%total)
 		status = 1
 	sdwriter.close()
 
@@ -1829,9 +1855,12 @@ def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None,alg_M
 		bar.finish()
 		sdwriter_rd.close()
 
-		if args.verbose == True: log.write("o  "+str(rd_dup_energy)+ " Duplicates removed initial energy (E < "+str(args.initial_energy_threshold)+" kcal/mol)")
-		if args.verbose == True: log.write("o  "+str(rd_dup_rms_eng)+ " Duplicates removed (RMSD < "+str(args.rms_threshold)+" / E < "+str(args.energy_threshold)+" kcal/mol) after rotation")
-		if args.verbose == True: log.write("o  "+str(len(rd_selectedcids) )+ " unique conformers remain")
+		if args.verbose == True:
+			log.write("o  "+str(rd_dup_energy)+ " Duplicates removed initial energy (E < "+str(args.initial_energy_threshold)+" kcal/mol)")
+		if args.verbose == True:
+			log.write("o  "+str(rd_dup_rms_eng)+ " Duplicates removed (RMSD < "+str(args.rms_threshold)+" / E < "+str(args.energy_threshold)+" kcal/mol) after rotation")
+		if args.verbose == True:
+			log.write("o  "+str(len(rd_selectedcids) )+ " unique conformers remain")
 
 
 		#filtering process after rotations
@@ -1845,7 +1874,6 @@ def optimize(mol, args, program,log,dup_data,dup_data_idx):
 	# if large system increase stck size
 	if args.large_sys == True:
 		os.environ['OMP_STACKSIZE'] = args.STACKSIZE
-		# if args.verbose == True: log.write('---- The Stack size has been updated for larger molecules to {0} ----'.format(os.environ['OMP_STACKSIZE']))
 
 	# removing the Ba atom if NCI complexes
 	if args.nci_complex == True:
@@ -1876,8 +1904,6 @@ def optimize(mol, args, program,log,dup_data,dup_data_idx):
 
 
 	cartesians = mol.GetConformers()[0].GetPositions()
-	# log.write(cartesians[0:2])
-	#if args.verbose == True: log.write('\no  The elements are the following {0} '.format(elements))
 
 	coordinates = torch.tensor([cartesians.tolist()], requires_grad=True, device=device)
 
@@ -1916,10 +1942,11 @@ def optimize(mol, args, program,log,dup_data,dup_data_idx):
 
 						#will update only for cdx, smi, and csv formats.
 						atom.charge = ase_charge
-				# if args.verbose == True: log.write('o  The Overall charge is reworked with rules for .smi, .csv, .cdx ')
+
 			else:
 				atom.charge = args.charge_default
-				if args.verbose == True: log.write('o  The Overall charge is read from the .com file ')
+				if args.verbose == True:
+					log.write('o  The Overall charge is read from the .com file ')
 		else:
 			ase_molecule = ase.Atoms(elements, positions=coordinates.tolist()[0],calculator=GFN2()) #define ase molecule using GFN2 Calculator
 		optimizer = ase.optimize.BFGS(ase_molecule, trajectory='xTB_opt.traj',logfile='xtb.opt')
@@ -1932,7 +1959,6 @@ def optimize(mol, args, program,log,dup_data,dup_data_idx):
 		# Now let's compute energy:
 		xtb_energy = ase_molecule.get_potential_energy()
 		sqm_energy = (xtb_energy / Hartree)* hartree_to_kcal
-		#if args.verbose: log.write("o  Final XTB E:",xtb_energy/Hartree,'Eh',xtb_energy,'eV') #Hartree, eV
 		###############################################################################
 
 	else:
@@ -1953,7 +1979,6 @@ def write_confs(conformers, energies, name, args, program,log):
 		cids = list(range(len(conformers)))
 		sortedcids = sorted(cids, key = lambda cid: energies[cid])
 
-		#if args.verbose: log.write("o ", name, "Energies:", np.array(sorted(energies)))
 		name = name.split('_rdkit')[0]# a bit hacky
 		sdwriter = Chem.SDWriter(name+'_'+program+args.output)
 
@@ -1962,9 +1987,11 @@ def write_confs(conformers, energies, name, args, program,log):
 			sdwriter.write(conformers[cid])
 			write_confs += 1
 
-		if args.verbose == True: log.write("o  Writing "+str(write_confs)+ " conformers to file " + name+'_'+program+args.output)
+		if args.verbose == True:
+			log.write("o  Writing "+str(write_confs)+ " conformers to file " + name+'_'+program+args.output)
 		sdwriter.close()
-	else: log.write("x  No conformers found!")
+	else:
+		log.write("x  No conformers found!")
 
 # xTB AND ANI1 OPTIMIZATION, FILTER AND WRITING SDF FILES
 def mult_min(name, args, program,log,dup_data,dup_data_idx):
@@ -1976,7 +2003,8 @@ def mult_min(name, args, program,log,dup_data,dup_data_idx):
 	globmin, n_high,n_dup_energy, n_dup_rms_eng  = None, 0, 0, 0
 	c_converged, c_energy, outmols = [], [], []
 
-	if args.verbose: log.write("\n\no  Multiple minimization of "+ name+args.output+ " with "+ program)
+	if args.verbose:
+		log.write("\n\no  Multiple minimization of "+ name+args.output+ " with "+ program)
 	bar = IncrementalBar('o  Minimizing', max = len(inmols))
 
 	for i,mol in enumerate(inmols):
@@ -1986,11 +2014,12 @@ def mult_min(name, args, program,log,dup_data,dup_data_idx):
 			# optimize this structure and record the energy
 			mol, converged, energy = optimize(mol, args, program,log,dup_data,dup_data_idx)
 
-			if globmin == None: globmin = energy
-			if energy < globmin: globmin = energy
+			if globmin == None:
+				globmin = energy
+			if energy < globmin:
+				globmin = energy
 
 			if converged == 0 and (energy - globmin) < args.ewin: # comparison in kcal/mol
-
 				unique = 0
 
 				# compare against all previous conformers located
@@ -2009,7 +2038,9 @@ def mult_min(name, args, program,log,dup_data,dup_data_idx):
 
 				if unique == 0:
 					pmol = PropertyMol.PropertyMol(mol)
-					outmols.append(pmol); c_converged.append(converged); c_energy.append(energy)
+					outmols.append(pmol)
+					c_converged.append(converged)
+					c_energy.append(energy)
 					conf += 1
 			else:
 				n_high += 1
@@ -2017,9 +2048,12 @@ def mult_min(name, args, program,log,dup_data,dup_data_idx):
 			pass #log.write("No molecules to optimize")
 
 	bar.finish()
-	if args.verbose == True: log.write("o  "+str( n_dup_energy)+ " Duplicates removed initial energy (E < "+str(args.initial_energy_threshold)+" kcal/mol)")
-	if args.verbose == True: log.write("o  "+str( n_dup_rms_eng)+ " Duplicates removed (RMSD < "+str(args.rms_threshold)+" / E < "+str(args.energy_threshold)+" kcal/mol)")
-	if args.verbose == True: log.write("o  "+str( n_high)+ " Conformers rejected based on energy (E > "+str(args.ewin)+" kcal/mol)")
+	if args.verbose == True:
+		log.write("o  "+str( n_dup_energy)+ " Duplicates removed initial energy (E < "+str(args.initial_energy_threshold)+" kcal/mol)")
+	if args.verbose == True:
+		log.write("o  "+str( n_dup_rms_eng)+ " Duplicates removed (RMSD < "+str(args.rms_threshold)+" / E < "+str(args.energy_threshold)+" kcal/mol)")
+	if args.verbose == True:
+		log.write("o  "+str( n_high)+ " Conformers rejected based on energy (E > "+str(args.ewin)+" kcal/mol)")
 
 	# if SQM energy exists, overwrite RDKIT energies and geometries
 	cids = list(range(len(outmols)))
