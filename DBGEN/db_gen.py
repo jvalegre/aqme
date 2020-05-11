@@ -155,7 +155,7 @@ def main():
 ### no it isnt working for *.smi, same or .sdf. We can add that feature in the end.
 
 	# this will perform conformational analysis and create inputs for Gaussian
-	if args.compute == True:
+	if args.compute:
 
 		# input file format specified
 		[file_name, file_format] = os.path.splitext(args.input)
@@ -167,19 +167,19 @@ def main():
 			mol_objects = [] # a list of mol objects that will be populated
 
 		# writing the list of DUPLICATES
-		if args.nodihedrals == True:
+		if args.nodihedrals:
 			if args.xtb != True and args.ANI1ccx != True:
 				dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples', 'RDKit-energy-duplicates','RDKit-RMS-and-energy-duplicates','RDKIT-Unique-conformers','time (seconds)','Overall charge'])
-			elif args.xtb == True:
+			elif args.xtb:
 				dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples', 'RDKit-energy-duplicates','RDKit-RMS-and-energy-duplicates','RDKIT-Unique-conformers','xTB-Initial-samples','xTB-initial_energy_threshold','xTB-RMS-and-energy-duplicates','xTB-Unique-conformers','time (seconds)','Overall charge'])
-			elif args.ANI1ccx == True:
+			elif args.ANI1ccx:
 				dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples', 'RDKit-energy-duplicates','RDKit-RMS-and-energy-duplicates','RDKIT-Unique-conformers','ANI1ccx-Initial-samples','ANI1ccx-initial_energy_threshold','ANI1ccx-RMS-and-energy-duplicates','ANI1ccx-Unique-conformers','time (seconds)','Overall charge'])
 		else:
 			if args.xtb != True and args.ANI1ccx != True:
 				dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples', 'RDKit-energy-duplicates','RDKit-RMS-and-energy-duplicates','RDKIT-Unique-conformers','RDKIT-Rotated-conformers','RDKIT-Rotated-Unique-conformers','time (seconds)','Overall charge'])
-			elif args.xtb == True:
+			elif args.xtb:
 				dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples', 'RDKit-energy-duplicates','RDKit-RMS-and-energy-duplicates','RDKIT-Unique-conformers','RDKIT-Rotated-conformers','RDKIT-Rotated-Unique-conformers','xTB-Initial-samples','xTB-initial_energy_threshold','xTB-RMS-and-energy-duplicates','xTB-Unique-conformers','time (seconds)','Overall charge'])
-			elif args.ANI1ccx == True:
+			elif args.ANI1ccx:
 					dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples', 'RDKit-energy-duplicates','RDKit-RMS-and-energy-duplicates','RDKIT-Unique-conformers','RDKIT-Rotated-conformers','RDKIT-Rotated-Unique-conformers','ANI1ccx-Initial-samples','ANI1ccx-initial_energy_threshold','ANI1ccx-RMS-and-energy-duplicates','ANI1ccx-Unique-conformers','time (seconds)','Overall charge'])
 
 		# sets up the chosen force field (this fixes some problems in case MMFF is replaced by UFF)
@@ -215,7 +215,7 @@ def main():
 				if args.verbose:
 					log.write("   -> Input Molecule {} is {}".format(i, smi))
 
-				if args.metal_complex == True:
+				if args.metal_complex:
 					mol,args.metal_idx,args.complex_coord,args.metal_sym = substituted_mol(smi,args,log)
 				else:
 					mol = Chem.MolFromSmiles(smi)
@@ -263,7 +263,7 @@ def main():
 				if args.verbose:
 					log.write("   -> Input Molecule {} is {}".format(i, smi))
 
-				if args.metal_complex == True:
+				if args.metal_complex:
 					mol,args.metal_idx,args.complex_coord,args.metal_sym = substituted_mol(smi,args,log)
 				else:
 					mol = Chem.MolFromSmiles(smi)
@@ -304,7 +304,7 @@ def main():
 				if args.verbose:
 					log.write("   -> Input Molecule {} is {}".format(i, smi))
 
-				if args.metal_complex == True:
+				if args.metal_complex:
 					mol,args.metal_idx,args.complex_coord,args.metal_sym = substituted_mol(smi,args,log)
 				else:
 					mol = Chem.MolFromSmiles(smi)
@@ -370,7 +370,7 @@ def main():
 
 			for mol in suppl:
 				#FInding the metal and replacing it for RDkit embedding
-				if args.metal_complex == True:
+				if args.metal_complex:
 					for el in elementspt:
 						if el.symbol == 'I':
 							atomic_number = el.number
@@ -429,7 +429,7 @@ def main():
 
 			for i, mol in enumerate(suppl):
 				#FInding the metal and replacing it for RDkit embedding
-				if args.metal_complex == True:
+				if args.metal_complex:
 					#changing name for Metal
 					for atom in mol.GetAtoms():
 						if atom.GetSymbol() == args.metal:
@@ -455,16 +455,16 @@ def main():
 					mol_objects.append([mol, name])
 
 	#applying rule to get the necessary conformers only
-	if args.exp_rules == True:
-		if args.verbose == True:
+	if args.exp_rules:
+		if args.verbose:
 			log.write("   ----- Applying experimental rules to write the new confs file -----")
 		### do 2 cases, for RDKit only and RDKIt+xTB
 		#grab all the gaussian files
 		if args.xtb != True and args.ANI1ccx != True:
 			conf_files =  glob.glob('*_rdkit.sdf')
-		elif args.xtb == True:
+		elif args.xtb:
 			conf_files =  glob.glob('*_xtb.sdf')
-		elif args.ANI1ccx == True:
+		elif args.ANI1ccx:
 			conf_files =  glob.glob('*_ani.sdf')
 
 		for file in conf_files:
@@ -478,21 +478,21 @@ def main():
 			for mol in allmols:
 				check_mol = True
 				check_mol = exp_rules_output(mol,args,log)
-				if check_mol == True:
+				if check_mol:
 					sdwriter.write(mol)
 			sdwriter.close()
 
-	if args.write_gauss == True:
-		if args.exp_rules == True:
+	if args.write_gauss:
+		if args.exp_rules:
 			conf_files =  glob.glob('*_rules.sdf')
 		#grad all the gaussian files
-		elif args.xtb != True and args.ANI1ccx != True and args.nodihedrals == True:
+		elif args.xtb != True and args.ANI1ccx != True and args.nodihedrals:
 			conf_files =  glob.glob('*_rdkit.sdf')
 		elif args.xtb != True and args.ANI1ccx != True and args.nodihedrals == False:
 			conf_files =  glob.glob('*_rdkit_rotated.sdf')
-		elif args.xtb == True:
+		elif args.xtb:
 			conf_files =  glob.glob('*_xtb.sdf')
-		elif args.ANI1ccx == True:
+		elif args.ANI1ccx:
 			conf_files =  glob.glob('*_ani.sdf')
 		else:
 			conf_files =  glob.glob('*.sdf')
@@ -555,7 +555,7 @@ def main():
 	#moving files after compute and write_gauss or only after compute
 	#moving all the sdf files to a separate folder after writing gaussian files
 	src = os.getcwd()
-	if args.xtb == True:
+	if args.xtb:
 		all_xtb_conf_files = glob.glob('*_xtb.sdf')
 		destination_xtb = src +'/xTB_minimised_generated_SDF_files'
 		for file in all_xtb_conf_files:
@@ -567,7 +567,7 @@ def main():
 					shutil.move(os.path.join(src, file), os.path.join(destination_xtb, file))
 				else:
 					raise
-	elif args.ANI1ccx == True:
+	elif args.ANI1ccx:
 		all_ani_conf_files = glob.glob('*_ani.sdf')
 		destination_ani = src +'/ANI1ccx_minimised_generated_SDF_files'
 		for file in all_ani_conf_files:
@@ -591,7 +591,7 @@ def main():
 			else:
 				raise
 
-	if args.analysis == True:
+	if args.analysis:
 		#adding in for general analysis
 		#need to specify the lot, bs as arguments for each analysis
 		if args.path == '':
@@ -618,7 +618,7 @@ def main():
 						output_analyzer(log_files, w_dir, lot, bs, bs_gcp, args, w_dir_fin,log)
 
 	#adding the part to check for resubmission of the newly created gaussian files.
-	if args.qsub == True:
+	if args.qsub:
 		#chceck if ech level of theory has a folder New gaussin FILES
 		for lot in args.level_of_theory:
 			for bs in args.basis_set:
@@ -627,11 +627,11 @@ def main():
 				w_dir = check_for_final_folder(w_dir,log)
 				os.chdir(w_dir)
 				cmd = args.submission_command + ' *.com'
-				if args.qsub == True:
+				if args.qsub:
 					os.system(cmd)
 
 	#once all files are finished are in the Finished folder
-	if args.dup == True:
+	if args.dup:
 		# Sets the folder and find the log files to analyze
 		for lot in args.level_of_theory:
 			for bs in args.basis_set:
@@ -650,7 +650,7 @@ def main():
 					pass
 
 	#once all files are finished are in the Finished folder
-	if args.boltz == True:
+	if args.boltz:
 		# Sets the folder and find the log files to analyze
 		for lot in args.level_of_theory:
 			for bs in args.basis_set:
@@ -669,7 +669,7 @@ def main():
 					except:
 						pass
 
-	if args.combine == True:
+	if args.combine:
 		#combines the files and gives the boltzmann weighted energies
 		for lot in args.level_of_theory:
 			for bs in args.basis_set:

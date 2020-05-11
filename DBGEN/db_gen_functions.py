@@ -379,7 +379,7 @@ def conformer_generation(mol,name,start_time,args,log,dup_data,dup_data_idx,coor
 			# the conformational search
 			gen = summ_search(mol, name,args,log,dup_data,dup_data_idx,coord_Map,alg_Map,mol_template)
 			if gen != -1:
-				if args.nodihedrals == True:
+				if args.nodihedrals:
 					if args.ANI1ccx != False:
 						mult_min(name+'_'+'rdkit', args, 'ani',log,dup_data,dup_data_idx)
 					if args.xtb != False:
@@ -469,7 +469,7 @@ def exp_rules_output(mol, args,log):
 							if new_mol_2.GetAtomWithIdx(atom_indexes[i]).IsInRingSize(5) == False:
 								ligand_atoms.append([atom_indexes[i],atom_indexes[j]])
 								break
-		if passing == True:
+		if passing:
 			# This stop variable and the breaks inside the inner loops will make that if there
 			# is one angle that does not meet the criteria for valid conformers, the outter (i)
 			# and inner (j) loops will stop simultaneously (saves time since the molecule is
@@ -520,15 +520,15 @@ def filters(mol,args,log):
 				#Fourth filter: atoms outside the scope chosen in 'possible_atoms'
 				if atom.GetSymbol() not in possible_atoms:
 					valid_structure = False
-					if args.verbose == True:
+					if args.verbose:
 						log.write(" Exiting as atom isn't in atoms in the periodic table")
 		else:
 			valid_structure = False
-			if args.verbose == True:
+			if args.verbose:
 				log.write(" Exiting as total molar mass > 1000")
 	else:
 		valid_structure = False
-		if args.verbose == True:
+		if args.verbose:
 			log.write(" Exiting as number of rotatable bonds > 10")
 	return valid_structure
 
@@ -560,8 +560,8 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args,log,cha
 			charge_com = charge_data.loc[i,'Overall charge']
 
 	#definition of input lines
-	if args.frequencies == True:
-		if args.dispersion_correction == True:
+	if args.frequencies:
+		if args.dispersion_correction:
 			if args.solvent_model == 'gas_phase':
 				input = 'opt=(maxcycles={0}) freq=noraman empiricaldispersion={1}'.format(args.max_cycle_opt,args.empirical_dispersion)
 				input_sp = 'nmr=giao empiricaldispersion={0}'.format(args.empirical_dispersion)  #input for single point nmr
@@ -576,7 +576,7 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args,log,cha
 				input = 'opt=(maxcycles={0}) freq=noraman scrf=({1},solvent={2})'.format(args.max_cycle_opt,args.solvent_model, args.solvent_name) #add solvent if needed
 				input_sp = 'scrf=({0},solvent={1}) nmr=giao'.format(args.solvent_model, args.solvent_name)  ##add solvent if needed
 	else:
-		if args.dispersion_correction == True:
+		if args.dispersion_correction:
 			if args.solvent_model == 'gas_phase':
 				input = 'opt=(maxcycles={0}) empiricaldispersion={1}'.format(args.max_cycle_opt,args.empirical_dispersion)
 				input_sp = 'nmr=giao empiricaldispersion={0}'.format(args.empirical_dispersion)  #input for single point nmr
@@ -616,7 +616,7 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args,log,cha
 					genecp = 'gen'
 					break
 
-	if args.single_point == True:
+	if args.single_point:
 		#pathto change to
 		path_write_gjf_files = 'generated_sp_files/' + str(lot) + '-' + str(bs)
 		#log.write(path_write_gjf_files)
@@ -633,8 +633,8 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args,log,cha
 
 	if genecp =='genecp' or genecp == 'gen':
 		#chk option
-		if args.chk == True:
-			if args.single_point == True:
+		if args.chk:
+			if args.single_point:
 				header = [
 					'%chk={}.chk'.format(name),
 					'%mem={}'.format(args.mem),
@@ -648,7 +648,7 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args,log,cha
 						'# {0}'.format(lot)+ '/'+ genecp + ' '+ input ]
 
 		else:
-			if args.single_point == True:
+			if args.single_point:
 				header = [
 					'%mem={}'.format(args.mem),
 					'%nprocshared={}'.format(args.nprocs),
@@ -659,10 +659,10 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args,log,cha
 					'%nprocshared={}'.format(args.nprocs),
 					'# {0}'.format(lot)+ '/'+ genecp + ' '+ input ]
 
-		if args.lowest_only == True:
+		if args.lowest_only:
 			subprocess.run(
 				  ['obabel', '-isdf', path_for_file+file, '-ocom', '-O'+com_low,'-l' , '1', '-xk', '\n'.join(header)]) #takes the lowest conformer which is the first in the file
-		elif args.lowest_n == True:
+		elif args.lowest_n:
 			no_to_write = 0
 			if len(energies) != 1:
 				for i in range(len(energies)):
@@ -700,7 +700,7 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args,log,cha
 			rename_file_name = rename_file_name.strip()+'.com'
 
 			#change charge and multiplicity for Octahydrasl
-			if args.metal_complex == True:
+			if args.metal_complex:
 				for i in range(0,len(read_lines)):
 					if len(read_lines[i].strip()) == 0:
 						read_lines[i+3] = str(charge_com)+' '+ str(args.complex_spin)+'\n'
@@ -721,7 +721,7 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args,log,cha
 				   ecp_gen_atoms = True
 
 			#error if both genecp and gen are
-			if ecp_genecp_atoms == True and ecp_gen_atoms == True:
+			if ecp_genecp_atoms and ecp_gen_atoms:
 				sys.exit("ERROR: Can't use Gen and GenECP at the same time")
 
 			for i in range(len(ecp_list)):
@@ -752,7 +752,7 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args,log,cha
 					fileout.write('0\n')
 					fileout.write(bs_gcp+'\n')
 					fileout.write('****\n\n')
-					if ecp_genecp_atoms == True:
+					if ecp_genecp_atoms:
 						for i in range(len(ecp_list)):
 							if ecp_list[i] in args.genecp_atoms:
 								fileout.write(ecp_list[i]+' ')
@@ -764,15 +764,15 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args,log,cha
 			os.rename(file,rename_file_name)
 
 			#submitting the gaussian file on summit
-			if args.qsub == True:
+			if args.qsub:
 				os.system(args.submission_command + rename_file_name)
 
 		os.chdir(path_for_file)
 
 	else:
 		#chk option
-		if args.chk == True:
-			if args.single_point == True:
+		if args.chk:
+			if args.single_point:
 				header = [
 					'%chk={}.chk'.format(name),
 					'%mem={}'.format(args.mem),
@@ -786,7 +786,7 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args,log,cha
 						'# {0}'.format(lot)+ '/'+ bs + ' '+ input ]
 
 		else:
-			if args.single_point == True:
+			if args.single_point:
 				header = [
 					'%mem={}'.format(args.mem),
 					'%nprocshared={}'.format(args.nprocs),
@@ -797,11 +797,11 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args,log,cha
 					'%nprocshared={}'.format(args.nprocs),
 					'# {0}'.format(lot)+ '/'+ bs + ' '+ input ]
 
-		if args.lowest_only == True:
+		if args.lowest_only:
 			subprocess.run(
 				  ['obabel', '-isdf', path_for_file+file, '-ocom', '-O'+com_low,'-l' , '1', '-xk', '\n'.join(header)]) #takes the lowest conformer which is the first in the file
 
-		elif args.lowest_n == True:
+		elif args.lowest_n:
 			no_to_write = 0
 			if len(energies) != 1:
 				for i in range(len(energies)):
@@ -838,7 +838,7 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args,log,cha
 			rename_file_name = rename_file_name.strip()+'.com'
 
 			#change charge and multiplicity for Octahydrasl
-			if args.metal_complex == True:
+			if args.metal_complex:
 				for i in range(0,len(read_lines)):
 					if len(read_lines[i].strip()) == 0:
 						read_lines[i+3] = str(charge_com)+' '+ str(args.complex_spin)+'\n'
@@ -851,7 +851,7 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args,log,cha
 			os.rename(file,rename_file_name)
 
 			#submitting the gaussian file on summit
-			if args.qsub == True:
+			if args.qsub:
 				os.system(args.submission_command + rename_file_name)
 
 		os.chdir(path_for_file)
@@ -873,8 +873,8 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin,log):
 	#log.write(w_dir)
 
 	#definition of input lines
-	if args.frequencies == True:
-		if args.dispersion_correction == True:
+	if args.frequencies:
+		if args.dispersion_correction:
 			if args.solvent_model == 'gas_phase':
 				input = 'opt=(maxcycles={0}) freq=noraman empiricaldispersion={1}'.format(args.max_cycle_opt,args.empirical_dispersion)
 				input_sp = 'nmr=giao empiricaldispersion={0}'.format(args.empirical_dispersion)  #input for single point nmr
@@ -889,7 +889,7 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin,log):
 				input = 'opt=(maxcycles={0}) freq=noraman scrf=({1},solvent={2})'.format(args.max_cycle_opt,args.solvent_model, args.solvent_name) #add solvent if needed
 				input_sp = 'scrf=({0},solvent={1}) nmr=giao'.format(args.solvent_model, args.solvent_name)  ##add solvent if needed
 	else:
-		if args.dispersion_correction == True:
+		if args.dispersion_correction:
 			if args.solvent_model == 'gas_phase':
 				input = 'opt=(maxcycles={0}) empiricaldispersion={1}'.format(args.max_cycle_opt,args.empirical_dispersion)
 				input_sp = 'nmr=giao empiricaldispersion={0}'.format(args.empirical_dispersion)  #input for single point nmr
@@ -1150,17 +1150,17 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin,log):
 				   ecp_genecp_atoms = True
 			if ecp_genecp_atoms == False:
 				genecp = 'gen'
-			if ecp_genecp_atoms == True:
+			if ecp_genecp_atoms:
 				genecp = 'genecp'
 
 			if genecp == 'genecp':
 				if ERRORTYPE == 'SCFerror':
-					if args.single_point == True:
+					if args.single_point:
 						keywords_opt = lot +'/'+ genecp+' '+ input_sp + 'SCF=QC'
 					else:
 						keywords_opt = lot +'/'+ genecp+' '+ input + 'SCF=QC'
 				else:
-					if args.single_point == True:
+					if args.single_point:
 						keywords_opt = lot +'/'+ genecp+' '+ input_sp
 					else:
 						keywords_opt = lot +'/'+ genecp+' '+ input
@@ -1199,12 +1199,12 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin,log):
 				fileout.close()
 			else:
 				if ERRORTYPE == 'SCFerror':
-					if args.single_point == True:
+					if args.single_point:
 						keywords_opt = lot +'/'+ genecp+' '+ input_sp + 'SCF=QC'
 					else:
 						keywords_opt = lot +'/'+ genecp+' '+ input + 'SCF=QC'
 				else:
-					if args.single_point == True:
+					if args.single_point:
 						keywords_opt = lot +'/'+ bs +' '+ input_sp
 					else:
 						keywords_opt = lot +'/'+ bs +' '+ input
@@ -1226,7 +1226,7 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin,log):
 		os.chdir(w_dir)
 
 		#adding in the NMR componenet only to the finished files after reading from normally finished log files
-		if args.sp == True and TERMINATION == "normal":
+		if args.sp and TERMINATION == "normal":
 
 			# creating new folder with new input gaussian files
 			single_point_input_files = w_dir+'/single_point_input_files'
@@ -1252,7 +1252,7 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin,log):
 				   ecp_genecp_atoms = True
 			if ecp_genecp_atoms == False:
 				genecp = 'gen'
-			if ecp_genecp_atoms == True:
+			if ecp_genecp_atoms:
 				genecp = 'genecp'
 
 			if genecp =='genecp':
@@ -1402,7 +1402,7 @@ def combine_files(csv_files, lot, bs, args,log):
 
 # CALCULATES RMSD between two molecules
 def get_conf_RMS(mol1, mol2, c1, c2, heavy, max_matches_RMSD,log):
-	if heavy == True:
+	if heavy:
 		 mol1 = Chem.RemoveHs(mol1)
 		 mol2 = Chem.RemoveHs(mol2)
 	rms = Chem.GetBestRMS(mol1,mol2,c1,c2,maxMatches=max_matches_RMSD)
@@ -1410,7 +1410,7 @@ def get_conf_RMS(mol1, mol2, c1, c2, heavy, max_matches_RMSD,log):
 
 # DETECTS INITIAL NUMBER OF SAMPLES AUTOMATICALLY
 def auto_sampling(mult_factor,mol,args,log):
-	if args.metal_complex == True:
+	if args.metal_complex:
 		if len(args.metal_idx) > 0:
 			mult_factor = mult_factor*3*len(args.metal_idx) # this accounts for possible trans/cis isomers in metal complexes
 	auto_samples = 0
@@ -1435,7 +1435,7 @@ def getDihedralMatches(mol, heavy,log):
 	seen = set()
 	for (a,b,c,d) in matches:
 		if (b,c) not in seen and (c,b) not in seen:
-			if heavy == True:
+			if heavy:
 				if mol.GetAtomWithIdx(a).GetSymbol() != 'H' and mol.GetAtomWithIdx(d).GetSymbol() != 'H':
 					seen.add((b,c))
 					uniqmatches.append((a,b,c,d))
@@ -1453,7 +1453,7 @@ def genConformer_r(mol, conf, i, matches, degree, sdwriter,args,name,log):
 	rotation_count = 1
 	if i >= len(matches): # base case, torsions should be set in conf
 		#setting the metal back instead of I
-		if args.metal_complex == True and args.nodihedrals == True:
+		if args.metal_complex and args.nodihedrals:
 			for atom in mol.GetAtoms():
 				if atom.GetIdx() in args.metal_idx:
 					re_symbol = args.metal_sym[args.metal_idx.index(atom.GetIdx())]
@@ -1724,7 +1724,7 @@ def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None,alg_M
 		bar.finish()
 
 
-		if args.verbose == True:
+		if args.verbose:
 			log.write("o  "+str(eng_dup)+ " Duplicates removed  pre-energy filter (E < "+str(args.initial_energy_threshold)+" kcal/mol)")
 
 
@@ -1760,7 +1760,7 @@ def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None,alg_M
 			bar.next()
 		bar.finish()
 
-		if args.verbose == True:
+		if args.verbose:
 			log.write("o  "+str(eng_rms_dup)+ " Duplicates removed (RMSD < "+str(args.rms_threshold)+" / E < "+str(args.energy_threshold)+" kcal/mol) after rotation")
 		if args.verbose:
 			log.write("o  "+ str(len(selectedcids))+" unique conformers remain")
@@ -1811,7 +1811,7 @@ def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None,alg_M
 			# include the first conformer in the list to start the filtering process
 			if rd_count == 0:
 				rd_selectedcids.append(i)
-				if args.metal_complex == True:
+				if args.metal_complex:
 					for atom in rdmols[i].GetAtoms():
 						if atom.GetIdx() in args.metal_idx:
 							re_symbol = args.metal_sym[args.metal_idx.index(atom.GetIdx())]
@@ -1838,7 +1838,7 @@ def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None,alg_M
 						rd_dup_rms_eng += 1
 						break
 			if excluded_conf == False:
-				if args.metal_complex == True:
+				if args.metal_complex:
 					for atom in rdmols[i].GetAtoms():
 						if atom.GetIdx() in args.metal_idx:
 							re_symbol = args.metal_sym[args.metal_idx.index(atom.GetIdx())]
@@ -1855,11 +1855,11 @@ def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None,alg_M
 		bar.finish()
 		sdwriter_rd.close()
 
-		if args.verbose == True:
+		if args.verbose:
 			log.write("o  "+str(rd_dup_energy)+ " Duplicates removed initial energy (E < "+str(args.initial_energy_threshold)+" kcal/mol)")
-		if args.verbose == True:
+		if args.verbose:
 			log.write("o  "+str(rd_dup_rms_eng)+ " Duplicates removed (RMSD < "+str(args.rms_threshold)+" / E < "+str(args.energy_threshold)+" kcal/mol) after rotation")
-		if args.verbose == True:
+		if args.verbose:
 			log.write("o  "+str(len(rd_selectedcids) )+ " unique conformers remain")
 
 
@@ -1872,16 +1872,16 @@ def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None,alg_M
 # xTB AND ANI1 OPTIMIZATIONS
 def optimize(mol, args, program,log,dup_data,dup_data_idx):
 	# if large system increase stck size
-	if args.large_sys == True:
+	if args.large_sys:
 		os.environ['OMP_STACKSIZE'] = args.STACKSIZE
 
 	# removing the Ba atom if NCI complexes
-	if args.nci_complex == True:
+	if args.nci_complex:
 		for atom in mol.GetAtoms():
 			if atom.GetSymbol() =='I':
 				atom.SetAtomicNum(1)
 
-	if args.metal_complex == True and args.nodihedrals == False:
+	if args.metal_complex and args.nodihedrals == False:
 		for atom in mol.GetAtoms():
 			if atom.GetIdx() in args.metal_idx:
 				re_symbol = args.metal_sym[args.metal_idx.index(atom.GetIdx())]
@@ -1932,7 +1932,7 @@ def optimize(mol, args, program,log,dup_data,dup_data_idx):
 
 	elif program == 'xtb':
 
-		if args.metal_complex == True:
+		if args.metal_complex:
 			#passing charges metal present
 			ase_molecule = ase.Atoms(elements, positions=coordinates.tolist()[0],calculator=GFN2()) #define ase molecule using GFN2 Calculator
 			if os.path.splitext(args.input)[1] == '.csv' or os.path.splitext(args.input)[1] == '.cdx' or os.path.splitext(args.input)[1] == '.smi':
@@ -1945,7 +1945,7 @@ def optimize(mol, args, program,log,dup_data,dup_data_idx):
 
 			else:
 				atom.charge = args.charge_default
-				if args.verbose == True:
+				if args.verbose:
 					log.write('o  The Overall charge is read from the .com file ')
 		else:
 			ase_molecule = ase.Atoms(elements, positions=coordinates.tolist()[0],calculator=GFN2()) #define ase molecule using GFN2 Calculator
@@ -1987,7 +1987,7 @@ def write_confs(conformers, energies, name, args, program,log):
 			sdwriter.write(conformers[cid])
 			write_confs += 1
 
-		if args.verbose == True:
+		if args.verbose:
 			log.write("o  Writing "+str(write_confs)+ " conformers to file " + name+'_'+program+args.output)
 		sdwriter.close()
 	else:
@@ -2048,11 +2048,11 @@ def mult_min(name, args, program,log,dup_data,dup_data_idx):
 			pass #log.write("No molecules to optimize")
 
 	bar.finish()
-	if args.verbose == True:
+	if args.verbose:
 		log.write("o  "+str( n_dup_energy)+ " Duplicates removed initial energy (E < "+str(args.initial_energy_threshold)+" kcal/mol)")
-	if args.verbose == True:
+	if args.verbose:
 		log.write("o  "+str( n_dup_rms_eng)+ " Duplicates removed (RMSD < "+str(args.rms_threshold)+" / E < "+str(args.energy_threshold)+" kcal/mol)")
-	if args.verbose == True:
+	if args.verbose:
 		log.write("o  "+str( n_high)+ " Conformers rejected based on energy (E > "+str(args.ewin)+" kcal/mol)")
 
 	# if SQM energy exists, overwrite RDKIT energies and geometries
