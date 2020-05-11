@@ -9,7 +9,6 @@ from rdkit.Chem import AllChem as Chem
 from rdkit.Chem import rdMolTransforms, PropertyMol, rdDistGeom, rdMolAlign, Lipinski, Descriptors
 from rdkit.Geometry import Point3D
 from periodictable import elements as elementspt
-import openbabel as ob
 import progress
 from progress.bar import IncrementalBar
 import numpy as np
@@ -23,15 +22,13 @@ try:
 	os.environ['KMP_DUPLICATE_LIB_OK']='True'
 	device = torch.device('cpu')
 	model = torchani.models.ANI1ccx()
-	from ase.units import Hartree,kcal,kJ
-	from ase.units import mol as mol_unit
-except:
-	Hartree, kcal, kJ, mol_unit = 27.211386024367243, 2.611447418269555e+22, 6.241509125883258e+21, 6.022140857e+23
+	from ase.units import Hartree
 
-try:
 	import xtb
 	from xtb import GFN2
 except: pass
+
+hartree_to_kcal = 627.509
 
 possible_atoms = ["", "H", "He", "Li", "Be", "B", "C", "N", "O", "F", "Ne", "Na", "Mg", "Al", "Si",
 				 "P", "S", "Cl", "Ar", "K", "Ca", "Sc", "Ti", "V", "Cr", "Mn", "Fe", "Co", "Ni", "Cu", "Zn",
@@ -380,15 +377,18 @@ def conformer_generation(mol,name,start_time,args,log,dup_data,dup_data_idx,coor
 			gen = summ_search(mol, name,args,log,dup_data,dup_data_idx,coord_Map,alg_Map,mol_template)
 			if gen != -1:
 				if args.nodihedrals == True:
-					if args.ANI1ccx != False: conformers, energies = mult_min(name+'_'+'rdkit', args, 'ani',log,dup_data,dup_data_idx)
-					if args.xtb != False: conformers, energies = mult_min(name+'_'+'rdkit', args, 'xtb',log,dup_data,dup_data_idx)
+					if args.ANI1ccx != False:
+						mult_min(name+'_'+'rdkit', args, 'ani',log,dup_data,dup_data_idx)
+					if args.xtb != False:
+						mult_min(name+'_'+'rdkit', args, 'xtb',log,dup_data,dup_data_idx)
 				else:
-					if args.ANI1ccx != False: conformers, energies = mult_min(name+'_'+'rdkit'+'_'+'rotated', args, 'ani',log,dup_data,dup_data_idx)
-					if args.xtb != False: conformers, energies = mult_min(name+'_'+'rdkit'+'_'+'rotated', args, 'xtb',log,dup_data,dup_data_idx)
+					if args.ANI1ccx != False:
+						mult_min(name+'_'+'rdkit'+'_'+'rotated', args, 'ani',log,dup_data,dup_data_idx)
+					if args.xtb != False:
+						mult_min(name+'_'+'rdkit'+'_'+'rotated', args, 'xtb',log,dup_data,dup_data_idx)
 			else: pass
 		except (KeyboardInterrupt, SystemExit):
 			raise
-		except Exception as e: print(traceback.print_exc())
 	else: log.write("ERROR: The structure is not valid")
 
 	# removing temporary files
@@ -727,7 +727,7 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args,log,cha
 				fileout.write('\n')
 			else:
 				if len(bs_gcp.split('.')) > 1:
-					if bs_gcp.split('.')[1] == 'txt':
+					if bs_gcp.split('.')[1] == 'txt' or bs_gcp.split('.')[1] == 'yaml':
 						os.chdir(path_for_file)
 						read_lines = open(bs_gcp,"r").readlines()
 						os.chdir(path_write_gjf_files)
@@ -1392,7 +1392,10 @@ def get_conf_RMS(mol1, mol2, c1, c2, heavy, max_matches_RMSD,log):
 	return rms
 
 # DETECTS INITIAL NUMBER OF SAMPLES AUTOMATICALLY
-def auto_sampling(mult_factor,mol,log):
+def auto_sampling(mult_factor,mol,args,log):
+	if args.metal_complex == True:
+		if len(args.metal_idx) > 0:
+			mult_factor = mult_factor*3*len(args.metal_idx) # this accounts for possible trans/cis isomers in metal complexes
 	auto_samples = 0
 	auto_samples += 3*(Lipinski.NumRotatableBonds(mol)) # x3, for C3 rotations
 	auto_samples += 3*(Lipinski.NHOHCount(mol)) # x3, for OH/NH rotations
@@ -1530,7 +1533,7 @@ def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None,alg_M
 
 	# detects and applies auto-detection of initial number of conformers
 	if args.sample == 'auto':
-		initial_confs = int(auto_sampling(args.auto_sample,mol,log))
+		initial_confs = int(auto_sampling(args.auto_sample,mol,args,log))
 
 	else:
 		initial_confs = int(args.sample)
@@ -1556,10 +1559,10 @@ def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None,alg_M
 			else:
 				cids = rdDistGeom.EmbedMultipleConfs(mol, initial_confs,ignoreSmoothingFailures=True, randomSeed=args.seed,numThreads = 0)
 			if len(cids) == 0 or len(cids) == 1 and initial_confs != 1:
-				log.write("o  conformers initially sampled with random coordinates")
+				log.write("o  Normal RDKit embeding process failed, trying to generate conformers with random coordinates (with "+str(initial_confs)+" possibilities)")
 				cids = rdDistGeom.EmbedMultipleConfs(mol, initial_confs, randomSeed=args.seed, useRandomCoords=True, boxSizeMult=10.0,ignoreSmoothingFailures=True, numZeroFail=1000, numThreads = 0)
 			if args.verbose:
-				log.write("o  "+ str(len(cids))+" conformers initially sampled")
+				log.write("o  "+ str(len(cids))+" conformers initially generated")
 		# case of embed for templates
 		else:
 			if args.etkdg:
@@ -1571,11 +1574,11 @@ def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None,alg_M
 				cids = rdDistGeom.EmbedMultipleConfs(mol, initial_confs, params=ps)
 			else:
 				cids = rdDistGeom.EmbedMultipleConfs(mol, initial_confs, randomSeed=args.seed,ignoreSmoothingFailures=True, coordMap = coord_Map,numThreads = 0)
-			if len(cids) == 0 or len(cids) == 1 and initial_confs != 1 :
-				log.write("o  conformers initially sampled with random coordinates")
+			if len(cids) == 0 or len(cids) == 1 and initial_confs != 1:
+				log.write("o  Normal RDKit embeding process failed, trying to generate conformers with random coordinates (with "+str(initial_confs)+" possibilities)")
 				cids = rdDistGeom.EmbedMultipleConfs(mol, initial_confs, randomSeed=args.seed, useRandomCoords=True, boxSizeMult=10.0, numZeroFail=1000,ignoreSmoothingFailures=True, coordMap = coord_Map,numThreads = 0)
 			if args.verbose:
-				log.write("o  "+ str(len(cids))+" conformers initially sampled")
+				log.write("o  "+ str(len(cids))+" conformers initially generated")
 
 		#energy minimize all to get more realistic results
 		#identify the atoms and decide Force Field
@@ -1584,7 +1587,7 @@ def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None,alg_M
 			if atom.GetAtomicNum() > 36: #upto Kr for MMFF, if not use UFF
 				args.ff = "UFF"
 				#log.write("UFF is used because there are atoms that MMFF doesn't recognise")
-		if args.verbose: log.write("o  Optimizing "+ str(len(cids))+ " initial conformers with"+ args.ff)
+		if args.verbose: log.write("o  Optimizing "+ str(len(cids))+ " initial conformers with "+ args.ff)
 		if args.verbose:
 			if args.nodihedrals == False:
 				log.write("o  Found "+ str(len(rotmatches))+ " rotatable torsions")
@@ -1609,8 +1612,6 @@ def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None,alg_M
 				energy = GetFF.CalcEnergy()
 				cenergy.append(GetFF.CalcEnergy())
 
-				#if args.verbose:
-				#    log.write("-   conformer", (i+1), "optimized: ", args.ff, "energy", GetFF.CalcEnergy())
 			#id template realign before doing calculations
 			else:
 				num_atom_match = mol.GetSubstructMatch(mol_template)
@@ -1702,11 +1703,11 @@ def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None,alg_M
 		bar.finish()
 
 
-		if args.verbose == True: log.write("o  "+str(eng_dup)+ " Duplicates removed  pre-energy filter (E < "+str(args.initial_energy_threshold)+" kcal/mol).")
+		if args.verbose == True: log.write("o  "+str(eng_dup)+ " Duplicates removed  pre-energy filter (E < "+str(args.initial_energy_threshold)+" kcal/mol)")
 
 
 		#reduce to unique set
-		if args.verbose: log.write("o  Removing duplicate conformers (RMSD < "+ str(args.rms_threshold)+ " and E difference < "+str(args.energy_threshold)+" kcal/mol).")
+		if args.verbose: log.write("o  Removing duplicate conformers (RMSD < "+ str(args.rms_threshold)+ " and E difference < "+str(args.energy_threshold)+" kcal/mol)")
 
 		bar = IncrementalBar('o  Filtering based on energy and RMSD', max = len(selectedcids_initial))
 		#check rmsd
@@ -1736,8 +1737,8 @@ def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None,alg_M
 			bar.next()
 		bar.finish()
 
-		if args.verbose == True: log.write("o  "+str(eng_rms_dup)+ " Duplicates removed (RMSD < "+str(args.rms_threshold)+" / E < "+str(args.energy_threshold)+" kcal/mol) after rotation.")
-		if args.verbose: log.write("o  "+ str(len(selectedcids))+" unique conformers remain.")
+		if args.verbose == True: log.write("o  "+str(eng_rms_dup)+ " Duplicates removed (RMSD < "+str(args.rms_threshold)+" / E < "+str(args.energy_threshold)+" kcal/mol) after rotation")
+		if args.verbose: log.write("o  "+ str(len(selectedcids))+" unique conformers remain")
 
 		dup_data.at[dup_data_idx, 'RDKit-energy-duplicates'] = eng_dup
 		dup_data.at[dup_data_idx, 'RDKit-RMS-and-energy-duplicates'] = eng_rms_dup
@@ -1828,9 +1829,9 @@ def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None,alg_M
 		bar.finish()
 		sdwriter_rd.close()
 
-		if args.verbose == True: log.write("o  "+str(rd_dup_energy)+ " Duplicates removed initial energy (E < "+str(args.initial_energy_threshold)+" kcal/mol).")
-		if args.verbose == True: log.write("o  "+str(rd_dup_rms_eng)+ " Duplicates removed (RMSD < "+str(args.rms_threshold)+" / E < "+str(args.energy_threshold)+" kcal/mol) after rotation.")
-		if args.verbose == True: log.write("o  "+str(len(rd_selectedcids) )+ " unique conformers remain.")
+		if args.verbose == True: log.write("o  "+str(rd_dup_energy)+ " Duplicates removed initial energy (E < "+str(args.initial_energy_threshold)+" kcal/mol)")
+		if args.verbose == True: log.write("o  "+str(rd_dup_rms_eng)+ " Duplicates removed (RMSD < "+str(args.rms_threshold)+" / E < "+str(args.energy_threshold)+" kcal/mol) after rotation")
+		if args.verbose == True: log.write("o  "+str(len(rd_selectedcids) )+ " unique conformers remain")
 
 
 		#filtering process after rotations
@@ -1900,8 +1901,7 @@ def optimize(mol, args, program,log,dup_data,dup_data_idx):
 		###############################################################################
 		# Now let's compute energy:
 		_, ani_energy = model((species, coordinates))
-		sqm_energy = ani_energy.item() * 627.509 # Hartree to kcal/mol
-		#if args.verbose: log.write("o  ANI Final E:", ani_energy.item(),'eH', ase_molecule.get_potential_energy(),'eV') #Hartree, eV
+		sqm_energy = ani_energy.item() * hartree_to_kcal # Hartree to kcal/mol
 		###############################################################################
 
 	elif program == 'xtb':
@@ -1931,7 +1931,7 @@ def optimize(mol, args, program,log,dup_data,dup_data_idx):
 		###############################################################################
 		# Now let's compute energy:
 		xtb_energy = ase_molecule.get_potential_energy()
-		sqm_energy = (xtb_energy / Hartree)* 627.509
+		sqm_energy = (xtb_energy / Hartree)* hartree_to_kcal
 		#if args.verbose: log.write("o  Final XTB E:",xtb_energy/Hartree,'Eh',xtb_energy,'eV') #Hartree, eV
 		###############################################################################
 
@@ -2017,9 +2017,9 @@ def mult_min(name, args, program,log,dup_data,dup_data_idx):
 			pass #log.write("No molecules to optimize")
 
 	bar.finish()
-	if args.verbose == True: log.write("o  "+str( n_dup_energy)+ " Duplicates removed initial energy (E < "+str(args.initial_energy_threshold)+" kcal/mol).")
-	if args.verbose == True: log.write("o  "+str( n_dup_rms_eng)+ " Duplicates removed (RMSD < "+str(args.rms_threshold)+" / E < "+str(args.energy_threshold)+" kcal/mol).")
-	if args.verbose == True: log.write("o  "+str( n_high)+ " Conformers rejected based on energy (E > "+str(args.ewin)+" kcal/mol).")
+	if args.verbose == True: log.write("o  "+str( n_dup_energy)+ " Duplicates removed initial energy (E < "+str(args.initial_energy_threshold)+" kcal/mol)")
+	if args.verbose == True: log.write("o  "+str( n_dup_rms_eng)+ " Duplicates removed (RMSD < "+str(args.rms_threshold)+" / E < "+str(args.energy_threshold)+" kcal/mol)")
+	if args.verbose == True: log.write("o  "+str( n_high)+ " Conformers rejected based on energy (E > "+str(args.ewin)+" kcal/mol)")
 
 	# if SQM energy exists, overwrite RDKIT energies and geometries
 	cids = list(range(len(outmols)))
@@ -2043,4 +2043,3 @@ def mult_min(name, args, program,log,dup_data,dup_data_idx):
 
 	# write the filtered, ordered conformers to external file
 	write_confs(outmols, c_energy, name, args, program,log)
-	return outmols, c_energy
