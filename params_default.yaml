@@ -56,6 +56,7 @@ energy_threshold_for_gaussian : 100  # in kcal/mol, from all the conformers gene
 
 # (4.2) DEFINITION OF A SECOND CATEGORY OF ATOMS SEPARATED IN GENECP
 genecp_atoms : [] # list of atoms included in the gen_ecp part
+gen_atoms : [] # list of atoms inclueded in gen part
 
 # (4.3) DEFINTION OF BASIS SET AND LEVEL OF THEORY AND SOLVENT
 basis_set : ['def2svp'] # basis set
@@ -68,7 +69,7 @@ dispersion_correction : False # include dispersion correction
 empirical_dispersion : 'GD3BJ' # type of dispersion correction
 
 # (4.5) SOLVATION MODEL
-solvent_model : 'IEFPCM' # type of solvation model. Options: gas_phase or any solvation model (i.e. SMD, IEFPCM, CPCM)
+solvent_model : 'gas_phase' # type of solvation model. Options: gas_phase or any solvation model (i.e. SMD, IEFPCM, CPCM)
 solvent_name : 'Chloroform' # solvent
 
 # (4.6) DEFAULT PARAMETERS FOR GAUSSIAN OPTIMIZATION

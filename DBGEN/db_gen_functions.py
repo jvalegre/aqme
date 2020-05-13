@@ -43,22 +43,22 @@ columns = ['Structure', 'E', 'ZPE', 'H', 'T.S', 'T.qh-S', 'G(T)', 'qh-G(T)']
 
 # CLASS FOR LOGGING
 class Logger:
-    def __init__(self, filein, append):
-        suffix = 'dat'
-        self.log = open('{0}_{1}.{2}'.format(filein, append, suffix), 'w')
+	def __init__(self, filein, append):
+		suffix = 'dat'
+		self.log = open('{0}_{1}.{2}'.format(filein, append, suffix), 'w')
 
-    def write(self, message):
-        print(message, end='\n')
-        self.log.write(message+ "\n")
+	def write(self, message):
+		print(message, end='\n')
+		self.log.write(message+ "\n")
 
-    def fatal(self, message):
-        print(message, end='\n')
-        self.log.write(message + "\n")
-        self.finalize()
-        sys.exit(1)
+	def fatal(self, message):
+		print(message, end='\n')
+		self.log.write(message + "\n")
+		self.finalize()
+		sys.exit(1)
 
-    def finalize(self):
-        self.log.close()
+	def finalize(self):
+		self.log.close()
 
 # SUBSTITUTION WITH I
 def substituted_mol(smi,args,log):
@@ -364,7 +364,7 @@ def template_embed_optimize(molecule_embed,mol_1,args,log):
 		n -= 1
 	energy = ff.CalcEnergy()
 	# rotate the embedded conformation onto the core_mol:
-	rms = rdMolAlign.AlignMol(molecule_embed, mol_1, atomMap=algMap,reflect=True,maxIters=100)
+	rdMolAlign.AlignMol(molecule_embed, mol_1, atomMap=algMap,reflect=True,maxIters=100)
 
 	return molecule_embed, coordMap, algMap
 
@@ -543,22 +543,85 @@ def read_energies(file,log): # parses the energies from sdf files - then used to
 	f.close()
 	return energies
 
-# MAIN FUNCTION TO CREATE GAUSSIAN JOBS
-def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args,log,charge_data):
+def header_com(name,lot,bs,bs_gcp, args, log, input_sp, input, genecp):
+	#chk option
+	if args.chk:
+		if args.single_point:
+			if genecp != 'None':
+				header = [
+					'%chk={}.chk'.format(name),
+					'%mem={}'.format(args.mem),
+					'%nprocshared={}'.format(args.nprocs),
+					'# {0}'.format(lot)+ '/'+ genecp + ' '+ input_sp ]
+			else:
+				header = [
+					'%chk={}.chk'.format(name),
+					'%mem={}'.format(args.mem),
+					'%nprocshared={}'.format(args.nprocs),
+					'# {0}'.format(lot)+ '/'+ bs + ' '+ input_sp ]
+		else:
+			if genecp != 'None':
+				header = [
+						'%chk={}.chk'.format(name),
+						'%mem={}'.format(args.mem),
+						'%nprocshared={}'.format(args.nprocs),
+						'# {0}'.format(lot)+ '/'+ genecp + ' '+ input ]
+			else:
+				header = [
+						'%chk={}.chk'.format(name),
+						'%mem={}'.format(args.mem),
+						'%nprocshared={}'.format(args.nprocs),
+						'# {0}'.format(lot)+ '/'+ bs + ' '+ input ]
+	else:
+		if args.single_point:
+			if genecp != 'None':
+				header = [
+					'%mem={}'.format(args.mem),
+					'%nprocshared={}'.format(args.nprocs),
+					'# {0}'.format(lot)+ '/'+ genecp + ' '+ input_sp ]
+			else:
+				header = [
+					'%mem={}'.format(args.mem),
+					'%nprocshared={}'.format(args.nprocs),
+					'# {0}'.format(lot)+ '/'+ bs + ' '+ input_sp ]
 
-	#find location of molecule and respective scharges
-	name_list = name.split('_')
-	if 'xtb' or 'ani' in name_list:
-		name_molecule = name[:-4]
-	if 'rdkit' in name_list:
-		name_molecule = name[:-6]
-	if 'rotated' in name_list:
-		name_molecule = name[:-8]
+		else:
+			if genecp != 'None':
+				header = [
+					'%mem={}'.format(args.mem),
+					'%nprocshared={}'.format(args.nprocs),
+					'# {0}'.format(lot)+ '/'+ genecp + ' '+ input ]
+			else:
+				header = [
+					'%mem={}'.format(args.mem),
+					'%nprocshared={}'.format(args.nprocs),
+					'# {0}'.format(lot)+ '/'+ bs + ' '+ input ]
+	return header
 
-	for i in range(len(charge_data)):
-		if charge_data.loc[i,'Molecule'] == name_molecule:
-			charge_com = charge_data.loc[i,'Overall charge']
+def convert_sdf_to_com(path_for_file,file,com,com_low,energies,header,args):
 
+	if args.lowest_only:
+		subprocess.run(
+			  ['obabel', '-isdf', path_for_file+file, '-ocom', '-O'+com_low,'-l' , '1', '-xk', '\n'.join(header)]) #takes the lowest conformer which is the first in the file
+	elif args.lowest_n:
+		no_to_write = 0
+		if len(energies) != 1:
+			for i in range(len(energies)):
+				energy_diff = energies[i] - energies[0]
+				if energy_diff < args.energy_threshold_for_gaussian: # thershold is in kcal/mol and energies are in kcal/mol as well
+					no_to_write +=1
+			subprocess.run(
+				 ['obabel', '-isdf', path_for_file+file, '-f', '1', '-l' , str(no_to_write), '-osdf', '-Otemp.sdf'])
+			subprocess.run(
+				  ['obabel', '-isdf', 'temp.sdf', '-ocom', '-O'+com,'-m', '-xk', '\n'.join(header)])
+		else:
+			subprocess.run(
+				  ['obabel', '-isdf', path_for_file+file, '-ocom', '-O'+com,'-m', '-xk', '\n'.join(header)])
+	else:
+		subprocess.run(
+			  ['obabel', '-isdf', path_for_file+file, '-ocom', '-O'+com,'-m', '-xk', '\n'.join(header)])
+
+def input_line(args):
 	#definition of input lines
 	if args.frequencies:
 		if args.dispersion_correction:
@@ -590,6 +653,25 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args,log,cha
 			else :
 				input = 'opt=(maxcycles={0}) scrf=({1},solvent={2})'.format(args.max_cycle_opt,args.solvent_model, args.solvent_name) #add solvent if needed
 				input_sp = 'scrf=({0},solvent={1}) nmr=giao'.format(args.solvent_model, args.solvent_name)  ##add solvent if needed
+	return input, input_sp
+
+# MAIN FUNCTION TO CREATE GAUSSIAN JOBS
+def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args,log,charge_data):
+
+	#find location of molecule and respective scharges
+	name_list = name.split('_')
+	if 'xtb' or 'ani' in name_list:
+		name_molecule = name[:-4]
+	if 'rdkit' in name_list:
+		name_molecule = name[:-6]
+	if 'rotated' in name_list:
+		name_molecule = name[:-8]
+
+	for i in range(len(charge_data)):
+		if charge_data.loc[i,'Molecule'] == name_molecule:
+			charge_com = charge_data.loc[i,'Overall charge']
+
+	input, input_sp = input_line(args)
 
 	#defining genecp
 	genecp = 'None'
@@ -631,59 +713,13 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args,log,cha
 	com = '{0}_.com'.format(name)
 	com_low = '{0}_low.com'.format(name)
 
+	header = header_com(name,lot, bs, bs_gcp,args,log,input_sp, input, genecp)
+
+	convert_sdf_to_com(path_for_file,file,com,com_low,energies,header,args)
+
+	com_files = glob.glob('{0}_*.com'.format(name))
+
 	if genecp =='genecp' or genecp == 'gen':
-		#chk option
-		if args.chk:
-			if args.single_point:
-				header = [
-					'%chk={}.chk'.format(name),
-					'%mem={}'.format(args.mem),
-					'%nprocshared={}'.format(args.nprocs),
-					'# {0}'.format(lot)+ '/'+ genecp + ' '+ input_sp ]
-			else:
-				header = [
-						'%chk={}.chk'.format(name),
-						'%mem={}'.format(args.mem),
-						'%nprocshared={}'.format(args.nprocs),
-						'# {0}'.format(lot)+ '/'+ genecp + ' '+ input ]
-
-		else:
-			if args.single_point:
-				header = [
-					'%mem={}'.format(args.mem),
-					'%nprocshared={}'.format(args.nprocs),
-					'# {0}'.format(lot)+ '/'+ genecp + ' '+ input_sp ]
-			else:
-				header = [
-					'%mem={}'.format(args.mem),
-					'%nprocshared={}'.format(args.nprocs),
-					'# {0}'.format(lot)+ '/'+ genecp + ' '+ input ]
-
-		if args.lowest_only:
-			subprocess.run(
-				  ['obabel', '-isdf', path_for_file+file, '-ocom', '-O'+com_low,'-l' , '1', '-xk', '\n'.join(header)]) #takes the lowest conformer which is the first in the file
-		elif args.lowest_n:
-			no_to_write = 0
-			if len(energies) != 1:
-				for i in range(len(energies)):
-					energy_diff = energies[i] - energies[0]
-					if energy_diff < args.energy_threshold_for_gaussian: # thershold is in kcal/mol and energies are in kcal/mol as well
-						no_to_write +=1
-				subprocess.run(
-					 ['obabel', '-isdf', path_for_file+file, '-f', '1', '-l' , str(no_to_write), '-osdf', '-Otemp.sdf'])
-				subprocess.run(
-					  ['obabel', '-isdf', 'temp.sdf', '-ocom', '-O'+com,'-m', '-xk', '\n'.join(header)])
-			else:
-				subprocess.run(
-					  ['obabel', '-isdf', path_for_file+file, '-ocom', '-O'+com,'-m', '-xk', '\n'.join(header)])
-		else:
-			subprocess.run(
-				  ['obabel', '-isdf', path_for_file+file, '-ocom', '-O'+com,'-m', '-xk', '\n'.join(header)])
-
-		#adding the basis set at the end of the FILES
-		#grab all the com FILES
-		com_files = glob.glob('{0}_*.com'.format(name))
-
 		for file in com_files:
 			ecp_list,ecp_genecp_atoms,ecp_gen_atoms = [],False,False
 			read_lines = open(file,"r").readlines()
@@ -756,8 +792,8 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args,log,cha
 						for i in range(len(ecp_list)):
 							if ecp_list[i] in args.genecp_atoms:
 								fileout.write(ecp_list[i]+' ')
-					fileout.write('0\n')
-					fileout.write(bs_gcp+'\n\n')
+						fileout.write('0\n')
+						fileout.write(bs_gcp+'\n\n')
 			fileout.close()
 
 			#change file by moving to new file
@@ -770,59 +806,6 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args,log,cha
 		os.chdir(path_for_file)
 
 	else:
-		#chk option
-		if args.chk:
-			if args.single_point:
-				header = [
-					'%chk={}.chk'.format(name),
-					'%mem={}'.format(args.mem),
-					'%nprocshared={}'.format(args.nprocs),
-					'# {0}'.format(lot)+ '/'+ bs + ' '+ input_sp ]
-			else:
-				header = [
-						'%chk={}.chk'.format(name),
-						'%mem={}'.format(args.mem),
-						'%nprocshared={}'.format(args.nprocs),
-						'# {0}'.format(lot)+ '/'+ bs + ' '+ input ]
-
-		else:
-			if args.single_point:
-				header = [
-					'%mem={}'.format(args.mem),
-					'%nprocshared={}'.format(args.nprocs),
-					'# {0}'.format(lot)+ '/'+ bs + ' '+ input_sp ]
-			else:
-				header = [
-					'%mem={}'.format(args.mem),
-					'%nprocshared={}'.format(args.nprocs),
-					'# {0}'.format(lot)+ '/'+ bs + ' '+ input ]
-
-		if args.lowest_only:
-			subprocess.run(
-				  ['obabel', '-isdf', path_for_file+file, '-ocom', '-O'+com_low,'-l' , '1', '-xk', '\n'.join(header)]) #takes the lowest conformer which is the first in the file
-
-		elif args.lowest_n:
-			no_to_write = 0
-			if len(energies) != 1:
-				for i in range(len(energies)):
-					energy_diff = energies[i] - energies[0]
-					if energy_diff < args.energy_threshold_for_gaussian: # thershold is in kcal/mol and energies are in kcal/mol as well
-						no_to_write +=1
-				subprocess.run(
-					 ['obabel', '-isdf', path_for_file+file, '-f', '1', '-l' , str(no_to_write), '-osdf', '-Otemp.sdf'])
-				subprocess.run(
-					  ['obabel', '-isdf', 'temp.sdf', '-ocom', '-O'+com,'-m', '-xk', '\n'.join(header)])
-
-			else:
-				subprocess.run(
-					  ['obabel', '-isdf', path_for_file+file, '-ocom', '-O'+com,'-m', '-xk', '\n'.join(header)])
-
-		else:
-			subprocess.run(
-				  ['obabel', '-isdf', path_for_file+file, '-ocom', '-O'+com,'-m', '-xk', '\n'.join(header)])
-
-		com_files = glob.glob('{0}_*.com'.format(name))
-
 		for file in com_files:
 			read_lines = open(file,"r").readlines()
 
@@ -852,7 +835,7 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args,log,cha
 
 			#submitting the gaussian file on summit
 			if args.qsub:
-				os.system(args.submission_command + rename_file_name)
+				os.system(arngs.submission_command + rename_file_name)
 
 		os.chdir(path_for_file)
 
@@ -867,42 +850,20 @@ def check_for_final_folder(w_dir,log):
 			dir_found =True
 	return w_dir
 
+def moving_log_files(source, destination, file):
+	try:
+		os.makedirs(destination)
+		shutil.move(source, destination)
+	except OSError:
+		if  os.path.isdir(destination) and not os.path.exists(destination+file):
+			shutil.move(source, destination)
+		else:
+			raise
+
 # DEFINTION OF OUTPUT ANALYSER and NMR FILES CREATOR
 def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin,log):
 
-	#log.write(w_dir)
-
-	#definition of input lines
-	if args.frequencies:
-		if args.dispersion_correction:
-			if args.solvent_model == 'gas_phase':
-				input = 'opt=(maxcycles={0}) freq=noraman empiricaldispersion={1}'.format(args.max_cycle_opt,args.empirical_dispersion)
-				input_sp = 'nmr=giao empiricaldispersion={0}'.format(args.empirical_dispersion)  #input for single point nmr
-			else :
-				input = 'opt=(maxcycles={0}) freq=noraman scrf=({1},solvent={2}) empiricaldispersion={3}'.format(args.max_cycle_opt, args.solvent_model, args.solvent_name,args.empirical_dispersion ) #add solvent if needed
-				input_sp = 'scrf=({0},solvent={1}) nmr=giao empiricaldispersion={2}'.format(args.solvent_model, args.solvent_name, args.empirical_dispersion)  ##add solvent if needed
-		else:
-			if args.solvent_model == 'gas_phase':
-				input = 'opt=(maxcycles={0}) freq=noraman'.format(args.max_cycle_opt)
-				input_sp = 'nmr=giao ' #input for single point nmr
-			else :
-				input = 'opt=(maxcycles={0}) freq=noraman scrf=({1},solvent={2})'.format(args.max_cycle_opt,args.solvent_model, args.solvent_name) #add solvent if needed
-				input_sp = 'scrf=({0},solvent={1}) nmr=giao'.format(args.solvent_model, args.solvent_name)  ##add solvent if needed
-	else:
-		if args.dispersion_correction:
-			if args.solvent_model == 'gas_phase':
-				input = 'opt=(maxcycles={0}) empiricaldispersion={1}'.format(args.max_cycle_opt,args.empirical_dispersion)
-				input_sp = 'nmr=giao empiricaldispersion={0}'.format(args.empirical_dispersion)  #input for single point nmr
-			else :
-				input = 'opt=(maxcycles={0}) scrf=({1},solvent={2}) empiricaldispersion={3}'.format(args.max_cycle_opt,args.solvent_model, args.solvent_name,args.empirical_dispersion ) #add solvent if needed
-				input_sp = 'scrf=({0},solvent={1}) nmr=giao empiricaldispersion={2}'.format(args.solvent_model, args.solvent_name, args.empirical_dispersion)  ##add solvent if needed
-		else:
-			if args.solvent_model == 'gas_phase':
-				input = 'opt=(maxcycles={0})'.format(args.max_cycle_opt)
-				input_sp = 'nmr=giao ' #input for single point nmr
-			else :
-				input = 'opt=(maxcycles={0}) scrf=({1},solvent={2})'.format(args.max_cycle_opt,args.solvent_model, args.solvent_name) #add solvent if needed
-				input_sp = 'scrf=({0},solvent={1}) nmr=giao'.format(args.solvent_model, args.solvent_name)  ##add solvent if needed
+	input, input_sp = input_line(args)
 
 	for file in log_files:
 
@@ -958,15 +919,15 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin,log):
 					break
 				# Sets where the final coordinates are inside the file
 				###if outlines[i].find("Input orientation") > -1: standor = i
+				if stop_get_details_dis_rot !=1 and (outlines[i].find("Distance matrix") > -1 or outlines[i].find("Rotational constants") >-1) :
+					if outlines[i-1].find("-------") > -1:
+						disrotor = i
+						stop_get_details_dis_rot += 1
 				if outlines[i].find("Standard orientation") > -1 and stop_get_details_stand_or !=1 :
 					standor = i
 					NATOMS = disrotor-i-6
 					#log.write(NATOMS)
 					stop_get_details_stand_or += 1
-				if stop_get_details_dis_rot !=1 and (outlines[i].find("Distance matrix") > -1 or outlines[i].find("Rotational constants") >-1) :
-					if outlines[i-1].find("-------") > -1:
-						disrotor = i
-						stop_get_details_dis_rot += 1
 				# Get the frequencies and identifies negative frequencies
 				if outlines[i].find(" Frequencies -- ") > -1 and stop_get_details_freq != 1:
 					nfreqs = len(outlines[i].split())
@@ -1070,30 +1031,12 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin,log):
 		source = w_dir+file
 
 		if IM_FREQS == 0 and TERMINATION == "normal":
-
-			#only if normally terminated move to the finished folder of first run.
-			# destination = finished_folder(w_dir)
 			destination = w_dir_fin
-
-			try:
-				os.makedirs(destination)
-				shutil.move(source, destination)
-			except OSError:
-				if  os.path.isdir(destination) and not os.path.exists(destination+file):
-					shutil.move(source, destination)
-				else:
-					raise
+			moving_log_files(source,destination, file)
 
 		if IM_FREQS > 0:
 			destination = w_dir+'imaginary_frequencies/'
-			try:
-				os.makedirs(destination)
-				shutil.move(source, destination)
-			except OSError:
-				if  os.path.isdir(destination) and not os.path.exists(destination+file):
-					shutil.move(source, destination)
-				else:
-					raise
+			moving_log_files(source,destination, file)
 
 		if IM_FREQS == 0 and TERMINATION == "error":
 			if stop_rms == 0 and ERRORTYPE == "atomicbasiserror":
@@ -1102,26 +1045,11 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin,log):
 				destination = w_dir+'failed_error/SCF_error'
 			else:
 				destination = w_dir+'failed_error/unknown_error'
-			try:
-				os.makedirs(destination)
-				shutil.move(source, destination)
-			except OSError:
-				if  os.path.isdir(destination) and not os.path.exists(destination+file):
-					shutil.move(source, destination)
-				else:
-					raise
+			moving_log_files(source,destination, file)
 
 		if IM_FREQS == 0 and TERMINATION == "unfinished":
 			destination = w_dir+'failed_unfinished/'
-			try:
-				os.makedirs(destination)
-				shutil.move(source, destination)
-			except OSError:
-				if  os.path.isdir(destination) and not os.path.exists(destination+file):
-					shutil.move(source, destination)
-				else:
-					raise
-
+			moving_log_files(source,destination, file)
 
 		if IM_FREQS > 0 or TERMINATION != "normal" and not os.path.exists(w_dir+'failed_error/unknown_error/'+file) and not os.path.exists(w_dir+'failed_error/atomic_basis_error/'+file):
 
@@ -1141,85 +1069,94 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin,log):
 			log.write('-> Creating new gaussian input files for {0}/{1} file {2}'.format(lot,bs,name))
 
 			# Options for genecp
-			ecp_list,ecp_genecp_atoms = [],False
+			ecp_list,ecp_genecp_atoms,ecp_gen_atoms = [],False,False
 
 			for i in range(len(ATOMTYPES)):
 				if ATOMTYPES[i] not in ecp_list and ATOMTYPES[i] in possible_atoms:
 					ecp_list.append(ATOMTYPES[i])
 				if ATOMTYPES[i] in args.genecp_atoms:
 				   ecp_genecp_atoms = True
-			if ecp_genecp_atoms == False:
+				if ATOMTYPES[i] in args.gen_atoms:
+				   ecp_gen_atoms = True
+			if ecp_gen_atoms == True:
 				genecp = 'gen'
-			if ecp_genecp_atoms:
+			if ecp_genecp_atoms == True:
 				genecp = 'genecp'
 
-			if genecp == 'genecp':
-				if ERRORTYPE == 'SCFerror':
+			#error if both genecp and gen are
+			if ecp_genecp_atoms and ecp_gen_atoms:
+				sys.exit("ERROR: Can't use Gen and GenECP at the same time")
+
+			if ERRORTYPE == 'SCFerror':
+				if genecp == 'genecp' or  genecp == 'gen':
 					if args.single_point:
 						keywords_opt = lot +'/'+ genecp+' '+ input_sp + 'SCF=QC'
 					else:
 						keywords_opt = lot +'/'+ genecp+' '+ input + 'SCF=QC'
 				else:
+					if args.single_point:
+						keywords_opt = lot +'/'+ bs+' '+ input_sp + 'SCF=QC'
+					else:
+						keywords_opt = lot +'/'+ bs+' '+ input + 'SCF=QC'
+			else:
+				if genecp == 'genecp' or  genecp == 'gen':
 					if args.single_point:
 						keywords_opt = lot +'/'+ genecp+' '+ input_sp
 					else:
 						keywords_opt = lot +'/'+ genecp+' '+ input
-
-				fileout = open(file.split(".")[0]+'.com', "w")
-				fileout.write("%mem="+str(args.mem)+"\n")
-				fileout.write("%nprocshared="+str(args.nprocs)+"\n")
-				fileout.write("# "+keywords_opt+"\n")
-				fileout.write("\n")
-				fileout.write(name+"\n")
-				fileout.write(str(CHARGE)+' '+str(MULT)+'\n')
-				for atom in range(0,NATOMS):
-					fileout.write('{0:>2} {1:12.8f} {2:12.8f} {3:12.8f}'.format(ATOMTYPES[atom], CARTESIANS[atom][0],  CARTESIANS[atom][1],  CARTESIANS[atom][2]))
-					fileout.write("\n")
-				fileout.write("\n")
-				for i in range(len(ecp_list)):
-					if ecp_list[i] not in args.genecp_atoms:
-						fileout.write(ecp_list[i]+' ')
-				fileout.write('0\n')
-				fileout.write(bs+'\n')
-				fileout.write('****\n')
-				if ecp_genecp_atoms == False:
-					fileout.write('\n')
-				else:
-					for i in range(len(ecp_list)):
-						if ecp_list[i] in args.genecp_atoms:
-							fileout.write(ecp_list[i]+' ')
-					fileout.write('0\n')
-					fileout.write(bs_gcp+'\n')
-					fileout.write('****\n\n')
-					for i in range(len(ecp_list)):
-						if ecp_list[i] in args.genecp_atoms:
-							fileout.write(ecp_list[i]+' ')
-					fileout.write('0\n')
-					fileout.write(bs_gcp+'\n\n')
-				fileout.close()
-			else:
-				if ERRORTYPE == 'SCFerror':
-					if args.single_point:
-						keywords_opt = lot +'/'+ genecp+' '+ input_sp + 'SCF=QC'
-					else:
-						keywords_opt = lot +'/'+ genecp+' '+ input + 'SCF=QC'
 				else:
 					if args.single_point:
 						keywords_opt = lot +'/'+ bs +' '+ input_sp
 					else:
 						keywords_opt = lot +'/'+ bs +' '+ input
-
-				fileout = open(file.split(".")[0]+'.com', "w")
-				fileout.write("%mem="+str(args.mem)+"\n")
-				fileout.write("%nprocshared="+str(args.nprocs)+"\n")
-				fileout.write("# "+keywords_opt+"\n")
+			fileout = open(file.split(".")[0]+'.com', "w")
+			fileout.write("%mem="+str(args.mem)+"\n")
+			fileout.write("%nprocshared="+str(args.nprocs)+"\n")
+			fileout.write("# "+keywords_opt+"\n")
+			fileout.write("\n")
+			fileout.write(name+"\n")
+			fileout.write(str(CHARGE)+' '+str(MULT)+'\n')
+			for atom in range(0,NATOMS):
+				fileout.write('{0:>2} {1:12.8f} {2:12.8f} {3:12.8f}'.format(ATOMTYPES[atom], CARTESIANS[atom][0],  CARTESIANS[atom][1],  CARTESIANS[atom][2]))
 				fileout.write("\n")
-				fileout.write(name+"\n")
-				fileout.write(str(CHARGE)+' '+str(MULT)+'\n')
-				for atom in range(0,NATOMS):
-					fileout.write('{0:>2} {1:12.8f} {2:12.8f} {3:12.8f}'.format(ATOMTYPES[atom], CARTESIANS[atom][0],  CARTESIANS[atom][1],  CARTESIANS[atom][2]))
-					fileout.write("\n")
-				fileout.write("\n")
+			fileout.write("\n")
+			if genecp == 'genecp' or  genecp == 'gen':
+				for i in range(len(ecp_list)):
+					if ecp_list[i] not in (args.genecp_atoms or args.gen_atoms):
+						fileout.write(ecp_list[i]+' ')
+				fileout.write('0\n')
+				fileout.write(bs+'\n')
+				fileout.write('****\n')
+				if ecp_genecp_atoms == False and ecp_gen_atoms == False :
+					fileout.write('\n')
+				else:
+					if len(bs_gcp.split('.')) > 1:
+						if bs_gcp.split('.')[1] == 'txt' or bs_gcp.split('.')[1] == 'yaml':
+							os.chdir(path_for_file)
+							read_lines = open(bs_gcp,"r").readlines()
+							os.chdir(path_write_gjf_files)
+							#chaanging the name of the files to the way they are in xTB Sdfs
+							#getting the title line
+							for line in read_lines:
+								fileout.write(line)
+							fileout.write('\n\n')
+					else:
+						for i in range(len(ecp_list)):
+							if ecp_list[i] in args.genecp_atoms :
+								fileout.write(ecp_list[i]+' ')
+							elif ecp_list[i] in args.gen_atoms :
+								fileout.write(ecp_list[i]+' ')
+						fileout.write('0\n')
+						fileout.write(bs_gcp+'\n')
+						fileout.write('****\n\n')
+						if ecp_genecp_atoms:
+							for i in range(len(ecp_list)):
+								if ecp_list[i] in args.genecp_atoms:
+									fileout.write(ecp_list[i]+' ')
+						fileout.write('0\n')
+						fileout.write(bs_gcp+'\n\n')
+				fileout.close()
+			else:
 				fileout.close()
 
 		#changing directory back to where all files are from new files created.
@@ -1243,67 +1180,73 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin,log):
 			log.write('Creating new single point files files for {0}/{1} file {2}'.format(lot,bs,name))
 
 			# Options for genecp
-			ecp_list,ecp_genecp_atoms = [],False
+			ecp_list,ecp_genecp_atoms, ecp_gen_atoms = [],False,False
 
 			for i in range(len(ATOMTYPES)):
 				if ATOMTYPES[i] not in ecp_list and ATOMTYPES[i] in possible_atoms:
 					ecp_list.append(ATOMTYPES[i])
 				if ATOMTYPES[i] in args.genecp_atoms:
 				   ecp_genecp_atoms = True
-			if ecp_genecp_atoms == False:
+				if ATOMTYPES[i] in args.gen_atoms:
+				   ecp_gen_atoms = True
+			if ecp_gen_atoms == True:
 				genecp = 'gen'
-			if ecp_genecp_atoms:
+			if ecp_genecp_atoms == True:
 				genecp = 'genecp'
 
-			if genecp =='genecp':
-				keywords_opt = lot +'/'+ genecp+' '+ input_sp
+			if genecp =='genecp' or genecp =='gen':
+				keywords_opt = lot +'/'+ genecp+' '+ args.input_for_sp
+			else:
+				keywords_opt = lot +'/'+ bs +' '+ args.input_for_sp
 
-				fileout = open(file.split(".")[0]+'.com', "w")
-				fileout.write("%mem="+str(args.mem)+"\n")
-				fileout.write("%nprocshared="+str(args.nprocs)+"\n")
-				fileout.write("# "+keywords_opt+"\n")
+			fileout = open(file.split(".")[0]+'.com', "w")
+			fileout.write("%mem="+str(args.mem)+"\n")
+			fileout.write("%nprocshared="+str(args.nprocs)+"\n")
+			fileout.write("# "+keywords_opt+"\n")
+			fileout.write("\n")
+			fileout.write(name+"\n")
+			fileout.write(str(CHARGE)+' '+str(MULT)+'\n')
+			for atom in range(0,NATOMS):
+				fileout.write('{0:>2} {1:12.8f} {2:12.8f} {3:12.8f}'.format(ATOMTYPES[atom], CARTESIANS[atom][0],  CARTESIANS[atom][1],  CARTESIANS[atom][2]))
 				fileout.write("\n")
-				fileout.write(name+"\n")
-				fileout.write(str(CHARGE)+' '+str(MULT)+'\n')
-				for atom in range(0,NATOMS):
-					fileout.write('{0:>2} {1:12.8f} {2:12.8f} {3:12.8f}'.format(ATOMTYPES[atom], CARTESIANS[atom][0],  CARTESIANS[atom][1],  CARTESIANS[atom][2]))
-					fileout.write("\n")
-				fileout.write("\n")
+			fileout.write("\n")
+			if genecp =='genecp' or genecp =='gen':
 				for i in range(len(ecp_list)):
-					if ecp_list[i] not in args.genecp_atoms:
+					if ecp_list[i] not in (args.genecp_atoms or args.gen_atoms):
 						fileout.write(ecp_list[i]+' ')
 				fileout.write('0\n')
 				fileout.write(bs+'\n')
 				fileout.write('****\n')
-				if ecp_genecp_atoms == False:
+				if ecp_genecp_atoms == False and ecp_gen_atoms == False :
 					fileout.write('\n')
 				else:
-					for i in range(len(ecp_list)):
-						if ecp_list[i] in args.genecp_atoms:
-							fileout.write(ecp_list[i]+' ')
-					fileout.write('0\n')
-					fileout.write(bs_gcp+'\n')
-					fileout.write('****\n\n')
-					for i in range(len(ecp_list)):
-						if ecp_list[i] in args.genecp_atoms:
-							fileout.write(ecp_list[i]+' ')
-					fileout.write('0\n')
-					fileout.write(bs_gcp+'\n\n')
+					if len(bs_gcp.split('.')) > 1:
+						if bs_gcp.split('.')[1] == 'txt' or bs_gcp.split('.')[1] == 'yaml':
+							os.chdir(path_for_file)
+							read_lines = open(bs_gcp,"r").readlines()
+							os.chdir(path_write_gjf_files)
+							#chaanging the name of the files to the way they are in xTB Sdfs
+							#getting the title line
+							for line in read_lines:
+								fileout.write(line)
+							fileout.write('\n\n')
+					else:
+						for i in range(len(ecp_list)):
+							if ecp_list[i] in args.genecp_atoms :
+								fileout.write(ecp_list[i]+' ')
+							elif ecp_list[i] in args.gen_atoms :
+								fileout.write(ecp_list[i]+' ')
+						fileout.write('0\n')
+						fileout.write(bs_gcp+'\n')
+						fileout.write('****\n\n')
+						if ecp_genecp_atoms:
+							for i in range(len(ecp_list)):
+								if ecp_list[i] in args.genecp_atoms:
+									fileout.write(ecp_list[i]+' ')
+						fileout.write('0\n')
+						fileout.write(bs_gcp+'\n\n')
 				fileout.close()
 			else:
-				keywords_opt = lot +'/'+ bs +' '+ input_sp
-
-				fileout = open(file.split(".")[0]+'.com', "w")
-				fileout.write("%mem="+str(args.mem)+"\n")
-				fileout.write("%nprocshared="+str(args.nprocs)+"\n")
-				fileout.write("# "+keywords_opt+"\n")
-				fileout.write("\n")
-				fileout.write(name+"\n")
-				fileout.write("\n")
-				fileout.write(str(CHARGE)+' '+str(MULT)+'\n')
-				for atom in range(0,NATOMS):
-					fileout.write('{0:>2} {1:12.8f} {2:12.8f} {3:12.8f}'.format(ATOMTYPES[atom], CARTESIANS[atom][0],  CARTESIANS[atom][1],  CARTESIANS[atom][2]))
-					fileout.write("\n")
 				fileout.write("\n")
 
 		#changing directory back to where all files are from new files created.
@@ -1482,7 +1425,7 @@ def genConformer_r(mol, conf, i, matches, degree, sdwriter,args,name,log):
 				log.write('   Force field {} not supported!'.format(args.ff))
 				sys.exit()
 			GetFF.Initialize()
-			converged = GetFF.Minimize(maxIts=args.opt_steps_RDKit)
+			GetFF.Minimize(maxIts=args.opt_steps_RDKit)
 			energy = GetFF.CalcEnergy()
 			mol.SetProp("Energy",energy)
 			mol.SetProp('_Name',name+' - conformer from rotation - ' + str(rotation_count))
@@ -1629,7 +1572,7 @@ def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None,alg_M
 					sys.exit()
 
 				GetFF.Initialize()
-				converged = GetFF.Minimize(maxIts=args.opt_steps_RDKit)
+				GetFF.Minimize(maxIts=args.opt_steps_RDKit)
 				energy = GetFF.CalcEnergy()
 				cenergy.append(GetFF.CalcEnergy())
 
@@ -1662,7 +1605,7 @@ def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None,alg_M
 					n -= 1
 				energy = ff_temp.CalcEnergy()
 				# rotate the embedded conformation onto the core_mol:
-				rms = rdMolAlign.AlignMol(mol, mol_template,prbCid=conf, atomMap=alg_Map,reflect=True,maxIters=100)
+				rdMolAlign.AlignMol(mol, mol_template,prbCid=conf, atomMap=alg_Map,reflect=True,maxIters=100)
 				# elif len(num_atom_match) == 5:
 				#     ff_temp = GetFF(mol, confId=conf)
 				#     conf_temp = mol_template.GetConformer()
@@ -2059,8 +2002,10 @@ def mult_min(name, args, program,log,dup_data,dup_data_idx):
 	cids = list(range(len(outmols)))
 	sortedcids = sorted(cids, key = lambda cid: c_energy[cid])
 
+	name_mol = name.split('_')[0]
+
 	for i, cid in enumerate(sortedcids):
-		outmols[cid].SetProp('_Name', name +' conformer ' + str(i+1))
+		outmols[cid].SetProp('_Name', name_mol +' conformer ' + str(i+1))
 		outmols[cid].SetProp('Energy', c_energy[cid])
 
 	if program == 'xtb':
@@ -2076,4 +2021,5 @@ def mult_min(name, args, program,log,dup_data,dup_data_idx):
 		dup_data.at[dup_data_idx, 'ANI1ccx-Unique-conformers'] = len(sortedcids)
 
 	# write the filtered, ordered conformers to external file
-	write_confs(outmols, c_energy, name, args, program,log)
+
+	write_confs(outmols, c_energy, name_mol, args, program,log)

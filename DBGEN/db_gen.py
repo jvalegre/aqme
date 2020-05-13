@@ -62,6 +62,7 @@ def main():
 	parser.add_argument("--write_gauss", action="store_true", default=False, help="Create input files for Gaussian")
 	parser.add_argument("-a", "--analysis", action="store_true", default=False, help="Fix and analyze Gaussian outputs")
 	parser.add_argument("-r", "--resubmit", action="store_true", default=False, help="Resubmit Gaussian input files")
+	parser.add_argument("--sp", action="store_true", default=False, help="Resubmit Gaussian single point input files")
 
 	#Post analysis
 	parser.add_argument("--dup",action="store_true",default=False, help="Remove Duplicates after DFT optimization")
