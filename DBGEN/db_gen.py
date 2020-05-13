@@ -26,8 +26,8 @@
 from __future__ import print_function
 import argparse, yaml, os, sys, subprocess, glob, shutil, time
 import pandas as pd
-from rdkit import Chem
 from rdkit.Chem import AllChem as Chem
+from periodictable import elements as elementspt
 from DBGEN.db_gen_functions import conformer_generation, substituted_mol, template_embed_sp, Logger, read_energies, write_gaussian_input_file, exp_rules_output
 from DBGEN.db_gen_functions import output_analyzer, check_for_final_folder, dup_calculation, combine_files, boltz_calculation
 
@@ -159,7 +159,7 @@ def main():
 	if args.compute:
 
 		# input file format specified
-		[file_name, file_format] = os.path.splitext(args.input)
+		 file_format = os.path.splitext(args.input)[1]
 
 		if file_format not in ['.smi', '.sdf', '.cdx', '.csv','.com','.gjf']:
 			log.write("\nx  INPUT FILETYPE NOT CURRENTLY SUPPORTED!")
@@ -334,7 +334,7 @@ def main():
 
 			emptylines=[]
 
-			for i in range(0,len(comlines)):
+			for i, line in enumerate(comlines):
 				if len(comlines[i].strip()) == 0:
 					emptylines.append(i)
 

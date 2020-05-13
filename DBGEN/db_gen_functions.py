@@ -1,15 +1,13 @@
 
-"""##################################################
+"""##################################################.
 # This file stores all the functions used by db_gen #
 ##################################################"""
 
-import math, os, sys, traceback, subprocess, glob, shutil, time
-from rdkit import Chem
+import math, os, sys, subprocess, glob, shutil, time
 from rdkit.Chem import AllChem as Chem
 from rdkit.Chem import rdMolTransforms, PropertyMol, rdDistGeom, rdMolAlign, Lipinski, Descriptors
 from rdkit.Geometry import Point3D
 from periodictable import elements as elementspt
-import progress
 from progress.bar import IncrementalBar
 import numpy as np
 import pandas as pd
@@ -24,7 +22,6 @@ try:
 	model = torchani.models.ANI1ccx()
 	from ase.units import Hartree
 
-	import xtb
 	from xtb import GFN2
 except:
 	pass
@@ -44,6 +41,9 @@ columns = ['Structure', 'E', 'ZPE', 'H', 'T.S', 'T.qh-S', 'G(T)', 'qh-G(T)']
 # CLASS FOR LOGGING
 class Logger:
 	def __init__(self, filein, append):
+		"""
+		Logger to write the output to a file
+		"""
 		suffix = 'dat'
 		self.log = open('{0}_{1}.{2}'.format(filein, append, suffix), 'w')
 
@@ -362,7 +362,6 @@ def template_embed_optimize(molecule_embed,mol_1,args,log):
 	while more and n:
 		more = ff.Minimize()
 		n -= 1
-	energy = ff.CalcEnergy()
 	# rotate the embedded conformation onto the core_mol:
 	rdMolAlign.AlignMol(molecule_embed, mol_1, atomMap=algMap,reflect=True,maxIters=100)
 
@@ -413,9 +412,12 @@ def exp_rules_output(mol, args,log):
 	atom_indexes = []
 	for atom in mol.GetAtoms():
 		# Finds the Ir atom and gets the atom types and indexes of all its neighbours
-		for el in elementspt:
-			if el.symbol == args.metal:
-				atomic_number = el.number
+		if atom.GetSymbol() in args.metal:
+			for el in elementspt:
+				if el.symbol == args.metal:
+					atomic_number = el.number
+			atom.SetAtomicNum(atomic_number)
+	for atom in mol.GetAtoms():
 		if atom.GetAtomicNum() == atomic_number:
 			metal_idx = atom.GetIdx()
 			for x in atom.GetNeighbors():
@@ -428,12 +430,16 @@ def exp_rules_output(mol, args,log):
 	# This information is required for the subsequent filtering process based on angles
 	if len(atom_indexes) == args.complex_coord:
 		ligand_atoms = []
+
 		for i in range(len(atom_indexes)):
 			# This is a filter that excludes molecules that fell apart during DFT geometry
 			# optimization (i.e. a N atom from one of the ligands separated from Ir). The
 			# max distance allowed can be tuned in length_filter
 			bond_length = rdMolTransforms.GetBondLength(mol_conf,metal_idx,atom_indexes[i])
-			length_filter = 2.25
+			if ligand_links[i] == 'P':
+				length_filter = 2.60
+			else:
+				length_filter = 2.25
 			if bond_length > length_filter:
 				passing = False
 				break
@@ -443,10 +449,14 @@ def exp_rules_output(mol, args,log):
 					# We know that the ligands never have 2 carbon atoms bonding the Ir atom. We
 					# only use atom_indexes[i] for C atoms, and atom_indexes[j] for the potential
 					# N atoms that are part of the same Ph_Py ligand
-					if ligand_links[i] == 'C' and atom_indexes[j] != 'C':
+					if ligand_links[i] == 'C':
 						# This part detects the Ir-C bond and breaks it, breaking the Ph_Py ring
 						bond = mol.GetBondBetweenAtoms(atom_indexes[i], metal_idx)
 						new_mol = Chem.FragmentOnBonds(mol, [bond.GetIdx()],addDummies=True, dummyLabels=[(atom_indexes[i], metal_idx)])
+						if new_mol.GetAtomWithIdx(atom_indexes[i]).IsInRingSize(5) == True:
+							five_mem = True
+						else:
+							five_mem = False
 						# Now, identify whether or not the initial 5-membered ring formed between
 						# [-Ir-C-C-C-N-] is broken when we break the Ir-C bond. This works
 						# because Ph_Py units bind Ir in the same way always, through 1 C and 1 N
@@ -455,21 +465,19 @@ def exp_rules_output(mol, args,log):
 						# 5-membered ring (atom.IsInRingSize(5) == False) which means that
 						# this atom was initially inside the same ligand as the
 						# parent C of atom_indexes[i])
-						if new_mol.GetAtomWithIdx(atom_indexes[j]).IsInRingSize(5) == False:
-							# This will append pairs of atoms indexes in the form:
-							# '[idx for C, idx for N]', where the couples are C and N atoms that
-							# are part of the same Ph_Py ligand
-							ligand_atoms.append([atom_indexes[i],atom_indexes[j]])
-							break
+						if five_mem == False:
+							if new_mol.GetAtomWithIdx(atom_indexes[j]).IsInRingSize(5) == False:
+								bond_2 = mol.GetBondBetweenAtoms(atom_indexes[j], metal_idx)
+								new_mol_2 = Chem.FragmentOnBonds(mol, [bond_2.GetIdx()],addDummies=True, dummyLabels=[(atom_indexes[j], metal_idx)])
+								#doing backwards as well eg. Ir N bond
+								if new_mol_2.GetAtomWithIdx(atom_indexes[i]).IsInRingSize(5) == False:
+									ligand_atoms.append([atom_indexes[i],atom_indexes[j]])
+									break
 						else:
-							# An additional filter just in case the N is part of a 5-membered
-							# ring besides the 5-membered ring that forms with Ir
-							bond_2 = mol.GetBondBetweenAtoms(atom_indexes[j], metal_idx)
-							new_mol_2 = Chem.FragmentOnBonds(mol, [bond_2.GetIdx()],addDummies=True, dummyLabels=[(atom_indexes[j], metal_idx)])
-							if new_mol_2.GetAtomWithIdx(atom_indexes[i]).IsInRingSize(5) == False:
+							if new_mol.GetAtomWithIdx(atom_indexes[j]).IsInRingSize(5) == False:
 								ligand_atoms.append([atom_indexes[i],atom_indexes[j]])
 								break
-		if passing:
+		if passing == True:
 			# This stop variable and the breaks inside the inner loops will make that if there
 			# is one angle that does not meet the criteria for valid conformers, the outter (i)
 			# and inner (j) loops will stop simultaneously (saves time since the molecule is
@@ -796,15 +804,6 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args,log,cha
 						fileout.write(bs_gcp+'\n\n')
 			fileout.close()
 
-			#change file by moving to new file
-			os.rename(file,rename_file_name)
-
-			#submitting the gaussian file on summit
-			if args.qsub:
-				os.system(args.submission_command + rename_file_name)
-
-		os.chdir(path_for_file)
-
 	else:
 		for file in com_files:
 			read_lines = open(file,"r").readlines()
@@ -830,14 +829,14 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args,log,cha
 				out.writelines(read_lines)
 				out.close()
 
-			#change file by moving to new file
-			os.rename(file,rename_file_name)
+	#change file by moving to new file
+	os.rename(file,rename_file_name)
 
-			#submitting the gaussian file on summit
-			if args.qsub:
-				os.system(arngs.submission_command + rename_file_name)
+	#submitting the gaussian file on summit
+	if args.qsub:
+		os.system(args.submission_command + rename_file_name)
 
-		os.chdir(path_for_file)
+	os.chdir(path_for_file)
 
 # CHECKS THE FOLDER OF FINAL LOG FILES
 def check_for_final_folder(w_dir,log):
@@ -1269,7 +1268,7 @@ def dup_calculation(val,w_dir, agrs,log):
 	dupfile = open('duplicate_files_checked.txt',"r")
 	duplines = dupfile.readlines()
 
-	for i in range(0,len(duplines)):
+	for i,line in enumerate(duplines):
 		if duplines[i].find('duplicate') > -1:
 			dup_file_list.append(duplines[i].split(' ')[1])
 
@@ -1280,7 +1279,7 @@ def dup_calculation(val,w_dir, agrs,log):
 			os.makedirs(destination)
 			shutil.move(source, destination)
 		except OSError:
-			if  os.path.isdir(destination) and not os.path.exists(destination+file):
+			if  os.path.isdir(destination) and not os.path.exists(destination):
 				shutil.move(source, destination)
 			else:
 				raise
@@ -1856,7 +1855,7 @@ def optimize(mol, args, program,log,dup_data,dup_data_idx):
 
 		ase_molecule = ase.Atoms(elements, positions=coordinates.tolist()[0], calculator=model.ase())
 		### make a function for constraints and optimization
-		if constraints != None:
+		if args.constraints != None:
 			fb = ase.constraints.FixBondLength(0, 1)
 			ase_molecule.set_distance(0,1,2.0)
 			ase_molecule.set_constraint(fb)
