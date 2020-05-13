@@ -159,7 +159,7 @@ def main():
 	if args.compute:
 
 		# input file format specified
-		 file_format = os.path.splitext(args.input)[1]
+		file_format = os.path.splitext(args.input)[1]
 
 		if file_format not in ['.smi', '.sdf', '.cdx', '.csv','.com','.gjf']:
 			log.write("\nx  INPUT FILETYPE NOT CURRENTLY SUPPORTED!")

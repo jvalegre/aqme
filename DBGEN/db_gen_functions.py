@@ -727,8 +727,8 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args,log,cha
 
 	com_files = glob.glob('{0}_*.com'.format(name))
 
-	if genecp =='genecp' or genecp == 'gen':
-		for file in com_files:
+	for file in com_files:
+		if genecp =='genecp' or genecp == 'gen':
 			ecp_list,ecp_genecp_atoms,ecp_gen_atoms = [],False,False
 			read_lines = open(file,"r").readlines()
 
@@ -804,8 +804,7 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args,log,cha
 						fileout.write(bs_gcp+'\n\n')
 			fileout.close()
 
-	else:
-		for file in com_files:
+		else:
 			read_lines = open(file,"r").readlines()
 
 			#changing the name of the files to the way they are in xTB Sdfs
@@ -829,12 +828,12 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args,log,cha
 				out.writelines(read_lines)
 				out.close()
 
-	#change file by moving to new file
-	os.rename(file,rename_file_name)
+		#change file by moving to new file
+		os.rename(file,rename_file_name)
 
-	#submitting the gaussian file on summit
-	if args.qsub:
-		os.system(args.submission_command + rename_file_name)
+		#submitting the gaussian file on summit
+		if args.qsub:
+			os.system(args.submission_command + rename_file_name)
 
 	os.chdir(path_for_file)
 
