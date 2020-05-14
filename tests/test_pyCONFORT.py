@@ -43,7 +43,7 @@ def test_confgen(smiles, params_file, n_conf, E_confs, n_confs_xtb, E_confs_xtb)
     subprocess.run(['python', '-m', 'DBGEN', '--varfile', params_file])
     print(path,glob.glob('*'))
     # Retrieving the generated CSV file
-    df_output = pd.read_csv(params_file.split('.')[0]+'.csv')
+    df_output = pd.read_csv(smiles+'-Duplicates Data.csv')
     file = params_file.split('.')[0]
 
     # tests for RDKit
