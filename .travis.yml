@@ -26,6 +26,7 @@ install:
   - conda install pyyaml
   - conda install pandas
   - conda install -q -c rdkit rdkit
+  - conda install -c anaconda pytest
 
 before_script:
  - export RDBASE=$CONDA_PREFIX/Library/share/RDKit
