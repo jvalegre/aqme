@@ -40,7 +40,7 @@ def test_confgen(smiles, params_file, n_conf, E_confs, n_confs_xtb, E_confs_xtb)
     path = os.getcwd()
 
     # gets into the directory for testing SMILES
-    os.chdir(path+smiles.split('.')[0])
+    os.chdir(path+'/'+smiles.split('.')[0])
 
     # Conformer generation using different parameters. It creates a CSV file
     subprocess.run(['python', '-m', 'DBGEN', '--varfile', params_file])
