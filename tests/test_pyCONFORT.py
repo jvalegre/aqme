@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import os
+import os, glob
 import pytest
 import pandas as pd
 import subprocess
@@ -38,12 +38,13 @@ def read_energies(file): # parses the energies from sdf files - then used to fil
 def test_confgen(smiles, params_file, n_conf, E_confs, n_confs_xtb, E_confs_xtb):
     # saves the working directory
     path = os.getcwd()
-
-    # Conformer generation using different parameters
+    print(path,glob.glob('*'))
+    # Conformer generation using different parameters. It creates a CSV file
     subprocess.run(['python', '-m', 'DBGEN', '--varfile', params_file])
-
-    df_output = pd.read_csv(params_file.SPLIT('.')[0])
-    file = params_file.SPLIT('.')[0]
+    print(path,glob.glob('*'))
+    # Retrieving the generated CSV file
+    df_output = pd.read_csv(params_file.split('.')[0]+'.csv')
+    file = params_file.split('.')[0]
 
     # tests for RDKit
     os.chdir(path+'\\RDKit_generated_SDF_files')
@@ -57,7 +58,7 @@ def test_confgen(smiles, params_file, n_conf, E_confs, n_confs_xtb, E_confs_xtb)
 
     print(test_init_rdkit_confs,test_prefilter_rdkit_confs)
     print(test_filter_rdkit_confs,test_rdkit_E_confs)
-    
+
     assert n_confs == test_n_confs
     assert E_confs == test_E_confs
 
