@@ -21,7 +21,7 @@ get info
 
 #pass the respective file as the first argument
 #running the compute job for either csv, smi, sdf, cdx
-python /DBcg/db_gen.py --compute --input $0
+python /DBcg/db_gen.py --compute --input "$0"
 
 #now after the above step all jobs would have been submitted.
 #check for any non normal termination using the output analysis

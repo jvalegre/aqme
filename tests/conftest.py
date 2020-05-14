@@ -11,6 +11,5 @@ except ImportError:
     here = os.path.dirname(os.path.abspath(__file__))
     BASEPATH = os.path.normpath(os.path.join(here, '..', 'pyCONFORT'))
 
-
 def datapath(path):
     return os.path.join(BASEPATH, 'examples', path)
