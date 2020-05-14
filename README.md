@@ -1,5 +1,5 @@
 ![](Logos/DBGEN%20logo.tif)
-[![Build Status](https://travis-ci.com/jvalegre/pyCONFORT.svg?branch=master)](https://travis-ci.com/jvalegre/pyCONFORT)
+![Build Status](https://img.shields.io/travis/com/jvalegre/pyconfort?label=Linux%20CI&logo=Travis)
 ![PyPI](https://img.shields.io/pypi/v/pyCONFORT)
 ![Size](https://img.shields.io/github/repo-size/jvalegre/pyCONFORT?label=size)
 [![CodeFactor](https://www.codefactor.io/repository/github/jvalegre/pyconfort/badge/master)](https://www.codefactor.io/repository/github/jvalegre/pyconfort/overview/master)
