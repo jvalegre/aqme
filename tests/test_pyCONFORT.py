@@ -5,6 +5,7 @@ import os
 import pytest
 import pandas as pd
 from conftest import datapath
+import subprocess
 
 # The target value is gonna be the number of conformers (n_conf). The other
 # parameters are gonna be variables used by DBGEN
