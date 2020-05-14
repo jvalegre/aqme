@@ -28,6 +28,7 @@ install:
   - conda install -q -c rdkit rdkit
   - conda install -c anaconda pytest
   - python setup.py install
+  - conda install -c conda-forge periodictable
 
 before_script:
  - export RDBASE=$CONDA_PREFIX/Library/share/RDKit
