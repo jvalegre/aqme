@@ -33,6 +33,5 @@ before_script:
  - echo $RDBASE
 
 script:
- - export BASEDIR=`pwd`
  - cd tests
- - python ../tests/conftest.py
+ - pytest -v
