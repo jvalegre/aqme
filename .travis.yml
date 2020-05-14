@@ -8,7 +8,6 @@ python:
 sudo: false
 
 before_install:
- - chmod +x .travis-install.sh
  # download and install miniconda
  - wget http://repo.continuum.io/miniconda/Miniconda3-4.1.11-Linux-x86_64.sh -O miniconda.sh;
  - bash miniconda.sh -b -p $HOME/conda
