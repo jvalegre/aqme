@@ -22,14 +22,6 @@ before_install:
  - conda create -q -n tenv python=$TRAVIS_PYTHON_VERSION pip cmake
  - source activate tenv
 
-# additional .debs we need:
-addons:
- apt:
-  packages:
-    - build-essential
-    - swig
-    - libjpeg-dev
-
 install:
   - conda install -c openbabel openbabel
   - conda install pyyaml
