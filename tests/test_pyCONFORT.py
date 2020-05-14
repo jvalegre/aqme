@@ -4,7 +4,6 @@
 import os
 import pytest
 import pandas as pd
-from conftest import datapath
 import subprocess
 
 # The target value is gonna be the number of conformers (n_conf). The other
@@ -31,7 +30,7 @@ def test_confgen(smiles, params_file, n_conf, E_confs, n_confs_xtb, E_confs_xtb)
     path = os.getcwd()
 
     # Conformer generation using different parameters
-    subprocess.call('python', '-m', 'DBGEN', '--varfile', params_file)
+    subprocess.run(['python', '-m', 'DBGEN', '--varfile', params_file])
 
     df_output = pd.from_csv(params_file.SPLIT('.')[0])
     file = params_file.SPLIT('.')[0]
