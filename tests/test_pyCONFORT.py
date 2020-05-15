@@ -18,10 +18,10 @@ def read_energies(file): # parses the energies from sdf files - then used to fil
 
 # The target value is gonna be the number of conformers (n_conf). The other
 # parameters are gonna be variables used by DBGEN
-@pytest.mark.parametrize("smiles, params_file, n_conf, E_confs, n_confs_xtb, E_confs_xtb",
+@pytest.mark.parametrize("smiles, params_file, n_confs, prefilter_confs_rdkit, filter_confs_rdkit, E_confs, n_confs_xtb, E_confs_xtb",
 [
     # Pentane example
-    ('pentane.smi', 'params_test1.yaml', 2, [1,2,3,5], 2, [1,2,3,5]),
+    ('pentane.smi', 'params_test1.yaml', 240, 236, 0, [1,2,3,5], 2, [1,2,3,5]),
     # ('pentane.smi', 'params_test2.yaml', 2, [1,2,3,5], 2, [1,2,3,5]),
     # ('pentane.smi', 'params_test3.yaml', 2, [1,2,3,5], 2, [1,2,3,5]),
     # ('pentane.smi', 'params_test4.yaml', 2, [1,2,3,5], 2, [1,2,3,5]),
@@ -51,17 +51,20 @@ def test_confgen(smiles, params_file, n_conf, E_confs, n_confs_xtb, E_confs_xtb)
     file = params_file.split('.')[0]
 
     # tests for RDKit
-    os.chdir(path+'/RDKit_generated_SDF_files')
-    sdf_file_rdkit = Chem.SDMolSupplier(file+'_rdkit.sdf')
+    # get data of total and duplicated conformers
     test_init_rdkit_confs = df_output['RDKIT-Initial-samples']
     test_prefilter_rdkit_confs = df_output['RDKit-energy-duplicates']
     test_filter_rdkit_confs = df_output['RDKit-RMS-and-energy-duplicates']
 
     # read the energies of the conformers
+    os.chdir(path+'/'+smiles.split('.')[0]+'/RDKit_generated_SDF_files')
+    sdf_file_rdkit = Chem.SDMolSupplier(file+'_rdkit.sdf')
     test_rdkit_E_confs = read_energies(file+'_rdkit.sdf')
 
-    assert n_confs == test_n_confs
-    assert E_confs == test_E_confs
+    assert n_confs == test_init_rdkit_confs
+    assert prefilter_confs_rdkit == test_prefilter_rdkit_confs
+    assert filter_confs_rdkit == test_filter_rdkit_confs
+    # assert E_confs == test_E_confs
 
     # tests for xtb
     if xtb:
