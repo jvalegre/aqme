@@ -51,18 +51,18 @@ def test_confgen(smiles, params_file, n_confs, prefilter_confs_rdkit, filter_con
     # tests for RDKit
     # get data of total and duplicated conformers
 	try:
-	    test_init_rdkit_confs = df_output['RDKIT-Initial-samples']
-	    test_prefilter_rdkit_confs = df_output['RDKit-energy-duplicates']
-	    test_filter_rdkit_confs = df_output['RDKit-RMSD-and-energy-duplicates']
+		test_init_rdkit_confs = df_output['RDKIT-Initial-samples']
+		test_prefilter_rdkit_confs = df_output['RDKit-energy-duplicates']
+		test_filter_rdkit_confs = df_output['RDKit-RMSD-and-energy-duplicates']
 	except:
 		test_init_rdkit_confs = -1
-	    test_prefilter_rdkit_confs = -1
-	    test_filter_rdkit_confs = -1
+		test_prefilter_rdkit_confs = -1
+		test_filter_rdkit_confs = -1
 
     # read the energies of the conformers
     os.chdir(path+'/'+smiles.split('.')[0]+'/RDKit_generated_SDF_files')
 	try:
-    	test_rdkit_E_confs = read_energies(smiles.split('.')[0]+'_rdkit.sdf')
+		test_rdkit_E_confs = read_energies(smiles.split('.')[0]+'_rdkit.sdf')
 	except:
 		test_rdkit_E_confs = -1
 
@@ -78,7 +78,7 @@ def test_confgen(smiles, params_file, n_confs, prefilter_confs_rdkit, filter_con
 
     # tests charge
 	try:
-    	test_charge = df_output['Overall charge']
+		test_charge = df_output['Overall charge']
 	except:
 		test_charge = -1
     assert charge == test_charge[0]
