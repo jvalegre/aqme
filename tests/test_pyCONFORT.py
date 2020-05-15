@@ -34,18 +34,17 @@ def read_energies(file): # parses the energies from sdf files - then used to fil
 ])
 
 def test_confgen(smiles, params_file, n_confs, prefilter_confs_rdkit, filter_confs_rdkit, E_confs, charge):
-    # saves the working directory
-    path = os.getcwd()
+	# saves the working directory
+	path = os.getcwd()
 
-    # gets into the directory for testing SMILES
-    os.chdir(path+'/'+smiles.split('.')[0])
+	# gets into the directory for testing SMILES
+	os.chdir(path+'/'+smiles.split('.')[0])
 
-    # Conformer generation using different parameters. It creates a CSV file
-    subprocess.run(['python', '-m', 'DBGEN', '--varfile', params_file])
+	# Conformer generation using different parameters. It creates a CSV file
+	subprocess.run(['python', '-m', 'DBGEN', '--varfile', params_file])
 
-    # Retrieving the generated CSV file
-    df_output = pd.read_csv(smiles.split('.')[0]+'-Duplicates Data.csv')
-
+	# Retrieving the generated CSV file
+	df_output = pd.read_csv(smiles.split('.')[0]+'-Duplicates Data.csv')
 	file = params_file.split('.')[0]
 
 	# tests for RDKit
