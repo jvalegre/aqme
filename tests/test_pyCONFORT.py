@@ -6,6 +6,9 @@ import pytest
 import pandas as pd
 import subprocess
 
+# saves the working directory
+path = os.getcwd()
+
 def read_energies(file): # parses the energies from sdf files - then used to filter conformers
 	energies = []
 	f = open(file,"r")
@@ -34,9 +37,6 @@ def read_energies(file): # parses the energies from sdf files - then used to fil
 ])
 
 def test_confgen(smiles, params_file, n_confs, prefilter_confs_rdkit, filter_confs_rdkit, E_confs, charge):
-	# saves the working directory
-	path = os.getcwd()
-
 	# gets into the directory for testing SMILES
 	os.chdir(path+'/'+smiles.split('.')[0])
 
