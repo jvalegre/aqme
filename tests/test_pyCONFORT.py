@@ -25,18 +25,17 @@ def read_energies(file): # parses the energies from sdf files - then used to fil
 # tests for the DBGEN module with organic molecules
 @pytest.mark.parametrize("smiles, params_file, n_confs, prefilter_confs_rdkit, filter_confs_rdkit, E_confs, charge",
 [
-    ('pentane.smi', 'params_test1.yaml', 240, 236, 0, [-5.27175,-4.44183,-3.84858,-1.57172],0), # test sample = 'auto', auto_sample = 20
-    ('pentane.smi', 'params_test2.yaml', 20, 16, 0, [-5.27175,-4.44183,-3.84858],0), # test sample = 20
-    ('pentane.smi', 'params_test3.yaml', 20, 2, 13, [-5.27175,-4.44183,-3.84858,-1.57172],0), # test initial_energy_threshold = 1E-10
-    ('pentane.smi', 'params_test4.yaml', 20, 10, 0, [-5.27175,-5.27175,-5.27175,-4.44183,-4.44183,-4.44183,-3.84858],0), # test energy_threshold = 1E-15
-    ('pentane.smi', 'params_test5.yaml', 20, 10, 0, [-5.27175,-5.27175,-5.27175,-4.44183,-4.44183,-4.44183,-3.84858],0), # test rms_threshold = 1E-15
-    ('pentane.smi', 'params_test6.yaml', 20, 2, 11, [-5.27175,-4.44183,-4.44183,-4.44183,-4.44183,-3.84858],0),
-    ('pentane.smi', 'params_test7.yaml', 60, 56, 0, [-5.27175,-4.44183,-3.84858,-1.57172],0), # test sample = 'auto', auto_sample = 5
+    ('pentane.smi', 'params_test1.yaml', 240, 236, 0, [-5.27175,-4.44184,-3.84858,-1.57172],0), # test sample = 'auto', auto_sample = 20
+    ('pentane.smi', 'params_test2.yaml', 20, 16, 0, [-5.27175, -4.44184, -3.84858, -1.57172],0), # test sample = 20
+    ('pentane.smi', 'params_test3.yaml', 20, 2, 13, [-5.27175, -4.44184, -4.44184, -3.84858, -1.57172],0), # test initial_energy_threshold = 1E-10
+    ('pentane.smi', 'params_test4.yaml', 20, 10, 0, [-5.27175, -5.27175, -5.27175, -5.27175, -4.44184, -4.44184, -4.44184, -4.44184, -3.84858, -1.57172],0), # test energy_threshold = 1E-15
+    ('pentane.smi', 'params_test5.yaml', 20, 10, 0, [-5.27175, -5.27175, -5.27175, -5.27175, -4.44184, -4.44184, -4.44184, -4.44184, -3.84858, -1.57172],0), # test rms_threshold = 1E-15
+    ('pentane.smi', 'params_test6.yaml', 20, 2, 11, [-5.27175, -4.44184, -4.44184, -4.44184, -4.44184, -3.84858, -1.57172],0),
+    ('pentane.smi', 'params_test7.yaml', 60, 56, 0, [-5.27175, -4.44184, -3.84858, -1.57172],0), # test sample = 'auto', auto_sample = 5
     ('pentane.smi', 'params_test8.yaml', 'nan', 'nan', 'nan', 'nan', 'nan'), # test num_rot_bonds = 1
     ('pentane.smi', 'params_test9.yaml', 'nan', 'nan', 'nan', 'nan', 'nan'), # test max_MolWt = 1
-    ('pentane.smi', 'params_test10.yaml', 20, 16, 0, [2.52059,3.68961,4.94318],0), # test ff = 'UFF'
-    ('pentane.smi', 'params_test11.yaml', 20, 0, 8, [-5.27037,-4.82921,-4.43450,-4.42888,-3.78645,-3.48832],0), # test opt_steps_RDKit = 40
-    ('pentane.smi', 'params_test12.yaml', 20, 16, 0, [-5.27175,-4.44183,-3.84858,-1.57172],0), # test seed = 10
+    ('pentane.smi', 'params_test10.yaml', 20, 16, 0, [2.52059, 3.68961, 4.94318, 6.51778],0), # test ff = 'UFF'
+    ('pentane.smi', 'params_test11.yaml', 20, 0, 8, [-5.26093, -4.41687, -4.39313, -4.10961, -3.93585, -2.95568, -2.43353, -2.03709, -1.51856, -1.45757, -0.22202, 0.46406],0), # test opt_steps_RDKit = 40
 ])
 
 def test_confgen(smiles, params_file, n_confs, prefilter_confs_rdkit, filter_confs_rdkit, E_confs, charge):
@@ -65,7 +64,7 @@ def test_confgen(smiles, params_file, n_confs, prefilter_confs_rdkit, filter_con
 	test_rdkit_E_confs = read_energies(smiles.split('.')[0]+'_rdkit.sdf')
 
 	# test for energies
-	if len(test_rdkit_E_confs) > 1:
+	if str(test_rdkit_E_confs) != 'nan':
 		test_round_confs = [round(num, precision) for num in test_rdkit_E_confs]
 		round_confs = [round(num, precision) for num in E_confs]
 	else:
