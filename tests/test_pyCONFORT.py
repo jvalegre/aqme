@@ -35,7 +35,7 @@ def read_energies(file): # parses the energies from sdf files - then used to fil
 # PARAMETERS TESTED FROM PARAMS_TEST*.YAML FILES:
 # sample, rms_threshold, energy_threshold, initial_energy_threshold, auto_sample, ff, ewin, xtb, dihedralscan,
 
-def test_confgen(smiles, params_file, n_conf, E_confs, n_confs_xtb, E_confs_xtb):
+def test_confgen(smiles, params_file, n_confs, prefilter_confs_rdkit, filter_confs_rdkit, E_confs, n_confs_xtb, E_confs_xtb):
     # saves the working directory
     path = os.getcwd()
 
