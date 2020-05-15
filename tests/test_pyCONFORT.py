@@ -51,7 +51,7 @@ def test_confgen(smiles, params_file, n_conf, E_confs, n_confs_xtb, E_confs_xtb)
     file = params_file.split('.')[0]
 
     # tests for RDKit
-    os.chdir(path+'\\RDKit_generated_SDF_files')
+    os.chdir(path+'/RDKit_generated_SDF_files')
     sdf_file_rdkit = Chem.SDMolSupplier(file+'_rdkit.sdf')
     test_init_rdkit_confs = df_output['RDKIT-Initial-samples']
     test_prefilter_rdkit_confs = df_output['RDKit-energy-duplicates']
@@ -67,7 +67,7 @@ def test_confgen(smiles, params_file, n_conf, E_confs, n_confs_xtb, E_confs_xtb)
     if xtb:
         sdf_file_xtb = smiles.split('.')[0]+'_xtb.sdf'
         sdf_file_xtb = Chem.SDMolSupplier(file_xtb)
-        test_E_confs_xtb = read_energies(file_xtb,log)
+        test_E_confs_xtb = read_energies(file_xtb)
 
         assert n_confs_xtb == test_n_confs_xtb
         assert E_confs_xtb == test_E_confs_xtb
