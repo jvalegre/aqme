@@ -38,7 +38,8 @@ before_script:
 
 script:
   - cd tests
-  - pytest -v
+  - pytest -v --cov=DBGEN
+  - codecov
 
-after_success:
-  - include_cov=coverage.txt bash <(curl -s https://codecov.io/bash)
+# after_success:
+#   - codecov
