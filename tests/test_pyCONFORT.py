@@ -16,26 +16,24 @@ def read_energies(file): # parses the energies from sdf files - then used to fil
 	f.close()
 	return energies
 
-# The target value is gonna be the number of conformers (n_conf). The other
-# parameters are gonna be variables used by DBGEN
-@pytest.mark.parametrize("smiles, params_file, xtb, n_confs, prefilter_confs_rdkit, filter_confs_rdkit, E_confs, n_confs_xtb, E_confs_xtb, charge",
+# tests for the DBGEN module with organic molecules
+@pytest.mark.parametrize("smiles, params_file, n_confs, prefilter_confs_rdkit, filter_confs_rdkit, E_confs, charge",
 [
-    # Pentane example
-    ('pentane.smi', 'params_test1.yaml', False, 240, 236, 0, [1,2,3,5], 2, [1,2,3,5],0),
-    # ('pentane.smi', 'params_test2.yaml', 2, [1,2,3,5], 2, [1,2,3,5]),
-    # ('pentane.smi', 'params_test3.yaml', 2, [1,2,3,5], 2, [1,2,3,5]),
-    # ('pentane.smi', 'params_test4.yaml', 2, [1,2,3,5], 2, [1,2,3,5]),
-    # ('pentane.smi', 'params_test5.yaml', 2, [1,2,3,5], 2, [1,2,3,5]),
-    # ('pentane.smi', 'params_test6.yaml', 2, [1,2,3,5], 2, [1,2,3,5]),
-    # ('pentane.smi', 'params_test7.yaml', 2, [1,2,3,5], 2, [1,2,3,5]),
-    # ('pentane.smi', 'params_test8.yaml', 2, [1,2,3,5], 2, [1,2,3,5]),
-    # ('pentane.smi', 'params_test9.yaml', 2, [1,2,3,5], 2, [1,2,3,5]),
+    ('pentane.smi', 'params_test1.yaml', 240, 236, 0, [-5.27175,-4.44183,-3.84858,-1.57172],0), # test sample = 'auto', auto_sample = 20
+    ('pentane.smi', 'params_test2.yaml', 20, 17, 0, [-5.27175,-4.44183,-3.84858],0), # test sample = 20
+    ('pentane.smi', 'params_test3.yaml', 20, 3, 13, [-5.27175,-4.44183,-3.84858,-1.57172],0), # test initial_energy_threshold = 1E-10
+    ('pentane.smi', 'params_test4.yaml', 20, 13, 0, [-5.27175,-5.27175,-5.27175,-4.44183,-4.44183,-4.44183,-3.84858],0), # test energy_threshold = 1E-15
+    ('pentane.smi', 'params_test5.yaml', 20, 13, 0, [-5.27175,-5.27175,-5.27175,-4.44183,-4.44183,-4.44183,-3.84858],0), # test rms_threshold = 1E-15
+    ('pentane.smi', 'params_test6.yaml', 20, 3, 11, [-5.27175,-4.44183,-4.44183,-4.44183,-4.44183,-3.84858],0),
+    ('pentane.smi', 'params_test7.yaml', 60, 56, 0, [-5.27175,-4.44183,-3.84858,-1.57172],0), # test sample = 'auto', auto_sample = 5
+    ('pentane.smi', 'params_test8.yaml', -1, -1, -1, -1, -1), # test num_rot_bonds = 1
+    ('pentane.smi', 'params_test9.yaml', -1, -1, -1, -1, -1), # test max_MolWt = 1
+    ('pentane.smi', 'params_test10.yaml', 20, 17, 0, [2.52059,3.68961,4.94318],0), # test ff = 'UFF'
+    ('pentane.smi', 'params_test11.yaml', 20, 0, 14, [-5.27037,-4.82921,-4.43450,-4.42888,-3.78645,-3.48832],0), # test opt_steps_RDKit = 40
+    ('pentane.smi', 'params_test12.yaml', 20, 16, 0, [-5.27175,-4.44183,-3.84858,-1.57172],0), # test seed = 10
 ])
 
-# PARAMETERS TESTED FROM PARAMS_TEST*.YAML FILES:
-# sample, rms_threshold, energy_threshold, initial_energy_threshold, auto_sample, ff, ewin, xtb, dihedralscan,
-
-def test_confgen(smiles, params_file, xtb, n_confs, prefilter_confs_rdkit, filter_confs_rdkit, E_confs, n_confs_xtb, E_confs_xtb, charge):
+def test_confgen(smiles, params_file, n_confs, prefilter_confs_rdkit, filter_confs_rdkit, E_confs, charge):
     # saves the working directory
     path = os.getcwd()
 
@@ -52,42 +50,41 @@ def test_confgen(smiles, params_file, xtb, n_confs, prefilter_confs_rdkit, filte
 
     # tests for RDKit
     # get data of total and duplicated conformers
-    test_init_rdkit_confs = df_output['RDKIT-Initial-samples']
-    test_prefilter_rdkit_confs = df_output['RDKit-energy-duplicates']
-    test_filter_rdkit_confs = df_output['RDKit-RMS-and-energy-duplicates']
+	try:
+	    test_init_rdkit_confs = df_output['RDKIT-Initial-samples']
+	    test_prefilter_rdkit_confs = df_output['RDKit-energy-duplicates']
+	    test_filter_rdkit_confs = df_output['RDKit-RMSD-and-energy-duplicates']
+	except:
+		test_init_rdkit_confs = -1
+	    test_prefilter_rdkit_confs = -1
+	    test_filter_rdkit_confs = -1
 
     # read the energies of the conformers
     os.chdir(path+'/'+smiles.split('.')[0]+'/RDKit_generated_SDF_files')
-    test_rdkit_E_confs = read_energies(smiles.split('.')[0]+'_rdkit.sdf')
+	try:
+    	test_rdkit_E_confs = read_energies(smiles.split('.')[0]+'_rdkit.sdf')
+	except:
+		test_rdkit_E_confs = -1
 
     assert n_confs == test_init_rdkit_confs[0]
     assert prefilter_confs_rdkit == test_prefilter_rdkit_confs[0]
     assert filter_confs_rdkit == test_filter_rdkit_confs[0]
-    # assert E_confs == test_E_confs
 
-    # tests for xtb
-    if xtb:
-        sdf_file_xtb = smiles.split('.')[0]+'_xtb.sdf'
-        test_E_confs_xtb = read_energies(file_xtb)
+	# compare # -*- coding: utf-8 -*-
+	round_confs = [round(num, 3) for num in E_confs]
+	test_round_confs = [round(num, 3) for num in test_E_confs]
 
-        assert n_confs_xtb == test_n_confs_xtb
-        assert E_confs_xtb == test_E_confs_xtb
+    assert round_confs == test_round_confs
 
     # tests charge
-    test_charge = df_output['Overall charge']
+	try:
+    	test_charge = df_output['Overall charge']
+	except:
+		test_charge = -1
     assert charge == test_charge[0]
 
-	# # remove sdf and csv files
-	# os.chdir(path+'/'+smiles.split('.')[0])
-	# subprocess.run(['rm', '-r', 'RDKit_generated_SDF_files'])
-    # subprocess.run(['rm', '*.csv'])
-
-
 # MISSING CHECKS:
-# CHECK THAT THE AUTO FUNCTION IS WORKING
-# CHECK THAT CSV GETS THE CORRECT INFO OF NUMBERS AND TIME!
 # CHECK COM FILES generation
-# CHECK THAT N OF DUPLICATES FOR THE DIFFERENT FILTERS IS ALWAYS THE samE
 # CHECK THAT THE METAL PART IS WORKING
 # CHECK THAT MULTIPLE METALS ARE COMPATIBLE
 # CHECK THAT THE TEMPLATE PART IS WORKING
