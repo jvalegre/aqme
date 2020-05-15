@@ -1,5 +1,5 @@
 # INPUT FILE
-input : 'smi.smi' # input files
+input : 'Ir_hexacoord.smi' # input files
 path : '' # path to guassian folder when we do analysis
 prefix : False # if prefix : True, set a generic name for the different molecules (i.e. comp_1, comp_2, etc)
 
@@ -35,7 +35,7 @@ charge_default : 0 #used to write the default if cannot be calculated for metal 
 # (2) TYPE OF OPTIMIZATION
 # Options: xTB, ANI1ccx (if True is selected).  Default : RDKit optimizaiton
 ANI1ccx : False
-xtb : True
+xtb : False
 
 # (3) RDKit AND xTB PARAMETERS
 ewin : 1000 #energy window in kcal/mol to use conformers for RDKit and xTB (conformers with E higher than ewin will be discarded)
@@ -87,11 +87,10 @@ angle_off : 30 # margin of error to determine angles (i.e. if angle_off is 30, a
 
 # (7) OPTIONS FOR METALS, ATOMS WITH UNCOMMON HYBRIDIZATIONS AND NCI COMPLEXES
 # IF A METAL OR AN ATOM WITH UNCOMMON HYBRIDIZATION (i.e. pentacoordinated phosphorus) IS USED
-metal_complex : False # specify True to activate this option
-metal : [] # specify the metal(s) or atom(s) with uncommon hybridization, in the format 'A','B','C'...
-m_oxi : [] # oxidation number of the atom (it is used to calculate the charge of the molecule)
+metal_complex : True # specify True to activate this option
+metal : ['Ir'] # specify the metal(s) or atom(s) with uncommon hybridization, in the format 'A','B','C'...
+m_oxi : [3] # oxidation number of the atom (it is used to calculate the charge of the molecule)
 complex_spin : 1 # final spin of the molecule (the code does not calculate spin, it must be defined by the user)
-complex_type : [] # define squareplanar and squarepyrimidal compounds
 
 # (8) IF A NONCOVALENT COMPLEX IS USED
 nci_complex : False # specify  true if NCI complex
