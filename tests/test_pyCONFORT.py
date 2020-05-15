@@ -58,7 +58,7 @@ def test_confgen(smiles, params_file, xtb, n_confs, prefilter_confs_rdkit, filte
 
     # read the energies of the conformers
     os.chdir(path+'/'+smiles.split('.')[0]+'/RDKit_generated_SDF_files')
-    test_rdkit_E_confs = read_energies(file+'_rdkit.sdf')
+    test_rdkit_E_confs = read_energies(smiles.split('.')[0]+'_rdkit.sdf')
 
     assert n_confs == test_init_rdkit_confs
     assert prefilter_confs_rdkit == test_prefilter_rdkit_confs
