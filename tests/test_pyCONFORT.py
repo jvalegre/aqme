@@ -36,9 +36,9 @@ def read_energies(file): # parses the energies from sdf files - then used to fil
     ('pentane.smi', 'params_test9.yaml', 'nan', 'nan', 'nan', 'nan', 'nan'), # test max_MolWt = 1
     ('pentane.smi', 'params_test10.yaml', 20, 16, 0, [2.52059, 3.68961, 4.94318, 6.51778],0), # test ff = 'UFF'
     ('pentane.smi', 'params_test11.yaml', 20, 0, 8, [-5.26093, -4.41687, -4.39313, -4.10961, -3.93585, -2.95568, -2.43353, -2.03709, -1.51856, -1.45757, -0.22202, 0.46406],0), # test opt_steps_RDKit = 40
-    ('Ir_hexacoord.smi', 'params_Ir_test1.yaml', 2, 0, 8, [-5.26093, -4.41687, -4.39313, -4.10961, -3.93585, -2.95568, -2.43353, -2.03709, -1.51856, -1.45757, -0.22202, 0.46406],1), # test opt_steps_RDKit = 40
+    ('Ir_hexacoord.smi', 'params_Ir_test1.yaml', 1440, 1434, 0, [-5.26093, -4.41687, -4.39313, -4.10961, -3.93585, -2.95568, -2.43353, -2.03709, -1.51856, -1.45757, -0.22202, 0.46406],1), # test opt_steps_RDKit = 40
     ('Ir_Au_complex.smi', 'params_Ir_Au_test1.yaml', 2, 0, 8, [-5.26093, -4.41687, -4.39313, -4.10961, -3.93585, -2.95568, -2.43353, -2.03709, -1.51856, -1.45757, -0.22202, 0.46406],1), # test opt_steps_RDKit = 40
-    ('Pd_squareplanar.smi', 'params_Pd_test1.yaml', 3, 0, 8, [-5.26093, -4.41687, -4.39313, -4.10961, -3.93585, -2.95568, -2.43353, -2.03709, -1.51856, -1.45757, -0.22202, 0.46406],1), # test opt_steps_RDKit = 40
+    ('Pd_squareplanar.smi', 'params_Pd_test1.yaml', 120, 111, 0, [-5.26093, -4.41687, -4.39313, -4.10961, -3.93585, -2.95568, -2.43353, -2.03709, -1.51856, -1.45757, -0.22202, 0.46406],1), # test opt_steps_RDKit = 40
 ])
 
 def test_confgen(smiles, params_file, n_confs, prefilter_confs_rdkit, filter_confs_rdkit, E_confs, charge):
