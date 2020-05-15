@@ -2009,13 +2009,13 @@ def mult_min(name, args, program,log,dup_data,dup_data_idx):
 	if program == 'xtb':
 		dup_data.at[dup_data_idx, 'xTB-Initial-samples'] = len(inmols)
 		dup_data.at[dup_data_idx, 'xTB-initial_energy_threshold'] = n_dup_energy
-		dup_data.at[dup_data_idx, 'xTB-RMS-and-energy-duplicates'] = n_dup_rms_eng
+		dup_data.at[dup_data_idx, 'xTB-RMSD-and-energy-duplicates'] = n_dup_rms_eng
 		dup_data.at[dup_data_idx, 'xTB-Unique-conformers'] = len(sortedcids)
 
 	if program == 'ani':
 		dup_data.at[dup_data_idx, 'ANI1ccx-Initial-samples'] = len(inmols)
 		dup_data.at[dup_data_idx, 'ANI1ccx-initial_energy_threshold'] = n_dup_energy
-		dup_data.at[dup_data_idx, 'ANI1ccx-RMS-and-energy-duplicates'] = n_dup_rms_eng
+		dup_data.at[dup_data_idx, 'ANI1ccx-RMSD-and-energy-duplicates'] = n_dup_rms_eng
 		dup_data.at[dup_data_idx, 'ANI1ccx-Unique-conformers'] = len(sortedcids)
 
 	# write the filtered, ordered conformers to external file
