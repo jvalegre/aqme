@@ -75,7 +75,7 @@ def test_confgen(smiles, params_file, n_confs, prefilter_confs_rdkit, filter_con
 	# read the energies of the conformers
 	os.chdir(path+'/'+smiles.split('.')[0]+'/RDKit_generated_SDF_files')
 	test_rdkit_E_confs = read_energies(smiles.split('.')[0]+'_rdkit.sdf')
-	print(test_rdkit_E_confs)
+	
 	# test for energies
 	try:
 		test_round_confs = [round(num, precision) for num in test_rdkit_E_confs]
