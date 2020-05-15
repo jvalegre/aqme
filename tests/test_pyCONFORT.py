@@ -60,9 +60,9 @@ def test_confgen(smiles, params_file, xtb, n_confs, prefilter_confs_rdkit, filte
     os.chdir(path+'/'+smiles.split('.')[0]+'/RDKit_generated_SDF_files')
     test_rdkit_E_confs = read_energies(smiles.split('.')[0]+'_rdkit.sdf')
 
-    assert n_confs == test_init_rdkit_confs
-    assert prefilter_confs_rdkit == test_prefilter_rdkit_confs
-    assert filter_confs_rdkit == test_filter_rdkit_confs
+    assert n_confs == test_init_rdkit_confs[0]
+    assert prefilter_confs_rdkit == test_prefilter_rdkit_confs[0]
+    assert filter_confs_rdkit == test_filter_rdkit_confs[0]
     # assert E_confs == test_E_confs
 
     # tests for xtb
@@ -75,7 +75,7 @@ def test_confgen(smiles, params_file, xtb, n_confs, prefilter_confs_rdkit, filte
 
     # tests charge
     test_charge = df_output['Overall charge']
-    assert charge == test_charge
+    assert charge == test_charge[0]
 
 
 # MISSING CHECKS:
