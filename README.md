@@ -4,7 +4,6 @@
 [![CodeFactor](https://img.shields.io/codefactor/grade/github/jvalegre/pyconfort?label=Codefactor&logo=codefactor)](https://www.codefactor.io/repository/github/jvalegre/pyconfort/overview/master)
 [![Codacy](https://img.shields.io/codacy/grade/047e9c6001a84713a82e180669e14c98?label=Codacy&logo=codacy)](https://www.codacy.com/manual/jvalegre/pyCONFORT?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=jvalegre/pyCONFORT&amp;utm_campaign=Badge_Grade)
 
-
 ![Size](https://img.shields.io/github/repo-size/jvalegre/pyconfort?label=Size)
 ![PyPI](https://img.shields.io/pypi/v/pyconfort?label=PyPI&logo=pypi)
 ![PyPI Downloads](https://img.shields.io/pypi/dm/pyconfort?label=PyPI%20downloads&logo=pypi&style=social)
