@@ -57,6 +57,10 @@ def test_confgen(smiles, params_file, n_confs, prefilter_confs_rdkit, filter_con
 		test_prefilter_rdkit_confs = -1
 		test_filter_rdkit_confs = -1
 
+	assert n_confs == test_init_rdkit_confs[0]
+	assert prefilter_confs_rdkit == test_prefilter_rdkit_confs[0]
+	assert filter_confs_rdkit == test_filter_rdkit_confs[0]
+
 	# read the energies of the conformers
 	os.chdir(path+'/'+smiles.split('.')[0]+'/RDKit_generated_SDF_files')
 	try:
@@ -64,13 +68,10 @@ def test_confgen(smiles, params_file, n_confs, prefilter_confs_rdkit, filter_con
 	except:
 		test_rdkit_E_confs = -1
 
-	assert n_confs == test_init_rdkit_confs[0]
-	assert prefilter_confs_rdkit == test_prefilter_rdkit_confs[0]
-	assert filter_confs_rdkit == test_filter_rdkit_confs[0]
-
 	# test for energies
 	round_confs = [round(num, 3) for num in E_confs]
-	test_round_confs = [round(num, 3) for num in test_E_confs]
+	if len(test_rdkit_E_confs) > 1:
+		test_round_confs = [round(num, 3) for num in test_rdkit_E_confs]
 
 	assert round_confs == test_round_confs
 
