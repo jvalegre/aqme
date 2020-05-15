@@ -65,7 +65,7 @@ def test_confgen(smiles, params_file, n_confs, prefilter_confs_rdkit, filter_con
 	test_rdkit_E_confs = read_energies(smiles.split('.')[0]+'_rdkit.sdf')
 
 	# test for energies
-	if if len(test_rdkit_E_confs) > 1:
+	if len(test_rdkit_E_confs) > 1:
 		test_round_confs = [round(num, precision) for num in test_rdkit_E_confs]
 		round_confs = [round(num, precision) for num in E_confs]
 	else:
