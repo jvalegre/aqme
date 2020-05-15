@@ -1707,7 +1707,7 @@ def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None,alg_M
 			log.write("o  "+ str(len(selectedcids))+" unique conformers remain")
 
 		dup_data.at[dup_data_idx, 'RDKit-energy-duplicates'] = eng_dup
-		dup_data.at[dup_data_idx, 'RDKit-RMS-and-energy-duplicates'] = eng_rms_dup
+		dup_data.at[dup_data_idx, 'RDKit-RMSD-and-energy-duplicates'] = eng_rms_dup
 		dup_data.at[dup_data_idx, 'RDKIT-Unique-conformers'] = len(selectedcids)
 
 		#writing charges after RDKIT
