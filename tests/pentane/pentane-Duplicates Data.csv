@@ -1,2 +1,2 @@
 Molecule,RDKIT-Initial-samples,RDKit-energy-duplicates,RDKit-RMS-and-energy-duplicates,RDKIT-Unique-conformers,time (seconds),Overall charge
-pentane,20,16,0,4,0.28,
+pentane,20,17,0,3,0.26,
