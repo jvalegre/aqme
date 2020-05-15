@@ -9,6 +9,8 @@ import DBGEN
 
 # saves the working directory
 path = os.getcwd()
+# decimal digits for comparing E
+precision = 5
 
 def read_energies(file): # parses the energies from sdf files - then used to filter conformers
 	energies = []
@@ -63,9 +65,12 @@ def test_confgen(smiles, params_file, n_confs, prefilter_confs_rdkit, filter_con
 	test_rdkit_E_confs = read_energies(smiles.split('.')[0]+'_rdkit.sdf')
 
 	# test for energies
-	round_confs = [round(num, 3) for num in E_confs]
-	if len(test_rdkit_E_confs) > 1:
-		test_round_confs = [round(num, 3) for num in test_rdkit_E_confs]
+	if if len(test_rdkit_E_confs) > 1:
+		test_round_confs = [round(num, precision) for num in test_rdkit_E_confs]
+		round_confs = [round(num, precision) for num in E_confs]
+	else:
+		test_round_confs = test_rdkit_E_confs
+		round_confs = E_confs
 
 	assert str(round_confs) == str(test_round_confs)
 
