@@ -57,29 +57,29 @@ def test_confgen(smiles, params_file, n_confs, prefilter_confs_rdkit, filter_con
 		test_prefilter_rdkit_confs = -1
 		test_filter_rdkit_confs = -1
 
-    # read the energies of the conformers
-    os.chdir(path+'/'+smiles.split('.')[0]+'/RDKit_generated_SDF_files')
+	# read the energies of the conformers
+	os.chdir(path+'/'+smiles.split('.')[0]+'/RDKit_generated_SDF_files')
 	try:
 		test_rdkit_E_confs = read_energies(smiles.split('.')[0]+'_rdkit.sdf')
 	except:
 		test_rdkit_E_confs = -1
 
-    assert n_confs == test_init_rdkit_confs[0]
-    assert prefilter_confs_rdkit == test_prefilter_rdkit_confs[0]
-    assert filter_confs_rdkit == test_filter_rdkit_confs[0]
+	assert n_confs == test_init_rdkit_confs[0]
+	assert prefilter_confs_rdkit == test_prefilter_rdkit_confs[0]
+	assert filter_confs_rdkit == test_filter_rdkit_confs[0]
 
-	# compare # -*- coding: utf-8 -*-
+	# test for energies
 	round_confs = [round(num, 3) for num in E_confs]
 	test_round_confs = [round(num, 3) for num in test_E_confs]
 
-    assert round_confs == test_round_confs
+	assert round_confs == test_round_confs
 
-    # tests charge
+	# tests charge
 	try:
 		test_charge = df_output['Overall charge']
 	except:
 		test_charge = -1
-    assert charge == test_charge[0]
+	assert charge == test_charge[0]
 
 # MISSING CHECKS:
 # CHECK COM FILES generation
