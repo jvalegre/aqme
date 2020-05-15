@@ -12,7 +12,6 @@ os.environ['KMP_DUPLICATE_LIB_OK']='True'
 device = torch.device('cpu')
 model = torchani.models.ANI1ccx()
 from ase.units import Hartree
-
 from xtb import GFN2
 
 # saves the working directory
