@@ -77,6 +77,11 @@ def test_confgen(smiles, params_file, xtb, n_confs, prefilter_confs_rdkit, filte
     test_charge = df_output['Overall charge']
     assert charge == test_charge[0]
 
+	# # remove sdf and csv files
+	# os.chdir(path+'/'+smiles.split('.')[0])
+	# subprocess.run(['rm', '-r', 'RDKit_generated_SDF_files'])
+    # subprocess.run(['rm', '*.csv'])
+
 
 # MISSING CHECKS:
 # CHECK THAT THE AUTO FUNCTION IS WORKING
