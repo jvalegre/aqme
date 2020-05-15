@@ -24,16 +24,16 @@ def read_energies(file): # parses the energies from sdf files - then used to fil
 @pytest.mark.parametrize("smiles, params_file, n_confs, prefilter_confs_rdkit, filter_confs_rdkit, E_confs, charge",
 [
     ('pentane.smi', 'params_test1.yaml', 240, 236, 0, [-5.27175,-4.44183,-3.84858,-1.57172],0), # test sample = 'auto', auto_sample = 20
-    ('pentane.smi', 'params_test2.yaml', 20, 17, 0, [-5.27175,-4.44183,-3.84858],0), # test sample = 20
-    ('pentane.smi', 'params_test3.yaml', 20, 3, 13, [-5.27175,-4.44183,-3.84858,-1.57172],0), # test initial_energy_threshold = 1E-10
-    ('pentane.smi', 'params_test4.yaml', 20, 13, 0, [-5.27175,-5.27175,-5.27175,-4.44183,-4.44183,-4.44183,-3.84858],0), # test energy_threshold = 1E-15
-    ('pentane.smi', 'params_test5.yaml', 20, 13, 0, [-5.27175,-5.27175,-5.27175,-4.44183,-4.44183,-4.44183,-3.84858],0), # test rms_threshold = 1E-15
-    ('pentane.smi', 'params_test6.yaml', 20, 3, 11, [-5.27175,-4.44183,-4.44183,-4.44183,-4.44183,-3.84858],0),
+    ('pentane.smi', 'params_test2.yaml', 20, 16, 0, [-5.27175,-4.44183,-3.84858],0), # test sample = 20
+    ('pentane.smi', 'params_test3.yaml', 20, 2, 13, [-5.27175,-4.44183,-3.84858,-1.57172],0), # test initial_energy_threshold = 1E-10
+    ('pentane.smi', 'params_test4.yaml', 20, 10, 0, [-5.27175,-5.27175,-5.27175,-4.44183,-4.44183,-4.44183,-3.84858],0), # test energy_threshold = 1E-15
+    ('pentane.smi', 'params_test5.yaml', 20, 10, 0, [-5.27175,-5.27175,-5.27175,-4.44183,-4.44183,-4.44183,-3.84858],0), # test rms_threshold = 1E-15
+    ('pentane.smi', 'params_test6.yaml', 20, 2, 11, [-5.27175,-4.44183,-4.44183,-4.44183,-4.44183,-3.84858],0),
     ('pentane.smi', 'params_test7.yaml', 60, 56, 0, [-5.27175,-4.44183,-3.84858,-1.57172],0), # test sample = 'auto', auto_sample = 5
     ('pentane.smi', 'params_test8.yaml', 'nan', 'nan', 'nan', 'nan', 'nan'), # test num_rot_bonds = 1
     ('pentane.smi', 'params_test9.yaml', 'nan', 'nan', 'nan', 'nan', 'nan'), # test max_MolWt = 1
-    ('pentane.smi', 'params_test10.yaml', 20, 17, 0, [2.52059,3.68961,4.94318],0), # test ff = 'UFF'
-    ('pentane.smi', 'params_test11.yaml', 20, 0, 14, [-5.27037,-4.82921,-4.43450,-4.42888,-3.78645,-3.48832],0), # test opt_steps_RDKit = 40
+    ('pentane.smi', 'params_test10.yaml', 20, 16, 0, [2.52059,3.68961,4.94318],0), # test ff = 'UFF'
+    ('pentane.smi', 'params_test11.yaml', 20, 0, 8, [-5.27037,-4.82921,-4.43450,-4.42888,-3.78645,-3.48832],0), # test opt_steps_RDKit = 40
     ('pentane.smi', 'params_test12.yaml', 20, 16, 0, [-5.27175,-4.44183,-3.84858,-1.57172],0), # test seed = 10
 ])
 
@@ -54,9 +54,9 @@ def test_confgen(smiles, params_file, n_confs, prefilter_confs_rdkit, filter_con
 	test_prefilter_rdkit_confs = df_output['RDKit-energy-duplicates']
 	test_filter_rdkit_confs = df_output['RDKit-RMSD-and-energy-duplicates']
 
-	assert n_confs == test_init_rdkit_confs[0]
-	assert prefilter_confs_rdkit == test_prefilter_rdkit_confs[0]
-	assert filter_confs_rdkit == test_filter_rdkit_confs[0]
+	assert str(n_confs) == str(test_init_rdkit_confs[0])
+	assert str(prefilter_confs_rdkit) == str(test_prefilter_rdkit_confs[0])
+	assert str(filter_confs_rdkit) == str(test_filter_rdkit_confs[0])
 
 	# read the energies of the conformers
 	os.chdir(path+'/'+smiles.split('.')[0]+'/RDKit_generated_SDF_files')
@@ -67,12 +67,12 @@ def test_confgen(smiles, params_file, n_confs, prefilter_confs_rdkit, filter_con
 	if len(test_rdkit_E_confs) > 1:
 		test_round_confs = [round(num, 3) for num in test_rdkit_E_confs]
 
-	assert round_confs == test_round_confs
+	assert str(round_confs) == str(test_round_confs)
 
 	# tests charge
 	test_charge = df_output['Overall charge']
 
-	assert charge == test_charge[0]
+	assert str(charge) == str(test_charge[0])
 
 # MISSING CHECKS:
 # CHECK COM FILES generation
