@@ -31,6 +31,8 @@ install:
   - conda install -c conda-forge periodictable
   - conda install -c conda-forge progress
   - pip install pytest-cov codecov
+  - pip install ninja
+  - pip install ase
 
 before_script:
   - export RDBASE=$CONDA_PREFIX/Library/share/RDKit
