@@ -46,10 +46,9 @@ def test_confgen(smiles, params_file, n_confs, prefilter_confs_rdkit, filter_con
     # Retrieving the generated CSV file
     df_output = pd.read_csv(smiles.split('.')[0]+'-Duplicates Data.csv')
 
-    file = params_file.split('.')[0]
+	file = params_file.split('.')[0]
 
-    # tests for RDKit
-    # get data of total and duplicated conformers
+	# tests for RDKit
 	try:
 		test_init_rdkit_confs = df_output['RDKIT-Initial-samples']
 		test_prefilter_rdkit_confs = df_output['RDKit-energy-duplicates']
