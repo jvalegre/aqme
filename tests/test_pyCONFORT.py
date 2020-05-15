@@ -18,10 +18,10 @@ def read_energies(file): # parses the energies from sdf files - then used to fil
 
 # The target value is gonna be the number of conformers (n_conf). The other
 # parameters are gonna be variables used by DBGEN
-@pytest.mark.parametrize("smiles, params_file, n_confs, prefilter_confs_rdkit, filter_confs_rdkit, E_confs, n_confs_xtb, E_confs_xtb",
+@pytest.mark.parametrize("smiles, params_file, xtb, n_confs, prefilter_confs_rdkit, filter_confs_rdkit, E_confs, n_confs_xtb, E_confs_xtb, charge",
 [
     # Pentane example
-    ('pentane.smi', 'params_test1.yaml', 240, 236, 0, [1,2,3,5], 2, [1,2,3,5]),
+    ('pentane.smi', 'params_test1.yaml', False, 240, 236, 0, [1,2,3,5], 2, [1,2,3,5],0),
     # ('pentane.smi', 'params_test2.yaml', 2, [1,2,3,5], 2, [1,2,3,5]),
     # ('pentane.smi', 'params_test3.yaml', 2, [1,2,3,5], 2, [1,2,3,5]),
     # ('pentane.smi', 'params_test4.yaml', 2, [1,2,3,5], 2, [1,2,3,5]),
@@ -35,7 +35,7 @@ def read_energies(file): # parses the energies from sdf files - then used to fil
 # PARAMETERS TESTED FROM PARAMS_TEST*.YAML FILES:
 # sample, rms_threshold, energy_threshold, initial_energy_threshold, auto_sample, ff, ewin, xtb, dihedralscan,
 
-def test_confgen(smiles, params_file, n_confs, prefilter_confs_rdkit, filter_confs_rdkit, E_confs, n_confs_xtb, E_confs_xtb):
+def test_confgen(smiles, params_file, xtb, n_confs, prefilter_confs_rdkit, filter_confs_rdkit, E_confs, n_confs_xtb, E_confs_xtb, charge):
     # saves the working directory
     path = os.getcwd()
 
@@ -58,7 +58,6 @@ def test_confgen(smiles, params_file, n_confs, prefilter_confs_rdkit, filter_con
 
     # read the energies of the conformers
     os.chdir(path+'/'+smiles.split('.')[0]+'/RDKit_generated_SDF_files')
-    sdf_file_rdkit = Chem.SDMolSupplier(file+'_rdkit.sdf')
     test_rdkit_E_confs = read_energies(file+'_rdkit.sdf')
 
     assert n_confs == test_init_rdkit_confs
@@ -69,11 +68,15 @@ def test_confgen(smiles, params_file, n_confs, prefilter_confs_rdkit, filter_con
     # tests for xtb
     if xtb:
         sdf_file_xtb = smiles.split('.')[0]+'_xtb.sdf'
-        sdf_file_xtb = Chem.SDMolSupplier(file_xtb)
         test_E_confs_xtb = read_energies(file_xtb)
 
         assert n_confs_xtb == test_n_confs_xtb
         assert E_confs_xtb == test_E_confs_xtb
+
+    # tests charge
+    test_charge = df_output['Overall charge']
+    assert charge == test_charge
+
 
 # MISSING CHECKS:
 # CHECK THAT THE AUTO FUNCTION IS WORKING
