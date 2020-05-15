@@ -22,7 +22,7 @@ def read_energies(file): # parses the energies from sdf files - then used to fil
 	f.close()
 	return energies
 
-# tests for the DBGEN module with organic molecules
+# tests for the DBGEN module with organic molecules and metal complexes
 @pytest.mark.parametrize("smiles, params_file, n_confs, prefilter_confs_rdkit, filter_confs_rdkit, E_confs, charge",
 [
     ('pentane.smi', 'params_test1.yaml', 240, 236, 0, [-5.27175,-4.44184,-3.84858,-1.57172],0), # test sample = 'auto', auto_sample = 20
@@ -36,6 +36,7 @@ def read_energies(file): # parses the energies from sdf files - then used to fil
     ('pentane.smi', 'params_test9.yaml', 'nan', 'nan', 'nan', 'nan', 'nan'), # test max_MolWt = 1
     ('pentane.smi', 'params_test10.yaml', 20, 16, 0, [2.52059, 3.68961, 4.94318, 6.51778],0), # test ff = 'UFF'
     ('pentane.smi', 'params_test11.yaml', 20, 0, 8, [-5.26093, -4.41687, -4.39313, -4.10961, -3.93585, -2.95568, -2.43353, -2.03709, -1.51856, -1.45757, -0.22202, 0.46406],0), # test opt_steps_RDKit = 40
+    ('Ir_hexacoord.smi', 'params_test12.yaml', 20, 0, 8, [-5.26093, -4.41687, -4.39313, -4.10961, -3.93585, -2.95568, -2.43353, -2.03709, -1.51856, -1.45757, -0.22202, 0.46406],0), # test opt_steps_RDKit = 40
 ])
 
 def test_confgen(smiles, params_file, n_confs, prefilter_confs_rdkit, filter_confs_rdkit, E_confs, charge):
@@ -62,14 +63,14 @@ def test_confgen(smiles, params_file, n_confs, prefilter_confs_rdkit, filter_con
 	# read the energies of the conformers
 	os.chdir(path+'/'+smiles.split('.')[0]+'/RDKit_generated_SDF_files')
 	test_rdkit_E_confs = read_energies(smiles.split('.')[0]+'_rdkit.sdf')
-
+	print(test_rdkit_E_confs)
 	# test for energies
-	if str(test_rdkit_E_confs) != 'nan':
+	try:
 		test_round_confs = [round(num, precision) for num in test_rdkit_E_confs]
 		round_confs = [round(num, precision) for num in E_confs]
-	else:
-		test_round_confs = test_rdkit_E_confs
-		round_confs = E_confs
+	except:
+		test_round_confs = 'nan'
+		round_confs = 'nan'
 
 	assert str(round_confs) == str(test_round_confs)
 
@@ -79,6 +80,7 @@ def test_confgen(smiles, params_file, n_confs, prefilter_confs_rdkit, filter_con
 	assert str(charge) == str(test_charge[0])
 
 # MISSING CHECKS:
+# START FROM COM, SDF, XYZ
 # CHECK COM FILES generation
 # CHECK THAT THE METAL PART IS WORKING
 # CHECK THAT MULTIPLE METALS ARE COMPATIBLE
