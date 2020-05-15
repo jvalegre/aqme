@@ -38,7 +38,7 @@ before_script:
 
 script:
   - cd tests
-  - pytest -v --cov=DBGEN
+  - pytest -v --cov=pyconfort
 
 after_success:
   - codecov
