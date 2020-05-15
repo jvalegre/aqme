@@ -1,9 +1,10 @@
 ![](Logos/DBGEN%20logo.tif)
 [![Build Status](https://img.shields.io/travis/com/jvalegre/pyconfort?label=Linux%20CI&logo=Travis)](https://travis-ci.com/github/jvalegre/pyCONFORT)
-![PyPI](https://img.shields.io/pypi/v/pyCONFORT)
-![Size](https://img.shields.io/github/repo-size/jvalegre/pyCONFORT?label=size)
-[![CodeFactor](https://www.codefactor.io/repository/github/jvalegre/pyconfort/badge/master)](https://www.codefactor.io/repository/github/jvalegre/pyconfort/overview/master)
+[![Codecov](https://img.shields.io/codecov/c/github/jvalegre/pyconfort?label=Codecov&logo=codecov](https://codecov.io/gh/jvalegre/pyCONFORT)
+![Size](https://img.shields.io/github/repo-size/jvalegre/pyconfort?label=Size)
+[![CodeFactor](https://img.shields.io/codefactor/grade/github/jvalegre/pyconfort?label=Codefactor&logo=codefactor)](https://www.codefactor.io/repository/github/jvalegre/pyconfort/overview/master)
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/047e9c6001a84713a82e180669e14c98)](https://www.codacy.com/manual/jvalegre/pyCONFORT?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=jvalegre/pyCONFORT&amp;utm_campaign=Badge_Grade)
+![PyPI](https://img.shields.io/pypi/v/pyconfort?label=PyPI&logo=pypi)
 ![PyPI Downloads](https://img.shields.io/pypi/dm/pyconfort?label=PyPI%20downloads&logo=pypi&style=social)
 
 # DBGEN
