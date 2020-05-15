@@ -1,10 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+# RDKit imports
 import os
 import pytest
 import pandas as pd
 import subprocess
+
+# xTB and ANI1 imports
 import ase
 import ase.optimize
 import torch, torchani
