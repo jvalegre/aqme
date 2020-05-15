@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import os, glob
+import os
 import pytest
 import pandas as pd
 import subprocess

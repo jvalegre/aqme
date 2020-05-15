@@ -23,7 +23,7 @@ before_install:
 
 install:
   - conda install -c openbabel openbabel
-  - conda install pyyaml
+  - pip install PyYAML
   - conda install pandas
   - conda install -q -c rdkit rdkit
   - conda install -c anaconda pytest
