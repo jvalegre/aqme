@@ -170,18 +170,18 @@ def main():
 		# writing the list of DUPLICATES
 		if args.nodihedrals:
 			if args.xtb != True and args.ANI1ccx != True:
-				dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples', 'RDKit-energy-duplicates','RDKit-RMS-and-energy-duplicates','RDKIT-Unique-conformers','time (seconds)','Overall charge'])
+				dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples', 'RDKit-energy-duplicates','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','time (seconds)','Overall charge'])
 			elif args.xtb:
-				dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples', 'RDKit-energy-duplicates','RDKit-RMS-and-energy-duplicates','RDKIT-Unique-conformers','xTB-Initial-samples','xTB-initial_energy_threshold','xTB-RMS-and-energy-duplicates','xTB-Unique-conformers','time (seconds)','Overall charge'])
+				dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples', 'RDKit-energy-duplicates','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','xTB-Initial-samples','xTB-initial_energy_threshold','xTB-RMSD-and-energy-duplicates','xTB-Unique-conformers','time (seconds)','Overall charge'])
 			elif args.ANI1ccx:
-				dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples', 'RDKit-energy-duplicates','RDKit-RMS-and-energy-duplicates','RDKIT-Unique-conformers','ANI1ccx-Initial-samples','ANI1ccx-initial_energy_threshold','ANI1ccx-RMS-and-energy-duplicates','ANI1ccx-Unique-conformers','time (seconds)','Overall charge'])
+				dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples', 'RDKit-energy-duplicates','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','ANI1ccx-Initial-samples','ANI1ccx-initial_energy_threshold','ANI1ccx-RMSD-and-energy-duplicates','ANI1ccx-Unique-conformers','time (seconds)','Overall charge'])
 		else:
 			if args.xtb != True and args.ANI1ccx != True:
-				dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples', 'RDKit-energy-duplicates','RDKit-RMS-and-energy-duplicates','RDKIT-Unique-conformers','RDKIT-Rotated-conformers','RDKIT-Rotated-Unique-conformers','time (seconds)','Overall charge'])
+				dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples', 'RDKit-energy-duplicates','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','RDKIT-Rotated-conformers','RDKIT-Rotated-Unique-conformers','time (seconds)','Overall charge'])
 			elif args.xtb:
-				dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples', 'RDKit-energy-duplicates','RDKit-RMS-and-energy-duplicates','RDKIT-Unique-conformers','RDKIT-Rotated-conformers','RDKIT-Rotated-Unique-conformers','xTB-Initial-samples','xTB-initial_energy_threshold','xTB-RMS-and-energy-duplicates','xTB-Unique-conformers','time (seconds)','Overall charge'])
+				dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples', 'RDKit-energy-duplicates','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','RDKIT-Rotated-conformers','RDKIT-Rotated-Unique-conformers','xTB-Initial-samples','xTB-initial_energy_threshold','xTB-RMSD-and-energy-duplicates','xTB-Unique-conformers','time (seconds)','Overall charge'])
 			elif args.ANI1ccx:
-					dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples', 'RDKit-energy-duplicates','RDKit-RMS-and-energy-duplicates','RDKIT-Unique-conformers','RDKIT-Rotated-conformers','RDKIT-Rotated-Unique-conformers','ANI1ccx-Initial-samples','ANI1ccx-initial_energy_threshold','ANI1ccx-RMS-and-energy-duplicates','ANI1ccx-Unique-conformers','time (seconds)','Overall charge'])
+					dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples', 'RDKit-energy-duplicates','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','RDKIT-Rotated-conformers','RDKIT-Rotated-Unique-conformers','ANI1ccx-Initial-samples','ANI1ccx-initial_energy_threshold','ANI1ccx-RMSD-and-energy-duplicates','ANI1ccx-Unique-conformers','time (seconds)','Overall charge'])
 
 		# sets up the chosen force field (this fixes some problems in case MMFF is replaced by UFF)
 		ori_ff = args.ff
