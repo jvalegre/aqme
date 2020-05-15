@@ -88,8 +88,8 @@ angle_off : 30 # margin of error to determine angles (i.e. if angle_off is 30, a
 # (7) OPTIONS FOR METALS, ATOMS WITH UNCOMMON HYBRIDIZATIONS AND NCI COMPLEXES
 # IF A METAL OR AN ATOM WITH UNCOMMON HYBRIDIZATION (i.e. pentacoordinated phosphorus) IS USED
 metal_complex : False # specify True to activate this option
-metal : ['Ir','Au'] # specify the metal(s) or atom(s) with uncommon hybridization, in the format 'A','B','C'...
-m_oxi : [3,1] # oxidation number of the atom (it is used to calculate the charge of the molecule)
+metal : ['Ag','Au'] # specify the metal(s) or atom(s) with uncommon hybridization, in the format 'A','B','C'...
+m_oxi : [1,1] # oxidation number of the atom (it is used to calculate the charge of the molecule)
 complex_spin : 1 # final spin of the molecule (the code does not calculate spin, it must be defined by the user)
 
 # (8) IF A NONCOVALENT COMPLEX IS USED
