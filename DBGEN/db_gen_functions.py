@@ -1489,6 +1489,277 @@ def rules_get_charge(mol,args,log):
 	else:
 		return charge
 
+def embed_conf(mol,initial_confs,args,log,coord_Map,alg_Map, mol_template):
+	if coord_Map == None and alg_Map == None and mol_template == None:
+		if args.etkdg:
+			ps = Chem.ETKDG()
+			ps.randomSeed = args.seed
+			ps.ignoreSmoothingFailures=True
+			ps.numThreads = 0
+			cids = rdDistGeom.EmbedMultipleConfs(mol, initial_confs, params=ps)
+		else:
+			cids = rdDistGeom.EmbedMultipleConfs(mol, initial_confs,ignoreSmoothingFailures=True, randomSeed=args.seed,numThreads = 0)
+		if len(cids) == 0 or len(cids) == 1 and initial_confs != 1:
+			log.write("o  Normal RDKit embeding process failed, trying to generate conformers with random coordinates (with "+str(initial_confs)+" possibilities)")
+			cids = rdDistGeom.EmbedMultipleConfs(mol, initial_confs, randomSeed=args.seed, useRandomCoords=True, boxSizeMult=10.0,ignoreSmoothingFailures=True, numZeroFail=1000, numThreads = 0)
+		if args.verbose:
+			log.write("o  "+ str(len(cids))+" conformers initially generated")
+	# case of embed for templates
+	else:
+		if args.etkdg:
+			ps = Chem.ETKDG()
+			ps.randomSeed = args.seed
+			ps.coordMap = coord_Map
+			ps.ignoreSmoothingFailures=True
+			ps.numThreads = 0
+			cids = rdDistGeom.EmbedMultipleConfs(mol, initial_confs, params=ps)
+		else:
+			cids = rdDistGeom.EmbedMultipleConfs(mol, initial_confs, randomSeed=args.seed,ignoreSmoothingFailures=True, coordMap = coord_Map,numThreads = 0)
+		if len(cids) == 0 or len(cids) == 1 and initial_confs != 1:
+			log.write("o  Normal RDKit embeding process failed, trying to generate conformers with random coordinates (with "+str(initial_confs)+" possibilities)")
+			cids = rdDistGeom.EmbedMultipleConfs(mol, initial_confs, randomSeed=args.seed, useRandomCoords=True, boxSizeMult=10.0, numZeroFail=1000,ignoreSmoothingFailures=True, coordMap = coord_Map,numThreads = 0)
+		if args.verbose:
+			log.write("o  "+ str(len(cids))+" conformers initially generated")
+
+	return cids
+
+def min_after_embed(mol,cids,name,initial_confs,rotmatches,dup_data,dup_data_idx,sdwriter,coord_Map,alg_Map, mol_template,args,log):
+
+	cenergy,outmols = [],[]
+	bar = IncrementalBar('o  Minimizing', max = len(cids))
+	for i, conf in enumerate(cids):
+		if coord_Map == None and alg_Map == None and mol_template == None:
+			if args.ff == "MMFF":
+				GetFF = Chem.MMFFGetMoleculeForceField(mol, Chem.MMFFGetMoleculeProperties(mol),confId=conf)
+			elif args.ff == "UFF":
+				GetFF = Chem.UFFGetMoleculeForceField(mol,confId=conf)
+			else:
+				log.write('   Force field {} not supported!'.format(args.ff))
+				sys.exit()
+
+			GetFF.Initialize()
+			GetFF.Minimize(maxIts=args.opt_steps_RDKit)
+			energy = GetFF.CalcEnergy()
+			cenergy.append(GetFF.CalcEnergy())
+
+		#id template realign before doing calculations
+		else:
+			num_atom_match = mol.GetSubstructMatch(mol_template)
+			# Force field parameters
+			if args.ff == "MMFF":
+				GetFF = lambda mol,confId=conf:Chem.MMFFGetMoleculeForceField(mol,Chem.MMFFGetMoleculeProperties(mol),confId=conf)
+			elif args.ff == "UFF":
+				GetFF = lambda mol,confId=conf:Chem.UFFGetMoleculeForceField(mol,confId=conf)
+			else:
+				log.write('   Force field {} not supported!'.format(args.ff))
+				sys.exit()
+			getForceField=GetFF
+
+			# clean up the conformation
+			ff_temp = getForceField(mol, confId=conf)
+			for k, idxI in enumerate(num_atom_match):
+				for l in range(k + 1, len(num_atom_match)):
+					idxJ = num_atom_match[l]
+					d = coord_Map[idxI].Distance(coord_Map[idxJ])
+					ff_temp.AddDistanceConstraint(idxI, idxJ, d, d, 10000)
+			ff_temp.Initialize()
+			#reassignned n from 4 to 10 for better embed and minimzation
+			n = 10
+			more = ff_temp.Minimize()
+			while more and n:
+				more = ff_temp.Minimize()
+				n -= 1
+			energy = ff_temp.CalcEnergy()
+			# rotate the embedded conformation onto the core_mol:
+			rdMolAlign.AlignMol(mol, mol_template,prbCid=conf, atomMap=alg_Map,reflect=True,maxIters=100)
+			cenergy.append(energy)
+
+		# outmols is gonna be a list containing "initial_confs" mol objects with "initial_confs"
+		# conformers. We do this to SetProp (Name and Energy) to the different conformers
+		# and log.write in the SDF file. At the end, since all the mol objects has the same
+		# conformers, but the energies are different, we can log.write conformers to SDF files
+		# with the energies of the parent mol objects. We measured the computing time and
+		# it's the same as using only 1 parent mol object with 10 conformers, but we couldn'temp
+		# SetProp correctly
+		pmol = PropertyMol.PropertyMol(mol)
+		outmols.append(pmol)
+		bar.next()
+	bar.finish()
+
+	for i, cid in enumerate(cids):
+		outmols[cid].SetProp('_Name', name + ' conformer ' + str(i+1))
+		outmols[cid].SetProp('Energy', cenergy[cid])
+
+	cids = list(range(len(outmols)))
+	sortedcids = sorted(cids,key = lambda cid: cenergy[cid])
+
+	log.write("\n\no  Filters after intial embedding of "+str(initial_confs)+" conformers")
+	selectedcids,selectedcids_initial, eng_dup,eng_rms_dup =[],[],-1,-1
+	bar = IncrementalBar('o  Filtering based on energy (pre-filter)', max = len(sortedcids))
+	for i, conf in enumerate(sortedcids):
+		# This keeps track of whether or not your conformer is unique
+		excluded_conf = False
+		# include the first conformer in the list to start the filtering process
+		if i == 0:
+			selectedcids_initial.append(conf)
+		# check rmsd
+		for seenconf in selectedcids_initial:
+			E_diff = abs(cenergy[conf] - cenergy[seenconf]) # in kcal/mol
+			if E_diff < args.initial_energy_threshold:
+				eng_dup += 1
+				excluded_conf = True
+				break
+		if excluded_conf == False:
+			if conf not in selectedcids_initial:
+				selectedcids_initial.append(conf)
+		bar.next()
+	bar.finish()
+
+
+	if args.verbose:
+		log.write("o  "+str(eng_dup)+ " Duplicates removed  pre-energy filter (E < "+str(args.initial_energy_threshold)+" kcal/mol)")
+
+
+	#reduce to unique set
+	if args.verbose:
+		log.write("o  Removing duplicate conformers (RMSD < "+ str(args.rms_threshold)+ " and E difference < "+str(args.energy_threshold)+" kcal/mol)")
+
+	bar = IncrementalBar('o  Filtering based on energy and RMSD', max = len(selectedcids_initial))
+	#check rmsd
+	for i, conf in enumerate(selectedcids_initial):
+
+		# #set torsions to same value
+		for m in rotmatches:
+			rdMolTransforms.SetDihedralDeg(outmols[conf].GetConformer(conf),*m,180.0)
+
+		# This keeps track of whether or not your conformer is unique
+		excluded_conf = False
+		# include the first conformer in the list to start the filtering process
+		if i == 0:
+			selectedcids.append(conf)
+		# check rmsd
+		for seenconf in selectedcids:
+			E_diff = abs(cenergy[conf] - cenergy[seenconf]) # in kcal/mol
+			if  E_diff < args.energy_threshold:
+				rms = get_conf_RMS(outmols[conf],outmols[conf],seenconf,conf, args.heavyonly, args.max_matches_RMSD,log)
+				if rms < args.rms_threshold:
+					excluded_conf = True
+					eng_rms_dup += 1
+					break
+		if excluded_conf == False:
+			if conf not in selectedcids:
+				selectedcids.append(conf)
+		bar.next()
+	bar.finish()
+
+	if args.verbose:
+		log.write("o  "+str(eng_rms_dup)+ " Duplicates removed (RMSD < "+str(args.rms_threshold)+" / E < "+str(args.energy_threshold)+" kcal/mol) after rotation")
+	if args.verbose:
+		log.write("o  "+ str(len(selectedcids))+" unique conformers remain")
+
+	dup_data.at[dup_data_idx, 'RDKit-energy-duplicates'] = eng_dup
+	dup_data.at[dup_data_idx, 'RDKit-RMSD-and-energy-duplicates'] = eng_rms_dup
+	dup_data.at[dup_data_idx, 'RDKIT-Unique-conformers'] = len(selectedcids)
+
+	#writing charges after RDKIT
+	args.charge = rules_get_charge(mol,args,log)
+	dup_data.at[dup_data_idx, 'Overall charge'] = np.sum(args.charge)
+
+	# now exhaustively drive torsions of selected conformers
+	n_confs = int(len(selectedcids) * (360 / args.degree) ** len(rotmatches))
+	if args.verbose and len(rotmatches) != 0:
+		log.write("\n\no  Systematic generation of "+ str(n_confs)+ " confomers")
+		bar = IncrementalBar('o  Generating conformations based on dihedral rotation', max = len(selectedcids))
+	else:
+		bar = IncrementalBar('o  Generating conformations', max = len(selectedcids))
+
+	total = 0
+	for conf in selectedcids:
+		#log.write(outmols[conf])
+		total += genConformer_r(outmols[conf], conf, 0, rotmatches, args.degree, sdwriter ,args,outmols[conf].GetProp('_Name'),log)
+		bar.next()
+	bar.finish()
+	if args.verbose and len(rotmatches) != 0:
+		log.write("o  %d total conformations generated"%total)
+	status = 1
+
+	dup_data.at[dup_data_idx, 'RDKIT-Rotated-conformers'] = total
+
+	return status
+
+def filter_after_rotation(args,name,log,dup_data,dup_data_idx):
+	rdmols = Chem.SDMolSupplier(name+'_'+'rdkit'+args.output, removeHs=False)
+	if rdmols is None:
+		log.write("Could not open "+ name+args.output)
+		sys.exit(-1)
+
+
+	bar = IncrementalBar('o  Filtering based on energy and rms after rotation of dihedrals', max = len(rdmols))
+	sdwriter_rd = Chem.SDWriter(name+'_'+'rdkit'+'_'+'rotated'+args.output)
+
+	rd_count = 0
+	rd_selectedcids,rd_dup_energy,rd_dup_rms_eng =[],-1,0
+	for i, rd_mol_i in enumerate(rdmols):
+		mol_rd = Chem.RWMol(rd_mol_i)
+		mol_rd.SetProp('_Name',mol_rd.GetProp('_Name')+' '+str(i))
+		# This keeps track of whether or not your conformer is unique
+		excluded_conf = False
+		# include the first conformer in the list to start the filtering process
+		if rd_count == 0:
+			rd_selectedcids.append(i)
+			if args.metal_complex:
+				for atom in mol_rd.GetAtoms():
+					if atom.GetIdx() in args.metal_idx:
+						re_symbol = args.metal_sym[args.metal_idx.index(atom.GetIdx())]
+						for el in elementspt:
+							if el.symbol == re_symbol:
+								atomic_number = el.number
+						atom.SetAtomicNum(atomic_number)
+				sdwriter_rd.write(mol_rd)
+		# Only the first ID gets included
+		rd_count = 1
+		# check rmsd
+		for j in rd_selectedcids:
+			if abs(float(rdmols[i].GetProp('Energy')) - float(rdmols[j].GetProp('Energy'))) < args.initial_energy_threshold: # comparison in kcal/mol
+				excluded_conf = True
+				rd_dup_energy += 1
+				break
+			if abs(float(rdmols[i].GetProp('Energy')) - float(rdmols[j].GetProp('Energy'))) < args.energy_threshold: # in kcal/mol
+				rms = get_conf_RMS(rdmols[i],rdmols[j],-1,-1, args.heavyonly, args.max_matches_RMSD,log)
+				if rms < args.rms_threshold:
+					excluded_conf = True
+					rd_dup_rms_eng += 1
+					break
+		if excluded_conf == False:
+			if args.metal_complex:
+				for atom in mol_rd.GetAtoms():
+					if atom.GetIdx() in args.metal_idx:
+						re_symbol = args.metal_sym[args.metal_idx.index(atom.GetIdx())]
+						for el in elementspt:
+							if el.symbol == re_symbol:
+								atomic_number = el.number
+						atom.SetAtomicNum(atomic_number)
+				sdwriter_rd.write(mol_rd)
+			if i not in rd_selectedcids:
+				rd_selectedcids.append(i)
+		bar.next()
+	bar.finish()
+	sdwriter_rd.close()
+
+	if args.verbose:
+		log.write("o  "+str(rd_dup_energy)+ " Duplicates removed initial energy (E < "+str(args.initial_energy_threshold)+" kcal/mol)")
+	if args.verbose:
+		log.write("o  "+str(rd_dup_rms_eng)+ " Duplicates removed (RMSD < "+str(args.rms_threshold)+" / E < "+str(args.energy_threshold)+" kcal/mol) after rotation")
+	if args.verbose:
+		log.write("o  "+str(len(rd_selectedcids) )+ " unique conformers remain")
+
+	#filtering process after rotations
+	dup_data.at[dup_data_idx, 'RDKIT-Rotated-Unique-conformers'] = len(rd_selectedcids)
+
+	status = 1
+
+	return status
+
 # EMBEDS, OPTIMIZES AND FILTERS RDKIT CONFORMERS
 def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None,alg_Map=None,mol_template=None):
 	sdwriter = Chem.SDWriter(name+'_'+'rdkit'+args.output)
@@ -1517,37 +1788,7 @@ def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None,alg_M
 		log.write("x  Too many torsions (%d). Skipping %s" %(len(rotmatches),(name+args.output)))
 		status = -1
 	else:
-		if coord_Map == None and alg_Map == None and mol_template == None:
-			if args.etkdg:
-				ps = Chem.ETKDG()
-				ps.randomSeed = args.seed
-				ps.ignoreSmoothingFailures=True
-				ps.numThreads = 0
-				cids = rdDistGeom.EmbedMultipleConfs(mol, initial_confs, params=ps)
-			else:
-				cids = rdDistGeom.EmbedMultipleConfs(mol, initial_confs,ignoreSmoothingFailures=True, randomSeed=args.seed,numThreads = 0)
-			if len(cids) == 0 or len(cids) == 1 and initial_confs != 1:
-				log.write("o  Normal RDKit embeding process failed, trying to generate conformers with random coordinates (with "+str(initial_confs)+" possibilities)")
-				cids = rdDistGeom.EmbedMultipleConfs(mol, initial_confs, randomSeed=args.seed, useRandomCoords=True, boxSizeMult=10.0,ignoreSmoothingFailures=True, numZeroFail=1000, numThreads = 0)
-			if args.verbose:
-				log.write("o  "+ str(len(cids))+" conformers initially generated")
-		# case of embed for templates
-		else:
-			if args.etkdg:
-				ps = Chem.ETKDG()
-				ps.randomSeed = args.seed
-				ps.coordMap = coord_Map
-				ps.ignoreSmoothingFailures=True
-				ps.numThreads = 0
-				cids = rdDistGeom.EmbedMultipleConfs(mol, initial_confs, params=ps)
-			else:
-				cids = rdDistGeom.EmbedMultipleConfs(mol, initial_confs, randomSeed=args.seed,ignoreSmoothingFailures=True, coordMap = coord_Map,numThreads = 0)
-			if len(cids) == 0 or len(cids) == 1 and initial_confs != 1:
-				log.write("o  Normal RDKit embeding process failed, trying to generate conformers with random coordinates (with "+str(initial_confs)+" possibilities)")
-				cids = rdDistGeom.EmbedMultipleConfs(mol, initial_confs, randomSeed=args.seed, useRandomCoords=True, boxSizeMult=10.0, numZeroFail=1000,ignoreSmoothingFailures=True, coordMap = coord_Map,numThreads = 0)
-			if args.verbose:
-				log.write("o  "+ str(len(cids))+" conformers initially generated")
-
+		cids = embed_conf(mol,initial_confs,args,log,coord_Map,alg_Map, mol_template)
 		#energy minimize all to get more realistic results
 		#identify the atoms and decide Force Field
 
@@ -1565,236 +1806,13 @@ def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None,alg_M
 			else:
 				log.write("o  Systematic torsion rotation is set to OFF")
 
-		cenergy,outmols = [],[]
-		bar = IncrementalBar('o  Minimizing', max = len(cids))
-		for i, conf in enumerate(cids):
-			if coord_Map == None and alg_Map == None and mol_template == None:
-				if args.ff == "MMFF":
-					GetFF = Chem.MMFFGetMoleculeForceField(mol, Chem.MMFFGetMoleculeProperties(mol),confId=conf)
-				elif args.ff == "UFF":
-					GetFF = Chem.UFFGetMoleculeForceField(mol,confId=conf)
-				else:
-					log.write('   Force field {} not supported!'.format(args.ff))
-					sys.exit()
-
-				GetFF.Initialize()
-				GetFF.Minimize(maxIts=args.opt_steps_RDKit)
-				energy = GetFF.CalcEnergy()
-				cenergy.append(GetFF.CalcEnergy())
-
-			#id template realign before doing calculations
-			else:
-				num_atom_match = mol.GetSubstructMatch(mol_template)
-				# Force field parameters
-				if args.ff == "MMFF":
-					GetFF = lambda mol,confId=conf:Chem.MMFFGetMoleculeForceField(mol,Chem.MMFFGetMoleculeProperties(mol),confId=conf)
-				elif args.ff == "UFF":
-					GetFF = lambda mol,confId=conf:Chem.UFFGetMoleculeForceField(mol,confId=conf)
-				else:
-					log.write('   Force field {} not supported!'.format(args.ff))
-					sys.exit()
-				getForceField=GetFF
-
-				# clean up the conformation
-				ff_temp = getForceField(mol, confId=conf)
-				for k, idxI in enumerate(num_atom_match):
-					for l in range(k + 1, len(num_atom_match)):
-						idxJ = num_atom_match[l]
-						d = coord_Map[idxI].Distance(coord_Map[idxJ])
-						ff_temp.AddDistanceConstraint(idxI, idxJ, d, d, 10000)
-				ff_temp.Initialize()
-				#reassignned n from 4 to 10 for better embed and minimzation
-				n = 10
-				more = ff_temp.Minimize()
-				while more and n:
-					more = ff_temp.Minimize()
-					n -= 1
-				energy = ff_temp.CalcEnergy()
-				# rotate the embedded conformation onto the core_mol:
-				rdMolAlign.AlignMol(mol, mol_template,prbCid=conf, atomMap=alg_Map,reflect=True,maxIters=100)
-				cenergy.append(energy)
-
-			# outmols is gonna be a list containing "initial_confs" mol objects with "initial_confs"
-			# conformers. We do this to SetProp (Name and Energy) to the different conformers
-			# and log.write in the SDF file. At the end, since all the mol objects has the same
-			# conformers, but the energies are different, we can log.write conformers to SDF files
-			# with the energies of the parent mol objects. We measured the computing time and
-			# it's the same as using only 1 parent mol object with 10 conformers, but we couldn'temp
-			# SetProp correctly
-			pmol = PropertyMol.PropertyMol(mol)
-			outmols.append(pmol)
-			bar.next()
-		bar.finish()
-
-		for i, cid in enumerate(cids):
-			outmols[cid].SetProp('_Name', name + ' conformer ' + str(i+1))
-			outmols[cid].SetProp('Energy', cenergy[cid])
-
-		cids = list(range(len(outmols)))
-		sortedcids = sorted(cids,key = lambda cid: cenergy[cid])
-
-		log.write("\n\no  Filters after intial embedding of "+str(initial_confs)+" conformers")
-		selectedcids,selectedcids_initial, eng_dup,eng_rms_dup =[],[],-1,-1
-		bar = IncrementalBar('o  Filtering based on energy (pre-filter)', max = len(sortedcids))
-		for i, conf in enumerate(sortedcids):
-			# This keeps track of whether or not your conformer is unique
-			excluded_conf = False
-			# include the first conformer in the list to start the filtering process
-			if i == 0:
-				selectedcids_initial.append(conf)
-			# check rmsd
-			for seenconf in selectedcids_initial:
-				E_diff = abs(cenergy[conf] - cenergy[seenconf]) # in kcal/mol
-				if E_diff < args.initial_energy_threshold:
-					eng_dup += 1
-					excluded_conf = True
-					break
-			if excluded_conf == False:
-				if conf not in selectedcids_initial:
-					selectedcids_initial.append(conf)
-			bar.next()
-		bar.finish()
-
-
-		if args.verbose:
-			log.write("o  "+str(eng_dup)+ " Duplicates removed  pre-energy filter (E < "+str(args.initial_energy_threshold)+" kcal/mol)")
-
-
-		#reduce to unique set
-		if args.verbose:
-			log.write("o  Removing duplicate conformers (RMSD < "+ str(args.rms_threshold)+ " and E difference < "+str(args.energy_threshold)+" kcal/mol)")
-
-		bar = IncrementalBar('o  Filtering based on energy and RMSD', max = len(selectedcids_initial))
-		#check rmsd
-		for i, conf in enumerate(selectedcids_initial):
-
-			# #set torsions to same value
-			for m in rotmatches:
-				rdMolTransforms.SetDihedralDeg(outmols[conf].GetConformer(conf),*m,180.0)
-
-			# This keeps track of whether or not your conformer is unique
-			excluded_conf = False
-			# include the first conformer in the list to start the filtering process
-			if i == 0:
-				selectedcids.append(conf)
-			# check rmsd
-			for seenconf in selectedcids:
-				E_diff = abs(cenergy[conf] - cenergy[seenconf]) # in kcal/mol
-				if  E_diff < args.energy_threshold:
-					rms = get_conf_RMS(outmols[conf],outmols[conf],seenconf,conf, args.heavyonly, args.max_matches_RMSD,log)
-					if rms < args.rms_threshold:
-						excluded_conf = True
-						eng_rms_dup += 1
-						break
-			if excluded_conf == False:
-				if conf not in selectedcids:
-					selectedcids.append(conf)
-			bar.next()
-		bar.finish()
-
-		if args.verbose:
-			log.write("o  "+str(eng_rms_dup)+ " Duplicates removed (RMSD < "+str(args.rms_threshold)+" / E < "+str(args.energy_threshold)+" kcal/mol) after rotation")
-		if args.verbose:
-			log.write("o  "+ str(len(selectedcids))+" unique conformers remain")
-
-		dup_data.at[dup_data_idx, 'RDKit-energy-duplicates'] = eng_dup
-		dup_data.at[dup_data_idx, 'RDKit-RMSD-and-energy-duplicates'] = eng_rms_dup
-		dup_data.at[dup_data_idx, 'RDKIT-Unique-conformers'] = len(selectedcids)
-
-		#writing charges after RDKIT
-		args.charge = rules_get_charge(mol,args,log)
-		dup_data.at[dup_data_idx, 'Overall charge'] = np.sum(args.charge)
-
-		# now exhaustively drive torsions of selected conformers
-		n_confs = int(len(selectedcids) * (360 / args.degree) ** len(rotmatches))
-		if args.verbose and len(rotmatches) != 0:
-			log.write("\n\no  Systematic generation of "+ str(n_confs)+ " confomers")
-			bar = IncrementalBar('o  Generating conformations based on dihedral rotation', max = len(selectedcids))
-		else:
-			bar = IncrementalBar('o  Generating conformations', max = len(selectedcids))
-
-		total = 0
-		for conf in selectedcids:
-			#log.write(outmols[conf])
-			total += genConformer_r(outmols[conf], conf, 0, rotmatches, args.degree, sdwriter ,args,outmols[conf].GetProp('_Name'),log)
-			bar.next()
-		bar.finish()
-		if args.verbose and len(rotmatches) != 0:
-			log.write("o  %d total conformations generated"%total)
-		status = 1
+		status = min_after_embed(mol,cids,name,initial_confs,rotmatches,dup_data,dup_data_idx,sdwriter,coord_Map,alg_Map, mol_template,args,log)
 	sdwriter.close()
 
 	#getting the energy from and mols after rotations
 	if not args.nodihedrals and len(rotmatches) != 0:
-		rdmols = Chem.SDMolSupplier(name+'_'+'rdkit'+args.output, removeHs=False)
-		if rdmols is None:
-			log.write("Could not open "+ name+args.output)
-			sys.exit(-1)
 
-
-		bar = IncrementalBar('o  Filtering based on energy and rms after rotation of dihedrals', max = len(rdmols))
-		sdwriter_rd = Chem.SDWriter(name+'_'+'rdkit'+'_'+'rotated'+args.output)
-
-		rd_count = 0
-		rd_selectedcids,rd_dup_energy,rd_dup_rms_eng =[],-1,0
-		for i, rd_mol_i in enumerate(rdmols):
-			mol_rd = Chem.RWMol(rd_mol_i)
-			mol_rd.SetProp('_Name',mol_rd.GetProp('_Name')+' '+str(i))
-			# This keeps track of whether or not your conformer is unique
-			excluded_conf = False
-			# include the first conformer in the list to start the filtering process
-			if rd_count == 0:
-				rd_selectedcids.append(i)
-				if args.metal_complex:
-					for atom in mol_rd.GetAtoms():
-						if atom.GetIdx() in args.metal_idx:
-							re_symbol = args.metal_sym[args.metal_idx.index(atom.GetIdx())]
-							for el in elementspt:
-								if el.symbol == re_symbol:
-									atomic_number = el.number
-							atom.SetAtomicNum(atomic_number)
-					sdwriter_rd.write(mol_rd)
-			# Only the first ID gets included
-			rd_count = 1
-			# check rmsd
-			for j in rd_selectedcids:
-				if abs(float(rdmols[i].GetProp('Energy')) - float(rdmols[j].GetProp('Energy'))) < args.initial_energy_threshold: # comparison in kcal/mol
-					excluded_conf = True
-					rd_dup_energy += 1
-					break
-				if abs(float(rdmols[i].GetProp('Energy')) - float(rdmols[j].GetProp('Energy'))) < args.energy_threshold: # in kcal/mol
-					rms = get_conf_RMS(rdmols[i],rdmols[j],-1,-1, args.heavyonly, args.max_matches_RMSD,log)
-					if rms < args.rms_threshold:
-						excluded_conf = True
-						rd_dup_rms_eng += 1
-						break
-			if excluded_conf == False:
-				if args.metal_complex:
-					for atom in mol_rd.GetAtoms():
-						if atom.GetIdx() in args.metal_idx:
-							re_symbol = args.metal_sym[args.metal_idx.index(atom.GetIdx())]
-							for el in elementspt:
-								if el.symbol == re_symbol:
-									atomic_number = el.number
-							atom.SetAtomicNum(atomic_number)
-					sdwriter_rd.write(mol_rd)
-				if i not in rd_selectedcids:
-					rd_selectedcids.append(i)
-			bar.next()
-		bar.finish()
-		sdwriter_rd.close()
-
-		if args.verbose:
-			log.write("o  "+str(rd_dup_energy)+ " Duplicates removed initial energy (E < "+str(args.initial_energy_threshold)+" kcal/mol)")
-		if args.verbose:
-			log.write("o  "+str(rd_dup_rms_eng)+ " Duplicates removed (RMSD < "+str(args.rms_threshold)+" / E < "+str(args.energy_threshold)+" kcal/mol) after rotation")
-		if args.verbose:
-			log.write("o  "+str(len(rd_selectedcids) )+ " unique conformers remain")
-
-
-		#filtering process after rotations
-		dup_data.at[dup_data_idx, 'RDKIT-Rotated-conformers'] = total
-		dup_data.at[dup_data_idx, 'RDKIT-Rotated-Unique-conformers'] = len(rd_selectedcids)
+		status = filter_after_rotation(args,name,log,dup_data,dup_data_idx)
 
 	elif not args.nodihedrals and len(rotmatches) ==0:
 		status = 0
