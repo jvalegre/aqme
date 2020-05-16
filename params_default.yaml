@@ -40,7 +40,6 @@ xtb : True
 # (3) RDKit AND xTB PARAMETERS
 ewin : 1000 #energy window in kcal/mol to use conformers for RDKit and xTB (conformers with E higher than ewin will be discarded)
 sample : 'auto' # number of conformers to sample to get non-torsional differences (default 100)
-solvent_xtb : '' # includes energies in the xTB energies after optimization in gas-phase
 
 # (4) OPTIONS FOR COM FILE GENERATION (write_gauss : True)
 # By default, you include optimization in the COM files.
@@ -91,7 +90,7 @@ metal_complex : False # specify True to activate this option
 metal : [] # specify the metal(s) or atom(s) with uncommon hybridization, in the format 'A','B','C'...
 m_oxi : [] # oxidation number of the atom (it is used to calculate the charge of the molecule)
 complex_spin : 1 # final spin of the molecule (the code does not calculate spin, it must be defined by the user)
-complex_type : [] # define squareplanar and squarepyrimidal compounds
+complex_type : '' # specify for squareplanar or squarepyrimidal
 
 # (8) IF A NONCOVALENT COMPLEX IS USED
 nci_complex : False # specify  true if NCI complex

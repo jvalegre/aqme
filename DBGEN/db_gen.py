@@ -1,5 +1,5 @@
-
-"""######################################################################################
+#!/usr/bin/env python
+""".####################################################################################.
 #########################################################################################
 ###																					  ###
 ###  pyCONFORT is a tool that allows to carry out automated:						  ###
@@ -21,7 +21,7 @@
 ###  svss@colostate.edu or juanvi89@hotmail.com  									  ###
 ###																					  ###
 #########################################################################################
-######################################################################################"""
+.####################################################################################."""
 
 from __future__ import print_function
 import argparse, yaml, os, sys, subprocess, glob, shutil, time
@@ -190,6 +190,8 @@ def main():
 		if file_format == '.smi':
 			smifile = open(args.input)
 
+			#used only for template
+			counter_for_template =0
 			for i, line in enumerate(smifile):
 				args.ff = ori_ff
 				args.metal_idx = []
@@ -227,10 +229,11 @@ def main():
 						file_template = os.path.dirname(os.path.abspath(__file__)) +'/Template/template-4-and-5.sdf'
 						temp = Chem.SDMolSupplier(file_template)
 						mol_objects_from_template,name, coord_Map, alg_Map, mol_template = template_embed_sp(mol,temp,name,args,log)
-						for i in range(len(mol_objects_from_template)):
+						for i, mol_temp in enumerate(mol_objects_from_template):
 							mol_objects.append([mol_objects_from_template[i],name[i],coord_Map[i],alg_Map[i],mol_template[i]])
 						for [mol, name, coord_Map,alg_Map,mol_template] in mol_objects:
-							conformer_generation(mol,name,start_time,args,log,dup_data,i,coord_Map,alg_Map,mol_template)
+							conformer_generation(mol,name,start_time,args,log,dup_data,counter_for_template,coord_Map,alg_Map,mol_template)
+							counter_for_template += 1
 					else:
 						log.write("x  Cannot use templates for complexes involving more than 1 metal.")
 						sys.exit()
@@ -275,7 +278,7 @@ def main():
 						file_template = os.path.dirname(os.path.abspath(__file__)) +'/Template/template-4-and-5.sdf'
 						temp = Chem.SDMolSupplier(file_template)
 						mol_objects_from_template,name, coord_Map, alg_Map, mol_template = template_embed_sp(mol,temp,name,args,log)
-						for i in range(len(mol_objects_from_template)):
+						for i, mole_temp in enumerate(mol_objects_from_template):
 							mol_objects.append([mol_objects_from_template[i],name[i],coord_Map[i],alg_Map[i],mol_template[i]])
 						for [mol, name, coord_Map,alg_Map,mol_template] in mol_objects:
 							conformer_generation(mol,name,start_time,args,log,dup_data,i,coord_Map,alg_Map,mol_template)
@@ -316,7 +319,7 @@ def main():
 						file_template = os.path.dirname(os.path.abspath(__file__)) +'/Template/template-4-and-5.sdf'
 						temp = Chem.SDMolSupplier(file_template)
 						mol_objects_from_template,name, coord_Map, alg_Map, mol_template = template_embed_sp(mol,temp,name,args,log)
-						for i in range(len(mol_objects_from_template)):
+						for i, mol_temp in enumerate(mol_objects_from_template):
 							mol_objects.append([mol_objects_from_template[i],name[i],coord_Map[i],alg_Map[i],mol_template[i]])
 					else:
 						log.write("x  Cannont use templates for complexes invovling more than 1 metal.")
@@ -403,7 +406,7 @@ def main():
 					file_template = os.path.dirname(os.path.abspath(__file__)) +'/Template/template-4-and-5.sdf'
 					temp = Chem.SDMolSupplier(file_template)
 					mol_objects_from_template,name, coord_Map, alg_Map, mol_template = template_embed_sp(mol,temp,name,args,log)
-					for i in range(len(mol_objects_from_template)):
+					for i, mol_temp in enumerate(mol_objects_from_template):
 						mol_objects.append([mol_objects_from_template[i],name[i],coord_Map[i],alg_Map[i],mol_template[i]])
 				else:
 					mol_objects.append([mol, name])
@@ -667,8 +670,7 @@ def main():
 							boltz_calculation(val,i,log)
 						else:
 							log.write(' Files for {} are not there!'.format(i))
-					except:
-						pass
+					except: pass
 
 	if args.combine:
 		#combines the files and gives the boltzmann weighted energies

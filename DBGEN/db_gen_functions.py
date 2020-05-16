@@ -1,4 +1,4 @@
-
+#!/usr/bin/env python
 """##################################################.
 # This file stores all the functions used by db_gen #
 ##################################################"""
@@ -16,13 +16,15 @@ import pandas as pd
 try:
 	import ase
 	import ase.optimize
-	import torch, torchani
+	from lib.xtb import GFN2
+	import torch
 	os.environ['KMP_DUPLICATE_LIB_OK']='True'
 	device = torch.device('cpu')
-	model = torchani.models.ANI1ccx()
 	from ase.units import Hartree
 
-	from xtb import GFN2
+	if args.ANI1ccx:
+		import torchani
+		model = torchani.models.ANI1ccx()
 except:
 	pass
 
@@ -40,6 +42,9 @@ columns = ['Structure', 'E', 'ZPE', 'H', 'T.S', 'T.qh-S', 'G(T)', 'qh-G(T)']
 
 # CLASS FOR LOGGING
 class Logger:
+	"""
+	 Class Logger to write the output to a file
+	"""
 	def __init__(self, filein, append):
 		"""
 		Logger to write the output to a file
@@ -332,8 +337,7 @@ def template_embed_optimize(molecule_embed,mol_1,args,log):
 	# This part selects which atoms from molecule are the atoms of the core
 	try:
 		coreConf = mol_1.GetConformer(coreConfId)
-	except:
-		pass
+	except: pass
 	for k, idxI in enumerate(num_atom_match):
 		core_mol_1 = coreConf.GetAtomPosition(k)
 		coordMap[idxI] = core_mol_1
@@ -385,9 +389,17 @@ def conformer_generation(mol,name,start_time,args,log,dup_data,dup_data_idx,coor
 						mult_min(name+'_'+'rdkit', args, 'xtb',log,dup_data,dup_data_idx)
 				else:
 					if args.ANI1ccx != False:
-						mult_min(name+'_'+'rdkit'+'_'+'rotated', args, 'ani',log,dup_data,dup_data_idx)
+						if gen != 0:
+							mult_min(name+'_'+'rdkit'+'_'+'rotated', args, 'ani',log,dup_data,dup_data_idx)
+						else:
+							log.write('\nx   No rotable dihydrals found. Using the non-rotated SDF for ANI')
+							mult_min(name+'_'+'rdkit', args, 'ani',log,dup_data,dup_data_idx)
 					if args.xtb != False:
-						mult_min(name+'_'+'rdkit'+'_'+'rotated', args, 'xtb',log,dup_data,dup_data_idx)
+						if gen !=0:
+							mult_min(name+'_'+'rdkit'+'_'+'rotated', args, 'xtb',log,dup_data,dup_data_idx)
+						else:
+							log.write('\nx   No rotable dihydrals found. Using the non-rotated SDF for xTB')
+							mult_min(name+'_'+'rdkit', args, 'xtb',log,dup_data,dup_data_idx)
 			else:
 				pass
 		except (KeyboardInterrupt, SystemExit):
@@ -431,7 +443,7 @@ def exp_rules_output(mol, args,log):
 	if len(atom_indexes) == args.complex_coord:
 		ligand_atoms = []
 
-		for i in range(len(atom_indexes)):
+		for i, atom_i in enumerate(atom_indexes):
 			# This is a filter that excludes molecules that fell apart during DFT geometry
 			# optimization (i.e. a N atom from one of the ligands separated from Ir). The
 			# max distance allowed can be tuned in length_filter
@@ -443,7 +455,7 @@ def exp_rules_output(mol, args,log):
 			if bond_length > length_filter:
 				passing = False
 				break
-			for j in range(len(atom_indexes)):
+			for j, atom_j in enumerate(atom_indexes):
 				# Avoid combinations of the same atom with itself
 				if atom_indexes[i] != atom_indexes[j]:
 					# We know that the ligands never have 2 carbon atoms bonding the Ir atom. We
@@ -485,9 +497,9 @@ def exp_rules_output(mol, args,log):
 			stop = False
 			# For complexes with 3 Ph_Py ligands:
 			if len(ligand_atoms) == 3:
-				for i in range(len(ligand_atoms)):
+				for i, lig_atom_i in enumerate(ligand_atoms):
 					if stop != True:
-						for j in range(len(ligand_atoms)):
+						for j, lig_atmo_j in enumerate(ligand_atoms):
 							# the i<=j part avoids repeating atoms, the i != j part avoid angles
 							# containing the same number twice (i.e. 4-16-4, this angle will fail)
 							if i <= j and i != j:
@@ -533,11 +545,11 @@ def filters(mol,args,log):
 		else:
 			valid_structure = False
 			if args.verbose:
-				log.write(" Exiting as total molar mass > 1000")
+				log.write(" Exiting as total molar mass > {0}".format(args.max_MolWt))
 	else:
 		valid_structure = False
 		if args.verbose:
-			log.write(" Exiting as number of rotatable bonds > 10")
+			log.write(" Exiting as number of rotatable bonds > {0}".format(args.num_rot_bonds))
 	return valid_structure
 
 # PARSES THE ENERGIES FROM SDF FILES
@@ -545,7 +557,7 @@ def read_energies(file,log): # parses the energies from sdf files - then used to
 	energies = []
 	f = open(file,"r")
 	readlines = f.readlines()
-	for i in range(len(readlines)):
+	for i, line in enumerate(readlines):
 		if readlines[i].find('>  <Energy>') > -1:
 			energies.append(float(readlines[i+1].split()[0]))
 	f.close()
@@ -614,7 +626,7 @@ def convert_sdf_to_com(path_for_file,file,com,com_low,energies,header,args):
 	elif args.lowest_n:
 		no_to_write = 0
 		if len(energies) != 1:
-			for i in range(len(energies)):
+			for i,energy in enumerate(energies):
 				energy_diff = energies[i] - energies[0]
 				if energy_diff < args.energy_threshold_for_gaussian: # thershold is in kcal/mol and energies are in kcal/mol as well
 					no_to_write +=1
@@ -673,7 +685,7 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args,log,cha
 	if 'rdkit' in name_list:
 		name_molecule = name[:-6]
 	if 'rotated' in name_list:
-		name_molecule = name[:-8]
+		name_molecule = name[:-14]
 
 	for i in range(len(charge_data)):
 		if charge_data.loc[i,'Molecule'] == name_molecule:
@@ -696,7 +708,7 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args,log,cha
 				break
 	except:
 		read_lines = open(file,"r").readlines()
-		for line in range(len(read_lines)):
+		for line, read_line in enumerate(read_lines):
 			for atom in args.genecp_atoms:
 				if read_lines[line].find(atom)>-1:
 					genecp = 'genecp'
@@ -820,7 +832,7 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args,log,cha
 
 			#change charge and multiplicity for Octahydrasl
 			if args.metal_complex:
-				for i in range(0,len(read_lines)):
+				for i ,line in enumerate(read_lines):
 					if len(read_lines[i].strip()) == 0:
 						read_lines[i+3] = str(charge_com)+' '+ str(args.complex_spin)+'\n'
 						break
@@ -1180,7 +1192,7 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin,log):
 			# Options for genecp
 			ecp_list,ecp_genecp_atoms, ecp_gen_atoms = [],False,False
 
-			for i in range(len(ATOMTYPES)):
+			for i, atomtype in enumerate(ATOMTYPES):
 				if ATOMTYPES[i] not in ecp_list and ATOMTYPES[i] in possible_atoms:
 					ecp_list.append(ATOMTYPES[i])
 				if ATOMTYPES[i] in args.genecp_atoms:
@@ -1209,7 +1221,7 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin,log):
 				fileout.write("\n")
 			fileout.write("\n")
 			if genecp =='genecp' or genecp =='gen':
-				for i in range(len(ecp_list)):
+				for i, ecp_list_atom in enumerate(ecp_list):
 					if ecp_list[i] not in (args.genecp_atoms or args.gen_atoms):
 						fileout.write(ecp_list[i]+' ')
 				fileout.write('0\n')
@@ -1391,7 +1403,6 @@ def getDihedralMatches(mol, heavy,log):
 # IF NOT USING DIHEDRALS, THIS REPLACES I BACK TO THE METAL WHEN METAL = TRUE
 # AND WRITES THE RDKIT SDF FILES. WITH DIHEDRALS, IT OPTIMIZES THE ROTAMERS
 def genConformer_r(mol, conf, i, matches, degree, sdwriter,args,name,log):
-	rotation_count = 1
 	if i >= len(matches): # base case, torsions should be set in conf
 		#setting the metal back instead of I
 		if args.metal_complex and args.nodihedrals:
@@ -1412,13 +1423,12 @@ def genConformer_r(mol, conf, i, matches, degree, sdwriter,args,name,log):
 		while deg < 360.0:
 			#log.write(matches[i])
 			rad = math.pi*deg / 180.0
-			#log.write(matches[i],rad)
 			rdMolTransforms.SetDihedralRad(mol.GetConformer(conf),*matches[i],value=rad)
 			#recalculating energies after rotation
 			if args.ff == "MMFF":
 				GetFF = Chem.MMFFGetMoleculeForceField(mol, Chem.MMFFGetMoleculeProperties(mol),confId=conf)
 			elif args.ff == "UFF":
-				GetFF = Chem.UFFGetMoleculeForceField(mol)
+				GetFF = Chem.UFFGetMoleculeForceField(mol,confId=conf)
 			else:
 				log.write('   Force field {} not supported!'.format(args.ff))
 				sys.exit()
@@ -1426,10 +1436,8 @@ def genConformer_r(mol, conf, i, matches, degree, sdwriter,args,name,log):
 			GetFF.Minimize(maxIts=args.opt_steps_RDKit)
 			energy = GetFF.CalcEnergy()
 			mol.SetProp("Energy",energy)
-			mol.SetProp('_Name',name+' - conformer from rotation - ' + str(rotation_count))
-			rotation_count +=1
+			mol.SetProp('_Name',name)
 			total += genConformer_r(mol, conf, i+1, matches, degree, sdwriter,args,name,log)
-
 			deg += degree
 		return total
 
@@ -1604,23 +1612,6 @@ def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None,alg_M
 				energy = ff_temp.CalcEnergy()
 				# rotate the embedded conformation onto the core_mol:
 				rdMolAlign.AlignMol(mol, mol_template,prbCid=conf, atomMap=alg_Map,reflect=True,maxIters=100)
-				# elif len(num_atom_match) == 5:
-				#     ff_temp = GetFF(mol, confId=conf)
-				#     conf_temp = mol_template.GetConformer()
-				#     for k in range(mol_template.GetNumAtoms()):
-				#         p = conf_temp.GetAtomPosition(k)
-				#         q = mol.GetConformer(conf).GetAtomPosition(k)
-				#         pIdx = ff_temp.AddExtraPoint(p.x, p.y, p.z, fixed=True) - 1
-				#         ff_temp.AddDistanceConstraint(pIdx, num_atom_match[k], 0, 0, 10000)
-				#     ff_temp.Initialize()
-				#     n = 10
-				#     more = ff_temp.Minimize(energyTol=1e-6, forceTol=1e-5)
-				#     while more and n:
-				#         more = ff_temp.Minimize(energyTol=1e-6, forceTol=1e-5)
-				#         n -= 1
-				#     # realign
-				#     energy = ff_temp.CalcEnergy()
-				#     rms = rdMolAlign.AlignMol(mol, mol_template,prbCid=conf, atomMap=alg_Map,reflect=True,maxIters=50)
 				cenergy.append(energy)
 
 			# outmols is gonna be a list containing "initial_confs" mol objects with "initial_confs"
@@ -1677,7 +1668,7 @@ def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None,alg_M
 		#check rmsd
 		for i, conf in enumerate(selectedcids_initial):
 
-			#set torsions to same value
+			# #set torsions to same value
 			for m in rotmatches:
 				rdMolTransforms.SetDihedralDeg(outmols[conf].GetConformer(conf),*m,180.0)
 
@@ -1734,7 +1725,7 @@ def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None,alg_M
 	sdwriter.close()
 
 	#getting the energy from and mols after rotations
-	if len(rotmatches) != 0:
+	if not args.nodihedrals and len(rotmatches) != 0:
 		rdmols = Chem.SDMolSupplier(name+'_'+'rdkit'+args.output, removeHs=False)
 		if rdmols is None:
 			log.write("Could not open "+ name+args.output)
@@ -1746,24 +1737,23 @@ def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None,alg_M
 
 		rd_count = 0
 		rd_selectedcids,rd_dup_energy,rd_dup_rms_eng =[],-1,0
-		for i in range(len(rdmols)):
+		for i, rd_mol_i in enumerate(rdmols):
+			mol_rd = Chem.RWMol(rd_mol_i)
+			mol_rd.SetProp('_Name',mol_rd.GetProp('_Name')+' '+str(i))
 			# This keeps track of whether or not your conformer is unique
 			excluded_conf = False
 			# include the first conformer in the list to start the filtering process
 			if rd_count == 0:
 				rd_selectedcids.append(i)
 				if args.metal_complex:
-					for atom in rdmols[i].GetAtoms():
+					for atom in mol_rd.GetAtoms():
 						if atom.GetIdx() in args.metal_idx:
 							re_symbol = args.metal_sym[args.metal_idx.index(atom.GetIdx())]
 							for el in elementspt:
 								if el.symbol == re_symbol:
 									atomic_number = el.number
 							atom.SetAtomicNum(atomic_number)
-					for atom in rdmols[i].GetAtoms():
-						sdwriter_rd.write(rdmols[i])
-				else:
-					sdwriter_rd.write(rdmols[i])
+					sdwriter_rd.write(mol_rd)
 			# Only the first ID gets included
 			rd_count = 1
 			# check rmsd
@@ -1780,16 +1770,14 @@ def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None,alg_M
 						break
 			if excluded_conf == False:
 				if args.metal_complex:
-					for atom in rdmols[i].GetAtoms():
+					for atom in mol_rd.GetAtoms():
 						if atom.GetIdx() in args.metal_idx:
 							re_symbol = args.metal_sym[args.metal_idx.index(atom.GetIdx())]
 							for el in elementspt:
 								if el.symbol == re_symbol:
 									atomic_number = el.number
 							atom.SetAtomicNum(atomic_number)
-					sdwriter_rd.write(rdmols[i],-1)
-				else:
-					sdwriter_rd.write(rdmols[i],-1)
+					sdwriter_rd.write(mol_rd)
 				if i not in rd_selectedcids:
 					rd_selectedcids.append(i)
 			bar.next()
@@ -1807,6 +1795,9 @@ def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None,alg_M
 		#filtering process after rotations
 		dup_data.at[dup_data_idx, 'RDKIT-Rotated-conformers'] = total
 		dup_data.at[dup_data_idx, 'RDKIT-Rotated-Unique-conformers'] = len(rd_selectedcids)
+
+	elif not args.nodihedrals and len(rotmatches) ==0:
+		status = 0
 
 	return status
 
@@ -2000,7 +1991,7 @@ def mult_min(name, args, program,log,dup_data,dup_data_idx):
 	cids = list(range(len(outmols)))
 	sortedcids = sorted(cids, key = lambda cid: c_energy[cid])
 
-	name_mol = name.split('_')[0]
+	name_mol = name.split('_rdkit')[0]
 
 	for i, cid in enumerate(sortedcids):
 		outmols[cid].SetProp('_Name', name_mol +' conformer ' + str(i+1))
@@ -2020,4 +2011,4 @@ def mult_min(name, args, program,log,dup_data,dup_data_idx):
 
 	# write the filtered, ordered conformers to external file
 
-	write_confs(outmols, c_energy, name_mol, args, program,log)
+	write_confs(outmols, c_energy, name, args, program,log)
