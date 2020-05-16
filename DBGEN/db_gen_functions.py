@@ -3,7 +3,7 @@
 # This file stores all the functions used by db_gen #
 ##################################################"""
 
-import math, os, sys, subprocess, glob, shutil, time
+import math, os, sys, subprocess, glob, shutil, time,yaml
 from rdkit.Chem import AllChem as Chem
 from rdkit.Chem import rdMolTransforms, PropertyMol, rdDistGeom, rdMolAlign, Lipinski, Descriptors
 from rdkit.Geometry import Point3D
@@ -65,6 +65,42 @@ class Logger:
 
 	def finalize(self):
 		self.log.close()
+
+
+def load_from_yaml(args,log):
+	# Variables will be updated from YAML file
+	if args.varfile != None:
+		if os.path.exists(args.varfile):
+			if os.path.splitext(args.varfile)[1] == '.yaml':
+				log.write("\no  IMPORTING VARIABLES FROM " + args.varfile)
+				with open(args.varfile, 'r') as file:
+					param_list = yaml.load(file, Loader=yaml.FullLoader)
+
+	for param in param_list:
+		if hasattr(args, param):
+			if getattr(args, param) != param_list[param]:
+				log.write("o  RESET " + param + " from " + str(getattr(args, param)) + " to " + str(param_list[param]))
+				setattr(args, param, param_list[param])
+			else:
+				log.write("o  DEFAULT " + param + " : " + str(getattr(args, param)))
+
+def creation_of_dup_csv(args):
+	# writing the list of DUPLICATES
+	if args.nodihedrals:
+		if args.xtb != True and args.ANI1ccx != True:
+			dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples', 'RDKit-energy-duplicates','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','time (seconds)','Overall charge'])
+		elif args.xtb:
+			dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples', 'RDKit-energy-duplicates','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','xTB-Initial-samples','xTB-initial_energy_threshold','xTB-RMSD-and-energy-duplicates','xTB-Unique-conformers','time (seconds)','Overall charge'])
+		elif args.ANI1ccx:
+			dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples', 'RDKit-energy-duplicates','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','ANI1ccx-Initial-samples','ANI1ccx-initial_energy_threshold','ANI1ccx-RMSD-and-energy-duplicates','ANI1ccx-Unique-conformers','time (seconds)','Overall charge'])
+	else:
+		if args.xtb != True and args.ANI1ccx != True:
+			dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples', 'RDKit-energy-duplicates','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','RDKIT-Rotated-conformers','RDKIT-Rotated-Unique-conformers','time (seconds)','Overall charge'])
+		elif args.xtb:
+			dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples', 'RDKit-energy-duplicates','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','RDKIT-Rotated-conformers','RDKIT-Rotated-Unique-conformers','xTB-Initial-samples','xTB-initial_energy_threshold','xTB-RMSD-and-energy-duplicates','xTB-Unique-conformers','time (seconds)','Overall charge'])
+		elif args.ANI1ccx:
+				dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples', 'RDKit-energy-duplicates','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','RDKIT-Rotated-conformers','RDKIT-Rotated-Unique-conformers','ANI1ccx-Initial-samples','ANI1ccx-initial_energy_threshold','ANI1ccx-RMSD-and-energy-duplicates','ANI1ccx-Unique-conformers','time (seconds)','Overall charge'])
+	return dup_data
 
 # SUBSTITUTION WITH I
 def substituted_mol(smi,args,log):
@@ -1761,15 +1797,15 @@ def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None,alg_M
 	else:
 		initial_confs = int(args.sample)
 
-	#
 	dup_data.at[dup_data_idx, 'Molecule'] = name
-	dup_data.at[dup_data_idx, 'RDKIT-Initial-samples'] = initial_confs
 
 	rotmatches = getDihedralMatches(mol, args.heavyonly,log)
 	if len(rotmatches) > args.max_torsions:
 		log.write("x  Too many torsions (%d). Skipping %s" %(len(rotmatches),(name+args.output)))
 		status = -1
+
 	else:
+		dup_data.at[dup_data_idx, 'RDKIT-Initial-samples'] = initial_confs
 		if args.nodihedrals == True:
 			rotmatches =[]
 		cids = embed_conf(mol,initial_confs,args,log,coord_Map,alg_Map, mol_template)
