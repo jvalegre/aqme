@@ -168,7 +168,6 @@ def compute_confs(smi, name,args,log,dup_data,counter_for_template,i,start_time)
 	else:
 		conformer_generation(mol,name,start_time,args,log,dup_data,i)
 
-
 # TEMPLATE GENERATION FOR SQUAREPLANAR AND squarepyramidal
 def template_embed_sp(molecule,temp,name_input,args,log):
 	mol_objects = [] # a list of mol objects that will be populated
@@ -2031,7 +2030,7 @@ def mult_min(name, args, program,log,dup_data,dup_data_idx):
 			if energy < globmin:
 				globmin = energy
 
-			if converged == 0 and (energy - globmin) < args.ewin: # comparison in kcal/mol
+			if converged == 0 and abs(energy - globmin) < args.ewin: # comparison in kcal/mol
 				unique = 0
 
 				# compare against all previous conformers located
