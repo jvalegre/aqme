@@ -531,26 +531,20 @@ def exp_rules_output(mol, args,log):
 # FILTER TO BE APPLIED FOR SMILES
 def filters(mol,args,log):
 	valid_structure = True
-	# First filter: number of rotatable bonds-bonds
-	if Lipinski.NumRotatableBonds(mol) < args.num_rot_bonds:
-		# Second filter: molecular weight
-		if Descriptors.MolWt(mol) < args.max_MolWt:
-			# Third filter: this filters salts off (2 separated components)
-			#if len(Chem.MolToSmiles(mol).split('.')) == 1:
-			for atom in mol.GetAtoms():
-				#Fourth filter: atoms outside the scope chosen in 'possible_atoms'
-				if atom.GetSymbol() not in possible_atoms:
-					valid_structure = False
-					if args.verbose:
-						log.write(" Exiting as atom isn't in atoms in the periodic table")
-		else:
-			valid_structure = False
-			if args.verbose:
-				log.write(" Exiting as total molar mass > {0}".format(args.max_MolWt))
+	# Second filter: molecular weight
+	if Descriptors.MolWt(mol) < args.max_MolWt:
+		# Third filter: this filters salts off (2 separated components)
+		#if len(Chem.MolToSmiles(mol).split('.')) == 1:
+		for atom in mol.GetAtoms():
+			#Fourth filter: atoms outside the scope chosen in 'possible_atoms'
+			if atom.GetSymbol() not in possible_atoms:
+				valid_structure = False
+				if args.verbose:
+					log.write(" Exiting as atom isn't in atoms in the periodic table")
 	else:
 		valid_structure = False
 		if args.verbose:
-			log.write(" Exiting as number of rotatable bonds > {0}".format(args.num_rot_bonds))
+			log.write(" Exiting as total molar mass > {0}".format(args.max_MolWt))
 	return valid_structure
 
 # PARSES THE ENERGIES FROM SDF FILES
@@ -1492,14 +1486,7 @@ def rules_get_charge(mol,args,log):
 
 def embed_conf(mol,initial_confs,args,log,coord_Map,alg_Map, mol_template):
 	if coord_Map == None and alg_Map == None and mol_template == None:
-		if args.etkdg:
-			ps = Chem.ETKDG()
-			ps.randomSeed = args.seed
-			ps.ignoreSmoothingFailures=True
-			ps.numThreads = 0
-			cids = rdDistGeom.EmbedMultipleConfs(mol, initial_confs, params=ps)
-		else:
-			cids = rdDistGeom.EmbedMultipleConfs(mol, initial_confs,ignoreSmoothingFailures=True, randomSeed=args.seed,numThreads = 0)
+		cids = rdDistGeom.EmbedMultipleConfs(mol, initial_confs,ignoreSmoothingFailures=True, randomSeed=args.seed,numThreads = 0)
 		if len(cids) == 0 or len(cids) == 1 and initial_confs != 1:
 			log.write("o  Normal RDKit embeding process failed, trying to generate conformers with random coordinates (with "+str(initial_confs)+" possibilities)")
 			cids = rdDistGeom.EmbedMultipleConfs(mol, initial_confs, randomSeed=args.seed, useRandomCoords=True, boxSizeMult=10.0,ignoreSmoothingFailures=True, numZeroFail=1000, numThreads = 0)
@@ -1619,8 +1606,6 @@ def min_after_embed(mol,cids,name,initial_confs,rotmatches,dup_data,dup_data_idx
 
 	if args.verbose:
 		log.write("o  "+str(eng_dup)+ " Duplicates removed  pre-energy filter (E < "+str(args.initial_energy_threshold)+" kcal/mol)")
-
-
 	#reduce to unique set
 	if args.verbose:
 		log.write("o  Removing duplicate conformers (RMSD < "+ str(args.rms_threshold)+ " and E difference < "+str(args.energy_threshold)+" kcal/mol)")
@@ -1780,15 +1765,13 @@ def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None,alg_M
 	dup_data.at[dup_data_idx, 'Molecule'] = name
 	dup_data.at[dup_data_idx, 'RDKIT-Initial-samples'] = initial_confs
 
-	if args.nodihedrals == False:
-		rotmatches = getDihedralMatches(mol, args.heavyonly,log)
-	else:
-		rotmatches = []
-
+	rotmatches = getDihedralMatches(mol, args.heavyonly,log)
 	if len(rotmatches) > args.max_torsions:
 		log.write("x  Too many torsions (%d). Skipping %s" %(len(rotmatches),(name+args.output)))
 		status = -1
 	else:
+		if args.nodihedrals == True:
+			rotmatches =[]
 		cids = embed_conf(mol,initial_confs,args,log,coord_Map,alg_Map, mol_template)
 		#energy minimize all to get more realistic results
 		#identify the atoms and decide Force Field
@@ -1810,13 +1793,12 @@ def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None,alg_M
 		status = min_after_embed(mol,cids,name,initial_confs,rotmatches,dup_data,dup_data_idx,sdwriter,coord_Map,alg_Map, mol_template,args,log)
 	sdwriter.close()
 
-	#getting the energy from and mols after rotations
-	if not args.nodihedrals and len(rotmatches) != 0:
-
-		status = filter_after_rotation(args,name,log,dup_data,dup_data_idx)
-
-	elif not args.nodihedrals and len(rotmatches) ==0:
-		status = 0
+	if status!= -1:
+		#getting the energy from and mols after rotations
+		if not args.nodihedrals and len(rotmatches) != 0:
+			status = filter_after_rotation(args,name,log,dup_data,dup_data_idx)
+		elif not args.nodihedrals and len(rotmatches) ==0:
+			status = 0
 
 	return status
 

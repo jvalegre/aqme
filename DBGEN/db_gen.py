@@ -90,7 +90,6 @@ def main():
 	parser.add_argument("--constraints", action="store_true",default=None, help="distance constraint")
 	parser.add_argument("--nodihedrals", action="store_true", default=False, help="turn off dihedral scan")
 	parser.add_argument("-d","--degree", type=float,help="Amount, in degrees, to enumerate torsions by (default 30.0)",default=30.0)
-	parser.add_argument("--etkdg", dest="etkdg",action="store_true",default=False, help="use new ETKDG knowledge-based method instead of distance geometry")
 	parser.add_argument("--max_torsions",type=int,help="Skip any molecules with more than this many torsions (default 5)",default=5)
 	parser.add_argument("--sample", help="number of conformers to sample to get non-torsional differences (default 100)", default=100, type=int, metavar="sample")
 	parser.add_argument("--auto_sample", help="final factor to multiply in the auto mode for the sample option (default 20)", default=20, type=int, metavar="auto_sample")
@@ -101,7 +100,6 @@ def main():
 	parser.add_argument("--energy_threshold", dest="energy_threshold",action="store",default=0.05, help="energy difference between unique conformers")
 	parser.add_argument("--initial_energy_threshold", dest="initial_energy_threshold",action="store",default=0.01, help="energy difference between unique conformers for the first filter of only E")
 	parser.add_argument("--max_MolWt", help="Max. molecular weight of molecule", default=1000, type=int, metavar="max_MolWt")
-	parser.add_argument("--num_rot_bonds", help="Max. number of rotatable bonds in a molecule", default=20, type=int, metavar="num_rot_bonds")
 	parser.add_argument("--large_sys", action="store_true",default=False, help="Large systems for xtb optimizations")
 	parser.add_argument("--STACKSIZE", help="STACKSIZE for optimization of large systems", default="500m")
 
