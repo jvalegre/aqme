@@ -1,5 +1,5 @@
 # INPUT FILE
-input : 'smi.smi' # input files
+input : 'Pd_squareplanar.smi' # input files
 path : '' # path to guassian folder when we do analysis
 prefix : False # if prefix : True, set a generic name for the different molecules (i.e. comp_1, comp_2, etc)
 
@@ -39,7 +39,8 @@ xtb : False
 
 # (3) RDKit AND xTB PARAMETERS
 ewin : 1000 #energy window in kcal/mol to use conformers for RDKit and xTB (conformers with E higher than ewin will be discarded)
-sample : 'auto' # number of conformers to sample to get non-torsional differences (default 100)
+sample : 20 # number of conformers to sample to get non-torsional differences (default 100)
+solvent_xtb : '' # includes energies in the xTB energies after optimization in gas-phase
 
 # (4) OPTIONS FOR COM FILE GENERATION (write_gauss : True)
 # By default, you include optimization in the COM files.
@@ -55,7 +56,7 @@ energy_threshold_for_gaussian : 100  # in kcal/mol, from all the conformers gene
 
 # (4.2) DEFINITION OF A SECOND CATEGORY OF ATOMS SEPARATED IN GENECP
 genecp_atoms : [] # list of atoms included in the gen_ecp part
-gen_atoms : [] # list of atoms inclueded in gen part
+gen_atoms : ['Pd'] # list of atoms inclueded in gen part
 
 # (4.3) DEFINTION OF BASIS SET AND LEVEL OF THEORY AND SOLVENT
 basis_set : ['def2svp'] # basis set
@@ -68,7 +69,7 @@ dispersion_correction : False # include dispersion correction
 empirical_dispersion : 'GD3BJ' # type of dispersion correction
 
 # (4.5) SOLVATION MODEL
-solvent_model : 'gas_phase' # type of solvation model. Options: gas_phase or any solvation model (i.e. SMD, IEFPCM, CPCM)
+solvent_model : 'SMD' # type of solvation model. Options: gas_phase or any solvation model (i.e. SMD, IEFPCM, CPCM)
 solvent_name : 'Chloroform' # solvent
 
 # (4.6) DEFAULT PARAMETERS FOR GAUSSIAN OPTIMIZATION
@@ -86,11 +87,11 @@ angle_off : 30 # margin of error to determine angles (i.e. if angle_off is 30, a
 
 # (7) OPTIONS FOR METALS, ATOMS WITH UNCOMMON HYBRIDIZATIONS AND NCI COMPLEXES
 # IF A METAL OR AN ATOM WITH UNCOMMON HYBRIDIZATION (i.e. pentacoordinated phosphorus) IS USED
-metal_complex : False # specify True to activate this option
-metal : [] # specify the metal(s) or atom(s) with uncommon hybridization, in the format 'A','B','C'...
-m_oxi : [] # oxidation number of the atom (it is used to calculate the charge of the molecule)
+metal_complex : True # specify True to activate this option
+metal : ['Pd'] # specify the metal(s) or atom(s) with uncommon hybridization, in the format 'A','B','C'...
+m_oxi : [2] # oxidation number of the atom (it is used to calculate the charge of the molecule)
 complex_spin : 1 # final spin of the molecule (the code does not calculate spin, it must be defined by the user)
-complex_type : '' # specify for squareplanar or squarepyrimidal
+complex_type : ['squareplanar'] # define squareplanar and squarepyrimidal compounds
 
 # (8) IF A NONCOVALENT COMPLEX IS USED
 nci_complex : False # specify  true if NCI complex
@@ -117,6 +118,7 @@ auto_sample : 20 # final factor to multiply in the auto mode for the sample opti
 
 # FILTERS FOR RDKIT OPTIMIZATION
 max_torsions : 20 # Skip any molecules with more than this many torsions (default 5)
+num_rot_bonds : 20 # Skip any molecules with more than this many rotatable bonds (default 5)
 max_MolWt : 10000 # Skip any molecules with molecular weights higher than this number
 
 # DIHEDRAL PROTOCOL FOR RDKIT OPTIMIZATION (SLOW SINCE IT SCANS MANY DIHEDRALS)
@@ -125,6 +127,7 @@ degree : 30 # amount, in degrees, to enumerate torsions if nodihedrals is False
 
 # PARAMETERS FOR RDKIT OPTIMIZATION
 ff : "MMFF" # force field used in the RDKit optimization. Options: MMFF or UFF
+etkdg : False # use new ETKDG knowledge-based method instead of distance geometry also needs to be present in RDKIT ENV
 seed : 62609 # random seed (default 62609) for ETKDG
 opt_steps_RDKit : 1000
 
