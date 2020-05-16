@@ -14,7 +14,7 @@ o  DEFAULT combine : False
 o  DEFAULT charge : []
 o  DEFAULT charge_default : 0
 o  DEFAULT ANI1ccx : False
-o  RESET xtb from False to True
+o  DEFAULT xtb : False
 o  RESET ewin from 40.0 to 1000
 o  RESET sample from 100 to auto
 o  RESET frequencies from False to True
@@ -54,12 +54,10 @@ o  RESET max_matches_RMSD from 1000000 to 1000
 o  DEFAULT heavyonly : True
 o  DEFAULT auto_sample : 20
 o  RESET max_torsions from 5 to 20
-o  DEFAULT num_rot_bonds : 20
 o  RESET max_MolWt from 1000 to 10000
-o  RESET nodihedrals from False to True
+o  DEFAULT nodihedrals : False
 o  DEFAULT degree : 30.0
 o  DEFAULT ff : MMFF
-o  DEFAULT etkdg : False
 o  DEFAULT seed : 62609
 o  DEFAULT opt_steps_RDKit : 1000
 o  DEFAULT opt_steps : 1000
@@ -76,7 +74,7 @@ o  RESET maxnumber from None to 100000
    ----- pentane -----
 o  240 conformers initially generated
 o  Optimizing 240 initial conformers with MMFF
-o  Systematic torsion rotation is set to OFF
+o  Found 2 rotatable torsions
 
 
 o  Filters after intial embedding of 240 conformers
@@ -86,4 +84,13 @@ o  0 Duplicates removed (RMSD < 0.25 / E < 0.25 kcal/mol) after rotation
 o  4 unique conformers remain
 
 
-o  Multiple minimization of pentane_rdkit.sdf with xtb
+o  Systematic generation of 576 confomers
+o  576 total conformations generated
+o  572 Duplicates removed initial energy (E < 0.0001 kcal/mol)
+o  0 Duplicates removed (RMSD < 0.25 / E < 0.25 kcal/mol) after rotation
+o  4 unique conformers remain
+
+ Execution time: 4.11 seconds
+
+o  Preparing Gaussian COM files in generated_gaussian_files/wb97xd-def2svp
+   -> Converting from pentane_rdkit_rotated.sdf
