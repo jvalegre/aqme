@@ -37,9 +37,10 @@ def read_energies(file): # parses the energies from sdf files - then used to fil
     ('pentane.smi', 'params_test11.yaml', 20, 0, 8, [-5.26093, -4.41687, -4.39313, -4.10961, -3.93585, -2.95568, -2.43353, -2.03709, -1.51856, -1.45757, -0.22202, 0.46406],0, False), # test opt_steps_RDKit = 40
     ('pentane.smi', 'params_test12.yaml', 20, 16, 0, [-5.27175,-4.44184,-3.84858,-1.57172],0, True), # test xTB = True
     ('pentane.smi', 'params_test13.yaml', 20, 16, 0, [-5.27175,-4.44184,-3.84858,-1.57172],0, True), # test ANI1ccx = True
-    ('Ir_hexacoord.smi', 'params_Ir_test1.yaml', 1440, 1434, 0, [1.53156, 1.55012, 1.5506, 1.55114, 1.55163, 1.57662], 1, False), # test single metal
-    ('Ag_Au_complex.smi', 'params_Ag_Au_test1.yaml', 2, 0, 0, [-5.26093, -4.41687, -4.39313, -4.10961, -3.93585, -2.95568, -2.43353, -2.03709, -1.51856, -1.45757, -0.22202, 0.46406],1, False), # test 2 metals
-    ('Pd_squareplanar.smi', 'params_Pd_test1.yaml', 120, 111, 0, [6.14954, 6.15497, 6.20729, 6.3288, 6.35036, 6.35559, 6.35893, 6.52387, 6.56902], 1, False), # test squareplanar template
+    ('Ir_hexacoord.smi', 'params_Ir_test1.yaml', 1440, 1434, 0, [1.53156, 1.55012, 1.5506, 1.55114, 1.55163, 1.57662], 1, False), # test single metal with genecp
+    ('Ag_Au_complex.smi', 'params_Ag_Au_test1.yaml', 60, 53, 0, [-5.26093, -4.41687, -4.39313, -4.10961, -3.93585, -2.95568, -2.43353, -2.03709, -1.51856, -1.45757, -0.22202, 0.46406],0, False), # test 2 metals with genecp
+    ('Pd_squareplanar.smi', 'params_Pd_test1.yaml', 120, 111, 0, [6.14954, 6.15497, 6.20729, 6.3288, 6.35036, 6.35559, 6.35893, 6.52387, 6.56902], 0, False), # test squareplanar template with gen
+    ('Rh_squareplanar.smi', 'params_Pd_test1.yaml', 120, 111, 0, [6.14954, 6.15497, 6.20729, 6.3288, 6.35036, 6.35559, 6.35893, 6.52387, 6.56902], 0, False), # test squareplanar template with gen
 ])
 
 def test_confgen(smiles, params_file, n_confs, prefilter_confs_rdkit, filter_confs_rdkit, E_confs, charge, xTB_ANI1):

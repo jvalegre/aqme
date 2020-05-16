@@ -32,7 +32,8 @@ install:
   - conda install -c conda-forge progress
   - pip install pytest-cov codecov
   - pip install ase
-  - conda install pytorch torchvision cpuonly -c pytorch
+  - pip install --pre torch torchvision -f https://download.pytorch.org/whl/nightly/cpu/torch_nightly.html
+  - pip install torchani
 
 before_script:
   - export RDBASE=$CONDA_PREFIX/Library/share/RDKit

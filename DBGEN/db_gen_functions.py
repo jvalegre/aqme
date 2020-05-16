@@ -21,10 +21,11 @@ try:
 	os.environ['KMP_DUPLICATE_LIB_OK']='True'
 	device = torch.device('cpu')
 	from ase.units import Hartree
-
-	if args.ANI1ccx:
-		import torchani
-		model = torchani.models.ANI1ccx()
+except:
+	pass
+try:
+	import torchani
+	model = torchani.models.ANI1ccx()
 except:
 	pass
 
@@ -91,7 +92,7 @@ def substituted_mol(smi,args,log):
 
 	return mol,args.metal_idx,args.complex_coord,args.metal_sym
 
-# TEMPLATE GENERATION FOR SQUAREPLANAR AND SQUAREPYRIMIDAL
+# TEMPLATE GENERATION FOR SQUAREPLANAR AND squarepyramidal
 def template_embed_sp(molecule,temp,name_input,args,log):
 	mol_objects = [] # a list of mol objects that will be populated
 	name_return = []

@@ -223,8 +223,8 @@ def main():
 				else:
 					mol = Chem.MolFromSmiles(smi)
 
-				# get manually for square planar and SQUAREPYRIMIDAL
-				if args.complex_type == 'squareplanar' or args.complex_type == 'squarepyrimidal':
+				# get manually for square planar and squarepyramidal
+				if args.complex_type == 'squareplanar' or args.complex_type == 'squarepyramidal':
 					if len(args.metal_idx) == 1:
 						file_template = os.path.dirname(os.path.abspath(__file__)) +'/Template/template-4-and-5.sdf'
 						temp = Chem.SDMolSupplier(file_template)
@@ -272,8 +272,8 @@ def main():
 				else:
 					mol = Chem.MolFromSmiles(smi)
 
-				# get manually for square planar and SQUAREPYRIMIDAL
-				if args.complex_type == 'squareplanar' or args.complex_type == 'squarepyrimidal':
+				# get manually for square planar and squarepyramidal
+				if args.complex_type == 'squareplanar' or args.complex_type == 'squarepyramidal':
 					if len(args.metal_idx) == 1:
 						file_template = os.path.dirname(os.path.abspath(__file__)) +'/Template/template-4-and-5.sdf'
 						temp = Chem.SDMolSupplier(file_template)
@@ -313,8 +313,8 @@ def main():
 				else:
 					mol = Chem.MolFromSmiles(smi)
 
-				# get manually for square planar and SQUAREPYRIMIDAL
-				if args.complex_type == 'squareplanar' or args.complex_type == 'squarepyrimidal':
+				# get manually for square planar and squarepyramidal
+				if args.complex_type == 'squareplanar' or args.complex_type == 'squarepyramidal':
 					if len(args.metal_idx) == 1:
 						file_template = os.path.dirname(os.path.abspath(__file__)) +'/Template/template-4-and-5.sdf'
 						temp = Chem.SDMolSupplier(file_template)
@@ -401,8 +401,8 @@ def main():
 					name = IDs[i]
 				else:
 					name = args.prefix+str(m)+'_'+IDs[i]
-				# get manually for square planar and SQUAREPYRIMIDAL
-				if args.complex_type == 'squareplanar' or args.complex_type == 'squarepyrimidal':
+				# get manually for square planar and squarepyramidal
+				if args.complex_type == 'squareplanar' or args.complex_type == 'squarepyramidal':
 					file_template = os.path.dirname(os.path.abspath(__file__)) +'/Template/template-4-and-5.sdf'
 					temp = Chem.SDMolSupplier(file_template)
 					mol_objects_from_template,name, coord_Map, alg_Map, mol_template = template_embed_sp(mol,temp,name,args,log)
@@ -450,7 +450,7 @@ def main():
 					name = IDs[i]
 				else:
 					name = args.prefix+str(m)+'_'+IDs[i]
-				if args.complex_type == 'squareplanar' or args.complex_type == 'squarepyrimidal':
+				if args.complex_type == 'squareplanar' or args.complex_type == 'squarepyramidal':
 					file_template = os.path.dirname(os.path.abspath(__file__)) +'/Template/template-4-and-5.sdf'
 					temp = Chem.SDMolSupplier(file_template)
 					mol_objects_from_template = template_embed_sp(mol,temp,name,args,log)

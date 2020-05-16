@@ -55,7 +55,7 @@ energy_threshold_for_gaussian : 100  # in kcal/mol, from all the conformers gene
 # lowest_n must be True to apply this energy threshold
 
 # (4.2) DEFINITION OF A SECOND CATEGORY OF ATOMS SEPARATED IN GENECP
-genecp_atoms : [] # list of atoms included in the gen_ecp part
+genecp_atoms : ['Au','Ag'] # list of atoms included in the gen_ecp part
 gen_atoms : [] # list of atoms inclueded in gen part
 
 # (4.3) DEFINTION OF BASIS SET AND LEVEL OF THEORY AND SOLVENT
@@ -65,15 +65,15 @@ level_of_theory : ['wb97xd'] # functional
 max_cycle_opt : 100 #default is 300
 
 # (4.4) DISPERSION CORRECTION FOR COM FILES
-dispersion_correction : False # include dispersion correction
+dispersion_correction : True # include dispersion correction
 empirical_dispersion : 'GD3BJ' # type of dispersion correction
 
 # (4.5) SOLVATION MODEL
-solvent_model : 'gas_phase' # type of solvation model. Options: gas_phase or any solvation model (i.e. SMD, IEFPCM, CPCM)
+solvent_model : 'IEFPCM' # type of solvation model. Options: gas_phase or any solvation model (i.e. SMD, IEFPCM, CPCM)
 solvent_name : 'Chloroform' # solvent
 
 # (4.6) DEFAULT PARAMETERS FOR GAUSSIAN OPTIMIZATION
-chk : False # include a %chk line at the beginning of the COM file
+chk : True # include a %chk line at the beginning of the COM file
 nprocs : 36 # number of processors for the COM file in %nprocshared
 mem: '60GB' # amount of memory for the COM file in %mem
 
@@ -87,7 +87,7 @@ angle_off : 30 # margin of error to determine angles (i.e. if angle_off is 30, a
 
 # (7) OPTIONS FOR METALS, ATOMS WITH UNCOMMON HYBRIDIZATIONS AND NCI COMPLEXES
 # IF A METAL OR AN ATOM WITH UNCOMMON HYBRIDIZATION (i.e. pentacoordinated phosphorus) IS USED
-metal_complex : False # specify True to activate this option
+metal_complex : True # specify True to activate this option
 metal : ['Ag','Au'] # specify the metal(s) or atom(s) with uncommon hybridization, in the format 'A','B','C'...
 m_oxi : [1,1] # oxidation number of the atom (it is used to calculate the charge of the molecule)
 complex_spin : 1 # final spin of the molecule (the code does not calculate spin, it must be defined by the user)
