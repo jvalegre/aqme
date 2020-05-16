@@ -28,10 +28,10 @@ import argparse, yaml, os, sys, subprocess, glob, shutil, time
 import pandas as pd
 from rdkit.Chem import AllChem as Chem
 from periodictable import elements as elementspt
-from DBGEN.db_gen_functions import conformer_generation, substituted_mol, template_embed_sp, Logger, read_energies, write_gaussian_input_file, exp_rules_output
+from DBGEN.db_gen_functions import creation_of_dup_csv,load_from_yaml,compute_confs,clean_args,conformer_generation, substituted_mol, template_embed_sp, Logger, read_energies, write_gaussian_input_file, exp_rules_output
 from DBGEN.db_gen_functions import output_analyzer, check_for_final_folder, dup_calculation, combine_files, boltz_calculation
 
-def main():
+def parser_args():
 	parser = argparse.ArgumentParser(description="Generate conformers depending on type of optimization (change parameters in db_gen_PATHS.py file).")
 
 	#Input details
@@ -129,29 +129,20 @@ def main():
 
 	args = parser.parse_args()
 
+	return args
+
+def main():
+
+	args = parser_args()
 	# Define the logging object
 	log = Logger("DBGEN", args.output_name)
-
+	#time
 	start_time = time.time()
+	#if needed to load from a yaml file
+	load_from_yaml(args,log)
 
-	# Variables will be updated from YAML file
-	if args.varfile != None:
-		if os.path.exists(args.varfile):
-			if os.path.splitext(args.varfile)[1] == '.yaml':
-				log.write("\no  IMPORTING VARIABLES FROM " + args.varfile)
-				with open(args.varfile, 'r') as file:
-					param_list = yaml.load(file, Loader=yaml.FullLoader)
-
-	for param in param_list:
-		if hasattr(args, param):
-			if getattr(args, param) != param_list[param]:
-				log.write("o  RESET " + param + " from " + str(getattr(args, param)) + " to " + str(param_list[param]))
-				setattr(args, param, param_list[param])
-			else:
-				log.write("o  DEFAULT " + param + " : " + str(getattr(args, param)))
-
-### check if it's working with *.smi (if it isn't, we need to change this a little bit)
-### no it isnt working for *.smi, same or .sdf. We can add that feature in the end.
+	#creation of csv to write dup data
+	dup_data = creation_of_dup_csv(args)
 
 	# this will perform conformational analysis and create inputs for Gaussian
 	if args.compute:
@@ -162,24 +153,6 @@ def main():
 		if file_format not in ['.smi', '.sdf', '.cdx', '.csv','.com','.gjf']:
 			log.write("\nx  INPUT FILETYPE NOT CURRENTLY SUPPORTED!")
 			sys.exit()
-		else:
-			mol_objects = [] # a list of mol objects that will be populated
-
-		# writing the list of DUPLICATES
-		if args.nodihedrals:
-			if args.xtb != True and args.ANI1ccx != True:
-				dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples', 'RDKit-energy-duplicates','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','time (seconds)','Overall charge'])
-			elif args.xtb:
-				dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples', 'RDKit-energy-duplicates','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','xTB-Initial-samples','xTB-initial_energy_threshold','xTB-RMSD-and-energy-duplicates','xTB-Unique-conformers','time (seconds)','Overall charge'])
-			elif args.ANI1ccx:
-				dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples', 'RDKit-energy-duplicates','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','ANI1ccx-Initial-samples','ANI1ccx-initial_energy_threshold','ANI1ccx-RMSD-and-energy-duplicates','ANI1ccx-Unique-conformers','time (seconds)','Overall charge'])
-		else:
-			if args.xtb != True and args.ANI1ccx != True:
-				dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples', 'RDKit-energy-duplicates','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','RDKIT-Rotated-conformers','RDKIT-Rotated-Unique-conformers','time (seconds)','Overall charge'])
-			elif args.xtb:
-				dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples', 'RDKit-energy-duplicates','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','RDKIT-Rotated-conformers','RDKIT-Rotated-Unique-conformers','xTB-Initial-samples','xTB-initial_energy_threshold','xTB-RMSD-and-energy-duplicates','xTB-Unique-conformers','time (seconds)','Overall charge'])
-			elif args.ANI1ccx:
-					dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples', 'RDKit-energy-duplicates','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','RDKIT-Rotated-conformers','RDKIT-Rotated-Unique-conformers','ANI1ccx-Initial-samples','ANI1ccx-initial_energy_threshold','ANI1ccx-RMSD-and-energy-duplicates','ANI1ccx-Unique-conformers','time (seconds)','Overall charge'])
 
 		# sets up the chosen force field (this fixes some problems in case MMFF is replaced by UFF)
 		ori_ff = args.ff
@@ -187,274 +160,48 @@ def main():
 		# SMILES input specified
 		if file_format == '.smi':
 			smifile = open(args.input)
-
 			#used only for template
 			counter_for_template =0
 			for i, line in enumerate(smifile):
-				args.ff = ori_ff
-				args.metal_idx = []
-				args.complex_coord = []
-				args.metal_sym = []
-
+				clean_args(args,ori_ff)
 				toks = line.split()
-
 				#editing part
 				smi = toks[0]
-
-				#taking largest component for salts
-				pieces = smi.split('.')
-				if len(pieces) > 1:
-					# take largest component by length
-					smi = max(pieces, key=len)
-
 				if args.prefix == False:
 					name = ''.join(toks[1:])
 				else:
 					name = args.prefix+str(i)+'_'+''.join(toks[1:])
 
-				# Converts each line to a rdkit mol object
-				if args.verbose:
-					log.write("   -> Input Molecule {} is {}".format(i, smi))
-
-				if args.metal_complex:
-					mol,args.metal_idx,args.complex_coord,args.metal_sym = substituted_mol(smi,args,log)
-				else:
-					mol = Chem.MolFromSmiles(smi)
-
-				# get manually for square planar and squarepyramidal
-				if args.complex_type == 'squareplanar' or args.complex_type == 'squarepyramidal':
-					if len(args.metal_idx) == 1:
-						file_template = os.path.dirname(os.path.abspath(__file__)) +'/Template/template-4-and-5.sdf'
-						temp = Chem.SDMolSupplier(file_template)
-						mol_objects_from_template,name, coord_Map, alg_Map, mol_template = template_embed_sp(mol,temp,name,args,log)
-						for i, mol_temp in enumerate(mol_objects_from_template):
-							mol_objects.append([mol_objects_from_template[i],name[i],coord_Map[i],alg_Map[i],mol_template[i]])
-						for [mol, name, coord_Map,alg_Map,mol_template] in mol_objects:
-							conformer_generation(mol,name,start_time,args,log,dup_data,counter_for_template,coord_Map,alg_Map,mol_template)
-							counter_for_template += 1
-					else:
-						log.write("x  Cannot use templates for complexes involving more than 1 metal.")
-						sys.exit()
-				else:
-					conformer_generation(mol,name,start_time,args,log,dup_data,i)
+				compute_confs(smi,name,args,log,dup_data,counter_for_template,i,start_time)
 			dup_data.to_csv(args.input.split('.')[0]+'-Duplicates Data.csv',index=False)
 
 		# CSV file with one columns SMILES and code_name
 		elif os.path.splitext(args.input)[1] == '.csv':
 			csv_smiles = pd.read_csv(args.input)
-			m = 0
+			counter_for_template =0
 			for i in range(len(csv_smiles)):
-				args.ff = ori_ff
-				args.metal_idx = []
-				args.complex_coord = []
-				args.metal_sym = []
+				clean_args(args,ori_ff)
 				#assigning names and smi i  each loop
 				if args.prefix == False:
 					name = csv_smiles.loc[i, 'code_name']
 				else:
 					name = 'comp_'+str(m)+'_'+csv_smiles.loc[i, 'code_name']
-
 				smi = csv_smiles.loc[i, 'SMILES']
-				#checking for salts
-				#taking largest component for salts
-				pieces = smi.split('.')
-				if len(pieces) > 1:
-					smi = max(pieces, key=len) #take largest component by length
-
-				# Converts each line to a rdkit mol object
-				if args.verbose:
-					log.write("   -> Input Molecule {} is {}".format(i, smi))
-
-				if args.metal_complex:
-					mol,args.metal_idx,args.complex_coord,args.metal_sym = substituted_mol(smi,args,log)
-				else:
-					mol = Chem.MolFromSmiles(smi)
-
-				# get manually for square planar and squarepyramidal
-				if args.complex_type == 'squareplanar' or args.complex_type == 'squarepyramidal':
-					if len(args.metal_idx) == 1:
-						file_template = os.path.dirname(os.path.abspath(__file__)) +'/Template/template-4-and-5.sdf'
-						temp = Chem.SDMolSupplier(file_template)
-						mol_objects_from_template,name, coord_Map, alg_Map, mol_template = template_embed_sp(mol,temp,name,args,log)
-						for i, mole_temp in enumerate(mol_objects_from_template):
-							mol_objects.append([mol_objects_from_template[i],name[i],coord_Map[i],alg_Map[i],mol_template[i]])
-						for [mol, name, coord_Map,alg_Map,mol_template] in mol_objects:
-							conformer_generation(mol,name,start_time,args,log,dup_data,i,coord_Map,alg_Map,mol_template)
-					else:
-						log.write("x  Cannont use templates for complexes invovling more than 1 metal.")
-						sys.exit()
-				else:
-					conformer_generation(mol,name,start_time,args,log,dup_data,i)
-				m += 1
+				compute_confs(smi,name,args,log,dup_data,counter_for_template,i,start_time)
 			dup_data.to_csv(args.input.split('.')[0]+'-Duplicates Data.csv',index=False)
+
 		# CDX file
 		elif os.path.splitext(args.input)[1] == '.cdx':
 				#converting to smiles from chemdraw
 			subprocess.run(['obabel', '-icdx', args.input, '-osmi', '-O', 'cdx.smi'])
 			smifile = open('cdx.smi',"r")
 
+			counter_for_template = 0
 			for i, smi in enumerate(smifile):
-				args.ff = ori_ff
+				clean_args(args,ori_ff)
 				name = 'comp' + str(i)+'_'
-
-				#taking largest component for salts
-				pieces = smi.split('.')
-				if len(pieces) > 1:
-					smi = max(pieces, key=len) #take largest component by length
-
-				# Converts each line to a rdkit mol object
-				if args.verbose:
-					log.write("   -> Input Molecule {} is {}".format(i, smi))
-
-				if args.metal_complex:
-					mol,args.metal_idx,args.complex_coord,args.metal_sym = substituted_mol(smi,args,log)
-				else:
-					mol = Chem.MolFromSmiles(smi)
-
-				# get manually for square planar and squarepyramidal
-				if args.complex_type == 'squareplanar' or args.complex_type == 'squarepyramidal':
-					if len(args.metal_idx) == 1:
-						file_template = os.path.dirname(os.path.abspath(__file__)) +'/Template/template-4-and-5.sdf'
-						temp = Chem.SDMolSupplier(file_template)
-						mol_objects_from_template,name, coord_Map, alg_Map, mol_template = template_embed_sp(mol,temp,name,args,log)
-						for i, mol_temp in enumerate(mol_objects_from_template):
-							mol_objects.append([mol_objects_from_template[i],name[i],coord_Map[i],alg_Map[i],mol_template[i]])
-					else:
-						log.write("x  Cannont use templates for complexes invovling more than 1 metal.")
-						sys.exit()
-				else:
-					mol_objects.append([mol, name])
-
-		# COM file
-		elif os.path.splitext(args.input)[1] == '.com' or os.path.splitext(args.input)[1] == '.gjf':
-			#converting to sdf from comfile to preserve geometry
-
-			#### ADD args.ff = ori_ff
-			comfile = open(args.input,"r")
-			comlines = comfile.readlines()
-
-			emptylines=[]
-
-			for i, line in enumerate(comlines):
-				if len(comlines[i].strip()) == 0:
-					emptylines.append(i)
-
-			#assigning the charges
-			args.charge_default = comlines[(emptylines[1]+1)].split(' ')[0]
-
-			xyzfile = open(os.path.splitext(args.input)[0]+'.xyz',"w")
-			xyzfile.write(str(emptylines[2]- (emptylines[1]+2)))
-			xyzfile.write('\n')
-			xyzfile.write(os.path.splitext(args.input)[0])
-			xyzfile.write('\n')
-			for i in range((emptylines[1]+2), emptylines[2]):
-				xyzfile.write(comlines[i])
-
-			xyzfile.close()
-			comfile.close()
-
-			subprocess.run(['obabel', '-ixyz', os.path.splitext(args.input)[0]+'.xyz', '-osdf', '-O', os.path.splitext(args.input)[0]+'.sdf'])
-
-			sdffile = os.path.splitext(args.input)[0]+'.sdf'
-
-			IDs = []
-			f = open(sdffile,"r")
-			readlines = f.readlines()
-
-			for i, line in enumerate(readlines):
-				if line.find('>  <ID>') > -1:
-					ID = readlines[i+1].split()[0]
-					IDs.append(ID)
-				else:
-					IDs.append(os.path.splitext(args.input)[0])
-
-			suppl = Chem.SDMolSupplier(sdffile)
-
-			for mol in suppl:
-				#FInding the metal and replacing it for RDkit embedding
-				if args.metal_complex:
-					for el in elementspt:
-						if el.symbol == 'I':
-							atomic_number = el.number
-					#changing name for Metal
-					for atom in mol.GetAtoms():
-						if atom.GetSymbol() in args.metal:
-							atom.SetAtomicNum(atomic_number)
-							if len(atom.GetNeighbors()) == 2:
-								atom.SetFormalCharge(-3)
-							if len(atom.GetNeighbors()) == 3:
-								atom.SetFormalCharge(-2)
-							if len(atom.GetNeighbors()) == 4:
-								atom.SetFormalCharge(-1)
-							if len(atom.GetNeighbors()) == 5:
-								atom.SetFormalCharge(0)
-							if len(atom.GetNeighbors()) == 6:
-								atom.SetFormalCharge(1)
-							if len(atom.GetNeighbors()) == 7:
-								atom.SetFormalCharge(2)
-							if len(atom.GetNeighbors()) == 8:
-								atom.SetFormalCharge(3)
-
-				if args.prefix == False:
-					name = IDs[i]
-				else:
-					name = args.prefix+str(m)+'_'+IDs[i]
-				# get manually for square planar and squarepyramidal
-				if args.complex_type == 'squareplanar' or args.complex_type == 'squarepyramidal':
-					file_template = os.path.dirname(os.path.abspath(__file__)) +'/Template/template-4-and-5.sdf'
-					temp = Chem.SDMolSupplier(file_template)
-					mol_objects_from_template,name, coord_Map, alg_Map, mol_template = template_embed_sp(mol,temp,name,args,log)
-					for i, mol_temp in enumerate(mol_objects_from_template):
-						mol_objects.append([mol_objects_from_template[i],name[i],coord_Map[i],alg_Map[i],mol_template[i]])
-				else:
-					mol_objects.append([mol, name])
-
-#------------------ Check for metals ----------------------------------------------
-		# SDF input specified
-		elif file_format == '.sdf':
-
-
-			#### ADD args.ff = ori_ff
-			sdffile = args.input
-			IDs = []
-			f = open(sdffile,"r")
-			readlines = f.readlines()
-
-			for i, line in enumerate(readlines):
-				if line.find('>  <ID>') > -1:
-					ID = readlines[i+1].split()[0]
-					IDs.append(ID)
-				else:
-					IDs.append(str(i))
-
-			suppl = Chem.SDMolSupplier(sdffile)
-
-			for i, mol in enumerate(suppl):
-				#FInding the metal and replacing it for RDkit embedding
-				if args.metal_complex:
-					#changing name for Metal
-					for atom in mol.GetAtoms():
-						if atom.GetSymbol() == args.metal:
-							for el in elementspt:
-								if el.symbol == 'I':
-									atomic_number = el.number
-							atom.SetAtomicNum(atomic_number)
-							if len(atom.GetNeighbors()) == 4:
-								atom.SetFormalCharge(-1)
-							if len(atom.GetNeighbors()) == 6:
-								atom.SetFormalCharge(1)
-
-				if args.prefix == False:
-					name = IDs[i]
-				else:
-					name = args.prefix+str(m)+'_'+IDs[i]
-				if args.complex_type == 'squareplanar' or args.complex_type == 'squarepyramidal':
-					file_template = os.path.dirname(os.path.abspath(__file__)) +'/Template/template-4-and-5.sdf'
-					temp = Chem.SDMolSupplier(file_template)
-					mol_objects_from_template = template_embed_sp(mol,temp,name,args,log)
-					mol_objects.append(mol_objects_from_template)
-				else:
-					mol_objects.append([mol, name])
+				compute_confs(smi,name,args,log,dup_data,counter_for_template,i,start_time)
+			dup_data.to_csv(args.input.split('.')[0]+'-Duplicates Data.csv',index=False)
 
 	#applying rule to get the necessary conformers only
 	if args.exp_rules:
@@ -561,37 +308,16 @@ def main():
 		all_xtb_conf_files = glob.glob('*_xtb.sdf')
 		destination_xtb = src +'/xTB_minimised_generated_SDF_files'
 		for file in all_xtb_conf_files:
-			try:
-				os.makedirs(destination_xtb)
-				shutil.move(os.path.join(src, file), os.path.join(destination_xtb, file))
-			except OSError:
-				if  os.path.isdir(destination_xtb):
-					shutil.move(os.path.join(src, file), os.path.join(destination_xtb, file))
-				else:
-					raise
+			moving_sdf_files(destination_xtb ,src,file)
 	elif args.ANI1ccx:
 		all_ani_conf_files = glob.glob('*_ani.sdf')
 		destination_ani = src +'/ANI1ccx_minimised_generated_SDF_files'
 		for file in all_ani_conf_files:
-			try:
-				os.makedirs(destination_ani)
-				shutil.move(os.path.join(src, file), os.path.join(destination_ani, file))
-			except OSError:
-				if  os.path.isdir(destination_ani):
-					shutil.move(os.path.join(src, file), os.path.join(destination_ani, file))
-				else:
-					raise
+			moving_sdf_files(destination_ani,src,file)
 	all_name_conf_files = glob.glob('*.sdf')
 	destination_rdkit = 'RDKit_generated_SDF_files'
 	for file in all_name_conf_files:
-		try:
-			os.makedirs(destination_rdkit)
-			shutil.move(os.path.join(src, file), os.path.join(destination_rdkit, file))
-		except OSError:
-			if  os.path.isdir(destination_rdkit):
-				shutil.move(os.path.join(src, file), os.path.join(destination_rdkit, file))
-			else:
-				raise
+		moving_sdf_files(destination_rdkit,src,file)
 
 	if args.analysis:
 		#adding in for general analysis

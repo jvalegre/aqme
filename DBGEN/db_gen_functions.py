@@ -128,6 +128,47 @@ def substituted_mol(smi,args,log):
 
 	return mol,args.metal_idx,args.complex_coord,args.metal_sym
 
+def clean_args(args,ori_ff):
+	args.ff = ori_ff
+	args.metal_idx = []
+	args.complex_coord = []
+	args.metal_sym = []
+
+def compute_confs(smi, name,args,log,dup_data,counter_for_template,i,start_time):
+	#taking largest component for salts
+	pieces = smi.split('.')
+	if len(pieces) > 1:
+		# take largest component by length
+		smi = max(pieces, key=len)
+
+	# Converts each line to a rdkit mol object
+	if args.verbose:
+		log.write("   -> Input Molecule {} is {}".format(i, smi))
+
+	if args.metal_complex:
+		mol,args.metal_idx,args.complex_coord,args.metal_sym = substituted_mol(smi,args,log)
+	else:
+		mol = Chem.MolFromSmiles(smi)
+
+	# get manually for square planar and squarepyramidal
+	if args.complex_type == 'squareplanar' or args.complex_type == 'squarepyramidal':
+		mol_objects = []
+		if len(args.metal_idx) == 1:
+			file_template = os.path.dirname(os.path.abspath(__file__)) +'/Template/template-4-and-5.sdf'
+			temp = Chem.SDMolSupplier(file_template)
+			mol_objects_from_template,name, coord_Map, alg_Map, mol_template = template_embed_sp(mol,temp,name,args,log)
+			for i, mol_temp in enumerate(mol_objects_from_template):
+				mol_objects.append([mol_objects_from_template[i],name[i],coord_Map[i],alg_Map[i],mol_template[i]])
+			for [mol, name, coord_Map,alg_Map,mol_template] in mol_objects:
+				conformer_generation(mol,name,start_time,args,log,dup_data,counter_for_template,coord_Map,alg_Map,mol_template)
+				counter_for_template += 1
+		else:
+			log.write("x  Cannot use templates for complexes involving more than 1 metal.")
+			sys.exit()
+	else:
+		conformer_generation(mol,name,start_time,args,log,dup_data,i)
+
+
 # TEMPLATE GENERATION FOR SQUAREPLANAR AND squarepyramidal
 def template_embed_sp(molecule,temp,name_input,args,log):
 	mol_objects = [] # a list of mol objects that will be populated
@@ -1530,15 +1571,7 @@ def embed_conf(mol,initial_confs,args,log,coord_Map,alg_Map, mol_template):
 			log.write("o  "+ str(len(cids))+" conformers initially generated")
 	# case of embed for templates
 	else:
-		if args.etkdg:
-			ps = Chem.ETKDG()
-			ps.randomSeed = args.seed
-			ps.coordMap = coord_Map
-			ps.ignoreSmoothingFailures=True
-			ps.numThreads = 0
-			cids = rdDistGeom.EmbedMultipleConfs(mol, initial_confs, params=ps)
-		else:
-			cids = rdDistGeom.EmbedMultipleConfs(mol, initial_confs, randomSeed=args.seed,ignoreSmoothingFailures=True, coordMap = coord_Map,numThreads = 0)
+		cids = rdDistGeom.EmbedMultipleConfs(mol, initial_confs, randomSeed=args.seed,ignoreSmoothingFailures=True, coordMap = coord_Map,numThreads = 0)
 		if len(cids) == 0 or len(cids) == 1 and initial_confs != 1:
 			log.write("o  Normal RDKit embeding process failed, trying to generate conformers with random coordinates (with "+str(initial_confs)+" possibilities)")
 			cids = rdDistGeom.EmbedMultipleConfs(mol, initial_confs, randomSeed=args.seed, useRandomCoords=True, boxSizeMult=10.0, numZeroFail=1000,ignoreSmoothingFailures=True, coordMap = coord_Map,numThreads = 0)
