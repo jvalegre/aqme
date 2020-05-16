@@ -28,7 +28,7 @@ import argparse, yaml, os, sys, subprocess, glob, shutil, time
 import pandas as pd
 from rdkit.Chem import AllChem as Chem
 from periodictable import elements as elementspt
-from DBGEN.db_gen_functions import creation_of_dup_csv,load_from_yaml,compute_confs,clean_args,conformer_generation, substituted_mol, template_embed_sp, Logger, read_energies, write_gaussian_input_file, exp_rules_output
+from DBGEN.db_gen_functions import creation_of_dup_csv,load_from_yaml,compute_confs,clean_args,conformer_generation, substituted_mol, template_embed_sp, Logger, read_energies, write_gaussian_input_file, exp_rules_output,moving_sdf_files
 from DBGEN.db_gen_functions import output_analyzer, check_for_final_folder, dup_calculation, combine_files, boltz_calculation
 
 def parser_args():
@@ -260,46 +260,26 @@ def main():
 					if args.single_point ==  True:
 						folder = sp_dir + '/' + str(lot) + '-' + str(bs)
 						log.write("\no  PREPARING SINGLE POINT INPUTS in {}".format(folder))
-						try:
-							os.makedirs(folder)
-						except OSError:
-							if os.path.isdir(folder):
-								pass
-							else:
-								raise
-
-						# writing the com files
-						# check conf_file exists, parse energies and then write dft input
-						for file in conf_files:
-							if os.path.exists(file):
-								if args.verbose:
-									log.write("   -> Converting from {}".format(file))
-								energies = read_energies(file,log)
-								name = os.path.splitext(file)[0]
-								write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args,log,charge_data)
-
-								# else create the directory for optimizations
 					else:
 						folder = g_dir + '/' + str(lot) + '-' + str(bs)
 						log.write("\no  Preparing Gaussian COM files in {}".format(folder))
-						try:
-							os.makedirs(folder)
-						except OSError:
-							if  os.path.isdir(folder):
-								pass
-							else:
-								raise
+					try:
+						os.makedirs(folder)
+					except OSError:
+						if os.path.isdir(folder):
+							pass
+						else:
+							raise
+					# writing the com files
+					# check conf_file exists, parse energies and then write dft input
+					for file in conf_files:
+						if os.path.exists(file):
+							if args.verbose:
+								log.write("   -> Converting from {}".format(file))
+							energies = read_energies(file,log)
+							name = os.path.splitext(file)[0]
 
-						# writing the com files
-						# check conf_file exists, parse energies and then write dft input
-						for file in conf_files:
-							if os.path.exists(file):
-								if args.verbose:
-									log.write("   -> Converting from {}".format(file))
-								energies = read_energies(file,log)
-								name = os.path.splitext(file)[0]
-
-								write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args,log,charge_data)
+							write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args,log,charge_data)
 
 	#moving files after compute and write_gauss or only after compute
 	#moving all the sdf files to a separate folder after writing gaussian files

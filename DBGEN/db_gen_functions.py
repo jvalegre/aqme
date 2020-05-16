@@ -163,7 +163,7 @@ def compute_confs(smi, name,args,log,dup_data,counter_for_template,i,start_time)
 				conformer_generation(mol,name,start_time,args,log,dup_data,counter_for_template,coord_Map,alg_Map,mol_template)
 				counter_for_template += 1
 		else:
-			log.write("x  Cannot use templates for complexes involving more than 1 metal.")
+			log.write("x  Cannot use templates for complexes involving more than 1 metal or for organic molecueles.")
 			sys.exit()
 	else:
 		conformer_generation(mol,name,start_time,args,log,dup_data,i)
@@ -939,6 +939,16 @@ def moving_log_files(source, destination, file):
 	except OSError:
 		if  os.path.isdir(destination) and not os.path.exists(destination+file):
 			shutil.move(source, destination)
+		else:
+			raise
+
+def moving_sdf_files(destination,src,file):
+	try:
+		os.makedirs(destination)
+		shutil.move(os.path.join(src, file), os.path.join(destination, file))
+	except OSError:
+		if  os.path.isdir(destination):
+			shutil.move(os.path.join(src, file), os.path.join(destination, file))
 		else:
 			raise
 
