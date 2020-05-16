@@ -164,7 +164,6 @@ def compute_confs(smi, name,args,log,dup_data,counter_for_template,i,start_time)
 				counter_for_template += 1
 		else:
 			log.write("x  Cannot use templates for complexes involving more than 1 metal or for organic molecueles.")
-			sys.exit()
 	else:
 		conformer_generation(mol,name,start_time,args,log,dup_data,i)
 
