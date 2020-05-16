@@ -37,14 +37,14 @@ def read_energies(file): # parses the energies from sdf files - then used to fil
     ('pentane.smi', 'params_test12.yaml', 20, 16, 0, [-5.27175,-4.44184,-3.84858,-1.57172], 0, False, True), # test xTB = True
     ('pentane.smi', 'params_test13.yaml', 20, 16, 0, [-5.27175,-4.44184,-3.84858,-1.57172], 0, False, True), # test ANI1ccx = True
     ('pentane.smi', 'params_test14.yaml', 20, 16, 0, [-5.27175, -4.44184], 0, False, False), # ewin = 1
-    ('pentane.smi', 'params_test15.yaml', 576, 'nan', 4, [-5.27175,-4.44184,-3.84858,-1.57172], 0, True, False), # test dihedral scan
+    ('pentane.smi', 'params_test15.yaml', 36, 'nan', 4, [-5.27175,-4.44184,-3.84858,-1.57172], 0, True, False), # test dihedral scan
     ('Ir_hexacoord.smi', 'params_Ir_test1.yaml', 1440, 1434, 0, [1.53156, 1.55012, 1.5506, 1.55114, 1.55163, 1.57662], 1, False, False), # test single metal with genecp
     ('Ir_hexacoord.smi', 'params_Ir_test2.yaml', 1440, 'nan', 6, [1.53156, 1.55012, 1.5506, 1.55114, 1.55163, 1.57662], 1, True, False), # test with dihedral scan
     ('Ag_Au_complex.smi', 'params_Ag_Au_test1.yaml', 360, 352, 0, [10.45361, 11.58698, 20.01407, 20.66195, 20.7945, 22.27646, 23.33896, 23.39252], 0, False, False), # test 2 metals with genecp
     ('Ag_Au_complex_2.smi', 'params_Ag_Au_test1.yaml', 20, 0, 0, [-5.26093, -4.41687, -4.39313, -4.10961, -3.93585, -2.95568, -2.43353, -2.03709, -1.51856, -1.45757, -0.22202, 0.46406], 1, False, False), # test 2 metals with genecp and charge
-    ('Ag_Au_complex_2.smi', 'params_Ag_Au_test2.yaml', 20, 'nan', 0, [-5.26093, -4.41687, -4.39313, -4.10961, -3.93585, -2.95568, -2.43353, -2.03709, -1.51856, -1.45757, -0.22202, 0.46406], 1, True, False), # test with dihedral scan
+    ('Ag_Au_complex_2.smi', 'params_Ag_Au_test2.yaml', 240, 'nan', 146, [-5.26093, -4.41687, -4.39313, -4.10961, -3.93585, -2.95568, -2.43353, -2.03709, -1.51856, -1.45757, -0.22202, 0.46406], 1, True, False), # test with dihedral scan
     ('Pd_squareplanar.smi', 'params_Pd_test1.yaml', 360, 349, 0, [8.97676, 9.01872, 9.10379, 9.15897, 9.16366, 9.17272, 9.18237, 9.19448, 9.22382, 9.26467, 9.43331], 0, False, False), # test squareplanar template with gen
-    ('Pd_squareplanar.smi', 'params_Pd_test2.yaml', 360, 'nan', 11, [8.97676, 9.01872, 9.10379, 9.15897, 9.16366, 9.17272, 9.18237, 9.19448, 9.22382, 9.26467, 9.43331], 0, True, False), # test nodihedral
+    ('Pd_squareplanar.smi', 'params_Pd_test2.yaml', 48, 'nan', 6, [8.97676, 9.01872, 9.10379, 9.15897, 9.16366, 9.17272, 9.18237, 9.19448, 9.22382, 9.26467, 9.43331], 0, True, False), # test nodihedral
     ('Rh_squarepyramidal.smi', 'params_Rh_test1.yaml', 360, 111, 0, [6.14954, 6.15497, 6.20729, 6.3288, 6.35036, 6.35559, 6.35893, 6.52387, 6.56902], 0, False, False), # test squareplanar template with gen
 ])
 
@@ -75,12 +75,15 @@ def test_confgen(smiles, params_file, n_confs, prefilter_confs_rdkit, filter_con
 		test_unique_confs = df_output['RDKIT-Rotated-Unique-conformers']
 
 		# I use the filter_confs_rdkit variable to assert for unique confs in dihedral scan
-		assert str(prefilter_confs_rdkit) == str(test_prefilter_rdkit_confs[0])
+		assert str(n_confs) == str(test_init_rdkit_confs[0])
 		assert str(filter_confs_rdkit) == str(test_unique_confs[0])
 
 	# read the energies of the conformers
 	os.chdir(path+'/'+smiles.split('.')[0]+'/RDKit_generated_SDF_files')
-	test_rdkit_E_confs = read_energies(smiles.split('.')[0]+'_rdkit.sdf')
+	if not dihedral:
+		test_rdkit_E_confs = read_energies(smiles.split('.')[0]+'_rdkit.sdf')
+	else:
+		test_rdkit_E_confs = read_energies(smiles.split('.')[0]+'_rdkit_rotated.sdf')
 
 	# test for energies
 	try:
