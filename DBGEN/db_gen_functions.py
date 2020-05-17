@@ -128,7 +128,14 @@ def substituted_mol(smi,args,log):
 
 	return mol,args.metal_idx,args.complex_coord,args.metal_sym
 
-def clean_args(args,ori_ff):
+def clean_args(args,ori_ff,smi):
+	mol = Chem.MolFromSmiles(smi)
+	for atom in mol.GetAtoms():
+		if atom.GetSymbol() in args.metal:
+			args.metal_complex= True
+			break
+	else:
+		args.metal_complex = False
 	args.ff = ori_ff
 	args.metal_idx = []
 	args.complex_coord = []
@@ -150,20 +157,21 @@ def compute_confs(smi, name,args,log,dup_data,counter_for_template,i,start_time)
 	else:
 		mol = Chem.MolFromSmiles(smi)
 
-	# get manually for square planar and squarepyramidal
-	if args.complex_type == 'squareplanar' or args.complex_type == 'squarepyramidal':
-		mol_objects = []
-		if len(args.metal_idx) == 1:
-			file_template = os.path.dirname(os.path.abspath(__file__)) +'/Template/template-4-and-5.sdf'
-			temp = Chem.SDMolSupplier(file_template)
-			mol_objects_from_template,name, coord_Map, alg_Map, mol_template = template_embed_sp(mol,temp,name,args,log)
-			for i, mol_temp in enumerate(mol_objects_from_template):
-				mol_objects.append([mol_objects_from_template[i],name[i],coord_Map[i],alg_Map[i],mol_template[i]])
-			for [mol, name, coord_Map,alg_Map,mol_template] in mol_objects:
-				conformer_generation(mol,name,start_time,args,log,dup_data,counter_for_template,coord_Map,alg_Map,mol_template)
-				counter_for_template += 1
-		else:
-			log.write("x  Cannot use templates for complexes involving more than 1 metal or for organic molecueles.")
+	if args.metal_complex:
+		# get manually for square planar and squarepyramidal
+		if args.complex_type == 'squareplanar' or args.complex_type == 'squarepyramidal':
+			mol_objects = []
+			if len(args.metal_idx) == 1:
+				file_template = os.path.dirname(os.path.abspath(__file__)) +'/Template/template-4-and-5.sdf'
+				temp = Chem.SDMolSupplier(file_template)
+				mol_objects_from_template,name, coord_Map, alg_Map, mol_template = template_embed_sp(mol,temp,name,args,log)
+				for i, mol_temp in enumerate(mol_objects_from_template):
+					mol_objects.append([mol_objects_from_template[i],name[i],coord_Map[i],alg_Map[i],mol_template[i]])
+				for [mol, name, coord_Map,alg_Map,mol_template] in mol_objects:
+					conformer_generation(mol,name,start_time,args,log,dup_data,counter_for_template,coord_Map,alg_Map,mol_template)
+					counter_for_template += 1
+			else:
+				log.write("x  Cannot use templates for complexes involving more than 1 metal or for organic molecueles.")
 	else:
 		conformer_generation(mol,name,start_time,args,log,dup_data,i)
 

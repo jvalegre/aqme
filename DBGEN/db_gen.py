@@ -163,10 +163,10 @@ def main():
 			#used only for template
 			counter_for_template =0
 			for i, line in enumerate(smifile):
-				clean_args(args,ori_ff)
 				toks = line.split()
 				#editing part
 				smi = toks[0]
+				clean_args(args,ori_ff,smi)
 				if args.prefix == False:
 					name = ''.join(toks[1:])
 				else:
@@ -180,13 +180,13 @@ def main():
 			csv_smiles = pd.read_csv(args.input)
 			counter_for_template =0
 			for i in range(len(csv_smiles)):
-				clean_args(args,ori_ff)
 				#assigning names and smi i  each loop
 				if args.prefix == False:
 					name = csv_smiles.loc[i, 'code_name']
 				else:
 					name = 'comp_'+str(m)+'_'+csv_smiles.loc[i, 'code_name']
 				smi = csv_smiles.loc[i, 'SMILES']
+				clean_args(args,ori_ff,smi)
 				compute_confs(smi,name,args,log,dup_data,counter_for_template,i,start_time)
 			dup_data.to_csv(args.input.split('.')[0]+'-Duplicates Data.csv',index=False)
 
@@ -198,7 +198,7 @@ def main():
 
 			counter_for_template = 0
 			for i, smi in enumerate(smifile):
-				clean_args(args,ori_ff)
+				clean_args(args,ori_ff,smi)
 				name = 'comp' + str(i)+'_'
 				compute_confs(smi,name,args,log,dup_data,counter_for_template,i,start_time)
 			dup_data.to_csv(args.input.split('.')[0]+'-Duplicates Data.csv',index=False)
