@@ -1786,7 +1786,7 @@ def filter_after_rotation(args,name,log,dup_data,dup_data_idx):
 							if el.symbol == re_symbol:
 								atomic_number = el.number
 						atom.SetAtomicNum(atomic_number)
-				sdwriter_rd.write(mol_rd)
+			sdwriter_rd.write(mol_rd)
 		# Only the first ID gets included
 		rd_count = 1
 		# check rmsd
@@ -1810,7 +1810,7 @@ def filter_after_rotation(args,name,log,dup_data,dup_data_idx):
 							if el.symbol == re_symbol:
 								atomic_number = el.number
 						atom.SetAtomicNum(atomic_number)
-				sdwriter_rd.write(mol_rd)
+			sdwriter_rd.write(mol_rd)
 			if i not in rd_selectedcids:
 				rd_selectedcids.append(i)
 		bar.next()
