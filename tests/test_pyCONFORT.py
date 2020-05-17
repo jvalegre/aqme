@@ -10,16 +10,6 @@ path = os.getcwd()
 # decimal digits for comparing E
 precision = 5
 
-def read_energies(file): # parses the energies from sdf files - then used to filter conformers
-	energies = []
-	f = open(file,"r")
-	readlines = f.readlines()
-	for i in range(len(readlines)):
-		if readlines[i].find('>  <Energy>') > -1:
-			energies.append(float(readlines[i+1].split()[0]))
-	f.close()
-	return energies
-
 # tests for individual organic molecules and metal complexes
 @pytest.mark.parametrize("smiles, params_file, n_confs, prefilter_confs_rdkit, filter_confs_rdkit, E_confs, charge, dihedral, xTB_ANI1",
 [
@@ -80,10 +70,19 @@ def test_confgen(smiles, params_file, n_confs, prefilter_confs_rdkit, filter_con
 
 	# read the energies of the conformers
 	os.chdir(path+'/'+smiles.split('.')[0]+'/RDKit_generated_SDF_files')
+
 	if not dihedral:
-		test_rdkit_E_confs = read_energies(smiles.split('.')[0]+'_rdkit.sdf')
+		file = smiles.split('.')[0]+'_rdkit.sdf'
 	else:
-		test_rdkit_E_confs = read_energies(smiles.split('.')[0]+'_rdkit_rotated.sdf')
+		file = smiles.split('.')[0]+'_rdkit_rotated.sdf'
+
+	test_rdkit_E_confs = []
+	f = open(file,"r")
+	readlines = f.readlines()
+	for i,line in enumerate(readlines):
+		if readlines[i].find('>  <Energy>') > -1:
+			test_rdkit_E_confs.append(float(readlines[i+1].split()[0]))
+	f.close()
 
 	# test for energies
 	try:
