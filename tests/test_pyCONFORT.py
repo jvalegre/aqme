@@ -126,7 +126,7 @@ def test_confgen(params_file):
     ('Pd_squareplanar2_conformer_1.com','params_comb_test2.yaml', True), # test gen_ecp
 ])
 
-def test_confgen(com_file, params_file):
+def test_confgen(com_file, params_file, gen_ecp):
 	# gets into the directory for testing SMILES
 	os.chdir(path+'/genecp')
 
