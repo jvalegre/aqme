@@ -123,7 +123,7 @@ def test_confgen(params_file):
 @pytest.mark.parametrize("com_file, params_file, gen_ecp",
 [
     ('Pd_squareplanar_conformer_1.com','params_comb_test1.yaml', False), # test gen
-    ('Pd_squareplanar2_conformer_1.com','params_comb_test2.yaml', True'), # test gen_ecp
+    ('Pd_squareplanar2_conformer_1.com','params_comb_test2.yaml', True), # test gen_ecp
 ])
 
 def test_confgen(com_file, params_file):
