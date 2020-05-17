@@ -103,21 +103,21 @@ def test_confgen(smiles, params_file, n_confs, prefilter_confs_rdkit, filter_con
 # tests mixing organic molecules and metals in the same input file
 # also, this part tests gen_ecp and gen in COM files
 # also, check if blank lines in the input files raise errors
-@pytest.mark.parametrize("params_file",
-[
-    ('params_comb_test1.yaml'), # test pentane + Pd complex
-    ('params_comb_test2.yaml'), # test pentane + Pd complex with blank lines
-    ('params_comb_test3.yaml'), # test pentane + Pd complex with template
-    ('params_comb_test4.yaml'), # test pentane + 2 metals
-	('params_comb_test5.yaml'), # test pentane + Pd + dihedral
-])
-
-def test_confgen(params_file):
-	# gets into the directory for testing SMILES
-	os.chdir(path+'/multiple')
-
-	# Conformer generation using different parameters. It creates a CSV file
-	subprocess.run(['python', '-m', 'DBGEN', '--varfile', params_file])
+# @pytest.mark.parametrize("params_file",
+# [
+#     ('params_comb_test1.yaml'), # test pentane + Pd complex
+#     ('params_comb_test2.yaml'), # test pentane + Pd complex with blank lines
+#     ('params_comb_test3.yaml'), # test pentane + Pd complex with template
+#     ('params_comb_test4.yaml'), # test pentane + 2 metals
+# 	('params_comb_test5.yaml'), # test pentane + Pd + dihedral
+# ])
+#
+# def test_confgen(params_file):
+# 	# gets into the directory for testing SMILES
+# 	os.chdir(path+'/multiple')
+#
+# 	# Conformer generation using different parameters. It creates a CSV file
+# 	subprocess.run(['python', '-m', 'DBGEN', '--varfile', params_file])
 
 # tests if gen and gen_ecp work
 @pytest.mark.parametrize("com_file, params_file, gen_ecp",
