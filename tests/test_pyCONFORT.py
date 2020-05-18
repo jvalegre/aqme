@@ -168,37 +168,37 @@ def test_confgen(folder, smiles, params_file, n_confs, prefilter_confs_rdkit, fi
             subprocess.run(['python', '-m', 'DBGEN', '--varfile', params_file])
 
         if smiles == 'CH4_Normal_termination.log':
-            os.chdir(path+'/'+folder+'/Finished')
+            os.chdir(path+'/'+folder+'/finished')
             assert smiles in glob.glob('*.*')
         if smiles == 'Basis_set_error1.LOG':
-            os.chdir(path+'/'+folder+'/Failed_error/Atomic_basis_error')
+            os.chdir(path+'/'+folder+'/failed_error/atomic_basis_error')
             assert smiles in glob.glob('*.*')
         if smiles == 'Basis_set_error2.LOG':
-            os.chdir(path+'/'+folder+'/Failed_error/Atomic_basis_error')
+            os.chdir(path+'/'+folder+'/failed_error/atomic_basis_error')
             assert smiles in glob.glob('*.*')
         if smiles == 'Error_termination.LOG':
-            os.chdir(path+'/'+folder+'/Failed_error/Unknown_error')
+            os.chdir(path+'/'+folder+'/failed_error/unknown_error')
             assert smiles in glob.glob('*.*')
         if smiles == 'Imag_freq.log':
-            os.chdir(path+'/'+folder+'/Imaginary_frequencies')
+            os.chdir(path+'/'+folder+'/imaginary_frequencies')
             assert smiles in glob.glob('*.*')
         if smiles == 'SCF_error.LOG':
-            os.chdir(path+'/'+folder+'/Failed_error/SCF_error')
+            os.chdir(path+'/'+folder+'/failed_error/SCF_error')
             assert smiles in glob.glob('*.*')
         if smiles == 'Unfinished.LOG':
-            os.chdir(path+'/'+folder+'/Failed_unfinished')
+            os.chdir(path+'/'+folder+'/failed_unfinished')
             assert smiles in glob.glob('*.*')
 
     elif type == 'analysis_with_dup':
         os.chdir(path+'/'+folder)
         subprocess.run(['python', '-m', 'DBGEN', '--varfile', params_file])
-        os.chdir(path+'/'+folder+'/Duplicates')
+        os.chdir(path+'/'+folder+'/duplicates')
         assert smiles in glob.glob('*.*')
 
     elif type == 'Single_point':
         os.chdir(path+'/'+folder)
         subprocess.run(['python', '-m', 'DBGEN', '--varfile', params_file])
-        os.chdir(path+'/'+folder+'/Single_point_input_files')
+        os.chdir(path+'/'+folder+'/single_point_input_files')
         assert len(glob.glob('*.*')) == 2
 
         file = smiles
