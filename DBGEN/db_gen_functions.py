@@ -15,18 +15,30 @@ import pandas as pd
 try:
 	import ase
 	import ase.optimize
-	from lib.xtb import GFN2
-	import torch
-	os.environ['KMP_DUPLICATE_LIB_OK']='True'
-	device = torch.device('cpu')
 	from ase.units import Hartree
 except:
-	pass
+	print('0')
+try:
+	from lib.xtb import GFN2
+except:
+	print('1')
+try:
+	import torch
+except:
+	print('2')
+try:
+	os.environ['KMP_DUPLICATE_LIB_OK']='True'
+except:
+	print('3')
+try:
+	device = torch.device('cpu')
+except:
+	print('4')
 try:
 	import torchani
 	model = torchani.models.ANI1ccx()
 except:
-	pass
+	print('5')
 
 hartree_to_kcal = 627.509
 

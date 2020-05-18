@@ -96,8 +96,10 @@ def calc_genecp(file, atom):
 
 def test_confgen(folder, smiles, params_file, n_confs, prefilter_confs_rdkit, filter_confs_rdkit, E_confs, charge, dihedral, xTB_ANI1, type):
     # gets into the directory for testing SMILES
-    os.chdir(path+'/'+folder+'/'+smiles.split('.')[0])
-
+    try:
+        os.chdir(path+'/'+folder+'/'+smiles.split('.')[0])
+    except:
+        pass
     # Conformer generation using different parameters. It creates a CSV file
     subprocess.run(['python', '-m', 'DBGEN', '--varfile', params_file])
 
