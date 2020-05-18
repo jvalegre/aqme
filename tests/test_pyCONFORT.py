@@ -57,11 +57,11 @@ def calc_energy(file):
     ('Genecp', 'Pd_squareplanar.smi', 'params_genecp_test1.yaml', 'nan', 'nan', 'nan', 'nan', 'nan', False, False, True), # test gen
     ('Genecp', 'Pd_squareplanar.smi', 'params_genecp_test2.yaml', 'nan', 'nan', 'nan', 'nan', 'nan', False, False, True), # test genecp
     # tests of input files with different formats
-    ('Input_files', 'pentane.csv', 'params_format_test1.yaml', 20, 16, 0, [-5.27175, -4.44184, -3.84858, -1.57172], 0, False, False, False), # test sample = 20
-    ('Input_files', 'pentane.cdx', 'params_format_test2.yaml', 20, 16, 0, [-5.27175, -4.44184, -3.84858, -1.57172], 0, False, False, False), # test sample = 20
-    ('Input_files', 'pentane.com', 'params_format_test3.yaml', 20, 16, 0, [-5.27175, -4.44184, -3.84858, -1.57172], 0, False, False, False), # test sample = 20
-    ('Input_files', 'pentane.gjf', 'params_format_test4.yaml', 20, 16, 0, [-5.27175, -4.44184, -3.84858, -1.57172], 0, False, False, False), # test sample = 20
-    ('Input_files', 'pentane.sdf', 'params_format_test5.yaml', 20, 16, 0, [-5.27175, -4.44184, -3.84858, -1.57172], 0, False, False, False), # test sample = 20
+    ('Input_files', 'pentane.csv', 'params_format_test1.yaml', 20, 16, 0, [-5.27175, -4.44184, -3.84858, -1.57172], 0, False, False, False), # test csv
+    ('Input_files', 'pentane.cdx', 'params_format_test2.yaml', 20, 16, 0, [-5.27175, -4.44184, -3.84858, -1.57172], 0, False, False, False), # test cdx
+    ('Input_files', 'pentane.com', 'params_format_test3.yaml', 20, 16, 0, [-5.27175, -4.44184, -3.84858, -1.57172], 0, False, False, False), # test com
+    ('Input_files', 'pentane.gjf', 'params_format_test4.yaml', 20, 16, 0, [-5.27175, -4.44184, -3.84858, -1.57172], 0, False, False, False), # test gjf
+    ('Input_files', 'pentane.sdf', 'params_format_test5.yaml', 20, 16, 0, [-5.27175, -4.44184, -3.84858, -1.57172], 0, False, False, False), # test sdf
 ])
 
 def test_confgen(folder, smiles, params_file, n_confs, prefilter_confs_rdkit, filter_confs_rdkit, E_confs, charge, dihedral, xTB_ANI1, only_check):
@@ -124,18 +124,18 @@ def test_confgen(folder, smiles, params_file, n_confs, prefilter_confs_rdkit, fi
             os.chdir(path+'/'+folder+'/'+smiles.split('.')[0]+'/generated_gaussian_files/wb97xd-def2svp')
             file = 'Pd_squareplanar_conformer_1.com'
             # count the amount of times Pd 0 is repeated: for gen only 1, for gen_ecp 2
-        	count = 0
-        	f = open(file,"r")
-        	readlines = f.readlines()
-        	for i, line in enumerate(readlines):
-        		if line.find('Pd 0') > -1:
-        			count += 1
-        	f.close()
+            count = 0
+            f = open(file,"r")
+            readlines = f.readlines()
+            for i, line in enumerate(readlines):
+                if line.find('Pd 0') > -1:
+                    count += 1
+            f.close()
 
-        	if if params_file == 'params_genecp_test1.yaml': # for gen
-        		assert count == 1
-        	else: # for genecp
-        		assert count == 2
+            if if params_file == 'params_genecp_test1.yaml': # for gen
+                assert count == 1
+            else: # for genecp
+                assert count == 2
 
 
 # MISSING CHECKS:
