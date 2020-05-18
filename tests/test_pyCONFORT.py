@@ -132,7 +132,7 @@ def test_confgen(folder, smiles, params_file, n_confs, prefilter_confs_rdkit, fi
                     count += 1
             f.close()
 
-            if if params_file == 'params_genecp_test1.yaml': # for gen
+            if params_file == 'params_genecp_test1.yaml': # for gen
                 assert count == 1
             else: # for genecp
                 assert count == 2
@@ -142,4 +142,3 @@ def test_confgen(folder, smiles, params_file, n_confs, prefilter_confs_rdkit, fi
 # experimental rules
 # analysis
 # sp files
-# autoprep
