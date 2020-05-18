@@ -18,7 +18,26 @@ def calc_energy(file):
         if readlines[i].find('>  <Energy>') > -1:
             energy.append(float(readlines[i+1].split()[0]))
     f.close()
+
     return energy
+
+def calc_genecp(file, atom):
+    # count the amount of times Pd 0 is repeated: for gen only 1, for gen_ecp 2
+    count,NBO,pop,opt = 0,0,0,0
+    f = open(file,"r")
+    readlines = f.readlines()
+    for i, line in enumerate(readlines):
+        if line.find('pop') > -1:
+            pop += 1
+        if line.find('opt') > -1:
+            opt += 1
+        if line.find(atom+' 0') > -1:
+            count += 1
+        if line.find('$NBO $END') > -1:
+            NBO += 1
+    f.close()
+
+    return count,NBO,pop,opt
 
 # tests for individual organic molecules and metal complexes
 @pytest.mark.parametrize("folder, smiles, params_file, n_confs, prefilter_confs_rdkit, filter_confs_rdkit, E_confs, charge, dihedral, xTB_ANI1, type",
@@ -63,14 +82,16 @@ def calc_energy(file):
     ('Genecp', 'Pd_squareplanar.smi', 'params_genecp_test1.yaml', 'nan', 'nan', 'nan', 'nan', 'nan', False, False, 'only_check'), # test gen
     ('Genecp', 'Pd_squareplanar.smi', 'params_genecp_test2.yaml', 'nan', 'nan', 'nan', 'nan', 'nan', False, False, 'only_check'), # test genecp
     # tests of the analysis part (I use smiles as the output LOG files)
-    ('Analysis', 'CH4_Normal_termination.log', 'params_analysis_test.yaml', 'nan', 'nan', 'nan', 'nan', 'nan', False, False, 'analysis'), # test sdf
-    ('Analysis', 'Basis_set_error1.LOG', 'params_analysis_test.yaml', 'nan', 'nan', 'nan', 'nan', 'nan', False, False, 'analysis'), # test sdf
-    ('Analysis', 'Basis_set_error2.LOG', 'params_analysis_test.yaml', 'nan', 'nan', 'nan', 'nan', 'nan', False, False, 'analysis'), # test sdf
-    ('Analysis', 'Error_termination.LOG', 'params_analysis_test.yaml', 'nan', 'nan', 'nan', 'nan', 'nan', False, False, 'analysis'), # test sdf
-    ('Analysis', 'Imag_freq.log', 'params_analysis_test.yaml', 'nan', 'nan', 'nan', 'nan', 'nan', False, False, 'analysis'), # test sdf
-    ('Analysis', 'SCF_error.LOG', 'params_analysis_test.yaml', 'nan', 'nan', 'nan', 'nan', 'nan', False, False, 'analysis'), # test sdf
-    ('Analysis', 'Unfinished.LOG', 'params_analysis_test.yaml', 'nan', 'nan', 'nan', 'nan', 'nan', False, False, 'analysis'), # test sdf
-    ('Analysis_with_dup', 'Duplicate.LOG', 'params_analysis_dup_test.yaml', 'nan', 'nan', 'nan', 'nan', 'nan', False, False, 'analysis_with_dup'), # test sdf
+    ('Analysis', 'CH4_Normal_termination.log', 'params_analysis_test.yaml', 'nan', 'nan', 'nan', 'nan', 'nan', False, False, 'analysis'), # test normal termination
+    ('Analysis', 'Basis_set_error1.LOG', 'params_analysis_test.yaml', 'nan', 'nan', 'nan', 'nan', 'nan', False, False, 'analysis'), # test incompatibilities with gen/genecp
+    ('Analysis', 'Basis_set_error2.LOG', 'params_analysis_test.yaml', 'nan', 'nan', 'nan', 'nan', 'nan', False, False, 'analysis'), # test incompatibilities with gen/genecp
+    ('Analysis', 'Error_termination.LOG', 'params_analysis_test.yaml', 'nan', 'nan', 'nan', 'nan', 'nan', False, False, 'analysis'), # test error terminations
+    ('Analysis', 'Imag_freq.log', 'params_analysis_test.yaml', 'nan', 'nan', 'nan', 'nan', 'nan', False, False, 'analysis'), # test imaginary frequencies
+    ('Analysis', 'SCF_error.LOG', 'params_analysis_test.yaml', 'nan', 'nan', 'nan', 'nan', 'nan', False, False, 'analysis'), # test SCF errors
+    ('Analysis', 'Unfinished.LOG', 'params_analysis_test.yaml', 'nan', 'nan', 'nan', 'nan', 'nan', False, False, 'analysis'), # test unfinished calculations
+    ('Analysis_with_dup', 'Duplicate.LOG', 'params_analysis_dup_test.yaml', 'nan', 'nan', 'nan', 'nan', 'nan', False, False, 'analysis_with_dup'), # test duplicates
+    ('Single_point', 'CH4_freq.log', 'params_sp_test.yaml', 'nan', 'nan', 'nan', 'nan', 'nan', False, False, 'Single_point'), # test single-point generation
+    ('Single_point', 'Pd_SP.LOG', 'params_sp_test.yaml', 'nan', 'nan', 'nan', 'nan', 'nan', False, False, 'Single_point'), # test single-point generation with genecp
 ])
 
 def test_confgen(folder, smiles, params_file, n_confs, prefilter_confs_rdkit, filter_confs_rdkit, E_confs, charge, dihedral, xTB_ANI1, type):
@@ -132,14 +153,7 @@ def test_confgen(folder, smiles, params_file, n_confs, prefilter_confs_rdkit, fi
         if params_file.find('_genecp_') > -1:
             os.chdir(path+'/'+folder+'/'+smiles.split('.')[0]+'/generated_gaussian_files/wb97xd-def2svp')
             file = 'Pd_squareplanar_conformer_1.com'
-            # count the amount of times Pd 0 is repeated: for gen only 1, for gen_ecp 2
-            count = 0
-            f = open(file,"r")
-            readlines = f.readlines()
-            for i, line in enumerate(readlines):
-                if line.find('Pd 0') > -1:
-                    count += 1
-            f.close()
+            count,NBO,pop,opt = calc_genecp(file, 'Pd')
 
             if params_file == 'params_genecp_test1.yaml': # for gen
                 assert count == 1
@@ -181,10 +195,31 @@ def test_confgen(folder, smiles, params_file, n_confs, prefilter_confs_rdkit, fi
         os.chdir(path+'/'+folder+'/Duplicates')
         assert smiles in glob.glob('*.*')
 
+    elif type == 'Single_point':
+        os.chdir(path+'/'+folder)
+        subprocess.run(['python', '-m', 'DBGEN', '--varfile', params_file])
+        os.chdir(path+'/'+folder+'/Single_point_input_files')
+        assert len(glob.glob('*.*')) == 2
+
+        file = smiles
+
+        if file == 'Pd_SP.LOG':
+            count,NBO,pop,opt = calc_genecp(file, 'Pd')
+            assert count == 2 # finds genecp for Pd
+            assert NBO == 1 # finds final line for sp
+            assert pop == 1 # finds input line for sp
+            assert opt == 0 # it does not find standard opt option
+
+        elif file == 'CH4_freq.log':
+            count,NBO,pop,opt = calc_genecp(file, 'C H')
+            assert count == 0 # does not find genecp part
+            assert NBO == 1 # finds final line for sp
+            assert pop == 1 # finds input line for sp
+            assert opt == 0 # it does not find standard opt option
+
     else:
         assert 'not right type of test' == 'no not right'
 
 
 # MISSING CHECKS:
 # experimental rules
-# sp files
