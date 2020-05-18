@@ -7,7 +7,6 @@ import math, os, sys, subprocess, glob, shutil, time,yaml
 from rdkit.Chem import AllChem as Chem
 from rdkit.Chem import rdMolTransforms, PropertyMol, rdDistGeom, rdMolAlign, Lipinski, Descriptors
 from rdkit.Geometry import Point3D
-from periodictable import elements as elementspt
 from progress.bar import IncrementalBar
 import numpy as np
 import pandas as pd
@@ -157,21 +156,20 @@ def compute_confs(smi, name,args,log,dup_data,counter_for_template,i,start_time)
 	else:
 		mol = Chem.MolFromSmiles(smi)
 
-	if args.metal_complex:
-		# get manually for square planar and squarepyramidal
-		if args.complex_type == 'squareplanar' or args.complex_type == 'squarepyramidal':
-			mol_objects = []
-			if len(args.metal_idx) == 1:
-				file_template = os.path.dirname(os.path.abspath(__file__)) +'/Template/template-4-and-5.sdf'
-				temp = Chem.SDMolSupplier(file_template)
-				mol_objects_from_template,name, coord_Map, alg_Map, mol_template = template_embed_sp(mol,temp,name,args,log)
-				for i, mol_temp in enumerate(mol_objects_from_template):
-					mol_objects.append([mol_objects_from_template[i],name[i],coord_Map[i],alg_Map[i],mol_template[i]])
-				for [mol, name, coord_Map,alg_Map,mol_template] in mol_objects:
-					conformer_generation(mol,name,start_time,args,log,dup_data,counter_for_template,coord_Map,alg_Map,mol_template)
-					counter_for_template += 1
-			else:
-				log.write("x  Cannot use templates for complexes involving more than 1 metal or for organic molecueles.")
+	# get manually for square planar and squarepyramidal
+	if args.complex_type == 'squareplanar' or args.complex_type == 'squarepyramidal':
+		mol_objects = []
+		if len(args.metal_idx) == 1:
+			file_template = os.path.dirname(os.path.abspath(__file__)) +'/template/template-4-and-5.sdf'
+			temp = Chem.SDMolSupplier(file_template)
+			mol_objects_from_template,name, coord_Map, alg_Map, mol_template = template_embed_sp(mol,temp,name,args,log)
+			for i,_ in enumerate(mol_objects_from_template):
+				mol_objects.append([mol_objects_from_template[i],name[i],coord_Map[i],alg_Map[i],mol_template[i]])
+			for [mol, name, coord_Map,alg_Map,mol_template] in mol_objects:
+				conformer_generation(mol,name,start_time,args,log,dup_data,counter_for_template,coord_Map,alg_Map,mol_template)
+				counter_for_template += 1
+		else:
+			log.write("x  Cannot use templates for complexes involving more than 1 metal or for organic molecueles.")
 	else:
 		conformer_generation(mol,name,start_time,args,log,dup_data,i)
 
@@ -187,7 +185,7 @@ def template_embed_sp(molecule,temp,name_input,args,log):
 	for atom in molecule.GetAtoms():
 		if atom.GetSymbol() == 'I'and (len(atom.GetBonds()) == 6 or len(atom.GetBonds()) == 5 or len(atom.GetBonds()) == 4 or len(atom.GetBonds()) == 3 or len(atom.GetBonds()) == 2):
 			if len(atom.GetBonds()) == 5:
-				atom.SetAtomicNum(53)
+				atom.SetAtomicNum(15)
 			if len(atom.GetBonds()) == 4:
 				atom.SetAtomicNum(14)
 			center_idx = atom.GetIdx()
@@ -269,6 +267,9 @@ def template_embed_sp(molecule,temp,name_input,args,log):
 					if atom.GetIdx() == center_idx:
 						neighbours = atom.GetNeighbors()
 
+				for atom in neighbours:
+					print(atom.GetSymbol(),atom.GetIdx())
+
 				# assigning order of replacement for the top
 				if name_1 == 0:
 					k = 4
@@ -326,7 +327,7 @@ def template_embed_sp(molecule,temp,name_input,args,log):
 					site_1,site_2,site_3,site_4,site_5,metal_site  = 0,0,0,0,0,0
 					for atom in mol_1.GetAtoms():
 						if atom.GetIdx()  == 5 and metal_site == 0:
-							atom.SetAtomicNum(53)
+							atom.SetAtomicNum(15)
 							center_temp = atom.GetIdx()
 							metal_site = 1
 						if k!= 0:
@@ -361,6 +362,8 @@ def template_embed_sp(molecule,temp,name_input,args,log):
 							elif atom.GetIdx() == 0 and site_5 == 0:
 								atom.SetAtomicNum(neighbours[0].GetAtomicNum())
 								site_5 = 1
+						print('after')
+						print(atom.GetSymbol(),atom.GetIdx())
 
 					#assigning and embedding onto the core
 					molecule_new, coordMap, algMap = template_embed_optimize(molecule,mol_1,args,log)
@@ -390,6 +393,7 @@ def template_embed_optimize(molecule_embed,mol_1,args,log):
 
 	#assigning and embedding onto the core
 	num_atom_match = molecule_embed.GetSubstructMatch(mol_1)
+	print(len(num_atom_match))
 
 	#add H's to molecule
 	molecule_embed = Chem.AddHs(molecule_embed)
@@ -405,14 +409,11 @@ def template_embed_optimize(molecule_embed,mol_1,args,log):
 		if atom.GetAtomicNum() > 36: # up to Kr for MMFF, if not, the code will use UFF
 			args.ff = "UFF"
 
-	#making the ff definition general
-	ff = args.ff
-
 	# Force field parameters
-	if ff == "MMFF":
-		GetFF = lambda x,confId=-1:Chem.MMFFGetMoleculeForceField(x,Chem.MMFFGetMoleculeProperties(x),confId=confId)
-	elif ff == "UFF":
-		GetFF = lambda x,confId=-1:Chem.UFFGetMoleculeForceField(x)
+	if args.ff == "MMFF":
+		GetFF = lambda mol,confId=-1:Chem.MMFFGetMoleculeForceField(mol,Chem.MMFFGetMoleculeProperties(mol),confId=-1)
+	elif args.ff == "UFF":
+		GetFF = lambda mol,confId=-1:Chem.UFFGetMoleculeForceField(mol,confId=-1)
 	else:
 		log.write('   Force field {} not supported!'.format(args.ff))
 		sys.exit()
@@ -430,6 +431,7 @@ def template_embed_optimize(molecule_embed,mol_1,args,log):
 	if len(num_atom_match) == 5:
 		ci = Chem.EmbedMolecule(molecule_embed, coordMap=coordMap, randomSeed=randomseed)
 	if len(num_atom_match) == 6:
+		#ignoreSmoothingFailures=True
 		ci = Chem.EmbedMolecule(molecule_embed, coordMap=coordMap, randomSeed=randomseed,ignoreSmoothingFailures=True)
 	if ci < 0:
 		log.write('Could not embed molecule.')
@@ -509,9 +511,7 @@ def exp_rules_output(mol, args,log):
 	for atom in mol.GetAtoms():
 		# Finds the Ir atom and gets the atom types and indexes of all its neighbours
 		if atom.GetSymbol() in args.metal:
-			for el in elementspt:
-				if el.symbol == args.metal:
-					atomic_number = el.number
+			atomic_number = possible_atoms.index(atom.GetSymbol())
 			atom.SetAtomicNum(atomic_number)
 	for atom in mol.GetAtoms():
 		if atom.GetAtomicNum() == atomic_number:
@@ -527,7 +527,7 @@ def exp_rules_output(mol, args,log):
 	if len(atom_indexes) == args.complex_coord:
 		ligand_atoms = []
 
-		for i, atom_i in enumerate(atom_indexes):
+		for i,_ in enumerate(atom_indexes):
 			# This is a filter that excludes molecules that fell apart during DFT geometry
 			# optimization (i.e. a N atom from one of the ligands separated from Ir). The
 			# max distance allowed can be tuned in length_filter
@@ -539,7 +539,7 @@ def exp_rules_output(mol, args,log):
 			if bond_length > length_filter:
 				passing = False
 				break
-			for j, atom_j in enumerate(atom_indexes):
+			for j,_ in enumerate(atom_indexes):
 				# Avoid combinations of the same atom with itself
 				if atom_indexes[i] != atom_indexes[j]:
 					# We know that the ligands never have 2 carbon atoms bonding the Ir atom. We
@@ -581,7 +581,7 @@ def exp_rules_output(mol, args,log):
 			stop = False
 			# For complexes with 3 Ph_Py ligands:
 			if len(ligand_atoms) == 3:
-				for i, lig_atom_i in enumerate(ligand_atoms):
+				for i,_ in enumerate(ligand_atoms):
 					if stop != True:
 						for j, lig_atmo_j in enumerate(ligand_atoms):
 							# the i<=j part avoids repeating atoms, the i != j part avoid angles
@@ -635,7 +635,7 @@ def read_energies(file,log): # parses the energies from sdf files - then used to
 	energies = []
 	f = open(file,"r")
 	readlines = f.readlines()
-	for i, line in enumerate(readlines):
+	for i,_ in enumerate(readlines):
 		if readlines[i].find('>  <Energy>') > -1:
 			energies.append(float(readlines[i+1].split()[0]))
 	f.close()
@@ -704,7 +704,7 @@ def convert_sdf_to_com(path_for_file,file,com,com_low,energies,header,args):
 	elif args.lowest_n:
 		no_to_write = 0
 		if len(energies) != 1:
-			for i,energy in enumerate(energies):
+			for i,_ in enumerate(energies):
 				energy_diff = energies[i] - energies[0]
 				if energy_diff < args.energy_threshold_for_gaussian: # thershold is in kcal/mol and energies are in kcal/mol as well
 					no_to_write +=1
@@ -786,7 +786,7 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args,log,cha
 				break
 	except:
 		read_lines = open(file,"r").readlines()
-		for line, read_line in enumerate(read_lines):
+		for line,_ in enumerate(read_lines):
 			for atom in args.genecp_atoms:
 				if read_lines[line].find(atom)>-1:
 					genecp = 'genecp'
@@ -910,7 +910,7 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args,log,cha
 
 			#change charge and multiplicity for Octahydrasl
 			if args.metal_complex:
-				for i ,line in enumerate(read_lines):
+				for i,_ in enumerate(read_lines):
 					if len(read_lines[i].strip()) == 0:
 						read_lines[i+3] = str(charge_com)+' '+ str(args.complex_spin)+'\n'
 						break
@@ -964,6 +964,7 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin,log):
 	input, input_sp = input_line(args)
 
 	for file in log_files:
+		print(file)
 
 		#made it global for all functions
 		rms = 10000
@@ -980,31 +981,37 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin,log):
 		freqs_so_far = 0
 		TERMINATION = "unfinished"
 		ERRORTYPE = 'unknown'
-		stop=0
-		#Change to reverse
-		for i in reversed(range(0,len(outlines))):
-			if stop == 3:
-				break
+		stop_name,stop_term=0,0
+
+		# only for name an and charge
+		for i in range(0,len(outlines)):
+			if stop_name == 2: break
 			# Get the name of the compound (specified in the title)
 			if outlines[i].find('Symbolic Z-matrix:') > -1:
 				name = outlines[i-2]
-				stop=stop+1
+				print(name)
+				stop_name=stop_name+1
+			# Determine charge and multiplicity
+			if outlines[i].find("Charge = ") > -1:
+				CHARGE = int(outlines[i].split()[2])
+				MULT = int(outlines[i].split()[5].rstrip("\n"))
+				stop_name=stop_name+1
+				print(CHARGE,MULT)
+
+		#Change to reverse for termination
+		for i in reversed(range(0,len(outlines))):
+			if stop_term == 1: break
 			# Determine the kind of job termination
 			if outlines[i].find("Normal termination") > -1:
 				TERMINATION = "normal"
-				stop=stop+1
+				stop_term=stop_term+1
 			elif outlines[i].find("Error termination") > -1:
 				TERMINATION = "error"
 				if outlines[i-1].find("Atomic number out of range") > -1:
 					ERRORTYPE = "atomicbasiserror"
 				if outlines[i-3].find("SCF Error SCF Error SCF Error SCF Error SCF Error SCF Error SCF Error SCF Error") > -1:
 					ERRORTYPE = "SCFerror"
-				stop=stop+1
-			# Determine charge and multiplicity
-			if outlines[i].find("Charge = ") > -1:
-				CHARGE = int(outlines[i].split()[2])
-				MULT = int(outlines[i].split()[5].rstrip("\n"))
-				stop=stop+1
+				stop_term=stop_term+1
 		#log.write(TERMINATION)
 
 		###reverse
@@ -1111,7 +1118,7 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin,log):
 				orig_carts.append([CARTESIANS[atom][0], CARTESIANS[atom][1], CARTESIANS[atom][2]])
 
 			# could get rid of atomic units here, if zpe_rat definition is changed
-			for mode, wn in enumerate(FREQS):
+			for mode,_ in enumerate(FREQS):
 				# Either moves along any and all imaginary freqs, or a specific mode requested by the user
 				if FREQS[mode] < 0.0:
 					shift.append(amplitude)
@@ -1138,7 +1145,7 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin,log):
 
 		if IM_FREQS == 0 and TERMINATION == "error":
 			if stop_rms == 0 and ERRORTYPE == "atomicbasiserror":
-				destination = w_dir+'failed_Error/atomic_basis_error'
+				destination = w_dir+'failed_error/atomic_basis_error'
 			elif stop_rms == 0 and ERRORTYPE == "SCFerror":
 				destination = w_dir+'failed_error/SCF_error'
 			else:
@@ -1149,7 +1156,7 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin,log):
 			destination = w_dir+'failed_unfinished/'
 			moving_log_files(source,destination, file)
 
-		if IM_FREQS > 0 or TERMINATION != "normal" and not os.path.exists(w_dir+'failed_error/unknown_error/'+file) and not os.path.exists(w_dir+'failed_error/atomic_basis_error/'+file):
+		if IM_FREQS > 0 or TERMINATION != "normal" and not os.path.exists(w_dir+'failed_error/atomic_basis_error/'+file):
 
 			# creating new folder with new input gaussian files
 			new_gaussian_input_files = w_dir+'new_gaussian_input_files'
@@ -1167,7 +1174,7 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin,log):
 			log.write('-> Creating new gaussian input files for {0}/{1} file {2}'.format(lot,bs,name))
 
 			# Options for genecp
-			ecp_list,ecp_genecp_atoms,ecp_gen_atoms = [],False,False
+			ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp = [],False,False,None
 
 			for i in range(len(ATOMTYPES)):
 				if ATOMTYPES[i] not in ecp_list and ATOMTYPES[i] in possible_atoms:
@@ -1278,9 +1285,9 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin,log):
 			log.write('Creating new single point files files for {0}/{1} file {2}'.format(lot,bs,name))
 
 			# Options for genecp
-			ecp_list,ecp_genecp_atoms, ecp_gen_atoms = [],False,False
+			ecp_list,ecp_genecp_atoms, ecp_gen_atoms,genecp = [],False,False,None
 
-			for i, atomtype in enumerate(ATOMTYPES):
+			for i,_ in enumerate(ATOMTYPES):
 				if ATOMTYPES[i] not in ecp_list and ATOMTYPES[i] in possible_atoms:
 					ecp_list.append(ATOMTYPES[i])
 				if ATOMTYPES[i] in args.genecp_atoms:
@@ -1292,10 +1299,7 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin,log):
 			if ecp_genecp_atoms == True:
 				genecp = 'genecp'
 
-			if genecp =='genecp' or genecp =='gen':
-				keywords_opt = lot +'/'+ genecp+' '+ args.input_for_sp
-			else:
-				keywords_opt = lot +'/'+ bs +' '+ args.input_for_sp
+			keywords_opt =  args.input_for_sp
 
 			fileout = open(file.split(".")[0]+'.com', "w")
 			fileout.write("%mem="+str(args.mem)+"\n")
@@ -1309,7 +1313,7 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin,log):
 				fileout.write("\n")
 			fileout.write("\n")
 			if genecp =='genecp' or genecp =='gen':
-				for i, ecp_list_atom in enumerate(ecp_list):
+				for i,_ in enumerate(ecp_list):
 					if ecp_list[i] not in (args.genecp_atoms or args.gen_atoms):
 						fileout.write(ecp_list[i]+' ')
 				fileout.write('0\n')
@@ -1367,7 +1371,7 @@ def dup_calculation(val,w_dir, agrs,log):
 	dupfile = open('duplicate_files_checked.txt',"r")
 	duplines = dupfile.readlines()
 
-	for i,line in enumerate(duplines):
+	for i,_ in enumerate(duplines):
 		if duplines[i].find('duplicate') > -1:
 			dup_file_list.append(duplines[i].split(' ')[1])
 
@@ -1497,9 +1501,7 @@ def genConformer_r(mol, conf, i, matches, degree, sdwriter,args,name,log):
 			for atom in mol.GetAtoms():
 				if atom.GetIdx() in args.metal_idx:
 					re_symbol = args.metal_sym[args.metal_idx.index(atom.GetIdx())]
-					for el in elementspt:
-						if el.symbol == re_symbol:
-							atomic_number = el.number
+					atomic_number = possible_atoms.index(re_symbol)
 					atom.SetAtomicNum(atomic_number)
 		sdwriter.write(mol,conf)
 		return 1
@@ -1782,9 +1784,7 @@ def filter_after_rotation(args,name,log,dup_data,dup_data_idx):
 				for atom in mol_rd.GetAtoms():
 					if atom.GetIdx() in args.metal_idx:
 						re_symbol = args.metal_sym[args.metal_idx.index(atom.GetIdx())]
-						for el in elementspt:
-							if el.symbol == re_symbol:
-								atomic_number = el.number
+						atomic_number = possible_atoms.index(re_symbol)
 						atom.SetAtomicNum(atomic_number)
 			sdwriter_rd.write(mol_rd)
 		# Only the first ID gets included
@@ -1806,9 +1806,7 @@ def filter_after_rotation(args,name,log,dup_data,dup_data_idx):
 				for atom in mol_rd.GetAtoms():
 					if atom.GetIdx() in args.metal_idx:
 						re_symbol = args.metal_sym[args.metal_idx.index(atom.GetIdx())]
-						for el in elementspt:
-							if el.symbol == re_symbol:
-								atomic_number = el.number
+						atomic_number = possible_atoms.index(re_symbol)
 						atom.SetAtomicNum(atomic_number)
 			sdwriter_rd.write(mol_rd)
 			if i not in rd_selectedcids:
@@ -1903,9 +1901,7 @@ def optimize(mol, args, program,log,dup_data,dup_data_idx):
 		for atom in mol.GetAtoms():
 			if atom.GetIdx() in args.metal_idx:
 				re_symbol = args.metal_sym[args.metal_idx.index(atom.GetIdx())]
-				for el in elementspt:
-					if el.symbol == re_symbol:
-						atomic_number = el.number
+				atomic_number = possible_atoms.index(re_symbol)
 				atom.SetAtomicNum(atomic_number)
 
 	elements = ''

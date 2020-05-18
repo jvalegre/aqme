@@ -63,6 +63,7 @@ def parser_args():
 	parser.add_argument("-a", "--analysis", action="store_true", default=False, help="Fix and analyze Gaussian outputs")
 	parser.add_argument("-r", "--resubmit", action="store_true", default=False, help="Resubmit Gaussian input files")
 	parser.add_argument("--sp", action="store_true", default=False, help="Resubmit Gaussian single point input files")
+	parser.add_argument("--input_for_sp",  help="Input line for Single point after DFT optimization ", default="nmr=giao", dest="input_for_sp", type=str)
 
 	#Post analysis
 	parser.add_argument("--dup",action="store_true",default=False, help="Remove Duplicates after DFT optimization")
@@ -286,16 +287,16 @@ def main():
 	src = os.getcwd()
 	if args.xtb:
 		all_xtb_conf_files = glob.glob('*_xtb.sdf')
-		destination_xtb = src +'/xTB_minimised_generated_SDF_files'
+		destination_xtb = src +'/xtb_minimised_generated_SDF_files'
 		for file in all_xtb_conf_files:
 			moving_sdf_files(destination_xtb ,src,file)
 	elif args.ANI1ccx:
 		all_ani_conf_files = glob.glob('*_ani.sdf')
-		destination_ani = src +'/ANI1ccx_minimised_generated_SDF_files'
+		destination_ani = src +'/ani1ccx_minimised_generated_SDF_files'
 		for file in all_ani_conf_files:
 			moving_sdf_files(destination_ani,src,file)
 	all_name_conf_files = glob.glob('*.sdf')
-	destination_rdkit = 'RDKit_generated_SDF_files'
+	destination_rdkit = 'rdkit_generated_SDF_files'
 	for file in all_name_conf_files:
 		moving_sdf_files(destination_rdkit,src,file)
 
@@ -305,7 +306,7 @@ def main():
 		if args.path == '':
 			log_files = glob.glob('*.log')
 			w_dir = os.getcwd()
-			w_dir_fin = w_dir+'/Finished'
+			w_dir_fin = w_dir+'/finished'
 			output_analyzer(log_files, w_dir, lot, bs, bs_gcp, args, w_dir_fin,log)
 
 		#taking the path
@@ -323,7 +324,9 @@ def main():
 						os.chdir(w_dir)
 						log.write(w_dir)
 						log_files = glob.glob('*.log')
+						print(log_files)
 						output_analyzer(log_files, w_dir, lot, bs, bs_gcp, args, w_dir_fin,log)
+
 
 	#adding the part to check for resubmission of the newly created gaussian files.
 	if args.qsub:
