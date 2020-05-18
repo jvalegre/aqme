@@ -59,8 +59,8 @@ def calc_energy(file):
     # tests of input files with different formats
     ('Input_files', 'pentane.csv', 'params_format_test1.yaml', 20, 16, 0, [-5.27175, -4.44184, -3.84858, -1.57172], 0, False, False, False), # test csv
     ('Input_files', 'pentane.cdx', 'params_format_test2.yaml', 20, 16, 0, [-5.27175, -4.44184, -3.84858, -1.57172], 0, False, False, False), # test cdx
-    ('Input_files', 'pentane.com', 'params_format_test3.yaml', 20, 16, 0, [-5.27175, -4.44184, -3.84858, -1.57172], 0, False, False, False), # test com
-    ('Input_files', 'pentane.gjf', 'params_format_test4.yaml', 20, 16, 0, [-5.27175, -4.44184, -3.84858, -1.57172], 0, False, False, False), # test gjf
+    ('Input_files', 'pentane.com', 'params_format_test3.yaml', 20, 16, 0, [-5.27175, -4.44184, -3.84858, -1.57172], 1, False, False, False), # test com with charge 1
+    ('Input_files', 'pentane.gjf', 'params_format_test4.yaml', 20, 16, 0, [-5.27175, -4.44184, -3.84858, -1.57172], -1, False, False, False), # test gjf with charge -1
     ('Input_files', 'pentane.sdf', 'params_format_test5.yaml', 20, 16, 0, [-5.27175, -4.44184, -3.84858, -1.57172], 0, False, False, False), # test sdf
 ])
 
