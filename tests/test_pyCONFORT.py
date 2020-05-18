@@ -126,7 +126,7 @@ def test_confgen(folder, smiles, params_file, n_confs, prefilter_confs_rdkit, fi
     		assert str(filter_confs_rdkit) == str(test_unique_confs[0])
 
     	# read the energies of the conformers
-    	os.chdir(path+'/'+folder+'/'+smiles.split('.')[0]+'/RDKit_generated_SDF_files')
+    	os.chdir(path+'/'+folder+'/'+smiles.split('.')[0]+'/rdkit_generated_sdf_files')
 
     	if not dihedral:
     		test_rdkit_E_confs = calc_energy(smiles.split('.')[0]+'_rdkit.sdf')
