@@ -56,14 +56,20 @@ def calc_energy(file):
     # tests to check that gen and genecp work correctly
     ('Genecp', 'Pd_squareplanar.smi', 'params_genecp_test1.yaml', 'nan', 'nan', 'nan', 'nan', 'nan', False, False, True), # test gen
     ('Genecp', 'Pd_squareplanar.smi', 'params_genecp_test2.yaml', 'nan', 'nan', 'nan', 'nan', 'nan', False, False, True), # test genecp
+    # tests of input files with different formats
+    ('Input_files', 'pentane.csv', 'params_format_test1.yaml', 20, 16, 0, [-5.27175, -4.44184, -3.84858, -1.57172], 0, False, False, False), # test sample = 20
+    ('Input_files', 'pentane.cdx', 'params_format_test2.yaml', 20, 16, 0, [-5.27175, -4.44184, -3.84858, -1.57172], 0, False, False, False), # test sample = 20
+    ('Input_files', 'pentane.com', 'params_format_test3.yaml', 20, 16, 0, [-5.27175, -4.44184, -3.84858, -1.57172], 0, False, False, False), # test sample = 20
+    ('Input_files', 'pentane.gjf', 'params_format_test4.yaml', 20, 16, 0, [-5.27175, -4.44184, -3.84858, -1.57172], 0, False, False, False), # test sample = 20
+    ('Input_files', 'pentane.sdf', 'params_format_test5.yaml', 20, 16, 0, [-5.27175, -4.44184, -3.84858, -1.57172], 0, False, False, False), # test sample = 20
 ])
 
 def test_confgen(folder, smiles, params_file, n_confs, prefilter_confs_rdkit, filter_confs_rdkit, E_confs, charge, dihedral, xTB_ANI1, only_check):
     # gets into the directory for testing SMILES
-	os.chdir(path+'/'+folder+'/'+smiles.split('.')[0])
+    os.chdir(path+'/'+folder+'/'+smiles.split('.')[0])
 
-	# Conformer generation using different parameters. It creates a CSV file
-	subprocess.run(['python', '-m', 'DBGEN', '--varfile', params_file])
+    # Conformer generation using different parameters. It creates a CSV file
+    subprocess.run(['python', '-m', 'DBGEN', '--varfile', params_file])
 
     if not only_check:
     	# Retrieving the generated CSV file
@@ -136,6 +142,4 @@ def test_confgen(folder, smiles, params_file, n_confs, prefilter_confs_rdkit, fi
 # experimental rules
 # analysis
 # sp files
-# gen and genecp with readlines
 # autoprep
-# empezar de SDF, COM, ChemDraw, XYZ, CSV
