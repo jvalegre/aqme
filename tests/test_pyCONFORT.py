@@ -152,7 +152,7 @@ def test_confgen(folder, smiles, params_file, n_confs, prefilter_confs_rdkit, fi
     elif type == 'only_check':
         if params_file.find('_genecp_') > -1:
             os.chdir(path+'/'+folder+'/'+smiles.split('.')[0]+'/generated_gaussian_files/wb97xd-def2svp')
-            file = 'Pd_squareplanar_conformer_1.com'
+            file = glob.glob('*.com')[0]
             count,NBO,pop,opt = calc_genecp(file, 'Pd')
 
             if params_file == 'params_genecp_test1.yaml': # for gen

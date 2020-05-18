@@ -28,7 +28,6 @@ install:
   - conda install -q -c rdkit rdkit
   - conda install -c anaconda pytest
   - python setup.py install
-  - conda install -c conda-forge periodictable
   - conda install -c conda-forge progress
   - pip install pytest-cov codecov
   - pip install Cython --install-option="--no-cython-compile"
