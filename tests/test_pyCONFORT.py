@@ -126,7 +126,7 @@ def test_confgen(folder, smiles, params_file, n_confs, prefilter_confs_rdkit, fi
     		assert str(filter_confs_rdkit) == str(test_unique_confs[0])
 
     	# read the energies of the conformers
-    	os.chdir(path+'/'+folder+'/'+smiles.split('.')[0]+'/RDKit_generated_SDF_files')
+    	os.chdir(path+'/'+folder+'/'+smiles.split('.')[0]+'/rdkit_generated_sdf_files')
 
     	if not dihedral:
     		test_rdkit_E_confs = calc_energy(smiles.split('.')[0]+'_rdkit.sdf')
@@ -152,7 +152,7 @@ def test_confgen(folder, smiles, params_file, n_confs, prefilter_confs_rdkit, fi
     elif type == 'only_check':
         if params_file.find('_genecp_') > -1:
             os.chdir(path+'/'+folder+'/'+smiles.split('.')[0]+'/generated_gaussian_files/wb97xd-def2svp')
-            file = 'Pd_squareplanar_conformer_1.com'
+            file = glob.glob('*.com')[0]
             count,NBO,pop,opt = calc_genecp(file, 'Pd')
 
             if params_file == 'params_genecp_test1.yaml': # for gen
