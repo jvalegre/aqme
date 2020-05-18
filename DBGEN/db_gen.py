@@ -24,10 +24,9 @@
 .####################################################################################."""
 
 from __future__ import print_function
-import argparse, yaml, os, sys, subprocess, glob, shutil, time
+import argparse, os, sys, subprocess, glob, shutil, time
 import pandas as pd
 from rdkit.Chem import AllChem as Chem
-from periodictable import elements as elementspt
 from DBGEN.db_gen_functions import creation_of_dup_csv,load_from_yaml,compute_confs,clean_args,conformer_generation, substituted_mol, template_embed_sp, Logger, read_energies, write_gaussian_input_file, exp_rules_output,moving_sdf_files
 from DBGEN.db_gen_functions import output_analyzer, check_for_final_folder, dup_calculation, combine_files, boltz_calculation
 
@@ -287,16 +286,16 @@ def main():
 	src = os.getcwd()
 	if args.xtb:
 		all_xtb_conf_files = glob.glob('*_xtb.sdf')
-		destination_xtb = src +'/xtb_minimised_generated_SDF_files'
+		destination_xtb = src +'/xtb_minimised_generated_sdf_files'
 		for file in all_xtb_conf_files:
 			moving_sdf_files(destination_xtb ,src,file)
 	elif args.ANI1ccx:
 		all_ani_conf_files = glob.glob('*_ani.sdf')
-		destination_ani = src +'/ani1ccx_minimised_generated_SDF_files'
+		destination_ani = src +'/ani1ccx_minimised_generated_sdf_files'
 		for file in all_ani_conf_files:
 			moving_sdf_files(destination_ani,src,file)
 	all_name_conf_files = glob.glob('*.sdf')
-	destination_rdkit = 'rdkit_generated_SDF_files'
+	destination_rdkit = 'rdkit_generated_sdf_files'
 	for file in all_name_conf_files:
 		moving_sdf_files(destination_rdkit,src,file)
 
@@ -326,7 +325,6 @@ def main():
 						log_files = glob.glob('*.log')
 						print(log_files)
 						output_analyzer(log_files, w_dir, lot, bs, bs_gcp, args, w_dir_fin,log)
-
 
 	#adding the part to check for resubmission of the newly created gaussian files.
 	if args.qsub:

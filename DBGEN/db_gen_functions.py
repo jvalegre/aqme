@@ -985,7 +985,8 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin,log):
 
 		# only for name an and charge
 		for i in range(0,len(outlines)):
-			if stop_name == 2: break
+			if stop_name == 2:
+				break
 			# Get the name of the compound (specified in the title)
 			if outlines[i].find('Symbolic Z-matrix:') > -1:
 				name = outlines[i-2]
@@ -1000,7 +1001,8 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin,log):
 
 		#Change to reverse for termination
 		for i in reversed(range(0,len(outlines))):
-			if stop_term == 1: break
+			if stop_term == 1:
+				break
 			# Determine the kind of job termination
 			if outlines[i].find("Normal termination") > -1:
 				TERMINATION = "normal"
