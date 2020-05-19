@@ -10,6 +10,7 @@ from rdkit.Geometry import Point3D
 from progress.bar import IncrementalBar
 import numpy as np
 import pandas as pd
+from operator import itemgetter, attrgetter
 
 # imports for xTB and ANI1
 try:
@@ -1775,9 +1776,8 @@ def filter_after_rotation(args,name,log,dup_data,dup_data_idx):
 		log.write("Could not open "+ name+args.output)
 		sys.exit(-1)
 
-
+	writer_mol_objects = []
 	bar = IncrementalBar('o  Filtering based on energy and rms after rotation of dihedrals', max = len(rdmols))
-	sdwriter_rd = Chem.SDWriter(name+'_'+'rdkit'+'_'+'rotated'+args.output)
 
 	rd_count = 0
 	rd_selectedcids,rd_dup_energy,rd_dup_rms_eng =[],-1,0
@@ -1795,7 +1795,8 @@ def filter_after_rotation(args,name,log,dup_data,dup_data_idx):
 						re_symbol = args.metal_sym[args.metal_idx.index(atom.GetIdx())]
 						atomic_number = possible_atoms.index(re_symbol)
 						atom.SetAtomicNum(atomic_number)
-			sdwriter_rd.write(mol_rd)
+			#sdwriter_rd.write(mol_rd)
+			writer_mol_objects.append([mol_rd,mol_rd.GetProp('Energy')])
 		# Only the first ID gets included
 		rd_count = 1
 		# check rmsd
@@ -1819,9 +1820,17 @@ def filter_after_rotation(args,name,log,dup_data,dup_data_idx):
 							re_symbol = args.metal_sym[args.metal_idx.index(atom.GetIdx())]
 							atomic_number = possible_atoms.index(re_symbol)
 							atom.SetAtomicNum(atomic_number)
-				sdwriter_rd.write(mol_rd)
+				#sdwriter_rd.write(mol_rd)
+				writer_mol_objects.append([mol_rd,mol_rd.GetProp('Energy')] )
 		bar.next()
 	bar.finish()
+
+	#writing sorted mol objects
+	sdwriter_rd = Chem.SDWriter(name+'_'+'rdkit'+'_'+'rotated'+args.output)
+	sortedmols = sorted(writer_mol_objects,key=lambda x: x[1],reverse=True)
+	for i, write_mol in enumerate(sortedmols):
+		sdwriter_rd.write(write_mol[0])
+
 	sdwriter_rd.close()
 
 	if args.verbose:

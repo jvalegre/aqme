@@ -306,7 +306,7 @@ def main():
 			log_files = glob.glob('*.log')
 			w_dir = os.getcwd()
 			w_dir_fin = w_dir+'/finished'
-			output_analyzer(log_files, w_dir, lot, bs, bs_gcp, args, w_dir_fin,log)
+			output_analyzer(log_files, w_dir, args.lot, args.bs, args.bs_gcp, args, w_dir_fin,log)
 
 		#taking the path
 		else:
