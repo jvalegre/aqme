@@ -26,7 +26,7 @@ from ase.units import Hartree, Bohr
 
 import numpy as np
 
-from lib.xtb.interface import XTBLibrary
+from libr.xtb.interface import XTBLibrary
 __all__ = ["GFN2", "GFN1", "GFN0", "XTB"]
 
 

@@ -26,8 +26,8 @@ from ase.units import Bohr
 
 import numpy as np
 
-from lib.xtb.interface import XTBLibrary
-from lib.xtb.calculators import XTB, GFN0, GFN1, GFN2
+from libr.xtb.interface import XTBLibrary
+from libr.xtb.calculators import XTB, GFN0, GFN1, GFN2
 
 __all__ = ['GBSA', 'GSOLV', 'GSOLV_REFERENCE', 'MOL1BAR']
 

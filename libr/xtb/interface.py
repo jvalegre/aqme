@@ -28,7 +28,7 @@ import numpy as np
 
 # seems like ctypeslib is not always available
 try:
-    as_ctype = np.ctypeslib.as_ctypes_type  # pylint:disable=invalid-name
+    as_ctype = np.ctypeslibr.as_ctypes_type  # pylint:disable=invalid-name
 except AttributeError:
     as_ctype = None  # pylint:disable=invalid-name
 
