@@ -197,7 +197,7 @@ def test_confgen(folder, smiles, params_file, n_confs, prefilter_confs_rdkit, fi
     elif type == 'Single_point':
         os.chdir(path+'/'+folder)
         subprocess.run(['python', '-m', 'DBGEN', '--varfile', params_file])
-        os.chdir(path+'/'+folder+'/single_point_input_files')
+        os.chdir(path+'/'+folder+'/finished/single_point_input_files')
         assert len(glob.glob('*.*')) == 2
 
         file = smiles
