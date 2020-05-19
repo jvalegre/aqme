@@ -190,12 +190,9 @@ def test_confgen(folder, smiles, params_file, n_confs, prefilter_confs_rdkit, fi
         if smiles == 'Unfinished.LOG':
             os.chdir(path+'/'+folder+'/failed_unfinished')
             assert smiles in glob.glob('*.*')
-
-    elif type == 'analysis_with_dup':
-        os.chdir(path+'/'+folder)
-        subprocess.run(['python', '-m', 'DBGEN', '--varfile', params_file])
-        os.chdir(path+'/'+folder+'/duplicates')
-        assert smiles in glob.glob('*.*')
+        if smiles == 'Duplicate.LOG':
+            os.chdir(path+'/'+folder+'/duplicates')
+            assert smiles in glob.glob('*.*')
 
     elif type == 'Single_point':
         os.chdir(path+'/'+folder)
