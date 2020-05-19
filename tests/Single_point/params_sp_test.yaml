@@ -20,8 +20,6 @@ write_gauss : False # writting Gaussian COM files after, look options of write_g
 # This generates new COM files from LOG files with imaginary freqs or errors
 analysis : False
 sp : True # write COM files after analysis
-input_for_sp : 'pop' # add the input line with keywords. For adjusting number of processors and memory, go belo (to gauss_write options)
-line_at_the_end_sp : '$NBO $END' # add a line at the end of the line (i.e. final line for NBO calcs)
 dup : False # if dup : True, analysis will also separate duplicate LOG files
 boltz : False # if boltz : True, analysis will calculate Bolztmann probabilities of each conformer
 combine : False # if boltz : True and combine : True, all the data from the CSV files created with boltz will be condensed in 3 CSV files
