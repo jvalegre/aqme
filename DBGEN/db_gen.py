@@ -62,7 +62,6 @@ def parser_args():
 	parser.add_argument("-a", "--analysis", action="store_true", default=False, help="Fix and analyze Gaussian outputs")
 	parser.add_argument("-r", "--resubmit", action="store_true", default=False, help="Resubmit Gaussian input files")
 	parser.add_argument("--sp", action="store_true", default=False, help="Resubmit Gaussian single point input files")
-	parser.add_argument("--input_for_sp",  help="Input line for Single point after DFT optimization ", default="nmr=giao", dest="input_for_sp", type=str)
 
 	#Post analysis
 	parser.add_argument("--dup",action="store_true",default=False, help="Remove Duplicates after DFT optimization")
@@ -106,7 +105,7 @@ def parser_args():
 	#arguments for gaussian files Creation
 	parser.add_argument("-l", "--level_of_theory",help="Level of Theory", default=['wB97xd'], dest="level_of_theory", type=str, nargs='*')
 	parser.add_argument("--basis_set",  help="Basis Set", default=['6-31g*'], dest="basis_set", type=str, nargs='*')
-	parser.add_argument("--basis_set_genecp_atoms",default=['LANL2DZ'], help="Basis Set genecp/gen: The length has to be the same as basis_set", dest="basis_set_genecp_atoms", type=str, nargs='?')
+	parser.add_argument("--basis_set_genecp_atoms",default=['LANL2DZ'], help="Basis Set genecp/gen: Can specify only one as basis_set", dest="basis_set_genecp_atoms", type=str, nargs='?')
 	parser.add_argument("--genecp_atoms",  help="genecp atoms",default=[], dest="genecp_atoms",type=str, nargs='*')
 	parser.add_argument("--gen_atoms",  help="gen atoms",default=[], dest="gen_atoms",type=str, nargs='*')
 	parser.add_argument("--max_cycle_opt", help="Number of cycles for DFT optimization", default="300", type=int, dest="max_cycle_opt")
@@ -122,6 +121,19 @@ def parser_args():
 	parser.add_argument("--nprocs", help="Number of Processors", default="24", type=int, dest="nprocs")
 	parser.add_argument("--mem", help="Memory", default="96GB", type=str, dest="mem")
 	parser.add_argument("--chk", action="store_true", default=False, help="Create .chk files for Gaussian")
+
+
+	#autoprep kind of single point inputs
+	parser.add_argument("--level_of_theory_sp",help="Level of Theory for single point after optimization", default=['wB97xd'], dest="level_of_theory_sp", type=str, nargs='*')
+	parser.add_argument("--basis_set_sp",  help="Basis Set for single point after optimization", default=['6-31g*'], dest="basis_set_sp", type=str, nargs='*')
+	parser.add_argument("--basis_set_genecp_atoms_sp",default=['LANL2DZ'], help="Basis Set genecp/gen: Can specify only one for single point after optimization", dest="basis_set_genecp_atoms_sp", type=str, nargs='?')
+	parser.add_argument("--dispersion_correction_sp",action="store_true", default=False, help="Add Dispersion Correction for single point after optimization")
+	parser.add_argument("--empirical_dispersion_sp",  help="Type of Dispersion for single point after optimization", default="D3BJ", dest="empirical_dispersion_sp", type=str)
+	parser.add_argument("--solvent_model_sp",  help="Type of solvent model for single point after optimization", default="gas_phase", dest="solvent_model_sp", type=str)
+	parser.add_argument("--solvent_name_sp",  help="Name of Solvent for single point after optimization", default="Acetonitrile", dest="solvent_name_sp", type=str)
+	parser.add_argument("--input_for_sp",  help="Input line for Single point after DFT optimization ", default="nmr=giao", dest="input_for_sp", type=str)
+	parser.add_argument("--last_line_for_sp",  help="Last input line for Single point after DFT optimization ", default="", dest="last_line_for_sp", type=str)
+
 
 	# submIssion of Gaussion files
 	parser.add_argument("--qsub", action="store_true", default=False, help="Submit Gaussian files")
@@ -303,7 +315,7 @@ def main():
 		#adding in for general analysis
 		#need to specify the lot, bs as arguments for each analysis
 		if args.path == '':
-			log_files = glob.glob('*.log')
+			log_files = glob.glob('*.LOG'.lower())+glob.glob('*.LOG')
 			w_dir = os.getcwd()
 			w_dir_fin = w_dir+'/finished'
 			for lot in args.level_of_theory:
@@ -317,16 +329,15 @@ def main():
 			for lot in args.level_of_theory:
 				for bs in args.basis_set:
 					for bs_gcp in args.basis_set_genecp_atoms:
-						w_dir = args.path + str(lot) + '-' + str(bs) +'/'
+						w_dir = args.path + str(lot) + '-' + str(bs)
 						#check if New_Gaussian_Input_Files folder exists
 						w_dir = check_for_final_folder(w_dir,log)
 						#assign the path to the finished directory.
 						w_dir_fin = args.path + str(lot) + '-' + str(bs) +'/finished'
 						#log.write(w_dir)
 						os.chdir(w_dir)
-						log.write(w_dir)
-						log_files = glob.glob('*.log')
-						print(log_files)
+						#log.write(w_dir)
+						log_files = glob.glob('*.log')+glob.glob('*.LOG')
 						output_analyzer(log_files, w_dir, lot, bs, bs_gcp, args, w_dir_fin,log)
 
 	#adding the part to check for resubmission of the newly created gaussian files.

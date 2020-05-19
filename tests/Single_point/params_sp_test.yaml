@@ -18,10 +18,8 @@ write_gauss : False # writting Gaussian COM files after, look options of write_g
 # if analysis is True, check all LOG files inside "generated_gaussian_files".
 # The folder might multiple subfolders with levels of theory (i.e. coming from the conformer generation).
 # This generates new COM files from LOG files with imaginary freqs or errors
-analysis : False
+analysis : True
 sp : True # write COM files after analysis
-input_for_sp : 'pop' # add the input line with keywords. For adjusting number of processors and memory, go belo (to gauss_write options)
-line_at_the_end_sp : '$NBO $END' # add a line at the end of the line (i.e. final line for NBO calcs)
 dup : False # if dup : True, analysis will also separate duplicate LOG files
 boltz : False # if boltz : True, analysis will calculate Bolztmann probabilities of each conformer
 combine : False # if boltz : True and combine : True, all the data from the CSV files created with boltz will be condensed in 3 CSV files
@@ -73,7 +71,22 @@ empirical_dispersion : 'GD3BJ' # type of dispersion correction
 solvent_model : 'gas_phase' # type of solvation model. Options: gas_phase or any solvation model (i.e. SMD, IEFPCM, CPCM)
 solvent_name : 'Chloroform' # solvent
 
-# (4.6) DEFAULT PARAMETERS FOR GAUSSIAN OPTIMIZATION
+# (4.6) DEFINTION OF BASIS SET AND LEVEL OF THEORY AND SOLVENT
+input_for_sp : 'pop' # add the input line with keywords. For adjusting number of processors and memory, go belo (to gauss_write options)
+last_line_for_sp : '$NBO $END' # last line to add for single point
+basis_set_sp : ['def2svp'] # basis set
+basis_set_genecp_atoms_sp : ['LANL2DZ'] # functional for the genecp part
+level_of_theory_sp : ['wb97xd'] # functional
+
+# (4.7) DISPERSION CORRECTION FOR COM FILES
+dispersion_correction_sp : False # include dispersion correction
+empirical_dispersion_sp : 'GD3BJ' # type of dispersion correction
+
+# (4.8) SOLVATION MODEL
+solvent_model_sp : 'gas_phase' # type of solvation model. Options: gas_phase or any solvation model (i.e. SMD, IEFPCM, CPCM)
+solvent_name_sp : 'Chloroform' # solvent
+
+# (4.9) DEFAULT PARAMETERS FOR GAUSSIAN OPTIMIZATION
 chk : False # include a %chk line at the beginning of the COM file
 nprocs : 36 # number of processors for the COM file in %nprocshared
 mem: '60GB' # amount of memory for the COM file in %mem

@@ -939,7 +939,7 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args,log,cha
 def check_for_final_folder(w_dir,log):
 	dir_found = False
 	while dir_found == False:
-		temp_dir = w_dir+'New_Gaussian_Input_Files/'
+		temp_dir = w_dir+'/new_gaussian_input_files'
 		if os.path.isdir(temp_dir):
 			w_dir = temp_dir
 		else:
@@ -966,13 +966,87 @@ def moving_sdf_files(destination,src,file):
 		else:
 			raise
 
+def check_for_gen_or_genecp(ATOMTYPES,args):
+	# Options for genecp
+	ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp = [],False,False,None
+
+	for i in range(len(ATOMTYPES)):
+		if ATOMTYPES[i] not in ecp_list and ATOMTYPES[i] in possible_atoms:
+			ecp_list.append(ATOMTYPES[i])
+		if ATOMTYPES[i] in args.genecp_atoms:
+		   ecp_genecp_atoms = True
+		if ATOMTYPES[i] in args.gen_atoms:
+		   ecp_gen_atoms = True
+	if ecp_gen_atoms == True:
+		genecp = 'gen'
+	if ecp_genecp_atoms == True:
+		genecp = 'genecp'
+
+	return ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp
+
+def new_com_file(file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,TERMINATION,IM_FREQS,bs_com,lot_com,bs_gcp_com):
+	fileout = open(file.split(".")[0]+'.com', "w")
+	fileout.write("%mem="+str(args.mem)+"\n")
+	fileout.write("%nprocshared="+str(args.nprocs)+"\n")
+	fileout.write("# "+keywords_opt+"\n")
+	fileout.write("\n")
+	fileout.write(name+"\n")
+	fileout.write(str(CHARGE)+' '+str(MULT)+'\n')
+	for atom in range(0,NATOMS):
+		fileout.write('{0:>2} {1:12.8f} {2:12.8f} {3:12.8f}'.format(ATOMTYPES[atom], CARTESIANS[atom][0],  CARTESIANS[atom][1],  CARTESIANS[atom][2]))
+		fileout.write("\n")
+	fileout.write("\n")
+	if genecp == 'genecp' or  genecp == 'gen':
+		for i in range(len(ecp_list)):
+			if ecp_list[i] not in (args.genecp_atoms or args.gen_atoms):
+				fileout.write(ecp_list[i]+' ')
+		fileout.write('0\n')
+		fileout.write(bs_com+'\n')
+		fileout.write('****\n')
+		if ecp_genecp_atoms == False and ecp_gen_atoms == False :
+			fileout.write('\n')
+		else:
+			if len(bs_gcp_com.split('.')) > 1:
+				if bs_gcp_com.split('.')[1] == 'txt' or bs_gcp_com.split('.')[1] == 'yaml':
+					os.chdir(path_for_file)
+					read_lines = open(bs_gcp_com,"r").readlines()
+					os.chdir(path_write_gjf_files)
+					#chaanging the name of the files to the way they are in xTB Sdfs
+					#getting the title line
+					for line in read_lines:
+						fileout.write(line)
+					fileout.write('\n\n')
+			else:
+				for i in range(len(ecp_list)):
+					if ecp_list[i] in args.genecp_atoms :
+						fileout.write(ecp_list[i]+' ')
+					elif ecp_list[i] in args.gen_atoms :
+						fileout.write(ecp_list[i]+' ')
+				fileout.write('0\n')
+				fileout.write(bs_gcp_com+'\n')
+				fileout.write('****\n\n')
+				if ecp_genecp_atoms:
+					for i in range(len(ecp_list)):
+						if ecp_list[i] in args.genecp_atoms:
+							fileout.write(ecp_list[i]+' ')
+					fileout.write('0\n')
+					fileout.write(bs_gcp_com+'\n\n')
+				if args.sp and TERMINATION == "normal" and IM_FREQS == 0:
+					fileout.write(args.last_line_for_sp)
+					fileout.write('\n\n')
+		fileout.close()
+	else:
+		if args.sp and TERMINATION == "normal" and IM_FREQS == 0 :
+			fileout.write(args.last_line_for_sp)
+			fileout.write('\n\n')
+		fileout.close()
+
 # DEFINTION OF OUTPUT ANALYSER and NMR FILES CREATOR
 def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin,log):
 
 	input, input_sp = input_line(args)
 
 	for file in log_files:
-		print(file)
 
 		#made it global for all functions
 		rms = 10000
@@ -998,17 +1072,15 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin,log):
 			# Get the name of the compound (specified in the title)
 			if outlines[i].find('Symbolic Z-matrix:') > -1:
 				name = outlines[i-2]
-				print(name)
 				stop_name=stop_name+1
 			# Determine charge and multiplicity
 			if outlines[i].find("Charge = ") > -1:
 				CHARGE = int(outlines[i].split()[2])
 				MULT = int(outlines[i].split()[5].rstrip("\n"))
 				stop_name=stop_name+1
-				print(CHARGE,MULT)
 
 		#Change to reverse for termination
-		for i in reversed(range(0,len(outlines))):
+		for i in reversed(range(len(outlines)-15,len(outlines))):
 			if stop_term == 1:
 				break
 			# Determine the kind of job termination
@@ -1017,20 +1089,18 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin,log):
 				stop_term=stop_term+1
 			elif outlines[i].find("Error termination") > -1:
 				TERMINATION = "error"
-				if outlines[i-1].find("Atomic number out of range") > -1:
+				if outlines[i-1].find("Atomic number out of range") > -1 or outlines[i-1].find("basis sets are only available") > -1 :
 					ERRORTYPE = "atomicbasiserror"
 				if outlines[i-3].find("SCF Error SCF Error SCF Error SCF Error SCF Error SCF Error SCF Error SCF Error") > -1:
 					ERRORTYPE = "SCFerror"
 				stop_term=stop_term+1
-		#log.write(TERMINATION)
 
 		###reverse
 		stop_get_details_stand_or = 0
 		stop_get_details_dis_rot = 0
-		stop_get_details_freq = 0
 		for i in reversed(range(0,len(outlines))):
 			if TERMINATION == "normal":
-				if stop_get_details_stand_or == 1 and stop_get_details_dis_rot == 1 and stop_get_details_freq == 1:
+				if stop_get_details_stand_or == 1 and stop_get_details_dis_rot == 1:
 					break
 				# Sets where the final coordinates are inside the file
 				###if outlines[i].find("Input orientation") > -1: standor = i
@@ -1043,23 +1113,24 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin,log):
 					NATOMS = disrotor-i-6
 					#log.write(NATOMS)
 					stop_get_details_stand_or += 1
-				# Get the frequencies and identifies negative frequencies
-				if outlines[i].find(" Frequencies -- ") > -1 and stop_get_details_freq != 1:
-					nfreqs = len(outlines[i].split())
-					for j in range(2, nfreqs):
-						FREQS.append(float(outlines[i].split()[j]))
-						NORMALMODE.append([])
-						if float(outlines[i].split()[j]) < 0.0:
-							IM_FREQS += 1
-					for j in range(3, nfreqs+1):
-						REDMASS.append(float(outlines[i+1].split()[j]))
-					for j in range(3, nfreqs+1):
-						FORCECONST.append(float(outlines[i+2].split()[j]))
-					for j in range(0,NATOMS):
-						for k in range(0, nfreqs-2):
-							NORMALMODE[(freqs_so_far + k)].append([float(outlines[i+5+j].split()[3*k+2]), float(outlines[i+5+j].split()[3*k+3]), float(outlines[i+5+j].split()[3*k+4])])
-					freqs_so_far = freqs_so_far + nfreqs - 2
-					stop_get_details_freq += 1
+
+		for i in range(0,len(outlines)):
+			# Get the frequencies and identifies negative frequencies
+			if outlines[i].find(" Frequencies -- ") > -1:
+				nfreqs = len(outlines[i].split())
+				for j in range(2, nfreqs):
+					FREQS.append(float(outlines[i].split()[j]))
+					NORMALMODE.append([])
+					if float(outlines[i].split()[j]) < 0.0:
+						IM_FREQS += 1
+				for j in range(3, nfreqs+1):
+					REDMASS.append(float(outlines[i+1].split()[j]))
+				for j in range(3, nfreqs+1):
+					FORCECONST.append(float(outlines[i+2].split()[j]))
+				for j in range(0,NATOMS):
+					for k in range(0, nfreqs-2):
+						NORMALMODE[(freqs_so_far + k)].append([float(outlines[i+5+j].split()[3*k+2]), float(outlines[i+5+j].split()[3*k+3]), float(outlines[i+5+j].split()[3*k+4])])
+				freqs_so_far = freqs_so_far + nfreqs - 2
 			if TERMINATION != "normal":
 				if outlines[i].find('Cartesian Forces:  Max') > -1:
 					if float(outlines[i].split()[5]) < rms:
@@ -1087,14 +1158,12 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin,log):
 			# Get he coordinates for jobs that did not finished or finished with an error
 			if stop_rms == 0:
 				last_line = len(outlines)
-				log.write('lastline')
 			else:
 				last_line = stop_rms
-				log.write('stoprms')
 			stop_get_details_stand_or = 0
 			stop_get_details_dis_rot = 0
 			for i in reversed(range(0,last_line)):
-				if stop_get_details_stand_or == 1 and stop_get_details_dis_rot == 1 and stop_get_details_freq == 1:
+				if stop_get_details_stand_or == 1 and stop_get_details_dis_rot == 1:
 					break
 				# Sets where the final coordinates are inside the file
 				if outlines[i].find("Standard orientation") > -1 and stop_get_details_stand_or != 1:
@@ -1143,33 +1212,33 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin,log):
 
 		# This part places the calculations in different folders depending on the type of
 		# termination and number of imag. freqs
-		source = w_dir+file
+		source = w_dir+'/'+file
 
 		if IM_FREQS == 0 and TERMINATION == "normal":
 			destination = w_dir_fin
 			moving_log_files(source,destination, file)
 
 		if IM_FREQS > 0:
-			destination = w_dir+'imaginary_frequencies/'
+			destination = w_dir+'/imaginary_frequencies/'
 			moving_log_files(source,destination, file)
 
 		if IM_FREQS == 0 and TERMINATION == "error":
-			if stop_rms == 0 and ERRORTYPE == "atomicbasiserror":
-				destination = w_dir+'failed_error/atomic_basis_error'
-			elif stop_rms == 0 and ERRORTYPE == "SCFerror":
-				destination = w_dir+'failed_error/SCF_error'
+			if ERRORTYPE == "atomicbasiserror":
+				destination = w_dir+'/failed_error/atomic_basis_error'
+			elif ERRORTYPE == "SCFerror":
+				destination = w_dir+'/failed_error/SCF_error'
 			else:
-				destination = w_dir+'failed_error/unknown_error'
+				destination = w_dir+'/failed_error/unknown_error'
 			moving_log_files(source,destination, file)
 
 		if IM_FREQS == 0 and TERMINATION == "unfinished":
-			destination = w_dir+'failed_unfinished/'
+			destination = w_dir+'/failed_unfinished/'
 			moving_log_files(source,destination, file)
 
-		if IM_FREQS > 0 or TERMINATION != "normal" and not os.path.exists(w_dir+'failed_error/atomic_basis_error/'+file):
+		if IM_FREQS > 0 or TERMINATION != "normal" and not os.path.exists(w_dir+'/failed_error/atomic_basis_error/'+file):
 
 			# creating new folder with new input gaussian files
-			new_gaussian_input_files = w_dir+'new_gaussian_input_files'
+			new_gaussian_input_files = w_dir+'/new_gaussian_input_files'
 
 			try:
 				os.makedirs(new_gaussian_input_files)
@@ -1178,25 +1247,10 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin,log):
 					os.chdir(new_gaussian_input_files)
 				else:
 					raise
-
 			os.chdir(new_gaussian_input_files)
+			#log.write('-> Creating new gaussian input files for {0} in {1}/{2}'.format(name,lot,bs))
 
-			log.write('-> Creating new gaussian input files for {0}/{1} file {2}'.format(lot,bs,name))
-
-			# Options for genecp
-			ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp = [],False,False,None
-
-			for i in range(len(ATOMTYPES)):
-				if ATOMTYPES[i] not in ecp_list and ATOMTYPES[i] in possible_atoms:
-					ecp_list.append(ATOMTYPES[i])
-				if ATOMTYPES[i] in args.genecp_atoms:
-				   ecp_genecp_atoms = True
-				if ATOMTYPES[i] in args.gen_atoms:
-				   ecp_gen_atoms = True
-			if ecp_gen_atoms == True:
-				genecp = 'gen'
-			if ecp_genecp_atoms == True:
-				genecp = 'genecp'
+			ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp =  check_for_gen_or_genecp(ATOMTYPES,args)
 
 			#error if both genecp and gen are
 			if ecp_genecp_atoms and ecp_gen_atoms:
@@ -1224,142 +1278,36 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin,log):
 						keywords_opt = lot +'/'+ bs +' '+ input_sp
 					else:
 						keywords_opt = lot +'/'+ bs +' '+ input
-			fileout = open(file.split(".")[0]+'.com', "w")
-			fileout.write("%mem="+str(args.mem)+"\n")
-			fileout.write("%nprocshared="+str(args.nprocs)+"\n")
-			fileout.write("# "+keywords_opt+"\n")
-			fileout.write("\n")
-			fileout.write(name+"\n")
-			fileout.write(str(CHARGE)+' '+str(MULT)+'\n')
-			for atom in range(0,NATOMS):
-				fileout.write('{0:>2} {1:12.8f} {2:12.8f} {3:12.8f}'.format(ATOMTYPES[atom], CARTESIANS[atom][0],  CARTESIANS[atom][1],  CARTESIANS[atom][2]))
-				fileout.write("\n")
-			fileout.write("\n")
-			if genecp == 'genecp' or  genecp == 'gen':
-				for i in range(len(ecp_list)):
-					if ecp_list[i] not in (args.genecp_atoms or args.gen_atoms):
-						fileout.write(ecp_list[i]+' ')
-				fileout.write('0\n')
-				fileout.write(bs+'\n')
-				fileout.write('****\n')
-				if ecp_genecp_atoms == False and ecp_gen_atoms == False :
-					fileout.write('\n')
-				else:
-					if len(bs_gcp.split('.')) > 1:
-						if bs_gcp.split('.')[1] == 'txt' or bs_gcp.split('.')[1] == 'yaml':
-							os.chdir(path_for_file)
-							read_lines = open(bs_gcp,"r").readlines()
-							os.chdir(path_write_gjf_files)
-							#chaanging the name of the files to the way they are in xTB Sdfs
-							#getting the title line
-							for line in read_lines:
-								fileout.write(line)
-							fileout.write('\n\n')
-					else:
-						for i in range(len(ecp_list)):
-							if ecp_list[i] in args.genecp_atoms :
-								fileout.write(ecp_list[i]+' ')
-							elif ecp_list[i] in args.gen_atoms :
-								fileout.write(ecp_list[i]+' ')
-						fileout.write('0\n')
-						fileout.write(bs_gcp+'\n')
-						fileout.write('****\n\n')
-						if ecp_genecp_atoms:
-							for i in range(len(ecp_list)):
-								if ecp_list[i] in args.genecp_atoms:
-									fileout.write(ecp_list[i]+' ')
-						fileout.write('0\n')
-						fileout.write(bs_gcp+'\n\n')
-				fileout.close()
-			else:
-				fileout.close()
-
-		#changing directory back to where all files are from new files created.
-		os.chdir(w_dir)
+			new_com_file(file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,TERMINATION,IM_FREQS,bs,lot,bs_gcp)
 
 		#adding in the NMR componenet only to the finished files after reading from normally finished log files
-		if args.sp and TERMINATION == "normal":
-
+		if args.sp and TERMINATION == "normal" and IM_FREQS == 0:
 			# creating new folder with new input gaussian files
 			single_point_input_files = w_dir+'/single_point_input_files'
-
-			try:
-				os.makedirs(single_point_input_files)
-			except OSError:
-				if  os.path.isdir(single_point_input_files):
-					os.chdir(single_point_input_files)
-				else:
-					raise
-
-			os.chdir(single_point_input_files)
-			log.write('Creating new single point files files for {0}/{1} file {2}'.format(lot,bs,name))
-
 			# Options for genecp
-			ecp_list,ecp_genecp_atoms, ecp_gen_atoms,genecp = [],False,False,None
+			ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp =  check_for_gen_or_genecp(ATOMTYPES,args)
 
-			for i,_ in enumerate(ATOMTYPES):
-				if ATOMTYPES[i] not in ecp_list and ATOMTYPES[i] in possible_atoms:
-					ecp_list.append(ATOMTYPES[i])
-				if ATOMTYPES[i] in args.genecp_atoms:
-				   ecp_genecp_atoms = True
-				if ATOMTYPES[i] in args.gen_atoms:
-				   ecp_gen_atoms = True
-			if ecp_gen_atoms == True:
-				genecp = 'gen'
-			if ecp_genecp_atoms == True:
-				genecp = 'genecp'
+			# Sets the folder and find the log files to analyze
+			for lot_sp in args.level_of_theory_sp:
+				for bs_sp in args.basis_set_sp:
+					for bs_gcp_sp in args.basis_set_genecp_atoms_sp:
+						#log.write('Creating new single point files files for {0} in {1}/{2}'.format(name,lot_sp,bs_sp))
+						folder = single_point_input_files + '/' + str(lot_sp) + '-' + str(bs_sp)
+						try:
+							os.makedirs(folder)
+							os.chdir(folder)
+						except OSError:
+							if os.path.isdir(folder):
+								os.chdir(folder)
+							else:
+								raise
+						if genecp == 'genecp' or  genecp == 'gen':
+							keywords_opt = lot_sp+'/'+ genecp+' '+ args.input_for_sp
+						else:
+							keywords_opt = lot_sp+'/'+ bs_sp+' '+ args.input_for_sp
 
-			keywords_opt =  args.input_for_sp
+						new_com_file(file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,TERMINATION,IM_FREQS,bs_sp,lot_sp,bs_gcp_sp)
 
-			fileout = open(file.split(".")[0]+'.com', "w")
-			fileout.write("%mem="+str(args.mem)+"\n")
-			fileout.write("%nprocshared="+str(args.nprocs)+"\n")
-			fileout.write("# "+keywords_opt+"\n")
-			fileout.write("\n")
-			fileout.write(name+"\n")
-			fileout.write(str(CHARGE)+' '+str(MULT)+'\n')
-			for atom in range(0,NATOMS):
-				fileout.write('{0:>2} {1:12.8f} {2:12.8f} {3:12.8f}'.format(ATOMTYPES[atom], CARTESIANS[atom][0],  CARTESIANS[atom][1],  CARTESIANS[atom][2]))
-				fileout.write("\n")
-			fileout.write("\n")
-			if genecp =='genecp' or genecp =='gen':
-				for i,_ in enumerate(ecp_list):
-					if ecp_list[i] not in (args.genecp_atoms or args.gen_atoms):
-						fileout.write(ecp_list[i]+' ')
-				fileout.write('0\n')
-				fileout.write(bs+'\n')
-				fileout.write('****\n')
-				if ecp_genecp_atoms == False and ecp_gen_atoms == False :
-					fileout.write('\n')
-				else:
-					if len(bs_gcp.split('.')) > 1:
-						if bs_gcp.split('.')[1] == 'txt' or bs_gcp.split('.')[1] == 'yaml':
-							os.chdir(path_for_file)
-							read_lines = open(bs_gcp,"r").readlines()
-							os.chdir(path_write_gjf_files)
-							#chaanging the name of the files to the way they are in xTB Sdfs
-							#getting the title line
-							for line in read_lines:
-								fileout.write(line)
-							fileout.write('\n\n')
-					else:
-						for i in range(len(ecp_list)):
-							if ecp_list[i] in args.genecp_atoms :
-								fileout.write(ecp_list[i]+' ')
-							elif ecp_list[i] in args.gen_atoms :
-								fileout.write(ecp_list[i]+' ')
-						fileout.write('0\n')
-						fileout.write(bs_gcp+'\n')
-						fileout.write('****\n\n')
-						if ecp_genecp_atoms:
-							for i in range(len(ecp_list)):
-								if ecp_list[i] in args.genecp_atoms:
-									fileout.write(ecp_list[i]+' ')
-						fileout.write('0\n')
-						fileout.write(bs_gcp+'\n\n')
-				fileout.close()
-			else:
-				fileout.write("\n")
 
 		#changing directory back to where all files are from new files created.
 		os.chdir(w_dir)
