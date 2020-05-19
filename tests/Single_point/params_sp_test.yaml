@@ -18,7 +18,7 @@ write_gauss : False # writting Gaussian COM files after, look options of write_g
 # if analysis is True, check all LOG files inside "generated_gaussian_files".
 # The folder might multiple subfolders with levels of theory (i.e. coming from the conformer generation).
 # This generates new COM files from LOG files with imaginary freqs or errors
-analysis : False
+analysis : True
 sp : True # write COM files after analysis
 dup : False # if dup : True, analysis will also separate duplicate LOG files
 boltz : False # if boltz : True, analysis will calculate Bolztmann probabilities of each conformer
