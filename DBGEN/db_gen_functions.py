@@ -1283,7 +1283,7 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin,log):
 		#adding in the NMR componenet only to the finished files after reading from normally finished log files
 		if args.sp and TERMINATION == "normal" and IM_FREQS == 0:
 			# creating new folder with new input gaussian files
-			single_point_input_files = w_dir+'/single_point_input_files'
+			single_point_input_files = w_dir_fin+'/single_point_input_files'
 			# Options for genecp
 			ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp =  check_for_gen_or_genecp(ATOMTYPES,args)
 
@@ -1302,9 +1302,27 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin,log):
 							else:
 								raise
 						if genecp == 'genecp' or  genecp == 'gen':
-							keywords_opt = lot_sp+'/'+ genecp+' '+ args.input_for_sp
+							if args.dispersion_correction_sp:
+								if args.solvent_model_sp == 'gas_phase':
+									keywords_opt = lot_sp+'/'+ genecp+' '+ args.input_for_sp + ' empiricaldispersion={0}'.format(args.empirical_dispersion_sp)
+								else:
+									keywords_opt = lot_sp+'/'+ genecp+' '+ args.input_for_sp + ' scrf=({0},solvent={1}) empiricaldispersion={2}  '.format(args.solvent_model_sp,args.solvent_name_sp,args.empirical_dispersion_sp)
+							else:
+								if args.solvent_model_sp == 'gas_phase':
+									keywords_opt = lot_sp+'/'+ genecp+' '+ args.input_for_sp
+								else:
+									keywords_opt = lot_sp+'/'+ genecp+' '+ args.input_for_sp + ' scrf=({0},solvent={1}) '.format(args.solvent_model_sp,args.solvent_name_sp)
 						else:
-							keywords_opt = lot_sp+'/'+ bs_sp+' '+ args.input_for_sp
+							if args.dispersion_correction_sp:
+								if args.solvent_model_sp == 'gas_phase':
+									keywords_opt = lot_sp+'/'+ bs_sp+' '+ args.input_for_sp + ' empiricaldispersion={0}'.format(args.empirical_dispersion_sp)
+								else:
+									keywords_opt = lot_sp+'/'+ bs_sp+' '+ args.input_for_sp + ' scrf=({0},solvent={1}) empiricaldispersion={2}  '.format(args.solvent_model_sp,args.solvent_name_sp,args.empirical_dispersion_sp)
+							else:
+								if args.solvent_model_sp == 'gas_phase':
+									keywords_opt = lot_sp+'/'+ bs_sp+' '+ args.input_for_sp
+								else:
+									keywords_opt = lot_sp+'/'+ bs_sp+' '+ args.input_for_sp + ' scrf=({0},solvent={1}) '.format(args.solvent_model_sp,args.solvent_name_sp)
 
 						new_com_file(file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,TERMINATION,IM_FREQS,bs_sp,lot_sp,bs_gcp_sp)
 
