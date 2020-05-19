@@ -1796,7 +1796,7 @@ def filter_after_rotation(args,name,log,dup_data,dup_data_idx):
 						atomic_number = possible_atoms.index(re_symbol)
 						atom.SetAtomicNum(atomic_number)
 			#sdwriter_rd.write(mol_rd)
-			writer_mol_objects.append([mol_rd,mol_rd.GetProp('Energy')])
+			writer_mol_objects.append([mol_rd,float(mol_rd.GetProp('Energy'))])
 		# Only the first ID gets included
 		rd_count = 1
 		# check rmsd
@@ -1821,13 +1821,13 @@ def filter_after_rotation(args,name,log,dup_data,dup_data_idx):
 							atomic_number = possible_atoms.index(re_symbol)
 							atom.SetAtomicNum(atomic_number)
 				#sdwriter_rd.write(mol_rd)
-				writer_mol_objects.append([mol_rd,mol_rd.GetProp('Energy')] )
+				writer_mol_objects.append([mol_rd,float(mol_rd.GetProp('Energy'))] )
 		bar.next()
 	bar.finish()
 
 	#writing sorted mol objects
 	sdwriter_rd = Chem.SDWriter(name+'_'+'rdkit'+'_'+'rotated'+args.output)
-	sortedmols = sorted(writer_mol_objects,key=lambda x: x[1],reverse=True)
+	sortedmols = sorted(writer_mol_objects,key=lambda x: x[1])
 	for i, write_mol in enumerate(sortedmols):
 		sdwriter_rd.write(write_mol[0])
 
