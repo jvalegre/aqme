@@ -15,18 +15,21 @@ import pandas as pd
 try:
 	import ase
 	import ase.optimize
-	from lib.xtb import GFN2
+	from ase.units import Hartree
 	import torch
 	os.environ['KMP_DUPLICATE_LIB_OK']='True'
 	device = torch.device('cpu')
-	from ase.units import Hartree
 except:
-	pass
+	print('0')
+try:
+	from lib.xtb import GFN2
+except:
+	print('1')
 try:
 	import torchani
 	model = torchani.models.ANI1ccx()
 except:
-	pass
+	print('5')
 
 hartree_to_kcal = 627.509
 
@@ -1780,12 +1783,12 @@ def filter_after_rotation(args,name,log,dup_data,dup_data_idx):
 	rd_selectedcids,rd_dup_energy,rd_dup_rms_eng =[],-1,0
 	for i, rd_mol_i in enumerate(rdmols):
 		mol_rd = Chem.RWMol(rd_mol_i)
-		mol_rd.SetProp('_Name',mol_rd.GetProp('_Name')+' '+str(i))
+		mol_rd.SetProp('_Name',rd_mol_i.GetProp('_Name')+' '+str(i))
 		# This keeps track of whether or not your conformer is unique
 		excluded_conf = False
 		# include the first conformer in the list to start the filtering process
 		if rd_count == 0:
-			rd_selectedcids.append(i)
+			rd_selectedcids.append(rd_mol_i)
 			if args.metal_complex:
 				for atom in mol_rd.GetAtoms():
 					if atom.GetIdx() in args.metal_idx:
@@ -1796,27 +1799,27 @@ def filter_after_rotation(args,name,log,dup_data,dup_data_idx):
 		# Only the first ID gets included
 		rd_count = 1
 		# check rmsd
-		for j in rd_selectedcids:
-			if abs(float(rdmols[i].GetProp('Energy')) - float(rdmols[j].GetProp('Energy'))) < args.initial_energy_threshold: # comparison in kcal/mol
+		for rd_mol_j in rd_selectedcids:
+			if abs(float(rd_mol_i.GetProp('Energy')) - float(rd_mol_j.GetProp('Energy'))) < args.initial_energy_threshold: # comparison in kcal/mol
 				excluded_conf = True
 				rd_dup_energy += 1
 				break
-			if abs(float(rdmols[i].GetProp('Energy')) - float(rdmols[j].GetProp('Energy'))) < args.energy_threshold: # in kcal/mol
-				rms = get_conf_RMS(rdmols[i],rdmols[j],-1,-1, args.heavyonly, args.max_matches_RMSD,log)
+			if abs(float(rd_mol_i.GetProp('Energy')) - float(rd_mol_j.GetProp('Energy'))) < args.energy_threshold: # in kcal/mol
+				rms = get_conf_RMS(mol_rd,rd_mol_j,-1,-1, args.heavyonly, args.max_matches_RMSD,log)
 				if rms < args.rms_threshold:
 					excluded_conf = True
 					rd_dup_rms_eng += 1
 					break
 		if excluded_conf == False:
-			if args.metal_complex:
-				for atom in mol_rd.GetAtoms():
-					if atom.GetIdx() in args.metal_idx:
-						re_symbol = args.metal_sym[args.metal_idx.index(atom.GetIdx())]
-						atomic_number = possible_atoms.index(re_symbol)
-						atom.SetAtomicNum(atomic_number)
-			sdwriter_rd.write(mol_rd)
-			if i not in rd_selectedcids:
-				rd_selectedcids.append(i)
+			if rd_mol_i not in rd_selectedcids:
+				rd_selectedcids.append(rd_mol_i)
+				if args.metal_complex:
+					for atom in mol_rd.GetAtoms():
+						if atom.GetIdx() in args.metal_idx:
+							re_symbol = args.metal_sym[args.metal_idx.index(atom.GetIdx())]
+							atomic_number = possible_atoms.index(re_symbol)
+							atom.SetAtomicNum(atomic_number)
+				sdwriter_rd.write(mol_rd)
 		bar.next()
 	bar.finish()
 	sdwriter_rd.close()
