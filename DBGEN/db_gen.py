@@ -306,7 +306,10 @@ def main():
 			log_files = glob.glob('*.log')
 			w_dir = os.getcwd()
 			w_dir_fin = w_dir+'/finished'
-			output_analyzer(log_files, w_dir, args.lot, args.bs, args.bs_gcp, args, w_dir_fin,log)
+			for lot in args.level_of_theory:
+				for bs in args.basis_set:
+					for bs_gcp in args.basis_set_genecp_atoms:
+							output_analyzer(log_files, w_dir, args.lot, args.bs, args.bs_gcp, args, w_dir_fin,log)
 
 		#taking the path
 		else:
