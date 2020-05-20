@@ -202,14 +202,16 @@ def test_confgen(folder, smiles, params_file, n_confs, prefilter_confs_rdkit, fi
         os.chdir(path+'/'+folder+'/finished/single_point_input_files/wB97xd-def2svp')
         assert len(glob.glob('*.*')) == 2
 
-        if smiles == 'Pd_SP.LOG':
+        file = smiles
+
+        if file == 'Pd_SP.LOG':
             count,NBO,pop,opt = calc_genecp(file, 'Pd')
             assert count == 2 # finds genecp for Pd
             assert NBO == 1 # finds final line for sp
             assert pop == 1 # finds input line for sp
             assert opt == 0 # it does not find standard opt option
 
-        elif smiles == 'CH4_freq.log':
+        elif file == 'CH4_freq.log':
             count,NBO,pop,opt = calc_genecp(file, 'C H')
             assert count == 0 # does not find genecp part
             assert NBO == 1 # finds final line for sp
