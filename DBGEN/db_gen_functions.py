@@ -78,7 +78,7 @@ def load_from_yaml(args,log):
 				log.write("\no  IMPORTING VARIABLES FROM " + args.varfile)
 				with open(args.varfile, 'r') as file:
 					param_list = yaml.load(file, Loader=yaml.FullLoader)
-				print(param_list)
+	print(param_list)
 	for param in param_list:
 		if hasattr(args, param):
 			if getattr(args, param) != param_list[param]:
