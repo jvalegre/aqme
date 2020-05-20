@@ -35,7 +35,7 @@ def parser_args():
 
 	#Input details
 	parser.add_argument("--varfile", dest="varfile", default=None, help="Parameters in YAML format")
-	parser.add_argument("-i", "--input", help="File containing molecular structure(s)")
+	parser.add_argument("-i", "--input", help="File containing molecular structure(s)",dest="input", default=" ")
 	parser.add_argument("--output_name", dest="output_name", default="output", metavar="output_name", help="Change output filename to DBGEN_\"output\".dat")
 	parser.add_argument("--output", dest="output", default=".sdf", metavar="output", help="The extension of the SDF files written")
 
@@ -74,7 +74,7 @@ def parser_args():
 	parser.add_argument("--angle_off", type=float,help="Any limit to set for check rules",default=30)
 
 	#pass the argument for path for the gaussian folder.
-	parser.add_argument("--path", help="Path for analysis/boltzmann factor/combining files where the gaussian folder created is present")
+	parser.add_argument("--path", help="Path for analysis/boltzmann factor/combining files where the gaussian folder created is present",dest="path", default="")
 	parser.add_argument("-v","--verbose",action="store_true",default=False, help="verbose output")
 
 	#argumets for conformer generation
