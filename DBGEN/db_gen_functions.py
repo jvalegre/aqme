@@ -20,15 +20,18 @@ try:
 	import torch
 	os.environ['KMP_DUPLICATE_LIB_OK']='True'
 	device = torch.device('cpu')
+	print('0')
 except:
 	print('0')
 try:
 	from lib.xtb import GFN2
+	print('1')
 except:
 	print('1')
 try:
 	import torchani
 	model = torchani.models.ANI1ccx()
+	print('5')
 except:
 	print('5')
 
@@ -78,7 +81,6 @@ def load_from_yaml(args,log):
 				log.write("\no  IMPORTING VARIABLES FROM " + args.varfile)
 				with open(args.varfile, 'r') as file:
 					param_list = yaml.load(file, Loader=yaml.FullLoader)
-	print(param_list)
 	for param in param_list:
 		if hasattr(args, param):
 			if getattr(args, param) != param_list[param]:
@@ -190,9 +192,10 @@ def template_embed_sp(molecule,temp,name_input,args,log):
 	mol_template = []
 
 	for atom in molecule.GetAtoms():
-		if atom.GetSymbol() == 'I'and (len(atom.GetBonds()) == 6 or len(atom.GetBonds()) == 5 or len(atom.GetBonds()) == 4 or len(atom.GetBonds()) == 3 or len(atom.GetBonds()) == 2):
+		if atom.GetIdx() in args.metal_idx:
 			if len(atom.GetBonds()) == 5:
-				atom.SetAtomicNum(15)
+				atom.SetAtomicNum(14)
+				atom.SetFormalCharge(1)
 			if len(atom.GetBonds()) == 4:
 				atom.SetAtomicNum(14)
 			center_idx = atom.GetIdx()
@@ -247,16 +250,6 @@ def template_embed_sp(molecule,temp,name_input,args,log):
 				#embedding of the molecule onto the core
 				molecule_new, coordMap, algMap = template_embed_optimize(molecule,mol_1,args,log)
 
-				for atom in molecule_new.GetAtoms():
-					if atom.GetIdx() == center_idx:
-						atom.SetAtomicNum(53)
-						atom.SetFormalCharge(-1)
-
-				for atom in mol_1.GetAtoms():
-					if atom.GetIdx() == center_temp:
-						atom.SetAtomicNum(53)
-						atom.SetFormalCharge(-1)
-
 				#writing to mol_object file
 				name_final = name_input + str(name)
 				mol_objects.append(molecule_new)
@@ -273,9 +266,6 @@ def template_embed_sp(molecule,temp,name_input,args,log):
 				for atom in molecule.GetAtoms():
 					if atom.GetIdx() == center_idx:
 						neighbours = atom.GetNeighbors()
-
-				for atom in neighbours:
-					print(atom.GetSymbol(),atom.GetIdx())
 
 				# assigning order of replacement for the top
 				if name_1 == 0:
@@ -334,7 +324,8 @@ def template_embed_sp(molecule,temp,name_input,args,log):
 					site_1,site_2,site_3,site_4,site_5,metal_site  = 0,0,0,0,0,0
 					for atom in mol_1.GetAtoms():
 						if atom.GetIdx()  == 5 and metal_site == 0:
-							atom.SetAtomicNum(15)
+							atom.SetAtomicNum(14)
+							atom.SetFormalCharge(1)
 							center_temp = atom.GetIdx()
 							metal_site = 1
 						if k!= 0:
@@ -369,19 +360,9 @@ def template_embed_sp(molecule,temp,name_input,args,log):
 							elif atom.GetIdx() == 0 and site_5 == 0:
 								atom.SetAtomicNum(neighbours[0].GetAtomicNum())
 								site_5 = 1
-						print('after')
-						print(atom.GetSymbol(),atom.GetIdx())
 
 					#assigning and embedding onto the core
 					molecule_new, coordMap, algMap = template_embed_optimize(molecule,mol_1,args,log)
-
-					for atom in molecule_new.GetAtoms():
-						if atom.GetIdx() == center_idx:
-							atom.SetAtomicNum(53)
-
-					for atom in mol_1.GetAtoms():
-						if atom.GetIdx() == center_temp:
-							atom.SetAtomicNum(53)
 
 					#writing to mol_object file
 					name_final = name_input + str(name_1)+ str(name_2)
@@ -389,8 +370,6 @@ def template_embed_sp(molecule,temp,name_input,args,log):
 					name_return.append(name_final)
 					coord_Map.append(coordMap)
 					alg_Map.append(algMap)
-
-
 					mol_template.append(mol_1)
 
 	return mol_objects, name_return, coord_Map, alg_Map, mol_template
@@ -400,7 +379,6 @@ def template_embed_optimize(molecule_embed,mol_1,args,log):
 
 	#assigning and embedding onto the core
 	num_atom_match = molecule_embed.GetSubstructMatch(mol_1)
-	print(len(num_atom_match))
 
 	#add H's to molecule
 	molecule_embed = Chem.AddHs(molecule_embed)
@@ -411,21 +389,6 @@ def template_embed_optimize(molecule_embed,mol_1,args,log):
 	randomseed=-1
 	force_constant=10000
 
-	# Choosing the type of force field
-	for atom in molecule_embed.GetAtoms():
-		if atom.GetAtomicNum() > 36: # up to Kr for MMFF, if not, the code will use UFF
-			args.ff = "UFF"
-
-	# Force field parameters
-	if args.ff == "MMFF":
-		GetFF = lambda mol,confId=-1:Chem.MMFFGetMoleculeForceField(mol,Chem.MMFFGetMoleculeProperties(mol),confId=-1)
-	elif args.ff == "UFF":
-		GetFF = lambda mol,confId=-1:Chem.UFFGetMoleculeForceField(mol,confId=-1)
-	else:
-		log.write('   Force field {} not supported!'.format(args.ff))
-		sys.exit()
-	getForceField=GetFF
-
 	# This part selects which atoms from molecule are the atoms of the core
 	try:
 		coreConf = mol_1.GetConformer(coreConfId)
@@ -434,31 +397,23 @@ def template_embed_optimize(molecule_embed,mol_1,args,log):
 		core_mol_1 = coreConf.GetAtomPosition(k)
 		coordMap[idxI] = core_mol_1
 
-	# This is the original version, if it doesn't work without coordMap I'll come back to it late
-	if len(num_atom_match) == 5:
-		ci = Chem.EmbedMolecule(molecule_embed, coordMap=coordMap, randomSeed=randomseed)
-	if len(num_atom_match) == 6:
-		#ignoreSmoothingFailures=True
-		ci = Chem.EmbedMolecule(molecule_embed, coordMap=coordMap, randomSeed=randomseed,ignoreSmoothingFailures=True)
+	ci = rdDistGeom.EmbedMolecule(molecule_embed, coordMap=coordMap, randomSeed=randomseed)
 	if ci < 0:
 		log.write('Could not embed molecule.')
+
+
+	GetFF = Chem.UFFGetMoleculeForceField(molecule_embed,confId=-1)
 
 	#algin molecule to the core
 	algMap = [(k, l) for l, k in enumerate(num_atom_match)]
 
-	ff = getForceField(molecule_embed, confId=-1)
 	for k, idxI in enumerate(num_atom_match):
 		for l in range(k + 1, len(num_atom_match)):
 			idxJ = num_atom_match[l]
 			d = coordMap[idxI].Distance(coordMap[idxJ])
-			ff.AddDistanceConstraint(idxI, idxJ, d, d, force_constant)
-	ff.Initialize()
-	#reassignned n from 4 to 10 for better embed and minimzation
-	n = 10
-	more = ff.Minimize()
-	while more and n:
-		more = ff.Minimize()
-		n -= 1
+			GetFF.AddDistanceConstraint(idxI, idxJ, d, d, force_constant)
+	GetFF.Initialize()
+	GetFF.Minimize(maxIts=args.opt_steps_RDKit)
 	# rotate the embedded conformation onto the core_mol:
 	rdMolAlign.AlignMol(molecule_embed, mol_1, atomMap=algMap,reflect=True,maxIters=100)
 
@@ -1572,7 +1527,7 @@ def embed_conf(mol,initial_confs,args,log,coord_Map,alg_Map, mol_template):
 
 	return cids
 
-def min_after_embed(mol,cids,name,initial_confs,rotmatches,dup_data,dup_data_idx,sdwriter,coord_Map,alg_Map, mol_template,args,log):
+def min_after_embed(mol,cids,name,initial_confs,rotmatches,dup_data,dup_data_idx,sdwriter,args,log,coord_Map,alg_Map, mol_template):
 
 	cenergy,outmols = [],[]
 	bar = IncrementalBar('o  Minimizing', max = len(cids))
@@ -1596,31 +1551,25 @@ def min_after_embed(mol,cids,name,initial_confs,rotmatches,dup_data,dup_data_idx
 			num_atom_match = mol.GetSubstructMatch(mol_template)
 			# Force field parameters
 			if args.ff == "MMFF":
-				GetFF = lambda mol,confId=conf:Chem.MMFFGetMoleculeForceField(mol,Chem.MMFFGetMoleculeProperties(mol),confId=conf)
+				GetFF = Chem.MMFFGetMoleculeForceField(mol, Chem.MMFFGetMoleculeProperties(mol),confId=conf)
 			elif args.ff == "UFF":
-				GetFF = lambda mol,confId=conf:Chem.UFFGetMoleculeForceField(mol,confId=conf)
+				GetFF = Chem.UFFGetMoleculeForceField(mol,confId=conf)
 			else:
 				log.write('   Force field {} not supported!'.format(args.ff))
 				sys.exit()
-			getForceField=GetFF
 
 			# clean up the conformation
-			ff_temp = getForceField(mol, confId=conf)
 			for k, idxI in enumerate(num_atom_match):
 				for l in range(k + 1, len(num_atom_match)):
 					idxJ = num_atom_match[l]
 					d = coord_Map[idxI].Distance(coord_Map[idxJ])
-					ff_temp.AddDistanceConstraint(idxI, idxJ, d, d, 10000)
-			ff_temp.Initialize()
-			#reassignned n from 4 to 10 for better embed and minimzation
-			n = 10
-			more = ff_temp.Minimize()
-			while more and n:
-				more = ff_temp.Minimize()
-				n -= 1
-			energy = ff_temp.CalcEnergy()
+					GetFF.AddDistanceConstraint(idxI, idxJ, d, d, 10000)
+			GetFF.Initialize()
+			GetFF.Minimize(maxIts=args.opt_steps_RDKit)
+			energy = GetFF.CalcEnergy()
+
 			# rotate the embedded conformation onto the core_mol:
-			rdMolAlign.AlignMol(mol, mol_template,prbCid=conf, atomMap=alg_Map,reflect=True,maxIters=100)
+			rdMolAlign.AlignMol(mol, mol_template, prbCid=conf,refCid=-1,atomMap=alg_Map,reflect=True,maxIters=100)
 			cenergy.append(energy)
 
 		# outmols is gonna be a list containing "initial_confs" mol objects with "initial_confs"
@@ -1816,7 +1765,8 @@ def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None,alg_M
 	sdwriter = Chem.SDWriter(name+'_'+'rdkit'+args.output)
 
 	Chem.SanitizeMol(mol)
-	mol = Chem.AddHs(mol)
+	if coord_Map == None and alg_Map == None and mol_template == None:
+		mol = Chem.AddHs(mol)
 	mol.SetProp("_Name",name)
 
 	# detects and applies auto-detection of initial number of conformers
@@ -1855,7 +1805,7 @@ def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None,alg_M
 			else:
 				log.write("o  Systematic torsion rotation is set to OFF")
 
-		status = min_after_embed(mol,cids,name,initial_confs,rotmatches,dup_data,dup_data_idx,sdwriter,coord_Map,alg_Map, mol_template,args,log)
+		status = min_after_embed(mol,cids,name,initial_confs,rotmatches,dup_data,dup_data_idx,sdwriter,args,log,coord_Map,alg_Map, mol_template)
 	sdwriter.close()
 
 	if status!= -1:
