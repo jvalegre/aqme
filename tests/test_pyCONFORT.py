@@ -89,7 +89,7 @@ def calc_genecp(file, atom):
     ('Analysis', 'Imag_freq.log', 'params_analysis_test.yaml', 'nan', 'nan', 'nan', 'nan', 'nan', False, False, 'analysis'), # test imaginary frequencies
     ('Analysis', 'SCF_error.LOG', 'params_analysis_test.yaml', 'nan', 'nan', 'nan', 'nan', 'nan', False, False, 'analysis'), # test SCF errors
     ('Analysis', 'Unfinished.LOG', 'params_analysis_test.yaml', 'nan', 'nan', 'nan', 'nan', 'nan', False, False, 'analysis'), # test unfinished calculations
-    ('Analysis_with_dup', 'Duplicate.LOG', 'params_analysis_dup_test.yaml', 'nan', 'nan', 'nan', 'nan', 'nan', False, False, 'analysis_with_dup'), # test duplicates
+    #('Analysis_with_dup', 'Duplicate.LOG', 'params_analysis_dup_test.yaml', 'nan', 'nan', 'nan', 'nan', 'nan', False, False, 'analysis_with_dup'), # test duplicates
     ('Single_point', 'CH4_freq.log', 'params_sp_test.yaml', 'nan', 'nan', 'nan', 'nan', 'nan', False, False, 'Single_point'), # test single-point generation
     ('Single_point', 'Pd_SP.LOG', 'params_sp_test.yaml', 'nan', 'nan', 'nan', 'nan', 'nan', False, False, 'Single_point'), # test single-point generation with genecp
 ])
