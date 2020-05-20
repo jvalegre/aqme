@@ -23,7 +23,7 @@ try:
 except:
 	print('0')
 try:
-	from libr.xtb import GFN2
+	from lib.xtb import GFN2
 except:
 	print('1')
 try:
@@ -78,7 +78,7 @@ def load_from_yaml(args,log):
 				log.write("\no  IMPORTING VARIABLES FROM " + args.varfile)
 				with open(args.varfile, 'r') as file:
 					param_list = yaml.load(file, Loader=yaml.FullLoader)
-
+				print(param_list)
 	for param in param_list:
 		if hasattr(args, param):
 			if getattr(args, param) != param_list[param]:
@@ -179,7 +179,6 @@ def compute_confs(smi, name,args,log,dup_data,counter_for_template,i,start_time)
 			conformer_generation(mol,name,start_time,args,log,dup_data,i)
 	else:
 		conformer_generation(mol,name,start_time,args,log,dup_data,i)
-
 
 # TEMPLATE GENERATION FOR SQUAREPLANAR AND squarepyramidal
 def template_embed_sp(molecule,temp,name_input,args,log):
@@ -1325,7 +1324,6 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin,log):
 									keywords_opt = lot_sp+'/'+ bs_sp+' '+ args.input_for_sp + ' scrf=({0},solvent={1}) '.format(args.solvent_model_sp,args.solvent_name_sp)
 
 						new_com_file(file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,TERMINATION,IM_FREQS,bs_sp,lot_sp,bs_gcp_sp)
-
 
 		#changing directory back to where all files are from new files created.
 		os.chdir(w_dir)
