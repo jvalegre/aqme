@@ -100,10 +100,10 @@ def test_confgen(folder, smiles, params_file, n_confs, prefilter_confs_rdkit, fi
         os.chdir(path+'/'+folder+'/'+smiles.split('.')[0])
         subprocess.run(['python', '-m', 'DBGEN', '--varfile', params_file])
 
-    	# Retrieving the generated CSV file
-    	df_output = pd.read_csv(smiles.split('.')[0]+'-Duplicates Data.csv')
+        # Retrieving the generated CSV file
+        df_output = pd.read_csv(smiles.split('.')[0]+'-Duplicates Data.csv')
 
-    	file = params_file.split('.')[0]
+        file = params_file.split('.')[0]
 
     	# tests for RDKit
     	if not dihedral:
