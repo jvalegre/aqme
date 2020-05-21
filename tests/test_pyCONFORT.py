@@ -65,7 +65,7 @@ def calc_genecp(file, atom):
     ('Metal_complexes', 'Ag_Au_complex_2.smi', 'params_Ag_Au_test2.yaml', 240, 'nan', 146, [36.49354, 36.77305, 36.82544, 36.97313, 37.23573, 37.24436, 37.56838, 38.25121, 39.10735, 41.20973, 41.24798, 41.26245, 41.35228, 41.35546, 41.35927, 41.46424, 41.53602, 41.59332, 41.62411, 41.6405, 41.72955, 41.73488, 41.79588, 41.86305, 41.90294, 41.92186, 41.92265, 41.93435, 42.05995, 42.06945, 42.27756, 42.37207, 42.45762, 42.48821, 42.50402, 42.53456, 42.95388, 43.13758, 43.25449, 44.78602, 44.93579, 44.96228, 45.26116, 45.26598, 45.44017, 45.55071, 45.8679, 46.061, 47.5134, 47.90304, 48.0069, 48.14663, 48.16596, 48.23897, 48.28195, 48.32833, 48.35315, 48.38528, 48.42291, 48.46023, 48.54182, 48.91924, 48.99078, 49.08647, 49.13862, 49.29747, 49.35792, 49.7613, 50.33035, 50.35371, 50.47871, 50.48243, 50.52847, 50.78177, 50.89001, 50.91743, 51.16714, 51.29948, 51.40979, 51.42053, 51.46385, 51.76021, 51.9065, 52.01792, 52.09117, 52.15601, 52.17765, 52.244, 52.2868, 52.51926, 52.69236, 53.57123, 53.60618, 53.77328, 53.86299, 53.88996, 53.9276, 53.93788, 53.94374, 53.97461, 53.97969, 54.07632, 54.10034, 54.13162, 54.15401, 54.25457, 54.26089, 54.2831, 54.28863, 55.60037, 55.64299, 55.77447, 55.88946, 55.9445, 56.08696, 56.91175, 57.01257, 57.11954, 57.21402, 57.38656, 57.47613, 58.04783, 58.16629, 58.24595, 58.27262, 58.3785, 58.40188, 58.46164, 58.63853, 58.70071, 58.72827, 58.8047, 58.91022, 59.02796, 59.36356, 60.17173, 60.54619, 61.79955, 61.91091, 61.95232, 62.04226, 62.15073, 62.2454, 62.6222, 63.04568, 67.79518], 1, True, False, 'conf_gen'), # test with dihedral scan
     ('Metal_complexes', 'Pd_squareplanar.smi', 'params_Pd_test1.yaml', 360, 349, 0, [8.97676, 9.01872, 9.10379, 9.15897, 9.16366, 9.17272, 9.18237, 9.19448, 9.22382, 9.26467, 9.43331], 0, False, False, 'conf_gen'), # test squareplanar template with gen
     ('Metal_complexes', 'Pd_squareplanar.smi', 'params_Pd_test2.yaml', 48, 'nan', 6, [8.97676, 9.01872, 9.15897, 9.17272, 9.18237, 9.19448], 0, True, False, 'conf_gen'), # test nodihedral
-    ('Metal_complexes', 'Rh_squarepyramidal.smi', 'params_Rh_test1.yaml', 360, 111, 0, [6.14954, 6.15497, 6.20729, 6.3288, 6.35036, 6.35559, 6.35893, 6.52387, 6.56902], 0, False, False, 'conf_gen'), # test squareplanar template with gen
+    ('Metal_complexes', 'Rh_squarepyramidal.smi', 'params_Rh_test1.yaml', 10, 0, 0, [6.14954, 6.15497, 6.20729, 6.3288, 6.35036, 6.35559, 6.35893, 6.52387, 6.56902], 0, False, False, 'conf_gen'), # test squareplanar template with gen
     # tests of input files with different formats
     ('Input_files', 'pentane.csv', 'params_format_test1.yaml', 20, 16, 0, [-5.27175, -4.44184, -3.84858, -1.57172], 0, False, False, 'conf_gen'), # test csv
     ('Input_files', 'pentane.cdx', 'params_format_test2.yaml', 20, 16, 0, [-5.27175, -4.44184, -3.84858, -1.57172], 0, False, False, 'conf_gen'), # test cdx
@@ -105,46 +105,46 @@ def test_confgen(folder, smiles, params_file, n_confs, prefilter_confs_rdkit, fi
 
         file = params_file.split('.')[0]
 
-    	# tests for RDKit
-    	if not dihedral:
-    		test_init_rdkit_confs = df_output['RDKIT-Initial-samples']
-    		test_prefilter_rdkit_confs = df_output['RDKit-energy-duplicates']
-    		test_filter_rdkit_confs = df_output['RDKit-RMSD-and-energy-duplicates']
+        # tests for RDKit
+        if not dihedral:
+            test_init_rdkit_confs = df_output['RDKIT-Initial-samples']
+            test_prefilter_rdkit_confs = df_output['RDKit-energy-duplicates']
+            test_filter_rdkit_confs = df_output['RDKit-RMSD-and-energy-duplicates']
 
-    		assert str(n_confs) == str(test_init_rdkit_confs[0])
-    		assert str(prefilter_confs_rdkit) == str(test_prefilter_rdkit_confs[0])
-    		assert str(filter_confs_rdkit) == str(test_filter_rdkit_confs[0])
+            assert str(n_confs) == str(test_init_rdkit_confs[0])
+            assert str(prefilter_confs_rdkit) == str(test_prefilter_rdkit_confs[0])
+            assert str(filter_confs_rdkit) == str(test_filter_rdkit_confs[0])
 
-    	else:
-    		test_init_rdkit_confs = df_output['RDKIT-Rotated-conformers']
-    		test_unique_confs = df_output['RDKIT-Rotated-Unique-conformers']
+        else:
+            test_init_rdkit_confs = df_output['RDKIT-Rotated-conformers']
+            test_unique_confs = df_output['RDKIT-Rotated-Unique-conformers']
 
-    		# I use the filter_confs_rdkit variable to assert for unique confs in dihedral scan
-    		assert str(n_confs) == str(test_init_rdkit_confs[0])
-    		assert str(filter_confs_rdkit) == str(test_unique_confs[0])
+            # I use the filter_confs_rdkit variable to assert for unique confs in dihedral scan
+            assert str(n_confs) == str(test_init_rdkit_confs[0])
+            assert str(filter_confs_rdkit) == str(test_unique_confs[0])
 
-    	# read the energies of the conformers
-    	os.chdir(path+'/'+folder+'/'+smiles.split('.')[0]+'/rdkit_generated_sdf_files')
+        # read the energies of the conformers
+        os.chdir(path+'/'+folder+'/'+smiles.split('.')[0]+'/rdkit_generated_sdf_files')
 
-    	if not dihedral:
-    		test_rdkit_E_confs = calc_energy(smiles.split('.')[0]+'_rdkit.sdf')
-    	else:
-    		test_rdkit_E_confs = calc_energy(smiles.split('.')[0]+'_rdkit_rotated.sdf')
+        if not dihedral:
+            test_rdkit_E_confs = calc_energy(smiles.split('.')[0]+'_rdkit.sdf')
+        else:
+            test_rdkit_E_confs = calc_energy(smiles.split('.')[0]+'_rdkit_rotated.sdf')
 
-    	# test for energies
-    	try:
-    		test_round_confs = [round(num, precision) for num in test_rdkit_E_confs]
-    		round_confs = [round(num, precision) for num in E_confs]
-    	except:
-    		test_round_confs = 'nan'
-    		round_confs = 'nan'
+        # test for energies
+        try:
+            test_round_confs = [round(num, precision) for num in test_rdkit_E_confs]
+            round_confs = [round(num, precision) for num in E_confs]
+        except:
+            test_round_confs = 'nan'
+            round_confs = 'nan'
 
-    	assert str(round_confs) == str(test_round_confs)
+        assert str(round_confs) == str(test_round_confs)
 
-    	# tests charge
-    	test_charge = df_output['Overall charge']
+        # tests charge
+        test_charge = df_output['Overall charge']
 
-    	assert str(charge) == str(test_charge[0])
+        assert str(charge) == str(test_charge[0])
 
     # check that the COM files are generated correctly with gen and gen_ecp
     elif type == 'only_check':
