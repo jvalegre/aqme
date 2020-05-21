@@ -95,15 +95,11 @@ def calc_genecp(file, atom):
 ])
 
 def test_confgen(folder, smiles, params_file, n_confs, prefilter_confs_rdkit, filter_confs_rdkit, E_confs, charge, dihedral, xTB_ANI1, type):
-    # gets into the directory for testing SMILES
-    try:
-        os.chdir(path+'/'+folder+'/'+smiles.split('.')[0])
-    except:
-        pass
-    # Conformer generation using different parameters. It creates a CSV file
-    subprocess.run(['python', '-m', 'DBGEN', '--varfile', params_file])
-
     if type == 'conf_gen':
+        # open right folder and run the code
+        os.chdir(path+'/'+folder+'/'+smiles.split('.')[0])
+        subprocess.run(['python', '-m', 'DBGEN', '--varfile', params_file])
+
     	# Retrieving the generated CSV file
     	df_output = pd.read_csv(smiles.split('.')[0]+'-Duplicates Data.csv')
 
@@ -152,6 +148,9 @@ def test_confgen(folder, smiles, params_file, n_confs, prefilter_confs_rdkit, fi
 
     # check that the COM files are generated correctly with gen and gen_ecp
     elif type == 'only_check':
+        # open right folder and run the code
+        os.chdir(path+'/'+folder+'/'+smiles.split('.')[0])
+        subprocess.run(['python', '-m', 'DBGEN', '--varfile', params_file])
         if params_file.find('_genecp_') > -1:
             os.chdir(path+'/'+folder+'/'+smiles.split('.')[0]+'/generated_gaussian_files/wb97xd-def2svp')
             file = glob.glob('*.com')[0]
@@ -168,7 +167,6 @@ def test_confgen(folder, smiles, params_file, n_confs, prefilter_confs_rdkit, fi
         files = glob.glob('*.*')
         if len(files) > 0:
             subprocess.run(['python', '-m', 'DBGEN', '--varfile', params_file])
-
         if smiles == 'CH4_Normal_termination.log':
             os.chdir(path+'/'+folder+'/finished')
             assert smiles in glob.glob('*.*')
@@ -199,7 +197,7 @@ def test_confgen(folder, smiles, params_file, n_confs, prefilter_confs_rdkit, fi
         files = glob.glob('*.*')
         if len(files) > 0:
             subprocess.run(['python', '-m', 'DBGEN', '--varfile', params_file])
-        os.chdir(path+'/'+folder+'/finished/single_point_input_files/wB97xd-def2svp')
+        os.chdir(path+'/'+folder+'/finished/single_point_input_files/wb97xd-def2svp')
         assert len(glob.glob('*.*')) == 2
 
         file = smiles
