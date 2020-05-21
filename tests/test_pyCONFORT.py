@@ -203,14 +203,14 @@ def test_confgen(folder, smiles, params_file, n_confs, prefilter_confs_rdkit, fi
         file = smiles
 
         if file == 'Pd_SP.LOG':
-            count,NBO,pop,opt = calc_genecp(file, 'Pd')
+            count,NBO,pop,opt = calc_genecp(file.split('.')[0]+'.com', 'Pd')
             assert count == 2 # finds genecp for Pd
             assert NBO == 1 # finds final line for sp
             assert pop == 1 # finds input line for sp
             assert opt == 0 # it does not find standard opt option
 
         elif file == 'CH4_freq.log':
-            count,NBO,pop,opt = calc_genecp(file, 'C H')
+            count,NBO,pop,opt = calc_genecp(file.split('.')[0]+'.com', 'C H')
             assert count == 0 # does not find genecp part
             assert NBO == 1 # finds final line for sp
             assert pop == 1 # finds input line for sp
