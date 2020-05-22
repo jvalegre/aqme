@@ -1567,7 +1567,6 @@ def min_after_embed(mol,cids,name,initial_confs,rotmatches,dup_data,dup_data_idx
 			GetFF.Initialize()
 			GetFF.Minimize(maxIts=args.opt_steps_RDKit)
 			energy = GetFF.CalcEnergy()
-
 			# rotate the embedded conformation onto the core_mol:
 			rdMolAlign.AlignMol(mol, mol_template, prbCid=conf,refCid=-1,atomMap=alg_Map,reflect=True,maxIters=100)
 			cenergy.append(energy)
@@ -1582,7 +1581,9 @@ def min_after_embed(mol,cids,name,initial_confs,rotmatches,dup_data,dup_data_idx
 		pmol = PropertyMol.PropertyMol(mol)
 		outmols.append(pmol)
 		bar.next()
+
 	bar.finish()
+	#With idoinde- true
 
 	for i, cid in enumerate(cids):
 		outmols[cid].SetProp('_Name', name + ' conformer ' + str(i+1))
@@ -1953,47 +1954,50 @@ def mult_min(name, args, program,log,dup_data,dup_data_idx):
 		log.write("\n\no  Multiple minimization of "+ name+args.output+ " with "+ program)
 	bar = IncrementalBar('o  Minimizing', max = len(inmols))
 
+	mol_objects_opt = []
 	for i,mol in enumerate(inmols):
 		bar.next()
 		conf = 1
 		if mol is not None:
 			# optimize this structure and record the energy
 			mol, converged, energy = optimize(mol, args, program,log,dup_data,dup_data_idx)
-
-			if globmin == None:
-				globmin = energy
-			if energy < globmin:
-				globmin = energy
-
-			if converged == 0 and abs(energy - globmin) < args.ewin: # comparison in kcal/mol
-				unique = 0
-
-				# compare against all previous conformers located
-				for j,seenmol in enumerate(outmols):
-					if abs(energy - c_energy[j]) < args.initial_energy_threshold: # comparison in kcal/mol
-						unique += 1
-						n_dup_energy += 1
-						break
-
-					if abs(energy - c_energy[j]) < args.energy_threshold: # comparison in kcal/mol
-						rms = get_conf_RMS(mol, seenmol, 0, 0, args.heavyonly, args.max_matches_RMSD,log)
-						if rms < args.rms_threshold:
-							unique += 1
-							n_dup_rms_eng += 1
-							break
-
-				if unique == 0:
-					pmol = PropertyMol.PropertyMol(mol)
-					outmols.append(pmol)
-					c_converged.append(converged)
-					c_energy.append(energy)
-					conf += 1
-			else:
-				n_high += 1
+			mol_objects_opt.append([mol,energy,converged])
 		else:
 			pass #log.write("No molecules to optimize")
-
 	bar.finish()
+
+	#sorted according to energy
+	sortedmols = sorted(mol_objects_opt,key=lambda x: x[1])
+	print(sortedmols)
+	globmin = sortedmols[0][1]
+	print(globmin)
+	for i,s_mol in enumerate(sortedmols):
+		if s_mol[2] == 0 and abs(s_mol[1] - globmin) < args.ewin: # comparison in kcal/mol
+			unique = 0
+
+			# compare against all previous conformers located
+			for j,seenmol in enumerate(outmols):
+				if abs(s_mol[1] - c_energy[j]) < args.initial_energy_threshold: # comparison in kcal/mol
+					unique += 1
+					n_dup_energy += 1
+					break
+
+				if abs(s_mol[1] - c_energy[j]) < args.energy_threshold: # comparison in kcal/mol
+					rms = get_conf_RMS(mol, seenmol, 0, 0, args.heavyonly, args.max_matches_RMSD,log)
+					if rms < args.rms_threshold:
+						unique += 1
+						n_dup_rms_eng += 1
+						break
+
+			if unique == 0:
+				pmol = PropertyMol.PropertyMol(mol)
+				outmols.append(pmol)
+				c_converged.append(converged)
+				c_energy.append(energy)
+				conf += 1
+		else:
+			n_high += 1
+
 	if args.verbose:
 		log.write("o  "+str( n_dup_energy)+ " Duplicates removed initial energy (E < "+str(args.initial_energy_threshold)+" kcal/mol)")
 	if args.verbose:
