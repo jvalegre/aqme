@@ -1968,9 +1968,7 @@ def mult_min(name, args, program,log,dup_data,dup_data_idx):
 
 	#sorted according to energy
 	sortedmols = sorted(mol_objects_opt,key=lambda x: x[1])
-	print(sortedmols)
 	globmin = sortedmols[0][1]
-	print(globmin)
 	for i,s_mol in enumerate(sortedmols):
 		if s_mol[2] == 0 and abs(s_mol[1] - globmin) < args.ewin: # comparison in kcal/mol
 			unique = 0
