@@ -1590,7 +1590,18 @@ def min_after_embed(mol,cids,name,initial_confs,rotmatches,dup_data,dup_data_idx
 		outmols[cid].SetProp('Energy', cenergy[cid])
 
 	cids = list(range(len(outmols)))
-	sortedcids = sorted(cids,key = lambda cid: cenergy[cid])
+	sorted_all_cids = sorted(cids,key = lambda cid: cenergy[cid])
+
+	sortedcids,nhigh_rdkit=[],0
+	for i,cid in enumerate(sorted_all_cids):
+		if i == 0:
+			cenergy_min = cenergy[cid]
+		if abs(cenergy[cid] - cenergy_min) < args.ewin_rdkit:
+			sortedcids.append(cid)
+		else:
+			nhigh_rdkit +=1
+	if args.verbose:
+		log.write("o  "+str(nhigh_rdkit)+ "  Conformers rejected based on energy (E > "+str(args.ewin_rdkit)+" kcal/mol)")
 
 	log.write("\n\no  Filters after intial embedding of "+str(initial_confs)+" conformers")
 	selectedcids,selectedcids_initial, eng_dup,eng_rms_dup =[],[],-1,-1
@@ -1966,7 +1977,7 @@ def mult_min(name, args, program,log,dup_data,dup_data_idx):
 			if energy < globmin:
 				globmin = energy
 
-			if converged == 0 and abs(energy - globmin) < args.ewin: # comparison in kcal/mol
+			if converged == 0 and abs(energy - globmin) < args.ewin_min: # comparison in kcal/mol
 				unique = 0
 
 				# compare against all previous conformers located
@@ -2000,7 +2011,7 @@ def mult_min(name, args, program,log,dup_data,dup_data_idx):
 	if args.verbose:
 		log.write("o  "+str( n_dup_rms_eng)+ " Duplicates removed (RMSD < "+str(args.rms_threshold)+" / E < "+str(args.energy_threshold)+" kcal/mol)")
 	if args.verbose:
-		log.write("o  "+str( n_high)+ " Conformers rejected based on energy (E > "+str(args.ewin)+" kcal/mol)")
+		log.write("o  "+str( n_high)+ " Conformers rejected based on energy (E > "+str(args.ewin_min)+" kcal/mol)")
 
 	# if SQM energy exists, overwrite RDKIT energies and geometries
 	cids = list(range(len(outmols)))

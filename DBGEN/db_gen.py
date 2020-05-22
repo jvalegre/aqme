@@ -80,7 +80,8 @@ def parser_args():
 	#argumets for conformer generation
 	parser.add_argument("--ANI1ccx", "--ani", action="store_true",default=False, help="request ANI1ccx optimizations")
 	parser.add_argument("--xtb", action="store_true",default=False, help="request xtb optimizations")
-	parser.add_argument("--ewin", action="store",default=40.0, help="energy window to print conformers (kJ/mol)", type=float)
+	parser.add_argument("--ewin_min", action="store",default=40.0, help="energy window to print conformers for minimization using xTB or ANI1ccx (kcal/mol)", type=float)
+	parser.add_argument("--ewin_rdkit", action="store",default=40.0, help="energy window to print conformers for RDKit (kcal/mol)", type=float)
 	parser.add_argument("--opt_fmax", action="store",default=0.05, help="fmax value used in xTB and AN1 optimizations", type=float)
 	parser.add_argument("--opt_steps", action="store",default=1000, help="max cycles used in xTB and AN1 optimizations", type=int)
 	parser.add_argument("--opt_steps_RDKit", action="store",default=1000, help="max cycles used in RDKit optimizations", type=int)
