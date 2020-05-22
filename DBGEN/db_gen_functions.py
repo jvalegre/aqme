@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+
 """##################################################.
 # This file stores all the functions used by db_gen #
 ##################################################"""
@@ -17,7 +18,6 @@ from rdkit.Chem import AllChem as Chem
 from rdkit.Chem import rdMolTransforms, PropertyMol, rdDistGeom, rdMolAlign, Lipinski, Descriptors
 from rdkit.Geometry import Point3D
 from progress.bar import IncrementalBar
-from operator import itemgetter, attrgetter
 
 # imports for xTB and ANI1
 try:
@@ -241,7 +241,6 @@ def template_embed_sp(molecule,temp,name_input,args,log):
 				for atom in mol_1.GetAtoms():
 					if atom.GetIdx() == 4 and metal_site == 0:
 						atom.SetAtomicNum(14)
-						center_temp = atom.GetIdx()
 						metal_site = 1
 					if atom.GetIdx() == 0 and site_1 == 0:
 						atom.SetAtomicNum(neighbours[0].GetAtomicNum())
@@ -335,7 +334,6 @@ def template_embed_sp(molecule,temp,name_input,args,log):
 						if atom.GetIdx()  == 5 and metal_site == 0:
 							atom.SetAtomicNum(14)
 							atom.SetFormalCharge(1)
-							center_temp = atom.GetIdx()
 							metal_site = 1
 						if k!= 0:
 							if atom.GetIdx()  == 1 and site_1 == 0:
@@ -555,7 +553,7 @@ def exp_rules_output(mol, args,log):
 			if len(ligand_atoms) == 3:
 				for i,_ in enumerate(ligand_atoms):
 					if not stop:
-						for j, lig_atmo_j in enumerate(ligand_atoms):
+						for j,_ in enumerate(ligand_atoms):
 							# the i<=j part avoids repeating atoms, the i != j part avoid angles
 							# containing the same number twice (i.e. 4-16-4, this angle will fail)
 							if i <= j and i != j:

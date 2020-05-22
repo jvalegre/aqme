@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+
 """.####################################################################################.
 #########################################################################################
 ###																					  ###
@@ -24,10 +25,15 @@
 .####################################################################################."""
 
 from __future__ import print_function
-import argparse, os, sys, subprocess, glob, shutil, time
+import argparse
+import os
+import sys
+import subprocess
+import glob
+import time
 import pandas as pd
 from rdkit.Chem import AllChem as Chem
-from DBGEN.db_gen_functions import creation_of_dup_csv,load_from_yaml,compute_confs,clean_args,conformer_generation, substituted_mol, template_embed_sp, Logger, read_energies, write_gaussian_input_file, exp_rules_output,moving_sdf_files
+from DBGEN.db_gen_functions import creation_of_dup_csv,load_from_yaml,compute_confs,clean_args, substituted_mol, Logger, read_energies, write_gaussian_input_file, exp_rules_output,moving_sdf_files
 from DBGEN.db_gen_functions import output_analyzer, check_for_final_folder, dup_calculation, combine_files, boltz_calculation
 
 def parser_args():
@@ -196,8 +202,8 @@ def main():
 				#assigning names and smi i  each loop
 				if not args.prefix:
 					name = csv_smiles.loc[i, 'code_name']
-				else:
-					name = 'comp_'+str(m)+'_'+csv_smiles.loc[i, 'code_name']
+				# else:
+				# 	name = 'comp_'+str(m)+'_'+csv_smiles.loc[i, 'code_name']
 				smi = csv_smiles.loc[i, 'SMILES']
 				clean_args(args,ori_ff,smi)
 				compute_confs(smi,name,args,log,dup_data,counter_for_template,i,start_time)
