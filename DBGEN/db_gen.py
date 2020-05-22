@@ -180,7 +180,7 @@ def main():
 				#editing part
 				smi = toks[0]
 				clean_args(args,ori_ff,smi)
-				if args.prefix == False:
+				if not args.prefix:
 					name = ''.join(toks[1:])
 				else:
 					name = args.prefix+str(i)+'_'+''.join(toks[1:])
@@ -194,7 +194,7 @@ def main():
 			counter_for_template =0
 			for i in range(len(csv_smiles)):
 				#assigning names and smi i  each loop
-				if args.prefix == False:
+				if not args.prefix:
 					name = csv_smiles.loc[i, 'code_name']
 				else:
 					name = 'comp_'+str(m)+'_'+csv_smiles.loc[i, 'code_name']
@@ -205,8 +205,9 @@ def main():
 
 		# CDX file
 		elif os.path.splitext(args.input)[1] == '.cdx':
-				#converting to smiles from chemdraw
-			subprocess.run(['obabel', '-icdx', args.input, '-osmi', '-O', 'cdx.smi'])
+			#converting to smiles from chemdraw
+			cmd_cdx = ['obabel', '-icdx', args.input, '-osmi', '-O', 'cdx.smi']
+			subprocess.run(cmd_cdx)
 			smifile = open('cdx.smi',"r")
 
 			counter_for_template = 0
@@ -222,7 +223,7 @@ def main():
 			log.write("   ----- Applying experimental rules to write the new confs file -----")
 		### do 2 cases, for RDKit only and RDKIt+xTB
 		#grab all the gaussian files
-		if args.xtb != True and args.ANI1ccx != True:
+		if not args.xtb and not args.ANI1ccx:
 			conf_files =  glob.glob('*_rdkit.sdf')
 		elif args.xtb:
 			conf_files =  glob.glob('*_xtb.sdf')
@@ -247,10 +248,10 @@ def main():
 	if args.write_gauss:
 		if args.exp_rules:
 			conf_files =  glob.glob('*_rules.sdf')
-		#grad all the gaussian files
-		elif args.xtb != True and args.ANI1ccx != True and args.nodihedrals:
-			conf_files =  glob.glob('*_rdkit.sdf')
-		elif args.xtb != True and args.ANI1ccx != True and args.nodihedrals == False:
+		# define the SDF files to convert to COM Gaussian files
+		elif not args.xtb and not args.ANI1ccx and args.nodihedrals:
+				conf_files =  glob.glob('*_rdkit.sdf')
+		elif not args.xtb and not args.ANI1ccx and not args.nodihedrals:
 			conf_files =  glob.glob('*_rdkit_rotated.sdf')
 		elif args.xtb:
 			conf_files =  glob.glob('*_xtb.sdf')
@@ -270,7 +271,7 @@ def main():
 			for bs in args.basis_set:
 				for bs_gcp in args.basis_set_genecp_atoms:
 					# only create this directory if single point calculation is requested
-					if args.single_point ==  True:
+					if args.single_point:
 						folder = sp_dir + '/' + str(lot) + '-' + str(bs)
 						log.write("\no  PREPARING SINGLE POINT INPUTS in {}".format(folder))
 					else:
@@ -350,9 +351,8 @@ def main():
 				#check if New_Gaussian_Input_Files folder exists
 				w_dir = check_for_final_folder(w_dir,log)
 				os.chdir(w_dir)
-				cmd = args.submission_command + ' *.com'
-				if args.qsub:
-					os.system(cmd)
+				cmd_qsub = [args.submission_command, '*.com']
+				subprocess.run(cmd_qsub)
 
 	#once all files are finished are in the Finished folder
 	if args.dup:
@@ -390,7 +390,8 @@ def main():
 							boltz_calculation(val,i,log)
 						else:
 							log.write(' Files for {} are not there!'.format(i))
-					except: pass
+					except:
+						pass
 
 	if args.combine:
 		#combines the files and gives the boltzmann weighted energies

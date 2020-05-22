@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
-import os,glob
+import os
+import glob
 import pytest
 import pandas as pd
 import subprocess
@@ -95,10 +96,11 @@ def calc_genecp(file, atom):
 ])
 
 def test_confgen(folder, smiles, params_file, n_confs, prefilter_confs_rdkit, filter_confs_rdkit, E_confs, charge, dihedral, xTB_ANI1, type):
+    cmd_pyconfort = ['python', '-m', 'DBGEN', '--varfile', params_file]
     if type == 'conf_gen':
         # open right folder and run the code
         os.chdir(path+'/'+folder+'/'+smiles.split('.')[0])
-        subprocess.run(['python', '-m', 'DBGEN', '--varfile', params_file])
+        subprocess.run(cmd_pyconfort)
 
         # Retrieving the generated CSV file
         df_output = pd.read_csv(smiles.split('.')[0]+'-Duplicates Data.csv')
@@ -150,7 +152,7 @@ def test_confgen(folder, smiles, params_file, n_confs, prefilter_confs_rdkit, fi
     elif type == 'only_check':
         # open right folder and run the code
         os.chdir(path+'/'+folder+'/'+smiles.split('.')[0])
-        subprocess.run(['python', '-m', 'DBGEN', '--varfile', params_file])
+        subprocess.run(cmd_pyconfort)
         if params_file.find('_genecp_') > -1:
             os.chdir(path+'/'+folder+'/'+smiles.split('.')[0]+'/generated_gaussian_files/wb97xd-def2svp')
             file = glob.glob('*.com')[0]
@@ -166,7 +168,7 @@ def test_confgen(folder, smiles, params_file, n_confs, prefilter_confs_rdkit, fi
         # the code will move the files the first time, this 'if' avoids errors
         files = glob.glob('*.*')
         if len(files) > 0:
-            subprocess.run(['python', '-m', 'DBGEN', '--varfile', params_file])
+            subprocess.run(cmd_pyconfort)
         if smiles == 'CH4_Normal_termination.log':
             os.chdir(path+'/'+folder+'/finished')
             assert smiles in glob.glob('*.*')
@@ -196,7 +198,7 @@ def test_confgen(folder, smiles, params_file, n_confs, prefilter_confs_rdkit, fi
         os.chdir(path+'/'+folder)
         files = glob.glob('*.*')
         if len(files) > 0:
-            subprocess.run(['python', '-m', 'DBGEN', '--varfile', params_file])
+            subprocess.run(cmd_pyconfort)
         os.chdir(path+'/'+folder+'/finished/single_point_input_files/wb97xd-def2svp')
         assert len(glob.glob('*.*')) == 2
 

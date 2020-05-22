@@ -3,13 +3,20 @@
 # This file stores all the functions used by db_gen #
 ##################################################"""
 
-import math, os, sys, subprocess, glob, shutil, time,yaml
+import math
+import os
+import sys
+import subprocess
+import glob
+import shutil
+import time
+import yaml
+import numpy as np
+import pandas as pd
 from rdkit.Chem import AllChem as Chem
 from rdkit.Chem import rdMolTransforms, PropertyMol, rdDistGeom, rdMolAlign, Lipinski, Descriptors
 from rdkit.Geometry import Point3D
 from progress.bar import IncrementalBar
-import numpy as np
-import pandas as pd
 from operator import itemgetter, attrgetter
 
 # imports for xTB and ANI1
@@ -75,12 +82,14 @@ class Logger:
 
 def load_from_yaml(args,log):
 	# Variables will be updated from YAML file
-	if args.varfile != None:
+	if args.varfile is not None:
 		if os.path.exists(args.varfile):
 			if os.path.splitext(args.varfile)[1] == '.yaml':
 				log.write("\no  IMPORTING VARIABLES FROM " + args.varfile)
 				with open(args.varfile, 'r') as file:
 					param_list = yaml.load(file, Loader=yaml.FullLoader)
+	else:
+		log.write("\no  No yaml file containing parameters was found (the program might crush unless you specify the input files manually!).\n")
 	for param in param_list:
 		if hasattr(args, param):
 			if getattr(args, param) != param_list[param]:
@@ -92,19 +101,19 @@ def load_from_yaml(args,log):
 def creation_of_dup_csv(args):
 	# writing the list of DUPLICATES
 	if args.nodihedrals:
-		if args.xtb != True and args.ANI1ccx != True:
+		if not args.xtb and not args.ANI1ccx:
 			dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples', 'RDKit-energy-window', 'RDKit-energy-duplicates','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','time (seconds)','Overall charge'])
 		elif args.xtb:
 			dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples','RDKit-energy-window', 'RDKit-energy-duplicates','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','xTB-Initial-samples','xTB-energy-window','xTB-initial_energy_threshold','xTB-RMSD-and-energy-duplicates','xTB-Unique-conformers','time (seconds)','Overall charge'])
 		elif args.ANI1ccx:
 			dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples','RDKit-energy-window', 'RDKit-energy-duplicates','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','ANI1ccx-Initial-samples','ANI1ccx-energy-window','ANI1ccx-initial_energy_threshold','ANI1ccx-RMSD-and-energy-duplicates','ANI1ccx-Unique-conformers','time (seconds)','Overall charge'])
 	else:
-		if args.xtb != True and args.ANI1ccx != True:
+		if not args.xtb and not args.ANI1ccx:
 			dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples','RDKit-energy-window', 'RDKit-energy-duplicates','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','RDKIT-Rotated-conformers','RDKIT-Rotated-Unique-conformers','time (seconds)','Overall charge'])
 		elif args.xtb:
 			dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples', 'RDKit-energy-window','RDKit-energy-duplicates','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','RDKIT-Rotated-conformers','RDKIT-Rotated-Unique-conformers','xTB-Initial-samples','xTB-energy-window','xTB-initial_energy_threshold','xTB-RMSD-and-energy-duplicates','xTB-Unique-conformers','time (seconds)','Overall charge'])
 		elif args.ANI1ccx:
-				dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples','RDKit-energy-window', 'RDKit-energy-duplicates','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','RDKIT-Rotated-conformers','RDKIT-Rotated-Unique-conformers','ANI1ccx-Initial-samples','ANI1ccx-energy-window','ANI1ccx-initial_energy_threshold','ANI1ccx-RMSD-and-energy-duplicates','ANI1ccx-Unique-conformers','time (seconds)','Overall charge'])
+			dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples','RDKit-energy-window', 'RDKit-energy-duplicates','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','RDKIT-Rotated-conformers','RDKIT-Rotated-Unique-conformers','ANI1ccx-Initial-samples','ANI1ccx-energy-window','ANI1ccx-initial_energy_threshold','ANI1ccx-RMSD-and-energy-duplicates','ANI1ccx-Unique-conformers','time (seconds)','Overall charge'])
 	return dup_data
 
 # SUBSTITUTION WITH I
@@ -392,7 +401,8 @@ def template_embed_optimize(molecule_embed,mol_1,args,log):
 	# This part selects which atoms from molecule are the atoms of the core
 	try:
 		coreConf = mol_1.GetConformer(coreConfId)
-	except: pass
+	except:
+		pass
 	for k, idxI in enumerate(num_atom_match):
 		core_mol_1 = coreConf.GetAtomPosition(k)
 		coordMap[idxI] = core_mol_1
@@ -431,18 +441,18 @@ def conformer_generation(mol,name,start_time,args,log,dup_data,dup_data_idx,coor
 			gen = summ_search(mol, name,args,log,dup_data,dup_data_idx,coord_Map,alg_Map,mol_template)
 			if gen != -1:
 				if args.nodihedrals:
-					if args.ANI1ccx != False:
+					if args.ANI1ccx:
 						mult_min(name+'_'+'rdkit', args, 'ani',log,dup_data,dup_data_idx)
-					if args.xtb != False:
+					if args.xtb:
 						mult_min(name+'_'+'rdkit', args, 'xtb',log,dup_data,dup_data_idx)
 				else:
-					if args.ANI1ccx != False:
+					if args.ANI1ccx:
 						if gen != 0:
 							mult_min(name+'_'+'rdkit'+'_'+'rotated', args, 'ani',log,dup_data,dup_data_idx)
 						else:
 							log.write('\nx   No rotable dihydrals found. Using the non-rotated SDF for ANI')
 							mult_min(name+'_'+'rdkit', args, 'ani',log,dup_data,dup_data_idx)
-					if args.xtb != False:
+					if args.xtb:
 						if gen !=0:
 							mult_min(name+'_'+'rdkit'+'_'+'rotated', args, 'xtb',log,dup_data,dup_data_idx)
 						else:
@@ -511,7 +521,7 @@ def exp_rules_output(mol, args,log):
 						# This part detects the Ir-C bond and breaks it, breaking the Ph_Py ring
 						bond = mol.GetBondBetweenAtoms(atom_indexes[i], metal_idx)
 						new_mol = Chem.FragmentOnBonds(mol, [bond.GetIdx()],addDummies=True, dummyLabels=[(atom_indexes[i], metal_idx)])
-						if new_mol.GetAtomWithIdx(atom_indexes[i]).IsInRingSize(5) == True:
+						if new_mol.GetAtomWithIdx(atom_indexes[i]).IsInRingSize(5):
 							five_mem = True
 						else:
 							five_mem = False
@@ -523,19 +533,19 @@ def exp_rules_output(mol, args,log):
 						# 5-membered ring (atom.IsInRingSize(5) == False) which means that
 						# this atom was initially inside the same ligand as the
 						# parent C of atom_indexes[i])
-						if five_mem == False:
-							if new_mol.GetAtomWithIdx(atom_indexes[j]).IsInRingSize(5) == False:
+						if not five_mem:
+							if not new_mol.GetAtomWithIdx(atom_indexes[j]).IsInRingSize(5):
 								bond_2 = mol.GetBondBetweenAtoms(atom_indexes[j], metal_idx)
 								new_mol_2 = Chem.FragmentOnBonds(mol, [bond_2.GetIdx()],addDummies=True, dummyLabels=[(atom_indexes[j], metal_idx)])
 								#doing backwards as well eg. Ir N bond
-								if new_mol_2.GetAtomWithIdx(atom_indexes[i]).IsInRingSize(5) == False:
+								if not new_mol_2.GetAtomWithIdx(atom_indexes[i]).IsInRingSize(5):
 									ligand_atoms.append([atom_indexes[i],atom_indexes[j]])
 									break
 						else:
-							if new_mol.GetAtomWithIdx(atom_indexes[j]).IsInRingSize(5) == False:
+							if not new_mol.GetAtomWithIdx(atom_indexes[j]).IsInRingSize(5):
 								ligand_atoms.append([atom_indexes[i],atom_indexes[j]])
 								break
-		if passing == True:
+		if passing:
 			# This stop variable and the breaks inside the inner loops will make that if there
 			# is one angle that does not meet the criteria for valid conformers, the outter (i)
 			# and inner (j) loops will stop simultaneously (saves time since the molecule is
@@ -544,7 +554,7 @@ def exp_rules_output(mol, args,log):
 			# For complexes with 3 Ph_Py ligands:
 			if len(ligand_atoms) == 3:
 				for i,_ in enumerate(ligand_atoms):
-					if stop != True:
+					if not stop:
 						for j, lig_atmo_j in enumerate(ligand_atoms):
 							# the i<=j part avoids repeating atoms, the i != j part avoid angles
 							# containing the same number twice (i.e. 4-16-4, this angle will fail)
@@ -661,8 +671,9 @@ def header_com(name,lot,bs,bs_gcp, args, log, input_sp, input, genecp):
 def convert_sdf_to_com(path_for_file,file,com,com_low,energies,header,args):
 
 	if args.lowest_only:
-		subprocess.run(
-			  ['obabel', '-isdf', path_for_file+file, '-ocom', '-O'+com_low,'-l' , '1', '-xk', '\n'.join(header)]) #takes the lowest conformer which is the first in the file
+		command_lowest = ['obabel', '-isdf', path_for_file+file, '-ocom', '-O'+com_low,'-l' , '1', '-xk', '\n'.join(header)]
+		subprocess.run(command_lowest) #takes the lowest conformer which is the first in the file
+
 	elif args.lowest_n:
 		no_to_write = 0
 		if len(energies) != 1:
@@ -670,16 +681,16 @@ def convert_sdf_to_com(path_for_file,file,com,com_low,energies,header,args):
 				energy_diff = energies[i] - energies[0]
 				if energy_diff < args.energy_threshold_for_gaussian: # thershold is in kcal/mol and energies are in kcal/mol as well
 					no_to_write +=1
-			subprocess.run(
-				 ['obabel', '-isdf', path_for_file+file, '-f', '1', '-l' , str(no_to_write), '-osdf', '-Otemp.sdf'])
-			subprocess.run(
-				  ['obabel', '-isdf', 'temp.sdf', '-ocom', '-O'+com,'-m', '-xk', '\n'.join(header)])
+			command_n = ['obabel', '-isdf', path_for_file+file, '-f', '1', '-l' , str(no_to_write), '-osdf', '-Otemp.sdf']
+			subprocess.run(command_n)
+			command_n_2 =  ['obabel', '-isdf', 'temp.sdf', '-ocom', '-O'+com,'-m', '-xk', '\n'.join(header)]
+			subprocess.run(command_n_2)
 		else:
-			subprocess.run(
-				  ['obabel', '-isdf', path_for_file+file, '-ocom', '-O'+com,'-m', '-xk', '\n'.join(header)])
+			command_n_3 = ['obabel', '-isdf', path_for_file+file, '-ocom', '-O'+com,'-m', '-xk', '\n'.join(header)]
+			subprocess.run(command_n_3)
 	else:
-		subprocess.run(
-			  ['obabel', '-isdf', path_for_file+file, '-ocom', '-O'+com,'-m', '-xk', '\n'.join(header)])
+		command_no_lowest = ['obabel', '-isdf', path_for_file+file, '-ocom', '-O'+com,'-m', '-xk', '\n'.join(header)]
+		subprocess.run(command_no_lowest)
 
 def input_line(args):
 	#definition of input lines
@@ -786,8 +797,8 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args,log,cha
 
 			#chaanging the name of the files to the way they are in xTB Sdfs
 			#getting the title line
-			for i in range(0,len(read_lines)):
-				if len(read_lines[i].strip()) == 0:
+			for i,line in enumerate(read_lines):
+				if len(line.strip()) == 0:
 					title_line = read_lines[i+1]
 					title_line = title_line.lstrip()
 					rename_file_name = title_line.replace(" ", "_")
@@ -797,8 +808,8 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args,log,cha
 
 			#change charge and multiplicity for Octahydrasl
 			if args.metal_complex:
-				for i in range(0,len(read_lines)):
-					if len(read_lines[i].strip()) == 0:
+				for i,line in enumerate(read_lines):
+					if len(line.strip()) == 0:
 						read_lines[i+3] = str(charge_com)+' '+ str(args.complex_spin)+'\n'
 						break
 				out = open(file, 'w')
@@ -820,13 +831,13 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args,log,cha
 			if ecp_genecp_atoms and ecp_gen_atoms:
 				sys.exit("ERROR: Can't use Gen and GenECP at the same time")
 
-			for i in range(len(ecp_list)):
-				if ecp_list[i] not in (args.genecp_atoms or args.gen_atoms):
-					fileout.write(ecp_list[i]+' ')
+			for i,element_ecp in enumerate(ecp_list):
+				if element_ecp not in (args.genecp_atoms or args.gen_atoms):
+					fileout.write(element_ecp+' ')
 			fileout.write('0\n')
 			fileout.write(bs+'\n')
 			fileout.write('****\n')
-			if ecp_genecp_atoms == False and ecp_gen_atoms == False :
+			if not ecp_genecp_atoms and not ecp_gen_atoms:
 				fileout.write('\n')
 			else:
 				if len(bs_gcp.split('.')) > 1:
@@ -840,18 +851,18 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args,log,cha
 							fileout.write(line)
 						fileout.write('\n\n')
 				else:
-					for i in range(len(ecp_list)):
-						if ecp_list[i] in args.genecp_atoms :
-							fileout.write(ecp_list[i]+' ')
-						elif ecp_list[i] in args.gen_atoms :
-							fileout.write(ecp_list[i]+' ')
+					for i,element_ecp in enumerate(ecp_list):
+						if element_ecp in args.genecp_atoms :
+							fileout.write(element_ecp+' ')
+						elif element_ecp in args.gen_atoms :
+							fileout.write(element_ecp+' ')
 					fileout.write('0\n')
 					fileout.write(bs_gcp+'\n')
 					fileout.write('****\n\n')
 					if ecp_genecp_atoms:
-						for i in range(len(ecp_list)):
-							if ecp_list[i] in args.genecp_atoms:
-								fileout.write(ecp_list[i]+' ')
+						for i,element_ecp in enumerate(ecp_list):
+							if element_ecp in args.genecp_atoms:
+								fileout.write(element_ecp+' ')
 						fileout.write('0\n')
 						fileout.write(bs_gcp+'\n\n')
 			fileout.close()
@@ -861,8 +872,8 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args,log,cha
 
 			#changing the name of the files to the way they are in xTB Sdfs
 			#getting the title line
-			for i in range(0,len(read_lines)):
-				if len(read_lines[i].strip()) == 0:
+			for i,line in enumerate(read_lines):
+				if len(line.strip()) == 0:
 					title_line = read_lines[i+1]
 					title_line = title_line.lstrip()
 					rename_file_name = title_line.replace(" ", "_")
@@ -885,14 +896,15 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args,log,cha
 
 		#submitting the gaussian file on summit
 		if args.qsub:
-			os.system(args.submission_command + rename_file_name)
+			cmd_qsub = [args.submission_command, rename_file_name]
+			subprocess.run(cmd_qsub)
 
 	os.chdir(path_for_file)
 
 # CHECKS THE FOLDER OF FINAL LOG FILES
 def check_for_final_folder(w_dir,log):
 	dir_found = False
-	while dir_found == False:
+	while not dir_found:
 		temp_dir = w_dir+'/new_gaussian_input_files'
 		if os.path.isdir(temp_dir):
 			w_dir = temp_dir
@@ -924,16 +936,16 @@ def check_for_gen_or_genecp(ATOMTYPES,args):
 	# Options for genecp
 	ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp = [],False,False,None
 
-	for i in range(len(ATOMTYPES)):
-		if ATOMTYPES[i] not in ecp_list and ATOMTYPES[i] in possible_atoms:
-			ecp_list.append(ATOMTYPES[i])
-		if ATOMTYPES[i] in args.genecp_atoms:
+	for i,atomtype in enumerate(ATOMTYPES):
+		if atomtype not in ecp_list and atomtype in possible_atoms:
+			ecp_list.append(atomtype)
+		if atomtype in args.genecp_atoms:
 		   ecp_genecp_atoms = True
-		if ATOMTYPES[i] in args.gen_atoms:
+		if atomtype in args.gen_atoms:
 		   ecp_gen_atoms = True
-	if ecp_gen_atoms == True:
+	if ecp_gen_atoms:
 		genecp = 'gen'
-	if ecp_genecp_atoms == True:
+	if ecp_genecp_atoms:
 		genecp = 'genecp'
 
 	return ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp
@@ -951,13 +963,13 @@ def new_com_file(file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTES
 		fileout.write("\n")
 	fileout.write("\n")
 	if genecp == 'genecp' or  genecp == 'gen':
-		for i in range(len(ecp_list)):
-			if ecp_list[i] not in (args.genecp_atoms or args.gen_atoms):
-				fileout.write(ecp_list[i]+' ')
+		for i,element_ecp in enumerate(ecp_list):
+			if element_ecp not in (args.genecp_atoms or args.gen_atoms):
+				fileout.write(element_ecp+' ')
 		fileout.write('0\n')
 		fileout.write(bs_com+'\n')
 		fileout.write('****\n')
-		if ecp_genecp_atoms == False and ecp_gen_atoms == False :
+		if not ecp_genecp_atoms and not ecp_gen_atoms:
 			fileout.write('\n')
 		else:
 			if len(bs_gcp_com.split('.')) > 1:
@@ -971,18 +983,18 @@ def new_com_file(file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTES
 						fileout.write(line)
 					fileout.write('\n\n')
 			else:
-				for i in range(len(ecp_list)):
-					if ecp_list[i] in args.genecp_atoms :
-						fileout.write(ecp_list[i]+' ')
-					elif ecp_list[i] in args.gen_atoms :
-						fileout.write(ecp_list[i]+' ')
+				for i,element_ecp in enumerate(ecp_list):
+					if element_ecp in args.genecp_atoms :
+						fileout.write(element_ecp+' ')
+					elif element_ecp in args.gen_atoms :
+						fileout.write(element_ecp+' ')
 				fileout.write('0\n')
 				fileout.write(bs_gcp_com+'\n')
 				fileout.write('****\n\n')
 				if ecp_genecp_atoms:
-					for i in range(len(ecp_list)):
-						if ecp_list[i] in args.genecp_atoms:
-							fileout.write(ecp_list[i]+' ')
+					for i,element_ecp in enumerate(ecp_list):
+						if element_ecp in args.genecp_atoms:
+							fileout.write(element_ecp+' ')
 					fileout.write('0\n')
 					fileout.write(bs_gcp_com+'\n\n')
 				if args.sp and TERMINATION == "normal" and IM_FREQS == 0:
@@ -1020,17 +1032,17 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin,log):
 		stop_name,stop_term=0,0
 
 		# only for name an and charge
-		for i in range(0,len(outlines)):
+		for i,outline in enumerate(outlines):
 			if stop_name == 2:
 				break
 			# Get the name of the compound (specified in the title)
-			if outlines[i].find('Symbolic Z-matrix:') > -1:
+			if outline.find('Symbolic Z-matrix:') > -1:
 				name = outlines[i-2]
 				stop_name=stop_name+1
 			# Determine charge and multiplicity
-			if outlines[i].find("Charge = ") > -1:
-				CHARGE = int(outlines[i].split()[2])
-				MULT = int(outlines[i].split()[5].rstrip("\n"))
+			if outline.find("Charge = ") > -1:
+				CHARGE = int(outline.split()[2])
+				MULT = int(outline.split()[5].rstrip("\n"))
 				stop_name=stop_name+1
 
 		#Change to reverse for termination
@@ -1068,14 +1080,14 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin,log):
 					#log.write(NATOMS)
 					stop_get_details_stand_or += 1
 
-		for i in range(0,len(outlines)):
+		for i,outline in enumerate(outlines):
 			# Get the frequencies and identifies negative frequencies
-			if outlines[i].find(" Frequencies -- ") > -1:
-				nfreqs = len(outlines[i].split())
+			if outline.find(" Frequencies -- ") > -1:
+				nfreqs = len(outline.split())
 				for j in range(2, nfreqs):
-					FREQS.append(float(outlines[i].split()[j]))
+					FREQS.append(float(outline.split()[j]))
 					NORMALMODE.append([])
-					if float(outlines[i].split()[j]) < 0.0:
+					if float(outline.split()[j]) < 0.0:
 						IM_FREQS += 1
 				for j in range(3, nfreqs+1):
 					REDMASS.append(float(outlines[i+1].split()[j]))
@@ -1285,15 +1297,15 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin,log):
 
 # CALCULATION OF BOLTZMANN FACTORS
 def boltz_calculation(val,i,log):
-	#need to have good vibes
-	cmd = 'python' +  ' -m' + ' goodvibes' + ' --csv' + ' --boltz ' +'--output ' + str(i) + ' ' + val
-	os.system(cmd)
+	# GoodVibes must be installed as a module (through pip or conda)
+	cmd_boltz = ['python','-m', 'goodvibes', '--csv', '--boltz', '--output', str(i), val]
+	subprocess.run(cmd_boltz)
 
 # CHECKING FOR DUPLICATES
 def dup_calculation(val,w_dir, agrs,log):
-	#need to have good vibes
-	cmd = 'python' +  ' -m' + ' goodvibes' + ' --dup ' + ' ' + val + '>' + ' ' + 'duplicate_files_checked.txt'
-	os.system(cmd)
+	# GoodVibes must be installed as a module (through pip or conda)
+	cmd_dup = ['python', '-m', 'goodvibes', '--dup', val, '>', 'duplicate_files_checked.txt']
+	subprocess.run(cmd_dup)
 
 	#reading the txt files to get the DUPLICATES
 	dup_file_list = []
@@ -1413,7 +1425,7 @@ def getDihedralMatches(mol, heavy,log):
 				if mol.GetAtomWithIdx(a).GetSymbol() != 'H' and mol.GetAtomWithIdx(d).GetSymbol() != 'H':
 					seen.add((b,c))
 					uniqmatches.append((a,b,c,d))
-			if heavy != True:
+			if not heavy:
 				if mol.GetAtomWithIdx(c).GetSymbol() == 'C' and mol.GetAtomWithIdx(d).GetSymbol() == 'H':
 					pass
 				else:
@@ -1435,12 +1447,9 @@ def genConformer_r(mol, conf, i, matches, degree, sdwriter,args,name,log):
 		sdwriter.write(mol,conf)
 		return 1
 	else:
-		#log.write(str(i)+'starting new else writing')
-		#incr = math.pi*degree / 180.0
 		total = 0
 		deg = 0
 		while deg < 360.0:
-			#log.write(matches[i])
 			rad = math.pi*deg / 180.0
 			rdMolTransforms.SetDihedralRad(mol.GetConformer(conf),*matches[i],value=rad)
 			#recalculating energies after rotation
@@ -1509,7 +1518,7 @@ def rules_get_charge(mol,args,log):
 		return charge
 
 def embed_conf(mol,initial_confs,args,log,coord_Map,alg_Map, mol_template):
-	if coord_Map == None and alg_Map == None and mol_template == None:
+	if coord_Map is None and alg_Map is None and mol_template is None:
 		cids = rdDistGeom.EmbedMultipleConfs(mol, initial_confs,ignoreSmoothingFailures=True, randomSeed=args.seed,numThreads = 0)
 		if len(cids) == 0 or len(cids) == 1 and initial_confs != 1:
 			log.write("o  Normal RDKit embeding process failed, trying to generate conformers with random coordinates (with "+str(initial_confs)+" possibilities)")
@@ -1532,7 +1541,7 @@ def min_after_embed(mol,cids,name,initial_confs,rotmatches,dup_data,dup_data_idx
 	cenergy,outmols = [],[]
 	bar = IncrementalBar('o  Minimizing', max = len(cids))
 	for i, conf in enumerate(cids):
-		if coord_Map == None and alg_Map == None and mol_template == None:
+		if coord_Map is None and alg_Map is None and mol_template is None:
 			if args.ff == "MMFF":
 				GetFF = Chem.MMFFGetMoleculeForceField(mol, Chem.MMFFGetMoleculeProperties(mol),confId=conf)
 			elif args.ff == "UFF":
@@ -1546,7 +1555,7 @@ def min_after_embed(mol,cids,name,initial_confs,rotmatches,dup_data,dup_data_idx
 			energy = GetFF.CalcEnergy()
 			cenergy.append(GetFF.CalcEnergy())
 
-		#id template realign before doing calculations
+		# id template realign before doing calculations
 		else:
 			num_atom_match = mol.GetSubstructMatch(mol_template)
 			# Force field parameters
@@ -1583,7 +1592,6 @@ def min_after_embed(mol,cids,name,initial_confs,rotmatches,dup_data,dup_data_idx
 		bar.next()
 
 	bar.finish()
-	#With idoinde- true
 
 	for i, cid in enumerate(cids):
 		outmols[cid].SetProp('_Name', name + ' conformer ' + str(i+1))
@@ -1621,7 +1629,7 @@ def min_after_embed(mol,cids,name,initial_confs,rotmatches,dup_data,dup_data_idx
 				eng_dup += 1
 				excluded_conf = True
 				break
-		if excluded_conf == False:
+		if not excluded_conf:
 			if conf not in selectedcids_initial:
 				selectedcids_initial.append(conf)
 		bar.next()
@@ -1656,7 +1664,7 @@ def min_after_embed(mol,cids,name,initial_confs,rotmatches,dup_data,dup_data_idx
 					excluded_conf = True
 					eng_rms_dup += 1
 					break
-		if excluded_conf == False:
+		if not excluded_conf:
 			if conf not in selectedcids:
 				selectedcids.append(conf)
 		bar.next()
@@ -1671,7 +1679,7 @@ def min_after_embed(mol,cids,name,initial_confs,rotmatches,dup_data,dup_data_idx
 	dup_data.at[dup_data_idx, 'RDKit-RMSD-and-energy-duplicates'] = eng_rms_dup
 	dup_data.at[dup_data_idx, 'RDKIT-Unique-conformers'] = len(selectedcids)
 
-	#writing charges after RDKIT
+	# writing charges after RDKIT
 	args.charge = rules_get_charge(mol,args,log)
 	dup_data.at[dup_data_idx, 'Overall charge'] = np.sum(args.charge)
 
@@ -1685,7 +1693,6 @@ def min_after_embed(mol,cids,name,initial_confs,rotmatches,dup_data,dup_data_idx
 
 	total = 0
 	for conf in selectedcids:
-		#log.write(outmols[conf])
 		total += genConformer_r(outmols[conf], conf, 0, rotmatches, args.degree, sdwriter ,args,outmols[conf].GetProp('_Name'),log)
 		bar.next()
 	bar.finish()
@@ -1723,7 +1730,6 @@ def filter_after_rotation(args,name,log,dup_data,dup_data_idx):
 						re_symbol = args.metal_sym[args.metal_idx.index(atom.GetIdx())]
 						atomic_number = possible_atoms.index(re_symbol)
 						atom.SetAtomicNum(atomic_number)
-			#sdwriter_rd.write(mol_rd)
 			writer_mol_objects.append([mol_rd,float(mol_rd.GetProp('Energy'))])
 		# Only the first ID gets included
 		rd_count = 1
@@ -1739,7 +1745,7 @@ def filter_after_rotation(args,name,log,dup_data,dup_data_idx):
 					excluded_conf = True
 					rd_dup_rms_eng += 1
 					break
-		if excluded_conf == False:
+		if not excluded_conf:
 			if rd_mol_i not in rd_selectedcids:
 				rd_selectedcids.append(rd_mol_i)
 				if args.metal_complex:
@@ -1748,12 +1754,11 @@ def filter_after_rotation(args,name,log,dup_data,dup_data_idx):
 							re_symbol = args.metal_sym[args.metal_idx.index(atom.GetIdx())]
 							atomic_number = possible_atoms.index(re_symbol)
 							atom.SetAtomicNum(atomic_number)
-				#sdwriter_rd.write(mol_rd)
 				writer_mol_objects.append([mol_rd,float(mol_rd.GetProp('Energy'))] )
 		bar.next()
 	bar.finish()
 
-	#writing sorted mol objects
+	# writing sorted mol objects
 	sdwriter_rd = Chem.SDWriter(name+'_'+'rdkit'+'_'+'rotated'+args.output)
 	sortedmols = sorted(writer_mol_objects,key=lambda x: x[1])
 	for i, write_mol in enumerate(sortedmols):
@@ -1768,7 +1773,7 @@ def filter_after_rotation(args,name,log,dup_data,dup_data_idx):
 	if args.verbose:
 		log.write("o  "+str(len(rd_selectedcids) )+ " unique conformers remain")
 
-	#filtering process after rotations
+	# filtering process after rotations
 	dup_data.at[dup_data_idx, 'RDKIT-Rotated-Unique-conformers'] = len(rd_selectedcids)
 
 	status = 1
@@ -1780,7 +1785,7 @@ def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None,alg_M
 	sdwriter = Chem.SDWriter(name+'_'+'rdkit'+args.output)
 
 	Chem.SanitizeMol(mol)
-	if coord_Map == None and alg_Map == None and mol_template == None:
+	if coord_Map is None and alg_Map is None and mol_template is None:
 		mol = Chem.AddHs(mol)
 	mol.SetProp("_Name",name)
 
@@ -1800,7 +1805,7 @@ def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None,alg_M
 
 	else:
 		dup_data.at[dup_data_idx, 'RDKIT-Initial-samples'] = initial_confs
-		if args.nodihedrals == True:
+		if args.nodihedrals:
 			rotmatches =[]
 		cids = embed_conf(mol,initial_confs,args,log,coord_Map,alg_Map, mol_template)
 		#energy minimize all to get more realistic results
@@ -1809,21 +1814,18 @@ def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None,alg_M
 		for atom in mol.GetAtoms():
 			if atom.GetAtomicNum() > 36: #up to Kr for MMFF, if not the code will use UFF
 				args.ff = "UFF"
-				#log.write("UFF is used because there are atoms that MMFF doesn't recognise")
 		if args.verbose:
 			log.write("o  Optimizing "+ str(len(cids))+ " initial conformers with "+ args.ff)
 		if args.verbose:
-			if args.nodihedrals == False:
+			if not args.nodihedrals:
 				log.write("o  Found "+ str(len(rotmatches))+ " rotatable torsions")
-				# for [a,b,c,d] in rotmatches:
-				# 	log.write('  '+mol.GetAtomWithIdx(a).GetSymbol()+str(a+1)+ mol.GetAtomWithIdx(b).GetSymbol()+str(b+1)+ mol.GetAtomWithIdx(c).GetSymbol()+str(c+1)+mol.GetAtomWithIdx(d).GetSymbol()+str(d+1))
 			else:
 				log.write("o  Systematic torsion rotation is set to OFF")
 
 		status = min_after_embed(mol,cids,name,initial_confs,rotmatches,dup_data,dup_data_idx,sdwriter,args,log,coord_Map,alg_Map, mol_template)
 	sdwriter.close()
 
-	if status!= -1:
+	if status != -1:
 		#getting the energy from and mols after rotations
 		if not args.nodihedrals and len(rotmatches) != 0:
 			status = filter_after_rotation(args,name,log,dup_data,dup_data_idx)
@@ -1844,7 +1846,7 @@ def optimize(mol, args, program,log,dup_data,dup_data_idx):
 			if atom.GetSymbol() =='I':
 				atom.SetAtomicNum(1)
 
-	if args.metal_complex and args.nodihedrals == False:
+	if args.metal_complex and not args.nodihedrals:
 		for atom in mol.GetAtoms():
 			if atom.GetIdx() in args.metal_idx:
 				re_symbol = args.metal_sym[args.metal_idx.index(atom.GetIdx())]
@@ -1863,9 +1865,7 @@ def optimize(mol, args, program,log,dup_data,dup_data_idx):
 	args.charge = rules_get_charge(mol,args,log)
 	dup_data.at[dup_data_idx, 'Overall charge'] = np.sum(args.charge)
 
-
 	cartesians = mol.GetConformers()[0].GetPositions()
-
 	coordinates = torch.tensor([cartesians.tolist()], requires_grad=True, device=device)
 
 	if program == 'ani':
@@ -1874,7 +1874,7 @@ def optimize(mol, args, program,log,dup_data,dup_data_idx):
 
 		ase_molecule = ase.Atoms(elements, positions=coordinates.tolist()[0], calculator=model.ase())
 		### make a function for constraints and optimization
-		if args.constraints != None:
+		if args.constraints is not None:
 			fb = ase.constraints.FixBondLength(0, 1)
 			ase_molecule.set_distance(0,1,2.0)
 			ase_molecule.set_constraint(fb)
@@ -1885,23 +1885,20 @@ def optimize(mol, args, program,log,dup_data,dup_data_idx):
 			species_coords = ase_molecule.get_positions().tolist()
 			coordinates = torch.tensor([species_coords], requires_grad=True, device=device)
 			converged = 0
-		###############################################################################
 		# Now let's compute energy:
 		_, ani_energy = model((species, coordinates))
 		sqm_energy = ani_energy.item() * hartree_to_kcal # Hartree to kcal/mol
-		###############################################################################
 
 	elif program == 'xtb':
-
 		if args.metal_complex:
-			#passing charges metal present
+			# passing charges metal present
 			ase_molecule = ase.Atoms(elements, positions=coordinates.tolist()[0],calculator=GFN2()) #define ase molecule using GFN2 Calculator
 			if os.path.splitext(args.input)[1] == '.csv' or os.path.splitext(args.input)[1] == '.cdx' or os.path.splitext(args.input)[1] == '.smi':
 				for i,atom in enumerate(ase_molecule):
 					if i in ase_metal:
 						ase_charge = args.charge[args.metal_idx.index(ase_metal_idx[ase_metal.index(i)])]
 
-						#will update only for cdx, smi, and csv formats.
+						# will update only for cdx, smi, and csv formats.
 						atom.charge = ase_charge
 
 			else:
@@ -1916,11 +1913,9 @@ def optimize(mol, args, program,log,dup_data,dup_data_idx):
 			species_coords = ase_molecule.get_positions().tolist()
 			coordinates = torch.tensor([species_coords], requires_grad=True, device=device)
 			converged = 0
-		###############################################################################
 		# Now let's compute energy:
 		xtb_energy = ase_molecule.get_potential_energy()
 		sqm_energy = (xtb_energy / Hartree)* hartree_to_kcal
-		###############################################################################
 
 	else:
 		log.write('program not defined!')
@@ -1975,7 +1970,7 @@ def mult_min(name, args, program,log,dup_data,dup_data_idx):
 			# optimize this structure and record the energy
 			mol, converged, energy = optimize(mol, args, program,log,dup_data,dup_data_idx)
 
-			if globmin == None:
+			if globmin is None:
 				globmin = energy
 			if energy < globmin:
 				globmin = energy
@@ -2009,6 +2004,7 @@ def mult_min(name, args, program,log,dup_data,dup_data_idx):
 			pass #log.write("No molecules to optimize")
 
 	bar.finish()
+
 	if args.verbose:
 		log.write("o  "+str( n_dup_energy)+ " Duplicates removed initial energy (E < "+str(args.initial_energy_threshold)+" kcal/mol)")
 	if args.verbose:
@@ -2041,5 +2037,4 @@ def mult_min(name, args, program,log,dup_data,dup_data_idx):
 		dup_data.at[dup_data_idx, 'ANI1ccx-Unique-conformers'] = len(sortedcids)
 
 	# write the filtered, ordered conformers to external file
-
 	write_confs(outmols, c_energy, name, args, program,log)
