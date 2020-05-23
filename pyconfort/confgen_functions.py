@@ -197,7 +197,6 @@ def calc_neighbours(molecule):
 # TEMPLATE GENERATION FOR SQUAREPLANAR AND squarepyramidal
 def template_embed_sp(molecule,temp,name_input,args,log):
 	mol_objects,name_return,coord_Map,alg_Map,mol_template = [],[],[],[],[]
-
 	number_of_neighbours,center_idx = calc_neighbours(molecule)
 
 	if number_of_neighbours == 4:
@@ -536,15 +535,20 @@ def genConformer_r(mol, conf, i, matches, degree, sdwriter,args,name,log):
 			deg += degree
 		return total
 
-# AUTOMATICALLY SETS THE CHARGE FOR METAL COMPLEXES
-def rules_get_charge(mol,args,log):
+def atom_groups():
 	C_group = ['C', 'Se', 'Ge']
 	N_group = ['N', 'P', 'As']
 	O_group = ['O', 'S', 'Se']
-	Cl_group = ['Cl', 'Br', 'I']
+	F_group = ['Cl', 'Br', 'I']
 
-	charge = np.empty(len(args.metal_idx), dtype=int)
+	return C_group,N_group,O_group,F_group
+
+# AUTOMATICALLY SETS THE CHARGE FOR METAL COMPLEXES
+def rules_get_charge(mol,args,log):
+	C_group,N_group,O_group,F_group = atom_groups()
+
 	neighbours = []
+	charge = np.empty(len(args.metal_idx), dtype=int)
 	#get the neighbours of metal atom
 	for atom in mol.GetAtoms():
 		if atom.GetIdx() in args.metal_idx:
@@ -552,30 +556,24 @@ def rules_get_charge(mol,args,log):
 			neighbours = atom.GetNeighbors()
 			charge[charge_idx] = args.m_oxi[charge_idx]
 			for atom in neighbours:
-				#Carbon list
-				if atom.GetSymbol() in C_group:
-					if atom.GetTotalValence()== 4:
+				if atom.GetTotalValence()== 4:
+					if atom.GetSymbol() in C_group:
 						charge[charge_idx] = charge[charge_idx] - 1
-					elif atom.GetTotalValence()== 3:
+					elif atom.GetSymbol() in N_group:
 						charge[charge_idx] = charge[charge_idx] - 0
-				#Nitrogen list
-				elif atom.GetSymbol() in N_group:
-					if atom.GetTotalValence() == 3:
+				elif atom.GetTotalValence()== 3:
+					if atom.GetSymbol() in C_group or atom.GetSymbol() in O_group:
+						charge[charge_idx] = charge[charge_idx] - 0
+					elif atom.GetSymbol() in N_group:
 						charge[charge_idx] = charge[charge_idx] - 1
-					elif atom.GetTotalValence() == 4:
-						charge[charge_idx] = charge[charge_idx] - 0
-				#Oxygen list
-				elif atom.GetSymbol() in O_group:
-					if atom.GetTotalValence() == 2:
+				elif atom.GetTotalValence() == 2:
+					if atom.GetSymbol() in O_group:
 						charge[charge_idx] = charge[charge_idx] - 1
-					elif atom.GetTotalValence() == 3:
+					elif atom.GetSymbol() in F_group:
 						charge[charge_idx] = charge[charge_idx] - 0
-				#Halogen list
-				elif atom.GetSymbol() in Cl_group:
-					if atom.GetTotalValence() == 1:
+				elif atom.GetTotalValence() == 1:
+					if atom.GetSymbol() in F_group:
 						charge[charge_idx] = charge[charge_idx] - 1
-					elif atom.GetTotalValence() == 2:
-						charge[charge_idx] = charge[charge_idx] - 0
 	if len(neighbours) == 0:
 		#no update in charge as it is an organic molecule
 		return args.charge_default
@@ -676,9 +674,9 @@ def ewin_filter(sorted_all_cids,cenergy,args,dup_data,dup_data_idx,log,calc_type
 		if args.verbose:
 			log.write("o  "+str(nhigh)+ " conformers rejected based on energy window ewin_min (E > "+str(args.ewin_min)+" kcal/mol)")
 		if args.ANI1ccx:
-			dup_data.at[dup_data_idx, 'ANI1ccx-energy-window'] = n_high
+			dup_data.at[dup_data_idx, 'ANI1ccx-energy-window'] = nhigh
 		elif args.xtb:
-			dup_data.at[dup_data_idx, 'xTB-energy-window'] = n_high
+			dup_data.at[dup_data_idx, 'xTB-energy-window'] = nhigh
 
 	return sortedcids
 
@@ -726,9 +724,6 @@ def RMSD_and_E_filter(outmols,selectedcids_initial,cenergy,rotmatches,args,dup_d
 
 	selectedcids,eng_rms_dup = [],-1
 	for i, conf in enumerate(selectedcids_initial):
-		# set torsions to same value
-		for m in rotmatches:
-			rdMolTransforms.SetDihedralDeg(outmols[conf].GetConformer(conf),*m,180.0)
 		# This keeps track of whether or not your conformer is unique
 		excluded_conf = False
 		# include the first conformer in the list to start the filtering process
@@ -850,7 +845,6 @@ def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None,alg_M
 				args.ff = "UFF"
 		if args.verbose:
 			log.write("o  Optimizing "+ str(len(cids))+ " initial conformers with "+ args.ff)
-		if args.verbose:
 			if not args.nodihedrals:
 				log.write("o  Found "+ str(len(rotmatches))+ " rotatable torsions")
 			else:
@@ -884,12 +878,11 @@ def ani_calc(elements,cartesians,coordinates,args,log):
 	if len(ase.io.Trajectory('xTB_opt.traj', mode='r')) != (args.opt_steps+1):
 		species_coords = ase_molecule.get_positions().tolist()
 		coordinates = torch.tensor([species_coords], requires_grad=True, device=device)
-		converged = 0
 	# Now let's compute energy:
 	_, ani_energy = model((species, coordinates))
 	sqm_energy = ani_energy.item() * hartree_to_kcal # Hartree to kcal/mol
 
-	return sqm_energy, converged, coordinates
+	return sqm_energy, coordinates
 
 # xTB OPTIMIZER AND ENERGY CALCULATOR
 def xtb_calc(elements,cartesians,coordinates,args,log):
@@ -915,12 +908,11 @@ def xtb_calc(elements,cartesians,coordinates,args,log):
 	if len(ase.io.Trajectory('xTB_opt.traj', mode='r')) != (args.opt_steps+1):
 		species_coords = ase_molecule.get_positions().tolist()
 		coordinates = torch.tensor([species_coords], requires_grad=True, device=device)
-		converged = 0
 	# Now let's compute energy:
 	xtb_energy = ase_molecule.get_potential_energy()
 	sqm_energy = (xtb_energy / Hartree)* hartree_to_kcal
 
-	return sqm_energy, converged, coordinates
+	return sqm_energy, coordinates
 
 # xTB AND ANI1 MAIN OPTIMIZATION PROCESS
 def optimize(mol, args, program,log,dup_data,dup_data_idx):
@@ -957,21 +949,21 @@ def optimize(mol, args, program,log,dup_data,dup_data_idx):
 	coordinates = torch.tensor([cartesians.tolist()], requires_grad=True, device=device)
 
 	if program == 'ani':
-		sqm_energy, converged, coordinates = ani_calc(elements,cartesians,coordinates,args,log)
+		sqm_energy, coordinates = ani_calc(elements,cartesians,coordinates,args,log)
 
 	elif program == 'xtb':
-		sqm_energy, converged, coordinates = xtb_calc(elements,cartesians,coordinates,args,log)
+		sqm_energy, coordinates = xtb_calc(elements,cartesians,coordinates,args,log)
 
 	else:
 		log.write('program not defined!')
 
-	energy, converged, cartesians = sqm_energy, converged, np.array(coordinates.tolist()[0])
+	energy, cartesians = sqm_energy, np.array(coordinates.tolist()[0])
 	# update coordinates of mol object
 	for j in range(mol.GetNumAtoms()):
 		[x,y,z] = cartesians[j]
 		mol.GetConformer().SetAtomPosition(j,Point3D(x,y,z))
 
-	return mol, converged, energy
+	return mol, energy
 
 # read SDF files from RDKit optimization
 def rdkit_sdf_read(name, args, log):
@@ -986,9 +978,7 @@ def mult_min(name, args, program,log,dup_data,dup_data_idx):
 	# read SDF files from RDKit optimization
 	inmols = rdkit_sdf_read(name, args, log)
 
-	globmin, n_dup_energy, n_dup_rms_eng  = None, 0, 0
-	c_converged, c_energy, outmols = [], [], []
-
+	cenergy, outmols = [],[]
 	if args.verbose:
 		log.write("\n\no  Multiple minimization of "+ name+args.output+ " with "+ program)
 	bar = IncrementalBar('o  Minimizing', max = len(inmols))
@@ -997,21 +987,19 @@ def mult_min(name, args, program,log,dup_data,dup_data_idx):
 		bar.next()
 		if mol is not None:
 			# optimize this structure and record the energy
-			mol, converged, energy = optimize(mol, args, program,log,dup_data,dup_data_idx)
-
+			mol,energy = optimize(mol, args, program,log,dup_data,dup_data_idx)
 			pmol = PropertyMol.PropertyMol(mol)
 			outmols.append(pmol)
-			c_converged.append(converged)
-			c_energy.append(energy)
+			cenergy.append(energy)
 
 	# if SQM energy exists, overwrite RDKIT energies and geometries
 	cids = list(range(len(outmols)))
-	sorted_all_cids = sorted(cids, key = lambda cid: c_energy[cid])
+	sorted_all_cids = sorted(cids, key = lambda cid: cenergy[cid])
 
 	name_mol = name.split('_rdkit')[0]
-	for i, cid in enumerate(sortedcids):
+	for i, cid in enumerate(sorted_all_cids):
 		outmols[cid].SetProp('_Name', name_mol +' conformer ' + str(i+1))
-		outmols[cid].SetProp('Energy', c_energy[cid])
+		outmols[cid].SetProp('Energy', cenergy[cid])
 
 	log.write("\n\no  Applying filters to intial conformers")
 	# filter based on energy window ewin_rdkit
@@ -1027,4 +1015,4 @@ def mult_min(name, args, program,log,dup_data,dup_data_idx):
 		dup_data.at[dup_data_idx, 'ANI1ccx-Initial-samples'] = len(inmols)
 
 	# write the filtered, ordered conformers to external file
-	write_confs(outmols, c_energy, name, args, program,log)
+	write_confs(outmols, cenergy, name, args, program,log)

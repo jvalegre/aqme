@@ -134,7 +134,7 @@ max_torsions : 20 # Skip any molecules with more than this many torsions (defaul
 max_MolWt : 10000 # Skip any molecules with molecular weights higher than this number
 
 # DIHEDRAL PROTOCOL FOR RDKIT OPTIMIZATION (SLOW SINCE IT SCANS MANY DIHEDRALS)
-nodihedrals : True # turn to True if no dihedral scan is needed
+nodihedrals : False # turn to True if no dihedral scan is needed
 degree : 30 # amount, in degrees, to enumerate torsions if nodihedrals is False
 
 # PARAMETERS FOR RDKIT OPTIMIZATION
