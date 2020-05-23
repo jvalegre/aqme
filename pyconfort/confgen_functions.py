@@ -551,33 +551,31 @@ def rules_get_charge(mol,args,log):
 			charge_idx = args.metal_idx.index(atom.GetIdx())
 			neighbours = atom.GetNeighbors()
 			charge[charge_idx] = args.m_oxi[charge_idx]
-
 			for atom in neighbours:
 				#Carbon list
 				if atom.GetSymbol() in C_group:
 					if atom.GetTotalValence()== 4:
 						charge[charge_idx] = charge[charge_idx] - 1
-					if atom.GetTotalValence()== 3:
+					elif atom.GetTotalValence()== 3:
 						charge[charge_idx] = charge[charge_idx] - 0
 				#Nitrogen list
-				if atom.GetSymbol() in N_group:
+				elif atom.GetSymbol() in N_group:
 					if atom.GetTotalValence() == 3:
 						charge[charge_idx] = charge[charge_idx] - 1
-					if atom.GetTotalValence() == 4:
+					elif atom.GetTotalValence() == 4:
 						charge[charge_idx] = charge[charge_idx] - 0
 				#Oxygen list
-				if atom.GetSymbol() in O_group:
+				elif atom.GetSymbol() in O_group:
 					if atom.GetTotalValence() == 2:
 						charge[charge_idx] = charge[charge_idx] - 1
-					if atom.GetTotalValence() == 3:
+					elif atom.GetTotalValence() == 3:
 						charge[charge_idx] = charge[charge_idx] - 0
 				#Halogen list
-				if atom.GetSymbol() in Cl_group:
+				elif atom.GetSymbol() in Cl_group:
 					if atom.GetTotalValence() == 1:
 						charge[charge_idx] = charge[charge_idx] - 1
-					if atom.GetTotalValence() == 2:
+					elif atom.GetTotalValence() == 2:
 						charge[charge_idx] = charge[charge_idx] - 0
-
 	if len(neighbours) == 0:
 		#no update in charge as it is an organic molecule
 		return args.charge_default
@@ -653,23 +651,39 @@ def min_and_E_calc(mol,cids,args,log,coord_Map,alg_Map,mol_template):
 	return outmols,cenergy
 
 # filter based on energy window (ewin_rdkit)
-def ewin_rdkit_filter(sorted_all_cids,cenergy,args,dup_data,dup_data_idx,log):
-	sortedcids,nhigh_rdkit=[],0
-	for i,cid in enumerate(sorted_all_cids):
-		if i == 0:
-			cenergy_min = cenergy[cid]
-		if abs(cenergy[cid] - cenergy_min) < args.ewin_rdkit:
-			sortedcids.append(cid)
-		else:
-			nhigh_rdkit +=1
-	if args.verbose:
-		log.write("o  "+str(nhigh_rdkit)+ " conformers rejected based on energy window ewin_rdkit (E > "+str(args.ewin_rdkit)+" kcal/mol)")
-	dup_data.at[dup_data_idx, 'RDKit-energy-window'] = nhigh_rdkit
+def ewin_filter(sorted_all_cids,cenergy,args,dup_data,dup_data_idx,log,calc_type):
+	sortedcids,nhigh_rdkit,nhigh=[],0,0
+	if calc_type == 'rdkit':
+		for i,cid in enumerate(sorted_all_cids):
+			if i == 0:
+				cenergy_min = cenergy[cid]
+			if abs(cenergy[cid] - cenergy_min) < args.ewin_rdkit:
+				sortedcids.append(cid)
+			else:
+				nhigh_rdkit +=1
+		if args.verbose:
+			log.write("o  "+str(nhigh_rdkit)+ " conformers rejected based on energy window ewin_rdkit (E > "+str(args.ewin_rdkit)+" kcal/mol)")
+		dup_data.at[dup_data_idx, 'RDKit-energy-window'] = nhigh_rdkit
+
+	elif calc_type == 'xtb_ani':
+		for i,cid in enumerate(sorted_all_cids):
+			if i == 0:
+				cenergy_min = cenergy[cid]
+				if abs(cenergy[cid] - cenergy_min) < args.ewin_min:
+					sortedcids.append(cid)
+				else:
+					nhigh +=1
+		if args.verbose:
+			log.write("o  "+str(nhigh)+ " conformers rejected based on energy window ewin_min (E > "+str(args.ewin_min)+" kcal/mol)")
+		if args.ANI1ccx:
+			dup_data.at[dup_data_idx, 'ANI1ccx-energy-window'] = n_high
+		elif args.xtb:
+			dup_data.at[dup_data_idx, 'xTB-energy-window'] = n_high
 
 	return sortedcids
 
 # pre-energy filter for RDKit
-def pre_E_filter(sortedcids,cenergy,args,dup_data,dup_data_idx,log):
+def pre_E_filter(sortedcids,cenergy,args,dup_data,dup_data_idx,log,calc_type):
 	selectedcids_initial, eng_dup =[],-1
 	bar = IncrementalBar('o  Filtering based on energy (pre-filter)', max = len(sortedcids))
 	for i, conf in enumerate(sortedcids):
@@ -693,12 +707,19 @@ def pre_E_filter(sortedcids,cenergy,args,dup_data,dup_data_idx,log):
 
 	if args.verbose:
 		log.write("o  "+str(eng_dup)+ " duplicates removed  pre-energy filter (E < "+str(args.initial_energy_threshold)+" kcal/mol)")
-	dup_data.at[dup_data_idx, 'RDKit-energy-duplicates'] = eng_dup
+
+	if calc_type == 'rdkit':
+		dup_data.at[dup_data_idx, 'RDKit-initial_energy_threshold'] = eng_dup
+	elif calc_type == 'xtb_ani':
+		if args.ANI1ccx:
+			dup_data.at[dup_data_idx, 'ANI1ccx-initial_energy_threshold'] = eng_dup
+		elif args.xtb:
+			dup_data.at[dup_data_idx, 'xTB-initial_energy_threshold'] = eng_dup
 
 	return selectedcids_initial
 
 # filter based on energy and RMSD
-def RMSD_and_E_filter(outmols,selectedcids_initial,cenergy,rotmatches,args,dup_data,dup_data_idx,log):
+def RMSD_and_E_filter(outmols,selectedcids_initial,cenergy,rotmatches,args,dup_data,dup_data_idx,log,calc_type):
 	if args.verbose:
 		log.write("o  Removing duplicate conformers (RMSD < "+ str(args.rms_threshold)+ " and E difference < "+str(args.energy_threshold)+" kcal/mol)")
 	bar = IncrementalBar('o  Filtering based on energy and RMSD', max = len(selectedcids_initial))
@@ -734,8 +755,16 @@ def RMSD_and_E_filter(outmols,selectedcids_initial,cenergy,rotmatches,args,dup_d
 	if args.verbose:
 		log.write("o  "+ str(len(selectedcids))+" unique conformers remain")
 
-	dup_data.at[dup_data_idx, 'RDKit-RMSD-and-energy-duplicates'] = eng_rms_dup
-	dup_data.at[dup_data_idx, 'RDKIT-Unique-conformers'] = len(selectedcids)
+	if calc_type == 'rdkit':
+		dup_data.at[dup_data_idx, 'RDKit-RMSD-and-energy-duplicates'] = eng_rms_dup
+		dup_data.at[dup_data_idx, 'RDKIT-Unique-conformers'] = len(selectedcids)
+	elif calc_type == 'xtb_ani':
+		if args.ANI1ccx:
+			dup_data.at[dup_data_idx, 'ANI1ccx-RMSD-and-energy-duplicates'] = eng_rms_dup
+			dup_data.at[dup_data_idx, 'ANI1ccx-Unique-conformers'] = len(selectedcids)
+		elif args.xtb:
+			dup_data.at[dup_data_idx, 'xTB-RMSD-and-energy-duplicates'] = eng_rms_dup
+			dup_data.at[dup_data_idx, 'xTB-Unique-conformers'] = len(selectedcids)
 
 	return selectedcids
 
@@ -755,28 +784,28 @@ def min_after_embed(mol,cids,name,initial_confs,rotmatches,dup_data,dup_data_idx
 	log.write("\n\no  Applying filters to intial conformers")
 
 	# filter based on energy window ewin_rdkit
-	sortedcids = ewin_rdkit_filter(sorted_all_cids,cenergy,args,dup_data,dup_data_idx,log)
+	sortedcids_rdkit = ewin_filter(sorted_all_cids,cenergy,args,dup_data,dup_data_idx,log,'rdkit')
 
 	# pre-filter based on energy only
-	selectedcids_initial = pre_E_filter(sortedcids,cenergy,args,dup_data,dup_data_idx,log)
+	selectedcids_initial_rdkit = pre_E_filter(sortedcids_rdkit,cenergy,args,dup_data,dup_data_idx,log,'rdkit')
 
 	# filter based on energy and RMSD
-	selectedcids = RMSD_and_E_filter(outmols,selectedcids_initial,cenergy,rotmatches,args,dup_data,dup_data_idx,log)
+	selectedcids_rdkit = RMSD_and_E_filter(outmols,selectedcids_initial_rdkit,cenergy,rotmatches,args,dup_data,dup_data_idx,log,'rdkit')
 
 	# writing charges after RDKIT
 	args.charge = rules_get_charge(mol,args,log)
 	dup_data.at[dup_data_idx, 'Overall charge'] = np.sum(args.charge)
 
 	# now exhaustively drive torsions of selected conformers
-	n_confs = int(len(selectedcids) * (360 / args.degree) ** len(rotmatches))
+	n_confs = int(len(selectedcids_rdkit) * (360 / args.degree) ** len(rotmatches))
 	if args.verbose and len(rotmatches) != 0:
 		log.write("\n\no  Systematic generation of "+ str(n_confs)+ " confomers")
-		bar = IncrementalBar('o  Generating conformations based on dihedral rotation', max = len(selectedcids))
+		bar = IncrementalBar('o  Generating conformations based on dihedral rotation', max = len(selectedcids_rdkit))
 	else:
-		bar = IncrementalBar('o  Generating conformations', max = len(selectedcids))
+		bar = IncrementalBar('o  Generating conformations', max = len(selectedcids_rdkit))
 
 	total = 0
-	for conf in selectedcids:
+	for conf in selectedcids_rdkit:
 		total += genConformer_r(outmols[conf], conf, 0, rotmatches, args.degree, sdwriter ,args,outmols[conf].GetProp('_Name'),log)
 		bar.next()
 	bar.finish()
@@ -792,7 +821,6 @@ def min_after_embed(mol,cids,name,initial_confs,rotmatches,dup_data,dup_data_idx
 # EMBEDS, OPTIMIZES AND FILTERS RDKIT CONFORMERS
 def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None,alg_Map=None,mol_template=None):
 	sdwriter = Chem.SDWriter(name+'_'+'rdkit'+args.output)
-
 	Chem.SanitizeMol(mol)
 	if coord_Map is None and alg_Map is None and mol_template is None:
 		mol = Chem.AddHs(mol)
@@ -801,7 +829,6 @@ def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None,alg_M
 	# detects and applies auto-detection of initial number of conformers
 	if args.sample == 'auto':
 		initial_confs = int(auto_sampling(args.auto_sample,mol,args,log))
-
 	else:
 		initial_confs = int(args.sample)
 
@@ -811,7 +838,6 @@ def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None,alg_M
 	if len(rotmatches) > args.max_torsions:
 		log.write("x  Too many torsions (%d). Skipping %s" %(len(rotmatches),(name+args.output)))
 		status = -1
-
 	else:
 		dup_data.at[dup_data_idx, 'RDKIT-Initial-samples'] = initial_confs
 		if args.nodihedrals:
@@ -819,7 +845,6 @@ def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None,alg_M
 		cids = embed_conf(mol,initial_confs,args,log,coord_Map,alg_Map, mol_template)
 		#energy minimize all to get more realistic results
 		#identify the atoms and decide Force Field
-
 		for atom in mol.GetAtoms():
 			if atom.GetAtomicNum() > 36: #up to Kr for MMFF, if not the code will use UFF
 				args.ff = "UFF"
@@ -840,7 +865,6 @@ def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None,alg_M
 			status = filter_after_rotation(args,name,log,dup_data,dup_data_idx)
 		elif not args.nodihedrals and len(rotmatches) ==0:
 			status = 0
-
 	return status
 
 # ANI1 OPTIMIZER AND ENERGY CALCULATOR
@@ -898,7 +922,7 @@ def xtb_calc(elements,cartesians,coordinates,args,log):
 
 	return sqm_energy, converged, coordinates
 
-# xTB AND ANI1 OPTIMIZATIONS
+# xTB AND ANI1 MAIN OPTIMIZATION PROCESS
 def optimize(mol, args, program,log,dup_data,dup_data_idx):
 	# if large system increase stack size
 	if args.large_sys:
@@ -949,14 +973,20 @@ def optimize(mol, args, program,log,dup_data,dup_data_idx):
 
 	return mol, converged, energy
 
-# xTB AND ANI1 OPTIMIZATION, FILTER AND WRITING SDF FILES
-def mult_min(name, args, program,log,dup_data,dup_data_idx):
+# read SDF files from RDKit optimization
+def rdkit_sdf_read(name, args, log):
 	inmols = Chem.SDMolSupplier(name+args.output, removeHs=False)
 	if inmols is None:
 		log.write("Could not open "+ name+args.output)
 		sys.exit(-1)
+	return inmols
 
-	globmin, n_high,n_dup_energy, n_dup_rms_eng  = None, 0, 0, 0
+# READ FILES FOR xTB AND ANI1 OPTIMIZATION, FILTER AND WRITING SDF FILES
+def mult_min(name, args, program,log,dup_data,dup_data_idx):
+	# read SDF files from RDKit optimization
+	inmols = rdkit_sdf_read(name, args, log)
+
+	globmin, n_dup_energy, n_dup_rms_eng  = None, 0, 0
 	c_converged, c_energy, outmols = [], [], []
 
 	if args.verbose:
@@ -965,76 +995,36 @@ def mult_min(name, args, program,log,dup_data,dup_data_idx):
 
 	for i,mol in enumerate(inmols):
 		bar.next()
-		conf = 1
 		if mol is not None:
 			# optimize this structure and record the energy
 			mol, converged, energy = optimize(mol, args, program,log,dup_data,dup_data_idx)
 
-			if globmin is None:
-				globmin = energy
-			if energy < globmin:
-				globmin = energy
-
-			if converged == 0 and abs(energy - globmin) < args.ewin_min: # comparison in kcal/mol
-				unique = 0
-
-				# compare against all previous conformers located
-				for j,seenmol in enumerate(outmols):
-					if abs(energy - c_energy[j]) < args.initial_energy_threshold: # comparison in kcal/mol
-						unique += 1
-						n_dup_energy += 1
-						break
-
-					if abs(energy - c_energy[j]) < args.energy_threshold: # comparison in kcal/mol
-						rms = get_conf_RMS(mol, seenmol, 0, 0, args.heavyonly, args.max_matches_RMSD,log)
-						if rms < args.rms_threshold:
-							unique += 1
-							n_dup_rms_eng += 1
-							break
-
-				if unique == 0:
-					pmol = PropertyMol.PropertyMol(mol)
-					outmols.append(pmol)
-					c_converged.append(converged)
-					c_energy.append(energy)
-					conf += 1
-			else:
-				n_high += 1
-		else:
-			pass #log.write("No molecules to optimize")
-
-	bar.finish()
-
-	if args.verbose:
-		log.write("o  "+str( n_dup_energy)+ " duplicates removed initial energy (E < "+str(args.initial_energy_threshold)+" kcal/mol)")
-	if args.verbose:
-		log.write("o  "+str( n_dup_rms_eng)+ " duplicates removed (RMSD < "+str(args.rms_threshold)+" / E < "+str(args.energy_threshold)+" kcal/mol)")
-	if args.verbose:
-		log.write("o  "+str( n_high)+ " conformers rejected based on energy (E > "+str(args.ewin_min)+" kcal/mol)")
+			pmol = PropertyMol.PropertyMol(mol)
+			outmols.append(pmol)
+			c_converged.append(converged)
+			c_energy.append(energy)
 
 	# if SQM energy exists, overwrite RDKIT energies and geometries
 	cids = list(range(len(outmols)))
-	sortedcids = sorted(cids, key = lambda cid: c_energy[cid])
+	sorted_all_cids = sorted(cids, key = lambda cid: c_energy[cid])
 
 	name_mol = name.split('_rdkit')[0]
-
 	for i, cid in enumerate(sortedcids):
 		outmols[cid].SetProp('_Name', name_mol +' conformer ' + str(i+1))
 		outmols[cid].SetProp('Energy', c_energy[cid])
 
+	log.write("\n\no  Applying filters to intial conformers")
+	# filter based on energy window ewin_rdkit
+	sortedcids = ewin_filter(sorted_all_cids,cenergy,args,dup_data,dup_data_idx,log,'xtb_ani')
+	# pre-filter based on energy only
+	selectedcids_initial = pre_E_filter(sortedcids,cenergy,args,dup_data,dup_data_idx,log,'xtb_ani')
+	# filter based on energy and RMSD
+	selectedcids = RMSD_and_E_filter(outmols,selectedcids_initial,cenergy,rotmatches,args,dup_data,dup_data_idx,log,'xtb_ani')
+
 	if program == 'xtb':
 		dup_data.at[dup_data_idx, 'xTB-Initial-samples'] = len(inmols)
-		dup_data.at[dup_data_idx, 'xTB-energy-window'] = n_high
-		dup_data.at[dup_data_idx, 'xTB-initial_energy_threshold'] = n_dup_energy
-		dup_data.at[dup_data_idx, 'xTB-RMSD-and-energy-duplicates'] = n_dup_rms_eng
-		dup_data.at[dup_data_idx, 'xTB-Unique-conformers'] = len(sortedcids)
-
 	if program == 'ani':
 		dup_data.at[dup_data_idx, 'ANI1ccx-Initial-samples'] = len(inmols)
-		dup_data.at[dup_data_idx, 'ANI1ccx-energy-window'] = n_high
-		dup_data.at[dup_data_idx, 'ANI1ccx-initial_energy_threshold'] = n_dup_energy
-		dup_data.at[dup_data_idx, 'ANI1ccx-RMSD-and-energy-duplicates'] = n_dup_rms_eng
-		dup_data.at[dup_data_idx, 'ANI1ccx-Unique-conformers'] = len(sortedcids)
 
 	# write the filtered, ordered conformers to external file
 	write_confs(outmols, c_energy, name, args, program,log)
