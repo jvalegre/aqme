@@ -15,6 +15,9 @@ import shutil
 import yaml
 import pandas as pd
 from rdkit.Chem import AllChem as Chem
+from pyconfort.argument_parser import possible_atoms
+
+possible_atoms = possible_atoms()
 
 # CLASS FOR LOGGING
 class Logger:
@@ -397,3 +400,64 @@ def write_confs(conformers, energies, name, args, program,log):
 		sdwriter.close()
 	else:
 		log.write("x  No conformers found!")
+
+# PARSES THE ENERGIES FROM SDF FILES
+def read_energies(file,log): # parses the energies from sdf files - then used to filter conformers
+	energies = []
+	f = open(file,"r")
+	readlines = f.readlines()
+	for i,_ in enumerate(readlines):
+		if readlines[i].find('>  <Energy>') > -1:
+			energies.append(float(readlines[i+1].split()[0]))
+	f.close()
+	return energies
+
+def write_gauss_main(args,log):
+	if args.exp_rules:
+		conf_files =  glob.glob('*_rules.sdf')
+	# define the SDF files to convert to COM Gaussian files
+	elif not args.xtb and not args.ANI1ccx and args.nodihedrals:
+			conf_files =  glob.glob('*_rdkit.sdf')
+	elif not args.xtb and not args.ANI1ccx and not args.nodihedrals:
+		conf_files =  glob.glob('*_rdkit_rotated.sdf')
+	elif args.xtb:
+		conf_files =  glob.glob('*_xtb.sdf')
+	elif args.ANI1ccx:
+		conf_files =  glob.glob('*_ani.sdf')
+	else:
+		conf_files =  glob.glob('*.sdf')
+
+	# names for directories created
+	sp_dir = 'generated_sp_files'
+	g_dir = 'generated_gaussian_files'
+
+	#read in dup_data to get the overall charge of MOLECULES
+	charge_data = pd.read_csv(args.input.split('.')[0]+'-Duplicates Data.csv', usecols=['Molecule','Overall charge'])
+
+	for lot in args.level_of_theory:
+		for bs in args.basis_set:
+			for bs_gcp in args.basis_set_genecp_atoms:
+				# only create this directory if single point calculation is requested
+				if args.single_point:
+					folder = sp_dir + '/' + str(lot) + '-' + str(bs)
+					log.write("\no  PREPARING SINGLE POINT INPUTS in {}".format(folder))
+				else:
+					folder = g_dir + '/' + str(lot) + '-' + str(bs)
+					log.write("\no  Preparing Gaussian COM files in {}".format(folder))
+				try:
+					os.makedirs(folder)
+				except OSError:
+					if os.path.isdir(folder):
+						pass
+					else:
+						raise
+				# writing the com files
+				# check conf_file exists, parse energies and then write dft input
+				for file in conf_files:
+					if os.path.exists(file):
+						if args.verbose:
+							log.write("   -> Converting from {}".format(file))
+						energies = read_energies(file,log)
+						name = os.path.splitext(file)[0]
+
+						write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args,log,charge_data)

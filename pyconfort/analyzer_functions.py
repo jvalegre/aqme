@@ -11,7 +11,10 @@ import subprocess
 import shutil
 import numpy as np
 import pandas as pd
-from pyconfort.writers import input_line
+from pyconfort.writer_functions import input_line
+from pyconfort.argument_parser import possible_atoms
+
+possible_atoms = possible_atoms()
 
 def moving_log_files(source, destination, file):
 	try:
@@ -434,6 +437,7 @@ def dup_calculation(val,w_dir, agrs,log):
 
 # COMBINING FILES FOR DIFFERENT MOLECULES
 def combine_files(csv_files, lot, bs, args,log):
+	columns = ['Structure', 'E', 'ZPE', 'H', 'T.S', 'T.qh-S', 'G(T)', 'qh-G(T)']
 	#final dataframe with only the boltzmann averaged values
 	final_file_avg_thermo_data = pd.DataFrame(columns=columns)
 	compare_G = pd.DataFrame(columns=['Structure_of_min_conf','min_qh-G(T)','boltz_avg_qh-G(T)'])
