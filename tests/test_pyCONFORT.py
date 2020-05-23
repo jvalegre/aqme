@@ -96,7 +96,7 @@ def calc_genecp(file, atom):
 ])
 
 def test_confgen(folder, smiles, params_file, n_confs, prefilter_confs_rdkit, filter_confs_rdkit, E_confs, charge, dihedral, xTB_ANI1, type):
-    cmd_pyconfort = ['python', '-m', 'DBGEN', '--varfile', params_file]
+    cmd_pyconfort = ['python', '-m', 'pyconfort', '--varfile', params_file]
     if type == 'conf_gen':
         # open right folder and run the code
         os.chdir(path+'/'+folder+'/'+smiles.split('.')[0])
@@ -104,7 +104,6 @@ def test_confgen(folder, smiles, params_file, n_confs, prefilter_confs_rdkit, fi
 
         # Retrieving the generated CSV file
         df_output = pd.read_csv(smiles.split('.')[0]+'-Duplicates Data.csv')
-
         file = params_file.split('.')[0]
 
         # tests for RDKit

@@ -9,14 +9,14 @@ with io.open(path.join(this_directory, 'README.md'), encoding='utf-8') as f:
 
 setup(
   name='pyconfort',
-  packages=['DBGEN'],
-  version='1.0.0',
+  packages=['pyconfort'],
+  version='1.0.1',
   license='MIT',
   description='Python-based conformer generation and post-processing of DFT output files',
   long_description=long_description,
   long_description_content_type='text/markdown',
   author='Shree Sowndarya S. V., Juan V. Alegre Requena, Robert S. Paton',
-  author_email='svss@colostate.edu',
+  author_email='svss@colostate.edu, juanvi89@hotmail.com',
   keywords=['conformers', 'cheminformatics', 'computational chemistry', 'metal complexes', 'DFT'],
   url = 'https://github.com/jvalegre/RotaConfort',
   download_url = 'https://github.com/jvalegre/RotaConfort/archive/v_1.0.tar.gz',

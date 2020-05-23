@@ -12,7 +12,7 @@
 ###  																				  ###
 #########################################################################################
 ###  																				  ###
-###  Version: v1.0, Release date: 24-April-2020										  ###
+###  Version: v1.0.1, Release date: 22-May-2020								     	  ###
 ###  																				  ###
 #########################################################################################
 ###  																				  ###
@@ -33,16 +33,17 @@ import glob
 import time
 import pandas as pd
 from rdkit.Chem import AllChem as Chem
-from DBGEN.db_gen_functions import creation_of_dup_csv,load_from_yaml,compute_confs,clean_args, substituted_mol, Logger, read_energies, write_gaussian_input_file, exp_rules_output,moving_sdf_files
-from DBGEN.db_gen_functions import output_analyzer, check_for_final_folder, dup_calculation, combine_files, boltz_calculation
+from pyconfort.confgen_functions import compute_confs, clean_args, substituted_mol, read_energies, exp_rules_output
+from pyconfort.analyzer_functions import output_analyzer, check_for_final_folder, dup_calculation, combine_files, boltz_calculation
+from pyconfort.writers import creation_of_dup_csv, load_from_yaml, Logger, write_gaussian_input_file, moving_sdf_files
 
 def parser_args():
-	parser = argparse.ArgumentParser(description="Generate conformers depending on type of optimization (change parameters in db_gen_PATHS.py file).")
+	parser = argparse.ArgumentParser(description="Generate conformers depending on type of optimization (change parameters in the params yaml file).")
 
 	#Input details
 	parser.add_argument("--varfile", dest="varfile", default=None, help="Parameters in YAML format")
 	parser.add_argument("-i", "--input", help="File containing molecular structure(s)",dest="input", default=" ")
-	parser.add_argument("--output_name", dest="output_name", default="output", metavar="output_name", help="Change output filename to DBGEN_\"output\".dat")
+	parser.add_argument("--output_name", dest="output_name", default="output", metavar="output_name", help="Change output filename to pyCONFORT_\"output\".dat")
 	parser.add_argument("--output", dest="output", default=".sdf", metavar="output", help="The extension of the SDF files written")
 
 	#metal complex
@@ -154,7 +155,7 @@ def main():
 
 	args = parser_args()
 	# Define the logging object
-	log = Logger("DBGEN", args.output_name)
+	log = Logger("pyCONFORT", args.output_name)
 	#time
 	start_time = time.time()
 	#if needed to load from a yaml file
