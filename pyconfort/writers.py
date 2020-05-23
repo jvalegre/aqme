@@ -14,6 +14,7 @@ import glob
 import shutil
 import yaml
 import pandas as pd
+from rdkit.Chem import AllChem as Chem
 
 # CLASS FOR LOGGING
 class Logger:

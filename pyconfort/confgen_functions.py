@@ -14,7 +14,6 @@ import shutil
 import time
 import yaml
 import numpy as np
-import pandas as pd
 from rdkit.Chem import AllChem as Chem
 from rdkit.Chem import rdMolTransforms, PropertyMol, rdDistGeom, rdMolAlign, Lipinski, Descriptors
 from rdkit.Geometry import Point3D
