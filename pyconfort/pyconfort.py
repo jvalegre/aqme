@@ -26,16 +26,13 @@
 
 from __future__ import print_function
 import os
-import sys
 import subprocess
 import glob
 import time
-import pandas as pd
-from rdkit.Chem import AllChem as Chem
 from pyconfort.argument_parser import parser_args
-from pyconfort.confgen_functions import compute_main, compute_confs, clean_args, substituted_mol
+from pyconfort.confgen_functions import compute_main, clean_args, substituted_mol
 from pyconfort.analyzer_functions import output_analyzer, check_for_final_folder, dup_calculation, combine_files, boltz_calculation
-from pyconfort.writer_functions import creation_of_dup_csv, load_from_yaml, Logger, write_gaussian_input_file, moving_sdf_files, write_gauss_main
+from pyconfort.writer_functions import creation_of_dup_csv, load_from_yaml, Logger, moving_sdf_files, write_gauss_main
 from pyconfort.filter_functions import exp_rules_main
 
 def main():

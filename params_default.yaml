@@ -34,7 +34,7 @@ charge_default : 0 #used to write the default if cannot be calculated for metal 
 # (2) TYPE OF OPTIMIZATION
 # Options: xTB, ANI1ccx (if True is selected).  Default : RDKit optimizaiton
 ANI1ccx : False
-xtb : False
+xtb : True
 
 # (3) RDKit AND xTB PARAMETERS
 ewin : 1000 #energy window in kcal/mol to use conformers for RDKit and xTB (conformers with E higher than ewin will be discarded)
