@@ -164,6 +164,7 @@ def test_confgen(folder, smiles, params_file, n_confs, prefilter_confs_rdkit, fi
 
     elif type == 'analysis':
         os.chdir(path+'/'+folder)
+        print(os.getcwd())
         # the code will move the files the first time, this 'if' avoids errors
         files = glob.glob('*.*')
         if len(files) > 0:
