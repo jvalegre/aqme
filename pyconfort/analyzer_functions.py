@@ -9,6 +9,7 @@ import os
 import sys
 import subprocess
 import shutil
+import glob
 import numpy as np
 import pandas as pd
 from pyconfort.writer_functions import input_line
