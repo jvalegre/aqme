@@ -25,9 +25,6 @@
 .####################################################################################."""
 
 from __future__ import print_function
-import os
-import subprocess
-import glob
 import time
 from pyconfort.argument_parser import parser_args
 from pyconfort.confgen_functions import compute_main, qsub_main

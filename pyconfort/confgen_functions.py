@@ -9,13 +9,11 @@ import math
 import os
 import sys
 import subprocess
-import glob
-import shutil
 import time
-import yaml
 import numpy as np
+import pandas as pd
 from rdkit.Chem import AllChem as Chem
-from rdkit.Chem import rdMolTransforms, PropertyMol, rdDistGeom, rdMolAlign, Lipinski, Descriptors
+from rdkit.Chem import rdMolTransforms, PropertyMol, rdDistGeom, rdMolAlign, Lipinski
 from rdkit.Geometry import Point3D
 from progress.bar import IncrementalBar
 from pyconfort.writer_functions import write_confs
@@ -181,7 +179,7 @@ def compute_confs(smi, name,args,log,dup_data,counter_for_template,i,start_time)
 		conformer_generation(mol,name,start_time,args,log,dup_data,i)
 
 # GET NUMBER OF NEIGHBOURS OF THE METAL CENTER
-def calc_neighbours(molecule):
+def calc_neighbours(molecule,args):
 	for atom in molecule.GetAtoms():
 		if atom.GetIdx() in args.metal_idx:
 			if len(atom.GetBonds()) == 5:
@@ -198,7 +196,7 @@ def calc_neighbours(molecule):
 # TEMPLATE GENERATION FOR SQUAREPLANAR AND squarepyramidal
 def template_embed_sp(molecule,temp,name_input,args,log):
 	mol_objects,name_return,coord_Map,alg_Map,mol_template = [],[],[],[],[]
-	number_of_neighbours,center_idx = calc_neighbours(molecule)
+	number_of_neighbours,center_idx = calc_neighbours(molecule,args)
 
 	if number_of_neighbours == 4:
 		#three cases for square planar
@@ -529,8 +527,7 @@ def genConformer_r(mol, conf, i, matches, degree, sdwriter,args,name,log):
 				sys.exit()
 			GetFF.Initialize()
 			GetFF.Minimize(maxIts=args.opt_steps_RDKit)
-			energy = GetFF.CalcEnergy()
-			mol.SetProp("Energy",energy)
+			mol.SetProp("Energy",GetFF.CalcEnergy())
 			mol.SetProp('_Name',name)
 			total += genConformer_r(mol, conf, i+1, matches, degree, sdwriter,args,name,log)
 			deg += degree
@@ -615,7 +612,6 @@ def min_and_E_calc(mol,cids,args,log,coord_Map,alg_Map,mol_template):
 				sys.exit()
 			GetFF.Initialize()
 			GetFF.Minimize(maxIts=args.opt_steps_RDKit)
-			energy = GetFF.CalcEnergy()
 			cenergy.append(GetFF.CalcEnergy())
 
 		# id template realign before doing calculations
