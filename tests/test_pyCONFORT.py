@@ -109,7 +109,7 @@ def test_confgen(folder, smiles, params_file, n_confs, prefilter_confs_rdkit, fi
         # tests for RDKit
         if not dihedral:
             test_init_rdkit_confs = df_output['RDKIT-Initial-samples']
-            test_prefilter_rdkit_confs = df_output['RDKit-energy-duplicates']
+            test_prefilter_rdkit_confs = df_output['RDKit-initial_energy_threshold']
             test_filter_rdkit_confs = df_output['RDKit-RMSD-and-energy-duplicates']
 
             assert str(n_confs) == str(test_init_rdkit_confs[0])
