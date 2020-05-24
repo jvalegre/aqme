@@ -16,6 +16,52 @@ from pyconfort.argument_parser import possible_atoms
 
 possible_atoms = possible_atoms()
 
+# main part of the analysis functions
+def analysis_main(args,log):
+	# when you run analysis in a folder full of output files
+	if args.path == '':
+		log_files = glob.glob('*.log')+glob.glob('*.LOG')+glob.glob('*.out')+glob.glob('*.OUT')
+		w_dir = os.getcwd()
+		w_dir_fin = w_dir+'/finished'
+		for lot in args.level_of_theory:
+			for bs in args.basis_set:
+				for bs_gcp in args.basis_set_genecp_atoms:
+					output_analyzer(log_files, w_dir, lot, bs, bs_gcp, args, w_dir_fin,log)
+
+	# when you specify multiple levels of theory
+	else:
+		# Sets the folder and find the log files to analyze
+		for lot in args.level_of_theory:
+			for bs in args.basis_set:
+				for bs_gcp in args.basis_set_genecp_atoms:
+					w_dir = args.path + str(lot) + '-' + str(bs)
+					#check if New_Gaussian_Input_Files folder exists
+					w_dir = check_for_final_folder(w_dir,log)
+					#assign the path to the finished directory.
+					w_dir_fin = args.path + str(lot) + '-' + str(bs) +'/finished'
+					#log.write(w_dir)
+					os.chdir(w_dir)
+					#log.write(w_dir)
+					log_files = glob.glob('*.log')+glob.glob('*.LOG')+glob.glob('*.out')+glob.glob('*.OUT')
+					output_analyzer(log_files, w_dir, lot, bs, bs_gcp, args, w_dir_fin, log)
+
+def dup_main(args,log):
+	# Sets the folder and find the log files to analyze
+	for lot in args.level_of_theory:
+		for bs in args.basis_set:
+			w_dir = args.path + str(lot) + '-' + str(bs) +'/'+'finished'
+			os.chdir(w_dir)
+			#can change molecules to a range as files will have codes in a continous manner
+			try:
+				log_files = glob.glob('*.log')
+				if len(log_files) != 0:
+					val = ' '.join(log_files)
+					dup_calculation(val,w_dir,args,log)
+				else:
+					log.write(' Files for are not there!')
+			except:
+				pass
+
 def moving_log_files(source, destination, file):
 	try:
 		os.makedirs(destination)
@@ -493,3 +539,32 @@ def combine_files(csv_files, lot, bs, args,log):
 	final_file_all_data.to_csv( str(lot) + '-' + str(bs) + '_all_molecules_all data.csv', index=False, encoding='utf-8-sig')
 	final_file_avg_thermo_data.to_csv( str(lot) + '-' + str(bs) + '_all_molecules_avg_thermo_data.csv', index=False, encoding='utf-8-sig')
 	compare_G.to_csv( str(lot) + '-' + str(bs) + '_all_molecules_compare_G(T).csv', index=False, encoding='utf-8-sig')
+
+def boltz_main(args,log):
+	# Sets the folder and find the log files to analyze
+	for lot in args.level_of_theory:
+		for bs in args.basis_set:
+			w_dir = args.path + str(lot) + '-' + str(bs) +'/'+'finished'
+			os.chdir(w_dir)
+			#can change molecules to a range as files will have codes in a continous manner
+			for i in range(args.maxnumber):
+				#grab all the corresponding files make sure to renamme prefix when working with differnet files
+				try:
+					log_files = glob.glob('RE' + '_' + str(i)+'_'+'confs_low.log')
+					if len(log_files) != 0:
+						val = ' '.join(log_files)
+						boltz_calculation(val,i,log)
+					else:
+						log.write(' Files for {} are not there!'.format(i))
+				except:
+					pass
+
+def combine_main(args,log):
+	# combines the files and gives the boltzmann weighted energies
+	for lot in args.level_of_theory:
+		for bs in args.basis_set:
+			w_dir = args.path + str(lot) + '-' + str(bs) + '/finished'
+			os.chdir(w_dir)
+			#read the csv log_files
+			csv_files = glob.glob('Goodvibes*.csv')
+			combine_files(csv_files, lot, bs, args, log)

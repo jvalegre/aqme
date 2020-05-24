@@ -30,9 +30,9 @@ import subprocess
 import glob
 import time
 from pyconfort.argument_parser import parser_args
-from pyconfort.confgen_functions import compute_main, clean_args, substituted_mol
-from pyconfort.analyzer_functions import output_analyzer, check_for_final_folder, dup_calculation, combine_files, boltz_calculation
-from pyconfort.writer_functions import creation_of_dup_csv, load_from_yaml, Logger, moving_sdf_files, write_gauss_main
+from pyconfort.confgen_functions import compute_main, qsub_main
+from pyconfort.analyzer_functions import analysis_main, dup_main, boltz_main, combine_main
+from pyconfort.writer_functions import creation_of_dup_csv, load_from_yaml, Logger, write_gauss_main, move_sdf_main
 from pyconfort.filter_functions import exp_rules_main
 
 def main():
@@ -56,117 +56,31 @@ def main():
 	if args.exp_rules:
 		exp_rules_main(args,log)
 
+	# main part for writing COM files from SDF files
 	if args.write_gauss:
 		write_gauss_main(args,log)
 
-	#moving files after compute and write_gauss or only after compute
-	#moving all the sdf files to a separate folder after writing gaussian files
-	src = os.getcwd()
-	if args.xtb:
-		all_xtb_conf_files = glob.glob('*_xtb.sdf')
-		destination_xtb = src +'/xtb_minimised_generated_sdf_files'
-		for file in all_xtb_conf_files:
-			moving_sdf_files(destination_xtb ,src,file)
-	elif args.ANI1ccx:
-		all_ani_conf_files = glob.glob('*_ani.sdf')
-		destination_ani = src +'/ani1ccx_minimised_generated_sdf_files'
-		for file in all_ani_conf_files:
-			moving_sdf_files(destination_ani,src,file)
-	else:
-		all_name_conf_files = glob.glob('*rdkit*.sdf')
-		destination_rdkit = 'rdkit_generated_sdf_files'
-		for file in all_name_conf_files:
-			moving_sdf_files(destination_rdkit,src,file)
+	# moving files after compute and/or write_gauss
+	move_sdf_main(args)
 
+	# main part of the analysis functions
 	if args.analysis:
-		# adding in for general analysis
-		# need to specify the lot, bs as arguments for each analysis
-		if args.path == '':
-			log_files = glob.glob('*.LOG'.lower())+glob.glob('*.LOG')
-			w_dir = os.getcwd()
-			w_dir_fin = w_dir+'/finished'
-			for lot in args.level_of_theory:
-				for bs in args.basis_set:
-					for bs_gcp in args.basis_set_genecp_atoms:
-							output_analyzer(log_files, w_dir, lot, bs, bs_gcp, args, w_dir_fin,log)
+		analysis_main(args,log)
 
-		#taking the path
-		else:
-			# Sets the folder and find the log files to analyze
-			for lot in args.level_of_theory:
-				for bs in args.basis_set:
-					for bs_gcp in args.basis_set_genecp_atoms:
-						w_dir = args.path + str(lot) + '-' + str(bs)
-						#check if New_Gaussian_Input_Files folder exists
-						w_dir = check_for_final_folder(w_dir,log)
-						#assign the path to the finished directory.
-						w_dir_fin = args.path + str(lot) + '-' + str(bs) +'/finished'
-						#log.write(w_dir)
-						os.chdir(w_dir)
-						#log.write(w_dir)
-						log_files = glob.glob('*.log')+glob.glob('*.LOG')
-						output_analyzer(log_files, w_dir, lot, bs, bs_gcp, args, w_dir_fin,log)
-
-	#adding the part to check for resubmission of the newly created gaussian files.
-	if args.qsub:
-		#chceck if ech level of theory has a folder New gaussin FILES
-		for lot in args.level_of_theory:
-			for bs in args.basis_set:
-				w_dir = args.path + str(lot) + '-' + str(bs) +'/'
-				#check if New_Gaussian_Input_Files folder exists
-				w_dir = check_for_final_folder(w_dir,log)
-				os.chdir(w_dir)
-				cmd_qsub = [args.submission_command, '*.com']
-				subprocess.run(cmd_qsub)
-
-	#once all files are finished are in the Finished folder
+	# main part of the duplicate function
 	if args.dup:
-		# Sets the folder and find the log files to analyze
-		for lot in args.level_of_theory:
-			for bs in args.basis_set:
-				w_dir = args.path + str(lot) + '-' + str(bs) +'/'+'finished'
-				os.chdir(w_dir)
-				#can change molecules to a range as files will have codes in a continous manner
-				try:
-					log_files = glob.glob('*.log')
-					if len(log_files) != 0:
-						val = ' '.join(log_files)
-						dup_calculation(val,w_dir,args,log)
-					else:
-						log.write(' Files for are not there!')
-
-				except:
-					pass
+		dup_main(args,log)
 
 	#once all files are finished are in the Finished folder
 	if args.boltz:
-		# Sets the folder and find the log files to analyze
-		for lot in args.level_of_theory:
-			for bs in args.basis_set:
-				w_dir = args.path + str(lot) + '-' + str(bs) +'/'+'finished'
-				os.chdir(w_dir)
-				#can change molecules to a range as files will have codes in a continous manner
-				for i in range(args.maxnumber):
-					#grab all the corresponding files make sure to renamme prefix when working with differnet files
-					try:
-						log_files = glob.glob('RE' + '_' + str(i)+'_'+'confs_low.log')
-						if len(log_files) != 0:
-							val = ' '.join(log_files)
-							boltz_calculation(val,i,log)
-						else:
-							log.write(' Files for {} are not there!'.format(i))
-					except:
-						pass
+		boltz_main(args,log)
 
 	if args.combine:
-		#combines the files and gives the boltzmann weighted energies
-		for lot in args.level_of_theory:
-			for bs in args.basis_set:
-				w_dir = args.path + str(lot) + '-' + str(bs) + '/finished'
-				os.chdir(w_dir)
-				#read the csv log_files
-				csv_files = glob.glob('Goodvibes*.csv')
-				combine_files(csv_files, lot, bs, args,log)
+		combine_main(args,log)
+
+	# main part of the automated workflow (submission of COM files and analyzer)
+	if args.qsub:
+		qsub_main(args,log)
 
 if __name__ == "__main__":
 	main()

@@ -21,6 +21,7 @@ from progress.bar import IncrementalBar
 from pyconfort.writer_functions import write_confs
 from pyconfort.filter_functions import filters,filter_after_rotation,get_conf_RMS
 from pyconfort.argument_parser import possible_atoms
+from pyconfort.analyzer_functions import check_for_final_folder
 
 # imports for xTB and ANI1
 try:
@@ -1016,3 +1017,14 @@ def mult_min(name, args, program,log,dup_data,dup_data_idx):
 
 	# write the filtered, ordered conformers to external file
 	write_confs(outmols, cenergy, name, args, program,log)
+
+def qsub_main(args,log):
+	#chceck if ech level of theory has a folder New gaussin FILES
+	for lot in args.level_of_theory:
+		for bs in args.basis_set:
+			w_dir = args.path + str(lot) + '-' + str(bs) +'/'
+			#check if New_Gaussian_Input_Files folder exists
+			w_dir = check_for_final_folder(w_dir,log)
+			os.chdir(w_dir)
+			cmd_qsub = [args.submission_command, '*.com']
+			subprocess.run(cmd_qsub)

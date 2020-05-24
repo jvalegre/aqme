@@ -461,3 +461,22 @@ def write_gauss_main(args,log):
 						name = os.path.splitext(file)[0]
 
 						write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args,log,charge_data)
+
+# moving files after compute and/or write_gauss
+def move_sdf_main(args):
+	src = os.getcwd()
+	if args.xtb:
+		all_xtb_conf_files = glob.glob('*_xtb.sdf')
+		destination_xtb = src +'/xtb_minimised_generated_sdf_files'
+		for file in all_xtb_conf_files:
+			moving_sdf_files(destination_xtb,src,file)
+	elif args.ANI1ccx:
+		all_ani_conf_files = glob.glob('*_ani.sdf')
+		destination_ani = src +'/ani1ccx_minimised_generated_sdf_files'
+		for file in all_ani_conf_files:
+			moving_sdf_files(destination_ani,src,file)
+	else:
+		all_name_conf_files = glob.glob('*_rdkit*.sdf')
+		destination_rdkit = 'rdkit_generated_sdf_files'
+		for file in all_name_conf_files:
+			moving_sdf_files(destination_rdkit,src,file)
