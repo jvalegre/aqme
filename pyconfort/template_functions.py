@@ -73,7 +73,7 @@ def four_embed(molecule,mol_1,number_of_neighbours,center_idx,neighbours_ret,nam
 			check=filter_template_mol(molecule_new, mol_objects,args,log)
 			if check:
 				#writing to mol_object file
-				name_final = name_input + str(name)
+				name_final = name_input +'_'+ str(name)
 				mol_objects.append(molecule_new)
 				name_return.append(name_final)
 				coord_Map.append(coordMap)
@@ -171,9 +171,9 @@ def five_embed(molecule,mol_1,number_of_neighbours,center_idx,neighbours_ret,nam
 			if ci>=0:
 				check=filter_template_mol(molecule_new, mol_objects,args,log)
 				if check:
-					name =  str(name_1)+ str(name_2)
+					name =  str(name_1)+'_'+ str(name_2)
 					#writing to mol_object file
-					name_final = name_input + name
+					name_final = name_input +'_'+name
 					mol_objects.append(molecule_new)
 					name_return.append(name_final)
 					coord_Map.append(coordMap)
@@ -283,7 +283,7 @@ def template_embed_optimize(molecule_embed,mol_1,args,log):
 		coordMap[idxI] = core_mol_1
 
 	ci = rdDistGeom.EmbedMolecule(molecule_embed, coordMap=coordMap, randomSeed=randomseed)
-	
+
 	if ci < 0:
 		log.write('Could not embed molecule.')
 		coordMap = None
