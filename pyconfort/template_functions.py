@@ -5,7 +5,7 @@
 # 	  used in template based conformer generation		#
 .#####################################################"""
 from rdkit.Chem import AllChem as Chem
-from rdkit.Chem import PropertyMol, rdDistGeom, rdMolAlign, Lipinski
+from rdkit.Chem import rdDistGeom, rdMolAlign
 from pyconfort.filter_functions import get_conf_RMS
 
 
