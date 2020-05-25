@@ -27,6 +27,8 @@ def analysis_main(args,log):
 		for lot in args.level_of_theory:
 			for bs in args.basis_set:
 				for bs_gcp in args.basis_set_genecp_atoms:
+					folder = w_dir
+					log.write("\no  ANALYZING OUTPUT FILES IN {}\n".format(folder))
 					output_analyzer(log_files, w_dir, lot, bs, bs_gcp, args, w_dir_fin,log)
 
 	# when you specify multiple levels of theory
@@ -44,6 +46,8 @@ def analysis_main(args,log):
 					os.chdir(w_dir)
 					#log.write(w_dir)
 					log_files = glob.glob('*.log')+glob.glob('*.LOG')+glob.glob('*.out')+glob.glob('*.OUT')
+					folder = w_dir + '/' + str(lot) + '-' + str(bs)
+					log.write("\no  ANALYZING OUTPUT FILES IN {}\n".format(folder))
 					output_analyzer(log_files, w_dir, lot, bs, bs_gcp, args, w_dir_fin, log)
 
 def dup_main(args,log):
@@ -207,6 +211,7 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin,log):
 		###reverse
 		stop_get_details_stand_or = 0
 		stop_get_details_dis_rot = 0
+		#start_for_freq_line = 0
 		for i in reversed(range(0,len(outlines))):
 			if TERMINATION == "normal":
 				if stop_get_details_stand_or == 1 and stop_get_details_dis_rot == 1:
@@ -222,6 +227,9 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin,log):
 					NATOMS = disrotor-i-6
 					#log.write(NATOMS)
 					stop_get_details_stand_or += 1
+				# if outlines[i].find("Harmonic frequencies ") > -1:
+				# 	start_for_freq_line = i
+
 
 		for i,outline in enumerate(outlines):
 			# Get the frequencies and identifies negative frequencies
@@ -357,7 +365,8 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin,log):
 				else:
 					raise
 			os.chdir(new_gaussian_input_files)
-			#log.write('-> Creating new gaussian input files for {0} in {1}/{2}'.format(name,lot,bs))
+
+			log.write('-> Creating new gaussian input files for {0} in {1}/{2}\n'.format(file,lot,bs))
 
 			ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp =  check_for_gen_or_genecp(ATOMTYPES,args)
 
@@ -400,7 +409,7 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin,log):
 			for lot_sp in args.level_of_theory_sp:
 				for bs_sp in args.basis_set_sp:
 					for bs_gcp_sp in args.basis_set_genecp_atoms_sp:
-						#log.write('Creating new single point files files for {0} in {1}/{2}'.format(name,lot_sp,bs_sp))
+						log.write('-> Creating new single point files files for {0} in {1}/{2}\n'.format(file,lot_sp,bs_sp))
 						folder = single_point_input_files + '/' + str(lot_sp) + '-' + str(bs_sp)
 						try:
 							os.makedirs(folder)
