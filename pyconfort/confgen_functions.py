@@ -12,7 +12,6 @@ import subprocess
 import time
 import numpy as np
 import pandas as pd
-import glob
 from rdkit.Chem import AllChem as Chem
 from rdkit.Chem import rdMolTransforms, PropertyMol, rdDistGeom, rdMolAlign, Lipinski
 from rdkit.Geometry import Point3D
@@ -640,7 +639,7 @@ def ani_calc(elements,cartesians,coordinates,args,log):
 	return sqm_energy, coordinates
 
 # xTB OPTIMIZER AND ENERGY CALCULATOR
-def xtb_calc(elements,cartesians,coordinates,args,log):
+def xtb_calc(elements,cartesians,coordinates,args,log,ase_metal,ase_metal_idx):
 	if args.metal_complex:
 		# passing charges metal present
 		ase_molecule = ase.Atoms(elements, positions=coordinates.tolist()[0],calculator=GFN2()) #define ase molecule using GFN2 Calculator
@@ -648,7 +647,6 @@ def xtb_calc(elements,cartesians,coordinates,args,log):
 			for i,atom in enumerate(ase_molecule):
 				if i in ase_metal:
 					ase_charge = args.charge[args.metal_idx.index(ase_metal_idx[ase_metal.index(i)])]
-
 					# will update only for cdx, smi, and csv formats.
 					atom.charge = ase_charge
 
@@ -703,7 +701,7 @@ def optimize(mol, args, program,log,dup_data,dup_data_idx):
 		sqm_energy, coordinates = ani_calc(elements,cartesians,coordinates,args,log)
 
 	elif program == 'xtb':
-		sqm_energy, coordinates = xtb_calc(elements,cartesians,coordinates,args,log)
+		sqm_energy, coordinates = xtb_calc(elements,cartesians,coordinates,args,log,ase_metal,ase_metal_idx)
 
 	else:
 		log.write('program not defined!')
