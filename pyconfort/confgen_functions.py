@@ -12,6 +12,7 @@ import subprocess
 import time
 import numpy as np
 import pandas as pd
+import glob
 from rdkit.Chem import AllChem as Chem
 from rdkit.Chem import rdMolTransforms, PropertyMol, rdDistGeom, rdMolAlign, Lipinski
 from rdkit.Geometry import Point3D
@@ -160,12 +161,18 @@ def compute_confs(smi, name,args,log,dup_data,counter_for_template,i,start_time)
 
 	if args.metal_complex:
 		# get manually for square planar and squarepyramidal
-		if args.complex_type == 'squareplanar' or args.complex_type == 'squarepyramidal':
+		if args.complex_type == 'squareplanar' or args.complex_type == 'squarepyramidal' or args.complex_type == 'linear' or args.complex_type == 'trigonalplanar':
 			mol_objects = []
 			if len(args.metal_idx) == 1:
-				file_template = os.path.dirname(os.path.abspath(__file__)) +'/template/template-4-and-5.sdf'
+				if args.complex_type == 'squareplanar' or args.complex_type == 'squarepyramidal':
+					file_template = os.path.dirname(os.path.abspath(__file__)) +'/template/template-4-and-5.sdf'
+				if args.complex_type =='linear':
+					print('in temp assigning')
+					file_template = os.path.dirname(os.path.abspath(__file__)) +'/template/template-2.sdf'
+				if args.complex_type =='trigonalplanar':
+					file_template = os.path.dirname(os.path.abspath(__file__)) +'/template/template-3.sdf'
 				temp = Chem.SDMolSupplier(file_template)
-				mol_objects_from_template,name, coord_Map, alg_Map, mol_template = template_embed_sp(mol,temp,name,args,log)
+				mol_objects_from_template,name, coord_Map, alg_Map, mol_template = template_embed(mol,temp,name,args,log)
 				for i,_ in enumerate(mol_objects_from_template):
 					mol_objects.append([mol_objects_from_template[i],name[i],coord_Map[i],alg_Map[i],mol_template[i]])
 				for [mol, name, coord_Map,alg_Map,mol_template] in mol_objects:
@@ -187,6 +194,10 @@ def calc_neighbours(molecule,args):
 				atom.SetFormalCharge(1)
 			if len(atom.GetBonds()) == 4:
 				atom.SetAtomicNum(14)
+			if len(atom.GetBonds()) == 2:
+				atom.SetAtomicNum(53)
+			if len(atom.GetBonds()) == 3:
+				atom.SetAtomicNum(53)
 			center_idx = atom.GetIdx()
 			number_of_neighbours = len(atom.GetNeighbors())
 			break
@@ -194,7 +205,7 @@ def calc_neighbours(molecule,args):
 	return number_of_neighbours,center_idx
 
 # TEMPLATE GENERATION FOR SQUAREPLANAR AND squarepyramidal
-def template_embed_sp(molecule,temp,name_input,args,log):
+def template_embed(molecule,temp,name_input,args,log):
 	mol_objects,name_return,coord_Map,alg_Map,mol_template = [],[],[],[],[]
 	number_of_neighbours,center_idx = calc_neighbours(molecule,args)
 
@@ -364,6 +375,70 @@ def template_embed_sp(molecule,temp,name_input,args,log):
 					coord_Map.append(coordMap)
 					alg_Map.append(algMap)
 					mol_template.append(mol_1)
+
+	if number_of_neighbours == 2:
+		for atom in molecule.GetAtoms():
+			if atom.GetIdx() == center_idx:
+				neighbours = atom.GetNeighbors()
+
+		for mol_1 in temp:
+			site_1,site_2,metal_site  = 0,0,0
+			for atom in mol_1.GetAtoms():
+				if atom.GetIdx()  == 2 and metal_site == 0:
+					atom.SetAtomicNum(53)
+					metal_site = 1
+				if atom.GetIdx()  == 0 and site_1 == 0:
+					atom.SetAtomicNum(neighbours[0].GetAtomicNum())
+					site_1 = 1
+				if atom.GetIdx()  == 1 and site_2 == 0:
+					atom.SetAtomicNum(neighbours[1].GetAtomicNum())
+					site_2 = 2
+
+		#assigning and embedding onto the core
+		molecule_new, coordMap, algMap = template_embed_optimize(molecule,mol_1,args,log)
+
+		#writing to mol_object file
+		name_final = name_input
+		mol_objects.append(molecule_new)
+		name_return.append(name_final)
+		coord_Map.append(coordMap)
+		alg_Map.append(algMap)
+		mol_template.append(mol_1)
+
+	if number_of_neighbours == 3:
+
+		for atom in molecule.GetAtoms():
+			print(atom.GetSymbol(),atom.GetIdx())
+			if atom.GetIdx() == center_idx:
+				neighbours = atom.GetNeighbors()
+
+		for mol_1 in temp:
+			site_1,site_2,site_3,metal_site  = 0,0,0,0
+			for atom in mol_1.GetAtoms():
+				print(atom.GetSymbol(),atom.GetIdx())
+				if atom.GetIdx()  == 0 and metal_site == 0:
+					atom.SetAtomicNum(53)
+					metal_site = 1
+				if atom.GetIdx()  == 1 and site_1 == 0:
+					atom.SetAtomicNum(neighbours[0].GetAtomicNum())
+					site_1 = 1
+				if atom.GetIdx()  == 2 and site_2 == 0:
+					atom.SetAtomicNum(neighbours[1].GetAtomicNum())
+					site_2 = 1
+				if atom.GetIdx()  == 3 and site_3 == 0:
+					atom.SetAtomicNum(neighbours[2].GetAtomicNum())
+					site_3 = 1
+
+		#assigning and embedding onto the core
+		molecule_new, coordMap, algMap = template_embed_optimize(molecule,mol_1,args,log)
+
+		#writing to mol_object file
+		name_final = name_input
+		mol_objects.append(molecule_new)
+		name_return.append(name_final)
+		coord_Map.append(coordMap)
+		alg_Map.append(algMap)
+		mol_template.append(mol_1)
 
 	return mol_objects, name_return, coord_Map, alg_Map, mol_template
 
@@ -617,15 +692,7 @@ def min_and_E_calc(mol,cids,args,log,coord_Map,alg_Map,mol_template):
 		# id template realign before doing calculations
 		else:
 			num_atom_match = mol.GetSubstructMatch(mol_template)
-			# Force field parameters
-			if args.ff == "MMFF":
-				GetFF = Chem.MMFFGetMoleculeForceField(mol, Chem.MMFFGetMoleculeProperties(mol),confId=conf)
-			elif args.ff == "UFF":
-				GetFF = Chem.UFFGetMoleculeForceField(mol,confId=conf)
-			else:
-				log.write('   Force field {} not supported!'.format(args.ff))
-				sys.exit()
-			# clean up the conformation
+			GetFF = Chem.UFFGetMoleculeForceField(mol,confId=conf)
 			for k, idxI in enumerate(num_atom_match):
 				for l in range(k + 1, len(num_atom_match)):
 					idxJ = num_atom_match[l]
