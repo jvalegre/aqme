@@ -288,14 +288,14 @@ def genConformer_r(mol, conf, i, matches, degree, sdwriter,args,name,log):
 
 			rdMolTransforms.SetDihedralRad(mol.GetConformer(conf),*matches[i],value=rad)
 			#recalculating energies after rotation
-			GetFF = minimize_rdkit_energy(mol,conf,args)
+			GetFF = minimize_rdkit_energy(mol,conf,args,log)
 			mol.SetProp("Energy",GetFF.CalcEnergy())
 			mol.SetProp('_Name',name)
 			total += genConformer_r(mol, conf, i+1, matches, degree, sdwriter,args,name,log)
 			deg += degree
 		return total
 
-def minimize_rdkit_energy(mol,conf,args):
+def minimize_rdkit_energy(mol,conf,args,log):
 	if args.ff == "MMFF":
 		GetFF = Chem.MMFFGetMoleculeForceField(mol, Chem.MMFFGetMoleculeProperties(mol),confId=conf)
 	elif args.ff == "UFF":
@@ -377,7 +377,7 @@ def min_and_E_calc(mol,cids,args,log,coord_Map,alg_Map,mol_template):
 	bar = IncrementalBar('o  Minimizing', max = len(cids))
 	for i, conf in enumerate(cids):
 		if coord_Map is None and alg_Map is None and mol_template is None:
-			GetFF = minimize_rdkit_energy(mol,conf,args)
+			GetFF = minimize_rdkit_energy(mol,conf,args,log)
 			cenergy.append(GetFF.CalcEnergy())
 
 		# id template realign before doing calculations
