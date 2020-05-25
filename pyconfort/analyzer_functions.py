@@ -157,7 +157,7 @@ def new_com_file(file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTES
 # DEFINTION OF OUTPUT ANALYSER and NMR FILES CREATOR
 def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin,log):
 
-	input, input_sp = input_line(args)
+	input, input_sp = input_route_line(args)
 
 	for file in log_files:
 
