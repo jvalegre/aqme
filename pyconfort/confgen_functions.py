@@ -336,8 +336,10 @@ def template_embed(molecule,temp,name_input,args,log):
 						elif atom.GetIdx()  == 4:
 							atom.SetAtomicNum(neighbours[j[2]].GetAtomicNum())
 						elif atom.GetIdx()  == 0:
-							if k!= 0:atom.SetAtomicNum(neighbours[k].GetAtomicNum())
-							elif k == 0:atom.SetAtomicNum(neighbours[0].GetAtomicNum())
+							if k!= 0:
+								atom.SetAtomicNum(neighbours[k].GetAtomicNum())
+							elif k == 0:
+								atom.SetAtomicNum(neighbours[0].GetAtomicNum())
 
 					#assigning and embedding onto the core
 					molecule_new, coordMap, algMap = template_embed_optimize(molecule,mol_1,args,log)
