@@ -727,7 +727,7 @@ def mult_min(name, args, program,log,dup_data,dup_data_idx):
 	# read SDF files from RDKit optimization
 	inmols = rdkit_sdf_read(name, args, log)
 
-	cenergy, outmols = [],[]
+	cenergy, outmols,rotmatches = [],[],[]
 	if args.verbose:
 		log.write("\n\no  Multiple minimization of "+ name+args.output+ " with "+ program)
 	bar = IncrementalBar('o  Minimizing', max = len(inmols))
