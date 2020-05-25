@@ -182,7 +182,7 @@ def five_embed(molecule,mol_1,number_of_neighbours,center_idx,neighbours_ret,nam
 					mol_template.append(mol_1)
 			else:
 				pass
-			counter +=1
+			counter += 1
 	return mol_objects, name_return, coord_Map, alg_Map, mol_template
 
 #GET THE LINEAR GEOMETRY

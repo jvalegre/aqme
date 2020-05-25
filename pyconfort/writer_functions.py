@@ -82,58 +82,34 @@ def creation_of_dup_csv(args):
 	return dup_data
 
 def header_com(name,lot,bs,bs_gcp, args, log, input_sp, input, genecp):
+
+	if args.single_point:
+		if genecp != 'None':
+			input_to_write = input_sp
+			genecp_or_bs_to_write = genecp
+		else:
+			input_to_write = input_sp
+			genecp_or_bs_to_write = bs
+	else:
+		if genecp != 'None':
+			input_to_write = input
+			genecp_or_bs_to_write = genecp
+		else:
+			input_to_write = input
+			genecp_or_bs_to_write = bs
 	#chk option
 	if args.chk:
-		if args.single_point:
-			if genecp != 'None':
-				header = [
-					'%chk={}.chk'.format(name),
-					'%mem={}'.format(args.mem),
-					'%nprocshared={}'.format(args.nprocs),
-					'# {0}'.format(lot)+ '/'+ genecp + ' '+ input_sp ]
-			else:
-				header = [
-					'%chk={}.chk'.format(name),
-					'%mem={}'.format(args.mem),
-					'%nprocshared={}'.format(args.nprocs),
-					'# {0}'.format(lot)+ '/'+ bs + ' '+ input_sp ]
-		else:
-			if genecp != 'None':
-				header = [
-						'%chk={}.chk'.format(name),
-						'%mem={}'.format(args.mem),
-						'%nprocshared={}'.format(args.nprocs),
-						'# {0}'.format(lot)+ '/'+ genecp + ' '+ input ]
-			else:
-				header = [
-						'%chk={}.chk'.format(name),
-						'%mem={}'.format(args.mem),
-						'%nprocshared={}'.format(args.nprocs),
-						'# {0}'.format(lot)+ '/'+ bs + ' '+ input ]
+		header = [
+			'%chk={}.chk'.format(name),
+			'%mem={}'.format(args.mem),
+			'%nprocshared={}'.format(args.nprocs),
+			'# {0}'.format(lot)+ '/'+ genecp_or_bs_to_write + ' '+ input_to_write ]
 	else:
-		if args.single_point:
-			if genecp != 'None':
-				header = [
-					'%mem={}'.format(args.mem),
-					'%nprocshared={}'.format(args.nprocs),
-					'# {0}'.format(lot)+ '/'+ genecp + ' '+ input_sp ]
-			else:
-				header = [
-					'%mem={}'.format(args.mem),
-					'%nprocshared={}'.format(args.nprocs),
-					'# {0}'.format(lot)+ '/'+ bs + ' '+ input_sp ]
+		header = [
+			'%mem={}'.format(args.mem),
+			'%nprocshared={}'.format(args.nprocs),
+			'# {0}'.format(lot)+ '/'+ genecp_or_bs_to_write + ' '+ input_to_write]
 
-		else:
-			if genecp != 'None':
-				header = [
-					'%mem={}'.format(args.mem),
-					'%nprocshared={}'.format(args.nprocs),
-					'# {0}'.format(lot)+ '/'+ genecp + ' '+ input ]
-			else:
-				header = [
-					'%mem={}'.format(args.mem),
-					'%nprocshared={}'.format(args.nprocs),
-					'# {0}'.format(lot)+ '/'+ bs + ' '+ input ]
 	return header
 
 def convert_sdf_to_com(path_for_file,file,com,com_low,energies,header,args):
@@ -159,6 +135,7 @@ def convert_sdf_to_com(path_for_file,file,com,com_low,energies,header,args):
 	else:
 		command_no_lowest = ['obabel', '-isdf', path_for_file+file, '-ocom', '-O'+com,'-m', '-xk', '\n'.join(header)]
 		subprocess.run(command_no_lowest)
+
 
 def input_line(args):
 	#definition of input lines
@@ -193,6 +170,29 @@ def input_line(args):
 				input = 'opt=(maxcycles={0}) scrf=({1},solvent={2})'.format(args.max_cycle_opt,args.solvent_model, args.solvent_name) #add solvent if needed
 				input_sp = 'scrf=({0},solvent={1}) nmr=giao'.format(args.solvent_model, args.solvent_name)  ##add solvent if needed
 	return input, input_sp
+
+def rename_file_and_charge_change(read_lines,file,args,charge_com):
+	#changing the name of the files to the way they are in xTB Sdfs
+	#getting the title line
+	for i,line in enumerate(read_lines):
+		if len(line.strip()) == 0:
+			title_line = read_lines[i+1]
+			title_line = title_line.lstrip()
+			rename_file_name = title_line.replace(" ", "_")
+			break
+
+	rename_file_name = rename_file_name.strip()+'.com'
+
+	#change charge and multiplicity for Octahydrasl
+	if args.metal_complex:
+		for i,_ in enumerate(read_lines):
+			if len(read_lines[i].strip()) == 0:
+				read_lines[i+3] = str(charge_com)+' '+ str(args.complex_spin)+'\n'
+				break
+		out = open(file, 'w')
+		out.writelines(read_lines)
+		out.close()
+	return rename_file_name
 
 # MAIN FUNCTION TO CREATE GAUSSIAN JOBS
 def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args,log,charge_data):
@@ -263,27 +263,9 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args,log,cha
 			ecp_list,ecp_genecp_atoms,ecp_gen_atoms = [],False,False
 			read_lines = open(file,"r").readlines()
 
-			#chaanging the name of the files to the way they are in xTB Sdfs
-			#getting the title line
-			for i,line in enumerate(read_lines):
-				if len(line.strip()) == 0:
-					title_line = read_lines[i+1]
-					title_line = title_line.lstrip()
-					rename_file_name = title_line.replace(" ", "_")
-					break
+			rename_file_name = rename_file_and_charge_change(read_lines,file,args,charge_com)
 
-			rename_file_name = rename_file_name.strip()+'.com'
-
-			#change charge and multiplicity for Octahydrasl
-			if args.metal_complex:
-				for i,line in enumerate(read_lines):
-					if len(line.strip()) == 0:
-						read_lines[i+3] = str(charge_com)+' '+ str(args.complex_spin)+'\n'
-						break
-				out = open(file, 'w')
-				out.writelines(read_lines)
-				out.close()
-				read_lines = open(file,"r").readlines()
+			read_lines = open(file,"r").readlines()
 
 			fileout = open(file, "a")
 			# Detect if there are I atoms to use genecp or not (to use gen)
@@ -338,26 +320,7 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args,log,cha
 		else:
 			read_lines = open(file,"r").readlines()
 
-			#changing the name of the files to the way they are in xTB Sdfs
-			#getting the title line
-			for i,line in enumerate(read_lines):
-				if len(line.strip()) == 0:
-					title_line = read_lines[i+1]
-					title_line = title_line.lstrip()
-					rename_file_name = title_line.replace(" ", "_")
-					break
-
-			rename_file_name = rename_file_name.strip()+'.com'
-
-			#change charge and multiplicity for Octahydrasl
-			if args.metal_complex:
-				for i,_ in enumerate(read_lines):
-					if len(read_lines[i].strip()) == 0:
-						read_lines[i+3] = str(charge_com)+' '+ str(args.complex_spin)+'\n'
-						break
-				out = open(file, 'w')
-				out.writelines(read_lines)
-				out.close()
+			rename_file_name = rename_file_and_charge_change(read_lines,file,args,charge_com)
 
 		#change file by moving to new file
 		os.rename(file,rename_file_name)

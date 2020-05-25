@@ -12,7 +12,15 @@ from rdkit.Chem import AllChem as Chem
 from rdkit.Chem import rdMolTransforms, Descriptors
 from pyconfort.argument_parser import possible_atoms
 
+
 possible_atoms = possible_atoms()
+
+def set_metal_atomic_number(mol,args):
+	for atom in mol.GetAtoms():
+		if atom.GetIdx() in args.metal_idx:
+			re_symbol = args.metal_sym[args.metal_idx.index(atom.GetIdx())]
+			atomic_number = possible_atoms.index(re_symbol)
+			atom.SetAtomicNum(atomic_number)
 
 # RULES TO GET EXPERIMENTAL CONFORMERS
 def exp_rules_output(mol, args,log):
@@ -188,11 +196,7 @@ def filter_after_rotation(args,name,log,dup_data,dup_data_idx):
 		if rd_count == 0:
 			rd_selectedcids.append(rd_mol_i)
 			if args.metal_complex:
-				for atom in mol_rd.GetAtoms():
-					if atom.GetIdx() in args.metal_idx:
-						re_symbol = args.metal_sym[args.metal_idx.index(atom.GetIdx())]
-						atomic_number = possible_atoms.index(re_symbol)
-						atom.SetAtomicNum(atomic_number)
+				set_metal_atomic_number(mol_rd,args)
 			writer_mol_objects.append([mol_rd,float(mol_rd.GetProp('Energy'))])
 		# Only the first ID gets included
 		rd_count = 1
@@ -212,11 +216,7 @@ def filter_after_rotation(args,name,log,dup_data,dup_data_idx):
 			if rd_mol_i not in rd_selectedcids:
 				rd_selectedcids.append(rd_mol_i)
 				if args.metal_complex:
-					for atom in mol_rd.GetAtoms():
-						if atom.GetIdx() in args.metal_idx:
-							re_symbol = args.metal_sym[args.metal_idx.index(atom.GetIdx())]
-							atomic_number = possible_atoms.index(re_symbol)
-							atom.SetAtomicNum(atomic_number)
+					set_metal_atomic_number(mol_rd,args)
 				writer_mol_objects.append([mol_rd,float(mol_rd.GetProp('Energy'))] )
 		bar.next()
 	bar.finish()

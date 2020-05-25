@@ -18,7 +18,7 @@ from rdkit.Chem import rdMolTransforms, PropertyMol, rdDistGeom, rdMolAlign, Lip
 from rdkit.Geometry import Point3D
 from progress.bar import IncrementalBar
 from pyconfort.writer_functions import write_confs
-from pyconfort.filter_functions import filters,filter_after_rotation,get_conf_RMS
+from pyconfort.filter_functions import filters,filter_after_rotation,get_conf_RMS,set_metal_atomic_number
 from pyconfort.argument_parser import possible_atoms
 from pyconfort.analyzer_functions import check_for_final_folder
 from pyconfort.template_functions import template_embed
@@ -277,11 +277,7 @@ def genConformer_r(mol, conf, i, matches, degree, sdwriter,args,name,log):
 	if i >= len(matches): # base case, torsions should be set in conf
 		#setting the metal back instead of I
 		if args.metal_complex and args.nodihedrals:
-			for atom in mol.GetAtoms():
-				if atom.GetIdx() in args.metal_idx:
-					re_symbol = args.metal_sym[args.metal_idx.index(atom.GetIdx())]
-					atomic_number = possible_atoms.index(re_symbol)
-					atom.SetAtomicNum(atomic_number)
+			set_metal_atomic_number(mol,args)
 		sdwriter.write(mol,conf)
 		return 1
 	else:
@@ -289,22 +285,27 @@ def genConformer_r(mol, conf, i, matches, degree, sdwriter,args,name,log):
 		deg = 0
 		while deg < 360.0:
 			rad = math.pi*deg / 180.0
+			
 			rdMolTransforms.SetDihedralRad(mol.GetConformer(conf),*matches[i],value=rad)
 			#recalculating energies after rotation
-			if args.ff == "MMFF":
-				GetFF = Chem.MMFFGetMoleculeForceField(mol, Chem.MMFFGetMoleculeProperties(mol),confId=conf)
-			elif args.ff == "UFF":
-				GetFF = Chem.UFFGetMoleculeForceField(mol,confId=conf)
-			else:
-				log.write('   Force field {} not supported!'.format(args.ff))
-				sys.exit()
-			GetFF.Initialize()
-			GetFF.Minimize(maxIts=args.opt_steps_RDKit)
+			GetFF = minimize_rdkit_energy(mol,conf,args)
 			mol.SetProp("Energy",GetFF.CalcEnergy())
 			mol.SetProp('_Name',name)
 			total += genConformer_r(mol, conf, i+1, matches, degree, sdwriter,args,name,log)
 			deg += degree
 		return total
+
+def minimize_rdkit_energy(mol,conf,args):
+	if args.ff == "MMFF":
+		GetFF = Chem.MMFFGetMoleculeForceField(mol, Chem.MMFFGetMoleculeProperties(mol),confId=conf)
+	elif args.ff == "UFF":
+		GetFF = Chem.UFFGetMoleculeForceField(mol,confId=conf)
+	else:
+		log.write('   Force field {} not supported!'.format(args.ff))
+		sys.exit()
+	GetFF.Initialize()
+	GetFF.Minimize(maxIts=args.opt_steps_RDKit)
+	return GetFF
 
 def atom_groups():
 	C_group = ['C', 'Se', 'Ge']
@@ -376,15 +377,7 @@ def min_and_E_calc(mol,cids,args,log,coord_Map,alg_Map,mol_template):
 	bar = IncrementalBar('o  Minimizing', max = len(cids))
 	for i, conf in enumerate(cids):
 		if coord_Map is None and alg_Map is None and mol_template is None:
-			if args.ff == "MMFF":
-				GetFF = Chem.MMFFGetMoleculeForceField(mol, Chem.MMFFGetMoleculeProperties(mol),confId=conf)
-			elif args.ff == "UFF":
-				GetFF = Chem.UFFGetMoleculeForceField(mol,confId=conf)
-			else:
-				log.write('   Force field {} not supported!'.format(args.ff))
-				sys.exit()
-			GetFF.Initialize()
-			GetFF.Minimize(maxIts=args.opt_steps_RDKit)
+			GetFF = minimize_rdkit_energy(mol,conf,args)
 			cenergy.append(GetFF.CalcEnergy())
 
 		# id template realign before doing calculations
@@ -637,7 +630,7 @@ def ani_calc(elements,cartesians,coordinates,args,log):
 
 	optimizer = ase.optimize.BFGS(ase_molecule, trajectory='ANI1_opt.traj')
 	optimizer.run(fmax=args.opt_fmax, steps=args.opt_steps)
-	if len(ase.io.Trajectory('xTB_opt.traj', mode='r')) != (args.opt_steps+1):
+	if len(ase.io.Trajectory('ANI1_opt.traj', mode='r')) != (args.opt_steps+1):
 		species_coords = ase_molecule.get_positions().tolist()
 		coordinates = torch.tensor([species_coords], requires_grad=True, device=device)
 	# Now let's compute energy:
@@ -689,11 +682,7 @@ def optimize(mol, args, program,log,dup_data,dup_data_idx):
 				atom.SetAtomicNum(1)
 
 	if args.metal_complex and not args.nodihedrals:
-		for atom in mol.GetAtoms():
-			if atom.GetIdx() in args.metal_idx:
-				re_symbol = args.metal_sym[args.metal_idx.index(atom.GetIdx())]
-				atomic_number = possible_atoms.index(re_symbol)
-				atom.SetAtomicNum(atomic_number)
+		set_metal_atomic_number(mol,args)
 
 	elements = ''
 	ase_metal = []
