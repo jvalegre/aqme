@@ -234,11 +234,16 @@ def template_embed(molecule,temp,name_input,args,log):
 							mol_1 = mol_1.GetMol()
 
 				for atom in mol_1.GetAtoms():
-					if atom.GetIdx() == 4:atom.SetAtomicNum(14)
-					if atom.GetIdx() == 0:atom.SetAtomicNum(neighbours[0].GetAtomicNum())
-					if atom.GetIdx() == 3:atom.SetAtomicNum(neighbours[j[0]].GetAtomicNum())
-					if atom.GetIdx() == 2:atom.SetAtomicNum(neighbours[j[1]].GetAtomicNum())
-					if atom.GetIdx() == 1:atom.SetAtomicNum(neighbours[j[2]].GetAtomicNum())
+					if atom.GetIdx() == 4:
+						atom.SetAtomicNum(14)
+					if atom.GetIdx() == 0:
+						atom.SetAtomicNum(neighbours[0].GetAtomicNum())
+					if atom.GetIdx() == 3:
+						atom.SetAtomicNum(neighbours[j[0]].GetAtomicNum())
+					if atom.GetIdx() == 2:
+						atom.SetAtomicNum(neighbours[j[1]].GetAtomicNum())
+					if atom.GetIdx() == 1:
+						atom.SetAtomicNum(neighbours[j[2]].GetAtomicNum())
 
 				#embedding of the molecule onto the core
 				molecule_new, coordMap, algMap = template_embed_optimize(molecule,mol_1,args,log)
@@ -320,11 +325,16 @@ def template_embed(molecule,temp,name_input,args,log):
 							atom.SetAtomicNum(14)
 							atom.SetFormalCharge(1)
 						if atom.GetIdx()  == 1:
-							if k!= 0:atom.SetAtomicNum(neighbours[0].GetAtomicNum())
-							elif k == 0:atom.SetAtomicNum(neighbours[4].GetAtomicNum())
-						elif atom.GetIdx()  == 2:atom.SetAtomicNum(neighbours[j[0]].GetAtomicNum())
-						elif atom.GetIdx()  == 3:atom.SetAtomicNum(neighbours[j[1]].GetAtomicNum())
-						elif atom.GetIdx()  == 4:atom.SetAtomicNum(neighbours[j[2]].GetAtomicNum())
+							if k!= 0:
+								atom.SetAtomicNum(neighbours[0].GetAtomicNum())
+							elif k == 0:
+								atom.SetAtomicNum(neighbours[4].GetAtomicNum())
+						elif atom.GetIdx()  == 2:
+							atom.SetAtomicNum(neighbours[j[0]].GetAtomicNum())
+						elif atom.GetIdx()  == 3:
+							atom.SetAtomicNum(neighbours[j[1]].GetAtomicNum())
+						elif atom.GetIdx()  == 4:
+							atom.SetAtomicNum(neighbours[j[2]].GetAtomicNum())
 						elif atom.GetIdx()  == 0:
 							if k!= 0:atom.SetAtomicNum(neighbours[k].GetAtomicNum())
 							elif k == 0:atom.SetAtomicNum(neighbours[0].GetAtomicNum())
@@ -345,9 +355,12 @@ def template_embed(molecule,temp,name_input,args,log):
 		if number_of_neighbours == 2:
 			neighbours = neighbours_ret
 			for atom in mol_1.GetAtoms():
-				if atom.GetIdx()  == 2:atom.SetAtomicNum(53)
-				if atom.GetIdx()  == 0:atom.SetAtomicNum(neighbours[0].GetAtomicNum())
-				if atom.GetIdx()  == 1:atom.SetAtomicNum(neighbours[1].GetAtomicNum())
+				if atom.GetIdx()  == 2:
+					atom.SetAtomicNum(53)
+				if atom.GetIdx()  == 0:
+					atom.SetAtomicNum(neighbours[0].GetAtomicNum())
+				if atom.GetIdx()  == 1:
+					atom.SetAtomicNum(neighbours[1].GetAtomicNum())
 
 			#assigning and embedding onto the core
 			molecule_new, coordMap, algMap = template_embed_optimize(molecule,mol_1,args,log)
@@ -363,10 +376,14 @@ def template_embed(molecule,temp,name_input,args,log):
 		if number_of_neighbours == 3:
 			neighbours = neighbours_ret
 			for atom in mol_1.GetAtoms():
-				if atom.GetIdx()  == 0:atom.SetAtomicNum(53)
-				if atom.GetIdx()  == 1:atom.SetAtomicNum(neighbours[0].GetAtomicNum())
-				if atom.GetIdx()  == 2:atom.SetAtomicNum(neighbours[1].GetAtomicNum())
-				if atom.GetIdx()  == 3:atom.SetAtomicNum(neighbours[2].GetAtomicNum())
+				if atom.GetIdx()  == 0:
+					atom.SetAtomicNum(53)
+				if atom.GetIdx()  == 1:
+					atom.SetAtomicNum(neighbours[0].GetAtomicNum())
+				if atom.GetIdx()  == 2:
+					atom.SetAtomicNum(neighbours[1].GetAtomicNum())
+				if atom.GetIdx()  == 3:
+					atom.SetAtomicNum(neighbours[2].GetAtomicNum())
 
 			#assigning and embedding onto the core
 			molecule_new, coordMap, algMap = template_embed_optimize(molecule,mol_1,args,log)
