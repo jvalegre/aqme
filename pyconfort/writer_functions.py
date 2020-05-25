@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+input_route#!/usr/bin/env python
 
 """#####################################################.
 # 		   This file stores all the functions 		    #
@@ -81,21 +81,21 @@ def creation_of_dup_csv(args):
 			dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples','RDKit-energy-window', 'RDKit-initial_energy_threshold','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','RDKIT-Rotated-conformers','RDKIT-Rotated-Unique-conformers','ANI1ccx-Initial-samples','ANI1ccx-energy-window','ANI1ccx-initial_energy_threshold','ANI1ccx-RMSD-and-energy-duplicates','ANI1ccx-Unique-conformers','time (seconds)','Overall charge'])
 	return dup_data
 
-def header_com(name,lot,bs,bs_gcp, args, log, input_sp, input, genecp):
+def header_com(name,lot,bs,bs_gcp, args, log, input_route_sp, input_route, genecp):
 
 	if args.single_point:
 		if genecp != 'None':
-			input_to_write = input_sp
+			input_route_to_write = input_route_sp
 			genecp_or_bs_to_write = genecp
 		else:
-			input_to_write = input_sp
+			input_route_to_write = input_route_sp
 			genecp_or_bs_to_write = bs
 	else:
 		if genecp != 'None':
-			input_to_write = input
+			input_route_to_write = input_route
 			genecp_or_bs_to_write = genecp
 		else:
-			input_to_write = input
+			input_route_to_write = input_route
 			genecp_or_bs_to_write = bs
 	#chk option
 	if args.chk:
@@ -103,12 +103,12 @@ def header_com(name,lot,bs,bs_gcp, args, log, input_sp, input, genecp):
 			'%chk={}.chk'.format(name),
 			'%mem={}'.format(args.mem),
 			'%nprocshared={}'.format(args.nprocs),
-			'# {0}'.format(lot)+ '/'+ genecp_or_bs_to_write + ' '+ input_to_write ]
+			'# {0}'.format(lot)+ '/'+ genecp_or_bs_to_write + ' '+ input_route_to_write ]
 	else:
 		header = [
 			'%mem={}'.format(args.mem),
 			'%nprocshared={}'.format(args.nprocs),
-			'# {0}'.format(lot)+ '/'+ genecp_or_bs_to_write + ' '+ input_to_write]
+			'# {0}'.format(lot)+ '/'+ genecp_or_bs_to_write + ' '+ input_route_to_write]
 
 	return header
 
@@ -137,39 +137,39 @@ def convert_sdf_to_com(path_for_file,file,com,com_low,energies,header,args):
 		subprocess.run(command_no_lowest)
 
 
-def input_line(args):
-	#definition of input lines
+def input_route_line(args):
+	#definition of input_route lines
 	if args.frequencies:
 		if args.dispersion_correction:
 			if args.solvent_model == 'gas_phase':
-				input = 'opt=(maxcycles={0}) freq=noraman empiricaldispersion={1}'.format(args.max_cycle_opt,args.empirical_dispersion)
-				input_sp = 'nmr=giao empiricaldispersion={0}'.format(args.empirical_dispersion)  #input for single point nmr
+				input_route = 'opt=(maxcycles={0}) freq=noraman empiricaldispersion={1}'.format(args.max_cycle_opt,args.empirical_dispersion)
+				input_route_sp = 'nmr=giao empiricaldispersion={0}'.format(args.empirical_dispersion)  #input_route for single point nmr
 			else :
-				input = 'opt=(maxcycles={0}) freq=noraman scrf=({1},solvent={2}) empiricaldispersion={3}'.format(args.max_cycle_opt, args.solvent_model, args.solvent_name,args.empirical_dispersion ) #add solvent if needed
-				input_sp = 'scrf=({0},solvent={1}) nmr=giao empiricaldispersion={2}'.format(args.solvent_model, args.solvent_name, args.empirical_dispersion)  ##add solvent if needed
+				input_route = 'opt=(maxcycles={0}) freq=noraman scrf=({1},solvent={2}) empiricaldispersion={3}'.format(args.max_cycle_opt, args.solvent_model, args.solvent_name,args.empirical_dispersion ) #add solvent if needed
+				input_route_sp = 'scrf=({0},solvent={1}) nmr=giao empiricaldispersion={2}'.format(args.solvent_model, args.solvent_name, args.empirical_dispersion)  ##add solvent if needed
 		else:
 			if args.solvent_model == 'gas_phase':
-				input = 'opt=(maxcycles={0}) freq=noraman'.format(args.max_cycle_opt)
-				input_sp = 'nmr=giao ' #input for single point nmr
+				input_route = 'opt=(maxcycles={0}) freq=noraman'.format(args.max_cycle_opt)
+				input_route_sp = 'nmr=giao ' #input_route for single point nmr
 			else :
-				input = 'opt=(maxcycles={0}) freq=noraman scrf=({1},solvent={2})'.format(args.max_cycle_opt,args.solvent_model, args.solvent_name) #add solvent if needed
-				input_sp = 'scrf=({0},solvent={1}) nmr=giao'.format(args.solvent_model, args.solvent_name)  ##add solvent if needed
+				input_route = 'opt=(maxcycles={0}) freq=noraman scrf=({1},solvent={2})'.format(args.max_cycle_opt,args.solvent_model, args.solvent_name) #add solvent if needed
+				input_route_sp = 'scrf=({0},solvent={1}) nmr=giao'.format(args.solvent_model, args.solvent_name)  ##add solvent if needed
 	else:
 		if args.dispersion_correction:
 			if args.solvent_model == 'gas_phase':
-				input = 'opt=(maxcycles={0}) empiricaldispersion={1}'.format(args.max_cycle_opt,args.empirical_dispersion)
-				input_sp = 'nmr=giao empiricaldispersion={0}'.format(args.empirical_dispersion)  #input for single point nmr
+				input_route = 'opt=(maxcycles={0}) empiricaldispersion={1}'.format(args.max_cycle_opt,args.empirical_dispersion)
+				input_route_sp = 'nmr=giao empiricaldispersion={0}'.format(args.empirical_dispersion)  #input_route for single point nmr
 			else :
-				input = 'opt=(maxcycles={0}) scrf=({1},solvent={2}) empiricaldispersion={3}'.format(args.max_cycle_opt,args.solvent_model, args.solvent_name,args.empirical_dispersion ) #add solvent if needed
-				input_sp = 'scrf=({0},solvent={1}) nmr=giao empiricaldispersion={2}'.format(args.solvent_model, args.solvent_name, args.empirical_dispersion)  ##add solvent if needed
+				input_route = 'opt=(maxcycles={0}) scrf=({1},solvent={2}) empiricaldispersion={3}'.format(args.max_cycle_opt,args.solvent_model, args.solvent_name,args.empirical_dispersion ) #add solvent if needed
+				input_route_sp = 'scrf=({0},solvent={1}) nmr=giao empiricaldispersion={2}'.format(args.solvent_model, args.solvent_name, args.empirical_dispersion)  ##add solvent if needed
 		else:
 			if args.solvent_model == 'gas_phase':
-				input = 'opt=(maxcycles={0})'.format(args.max_cycle_opt)
-				input_sp = 'nmr=giao ' #input for single point nmr
+				input_route = 'opt=(maxcycles={0})'.format(args.max_cycle_opt)
+				input_route_sp = 'nmr=giao ' #input_route for single point nmr
 			else :
-				input = 'opt=(maxcycles={0}) scrf=({1},solvent={2})'.format(args.max_cycle_opt,args.solvent_model, args.solvent_name) #add solvent if needed
-				input_sp = 'scrf=({0},solvent={1}) nmr=giao'.format(args.solvent_model, args.solvent_name)  ##add solvent if needed
-	return input, input_sp
+				input_route = 'opt=(maxcycles={0}) scrf=({1},solvent={2})'.format(args.max_cycle_opt,args.solvent_model, args.solvent_name) #add solvent if needed
+				input_route_sp = 'scrf=({0},solvent={1}) nmr=giao'.format(args.solvent_model, args.solvent_name)  ##add solvent if needed
+	return input_route, input_route_sp
 
 def rename_file_and_charge_change(read_lines,file,args,charge_com):
 	#changing the name of the files to the way they are in xTB Sdfs
@@ -210,7 +210,7 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args,log,cha
 		if charge_data.loc[i,'Molecule'] == name_molecule:
 			charge_com = charge_data.loc[i,'Overall charge']
 
-	input, input_sp = input_line(args)
+	input_route, input_route_sp = input_route_line(args)
 
 	#defining genecp
 	genecp = 'None'
@@ -252,7 +252,7 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args,log,cha
 	com = '{0}_.com'.format(name)
 	com_low = '{0}_low.com'.format(name)
 
-	header = header_com(name,lot, bs, bs_gcp,args,log,input_sp, input, genecp)
+	header = header_com(name,lot, bs, bs_gcp,args,log,input_route_sp, input_route, genecp)
 
 	convert_sdf_to_com(path_for_file,file,com,com_low,energies,header,args)
 
