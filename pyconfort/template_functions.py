@@ -67,17 +67,20 @@ def four_embed(molecule,mol_1,number_of_neighbours,center_idx,neighbours_ret,nam
 				atom.SetAtomicNum(neighbours[j[2]].GetAtomicNum())
 
 		#embedding of the molecule onto the core
-		molecule_new, coordMap, algMap = template_embed_optimize(molecule,mol_1,args,log)
+		molecule_new, coordMap, algMap,ci = template_embed_optimize(molecule,mol_1,args,log)
 
-		check=filter_template_mol(molecule_new, mol_objects,args,log)
-		if check:
-			#writing to mol_object file
-			name_final = name_input + str(name)
-			mol_objects.append(molecule_new)
-			name_return.append(name_final)
-			coord_Map.append(coordMap)
-			alg_Map.append(algMap)
-			mol_template.append(mol_1)
+		if ci>=0:
+			check=filter_template_mol(molecule_new, mol_objects,args,log)
+			if check:
+				#writing to mol_object file
+				name_final = name_input + str(name)
+				mol_objects.append(molecule_new)
+				name_return.append(name_final)
+				coord_Map.append(coordMap)
+				alg_Map.append(algMap)
+				mol_template.append(mol_1)
+		else:
+			pass
 	return mol_objects, name_return, coord_Map, alg_Map, mol_template
 
 # GET THE SQUAREPYRAMIDAL GEOMETRY
@@ -164,17 +167,20 @@ def five_embed(molecule,mol_1,number_of_neighbours,center_idx,neighbours_ret,nam
 						atom.SetAtomicNum(neighbours[0].GetAtomicNum())
 
 			#assigning and embedding onto the core
-			molecule_new, coordMap, algMap = template_embed_optimize(molecule,mol_1,args,log)
-			check=filter_template_mol(molecule_new, mol_objects,args,log)
-			if check:
-				name =  str(name_1)+ str(name_2)
-				#writing to mol_object file
-				name_final = name_input + name
-				mol_objects.append(molecule_new)
-				name_return.append(name_final)
-				coord_Map.append(coordMap)
-				alg_Map.append(algMap)
-				mol_template.append(mol_1)
+			molecule_new, coordMap, algMap,ci = template_embed_optimize(molecule,mol_1,args,log)
+			if ci>=0:
+				check=filter_template_mol(molecule_new, mol_objects,args,log)
+				if check:
+					name =  str(name_1)+ str(name_2)
+					#writing to mol_object file
+					name_final = name_input + name
+					mol_objects.append(molecule_new)
+					name_return.append(name_final)
+					coord_Map.append(coordMap)
+					alg_Map.append(algMap)
+					mol_template.append(mol_1)
+			else:
+				pass
 	return mol_objects, name_return, coord_Map, alg_Map, mol_template
 
 #GET THE LINEAR GEOMETRY
@@ -190,15 +196,18 @@ def two_embed(molecule,mol_1,number_of_neighbours,center_idx,neighbours_ret,name
 			atom.SetAtomicNum(neighbours[1].GetAtomicNum())
 
 	#assigning and embedding onto the core
-	molecule_new, coordMap, algMap = template_embed_optimize(molecule,mol_1,args,log)
+	molecule_new, coordMap, algMap,ci = template_embed_optimize(molecule,mol_1,args,log)
 
-	#writing to mol_object file
-	name_final = name_input
-	mol_objects.append(molecule_new)
-	name_return.append(name_final)
-	coord_Map.append(coordMap)
-	alg_Map.append(algMap)
-	mol_template.append(mol_1)
+	if ci>=0:
+		#writing to mol_object file
+		name_final = name_input
+		mol_objects.append(molecule_new)
+		name_return.append(name_final)
+		coord_Map.append(coordMap)
+		alg_Map.append(algMap)
+		mol_template.append(mol_1)
+	else:
+		pass
 
 	return mol_objects, name_return, coord_Map, alg_Map, mol_template
 
@@ -217,15 +226,17 @@ def three_embed(molecule,mol_1,number_of_neighbours,center_idx,neighbours_ret,na
 			atom.SetAtomicNum(neighbours[2].GetAtomicNum())
 
 	#assigning and embedding onto the core
-	molecule_new, coordMap, algMap = template_embed_optimize(molecule,mol_1,args,log)
-
-	#writing to mol_object file
-	name_final = name_input
-	mol_objects.append(molecule_new)
-	name_return.append(name_final)
-	coord_Map.append(coordMap)
-	alg_Map.append(algMap)
-	mol_template.append(mol_1)
+	molecule_new, coordMap, algMap,ci = template_embed_optimize(molecule,mol_1,args,log)
+	if ci>=0:
+		#writing to mol_object file
+		name_final = name_input
+		mol_objects.append(molecule_new)
+		name_return.append(name_final)
+		coord_Map.append(coordMap)
+		alg_Map.append(algMap)
+		mol_template.append(mol_1)
+	else:
+		pass
 
 	return mol_objects, name_return, coord_Map, alg_Map, mol_template
 
@@ -272,26 +283,29 @@ def template_embed_optimize(molecule_embed,mol_1,args,log):
 		coordMap[idxI] = core_mol_1
 
 	ci = rdDistGeom.EmbedMolecule(molecule_embed, coordMap=coordMap, randomSeed=randomseed)
+	
 	if ci < 0:
 		log.write('Could not embed molecule.')
+		coordMap = None
+		algMap = None
 
+	if ci >= 0:
+		GetFF = Chem.UFFGetMoleculeForceField(molecule_embed,confId=-1)
 
-	GetFF = Chem.UFFGetMoleculeForceField(molecule_embed,confId=-1)
+		#algin molecule to the core
+		algMap = [(k, l) for l, k in enumerate(num_atom_match)]
 
-	#algin molecule to the core
-	algMap = [(k, l) for l, k in enumerate(num_atom_match)]
+		for k, idxI in enumerate(num_atom_match):
+			for l in range(k + 1, len(num_atom_match)):
+				idxJ = num_atom_match[l]
+				d = coordMap[idxI].Distance(coordMap[idxJ])
+				GetFF.AddDistanceConstraint(idxI, idxJ, d, d, force_constant)
+		GetFF.Initialize()
+		GetFF.Minimize(maxIts=args.opt_steps_RDKit)
+		# rotate the embedded conformation onto the core_mol:
+		rdMolAlign.AlignMol(molecule_embed, mol_1, atomMap=algMap,reflect=True,maxIters=100)
 
-	for k, idxI in enumerate(num_atom_match):
-		for l in range(k + 1, len(num_atom_match)):
-			idxJ = num_atom_match[l]
-			d = coordMap[idxI].Distance(coordMap[idxJ])
-			GetFF.AddDistanceConstraint(idxI, idxJ, d, d, force_constant)
-	GetFF.Initialize()
-	GetFF.Minimize(maxIts=args.opt_steps_RDKit)
-	# rotate the embedded conformation onto the core_mol:
-	rdMolAlign.AlignMol(molecule_embed, mol_1, atomMap=algMap,reflect=True,maxIters=100)
-
-	return molecule_embed, coordMap, algMap
+	return molecule_embed, coordMap, algMap, ci
 
 # FILTER FOR REMOVING MOLS IF LIGANDS ARE THE SAME
 def filter_template_mol(molecule_new, mol_objects,args,log):
