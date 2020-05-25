@@ -87,6 +87,7 @@ def four_embed(molecule,mol_1,number_of_neighbours,center_idx,neighbours_ret,nam
 def five_embed(molecule,mol_1,number_of_neighbours,center_idx,neighbours_ret,name_input,args,log):
 	mol_objects,name_return,coord_Map,alg_Map,mol_template,check = [],[],[],[],[],False
 	#fifteen cases for square pyrimidal
+	counter = 0
 	for name_1 in range(5):
 		for name_2 in range(3):
 			#assigning neighbours
@@ -171,7 +172,7 @@ def five_embed(molecule,mol_1,number_of_neighbours,center_idx,neighbours_ret,nam
 			if ci>=0:
 				check=filter_template_mol(molecule_new, mol_objects,args,log)
 				if check:
-					name =  str(name_1)+'_'+ str(name_2)
+					name =  str(counter)
 					#writing to mol_object file
 					name_final = name_input +'_'+name
 					mol_objects.append(molecule_new)
@@ -181,6 +182,7 @@ def five_embed(molecule,mol_1,number_of_neighbours,center_idx,neighbours_ret,nam
 					mol_template.append(mol_1)
 			else:
 				pass
+			counter +=1
 	return mol_objects, name_return, coord_Map, alg_Map, mol_template
 
 #GET THE LINEAR GEOMETRY
