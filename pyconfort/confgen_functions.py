@@ -285,7 +285,7 @@ def genConformer_r(mol, conf, i, matches, degree, sdwriter,args,name,log):
 		deg = 0
 		while deg < 360.0:
 			rad = math.pi*deg / 180.0
-			
+
 			rdMolTransforms.SetDihedralRad(mol.GetConformer(conf),*matches[i],value=rad)
 			#recalculating energies after rotation
 			GetFF = minimize_rdkit_energy(mol,conf,args)

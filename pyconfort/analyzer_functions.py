@@ -12,7 +12,7 @@ import shutil
 import glob
 import numpy as np
 import pandas as pd
-from pyconfort.writer_functions import input_line
+from pyconfort.writer_functions import input_route_line
 from pyconfort.argument_parser import possible_atoms
 
 possible_atoms = possible_atoms()
