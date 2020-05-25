@@ -200,245 +200,184 @@ def calc_neighbours(molecule,args):
 				atom.SetAtomicNum(53)
 			center_idx = atom.GetIdx()
 			number_of_neighbours = len(atom.GetNeighbors())
+			neighbours = atom.GetNeighbors()
 			break
-
-	return number_of_neighbours,center_idx
+	return number_of_neighbours,center_idx,neighbours
 
 # TEMPLATE GENERATION FOR SQUAREPLANAR AND squarepyramidal
 def template_embed(molecule,temp,name_input,args,log):
-	mol_objects,name_return,coord_Map,alg_Map,mol_template = [],[],[],[],[]
-	number_of_neighbours,center_idx = calc_neighbours(molecule,args)
+	mol_objects,name_return,coord_Map,alg_Map,mol_template,check = [],[],[],[],[],False
+	number_of_neighbours,center_idx,neighbours_ret = calc_neighbours(molecule,args)
 
-	if number_of_neighbours == 4:
-		#three cases for square planar
-		for name in range(3):
-			#assigning neighbours
-			for atom in molecule.GetAtoms():
-				if atom.GetIdx() == center_idx:
-					neighbours = atom.GetNeighbors()
-
-			#assigning order of replacement
-			if name == 0:
-				j = [1,2,3]
-			elif name == 1:
-				j = [2,3,1]
-			elif name == 2:
-				j = [3,1,2]
-
-			#checking for same atom neighbours and assigning in the templates for all mols in suppl!
-			for mol_1 in temp:
-				for atom in mol_1.GetAtoms():
-					if atom.GetSymbol() == 'F':
-						mol_1 = Chem.RWMol(mol_1)
-						idx = atom.GetIdx()
-						mol_1.RemoveAtom(idx)
-						mol_1 = mol_1.GetMol()
-
-				site_1,site_2,site_3,site_4,metal_site  = 0,0,0,0,0
-				for atom in mol_1.GetAtoms():
-					if atom.GetIdx() == 4 and metal_site == 0:
-						atom.SetAtomicNum(14)
-						metal_site = 1
-					if atom.GetIdx() == 0 and site_1 == 0:
-						atom.SetAtomicNum(neighbours[0].GetAtomicNum())
-						site_1 = 1
-					if atom.GetIdx() == 3 and site_2 == 0:
-						atom.SetAtomicNum(neighbours[j[0]].GetAtomicNum())
-						site_2 = 1
-					if atom.GetIdx() == 2 and site_3 == 0:
-						atom.SetAtomicNum(neighbours[j[1]].GetAtomicNum())
-						site_3 = 1
-					if atom.GetIdx() == 1 and site_4 == 0 :
-						atom.SetAtomicNum(neighbours[j[2]].GetAtomicNum())
-						site_4 = 1
-
-				#embedding of the molecule onto the core
-				molecule_new, coordMap, algMap = template_embed_optimize(molecule,mol_1,args,log)
-
-				#writing to mol_object file
-				name_final = name_input + str(name)
-				mol_objects.append(molecule_new)
-				name_return.append(name_final)
-				coord_Map.append(coordMap)
-				alg_Map.append(algMap)
-				mol_template.append(mol_1)
-
-	if number_of_neighbours == 5:
-		#fifteen cases for square pyrimidal
-		for name_1 in range(5):
-			for name_2 in range(3):
+	for mol_1 in temp:
+		if number_of_neighbours == 4:
+			#three cases for square planar
+			for name in range(3):
 				#assigning neighbours
-				for atom in molecule.GetAtoms():
-					if atom.GetIdx() == center_idx:
-						neighbours = atom.GetNeighbors()
+				neighbours = neighbours_ret
 
-				# assigning order of replacement for the top
-				if name_1 == 0:
-					k = 4
-				elif name_1== 1:
-					k = 3
-				elif name_1 == 2:
-					k = 2
-				elif name_1== 3:
-					k = 1
-				elif name_1 == 4:
-					k = 0
-
-				# assigning order of replacement for the plane
-				if name_2 == 0 and k == 4:
+				#assigning order of replacement
+				if name == 0:
 					j = [1,2,3]
-				elif name_2 == 1 and k == 4:
+				elif name == 1:
 					j = [2,3,1]
-				elif name_2 == 2 and k == 4:
-					j = [3,1,2]
-
-				# assigning order of replacement for the plane
-				if name_2 == 0 and k == 3:
-					j = [1,2,4]
-				elif name_2 == 1 and k == 3:
-					j = [2,4,1]
-				elif name_2 == 2 and k == 3:
-					j = [4,1,2]
-
-				# assigning order of replacement for the plane
-				if name_2 == 0 and k == 2:
-					j = [1,4,3]
-				elif name_2 == 1 and k == 2:
-					j = [4,3,1]
-				elif name_2 == 2 and k == 2:
-					j = [4,1,3]
-
-				# assigning order of replacement for the plane
-				if name_2 == 0 and k == 1:
-					j = [4,2,3]
-				elif name_2 == 1 and k == 1:
-					j = [2,3,4]
-				elif name_2 == 2 and k == 1:
-					j = [3,4,2]
-
-				# assigning order of replacement for the plane
-				if name_2 == 0 and k == 0:
-					j = [1,2,3]
-				elif name_2 == 1 and k == 0:
-					j = [2,3,1]
-				elif name_2 == 2 and k == 0:
+				elif name == 2:
 					j = [3,1,2]
 
 				#checking for same atom neighbours and assigning in the templates for all mols in suppl!
 				for mol_1 in temp:
-					site_1,site_2,site_3,site_4,site_5,metal_site  = 0,0,0,0,0,0
 					for atom in mol_1.GetAtoms():
-						if atom.GetIdx()  == 5 and metal_site == 0:
-							atom.SetAtomicNum(14)
-							atom.SetFormalCharge(1)
-							metal_site = 1
-						if k!= 0:
-							if atom.GetIdx()  == 1 and site_1 == 0:
-								atom.SetAtomicNum(neighbours[0].GetAtomicNum())
-								site_1 = 1
-							elif atom.GetIdx()  == 2 and site_2 == 0:
-								atom.SetAtomicNum(neighbours[j[0]].GetAtomicNum())
-								site_2 = 1
-							elif atom.GetIdx()  == 3 and site_3 == 0:
-								atom.SetAtomicNum(neighbours[j[1]].GetAtomicNum())
-								site_3 = 1
-							elif atom.GetIdx()  == 4 and site_4 == 0:
-								atom.SetAtomicNum(neighbours[j[2]].GetAtomicNum())
-								site_4 = 1
-							elif atom.GetIdx()  == 0 and site_5 == 0:
-								atom.SetAtomicNum(neighbours[k].GetAtomicNum())
-								site_5 = 1
-						elif k == 0:
-							if atom.GetIdx()  == 1 and site_1 == 0:
-								atom.SetAtomicNum(neighbours[4].GetAtomicNum())
-								site_1 = 1
-							elif atom.GetIdx()  == 2 and site_2 == 0:
-								atom.SetAtomicNum(neighbours[j[0]].GetAtomicNum())
-								site_2 = 1
-							elif atom.GetIdx()  == 3 and site_3 == 0:
-								atom.SetAtomicNum(neighbours[j[1]].GetAtomicNum())
-								site_3 = 1
-							elif atom.GetIdx()  == 4 and site_4 == 0:
-								atom.SetAtomicNum(neighbours[j[2]].GetAtomicNum())
-								site_4 = 1
-							elif atom.GetIdx() == 0 and site_5 == 0:
-								atom.SetAtomicNum(neighbours[0].GetAtomicNum())
-								site_5 = 1
+						if atom.GetSymbol() == 'F':
+							mol_1 = Chem.RWMol(mol_1)
+							idx = atom.GetIdx()
+							mol_1.RemoveAtom(idx)
+							mol_1 = mol_1.GetMol()
 
-					#assigning and embedding onto the core
-					molecule_new, coordMap, algMap = template_embed_optimize(molecule,mol_1,args,log)
+				for atom in mol_1.GetAtoms():
+					if atom.GetIdx() == 4:atom.SetAtomicNum(14)
+					if atom.GetIdx() == 0:atom.SetAtomicNum(neighbours[0].GetAtomicNum())
+					if atom.GetIdx() == 3:atom.SetAtomicNum(neighbours[j[0]].GetAtomicNum())
+					if atom.GetIdx() == 2:atom.SetAtomicNum(neighbours[j[1]].GetAtomicNum())
+					if atom.GetIdx() == 1:atom.SetAtomicNum(neighbours[j[2]].GetAtomicNum())
 
+				#embedding of the molecule onto the core
+				molecule_new, coordMap, algMap = template_embed_optimize(molecule,mol_1,args,log)
+
+				check=filter_template_mol(molecule_new, mol_objects,args,log)
+				if check:
 					#writing to mol_object file
-					name_final = name_input + str(name_1)+ str(name_2)
+					name_final = name_input + str(name)
 					mol_objects.append(molecule_new)
 					name_return.append(name_final)
 					coord_Map.append(coordMap)
 					alg_Map.append(algMap)
 					mol_template.append(mol_1)
 
-	if number_of_neighbours == 2:
-		for atom in molecule.GetAtoms():
-			if atom.GetIdx() == center_idx:
-				neighbours = atom.GetNeighbors()
+					print(mol_objects)
 
-		for mol_1 in temp:
-			site_1,site_2,metal_site  = 0,0,0
+		if number_of_neighbours == 5:
+			#fifteen cases for square pyrimidal
+			for name_1 in range(5):
+				for name_2 in range(3):
+					#assigning neighbours
+					neighbours = neighbours_ret
+
+					# assigning order of replacement for the top
+					if name_1 == 0:
+						k = 4
+					elif name_1== 1:
+						k = 3
+					elif name_1 == 2:
+						k = 2
+					elif name_1== 3:
+						k = 1
+					elif name_1 == 4:
+						k = 0
+
+					# assigning order of replacement for the plane
+					if name_2 == 0 and k == 4:
+						j = [1,2,3]
+					elif name_2 == 1 and k == 4:
+						j = [2,3,1]
+					elif name_2 == 2 and k == 4:
+						j = [3,1,2]
+
+					# assigning order of replacement for the plane
+					if name_2 == 0 and k == 3:
+						j = [1,2,4]
+					elif name_2 == 1 and k == 3:
+						j = [2,4,1]
+					elif name_2 == 2 and k == 3:
+						j = [4,1,2]
+
+					# assigning order of replacement for the plane
+					if name_2 == 0 and k == 2:
+						j = [1,4,3]
+					elif name_2 == 1 and k == 2:
+						j = [4,3,1]
+					elif name_2 == 2 and k == 2:
+						j = [4,1,3]
+
+					# assigning order of replacement for the plane
+					if name_2 == 0 and k == 1:
+						j = [4,2,3]
+					elif name_2 == 1 and k == 1:
+						j = [2,3,4]
+					elif name_2 == 2 and k == 1:
+						j = [3,4,2]
+
+					# assigning order of replacement for the plane
+					if name_2 == 0 and k == 0:
+						j = [1,2,3]
+					elif name_2 == 1 and k == 0:
+						j = [2,3,1]
+					elif name_2 == 2 and k == 0:
+						j = [3,1,2]
+
+					#checking for same atom neighbours and assigning in the templates for all mols in suppl!
+					for atom in mol_1.GetAtoms():
+						if atom.GetIdx()  == 5:
+							atom.SetAtomicNum(14)
+							atom.SetFormalCharge(1)
+						if atom.GetIdx()  == 1:
+							if k!= 0:atom.SetAtomicNum(neighbours[0].GetAtomicNum())
+							elif k == 0:atom.SetAtomicNum(neighbours[4].GetAtomicNum())
+						elif atom.GetIdx()  == 2:atom.SetAtomicNum(neighbours[j[0]].GetAtomicNum())
+						elif atom.GetIdx()  == 3:atom.SetAtomicNum(neighbours[j[1]].GetAtomicNum())
+						elif atom.GetIdx()  == 4:atom.SetAtomicNum(neighbours[j[2]].GetAtomicNum())
+						elif atom.GetIdx()  == 0:
+							if k!= 0:atom.SetAtomicNum(neighbours[k].GetAtomicNum())
+							elif k == 0:atom.SetAtomicNum(neighbours[0].GetAtomicNum())
+
+					#assigning and embedding onto the core
+					molecule_new, coordMap, algMap = template_embed_optimize(molecule,mol_1,args,log)
+					check=filter_template_mol(molecule_new, mol_objects,args,log)
+					if check:
+						name =  str(name_1)+ str(name_2)
+						#writing to mol_object file
+						name_final = name_input + name
+						mol_objects.append(molecule_new)
+						name_return.append(name_final)
+						coord_Map.append(coordMap)
+						alg_Map.append(algMap)
+						mol_template.append(mol_1)
+
+		if number_of_neighbours == 2:
+			neighbours = neighbours_ret
 			for atom in mol_1.GetAtoms():
-				if atom.GetIdx()  == 2 and metal_site == 0:
-					atom.SetAtomicNum(53)
-					metal_site = 1
-				if atom.GetIdx()  == 0 and site_1 == 0:
-					atom.SetAtomicNum(neighbours[0].GetAtomicNum())
-					site_1 = 1
-				if atom.GetIdx()  == 1 and site_2 == 0:
-					atom.SetAtomicNum(neighbours[1].GetAtomicNum())
-					site_2 = 2
+				if atom.GetIdx()  == 2:atom.SetAtomicNum(53)
+				if atom.GetIdx()  == 0:atom.SetAtomicNum(neighbours[0].GetAtomicNum())
+				if atom.GetIdx()  == 1:atom.SetAtomicNum(neighbours[1].GetAtomicNum())
 
-		#assigning and embedding onto the core
-		molecule_new, coordMap, algMap = template_embed_optimize(molecule,mol_1,args,log)
+			#assigning and embedding onto the core
+			molecule_new, coordMap, algMap = template_embed_optimize(molecule,mol_1,args,log)
 
-		#writing to mol_object file
-		name_final = name_input
-		mol_objects.append(molecule_new)
-		name_return.append(name_final)
-		coord_Map.append(coordMap)
-		alg_Map.append(algMap)
-		mol_template.append(mol_1)
+			#writing to mol_object file
+			name_final = name_input
+			mol_objects.append(molecule_new)
+			name_return.append(name_final)
+			coord_Map.append(coordMap)
+			alg_Map.append(algMap)
+			mol_template.append(mol_1)
 
-	if number_of_neighbours == 3:
-
-		for atom in molecule.GetAtoms():
-			print(atom.GetSymbol(),atom.GetIdx())
-			if atom.GetIdx() == center_idx:
-				neighbours = atom.GetNeighbors()
-
-		for mol_1 in temp:
-			site_1,site_2,site_3,metal_site  = 0,0,0,0
+		if number_of_neighbours == 3:
+			neighbours = neighbours_ret
 			for atom in mol_1.GetAtoms():
-				print(atom.GetSymbol(),atom.GetIdx())
-				if atom.GetIdx()  == 0 and metal_site == 0:
-					atom.SetAtomicNum(53)
-					metal_site = 1
-				if atom.GetIdx()  == 1 and site_1 == 0:
-					atom.SetAtomicNum(neighbours[0].GetAtomicNum())
-					site_1 = 1
-				if atom.GetIdx()  == 2 and site_2 == 0:
-					atom.SetAtomicNum(neighbours[1].GetAtomicNum())
-					site_2 = 1
-				if atom.GetIdx()  == 3 and site_3 == 0:
-					atom.SetAtomicNum(neighbours[2].GetAtomicNum())
-					site_3 = 1
+				if atom.GetIdx()  == 0:atom.SetAtomicNum(53)
+				if atom.GetIdx()  == 1:atom.SetAtomicNum(neighbours[0].GetAtomicNum())
+				if atom.GetIdx()  == 2:atom.SetAtomicNum(neighbours[1].GetAtomicNum())
+				if atom.GetIdx()  == 3:atom.SetAtomicNum(neighbours[2].GetAtomicNum())
 
-		#assigning and embedding onto the core
-		molecule_new, coordMap, algMap = template_embed_optimize(molecule,mol_1,args,log)
+			#assigning and embedding onto the core
+			molecule_new, coordMap, algMap = template_embed_optimize(molecule,mol_1,args,log)
 
-		#writing to mol_object file
-		name_final = name_input
-		mol_objects.append(molecule_new)
-		name_return.append(name_final)
-		coord_Map.append(coordMap)
-		alg_Map.append(algMap)
-		mol_template.append(mol_1)
+			#writing to mol_object file
+			name_final = name_input
+			mol_objects.append(molecule_new)
+			name_return.append(name_final)
+			coord_Map.append(coordMap)
+			alg_Map.append(algMap)
+			mol_template.append(mol_1)
 
 	return mol_objects, name_return, coord_Map, alg_Map, mol_template
 
@@ -487,6 +426,19 @@ def template_embed_optimize(molecule_embed,mol_1,args,log):
 	rdMolAlign.AlignMol(molecule_embed, mol_1, atomMap=algMap,reflect=True,maxIters=100)
 
 	return molecule_embed, coordMap, algMap
+
+def filter_template_mol(molecule_new, mol_objects,args,log):
+	if len(mol_objects) ==0:
+		check = True
+	else:
+		check = True
+		#check if molecule also exixts in the mol_objects
+		for mol in mol_objects:
+			rms = get_conf_RMS(mol, molecule_new, -1, -1, args.heavyonly, args.max_matches_RMSD,log)
+			if rms < 0.5:
+				check = False
+				break
+	return check
 
 # FUCNTION WORKING WITH MOL OBJECT TO CREATE CONFORMERS
 def conformer_generation(mol,name,start_time,args,log,dup_data,dup_data_idx,coord_Map=None,alg_Map=None,mol_template=None):
