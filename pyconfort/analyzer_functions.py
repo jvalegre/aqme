@@ -97,7 +97,7 @@ def check_for_gen_or_genecp(ATOMTYPES,args):
 	return ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp
 
 # CREATION OF COM FILES
-def new_com_file(file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,TERMINATION,IM_FREQS,bs_com,lot_com,bs_gcp_com):
+def new_com_file(file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,TERMINATION,IM_FREQS,bs_com,lot_com,bs_gcp_com,path_for_file,path_write_gjf_files):
 	fileout = open(file.split(".")[0]+'.com', "w")
 	fileout.write("%mem="+str(args.mem)+"\n")
 	fileout.write("%nprocshared="+str(args.nprocs)+"\n")
@@ -157,7 +157,7 @@ def new_com_file(file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTES
 # DEFINTION OF OUTPUT ANALYSER and NMR FILES CREATOR
 def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin,log):
 
-	input, input_sp = input_route_line(args)
+	input_route, input_route_sp = input_route_line(args)
 
 	for file in log_files:
 
@@ -377,26 +377,26 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin,log):
 			if ERRORTYPE == 'SCFerror':
 				if genecp == 'genecp' or  genecp == 'gen':
 					if args.single_point:
-						keywords_opt = lot +'/'+ genecp+' '+ input_sp + 'SCF=QC'
+						keywords_opt = lot +'/'+ genecp+' '+ input_route_sp + 'SCF=QC'
 					else:
-						keywords_opt = lot +'/'+ genecp+' '+ input + 'SCF=QC'
+						keywords_opt = lot +'/'+ genecp+' '+ input_route + 'SCF=QC'
 				else:
 					if args.single_point:
-						keywords_opt = lot +'/'+ bs+' '+ input_sp + 'SCF=QC'
+						keywords_opt = lot +'/'+ bs+' '+ input_route_sp + 'SCF=QC'
 					else:
-						keywords_opt = lot +'/'+ bs+' '+ input + 'SCF=QC'
+						keywords_opt = lot +'/'+ bs+' '+ input_route + 'SCF=QC'
 			else:
 				if genecp == 'genecp' or  genecp == 'gen':
 					if args.single_point:
-						keywords_opt = lot +'/'+ genecp+' '+ input_sp
+						keywords_opt = lot +'/'+ genecp+' '+ input_route_sp
 					else:
-						keywords_opt = lot +'/'+ genecp+' '+ input
+						keywords_opt = lot +'/'+ genecp+' '+ input_route
 				else:
 					if args.single_point:
-						keywords_opt = lot +'/'+ bs +' '+ input_sp
+						keywords_opt = lot +'/'+ bs +' '+ input_route_sp
 					else:
-						keywords_opt = lot +'/'+ bs +' '+ input
-			new_com_file(file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,TERMINATION,IM_FREQS,bs,lot,bs_gcp)
+						keywords_opt = lot +'/'+ bs +' '+ input_route
+			new_com_file(file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,TERMINATION,IM_FREQS,bs,lot,bs_gcp,path_for_file,path_write_gjf_files)
 
 		#adding in the NMR componenet only to the finished files after reading from normally finished log files
 		if args.sp and TERMINATION == "normal" and IM_FREQS == 0:
@@ -442,7 +442,7 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin,log):
 								else:
 									keywords_opt = lot_sp+'/'+ bs_sp+' '+ args.input_for_sp + ' scrf=({0},solvent={1}) '.format(args.solvent_model_sp,args.solvent_name_sp)
 
-						new_com_file(file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,TERMINATION,IM_FREQS,bs_sp,lot_sp,bs_gcp_sp)
+						new_com_file(file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,TERMINATION,IM_FREQS,bs_sp,lot_sp,bs_gcp_sp,path_for_file,path_write_gjf_files)
 
 		#changing directory back to where all files are from new files created.
 		os.chdir(w_dir)
