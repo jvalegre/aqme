@@ -4,10 +4,8 @@
 # 		   This file stores all the functions 		    #
 # 	  used in template based conformer generation		#
 .#####################################################"""
-import numpy as np
 from rdkit.Chem import AllChem as Chem
-from rdkit.Chem import rdMolTransforms, PropertyMol, rdDistGeom, rdMolAlign, Lipinski
-from rdkit.Geometry import Point3D
+from rdkit.Chem import PropertyMol, rdDistGeom, rdMolAlign, Lipinski
 from pyconfort.filter_functions import get_conf_RMS
 
 
@@ -32,7 +30,7 @@ def calc_neighbours(molecule,args):
 
 # GET THE SQUAREPLANAR GEOMETRY
 def four_embed(molecule,mol_1,number_of_neighbours,center_idx,neighbours_ret,name_input,args,log):
-	mol_objects,name_return,coord_Map,alg_Map,mol_template,check = [],[],[],[],[],False
+	mol_objects,name_return,coord_Map,alg_Map,mol_template = [],[],[],[],[]
 	#three cases for square planar
 	for name in range(3):
 		#assigning neighbours
@@ -85,7 +83,7 @@ def four_embed(molecule,mol_1,number_of_neighbours,center_idx,neighbours_ret,nam
 
 # GET THE SQUAREPYRAMIDAL GEOMETRY
 def five_embed(molecule,mol_1,number_of_neighbours,center_idx,neighbours_ret,name_input,args,log):
-	mol_objects,name_return,coord_Map,alg_Map,mol_template,check = [],[],[],[],[],False
+	mol_objects,name_return,coord_Map,alg_Map,mol_template = [],[],[],[],[]
 	#fifteen cases for square pyrimidal
 	counter = 0
 	for name_1 in range(5):
@@ -187,7 +185,7 @@ def five_embed(molecule,mol_1,number_of_neighbours,center_idx,neighbours_ret,nam
 
 #GET THE LINEAR GEOMETRY
 def two_embed(molecule,mol_1,number_of_neighbours,center_idx,neighbours_ret,name_input,args,log):
-	mol_objects,name_return,coord_Map,alg_Map,mol_template,check = [],[],[],[],[],False
+	mol_objects,name_return,coord_Map,alg_Map,mol_template = [],[],[],[],[]
 	neighbours = neighbours_ret
 	for atom in mol_1.GetAtoms():
 		if atom.GetIdx()  == 2:
@@ -215,7 +213,7 @@ def two_embed(molecule,mol_1,number_of_neighbours,center_idx,neighbours_ret,name
 
 # GET THE TRIGONAL PLANAR GEOMETRY
 def three_embed(molecule,mol_1,number_of_neighbours,center_idx,neighbours_ret,name_input,args,log):
-	mol_objects,name_return,coord_Map,alg_Map,mol_template,check = [],[],[],[],[],False
+	mol_objects,name_return,coord_Map,alg_Map,mol_template = [],[],[],[],[]
 	neighbours = neighbours_ret
 	for atom in mol_1.GetAtoms():
 		if atom.GetIdx()  == 0:
