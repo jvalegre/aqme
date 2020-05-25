@@ -97,7 +97,7 @@ def check_for_gen_or_genecp(ATOMTYPES,args):
 	return ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp
 
 # CREATION OF COM FILES
-def new_com_file(file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,TERMINATION,IM_FREQS,bs_com,lot_com,bs_gcp_com,path_for_file,path_write_gjf_files):
+def new_com_file(file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,TERMINATION,IM_FREQS,bs_com,lot_com,bs_gcp_com):
 	fileout = open(file.split(".")[0]+'.com', "w")
 	fileout.write("%mem="+str(args.mem)+"\n")
 	fileout.write("%nprocshared="+str(args.nprocs)+"\n")
@@ -396,7 +396,7 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin,log):
 						keywords_opt = lot +'/'+ bs +' '+ input_route_sp
 					else:
 						keywords_opt = lot +'/'+ bs +' '+ input_route
-			new_com_file(file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,TERMINATION,IM_FREQS,bs,lot,bs_gcp,path_for_file,path_write_gjf_files)
+			new_com_file(file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,TERMINATION,IM_FREQS,bs,lot,bs_gcp)
 
 		#adding in the NMR componenet only to the finished files after reading from normally finished log files
 		if args.sp and TERMINATION == "normal" and IM_FREQS == 0:
@@ -442,7 +442,7 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin,log):
 								else:
 									keywords_opt = lot_sp+'/'+ bs_sp+' '+ args.input_for_sp + ' scrf=({0},solvent={1}) '.format(args.solvent_model_sp,args.solvent_name_sp)
 
-						new_com_file(file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,TERMINATION,IM_FREQS,bs_sp,lot_sp,bs_gcp_sp,path_for_file,path_write_gjf_files)
+						new_com_file(file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,TERMINATION,IM_FREQS,bs_sp,lot_sp,bs_gcp_sp)
 
 		#changing directory back to where all files are from new files created.
 		os.chdir(w_dir)
