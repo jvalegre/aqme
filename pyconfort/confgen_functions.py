@@ -301,7 +301,7 @@ def minimize_rdkit_energy(mol,conf,args,log):
 	elif args.ff == "UFF":
 		GetFF = Chem.UFFGetMoleculeForceField(mol,confId=conf)
 	else:
-		log.write('   Force field {} not supported!'.format(args.ff))
+		log.write(' Force field {} not supported!'.format(args.ff))
 		sys.exit()
 	GetFF.Initialize()
 	GetFF.Minimize(maxIts=args.opt_steps_RDKit)
