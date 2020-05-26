@@ -1,5 +1,5 @@
 # INPUT FILE
-input : 'smi.smi' # input files
+input : '' # input files
 path : '' # path to guassian folder when we do analysis
 prefix : False # if prefix : True, set a generic name for the different molecules (i.e. comp_1, comp_2, etc)
 
@@ -11,19 +11,18 @@ verbose : True
 # Compute : True and write_gauss : True --> generates conformers in SDF files and writes COM files
 # Compute : True and write_gauss : False --> generates conformers in SDF files only
 # Compute : False and write_gauss : True --> reads SDF files from the main DBGEN folder (all SDF files)
-compute : True
-write_gauss : True # writting Gaussian COM files after, look options of write_gauss below
+compute : False
+write_gauss : False # writting Gaussian COM files after, look options of write_gauss below
 
 # (2) ANALYSIS OF LOG FILES
 # if analysis is True, check all LOG files inside "generated_gaussian_files".
 # The folder might multiple subfolders with levels of theory (i.e. coming from the conformer generation).
 # This generates new COM files from LOG files with imaginary freqs or errors
-analysis : False
+analysis : True
 sp : False # write COM files after analysis
 dup : False # if dup : True, analysis will also separate duplicate LOG files
 boltz : False # if boltz : True, analysis will calculate Bolztmann probabilities of each conformer
 combine : False # if boltz : True and combine : True, all the data from the CSV files created with boltz will be condensed in 3 CSV files
-amplitude_ifreq : 0.2 # amplitude use to displace the imaginary frequencies to fix during analysis
 
 # COMMON PARAMETERS TO EDIT
 
@@ -39,7 +38,7 @@ xtb : False
 
 # (3) RDKit AND xTB PARAMETERS
 ewin : 1000 #energy window in kcal/mol to use conformers for RDKit and xTB (conformers with E higher than ewin will be discarded)
-sample : 20 # number of conformers to sample to get non-torsional differences (default 100)
+sample : 'auto' # number of conformers to sample to get non-torsional differences (default 100)
 
 # (4) OPTIONS FOR COM FILE GENERATION (write_gauss : True)
 # By default, you include optimization in the COM files.
@@ -64,7 +63,7 @@ level_of_theory : ['wb97xd'] # functional
 max_cycle_opt : 100 #default is 300
 
 # (4.4) DISPERSION CORRECTION FOR COM FILES
-dispersion_correction : False # include dispersion correction
+dispersion_correction : True # include dispersion correction
 empirical_dispersion : 'GD3BJ' # type of dispersion correction
 
 # (4.5) SOLVATION MODEL
@@ -74,16 +73,16 @@ solvent_name : 'Chloroform' # solvent
 # (4.6) DEFINTION OF BASIS SET AND LEVEL OF THEORY AND SOLVENT
 input_for_sp : 'nmr = giao' # add the input line with keywords. For adjusting number of processors and memory, go belo (to gauss_write options)
 last_line_for_sp : '-1' # last line to add for single point
-basis_set_sp : ['def2svp'] # basis set
+basis_set_sp : ['def2svp','321g'] # basis set
 basis_set_genecp_atoms_sp : ['LANL2DZ'] # functional for the genecp part
-level_of_theory_sp : ['wb97xd'] # functional
+level_of_theory_sp : ['wb97xd','b3lyp'] # functional
 
 # (4.7) DISPERSION CORRECTION FOR COM FILES
-dispersion_correction_sp : False # include dispersion correction
+dispersion_correction_sp : True # include dispersion correction
 empirical_dispersion_sp : 'GD3BJ' # type of dispersion correction
 
 # (4.8) SOLVATION MODEL
-solvent_model_sp : 'gas_phase' # type of solvation model. Options: gas_phase or any solvation model (i.e. SMD, IEFPCM, CPCM)
+solvent_model_sp : 'SMD' # type of solvation model. Options: gas_phase or any solvation model (i.e. SMD, IEFPCM, CPCM)
 solvent_name_sp : 'Chloroform' # solvent
 
 # (4.9) DEFAULT PARAMETERS FOR GAUSSIAN OPTIMIZATION

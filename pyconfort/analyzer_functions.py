@@ -21,7 +21,7 @@ possible_atoms = possible_atoms()
 def analysis_main(w_dir_initial,args,log):
 	# when you run analysis in a folder full of output files
 	if args.path == '':
-		log_files = glob.glob('*.log')+glob.glob('*.LOG')+glob.glob('*.out')+glob.glob('*.OUT')
+		log_files = glob.glob('*.log')+glob.glob('*.out')
 		w_dir_fin = w_dir_initial+'/finished'
 		for lot in args.level_of_theory:
 			for bs in args.basis_set:
@@ -44,7 +44,7 @@ def analysis_main(w_dir_initial,args,log):
 					#log.write(w_dir)
 					os.chdir(w_dir)
 					#log.write(w_dir)
-					log_files = glob.glob('*.log')+glob.glob('*.LOG')+glob.glob('*.out')+glob.glob('*.OUT')
+					log_files = glob.glob('*.log')+glob.glob('*.out')
 					folder = w_dir + '/' + str(lot) + '-' + str(bs)
 					log.write("\no  ANALYZING OUTPUT FILES IN {}\n".format(folder))
 					output_analyzer(log_files, w_dir_initial, lot, bs, bs_gcp, args, w_dir_fin, log)
@@ -57,7 +57,7 @@ def dup_main(args,log):
 			os.chdir(w_dir)
 			#can change molecules to a range as files will have codes in a continous manner
 			try:
-				log_files = glob.glob('*.log')
+				log_files = glob.glob('*.log')+glob.glob('*.out')
 				if len(log_files) != 0:
 					val = ' '.join(log_files)
 					dup_calculation(val,w_dir,args,log)
@@ -159,6 +159,7 @@ def output_analyzer(log_files, w_dir_initial, lot, bs,bs_gcp, args, w_dir_fin,lo
 	input_route, input_route_sp = input_route_line(args)
 
 	for file in log_files:
+		print(log_files)
 		#made it global for all functions
 		rms = 10000
 		#defined the variable stop_rms, standor
@@ -166,6 +167,7 @@ def output_analyzer(log_files, w_dir_initial, lot, bs,bs_gcp, args, w_dir_fin,lo
 		standor = 0
 		NATOMS = 0
 
+		os.chdir(w_dir_initial)
 		outfile = open(file,"r")
 		outlines = outfile.readlines()
 		ATOMTYPES, CARTESIANS = [],[]
@@ -297,7 +299,7 @@ def output_analyzer(log_files, w_dir_initial, lot, bs,bs_gcp, args, w_dir_fin,lo
 		# This part fixes jobs with imaginary freqs
 		if IM_FREQS > 0:
 			# Multiplies the imaginary normal mode vector by this amount (from -1 to 1).
-			amplitude = 0.2 # default in pyQRC
+			amplitude = args.amplitude_ifreq # default in pyQRC
 			shift = []
 
 			# Save the original Cartesian coordinates before they are altered
@@ -357,8 +359,7 @@ def output_analyzer(log_files, w_dir_initial, lot, bs,bs_gcp, args, w_dir_fin,lo
 				else:
 					raise
 			os.chdir(new_gaussian_input_files)
-
-			log.write('-> Creating new gaussian input files for {0} in {1}/{2}\n'.format(file,lot,bs))
+			log.write('-> Creating new gaussian input files for {0} in {1}\n'.format(file,new_gaussian_input_files))
 
 			ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp =  check_for_gen_or_genecp(ATOMTYPES,args)
 

@@ -165,12 +165,11 @@ def compute_confs(smi, name,args,log,dup_data,counter_for_template,i,start_time)
 			mol_objects = []
 			if len(args.metal_idx) == 1:
 				if args.complex_type == 'squareplanar' or args.complex_type == 'squarepyramidal':
-					file_template = os.path.dirname(os.path.abspath(__file__)) +'/template/template-4-and-5.sdf'
+					file_template = os.path.dirname(os.path.abspath(__file__)) +'/templates/template-4-and-5.sdf'
 				if args.complex_type =='linear':
-					print('in temp assigning')
-					file_template = os.path.dirname(os.path.abspath(__file__)) +'/template/template-2.sdf'
+					file_template = os.path.dirname(os.path.abspath(__file__)) +'/templates/template-2.sdf'
 				if args.complex_type =='trigonalplanar':
-					file_template = os.path.dirname(os.path.abspath(__file__)) +'/template/template-3.sdf'
+					file_template = os.path.dirname(os.path.abspath(__file__)) +'/templates/template-3.sdf'
 				temp = Chem.SDMolSupplier(file_template)
 				mol_objects_from_template,name, coord_Map, alg_Map, mol_template = template_embed(mol,temp,name,args,log)
 				for i,_ in enumerate(mol_objects_from_template):

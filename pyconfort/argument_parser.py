@@ -35,6 +35,7 @@ def parser_args():
 	parser.add_argument("-r", "--resubmit", action="store_true", default=False, help="Resubmit Gaussian input files")
 	parser.add_argument("--sp", action="store_true", default=False, help="Resubmit Gaussian single point input files")
 	#Post analysis
+	parser.add_argument("--amplitude_ifreq", action="store",default=0.2, help="amplitude use to displace the imaginary frequencies to fix during analysis", type=float)
 	parser.add_argument("--dup",action="store_true",default=False, help="Remove Duplicates after DFT optimization")
 	parser.add_argument("-b","--boltz", action="store_true", default=False, help="Boltzmann factor for each conformers from Gaussian output files")
 	parser.add_argument("-f","--combine", action="store_true", default=False, help="Combine files of differnt molecules including boltzmann weighted energies")
