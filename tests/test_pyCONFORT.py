@@ -5,10 +5,7 @@
 ######################################################.
 
 import os
-import glob
 import pytest
-import pandas as pd
-import subprocess
 from definitions_testing import test_conf_gen,test_only_check,test_analysis,test_single_point
 
 # saves the working directory
@@ -76,22 +73,22 @@ def test_confgen(folder, smiles, params_file, n_confs, prefilter_confs_rdkit, fi
     cmd_pyconfort = ['python', '-m', 'pyconfort', '--varfile', params_file]
 
     if type == 'conf_gen':
-        test_conf_gen(path, precision, folder, smiles, params_file, n_confs, prefilter_confs_rdkit, filter_confs_rdkit, E_confs, charge, dihedral, xTB_ANI1, type)
+        test_conf_gen(path, precision, cmd_pyconfort, folder, smiles, params_file, n_confs, prefilter_confs_rdkit, filter_confs_rdkit, E_confs, charge, dihedral, xTB_ANI1, type)
 
     # check that the COM files are generated correctly with gen and gen_ecp
     elif type == 'only_check':
-        test_only_check(path, precision, folder, smiles, params_file, n_confs, prefilter_confs_rdkit, filter_confs_rdkit, E_confs, charge, dihedral, xTB_ANI1, type)
+        test_only_check(path, precision, cmd_pyconfort, folder, smiles, params_file, n_confs, prefilter_confs_rdkit, filter_confs_rdkit, E_confs, charge, dihedral, xTB_ANI1, type)
 
     elif type == 'analysis':
-        test_analysis(path, precision, folder, smiles, params_file, n_confs, prefilter_confs_rdkit, filter_confs_rdkit, E_confs, charge, dihedral, xTB_ANI1, type)
+        test_analysis(path, precision, cmd_pyconfort, folder, smiles, params_file, n_confs, prefilter_confs_rdkit, filter_confs_rdkit, E_confs, charge, dihedral, xTB_ANI1, type)
 
-    elif type == 'Duplicates':
-        if smiles == 'Duplicate.LOG':
-            os.chdir(path+'/'+folder+'/duplicates')
-            assert smiles in glob.glob('*.*')
+    # elif type == 'Duplicates':
+    #     if smiles == 'Duplicate.LOG':
+    #         os.chdir(path+'/'+folder+'/duplicates')
+    #         assert smiles in glob.glob('*.*')
 
     elif type == 'Single_point':
-        test_single_point(path, precision, folder, smiles, params_file, n_confs, prefilter_confs_rdkit, filter_confs_rdkit, E_confs, charge, dihedral, xTB_ANI1, type)
+        test_single_point(path, precision, cmd_pyconfort, folder, smiles, params_file, n_confs, prefilter_confs_rdkit, filter_confs_rdkit, E_confs, charge, dihedral, xTB_ANI1, type)
 
     else:
         assert 'not right type of test' == 'no not right'
