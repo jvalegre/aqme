@@ -39,7 +39,7 @@ def calc_genecp(file, atom):
 
     return count,NBO,pop,opt
 
-def test_conf_gen(path, precision, cmd_pyconfort, folder, smiles, params_file, n_confs, prefilter_confs_rdkit, filter_confs_rdkit, E_confs, charge, dihedral, xTB_ANI1, type):
+def conf_gen(path, precision, cmd_pyconfort, folder, smiles, params_file, n_confs, prefilter_confs_rdkit, filter_confs_rdkit, E_confs, charge, dihedral, xTB_ANI1):
     # open right folder and run the code
     os.chdir(path+'/'+folder+'/'+smiles.split('.')[0])
     subprocess.run(cmd_pyconfort)
@@ -90,7 +90,7 @@ def test_conf_gen(path, precision, cmd_pyconfort, folder, smiles, params_file, n
     assert str(charge) == str(test_charge[0])
 
 
-def test_only_check(path, precision, cmd_pyconfort, folder, smiles, params_file, n_confs, prefilter_confs_rdkit, filter_confs_rdkit, E_confs, charge, dihedral, xTB_ANI1, type):
+def only_check(path, precision, cmd_pyconfort, folder, smiles, params_file, n_confs, prefilter_confs_rdkit, filter_confs_rdkit, E_confs, charge, dihedral, xTB_ANI1):
     # open right folder and run the code
     os.chdir(path+'/'+folder+'/'+smiles.split('.')[0])
     subprocess.run(cmd_pyconfort)
@@ -104,7 +104,7 @@ def test_only_check(path, precision, cmd_pyconfort, folder, smiles, params_file,
         else: # for genecp
             assert count == 2
 
-def test_analysis(path, precision, cmd_pyconfort, folder, smiles, params_file, n_confs, prefilter_confs_rdkit, filter_confs_rdkit, E_confs, charge, dihedral, xTB_ANI1, type):
+def analysis(path, precision, cmd_pyconfort, folder, file, params_file, type):
     os.chdir(path+'/'+folder)
     print(os.getcwd())
     # the code will move the files the first time, this 'if' avoids errors
@@ -133,7 +133,7 @@ def test_analysis(path, precision, cmd_pyconfort, folder, smiles, params_file, n
         os.chdir(path+'/'+folder+'/failed_unfinished')
         assert smiles in glob.glob('*.*')
 
-def test_single_point(path, precision, cmd_pyconfort, folder, smiles, params_file, n_confs, prefilter_confs_rdkit, filter_confs_rdkit, E_confs, charge, dihedral, xTB_ANI1, type):
+def single_point(path, precision, cmd_pyconfort, folder, file, params_file, type):
     os.chdir(path+'/'+folder)
     files = glob.glob('*.*')
     if len(files) > 0:
