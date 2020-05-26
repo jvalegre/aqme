@@ -10,9 +10,9 @@ import pytest
 from definitions_testing import conf_gen
 
 # saves the working directory
-path = os.getcwd()
+path_metals = os.getcwd()
 # decimal digits for comparing E
-precision = 5
+precision_metals = 5
 
 # tests for individual organic molecules and metal complexes
 @pytest.mark.parametrize("folder, smiles, params_file, n_confs, prefilter_confs_rdkit, filter_confs_rdkit, E_confs, charge, dihedral, xTB_ANI1",
@@ -30,9 +30,9 @@ precision = 5
 
 def test_confgen_metals(folder, smiles, params_file, n_confs, prefilter_confs_rdkit, filter_confs_rdkit, E_confs, charge, dihedral, xTB_ANI1):
     # runs the program with the different tests
-    cmd_pyconfort = ['python', '-m', 'pyconfort', '--varfile', params_file]
+    cmd_metals = ['python', '-m', 'pyconfort', '--varfile', params_file]
 
-    conf_gen(path, precision, cmd_pyconfort, folder, smiles, params_file, n_confs, prefilter_confs_rdkit, filter_confs_rdkit, E_confs, charge, dihedral, xTB_ANI1)
+    conf_gen(path_metals, precision_metals, cmd_metals, folder, smiles, n_confs, prefilter_confs_rdkit, filter_confs_rdkit, E_confs, charge, dihedral, xTB_ANI1)
 
 # MISSING CHECKS:
 # experimental rules for confgen SDF to COM

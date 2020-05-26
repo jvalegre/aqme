@@ -10,9 +10,9 @@ import pytest
 from definitions_testing import conf_gen, only_check
 
 # saves the working directory
-path = os.getcwd()
+path_others = os.getcwd()
 # decimal digits for comparing E
-precision = 5
+precision_others = 5
 
 # tests for individual organic molecules and metal complexes
 @pytest.mark.parametrize("folder, smiles, params_file, n_confs, prefilter_confs_rdkit, filter_confs_rdkit, E_confs, charge, dihedral, xTB_ANI1",
@@ -34,11 +34,8 @@ precision = 5
     ('Genecp', 'Pd_squareplanar.smi', 'params_genecp_test2.yaml', 'nan', 'nan', 'nan', 'nan', 'nan', False, False), # test genecp
 ])
 
-def test_confgen_metals(folder, smiles, params_file, n_confs, prefilter_confs_rdkit, filter_confs_rdkit, E_confs, charge, dihedral, xTB_ANI1):
+def test_confgen_others(folder, smiles, params_file, n_confs, prefilter_confs_rdkit, filter_confs_rdkit, E_confs, charge, dihedral, xTB_ANI1):
     # runs the program with the different tests
-    cmd_pyconfort = ['python', '-m', 'pyconfort', '--varfile', params_file]
+    cmd_others = ['python', '-m', 'pyconfort', '--varfile', params_file]
 
-    conf_gen(path, precision, cmd_pyconfort, folder, smiles, params_file, n_confs, prefilter_confs_rdkit, filter_confs_rdkit, E_confs, charge, dihedral, xTB_ANI1)
-
-# MISSING CHECKS:
-# experimental rules
+    conf_gen(path_others, precision_others, cmd_others, folder, smiles, n_confs, prefilter_confs_rdkit, filter_confs_rdkit, E_confs, charge, dihedral, xTB_ANI1)

@@ -9,14 +9,12 @@ import pytest
 from definitions_testing import analysis,single_point
 
 # saves the working directory
-path = os.getcwd()
-# decimal digits for comparing E
-precision = 5
+path_analysis_dup_sp = os.getcwd()
 
 # tests for individual organic molecules and metal complexes
 @pytest.mark.parametrize("folder, file, params_file, type",
 [
-    # tests of the analysis part (I use smiles as the output LOG files)
+    # tests of the analysis part (I use file as the output LOG files)
     ('Analysis', 'CH4_Normal_termination.log', 'params_analysis_test.yaml', 'analysis'), # test normal termination
     ('Analysis', 'Basis_set_error1.LOG', 'params_analysis_test.yaml', 'analysis'), # test incompatibilities with gen/genecp
     ('Analysis', 'Basis_set_error2.LOG', 'params_analysis_test.yaml', 'analysis'), # test incompatibilities with gen/genecp
@@ -34,15 +32,15 @@ def test_analysis_dup_sp(folder, file, params_file, type):
     cmd_pyconfort = ['python', '-m', 'pyconfort', '--varfile', params_file]
 
     if type == 'analysis':
-        analysis(path, precision, cmd_pyconfort, folder, file, params_file, type)
+        analysis(path_analysis_dup_sp, cmd_pyconfort, folder, file)
 
     # elif type == 'Duplicates':
-    #     if smiles == 'Duplicate.LOG':
-    #         os.chdir(path+'/'+folder+'/duplicates')
-    #         assert smiles in glob.glob('*.*')
+    #     if file == 'Duplicate.LOG':
+    #         os.chdir(path_analysis_dup_sp+'/'+folder+'/duplicates')
+    #         assert file in glob.glob('*.*')
 
     elif type == 'single_point':
-        single_point(path, precision, cmd_pyconfort, folder, file, params_file, type)
+        single_point(path_analysis_dup_sp, cmd_pyconfort, folder, file)
 
 # MISSING CHECKS:
 # experimental rules for analysis LOG to COM

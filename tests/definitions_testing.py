@@ -39,14 +39,13 @@ def calc_genecp(file, atom):
 
     return count,NBO,pop,opt
 
-def conf_gen(path, precision, cmd_pyconfort, folder, smiles, params_file, n_confs, prefilter_confs_rdkit, filter_confs_rdkit, E_confs, charge, dihedral, xTB_ANI1):
+def conf_gen(path, precision, cmd_pyconfort, folder, smiles, n_confs, prefilter_confs_rdkit, filter_confs_rdkit, E_confs, charge, dihedral, xTB_ANI1):
     # open right folder and run the code
     os.chdir(path+'/'+folder+'/'+smiles.split('.')[0])
     subprocess.run(cmd_pyconfort)
 
     # Retrieving the generated CSV file
     df_output = pd.read_csv(smiles.split('.')[0]+'-Duplicates Data.csv')
-    file = params_file.split('.')[0]
 
     # tests for RDKit
     if not dihedral:
@@ -104,44 +103,42 @@ def only_check(path, precision, cmd_pyconfort, folder, smiles, params_file, n_co
         else: # for genecp
             assert count == 2
 
-def analysis(path, precision, cmd_pyconfort, folder, file, params_file, type):
+def analysis(path, cmd_pyconfort, folder, file):
     os.chdir(path+'/'+folder)
     print(os.getcwd())
     # the code will move the files the first time, this 'if' avoids errors
     files = glob.glob('*.*')
     if len(files) > 0:
         subprocess.run(cmd_pyconfort)
-    if smiles == 'CH4_Normal_termination.log':
+    if file == 'CH4_Normal_termination.log':
         os.chdir(path+'/'+folder+'/finished')
-        assert smiles in glob.glob('*.*')
-    if smiles == 'Basis_set_error1.LOG':
+        assert file in glob.glob('*.*')
+    if file == 'Basis_set_error1.LOG':
         os.chdir(path+'/'+folder+'/failed_error/atomic_basis_error')
-        assert smiles in glob.glob('*.*')
-    if smiles == 'Basis_set_error2.LOG':
+        assert file in glob.glob('*.*')
+    if file == 'Basis_set_error2.LOG':
         os.chdir(path+'/'+folder+'/failed_error/atomic_basis_error')
-        assert smiles in glob.glob('*.*')
-    if smiles == 'Error_termination.LOG':
+        assert file in glob.glob('*.*')
+    if file == 'Error_termination.LOG':
         os.chdir(path+'/'+folder+'/failed_error/unknown_error')
-        assert smiles in glob.glob('*.*')
-    if smiles == 'Imag_freq.log':
+        assert file in glob.glob('*.*')
+    if file == 'Imag_freq.log':
         os.chdir(path+'/'+folder+'/imaginary_frequencies')
-        assert smiles in glob.glob('*.*')
-    if smiles == 'SCF_error.LOG':
+        assert file in glob.glob('*.*')
+    if file == 'SCF_error.LOG':
         os.chdir(path+'/'+folder+'/failed_error/SCF_error')
-        assert smiles in glob.glob('*.*')
-    if smiles == 'Unfinished.LOG':
+        assert file in glob.glob('*.*')
+    if file == 'Unfinished.LOG':
         os.chdir(path+'/'+folder+'/failed_unfinished')
-        assert smiles in glob.glob('*.*')
+        assert file in glob.glob('*.*')
 
-def single_point(path, precision, cmd_pyconfort, folder, file, params_file, type):
+def single_point(path, cmd_pyconfort, folder, file):
     os.chdir(path+'/'+folder)
     files = glob.glob('*.*')
     if len(files) > 0:
         subprocess.run(cmd_pyconfort)
     os.chdir(path+'/'+folder+'/finished/single_point_input_files/wb97xd-def2svp')
     assert len(glob.glob('*.*')) == 2
-
-    file = smiles
 
     if file == 'Pd_SP.LOG':
         count,NBO,pop,opt = calc_genecp(file.split('.')[0]+'.com', 'Pd')
