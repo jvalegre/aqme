@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-""".####################################################################################.
+#########################################################################################.
 #########################################################################################
 ###																					  ###
 ###  pyCONFORT is a tool that allows to carry out automated:						  ###
@@ -22,9 +22,10 @@
 ###  svss@colostate.edu or juanvi89@hotmail.com  									  ###
 ###																					  ###
 #########################################################################################
-.####################################################################################."""
+#########################################################################################.
 
 from __future__ import print_function
+import os
 import time
 from pyconfort.argument_parser import parser_args
 from pyconfort.confgen_functions import compute_main, qsub_main
@@ -33,7 +34,8 @@ from pyconfort.writer_functions import creation_of_dup_csv, load_from_yaml, Logg
 from pyconfort.filter_functions import exp_rules_main
 
 def main():
-
+	# working directory and arguments
+	w_dir_initial = os.getcwd()
 	args = parser_args()
 	# Define the logging object
 	log = Logger("pyCONFORT", args.output_name)
@@ -62,7 +64,7 @@ def main():
 
 	# main part of the analysis functions
 	if args.analysis:
-		analysis_main(args,log)
+		analysis_main(w_dir_initial,args,log)
 
 	# main part of the duplicate function
 	if args.dup:

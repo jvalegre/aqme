@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 
-"""#####################################################.
-# 		   This file stores all the functions 		    #
-# 	    	  used in conformer generation			    #
-.#####################################################"""
+#####################################################.
+# 		   This file stores all the functions 	    #
+# 	    	  used in conformer generation		    #
+#####################################################.
 
 import math
 import os

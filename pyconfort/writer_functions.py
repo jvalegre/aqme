@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 
-"""#####################################################.
+#########################################################.
 # 		   This file stores all the functions 		    #
 # 	       used in writing SDF and COM files,           #
 #              as well as the logger and                #
 #                 yaml file importer		            #
-######################################################"""
+#########################################################.
 
 import os
 import sys

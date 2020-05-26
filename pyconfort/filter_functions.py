@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 
-"""#####################################################.
-# 		   This file stores all the functions 		    #
-# 	    	       used for filtering			        #
-.#####################################################"""
+#####################################################.
+# 		  This file stores all the functions 	    #
+# 	             used for filtering			        #
+#####################################################.
 
 import glob
 import sys

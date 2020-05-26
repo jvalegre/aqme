@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 
-"""#####################################################.
-# 		   This file stores all the functions 		    #
-# 	  used in template based conformer generation		#
-.#####################################################"""
+#####################################################.
+#   	  This file stores all the functions 	    #
+#    used in template based conformer generation	#
+#####################################################.
 from rdkit.Chem import AllChem as Chem
 from rdkit.Chem import rdDistGeom, rdMolAlign
 from pyconfort.filter_functions import get_conf_RMS
