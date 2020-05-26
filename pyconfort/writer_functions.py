@@ -134,13 +134,13 @@ def input_route_line(args):
 	if args.frequencies:
 		input_route += 'freq=noraman'
 	if args.dispersion_correction:
-		input_route += f' empiricaldispersion={args.empirical_dispersion}'
+		input_route += ' empiricaldispersion={0}'.format(args.empirical_dispersion)
 	if not args.analysis:
-		input_route += f' opt=(maxcycles={args.max_cycle_opt})'
+		input_route += ' opt=(maxcycles={0})'.format(args.max_cycle_opt)
 	else:
-		input_route += f' opt=(calcfc,maxcycles={args.max_cycle_opt})'
+		input_route += ' opt=(calcfc,maxcycles={0})'.format(args.max_cycle_opt)
 	if args.solvent_model != 'gas_phase':
-		input_route += f' scrf=({args.solvent_model},solvent={args.solvent_name})'
+		input_route += ' scrf=({0},solvent={1})'.format(args.solvent_model,args.solvent_name)
 	return input_route
 
 def rename_file_and_charge_change(read_lines,file,args,charge_com):
