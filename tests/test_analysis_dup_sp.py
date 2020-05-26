@@ -43,8 +43,8 @@ def test_analysis_dup_sp(folder, file, params_file, type_of_job):
 
     elif type_of_job == 'single_point':
         count = 0
-            if count == 0:
-                single_point(path_analysis_dup_sp, cmd_pyconfort, folder, file)
+        if count == 0:
+            single_point(path_analysis_dup_sp, cmd_pyconfort, folder, file)
 
 # MISSING CHECKS:
 # experimental rules for analysis LOG to COM
