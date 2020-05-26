@@ -18,11 +18,11 @@ path_analysis_dup_sp = os.getcwd()
     ('Analysis', 'CH4_Normal_termination.log', 'params_analysis_test.yaml', 'analysis'), # test normal termination
     ('Analysis', 'Basis_set_error1.LOG', 'params_analysis_test.yaml', 'analysis'), # test incompatibilities with gen/genecp
     ('Analysis', 'Basis_set_error2.LOG', 'params_analysis_test.yaml', 'analysis'), # test incompatibilities with gen/genecp
-    ('Analysis', 'Error_termination.LOG', 'params_analysis_test.yaml', 'analysis'), # test error terminations
+    ('Analysis', 'MeOH_Error_termination.LOG', 'params_analysis_test.yaml', 'analysis'), # test error terminations
     ('Analysis', 'Imag_freq.log', 'params_analysis_test.yaml', 'analysis'), # test imaginary frequencies
-    ('Analysis', 'SCF_error.LOG', 'params_analysis_test.yaml', 'analysis'), # test SCF errors
-    ('Analysis', 'Unfinished.LOG', 'params_analysis_test.yaml', 'analysis'), # test unfinished calculations
-    #('Analysis_with_dup', 'Duplicate.LOG', 'params_analysis_dup_test.yaml', 'analysis_with_dup'), # test duplicates
+    ('Analysis', 'MeOH_SCF_error.LOG', 'params_analysis_test.yaml', 'analysis'), # test SCF errors
+    ('Analysis', 'MeOH_Unfinished.LOG', 'params_analysis_test.yaml', 'analysis'), # test unfinished calculations
+    #('Analysis_with_dup', 'CH4_Duplicate.LOG', 'params_analysis_dup_test.yaml', 'analysis_with_dup'), # test duplicates
     ('Single_point', 'CH4_freq.log', 'params_sp_test.yaml', 'single_point'), # test single-point generation
     ('Single_point', 'Pd_SP.LOG', 'params_sp_test.yaml', 'single_point'), # test single-point generation with genecp
 ])

@@ -67,7 +67,7 @@ dispersion_correction : True # include dispersion correction
 empirical_dispersion : 'GD3BJ' # type of dispersion correction
 
 # (4.5) SOLVATION MODEL
-solvent_model : 'gas_phase' # type of solvation model. Options: gas_phase or any solvation model (i.e. SMD, IEFPCM, CPCM)
+solvent_model : 'SMD' # type of solvation model. Options: gas_phase or any solvation model (i.e. SMD, IEFPCM, CPCM)
 solvent_name : 'Chloroform' # solvent
 
 # (4.6) DEFINTION OF BASIS SET AND LEVEL OF THEORY AND SOLVENT

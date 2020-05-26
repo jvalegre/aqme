@@ -103,34 +103,81 @@ def only_check(path, precision, cmd_pyconfort, folder, smiles, params_file, n_co
         else: # for genecp
             assert count == 2
 
+def find_coordinates(file,coordinates):
+    coordinates_found = 0
+    com_file = file.split('.')[0]+'.com'
+	outfile = open(com_file,"r")
+	outlines = outfile.readlines()
+	for i,outline in enumerate(outlines):
+		if outline.find(coordinates) > -1:
+            coordinates_found = 1
+            break
+    return coordinates_found
+
+def check_log_files(path, folder, file):
+    if file == 'CH4_Normal_termination.log':
+        os.chdir(path+'/'+folder+'/finished')
+        assert file in glob.glob('*.*')
+    elif file == 'Basis_set_error1.LOG' or file == 'Basis_set_error2.LOG':
+        os.chdir(path+'/'+folder+'/failed_error/atomic_basis_error')
+        assert file in glob.glob('*.*')
+    elif file == 'MeOH_Error_termination.LOG':
+        os.chdir(path+'/'+folder+'/failed_error/unknown_error')
+        assert file in glob.glob('*.*')
+    elif file == 'Imag_freq.log':
+        os.chdir(path+'/'+folder+'/imaginary_frequencies')
+        assert file in glob.glob('*.*')
+    elif file == 'MeOH_SCF_error.LOG':
+        os.chdir(path+'/'+folder+'/failed_error/SCF_error')
+        assert file in glob.glob('*.*')
+    elif file == 'MeOH_Unfinished.LOG':
+        os.chdir(path+'/'+folder+'/failed_unfinished')
+        assert file in glob.glob('*.*')
+
+def check_com_files(path, folder, file):
+    if file == 'Basis_set_error1.LOG' or file == 'Basis_set_error2.LOG':
+        os.chdir(path+'/'+folder+'/new_gaussian_input_files/def2svp-wb97xd')
+        assert file not in glob.glob('*.*')
+    elif file == 'MeOH_Error_termination.LOG':
+        coordinates = 'H  -1.14928800  -0.80105100  -0.00024300'
+        coordinates_error_found = find_coordinates(file,coordinates)
+        assert coordinates_error_found == 1
+        com_input_line_error = '# wb97xd/def2svp freq=noraman empiricaldispersion=GD3BJ opt=(calcfc,maxcycles=100) scrf=(SMD,solvent=Chloroform)'
+        input_found_error = find_coordinates(file,com_input_line_error)
+        assert input_found_error == 1
+    elif file == 'Imag_freq.log':
+        coordinates = 'H  -0.56133100   0.63933100  -0.67133100'
+        coordinates_imag_found = find_coordinates(file,coordinates)
+        assert coordinates_imag_found == 1
+        com_input_line_imag = '# wb97xd/def2svp freq=noraman empiricaldispersion=GD3BJ opt=(calcfc,maxcycles=100) scrf=(SMD,solvent=Chloroform)'
+        input_found_imag = find_coordinates(file,com_input_line_imag)
+        assert input_found_imag == 1
+    elif file == 'MeOH_SCF_error.LOG':
+        coordinates = 'H  -1.04798700   0.80281000  -0.68030200'
+        coordinates_scf_found = find_coordinates(file,coordinates)
+        assert coordinates_scf_found == 1
+        com_input_line_scf = '# wb97xd/def2svp freq=noraman empiricaldispersion=GD3BJ opt=(calcfc,maxcycles=100) scrf=(SMD,solvent=Chloroform) scf=qc'
+        input_found_scf = find_coordinates(file,com_input_line_scf)
+        assert input_found_scf == 1
+    elif file == 'MeOH_Unfinished.LOG':
+        coordinates = 'H  -1.04779100   0.87481300  -0.58663200'
+        coordinates_unfinished_found = find_coordinates(file,coordinates)
+        assert coordinates_unfinished_found == 1
+        com_input_line_unfinished = '# wb97xd/def2svp freq=noraman empiricaldispersion=GD3BJ opt=(calcfc,maxcycles=100) scrf=(SMD,solvent=Chloroform)'
+        input_found_unfinished = find_coordinates(file,com_input_line_unfinished)
+        assert input_found_unfinished == 1
+
 def analysis(path, cmd_pyconfort, folder, file):
     os.chdir(path+'/'+folder)
-    print(os.getcwd())
     # the code will move the files the first time, this 'if' avoids errors
     files = glob.glob('*.*')
     if len(files) > 0:
         subprocess.run(cmd_pyconfort)
-    if file == 'CH4_Normal_termination.log':
-        os.chdir(path+'/'+folder+'/finished')
-        assert file in glob.glob('*.*')
-    if file == 'Basis_set_error1.LOG':
-        os.chdir(path+'/'+folder+'/failed_error/atomic_basis_error')
-        assert file in glob.glob('*.*')
-    if file == 'Basis_set_error2.LOG':
-        os.chdir(path+'/'+folder+'/failed_error/atomic_basis_error')
-        assert file in glob.glob('*.*')
-    if file == 'Error_termination.LOG':
-        os.chdir(path+'/'+folder+'/failed_error/unknown_error')
-        assert file in glob.glob('*.*')
-    if file == 'Imag_freq.log':
-        os.chdir(path+'/'+folder+'/imaginary_frequencies')
-        assert file in glob.glob('*.*')
-    if file == 'SCF_error.LOG':
-        os.chdir(path+'/'+folder+'/failed_error/SCF_error')
-        assert file in glob.glob('*.*')
-    if file == 'Unfinished.LOG':
-        os.chdir(path+'/'+folder+'/failed_unfinished')
-        assert file in glob.glob('*.*')
+    # make sure the LOG files are in the right folders after analysis
+    check_log_files(path, folder, file)
+    # make sure the generated COM files have the right level of theory and geometries
+    os.chdir(path+'/'+folder+'/new_gaussian_input_files/def2svp-wb97xd')
+    check_com_files(path, folder, file)
 
 def single_point(path, cmd_pyconfort, folder, file):
     os.chdir(path+'/'+folder)

@@ -156,7 +156,7 @@ def new_com_file(w_dir_initial,w_dir_writing,file,args,keywords_opt,name,CHARGE,
 # DEFINTION OF OUTPUT ANALYSER and NMR FILES CREATOR
 def output_analyzer(log_files, w_dir_initial, lot, bs,bs_gcp, args, w_dir_fin,log):
 
-	input_route, input_route_sp = input_route_line(args)
+	input_route = input_route_line(args)
 
 	for file in log_files:
 		#made it global for all functions
@@ -361,7 +361,7 @@ def output_analyzer(log_files, w_dir_initial, lot, bs,bs_gcp, args, w_dir_fin,lo
 				else:
 					raise
 			os.chdir(new_gaussian_input_files)
-			log.write('-> Creating new gaussian input files for {0} in {1}/{2}-{3}\n'.format(file,new_gaussian_input_files,bs,lot))
+			log.write('-> Creating new gaussian input file for {0} in {1}/{2}-{3}'.format(file,new_gaussian_input_files,bs,lot))
 
 			ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp =  check_for_gen_or_genecp(ATOMTYPES,args)
 
@@ -371,28 +371,17 @@ def output_analyzer(log_files, w_dir_initial, lot, bs,bs_gcp, args, w_dir_fin,lo
 
 			if ERRORTYPE == 'SCFerror':
 				if genecp == 'genecp' or  genecp == 'gen':
-					if args.single_point:
-						keywords_opt = lot +'/'+ genecp+' '+ input_route_sp + 'SCF=QC'
-					else:
-						keywords_opt = lot +'/'+ genecp+' '+ input_route + 'SCF=QC'
+					keywords_opt = lot +'/'+ genecp+' '+ input_route + ' scf=qc'
 				else:
-					if args.single_point:
-						keywords_opt = lot +'/'+ bs+' '+ input_route_sp + 'SCF=QC'
-					else:
-						keywords_opt = lot +'/'+ bs+' '+ input_route + 'SCF=QC'
+					keywords_opt = lot +'/'+ bs+' '+ input_route + ' scf=qc'
 			else:
 				if genecp == 'genecp' or  genecp == 'gen':
-					if args.single_point:
-						keywords_opt = lot +'/'+ genecp+' '+ input_route_sp
-					else:
-						keywords_opt = lot +'/'+ genecp+' '+ input_route
+					keywords_opt = lot +'/'+ genecp+' '+ input_route
 				else:
-					if args.single_point:
-						keywords_opt = lot +'/'+ bs +' '+ input_route_sp
-					else:
-						keywords_opt = lot +'/'+ bs +' '+ input_route
+					keywords_opt = lot +'/'+ bs +' '+ input_route
 
 			w_dir_writing = os.getcwd()
+
 			new_com_file(w_dir_initial,w_dir_writing,file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,TERMINATION,IM_FREQS,bs,lot,bs_gcp)
 
 		#adding in the NMR componenet only to the finished files after reading from normally finished log files
