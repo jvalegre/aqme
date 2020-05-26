@@ -7,7 +7,7 @@
 
 import os
 import pytest
-from definitions_testing import conf_gen, only_check
+from definitions_testing import conf_gen
 
 # saves the working directory
 path_others = os.getcwd()

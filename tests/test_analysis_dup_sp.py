@@ -12,7 +12,7 @@ from definitions_testing import analysis,single_point
 path_analysis_dup_sp = os.getcwd()
 
 # tests for individual organic molecules and metal complexes
-@pytest.mark.parametrize("folder, file, params_file, type",
+@pytest.mark.parametrize("folder, file, params_file, type_of_job",
 [
     # tests of the analysis part (I use file as the output LOG files)
     ('Analysis', 'CH4_Normal_termination.log', 'params_analysis_test.yaml', 'analysis'), # test normal termination
@@ -27,20 +27,24 @@ path_analysis_dup_sp = os.getcwd()
     ('Single_point', 'Pd_SP.LOG', 'params_sp_test.yaml', 'single_point'), # test single-point generation with genecp
 ])
 
-def test_analysis_dup_sp(folder, file, params_file, type):
+def test_analysis_dup_sp(folder, file, params_file, type_of_job):
     # runs the program with the different tests
     cmd_pyconfort = ['python', '-m', 'pyconfort', '--varfile', params_file]
 
-    if type == 'analysis':
-        analysis(path_analysis_dup_sp, cmd_pyconfort, folder, file)
+    if type_of_job == 'analysis':
+        count = 0
+        if count = 0:
+            analysis(path_analysis_dup_sp, cmd_pyconfort, folder, file)
 
-    # elif type == 'Duplicates':
+    # elif type_of_job == 'Duplicates':
     #     if file == 'Duplicate.LOG':
     #         os.chdir(path_analysis_dup_sp+'/'+folder+'/duplicates')
     #         assert file in glob.glob('*.*')
 
-    elif type == 'single_point':
-        single_point(path_analysis_dup_sp, cmd_pyconfort, folder, file)
+    elif type_of_job == 'single_point':
+        count = 0
+            if count = 0:
+                single_point(path_analysis_dup_sp, cmd_pyconfort, folder, file)
 
 # MISSING CHECKS:
 # experimental rules for analysis LOG to COM
