@@ -42,7 +42,7 @@ def calc_genecp(file, atom):
 def conf_gen(path, precision, cmd_pyconfort, folder, smiles, n_confs, prefilter_confs_rdkit, filter_confs_rdkit, E_confs, charge, dihedral, xTB_ANI1):
     # open right folder and run the code
     os.chdir(path+'/'+folder+'/'+smiles.split('.')[0])
-    subprocess.run(cmd_pyconfort)
+    subprocess.call(cmd_pyconfort)
 
     # Retrieving the generated CSV file
     df_output = pd.read_csv(smiles.split('.')[0]+'-Duplicates Data.csv')
@@ -92,7 +92,7 @@ def conf_gen(path, precision, cmd_pyconfort, folder, smiles, n_confs, prefilter_
 def only_check(path, precision, cmd_pyconfort, folder, smiles, params_file, n_confs, prefilter_confs_rdkit, filter_confs_rdkit, E_confs, charge, dihedral, xTB_ANI1):
     # open right folder and run the code
     os.chdir(path+'/'+folder+'/'+smiles.split('.')[0])
-    subprocess.run(cmd_pyconfort)
+    subprocess.call(cmd_pyconfort)
     if params_file.find('_genecp_') > -1:
         os.chdir(path+'/'+folder+'/'+smiles.split('.')[0]+'/generated_gaussian_files/wb97xd-def2svp')
         file = glob.glob('*.com')[0]
@@ -172,7 +172,7 @@ def analysis(path, cmd_pyconfort, folder, file):
     # the code will move the files the first time, this 'if' avoids errors
     files = glob.glob('*.*')
     if len(files) > 0:
-        subprocess.run(cmd_pyconfort)
+        subprocess.call(cmd_pyconfort)
     # make sure the LOG files are in the right folders after analysis
     check_log_files(path, folder, file)
     # make sure the generated COM files have the right level of theory and geometries
@@ -183,7 +183,7 @@ def single_point(path, cmd_pyconfort, folder, file):
     os.chdir(path+'/'+folder)
     files = glob.glob('*.*')
     if len(files) > 0:
-        subprocess.run(cmd_pyconfort)
+        subprocess.call(cmd_pyconfort)
     os.chdir(path+'/'+folder+'/finished/single_point_input_files/wb97xd-def2svp')
     assert len(glob.glob('*.*')) == 2
 

@@ -107,7 +107,7 @@ def convert_sdf_to_com(path_for_file,file,com,com_low,energies,header,args):
 
 	if args.lowest_only:
 		command_lowest = ['obabel', '-isdf', path_for_file+file, '-ocom', '-O'+com_low,'-l' , '1', '-xk', '\n'.join(header)]
-		subprocess.run(command_lowest) #takes the lowest conformer which is the first in the file
+		subprocess.call(command_lowest) #takes the lowest conformer which is the first in the file
 
 	elif args.lowest_n:
 		no_to_write = 0
@@ -117,22 +117,22 @@ def convert_sdf_to_com(path_for_file,file,com,com_low,energies,header,args):
 				if energy_diff < args.energy_threshold_for_gaussian: # thershold is in kcal/mol and energies are in kcal/mol as well
 					no_to_write +=1
 			command_n = ['obabel', '-isdf', path_for_file+file, '-f', '1', '-l' , str(no_to_write), '-osdf', '-Otemp.sdf']
-			subprocess.run(command_n)
+			subprocess.call(command_n)
 			command_n_2 =  ['obabel', '-isdf', 'temp.sdf', '-ocom', '-O'+com,'-m', '-xk', '\n'.join(header)]
-			subprocess.run(command_n_2)
+			subprocess.call(command_n_2)
 		else:
 			command_n_3 = ['obabel', '-isdf', path_for_file+file, '-ocom', '-O'+com,'-m', '-xk', '\n'.join(header)]
-			subprocess.run(command_n_3)
+			subprocess.call(command_n_3)
 	else:
 		command_no_lowest = ['obabel', '-isdf', path_for_file+file, '-ocom', '-O'+com,'-m', '-xk', '\n'.join(header)]
-		subprocess.run(command_no_lowest)
+		subprocess.call(command_no_lowest)
 
 
 def input_route_line(args):
 	#definition of input_route lines
 	input_route = ''
 	if args.frequencies:
-		input_route += f'freq=noraman'
+		input_route += 'freq=noraman'
 	if args.dispersion_correction:
 		input_route += f' empiricaldispersion={args.empirical_dispersion}'
 	if not args.analysis:
@@ -300,7 +300,7 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args,log,cha
 		#submitting the gaussian file on summit
 		if args.qsub:
 			cmd_qsub = [args.submission_command, rename_file_name]
-			subprocess.run(cmd_qsub)
+			subprocess.call(cmd_qsub)
 
 	os.chdir(path_for_file)
 

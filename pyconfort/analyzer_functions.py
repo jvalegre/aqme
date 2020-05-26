@@ -445,13 +445,13 @@ def check_for_final_folder(w_dir,log):
 def boltz_calculation(val,i,log):
 	# GoodVibes must be installed as a module (through pip or conda)
 	cmd_boltz = ['python','-m', 'goodvibes', '--csv', '--boltz', '--output', str(i), val]
-	subprocess.run(cmd_boltz)
+	subprocess.call(cmd_boltz)
 
 # CHECKING FOR DUPLICATES
 def dup_calculation(val,w_dir, agrs,log):
 	# GoodVibes must be installed as a module (through pip or conda)
 	cmd_dup = ['python', '-m', 'goodvibes', '--dup', val, '>', 'duplicate_files_checked.txt']
-	subprocess.run(cmd_dup)
+	subprocess.call(cmd_dup)
 
 	#reading the txt files to get the DUPLICATES
 	dup_file_list = []

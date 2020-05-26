@@ -94,7 +94,7 @@ def compute_main(dup_data,args,log,start_time):
 	elif os.path.splitext(args.input)[1] == '.cdx':
 		#converting to smiles from chemdraw
 		cmd_cdx = ['obabel', '-icdx', args.input, '-osmi', '-O', 'cdx.smi']
-		subprocess.run(cmd_cdx)
+		subprocess.call(cmd_cdx)
 		smifile = open('cdx.smi',"r")
 
 		counter_for_template = 0
@@ -774,4 +774,4 @@ def qsub_main(args,log):
 			w_dir = check_for_final_folder(w_dir,log)
 			os.chdir(w_dir)
 			cmd_qsub = [args.submission_command, '*.com']
-			subprocess.run(cmd_qsub)
+			subprocess.call(cmd_qsub)
