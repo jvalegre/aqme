@@ -49,7 +49,7 @@ def main():
 
 	# this will perform conformational analysis and create inputs for Gaussian
 	if args.compute:
-		compute_main(dup_data,args,log,start_time)
+		compute_main(w_dir_initial,dup_data,args,log,start_time)
 
 	#applying rules to discard certain conformers based on rules that the user define
 	if args.exp_rules:

@@ -16,6 +16,7 @@ from rdkit.Chem import AllChem as Chem
 from rdkit.Chem import rdMolTransforms, PropertyMol, rdDistGeom, rdMolAlign, Lipinski
 from rdkit.Geometry import Point3D
 from progress.bar import IncrementalBar
+import pyconfort
 from pyconfort.writer_functions import write_confs
 from pyconfort.filter_functions import filters,filter_after_rotation,get_conf_RMS,set_metal_atomic_number
 from pyconfort.argument_parser import possible_atoms
@@ -46,7 +47,7 @@ hartree_to_kcal = 627.509
 possible_atoms = possible_atoms()
 
 # main function to generate conformers
-def compute_main(dup_data,args,log,start_time):
+def compute_main(w_dir_initial,dup_data,args,log,start_time):
 	# input file format specified
 	file_format = os.path.splitext(args.input)[1]
 
@@ -72,7 +73,7 @@ def compute_main(dup_data,args,log,start_time):
 			else:
 				name = args.prefix+str(i)+'_'+''.join(toks[1:])
 
-			compute_confs(smi,name,args,log,dup_data,counter_for_template,i,start_time)
+			compute_confs(w_dir_initial,smi,name,args,log,dup_data,counter_for_template,i,start_time)
 		dup_data.to_csv(args.input.split('.')[0]+'-Duplicates Data.csv',index=False)
 
 	# CSV file with one columns SMILES and code_name
@@ -87,7 +88,7 @@ def compute_main(dup_data,args,log,start_time):
 			# 	name = 'comp_'+str(m)+'_'+csv_smiles.loc[i, 'code_name']
 			smi = csv_smiles.loc[i, 'SMILES']
 			clean_args(args,ori_ff,smi)
-			compute_confs(smi,name,args,log,dup_data,counter_for_template,i,start_time)
+			compute_confs(w_dir_initial,smi,name,args,log,dup_data,counter_for_template,i,start_time)
 		dup_data.to_csv(args.input.split('.')[0]+'-Duplicates Data.csv',index=False)
 
 	# CDX file
@@ -101,7 +102,7 @@ def compute_main(dup_data,args,log,start_time):
 		for i, smi in enumerate(smifile):
 			clean_args(args,ori_ff,smi)
 			name = 'comp' + str(i)+'_'
-			compute_confs(smi,name,args,log,dup_data,counter_for_template,i,start_time)
+			compute_confs(w_dir_initial,smi,name,args,log,dup_data,counter_for_template,i,start_time)
 		dup_data.to_csv(args.input.split('.')[0]+'-Duplicates Data.csv',index=False)
 
 # SUBSTITUTION WITH I
@@ -143,7 +144,7 @@ def clean_args(args,ori_ff,smi):
 	args.complex_coord = []
 	args.metal_sym = []
 
-def compute_confs(smi, name,args,log,dup_data,counter_for_template,i,start_time):
+def compute_confs(w_dir_initial,smi, name,args,log,dup_data,counter_for_template,i,start_time):
 	#taking largest component for salts
 	pieces = smi.split('.')
 	if len(pieces) > 1:
@@ -164,13 +165,16 @@ def compute_confs(smi, name,args,log,dup_data,counter_for_template,i,start_time)
 		if args.complex_type == 'squareplanar' or args.complex_type == 'squarepyramidal' or args.complex_type == 'linear' or args.complex_type == 'trigonalplanar':
 			mol_objects = []
 			if len(args.metal_idx) == 1:
+				os.chdir(os.path.join(pyconfort.__path__[0])+'/templates')
+				# print(glob.glob('*.*'))
 				if args.complex_type == 'squareplanar' or args.complex_type == 'squarepyramidal':
-					file_template = os.path.dirname(os.path.abspath(__file__)) +'/templates/template-4-and-5.sdf'
+					file_template = 'template-4-and-5.sdf'
 				if args.complex_type =='linear':
 					file_template = os.path.dirname(os.path.abspath(__file__)) +'/templates/template-2.sdf'
 				if args.complex_type =='trigonalplanar':
 					file_template = os.path.dirname(os.path.abspath(__file__)) +'/templates/template-3.sdf'
 				temp = Chem.SDMolSupplier(file_template)
+				os.chdir(w_dir_initial)
 				mol_objects_from_template,name, coord_Map, alg_Map, mol_template = template_embed(mol,temp,name,args,log)
 				for i,_ in enumerate(mol_objects_from_template):
 					mol_objects.append([mol_objects_from_template[i],name[i],coord_Map[i],alg_Map[i],mol_template[i]])

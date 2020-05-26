@@ -100,7 +100,7 @@ o  428 Duplicates removed initial energy (E < 0.0001 kcal/mol)
 o  0 Duplicates removed (RMSD < 0.25 / E < 0.25 kcal/mol) after rotation
 o  4 unique conformers remain
 
- Execution time: 1.98 seconds
+ Execution time: 1.89 seconds
 
 o  Preparing Gaussian COM files in generated_gaussian_files/wb97xd-def2svp
    -> Converting from pentane_rdkit_rotated.sdf

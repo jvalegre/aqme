@@ -47,21 +47,22 @@ class Logger:
 # LOAD PARAMETERS FROM A YAML FILE
 def load_from_yaml(args,log):
 	# Variables will be updated from YAML file
-	if args.varfile is not None:
-		if os.path.exists(args.varfile):
-			if os.path.splitext(args.varfile)[1] == '.yaml':
-				log.write("\no  IMPORTING VARIABLES FROM " + args.varfile)
-				with open(args.varfile, 'r') as file:
-					param_list = yaml.load(file, Loader=yaml.FullLoader)
-	else:
-		log.write("\no  No yaml file containing parameters was found (the program might crush unless you specify the input files manually!).\n")
-	for param in param_list:
-		if hasattr(args, param):
-			if getattr(args, param) != param_list[param]:
-				log.write("o  RESET " + param + " from " + str(getattr(args, param)) + " to " + str(param_list[param]))
-				setattr(args, param, param_list[param])
-			else:
-				log.write("o  DEFAULT " + param + " : " + str(getattr(args, param)))
+	try:
+		if args.varfile is not None:
+			if os.path.exists(args.varfile):
+				if os.path.splitext(args.varfile)[1] == '.yaml':
+					log.write("\no  IMPORTING VARIABLES FROM " + args.varfile)
+					with open(args.varfile, 'r') as file:
+						param_list = yaml.load(file, Loader=yaml.SafeLoader)
+			for param in param_list:
+				if hasattr(args, param):
+					if getattr(args, param) != param_list[param]:
+						log.write("o  RESET " + param + " from " + str(getattr(args, param)) + " to " + str(param_list[param]))
+						setattr(args, param, param_list[param])
+					else:
+						log.write("o  DEFAULT " + param + " : " + str(getattr(args, param)))
+	except UnboundLocalError:
+		log.write("\no  The specified yaml file containing parameters was not found! Make sure that the valid params file is in the folder where you are running the code.\n")
 
 def creation_of_dup_csv(args):
 	# writing the list of DUPLICATES

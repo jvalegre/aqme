@@ -20,8 +20,8 @@ path_analysis_dup_sp = os.getcwd()
     ('Analysis', 'Basis_set_error2.LOG', 'params_analysis_test.yaml', 'analysis'), # test incompatibilities with gen/genecp
     ('Analysis', 'MeOH_Error_termination.LOG', 'params_analysis_test.yaml', 'analysis'), # test error terminations
     ('Analysis', 'Imag_freq.log', 'params_analysis_test.yaml', 'analysis'), # test imaginary frequencies
-    ('Analysis', 'MeOH_SCF_error.LOG', 'params_analysis_test.yaml', 'analysis'), # test SCF errors
-    ('Analysis', 'MeOH_Unfinished.LOG', 'params_analysis_test.yaml', 'analysis'), # test unfinished calculations
+    ('Analysis', 'MeOH_SCF_error.out', 'params_analysis_test.yaml', 'analysis'), # test SCF errors
+    ('Analysis', 'MeOH_Unfinished.OUT', 'params_analysis_test.yaml', 'analysis'), # test unfinished calculations
     #('Analysis_with_dup', 'CH4_Duplicate.LOG', 'params_analysis_dup_test.yaml', 'analysis_with_dup'), # test duplicates
     ('Single_point', 'CH4_freq.log', 'params_sp_test.yaml', 'single_point'), # test single-point generation
     ('Single_point', 'Pd_SP.LOG', 'params_sp_test.yaml', 'single_point'), # test single-point generation with genecp
@@ -32,9 +32,7 @@ def test_analysis_dup_sp(folder, file, params_file, type_of_job):
     cmd_pyconfort = ['python', '-m', 'pyconfort', '--varfile', params_file]
 
     if type_of_job == 'analysis':
-        count = 0
-        if count == 0:
-            analysis(path_analysis_dup_sp, cmd_pyconfort, folder, file)
+        analysis(path_analysis_dup_sp, cmd_pyconfort, folder, file)
 
     # elif type_of_job == 'Duplicates':
     #     if file == 'Duplicate.LOG':
@@ -42,9 +40,7 @@ def test_analysis_dup_sp(folder, file, params_file, type_of_job):
     #         assert file in glob.glob('*.*')
 
     elif type_of_job == 'single_point':
-        count = 0
-        if count == 0:
-            single_point(path_analysis_dup_sp, cmd_pyconfort, folder, file)
+        single_point(path_analysis_dup_sp, cmd_pyconfort, folder, file)
 
 # MISSING CHECKS:
 # experimental rules for analysis LOG to COM
