@@ -106,10 +106,10 @@ def only_check(path, precision, cmd_pyconfort, folder, smiles, params_file, n_co
 def find_coordinates(file,coordinates):
     coordinates_found = 0
     com_file = file.split('.')[0]+'.com'
-	outfile = open(com_file,"r")
-	outlines = outfile.readlines()
-	for i,outline in enumerate(outlines):
-		if outline.find(coordinates) > -1:
+    outfile = open(com_file,"r")
+    outlines = outfile.readlines()
+    for i,outline in enumerate(outlines):
+        if outline.find(coordinates) > -1:
             coordinates_found = 1
             break
     return coordinates_found
