@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
 ######################################################.
-# 		  Main file for testing with pytest: 	     #
-#     conformer generation of organic molecules      #
+# 		        Testing with pytest: 	             #
+#     Conformer generation of organic molecules      #
 ######################################################.
 
 import os

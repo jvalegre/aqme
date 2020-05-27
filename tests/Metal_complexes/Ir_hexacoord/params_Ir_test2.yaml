@@ -39,7 +39,7 @@ xtb : False
 
 # (3) RDKit AND xTB PARAMETERS
 ewin : 1000 #energy window in kcal/mol to use conformers for RDKit and xTB (conformers with E higher than ewin will be discarded)
-sample : 20 # number of conformers to sample to get non-torsional differences (default 100)
+sample : 10 # number of conformers to sample to get non-torsional differences (default 100)
 solvent_xtb : '' # includes energies in the xTB energies after optimization in gas-phase
 
 # (4) OPTIONS FOR COM FILE GENERATION (write_gauss : True)

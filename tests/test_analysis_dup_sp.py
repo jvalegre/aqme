@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 ######################################################.
-# 		  Main file for testing with pytest 	     #
+# 	        Testing analysis with pytest 	         #
 ######################################################.
 
 import os

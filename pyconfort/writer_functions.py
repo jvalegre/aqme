@@ -172,12 +172,15 @@ def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args,log,cha
 
 	#find location of molecule and respective scharges
 	name_list = name.split('_')
-	if 'xtb' or 'ani' in name_list:
+	if 'rules' in name_list:
+		name_molecule = name[:-23]
+	elif 'xtb' or 'ani' in name_list:
 		name_molecule = name[:-4]
-	if 'rdkit' in name_list:
+	elif 'rdkit' in name_list:
 		name_molecule = name[:-6]
-	if 'rotated' in name_list:
+	elif 'rotated' in name_list:
 		name_molecule = name[:-14]
+
 
 	for i in range(len(charge_data)):
 		if charge_data.loc[i,'Molecule'] == name_molecule:
@@ -389,6 +392,7 @@ def write_gauss_main(args,log):
 						raise
 				# writing the com files
 				# check conf_file exists, parse energies and then write dft input
+
 				for file in conf_files:
 					if os.path.exists(file):
 						if args.verbose:
