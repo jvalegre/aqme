@@ -13,7 +13,7 @@ from definitions_testing import conf_gen_exp_rules
 path_exp_rules = os.getcwd()
 # decimal digits for comparing E
 precision_exp_rules = 5
-params_file = 'params_Ir_exp_rules_test'
+params_file = 'params_Ir_exp_rules_test.yaml'
 
 # tests for individual organic molecules and metal complexes
 @pytest.mark.parametrize("smiles, E_confs_no_rules, E_confs_rules, charge",
