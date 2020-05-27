@@ -22,19 +22,20 @@ before_install:
   - source activate tenv
 
 install:
-  - conda install -c openbabel openbabel
-  - pip install PyYAML
-  - conda install pandas
-  - conda install -q -c rdkit rdkit
-  - conda install -c anaconda pytest
+  - pip install openbabel==3.1.1.1
+  - pip install PyYAML==5.3.1
+  - pip install pandas==1.0.3
+  - conda install -c rdkit rdkit=2019.03.4
+  - pip install pytest==5.4.2
   - python setup.py install
-  - conda install -c conda-forge progress
-  - pip install pytest-cov codecov
-  - pip install Cython --install-option="--no-cython-compile"
-  - pip install ase
-  - pip install --pre torch torchvision -f https://download.pytorch.org/whl/nightly/cu100/torch_nightly.html
-  - pip install torchani
-  - pip install goodvibes
+  - pip install progress==1.5
+  - pip install pytest-cov==2.9.0
+  - pip install codecov==2.1.3
+  # - pip install Cython --install-option="--no-cython-compile"
+  # - pip install ase
+  # - pip install --pre torch torchvision -f https://download.pytorch.org/whl/nightly/cu100/torch_nightly.html
+  # - pip install torchani
+  # - pip install goodvibes
 
 before_script:
   - export RDBASE=$CONDA_PREFIX/Library/share/RDKit
