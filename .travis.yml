@@ -22,7 +22,7 @@ before_install:
   - source activate tenv
 
 install:
-  - pip install openbabel==3.1.1.1
+  - conda install -c openbabel openbabel==2.4.1
   - pip install PyYAML==5.3.1
   - pip install pandas==1.0.3
   - conda install -c rdkit rdkit=2019.03.4
