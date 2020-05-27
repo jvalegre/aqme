@@ -165,14 +165,16 @@ def compute_confs(w_dir_initial,smi, name,args,log,dup_data,counter_for_template
 		if args.complex_type == 'squareplanar' or args.complex_type == 'squarepyramidal' or args.complex_type == 'linear' or args.complex_type == 'trigonalplanar':
 			mol_objects = []
 			if len(args.metal_idx) == 1:
-				os.chdir(os.path.join(pyconfort.__path__[0])+'/templates')
-				# print(glob.glob('*.*'))
+				try:
+					os.chdir(os.path.join(pyconfort.__path__[0])+'/templates')
+				except FileNotFoundError:
+					os.chdir(os.path.join(pyconfort.__path__[0])+'\\templates')
 				if args.complex_type == 'squareplanar' or args.complex_type == 'squarepyramidal':
 					file_template = 'template-4-and-5.sdf'
 				if args.complex_type =='linear':
-					file_template = os.path.dirname(os.path.abspath(__file__)) +'/templates/template-2.sdf'
+					file_template = 'template-2.sdf'
 				if args.complex_type =='trigonalplanar':
-					file_template = os.path.dirname(os.path.abspath(__file__)) +'/templates/template-3.sdf'
+					file_template = 'template-3.sdf'
 				temp = Chem.SDMolSupplier(file_template)
 				os.chdir(w_dir_initial)
 				mol_objects_from_template,name, coord_Map, alg_Map, mol_template = template_embed(mol,temp,name,args,log)

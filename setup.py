@@ -10,6 +10,7 @@ with io.open(path.join(this_directory, 'README.md'), encoding='utf-8') as f:
 setup(
   name='pyconfort',
   packages=['pyconfort'],
+  package_data={'pyconfort': ['templates/*']},
   version='1.0.1',
   license='MIT',
   description='Python-based conformer generation and post-processing of DFT output files',

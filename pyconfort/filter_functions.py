@@ -135,11 +135,7 @@ def exp_rules_main(args,log):
 			conf_files =  glob.glob('*_rdkit_rotated.sdf')
 	else:
 		conf_files =  glob.glob('*_xtb.sdf')
-	if not args.xtb:
-		conf_files =  glob.glob('*_rdkit.sdf')
-	elif args.xtb:
-		conf_files =  glob.glob('*_xtb.sdf')
-
+	
 	for file in conf_files:
 		allmols = Chem.SDMolSupplier(file, removeHs=False)
 		if allmols is None:

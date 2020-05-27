@@ -168,19 +168,19 @@ def rename_file_and_charge_change(read_lines,file,args,charge_com):
 	return rename_file_name
 
 # MAIN FUNCTION TO CREATE GAUSSIAN JOBS
-def write_gaussian_input_file(file, name,lot, bs, bs_gcp, energies, args,log,charge_data):
+def write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args,log,charge_data):
 
 	#find location of molecule and respective scharges
 	name_list = name.split('_')
+	
 	if 'rules' in name_list:
 		name_molecule = name[:-23]
-	elif 'xtb' or 'ani' in name_list:
+	elif 'xtb' in name_list or 'ani' in name_list:
 		name_molecule = name[:-4]
-	elif 'rdkit' in name_list:
-		name_molecule = name[:-6]
 	elif 'rotated' in name_list:
 		name_molecule = name[:-14]
-
+	elif 'rdkit' in name_list:
+		name_molecule = name[:-6]
 
 	for i in range(len(charge_data)):
 		if charge_data.loc[i,'Molecule'] == name_molecule:
@@ -356,7 +356,7 @@ def write_gauss_main(args,log):
 		conf_files =  glob.glob('*_rules.sdf')
 	# define the SDF files to convert to COM Gaussian files
 	elif not args.xtb and not args.ANI1ccx and args.nodihedrals:
-			conf_files =  glob.glob('*_rdkit.sdf')
+		conf_files =  glob.glob('*_rdkit.sdf')
 	elif not args.xtb and not args.ANI1ccx and not args.nodihedrals:
 		conf_files =  glob.glob('*_rdkit_rotated.sdf')
 	elif args.xtb:
@@ -391,14 +391,14 @@ def write_gauss_main(args,log):
 					else:
 						raise
 				# writing the com files
-				# check conf_file exists, parse energies and then write dft input
+				# check conf_file exists, parse energies and then write DFT input
 
 				for file in conf_files:
 					if os.path.exists(file):
 						if args.verbose:
 							log.write("   -> Converting from {}".format(file))
 						energies = read_energies(file,log)
-						name = os.path.splitext(file)[0]
+						name = file.split('.')[0]
 
 						write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args,log,charge_data)
 

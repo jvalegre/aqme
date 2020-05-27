@@ -8,7 +8,6 @@ from rdkit.Chem import AllChem as Chem
 from rdkit.Chem import rdDistGeom, rdMolAlign
 from pyconfort.filter_functions import get_conf_RMS
 
-
 # GET NUMBER OF NEIGHBOURS OF THE METAL CENTER
 def calc_neighbours(molecule,args):
 	for atom in molecule.GetAtoms():

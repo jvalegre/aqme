@@ -91,7 +91,7 @@ metal_complex : True # specify True to activate this option
 metal : ['Pd'] # specify the metal(s) or atom(s) with uncommon hybridization, in the format 'A','B','C'...
 m_oxi : [2] # oxidation number of the atom (it is used to calculate the charge of the molecule)
 complex_spin : 1 # final spin of the molecule (the code does not calculate spin, it must be defined by the user)
-complex_type : ['squareplanar'] # define squareplanar and squarepyrimidal compounds
+complex_type : 'squareplanar' # define squareplanar and squarepyrimidal compounds
 
 # (8) IF A NONCOVALENT COMPLEX IS USED
 nci_complex : False # specify  true if NCI complex

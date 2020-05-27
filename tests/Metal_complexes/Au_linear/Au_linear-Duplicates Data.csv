@@ -1,0 +1,2 @@
+Molecule,RDKIT-Initial-samples,RDKit-energy-window,RDKit-initial_energy_threshold,RDKit-RMSD-and-energy-duplicates,RDKIT-Unique-conformers,RDKIT-Rotated-conformers,RDKIT-Rotated-Unique-conformers,time (seconds),Overall charge
+Au_linear,20,0,18,0,2,3456,3,10.01,-1
