@@ -126,6 +126,18 @@ def compute_main(w_dir_initial,dup_data,args,log,start_time):
 			i += 1
 		dup_data.to_csv(args.input.split('.')[0]+'-Duplicates Data.csv',index=False)
 
+	# COM file
+	elif os.path.splitext(args.input)[1] == '.sdf':
+		suppl, IDs, charges = mol_from_sdf(args)
+		counter_for_template = 0
+		i=0
+		for mol,name,charge_sdf in zip(suppl,IDs,charges):
+			args.charge_default = charge_sdf
+			clean_args(args,ori_ff,mol)
+			compute_confs(w_dir_initial,mol,name,args,log,dup_data,counter_for_template,i,start_time)
+			i += 1
+		dup_data.to_csv(args.input.split('.')[0]+'-Duplicates Data.csv',index=False)
+
 #com to xyz to sdf for obabel
 def com_2_xyz_2_sdf(args):
 	comfile = open(args.input,"r")
@@ -180,26 +192,29 @@ def substituted_mol(mol,args,log):
 	return mol,args.metal_idx,args.complex_coord,args.metal_sym
 
 #mol from sdf
-def mol_from_sdf(sdffile,args,read_charge_from_sdf):
+def mol_from_sdf(args):
+	suppl = Chem.SDMolSupplier(args.input)
 	IDs,charges = [],[]
-	f = open(sdffile,"r")
+	f = open(args.input,"r")
 	readlines = f.readlines()
 
 	for i, line in enumerate(readlines):
 		if line.find('>  <ID>') > -1:
 			ID = readlines[i+1].split()[0]
 			IDs.append(ID)
-		else:
-			IDs.append(os.path.splitext(args.input)[0])
-		if read_charge_from_sdf:
-			if line.find('CHG') > -1:
-				charge_line =  line.split(' ').reverse()
-				charge = 0
-				for i in range(0,len(charge_line)-4):
-					if i (num % 2) == 0:
-						charge += charge_line[i]
-				charges.append(charge)
-	suppl = Chem.SDMolSupplier(sdffile)
+		if line.find('CHG') > -1:
+			charge_line =  line.split(' ').reverse()
+			charge = 0
+			for i in range(0,len(charge_line)-4):
+				if i (num % 2) == 0:
+					charge += charge_line[i]
+			charges.append(charge)
+	if IDs == []:
+		for i,_ in enumerate(suppl):
+			IDs.append(os.path.splitext(args.input)[0]+'_'+str(i))
+	if charges == []:
+		for i,_ in enumerate(suppl):
+			charges.append(0)
 	return suppl, IDs, charges
 
 def clean_args(args,ori_ff,mol):
@@ -236,9 +251,9 @@ def compute_confs(w_dir_initial,mol, name,args,log,dup_data,counter_for_template
 			mol_objects = []
 			if len(args.metal_idx) == 1:
 				try:
-					os.chdir(os.path.join(pyconfort.__path__[0])+'/templates')
+					os.chdir(os.path.join(pyconfort.__path__[0])+'/templates/')
 				except FileNotFoundError:
-					os.chdir(os.path.join(pyconfort.__path__[0])+'\\templates')
+					os.chdir(os.path.join(pyconfort.__path__[0])+'/templates/')
 				if args.complex_type == 'squareplanar' or args.complex_type == 'squarepyramidal':
 					file_template = 'template-4-and-5.sdf'
 				if args.complex_type =='linear':
