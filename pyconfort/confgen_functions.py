@@ -111,18 +111,20 @@ def compute_main(w_dir_initial,dup_data,args,log,start_time):
 			compute_confs(w_dir_initial,mol,name,args,log,dup_data,counter_for_template,i,start_time)
 		dup_data.to_csv(args.input.split('.')[0]+'-Duplicates Data.csv',index=False)
 
-
-	# CDX file
-	elif os.path.splitext(args.input)[1] == '.gjf' or os.path.splitext(args.input)[1] == 'com':
+	# COM file
+	elif os.path.splitext(args.input)[1] == '.gjf' or os.path.splitext(args.input)[1] == '.com':
 		#converting to sdf from comfile to preserve geometry
-		com_2_xyz_2_sdf(args)
-
+		args.charge_default = com_2_xyz_2_sdf(args)
 		sdffile = os.path.splitext(args.input)[0]+'.sdf'
-		suppl, IDs, charges = mol_from_sdf(sdffile,args,False)
-
+		suppl = Chem.SDMolSupplier(sdffile)
+		name = os.path.splitext(args.input)[0]
+		counter_for_template = 0
+		i=0
 		for mol in suppl:
-			clean_args(args,ori_ff,smi)
-
+			clean_args(args,ori_ff,mol)
+			compute_confs(w_dir_initial,mol,name,args,log,dup_data,counter_for_template,i,start_time)
+			i += 1
+		dup_data.to_csv(args.input.split('.')[0]+'-Duplicates Data.csv',index=False)
 
 #com to xyz to sdf for obabel
 def com_2_xyz_2_sdf(args):
@@ -136,7 +138,7 @@ def com_2_xyz_2_sdf(args):
 			emptylines.append(i)
 
 	#assigning the charges
-	dup_data.at[dup_data_idx, 'Overall charge'] = comlines[(emptylines[1]+1)].split(' ')[0]
+	charge_com = comlines[(emptylines[1]+1)].split(' ')[0]
 
 	xyzfile = open(os.path.splitext(args.input)[0]+'.xyz',"w")
 	xyzfile.write(str(emptylines[2]- (emptylines[1]+2)))
@@ -151,6 +153,7 @@ def com_2_xyz_2_sdf(args):
 
 	subprocess.run(['obabel', '-ixyz', os.path.splitext(args.input)[0]+'.xyz', '-osdf', '-O', os.path.splitext(args.input)[0]+'.sdf','--gen3D'])
 
+	return charge_com
 # SUBSTITUTION WITH I
 def substituted_mol(mol,args,log):
 	for atom in mol.GetAtoms():
@@ -560,7 +563,7 @@ def RMSD_and_E_filter(outmols,selectedcids_initial,cenergy,rotmatches,args,dup_d
 		for seenconf in selectedcids:
 			E_diff = abs(cenergy[conf] - cenergy[seenconf]) # in kcal/mol
 			if  E_diff < args.energy_threshold:
-					rms = get_conf_RMS(outmols[conf],outmols[conf],seenconf,conf, args.heavyonly, args.max_matches_RMSD,log)
+				rms = get_conf_RMS(outmols[conf],outmols[conf],seenconf,conf, args.heavyonly, args.max_matches_RMSD,log)
 				if rms < args.rms_threshold:
 					excluded_conf = True
 					eng_rms_dup += 1
@@ -614,8 +617,11 @@ def min_after_embed(mol,cids,name,initial_confs,rotmatches,dup_data,dup_data_idx
 	selectedcids_rdkit = RMSD_and_E_filter(outmols,selectedcids_initial_rdkit,cenergy,rotmatches,args,dup_data,dup_data_idx,log,'rdkit')
 
 	# writing charges after RDKIT
-	args.charge = rules_get_charge(mol,args,log)
-	dup_data.at[dup_data_idx, 'Overall charge'] = np.sum(args.charge)
+	if os.path.splitext(args.input)[1] == '.cdx' or os.path.splitext(args.input)[1] == '.smi' or os.path.splitext(args.input)[1] == '.csv':
+		args.charge = rules_get_charge(mol,args,log)
+		dup_data.at[dup_data_idx, 'Overall charge'] = np.sum(args.charge)
+	else:
+		dup_data.at[dup_data_idx, 'Overall charge'] = args.charge_default
 
 	# now exhaustively drive torsions of selected conformers
 	n_confs = int(len(selectedcids_rdkit) * (360 / args.degree) ** len(rotmatches))
@@ -763,8 +769,11 @@ def optimize(mol, args, program,log,dup_data,dup_data_idx):
 			ase_metal_idx.append(atom.GetIdx())
 		elements += atom.GetSymbol()
 
-	args.charge = rules_get_charge(mol,args,log)
-	dup_data.at[dup_data_idx, 'Overall charge'] = np.sum(args.charge)
+	if os.path.splitext(args.input)[1] == '.cdx' or os.path.splitext(args.input)[1] == '.smi' or os.path.splitext(args.input)[1] == '.csv':
+		args.charge = rules_get_charge(mol,args,log)
+		dup_data.at[dup_data_idx, 'Overall charge'] = np.sum(args.charge)
+	else:
+		dup_data.at[dup_data_idx, 'Overall charge'] = args.charge_default
 
 	cartesians = mol.GetConformers()[0].GetPositions()
 	coordinates = torch.tensor([cartesians.tolist()], requires_grad=True, device=device)
