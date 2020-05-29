@@ -123,34 +123,6 @@ def exp_rules_output(mol, args,log):
 			passing = False
 		return passing
 
-# MAIN OPTION FOR DISCARDING MOLECULES BASED ON USER INPUT DATA (REFERRED AS EXPERIMENTAL RULES)
-def exp_rules_main(args,log):
-	if args.verbose:
-		log.write("\n   ----- Applying experimental rules to write the new confs file -----")
-	# do 2 cases, for RDKit only and RDKIt+xTB
-	if not args.xtb:
-		if args.nodihedrals:
-			conf_files =  glob.glob('*_rdkit.sdf')
-		else:
-			conf_files =  glob.glob('*_rdkit_rotated.sdf')
-	else:
-		conf_files =  glob.glob('*_xtb.sdf')
-	
-	for file in conf_files:
-		allmols = Chem.SDMolSupplier(file, removeHs=False)
-		if allmols is None:
-			log.write("Could not open "+ file)
-			sys.exit(-1)
-
-		sdwriter = Chem.SDWriter(file.split('.')[0]+'_filter_exp_rules.sdf')
-
-		for mol in allmols:
-			check_mol = True
-			check_mol = exp_rules_output(mol,args,log)
-			if check_mol:
-				sdwriter.write(mol)
-		sdwriter.close()
-
 # FILTER TO BE APPLIED FOR SMILES
 def filters(mol,args,log):
 	valid_structure = True
@@ -178,69 +150,129 @@ def get_conf_RMS(mol1, mol2, c1, c2, heavy, max_matches_RMSD,log):
 	rms = Chem.GetBestRMS(mol1,mol2,c1,c2,maxMatches=max_matches_RMSD)
 	return rms
 
-def filter_after_rotation(args,name,log,dup_data,dup_data_idx):
-	rdmols = Chem.SDMolSupplier(name+'_'+'rdkit'+args.output, removeHs=False)
-	if rdmols is None:
-		log.write("Could not open "+ name+args.output)
-		sys.exit(-1)
+# filter based on energy window (ewin_rdkit)
+def ewin_filter(sorted_all_cids,cenergy,args,dup_data,dup_data_idx,log,calc_type):
+	sortedcids,nhigh_rdkit,nhigh=[],0,0
+	if calc_type == 'rdkit' or calc_type == 'rotated_rdkit':
+		for i,cid in enumerate(sorted_all_cids):
+			if i == 0:
+				cenergy_min = cenergy[cid]
+			if abs(cenergy[cid] - cenergy_min) < args.ewin_rdkit:
+				sortedcids.append(cid)
+			else:
+				nhigh_rdkit +=1
+	if calc_type == 'rdkit':
+		if args.verbose:
+			log.write("o  "+str(nhigh_rdkit)+ " conformers rejected based on energy window ewin_rdkit (E > "+str(args.ewin_rdkit)+" kcal/mol)")
+		dup_data.at[dup_data_idx, 'RDKit-energy-window'] = nhigh_rdkit
+	if calc_type == 'rotated_rdkit':
+		if args.verbose:
+			log.write("o  "+str(nhigh_rdkit)+ " conformers rejected after rotation based on energy window ewin_rdkit (E > "+str(args.ewin_rdkit)+" kcal/mol)")
+		dup_data.at[dup_data_idx, 'RDKit-Rotated-energy-window'] = nhigh_rdkit
 
-	writer_mol_objects = []
-	bar = IncrementalBar('o  Filtering based on energy and rms after rotation of dihedrals', max = len(rdmols))
+	if calc_type == 'xtb_ani':
+		for i,cid in enumerate(sorted_all_cids):
+			if i == 0:
+				cenergy_min = cenergy[cid]
+			if abs(cenergy[cid] - cenergy_min) < args.ewin_min:
+				sortedcids.append(cid)
+			else:
+				nhigh +=1
+		if args.verbose:
+			log.write("o  "+str(nhigh)+ " conformers rejected based on energy window ewin_min (E > "+str(args.ewin_min)+" kcal/mol)")
+		if args.ANI1ccx:
+			dup_data.at[dup_data_idx, 'ANI1ccx-energy-window'] = nhigh
+		elif args.xtb:
+			dup_data.at[dup_data_idx, 'xTB-energy-window'] = nhigh
+	return sortedcids
 
-	rd_count = 0
-	rd_selectedcids,rd_dup_energy,rd_dup_rms_eng =[],-1,0
-	for i, rd_mol_i in enumerate(rdmols):
-		mol_rd = Chem.RWMol(rd_mol_i)
-		mol_rd.SetProp('_Name',rd_mol_i.GetProp('_Name')+' '+str(i))
+# pre-energy filter for RDKit
+def pre_E_filter(sortedcids,cenergy,args,dup_data,dup_data_idx,log,calc_type):
+	selectedcids_initial, eng_dup =[],-1
+	bar = IncrementalBar('o  Filtering based on energy (pre-filter)', max = len(sortedcids))
+	for i, conf in enumerate(sortedcids):
 		# This keeps track of whether or not your conformer is unique
 		excluded_conf = False
 		# include the first conformer in the list to start the filtering process
-		if rd_count == 0:
-			rd_selectedcids.append(rd_mol_i)
-			if args.metal_complex:
-				set_metal_atomic_number(mol_rd,args)
-			writer_mol_objects.append([mol_rd,float(mol_rd.GetProp('Energy'))])
-		# Only the first ID gets included
-		rd_count = 1
+		if i == 0:
+			selectedcids_initial.append(conf)
 		# check rmsd
-		for rd_mol_j in rd_selectedcids:
-			if abs(float(rd_mol_i.GetProp('Energy')) - float(rd_mol_j.GetProp('Energy'))) < args.initial_energy_threshold: # comparison in kcal/mol
+		for seenconf in selectedcids_initial:
+			E_diff = abs(cenergy[conf] - cenergy[seenconf]) # in kcal/mol
+			if E_diff < args.initial_energy_threshold:
+				eng_dup += 1
 				excluded_conf = True
-				rd_dup_energy += 1
 				break
-			if abs(float(rd_mol_i.GetProp('Energy')) - float(rd_mol_j.GetProp('Energy'))) < args.energy_threshold: # in kcal/mol
-				rms = get_conf_RMS(mol_rd,rd_mol_j,-1,-1, args.heavyonly, args.max_matches_RMSD,log)
-				if rms < args.rms_threshold:
-					excluded_conf = True
-					rd_dup_rms_eng += 1
-					break
 		if not excluded_conf:
-			if rd_mol_i not in rd_selectedcids:
-				rd_selectedcids.append(rd_mol_i)
-				if args.metal_complex:
-					set_metal_atomic_number(mol_rd,args)
-				writer_mol_objects.append([mol_rd,float(mol_rd.GetProp('Energy'))] )
+			if conf not in selectedcids_initial:
+				selectedcids_initial.append(conf)
 		bar.next()
 	bar.finish()
 
-	# writing sorted mol objects
-	sdwriter_rd = Chem.SDWriter(name+'_'+'rdkit'+'_'+'rotated'+args.output)
-	sortedmols = sorted(writer_mol_objects,key=lambda x: x[1])
-	for i, write_mol in enumerate(sortedmols):
-		sdwriter_rd.write(write_mol[0])
+	if args.verbose:
+		log.write("o  "+str(eng_dup)+ " duplicates removed  pre-energy filter (E < "+str(args.initial_energy_threshold)+" kcal/mol)")
 
-	sdwriter_rd.close()
+	if calc_type == 'rdkit':
+		dup_data.at[dup_data_idx, 'RDKit-initial_energy_threshold'] = eng_dup
+	if calc_type == 'rotated_rdkit':
+		dup_data.at[dup_data_idx, 'RDKit-Rotated-initial_energy_threshold'] = eng_dup
+	elif calc_type == 'xtb_ani':
+		if args.ANI1ccx:
+			dup_data.at[dup_data_idx, 'ANI1ccx-initial_energy_threshold'] = eng_dup
+		elif args.xtb:
+			dup_data.at[dup_data_idx, 'xTB-initial_energy_threshold'] = eng_dup
+
+	return selectedcids_initial
+
+# filter based on energy and RMSD
+def RMSD_and_E_filter(outmols,selectedcids_initial,cenergy,args,dup_data,dup_data_idx,log,calc_type):
+	if args.verbose:
+		log.write("o  Removing duplicate conformers (RMSD < "+ str(args.rms_threshold)+ " and E difference < "+str(args.energy_threshold)+" kcal/mol)")
+	bar = IncrementalBar('o  Filtering based on energy and RMSD', max = len(selectedcids_initial))
+
+	selectedcids,eng_rms_dup = [],-1
+	for i, conf in enumerate(selectedcids_initial):
+		# This keeps track of whether or not your conformer is unique
+		excluded_conf = False
+		# include the first conformer in the list to start the filtering process
+
+		if i == 0:
+			selectedcids.append(conf)
+		# check energy and rmsd
+		for seenconf in selectedcids:
+			E_diff = abs(cenergy[conf] - cenergy[seenconf]) # in kcal/mol
+			if  E_diff < args.energy_threshold:
+				if calc_type == 'rdkit':
+					rms = get_conf_RMS(outmols[conf],outmols[conf],seenconf,conf, args.heavyonly, args.max_matches_RMSD,log)
+				elif calc_type == 'rotated_rdkit' or calc_type =='xtb_ani':
+					rms = get_conf_RMS(outmols[conf],outmols[seenconf],-1,-1, args.heavyonly, args.max_matches_RMSD,log)
+				if rms < args.rms_threshold:
+					excluded_conf = True
+					eng_rms_dup += 1
+					break
+		if not excluded_conf:
+			if conf not in selectedcids:
+				selectedcids.append(conf)
+		bar.next()
+	bar.finish()
 
 	if args.verbose:
-		log.write("o  "+str(rd_dup_energy)+ " Duplicates removed initial energy (E < "+str(args.initial_energy_threshold)+" kcal/mol)")
+		log.write("o  "+str(eng_rms_dup)+ " duplicates removed (RMSD < "+str(args.rms_threshold)+" / E < "+str(args.energy_threshold)+" kcal/mol) after rotation")
 	if args.verbose:
-		log.write("o  "+str(rd_dup_rms_eng)+ " Duplicates removed (RMSD < "+str(args.rms_threshold)+" / E < "+str(args.energy_threshold)+" kcal/mol) after rotation")
-	if args.verbose:
-		log.write("o  "+str(len(rd_selectedcids) )+ " unique conformers remain")
+		log.write("o  "+ str(len(selectedcids))+" unique conformers remain")
 
-	# filtering process after rotations
-	dup_data.at[dup_data_idx, 'RDKIT-Rotated-Unique-conformers'] = len(rd_selectedcids)
+	if calc_type == 'rdkit':
+		dup_data.at[dup_data_idx, 'RDKit-RMSD-and-energy-duplicates'] = eng_rms_dup
+		dup_data.at[dup_data_idx, 'RDKIT-Unique-conformers'] = len(selectedcids)
+	if calc_type == 'rotated_rdkit':
+		dup_data.at[dup_data_idx, 'RDKit-Rotated-RMSD-and-energy-duplicates'] = eng_rms_dup
+		dup_data.at[dup_data_idx, 'RDKIT-Rotated-Unique-conformers'] = len(selectedcids)
+	elif calc_type == 'xtb_ani':
+		if args.ANI1ccx:
+			dup_data.at[dup_data_idx, 'ANI1ccx-RMSD-and-energy-duplicates'] = eng_rms_dup
+			dup_data.at[dup_data_idx, 'ANI1ccx-Unique-conformers'] = len(selectedcids)
+		elif args.xtb:
+			dup_data.at[dup_data_idx, 'xTB-RMSD-and-energy-duplicates'] = eng_rms_dup
+			dup_data.at[dup_data_idx, 'xTB-Unique-conformers'] = len(selectedcids)
 
-	status = 1
-
-	return status
+	return selectedcids

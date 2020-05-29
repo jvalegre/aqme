@@ -28,10 +28,8 @@ from __future__ import print_function
 import os
 import time
 from pyconfort.argument_parser import parser_args
-from pyconfort.confgen_functions import compute_main, qsub_main
-from pyconfort.analyzer_functions import analysis_main, dup_main, boltz_main, combine_main
-from pyconfort.writer_functions import creation_of_dup_csv, load_from_yaml, Logger, write_gauss_main, move_sdf_main
-from pyconfort.filter_functions import exp_rules_main
+from pyconfort.main_functions import *
+from pyconfort.writer_functions import creation_of_dup_csv, load_from_yaml, Logger
 
 def main():
 	# working directory and arguments

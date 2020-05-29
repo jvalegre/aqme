@@ -75,11 +75,11 @@ def creation_of_dup_csv(args):
 			dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples','RDKit-energy-window', 'RDKit-initial_energy_threshold','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','ANI1ccx-Initial-samples','ANI1ccx-energy-window','ANI1ccx-initial_energy_threshold','ANI1ccx-RMSD-and-energy-duplicates','ANI1ccx-Unique-conformers','time (seconds)','Overall charge'])
 	else:
 		if not args.xtb and not args.ANI1ccx:
-			dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples','RDKit-energy-window', 'RDKit-initial_energy_threshold','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','RDKIT-Rotated-conformers','RDKIT-Rotated-Unique-conformers','time (seconds)','Overall charge'])
+			dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples','RDKit-energy-window', 'RDKit-initial_energy_threshold','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','RDKIT-Rotated-conformers','RDKit-Rotated-energy-window', 'RDKit-Rotated-initial_energy_threshold','RDKit-Rotated-RMSD-and-energy-duplicates','RDKIT-Rotated-Unique-conformers','time (seconds)','Overall charge'])
 		elif args.xtb:
-			dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples', 'RDKit-energy-window','RDKit-initial_energy_threshold','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','RDKIT-Rotated-conformers','RDKIT-Rotated-Unique-conformers','xTB-Initial-samples','xTB-energy-window','xTB-initial_energy_threshold','xTB-RMSD-and-energy-duplicates','xTB-Unique-conformers','time (seconds)','Overall charge'])
+			dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples', 'RDKit-energy-window','RDKit-initial_energy_threshold','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','RDKIT-Rotated-conformers','RDKit-Rotated-energy-window', 'RDKit-Rotated-initial_energy_threshold','RDKit-Rotated-RMSD-and-energy-duplicates','RDKIT-Rotated-Unique-conformers','xTB-Initial-samples','xTB-energy-window','xTB-initial_energy_threshold','xTB-RMSD-and-energy-duplicates','xTB-Unique-conformers','time (seconds)','Overall charge'])
 		elif args.ANI1ccx:
-			dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples','RDKit-energy-window', 'RDKit-initial_energy_threshold','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','RDKIT-Rotated-conformers','RDKIT-Rotated-Unique-conformers','ANI1ccx-Initial-samples','ANI1ccx-energy-window','ANI1ccx-initial_energy_threshold','ANI1ccx-RMSD-and-energy-duplicates','ANI1ccx-Unique-conformers','time (seconds)','Overall charge'])
+			dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples','RDKit-energy-window', 'RDKit-initial_energy_threshold','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','RDKIT-Rotated-conformers','RDKit-Rotated-energy-window', 'RDKit-Rotated-initial_energy_threshold','RDKit-Rotated-RMSD-and-energy-duplicates','RDKIT-Rotated-Unique-conformers','ANI1ccx-Initial-samples','ANI1ccx-energy-window','ANI1ccx-initial_energy_threshold','ANI1ccx-RMSD-and-energy-duplicates','ANI1ccx-Unique-conformers','time (seconds)','Overall charge'])
 	return dup_data
 
 def header_com(name,lot,bs,bs_gcp, args, log, input_route, genecp):
@@ -172,7 +172,7 @@ def write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args,log,ch
 
 	#find location of molecule and respective scharges
 	name_list = name.split('_')
-	
+
 	if 'rules' in name_list:
 		name_molecule = name[:-23]
 	elif 'xtb' in name_list or 'ani' in name_list:
@@ -350,73 +350,3 @@ def read_energies(file,log): # parses the energies from sdf files - then used to
 			energies.append(float(readlines[i+1].split()[0]))
 	f.close()
 	return energies
-
-def write_gauss_main(args,log):
-	if args.exp_rules:
-		conf_files =  glob.glob('*_rules.sdf')
-	# define the SDF files to convert to COM Gaussian files
-	elif not args.xtb and not args.ANI1ccx and args.nodihedrals:
-		conf_files =  glob.glob('*_rdkit.sdf')
-	elif not args.xtb and not args.ANI1ccx and not args.nodihedrals:
-		conf_files =  glob.glob('*_rdkit_rotated.sdf')
-	elif args.xtb:
-		conf_files =  glob.glob('*_xtb.sdf')
-	elif args.ANI1ccx:
-		conf_files =  glob.glob('*_ani.sdf')
-	else:
-		conf_files =  glob.glob('*.sdf')
-
-	# names for directories created
-	sp_dir = 'generated_sp_files'
-	g_dir = 'generated_gaussian_files'
-
-	#read in dup_data to get the overall charge of MOLECULES
-	charge_data = pd.read_csv(args.input.split('.')[0]+'-Duplicates Data.csv', usecols=['Molecule','Overall charge'])
-
-	for lot in args.level_of_theory:
-		for bs in args.basis_set:
-			for bs_gcp in args.basis_set_genecp_atoms:
-				# only create this directory if single point calculation is requested
-				if args.single_point:
-					folder = sp_dir + '/' + str(lot) + '-' + str(bs)
-					log.write("\no  PREPARING SINGLE POINT INPUTS in {}".format(folder))
-				else:
-					folder = g_dir + '/' + str(lot) + '-' + str(bs)
-					log.write("\no  Preparing Gaussian COM files in {}".format(folder))
-				try:
-					os.makedirs(folder)
-				except OSError:
-					if os.path.isdir(folder):
-						pass
-					else:
-						raise
-				# writing the com files
-				# check conf_file exists, parse energies and then write DFT input
-
-				for file in conf_files:
-					if os.path.exists(file):
-						if args.verbose:
-							log.write("   -> Converting from {}".format(file))
-						energies = read_energies(file,log)
-						name = file.split('.')[0]
-
-						write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args,log,charge_data)
-
-# moving files after compute and/or write_gauss
-def move_sdf_main(args):
-	src = os.getcwd()
-	if args.xtb:
-		all_xtb_conf_files = glob.glob('*_xtb.sdf')
-		destination_xtb = src +'/xtb_minimised_generated_sdf_files'
-		for file in all_xtb_conf_files:
-			moving_sdf_files(destination_xtb,src,file)
-	elif args.ANI1ccx:
-		all_ani_conf_files = glob.glob('*_ani.sdf')
-		destination_ani = src +'/ani1ccx_minimised_generated_sdf_files'
-		for file in all_ani_conf_files:
-			moving_sdf_files(destination_ani,src,file)
-	else:
-		all_name_conf_files = glob.glob('*_rdkit*.sdf')
-		destination_rdkit = 'rdkit_generated_sdf_files'
-		for file in all_name_conf_files:
-			moving_sdf_files(destination_rdkit,src,file)
