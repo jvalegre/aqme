@@ -34,7 +34,7 @@ try:
 except:
 	print('0')
 try:
-	from lib.xtb import GFN2
+	from xtb import GFN2
 except:
 	print('1')
 try:
@@ -493,7 +493,10 @@ def RMSD_and_E_filter(outmols,selectedcids_initial,cenergy,rotmatches,args,dup_d
 		for seenconf in selectedcids:
 			E_diff = abs(cenergy[conf] - cenergy[seenconf]) # in kcal/mol
 			if  E_diff < args.energy_threshold:
-				rms = get_conf_RMS(outmols[conf],outmols[conf],seenconf,conf, args.heavyonly, args.max_matches_RMSD,log)
+				if calc_type == 'rdkit':
+					rms = get_conf_RMS(outmols[conf],outmols[conf],conf,seenconf, args.heavyonly, args.max_matches_RMSD,log)
+				elif calc_type == 'xtb_ani':
+					rms = get_conf_RMS(outmols[conf],outmols[seenconf],-1,-1, args.heavyonly, args.max_matches_RMSD,log)
 				if rms < args.rms_threshold:
 					excluded_conf = True
 					eng_rms_dup += 1

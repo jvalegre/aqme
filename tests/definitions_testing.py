@@ -7,6 +7,7 @@
 
 import os
 import glob
+import shutil
 import pandas as pd
 import subprocess
 
@@ -27,22 +28,25 @@ def calc_genecp(file, atom):
     f = open(file,"r")
     readlines = f.readlines()
     for i, line in enumerate(readlines):
+        line_parts = line.split()
         if line.find('pop') > -1:
             pop += 1
         if line.find('opt') > -1:
             opt += 1
-        elif line.find('# wb97xd') > -1:
+        if line.find('# wb97xd') > -1:
             charge_com = readlines[i+4].split()[0]
             multiplicity_com = readlines[i+4].split()[1]
-        elif line.find(atom+' 0') > -1:
-            count += 1
         elif line.find('$NBO $END') > -1:
             NBO += 1
+        for _,atom_ind in enumerate(atom):
+            if atom_ind in line_parts and '0' in line_parts:
+                count += 1
+                break
     f.close()
 
     return count,NBO,pop,opt,charge_com,multiplicity_com
 
-def conf_gen(path, precision, cmd_pyconfort, folder, smiles, n_confs, prefilter_confs_rdkit, filter_confs_rdkit, E_confs, charge, dihedral, xTB_ANI1):
+def conf_gen(path, precision, cmd_pyconfort, folder, smiles, E_confs, dihedral, xTB_ANI1, metal, template):
     # open right folder and run the code
     os.chdir(path+'/'+folder+'/'+smiles.split('.')[0])
     subprocess.call(cmd_pyconfort)
@@ -55,41 +59,64 @@ def conf_gen(path, precision, cmd_pyconfort, folder, smiles, n_confs, prefilter_
         test_init_rdkit_confs = df_output['RDKIT-Initial-samples']
         test_prefilter_rdkit_confs = df_output['RDKit-initial_energy_threshold']
         test_filter_rdkit_confs = df_output['RDKit-RMSD-and-energy-duplicates']
-
-        assert str(n_confs) == str(test_init_rdkit_confs[0])
-        assert str(prefilter_confs_rdkit) == str(test_prefilter_rdkit_confs[0])
-        assert str(filter_confs_rdkit) == str(test_filter_rdkit_confs[0])
-
+        test_unique_confs = 'nan'
     else:
         test_init_rdkit_confs = df_output['RDKIT-Rotated-conformers']
+        test_prefilter_rdkit_confs = 'nan'
         test_unique_confs = df_output['RDKIT-Rotated-Unique-conformers']
-
-        # I use the filter_confs_rdkit variable to assert for unique confs in dihedral scan
-        assert str(n_confs) == str(test_init_rdkit_confs[0])
-        assert str(filter_confs_rdkit) == str(test_unique_confs[0])
+        test_filter_rdkit_confs = 'nan'
 
     # read the energies of the conformers
-    os.chdir(path+'/'+folder+'/'+smiles.split('.')[0]+'/rdkit_generated_sdf_files')
-
-    if not dihedral:
-        test_rdkit_E_confs = calc_energy(smiles.split('.')[0]+'_rdkit.sdf')
-    else:
-        test_rdkit_E_confs = calc_energy(smiles.split('.')[0]+'_rdkit_rotated.sdf')
-
-    # test for energies
     try:
-        test_round_confs = [round(num, precision) for num in test_rdkit_E_confs]
-        round_confs = [round(num, precision) for num in E_confs]
-    except:
-        test_round_confs = 'nan'
-        round_confs = 'nan'
+        os.chdir(path+'/'+folder+'/'+smiles.split('.')[0]+'/rdkit_generated_sdf_files')
+        if template == 'squareplanar' or template == 'squarepyramidal':
+            if not dihedral:
+                test_rdkit_E_confs = calc_energy(smiles.split('.')[0]+'_0_rdkit.sdf')
+            else:
+                test_rdkit_E_confs = calc_energy(smiles.split('.')[0]+'_0_rdkit_rotated.sdf')
+        else:
+            if not dihedral:
+                test_rdkit_E_confs = calc_energy(smiles.split('.')[0]+'_rdkit.sdf')
+            else:
+                test_rdkit_E_confs = calc_energy(smiles.split('.')[0]+'_rdkit_rotated.sdf')
 
-    assert str(round_confs) == str(test_round_confs)
+        # test for energies
+        try:
+            test_round_confs = [round(num, precision) for num in test_rdkit_E_confs]
+            round_confs = [round(num, precision) for num in E_confs]
 
-    # tests charge
-    test_charge = df_output['Overall charge']
+        except:
+            test_round_confs = 'nan'
+            round_confs = 'nan'
 
-    assert str(charge) == str(test_charge[0])
+        # tests charge
+        test_charge = df_output['Overall charge']
+
+        os.chdir(path+'/'+folder+'/'+smiles.split('.')[0]+'/generated_gaussian_files/wb97xd-def2svp')
+        file_gen = glob.glob(smiles.split('.')[0]+'*.com')[0]
+        if metal != False:
+            count,_,_,_,charge_com,multiplicity_com = calc_genecp(file_gen, metal)
+        else:
+            count,_,_,_,charge_com,multiplicity_com = calc_genecp(file_gen, ['C'])
+
+    # this is included for the tests where no confs are generated
+    except (FileNotFoundError,IndexError):
+        test_init_rdkit_confs, test_filter_rdkit_confs, test_prefilter_rdkit_confs, test_unique_confs = 'nan','nan','nan','nan'
+        test_round_confs, round_confs, test_charge = 'nan','nan','nan'
+        count,charge_com,multiplicity_com = 'nan','nan','nan'
+
+    # remove all the data created by the job
+    os.chdir(path+'/'+folder+'/'+smiles.split('.')[0])
+    all_data = glob.glob('*')
+    discard_ext = ['sdf','csv','dat']
+    for _,file in enumerate(all_data):
+        if len(file.split('.')) == 1:
+            shutil.rmtree(file, ignore_errors=True)
+        else:
+            if file.split('.')[1] in discard_ext:
+                os.remove(file)
+
+    return test_init_rdkit_confs,test_prefilter_rdkit_confs,test_filter_rdkit_confs,round_confs,test_round_confs,test_charge,test_unique_confs,count,charge_com,multiplicity_com
 
 def only_check(path, precision, cmd_pyconfort, folder, smiles, params_file, n_confs, prefilter_confs_rdkit, filter_confs_rdkit, E_confs, charge, dihedral, xTB_ANI1):
     # open right folder and run the code
@@ -138,7 +165,7 @@ def check_log_files(path, folder, file):
 
 def check_com_files(path, folder, file):
     if file == 'Basis_set_error1.LOG' or file == 'Basis_set_error2.LOG':
-        os.chdir(path+'/'+folder+'/new_gaussian_input_files/def2svp-wb97xd')
+        os.chdir(path+'/'+folder+'/new_gaussian_input_files/wb97xd-def2svp')
         assert file not in glob.glob('*.*')
     elif file == 'MeOH_Error_termination.LOG':
         coordinates = 'H  -1.14928800  -0.80105100  -0.00024300'
@@ -178,7 +205,7 @@ def analysis(path, cmd_pyconfort, folder, file):
     # make sure the LOG files are in the right folders after analysis
     check_log_files(path, folder, file)
     # make sure the generated COM files have the right level of theory and geometries
-    os.chdir(path+'/'+folder+'/new_gaussian_input_files/def2svp-wb97xd')
+    os.chdir(path+'/'+folder+'/new_gaussian_input_files/wb97xd-def2svp')
     check_com_files(path, folder, file)
 
 def single_point(path, cmd_pyconfort, folder, file):
