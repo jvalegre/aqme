@@ -46,6 +46,21 @@ def calc_genecp(file, atom):
 
     return count,NBO,pop,opt,charge_com,multiplicity_com
 
+def remove_data(path, folder, smiles):
+    # remove all the data created by the job
+    if not smiles:
+        os.chdir(path+'/'+folder)
+    else:
+        os.chdir(path+'/'+folder+'/'+smiles.split('.')[0])
+    all_data = glob.glob('*')
+    discard_ext = ['sdf','csv','dat']
+    for _,file in enumerate(all_data):
+        if len(file.split('.')) == 1:
+            shutil.rmtree(file, ignore_errors=True)
+        elif file != 'charged.csv':
+            if file.split('.')[1] in discard_ext:
+                os.remove(file)
+
 def conf_gen(path, precision, cmd_pyconfort, folder, smiles, E_confs, dihedral, xTB_ANI1, metal, template):
     # open right folder and run the code
     os.chdir(path+'/'+folder+'/'+smiles.split('.')[0])
@@ -114,32 +129,9 @@ def conf_gen(path, precision, cmd_pyconfort, folder, smiles, E_confs, dihedral, 
         test_round_confs, round_confs, test_charge = 'nan','nan','nan'
         count,charge_com,multiplicity_com = 'nan','nan','nan'
 
-    # remove all the data created by the job
-    os.chdir(path+'/'+folder+'/'+smiles.split('.')[0])
-    all_data = glob.glob('*')
-    discard_ext = ['sdf','csv','dat']
-    for _,file in enumerate(all_data):
-        if len(file.split('.')) == 1:
-            shutil.rmtree(file, ignore_errors=True)
-        elif file != 'charged.csv':
-            if file.split('.')[1] in discard_ext:
-                os.remove(file)
+    remove_data(path, folder, smiles)
 
     return test_init_rdkit_confs,test_prefilter_rdkit_confs,test_filter_rdkit_confs,round_confs,test_round_confs,test_charge,test_unique_confs,count,charge_com,multiplicity_com
-
-def only_check(path, precision, cmd_pyconfort, folder, smiles, params_file, n_confs, prefilter_confs_rdkit, filter_confs_rdkit, E_confs, charge, dihedral, xTB_ANI1):
-    # open right folder and run the code
-    os.chdir(path+'/'+folder+'/'+smiles.split('.')[0])
-    subprocess.call(cmd_pyconfort)
-    if params_file.find('_genecp_') > -1:
-        os.chdir(path+'/'+folder+'/'+smiles.split('.')[0]+'/generated_gaussian_files/wb97xd-def2svp')
-        file = glob.glob('*.com')[0]
-        count,_,_,_,_,_ = calc_genecp(file, 'Pd')
-
-        if params_file == 'params_genecp_test1.yaml': # for gen
-            assert count == 1
-        else: # for genecp
-            assert count == 2
 
 def find_coordinates(file,coordinates):
     coordinates_found = 0
@@ -226,27 +218,21 @@ def single_point(path, cmd_pyconfort, folder, file):
     assert len(glob.glob('*.*')) == 2
 
     if file == 'Pd_SP.LOG':
-        count,NBO,pop,opt,_,_ = calc_genecp(file.split('.')[0]+'.com', 'Pd')
-        assert count == 2 # finds genecp for Pd
-        assert NBO == 1 # finds final line for sp
-        assert pop == 1 # finds input line for sp
-        assert opt == 0 # it does not find standard opt option
+        count,NBO,pop,opt,_,_ = calc_genecp(file.split('.')[0]+'.com', ['Pd'])
 
     elif file == 'CH4_freq.log':
-        count,NBO,pop,opt,_,_ = calc_genecp(file.split('.')[0]+'.com', 'C H')
-        assert count == 0 # does not find genecp part
-        assert NBO == 1 # finds final line for sp
-        assert pop == 1 # finds input line for sp
-        assert opt == 0 # it does not find standard opt option
+        count,NBO,pop,opt,_,_ = calc_genecp(file.split('.')[0]+'.com', ['C H'])
 
-def conf_gen_exp_rules(path, precision, cmd_exp_rules, smiles, E_confs_no_rules, E_confs_rules, charge):
+    return count,NBO,pop,opt
+    
+def conf_gen_exp_rules(path, folder, precision, cmd_exp_rules, smiles, E_confs_no_rules, E_confs_rules):
     # open right folder and run the code
-    os.chdir(path+'/Metal_complexes/Ir_exp_rules')
+    os.chdir(path+'/'+folder)
     if 'rdkit_generated_sdf_files' not in glob.glob('*'):
         subprocess.call(cmd_exp_rules)
 
     # read the energies of the conformers with and without the exp_rules filter
-    os.chdir(path+'/Metal_complexes/Ir_exp_rules/rdkit_generated_sdf_files')
+    os.chdir(path+'/'+folder+'/rdkit_generated_sdf_files')
 
     test_E_confs_no_rules = calc_energy(smiles+'_rdkit.sdf')
     test_E_confs_rules = calc_energy(smiles+'_rdkit_filter_exp_rules.sdf')
@@ -258,12 +244,12 @@ def conf_gen_exp_rules(path, precision, cmd_exp_rules, smiles, E_confs_no_rules,
     test_round_E_confs_rules = [round(num, precision) for num in test_E_confs_rules]
     round_E_confs_rules = [round(num, precision) for num in E_confs_rules]
 
-    assert str(test_round_E_confs_no_rules) == str(round_E_confs_no_rules)
-    assert str(test_round_E_confs_rules) == str(round_E_confs_rules)
-
     # tests charge and genecp
-    os.chdir(path+'/Metal_complexes/Ir_exp_rules/generated_gaussian_files')
+    os.chdir(path+'/'+folder+'/generated_gaussian_files/wb97xd-def2svp')
     file_exp_rules = glob.glob(smiles+'*')[0]
-    _,_,_,_,test_charge,_ = calc_genecp(file_exp_rules, 'Ir')
+    test_com_files = len(glob.glob(smiles+'*'))
+    _,_,_,_,test_charge,_ = calc_genecp(file_exp_rules, ['Ir'])
 
-    assert str(charge) == str(test_charge)
+    remove_data(path, folder, smiles=False)
+
+    return round_E_confs_no_rules,round_E_confs_rules,test_round_E_confs_no_rules,test_round_E_confs_rules,test_charge,test_com_files
