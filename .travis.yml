@@ -17,9 +17,9 @@ sudo: false
   - conda update -q conda
   # Useful for debugging any issues with conda
   - conda info -a
-#   # create and activate the build/test environment
-#   - conda create -q -n tenv python=$TRAVIS_PYTHON_VERSION pip cmake
-#   - source activate tenv
+  # create and activate the build/test environment
+  - conda create -q -n tenv python=$TRAVIS_PYTHON_VERSION pip cmake
+  - source activate tenv
 
 install:
   - conda install -c openbabel openbabel==2.4.1
