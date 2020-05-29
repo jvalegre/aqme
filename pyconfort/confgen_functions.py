@@ -34,7 +34,7 @@ try:
 except:
 	print('0')
 try:
-	from xtb import GFN2
+	from lib.xtb import GFN2
 except:
 	print('1')
 try:
@@ -67,13 +67,15 @@ def compute_main(w_dir_initial,dup_data,args,log,start_time):
 			toks = line.split()
 			#editing part
 			smi = toks[0]
-			clean_args(args,ori_ff,smi)
+			smi = check_for_pieces(smi)
+			mol = Chem.MolFromSmiles(smi)
+			clean_args(args,ori_ff,mol)
 			if not args.prefix:
 				name = ''.join(toks[1:])
 			else:
 				name = args.prefix+str(i)+'_'+''.join(toks[1:])
 
-			compute_confs(w_dir_initial,smi,name,args,log,dup_data,counter_for_template,i,start_time)
+			compute_confs(w_dir_initial,mol,name,args,log,dup_data,counter_for_template,i,start_time)
 		dup_data.to_csv(args.input.split('.')[0]+'-Duplicates Data.csv',index=False)
 
 	# CSV file with one columns SMILES and code_name
@@ -87,8 +89,10 @@ def compute_main(w_dir_initial,dup_data,args,log,start_time):
 			# else:
 			# 	name = 'comp_'+str(m)+'_'+csv_smiles.loc[i, 'code_name']
 			smi = csv_smiles.loc[i, 'SMILES']
-			clean_args(args,ori_ff,smi)
-			compute_confs(w_dir_initial,smi,name,args,log,dup_data,counter_for_template,i,start_time)
+			smi = check_for_pieces(smi)
+			mol = Chem.MolFromSmiles(smi)
+			clean_args(args,ori_ff,mol)
+			compute_confs(w_dir_initial,mol,name,args,log,dup_data,counter_for_template,i,start_time)
 		dup_data.to_csv(args.input.split('.')[0]+'-Duplicates Data.csv',index=False)
 
 	# CDX file
@@ -100,14 +104,55 @@ def compute_main(w_dir_initial,dup_data,args,log,start_time):
 
 		counter_for_template = 0
 		for i, smi in enumerate(smifile):
-			clean_args(args,ori_ff,smi)
+			smi = check_for_pieces(smi)
+			mol = Chem.MolFromSmiles(smi)
+			clean_args(args,ori_ff,mol)
 			name = 'comp' + str(i)+'_'
-			compute_confs(w_dir_initial,smi,name,args,log,dup_data,counter_for_template,i,start_time)
+			compute_confs(w_dir_initial,mol,name,args,log,dup_data,counter_for_template,i,start_time)
 		dup_data.to_csv(args.input.split('.')[0]+'-Duplicates Data.csv',index=False)
 
+
+	# CDX file
+	elif os.path.splitext(args.input)[1] == '.gjf' or os.path.splitext(args.input)[1] == 'com':
+		#converting to sdf from comfile to preserve geometry
+		com_2_xyz_2_sdf(args)
+
+		sdffile = os.path.splitext(args.input)[0]+'.sdf'
+		suppl, IDs, charges = mol_from_sdf(sdffile,args,False)
+
+		for mol in suppl:
+			clean_args(args,ori_ff,smi)
+
+
+#com to xyz to sdf for obabel
+def com_2_xyz_2_sdf(args):
+	comfile = open(args.input,"r")
+	comlines = comfile.readlines()
+
+	emptylines=[]
+
+	for i, line in enumerate(comlines):
+		if len(comlines[i].strip()) == 0:
+			emptylines.append(i)
+
+	#assigning the charges
+	dup_data.at[dup_data_idx, 'Overall charge'] = comlines[(emptylines[1]+1)].split(' ')[0]
+
+	xyzfile = open(os.path.splitext(args.input)[0]+'.xyz',"w")
+	xyzfile.write(str(emptylines[2]- (emptylines[1]+2)))
+	xyzfile.write('\n')
+	xyzfile.write(os.path.splitext(args.input)[0])
+	xyzfile.write('\n')
+	for i in range((emptylines[1]+2), emptylines[2]):
+		xyzfile.write(comlines[i])
+
+	xyzfile.close()
+	comfile.close()
+
+	subprocess.run(['obabel', '-ixyz', os.path.splitext(args.input)[0]+'.xyz', '-osdf', '-O', os.path.splitext(args.input)[0]+'.sdf','--gen3D'])
+
 # SUBSTITUTION WITH I
-def substituted_mol(smi,args,log):
-	mol = Chem.MolFromSmiles(smi)
+def substituted_mol(mol,args,log):
 	for atom in mol.GetAtoms():
 		if atom.GetSymbol() in args.metal:
 			args.metal_sym.append(atom.GetSymbol() )
@@ -131,8 +176,30 @@ def substituted_mol(smi,args,log):
 
 	return mol,args.metal_idx,args.complex_coord,args.metal_sym
 
-def clean_args(args,ori_ff,smi):
-	mol = Chem.MolFromSmiles(smi)
+#mol from sdf
+def mol_from_sdf(sdffile,args,read_charge_from_sdf):
+	IDs,charges = [],[]
+	f = open(sdffile,"r")
+	readlines = f.readlines()
+
+	for i, line in enumerate(readlines):
+		if line.find('>  <ID>') > -1:
+			ID = readlines[i+1].split()[0]
+			IDs.append(ID)
+		else:
+			IDs.append(os.path.splitext(args.input)[0])
+		if read_charge_from_sdf:
+			if line.find('CHG') > -1:
+				charge_line =  line.split(' ').reverse()
+				charge = 0
+				for i in range(0,len(charge_line)-4):
+					if i (num % 2) == 0:
+						charge += charge_line[i]
+				charges.append(charge)
+	suppl = Chem.SDMolSupplier(sdffile)
+	return suppl, IDs, charges
+
+def clean_args(args,ori_ff,mol):
 	for atom in mol.GetAtoms():
 		if atom.GetSymbol() in args.metal:
 			args.metal_complex= True
@@ -144,21 +211,21 @@ def clean_args(args,ori_ff,smi):
 	args.complex_coord = []
 	args.metal_sym = []
 
-def compute_confs(w_dir_initial,smi, name,args,log,dup_data,counter_for_template,i,start_time):
+def check_for_pieces(smi):
 	#taking largest component for salts
 	pieces = smi.split('.')
 	if len(pieces) > 1:
 		# take largest component by length
 		smi = max(pieces, key=len)
+	return smi
 
+def compute_confs(w_dir_initial,mol, name,args,log,dup_data,counter_for_template,i,start_time):
 	# Converts each line to a rdkit mol object
 	if args.verbose:
-		log.write("   -> Input Molecule {} is {}".format(i, smi))
+		log.write("   -> Input Molecule {} is {}".format(i, Chem.MolToSmiles(mol)))
 
 	if args.metal_complex:
-		mol,args.metal_idx,args.complex_coord,args.metal_sym = substituted_mol(smi,args,log)
-	else:
-		mol = Chem.MolFromSmiles(smi)
+		mol,args.metal_idx,args.complex_coord,args.metal_sym = substituted_mol(mol,args,log)
 
 	if args.metal_complex:
 		# get manually for square planar and squarepyramidal
@@ -493,10 +560,7 @@ def RMSD_and_E_filter(outmols,selectedcids_initial,cenergy,rotmatches,args,dup_d
 		for seenconf in selectedcids:
 			E_diff = abs(cenergy[conf] - cenergy[seenconf]) # in kcal/mol
 			if  E_diff < args.energy_threshold:
-				if calc_type == 'rdkit':
-					rms = get_conf_RMS(outmols[conf],outmols[conf],conf,seenconf, args.heavyonly, args.max_matches_RMSD,log)
-				elif calc_type == 'xtb_ani':
-					rms = get_conf_RMS(outmols[conf],outmols[seenconf],-1,-1, args.heavyonly, args.max_matches_RMSD,log)
+					rms = get_conf_RMS(outmols[conf],outmols[conf],seenconf,conf, args.heavyonly, args.max_matches_RMSD,log)
 				if rms < args.rms_threshold:
 					excluded_conf = True
 					eng_rms_dup += 1
