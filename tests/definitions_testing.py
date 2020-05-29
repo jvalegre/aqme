@@ -66,19 +66,27 @@ def conf_gen(path, precision, cmd_pyconfort, folder, smiles, E_confs, dihedral, 
         test_unique_confs = df_output['RDKIT-Rotated-Unique-conformers']
         test_filter_rdkit_confs = 'nan'
 
+    # file_smi is a variable used for finding SDF and COM files
+    if folder == 'Multiple':
+        file_smi = 'pentane'
+    else:
+        file_smi = smiles.split('.')[0]
+
     # read the energies of the conformers
     try:
         os.chdir(path+'/'+folder+'/'+smiles.split('.')[0]+'/rdkit_generated_sdf_files')
+        # this is to tests smi files with multiple smiles
+
         if template == 'squareplanar' or template == 'squarepyramidal':
             if not dihedral:
-                test_rdkit_E_confs = calc_energy(smiles.split('.')[0]+'_0_rdkit.sdf')
+                test_rdkit_E_confs = calc_energy(file_smi+'_0_rdkit.sdf')
             else:
-                test_rdkit_E_confs = calc_energy(smiles.split('.')[0]+'_0_rdkit_rotated.sdf')
+                test_rdkit_E_confs = calc_energy(file_smi+'_0_rdkit_rotated.sdf')
         else:
             if not dihedral:
-                test_rdkit_E_confs = calc_energy(smiles.split('.')[0]+'_rdkit.sdf')
+                test_rdkit_E_confs = calc_energy(file_smi+'_rdkit.sdf')
             else:
-                test_rdkit_E_confs = calc_energy(smiles.split('.')[0]+'_rdkit_rotated.sdf')
+                test_rdkit_E_confs = calc_energy(file_smi+'_rdkit_rotated.sdf')
 
         # test for energies
         try:
@@ -93,7 +101,8 @@ def conf_gen(path, precision, cmd_pyconfort, folder, smiles, E_confs, dihedral, 
         test_charge = df_output['Overall charge']
 
         os.chdir(path+'/'+folder+'/'+smiles.split('.')[0]+'/generated_gaussian_files/wb97xd-def2svp')
-        file_gen = glob.glob(smiles.split('.')[0]+'*.com')[0]
+
+        file_gen = glob.glob(file_smi+'*.com')[0]
         if metal != False:
             count,_,_,_,charge_com,multiplicity_com = calc_genecp(file_gen, metal)
         else:
@@ -112,7 +121,7 @@ def conf_gen(path, precision, cmd_pyconfort, folder, smiles, E_confs, dihedral, 
     for _,file in enumerate(all_data):
         if len(file.split('.')) == 1:
             shutil.rmtree(file, ignore_errors=True)
-        else:
+        elif file != 'charged.csv':
             if file.split('.')[1] in discard_ext:
                 os.remove(file)
 

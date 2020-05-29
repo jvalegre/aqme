@@ -15,7 +15,7 @@ path_organic = os.getcwd()
 precision_organic = 5
 
 # tests for individual organic molecules and metal complexes
-@pytest.mark.parametrize("folder, smiles, params_file, n_confs, prefilter_confs_rdkit, filter_confs_rdkit, E_confs, charge, multiplicity, dihedral, xTB_ANI1",
+@pytest.mark.parametrize("folder, smiles, params_file, n_confs_organic, prefilter_confs_rdkit_organic_organic, filter_confs_rdkit_organic, E_confs, charge_organic, multiplicity_organic, dihedral, xTB_ANI1",
 [
     # tests for conformer generation with RDKit, xTB and ANI1
     ('Organic_molecules', 'pentane.smi', 'params_test1.yaml', 240, 236, 0, [-5.27175,-4.44184,-3.84858,-1.57172], 0, 1, False, False), # test sample = 'auto', auto_sample = 20
@@ -36,35 +36,35 @@ precision_organic = 5
     ('Organic_molecules', 'pentane.smi', 'params_test16.yaml', 20, 17, 0, [-5.27175, -4.44184, -3.84858], 0, 3, False, False), # test multiplicity = 3
 ])
 
-def test_confgen_organic(folder, smiles, params_file, n_confs, prefilter_confs_rdkit, filter_confs_rdkit, E_confs, charge, multiplicity, dihedral, xTB_ANI1):
+def test_confgen_organic(folder, smiles, params_file, n_confs_organic, prefilter_confs_rdkit_organic_organic, filter_confs_rdkit_organic, E_confs, charge_organic, multiplicity_organic, dihedral, xTB_ANI1):
     # runs the program with the different tests
     cmd_organic = ['python', '-m', 'pyconfort', '--varfile', params_file]
 
-    test_init_rdkit_confs,test_prefilter_rdkit_confs,test_filter_rdkit_confs,round_confs,test_round_confs,test_charge,test_unique_confs,count,charge_com,multiplicity_com = conf_gen(path_organic, precision_organic, cmd_organic, folder, smiles, E_confs, dihedral, xTB_ANI1, metal=False, template=False)
+    test_init_rdkit_confs_organic,test_prefilter_rdkit_confs_organic,test_filter_rdkit_confs_organic,round_confs_organic,test_round_confs_organic,test_charge_organic,test_unique_confs_organic,count,charge_organic_com,multiplicity_com_organic = conf_gen(path_organic, precision_organic, cmd_organic, folder, smiles, E_confs, dihedral, xTB_ANI1, metal=False, template=False)
 
     # the assert statements are placed here, otherwise pytest doesn't explain the AssertionError
     # first, dicard tests 8 and 9 since they are designed to fail
-    if n_confs != 'nan':
+    if n_confs_organic != 'nan':
         # dihedral vs no dihedral scans
         if not dihedral:
-            assert str(n_confs) == str(test_init_rdkit_confs[0])
-            assert str(prefilter_confs_rdkit) == str(test_prefilter_rdkit_confs[0])
-            assert str(filter_confs_rdkit) == str(test_filter_rdkit_confs[0])
+            assert str(n_confs_organic) == str(test_init_rdkit_confs_organic[0])
+            assert str(prefilter_confs_rdkit_organic_organic) == str(test_prefilter_rdkit_confs_organic[0])
+            assert str(filter_confs_rdkit_organic) == str(test_filter_rdkit_confs_organic[0])
         else:
-            assert str(n_confs) == str(test_init_rdkit_confs[0])
-            # I use the filter_confs_rdkit variable to assert for unique confs in dihedral scan
-            assert str(filter_confs_rdkit) == str(test_unique_confs[0])
+            assert str(n_confs_organic) == str(test_init_rdkit_confs_organic[0])
+            # I use the filter_confs_rdkit_organic variable to assert for unique confs in dihedral scan
+            assert str(filter_confs_rdkit_organic) == str(test_unique_confs_organic[0])
 
-        assert str(round_confs) == str(test_round_confs)
-        assert str(charge) == str(test_charge[0])
+        assert str(round_confs_organic) == str(test_round_confs_organic)
+        assert str(charge_organic) == str(test_charge_organic[0])
 
-        # make sure the COM files have the right charge and multiplicity
-        assert str(charge_com) == str(charge)
-        assert str(multiplicity_com) == str(multiplicity)
+        # make sure the COM files have the right charge_organic and multiplicity
+        assert str(charge_organic_com) == str(charge_organic)
+        assert str(multiplicity_com_organic) == str(multiplicity_organic)
 
     elif params_file == 'params_test8.yaml' or params_file == 'params_test9.yaml':
-        assert str(test_filter_rdkit_confs) == 'nan'
-        assert str(test_round_confs) == 'nan'
+        assert str(test_filter_rdkit_confs_organic) == 'nan'
+        assert str(test_round_confs_organic) == 'nan'
 
     else:
         assert 3 ==2
