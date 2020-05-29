@@ -105,17 +105,19 @@ def mol_from_sdf(args):
 	IDs,charges = [],[]
 	f = open(args.input,"r")
 	readlines = f.readlines()
-
 	for i, line in enumerate(readlines):
 		if line.find('>  <ID>') > -1:
 			ID = readlines[i+1].split()[0]
 			IDs.append(ID)
-		if line.find('CHG') > -1:
-			charge_line =  line.split(' ').reverse()
+		if line.find('M  CHG') > -1:
+			charge_line =  line.split('  ')
 			charge = 0
-			for i in range(0,len(charge_line)-4):
-				if i (num % 2) == 0:
-					charge += charge_line[i]
+			for i in range(4,len(charge_line)):
+				if (i % 2) == 0:
+					if i == len(charge_line) - 1:
+						charge_line[i] = charge_line[i].split('\n')[0]
+					charge += int(charge_line[i])
+			print(charge)
 			charges.append(charge)
 	if IDs == []:
 		for i,_ in enumerate(suppl):
