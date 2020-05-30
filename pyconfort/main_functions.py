@@ -52,8 +52,8 @@ def compute_main(w_dir_initial,dup_data,args,log,start_time):
 			#assigning names and smi i  each loop
 			if not args.prefix:
 				name = csv_smiles.loc[i, 'code_name']
-			# else:
-			# 	name = 'comp_'+str(m)+'_'+csv_smiles.loc[i, 'code_name']
+			else:
+				name = 'comp_'+str(i)+'_'+csv_smiles.loc[i, 'code_name']
 			smi = csv_smiles.loc[i, 'SMILES']
 			smi = check_for_pieces(smi)
 			if not args.metal_complex:
