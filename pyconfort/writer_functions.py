@@ -320,17 +320,13 @@ def moving_sdf_files(destination,src,file):
 			raise
 
 # WRITE SDF FILES FOR xTB AND ANI1
-def write_confs(conformers, energies, name, args, program,log):
+def write_confs(conformers, energies,selectedcids, name, args, program,log):
 	if len(conformers) > 0:
-		# list in energy order
-		cids = list(range(len(conformers)))
-		sortedcids = sorted(cids, key = lambda cid: energies[cid])
-
 		name = name.split('_rdkit')[0]# a bit hacky
 		sdwriter = Chem.SDWriter(name+'_'+program+args.output)
 
 		write_confs = 0
-		for cid in sortedcids:
+		for cid in selectedcids:
 			sdwriter.write(conformers[cid])
 			write_confs += 1
 

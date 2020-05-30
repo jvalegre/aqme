@@ -683,4 +683,4 @@ def mult_min(name, args, program,log,dup_data,dup_data_idx):
 		dup_data.at[dup_data_idx, 'ANI1ccx-Initial-samples'] = len(inmols)
 
 	# write the filtered, ordered conformers to external file
-	write_confs(outmols, cenergy, name, args, program,log)
+	write_confs(outmols, cenergy,selectedcids, name, args, program,log)
