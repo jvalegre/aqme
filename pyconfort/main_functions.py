@@ -177,13 +177,14 @@ def analysis_main(w_dir_initial,args,log):
 	# when you run analysis in a folder full of output files
 	if args.path == '':
 		log_files = glob.glob('*.log')+glob.glob('*.LOG')+glob.glob('*.out')+glob.glob('*.OUT')
-		w_dir_fin = w_dir_initial+'/finished'
+		w_dir = os.getcwd()
+		w_dir_fin = w_dir+'/finished'
 		for lot in args.level_of_theory:
 			for bs in args.basis_set:
 				for bs_gcp in args.basis_set_genecp_atoms:
 					folder = w_dir_initial
 					log.write("\no  ANALYZING OUTPUT FILES IN {}\n".format(folder))
-					output_analyzer(log_files, w_dir_initial, lot, bs, bs_gcp, args, w_dir_fin,log)
+					output_analyzer(log_files, w_dir, lot, bs, bs_gcp, args, w_dir_fin,w_dir_initial,log)
 
 	# when you specify multiple levels of theory
 	else:
@@ -202,7 +203,7 @@ def analysis_main(w_dir_initial,args,log):
 					log_files = glob.glob('*.log')+glob.glob('*.LOG')+glob.glob('*.out')+glob.glob('*.OUT')
 					folder = w_dir + '/' + str(lot) + '-' + str(bs)
 					log.write("\no  ANALYZING OUTPUT FILES IN {}\n".format(folder))
-					output_analyzer(log_files, w_dir_initial, lot, bs, bs_gcp, args, w_dir_fin, log)
+					output_analyzer(log_files, w_dir, lot, bs, bs_gcp, args, w_dir_fin,w_dir_initial,log)
 
 def dup_main(args,log):
 	# Sets the folder and find the log files to analyze

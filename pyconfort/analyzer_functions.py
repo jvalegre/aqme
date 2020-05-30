@@ -47,7 +47,7 @@ def check_for_gen_or_genecp(ATOMTYPES,args):
 	return ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp
 
 # CREATION OF COM FILES
-def new_com_file(w_dir_initial,w_dir_writing,file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,TERMINATION,IM_FREQS,bs_com,lot_com,bs_gcp_com):
+def new_com_file(w_dir,w_dir_initial,file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,TERMINATION,IM_FREQS,bs_com,lot_com,bs_gcp_com):
 	fileout = open(file.split(".")[0]+'.com', "w")
 	fileout.write("%mem="+str(args.mem)+"\n")
 	fileout.write("%nprocshared="+str(args.nprocs)+"\n")
@@ -73,7 +73,7 @@ def new_com_file(w_dir_initial,w_dir_writing,file,args,keywords_opt,name,CHARGE,
 				if bs_gcp_com.split('.')[1] == 'txt' or bs_gcp_com.split('.')[1] == 'yaml':
 					os.chdir(w_dir_initial)
 					read_lines = open(bs_gcp_com,"r").readlines()
-					os.chdir(w_dir_writing)
+					os.chdir(w_dir)
 					#changing the name of the files to the way they are in xTB Sdfs
 					#getting the title line
 					for line in read_lines:
@@ -105,7 +105,7 @@ def new_com_file(w_dir_initial,w_dir_writing,file,args,keywords_opt,name,CHARGE,
 		fileout.close()
 
 # DEFINTION OF OUTPUT ANALYSER and NMR FILES CREATOR
-def output_analyzer(log_files, w_dir_initial, lot, bs,bs_gcp, args, w_dir_fin,log):
+def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin,w_dir_initial,log):
 
 	input_route = input_route_line(args)
 
@@ -117,7 +117,7 @@ def output_analyzer(log_files, w_dir_initial, lot, bs,bs_gcp, args, w_dir_fin,lo
 		standor = 0
 		NATOMS = 0
 
-		os.chdir(w_dir_initial)
+		os.chdir(w_dir)
 		try:
 			outfile = open(file,"r")
 		except FileNotFoundError:
@@ -276,33 +276,33 @@ def output_analyzer(log_files, w_dir_initial, lot, bs,bs_gcp, args, w_dir_fin,lo
 
 		# This part places the calculations in different folders depending on the type of
 		# termination and number of imag. freqs
-		source = w_dir_initial+'/'+file
+		source = w_dir+'/'+file
 
 		if IM_FREQS == 0 and TERMINATION == "normal":
 			destination = w_dir_fin
 			moving_log_files(source,destination, file)
 
 		if IM_FREQS > 0:
-			destination = w_dir_initial+'/imaginary_frequencies/'
+			destination = w_dir+'/imaginary_frequencies/'
 			moving_log_files(source,destination, file)
 
 		if IM_FREQS == 0 and TERMINATION == "error":
 			if ERRORTYPE == "atomicbasiserror":
-				destination = w_dir_initial+'/failed_error/atomic_basis_error'
+				destination = w_dir+'/failed_error/atomic_basis_error'
 			elif ERRORTYPE == "SCFerror":
-				destination = w_dir_initial+'/failed_error/SCF_error'
+				destination = w_dir+'/failed_error/SCF_error'
 			else:
-				destination = w_dir_initial+'/failed_error/unknown_error'
+				destination = w_dir+'/failed_error/unknown_error'
 			moving_log_files(source,destination, file)
 
 		if IM_FREQS == 0 and TERMINATION == "unfinished":
-			destination = w_dir_initial+'/failed_unfinished/'
+			destination = w_dir+'/failed_unfinished/'
 			moving_log_files(source,destination, file)
 
-		if IM_FREQS > 0 or TERMINATION != "normal" and not os.path.exists(w_dir_initial+'/failed_error/atomic_basis_error/'+file):
+		if IM_FREQS > 0 or TERMINATION != "normal" and not os.path.exists(w_dir+'/failed_error/atomic_basis_error/'+file):
 
 			# creating new folder with new input gaussian files
-			new_gaussian_input_files = w_dir_initial+'/new_gaussian_input_files//'+bs+'-'+lot
+			new_gaussian_input_files = w_dir+'/new_gaussian_input_files/'
 
 			try:
 				os.makedirs(new_gaussian_input_files)
@@ -312,7 +312,7 @@ def output_analyzer(log_files, w_dir_initial, lot, bs,bs_gcp, args, w_dir_fin,lo
 				else:
 					raise
 			os.chdir(new_gaussian_input_files)
-			log.write('-> Creating new gaussian input file for {0} in {1}/{2}-{3}'.format(file,new_gaussian_input_files,bs,lot))
+			log.write('-> Creating new gaussian input file for {0} in {1}/{2}'.format(file,lot,bs))
 
 			ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp =  check_for_gen_or_genecp(ATOMTYPES,args)
 
@@ -331,9 +331,7 @@ def output_analyzer(log_files, w_dir_initial, lot, bs,bs_gcp, args, w_dir_fin,lo
 				else:
 					keywords_opt = lot +'/'+ bs +' '+ input_route
 
-			w_dir_writing = os.getcwd()
-
-			new_com_file(w_dir_initial,w_dir_writing,file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,TERMINATION,IM_FREQS,bs,lot,bs_gcp)
+			new_com_file(w_dir,w_dir_initial,file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,TERMINATION,IM_FREQS,bs,lot,bs_gcp)
 
 		#adding in the NMR componenet only to the finished files after reading from normally finished log files
 		if args.sp and TERMINATION == "normal" and IM_FREQS == 0:
@@ -378,8 +376,7 @@ def output_analyzer(log_files, w_dir_initial, lot, bs,bs_gcp, args, w_dir_fin,lo
 									keywords_opt = lot_sp+'/'+ bs_sp+' '+ args.input_for_sp
 								else:
 									keywords_opt = lot_sp+'/'+ bs_sp+' '+ args.input_for_sp + ' scrf=({0},solvent={1}) '.format(args.solvent_model_sp,args.solvent_name_sp)
-						w_dir_writing = os.getcwd()
-						new_com_file(w_dir_initial,w_dir_writing,file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,TERMINATION,IM_FREQS,bs_sp,lot_sp,bs_gcp_sp)
+						new_com_file(w_dir,w_dir_initial,file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,TERMINATION,IM_FREQS,bs_sp,lot_sp,bs_gcp_sp)
 
 # CHECKS THE FOLDER OF FINAL LOG FILES
 def check_for_final_folder(w_dir,log):
