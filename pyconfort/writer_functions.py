@@ -156,15 +156,14 @@ def rename_file_and_charge_change(read_lines,file,args,charge_com):
 
 	rename_file_name = rename_file_name.strip()+'.com'
 
-	#change charge and multiplicity for Octahydrasl
-	if args.metal_complex:
-		for i,_ in enumerate(read_lines):
-			if len(read_lines[i].strip()) == 0:
-				read_lines[i+3] = str(charge_com)+' '+ str(args.complex_spin)+'\n'
-				break
-		out = open(file, 'w')
-		out.writelines(read_lines)
-		out.close()
+	#change charge and multiplicity for all molecules
+	for i,_ in enumerate(read_lines):
+		if len(read_lines[i].strip()) == 0:
+			read_lines[i+3] = str(charge_com)+' '+ str(args.complex_spin)+'\n'
+			break
+	out = open(file, 'w')
+	out.writelines(read_lines)
+	out.close()
 	return rename_file_name
 
 # MAIN FUNCTION TO CREATE GAUSSIAN JOBS
