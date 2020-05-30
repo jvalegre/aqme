@@ -178,28 +178,29 @@ def output_analyzer(log_files, w_dir, lot, bs,bs_gcp, args, w_dir_fin,w_dir_init
 					NATOMS = disrotor-i-6
 					stop_get_details_stand_or += 1
 
-		for i,outline in enumerate(outlines):
-			# Get the frequencies and identifies negative frequencies
-			if outline.find(" Frequencies -- ") > -1:
-				nfreqs = len(outline.split())
-				for j in range(2, nfreqs):
-					FREQS.append(float(outline.split()[j]))
-					NORMALMODE.append([])
-					if float(outline.split()[j]) < 0.0:
-						IM_FREQS += 1
-				for j in range(3, nfreqs+1):
-					REDMASS.append(float(outlines[i+1].split()[j]))
-				for j in range(3, nfreqs+1):
-					FORCECONST.append(float(outlines[i+2].split()[j]))
-				for j in range(0,NATOMS):
-					for k in range(0, nfreqs-2):
-						NORMALMODE[(freqs_so_far + k)].append([float(outlines[i+5+j].split()[3*k+2]), float(outlines[i+5+j].split()[3*k+3]), float(outlines[i+5+j].split()[3*k+4])])
-				freqs_so_far = freqs_so_far + nfreqs - 2
-			if TERMINATION != "normal":
-				if outlines[i].find('Cartesian Forces:  Max') > -1:
-					if float(outlines[i].split()[5]) < rms:
-						rms = float(outlines[i].split()[5])
-						stop_rms = i
+		if args.frequencies:
+			for i,outline in enumerate(outlines):
+				# Get the frequencies and identifies negative frequencies
+				if outline.find(" Frequencies -- ") > -1:
+					nfreqs = len(outline.split())
+					for j in range(2, nfreqs):
+						FREQS.append(float(outline.split()[j]))
+						NORMALMODE.append([])
+						if float(outline.split()[j]) < 0.0:
+							IM_FREQS += 1
+					for j in range(3, nfreqs+1):
+						REDMASS.append(float(outlines[i+1].split()[j]))
+					for j in range(3, nfreqs+1):
+						FORCECONST.append(float(outlines[i+2].split()[j]))
+					for j in range(0,NATOMS):
+						for k in range(0, nfreqs-2):
+							NORMALMODE[(freqs_so_far + k)].append([float(outlines[i+5+j].split()[3*k+2]), float(outlines[i+5+j].split()[3*k+3]), float(outlines[i+5+j].split()[3*k+4])])
+					freqs_so_far = freqs_so_far + nfreqs - 2
+				if TERMINATION != "normal":
+					if outlines[i].find('Cartesian Forces:  Max') > -1:
+						if float(outlines[i].split()[5]) < rms:
+							rms = float(outlines[i].split()[5])
+							stop_rms = i
 
 		if TERMINATION == "normal":
 			# Get the coordinates for jobs that finished well with and without imag. freqs
