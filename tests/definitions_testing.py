@@ -224,11 +224,11 @@ def single_point(path, cmd_pyconfort, folder, file):
         count,NBO,pop,opt,_,_ = calc_genecp(file.split('.')[0]+'.com', ['C H'])
 
     return count,NBO,pop,opt
-    
+
 def conf_gen_exp_rules(path, folder, precision, cmd_exp_rules, smiles, E_confs_no_rules, E_confs_rules):
     # open right folder and run the code
     os.chdir(path+'/'+folder)
-    if 'rdkit_generated_sdf_files' not in glob.glob('*'):
+    if smiles == 'Ir_1':
         subprocess.call(cmd_exp_rules)
 
     # read the energies of the conformers with and without the exp_rules filter
