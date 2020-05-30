@@ -139,6 +139,16 @@ def clean_args(args,ori_ff,mol):
 	args.complex_coord = []
 	args.metal_sym = []
 
+def check_charge_smi(smi):
+	count_plus,count_minus = 0,0
+	for i in smi:
+		if i == '+':
+			count_plus = count_plus + 1
+		if i == '-':
+			count_minus = count_minus + 1
+	charge = count_plus + count_minus
+	return charge
+
 def check_for_pieces(smi):
 	#taking largest component for salts
 	pieces = smi.split('.')
