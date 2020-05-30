@@ -350,8 +350,7 @@ def rules_get_charge(mol,args,log):
 						charge[charge_idx] = charge[charge_idx] - 1
 				elif atom.GetTotalValence() == 2:
 					if atom.GetSymbol() in O_group:
-						charge[charge_i
-						dx] = charge[charge_idx] - 1
+						charge[charge_idx] = charge[charge_idx] - 1
 					elif atom.GetSymbol() in F_group:
 						charge[charge_idx] = charge[charge_idx] - 0
 				elif atom.GetTotalValence() == 1:
