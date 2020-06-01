@@ -5,7 +5,19 @@ python:
   - "3.7"
 
 # switch to new infrastructure
-sudo: true
+sudo: required
+
+matrix:
+  include:
+    - os: linux
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - gcc-9
+            - gfortran-9
+      env: CC='gcc-9' FC='gfortran-9'
 
 before_install:
   # download and install miniconda
@@ -58,7 +70,7 @@ before_script:
     - wget https://github.com/grimme-lab/xtb/archive/v6.3.0.zip
     - unzip v6.3.0.zip
     - cd xtb-6.3.0
-    - export FC=gfortran-9 CC=gcc-9
+    # - export FC=gfortran-9 CC=gcc-9
     - meson setup build_gcc --buildtype release -Dla_backend=openblas --warnlevel 0
     - ninja -C build_gcc test
 #   - export RDBASE=$CONDA_PREFIX/Library/share/RDKit
