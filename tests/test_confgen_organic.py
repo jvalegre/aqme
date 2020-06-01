@@ -18,22 +18,22 @@ precision_organic = 5
 @pytest.mark.parametrize("folder, smiles, params_file, n_confs_organic, prefilter_confs_rdkit_organic_organic, filter_confs_rdkit_organic, E_confs, charge_organic, multiplicity_organic, dihedral, xTB_ANI1",
 [
     # tests for conformer generation with RDKit, xTB and ANI1
-    ('Organic_molecules', 'pentane.smi', 'params_test1.yaml', 240, 236, 0, [-5.27175,-4.44184,-3.84858,-1.57172], 0, 1, False, False), # test sample = 'auto', auto_sample = 20
-    ('Organic_molecules', 'pentane.smi', 'params_test2.yaml', 20, 17, 0, [-5.27175, -4.44184, -3.84858], 0, 1, False, False), # test sample = 20
-    ('Organic_molecules', 'pentane.smi', 'params_test3.yaml', 20, 5, 11, [-5.27175, -4.44184, -4.44184, -3.84858], 0, 1, False, False), # test initial_energy_threshold = 1E-10
-    ('Organic_molecules', 'pentane.smi', 'params_test4.yaml', 20, 11, 0, [-5.27175, -5.27175, -5.27175, -5.27175, -5.27175, -4.44184, -4.44184, -4.44184, -3.84858], 0, 1, False, False), # test energy_threshold = 1E-15
-    ('Organic_molecules', 'pentane.smi', 'params_test5.yaml', 20, 11, 0, [-5.27175, -5.27175, -5.27175, -5.27175, -5.27175, -4.44184, -4.44184, -4.44184, -3.84858], 0, 1, False, False), # test rms_threshold = 1E-15
-    ('Organic_molecules', 'pentane.smi', 'params_test6.yaml', 20, 5, 9, [-5.27175, -4.44184, -4.44184, -4.44184, -4.44184, -3.84858], 0, 1, False, False),
-    ('Organic_molecules', 'pentane.smi', 'params_test7.yaml', 60, 56, 0, [-5.27175, -4.44184, -3.84858, -1.57172], 0, 1, False, False), # test sample = 'auto', auto_sample = 5
-    ('Organic_molecules', 'pentane.smi', 'params_test8.yaml', 'nan', 'nan', 'nan', 'nan', 'nan', 'nan', False, False), # test max_torsions = 1
-    ('Organic_molecules', 'pentane.smi', 'params_test9.yaml', 'nan', 'nan', 'nan', 'nan', 'nan', 'nan', False, False), # test max_MolWt = 1
-    ('Organic_molecules', 'pentane.smi', 'params_test10.yaml', 20, 17, 0, [2.52059, 3.68961, 4.94318], 0, 1, False, False), # test ff = 'UFF'
-    ('Organic_molecules', 'pentane.smi', 'params_test11.yaml', 20, 1, 12, [-5.27113, -4.44046, -4.43598, -4.06762, -3.90769, -3.81966, -2.53933], 0, 1, False, False), # test opt_steps_RDKit = 40
+    # ('Organic_molecules', 'pentane.smi', 'params_test1.yaml', 240, 236, 0, [-5.27175,-4.44184,-3.84858,-1.57172], 0, 1, False, False), # test sample = 'auto', auto_sample = 20
+    # ('Organic_molecules', 'pentane.smi', 'params_test2.yaml', 20, 17, 0, [-5.27175, -4.44184, -3.84858], 0, 1, False, False), # test sample = 20
+    # ('Organic_molecules', 'pentane.smi', 'params_test3.yaml', 20, 5, 11, [-5.27175, -4.44184, -4.44184, -3.84858], 0, 1, False, False), # test initial_energy_threshold = 1E-10
+    # ('Organic_molecules', 'pentane.smi', 'params_test4.yaml', 20, 11, 0, [-5.27175, -5.27175, -5.27175, -5.27175, -5.27175, -4.44184, -4.44184, -4.44184, -3.84858], 0, 1, False, False), # test energy_threshold = 1E-15
+    # ('Organic_molecules', 'pentane.smi', 'params_test5.yaml', 20, 11, 0, [-5.27175, -5.27175, -5.27175, -5.27175, -5.27175, -4.44184, -4.44184, -4.44184, -3.84858], 0, 1, False, False), # test rms_threshold = 1E-15
+    # ('Organic_molecules', 'pentane.smi', 'params_test6.yaml', 20, 5, 9, [-5.27175, -4.44184, -4.44184, -4.44184, -4.44184, -3.84858], 0, 1, False, False),
+    # ('Organic_molecules', 'pentane.smi', 'params_test7.yaml', 60, 56, 0, [-5.27175, -4.44184, -3.84858, -1.57172], 0, 1, False, False), # test sample = 'auto', auto_sample = 5
+    # ('Organic_molecules', 'pentane.smi', 'params_test8.yaml', 'nan', 'nan', 'nan', 'nan', 'nan', 'nan', False, False), # test max_torsions = 1
+    # ('Organic_molecules', 'pentane.smi', 'params_test9.yaml', 'nan', 'nan', 'nan', 'nan', 'nan', 'nan', False, False), # test max_MolWt = 1
+    # ('Organic_molecules', 'pentane.smi', 'params_test10.yaml', 20, 17, 0, [2.52059, 3.68961, 4.94318], 0, 1, False, False), # test ff = 'UFF'
+    # ('Organic_molecules', 'pentane.smi', 'params_test11.yaml', 20, 1, 12, [-5.27113, -4.44046, -4.43598, -4.06762, -3.90769, -3.81966, -2.53933], 0, 1, False, False), # test opt_steps_RDKit = 40
     ('Organic_molecules', 'pentane.smi', 'params_test12.yaml', 20, 16, 0, [-5.27175,-4.44184,-3.84858,-1.57172], 0, 1, False, True), # test xTB = True
     ('Organic_molecules', 'pentane.smi', 'params_test13.yaml', 20, 16, 0, [-5.27175,-4.44184,-3.84858,-1.57172], 0, 1, False, True), # test ANI1ccx = True
-    ('Organic_molecules', 'pentane.smi', 'params_test14.yaml', 20, 17, 0, [-5.27175, -4.44184], 0, 1, False, False), # ewin = 1
-    ('Organic_molecules', 'pentane.smi', 'params_test15.yaml', 27, 'nan', 4, [-5.27175,-4.44184,-3.84858,-1.57172], 0, 1, True, False), # test dihedral scan
-    ('Organic_molecules', 'pentane.smi', 'params_test16.yaml', 20, 17, 0, [-5.27175, -4.44184, -3.84858], 0, 3, False, False), # test multiplicity = 3
+    # ('Organic_molecules', 'pentane.smi', 'params_test14.yaml', 20, 17, 0, [-5.27175, -4.44184], 0, 1, False, False), # ewin = 1
+    # ('Organic_molecules', 'pentane.smi', 'params_test15.yaml', 27, 'nan', 4, [-5.27175,-4.44184,-3.84858,-1.57172], 0, 1, True, False), # test dihedral scan
+    # ('Organic_molecules', 'pentane.smi', 'params_test16.yaml', 20, 17, 0, [-5.27175, -4.44184, -3.84858], 0, 3, False, False), # test multiplicity = 3
 ])
 
 def test_confgen_organic(folder, smiles, params_file, n_confs_organic, prefilter_confs_rdkit_organic_organic, filter_confs_rdkit_organic, E_confs, charge_organic, multiplicity_organic, dihedral, xTB_ANI1):
