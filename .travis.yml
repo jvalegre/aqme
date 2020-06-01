@@ -25,6 +25,7 @@ before_install:
   # - sudo apt upgrade
 
 install:
+  - sudo apt-get install gfortran
   - conda install -c openbabel openbabel==2.4.1
   - pip install PyYAML==5.3.1
   - pip install pandas==1.0.3
@@ -44,7 +45,6 @@ install:
   - pip install ninja
   - sudo apt-get install libblas-dev liblapack-dev
   - sudo apt-get install libblas-dev liblapack-dev
-  - sudo apt-get install -y gfortran-8
   # - sudo apt install gfortran-8
   - sudo apt-get install gcc-8
 
