@@ -54,7 +54,6 @@ install:
   - pip install ninja==1.9.0.post1
   - sudo apt-get install libblas-dev liblapack-dev
   - sudo apt-get install libopenblas-base libopenblas-dev
-  - sudo apt-get install intel-mkl
 
 before_script:
   # For xTB
@@ -74,6 +73,13 @@ before_script:
   - git clone --branch=master https://github.com/grimme-lab/xtb-python
   - cd xtb-python
   - git submodule update --init
+  # install the MKL library
+  - wget https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS-2019.PUB
+  - apt-key add GPG-PUB-KEY-INTEL-SW-PRODUCTS-2019.PUB
+  - rm GPG-PUB-KEY-INTEL-SW-PRODUCTS-2019.PUB
+  - sudo sh -c 'echo deb https://apt.repos.intel.com/mkl all main > /etc/apt/sources.list.d/intel-mkl.list'
+  - sudo apt-get update
+  - sudo apt-get install intel-mkl-2020.0-088
   - meson setup build --prefix=$PWD --libdir=xtb
   - ninja -C build install
   - pip install -e .
