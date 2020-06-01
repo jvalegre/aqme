@@ -83,6 +83,7 @@ before_script:
   # - export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/intel/composer_xe_2013_sp1/mkl/lib/intel64
   - export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/opt/intel/parallel_studio_xe_2020.0.088/compilers_and_libraries_2020/linux/mkl/
   - echo $LD_LIBRARY_PATH
+  - locate intel-mkl
   - meson setup build --prefix=$PWD --libdir=xtb
   - ninja -C build install
   - pip install -e .
