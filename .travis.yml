@@ -113,6 +113,8 @@ before_script:
   - ls
   - cd opt
   - ls
+  - cd intel
+  - ls
   - meson setup build --prefix=$PWD --libdir=xtb
   - ninja -C build install
   - pip install -e .
