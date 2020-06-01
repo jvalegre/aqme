@@ -25,8 +25,6 @@ before_install:
   # - sudo apt upgrade
 
 install:
-  - sudo apt-get install gfortran
-  - sudo apt-get install gcc
   - conda install -c openbabel openbabel==2.4.1
   - pip install PyYAML==5.3.1
   - pip install pandas==1.0.3
@@ -42,10 +40,12 @@ install:
   - pip install torchani==2.0
   # - pip install goodvibes
   # for xTB
-  - pip install meson
-  - pip install ninja
+  - sudo apt-get install gfortran-5
+  - sudo apt-get install gcc-5
+  - pip install meson==0.54.2
+  - pip install ninja==1.9.0.post1
   - sudo apt-get install libblas-dev liblapack-dev
-  - sudo apt-get install libblas-dev liblapack-dev
+  - sudo apt-get install libopenblas-base libopenblas-dev
 
 before_script:
     # For xTB
