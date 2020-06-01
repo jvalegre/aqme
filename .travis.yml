@@ -22,7 +22,7 @@ before_install:
   - source activate tenv
   - sudo apt-get update
   - sudo apt update
-  - sudo apt upgrade
+  # - sudo apt upgrade
 
 install:
   - conda install -c openbabel openbabel==2.4.1
