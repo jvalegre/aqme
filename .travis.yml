@@ -44,7 +44,8 @@ install:
   - pip install ninja
   - sudo apt-get install libblas-dev liblapack-dev
   - sudo apt-get install libblas-dev liblapack-dev
-  - sudo apt-get install gfortran-8
+  - sudo apt-get install -y gfortran-8
+  # - sudo apt install gfortran-8
   - sudo apt-get install gcc-8
 
 before_script:
