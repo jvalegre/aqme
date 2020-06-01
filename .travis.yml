@@ -38,9 +38,9 @@ before_install:
   # - sudo apt upgrade
 
 install:
-  - sudo add-apt-repository ppa:ubuntu-toolchain-r/test
-  - sudo apt update
-  - sudo apt install gfortran-9
+  # - sudo add-apt-repository ppa:ubuntu-toolchain-r/test
+  # - sudo apt update
+  # - sudo apt install gfortran-9
   # - sudo apt-get install gfortran-9
   # - sudo apt-get install gcc-9
   - conda install -c openbabel openbabel==2.4.1
