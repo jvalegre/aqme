@@ -33,7 +33,7 @@ def compute_main(w_dir_initial,dup_data,args,log,start_time):
 			smi = toks[0]
 			smi = check_for_pieces(smi)
 			if not args.metal_complex:
-				arg.charge_default = check_charge_smi(smi)
+				args.charge_default = check_charge_smi(smi)
 			mol = Chem.MolFromSmiles(smi)
 			clean_args(args,ori_ff,mol)
 			if not args.prefix:
@@ -57,7 +57,7 @@ def compute_main(w_dir_initial,dup_data,args,log,start_time):
 			smi = csv_smiles.loc[i, 'SMILES']
 			smi = check_for_pieces(smi)
 			if not args.metal_complex:
-				arg.charge_default = check_charge_smi(smi)
+				args.charge_default = check_charge_smi(smi)
 			mol = Chem.MolFromSmiles(smi)
 			clean_args(args,ori_ff,mol)
 			compute_confs(w_dir_initial,mol,name,args,log,dup_data,counter_for_template,i,start_time)
@@ -74,7 +74,7 @@ def compute_main(w_dir_initial,dup_data,args,log,start_time):
 		for i, smi in enumerate(smifile):
 			smi = check_for_pieces(smi)
 			if not args.metal_complex:
-				arg.charge_default = check_charge_smi(smi)
+				args.charge_default = check_charge_smi(smi)
 			mol = Chem.MolFromSmiles(smi)
 			clean_args(args,ori_ff,mol)
 			name = 'comp' + str(i)+'_'
