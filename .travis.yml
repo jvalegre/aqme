@@ -81,7 +81,8 @@ before_script:
   - sudo apt-get update
   - sudo apt-get install intel-mkl-2020.0-088
   # - export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/intel/composer_xe_2013_sp1/mkl/lib/intel64
-  - export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/intel/parallel_studio_xe_2020.0.088/compilers_and_libraries_2020/linux/mkl/
+  - export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/opt/intel/parallel_studio_xe_2020.0.088/compilers_and_libraries_2020/linux/mkl/
+  - echo $LD_LIBRARY_PATH
   - meson setup build --prefix=$PWD --libdir=xtb
   - ninja -C build install
   - pip install -e .
