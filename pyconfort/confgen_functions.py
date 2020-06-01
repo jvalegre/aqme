@@ -34,7 +34,7 @@ try:
 except:
 	print('0')
 try:
-	from lib.xtb import GFN2
+	from xtb import GFN2
 except:
 	print('1')
 try:

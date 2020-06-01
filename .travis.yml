@@ -15,9 +15,11 @@ matrix:
           sources:
             - ubuntu-toolchain-r-test
           packages:
-            - gcc-9
-            - gfortran-9
-      env: CC='gcc-9' FC='gfortran-9'
+            - gcc-8
+            - gfortran-8
+            - libblas-dev
+            - liblapack-dev
+      env: CC='gcc-8' FC='gfortran-8'
 
 before_install:
   # download and install miniconda
@@ -72,7 +74,15 @@ before_script:
     - cd xtb-6.3.0
     # - export FC=gfortran-9 CC=gcc-9
     - meson setup build_gcc --buildtype release -Dla_backend=openblas --warnlevel 0
-    - ninja -C build_gcc test
+    - XTBHOME=$PWD
+    - XTBPATH=${XTBHOME}/share/xtb:${XTBHOME}:${HOME}
+    - MANPATH=${MANPATH}:${XTBHOME}/share/man
+    - PATH=${PATH}:${XTBHOME}/bin
+    - LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${XTBHOME}/lib
+    - PYTHONPATH=${PYTHONPATH}:${XTBHOME}/python
+    - export PATH XTBPATH MANPATH LD_LIBRARY_PATH PYTHONPATH
+    # - ninja -C build_gcc test
+    - cd ..
 #   - export RDBASE=$CONDA_PREFIX/Library/share/RDKit
 #   - echo $RDBASE
 
