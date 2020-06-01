@@ -84,26 +84,35 @@ before_script:
   # - export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/opt/intel/parallel_studio_xe_2020.0.088/compilers_and_libraries_2020/linux/mkl/
   - ls
   - cd ..
+  - pwd
+  - ls
+  - cd ..
+  - pwd
+  - ls
+  - cd ..
+  - pwd
+  - ls
+  - cd ..
+  - pwd
+  - ls
+  - cd ..
+  - pwd
+  - ls
+  - cd ..
+  - pwd
+  - ls
+  - cd ..
+  - pwd
+  - ls
+  - cd ..
+  - pwd
   - ls
   - cd ..
   - ls
   - cd ..
   - ls
-  - cd ..
+  - cd opt
   - ls
-  - cd ..
-  - ls
-  - cd ..
-  - ls
-  - cd ..
-  - ls
-  - cd ..
-  - ls
-  - cd ..
-  - ls
-  - cd ..
-  - ls
-  - cd ..
   - meson setup build --prefix=$PWD --libdir=xtb
   - ninja -C build install
   - pip install -e .
