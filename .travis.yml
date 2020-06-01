@@ -20,6 +20,9 @@ before_install:
   # create and activate the build/test environment
   - conda create -q -n tenv python=$TRAVIS_PYTHON_VERSION pip cmake
   - source activate tenv
+  - sudo apt-get update
+  - sudo apt update
+  - sudo apt upgrade
 
 install:
   - conda install -c openbabel openbabel==2.4.1
@@ -32,17 +35,17 @@ install:
   - pip install pytest-cov==2.9.0
   - pip install codecov==2.1.3
   # - pip install Cython --install-option="--no-cython-compile"
-  - pip install ase
+  - pip install ase==3.19.1
   - pip install torch==1.5.0+cpu torchvision==0.6.0+cpu -f https://download.pytorch.org/whl/torch_stable.html
-  - pip install torchani
+  - pip install torchani==2.0
   # - pip install goodvibes
   # for xTB
   - pip install meson
   - pip install ninja
-  - apt-get install libblas-dev liblapack-dev
-  - apt-get install libblas-dev liblapack-dev
-  - apt-get install gfortran-8
-  - apt-get install gcc-8
+  - sudo apt-get install libblas-dev liblapack-dev
+  - sudo apt-get install libblas-dev liblapack-dev
+  - sudo apt-get install gfortran-8
+  - sudo apt-get install gcc-8
 
 before_script:
     # For xTB
