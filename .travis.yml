@@ -5,7 +5,7 @@ python:
   - "3.7"
 
 # switch to new infrastructure
-sudo: false
+sudo: true
 
 before_install:
   # download and install miniconda
