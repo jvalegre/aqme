@@ -21,6 +21,25 @@ matrix:
 
 before_install:
   # download and install miniconda
+  - for filename in $(ls)
+  - do
+  - echo $filename
+  - done;
+  - cd ..
+  - for filename in $(ls)
+  - do
+  - echo $filename
+  - done;
+  - cd ..
+  - for filename in $(ls)
+  - do
+  - echo $filename
+  - done;
+  - cd ..
+  - for filename in $(ls)
+  - do
+  - echo $filename
+  - done;
   - wget http://repo.continuum.io/miniconda/Miniconda3-4.1.11-Linux-x86_64.sh -O miniconda.sh;
   - bash miniconda.sh -b -p $HOME/conda
   - export PATH="$HOME/conda/bin:$PATH"
@@ -82,16 +101,6 @@ before_script:
   - sudo apt-get install intel-mkl-2020.0-088
   # - export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/intel/composer_xe_2013_sp1/mkl/lib/intel64
   - export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/opt/intel/parallel_studio_xe_2020.0.088/compilers_and_libraries_2020/linux/mkl/
-  - cd /usr/local/opt/
-  - for filename in $(ls)
-  - do
-  - echo $filename
-  - done;
-  - cd /usr/local/
-  - for filename in $(ls)
-  - do
-  - echo $filename
-  - done;
   - sudo locate intel-mkl
   - meson setup build --prefix=$PWD --libdir=xtb
   - ninja -C build install
