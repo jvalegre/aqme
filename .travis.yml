@@ -17,8 +17,6 @@ matrix:
           packages:
             - gcc-8
             - gfortran-8
-            - libblas-dev
-            - libopenblas-base
       env: CC='gcc-8' FC='gfortran-8'
 
 before_install:
@@ -40,11 +38,6 @@ before_install:
   # - sudo apt upgrade
 
 install:
-  # - sudo add-apt-repository ppa:ubuntu-toolchain-r/test
-  # - sudo apt update
-  # - sudo apt install gfortran-9
-  # - sudo apt-get install gfortran-9
-  # - sudo apt-get install gcc-9
   - conda install -c openbabel openbabel==2.4.1
   - pip install PyYAML==5.3.1
   - pip install pandas==1.0.3
@@ -62,15 +55,14 @@ install:
   # for xTB
   - pip install meson==0.54.2
   - pip install ninja==1.9.0.post1
-  # - sudo apt-get install libblas-dev liblapack-dev
-  # - sudo apt-get install libopenblas-base libopenblas-dev
+  - sudo apt-get install libblas-dev liblapack-dev
+  - sudo apt-get install libopenblas-base libopenblas-dev
 
 before_script:
     # For xTB
     - wget https://github.com/grimme-lab/xtb/archive/v6.3.0.zip
     - unzip v6.3.0.zip
     - cd xtb-6.3.0
-    # - export FC=gfortran-9 CC=gcc-9
     - meson setup build_gcc --buildtype release -Dla_backend=openblas --warnlevel 0
     - XTBHOME=$PWD
     - XTBPATH=${XTBHOME}/share/xtb:${XTBHOME}:${HOME}
