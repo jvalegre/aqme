@@ -4,9 +4,9 @@ language: python
 python:
   - "3.7"
 
-# switch to new infrastructure
 sudo: required
 
+# xTB needs gcc-8 and gfortran-8 to be compiled
 matrix:
   include:
     - os: linux
@@ -33,9 +33,6 @@ before_install:
   - conda create -q -n tenv python=$TRAVIS_PYTHON_VERSION pip cmake
   - source activate tenv
   - sudo apt-get update
-  # - sudo apt-get upgrade
-  # - sudo apt update
-  # - sudo apt upgrade
 
 install:
   - conda install -c openbabel openbabel==2.4.1
@@ -72,11 +69,13 @@ before_script:
     - PYTHONPATH=${PYTHONPATH}:${XTBHOME}/python
     - export PATH XTBPATH MANPATH LD_LIBRARY_PATH PYTHONPATH
     # - ninja -C build_gcc test
-#   - export RDBASE=$CONDA_PREFIX/Library/share/RDKit
-#   - echo $RDBASE
+    # change it into wget + unzip zip when there is a release (that way the version used will always be the same)
     - git clone --branch=master https://github.com/grimme-lab/xtb-python
     - cd xtb-python
-    - python setup.py install
+    - git submodule update --init
+    - meson setup build --prefix=$PWD --libdir=xtb
+    - ninja -C build install
+    - pip install -e .
     - cd ..
     - cd ..
 
