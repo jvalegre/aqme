@@ -36,8 +36,24 @@ install:
   - pip install torch==1.5.0+cpu torchvision==0.6.0+cpu -f https://download.pytorch.org/whl/torch_stable.html
   - pip install torchani
   # - pip install goodvibes
+  # for xTB
+  - pip install meson
+  - pip install ninja
+  - apt-get install libblas-dev liblapack-dev
+  - apt-get install libblas-dev liblapack-dev
+  - apt-get install gfortran-8
+  - apt-get install gcc-8
 
-# before_script:
+before_script:
+    # For xTB
+    - mkdir xtb_source
+    - cd xtb_source
+    - wget https://github.com/grimme-lab/xtb/archive/v6.3.0.zip
+    - unzip xtb-6.3.0.zip
+    - cd xtb-6.3.0
+    - export FC=gfortran-8 CC=gcc-8
+    - meson setup build_gcc --buildtype release -Dla_backend=openblas --warnlevel 0
+    - ninja -C build_gcc test
 #   - export RDBASE=$CONDA_PREFIX/Library/share/RDKit
 #   - echo $RDBASE
 
