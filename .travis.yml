@@ -62,13 +62,11 @@ install:
   # for xTB
   - pip install meson==0.54.2
   - pip install ninja==1.9.0.post1
-  - sudo apt-get install libblas-dev liblapack-dev
-  - sudo apt-get install libopenblas-base libopenblas-dev
+  # - sudo apt-get install libblas-dev liblapack-dev
+  # - sudo apt-get install libopenblas-base libopenblas-dev
 
 before_script:
     # For xTB
-    - mkdir xtb_source
-    - cd xtb_source
     - wget https://github.com/grimme-lab/xtb/archive/v6.3.0.zip
     - unzip v6.3.0.zip
     - cd xtb-6.3.0
