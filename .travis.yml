@@ -72,9 +72,13 @@ before_script:
     - PYTHONPATH=${PYTHONPATH}:${XTBHOME}/python
     - export PATH XTBPATH MANPATH LD_LIBRARY_PATH PYTHONPATH
     # - ninja -C build_gcc test
-    - cd ..
 #   - export RDBASE=$CONDA_PREFIX/Library/share/RDKit
 #   - echo $RDBASE
+    - git clone --branch=master https://github.com/grimme-lab/xtb-python
+    - cd xtb-python
+    - python setup.py install
+    - cd ..
+    - cd ..
 
 script:
   - cd tests
