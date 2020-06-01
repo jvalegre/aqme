@@ -21,7 +21,8 @@ before_install:
   - conda create -q -n tenv python=$TRAVIS_PYTHON_VERSION pip cmake
   - source activate tenv
   - sudo apt-get update
-  - sudo apt update
+  - sudo apt-get upgrade
+  # - sudo apt update
   # - sudo apt upgrade
 
 install:
