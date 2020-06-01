@@ -54,7 +54,7 @@ install:
   - pip install ninja==1.9.0.post1
   - sudo apt-get install libblas-dev liblapack-dev
   - sudo apt-get install libopenblas-base libopenblas-dev
-  - sudo apt-get install intel-mkl-2020.0-088
+  - sudo apt-get install intel-mkl
 
 before_script:
   # For xTB
