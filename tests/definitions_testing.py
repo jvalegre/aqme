@@ -71,10 +71,21 @@ def conf_gen(path, precision, cmd_pyconfort, folder, smiles, E_confs, dihedral, 
 
     # tests for RDKit
     if not dihedral:
-        test_init_rdkit_confs = df_output['RDKIT-Initial-samples']
-        test_prefilter_rdkit_confs = df_output['RDKit-initial_energy_threshold']
-        test_filter_rdkit_confs = df_output['RDKit-RMSD-and-energy-duplicates']
-        test_unique_confs = 'nan'
+        if not xTB_ANI1:
+            test_init_rdkit_confs = df_output['RDKIT-Initial-samples']
+            test_prefilter_rdkit_confs = df_output['RDKit-initial_energy_threshold']
+            test_filter_rdkit_confs = df_output['RDKit-RMSD-and-energy-duplicates']
+            test_unique_confs = 'nan'
+        elif xTB_ANI1 == 'xTB':
+            test_init_rdkit_confs = df_output['xTB-Initial-samples']
+            test_prefilter_rdkit_confs = df_output['xTB-initial_energy_threshold']
+            test_filter_rdkit_confs = df_output['xTB-RMSD-and-energy-duplicates']
+            test_unique_confs = 'nan'
+        elif xTB_ANI1 == 'AN1ccx':
+            test_init_rdkit_confs = df_output['AN1ccx-Initial-samples']
+            test_prefilter_rdkit_confs = df_output['AN1ccx-initial_energy_threshold']
+            test_filter_rdkit_confs = df_output['AN1ccx-RMSD-and-energy-duplicates']
+            test_unique_confs = 'nan'
     else:
         test_init_rdkit_confs = df_output['RDKIT-Rotated-conformers']
         test_prefilter_rdkit_confs = 'nan'
@@ -89,19 +100,26 @@ def conf_gen(path, precision, cmd_pyconfort, folder, smiles, E_confs, dihedral, 
 
     # read the energies of the conformers
     try:
-        os.chdir(path+'/'+folder+'/'+smiles.split('.')[0]+'/rdkit_generated_sdf_files')
-        # this is to tests smi files with multiple smiles
+        if not xTB_ANI1:
+            os.chdir(path+'/'+folder+'/'+smiles.split('.')[0]+'/rdkit_generated_sdf_files')
+            # this is to tests smi files with multiple smiles
 
-        if template == 'squareplanar' or template == 'squarepyramidal':
-            if not dihedral:
-                test_rdkit_E_confs = calc_energy(file_smi+'_0_rdkit.sdf')
+            if template == 'squareplanar' or template == 'squarepyramidal':
+                if not dihedral:
+                    test_rdkit_E_confs = calc_energy(file_smi+'_0_rdkit.sdf')
+                else:
+                    test_rdkit_E_confs = calc_energy(file_smi+'_0_rdkit_rotated.sdf')
             else:
-                test_rdkit_E_confs = calc_energy(file_smi+'_0_rdkit_rotated.sdf')
-        else:
-            if not dihedral:
-                test_rdkit_E_confs = calc_energy(file_smi+'_rdkit.sdf')
-            else:
-                test_rdkit_E_confs = calc_energy(file_smi+'_rdkit_rotated.sdf')
+                if not dihedral:
+                    test_rdkit_E_confs = calc_energy(file_smi+'_rdkit.sdf')
+                else:
+                    test_rdkit_E_confs = calc_energy(file_smi+'_rdkit_rotated.sdf')
+        elif xTB_ANI1 == 'xTB':
+            os.chdir(path+'/'+folder+'/'+smiles.split('.')[0]+'/xtb_minimised_generated_sdf_files')
+            test_rdkit_E_confs = calc_energy(file_smi+'_xtb.sdf')
+        elif xTB_ANI1 == 'AN1ccx':
+            os.chdir(path+'/'+folder+'/'+smiles.split('.')[0]+'/ani1ccx_minimised_generated_sdf_files')
+            test_rdkit_E_confs = calc_energy(file_smi+'_ani.sdf')
 
         # test for energies
         try:
