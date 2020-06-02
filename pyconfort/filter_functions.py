@@ -5,14 +5,10 @@
 # 	             used for filtering			        #
 #####################################################.
 
-import os
-import glob
-import sys
 from progress.bar import IncrementalBar
 from rdkit.Chem import AllChem as Chem
 from rdkit.Chem import rdMolTransforms, Descriptors
 from pyconfort.argument_parser import possible_atoms
-
 
 possible_atoms = possible_atoms()
 

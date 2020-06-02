@@ -28,7 +28,7 @@ from __future__ import print_function
 import os
 import time
 from pyconfort.argument_parser import parser_args
-from pyconfort.main_functions import *
+from pyconfort.main_functions import compute_main, exp_rules_main, write_gauss_main, move_sdf_main, analysis_main, dup_main, boltz_main, combine_main, qsub_main
 from pyconfort.writer_functions import creation_of_dup_csv, load_from_yaml, Logger
 
 def main():

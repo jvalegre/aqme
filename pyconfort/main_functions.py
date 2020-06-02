@@ -3,12 +3,17 @@
 #####################################################.
 # 		   This file stores all the main functions 	#
 #####################################################.
-from pyconfort.confgen_functions import *
-from pyconfort.writer_functions import *
-from pyconfort.filter_functions import *
-from pyconfort.argument_parser import *
-from pyconfort.analyzer_functions import *
-from pyconfort.template_functions import *
+
+import glob
+import sys
+import os
+import pandas as pd
+import subprocess
+from rdkit.Chem import AllChem as Chem
+from pyconfort.confgen_functions import check_for_pieces, check_charge_smi, clean_args, compute_confs, com_2_xyz_2_sdf, mol_from_sdf
+from pyconfort.writer_functions import read_energies, write_gaussian_input_file, moving_sdf_files
+from pyconfort.filter_functions import exp_rules_output
+from pyconfort.analyzer_functions import output_analyzer, check_for_final_folder, dup_calculation, boltz_calculation, combine_files
 
 # main function to generate conformers
 def compute_main(w_dir_initial,dup_data,args,log,start_time):
@@ -147,9 +152,9 @@ def write_gauss_main(args,log):
 						pass
 					else:
 						raise
+
 				# writing the com files
 				# check conf_file exists, parse energies and then write DFT input
-
 				for file in conf_files:
 					if os.path.exists(file):
 						if args.verbose:

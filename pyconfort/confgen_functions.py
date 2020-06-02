@@ -11,16 +11,14 @@ import sys
 import subprocess
 import time
 import numpy as np
-import pandas as pd
 from rdkit.Chem import AllChem as Chem
 from rdkit.Chem import rdMolTransforms, PropertyMol, rdDistGeom, rdMolAlign, Lipinski
 from rdkit.Geometry import Point3D
 from progress.bar import IncrementalBar
 import pyconfort
 from pyconfort.writer_functions import write_confs
-from pyconfort.filter_functions import filters,get_conf_RMS,set_metal_atomic_number,ewin_filter,pre_E_filter,RMSD_and_E_filter
+from pyconfort.filter_functions import filters,set_metal_atomic_number,ewin_filter,pre_E_filter,RMSD_and_E_filter
 from pyconfort.argument_parser import possible_atoms
-from pyconfort.analyzer_functions import check_for_final_folder
 from pyconfort.template_functions import template_embed
 
 # imports for xTB and ANI1
@@ -34,6 +32,8 @@ try:
 except:
 	print('0')
 try:
+	import importlib
+	importlib.import_module("xtb-python")
 	from xtb-python import GFN2
 except:
 	print('1')
