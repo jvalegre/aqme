@@ -31,27 +31,14 @@ try:
 	device = torch.device('cpu')
 except:
 	print('0')
-import importlib
-try:
-	xtb = importlib.import_module("xtb-python")
-except:
-	print('0a')
-try:
-	xtb = importlib.import_module("xtb-python==20.1")
-except:
-	print('0b')
-try:
-	xtb = importlib.import_module("xtb-python 20.1")
-except:
-	print('0c')
 try:
 	import xtb
+	from xtb import GFN2
 except:
-	print('0d')
-print(xtb)
+	print('xTB is not installed correctly - xTB is not available')
+
 # from xtb import GFN2
 # except:
-# 	print('xTB is not installed correctly - xTB is not available')
 try:
 	import torchani
 	model = torchani.models.ANI1ccx()
@@ -585,7 +572,7 @@ def ani_calc(elements,cartesians,coordinates,args,log):
 def xtb_calc(elements,cartesians,coordinates,args,log,ase_metal,ase_metal_idx):
 	if args.metal_complex:
 		# passing charges metal present
-		ase_molecule = ase.Atoms(elements, positions=coordinates.tolist()[0],calculator=xtb.GFN2()) #define ase molecule using GFN2 Calculator
+		ase_molecule = ase.Atoms(elements, positions=coordinates.tolist()[0],calculator=GFN2()) #define ase molecule using GFN2 Calculator
 		if os.path.splitext(args.input)[1] == '.csv' or os.path.splitext(args.input)[1] == '.cdx' or os.path.splitext(args.input)[1] == '.smi':
 			for i,atom in enumerate(ase_molecule):
 				if i in ase_metal:
@@ -598,7 +585,7 @@ def xtb_calc(elements,cartesians,coordinates,args,log,ase_metal,ase_metal_idx):
 			if args.verbose:
 				log.write('o  The Overall charge is read from the .com file ')
 	else:
-		ase_molecule = ase.Atoms(elements, positions=coordinates.tolist()[0],calculator=xtb.GFN2()) #define ase molecule using GFN2 Calculator
+		ase_molecule = ase.Atoms(elements, positions=coordinates.tolist()[0],calculator=GFN2()) #define ase molecule using GFN2 Calculator
 	optimizer = ase.optimize.BFGS(ase_molecule, trajectory='xTB_opt.traj',logfile='xtb.opt')
 	optimizer.run(fmax=args.opt_fmax, steps=args.opt_steps)
 	if len(ase.io.Trajectory('xTB_opt.traj', mode='r')) != (args.opt_steps+1):
