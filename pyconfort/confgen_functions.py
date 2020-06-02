@@ -32,15 +32,31 @@ try:
 except:
 	print('0')
 import importlib
+try:
 	xtb = importlib.import_module("xtb-python")
-	# from xtb import GFN2
+except:
+	print('0a')
+try:
+	xtb = importlib.import_module("xtb-python==20.1")
+except:
+	print('0b')
+try:
+	xtb = importlib.import_module("xtb-python 20.1")
+except:
+	print('0c')
+try:
+	import xtb
+except:
+	print('0d')
+print(xtb)
+# from xtb import GFN2
 # except:
-# 	print('1')
+# 	print('xTB is not installed correctly - xTB is not available')
 try:
 	import torchani
 	model = torchani.models.ANI1ccx()
 except:
-	print('5')
+	print('Torchani is not installed correctly - ANI1ccx is not available')
 
 hartree_to_kcal = 627.509
 possible_atoms = possible_atoms()
