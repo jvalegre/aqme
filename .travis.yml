@@ -85,6 +85,7 @@ before_script:
   - pip install -e .
   - cd ..
   - cd ..
+  - conda list
 
 script:
   - cd tests
