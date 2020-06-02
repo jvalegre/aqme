@@ -151,7 +151,7 @@ before_script:
   # - cd lib
   # - ls
   # - pwd
-  - meson setup build --prefix=$PWD --libdir=xtb -Dla_backend=netlib
+  - meson setup build --prefix=$PWD --libdir=xtb
   - ninja -C build install
   - pip install -e .
   - cd ..
