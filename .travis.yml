@@ -115,10 +115,18 @@ before_script:
   - ls
   - cd intel
   - ls
+  - cd mkl
+  - ls
+  - pwd
+  - cd ..
   - cd compilers_and_libraries_2020
   - ls
   - cd linux
   - ls
+  - cd mkl
+  - ls
+  - pwd
+  - cd ..
   - cd ..
   - cd ..
   - cd parallel_studio_xe_2020.0.088
@@ -127,6 +135,9 @@ before_script:
   - ls
   - cd linux
   - ls
+  - cd mkl
+  - ls
+  - pwd
   - meson setup build --prefix=$PWD --libdir=xtb
   - ninja -C build install
   - pip install -e .
