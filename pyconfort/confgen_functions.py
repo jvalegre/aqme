@@ -37,8 +37,6 @@ try:
 except:
 	print('xTB is not installed correctly - xTB is not available')
 
-# from xtb import GFN2
-# except:
 try:
 	import torchani
 	model = torchani.models.ANI1ccx()
