@@ -31,12 +31,11 @@ try:
 	device = torch.device('cpu')
 except:
 	print('0')
-try:
-	import importlib
+import importlib
 	xtb = importlib.import_module("xtb-python")
 	# from xtb import GFN2
-except:
-	print('1')
+# except:
+# 	print('1')
 try:
 	import torchani
 	model = torchani.models.ANI1ccx()
