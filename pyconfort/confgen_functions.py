@@ -33,8 +33,8 @@ except:
 	print('0')
 try:
 	import importlib
-	importlib.import_module("xtb-python")
-	from xtb-python import GFN2
+	importlib.import_module("xtb-python.GFN2")
+	# from xtb-python import GFN2
 except:
 	print('1')
 try:
