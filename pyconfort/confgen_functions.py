@@ -33,7 +33,7 @@ except:
 	print('0')
 try:
 	import importlib
-	importlib.import_module("xtb-python.GFN2")
+	GFN2 = importlib.import_module("xtb-python.GFN2")
 	# from xtb-python import GFN2
 except:
 	print('1')
@@ -71,7 +71,8 @@ def com_2_xyz_2_sdf(args):
 	xyzfile.close()
 	comfile.close()
 
-	subprocess.run(['obabel', '-ixyz', os.path.splitext(args.input)[0]+'.xyz', '-osdf', '-O', os.path.splitext(args.input)[0]+'.sdf','--gen3D'])
+	cmd_obabel = ['obabel', '-ixyz', os.path.splitext(args.input)[0]+'.xyz', '-osdf', '-O', os.path.splitext(args.input)[0]+'.sdf','--gen3D']
+	subprocess.run(cmd_obabel)
 
 	return charge_com
 
