@@ -17,6 +17,8 @@ matrix:
           packages:
             - gcc-8
             - gfortran-8
+            - liblapack-dev
+            - libblas-dev
       env: CC='gcc-8' FC='gfortran-8'
 
 before_install:
@@ -49,7 +51,10 @@ install:
   - pip install torchani==2.0
   # - pip install goodvibes
   # for xTB
-  - pip install Cython==0.29.19
+  # - pip install Cython==0.29.19
+  - pip install numpy==1.18.4
+  - pip install cffi==1.14.0
+  - pip install qcelemental==0.14.0
   - pip install meson==0.54.2
   - pip install ninja==1.9.0.post1
   - sudo apt-get install libblas-dev liblapack-dev
@@ -72,19 +77,17 @@ before_script:
   # change it into wget + unzip zip when there is a release (that way the version used will always be the same)
   - git clone --branch=master https://github.com/grimme-lab/xtb-python
   - cd xtb-python
-  - git submodule update --init
+  # - git submodule update --init
   # install the MKL library
-  - wget https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS-2019.PUB
-  - sudo apt-key add GPG-PUB-KEY-INTEL-SW-PRODUCTS-2019.PUB
-  - rm GPG-PUB-KEY-INTEL-SW-PRODUCTS-2019.PUB
-  - sudo sh -c 'echo deb https://apt.repos.intel.com/mkl all main > /etc/apt/sources.list.d/intel-mkl.list'
-  - sudo apt-get update
-  - sudo apt-get install intel-mkl-2020.0-088
-  - export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/intel/mkl/lib/intel64_lin/
-  - export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/intel/compilers_and_libraries_2020/linux/mkl/lib/intel64_lin/
-  - export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/intel/parallel_studio_xe_2020.0.088/compilers_and_libraries_2020/linux/mkl/lib/intel64_lin/
-# - export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/intel/composer_xe_2013_sp1/mkl/lib/intel64
-  # - export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/opt/intel/parallel_studio_xe_2020.0.088/compilers_and_libraries_2020/linux/mkl/
+  # - wget https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS-2019.PUB
+  # - sudo apt-key add GPG-PUB-KEY-INTEL-SW-PRODUCTS-2019.PUB
+  # - rm GPG-PUB-KEY-INTEL-SW-PRODUCTS-2019.PUB
+  # - sudo sh -c 'echo deb https://apt.repos.intel.com/mkl all main > /etc/apt/sources.list.d/intel-mkl.list'
+  # - sudo apt-get update
+  # - sudo apt-get install intel-mkl-2020.0-088
+  # - export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/intel/mkl/lib/intel64_lin/
+  # - export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/intel/compilers_and_libraries_2020/linux/mkl/lib/intel64_lin/
+  # - export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/intel/parallel_studio_xe_2020.0.088/compilers_and_libraries_2020/linux/mkl/lib/intel64_lin/
   # - ls
   # - cd ..
   # - pwd
@@ -148,7 +151,7 @@ before_script:
   # - cd lib
   # - ls
   # - pwd
-  - meson setup build --prefix=$PWD --libdir=xtb
+  - meson setup build --prefix=$PWD --libdir=xtb -Dla_backend=netlib
   - ninja -C build install
   - pip install -e .
   - cd ..
