@@ -117,7 +117,9 @@ before_script:
   - ls
   - cd mkl
   - ls
+  - cd lib
   - pwd
+  - cd ..
   - cd ..
   - cd compilers_and_libraries_2020
   - ls
@@ -125,7 +127,10 @@ before_script:
   - ls
   - cd mkl
   - ls
+  - cd lib
+  - ls
   - pwd
+  - cd ..
   - cd ..
   - cd ..
   - cd ..
@@ -136,6 +141,8 @@ before_script:
   - cd linux
   - ls
   - cd mkl
+  - ls
+  - cd lib
   - ls
   - pwd
   - meson setup build --prefix=$PWD --libdir=xtb
