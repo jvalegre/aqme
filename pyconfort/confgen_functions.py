@@ -32,7 +32,7 @@ try:
 except:
 	print('0')
 try:
-	from xtb.interface import Param
+	from xtb.ase.calculator import XTB
 except:
 	print('xTB is not installed correctly - xTB is not available')
 
@@ -569,7 +569,7 @@ def ani_calc(elements,cartesians,coordinates,args,log):
 def xtb_calc(elements,cartesians,coordinates,args,log,ase_metal,ase_metal_idx):
 	if args.metal_complex:
 		# passing charges metal present
-		ase_molecule = ase.Atoms(elements, positions=coordinates.tolist()[0],calculator=Param.GFN2xTB) #define ase molecule using GFN2 Calculator
+		ase_molecule = ase.Atoms(elements, positions=coordinates.tolist()[0],calculator=XTB(method="GFN2-xTB")) #define ase molecule using GFN2 Calculator
 		if os.path.splitext(args.input)[1] == '.csv' or os.path.splitext(args.input)[1] == '.cdx' or os.path.splitext(args.input)[1] == '.smi':
 			for i,atom in enumerate(ase_molecule):
 				if i in ase_metal:
@@ -582,7 +582,7 @@ def xtb_calc(elements,cartesians,coordinates,args,log,ase_metal,ase_metal_idx):
 			if args.verbose:
 				log.write('o  The Overall charge is read from the .com file ')
 	else:
-		ase_molecule = ase.Atoms(elements, positions=coordinates.tolist()[0],calculator=Param.GFN2xTB) #define ase molecule using GFN2 Calculator
+		ase_molecule = ase.Atoms(elements, positions=coordinates.tolist()[0],calculator=XTB(method="GFN2-xTB")) #define ase molecule using GFN2 Calculator
 	optimizer = ase.optimize.BFGS(ase_molecule, trajectory='xTB_opt.traj',logfile='xtb.opt')
 	optimizer.run(fmax=args.opt_fmax, steps=args.opt_steps)
 	if len(ase.io.Trajectory('xTB_opt.traj', mode='r')) != (args.opt_steps+1):
