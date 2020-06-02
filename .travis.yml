@@ -117,10 +117,15 @@ before_script:
   - ls
   - cd compilers_and_libraries_2020
   - ls
+  - cd linux
+  - ls
+  - cd ..
   - cd ..
   - cd parallel_studio_xe_2020.0.088
   - ls
   - cd compilers_and_libraries_2020
+  - ls
+  - cd linux
   - ls
   - meson setup build --prefix=$PWD --libdir=xtb
   - ninja -C build install
