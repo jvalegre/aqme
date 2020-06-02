@@ -77,7 +77,7 @@ before_script:
   # change it into wget + unzip zip when there is a release (that way the version used will always be the same)
   - git clone --branch=master https://github.com/grimme-lab/xtb-python
   - cd xtb-python
-  # - git submodule update --init
+  - git submodule update --init
   # install the MKL library
   # - wget https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS-2019.PUB
   # - sudo apt-key add GPG-PUB-KEY-INTEL-SW-PRODUCTS-2019.PUB
@@ -151,7 +151,7 @@ before_script:
   # - cd lib
   # - ls
   # - pwd
-  - meson setup build --prefix=$PWD --libdir=xtb
+  - meson setup build --prefix=$PWD --libdir=xtb -Dla_backend=netlib
   - ninja -C build install
   - pip install -e .
   - cd ..
