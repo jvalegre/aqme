@@ -31,7 +31,7 @@ try:
 except (ModuleNotFoundError,AttributeError):
 	ase_installed = False
 	print('ASE is not installed correctly - xTB and ANI1ccx are not available')
-if ase_installed == True:
+if ase_installed:
 	try:
 		import torch
 		os.environ['KMP_DUPLICATE_LIB_OK']='True'
@@ -39,7 +39,7 @@ if ase_installed == True:
 	except (ModuleNotFoundError,AttributeError):
 		torch_installed = False
 		print('TORCH is not installed correctly - xTB and ANI1ccx are not available')
-	if torch_installed == True:
+	if torch_installed:
 		try:
 			from xtb.ase.calculator import XTB
 		except (ModuleNotFoundError,AttributeError):
@@ -61,7 +61,7 @@ def com_2_xyz_2_sdf(args):
 	emptylines=[]
 
 	for i, line in enumerate(comlines):
-		if len(comlines[i].strip()) == 0:
+		if len(line.strip()) == 0:
 			emptylines.append(i)
 
 	#assigning the charges
@@ -165,6 +165,21 @@ def check_for_pieces(smi):
 		smi = max(pieces, key=len)
 	return smi
 
+def load_template(args):
+	try:
+		os.chdir(os.path.join(pyconfort.__path__[0])+'/templates/')
+	except FileNotFoundError:
+		print('x The templates folder was not found, probably due to a problem while installing pyCONFORT')
+		sys.exit()
+	if args.complex_type == 'squareplanar' or args.complex_type == 'squarepyramidal':
+		file_template = 'template-4-and-5.sdf'
+	if args.complex_type =='linear':
+		file_template = 'template-2.sdf'
+	if args.complex_type =='trigonalplanar':
+		file_template = 'template-3.sdf'
+
+	return file_template
+
 def compute_confs(w_dir_initial,mol, name,args,log,dup_data,counter_for_template,i,start_time):
 	# Converts each line to a rdkit mol object
 	if args.verbose:
@@ -178,23 +193,14 @@ def compute_confs(w_dir_initial,mol, name,args,log,dup_data,counter_for_template
 		if args.complex_type == 'squareplanar' or args.complex_type == 'squarepyramidal' or args.complex_type == 'linear' or args.complex_type == 'trigonalplanar':
 			mol_objects = []
 			if len(args.metal_idx) == 1:
-				try:
-					os.chdir(os.path.join(pyconfort.__path__[0])+'/templates/')
-				except FileNotFoundError:
-					os.chdir(os.path.join(pyconfort.__path__[0])+'/templates/')
-				if args.complex_type == 'squareplanar' or args.complex_type == 'squarepyramidal':
-					file_template = 'template-4-and-5.sdf'
-				if args.complex_type =='linear':
-					file_template = 'template-2.sdf'
-				if args.complex_type =='trigonalplanar':
-					file_template = 'template-3.sdf'
+				file_template = load_template(args)
 				temp = Chem.SDMolSupplier(file_template)
 				os.chdir(w_dir_initial)
-				mol_objects_from_template,name, coord_Map, alg_Map, mol_template = template_embed(mol,temp,name,args,log)
-				for i,_ in enumerate(mol_objects_from_template):
-					mol_objects.append([mol_objects_from_template[i],name[i],coord_Map[i],alg_Map[i],mol_template[i]])
-				for [mol, name, coord_Map,alg_Map,mol_template] in mol_objects:
-					conformer_generation(mol,name,start_time,args,log,dup_data,counter_for_template,coord_Map,alg_Map,mol_template)
+				mol_objects_from_template, name_mol, coord_Map, alg_Map, mol_template = template_embed(mol,temp,name,args,log)
+				for j,_ in enumerate(mol_objects_from_template):
+					mol_objects.append([mol_objects_from_template[j],name_mol[j],coord_Map[j],alg_Map[j],mol_template[j]])
+				for [mol_object, name_mol, coord_Map, alg_Map, mol_template] in mol_objects:
+					conformer_generation(mol_object,name_mol,start_time,args,log,dup_data,counter_for_template,coord_Map,alg_Map,mol_template)
 					counter_for_template += 1
 			else:
 				log.write("x  Cannot use templates for complexes involving more than 1 metal or for organic molecueles.")
@@ -211,29 +217,19 @@ def conformer_generation(mol,name,start_time,args,log,dup_data,dup_data_idx,coor
 			log.write("\n   ----- {} -----".format(name))
 
 		try:
-			# the conformational search
+			# the conformational search for RDKit
 			gen = summ_search(mol, name,args,log,dup_data,dup_data_idx,coord_Map,alg_Map,mol_template)
-			if gen != -1:
-				if args.nodihedrals:
+			if args.ANI1ccx or args.xtb:
+				if gen != -1:
 					if args.ANI1ccx:
-						mult_min(name+'_'+'rdkit', args, 'ani',log,dup_data,dup_data_idx)
-					if args.xtb:
-						mult_min(name+'_'+'rdkit', args, 'xtb',log,dup_data,dup_data_idx)
-				else:
-					if args.ANI1ccx:
-						if gen != 0:
-							mult_min(name+'_'+'rdkit'+'_'+'rotated', args, 'ani',log,dup_data,dup_data_idx)
-						else:
-							log.write('\nx   No rotable dihydrals found. Using the non-rotated SDF for ANI')
-							mult_min(name+'_'+'rdkit', args, 'ani',log,dup_data,dup_data_idx)
-					if args.xtb:
-						if gen !=0:
-							mult_min(name+'_'+'rdkit'+'_'+'rotated', args, 'xtb',log,dup_data,dup_data_idx)
-						else:
-							log.write('\nx   No rotable dihydrals found. Using the non-rotated SDF for xTB')
-							mult_min(name+'_'+'rdkit', args, 'xtb',log,dup_data,dup_data_idx)
-			else:
-				pass
+						min_suffix = 'ani'
+					elif args.xtb:
+						min_suffix = 'xtb'
+					if gen != 0:
+						mult_min(name+'_'+'rdkit'+'_'+'rotated', args, min_suffix, log, dup_data, dup_data_idx)
+					else:
+						mult_min(name+'_'+'rdkit', args, min_suffix,log,dup_data,dup_data_idx)
+
 		except (KeyboardInterrupt, SystemExit):
 			raise
 	else:
@@ -348,18 +344,12 @@ def rules_get_charge(mol,args,log):
 				if neighbour.GetTotalValence()== 4:
 					if neighbour.GetSymbol() in C_group:
 						charge[charge_idx] = charge[charge_idx] - 1
-					elif neighbour.GetSymbol() in N_group:
-						charge[charge_idx] = charge[charge_idx] - 0
 				elif neighbour.GetTotalValence()== 3:
-					if neighbour.GetSymbol() in C_group or neighbour.GetSymbol() in O_group:
-						charge[charge_idx] = charge[charge_idx] - 0
-					elif neighbour.GetSymbol() in N_group:
+					if neighbour.GetSymbol() in N_group:
 						charge[charge_idx] = charge[charge_idx] - 1
 				elif neighbour.GetTotalValence() == 2:
 					if neighbour.GetSymbol() in O_group:
 						charge[charge_idx] = charge[charge_idx] - 1
-					elif neighbour.GetSymbol() in F_group:
-						charge[charge_idx] = charge[charge_idx] - 0
 				elif neighbour.GetTotalValence() == 1:
 					if neighbour.GetSymbol() in F_group:
 						charge[charge_idx] = charge[charge_idx] - 1
@@ -392,7 +382,7 @@ def embed_conf(mol,initial_confs,args,log,coord_Map,alg_Map, mol_template):
 def min_and_E_calc(mol,cids,args,log,coord_Map,alg_Map,mol_template):
 	cenergy,outmols = [],[]
 	bar = IncrementalBar('o  Minimizing', max = len(cids))
-	for i, conf in enumerate(cids):
+	for _, conf in enumerate(cids):
 		if coord_Map is None and alg_Map is None and mol_template is None:
 			GetFF = minimize_rdkit_energy(mol,conf,args,log)
 			cenergy.append(GetFF.CalcEnergy())
@@ -473,12 +463,10 @@ def min_after_embed(mol,cids,name,initial_confs,rotmatches,dup_data,dup_data_idx
 
 	return status
 
-# EMBEDS, OPTIMIZES AND FILTERS RDKIT CONFORMERS
-def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None,alg_Map=None,mol_template=None):
+def rdkit_to_sdf(mol, name,args,log,dup_data,dup_data_idx, coord_Map, alg_Map, mol_template):
 	sdwriter = Chem.SDWriter(name+'_'+'rdkit'+args.output)
 	Chem.SanitizeMol(mol)
-	if coord_Map is None and alg_Map is None and mol_template is None:
-		mol = Chem.AddHs(mol)
+	mol = Chem.AddHs(mol)
 	mol.SetProp("_Name",name)
 
 	# detects and applies auto-detection of initial number of conformers
@@ -513,40 +501,52 @@ def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None,alg_M
 		status = min_after_embed(mol,cids,name,initial_confs,rotmatches,dup_data,dup_data_idx,sdwriter,args,log,coord_Map,alg_Map, mol_template)
 	sdwriter.close()
 
+	return status,rotmatches
+
+def dihedral_filter_and_sdf(name,args,log,dup_data,dup_data_idx):
+	rotated_energy = []
+	rdmols = Chem.SDMolSupplier(name+'_'+'rdkit'+args.output, removeHs=False)
+	if rdmols is None:
+		log.write("Could not open "+ name+args.output)
+		sys.exit(-1)
+
+	for i, rd_mol_i in enumerate(rdmols):
+		rotated_energy.append(float(rd_mol_i.GetProp('Energy')))
+
+	rotated_cids = list(range(len(rdmols)))
+	sorted_rotated_cids = sorted(rotated_cids, key = lambda cid: rotated_energy[cid])
+
+	# filter based on energy window ewin_rdkit
+	sortedcids_rotated = ewin_filter(sorted_rotated_cids,rotated_energy,args,dup_data,dup_data_idx,log,'rotated_rdkit')
+	# pre-filter based on energy only
+	selectedcids_initial_rotated = pre_E_filter(sortedcids_rotated,rotated_energy,args,dup_data,dup_data_idx,log,'rotated_rdkit')
+	# filter based on energy and RMSD
+	selectedcids_rotated = RMSD_and_E_filter(rdmols,selectedcids_initial_rotated,rotated_energy,args,dup_data,dup_data_idx,log,'rotated_rdkit')
+
+	sdwriter_rd = Chem.SDWriter(name+'_'+'rdkit'+'_'+'rotated'+args.output)
+	for i, cid in enumerate(selectedcids_rotated):
+		mol_rd = Chem.RWMol(rdmols[cid])
+		mol_rd.SetProp('_Name',rdmols[cid].GetProp('_Name')+' '+str(i))
+		if args.metal_complex:
+			set_metal_atomic_number(mol_rd,args)
+		sdwriter_rd.write(mol_rd)
+	sdwriter_rd.close()
+	status = 1
+
+# EMBEDS, OPTIMIZES AND FILTERS RDKIT CONFORMERS
+def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None, alg_Map=None, mol_template=None):
+	# writes sdf for the first RDKit conformer generation
+	status,rotmatches = rdkit_to_sdf(mol, name,args,log,dup_data,dup_data_idx, coord_Map, alg_Map, mol_template)
+
+	# reads the initial SDF files from RDKit and uses dihedral scan if selected
 	if status != -1:
-		#getting the energy from and mols after rotations
+		# getting the energy and mols after rotations
 		if not args.nodihedrals and len(rotmatches) != 0:
-			rotated_energy = []
-			rdmols = Chem.SDMolSupplier(name+'_'+'rdkit'+args.output, removeHs=False)
-			if rdmols is None:
-				log.write("Could not open "+ name+args.output)
-				sys.exit(-1)
+			status = dihedral_filter_and_sdf(name,args,log,dup_data,dup_data_idx)
 
-			for i, rd_mol_i in enumerate(rdmols):
-				rotated_energy.append(float(rd_mol_i.GetProp('Energy')))
-
-			rotated_cids = list(range(len(rdmols)))
-			sorted_rotated_cids = sorted(rotated_cids, key = lambda cid: rotated_energy[cid])
-
-			# filter based on energy window ewin_rdkit
-			sortedcids_rotated = ewin_filter(sorted_rotated_cids,rotated_energy,args,dup_data,dup_data_idx,log,'rotated_rdkit')
-			# pre-filter based on energy only
-			selectedcids_initial_rotated = pre_E_filter(sortedcids_rotated,rotated_energy,args,dup_data,dup_data_idx,log,'rotated_rdkit')
-			# filter based on energy and RMSD
-			selectedcids_rotated = RMSD_and_E_filter(rdmols,selectedcids_initial_rotated,rotated_energy,args,dup_data,dup_data_idx,log,'rotated_rdkit')
-
-			sdwriter_rd = Chem.SDWriter(name+'_'+'rdkit'+'_'+'rotated'+args.output)
-			for i, cid in enumerate(selectedcids_rotated):
-				mol_rd = Chem.RWMol(rdmols[cid])
-				mol_rd.SetProp('_Name',rdmols[cid].GetProp('_Name')+' '+str(i))
-				if args.metal_complex:
-					set_metal_atomic_number(mol_rd,args)
-				sdwriter_rd.write(mol_rd)
-			sdwriter_rd.close()
-			status = 1
-			#status=filter_after_rotation(args,name,log,dup_data,dup_data_idx)
-		elif not args.nodihedrals and len(rotmatches) ==0:
+		elif not args.nodihedrals and len(rotmatches) == 0:
 			status = 0
+
 	return status
 
 # ANI1 OPTIMIZER AND ENERGY CALCULATOR
