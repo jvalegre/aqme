@@ -231,18 +231,12 @@ def get_coords_not_normal(outlines, stop_rms, stand_or, dist_rot_or, NATOMS, pos
 			stand_or = i
 			NATOMS = dist_rot_or-i-6
 			stop_get_details_stand_or += 1
-		if stop_get_details_stand_or != 1 and (outlines[i].find("Distance matrix") > -1 or outlines[i].find("Rotational constants") >-1):
-			if outlines[i-1].find("-------") > -1:
-				dist_rot_or = i
-				stop_get_details_dis_rot += 1
-	for i in range (stand_or+5,stand_or+5+NATOMS):
-		massno = int(outlines[i].split()[1])
-		if massno < len(possible_atoms):
-			atom_symbol = possible_atoms[massno]
-		else:
-			atom_symbol = "XX"
-		ATOMTYPES.append(atom_symbol)
-		CARTESIANS.append([float(outlines[i].split()[3]), float(outlines[i].split()[4]), float(outlines[i].split()[5])])
+		# if stop_get_details_stand_or != 1 and (outlines[i].find("Distance matrix") > -1 or outlines[i].find("Rotational constants") >-1):
+		# 	if outlines[i-1].find("-------") > -1:
+		# 		dist_rot_or = i
+		# 		stop_get_details_dis_rot += 1
+
+	ATOMTYPES, CARTESIANS = get_coords_normal(outlines, stand_or, NATOMS, possible_atoms, ATOMTYPES, CARTESIANS)
 
 	return ATOMTYPES, CARTESIANS
 

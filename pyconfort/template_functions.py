@@ -27,6 +27,60 @@ def calc_neighbours(molecule,args):
 			break
 	return number_of_neighbours,center_idx,neighbours
 
+#GET THE LINEAR GEOMETRY
+def two_embed(molecule,mol_1,number_of_neighbours,center_idx,neighbours_ret,name_input,args,log,mol_objects,name_return,coord_Map,alg_Map,mol_template):
+	for atom in mol_1.GetAtoms():
+		if atom.GetIdx()  == 2:
+			atom.SetAtomicNum(53)
+		if atom.GetIdx()  == 0:
+			atom.SetAtomicNum(neighbours_ret[0].GetAtomicNum())
+		if atom.GetIdx()  == 1:
+			atom.SetAtomicNum(neighbours_ret[1].GetAtomicNum())
+
+	#assigning and embedding onto the core
+	molecule_new, coordMap, algMap,ci = template_embed_optimize(molecule,mol_1,args,log,mol_objects,name_return,coord_Map,alg_Map,mol_template)
+
+	if ci>=0:
+		#writing to mol_object file
+		name_final = name_input
+		mol_objects.append(molecule_new)
+		name_return.append(name_final)
+		coord_Map.append(coordMap)
+		alg_Map.append(algMap)
+		mol_template.append(mol_1)
+	else:
+		pass
+
+	return mol_objects, name_return, coord_Map, alg_Map, mol_template
+
+# GET THE TRIGONAL PLANAR GEOMETRY
+def three_embed(molecule,mol_1,number_of_neighbours,center_idx,neighbours_ret,name_input,args,log,mol_objects,name_return,coord_Map,alg_Map,mol_template):
+	mol_objects,name_return,coord_Map,alg_Map,mol_template = [],[],[],[],[]
+	for atom in mol_1.GetAtoms():
+		if atom.GetIdx()  == 0:
+			atom.SetAtomicNum(53)
+		if atom.GetIdx()  == 1:
+			atom.SetAtomicNum(neighbours_ret[0].GetAtomicNum())
+		if atom.GetIdx()  == 2:
+			atom.SetAtomicNum(neighbours_ret[1].GetAtomicNum())
+		if atom.GetIdx()  == 3:
+			atom.SetAtomicNum(neighbours_ret[2].GetAtomicNum())
+
+	#assigning and embedding onto the core
+	molecule_new, coordMap, algMap,ci = template_embed_optimize(molecule,mol_1,args,log,mol_objects,name_return,coord_Map,alg_Map,mol_template)
+	if ci>=0:
+		#writing to mol_object file
+		name_final = name_input
+		mol_objects.append(molecule_new)
+		name_return.append(name_final)
+		coord_Map.append(coordMap)
+		alg_Map.append(algMap)
+		mol_template.append(mol_1)
+	else:
+		pass
+
+	return mol_objects, name_return, coord_Map, alg_Map, mol_template
+
 # GET THE SQUAREPLANAR GEOMETRY
 def four_embed(molecule,mol_1,number_of_neighbours,center_idx,neighbours_ret,name_input,args,log):
 	mol_objects,name_return,coord_Map,alg_Map,mol_template = [],[],[],[],[]
@@ -182,81 +236,26 @@ def five_embed(molecule,mol_1,number_of_neighbours,center_idx,neighbours_ret,nam
 			counter += 1
 	return mol_objects, name_return, coord_Map, alg_Map, mol_template
 
-#GET THE LINEAR GEOMETRY
-def two_embed(molecule,mol_1,number_of_neighbours,center_idx,neighbours_ret,name_input,args,log):
-	mol_objects,name_return,coord_Map,alg_Map,mol_template = [],[],[],[],[]
-	neighbours = neighbours_ret
-	for atom in mol_1.GetAtoms():
-		if atom.GetIdx()  == 2:
-			atom.SetAtomicNum(53)
-		if atom.GetIdx()  == 0:
-			atom.SetAtomicNum(neighbours[0].GetAtomicNum())
-		if atom.GetIdx()  == 1:
-			atom.SetAtomicNum(neighbours[1].GetAtomicNum())
-
-	#assigning and embedding onto the core
-	molecule_new, coordMap, algMap,ci = template_embed_optimize(molecule,mol_1,args,log)
-
-	if ci>=0:
-		#writing to mol_object file
-		name_final = name_input
-		mol_objects.append(molecule_new)
-		name_return.append(name_final)
-		coord_Map.append(coordMap)
-		alg_Map.append(algMap)
-		mol_template.append(mol_1)
-	else:
-		pass
-
-	return mol_objects, name_return, coord_Map, alg_Map, mol_template
-
-# GET THE TRIGONAL PLANAR GEOMETRY
-def three_embed(molecule,mol_1,number_of_neighbours,center_idx,neighbours_ret,name_input,args,log):
-	mol_objects,name_return,coord_Map,alg_Map,mol_template = [],[],[],[],[]
-	neighbours = neighbours_ret
-	for atom in mol_1.GetAtoms():
-		if atom.GetIdx()  == 0:
-			atom.SetAtomicNum(53)
-		if atom.GetIdx()  == 1:
-			atom.SetAtomicNum(neighbours[0].GetAtomicNum())
-		if atom.GetIdx()  == 2:
-			atom.SetAtomicNum(neighbours[1].GetAtomicNum())
-		if atom.GetIdx()  == 3:
-			atom.SetAtomicNum(neighbours[2].GetAtomicNum())
-
-	#assigning and embedding onto the core
-	molecule_new, coordMap, algMap,ci = template_embed_optimize(molecule,mol_1,args,log)
-	if ci>=0:
-		#writing to mol_object file
-		name_final = name_input
-		mol_objects.append(molecule_new)
-		name_return.append(name_final)
-		coord_Map.append(coordMap)
-		alg_Map.append(algMap)
-		mol_template.append(mol_1)
-	else:
-		pass
-
-	return mol_objects, name_return, coord_Map, alg_Map, mol_template
-
 # TEMPLATE GENERATION FOR SQUAREPLANAR AND squarepyramidal
 def template_embed(molecule,temp,name_input,args,log):
 	number_of_neighbours,center_idx,neighbours_ret = calc_neighbours(molecule,args)
+	mol_objects,name_return,coord_Map,alg_Map,mol_template = [],[],[],[],[]
 
 	for mol_1 in temp:
-		if number_of_neighbours == 4:
-			mol_objects, name_return, coord_Map, alg_Map, mol_template=four_embed(molecule,mol_1,number_of_neighbours,center_idx,neighbours_ret,name_input,args,log)
-
-		if number_of_neighbours == 5:
-			mol_objects, name_return, coord_Map, alg_Map, mol_template=five_embed(molecule,mol_1,number_of_neighbours,center_idx,neighbours_ret,name_input,args,log)
-
 		if number_of_neighbours == 2:
-			mol_objects, name_return, coord_Map, alg_Map, mol_template=two_embed(molecule,mol_1,number_of_neighbours,center_idx,neighbours_ret,name_input,args,log)
+			mol_objects, name_return, coord_Map, alg_Map, mol_template=two_embed(molecule,mol_1,number_of_neighbours,center_idx,neighbours_ret,name_input,args,log,mol_objects,name_return,coord_Map,alg_Map,mol_template)
 
-		if number_of_neighbours == 3:
-			mol_objects, name_return, coord_Map, alg_Map, mol_template=three_embed(molecule,mol_1,number_of_neighbours,center_idx,neighbours_ret,name_input,args,log)
+		elif number_of_neighbours == 3:
+			mol_objects, name_return, coord_Map, alg_Map, mol_template=three_embed(molecule,mol_1,number_of_neighbours,center_idx,neighbours_ret,name_input,args,log,mol_objects,name_return,coord_Map,alg_Map,mol_template)
+
+		elif number_of_neighbours == 4:
+			mol_objects, name_return, coord_Map, alg_Map, mol_template = four_embed(molecule,mol_1,number_of_neighbours,center_idx,neighbours_ret,name_input,args,log,mol_objects,name_return,coord_Map,alg_Map,mol_template)
+
+		elif number_of_neighbours == 5:
+			mol_objects, name_return, coord_Map, alg_Map, mol_template=five_embed(molecule,mol_1,number_of_neighbours,center_idx,neighbours_ret,name_input,args,log,mol_objects,name_return,coord_Map,alg_Map,mol_template)
 
 	return mol_objects, name_return, coord_Map, alg_Map, mol_template
+
 # TEMPLATE EMBED OPTIMIZE
 def template_embed_optimize(molecule_embed,mol_1,args,log):
 

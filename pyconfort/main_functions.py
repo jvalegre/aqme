@@ -26,12 +26,13 @@ def compute_main(w_dir_initial,dup_data,args,log,start_time):
 
 	# sets up the chosen force field (this fixes some problems in case MMFF is replaced by UFF)
 	ori_ff = args.ff
+	ori_charge = args.charge_default
 
 	# SMILES input specified
 	if file_format == '.smi':
 		smifile = open(args.input)
 		#used only for template
-		counter_for_template =0
+		counter_for_template = 0
 		for i, line in enumerate(smifile):
 			toks = line.split()
 			#editing part
@@ -45,9 +46,7 @@ def compute_main(w_dir_initial,dup_data,args,log,start_time):
 				name = ''.join(toks[1:])
 			else:
 				name = args.prefix+str(i)+'_'+''.join(toks[1:])
-
 			compute_confs(w_dir_initial,mol,name,args,log,dup_data,counter_for_template,i,start_time)
-		dup_data.to_csv(args.input.split('.')[0]+'-Duplicates Data.csv',index=False)
 
 	# CSV file with one columns SMILES and code_name
 	elif os.path.splitext(args.input)[1] == '.csv':
@@ -55,18 +54,17 @@ def compute_main(w_dir_initial,dup_data,args,log,start_time):
 		counter_for_template =0
 		for i in range(len(csv_smiles)):
 			#assigning names and smi i  each loop
-			if not args.prefix:
-				name = csv_smiles.loc[i, 'code_name']
-			else:
-				name = 'comp_'+str(i)+'_'+csv_smiles.loc[i, 'code_name']
 			smi = csv_smiles.loc[i, 'SMILES']
 			smi = check_for_pieces(smi)
 			if not args.metal_complex:
 				args.charge_default = check_charge_smi(smi)
 			mol = Chem.MolFromSmiles(smi)
 			clean_args(args,ori_ff,mol)
+			if not args.prefix:
+				name = csv_smiles.loc[i, 'code_name']
+			else:
+				name = 'comp_'+str(i)+'_'+csv_smiles.loc[i, 'code_name']
 			compute_confs(w_dir_initial,mol,name,args,log,dup_data,counter_for_template,i,start_time)
-		dup_data.to_csv(args.input.split('.')[0]+'-Duplicates Data.csv',index=False)
 
 	# CDX file
 	elif os.path.splitext(args.input)[1] == '.cdx':
@@ -84,7 +82,6 @@ def compute_main(w_dir_initial,dup_data,args,log,start_time):
 			clean_args(args,ori_ff,mol)
 			name = 'comp' + str(i)+'_'
 			compute_confs(w_dir_initial,mol,name,args,log,dup_data,counter_for_template,i,start_time)
-		dup_data.to_csv(args.input.split('.')[0]+'-Duplicates Data.csv',index=False)
 
 	# COM file
 	elif os.path.splitext(args.input)[1] == '.gjf' or os.path.splitext(args.input)[1] == '.com':
@@ -99,7 +96,6 @@ def compute_main(w_dir_initial,dup_data,args,log,start_time):
 			clean_args(args,ori_ff,mol)
 			compute_confs(w_dir_initial,mol,name,args,log,dup_data,counter_for_template,i,start_time)
 			i += 1
-		dup_data.to_csv(args.input.split('.')[0]+'-Duplicates Data.csv',index=False)
 
 	# COM file
 	elif os.path.splitext(args.input)[1] == '.sdf':
@@ -107,11 +103,12 @@ def compute_main(w_dir_initial,dup_data,args,log,start_time):
 		counter_for_template = 0
 		i=0
 		for mol,name,charge_sdf in zip(suppl,IDs,charges):
-			args.charge_default = charge_sdf
 			clean_args(args,ori_ff,mol)
+			args.charge_default = charge_sdf
 			compute_confs(w_dir_initial,mol,name,args,log,dup_data,counter_for_template,i,start_time)
 			i += 1
-		dup_data.to_csv(args.input.split('.')[0]+'-Duplicates Data.csv',index=False)
+
+	dup_data.to_csv(args.input.split('.')[0]+'-Duplicates Data.csv',index=False)
 
 def write_gauss_main(args,log):
 	if args.exp_rules:
