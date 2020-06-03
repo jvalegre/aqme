@@ -45,7 +45,7 @@ def check_for_gen_or_genecp(ATOMTYPES,args):
 
 	return ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp
 
-def write_header_and_coords(file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS):
+def write_header_and_coords(fileout,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS):
 	fileout.write("%mem="+str(args.mem)+"\n")
 	fileout.write("%nprocshared="+str(args.nprocs)+"\n")
 	fileout.write("# "+keywords_opt+"\n")
@@ -57,7 +57,7 @@ def write_header_and_coords(file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMT
 		fileout.write("\n")
 	fileout.write("\n")
 
-def write_genecp(genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,bs_com,lot_com,bs_gcp_com):
+def write_genecp(fileout,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,bs_com,lot_com,bs_gcp_com,args,w_dir_initial,w_dir):
 	for _,element_ecp in enumerate(ecp_list):
 		if element_ecp not in (args.genecp_atoms or args.gen_atoms):
 			fileout.write(element_ecp+' ')
@@ -94,10 +94,10 @@ def write_genecp(genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,bs_com,lot_com,b
 def new_com_file(w_dir,w_dir_initial,file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,TERMINATION,IM_FREQS,bs_com,lot_com,bs_gcp_com):
 	fileout = open(file.split(".")[0]+'.com', "w")
 
-	write_header_and_coords(file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS)
+	write_header_and_coords(fileout,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS)
 
 	if genecp == 'genecp' or  genecp == 'gen':
-		write_genecp(genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,bs_com,lot_com,bs_gcp_com)
+		write_genecp(fileout,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,bs_com,lot_com,bs_gcp_com,args,w_dir_initial,w_dir)
 
 	if args.sp and TERMINATION == "normal" and IM_FREQS == 0 :
 		fileout.write(args.last_line_for_sp)
@@ -106,24 +106,25 @@ def new_com_file(w_dir,w_dir_initial,file,args,keywords_opt,name,CHARGE,MULT,NAT
 	fileout.close()
 
 def read_log_file(w_dir,file):
+	break_loop = False
 	os.chdir(w_dir)
 	try:
 		outfile = open(file,"r")
 	except FileNotFoundError:
-		break
+		break_loop = True
 	outlines = outfile.readlines()
 
-	return outlines
+	return outlines, outfile, break_loop
 
 def get_initial_variables():
 	rms = 10000
-	stop_rms,stand_or,NATOMS,IM_FREQS,freqs_so_far,stop_name,stop_term,nfreqs = 0,0,0,0,0,0,0,0
+	stop_rms,stand_or,NATOMS,IM_FREQS,freqs_so_far,stop_name,stop_term,nfreqs,dist_rot_or = 0,0,0,0,0,0,0,0,0
 	ATOMTYPES, CARTESIANS, FREQS, READMASS, FORCECONST, NORMALMODE = [],[],[],[],[],[]
 	TERMINATION,ERRORTYPE  = 'unfinished','unknown'
 
-	return rms,stop_rms,stand_or,NATOMS,IM_FREQS,freqs_so_far,stop_name,stop_term,nfreqs,ATOMTYPES,CARTESIANS,FREQS,READMASS,FORCECONST,NORMALMODE,TERMINATION,ERRORTYPE
+	return rms,stop_rms,stand_or,NATOMS,IM_FREQS,freqs_so_far,stop_name,stop_term,nfreqs,ATOMTYPES,CARTESIANS,FREQS,READMASS,FORCECONST,NORMALMODE,TERMINATION,ERRORTYPE,dist_rot_or
 
-def get_name_charge_multiplicity(outlines):
+def get_name_charge_multiplicity(outlines,stop_name):
 	# only for name an and charge
 	for i,outline in enumerate(outlines):
 		if stop_name == 2:
@@ -161,7 +162,7 @@ def get_termination_type(outlines,stop_term,TERMINATION,ERRORTYPE):
 			ERRORTYPE = ERRORTYPE
 	return TERMINATION,ERRORTYPE
 
-def get_geom_and_freq(outlines, TERMINATION, NATOMS, FREQS, NORMALMODE, IM_FREQS, READMASS, FORCECONST, nfreqs, freqs_so_far, rms, stop_rms, dist_rot_or, stand_or):
+def get_geom_and_freq(outlines, args, TERMINATION, NATOMS, FREQS, NORMALMODE, IM_FREQS, READMASS, FORCECONST, nfreqs, freqs_so_far, rms, stop_rms, dist_rot_or, stand_or):
 	stop_get_details_stand_or, stop_get_details_dis_rot = 0,0
 	# reverse loop to speed up the reading of the output files
 	for i in reversed(range(0,len(outlines))):
@@ -270,7 +271,7 @@ def fix_imag_freqs(NATOMS, CARTESIANS, args, FREQS, NORMALMODE):
 
 	return CARTESIANS
 
-def create_folder_and_com(w_dir,log,ATOMTYPES,args,TERMINATION,IM_FREQS,w_dir_fin,file,lot,bs,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp):
+def create_folder_and_com(w_dir,log,ATOMTYPES,args,TERMINATION,IM_FREQS,w_dir_fin,file,lot,bs,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp,ERRORTYPE,input_route,w_dir_initial):
 	# creating new folder with new input gaussian files
 	new_gaussian_input_files = w_dir+'/new_gaussian_input_files/'
 
@@ -330,10 +331,11 @@ def output_analyzer(log_files, w_dir, lot, bs, bs_gcp, args, w_dir_fin, w_dir_in
 
 	for file in log_files:
 		# read the file
-		outlines = read_log_file(w_dir,file)
-
+		outlines, outfile, break_loop = read_log_file(w_dir,file)
+		if break_loop:
+			break
 		# get initial parameters
-		rms,stop_rms,stand_or,NATOMS,IM_FREQS,freqs_so_far,stop_name,stop_term,nfreqs,ATOMTYPES,CARTESIANS,FREQS,READMASS,FORCECONST,NORMALMODE,TERMINATION,ERRORTYPE = get_initial_variables()
+		rms,stop_rms,stand_or,NATOMS,IM_FREQS,freqs_so_far,stop_name,stop_term,nfreqs,ATOMTYPES,CARTESIANS,FREQS,READMASS,FORCECONST,NORMALMODE,TERMINATION,ERRORTYPE,dist_rot_or = get_initial_variables()
 
 		# get name, charge and multiplicity
 		name, CHARGE, MULT = get_name_charge_multiplicity(outlines)
@@ -342,7 +344,7 @@ def output_analyzer(log_files, w_dir, lot, bs, bs_gcp, args, w_dir_fin, w_dir_in
 		TERMINATION,ERRORTYPE = get_termination_type(outlines,stop_term,TERMINATION,ERRORTYPE)
 
 		# get geometry parameters and frequency information
-		TERMINATION, NATOMS, FREQS, NORMALMODE, IM_FREQS, READMASS, FORCECONST, nfreqs, freqs_so_far, rms, stop_rms, dist_rot_or, stand_or = get_geom_and_freq(outlines, TERMINATION, NATOMS, FREQS, NORMALMODE, IM_FREQS, READMASS, FORCECONST, nfreqs, freqs_so_far, rms, stop_rms, dist_rot_or, stand_or)
+		TERMINATION, NATOMS, FREQS, NORMALMODE, IM_FREQS, READMASS, FORCECONST, nfreqs, freqs_so_far, rms, stop_rms, dist_rot_or, stand_or = get_geom_and_freq(outlines, args, TERMINATION, NATOMS, FREQS, NORMALMODE, IM_FREQS, READMASS, FORCECONST, nfreqs, freqs_so_far, rms, stop_rms, dist_rot_or, stand_or)
 
 		# Get the coordinates for jobs that finished well with and without imag. freqs
 		if TERMINATION == "normal":
@@ -367,7 +369,7 @@ def output_analyzer(log_files, w_dir, lot, bs, bs_gcp, args, w_dir_fin, w_dir_in
 
 		# create folders and set level of theory in COM files to fix imaginary freqs or not normal terminations
 		if IM_FREQS > 0 or TERMINATION != "normal" and not os.path.exists(w_dir+'/failed_error/atomic_basis_error/'+file):
-			create_folder_and_com(w_dir,log,ATOMTYPES,args,TERMINATION,IM_FREQS,w_dir_fin,file,lot,bs,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp)
+			create_folder_and_com(w_dir,log,ATOMTYPES,args,TERMINATION,IM_FREQS,w_dir_fin,file,lot,bs,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp,ERRORTYPE,input_route,w_dir_initial)
 
 		# adding in the NMR componenet only to the finished files after reading from normally finished log files
 		if args.sp and TERMINATION == "normal" and IM_FREQS == 0:

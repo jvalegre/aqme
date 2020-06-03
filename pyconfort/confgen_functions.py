@@ -533,6 +533,8 @@ def dihedral_filter_and_sdf(name,args,log,dup_data,dup_data_idx):
 	sdwriter_rd.close()
 	status = 1
 
+	return status
+
 # EMBEDS, OPTIMIZES AND FILTERS RDKIT CONFORMERS
 def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None, alg_Map=None, mol_template=None):
 	# writes sdf for the first RDKit conformer generation
