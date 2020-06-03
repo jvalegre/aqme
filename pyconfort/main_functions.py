@@ -222,16 +222,13 @@ def dup_main(args,log):
 		for bs in args.basis_set:
 			w_dir = args.path + str(lot) + '-' + str(bs) +'/'+'finished'
 			os.chdir(w_dir)
-			#can change molecules to a range as files will have codes in a continous manner
-			try:
-				log_files = glob.glob('*.log')+glob.glob('*.LOG')+glob.glob('*.out')+glob.glob('*.OUT')
-				if len(log_files) != 0:
-					val = ' '.join(log_files)
-					dup_calculation(val,w_dir,args,log)
-				else:
-					log.write(' Files for are not there!')
-			except:
-				pass
+			# change molecules to a range as files will have codes in a continous manner
+			log_files = glob.glob('*.log')+glob.glob('*.LOG')+glob.glob('*.out')+glob.glob('*.OUT')
+			if len(log_files) != 0:
+				val = ' '.join(log_files)
+				dup_calculation(val,w_dir,args,log)
+			else:
+				log.write(' There are not any log or out files in this folder.')
 
 def qsub_main(args,log):
 	#chceck if ech level of theory has a folder New gaussin FILES
@@ -253,15 +250,12 @@ def boltz_main(args,log):
 			#can change molecules to a range as files will have codes in a continous manner
 			for i in range(args.maxnumber):
 				#grab all the corresponding files make sure to renamme prefix when working with differnet files
-				try:
-					log_files = glob.glob('RE' + '_' + str(i)+'_'+'confs_low.log')
-					if len(log_files) != 0:
-						val = ' '.join(log_files)
-						boltz_calculation(val,i,log)
-					else:
-						log.write(' Files for {} are not there!'.format(i))
-				except:
-					pass
+				log_files = glob.glob('RE' + '_' + str(i)+'_'+'confs_low.log')
+				if len(log_files) != 0:
+					val = ' '.join(log_files)
+					boltz_calculation(val,i,log)
+				else:
+					log.write(' Files for {} are not there!'.format(i))
 
 def combine_main(args,log):
 	# combines the files and gives the boltzmann weighted energies

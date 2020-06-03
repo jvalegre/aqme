@@ -61,15 +61,7 @@ def remove_data(path, folder, smiles):
             if file.split('.')[1] in discard_ext:
                 os.remove(file)
 
-def conf_gen(path, precision, cmd_pyconfort, folder, smiles, E_confs, dihedral, xTB_ANI1, metal, template):
-    # open right folder and run the code
-    os.chdir(path+'/'+folder+'/'+smiles.split('.')[0])
-    subprocess.call(cmd_pyconfort)
-
-    # Retrieving the generated CSV file
-    df_output = pd.read_csv(smiles.split('.')[0]+'-Duplicates Data.csv')
-
-    # tests for RDKit
+def rdkit_tests(df_output,dihedral,xTB_ANI1):
     if not dihedral:
         if not xTB_ANI1:
             test_init_rdkit_confs = df_output['RDKIT-Initial-samples']
@@ -89,8 +81,21 @@ def conf_gen(path, precision, cmd_pyconfort, folder, smiles, E_confs, dihedral, 
     else:
         test_init_rdkit_confs = df_output['RDKIT-Rotated-conformers']
         test_prefilter_rdkit_confs = 'nan'
-        test_unique_confs = df_output['RDKIT-Rotated-Unique-conformers']
         test_filter_rdkit_confs = 'nan'
+        test_unique_confs = df_output['RDKIT-Rotated-Unique-conformers']
+
+    return test_init_rdkit_confs, test_prefilter_rdkit_confs, test_filter_rdkit_confs, test_unique_confs
+
+def conf_gen(path, precision, cmd_pyconfort, folder, smiles, E_confs, dihedral, xTB_ANI1, metal, template):
+    # open right folder and run the code
+    os.chdir(path+'/'+folder+'/'+smiles.split('.')[0])
+    subprocess.call(cmd_pyconfort)
+
+    # Retrieving the generated CSV file
+    df_output = pd.read_csv(smiles.split('.')[0]+'-Duplicates Data.csv')
+
+    # tests for RDKit
+    test_init_rdkit_confs, test_prefilter_rdkit_confs, test_filter_rdkit_confs, test_unique_confs = rdkit_tests(df_output,dihedral,xTB_ANI1)
 
     # file_smi is a variable used for finding SDF and COM files
     if folder == 'Multiple':
@@ -103,17 +108,22 @@ def conf_gen(path, precision, cmd_pyconfort, folder, smiles, E_confs, dihedral, 
         if not xTB_ANI1:
             os.chdir(path+'/'+folder+'/'+smiles.split('.')[0]+'/rdkit_generated_sdf_files')
             # this is to tests smi files with multiple smiles
-
-            if template == 'squareplanar' or template == 'squarepyramidal':
-                if not dihedral:
-                    test_rdkit_E_confs = calc_energy(file_smi+'_0_rdkit.sdf')
-                else:
-                    test_rdkit_E_confs = calc_energy(file_smi+'_0_rdkit_rotated.sdf')
-            else:
+            if folder == 'Multiple':
                 if not dihedral:
                     test_rdkit_E_confs = calc_energy(file_smi+'_rdkit.sdf')
                 else:
                     test_rdkit_E_confs = calc_energy(file_smi+'_rdkit_rotated.sdf')
+            else:
+                if template == 'squareplanar' or template == 'squarepyramidal':
+                    if not dihedral:
+                        test_rdkit_E_confs = calc_energy(file_smi+'_0_rdkit.sdf')
+                    else:
+                        test_rdkit_E_confs = calc_energy(file_smi+'_0_rdkit_rotated.sdf')
+                else:
+                    if not dihedral:
+                        test_rdkit_E_confs = calc_energy(file_smi+'_rdkit.sdf')
+                    else:
+                        test_rdkit_E_confs = calc_energy(file_smi+'_rdkit_rotated.sdf')
         elif xTB_ANI1 == 'xTB':
             os.chdir(path+'/'+folder+'/'+smiles.split('.')[0]+'/xtb_minimised_generated_sdf_files')
             test_rdkit_E_confs = calc_energy(file_smi+'_xtb.sdf')
@@ -126,7 +136,7 @@ def conf_gen(path, precision, cmd_pyconfort, folder, smiles, E_confs, dihedral, 
             test_round_confs = [round(num, precision) for num in test_rdkit_E_confs]
             round_confs = [round(num, precision) for num in E_confs]
 
-        except:
+        except TypeError:
             test_round_confs = 'nan'
             round_confs = 'nan'
 

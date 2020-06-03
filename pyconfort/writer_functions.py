@@ -200,7 +200,7 @@ def write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args,log,ch
 			elif atom.GetSymbol() in args.gen_atoms:
 				genecp = 'gen'
 				break
-	except:
+	except OSError:
 		read_lines = open(file,"r").readlines()
 		for line,_ in enumerate(read_lines):
 			for atom in args.genecp_atoms:

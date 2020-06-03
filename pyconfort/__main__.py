@@ -16,4 +16,5 @@ if __package__ != 'pyconfort':
     print('pyCONFORT is not installed! Use: pip install pyconfort (anywhere, using a terminal) or python setup.py install (from the downloaded /pyCONFORT/pyconfort folder).')
 
 if __name__ == '__main__':
-    sys.exit(pyconfort.main())
+    pyconfort.main()
+    sys.exit()

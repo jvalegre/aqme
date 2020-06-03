@@ -1,6 +1,6 @@
 
-o  IMPORTING VARIABLES FROM params_format_test8.yaml
-o  RESET input from   to charged.mol2
+o  IMPORTING VARIABLES FROM params_format_test9.yaml
+o  RESET input from   to charged.xyz
 o  DEFAULT path : 
 o  RESET prefix from None to False
 o  RESET verbose from False to True

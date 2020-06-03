@@ -22,25 +22,33 @@ from pyconfort.argument_parser import possible_atoms
 from pyconfort.template_functions import template_embed
 
 # imports for xTB and ANI1
+ase_installed = True
+torch_installed = True
 try:
 	import ase
 	import ase.optimize
 	from ase.units import Hartree
-	import torch
-	os.environ['KMP_DUPLICATE_LIB_OK']='True'
-	device = torch.device('cpu')
-except:
-	print('0')
-try:
-	from xtb.ase.calculator import XTB
-except:
-	print('xTB is not installed correctly - xTB is not available')
-
-try:
-	import torchani
-	model = torchani.models.ANI1ccx()
-except:
-	print('Torchani is not installed correctly - ANI1ccx is not available')
+except (ModuleNotFoundError,AttributeError):
+	ase_installed = False
+	print('ASE is not installed correctly - xTB and ANI1ccx are not available')
+if ase_installed == True:
+	try:
+		import torch
+		os.environ['KMP_DUPLICATE_LIB_OK']='True'
+		device = torch.device('cpu')
+	except (ModuleNotFoundError,AttributeError):
+		torch_installed = False
+		print('TORCH is not installed correctly - xTB and ANI1ccx are not available')
+	if torch_installed == True:
+		try:
+			from xtb.ase.calculator import XTB
+		except (ModuleNotFoundError,AttributeError):
+			print('xTB is not installed correctly - xTB is not available')
+		try:
+			import torchani
+			model = torchani.models.ANI1ccx()
+		except (ModuleNotFoundError,AttributeError):
+			print('Torchani is not installed correctly - ANI1ccx is not available')
 
 hartree_to_kcal = 627.509
 possible_atoms = possible_atoms()
@@ -113,12 +121,11 @@ def mol_from_sdf(args):
 		if line.find('M  CHG') > -1:
 			charge_line =  line.split('  ')
 			charge = 0
-			for i in range(4,len(charge_line)):
-				if (i % 2) == 0:
-					if i == len(charge_line) - 1:
-						charge_line[i] = charge_line[i].split('\n')[0]
-					charge += int(charge_line[i])
-			print(charge)
+			for j in range(4,len(charge_line)):
+				if (j % 2) == 0:
+					if j == len(charge_line) - 1:
+						charge_line[j] = charge_line[j].split('\n')[0]
+					charge += int(charge_line[j])
 			charges.append(charge)
 	if IDs == []:
 		for i,_ in enumerate(suppl):
@@ -337,24 +344,24 @@ def rules_get_charge(mol,args,log):
 			charge_idx = args.metal_idx.index(atom.GetIdx())
 			neighbours = atom.GetNeighbors()
 			charge[charge_idx] = args.m_oxi[charge_idx]
-			for atom in neighbours:
-				if atom.GetTotalValence()== 4:
-					if atom.GetSymbol() in C_group:
+			for neighbour in neighbours:
+				if neighbour.GetTotalValence()== 4:
+					if neighbour.GetSymbol() in C_group:
 						charge[charge_idx] = charge[charge_idx] - 1
-					elif atom.GetSymbol() in N_group:
+					elif neighbour.GetSymbol() in N_group:
 						charge[charge_idx] = charge[charge_idx] - 0
-				elif atom.GetTotalValence()== 3:
-					if atom.GetSymbol() in C_group or atom.GetSymbol() in O_group:
+				elif neighbour.GetTotalValence()== 3:
+					if neighbour.GetSymbol() in C_group or neighbour.GetSymbol() in O_group:
 						charge[charge_idx] = charge[charge_idx] - 0
-					elif atom.GetSymbol() in N_group:
+					elif neighbour.GetSymbol() in N_group:
 						charge[charge_idx] = charge[charge_idx] - 1
-				elif atom.GetTotalValence() == 2:
-					if atom.GetSymbol() in O_group:
+				elif neighbour.GetTotalValence() == 2:
+					if neighbour.GetSymbol() in O_group:
 						charge[charge_idx] = charge[charge_idx] - 1
-					elif atom.GetSymbol() in F_group:
+					elif neighbour.GetSymbol() in F_group:
 						charge[charge_idx] = charge[charge_idx] - 0
-				elif atom.GetTotalValence() == 1:
-					if atom.GetSymbol() in F_group:
+				elif neighbour.GetTotalValence() == 1:
+					if neighbour.GetSymbol() in F_group:
 						charge[charge_idx] = charge[charge_idx] - 1
 	if len(neighbours) == 0:
 		#no update in charge as it is an organic molecule
