@@ -165,6 +165,7 @@ def rename_file_and_charge_change(read_lines,file,args,charge_com):
 	return rename_file_name
 
 def get_name_and_charge(name,charge_data):
+
 	name_list = name.split('_')
 
 	if 'rules' in name_list:
@@ -175,7 +176,6 @@ def get_name_and_charge(name,charge_data):
 		name_molecule = name[:-14]
 	elif 'rdkit' in name_list:
 		name_molecule = name[:-6]
-
 	for i in range(len(charge_data)):
 		if charge_data.loc[i,'Molecule'] == name_molecule:
 			charge_com = charge_data.loc[i,'Overall charge']
@@ -218,6 +218,7 @@ def write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args, log, 
 
 	# get the names of the SDF files to read from depending on the optimizer and their suffixes. Also, get molecular charge
 	name_molecule,charge_com = get_name_and_charge(name,charge_data)
+
 
 	input_route = input_route_line(args)
 

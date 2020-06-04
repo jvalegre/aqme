@@ -28,7 +28,7 @@ def calc_neighbours(molecule,args):
 	return number_of_neighbours,center_idx,neighbours
 
 #GET THE LINEAR GEOMETRY
-def two_embed(molecule,mol_1,number_of_neighbours,center_idx,neighbours_ret,name_input,args,log,mol_objects,name_return,coord_Map,alg_Map,mol_template):
+def two_embed(molecule,mol_1,number_of_neighbours,center_idx,neighbours_ret,name_input,args,log):
 	for atom in mol_1.GetAtoms():
 		if atom.GetIdx()  == 2:
 			atom.SetAtomicNum(53)
@@ -54,7 +54,7 @@ def two_embed(molecule,mol_1,number_of_neighbours,center_idx,neighbours_ret,name
 	return mol_objects, name_return, coord_Map, alg_Map, mol_template
 
 # GET THE TRIGONAL PLANAR GEOMETRY
-def three_embed(molecule,mol_1,number_of_neighbours,center_idx,neighbours_ret,name_input,args,log,mol_objects,name_return,coord_Map,alg_Map,mol_template):
+def three_embed(molecule,mol_1,number_of_neighbours,center_idx,neighbours_ret,name_input,args,log):
 	mol_objects,name_return,coord_Map,alg_Map,mol_template = [],[],[],[],[]
 	for atom in mol_1.GetAtoms():
 		if atom.GetIdx()  == 0:
@@ -243,16 +243,16 @@ def template_embed(molecule,temp,name_input,args,log):
 
 	for mol_1 in temp:
 		if number_of_neighbours == 2:
-			mol_objects, name_return, coord_Map, alg_Map, mol_template=two_embed(molecule,mol_1,number_of_neighbours,center_idx,neighbours_ret,name_input,args,log,mol_objects,name_return,coord_Map,alg_Map,mol_template)
+			mol_objects, name_return, coord_Map, alg_Map, mol_template=two_embed(molecule,mol_1,number_of_neighbours,center_idx,neighbours_ret,name_input,args,log)
 
 		elif number_of_neighbours == 3:
-			mol_objects, name_return, coord_Map, alg_Map, mol_template=three_embed(molecule,mol_1,number_of_neighbours,center_idx,neighbours_ret,name_input,args,log,mol_objects,name_return,coord_Map,alg_Map,mol_template)
+			mol_objects, name_return, coord_Map, alg_Map, mol_template=three_embed(molecule,mol_1,number_of_neighbours,center_idx,neighbours_ret,name_input,args,log)
 
 		elif number_of_neighbours == 4:
-			mol_objects, name_return, coord_Map, alg_Map, mol_template = four_embed(molecule,mol_1,number_of_neighbours,center_idx,neighbours_ret,name_input,args,log,mol_objects,name_return,coord_Map,alg_Map,mol_template)
+			mol_objects, name_return, coord_Map, alg_Map, mol_template = four_embed(molecule,mol_1,number_of_neighbours,center_idx,neighbours_ret,name_input,args,log)
 
 		elif number_of_neighbours == 5:
-			mol_objects, name_return, coord_Map, alg_Map, mol_template=five_embed(molecule,mol_1,number_of_neighbours,center_idx,neighbours_ret,name_input,args,log,mol_objects,name_return,coord_Map,alg_Map,mol_template)
+			mol_objects, name_return, coord_Map, alg_Map, mol_template=five_embed(molecule,mol_1,number_of_neighbours,center_idx,neighbours_ret,name_input,args,log)
 
 	return mol_objects, name_return, coord_Map, alg_Map, mol_template
 

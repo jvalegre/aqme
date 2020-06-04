@@ -391,17 +391,7 @@ def min_and_E_calc(mol,cids,args,log,coord_Map,alg_Map,mol_template):
 
 		# id template realign before doing calculations
 		else:
-			num_atom_match = mol.GetSubstructMatch(mol_template)
-			GetFF = Chem.UFFGetMoleculeForceField(mol,confId=conf)
-			for k, idxI in enumerate(num_atom_match):
-				for l in range(k + 1, len(num_atom_match)):
-					idxJ = num_atom_match[l]
-					d = coord_Map[idxI].Distance(coord_Map[idxJ])
-					GetFF.AddDistanceConstraint(idxI, idxJ, d, d, 10000)
-			GetFF.Initialize()
-			GetFF.Minimize(maxIts=args.opt_steps_RDKit)
-			# rotate the embedded conformation onto the core_mol:
-			rdMolAlign.AlignMol(mol, mol_template, prbCid=conf,refCid=-1,atomMap=alg_Map,reflect=True,maxIters=100)
+			mol,GetFF = realign_mol(mol,conf,coord_Map, alg_Map, mol_template,args,log)
 			cenergy.append(GetFF.CalcEnergy())
 		# outmols is gonna be a list containing "initial_confs" mol objects with "initial_confs" conformers. We do this to SetProp (Name and Energy) to the different conformers
 		# and log.write in the SDF file. At the end, since all the mol objects has the same conformers, but the energies are different, we can log.write conformers to SDF files
@@ -505,7 +495,22 @@ def rdkit_to_sdf(mol, name,args,log,dup_data,dup_data_idx, coord_Map, alg_Map, m
 
 	return status,rotmatches
 
-def dihedral_filter_and_sdf(name,args,log,dup_data,dup_data_idx):
+def realign_mol(mol,conf,coord_Map, alg_Map, mol_template,args,log):
+	num_atom_match = mol.GetSubstructMatch(mol_template)
+	GetFF = Chem.UFFGetMoleculeForceField(mol,confId=conf)
+	for k, idxI in enumerate(num_atom_match):
+		for l in range(k + 1, len(num_atom_match)):
+			idxJ = num_atom_match[l]
+			d = coord_Map[idxI].Distance(coord_Map[idxJ])
+			GetFF.AddDistanceConstraint(idxI, idxJ, d, d, 10000)
+	GetFF.Initialize()
+	GetFF.Minimize(maxIts=args.opt_steps_RDKit)
+	# rotate the embedded conformation onto the core_mol:
+	rdMolAlign.AlignMol(mol, mol_template, prbCid=conf,refCid=-1,atomMap=alg_Map,reflect=True,maxIters=100)
+	return mol,GetFF
+
+
+def dihedral_filter_and_sdf(name,args,log,dup_data,dup_data_idx,coord_Map, alg_Map, mol_template):
 	rotated_energy = []
 	rdmols = Chem.SDMolSupplier(name+'_'+'rdkit'+args.output, removeHs=False)
 	if rdmols is None:
@@ -529,9 +534,16 @@ def dihedral_filter_and_sdf(name,args,log,dup_data,dup_data_idx):
 	for i, cid in enumerate(selectedcids_rotated):
 		mol_rd = Chem.RWMol(rdmols[cid])
 		mol_rd.SetProp('_Name',rdmols[cid].GetProp('_Name')+' '+str(i))
-		if args.metal_complex:
-			set_metal_atomic_number(mol_rd,args)
-		sdwriter_rd.write(mol_rd)
+		if coord_Map == None and alg_Map==None and mol_template==None:
+			if args.metal_complex:
+				set_metal_atomic_number(mol_rd,args)
+			sdwriter_rd.write(mol_rd)
+		else:
+			mol_rd_realigned,GetFF = realign_mol(mol_rd,-1,coord_Map, alg_Map, mol_template,args,log)
+			if args.metal_complex:
+				set_metal_atomic_number(mol_rd_realigned,args)
+			sdwriter_rd.write(mol_rd_realigned)
+
 	sdwriter_rd.close()
 	status = 1
 
@@ -546,7 +558,7 @@ def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None, alg_
 	if status != -1:
 		# getting the energy and mols after rotations
 		if not args.nodihedrals and len(rotmatches) != 0:
-			status = dihedral_filter_and_sdf(name,args,log,dup_data,dup_data_idx)
+			status = dihedral_filter_and_sdf(name,args,log,dup_data,dup_data_idx,coord_Map, alg_Map, mol_template)
 
 		elif not args.nodihedrals and len(rotmatches) == 0:
 			status = 0
