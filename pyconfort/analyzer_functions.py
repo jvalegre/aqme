@@ -162,7 +162,7 @@ def get_termination_type(outlines,stop_term,TERMINATION,ERRORTYPE):
 			ERRORTYPE = ERRORTYPE
 	return TERMINATION,ERRORTYPE
 
-def get_geom_and_freq(outlines, args, TERMINATION, NATOMS, FREQS, NORMALMODE, IM_FREQS, READMASS, FORCECONST, nfreqs, freqs_so_far, rms, stop_rms, dist_rot_or, stand_or):
+def get_geom_and_freq_for_normal(outlines, args, TERMINATION, NATOMS, FREQS, NORMALMODE, IM_FREQS, READMASS, FORCECONST, nfreqs, freqs_so_far, rms, stop_rms, dist_rot_or, stand_or):
 	stop_get_details_stand_or, stop_get_details_dis_rot,finding_freq_line,stop_finding_freq_line = 0,0,0,0
 	# reverse loop to speed up the reading of the output files
 	for i in reversed(range(0,len(outlines))):
@@ -238,14 +238,14 @@ def get_coords_not_normal(outlines, stop_rms, stand_or, dist_rot_or, NATOMS, pos
 			stand_or = i
 			NATOMS = dist_rot_or-i-6
 			stop_get_details_stand_or += 1
-		# if stop_get_details_stand_or != 1 and (outlines[i].find("Distance matrix") > -1 or outlines[i].find("Rotational constants") >-1):
-		# 	if outlines[i-1].find("-------") > -1:
-		# 		dist_rot_or = i
-		# 		stop_get_details_dis_rot += 1
+		if stop_get_details_stand_or != 1 and (outlines[i].find("Distance matrix") > -1 or outlines[i].find("Rotational constants") >-1):
+			if outlines[i-1].find("-------") > -1:
+				dist_rot_or = i
+				stop_get_details_dis_rot += 1
 
 	ATOMTYPES, CARTESIANS = get_coords_normal(outlines, stand_or, NATOMS, possible_atoms, ATOMTYPES, CARTESIANS)
 
-	return ATOMTYPES, CARTESIANS
+	return ATOMTYPES, CARTESIANS, NATOMS
 
 def fix_imag_freqs(NATOMS, CARTESIANS, args, FREQS, NORMALMODE):
 	# Multiplies the imaginary normal mode vector by this amount (from -1 to 1).
@@ -273,7 +273,6 @@ def fix_imag_freqs(NATOMS, CARTESIANS, args, FREQS, NORMALMODE):
 	return CARTESIANS
 
 def create_folder_and_com(w_dir,log,NATOMS,ATOMTYPES,CARTESIANS,args,TERMINATION,IM_FREQS,w_dir_fin,file,lot,bs,bs_gcp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp,ERRORTYPE,input_route,w_dir_initial,name,CHARGE,MULT):
-
 	# creating new folder with new input gaussian files
 	new_gaussian_input_files = w_dir+'/new_gaussian_input_files/'
 
@@ -346,7 +345,7 @@ def output_analyzer(log_files, w_dir, lot, bs, bs_gcp, args, w_dir_fin, w_dir_in
 		TERMINATION,ERRORTYPE = get_termination_type(outlines,stop_term,TERMINATION,ERRORTYPE)
 
 		# get geometry parameters and frequency information
-		TERMINATION, NATOMS, FREQS, NORMALMODE, IM_FREQS, READMASS, FORCECONST, nfreqs, freqs_so_far, rms, stop_rms, dist_rot_or, stand_or = get_geom_and_freq(outlines, args, TERMINATION, NATOMS, FREQS, NORMALMODE, IM_FREQS, READMASS, FORCECONST, nfreqs, freqs_so_far, rms, stop_rms, dist_rot_or, stand_or)
+		TERMINATION, NATOMS, FREQS, NORMALMODE, IM_FREQS, READMASS, FORCECONST, nfreqs, freqs_so_far, rms, stop_rms, dist_rot_or, stand_or = get_geom_and_freq_for_normal(outlines, args, TERMINATION, NATOMS, FREQS, NORMALMODE, IM_FREQS, READMASS, FORCECONST, nfreqs, freqs_so_far, rms, stop_rms, dist_rot_or, stand_or)
 
 		# Get the coordinates for jobs that finished well with and without imag. freqs
 		if TERMINATION == "normal":
@@ -354,8 +353,7 @@ def output_analyzer(log_files, w_dir, lot, bs, bs_gcp, args, w_dir_fin, w_dir_in
 
 		# Get he coordinates for jobs that did not finished or finished with an error
 		if TERMINATION != "normal":
-			ATOMTYPES, CARTESIANS = get_coords_not_normal(outlines, stop_rms, stand_or, dist_rot_or, NATOMS, possible_atoms, ATOMTYPES, CARTESIANS)
-
+			ATOMTYPES, CARTESIANS,NATOMS = get_coords_not_normal(outlines, stop_rms, stand_or, dist_rot_or, NATOMS, possible_atoms, ATOMTYPES, CARTESIANS)
 		# This part fixes imaginary freqs (if any)
 		if IM_FREQS > 0:
 			CARTESIANS = fix_imag_freqs(NATOMS, CARTESIANS, args, FREQS, NORMALMODE)
