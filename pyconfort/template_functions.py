@@ -28,7 +28,7 @@ def calc_neighbours(molecule,args):
 	return number_of_neighbours,center_idx,neighbours
 
 #GET THE LINEAR GEOMETRY
-def two_embed(molecule,mol_1,number_of_neighbours,center_idx,neighbours_ret,name_input,args,log):
+def two_embed(molecule_embed,molecule,mol_1,number_of_neighbours,center_idx,neighbours_ret,name_input,args,log):
 	mol_objects,name_return,coord_Map,alg_Map,mol_template = [],[],[],[],[]
 	for atom in mol_1.GetAtoms():
 		if atom.GetIdx()  == 2:
@@ -39,7 +39,7 @@ def two_embed(molecule,mol_1,number_of_neighbours,center_idx,neighbours_ret,name
 			atom.SetAtomicNum(neighbours_ret[1].GetAtomicNum())
 
 	#assigning and embedding onto the core
-	molecule_new, coordMap, algMap,ci = template_embed_optimize(molecule,mol_1,args,log,mol_objects,name_return,coord_Map,alg_Map,mol_template)
+	molecule_new, coordMap, algMap,ci = template_embed_optimize(molecule_embed,molecule,mol_1,args,log,mol_objects,name_return,coord_Map,alg_Map,mol_template)
 
 	if ci>=0:
 		#writing to mol_object file
@@ -55,7 +55,7 @@ def two_embed(molecule,mol_1,number_of_neighbours,center_idx,neighbours_ret,name
 	return mol_objects, name_return, coord_Map, alg_Map, mol_template
 
 # GET THE TRIGONAL PLANAR GEOMETRY
-def three_embed(molecule,mol_1,number_of_neighbours,center_idx,neighbours_ret,name_input,args,log):
+def three_embed(molecule_embed,molecule,mol_1,number_of_neighbours,center_idx,neighbours_ret,name_input,args,log):
 	mol_objects,name_return,coord_Map,alg_Map,mol_template = [],[],[],[],[]
 	for atom in mol_1.GetAtoms():
 		if atom.GetIdx()  == 0:
@@ -68,7 +68,7 @@ def three_embed(molecule,mol_1,number_of_neighbours,center_idx,neighbours_ret,na
 			atom.SetAtomicNum(neighbours_ret[2].GetAtomicNum())
 
 	#assigning and embedding onto the core
-	molecule_new, coordMap, algMap,ci = template_embed_optimize(molecule,mol_1,args,log,mol_objects,name_return,coord_Map,alg_Map,mol_template)
+	molecule_new, coordMap, algMap,ci = template_embed_optimize(molecule_embed,molecule,mol_1,args,log,mol_objects,name_return,coord_Map,alg_Map,mol_template)
 	if ci>=0:
 		#writing to mol_object file
 		name_final = name_input
@@ -83,7 +83,7 @@ def three_embed(molecule,mol_1,number_of_neighbours,center_idx,neighbours_ret,na
 	return mol_objects, name_return, coord_Map, alg_Map, mol_template
 
 # GET THE SQUAREPLANAR GEOMETRY
-def four_embed(molecule,mol_1,number_of_neighbours,center_idx,neighbours_ret,name_input,args,log):
+def four_embed(molecule_embed,molecule,mol_1,number_of_neighbours,center_idx,neighbours_ret,name_input,args,log):
 	mol_objects,name_return,coord_Map,alg_Map,mol_template = [],[],[],[],[]
 	#three cases for square planar
 	for name in range(3):
@@ -119,7 +119,7 @@ def four_embed(molecule,mol_1,number_of_neighbours,center_idx,neighbours_ret,nam
 				atom.SetAtomicNum(neighbours[j[2]].GetAtomicNum())
 
 		#embedding of the molecule onto the core
-		molecule_new, coordMap, algMap,ci = template_embed_optimize(molecule,mol_1,args,log)
+		molecule_new, coordMap, algMap,ci = template_embed_optimize(molecule_embed,molecule,mol_1,args,log,mol_objects,name_return,coord_Map,alg_Map,mol_template)
 
 		if ci>=0:
 			check=filter_template_mol(molecule_new, mol_objects,args,log)
@@ -136,7 +136,7 @@ def four_embed(molecule,mol_1,number_of_neighbours,center_idx,neighbours_ret,nam
 	return mol_objects, name_return, coord_Map, alg_Map, mol_template
 
 # GET THE SQUAREPYRAMIDAL GEOMETRY
-def five_embed(molecule,mol_1,number_of_neighbours,center_idx,neighbours_ret,name_input,args,log):
+def five_embed(molecule_embed,molecule,mol_1,number_of_neighbours,center_idx,neighbours_ret,name_input,args,log):
 	mol_objects,name_return,coord_Map,alg_Map,mol_template = [],[],[],[],[]
 	#fifteen cases for square pyrimidal
 	counter = 0
@@ -220,7 +220,7 @@ def five_embed(molecule,mol_1,number_of_neighbours,center_idx,neighbours_ret,nam
 						atom.SetAtomicNum(neighbours[0].GetAtomicNum())
 
 			#assigning and embedding onto the core
-			molecule_new, coordMap, algMap,ci = template_embed_optimize(molecule,mol_1,args,log)
+			molecule_new, coordMap, algMap,ci = template_embed_optimize(molecule_embed,molecule,mol_1,args,log,mol_objects,name_return,coord_Map,alg_Map,mol_template)
 			if ci>=0:
 				check=filter_template_mol(molecule_new, mol_objects,args,log)
 				if check:
@@ -244,21 +244,21 @@ def template_embed(molecule,temp,name_input,args,log):
 
 	for mol_1 in temp:
 		if number_of_neighbours == 2:
-			mol_objects, name_return, coord_Map, alg_Map, mol_template=two_embed(molecule,mol_1,number_of_neighbours,center_idx,neighbours_ret,name_input,args,log)
+			mol_objects, name_return, coord_Map, alg_Map, mol_template=two_embed(molecule_embed,molecule,mol_1,number_of_neighbours,center_idx,neighbours_ret,name_input,args,log)
 
 		elif number_of_neighbours == 3:
-			mol_objects, name_return, coord_Map, alg_Map, mol_template=three_embed(molecule,mol_1,number_of_neighbours,center_idx,neighbours_ret,name_input,args,log)
+			mol_objects, name_return, coord_Map, alg_Map, mol_template=three_embed(molecule_embed,molecule,mol_1,number_of_neighbours,center_idx,neighbours_ret,name_input,args,log)
 
 		elif number_of_neighbours == 4:
-			mol_objects, name_return, coord_Map, alg_Map, mol_template = four_embed(molecule,mol_1,number_of_neighbours,center_idx,neighbours_ret,name_input,args,log)
+			mol_objects, name_return, coord_Map, alg_Map, mol_template = four_embed(molecule_embed,molecule,mol_1,number_of_neighbours,center_idx,neighbours_ret,name_input,args,log)
 
 		elif number_of_neighbours == 5:
-			mol_objects, name_return, coord_Map, alg_Map, mol_template=five_embed(molecule,mol_1,number_of_neighbours,center_idx,neighbours_ret,name_input,args,log)
+			mol_objects, name_return, coord_Map, alg_Map, mol_template=five_embed(molecule_embed,molecule,mol_1,number_of_neighbours,center_idx,neighbours_ret,name_input,args,log)
 
 	return mol_objects, name_return, coord_Map, alg_Map, mol_template
 
 # TEMPLATE EMBED OPTIMIZE
-def template_embed_optimize(molecule_embed,mol_1,args,log):
+def template_embed_optimize(molecule_embed,molecule,mol_1,args,log,mol_objects,name_return,coord_Map,alg_Map,mol_template):
 
 	#assigning and embedding onto the core
 	num_atom_match = molecule_embed.GetSubstructMatch(mol_1)

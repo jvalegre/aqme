@@ -228,7 +228,10 @@ def conformer_generation(mol,name,start_time,args,log,dup_data,dup_data_idx,coor
 					elif args.xtb:
 						min_suffix = 'xtb'
 					if gen != 0:
-						mult_min(name+'_'+'rdkit'+'_'+'rotated', args, min_suffix, log, dup_data, dup_data_idx)
+						if args.nodihedrals:
+							mult_min(name+'_'+'rdkit', args, min_suffix, log, dup_data, dup_data_idx)
+						else:
+							mult_min(name+'_'+'rdkit'+'_'+'rotated', args, min_suffix, log, dup_data, dup_data_idx)
 					else:
 						mult_min(name+'_'+'rdkit', args, min_suffix,log,dup_data,dup_data_idx)
 

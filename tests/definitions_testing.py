@@ -57,7 +57,7 @@ def remove_data(path, folder, smiles):
     for _,file in enumerate(all_data):
         if len(file.split('.')) == 1:
             shutil.rmtree(file, ignore_errors=True)
-        elif file != 'charged.csv':
+        elif file != 'charged.csv' or file != 'charged.sdf':
             if file.split('.')[1] in discard_ext:
                 os.remove(file)
 
@@ -234,7 +234,7 @@ def analysis(path, cmd_pyconfort, folder, file):
     # make sure the LOG files are in the right folders after analysis
     check_log_files(path, folder, file)
     # make sure the generated COM files have the right level of theory and geometries
-    os.chdir(path+'/'+folder+'/new_gaussian_input_files/wb97xd-def2svp')
+    os.chdir(path+'/'+folder+'/new_gaussian_input_files/')
     check_com_files(path, folder, file)
 
 def single_point(path, cmd_pyconfort, folder, file):
