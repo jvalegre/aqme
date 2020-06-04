@@ -29,6 +29,7 @@ def calc_neighbours(molecule,args):
 
 #GET THE LINEAR GEOMETRY
 def two_embed(molecule,mol_1,number_of_neighbours,center_idx,neighbours_ret,name_input,args,log):
+	mol_objects,name_return,coord_Map,alg_Map,mol_template = [],[],[],[],[]
 	for atom in mol_1.GetAtoms():
 		if atom.GetIdx()  == 2:
 			atom.SetAtomicNum(53)

@@ -180,7 +180,7 @@ def get_name_and_charge(name,charge_data):
 		if charge_data.loc[i,'Molecule'] == name_molecule:
 			charge_com = charge_data.loc[i,'Overall charge']
 
-	return name_molecule,charge_com
+	return charge_com
 
 def get_genecp(file,args):
 	genecp = 'None'
@@ -217,7 +217,7 @@ def get_genecp(file,args):
 def write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args, log, charge_data):
 
 	# get the names of the SDF files to read from depending on the optimizer and their suffixes. Also, get molecular charge
-	name_molecule,charge_com = get_name_and_charge(name,charge_data)
+	charge_com = get_name_and_charge(name,charge_data)
 
 
 	input_route = input_route_line(args)
