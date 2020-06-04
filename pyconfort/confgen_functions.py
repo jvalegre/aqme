@@ -534,7 +534,7 @@ def dihedral_filter_and_sdf(name,args,log,dup_data,dup_data_idx,coord_Map, alg_M
 	for i, cid in enumerate(selectedcids_rotated):
 		mol_rd = Chem.RWMol(rdmols[cid])
 		mol_rd.SetProp('_Name',rdmols[cid].GetProp('_Name')+' '+str(i))
-		if coord_Map == None and alg_Map==None and mol_template==None:
+		if coord_Map is None and alg_Map is None and mol_template is None:
 			if args.metal_complex:
 				set_metal_atomic_number(mol_rd,args)
 			sdwriter_rd.write(mol_rd)

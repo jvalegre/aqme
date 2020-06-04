@@ -131,7 +131,7 @@ def write_gauss_main(args,log):
 
 	#read in dup_data to get the overall charge of MOLECULES
 	charge_data = pd.read_csv(args.input.split('.')[0]+'-Duplicates Data.csv', usecols=['Molecule','Overall charge'])
-	
+
 	for lot in args.level_of_theory:
 		for bs in args.basis_set:
 			for bs_gcp in args.basis_set_genecp_atoms:
