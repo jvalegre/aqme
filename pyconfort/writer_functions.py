@@ -21,9 +21,7 @@ possible_atoms = possible_atoms()
 
 # CLASS FOR LOGGING
 class Logger:
-	"""
-	 Class Logger to write the output to a file
-	"""
+	# Class Logger to write the output to a file
 	def __init__(self, filein, append):
 		"""
 		Logger to write the output to a file
@@ -166,10 +164,7 @@ def rename_file_and_charge_change(read_lines,file,args,charge_com):
 	out.close()
 	return rename_file_name
 
-# MAIN FUNCTION TO CREATE GAUSSIAN JOBS
-def write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args,log,charge_data):
-
-	#find location of molecule and respective scharges
+def get_name_and_charge(name,charge_data):
 	name_list = name.split('_')
 
 	if 'rules' in name_list:
@@ -185,9 +180,9 @@ def write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args,log,ch
 		if charge_data.loc[i,'Molecule'] == name_molecule:
 			charge_com = charge_data.loc[i,'Overall charge']
 
-	input_route = input_route_line(args)
+	return name_molecule,charge_com
 
-	#defining genecp
+def get_genecp(file,args):
 	genecp = 'None'
 
 	try:
@@ -201,26 +196,41 @@ def write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args,log,ch
 				genecp = 'gen'
 				break
 	except OSError:
-		read_lines = open(file,"r").readlines()
-		for line,_ in enumerate(read_lines):
-			for atom in args.genecp_atoms:
-				if read_lines[line].find(atom)>-1:
-					genecp = 'genecp'
-					break
-			for atom in args.gen_atoms:
-				if read_lines[line].find(atom)>-1:
-					genecp = 'gen'
-					break
+		outfile = open(file,"r")
+		outlines = outfile.readlines()
+		for _,line in enumerate(outlines):
+			if args.genecp_atoms:
+				for atom in args.genecp_atoms:
+					if line.find(atom)>-1:
+						genecp = 'genecp'
+						break
+			elif args.gen_atoms:
+				for atom in args.gen_atoms:
+					if line.find(atom)>-1:
+						genecp = 'gen'
+						break
+		outfile.close()
 
+	return genecp
+
+# MAIN FUNCTION TO CREATE GAUSSIAN JOBS
+def write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args, log, charge_data):
+
+	# get the names of the SDF files to read from depending on the optimizer and their suffixes. Also, get molecular charge
+	name_molecule,charge_com = get_name_and_charge(name,charge_data)
+
+	input_route = input_route_line(args)
+
+	#defining genecp
+	genecp = get_genecp(file,args)
+
+	# defining path to place the new COM files
 	if args.single_point:
-		#pathto change to
 		path_write_gjf_files = 'generated_sp_files/' + str(lot) + '-' + str(bs)
-		#log.write(path_write_gjf_files)
-		os.chdir(path_write_gjf_files)
 	else:
-		#path to change to
 		path_write_gjf_files = 'generated_gaussian_files/' + str(lot) + '-' + str(bs)
-		os.chdir(path_write_gjf_files)
+
+	os.chdir(path_write_gjf_files)
 
 	path_for_file = '../../'
 
@@ -243,7 +253,7 @@ def write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args,log,ch
 			read_lines = open(file,"r").readlines()
 
 			fileout = open(file, "a")
-			# Detect if there are I atoms to use genecp or not (to use gen)
+			# Detect if there are atoms to use genecp or not (to use gen)
 			for i in range(4,len(read_lines)):
 				if read_lines[i].split(' ')[0] not in ecp_list and read_lines[i].split(' ')[0] in possible_atoms:
 					ecp_list.append(read_lines[i].split(' ')[0])
@@ -256,7 +266,7 @@ def write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args,log,ch
 			if ecp_genecp_atoms and ecp_gen_atoms:
 				sys.exit("ERROR: Can't use Gen and GenECP at the same time")
 
-			for i,element_ecp in enumerate(ecp_list):
+			for _,element_ecp in enumerate(ecp_list):
 				if element_ecp not in (args.genecp_atoms or args.gen_atoms):
 					fileout.write(element_ecp+' ')
 			fileout.write('0\n')
@@ -276,7 +286,7 @@ def write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args,log,ch
 							fileout.write(line)
 						fileout.write('\n\n')
 				else:
-					for i,element_ecp in enumerate(ecp_list):
+					for _,element_ecp in enumerate(ecp_list):
 						if element_ecp in args.genecp_atoms :
 							fileout.write(element_ecp+' ')
 						elif element_ecp in args.gen_atoms :
@@ -285,7 +295,7 @@ def write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args,log,ch
 					fileout.write(bs_gcp+'\n')
 					fileout.write('****\n\n')
 					if ecp_genecp_atoms:
-						for i,element_ecp in enumerate(ecp_list):
+						for _,element_ecp in enumerate(ecp_list):
 							if element_ecp in args.genecp_atoms:
 								fileout.write(element_ecp+' ')
 						fileout.write('0\n')

@@ -136,7 +136,7 @@ def mol_from_sdf(args):
 	return suppl, IDs, charges
 
 # returns the arguments to their original value after each calculation
-def clean_args(args,ori_ff,mol):
+def clean_args(args,ori_ff,mol,ori_charge):
 	for atom in mol.GetAtoms():
 		if atom.GetSymbol() in args.metal:
 			args.metal_complex= True

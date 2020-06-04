@@ -41,7 +41,7 @@ def compute_main(w_dir_initial,dup_data,args,log,start_time):
 			if not args.metal_complex:
 				args.charge_default = check_charge_smi(smi)
 			mol = Chem.MolFromSmiles(smi)
-			clean_args(args,ori_ff,mol)
+			clean_args(args,ori_ff,mol,ori_charge)
 			if not args.prefix:
 				name = ''.join(toks[1:])
 			else:
@@ -59,7 +59,7 @@ def compute_main(w_dir_initial,dup_data,args,log,start_time):
 			if not args.metal_complex:
 				args.charge_default = check_charge_smi(smi)
 			mol = Chem.MolFromSmiles(smi)
-			clean_args(args,ori_ff,mol)
+			clean_args(args,ori_ff,mol,ori_charge)
 			if not args.prefix:
 				name = csv_smiles.loc[i, 'code_name']
 			else:
@@ -79,7 +79,7 @@ def compute_main(w_dir_initial,dup_data,args,log,start_time):
 			if not args.metal_complex:
 				args.charge_default = check_charge_smi(smi)
 			mol = Chem.MolFromSmiles(smi)
-			clean_args(args,ori_ff,mol)
+			clean_args(args,ori_ff,mol,ori_charge)
 			name = 'comp' + str(i)+'_'
 			compute_confs(w_dir_initial,mol,name,args,log,dup_data,counter_for_template,i,start_time)
 
@@ -93,7 +93,7 @@ def compute_main(w_dir_initial,dup_data,args,log,start_time):
 		counter_for_template = 0
 		i=0
 		for mol in suppl:
-			clean_args(args,ori_ff,mol)
+			clean_args(args,ori_ff,mol,ori_charge)
 			compute_confs(w_dir_initial,mol,name,args,log,dup_data,counter_for_template,i,start_time)
 			i += 1
 
@@ -103,7 +103,7 @@ def compute_main(w_dir_initial,dup_data,args,log,start_time):
 		counter_for_template = 0
 		i=0
 		for mol,name,charge_sdf in zip(suppl,IDs,charges):
-			clean_args(args,ori_ff,mol)
+			clean_args(args,ori_ff,mol,ori_charge)
 			args.charge_default = charge_sdf
 			compute_confs(w_dir_initial,mol,name,args,log,dup_data,counter_for_template,i,start_time)
 			i += 1
@@ -159,7 +159,7 @@ def write_gauss_main(args,log):
 						energies = read_energies(file,log)
 						name = file.split('.')[0]
 
-						write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args,log,charge_data)
+						write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args, log, charge_data)
 
 # moving files after compute and/or write_gauss
 def move_sdf_main(args):
