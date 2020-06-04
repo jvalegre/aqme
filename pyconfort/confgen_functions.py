@@ -112,8 +112,8 @@ def substituted_mol(mol,args,log):
 def mol_from_sdf(args):
 	suppl = Chem.SDMolSupplier(args.input)
 	IDs,charges = [],[]
-	f = open(args.input,"r")
-	readlines = f.readlines()
+	readlines = open(args.input,"r").readlines()
+
 	for i, line in enumerate(readlines):
 		if line.find('>  <ID>') > -1:
 			ID = readlines[i+1].split()[0]
