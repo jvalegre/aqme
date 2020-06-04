@@ -39,7 +39,7 @@ def two_embed(molecule_embed,molecule,mol_1,number_of_neighbours,center_idx,neig
 			atom.SetAtomicNum(neighbours_ret[1].GetAtomicNum())
 
 	#assigning and embedding onto the core
-	molecule_new, coordMap, algMap,ci = template_embed_optimize(molecule_embed,molecule,mol_1,args,log,mol_objects,name_return,coord_Map,alg_Map,mol_template)
+	molecule_new, coordMap, algMap,ci = template_embed_optimize(molecule_embed,molecule,mol_1,args,log)
 
 	if ci>=0:
 		#writing to mol_object file
@@ -68,7 +68,7 @@ def three_embed(molecule_embed,molecule,mol_1,number_of_neighbours,center_idx,ne
 			atom.SetAtomicNum(neighbours_ret[2].GetAtomicNum())
 
 	#assigning and embedding onto the core
-	molecule_new, coordMap, algMap,ci = template_embed_optimize(molecule_embed,molecule,mol_1,args,log,mol_objects,name_return,coord_Map,alg_Map,mol_template)
+	molecule_new, coordMap, algMap,ci = template_embed_optimize(molecule_embed,molecule,mol_1,args,log)
 	if ci>=0:
 		#writing to mol_object file
 		name_final = name_input
@@ -119,7 +119,7 @@ def four_embed(molecule_embed,molecule,mol_1,number_of_neighbours,center_idx,nei
 				atom.SetAtomicNum(neighbours[j[2]].GetAtomicNum())
 
 		#embedding of the molecule onto the core
-		molecule_new, coordMap, algMap,ci = template_embed_optimize(molecule_embed,molecule,mol_1,args,log,mol_objects,name_return,coord_Map,alg_Map,mol_template)
+		molecule_new, coordMap, algMap,ci = template_embed_optimize(molecule_embed,molecule,mol_1,args,log)
 
 		if ci>=0:
 			check=filter_template_mol(molecule_new, mol_objects,args,log)
@@ -220,7 +220,7 @@ def five_embed(molecule_embed,molecule,mol_1,number_of_neighbours,center_idx,nei
 						atom.SetAtomicNum(neighbours[0].GetAtomicNum())
 
 			#assigning and embedding onto the core
-			molecule_new, coordMap, algMap,ci = template_embed_optimize(molecule_embed,molecule,mol_1,args,log,mol_objects,name_return,coord_Map,alg_Map,mol_template)
+			molecule_new, coordMap, algMap,ci = template_embed_optimize(molecule_embed,molecule,mol_1,args,log)
 			if ci>=0:
 				check=filter_template_mol(molecule_new, mol_objects,args,log)
 				if check:
@@ -258,7 +258,7 @@ def template_embed(molecule,temp,name_input,args,log):
 	return mol_objects, name_return, coord_Map, alg_Map, mol_template
 
 # TEMPLATE EMBED OPTIMIZE
-def template_embed_optimize(molecule_embed,molecule,mol_1,args,log,mol_objects,name_return,coord_Map,alg_Map,mol_template):
+def template_embed_optimize(molecule_embed,molecule,mol_1,args,log):
 
 	#assigning and embedding onto the core
 	num_atom_match = molecule_embed.GetSubstructMatch(mol_1)
