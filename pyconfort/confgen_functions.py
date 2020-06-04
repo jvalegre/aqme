@@ -539,7 +539,7 @@ def dihedral_filter_and_sdf(name,args,log,dup_data,dup_data_idx,coord_Map, alg_M
 				set_metal_atomic_number(mol_rd,args)
 			sdwriter_rd.write(mol_rd)
 		else:
-			mol_rd_realigned,GetFF = realign_mol(mol_rd,-1,coord_Map, alg_Map, mol_template,args,log)
+			mol_rd_realigned,_ = realign_mol(mol_rd,-1,coord_Map, alg_Map, mol_template,args,log)
 			if args.metal_complex:
 				set_metal_atomic_number(mol_rd_realigned,args)
 			sdwriter_rd.write(mol_rd_realigned)
