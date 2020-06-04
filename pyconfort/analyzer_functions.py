@@ -163,12 +163,16 @@ def get_termination_type(outlines,stop_term,TERMINATION,ERRORTYPE):
 	return TERMINATION,ERRORTYPE
 
 def get_geom_and_freq(outlines, args, TERMINATION, NATOMS, FREQS, NORMALMODE, IM_FREQS, READMASS, FORCECONST, nfreqs, freqs_so_far, rms, stop_rms, dist_rot_or, stand_or):
-	stop_get_details_stand_or, stop_get_details_dis_rot = 0,0
+	stop_get_details_stand_or, stop_get_details_dis_rot,finding_freq_line,stop_finding_freq_line = 0,0,0,0
 	# reverse loop to speed up the reading of the output files
 	for i in reversed(range(0,len(outlines))):
 		if TERMINATION == "normal":
-			if stop_get_details_stand_or == 1 and stop_get_details_dis_rot == 1:
-				break
+			if not args.frequencies:
+				if stop_get_details_stand_or == 1 and stop_get_details_dis_rot == 1:
+					break
+			else:
+				if stop_get_details_stand_or == 1 and stop_get_details_dis_rot == 1 and stop_finding_freq_line ==1 :
+					break
 			# Sets where the final coordinates are inside the file
 			if stop_get_details_dis_rot !=1 and (outlines[i].find("Distance matrix") > -1 or outlines[i].find("Rotational constants") >-1) :
 				if outlines[i-1].find("-------") > -1:
@@ -178,16 +182,19 @@ def get_geom_and_freq(outlines, args, TERMINATION, NATOMS, FREQS, NORMALMODE, IM
 				stand_or = i
 				NATOMS = dist_rot_or-i-6
 				stop_get_details_stand_or += 1
+			if args.frequencies:
+				if outlines[i].find(" Harmonic frequencies") > -1 and stop_finding_freq_line !=1 :
+					finding_freq_line = i
 
 	if args.frequencies:
-		for i,outline in enumerate(outlines):
+		for i in range(finding_freq_line,len(outlines)):
 			# Get the frequencies and identifies negative frequencies
-			if outline.find(" Frequencies -- ") > -1:
-				nfreqs = len(outline.split())
+			if outlines[i].find(" Frequencies -- ") > -1:
+				nfreqs = len(outlines[i].split())
 				for j in range(2, nfreqs):
-					FREQS.append(float(outline.split()[j]))
+					FREQS.append(float(outlines[i].split()[j]))
 					NORMALMODE.append([])
-					if float(outline.split()[j]) < 0.0:
+					if float(outlines[i].split()[j]) < 0.0:
 						IM_FREQS += 1
 				for j in range(3, nfreqs+1):
 					READMASS.append(float(outlines[i+1].split()[j]))
@@ -265,7 +272,8 @@ def fix_imag_freqs(NATOMS, CARTESIANS, args, FREQS, NORMALMODE):
 
 	return CARTESIANS
 
-def create_folder_and_com(w_dir,log,ATOMTYPES,args,TERMINATION,IM_FREQS,w_dir_fin,file,lot,bs,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp,ERRORTYPE,input_route,w_dir_initial):
+def create_folder_and_com(w_dir,log,NATOMS,ATOMTYPES,CARTESIANS,args,TERMINATION,IM_FREQS,w_dir_fin,file,lot,bs,bs_gcp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp,ERRORTYPE,input_route,w_dir_initial,name,CHARGE,MULT):
+
 	# creating new folder with new input gaussian files
 	new_gaussian_input_files = w_dir+'/new_gaussian_input_files/'
 
@@ -332,7 +340,7 @@ def output_analyzer(log_files, w_dir, lot, bs, bs_gcp, args, w_dir_fin, w_dir_in
 		rms,stop_rms,stand_or,NATOMS,IM_FREQS,freqs_so_far,stop_name,stop_term,nfreqs,ATOMTYPES,CARTESIANS,FREQS,READMASS,FORCECONST,NORMALMODE,TERMINATION,ERRORTYPE,dist_rot_or = get_initial_variables()
 
 		# get name, charge and multiplicity
-		name, CHARGE, MULT = get_name_charge_multiplicity(outlines)
+		name, CHARGE, MULT = get_name_charge_multiplicity(outlines,stop_name)
 
 		# get termination type
 		TERMINATION,ERRORTYPE = get_termination_type(outlines,stop_term,TERMINATION,ERRORTYPE)
@@ -363,7 +371,7 @@ def output_analyzer(log_files, w_dir, lot, bs, bs_gcp, args, w_dir_fin, w_dir_in
 
 		# create folders and set level of theory in COM files to fix imaginary freqs or not normal terminations
 		if IM_FREQS > 0 or TERMINATION != "normal" and not os.path.exists(w_dir+'/failed_error/atomic_basis_error/'+file):
-			create_folder_and_com(w_dir,log,ATOMTYPES,args,TERMINATION,IM_FREQS,w_dir_fin,file,lot,bs,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp,ERRORTYPE,input_route,w_dir_initial)
+			create_folder_and_com(w_dir,log,NATOMS,ATOMTYPES,CARTESIANS,args,TERMINATION,IM_FREQS,w_dir_fin,file,lot,bs,bs_gcp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp,ERRORTYPE,input_route,w_dir_initial,name,CHARGE, MULT)
 
 		# adding in the NMR componenet only to the finished files after reading from normally finished log files
 		if args.sp and TERMINATION == "normal" and IM_FREQS == 0:
