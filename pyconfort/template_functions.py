@@ -244,16 +244,16 @@ def template_embed(molecule,temp,name_input,args,log):
 
 	for mol_1 in temp:
 		if number_of_neighbours == 2:
-			mol_objects, name_return, coord_Map, alg_Map, mol_template=two_embed(molecule_embed,molecule,mol_1,number_of_neighbours,center_idx,neighbours_ret,name_input,args,log)
+			mol_objects, name_return, coord_Map, alg_Map, mol_template=two_embed(molecule,molecule,mol_1,number_of_neighbours,center_idx,neighbours_ret,name_input,args,log)
 
 		elif number_of_neighbours == 3:
-			mol_objects, name_return, coord_Map, alg_Map, mol_template=three_embed(molecule_embed,molecule,mol_1,number_of_neighbours,center_idx,neighbours_ret,name_input,args,log)
+			mol_objects, name_return, coord_Map, alg_Map, mol_template=three_embed(molecule,molecule,mol_1,number_of_neighbours,center_idx,neighbours_ret,name_input,args,log)
 
 		elif number_of_neighbours == 4:
-			mol_objects, name_return, coord_Map, alg_Map, mol_template = four_embed(molecule_embed,molecule,mol_1,number_of_neighbours,center_idx,neighbours_ret,name_input,args,log)
+			mol_objects, name_return, coord_Map, alg_Map, mol_template = four_embed(molecule,molecule,mol_1,number_of_neighbours,center_idx,neighbours_ret,name_input,args,log)
 
 		elif number_of_neighbours == 5:
-			mol_objects, name_return, coord_Map, alg_Map, mol_template=five_embed(molecule_embed,molecule,mol_1,number_of_neighbours,center_idx,neighbours_ret,name_input,args,log)
+			mol_objects, name_return, coord_Map, alg_Map, mol_template=five_embed(molecule,molecule,mol_1,number_of_neighbours,center_idx,neighbours_ret,name_input,args,log)
 
 	return mol_objects, name_return, coord_Map, alg_Map, mol_template
 
