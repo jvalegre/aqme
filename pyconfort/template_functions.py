@@ -275,7 +275,7 @@ def template_embed_optimize(molecule_embed,molecule,mol_1,args,log):
 	# This part selects which atoms from molecule are the atoms of the core
 	try:
 		coreConf = mol_1.GetConformer(coreConfId)
-	except BaseException:
+	except:
 		pass
 	for k, idxI in enumerate(num_atom_match):
 		core_mol_1 = coreConf.GetAtomPosition(k)

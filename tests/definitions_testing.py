@@ -16,7 +16,7 @@ def calc_energy(file):
     f = open(file,"r")
     readlines = f.readlines()
     for i,line in enumerate(readlines):
-        if readlines[i].find('>  <Energy>') > -1:
+        if line.find('>  <Energy>') > -1:
             energy.append(float(readlines[i+1].split()[0]))
     f.close()
 
@@ -61,7 +61,7 @@ def remove_data(path, folder, smiles):
             if file.split('.')[1] in discard_ext:
                 os.remove(file)
 
-def rdkit_tests(df_output,dihedral,xTB_ANI1):
+def rdkit_tests(df_output,dihedral,xTB_ANI1,cmd_pyconfort):
     if not dihedral:
         if not xTB_ANI1:
             test_init_rdkit_confs = df_output['RDKIT-Initial-samples']
@@ -79,10 +79,14 @@ def rdkit_tests(df_output,dihedral,xTB_ANI1):
             test_filter_rdkit_confs = df_output['AN1ccx-RMSD-and-energy-duplicates']
             test_unique_confs = 'nan'
     else:
-        test_init_rdkit_confs = df_output['RDKIT-Rotated-conformers']
+        if cmd_pyconfort[4] == 'params_Cu_test2.yaml':
+            test_unique_confs = df_output['RDKIT-Rotated-conformers']
+            test_init_rdkit_confs = df_output['RDKIT-Initial-samples']
+        else:
+            test_init_rdkit_confs = df_output['RDKIT-Rotated-conformers']
+            test_unique_confs = df_output['RDKIT-Rotated-Unique-conformers']
         test_prefilter_rdkit_confs = 'nan'
         test_filter_rdkit_confs = 'nan'
-        test_unique_confs = df_output['RDKIT-Rotated-Unique-conformers']
 
     return test_init_rdkit_confs, test_prefilter_rdkit_confs, test_filter_rdkit_confs, test_unique_confs
 
@@ -95,7 +99,7 @@ def conf_gen(path, precision, cmd_pyconfort, folder, smiles, E_confs, dihedral, 
     df_output = pd.read_csv(smiles.split('.')[0]+'-Duplicates Data.csv')
 
     # tests for RDKit
-    test_init_rdkit_confs, test_prefilter_rdkit_confs, test_filter_rdkit_confs, test_unique_confs = rdkit_tests(df_output,dihedral,xTB_ANI1)
+    test_init_rdkit_confs, test_prefilter_rdkit_confs, test_filter_rdkit_confs, test_unique_confs = rdkit_tests(df_output,dihedral,xTB_ANI1,cmd_pyconfort)
 
     # file_smi is a variable used for finding SDF and COM files
     if folder == 'Multiple':
@@ -120,7 +124,7 @@ def conf_gen(path, precision, cmd_pyconfort, folder, smiles, E_confs, dihedral, 
                     else:
                         test_rdkit_E_confs = calc_energy(file_smi+'_0_rdkit_rotated.sdf')
                 else:
-                    if not dihedral:
+                    if not dihedral or cmd_pyconfort[4] == 'params_Cu_test2.yaml':
                         test_rdkit_E_confs = calc_energy(file_smi+'_rdkit.sdf')
                     else:
                         test_rdkit_E_confs = calc_energy(file_smi+'_rdkit_rotated.sdf')
@@ -194,8 +198,7 @@ def check_log_files(path, folder, file):
 
 def check_com_files(path, folder, file):
     if file == 'Basis_set_error1.LOG' or file == 'Basis_set_error2.LOG':
-        os.chdir(path+'/'+folder+'/new_gaussian_input_files/wb97xd-def2svp')
-        assert file not in glob.glob('*.*')
+        assert file.split('.')[0]+'.com' not in glob.glob('*.*')
     elif file == 'MeOH_Error_termination.LOG':
         coordinates = 'H  -1.14928800  -0.80105100  -0.00024300'
         coordinates_error_found = find_coordinates(file,coordinates)

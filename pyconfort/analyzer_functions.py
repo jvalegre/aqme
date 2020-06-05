@@ -148,7 +148,6 @@ def get_termination_type(outlines,stop_term,TERMINATION,ERRORTYPE):
 		# Determine the kind of job termination
 		if outlines[i].find("Normal termination") > -1:
 			TERMINATION = "normal"
-			ERRORTYPE = ERRORTYPE
 			stop_term += 1
 		elif outlines[i].find("Error termination") > -1:
 			TERMINATION = "error"
@@ -157,9 +156,6 @@ def get_termination_type(outlines,stop_term,TERMINATION,ERRORTYPE):
 			if outlines[i-3].find("SCF Error SCF Error SCF Error SCF Error SCF Error SCF Error SCF Error SCF Error") > -1:
 				ERRORTYPE = "SCFerror"
 			stop_term += 1
-		else:
-			TERMINATION = TERMINATION
-			ERRORTYPE = ERRORTYPE
 	return TERMINATION,ERRORTYPE
 
 def get_geom_and_freq_for_normal(outlines, args, TERMINATION, NATOMS, FREQS, NORMALMODE, IM_FREQS, READMASS, FORCECONST, nfreqs, freqs_so_far, rms, stop_rms, dist_rot_or, stand_or):
