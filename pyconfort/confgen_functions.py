@@ -202,14 +202,16 @@ def compute_confs(w_dir_initial,mol, name,args,log,dup_data,counter_for_template
 				for j,_ in enumerate(mol_objects_from_template):
 					mol_objects.append([mol_objects_from_template[j],name_mol[j],coord_Map[j],alg_Map[j],mol_template[j]])
 				for [mol_object, name_mol, coord_Map, alg_Map, mol_template] in mol_objects:
-					conformer_generation(mol_object,name_mol,start_time,args,log,dup_data,counter_for_template,coord_Map,alg_Map,mol_template)
+					status = conformer_generation(mol_object,name_mol,start_time,args,log,dup_data,counter_for_template,coord_Map,alg_Map,mol_template)
 					counter_for_template += 1
 			else:
 				log.write("x  Cannot use templates for complexes involving more than 1 metal or for organic molecueles.")
 		else:
-			conformer_generation(mol,name,start_time,args,log,dup_data,i)
+			status = conformer_generation(mol,name,start_time,args,log,dup_data,i)
 	else:
-		conformer_generation(mol,name,start_time,args,log,dup_data,i)
+		 status = conformer_generation(mol,name,start_time,args,log,dup_data,i)
+
+	return status
 
 # FUCNTION WORKING WITH MOL OBJECT TO CREATE CONFORMERS
 def conformer_generation(mol,name,start_time,args,log,dup_data,dup_data_idx,coord_Map=None,alg_Map=None,mol_template=None):
@@ -217,28 +219,31 @@ def conformer_generation(mol,name,start_time,args,log,dup_data,dup_data_idx,coor
 	if valid_structure:
 		if args.verbose:
 			log.write("\n   ----- {} -----".format(name))
-
 		try:
 			# the conformational search for RDKit
-			gen = summ_search(mol, name,args,log,dup_data,dup_data_idx,coord_Map,alg_Map,mol_template)
+			status = summ_search(mol, name,args,log,dup_data,dup_data_idx,coord_Map,alg_Map,mol_template)
 			if args.ANI1ccx or args.xtb:
-				if gen != -1:
+				if status != -1:
 					if args.ANI1ccx:
 						min_suffix = 'ani'
 					elif args.xtb:
 						min_suffix = 'xtb'
-					if gen != 0:
+					if status != 0:
 						if args.nodihedrals:
 							mult_min(name+'_'+'rdkit', args, min_suffix, log, dup_data, dup_data_idx)
 						else:
 							mult_min(name+'_'+'rdkit'+'_'+'rotated', args, min_suffix, log, dup_data, dup_data_idx)
 					else:
-						mult_min(name+'_'+'rdkit', args, min_suffix,log,dup_data,dup_data_idx)
+						log.write('\nx  No rotatable dihedral found. Run again with nodihedral set to TRUE')
+			else:
+				if status == 0:
+					log.write('\nx  No rotatable dihedral found. Run again with nodihedral set to TRUE')
+
 
 		except (KeyboardInterrupt, SystemExit):
 			raise
 	else:
-		log.write("ERROR: The structure is not valid")
+		log.write("\nx  ERROR: The structure is not valid")
 
 	# removing temporary files
 	temp_files = ['gfn2.out', 'xTB_opt.traj', 'ANI1_opt.traj', 'wbo', 'xtbrestart']
@@ -249,6 +254,8 @@ def conformer_generation(mol,name,start_time,args,log,dup_data,dup_data_idx,coor
 	if args.time:
 		log.write("\n Execution time: %s seconds" % (round(time.time() - start_time,2)))
 		dup_data.at[dup_data_idx, 'time (seconds)'] = round(time.time() - start_time,2)
+
+	return status
 
 # DETECTS INITIAL NUMBER OF SAMPLES AUTOMATICALLY
 def auto_sampling(mult_factor,mol,args,log):
@@ -476,6 +483,8 @@ def rdkit_to_sdf(mol, name,args,log,dup_data,dup_data_idx, coord_Map, alg_Map, m
 	if len(rotmatches) > args.max_torsions:
 		log.write("x  Too many torsions (%d). Skipping %s" %(len(rotmatches),(name+args.output)))
 		status = -1
+	elif not args.nodihedrals and len(rotmatches) == 0:
+		status = 0
 	else:
 		dup_data.at[dup_data_idx, 'RDKIT-Initial-samples'] = initial_confs
 		if args.nodihedrals:
@@ -558,13 +567,11 @@ def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None, alg_
 	status,rotmatches = rdkit_to_sdf(mol, name,args,log,dup_data,dup_data_idx, coord_Map, alg_Map, mol_template)
 
 	# reads the initial SDF files from RDKit and uses dihedral scan if selected
-	if status != -1:
+	if status != -1 or status != 0:
 		# getting the energy and mols after rotations
 		if not args.nodihedrals and len(rotmatches) != 0:
 			status = dihedral_filter_and_sdf(name,args,log,dup_data,dup_data_idx,coord_Map, alg_Map, mol_template)
 
-		elif not args.nodihedrals and len(rotmatches) == 0:
-			status = 0
 
 	return status
 

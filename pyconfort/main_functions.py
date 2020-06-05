@@ -129,36 +129,40 @@ def write_gauss_main(args,log):
 	sp_dir = 'generated_sp_files'
 	g_dir = 'generated_gaussian_files'
 
-	#read in dup_data to get the overall charge of MOLECULES
-	charge_data = pd.read_csv(args.input.split('.')[0]+'-Duplicates Data.csv', usecols=['Molecule','Overall charge'])
-	for lot in args.level_of_theory:
-		for bs in args.basis_set:
-			for bs_gcp in args.basis_set_genecp_atoms:
-				# only create this directory if single point calculation is requested
-				if args.single_point:
-					folder = sp_dir + '/' + str(lot) + '-' + str(bs)
-					log.write("\no  PREPARING SINGLE POINT INPUTS in {}".format(folder))
-				else:
-					folder = g_dir + '/' + str(lot) + '-' + str(bs)
-					log.write("\no  Preparing Gaussian COM files in {}".format(folder))
-				try:
-					os.makedirs(folder)
-				except OSError:
-					if os.path.isdir(folder):
-						pass
+	if len(conf_files) != 0:
+		#read in dup_data to get the overall charge of MOLECULES
+		charge_data = pd.read_csv(args.input.split('.')[0]+'-Duplicates Data.csv', usecols=['Molecule','Overall charge'])
+		for lot in args.level_of_theory:
+			for bs in args.basis_set:
+				for bs_gcp in args.basis_set_genecp_atoms:
+					# only create this directory if single point calculation is requested
+					if args.single_point:
+						folder = sp_dir + '/' + str(lot) + '-' + str(bs)
+						log.write("\no  PREPARING SINGLE POINT INPUTS in {}".format(folder))
 					else:
-						raise
+						folder = g_dir + '/' + str(lot) + '-' + str(bs)
+						log.write("\no  Preparing Gaussian COM files in {}".format(folder))
+					try:
+						os.makedirs(folder)
+					except OSError:
+						if os.path.isdir(folder):
+							pass
+						else:
+							raise
 
-				# writing the com files
-				# check conf_file exists, parse energies and then write DFT input
-				for file in conf_files:
-					if os.path.exists(file):
-						if args.verbose:
-							log.write("   -> Converting from {}".format(file))
-						energies = read_energies(file,log)
-						name = file.split('.')[0]
+					# writing the com files
+					# check conf_file exists, parse energies and then write DFT input
+					for file in conf_files:
+						if os.path.exists(file):
+							if args.verbose:
+								log.write("   -> Converting from {}".format(file))
+							energies = read_energies(file,log)
+							name = file.split('.')[0]
 
-						write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args, log, charge_data)
+							write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args, log, charge_data)
+	else:
+		log.write('\nx  No SDF files detected to convert to gaussian COM files')
+
 
 # moving files after compute and/or write_gauss
 def move_sdf_main(args):
