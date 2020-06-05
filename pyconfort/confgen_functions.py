@@ -156,7 +156,7 @@ def check_charge_smi(smi):
 			count_plus = count_plus + 1
 		if i == '-':
 			count_minus = count_minus + 1
-	charge = count_plus + count_minus
+	charge = count_plus - count_minus
 	return charge
 
 def check_for_pieces(smi):
@@ -439,6 +439,7 @@ def min_after_embed(mol,cids,name,initial_confs,rotmatches,dup_data,dup_data_idx
 	# writing charges after RDKIT
 	if os.path.splitext(args.input)[1] == '.cdx' or os.path.splitext(args.input)[1] == '.smi' or os.path.splitext(args.input)[1] == '.csv':
 		args.charge = rules_get_charge(mol,args,log)
+		print('write'+str(args.charge))
 		dup_data.at[dup_data_idx, 'Overall charge'] = np.sum(args.charge)
 	else:
 		dup_data.at[dup_data_idx, 'Overall charge'] = args.charge_default

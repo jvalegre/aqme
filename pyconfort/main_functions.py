@@ -38,10 +38,10 @@ def compute_main(w_dir_initial,dup_data,args,log,start_time):
 			#editing part
 			smi = toks[0]
 			smi = check_for_pieces(smi)
-			if not args.metal_complex:
-				args.charge_default = check_charge_smi(smi)
 			mol = Chem.MolFromSmiles(smi)
 			clean_args(args,ori_ff,mol,ori_charge)
+			if not args.metal_complex:
+				args.charge_default = check_charge_smi(smi)
 			if not args.prefix:
 				name = ''.join(toks[1:])
 			else:
@@ -56,10 +56,10 @@ def compute_main(w_dir_initial,dup_data,args,log,start_time):
 			#assigning names and smi i  each loop
 			smi = csv_smiles.loc[i, 'SMILES']
 			smi = check_for_pieces(smi)
-			if not args.metal_complex:
-				args.charge_default = check_charge_smi(smi)
 			mol = Chem.MolFromSmiles(smi)
 			clean_args(args,ori_ff,mol,ori_charge)
+			if not args.metal_complex:
+				args.charge_default = check_charge_smi(smi)
 			if not args.prefix:
 				name = csv_smiles.loc[i, 'code_name']
 			else:
@@ -76,17 +76,17 @@ def compute_main(w_dir_initial,dup_data,args,log,start_time):
 		counter_for_template = 0
 		for i, smi in enumerate(smifile):
 			smi = check_for_pieces(smi)
-			if not args.metal_complex:
-				args.charge_default = check_charge_smi(smi)
 			mol = Chem.MolFromSmiles(smi)
 			clean_args(args,ori_ff,mol,ori_charge)
+			if not args.metal_complex:
+				args.charge_default = check_charge_smi(smi)
 			name = 'comp' + str(i)+'_'
 			compute_confs(w_dir_initial,mol,name,args,log,dup_data,counter_for_template,i,start_time)
 
 	# COM file
 	elif os.path.splitext(args.input)[1] == '.gjf' or os.path.splitext(args.input)[1] == '.com':
 		#converting to sdf from comfile to preserve geometry
-		args.charge_default = com_2_xyz_2_sdf(args)
+		charge_com = com_2_xyz_2_sdf(args)
 		sdffile = os.path.splitext(args.input)[0]+'.sdf'
 		suppl = Chem.SDMolSupplier(sdffile)
 		name = os.path.splitext(args.input)[0]
@@ -94,6 +94,7 @@ def compute_main(w_dir_initial,dup_data,args,log,start_time):
 		i=0
 		for mol in suppl:
 			clean_args(args,ori_ff,mol,ori_charge)
+			args.charge_default = charge_com
 			compute_confs(w_dir_initial,mol,name,args,log,dup_data,counter_for_template,i,start_time)
 			i += 1
 
