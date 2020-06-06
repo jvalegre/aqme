@@ -559,6 +559,9 @@ def dihedral_filter_and_sdf(name,args,log,dup_data,dup_data_idx,coord_Map, alg_M
 	sdwriter_rd.close()
 	status = 1
 
+	#removes the rdkit file
+	os.remove(name+'_'+'rdkit'+args.output)
+
 	return status
 
 # EMBEDS, OPTIMIZES AND FILTERS RDKIT CONFORMERS
