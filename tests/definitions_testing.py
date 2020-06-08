@@ -47,17 +47,18 @@ def calc_genecp(file, atom):
     return count,NBO,pop,opt,charge_com,multiplicity_com
 
 def remove_data(path, folder, smiles):
-    # remove all the data created by the job
+    # remove all the data created by the job except those files included in exceptions
     if not smiles:
         os.chdir(path+'/'+folder)
     else:
         os.chdir(path+'/'+folder+'/'+smiles.split('.')[0])
     all_data = glob.glob('*')
     discard_ext = ['sdf','csv','dat']
+    exceptions = ['charged.csv','charged.sdf','pentane_n_lowest.sdf']
     for _,file in enumerate(all_data):
         if len(file.split('.')) == 1:
             shutil.rmtree(file, ignore_errors=True)
-        elif file != 'charged.csv' or file != 'charged.sdf':
+        elif file not in exceptions:
             if file.split('.')[1] in discard_ext:
                 os.remove(file)
 
@@ -281,6 +282,117 @@ def conf_gen_exp_rules(path, folder, precision, cmd_exp_rules, smiles, E_confs_n
     test_com_files = len(glob.glob(smiles+'*'))
     _,_,_,_,test_charge,_ = calc_genecp(file_exp_rules, ['Ir'])
 
-    remove_data(path, folder, smiles=False)
+    if smiles == 'Ir_6':
+        remove_data(path, folder, smiles=False)
 
     return round_E_confs_no_rules,round_E_confs_rules,test_round_E_confs_no_rules,test_round_E_confs_rules,test_charge,test_com_files
+
+def misc_sdf_test(path_misc, smiles):
+    # run the code and get to the folder where the SDF files are created
+    os.chdir(path_misc+'/'+'Misc/rdkit_generated_sdf_files')
+
+    # find how many SDF files were generated
+    test_goal = len(glob.glob(smiles.split('.')[0]+'*_rdkit.sdf'))
+    test_goal_2 = len(glob.glob(smiles.split('.')[0]+'*_rdkit_rotated.sdf'))
+
+    remove_data(path_misc, 'Misc', smiles=False)
+
+    return test_goal, test_goal_2
+
+def misc_com_test(path_misc, smiles):
+    # get the amount of COM files created
+    os.chdir(path_misc+'/'+'Misc/generated_gaussian_files/wb97xd-def2svp')
+    test_goal = len(glob.glob(smiles.split('.')[0]+'*.com'))
+
+    remove_data(path_misc, 'Misc', smiles=False)
+
+    return test_goal
+
+def misc_genecp_test(path_misc, smiles):
+    os.chdir(path_misc+'/'+'Misc/generated_gaussian_files/wb97xd-def2svp')
+    com_gen_files = glob.glob(smiles.split('.')[0]+'*.com')
+    # I take just the first COM file (the others should be the same)
+    file_gen = com_gen_files[0]
+
+    # this function will find the lines from the manually inputed genecp
+    gen_input = '      0.0745000              1.0000000'
+    ecp_input = 'C-ECP     4     78'
+    gen_found = find_coordinates(file_gen,gen_input)
+    ecp_found = find_coordinates(file_gen,ecp_input)
+
+    remove_data(path_misc, 'Misc', smiles=False)
+
+    return gen_found,ecp_found
+
+def misc_freq_test(path_misc, smiles):
+    os.chdir(path_misc+'/'+'Misc/generated_gaussian_files/wb97xd-def2svp')
+    com_freq_files = glob.glob(smiles.split('.')[0]+'*.com')
+    # I take just the first COM file (the others should be the same)
+    file_freq = com_freq_files[0]
+
+    freq_input = 'freq'
+    max_input = 'opt=(maxcycles=250)'
+    chk_input = '%chk=pentane_conformer'
+    mem_input = '%mem=20GB'
+    nprocs_input = '%nprocshared=24'
+    solvent_input = 'scrf=(SMD,solvent=hexane)'
+    dispersion_input = 'empiricaldispersion=GD3'
+
+    freq_found = find_coordinates(file_freq,freq_input)
+    max_found = find_coordinates(file_freq,max_input)
+    chk_found = find_coordinates(file_freq,chk_input)
+    mem_found = find_coordinates(file_freq,mem_input)
+    nprocs_found = find_coordinates(file_freq,nprocs_input)
+    solvent_found = find_coordinates(file_freq,solvent_input)
+    dispersion_found = find_coordinates(file_freq,dispersion_input)
+
+    remove_data(path_misc, 'Misc', smiles=False)
+
+    return freq_found,max_found,chk_found,mem_found,nprocs_found,solvent_found,dispersion_found
+
+def misc_lot_test(path_misc, smiles):
+    lots = ['wb97xd-def2svp', 'b3lyp-6-31G','m062x-def2tzvp']
+    genecp_lots = ['LANL2DZ','midix','LANL2TZ']
+    for i,lot in enumerate(lots):
+        try:
+            os.chdir(path_misc+'/'+'Misc/generated_gaussian_files/'+lot)
+            com_lot_files = glob.glob(smiles.split('.')[0]+'*.com')
+            if len(com_lot_files) > 0:
+                # I take just the first COM file (the others should be the same)
+                file_lot = com_lot_files[0]
+                files_found = 1
+            else:
+                # a two here means that the folder are created with no files inside
+                files_found = 2
+
+        except FileNotFoundError:
+            files_found = 0
+        if files_found == 1:
+            gen_lot_found = find_coordinates(file_lot,genecp_lots[i])
+        else:
+            # a two here means that the problem comes from the previous part
+            gen_lot_found = 2
+
+    remove_data(path_misc, 'Misc', smiles=False)
+
+    return files_found,gen_lot_found
+
+def misc_nocom_test(path_misc, smiles):
+    # finds the folder where COM files are generated normally
+    try:
+        os.chdir(path_misc+'/'+'Misc/generated_gaussian_files/wb97xd-def2svp')
+        test_goal = 1
+    except:
+        test_goal = 0
+        # run the code and get to the folder where the SDF files are created
+        os.chdir(path_misc+'/'+'Misc/rdkit_generated_sdf_files')
+
+    # find if the code generates SDF files
+    if len(glob.glob(smiles.split('.')[0]+'*_rdkit.sdf')) > 0:
+        test_goal_2 = 1
+    else:
+        test_goal_2 = 0
+
+    remove_data(path_misc, 'Misc', smiles=False)
+
+    return test_goal,test_goal_2
