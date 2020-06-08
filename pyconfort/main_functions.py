@@ -10,7 +10,7 @@ import os
 import pandas as pd
 import subprocess
 from rdkit.Chem import AllChem as Chem
-from pyconfort.confgen_functions import check_for_pieces, check_charge_smi, clean_args, compute_confs, com_2_xyz_2_sdf, mol_from_sdf
+from pyconfort.confgen_functions import check_for_pieces, check_charge_smi, clean_args, compute_confs, com_2_xyz_2_sdf, mol_from_sdf_or_mol_or_mol2
 from pyconfort.writer_functions import read_energies, write_gaussian_input_file, moving_sdf_files
 from pyconfort.filter_functions import exp_rules_output
 from pyconfort.analyzer_functions import output_analyzer, check_for_final_folder, dup_calculation, boltz_calculation, combine_files
@@ -20,8 +20,12 @@ def compute_main(w_dir_initial,dup_data,args,log,start_time):
 	# input file format specified
 	file_format = os.path.splitext(args.input)[1]
 
-	if file_format not in ['.smi', '.sdf', '.cdx', '.csv','.com','.gjf']:
+	if file_format not in ['.smi', '.sdf', '.cdx', '.csv','.com','.gjf','.mol','.mol2','.xyz']:
 		log.write("\nx  INPUT FILETYPE NOT CURRENTLY SUPPORTED!")
+		sys.exit()
+
+	if not os.path.exists(args.input):
+		log.write("\nx  INPUT FILE NOT FOUND!")
 		sys.exit()
 
 	# sets up the chosen force field (this fixes some problems in case MMFF is replaced by UFF)
@@ -33,6 +37,7 @@ def compute_main(w_dir_initial,dup_data,args,log,start_time):
 		smifile = open(args.input)
 		#used only for template
 		counter_for_template = 0
+
 		for i, line in enumerate(smifile):
 			toks = line.split()
 			#editing part
@@ -83,8 +88,10 @@ def compute_main(w_dir_initial,dup_data,args,log,start_time):
 			name = 'comp' + str(i)+'_'
 			compute_confs(w_dir_initial,mol,name,args,log,dup_data,counter_for_template,i,start_time)
 
+		os.remove('cdx.smi')
+
 	# COM file
-	elif os.path.splitext(args.input)[1] == '.gjf' or os.path.splitext(args.input)[1] == '.com':
+	elif os.path.splitext(args.input)[1] == '.gjf' or os.path.splitext(args.input)[1] == '.com' or  os.path.splitext(args.input)[1] == '.xyz' :
 		#converting to sdf from comfile to preserve geometry
 		charge_com = com_2_xyz_2_sdf(args)
 		sdffile = os.path.splitext(args.input)[0]+'.sdf'
@@ -98,18 +105,28 @@ def compute_main(w_dir_initial,dup_data,args,log,start_time):
 			compute_confs(w_dir_initial,mol,name,args,log,dup_data,counter_for_template,i,start_time)
 			i += 1
 
-	# COM file
-	elif os.path.splitext(args.input)[1] == '.sdf':
-		suppl, IDs, charges = mol_from_sdf(args)
+	# SDF file
+	elif os.path.splitext(args.input)[1] == '.sdf' or os.path.splitext(args.input)[1] == '.mol' or os.path.splitext(args.input)[1] == '.mol2':
+		suppl, IDs, charges = mol_from_sdf_or_mol_or_mol2(args)
 		counter_for_template = 0
 		i=0
-		for mol,name,charge_sdf in zip(suppl,IDs,charges):
-			clean_args(args,ori_ff,mol,ori_charge)
-			args.charge_default = charge_sdf
+		if os.path.splitext(args.input)[1] == '.sdf':
+			for mol,name,charge_sdf in zip(suppl,IDs,charges):
+				clean_args(args,ori_ff,mol,ori_charge)
+				args.charge_default = charge_sdf
+				compute_confs(w_dir_initial,mol,name,args,log,dup_data,counter_for_template,i,start_time)
+				i += 1
+		elif os.path.splitext(args.input)[1] == '.mol' or os.path.splitext(args.input)[1] == '.mol2':
+			args.charge_default = charges[0]
+			name = IDs[0]
+			mol = suppl
+			print('mol is {0}'.format(mol))
 			compute_confs(w_dir_initial,mol,name,args,log,dup_data,counter_for_template,i,start_time)
 			i += 1
 
 	dup_data.to_csv(args.input.split('.')[0]+'-Duplicates Data.csv',index=False)
+
+
 
 def write_gauss_main(args,log):
 	if args.exp_rules:
@@ -163,7 +180,6 @@ def write_gauss_main(args,log):
 							write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args, log, charge_data)
 	else:
 		log.write('\nx  No SDF files detected to convert to gaussian COM files')
-
 
 # moving files after compute and/or write_gauss
 def move_sdf_main(args):

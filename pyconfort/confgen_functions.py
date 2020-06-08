@@ -12,7 +12,7 @@ import subprocess
 import time
 import numpy as np
 from rdkit.Chem import AllChem as Chem
-from rdkit.Chem import rdMolTransforms, PropertyMol, rdDistGeom, rdMolAlign, Lipinski
+from rdkit.Chem import rdMolTransforms, PropertyMol, rdDistGeom, rdMolAlign, Lipinski, rdmolfiles
 from rdkit.Geometry import Point3D
 from progress.bar import IncrementalBar
 import pyconfort
@@ -55,33 +55,38 @@ possible_atoms = possible_atoms()
 
 #com to xyz to sdf for obabel
 def com_2_xyz_2_sdf(args):
-	comfile = open(args.input,"r")
-	comlines = comfile.readlines()
 
-	emptylines=[]
+	if os.path.splitext(args.input)[1] =='.com' or os.path.splitext(args.input)[1] =='.gjf' :
 
-	for i, line in enumerate(comlines):
-		if len(line.strip()) == 0:
-			emptylines.append(i)
+		comfile = open(args.input,"r")
+		comlines = comfile.readlines()
 
-	#assigning the charges
-	charge_com = comlines[(emptylines[1]+1)].split(' ')[0]
+		emptylines=[]
 
-	xyzfile = open(os.path.splitext(args.input)[0]+'.xyz',"w")
-	xyzfile.write(str(emptylines[2]- (emptylines[1]+2)))
-	xyzfile.write('\n')
-	xyzfile.write(os.path.splitext(args.input)[0])
-	xyzfile.write('\n')
-	for i in range((emptylines[1]+2), emptylines[2]):
-		xyzfile.write(comlines[i])
+		for i, line in enumerate(comlines):
+			if len(line.strip()) == 0:
+				emptylines.append(i)
 
-	xyzfile.close()
-	comfile.close()
+		#assigning the charges
+		charge_com = comlines[(emptylines[1]+1)].split(' ')[0]
+
+		xyzfile = open(os.path.splitext(args.input)[0]+'.xyz',"w")
+		xyzfile.write(str(emptylines[2]- (emptylines[1]+2)))
+		xyzfile.write('\n')
+		xyzfile.write(os.path.splitext(args.input)[0])
+		xyzfile.write('\n')
+		for i in range((emptylines[1]+2), emptylines[2]):
+			xyzfile.write(comlines[i])
+
+		xyzfile.close()
+		comfile.close()
 
 	cmd_obabel = ['obabel', '-ixyz', os.path.splitext(args.input)[0]+'.xyz', '-osdf', '-O', os.path.splitext(args.input)[0]+'.sdf','--gen3D']
 	subprocess.run(cmd_obabel)
-
-	return charge_com
+	if os.path.splitext(args.input)[1] =='.com' or os.path.splitext(args.input)[1] =='.gjf':
+		return charge_com
+	else:
+		return args.charge_default
 
 # SUBSTITUTION WITH I
 def substituted_mol(mol,args,log):
@@ -109,8 +114,14 @@ def substituted_mol(mol,args,log):
 	return mol,args.metal_idx,args.complex_coord,args.metal_sym
 
 #mol from sdf
-def mol_from_sdf(args):
-	suppl = Chem.SDMolSupplier(args.input)
+def mol_from_sdf_or_mol_or_mol2(args):
+	if os.path.splitext(args.input)[1] =='.sdf':
+		suppl = Chem.SDMolSupplier(args.input)
+	elif os.path.splitext(args.input)[1] =='.mol':
+		suppl = Chem.MolFromMolFile(args.input)
+	elif os.path.splitext(args.input)[1] =='.mol2':
+		suppl = Chem.MolFromMol2File(args.input)
+
 	IDs,charges = [],[]
 	readlines = open(args.input,"r").readlines()
 
@@ -128,10 +139,16 @@ def mol_from_sdf(args):
 					charge += int(charge_line[j])
 			charges.append(charge)
 	if IDs == []:
-		for i,_ in enumerate(suppl):
-			IDs.append(os.path.splitext(args.input)[0]+'_'+str(i))
+		if os.path.splitext(args.input)[1] =='.sdf':
+			for i,_ in enumerate(suppl):
+				IDs.append(os.path.splitext(args.input)[0]+'_'+str(i))
+		else:
+			IDs.append(os.path.splitext(args.input)[0])
 	if charges == []:
-		for i,_ in enumerate(suppl):
+		if os.path.splitext(args.input)[1] =='.sdf':
+			for i,_ in enumerate(suppl):
+				charges.append(0)
+		else:
 			charges.append(0)
 	return suppl, IDs, charges
 
