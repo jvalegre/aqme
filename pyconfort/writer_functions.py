@@ -102,7 +102,11 @@ def header_com(name,lot,bs,bs_gcp, args, log, input_route, genecp):
 
 	return header
 
-def convert_sdf_to_com(path_for_file,file,com,com_low,energies,header,args):
+def convert_sdf_to_com(path_for_file,file,com,com_low,energies,header,args,log):
+
+	if args.lowest_only and args.lowest_n:
+		log.write('x  Both lowest \'n\' and lowest are turned on. Writing lowest \'n\'')
+		args.lowest_only = False
 
 	if args.lowest_only:
 		command_lowest = ['obabel', '-isdf', path_for_file+file, '-ocom', '-O'+com_low,'-l' , '1', '-xk', '\n'.join(header)]
@@ -119,6 +123,7 @@ def convert_sdf_to_com(path_for_file,file,com,com_low,energies,header,args):
 			subprocess.call(command_n)
 			command_n_2 =  ['obabel', '-isdf', 'temp.sdf', '-ocom', '-O'+com,'-m', '-xk', '\n'.join(header)]
 			subprocess.call(command_n_2)
+			os.remove('temp.sdf')
 		else:
 			command_n_3 = ['obabel', '-isdf', path_for_file+file, '-ocom', '-O'+com,'-m', '-xk', '\n'.join(header)]
 			subprocess.call(command_n_3)
@@ -142,7 +147,7 @@ def input_route_line(args):
 		input_route += ' scrf=({0},solvent={1})'.format(args.solvent_model,args.solvent_name)
 	return input_route
 
-def rename_file_and_charge_change(read_lines,file,args,charge_com):
+def rename_file_and_charge_chk_change(read_lines,file,args,charge_com):
 	#changing the name of the files to the way they are in xTB Sdfs
 	#getting the title line
 	for i,line in enumerate(read_lines):
@@ -154,8 +159,12 @@ def rename_file_and_charge_change(read_lines,file,args,charge_com):
 
 	rename_file_name = rename_file_name.strip()+'.com'
 
+
 	#change charge and multiplicity for all molecules
 	for i,_ in enumerate(read_lines):
+		if args.chk:
+			if read_lines[i].find('%chk') > -1:
+				read_lines[i] = '%chk='+rename_file_name.split('.com')[0]+'.chk\n'
 		if len(read_lines[i].strip()) == 0:
 			read_lines[i+3] = str(charge_com)+' '+ str(args.complex_spin)+'\n'
 			break
@@ -240,7 +249,7 @@ def write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args, log, 
 
 	header = header_com(name,lot, bs, bs_gcp,args,log, input_route, genecp)
 
-	convert_sdf_to_com(path_for_file,file,com,com_low,energies,header,args)
+	convert_sdf_to_com(path_for_file,file,com,com_low,energies,header,args,log)
 
 	com_files = glob.glob('{0}_*.com'.format(name))
 
@@ -249,7 +258,7 @@ def write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args, log, 
 			ecp_list,ecp_genecp_atoms,ecp_gen_atoms = [],False,False
 			read_lines = open(file,"r").readlines()
 
-			rename_file_name = rename_file_and_charge_change(read_lines,file,args,charge_com)
+			rename_file_name = rename_file_and_charge_chk_change(read_lines,file,args,charge_com)
 
 			read_lines = open(file,"r").readlines()
 
@@ -306,7 +315,7 @@ def write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args, log, 
 		else:
 			read_lines = open(file,"r").readlines()
 
-			rename_file_name = rename_file_and_charge_change(read_lines,file,args,charge_com)
+			rename_file_name = rename_file_and_charge_chk_change(read_lines,file,args,charge_com)
 
 		#change file by moving to new file
 		os.rename(file,rename_file_name)
