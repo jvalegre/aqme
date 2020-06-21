@@ -345,8 +345,15 @@ def minimize_rdkit_energy(mol,conf,args,log):
 	else:
 		log.write(' Force field {} not supported!'.format(args.ff))
 		sys.exit()
-	GetFF.Initialize()
-	GetFF.Minimize(maxIts=args.opt_steps_RDKit)
+	try:
+		GetFF.Initialize()
+		GetFF.Minimize(maxIts=args.opt_steps_RDKit)
+	except:
+		#if not MMFF use UFF
+		args.ff == "UFF"
+		GetFF = Chem.UFFGetMoleculeForceField(mol,confId=conf)
+		GetFF.Initialize()
+		GetFF.Minimize(maxIts=args.opt_steps_RDKit)
 	return GetFF
 
 def atom_groups():
