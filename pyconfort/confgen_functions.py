@@ -600,18 +600,20 @@ def ani_calc(elements,cartesians,coordinates,args,log):
 	species = model.species_to_tensor(elements).to(device).unsqueeze(0)
 	_, ani_energy = model((species, coordinates))
 
+
 	ase_molecule = ase.Atoms(elements, positions=coordinates.tolist()[0], calculator=model.ase())
+
 	### make a function for constraints and optimization
-	if args.constraints is not None:
+	if args.constraints:
 		fb = ase.constraints.FixBondLength(0, 1)
-		ase_molecule.set_distance(0,1,2.0)
 		ase_molecule.set_constraint(fb)
 
-	optimizer = ase.optimize.BFGS(ase_molecule, trajectory='ANI1_opt.traj')
+	optimizer = ase.optimize.BFGS(ase_molecule, trajectory='ANI1_opt.traj', logfile='ase.opt' )
 	optimizer.run(fmax=args.opt_fmax, steps=args.opt_steps)
 	if len(ase.io.Trajectory('ANI1_opt.traj', mode='r')) != (args.opt_steps+1):
 		species_coords = ase_molecule.get_positions().tolist()
 		coordinates = torch.tensor([species_coords], requires_grad=True, device=device)
+
 	# Now let's compute energy:
 	_, ani_energy = model((species, coordinates))
 	sqm_energy = ani_energy.item() * hartree_to_kcal # Hartree to kcal/mol

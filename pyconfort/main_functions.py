@@ -146,7 +146,10 @@ def write_gauss_main(args,log):
 	# names for directories created
 	sp_dir = 'generated_sp_files'
 	g_dir = 'generated_gaussian_files'
-
+	#fixing genecp to LAL2DZ if empty
+	if len(args.basis_set_genecp_atoms) == 0:
+		args.basis_set_genecp_atoms = ['LANL2DZ']
+		
 	if len(conf_files) != 0:
 		#read in dup_data to get the overall charge of MOLECULES
 		charge_data = pd.read_csv(args.input.split('.')[0]+'-Duplicates Data.csv', usecols=['Molecule','Overall charge'])
