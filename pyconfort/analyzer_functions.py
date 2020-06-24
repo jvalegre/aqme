@@ -410,6 +410,11 @@ def output_analyzer(log_files, w_dir, lot, bs, bs_gcp, args, w_dir_fin, w_dir_in
 									keywords_opt = lot_sp+'/'+ bs_sp+' '+ args.input_for_sp
 								else:
 									keywords_opt = lot_sp+'/'+ bs_sp+' '+ args.input_for_sp + ' scrf=({0},solvent={1}) '.format(args.solvent_model_sp,args.solvent_name_sp)
+						if args.sp:
+							if args.spin_sp is not None:
+								CHARGE = args.spin_sp
+							if args.mult_sp is not None:
+								MULT = args.mult_sp
 						new_com_file(w_dir,w_dir_initial,file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,TERMINATION,IM_FREQS,bs_sp,lot_sp,bs_gcp_sp)
 
 # CHECKS THE FOLDER OF FINAL LOG FILES
