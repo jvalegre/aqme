@@ -55,7 +55,6 @@ def parser_args():
 	parser.add_argument("--opt_steps_RDKit", action="store",default=1000, help="max cycles used in RDKit optimizations", type=int)
 	parser.add_argument("--time","-t",action='store_true',default=False,help="request program runtime")
 	parser.add_argument("--heavyonly", help="only consider torsion angles involving heavy (non H) elements (default=True)", default=True, metavar="heavyonly")
-	parser.add_argument("--constraints", action="store_true",default=None, help="distance constraint")
 	parser.add_argument("--nodihedrals", action="store_true", default=False, help="turn off dihedral scan")
 	parser.add_argument("-d","--degree", type=float,help="Amount, in degrees, to enumerate torsions by (default 30.0)",default=30.0)
 	parser.add_argument("--max_torsions",type=int,help="Skip any molecules with more than this many torsions (default 5)",default=5)

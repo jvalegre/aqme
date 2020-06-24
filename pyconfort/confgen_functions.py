@@ -610,11 +610,6 @@ def ani_calc(elements,cartesians,coordinates,args,log):
 
 	ase_molecule = ase.Atoms(elements, positions=coordinates.tolist()[0], calculator=model.ase())
 
-	### make a function for constraints and optimization
-	if args.constraints:
-		fb = ase.constraints.FixBondLength(0, 1)
-		ase_molecule.set_constraint(fb)
-
 	optimizer = ase.optimize.BFGS(ase_molecule, trajectory='ANI1_opt.traj', logfile='ase.opt' )
 	optimizer.run(fmax=args.opt_fmax, steps=args.opt_steps)
 	if len(ase.io.Trajectory('ANI1_opt.traj', mode='r')) != (args.opt_steps+1):
