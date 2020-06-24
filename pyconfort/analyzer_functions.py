@@ -414,7 +414,7 @@ def output_analyzer(log_files, w_dir, lot, bs, bs_gcp, args, w_dir_fin, w_dir_in
 								else:
 									keywords_opt = lot_sp+'/'+ bs_sp+' '+ args.input_for_sp + ' scrf=({0},solvent={1}) '.format(args.solvent_model_sp,args.solvent_name_sp)
 						if args.sp:
-							if args.spin_sp is not None:
+							if args.charge_sp is not None:
 								CHARGE = args.charge_sp
 							if args.mult_sp is not None:
 								MULT = args.mult_sp
