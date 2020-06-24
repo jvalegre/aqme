@@ -198,7 +198,7 @@ def move_sdf_main(args):
 		destination_ani = src +'/ani1ccx_minimised_generated_sdf_files'
 		for file in all_ani_conf_files:
 			moving_sdf_files(destination_ani,src,file)
-	else:
+	if args.compute or args.write_gauss:
 		all_name_conf_files = glob.glob('*_rdkit*.sdf')
 		destination_rdkit = 'rdkit_generated_sdf_files'
 		for file in all_name_conf_files:

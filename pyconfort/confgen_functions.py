@@ -263,7 +263,7 @@ def conformer_generation(mol,name,start_time,args,log,dup_data,dup_data_idx,coor
 		log.write("\nx  ERROR: The structure is not valid")
 
 	# removing temporary files
-	temp_files = ['gfn2.out', 'xTB_opt.traj', 'ANI1_opt.traj', 'wbo', 'xtbrestart']
+	temp_files = ['gfn2.out', 'xTB_opt.traj', 'ANI1_opt.traj', 'wbo', 'xtbrestart','ase.opt']
 	for file in temp_files:
 		if os.path.exists(file):
 			os.remove(file)
