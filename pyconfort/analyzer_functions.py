@@ -202,9 +202,12 @@ def get_geom_and_freq_for_normal(outlines, args, TERMINATION, NATOMS, FREQS, NOR
 				freqs_so_far = freqs_so_far + nfreqs - 2
 			if TERMINATION != "normal":
 				if outlines[i].find('Cartesian Forces:  Max') > -1:
-					if float(outlines[i].split()[5]) < rms:
-						rms = float(outlines[i].split()[5])
-						stop_rms = i
+					try:
+						if float(outlines[i].split()[5]) < rms:
+							rms = float(outlines[i].split()[5])
+							stop_rms = i
+					except ValueError:
+						rms = 10000
 	return TERMINATION, NATOMS, FREQS, NORMALMODE, IM_FREQS, READMASS, FORCECONST, nfreqs, freqs_so_far, rms, stop_rms, dist_rot_or, stand_or
 
 def get_coords_normal(outlines, stand_or, NATOMS, possible_atoms, ATOMTYPES, CARTESIANS):
