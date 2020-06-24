@@ -73,6 +73,7 @@ def parser_args():
 	parser.add_argument("-l", "--level_of_theory",help="Level of Theory", default=['wB97xd'], dest="level_of_theory", type=str, nargs='*')
 	parser.add_argument("--basis_set",  help="Basis Set", default=['6-31g*'], dest="basis_set", type=str, nargs='*')
 	parser.add_argument("--basis_set_genecp_atoms",default=['LANL2DZ'], help="Basis Set genecp/gen: Can specify only one as basis_set", dest="basis_set_genecp_atoms", type=str, nargs='?')
+	parser.add_argument("--input_for_gauss",  help="Input line for DFT optimization ", default=None, dest="input_for_gauss", type=str)
 	parser.add_argument("--genecp_atoms",  help="genecp atoms",default=[], dest="genecp_atoms",type=str, nargs='*')
 	parser.add_argument("--gen_atoms",  help="gen atoms",default=[], dest="gen_atoms",type=str, nargs='*')
 	parser.add_argument("--max_cycle_opt", help="Number of cycles for DFT optimization", default="300", type=int, dest="max_cycle_opt")
@@ -101,7 +102,7 @@ def parser_args():
 	parser.add_argument("--charge_sp", help="The charge for single point calculation", default=None, type=int, metavar="charge_sp")
 	parser.add_argument("--mult_sp", help="The multiplicity for single point calculation", default=None, type=int, metavar="mult_sp")
 	parser.add_argument("--suffix_sp", help="The suffix for single point calculation", default=None, type=str, metavar="suffix_sp")
-	
+
 	# submission of Gaussion files
 	parser.add_argument("--qsub", action="store_true", default=False, help="Submit Gaussian files")
 	parser.add_argument("--submission_command",  help="Queueing system that the submission is done on", default="qsub_summit", metavar="submission_command", type=str)
