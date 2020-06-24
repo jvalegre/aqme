@@ -92,7 +92,13 @@ def write_genecp(fileout,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,bs_com,l
 
 # CREATION OF COM FILES
 def new_com_file(w_dir,w_dir_initial,file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,TERMINATION,IM_FREQS,bs_com,lot_com,bs_gcp_com):
-	fileout = open(file.split(".")[0]+'.com', "w")
+	if args.sp:
+		if args.suffix_sp is None:
+			fileout = open(file.split(".")[0]+'-'+lot_com+'-'+bs_com+'.com', "w")
+		else:
+			fileout = open(file.split(".")[0]+'-'+args.suffix_sp+'-'+lot_com+'-'+bs_com+'.com', "w")
+	else:
+		fileout = open(file.split(".")[0]+'.com', "w")
 
 	write_header_and_coords(fileout,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS)
 

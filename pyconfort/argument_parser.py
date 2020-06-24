@@ -100,6 +100,8 @@ def parser_args():
 	parser.add_argument("--last_line_for_sp",  help="Last input line for Single point after DFT optimization ", default="", dest="last_line_for_sp", type=str)
 	parser.add_argument("--charge_sp", help="The charge for single point calculation", default=None, type=int, metavar="charge_sp")
 	parser.add_argument("--mult_sp", help="The multiplicity for single point calculation", default=None, type=int, metavar="mult_sp")
+	parser.add_argument("--suffix_sp", help="The suffix for single point calculation", default=None, type=str, metavar="suffix_sp")
+	
 	# submission of Gaussion files
 	parser.add_argument("--qsub", action="store_true", default=False, help="Submit Gaussian files")
 	parser.add_argument("--submission_command",  help="Queueing system that the submission is done on", default="qsub_summit", metavar="submission_command", type=str)
