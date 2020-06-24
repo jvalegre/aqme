@@ -437,30 +437,31 @@ def check_for_final_folder(w_dir,log):
 			dir_found =True
 	return w_dir
 
-# CALCULATION OF BOLTZMANN FACTORS
-def boltz_calculation(val,i,log):
-	# GoodVibes must be installed as a module (through pip or conda)
-	cmd_boltz = ['python','-m', 'goodvibes', '--csv', '--boltz', '--output', str(i), val]
-	subprocess.call(cmd_boltz)
-
 # CHECKING FOR DUPLICATES
-def dup_calculation(val,w_dir, agrs,log):
+def dup_calculation(val,w_dir, args,log):
+
 	# GoodVibes must be installed as a module (through pip or conda)
-	cmd_dup = ['python', '-m', 'goodvibes', '--dup', val, '>', 'duplicate_files_checked.txt']
+	cmd_dup = ['python', '-m', 'goodvibes', '--dup']
+	for file in val:
+		cmd_dup.append(file)
 	subprocess.call(cmd_dup)
 
 	#reading the txt files to get the DUPLICATES
 	dup_file_list = []
-	dupfile = open('duplicate_files_checked.txt',"r")
-	duplines = dupfile.readlines()
+	duplines = open('Goodvibes_output.dat',"r").readlines()
 
 	for i,_ in enumerate(duplines):
 		if duplines[i].find('duplicate') > -1:
-			dup_file_list.append(duplines[i].split(' ')[1])
+			dup_file_list.append(duplines[i].split(' ')[2])
 
 	#move the files to specific directory
-	destination = w_dir+'Duplicates/'
+	destination = w_dir+'/Duplicates/'
 	for source in dup_file_list:
+		#finding the extension
+		for file in val:
+			if file.split('.')[0] == source:
+				ext=file.split('.')[1]
+		source=source+'.'+ext
 		try:
 			os.makedirs(destination)
 			shutil.move(source, destination)
@@ -469,62 +470,3 @@ def dup_calculation(val,w_dir, agrs,log):
 				shutil.move(source, destination)
 			else:
 				raise
-
-# COMBINING FILES FOR DIFFERENT MOLECULES
-def combine_files(csv_files, lot, bs, args,log):
-	columns = ['Structure', 'E', 'ZPE', 'H', 'T.S', 'T.qh-S', 'G(T)', 'qh-G(T)']
-	#final dataframe with only the boltzmann averaged values
-	final_file_avg_thermo_data = pd.DataFrame(columns=columns)
-	compare_G = pd.DataFrame(columns=['Structure_of_min_conf','min_qh-G(T)','boltz_avg_qh-G(T)'])
-
-	files = []
-	#combine all the csv_files
-
-	for f in csv_files:
-
-		log.write(f)
-
-		df = pd.read_csv(f, skiprows = 16)
-		# df['Structure']= df['Structure'].astype(str)
-		df = df.rename(columns={"   Structure": "Structure"})
-
-		#dropping the ************* line
-		df = df.drop(df.index[0])
-		df.iloc[-1] = np.nan
-
-		for col in columns:
-			if col == 'Structure':
-				#identifyin the minmum energy if the conformers
-				min_G = df['qh-G(T)'].min()
-				#getting the name of the structure of the min G
-				idx_name_of_min_conf = df['qh-G(T)'].idxmin() - 1
-				name_of_min_conf = df.iloc[idx_name_of_min_conf]['Structure']
-
-			elif col != 'Structure':
-				boltz_avg = np.sum(df[col] * df['Boltz'])
-				df.at[df.index[-1], col] = boltz_avg
-				if col == 'qh-G(T)':
-					compare_G = compare_G.append({'Structure_of_min_conf': name_of_min_conf,'min_qh-G(T)': min_G,'boltz_avg_qh-G(T)': boltz_avg}, ignore_index=True)
-
-		final_file_avg_thermo_data = final_file_avg_thermo_data.append({'Structure':name_of_min_conf , 'E': df.iloc[-1]['E'] , 'ZPE': df.iloc[-1]['ZPE'], 'H':df.iloc[-1]['H'] , 'T.S':df.iloc[-1]['T.S'] , 'T.qh-S':df.iloc[-1]['T.qh-S'] , 'G(T)': df.iloc[-1]['G(T)'], 'qh-G(T)':df.iloc[-1]['qh-G(T)'] },ignore_index=True)
-
-		files.append(df)
-
-	final_file_all_data = pd.concat(files, axis=0, ignore_index=True)
-
-	#combined_csv = pd.concat([pd.read_csv(f, skiprows = 14, skipfooter = 1) for f in csv_files ])
-	#change directory to write all files in one place
-	destination = args.path+'All csv files/'+ str(lot)+ '-'+ str(bs)
-	try:
-		os.makedirs(destination)
-	except OSError:
-		if  os.path.isdir(destination):
-			pass
-		else:
-			raise
-	os.chdir(destination)
-
-	#export to csv
-	final_file_all_data.to_csv( str(lot) + '-' + str(bs) + '_all_molecules_all data.csv', index=False, encoding='utf-8-sig')
-	final_file_avg_thermo_data.to_csv( str(lot) + '-' + str(bs) + '_all_molecules_avg_thermo_data.csv', index=False, encoding='utf-8-sig')
-	compare_G.to_csv( str(lot) + '-' + str(bs) + '_all_molecules_compare_G(T).csv', index=False, encoding='utf-8-sig')

@@ -13,7 +13,7 @@ from rdkit.Chem import AllChem as Chem
 from pyconfort.confgen_functions import check_for_pieces, check_charge_smi, clean_args, compute_confs, com_2_xyz_2_sdf, mol_from_sdf_or_mol_or_mol2
 from pyconfort.writer_functions import read_energies, write_gaussian_input_file, moving_sdf_files
 from pyconfort.filter_functions import exp_rules_output
-from pyconfort.analyzer_functions import output_analyzer, check_for_final_folder, dup_calculation, boltz_calculation, combine_files
+from pyconfort.analyzer_functions import output_analyzer, check_for_final_folder, dup_calculation
 
 # main function to generate conformers
 def compute_main(w_dir_initial,dup_data,args,log,start_time):
@@ -217,7 +217,7 @@ def analysis_main(w_dir_initial,args,log):
 					folder = w_dir_initial
 					log.write("\no  ANALYZING OUTPUT FILES IN {}\n".format(folder))
 					output_analyzer(log_files, w_dir, lot, bs, bs_gcp, args, w_dir_fin,w_dir_initial,log)
-
+		os.chdir(w_dir)
 	# when you specify multiple levels of theory
 	else:
 		# Sets the folder and find the log files to analyze
@@ -236,20 +236,28 @@ def analysis_main(w_dir_initial,args,log):
 					folder = w_dir + '/' + str(lot) + '-' + str(bs)
 					log.write("\no  ANALYZING OUTPUT FILES IN {}\n".format(folder))
 					output_analyzer(log_files, w_dir, lot, bs, bs_gcp, args, w_dir_fin,w_dir_initial,log)
+		os.chdir(args.path)
 
 def dup_main(args,log):
-	# Sets the folder and find the log files to analyze
-	for lot in args.level_of_theory:
-		for bs in args.basis_set:
-			w_dir = args.path + str(lot) + '-' + str(bs) +'/'+'finished'
-			os.chdir(w_dir)
-			# change molecules to a range as files will have codes in a continous manner
-			log_files = glob.glob('*.log')+glob.glob('*.LOG')+glob.glob('*.out')+glob.glob('*.OUT')
-			if len(log_files) != 0:
-				val = ' '.join(log_files)
-				dup_calculation(val,w_dir,args,log)
-			else:
-				log.write(' There are not any log or out files in this folder.')
+	if args.path == '':
+		w_dir = os.getcwd()
+		log_files = glob.glob('*.log')+glob.glob('*.LOG')+glob.glob('*.out')+glob.glob('*.OUT')
+		if len(log_files) != 0:
+			dup_calculation(log_files,w_dir,args,log)
+		else:
+			log.write(' There are not any log or out files in this folder.')
+	else:
+		# Sets the folder and find the log files to analyze
+		for lot in args.level_of_theory:
+			for bs in args.basis_set:
+				w_dir = args.path + str(lot) + '-' + str(bs)
+				os.chdir(w_dir)
+				# change molecules to a range as files will have codes in a continous manner
+				log_files = glob.glob('*.log')+glob.glob('*.LOG')+glob.glob('*.out')+glob.glob('*.OUT')
+				if len(log_files) != 0:
+					dup_calculation(log_files,w_dir,args,log)
+				else:
+					log.write(' There are not any log or out files in this folder.')
 
 def qsub_main(args,log):
 	#chceck if ech level of theory has a folder New gaussin FILES
@@ -261,32 +269,6 @@ def qsub_main(args,log):
 			os.chdir(w_dir)
 			cmd_qsub = [args.submission_command, '*.com']
 			subprocess.call(cmd_qsub)
-
-def boltz_main(args,log):
-	# Sets the folder and find the log files to analyze
-	for lot in args.level_of_theory:
-		for bs in args.basis_set:
-			w_dir = args.path + str(lot) + '-' + str(bs) +'/'+'finished'
-			os.chdir(w_dir)
-			#can change molecules to a range as files will have codes in a continous manner
-			for i in range(args.maxnumber):
-				#grab all the corresponding files make sure to renamme prefix when working with differnet files
-				log_files = glob.glob('RE' + '_' + str(i)+'_'+'confs_low.log')
-				if len(log_files) != 0:
-					val = ' '.join(log_files)
-					boltz_calculation(val,i,log)
-				else:
-					log.write(' Files for {} are not there!'.format(i))
-
-def combine_main(args,log):
-	# combines the files and gives the boltzmann weighted energies
-	for lot in args.level_of_theory:
-		for bs in args.basis_set:
-			w_dir = args.path + str(lot) + '-' + str(bs) + '/finished'
-			os.chdir(w_dir)
-			#read the csv log_files
-			csv_files = glob.glob('Goodvibes*.csv')
-			combine_files(csv_files, lot, bs, args, log)
 
 # MAIN OPTION FOR DISCARDING MOLECULES BASED ON USER INPUT DATA (REFERRED AS EXPERIMENTAL RULES)
 def exp_rules_main(args,log):

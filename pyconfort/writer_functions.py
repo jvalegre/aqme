@@ -131,7 +131,6 @@ def convert_sdf_to_com(path_for_file,file,com,com_low,energies,header,args,log):
 		command_no_lowest = ['obabel', '-isdf', path_for_file+file, '-ocom', '-O'+com,'-m', '-xk', '\n'.join(header)]
 		subprocess.call(command_no_lowest)
 
-
 def input_route_line(args):
 	#definition of input_route lines
 	if args.input_for_gauss is None:
