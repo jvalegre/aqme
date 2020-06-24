@@ -353,7 +353,7 @@ def output_analyzer(log_files, w_dir, lot, bs, bs_gcp, args, w_dir_fin, w_dir_in
 		TERMINATION, NATOMS, FREQS, NORMALMODE, IM_FREQS, READMASS, FORCECONST, nfreqs, freqs_so_far, rms, stop_rms, dist_rot_or, stand_or = get_geom_and_freq_for_normal(outlines, args, TERMINATION, NATOMS, FREQS, NORMALMODE, IM_FREQS, READMASS, FORCECONST, nfreqs, freqs_so_far, rms, stop_rms, dist_rot_or, stand_or)
 
 		# Get the coordinates for jobs that finished well with and without imag. freqs
-		if TERMINATION == "normal":
+		if TERMINATION == "normal" and IM_FREQS>0:
 			ATOMTYPES, CARTESIANS = get_coords_normal(outlines, stand_or, NATOMS, possible_atoms, ATOMTYPES, CARTESIANS)
 
 		# Get he coordinates for jobs that did not finished or finished with an error
@@ -378,6 +378,8 @@ def output_analyzer(log_files, w_dir, lot, bs, bs_gcp, args, w_dir_fin, w_dir_in
 
 		# adding in the NMR componenet only to the finished files after reading from normally finished log files
 		if args.sp and TERMINATION == "normal" and IM_FREQS == 0:
+			#get coordinates
+			ATOMTYPES, CARTESIANS = get_coords_normal(outlines, stand_or, NATOMS, possible_atoms, ATOMTYPES, CARTESIANS)
 			# creating new folder with new input gaussian files
 			single_point_input_files = w_dir_fin+'/single_point_input_files'
 			# Options for genecp
