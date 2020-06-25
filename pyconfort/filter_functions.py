@@ -51,7 +51,7 @@ def exp_rules_output(mol, args,log):
 				if ligand_links[i] == 'P':
 					length_filter = 2.60
 				else:
-					length_filter = 2.25
+					length_filter = 2.45
 				if bond_length > length_filter:
 					passing = False
 					break
@@ -240,7 +240,7 @@ def RMSD_and_E_filter(outmols,selectedcids_initial,cenergy,args,dup_data,dup_dat
 			if  E_diff < args.energy_threshold:
 				if calc_type == 'rdkit':
 					rms = get_conf_RMS(outmols[conf],outmols[conf],seenconf,conf, args.heavyonly, args.max_matches_RMSD,log)
-				elif calc_type == 'rotated_rdkit' or calc_type =='xtb' or calc_type =='ani' :
+				elif calc_type == 'rotated_rdkit' or calc_type =='xtb' or calc_type =='ani':
 					rms = get_conf_RMS(outmols[conf],outmols[seenconf],-1,-1, args.heavyonly, args.max_matches_RMSD,log)
 				if rms < args.rms_threshold:
 					excluded_conf = True

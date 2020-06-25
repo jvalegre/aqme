@@ -12,7 +12,7 @@ import subprocess
 import time
 import numpy as np
 from rdkit.Chem import AllChem as Chem
-from rdkit.Chem import rdMolTransforms, PropertyMol, rdDistGeom, rdMolAlign, Lipinski, rdmolfiles
+from rdkit.Chem import rdMolTransforms, PropertyMol, rdDistGeom, rdMolAlign, Lipinski
 from rdkit.Geometry import Point3D
 from progress.bar import IncrementalBar
 import pyconfort
@@ -261,7 +261,6 @@ def conformer_generation(mol,name,start_time,args,log,dup_data,dup_data_idx,coor
 				if status == 0:
 					log.write('\nx  No rotatable dihedral found. Run again with nodihedral set to TRUE')
 
-
 		except (KeyboardInterrupt, SystemExit):
 			raise
 	else:
@@ -355,7 +354,6 @@ def minimize_rdkit_energy(mol,conf,args,log):
 		GetFF.Minimize(maxIts=args.opt_steps_RDKit)
 	except:
 		#if not MMFF use UFF
-		args.ff == "UFF"
 		GetFF = Chem.UFFGetMoleculeForceField(mol,confId=conf)
 		GetFF.Initialize()
 		GetFF.Minimize(maxIts=args.opt_steps_RDKit)

@@ -22,7 +22,6 @@ path_analysis_dup_sp = os.getcwd()
     ('Analysis', 'Imag_freq.log', 'params_analysis_test.yaml', 'analysis'), # test imaginary frequencies
     ('Analysis', 'MeOH_SCF_error.out', 'params_analysis_test.yaml', 'analysis'), # test SCF errors
     ('Analysis', 'MeOH_Unfinished.OUT', 'params_analysis_test.yaml', 'analysis'), # test unfinished calculations
-    ('Analysis_with_dup', 'CH4_Duplicate.LOG', 'params_analysis_dup_test.yaml', 'analysis_with_dup'), # test duplicates
     # tests for single points
     ('Single_point', 'CH4_freq.log', 'params_sp_test.yaml', 'single_point'), # test single-point generation
     ('Single_point', 'Pd_SP.LOG', 'params_sp_test.yaml', 'single_point'), # test single-point generation with genecp
@@ -35,11 +34,6 @@ def test_analysis_dup_sp(folder, file, params_file, type_of_job):
     if type_of_job == 'analysis':
         analysis(path_analysis_dup_sp, cmd_pyconfort, folder, file)
 
-    # elif type_of_job == 'Duplicates':
-    #     if file == 'Duplicate.LOG':
-    #         os.chdir(path_analysis_dup_sp+'/'+folder+'/duplicates')
-    #         assert file in glob.glob('*.*')
-
     elif type_of_job == 'single_point':
         count,NBO,pop,opt = single_point(path_analysis_dup_sp, cmd_pyconfort, folder, file)
 
@@ -51,6 +45,3 @@ def test_analysis_dup_sp(folder, file, params_file, type_of_job):
         assert NBO == 1 # finds final line for sp
         assert pop == 1 # finds input line for sp
         assert opt == 0 # it does not find standard opt option
-
-# MISSING CHECKS:
-# experimental rules for analysis LOG to COM

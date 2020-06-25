@@ -27,6 +27,9 @@ amplitude_ifreq : 0.2 # amplitude use to displace the imaginary frequencies to f
 
 # COMMON PARAMETERS TO EDIT
 
+# (0) Input line for the COM files generated with the compute and analysis options
+input_for_gauss : None
+
 # (1) CHARGE FOR XTB OPTIMIZATION AND COM FILES
 charge : [] # final charge of the molecule (used in xTB optimization automatically updated for each metal atom if not charge_default is written)
 # If metal_complex : True, the script will recalculate the charge
@@ -73,11 +76,14 @@ solvent_model : 'gas_phase' # type of solvation model. Options: gas_phase or any
 solvent_name : 'Chloroform' # solvent
 
 # (4.6) DEFINTION OF BASIS SET AND LEVEL OF THEORY AND SOLVENT
+charge_sp : None
+mult_sp : None
 input_for_sp : 'nmr = giao' # add the input line with keywords. For adjusting number of processors and memory, go belo (to gauss_write options)
-last_line_for_sp : '-1' # last line to add for single point
+last_line_for_sp : '' # last line to add for single point
 basis_set_sp : ['def2svp'] # basis set
 basis_set_genecp_atoms_sp : ['LANL2DZ'] # functional for the genecp part
 level_of_theory_sp : ['wb97xd'] # functional
+suffix_sp : None
 
 # (4.7) DISPERSION CORRECTION FOR COM FILES
 dispersion_correction_sp : False # include dispersion correction

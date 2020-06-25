@@ -49,7 +49,7 @@ install:
   - pip install ase==3.19.1
   - pip install torch==1.5.0+cpu torchvision==0.6.0+cpu -f https://download.pytorch.org/whl/torch_stable.html
   - pip install torchani==2.0
-  # - pip install goodvibes
+  - pip install goodvibes
   # for xTB
   # - pip install Cython==0.29.19
   - pip install importlib==1.0.4
@@ -76,8 +76,10 @@ before_script:
   - export PATH XTBPATH MANPATH LD_LIBRARY_PATH PYTHONPATH
   # - ninja -C build_gcc test
   # change it into wget + unzip zip when there is a release (that way the version used will always be the same)
-  - git clone --branch=master https://github.com/grimme-lab/xtb-python
-  - cd xtb-python
+  - wget https://github.com/grimme-lab/xtb-python/archive/xtb-python-20.1.zip
+  - unzip xtb-python-20.1.zip
+  # - git clone --branch=master https://github.com/grimme-lab/xtb-python
+  - cd xtb-python-20.1
   # compile xtb-python
   - git submodule update --init
   - meson setup build --prefix=$PWD --libdir=xtb -Dla_backend=netlib
@@ -85,7 +87,7 @@ before_script:
   - pip install -e .
   - cd ..
   - cd ..
-  - conda list
+  # - conda list
 
 script:
   - cd tests

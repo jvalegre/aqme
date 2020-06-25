@@ -74,10 +74,10 @@ def rdkit_tests(df_output,dihedral,xTB_ANI1,cmd_pyconfort):
             test_prefilter_rdkit_confs = df_output['xTB-initial_energy_threshold']
             test_filter_rdkit_confs = df_output['xTB-RMSD-and-energy-duplicates']
             test_unique_confs = 'nan'
-        elif xTB_ANI1 == 'AN1ccx':
-            test_init_rdkit_confs = df_output['AN1ccx-Initial-samples']
-            test_prefilter_rdkit_confs = df_output['AN1ccx-initial_energy_threshold']
-            test_filter_rdkit_confs = df_output['AN1ccx-RMSD-and-energy-duplicates']
+        elif xTB_ANI1 == 'ANI1ccx':
+            test_init_rdkit_confs = df_output['ANI1ccx-Initial-samples']
+            test_prefilter_rdkit_confs = df_output['ANI1ccx-initial_energy_threshold']
+            test_filter_rdkit_confs = df_output['ANI1ccx-RMSD-and-energy-duplicates']
             test_unique_confs = 'nan'
     else:
         if cmd_pyconfort[4] == 'params_Cu_test2.yaml':
@@ -132,7 +132,7 @@ def conf_gen(path, precision, cmd_pyconfort, folder, smiles, E_confs, dihedral, 
         elif xTB_ANI1 == 'xTB':
             os.chdir(path+'/'+folder+'/'+smiles.split('.')[0]+'/xtb_minimised_generated_sdf_files')
             test_rdkit_E_confs = calc_energy(file_smi+'_xtb.sdf')
-        elif xTB_ANI1 == 'AN1ccx':
+        elif xTB_ANI1 == 'ANI1ccx':
             os.chdir(path+'/'+folder+'/'+smiles.split('.')[0]+'/ani1ccx_minimised_generated_sdf_files')
             test_rdkit_E_confs = calc_energy(file_smi+'_ani.sdf')
 
@@ -171,7 +171,7 @@ def find_coordinates(file,coordinates):
     com_file = file.split('.')[0]+'.com'
     outfile = open(com_file,"r")
     outlines = outfile.readlines()
-    for i,outline in enumerate(outlines):
+    for _,outline in enumerate(outlines):
         if outline.find(coordinates) > -1:
             coordinates_found = 1
             break

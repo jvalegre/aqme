@@ -120,13 +120,10 @@ def compute_main(w_dir_initial,dup_data,args,log,start_time):
 			args.charge_default = charges[0]
 			name = IDs[0]
 			mol = suppl
-			print('mol is {0}'.format(mol))
 			compute_confs(w_dir_initial,mol,name,args,log,dup_data,counter_for_template,i,start_time)
 			i += 1
 
 	dup_data.to_csv(args.input.split('.')[0]+'-Duplicates Data.csv',index=False)
-
-
 
 def write_gauss_main(args,log):
 	if args.exp_rules:
@@ -206,11 +203,21 @@ def move_sdf_main(args):
 		for file in all_name_conf_files:
 			moving_sdf_files(destination_rdkit,src,file)
 
+def get_log_out_files():
+	log_files = []
+	output_formats = ['*.log','*.LOG','*.out','*.OUT']
+	for _,format in enumerate(output_formats):
+		for _,file_out in enumerate(glob.glob(format)):
+			if file_out not in log_files:
+				log_files.append(file_out)
+	return log_files
+
 # main part of the analysis functions
 def analysis_main(w_dir_initial,args,log):
 	# when you run analysis in a folder full of output files
 	if args.path == '':
-		log_files = glob.glob('*.log')+glob.glob('*.LOG')+glob.glob('*.out')+glob.glob('*.OUT')
+
+		log_files = get_log_out_files()
 		w_dir = os.getcwd()
 		w_dir_fin = w_dir+'/finished'
 		for lot in args.level_of_theory:
@@ -231,10 +238,8 @@ def analysis_main(w_dir_initial,args,log):
 					w_dir = check_for_final_folder(w_dir,log)
 					#assign the path to the finished directory.
 					w_dir_fin = args.path + str(lot) + '-' + str(bs) +'/finished'
-					#log.write(w_dir)
 					os.chdir(w_dir)
-					#log.write(w_dir)
-					log_files = glob.glob('*.log')+glob.glob('*.LOG')+glob.glob('*.out')+glob.glob('*.OUT')
+					log_files = get_log_out_files()
 					folder = w_dir + '/' + str(lot) + '-' + str(bs)
 					log.write("\no  ANALYZING OUTPUT FILES IN {}\n".format(folder))
 					output_analyzer(log_files, w_dir, lot, bs, bs_gcp, args, w_dir_fin,w_dir_initial,log)
@@ -243,7 +248,7 @@ def analysis_main(w_dir_initial,args,log):
 def dup_main(args,log):
 	if args.path == '':
 		w_dir = os.getcwd()
-		log_files = glob.glob('*.log')+glob.glob('*.LOG')+glob.glob('*.out')+glob.glob('*.OUT')
+		log_files = get_log_out_files()
 		if len(log_files) != 0:
 			dup_calculation(log_files,w_dir,args,log)
 		else:
@@ -255,7 +260,7 @@ def dup_main(args,log):
 				w_dir = args.path + str(lot) + '-' + str(bs)
 				os.chdir(w_dir)
 				# change molecules to a range as files will have codes in a continous manner
-				log_files = glob.glob('*.log')+glob.glob('*.LOG')+glob.glob('*.out')+glob.glob('*.OUT')
+				log_files = get_log_out_files()
 				if len(log_files) != 0:
 					dup_calculation(log_files,w_dir,args,log)
 				else:

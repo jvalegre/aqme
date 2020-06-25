@@ -30,7 +30,7 @@ precision_organic = 5
     ('Organic_molecules', 'pentane.smi', 'params_test10.yaml', 20, 17, 0, [2.52059, 3.68961, 4.94318], 0, 1, False, False), # test ff = 'UFF'
     ('Organic_molecules', 'pentane.smi', 'params_test11.yaml', 20, 1, 12, [-5.27113, -4.44046, -4.43598, -4.06762, -3.90769, -3.81966, -2.53933], 0, 1, False, False), # test opt_steps_RDKit = 40
     ('Organic_molecules', 'pentane.smi', 'params_test12.yaml', 3, 0, 0, [-10560.62152, -10560.03876, -10559.41775], 0, 1, False, 'xTB'), # test xTB = True
-    ('Organic_molecules', 'pentane.smi', 'params_test13.yaml', 3, 0, 0, [-5.27175,-4.44184,-3.84858,-1.57172], 0, 1, False, 'AN1ccx'), # test ANI1ccx = True
+    ('Organic_molecules', 'pentane.smi', 'params_test13.yaml', 3, 0, 0, [-123942.60358,-123941.72746,-123940.80475], 0, 1, False, 'ANI1ccx'), # test ANI1ccx = True
     ('Organic_molecules', 'pentane.smi', 'params_test14.yaml', 20, 17, 0, [-5.27175, -4.44184], 0, 1, False, False), # ewin = 1
     ('Organic_molecules', 'pentane.smi', 'params_test15.yaml', 27, 'nan', 4, [-5.27175,-4.44184,-3.84858,-1.57172], 0, 1, True, False), # test dihedral scan
     ('Organic_molecules', 'pentane.smi', 'params_test16.yaml', 20, 17, 0, [-5.27175, -4.44184, -3.84858], 0, 3, False, False), # test multiplicity = 3

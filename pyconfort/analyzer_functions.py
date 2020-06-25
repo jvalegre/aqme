@@ -9,22 +9,16 @@ import os
 import sys
 import subprocess
 import shutil
-import numpy as np
-import pandas as pd
 from pyconfort.writer_functions import input_route_line
 from pyconfort.argument_parser import possible_atoms
 
 possible_atoms = possible_atoms()
 
-def moving_log_files(source, destination, file):
-	try:
+def moving_log_files(source, destination):
+	if not os.path.isdir(destination):
 		os.makedirs(destination)
+	if not os.path.exists(destination+source):
 		shutil.move(source, destination)
-	except OSError:
-		if  os.path.isdir(destination) and not os.path.exists(destination+file):
-			shutil.move(source, destination)
-		else:
-			raise
 
 # DETECTION OF GEN/GENECP
 def check_for_gen_or_genecp(ATOMTYPES,args):
@@ -116,9 +110,10 @@ def read_log_file(w_dir,file):
 	os.chdir(w_dir)
 	try:
 		outfile = open(file,"r")
+		outlines = outfile.readlines()
 	except FileNotFoundError:
 		break_loop = True
-	outlines = outfile.readlines()
+		outfile, outlines = None, None
 
 	return outlines, outfile, break_loop
 
@@ -311,11 +306,11 @@ def create_folder_move_log_files(w_dir,file,IM_FREQS,TERMINATION,ERRORTYPE,w_dir
 
 	if IM_FREQS == 0 and TERMINATION == "normal":
 		destination = w_dir_fin
-		moving_log_files(source, destination, file)
+		moving_log_files(source, destination)
 
 	if IM_FREQS > 0:
 		destination = w_dir+'/imaginary_frequencies/'
-		moving_log_files(source, destination, file)
+		moving_log_files(source, destination)
 
 	if IM_FREQS == 0 and TERMINATION == "error":
 		if ERRORTYPE == "atomicbasiserror":
@@ -324,11 +319,11 @@ def create_folder_move_log_files(w_dir,file,IM_FREQS,TERMINATION,ERRORTYPE,w_dir
 			destination = w_dir+'/failed_error/SCF_error'
 		else:
 			destination = w_dir+'/failed_error/unknown_error'
-		moving_log_files(source, destination, file)
+		moving_log_files(source, destination)
 
 	elif IM_FREQS == 0 and TERMINATION == "unfinished":
 		destination = w_dir+'/failed_unfinished/'
-		moving_log_files(source, destination, file)
+		moving_log_files(source, destination)
 
 # DEFINTION OF OUTPUT ANALYSER and NMR FILES CREATOR
 def output_analyzer(log_files, w_dir, lot, bs, bs_gcp, args, w_dir_fin, w_dir_initial, log):
@@ -383,49 +378,34 @@ def output_analyzer(log_files, w_dir, lot, bs, bs_gcp, args, w_dir_fin, w_dir_in
 			# creating new folder with new input gaussian files
 			single_point_input_files = w_dir_fin+'/single_point_input_files'
 			# Options for genecp
-			ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp =  check_for_gen_or_genecp(ATOMTYPES,args)
+			ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp = check_for_gen_or_genecp(ATOMTYPES,args)
 
 			# Sets the folder and find the log files to analyze
 			for lot_sp in args.level_of_theory_sp:
 				for bs_sp in args.basis_set_sp:
 					for bs_gcp_sp in args.basis_set_genecp_atoms_sp:
-						log.write('-> Creating new single point files files for {0} in {1}/{2}\n'.format(file,lot_sp,bs_sp))
-						folder = single_point_input_files + '/' + str(lot_sp) + '-' + str(bs_sp)
-						try:
-							os.makedirs(folder)
-							os.chdir(folder)
-						except OSError:
-							if os.path.isdir(folder):
-								os.chdir(folder)
-							else:
-								raise
+						log.write('-> Creating new single point files files for {0} in ./finished/single_point_input_files/{1}-{2}\n'.format(file,lot_sp,bs_sp))
+						dir_name = str(lot_sp) + '-' + str(bs_sp)
+						if not os.path.isdir(single_point_input_files):
+							os.makedirs(single_point_input_files)
+							os.chdir(single_point_input_files)
+							os.makedirs(dir_name)
+						os.chdir(single_point_input_files+'/'+dir_name)
+
 						if genecp == 'genecp' or  genecp == 'gen':
-							if args.dispersion_correction_sp:
-								if args.solvent_model_sp == 'gas_phase':
-									keywords_opt = lot_sp+'/'+ genecp+' '+ args.input_for_sp + ' empiricaldispersion={0}'.format(args.empirical_dispersion_sp)
-								else:
-									keywords_opt = lot_sp+'/'+ genecp+' '+ args.input_for_sp + ' scrf=({0},solvent={1}) empiricaldispersion={2}  '.format(args.solvent_model_sp,args.solvent_name_sp,args.empirical_dispersion_sp)
-							else:
-								if args.solvent_model_sp == 'gas_phase':
-									keywords_opt = lot_sp+'/'+ genecp+' '+ args.input_for_sp
-								else:
-									keywords_opt = lot_sp+'/'+ genecp+' '+ args.input_for_sp + ' scrf=({0},solvent={1}) '.format(args.solvent_model_sp,args.solvent_name_sp)
+							keywords_opt = lot_sp+'/'+ genecp+' '+ args.input_for_sp
 						else:
-							if args.dispersion_correction_sp:
-								if args.solvent_model_sp == 'gas_phase':
-									keywords_opt = lot_sp+'/'+ bs_sp+' '+ args.input_for_sp + ' empiricaldispersion={0}'.format(args.empirical_dispersion_sp)
-								else:
-									keywords_opt = lot_sp+'/'+ bs_sp+' '+ args.input_for_sp + ' scrf=({0},solvent={1}) empiricaldispersion={2}  '.format(args.solvent_model_sp,args.solvent_name_sp,args.empirical_dispersion_sp)
-							else:
-								if args.solvent_model_sp == 'gas_phase':
-									keywords_opt = lot_sp+'/'+ bs_sp+' '+ args.input_for_sp
-								else:
-									keywords_opt = lot_sp+'/'+ bs_sp+' '+ args.input_for_sp + ' scrf=({0},solvent={1}) '.format(args.solvent_model_sp,args.solvent_name_sp)
-						if args.sp:
-							if args.charge_sp is not None:
-								CHARGE = args.charge_sp
-							if args.mult_sp is not None:
-								MULT = args.mult_sp
+							keywords_opt = lot_sp+'/'+ bs_sp+' '+ args.input_for_sp
+						if args.dispersion_correction_sp:
+							keywords_opt += ' empiricaldispersion={0}'.format(args.empirical_dispersion_sp)
+						if args.solvent_model_sp != 'gas_phase':
+							keywords_opt += ' scrf=({0},solvent={1})'.format(args.solvent_model_sp,args.solvent_name_sp)
+
+						if args.charge_sp is not None:
+							CHARGE = args.charge_sp
+						if args.mult_sp is not None:
+							MULT = args.mult_sp
+
 						new_com_file(w_dir,w_dir_initial,file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,TERMINATION,IM_FREQS,bs_sp,lot_sp,bs_gcp_sp)
 
 # CHECKS THE FOLDER OF FINAL LOG FILES
@@ -440,7 +420,7 @@ def check_for_final_folder(w_dir,log):
 	return w_dir
 
 # CHECKING FOR DUPLICATES
-def dup_calculation(val,w_dir, args,log):
+def dup_calculation(val, w_dir, args, log):
 
 	# GoodVibes must be installed as a module (through pip or conda)
 	cmd_dup = ['python', '-m', 'goodvibes', '--dup']
@@ -457,18 +437,11 @@ def dup_calculation(val,w_dir, args,log):
 			dup_file_list.append(duplines[i].split(' ')[2])
 
 	#move the files to specific directory
-	destination = w_dir+'/Duplicates/'
+	destination = w_dir+'/duplicates/'
 	for source in dup_file_list:
 		#finding the extension
 		for file in val:
 			if file.split('.')[0] == source:
 				ext=file.split('.')[1]
 		source=source+'.'+ext
-		try:
-			os.makedirs(destination)
-			shutil.move(source, destination)
-		except OSError:
-			if  os.path.isdir(destination) and not os.path.exists(destination):
-				shutil.move(source, destination)
-			else:
-				raise
+		moving_log_files(source, destination)
