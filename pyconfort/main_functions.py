@@ -136,10 +136,12 @@ def write_gauss_main(args,log):
 		conf_files =  glob.glob('*_rdkit.sdf')
 	elif not args.xtb and not args.ANI1ccx and not args.nodihedrals:
 		conf_files =  glob.glob('*_rdkit_rotated.sdf')
-	elif args.xtb:
+	elif args.xtb and not args.ANI1ccx:
 		conf_files =  glob.glob('*_xtb.sdf')
-	elif args.ANI1ccx:
+	elif args.ANI1ccx and not args.xtb:
 		conf_files =  glob.glob('*_ani.sdf')
+	elif args.ANI1ccx and args.xtb:
+		conf_files =  glob.glob('*_ani.sdf') + glob.glob('*_xtb.sdf')
 	else:
 		conf_files =  glob.glob('*.sdf')
 

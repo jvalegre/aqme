@@ -243,13 +243,18 @@ def conformer_generation(mol,name,start_time,args,log,dup_data,dup_data_idx,coor
 				if status != -1:
 					if args.ANI1ccx:
 						min_suffix = 'ani'
-					elif args.xtb:
+						if status != 0:
+							if args.nodihedrals:
+								mult_min(name+'_'+'rdkit', args, min_suffix, log, dup_data, dup_data_idx)
+							else:
+								mult_min(name+'_'+'rdkit'+'_'+'rotated', args, min_suffix, log, dup_data, dup_data_idx)
+					if args.xtb:
 						min_suffix = 'xtb'
-					if status != 0:
-						if args.nodihedrals:
-							mult_min(name+'_'+'rdkit', args, min_suffix, log, dup_data, dup_data_idx)
-						else:
-							mult_min(name+'_'+'rdkit'+'_'+'rotated', args, min_suffix, log, dup_data, dup_data_idx)
+						if status != 0:
+							if args.nodihedrals:
+								mult_min(name+'_'+'rdkit', args, min_suffix, log, dup_data, dup_data_idx)
+							else:
+								mult_min(name+'_'+'rdkit'+'_'+'rotated', args, min_suffix, log, dup_data, dup_data_idx)
 					else:
 						log.write('\nx  No rotatable dihedral found. Run again with nodihedral set to TRUE')
 			else:
@@ -739,11 +744,11 @@ def mult_min(name, args, program,log,dup_data,dup_data_idx):
 
 	log.write("\n\no  Applying filters to intial conformers")
 	# filter based on energy window ewin_rdkit
-	sortedcids = ewin_filter(sorted_all_cids,cenergy,args,dup_data,dup_data_idx,log,'xtb_ani')
+	sortedcids = ewin_filter(sorted_all_cids,cenergy,args,dup_data,dup_data_idx,log,program)
 	# pre-filter based on energy only
-	selectedcids_initial = pre_E_filter(sortedcids,cenergy,args,dup_data,dup_data_idx,log,'xtb_ani')
+	selectedcids_initial = pre_E_filter(sortedcids,cenergy,args,dup_data,dup_data_idx,log,program)
 	# filter based on energy and RMSD
-	selectedcids = RMSD_and_E_filter(outmols,selectedcids_initial,cenergy,args,dup_data,dup_data_idx,log,'xtb_ani')
+	selectedcids = RMSD_and_E_filter(outmols,selectedcids_initial,cenergy,args,dup_data,dup_data_idx,log,program)
 
 	if program == 'xtb':
 		dup_data.at[dup_data_idx, 'xTB-Initial-samples'] = len(inmols)
