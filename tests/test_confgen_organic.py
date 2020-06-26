@@ -34,6 +34,21 @@ precision_organic = 5
     ('Organic_molecules', 'pentane.smi', 'params_test14.yaml', 20, 17, 0, [-5.27175, -4.44184], 0, 1, False, False), # ewin = 1
     ('Organic_molecules', 'pentane.smi', 'params_test15.yaml', 27, 'nan', 4, [-5.27175,-4.44184,-3.84858,-1.57172], 0, 1, True, False), # test dihedral scan
     ('Organic_molecules', 'pentane.smi', 'params_test16.yaml', 20, 17, 0, [-5.27175, -4.44184, -3.84858], 0, 3, False, False), # test multiplicity = 3
+    # these two tests go together to ensure that xTB and ANI work sequentially
+    ('Organic_molecules', 'pentane.smi', 'params_test17.yaml', 3, 0, 0, [-10560.62152, -10560.03876, -10559.41775], 0, 1, False, 'xTB'), # test xTB = True with ANI1ccx = True
+    ('Organic_molecules', 'pentane.smi', 'params_test17.yaml', 3, 0, 0, [-123942.60358,-123941.72746,-123940.80475], 0, 1, False, 'ANI1ccx'), # test xTB = True with ANI1ccx = True
+    # xTB and ANI with dihedral
+    ('Organic_molecules', 'pentane.smi', 'params_test18.yaml', 3, 0, 0, [-10560.62152, -10560.03876, -10559.41775], 0, 1, True, 'xTB'), # test xTB = True with dihedral
+    ('Organic_molecules', 'pentane.smi', 'params_test19.yaml', 3, 0, 0, [-123942.60358,-123941.72746,-123940.80475], 0, 1, False, 'ANI1ccx'), # test ANI1ccx = True with dihedral
+    # E filters and windoes for xTB and ANI
+    ('Organic_molecules', 'pentane.smi', 'params_test20.yaml', 3, 0, 0, [-10560.62152, -10560.03876], 0, 1, False, 'xTB'), # test xTB = True with E window = 1
+    ('Organic_molecules', 'pentane.smi', 'params_test21.yaml', 3, 0, 0, [-123942.60358,-123941.72746], 0, 1, False, 'ANI1ccx'), # test ANI1ccx = True with E window = 1
+    ('Organic_molecules', 'pentane.smi', 'params_test22.yaml', 9, 0, 3, [-10560.62134,-10560.46555,-10560.03321,-10560.02739,-10559.88780,-10559.38807], 0, 1, False, 'xTB'), # test xTB = True, opt_steps_RDKit = 40 and E filter = 0.1
+    ('Organic_molecules', 'pentane.smi', 'params_test23.yaml', 7, 0, 3, [-10560.62134,-10560.03321,-10560.02739,-10559.38807], 0, 1, False, 'xTB'), # test xTB = True, opt_steps_RDKit = 40 and RMSD filter = 0.1
+    ('Organic_molecules', 'pentane.smi', 'params_test24.yaml', 6, 2, 1, [-10560.62134,-10560.03321,-10559.88780], 0, 1, False, 'xTB'), # test xTB = True, opt_steps_RDKit = 40 and E pre-filter = 0.1
+    ('Organic_molecules', 'pentane.smi', 'params_test25.yaml', 9, 0, 2, [-123942.60309,-123942.50244,-123941.72165,-123941.71528,-123941.60525,-123941.49162,-123940.79906], 0, 1, False, 'ANI1ccx'), # test ANI1ccx = True, opt_steps_RDKit = 40 and E filter = 0.1
+    ('Organic_molecules', 'pentane.smi', 'params_test26.yaml', 7, 0, 3, [-123942.60309,-123941.72165,-123941.71528,-123940.79906], 0, 1, False, 'ANI1ccx'), # test ANI1ccx = True, opt_steps_RDKit = 40 and RMSD filter = 0.1
+    ('Organic_molecules', 'pentane.smi', 'params_test27.yaml', 6, 1, 2, [-123942.60309,-123941.72165,-123941.71528,-123941.60525], 0, 1, False, 'ANI1ccx'), # test ANI1ccx = True, opt_steps_RDKit = 40 and E pre-filter = 0.1
 ])
 
 def test_confgen_organic(folder, smiles, params_file, n_confs_organic, prefilter_confs_rdkit_organic_organic, filter_confs_rdkit_organic, E_confs, charge_organic, multiplicity_organic, dihedral, xTB_ANI1):

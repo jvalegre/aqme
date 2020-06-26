@@ -1,5 +1,5 @@
 # INPUT FILE
-input : 'charged.cdx' # input files
+input : 'smi.smi' # input files
 path : '' # path to guassian folder when we do analysis
 prefix : False # if prefix : True, set a generic name for the different molecules (i.e. comp_1, comp_2, etc)
 
@@ -20,27 +20,28 @@ write_gauss : True # writting Gaussian COM files after, look options of write_ga
 # This generates new COM files from LOG files with imaginary freqs or errors
 analysis : False
 sp : False # write COM files after analysis
-input_for_sp : '' # add the input line with keywords. For adjusting number of processors and memory, go belo (to gauss_write options)
 dup : False # if dup : True, analysis will also separate duplicate LOG files
 boltz : False # if boltz : True, analysis will calculate Bolztmann probabilities of each conformer
 combine : False # if boltz : True and combine : True, all the data from the CSV files created with boltz will be condensed in 3 CSV files
+amplitude_ifreq : 0.2 # amplitude use to displace the imaginary frequencies to fix during analysis
 
 # COMMON PARAMETERS TO EDIT
 
+# (0) Input line for the COM files generated with the compute and analysis options
+input_for_gauss : None
+
 # (1) CHARGE FOR XTB OPTIMIZATION AND COM FILES
-charge : [] # final charge of the molecule (used in xTB optimization automatically updated for each metal atom if not charge_default is written)
-# If metal_complex : True, the script will recalculate the charge
-charge_default : 'auto' #used to write the default if cannot be calculated for metal atom
+charge_default : 'auto' # charge of the molecule (when the metal option = False). If charge_default = 'auto', the program will calculate the charge for you
 
 # (2) TYPE OF OPTIMIZATION
 # Options: xTB, ANI1ccx (if True is selected).  Default : RDKit optimizaiton
 ANI1ccx : False
-xtb : False
+xtb : True
 
 # (3) RDKit AND xTB PARAMETERS
-ewin : 1000 #energy window in kcal/mol to use conformers for RDKit and xTB (conformers with E higher than ewin will be discarded)
+ewin_min : 100 # energy window in kcal/mol to use conformers for ANI1ccx and xTB (conformers with E higher than ewin will be discarded)
+ewin_rdkit : 100 # energy window in kcal/mol to use conformers for RDKit (conformers with E higher than ewin will be discarded)
 sample : 20 # number of conformers to sample to get non-torsional differences (default 100)
-solvent_xtb : '' # includes energies in the xTB energies after optimization in gas-phase
 
 # (4) OPTIONS FOR COM FILE GENERATION (write_gauss : True)
 # By default, you include optimization in the COM files.
@@ -72,7 +73,25 @@ empirical_dispersion : 'GD3BJ' # type of dispersion correction
 solvent_model : 'gas_phase' # type of solvation model. Options: gas_phase or any solvation model (i.e. SMD, IEFPCM, CPCM)
 solvent_name : 'Chloroform' # solvent
 
-# (4.6) DEFAULT PARAMETERS FOR GAUSSIAN OPTIMIZATION
+# (4.6) DEFINTION OF BASIS SET AND LEVEL OF THEORY AND SOLVENT
+charge_sp : None
+mult_sp : None
+input_for_sp : 'nmr = giao' # add the input line with keywords. For adjusting number of processors and memory, go belo (to gauss_write options)
+last_line_for_sp : '' # last line to add for single point
+basis_set_sp : ['def2svp'] # basis set
+basis_set_genecp_atoms_sp : ['LANL2DZ'] # functional for the genecp part
+level_of_theory_sp : ['wb97xd'] # functional
+suffix_sp : None
+
+# (4.7) DISPERSION CORRECTION FOR COM FILES
+dispersion_correction_sp : False # include dispersion correction
+empirical_dispersion_sp : 'GD3BJ' # type of dispersion correction
+
+# (4.8) SOLVATION MODEL
+solvent_model_sp : 'gas_phase' # type of solvation model. Options: gas_phase or any solvation model (i.e. SMD, IEFPCM, CPCM)
+solvent_name_sp : 'Chloroform' # solvent
+
+# (4.9) DEFAULT PARAMETERS FOR GAUSSIAN OPTIMIZATION
 chk : False # include a %chk line at the beginning of the COM file
 nprocs : 36 # number of processors for the COM file in %nprocshared
 mem: '60GB' # amount of memory for the COM file in %mem
@@ -87,10 +106,11 @@ angle_off : 30 # margin of error to determine angles (i.e. if angle_off is 30, a
 
 # (7) OPTIONS FOR METALS, ATOMS WITH UNCOMMON HYBRIDIZATIONS AND NCI COMPLEXES
 # IF A METAL OR AN ATOM WITH UNCOMMON HYBRIDIZATION (i.e. pentacoordinated phosphorus) IS USED
-metal_complex : False # specify True to activate this option
-metal : [] # specify the metal(s) or atom(s) with uncommon hybridization, in the format 'A','B','C'...
-m_oxi : [] # oxidation number of the atom (it is used to calculate the charge of the molecule)
+metal_complex : True # specify True to activate this option
+metal : ['Pd'] # specify the metal(s) or atom(s) with uncommon hybridization, in the format 'A','B','C'...
+m_oxi : [3] # oxidation number of the atom (it is used to calculate the charge of the molecule)
 complex_spin : 1 # final spin of the molecule (the code does not calculate spin, it must be defined by the user)
+complex_type : 'squareplanar' # specify for linear, trigonalplanar, squareplanar or squarepyramidal
 
 # (8) IF A NONCOVALENT COMPLEX IS USED
 nci_complex : False # specify  true if NCI complex
@@ -117,7 +137,6 @@ auto_sample : 20 # final factor to multiply in the auto mode for the sample opti
 
 # FILTERS FOR RDKIT OPTIMIZATION
 max_torsions : 20 # Skip any molecules with more than this many torsions (default 5)
-num_rot_bonds : 20 # Skip any molecules with more than this many rotatable bonds (default 5)
 max_MolWt : 10000 # Skip any molecules with molecular weights higher than this number
 
 # DIHEDRAL PROTOCOL FOR RDKIT OPTIMIZATION (SLOW SINCE IT SCANS MANY DIHEDRALS)
@@ -126,7 +145,6 @@ degree : 30 # amount, in degrees, to enumerate torsions if nodihedrals is False
 
 # PARAMETERS FOR RDKIT OPTIMIZATION
 ff : "MMFF" # force field used in the RDKit optimization. Options: MMFF or UFF
-etkdg : False # use new ETKDG knowledge-based method instead of distance geometry also needs to be present in RDKIT ENV
 seed : 62609 # random seed (default 62609) for ETKDG
 opt_steps_RDKit : 1000
 
@@ -138,6 +156,11 @@ opt_fmax : 0.05 # fmax value to achieve optimization
 constraints : None
 
 # DEFAULT PARAMETERS ONLY FOR xTB OPTIMIZATION
+xtb_method : 'GFN2-xTB' # Specify xtb method used. Options: 'GFN2-xTB', 'GFN1-xTB', 'GFN0-xTB', 'GFN-FF' (maybe more, check the xTB webpage)
+xtb_solvent : 'water' # Specify GBSA solvent. For a list of solvents, check the xTB webpage
+xtb_accuracy : 1.0 # Numerical accuracy of the xTB calculation
+xtb_electronic_temperature : 300.0 # Electronic temperature for TB methods
+xtb_max_iterations : 250 # Iterations for self-consistent evaluation
 large_sys : True
 STACKSIZE : '1G' #set for large system
 

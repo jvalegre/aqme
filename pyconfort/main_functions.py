@@ -45,8 +45,9 @@ def compute_main(w_dir_initial,dup_data,args,log,start_time):
 			smi = check_for_pieces(smi)
 			mol = Chem.MolFromSmiles(smi)
 			clean_args(args,ori_ff,mol,ori_charge)
-			if not args.metal_complex:
-				args.charge_default = check_charge_smi(smi)
+			if args.charge_default == 'auto':
+				if not args.metal_complex:
+					args.charge_default = check_charge_smi(smi)
 			if not args.prefix:
 				name = ''.join(toks[1:])
 			else:
@@ -63,8 +64,9 @@ def compute_main(w_dir_initial,dup_data,args,log,start_time):
 			smi = check_for_pieces(smi)
 			mol = Chem.MolFromSmiles(smi)
 			clean_args(args,ori_ff,mol,ori_charge)
-			if not args.metal_complex:
-				args.charge_default = check_charge_smi(smi)
+			if args.charge_default == 'auto':
+				if not args.metal_complex:
+					args.charge_default = check_charge_smi(smi)
 			if not args.prefix:
 				name = csv_smiles.loc[i, 'code_name']
 			else:
@@ -83,8 +85,9 @@ def compute_main(w_dir_initial,dup_data,args,log,start_time):
 			smi = check_for_pieces(smi)
 			mol = Chem.MolFromSmiles(smi)
 			clean_args(args,ori_ff,mol,ori_charge)
-			if not args.metal_complex:
-				args.charge_default = check_charge_smi(smi)
+			if args.charge_default == 'auto':
+				if not args.metal_complex:
+					args.charge_default = check_charge_smi(smi)				
 			name = 'comp' + str(i)+'_'
 			compute_confs(w_dir_initial,mol,name,args,log,dup_data,counter_for_template,i,start_time)
 
@@ -206,8 +209,8 @@ def move_sdf_main(args):
 def get_log_out_files():
 	log_files = []
 	output_formats = ['*.log','*.LOG','*.out','*.OUT']
-	for _,format in enumerate(output_formats):
-		for _,file_out in enumerate(glob.glob(format)):
+	for _,output_format in enumerate(output_formats):
+		for _,file_out in enumerate(glob.glob(output_format)):
 			if file_out not in log_files:
 				log_files.append(file_out)
 	return log_files

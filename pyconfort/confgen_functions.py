@@ -167,13 +167,18 @@ def clean_args(args,ori_ff,mol,ori_charge):
 	args.metal_sym = []
 
 def check_charge_smi(smi):
-	count_plus,count_minus = 0,0
-	for i in smi:
-		if i == '+':
-			count_plus = count_plus + 1
-		if i == '-':
-			count_minus = count_minus + 1
-	charge = count_plus - count_minus
+	charge = 0
+	for i,smi_letter in enumerate(smi):
+		if smi_letter == '+':
+			if smi[i+1] == ']':
+				charge += 1
+			else:
+				charge += int(smi[i+1])+1
+		elif smi_letter == '-':
+			if smi[i+1] == ']':
+				charge -= 1
+			else:
+				charge -= int(smi[i+1])+1
 	return charge
 
 def check_for_pieces(smi):
@@ -267,7 +272,7 @@ def conformer_generation(mol,name,start_time,args,log,dup_data,dup_data_idx,coor
 		log.write("\nx  ERROR: The structure is not valid")
 
 	# removing temporary files
-	temp_files = ['gfn2.out', 'xTB_opt.traj', 'ANI1_opt.traj', 'wbo', 'xtbrestart','ase.opt']
+	temp_files = ['gfn2.out', 'xTB_opt.traj', 'ANI1_opt.traj', 'wbo', 'xtbrestart','ase.opt','xtb.opt','gfnff_topo']
 	for file in temp_files:
 		if os.path.exists(file):
 			os.remove(file)
@@ -629,7 +634,7 @@ def ani_calc(elements,cartesians,coordinates,args,log):
 def xtb_calc(elements,cartesians,coordinates,args,log,ase_metal,ase_metal_idx):
 	if args.metal_complex:
 		# passing charges metal present
-		ase_molecule = ase.Atoms(elements, positions=coordinates.tolist()[0],calculator=XTB(method="GFN2-xTB")) #define ase molecule using GFN2 Calculator
+		ase_molecule = ase.Atoms(elements, positions=coordinates.tolist()[0],calculator=XTB(method=args.xtb_method,accuracy=args.xtb_accuracy,electronic_temperature=args.xtb_electronic_temperature,max_iterations=args.xtb_max_iterations,solvent=args.xtb_solvent)) #define ase molecule using GFN2 Calculator
 		if os.path.splitext(args.input)[1] == '.csv' or os.path.splitext(args.input)[1] == '.cdx' or os.path.splitext(args.input)[1] == '.smi':
 			for i,atom in enumerate(ase_molecule):
 				if i in ase_metal:
@@ -642,7 +647,7 @@ def xtb_calc(elements,cartesians,coordinates,args,log,ase_metal,ase_metal_idx):
 			if args.verbose:
 				log.write('o  The Overall charge is read from the .com file ')
 	else:
-		ase_molecule = ase.Atoms(elements, positions=coordinates.tolist()[0],calculator=XTB(method="GFN2-xTB")) #define ase molecule using GFN2 Calculator
+		ase_molecule = ase.Atoms(elements, positions=coordinates.tolist()[0],calculator=XTB(method=args.xtb_method,accuracy=args.xtb_accuracy,electronic_temperature=args.xtb_electronic_temperature,max_iterations=args.xtb_max_iterations,solvent=args.xtb_solvent)) #define ase molecule using GFN2 Calculator
 	optimizer = ase.optimize.BFGS(ase_molecule, trajectory='xTB_opt.traj',logfile='xtb.opt')
 	optimizer.run(fmax=args.opt_fmax, steps=args.opt_steps)
 	if len(ase.io.Trajectory('xTB_opt.traj', mode='r')) != (args.opt_steps+1):

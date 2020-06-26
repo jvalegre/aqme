@@ -31,9 +31,7 @@ amplitude_ifreq : 0.2 # amplitude use to displace the imaginary frequencies to f
 input_for_gauss : None
 
 # (1) CHARGE FOR XTB OPTIMIZATION AND COM FILES
-charge : [] # final charge of the molecule (used in xTB optimization automatically updated for each metal atom if not charge_default is written)
-# If metal_complex : True, the script will recalculate the charge
-charge_default : 0 #used to write the default if cannot be calculated for metal atom
+charge_default : 'auto' # charge of the molecule (when the metal option = False). If charge_default = 'auto', the program will calculate the charge for you
 
 # (2) TYPE OF OPTIMIZATION
 # Options: xTB, ANI1ccx (if True is selected).  Default : RDKit optimizaiton
@@ -158,6 +156,11 @@ opt_fmax : 0.05 # fmax value to achieve optimization
 constraints : None
 
 # DEFAULT PARAMETERS ONLY FOR xTB OPTIMIZATION
+xtb_method : 'GFN2-xTB' # Specify xtb method used. Options: 'GFN2-xTB', 'GFN1-xTB', 'GFN0-xTB', 'GFN-FF' (maybe more, check the xTB webpage)
+xtb_solvent : 'none' # Specify GBSA solvent. For a list of solvents, check the xTB webpage
+xtb_accuracy : 1.0 # Numerical accuracy of the xTB calculation
+xtb_electronic_temperature : 300.0 # Electronic temperature for TB methods
+xtb_max_iterations : 250 # Iterations for self-consistent evaluation
 large_sys : True
 STACKSIZE : '1G' #set for large system
 

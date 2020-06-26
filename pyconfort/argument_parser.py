@@ -15,14 +15,14 @@ def parser_args():
 	parser.add_argument("--output", dest="output", default=".sdf", metavar="output", help="The extension of the SDF files written")
 	#metal complex
 	parser.add_argument("--metal_complex", action="store_true", default=False, help="Request metal complex with coord. no. 4, 5 or 6")
-	parser.add_argument("--metal",  help="Specify metallic element", default=["Ir"], dest="metal", type=str)
+	parser.add_argument("--metal",  help="Specify metallic element", default=[], dest="metal", type=str)
 	parser.add_argument("--complex_spin",  help="Multiplicity of metal complex", default="1", dest="complex_spin", type=int)
 	parser.add_argument("--complex_coord", help="Coord. no. of metal complex (automatically updates)", default=[], dest="complex_coord", type=int)
 	parser.add_argument("--complex_type",  help="Geometry about metal (e.g. octahedral)", default="octahedral", dest="complex_type", type=str)
 	parser.add_argument("--m_oxi",  help="Metal oxidation state", default=["3"], dest="m_oxi", type=int)
 	parser.add_argument("--metal_idx",  help="Metal index (automatically updates)", default=[], dest="metal_idx", type=int)
 	parser.add_argument("--charge",  help="Charge of metal complex (automatically updates)", default=[], dest="charge", type=int)
-	parser.add_argument("--charge_default",  help="Charge default to be considered", default="0", dest="charge_default", type=int)
+	parser.add_argument("--charge_default",  help="Charge default to be considered", default='auto', dest="charge_default")
 	parser.add_argument("--metal_sym",  help="Symbols of metals to be considered from list (automatically updates)", default=[], dest="metal_sym", type=str)
 	#NCI complex
 	parser.add_argument("--nci_complex", action="store_true", default=False, help="Request NCI complexes")
@@ -40,7 +40,7 @@ def parser_args():
 	parser.add_argument("-b","--boltz", action="store_true", default=False, help="Boltzmann factor for each conformers from Gaussian output files")
 	parser.add_argument("-f","--combine", action="store_true", default=False, help="Combine files of differnt molecules including boltzmann weighted energies")
 	#apply exp rules
-	parser.add_argument("--exp_rules", action="store_true", default=False, help="Experimental rules applied to make Gaussian input files")
+	parser.add_argument("--exp_rules", dest="exp_rules", default=False, help="Experimental rules applied to make Gaussian input files")
 	parser.add_argument("--angle_off", type=float,help="Any limit to set for check rules",default=30)
 	#pass the argument for path for the gaussian folder.
 	parser.add_argument("--path", help="Path for analysis/boltzmann factor/combining files where the gaussian folder created is present",dest="path", default="")
@@ -69,6 +69,11 @@ def parser_args():
 	parser.add_argument("--max_MolWt", help="Max. molecular weight of molecule", default=1000, type=int, metavar="max_MolWt")
 	parser.add_argument("--large_sys", action="store_true",default=False, help="Large systems for xtb optimizations")
 	parser.add_argument("--STACKSIZE", help="STACKSIZE for optimization of large systems", default="500m")
+	parser.add_argument("--xtb_method", help="Specify xtb method used", default='GFN2-xTB', dest="xtb_method", type=str)
+	parser.add_argument("--xtb_solvent", help="Specify GBSA solvent used", default='none', dest="xtb_solvent", type=str)
+	parser.add_argument("--xtb_accuracy", help="Numerical accuracy of the xTB calculation", action="store", default=1.0, dest="xtb_accuracy")
+	parser.add_argument("--xtb_electronic_temperature", help="Electronic temperature for TB methods", action="store", default=300.0, dest="xtb_electronic_temperature")
+	parser.add_argument("--xtb_max_iterations", help="Numerical accuracy of the xTB calculation", action="store", default=250, dest="xtb_max_iterations")
 	#arguments for gaussian files creation
 	parser.add_argument("-l", "--level_of_theory",help="Level of Theory", default=['wB97xd'], dest="level_of_theory", type=str, nargs='*')
 	parser.add_argument("--basis_set",  help="Basis Set", default=['6-31g*'], dest="basis_set", type=str, nargs='*')

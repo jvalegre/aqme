@@ -20,10 +20,11 @@ write_gauss : False # writting Gaussian COM files after, look options of write_g
 # This generates new COM files from LOG files with imaginary freqs or errors
 analysis : True
 sp : True # write COM files after analysis
-input_for_sp : '' # add the input line with keywords. For adjusting number of processors and memory, go belo (to gauss_write options)
 dup : True # if dup : True, analysis will also separate duplicate LOG files
 
 # COMMON PARAMETERS TO EDIT
+genecp_atoms : ['C'] # list of atoms included in the gen_ecp part
+basis_set_genecp_atoms : ['LANL2DZ'] # functional for the genecp part
 
 charge_sp : 3
 mult_sp : 5
@@ -32,3 +33,4 @@ last_line_for_sp : '$NBO $END' # last line to add for single point
 basis_set_sp : ['def2svp'] # basis set
 level_of_theory_sp : ['wb97xd'] # functional
 suffix_sp : 'spc'
+basis_set_genecp_atoms_sp : ['LANL2DZ'] # functional for the genecp part
