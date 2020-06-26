@@ -74,10 +74,13 @@ before_script:
   - LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${XTBHOME}/lib
   - PYTHONPATH=${PYTHONPATH}:${XTBHOME}/python
   - export PATH XTBPATH MANPATH LD_LIBRARY_PATH PYTHONPATH
-  # change it into wget + unzip zip when there is a release (that way the version used will always be the same)
-  - wget https://github.com/grimme-lab/xtb-python/archive/v20.1.zip
-  - unzip v20.1.zip
-  - cd xtb-python-20.1
+  - git clone --branch=master https://github.com/jvalegre/xtb-python
+  # - git clone --branch=master https://github.com/grimme-lab/xtb-python
+  - cd xtb-python
+  # change the previous git clone part into this wget + unzip zip when there is a release (that way the version used will always be the same)
+  # - wget https://github.com/grimme-lab/xtb-python/archive/v20.1.zip
+  # - unzip v20.1.zip
+  # - cd xtb-python-20.1
   # compile xtb-python
   - git submodule update --init
   - meson setup build --prefix=$PWD --libdir=xtb -Dla_backend=netlib
