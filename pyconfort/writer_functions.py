@@ -135,7 +135,7 @@ def convert_sdf_to_com(path_for_file,file,com,com_low,energies,header,args,log):
 
 def input_route_line(args):
 	#definition of input_route lines
-	if args.input_for_gauss is None:
+	if args.input_for_gauss == 'None':
 		input_route = ''
 		if args.frequencies:
 			input_route += 'freq=noraman'
@@ -149,6 +149,7 @@ def input_route_line(args):
 			input_route += ' scrf=({0},solvent={1})'.format(args.solvent_model,args.solvent_name)
 	else:
 		input_route = args.input_for_gauss
+		
 	return input_route
 
 def rename_file_and_charge_chk_change(read_lines,file,args,charge_com):

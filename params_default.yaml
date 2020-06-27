@@ -28,7 +28,7 @@ amplitude_ifreq : 0.2 # amplitude use to displace the imaginary frequencies to f
 # COMMON PARAMETERS TO EDIT
 
 # (0) Input line for the COM files generated with the compute and analysis options
-input_for_gauss : None
+input_for_gauss : 'None'
 
 # (1) CHARGE FOR XTB OPTIMIZATION AND COM FILES
 charge_default : 'auto' # charge of the molecule (when the metal option = False). If charge_default = 'auto', the program will calculate the charge for you
