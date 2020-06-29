@@ -87,7 +87,7 @@ def compute_main(w_dir_initial,dup_data,args,log,start_time):
 			clean_args(args,ori_ff,mol,ori_charge)
 			if args.charge_default == 'auto':
 				if not args.metal_complex:
-					args.charge_default = check_charge_smi(smi)				
+					args.charge_default = check_charge_smi(smi)
 			name = 'comp' + str(i)+'_'
 			compute_confs(w_dir_initial,mol,name,args,log,dup_data,counter_for_template,i,start_time)
 
@@ -191,12 +191,12 @@ def write_gauss_main(args,log):
 def move_sdf_main(args):
 	src = os.getcwd()
 	if args.xtb:
-		all_xtb_conf_files = glob.glob('*_xtb.sdf')
+		all_xtb_conf_files = glob.glob('*_xtb.sdf') + glob.glob('*_xtb_all_confs.sdf')
 		destination_xtb = src +'/xtb_minimised_generated_sdf_files'
 		for file in all_xtb_conf_files:
 			moving_sdf_files(destination_xtb,src,file)
-	elif args.ANI1ccx:
-		all_ani_conf_files = glob.glob('*_ani.sdf')
+	if args.ANI1ccx:s
+		all_ani_conf_files = glob.glob('*_ani.sdf') + glob.glob('*_ani_all_confs.sdf')
 		destination_ani = src +'/ani1ccx_minimised_generated_sdf_files'
 		for file in all_ani_conf_files:
 			moving_sdf_files(destination_ani,src,file)

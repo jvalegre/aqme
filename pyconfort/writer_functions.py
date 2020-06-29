@@ -149,7 +149,7 @@ def input_route_line(args):
 			input_route += ' scrf=({0},solvent={1})'.format(args.solvent_model,args.solvent_name)
 	else:
 		input_route = args.input_for_gauss
-		
+
 	return input_route
 
 def rename_file_and_charge_chk_change(read_lines,file,args,charge_com):

@@ -742,8 +742,20 @@ def mult_min(name, args, program,log,dup_data,dup_data_idx):
 
 	name_mol = name.split('_rdkit')[0]
 	for i, cid in enumerate(sorted_all_cids):
-		outmols[cid].SetProp('_Name', name_mol +' conformer ' + str(i+1))
+		outmols[cid].SetProp('_Name', name_mol +' conformer ' + str(i+1) +' '+program)
 		outmols[cid].SetProp('Energy', cenergy[cid])
+
+	#writing all conformers to files after minimization
+	sdwriter = Chem.SDWriter(name+'_'+program+'_all_confs'+args.output)
+
+	write_all_confs = 0
+	for cid in sorted_all_cids:
+		sdwriter.write(outmols[cid])
+		write_all_confs += 1
+
+	if args.verbose:
+		log.write("o  Writing "+str(write_confs)+ " conformers to file " + name+'_'+program+args.output)
+	sdwriter.close()
 
 	log.write("\n\no  Applying filters to intial conformers")
 	# filter based on energy window ewin_rdkit
