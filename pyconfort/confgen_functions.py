@@ -742,11 +742,11 @@ def mult_min(name, args, program,log,dup_data,dup_data_idx):
 
 	name_mol = name.split('_rdkit')[0]
 	for i, cid in enumerate(sorted_all_cids):
-		outmols[cid].SetProp('_Name', name_mol +' conformer ' + str(i+1) +' '+program)
+		outmols[cid].SetProp('_Name', outmols[cid].GetProp('_Name') +' '+program)
 		outmols[cid].SetProp('Energy', cenergy[cid])
 
 	#writing all conformers to files after minimization
-	sdwriter = Chem.SDWriter(name+'_'+program+'_all_confs'+args.output)
+	sdwriter = Chem.SDWriter(name.split('_rdkit')[0]+'_'+program+'_all_confs'+args.output)
 
 	write_all_confs = 0
 	for cid in sorted_all_cids:

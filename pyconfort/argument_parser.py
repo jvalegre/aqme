@@ -31,6 +31,7 @@ def parser_args():
 	#work the script has to do
 	parser.add_argument("-w", "--compute", action="store_true", default=False, help="Perform conformational analysis")
 	parser.add_argument("--write_gauss", action="store_true", default=False, help="Create input files for Gaussian")
+	parser.add_argument("--graph", action="store_true", default=False, help="Produce Graph after DFT calculations are done")
 	parser.add_argument("-a", "--analysis", action="store_true", default=False, help="Fix and analyze Gaussian outputs")
 	parser.add_argument("-r", "--resubmit", action="store_true", default=False, help="Resubmit Gaussian input files")
 	parser.add_argument("--sp", action="store_true", default=False, help="Resubmit Gaussian single point input files")

@@ -14,6 +14,7 @@ from pyconfort.confgen_functions import check_for_pieces, check_charge_smi, clea
 from pyconfort.writer_functions import read_energies, write_gaussian_input_file, moving_sdf_files
 from pyconfort.filter_functions import exp_rules_output
 from pyconfort.analyzer_functions import output_analyzer, check_for_final_folder, dup_calculation
+from pyconfort.grapher import graph
 
 # main function to generate conformers
 def compute_main(w_dir_initial,dup_data,args,log,start_time):
@@ -195,7 +196,7 @@ def move_sdf_main(args):
 		destination_xtb = src +'/xtb_minimised_generated_sdf_files'
 		for file in all_xtb_conf_files:
 			moving_sdf_files(destination_xtb,src,file)
-	if args.ANI1ccx:s
+	if args.ANI1ccx:
 		all_ani_conf_files = glob.glob('*_ani.sdf') + glob.glob('*_ani_all_confs.sdf')
 		destination_ani = src +'/ani1ccx_minimised_generated_sdf_files'
 		for file in all_ani_conf_files:
@@ -279,6 +280,39 @@ def qsub_main(args,log):
 			os.chdir(w_dir)
 			cmd_qsub = [args.submission_command, '*.com']
 			subprocess.call(cmd_qsub)
+
+def graph_main(args,log,w_dir_initial):
+	#get sdf FILES from csv
+	pd_name = pd.read_csv(args.input.split('.')[0]+'-Duplicates Data.csv')
+
+	for i,_ in enumerate(pd_name):
+		name = pd_name.loc[i,'Molecule']
+		print(name)
+
+		if args.nodihedrals:
+			sdf_rdkit =  w_dir_initial+'/rdkit_generated_sdf_files/'+name+'_rdkit.sdf'
+		elif not args.nodihedrals:
+			sdf_rdkit =  w_dir_initial+'/rdkit_generated_sdf_files/'+name+'_rdkit_rotated.sdf'
+
+		if args.xtb:
+			print('in xtb')
+			sdf_xtb =  w_dir_initial+'/xtb_minimised_generated_sdf_files/'+name+'_xtb_all_confs.sdf'
+		if args.ANI1ccx:
+			print('in ani')
+			sdf_ani = w_dir_initial+'/ani1ccx_minimised_generated_sdf_files/'+name+'_ani_all_confs.sdf'
+
+		print(sdf_rdkit,sdf_xtb,sdf_ani)
+
+		# Sets the folder and find the log files to analyze
+		for lot in args.level_of_theory:
+			for bs in args.basis_set:
+				for bs_gcp in args.basis_set_genecp_atoms:
+					#assign the path to the finished directory.
+					w_dir = args.path + str(lot) + '-' + str(bs) +'/finished'
+					os.chdir(w_dir)
+					log_files = glob.glob(name+'_*.log')
+					graph(sdf_rdkit,sdf_xtb,sdf_ani,log_files,args,log)
+
 
 # MAIN OPTION FOR DISCARDING MOLECULES BASED ON USER INPUT DATA (REFERRED AS EXPERIMENTAL RULES)
 def exp_rules_main(args,log):
