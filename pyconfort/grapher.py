@@ -5,13 +5,25 @@
 # 	    	  used for genrating a graph      	    #
 #####################################################.
 
+
 from pyconfort.confgen_functions import rdkit_sdf_read
 from rdkit.Chem import AllChem as Chem
 import numpy as np
 import os
-if args.graph:
-    import cclib
-    import matplotlib.pyplot as plt
+cclib_installed = True
+matplotlib_installed = True
+if cclib_installed:
+    try:
+        import cclib
+    except (ModuleNotFoundError,AttributeError):
+    	cclib_installed = False
+    	print('cclib is not installed correctly')
+if matplotlib_installed:
+    try:
+        import matplotlib.pyplot as plt
+    except (ModuleNotFoundError,AttributeError):
+    	matplotlib_installed = False
+    	print('matplotlib is not installed correctly')
 
 ev_2_kcal_mol = 23 #ev to kcal/mol
 
