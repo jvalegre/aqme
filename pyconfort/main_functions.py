@@ -279,11 +279,14 @@ def qsub_main(args,log):
 			subprocess.call(cmd_qsub)
 
 def graph_main(args,log,w_dir_initial):
+
 	#get sdf FILES from csv
 	pd_name = pd.read_csv(args.input.split('.')[0]+'-Duplicates Data.csv')
 
 	for i in range(len(pd_name)):
 		name = pd_name.loc[i,'Molecule']
+
+		log.write("\no  Plotting graphs for molecule : {0} ".format(name))
 
 		if args.nodihedrals:
 			sdf_rdkit =  w_dir_initial+'/rdkit_generated_sdf_files/'+name+'_rdkit.sdf'
