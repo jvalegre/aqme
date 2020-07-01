@@ -26,7 +26,15 @@ Please report any bugs or missing details at the mailing list or open an issue a
 	 Quickstart/setup
 	 Quickstart/requirements
 	 Quickstart/basic
+	 Quickstart/defaults
 	 Quickstart/development
+
+.. toctree::
+	:maxdepth: 3
+	:caption: Input Formats
+
+	Input Formats/Input Formats
+
 
 .. toctree::
 	:maxdepth: 3
@@ -40,25 +48,28 @@ Please report any bugs or missing details at the mailing list or open an issue a
 	:maxdepth: 3
 	:caption: Templates
 
-	Conformer Generation with Templates/Linear
-	Conformer Generation with Templates/Trigonal Planar
-	Conformer Generation with Templates/Square Planar
-	Conformer Generation with Templates/Square Pyrimidal
+	Templates/Templates
+
 
 .. toctree::
 	:maxdepth: 3
 	:caption: Methods
 
-	Methods for Conformer Generation/RDKit Only
-	Methods for Conformer Generation/RDKit + xTB
-	Methods for Conformer Generation/RDKit + ANI1ccx
+	Methods/RDKit Only
+	Methods/RDKit + xTB
+	Methods/RDKit + ANI1ccx
 
 .. toctree::
 	:maxdepth: 3
 	:caption: Gaussian Input Files
 
-	Generation of Gaussian Input Files/Options for input parameters
+	Gaussian Input Files/Options for input parameters
 
+.. toctree::
+	:maxdepth: 3
+	:caption: Analysis
+
+	Analysis/Options for Analysis
 
 .. toctree::
 	:maxdepth: 3

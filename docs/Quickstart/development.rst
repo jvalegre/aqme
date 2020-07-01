@@ -7,4 +7,4 @@ Development
 This documents provides details about possible collaborations for the developments of ``pyCONFORT``
 program.
 
-.. contents::
+Please contact Robert S. Paton for possible collaborations to improve ``pyCONFORT``!
