@@ -42,6 +42,10 @@ def main():
 	#if needed to load from a yaml file
 	load_from_yaml(args,log)
 
+	#setting defaults back
+	if len(args.basis_set_genecp_atoms) == 0:
+		args.basis_set_genecp_atoms = ['LANL2DZ']
+
 	#creation of csv to write dup data
 	dup_data = creation_of_dup_csv(args)
 

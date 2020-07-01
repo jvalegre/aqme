@@ -244,6 +244,7 @@ def conformer_generation(mol,name,start_time,args,log,dup_data,dup_data_idx,coor
 		try:
 			# the conformational search for RDKit
 			status = summ_search(mol, name,args,log,dup_data,dup_data_idx,coord_Map,alg_Map,mol_template)
+			print(status)
 			if args.ANI1ccx or args.xtb:
 				if status != -1:
 					if args.ANI1ccx:
@@ -253,7 +254,7 @@ def conformer_generation(mol,name,start_time,args,log,dup_data,dup_data_idx,coor
 								mult_min(name+'_'+'rdkit', args, min_suffix, log, dup_data, dup_data_idx)
 							else:
 								mult_min(name+'_'+'rdkit'+'_'+'rotated', args, min_suffix, log, dup_data, dup_data_idx)
-					if args.xtb:
+					elif args.xtb:
 						min_suffix = 'xtb'
 						if status != 0:
 							if args.nodihedrals:

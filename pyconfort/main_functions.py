@@ -151,9 +151,6 @@ def write_gauss_main(args,log):
 	g_dir = 'generated_gaussian_files'
 	#fixing genecp to LAL2DZ if empty
 
-	if len(args.basis_set_genecp_atoms) == 0:
-		args.basis_set_genecp_atoms = ['LANL2DZ']
-
 	if len(conf_files) != 0:
 		#read in dup_data to get the overall charge of MOLECULES
 		charge_data = pd.read_csv(args.input.split('.')[0]+'-Duplicates Data.csv', usecols=['Molecule','Overall charge'])
@@ -220,10 +217,10 @@ def get_log_out_files():
 def analysis_main(w_dir_initial,args,log):
 	# when you run analysis in a folder full of output files
 	if args.path == '':
-
 		log_files = get_log_out_files()
 		w_dir = os.getcwd()
 		w_dir_fin = w_dir+'/finished'
+
 		for lot in args.level_of_theory:
 			for bs in args.basis_set:
 				for bs_gcp in args.basis_set_genecp_atoms:
@@ -285,23 +282,17 @@ def graph_main(args,log,w_dir_initial):
 	#get sdf FILES from csv
 	pd_name = pd.read_csv(args.input.split('.')[0]+'-Duplicates Data.csv')
 
-	for i,_ in enumerate(pd_name):
+	for i in range(len(pd_name)):
 		name = pd_name.loc[i,'Molecule']
-		print(name)
 
 		if args.nodihedrals:
 			sdf_rdkit =  w_dir_initial+'/rdkit_generated_sdf_files/'+name+'_rdkit.sdf'
 		elif not args.nodihedrals:
-			sdf_rdkit =  w_dir_initial+'/rdkit_generated_sdf_files/'+name+'_rdkit_rotated.sdf'
-
+			sdf_rdkit = w_dir_initial+'/rdkit_generated_sdf_files/'+name+'_rdkit_rotated.sdf'
 		if args.xtb:
-			print('in xtb')
 			sdf_xtb =  w_dir_initial+'/xtb_minimised_generated_sdf_files/'+name+'_xtb_all_confs.sdf'
 		if args.ANI1ccx:
-			print('in ani')
 			sdf_ani = w_dir_initial+'/ani1ccx_minimised_generated_sdf_files/'+name+'_ani_all_confs.sdf'
-
-		print(sdf_rdkit,sdf_xtb,sdf_ani)
 
 		# Sets the folder and find the log files to analyze
 		for lot in args.level_of_theory:
@@ -311,7 +302,7 @@ def graph_main(args,log,w_dir_initial):
 					w_dir = args.path + str(lot) + '-' + str(bs) +'/finished'
 					os.chdir(w_dir)
 					log_files = glob.glob(name+'_*.log')
-					graph(sdf_rdkit,sdf_xtb,sdf_ani,log_files,args,log)
+					graph(sdf_rdkit,sdf_xtb,sdf_ani,log_files,args,log,lot,bs,name,w_dir_initial)
 
 
 # MAIN OPTION FOR DISCARDING MOLECULES BASED ON USER INPUT DATA (REFERRED AS EXPERIMENTAL RULES)
