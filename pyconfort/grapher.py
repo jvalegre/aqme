@@ -60,8 +60,6 @@ def plot_graph(energy_rdkit,energy_min,energy_min_dft,lot,bs,name_mol,args,type,
                 list.append(energy_min_dft[i][1])
         list_all.append(list)
 
-    print(list_all)
-
     fig=plt.figure() #Creates a new figure
     ax1=fig.add_subplot(111) #Plot with: 1 row, 1 column, first subplot.
 
