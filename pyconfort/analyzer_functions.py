@@ -87,7 +87,7 @@ def write_genecp(fileout,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,bs_com,l
 # CREATION OF COM FILES
 def new_com_file(w_dir,w_dir_initial,file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,TERMINATION,IM_FREQS,bs_com,lot_com,bs_gcp_com):
 	if args.sp:
-		if args.suffix_sp is None:
+		if args.suffix_sp == 'None':
 			fileout = open(file.split(".")[0]+'-'+lot_com+'-'+bs_com+'.com', "w")
 		else:
 			fileout = open(file.split(".")[0]+'-'+args.suffix_sp+'-'+lot_com+'-'+bs_com+'.com', "w")
@@ -191,7 +191,7 @@ def get_geom_and_freq_for_normal(outlines, args, TERMINATION, NATOMS, FREQS, NOR
 				for j in range(2, nfreqs):
 					FREQS.append(float(outlines[i].split()[j]))
 					NORMALMODE.append([])
-					if float(outlines[i].split()[j]) < 0.0:
+					if float(outlines[i].split()[j]) < args.ifreq_cutoff:
 						IM_FREQS += 1
 				for j in range(3, nfreqs+1):
 					READMASS.append(float(outlines[i+1].split()[j]))
@@ -401,9 +401,9 @@ def output_analyzer(log_files, w_dir, lot, bs, bs_gcp, args, w_dir_fin, w_dir_in
 						if args.solvent_model_sp != 'gas_phase':
 							keywords_opt += ' scrf=({0},solvent={1})'.format(args.solvent_model_sp,args.solvent_name_sp)
 
-						if args.charge_sp is not None:
+						if args.charge_sp != 'None':
 							CHARGE = args.charge_sp
-						if args.mult_sp is not None:
+						if args.mult_sp != 'None':
 							MULT = args.mult_sp
 
 						new_com_file(w_dir,w_dir_initial,file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,TERMINATION,IM_FREQS,bs_sp,lot_sp,bs_gcp_sp)

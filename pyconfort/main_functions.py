@@ -49,7 +49,7 @@ def compute_main(w_dir_initial,dup_data,args,log,start_time):
 			if args.charge_default == 'auto':
 				if not args.metal_complex:
 					args.charge_default = check_charge_smi(smi)
-			if not args.prefix:
+			if args.prefix == 'None':
 				name = ''.join(toks[1:])
 			else:
 				name = args.prefix+str(i)+'_'+''.join(toks[1:])
@@ -68,7 +68,7 @@ def compute_main(w_dir_initial,dup_data,args,log,start_time):
 			if args.charge_default == 'auto':
 				if not args.metal_complex:
 					args.charge_default = check_charge_smi(smi)
-			if not args.prefix:
+			if args.prefix == 'None':
 				name = csv_smiles.loc[i, 'code_name']
 			else:
 				name = 'comp_'+str(i)+'_'+csv_smiles.loc[i, 'code_name']
@@ -288,6 +288,7 @@ def graph_main(args,log,w_dir_initial):
 
 		log.write("\no  Plotting graphs for molecule : {0} ".format(name))
 
+		sdf_ani,sdf_xtb = None,None
 		if args.nodihedrals:
 			sdf_rdkit =  w_dir_initial+'/rdkit_generated_sdf_files/'+name+'_rdkit.sdf'
 		elif not args.nodihedrals:

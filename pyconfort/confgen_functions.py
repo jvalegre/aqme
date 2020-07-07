@@ -244,27 +244,26 @@ def conformer_generation(mol,name,start_time,args,log,dup_data,dup_data_idx,coor
 		try:
 			# the conformational search for RDKit
 			status = summ_search(mol, name,args,log,dup_data,dup_data_idx,coord_Map,alg_Map,mol_template)
-			print(status)
 			if args.ANI1ccx or args.xtb:
 				if status != -1:
-					if args.ANI1ccx:
+					if args.ANI1ccx and status != 0:
 						min_suffix = 'ani'
-						if status != 0:
-							if args.nodihedrals:
-								mult_min(name+'_'+'rdkit', args, min_suffix, log, dup_data, dup_data_idx)
-							else:
-								mult_min(name+'_'+'rdkit'+'_'+'rotated', args, min_suffix, log, dup_data, dup_data_idx)
-					elif args.xtb:
+						if args.nodihedrals:
+							mult_min(name+'_'+'rdkit', args, min_suffix, log, dup_data, dup_data_idx)
+						else:
+							mult_min(name+'_'+'rdkit'+'_'+'rotated', args, min_suffix, log, dup_data, dup_data_idx)
+					elif args.xtb and status != 0:
 						min_suffix = 'xtb'
-						if status != 0:
-							if args.nodihedrals:
-								mult_min(name+'_'+'rdkit', args, min_suffix, log, dup_data, dup_data_idx)
-							else:
-								mult_min(name+'_'+'rdkit'+'_'+'rotated', args, min_suffix, log, dup_data, dup_data_idx)
-					else:
+						if args.nodihedrals:
+							mult_min(name+'_'+'rdkit', args, min_suffix, log, dup_data, dup_data_idx)
+						else:
+							mult_min(name+'_'+'rdkit'+'_'+'rotated', args, min_suffix, log, dup_data, dup_data_idx)
+					elif status == 0:
+						os.remove(name+'_'+'rdkit'+args.output)
 						log.write('\nx  No rotatable dihedral found. Run again with nodihedral set to TRUE')
 			else:
 				if status == 0:
+					os.remove(name+'_'+'rdkit'+args.output)
 					log.write('\nx  No rotatable dihedral found. Run again with nodihedral set to TRUE')
 
 		except (KeyboardInterrupt, SystemExit):

@@ -79,7 +79,7 @@ def plot_graph(energy_rdkit,energy_min,energy_min_dft,lot,bs,name_mol,args,type,
 
     cmap = get_cmap(len(list_all))
     for i,list in enumerate(list_all):
-        line = ax1.plot(list,c=cmap(i),label=name_all[i], linestyle='-', marker='o',markeredgewidth=0.75, markeredgecolor='k')
+        line = ax1.plot(list,c=cmap(i),label=name_all[i], linestyle='-', marker='o',markeredgewidth=0.75, markeredgecolor='k',linewidth=0.5)
         lines += line
 
     plt.xticks(range(0,3), x_axis)
@@ -132,8 +132,10 @@ def graph(sdf_rdkit,sdf_xtb,sdf_ani,log_files,args,log,lot,bs,name_mol,w_dir_ini
             name = file.split('_xtb.log')[0]
             energy_xtb_dft.append([name,data.scfenergies[0]*ev_2_kcal_mol])
 
-    energy_ani_dft_sc = scaling_with_lowest(energy_ani_dft)
-    energy_xtb_dft_sc = scaling_with_lowest(energy_xtb_dft)
+    if args.ANI1ccx:
+        energy_ani_dft_sc = scaling_with_lowest(energy_ani_dft)
+    if args.xtb:
+        energy_xtb_dft_sc = scaling_with_lowest(energy_xtb_dft)
 
     if args.xtb:
         plot_graph(energy_rdkit_sc,energy_xtb_sc,energy_xtb_dft_sc,lot,bs,name_mol,args,'xtb',w_dir_initial)
