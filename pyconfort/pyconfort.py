@@ -35,8 +35,7 @@ def main():
 	# working directory and arguments
 	w_dir_initial = os.getcwd()
 	args = parser_args()
-	# Define the logging object
-	log = Logger("pyCONFORT", args.output_name)
+	log = Logger("pyCONFORT-default-changes", args.output_name)
 	#time
 	start_time = time.time()
 	#if needed to load from a yaml file
@@ -51,14 +50,17 @@ def main():
 
 	# this will perform conformational analysis and create inputs for Gaussian
 	if args.compute:
+		log = Logger("pyCONFORT-compute", args.output_name)
 		compute_main(w_dir_initial,dup_data,args,log,start_time)
 
 	#applying rules to discard certain conformers based on rules that the user define
 	if args.exp_rules:
+		log = Logger("pyCONFORT-exp-rules", args.output_name)
 		exp_rules_main(args,log)
 
 	# main part for writing COM files from SDF files
 	if args.write_gauss:
+		log = Logger("pyCONFORT-gaussian-input", args.output_name)
 		write_gauss_main(args,log)
 
 	# moving files after compute and/or write_gauss
@@ -66,18 +68,22 @@ def main():
 
 	# main part of the duplicate function
 	if args.dup:
+		log = Logger("pyCONFORT-duplicates-removed", args.output_name)
 		dup_main(args,log)
 
 	# main part of the analysis functions
 	if args.analysis:
+		log = Logger("pyCONFORT-analysis", args.output_name)
 		analysis_main(w_dir_initial,args,log)
 
 	# main part of the automated workflow (submission of COM files and analyzer)
 	if args.qsub:
+		log = Logger("pyCONFORT-auto-submission", args.output_name)
 		qsub_main(args,log)
 
 	# main part of the automated workflow (submission of COM files and analyzer)
 	if args.graph:
+		log = Logger("pyCONFORT-graph", args.output_name)
 		graph_main(args,log,w_dir_initial)
 
 if __name__ == "__main__":

@@ -27,7 +27,7 @@ def parser_args():
 	#NCI complex
 	parser.add_argument("--nci_complex", action="store_true", default=False, help="Request NCI complexes")
 	parser.add_argument("-m", "--maxnumber", help="Number of compounds", type=int, metavar="maxnumber")
-	parser.add_argument("--prefix", help="Prefix for naming files", default="None", metavar="prefix")
+	parser.add_argument("--prefix", help="Prefix for naming files", default="None", metavar="prefix",type=str)
 	#work the script has to do
 	parser.add_argument("-w", "--compute", action="store_true", default=False, help="Perform conformational analysis")
 	parser.add_argument("--write_gauss", action="store_true", default=False, help="Create input files for Gaussian")
@@ -106,8 +106,8 @@ def parser_args():
 	parser.add_argument("--solvent_name_sp",  help="Name of Solvent for single point after optimization", default="Acetonitrile", dest="solvent_name_sp", type=str)
 	parser.add_argument("--input_for_sp",  help="Input line for Single point after DFT optimization ", default="nmr=giao", dest="input_for_sp", type=str)
 	parser.add_argument("--last_line_for_sp",  help="Last input line for Single point after DFT optimization ", default="", dest="last_line_for_sp", type=str)
-	parser.add_argument("--charge_sp", help="The charge for single point calculation", default="None", type=int, metavar="charge_sp")
-	parser.add_argument("--mult_sp", help="The multiplicity for single point calculation", default="None", type=int, metavar="mult_sp")
+	parser.add_argument("--charge_sp", help="The charge for single point calculation", default="None", metavar="charge_sp")
+	parser.add_argument("--mult_sp", help="The multiplicity for single point calculation", default="None", metavar="mult_sp")
 	parser.add_argument("--suffix_sp", help="The suffix for single point calculation", default="None", type=str, metavar="suffix_sp")
 
 	# submission of Gaussion files

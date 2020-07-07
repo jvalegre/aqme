@@ -52,7 +52,7 @@ def compute_main(w_dir_initial,dup_data,args,log,start_time):
 			if args.prefix == 'None':
 				name = ''.join(toks[1:])
 			else:
-				name = args.prefix+str(i)+'_'+''.join(toks[1:])
+				name = str(args.prefix)+str(i)+'_'+''.join(toks[1:])
 			compute_confs(w_dir_initial,mol,name,args,log,dup_data,counter_for_template,i,start_time)
 
 	# CSV file with one columns SMILES and code_name
