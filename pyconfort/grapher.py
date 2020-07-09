@@ -41,7 +41,7 @@ def rename_name(energy,type):
         energy[i][0] = energy[i][0].split('_'+type)[0]
     return energy
 
-def get_cmap(n, name='gnuplot'):
+def get_cmap(n, name='viridis'):
     '''Returns a function that maps each index in 0, 1, ..., n-1 to a distinct
     RGB color; the keyword argument name must be a standard mpl colormap name.'''
     return plt.cm.get_cmap(name, n)
@@ -61,6 +61,7 @@ def plot_graph(energy_rdkit,energy_min,energy_min_dft,lot,bs,name_mol,args,type,
         x_axis_names=['RDKit','ANI1ccx',lot+'-'+bs]
 
     x_axis = [0,1,2]
+    x_axis_2 = [0,1]
 
     list_all = []
     name_all = []
@@ -80,10 +81,7 @@ def plot_graph(energy_rdkit,energy_min,energy_min_dft,lot,bs,name_mol,args,type,
     fig=plt.figure() #Creates a new figure
     ax1=fig.add_subplot(111) #Plot with: 1 row, 1 column, first subplot.
 
-    lines = []
-
     cmap = get_cmap(len(list_all))
-
     Path = mpath.Path
     for i, list in enumerate(list_all):
         path_patch_1 = mpatches.PathPatch(
@@ -91,12 +89,16 @@ def plot_graph(energy_rdkit,energy_min,energy_min_dft,lot,bs,name_mol,args,type,
                      [Path.MOVETO, Path.CURVE3, Path.CURVE3]),
                 fc="none", transform=ax1.transData, color=cmap(i))
         ax1.add_patch(path_patch_1)
-        path_patch_2 = mpatches.PathPatch(
-                Path([(x_axis[1], list[1]), (x_axis[1]+0.5, list[2]), (x_axis[2] ,list[2])],
-                     [Path.MOVETO, Path.CURVE3, Path.CURVE3]),
-                fc="none", transform=ax1.transData, color=cmap(i))
-        ax1.add_patch(path_patch_2)
-        ax1.scatter(x_axis,list,color=cmap(i), marker='o')
+        if len(list) == 3:
+            path_patch_2 = mpatches.PathPatch(
+                    Path([(x_axis[1], list[1]), (x_axis[1]+0.5, list[2]), (x_axis[2] ,list[2])],
+                         [Path.MOVETO, Path.CURVE3, Path.CURVE3]),
+                    fc="none", transform=ax1.transData, color=cmap(i))
+            ax1.add_patch(path_patch_2)
+        if len(list) == 3:
+            ax1.scatter(x_axis,list,color=cmap(i), marker='o')
+        else:
+            ax1.scatter(x_axis_2,list,color=cmap(i), marker='o')
 
     plt.xticks(range(0,3), x_axis_names)
 
