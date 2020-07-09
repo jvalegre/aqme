@@ -11,6 +11,8 @@ from rdkit.Chem import AllChem as Chem
 import numpy as np
 import matplotlib.path as mpath
 import matplotlib.patches as mpatches
+from sklearn.metrics import mean_absolute_error
+import statistics as stats
 
 import os
 cclib_installed = True
@@ -29,6 +31,11 @@ if matplotlib_installed:
     	print('matplotlib is not installed correctly')
 
 ev_2_kcal_mol = 23 #ev to kcal/mol
+
+def stats_calc(y_dft,y):
+	mae = mean_absolute_error(y, y_dft)
+	sd = stats.stdev(y)
+	return mae,sd
 
 def get_energy(inmols_min):
     energy_min = []
@@ -55,10 +62,16 @@ def scaling_with_lowest(energy):
     return energy
 
 def plot_graph(energy_rdkit,energy_min,energy_min_dft,lot,bs,name_mol,args,type,w_dir_initial):
+
+    # mae_rdkit,sd_rdkit = stats_calc(np.array(energy_min_dft[:,1]).astype(np.float64),np.array(energy_rdkit[:,1]).astype(np.float64))
+    # mae_min,sd_min = stats_calc(np.array(energy_min_dft[:,1]).astype(np.float64),np.array(energy_min[:,1]).astype(np.float64))
+
     if type =='xtb':
         x_axis_names=['RDKit','xTB',lot+'-'+bs]
+        # textstr = r'RDKit : {0}\pm{1}\t xTB : {2}\pm{3}'%(mae_rdkit, sd_rdkit,mae_min, sd_min)
     if type =='ani':
         x_axis_names=['RDKit','ANI1ccx',lot+'-'+bs]
+        # textstr = r'RDKit : {0}\pm{1}\t ANI1ccx : {2}\pm{3}'%(mae_rdkit, sd_rdkit,mae_min, sd_min)
 
     x_axis = [0,1,2]
     x_axis_2 = [0,1]
@@ -101,7 +114,7 @@ def plot_graph(energy_rdkit,energy_min,energy_min_dft,lot,bs,name_mol,args,type,
             ax1.scatter(x_axis_2,list,color=cmap(i), marker='o')
 
     plt.xticks(range(0,3), x_axis_names)
-
+    # plt.text(0.5, 0, textstr , horizontalalignment='center', verticalalignment='center', transform=ax.transAxes, fontsize=14,bbox=dict(facecolor='black', alpha=0.5))
     #ax1.legend(lines,labels,loc='upper center', prop={'size':4}, bbox_to_anchor=(0.5, -0.13), fancybox=True, shadow=True, ncol=5)
     ax1.set_xlabel('Type of Calculation',fontsize=10)
     ax1.set_ylabel('Relative Energy (kcal/mol)',fontsize=10)
