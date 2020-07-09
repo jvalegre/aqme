@@ -96,12 +96,12 @@ def new_com_file(w_dir,w_dir_initial,file,args,keywords_opt,name,CHARGE,MULT,NAT
 
 	write_header_and_coords(fileout,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS)
 
-	if genecp == 'genecp' or  genecp == 'gen':
-		write_genecp(fileout,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,bs_com,lot_com,bs_gcp_com,args,w_dir_initial,w_dir)
-
 	if args.sp and TERMINATION == "normal" and IM_FREQS == 0 :
 		fileout.write(args.last_line_for_sp)
 		fileout.write('\n\n')
+
+	if genecp == 'genecp' or  genecp == 'gen':
+		write_genecp(fileout,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,bs_com,lot_com,bs_gcp_com,args,w_dir_initial,w_dir)
 
 	fileout.close()
 
@@ -301,40 +301,50 @@ def create_folder_and_com(w_dir,log,NATOMS,ATOMTYPES,CARTESIANS,args,TERMINATION
 
 	new_com_file(w_dir,w_dir_initial,file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,TERMINATION,IM_FREQS,bs,lot,bs_gcp)
 
-def create_folder_move_log_files(w_dir,file,IM_FREQS,TERMINATION,ERRORTYPE,w_dir_fin):
+def create_folder_move_log_files(w_dir,file,IM_FREQS,TERMINATION,ERRORTYPE,w_dir_fin,finished,unfinished,atom_error,scf_error,imag_freq,other_error):
 	source = w_dir+'/'+file
 
 	if IM_FREQS == 0 and TERMINATION == "normal":
 		destination = w_dir_fin
 		moving_log_files(source, destination)
+		finished += 1
 
 	if IM_FREQS > 0:
 		destination = w_dir+'/imaginary_frequencies/'
 		moving_log_files(source, destination)
+		imag_freq += 1
 
 	if IM_FREQS == 0 and TERMINATION == "error":
 		if ERRORTYPE == "atomicbasiserror":
 			destination = w_dir+'/failed_error/atomic_basis_error'
+			atom_error += 1
 		elif ERRORTYPE == "SCFerror":
 			destination = w_dir+'/failed_error/SCF_error'
+			scf_error += 1
 		else:
 			destination = w_dir+'/failed_error/unknown_error'
+			other_error += 1
 		moving_log_files(source, destination)
 
 	elif IM_FREQS == 0 and TERMINATION == "unfinished":
 		destination = w_dir+'/failed_unfinished/'
 		moving_log_files(source, destination)
+		unfinished += 1
+
+	return finished,unfinished,atom_error,scf_error,imag_freq,other_error
 
 # DEFINTION OF OUTPUT ANALYSER and NMR FILES CREATOR
-def output_analyzer(log_files, w_dir, lot, bs, bs_gcp, args, w_dir_fin, w_dir_initial, log):
+def output_analyzer(log_files, w_dir, lot, bs, bs_gcp, args, w_dir_fin, w_dir_initial, log,ana_data):
 
 	input_route = input_route_line(args)
+	finished,unfinished,atom_error,scf_error,imag_freq,other_error = 0,0,0,0,0,0
 
 	for file in log_files:
 		# read the file
 		outlines, outfile, break_loop = read_log_file(w_dir,file)
 		if break_loop:
 			break
+
 		# get initial parameters
 		rms,stop_rms,stand_or,NATOMS,IM_FREQS,freqs_so_far,stop_name,stop_term,nfreqs,ATOMTYPES,CARTESIANS,FREQS,READMASS,FORCECONST,NORMALMODE,TERMINATION,ERRORTYPE,dist_rot_or = get_initial_variables()
 
@@ -362,7 +372,7 @@ def output_analyzer(log_files, w_dir, lot, bs, bs_gcp, args, w_dir_fin, w_dir_in
 		outfile.close()
 
 		# This part places the calculations in different folders depending on the type of termination
-		create_folder_move_log_files(w_dir,file,IM_FREQS,TERMINATION,ERRORTYPE,w_dir_fin)
+		finished,unfinished,atom_error,scf_error,imag_freq,other_error = create_folder_move_log_files(w_dir,file,IM_FREQS,TERMINATION,ERRORTYPE,w_dir_fin,finished,unfinished,atom_error,scf_error,imag_freq,other_error)
 
 		# check if gen or genecp are active
 		ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp =  check_for_gen_or_genecp(ATOMTYPES,args)
@@ -407,6 +417,18 @@ def output_analyzer(log_files, w_dir, lot, bs, bs_gcp, args, w_dir_fin, w_dir_in
 							MULT = args.mult_sp
 
 						new_com_file(w_dir,w_dir_initial,file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,TERMINATION,IM_FREQS,bs_sp,lot_sp,bs_gcp_sp)
+
+	#write to csv ana_data
+	ana_data.at[0,'Total Files'] = len(log_files)
+	ana_data.at[0,'Normal Termination'] = finished
+	ana_data.at[0,'Imaginary frequencies'] = imag_freq
+	ana_data.at[0,'SCF Error'] = scf_error
+	ana_data.at[0,'Atomic Basis Error'] =  atom_error
+	ana_data.at[0,'Other Errors'] = other_error
+	ana_data.at[0,'Unfinished'] = unfinished
+
+	os.chdir(w_dir)
+	ana_data.to_csv('Analysis-Data-compiles.csv',index=False)
 
 # CHECKS THE FOLDER OF FINAL LOG FILES
 def check_for_final_folder(w_dir,log):

@@ -82,6 +82,11 @@ def creation_of_dup_csv(args):
 			dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples','RDKit-energy-window', 'RDKit-initial_energy_threshold','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','RDKIT-Rotated-conformers','RDKit-Rotated-energy-window', 'RDKit-Rotated-initial_energy_threshold','RDKit-Rotated-RMSD-and-energy-duplicates','RDKIT-Rotated-Unique-conformers','ANI1ccx-Initial-samples','ANI1ccx-energy-window','ANI1ccx-initial_energy_threshold','ANI1ccx-RMSD-and-energy-duplicates','ANI1ccx-Unique-conformers','xTB-Initial-samples','xTB-energy-window','xTB-initial_energy_threshold','xTB-RMSD-and-energy-duplicates','xTB-Unique-conformers','time (seconds)','Overall charge'])
 	return dup_data
 
+def creation_of_ana_csv(args):
+	if args.analysis:
+		ana_data =  pd.DataFrame(columns = ['Total Files','Normal Termination', 'Imaginary frequencies', 'SCF Error','Atomic Basis Error','Other Errors','Unfinished'])
+	return ana_data
+
 def header_com(name,lot,bs,bs_gcp, args, log, input_route, genecp):
 	if genecp != 'None':
 		input_route_to_write = input_route
@@ -290,8 +295,9 @@ def write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args, log, 
 			if not ecp_genecp_atoms and not ecp_gen_atoms:
 				fileout.write('\n')
 			else:
+				format_ext_genecp = ['.txt','.yaml','.yml','.rtf']
 				if len(bs_gcp.split('.')) > 1:
-					if bs_gcp.split('.')[1] == 'txt' or bs_gcp.split('.')[1] == 'yaml':
+					if bs_gcp.split('.')[1] in format_ext_genecp:
 						os.chdir(path_for_file)
 						read_lines = open(bs_gcp,"r").readlines()
 						os.chdir(path_write_gjf_files)

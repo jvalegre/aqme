@@ -29,7 +29,7 @@ import os
 import time
 from pyconfort.argument_parser import parser_args
 from pyconfort.main_functions import compute_main, exp_rules_main, write_gauss_main, move_sdf_main, analysis_main, dup_main, qsub_main,graph_main
-from pyconfort.writer_functions import creation_of_dup_csv, load_from_yaml, Logger
+from pyconfort.writer_functions import creation_of_dup_csv, load_from_yaml, Logger,creation_of_ana_csv
 
 def main():
 	# working directory and arguments
@@ -45,11 +45,11 @@ def main():
 	if len(args.basis_set_genecp_atoms) == 0:
 		args.basis_set_genecp_atoms = ['LANL2DZ']
 
-	#creation of csv to write dup data
-	dup_data = creation_of_dup_csv(args)
 
 	# this will perform conformational analysis and create inputs for Gaussian
 	if args.compute:
+		#creation of csv to write dup data
+		dup_data = creation_of_dup_csv(args)
 		log = Logger("pyCONFORT-compute", args.output_name)
 		compute_main(w_dir_initial,dup_data,args,log,start_time)
 
@@ -71,10 +71,12 @@ def main():
 		log = Logger("pyCONFORT-duplicates-removed", args.output_name)
 		dup_main(args,log)
 
+
 	# main part of the analysis functions
 	if args.analysis:
+		ana_data = creation_of_ana_csv(args)
 		log = Logger("pyCONFORT-analysis", args.output_name)
-		analysis_main(w_dir_initial,args,log)
+		analysis_main(w_dir_initial,args,log,ana_data)
 
 	# main part of the automated workflow (submission of COM files and analyzer)
 	if args.qsub:

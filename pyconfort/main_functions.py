@@ -21,7 +21,7 @@ def compute_main(w_dir_initial,dup_data,args,log,start_time):
 	# input file format specified
 	file_format = os.path.splitext(args.input)[1]
 
-	if file_format not in ['.smi', '.sdf', '.cdx', '.csv','.com','.gjf','.mol','.mol2','.xyz']:
+	if file_format not in ['.smi', '.sdf', '.cdx', '.csv','.com','.gjf','.mol','.mol2','.xyz','.txt']:
 		log.write("\nx  INPUT FILETYPE NOT CURRENTLY SUPPORTED!")
 		sys.exit()
 
@@ -34,7 +34,7 @@ def compute_main(w_dir_initial,dup_data,args,log,start_time):
 	ori_charge = args.charge_default
 
 	# SMILES input specified
-	if file_format == '.smi':
+	if file_format == '.smi' or file_format =='.txt':
 		smifile = open(args.input)
 		#used only for template
 		counter_for_template = 0
@@ -214,7 +214,7 @@ def get_log_out_files():
 	return log_files
 
 # main part of the analysis functions
-def analysis_main(w_dir_initial,args,log):
+def analysis_main(w_dir_initial,args,log,ana_data):
 	# when you run analysis in a folder full of output files
 	if args.path == '':
 		log_files = get_log_out_files()
@@ -226,7 +226,7 @@ def analysis_main(w_dir_initial,args,log):
 				for bs_gcp in args.basis_set_genecp_atoms:
 					folder = w_dir_initial
 					log.write("\no  ANALYZING OUTPUT FILES IN {}\n".format(folder))
-					output_analyzer(log_files, w_dir, lot, bs, bs_gcp, args, w_dir_fin,w_dir_initial,log)
+					output_analyzer(log_files, w_dir, lot, bs, bs_gcp, args, w_dir_fin,w_dir_initial,log,ana_data)
 		os.chdir(w_dir)
 	# when you specify multiple levels of theory
 	else:
@@ -243,7 +243,7 @@ def analysis_main(w_dir_initial,args,log):
 					log_files = get_log_out_files()
 					folder = w_dir + '/' + str(lot) + '-' + str(bs)
 					log.write("\no  ANALYZING OUTPUT FILES IN {}\n".format(folder))
-					output_analyzer(log_files, w_dir, lot, bs, bs_gcp, args, w_dir_fin,w_dir_initial,log)
+					output_analyzer(log_files, w_dir, lot, bs, bs_gcp, args, w_dir_fin,w_dir_initial,log,ana_data)
 		os.chdir(args.path)
 
 def dup_main(args,log):
