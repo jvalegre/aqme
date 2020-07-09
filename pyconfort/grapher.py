@@ -9,6 +9,9 @@
 from pyconfort.confgen_functions import rdkit_sdf_read
 from rdkit.Chem import AllChem as Chem
 import numpy as np
+import matplotlib.path as mpath
+import matplotlib.patches as mpatches
+
 import os
 cclib_installed = True
 matplotlib_installed = True
@@ -53,9 +56,11 @@ def scaling_with_lowest(energy):
 
 def plot_graph(energy_rdkit,energy_min,energy_min_dft,lot,bs,name_mol,args,type,w_dir_initial):
     if type =='xtb':
-        x_axis=['RDKit','xTB',lot+'-'+bs]
+        x_axis_names=['RDKit','xTB',lot+'-'+bs]
     if type =='ani':
-        x_axis=['RDKit','ANI1ccx',lot+'-'+bs]
+        x_axis_names=['RDKit','ANI1ccx',lot+'-'+bs]
+
+    x_axis = [0,1,2]
 
     list_all = []
     name_all = []
@@ -78,12 +83,22 @@ def plot_graph(energy_rdkit,energy_min,energy_min_dft,lot,bs,name_mol,args,type,
     lines = []
 
     cmap = get_cmap(len(list_all))
-    for i,list in enumerate(list_all):
-        line = ax1.plot(list,c=cmap(i),label=name_all[i], linestyle='-', marker='o',markeredgewidth=0.75, markeredgecolor='k',linewidth=0.5)
-        lines += line
 
-    plt.xticks(range(0,3), x_axis)
-    labels = [l.get_label() for l in lines]
+    Path = mpath.Path
+    for i, list in enumerate(list_all):
+        path_patch_1 = mpatches.PathPatch(
+                Path([(x_axis[0], list[0]), (x_axis[0]+0.5, list[1]), (x_axis[1] ,list[1])],
+                     [Path.MOVETO, Path.CURVE3, Path.CURVE3]),
+                fc="none", transform=ax1.transData, color=cmap(i))
+        ax1.add_patch(path_patch_1)
+        path_patch_2 = mpatches.PathPatch(
+                Path([(x_axis[1], list[1]), (x_axis[1]+0.5, list[2]), (x_axis[2] ,list[2])],
+                     [Path.MOVETO, Path.CURVE3, Path.CURVE3]),
+                fc="none", transform=ax1.transData, color=cmap(i))
+        ax1.add_patch(path_patch_2)
+        ax1.scatter(x_axis,list,color=cmap(i), marker='o')
+
+    plt.xticks(range(0,3), x_axis_names)
 
     #ax1.legend(lines,labels,loc='upper center', prop={'size':4}, bbox_to_anchor=(0.5, -0.13), fancybox=True, shadow=True, ncol=5)
     ax1.set_xlabel('Type of Calculation',fontsize=10)
