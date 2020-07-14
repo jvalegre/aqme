@@ -396,11 +396,9 @@ def output_analyzer(log_files, w_dir, lot, bs, bs_gcp, args, w_dir_fin, w_dir_in
 					for bs_gcp_sp in args.basis_set_genecp_atoms_sp:
 						log.write('-> Creating new single point files files for {0} in ./finished/single_point_input_files/{1}-{2}\n'.format(file,lot_sp,bs_sp))
 						dir_name = str(lot_sp) + '-' + str(bs_sp)
-						if not os.path.isdir(single_point_input_files):
-							os.makedirs(single_point_input_files)
-							os.chdir(single_point_input_files)
-							os.makedirs(dir_name)
-						os.chdir(single_point_input_files+'/'+dir_name)
+						if not os.path.isdir(single_point_input_files+'/'+dir_name):
+							os.makedirs(single_point_input_files+'/'+dir_name)
+							os.chdir(single_point_input_files+'/'+dir_name)
 
 						if genecp == 'genecp' or  genecp == 'gen':
 							keywords_opt = lot_sp+'/'+ genecp+' '+ args.input_for_sp

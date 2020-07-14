@@ -128,9 +128,9 @@ def four_embed(molecule_embed,molecule,mol_1,number_of_neighbours,center_idx,nei
 
 				name_final = name_input.split()[0]+'_'+ str(name)
 				mol_objects.append(molecule_new)
-				print(mol_objects)
+				#print(mol_objects)
 				name_return.append(name_final)
-				print(name_return)
+				#print(name_return)
 				coord_Map.append(coordMap)
 				alg_Map.append(algMap)
 				mol_template.append(mol_1)
@@ -239,7 +239,7 @@ def five_embed(molecule_embed,molecule,mol_1,number_of_neighbours,center_idx,nei
 			else:
 				pass
 			counter += 1
-	print(name_return)
+	#print(name_return)
 	return mol_objects, name_return, coord_Map, alg_Map, mol_template
 
 # TEMPLATE GENERATION FOR SQUAREPLANAR AND squarepyramidal

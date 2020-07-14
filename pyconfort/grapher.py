@@ -109,9 +109,9 @@ def plot_graph(energy_rdkit,energy_min,energy_min_dft,lot,bs,name_mol,args,type,
                     fc="none", transform=ax1.transData, color=cmap(i))
             ax1.add_patch(path_patch_2)
         if len(list) == 3:
-            ax1.scatter(x_axis,list,color=cmap(i), marker='o')
+            ax1.scatter(x_axis,list,color=cmap(i), marker='o',zorder=2,edgecolors= "black",linewidth=0.5)
         else:
-            ax1.scatter(x_axis_2,list,color=cmap(i), marker='o')
+            ax1.scatter(x_axis_2,list,color=cmap(i), marker='o',zorder=2,edgecolors= "black",linewidth=0.5)
 
     plt.xticks(range(0,3), x_axis_names)
     # plt.text(0.5, 0, textstr , horizontalalignment='center', verticalalignment='center', transform=ax.transAxes, fontsize=14,bbox=dict(facecolor='black', alpha=0.5))
@@ -119,6 +119,7 @@ def plot_graph(energy_rdkit,energy_min,energy_min_dft,lot,bs,name_mol,args,type,
     ax1.set_xlabel('Type of Calculation',fontsize=10)
     ax1.set_ylabel('Relative Energy (kcal/mol)',fontsize=10)
     #plt.setp(ax1.get_xticklabels(), rotation=60, ha="right", visible=True)
+    plt.grid(linestyle='--', linewidth=0.75)
     plt.setp(ax1.get_xticklabels(), rotation=0, visible=True)
     title_string=('Graph of Energies of Conformers for different Methods : {0}'.format(name_mol))
     ax1.set_title(title_string, fontsize=12)
