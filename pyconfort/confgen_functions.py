@@ -754,10 +754,10 @@ def mult_min(name, args, program,log,dup_data,dup_data_idx):
 		write_all_confs += 1
 
 	if args.verbose:
-		log.write("o  Writing "+str(write_confs)+ " conformers to file " + name+'_'+program+args.output)
+		log.write("\no  Writing "+str(write_all_confs )+ " conformers to file " + name+'_'+program+args.output)
 	sdwriter.close()
 
-	log.write("\n\no  Applying filters to intial conformers")
+	log.write("\n\no  Applying filters to intial conformers after "+program+" minimization")
 	# filter based on energy window ewin_rdkit
 	sortedcids = ewin_filter(sorted_all_cids,cenergy,args,dup_data,dup_data_idx,log,program)
 	# pre-filter based on energy only
