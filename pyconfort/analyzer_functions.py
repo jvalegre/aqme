@@ -404,7 +404,7 @@ def output_analyzer(log_files, w_dir, lot, bs, bs_gcp, args, w_dir_fin, w_dir_in
 							keywords_opt = lot_sp+'/'+ genecp+' '+ args.input_for_sp
 						else:
 							keywords_opt = lot_sp+'/'+ bs_sp+' '+ args.input_for_sp
-						if args.dispersion_correction_sp:
+						if args.empirical_dispersion_sp != 'None':
 							keywords_opt += ' empiricaldispersion={0}'.format(args.empirical_dispersion_sp)
 						if args.solvent_model_sp != 'gas_phase':
 							keywords_opt += ' scrf=({0},solvent={1})'.format(args.solvent_model_sp,args.solvent_name_sp)

@@ -662,7 +662,7 @@ def xtb_calc(elements,cartesians,coordinates,args,log,ase_metal,ase_metal_idx):
 # xTB AND ANI1 MAIN OPTIMIZATION PROCESS
 def optimize(mol, args, program,log,dup_data,dup_data_idx):
 	# if large system increase stack size
-	if args.large_sys:
+	if args.STACKSIZE != '1G':
 		os.environ['OMP_STACKSIZE'] = args.STACKSIZE
 
 	# removing the Ba atom if NCI complexes

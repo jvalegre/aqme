@@ -144,7 +144,7 @@ def input_route_line(args):
 		input_route = ''
 		if args.frequencies:
 			input_route += 'freq=noraman'
-		if args.dispersion_correction:
+		if args.empirical_dispersion != 'None':
 			input_route += ' empiricaldispersion={0}'.format(args.empirical_dispersion)
 		if not args.analysis:
 			input_route += ' opt=(maxcycles={0})'.format(args.max_cycle_opt)
