@@ -151,7 +151,6 @@ def write_gauss_main(args,log):
 		xyz_files =  glob.glob('*.xyz')
 		convert_xyz_to_sdf(xyz_files,args,log)
 		conf_files =  glob.glob('*.sdf')
-		print(conf_files)
 
 	# names for directories created
 	sp_dir = 'generated_sp_files'
@@ -160,9 +159,9 @@ def write_gauss_main(args,log):
 
 	if len(conf_files) != 0:
 		#read in dup_data to get the overall charge of MOLECULES
-		if not args.com_from_xyz:
+		try:
 			charge_data = pd.read_csv(args.input.split('.')[0]+'-Duplicates Data.csv', usecols=['Molecule','Overall charge'])
-		else:
+		except:
 			charge_data = None
 		for lot in args.level_of_theory:
 			for bs in args.basis_set:
