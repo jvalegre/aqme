@@ -87,7 +87,6 @@ def creation_of_ana_csv(args):
 		ana_data =  pd.DataFrame(columns = ['Total Files','Normal Termination', 'Imaginary frequencies', 'SCF Error','Atomic Basis Error','Other Errors','Unfinished'])
 	return ana_data
 
-
 def convert_xyz_to_sdf(xyz_files,args,log):
 	for file in xyz_files:
 		name=file.split('.xyz')[0]

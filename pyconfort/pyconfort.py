@@ -28,7 +28,7 @@ from __future__ import print_function
 import os
 import time
 from pyconfort.argument_parser import parser_args
-from pyconfort.main_functions import compute_main, exp_rules_main, write_gauss_main, move_sdf_main, analysis_main, dup_main, qsub_main,graph_main
+from pyconfort.main_functions import compute_main, exp_rules_main, write_gauss_main, move_sdf_main, analysis_main, dup_main, qsub_main,graph_main,geom_par_main
 from pyconfort.writer_functions import creation_of_dup_csv, load_from_yaml, Logger,creation_of_ana_csv
 
 def main():
@@ -53,6 +53,8 @@ def main():
 		log = Logger("pyCONFORT-compute", args.output_name)
 		compute_main(w_dir_initial,dup_data,args,log,start_time)
 
+
+
 	#applying rules to discard certain conformers based on rules that the user define
 	if args.exp_rules:
 		log = Logger("pyCONFORT-exp-rules", args.output_name)
@@ -65,6 +67,10 @@ def main():
 
 	# moving files after compute and/or write_gauss
 	move_sdf_main(args)
+
+	if args.geom_par:
+		log = Logger("pyCONFORT-calculation-of-geom-para", args.output_name)
+		geom_par_main(args,log,w_dir_initial)
 
 	# main part of the duplicate function
 	if args.dup:

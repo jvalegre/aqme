@@ -75,6 +75,13 @@ def parser_args():
 	parser.add_argument("--xtb_accuracy", help="Numerical accuracy of the xTB calculation", action="store", default=1.0, dest="xtb_accuracy")
 	parser.add_argument("--xtb_electronic_temperature", help="Electronic temperature for TB methods", action="store", default=300.0, dest="xtb_electronic_temperature")
 	parser.add_argument("--xtb_max_iterations", help="Numerical accuracy of the xTB calculation", action="store", default=250, dest="xtb_max_iterations")
+
+	#track geometric parameters
+	parser.add_argument("--geom_par", action="store_true", default=False, help="Turn on for tracking the geometric parmeters")
+	parser.add_argument("--dihedral", help="Specify the atom indexs to track dihedrals for different conformes", default=[], dest="dihedral", type=str, nargs=4,action='append')
+	parser.add_argument("--bond", help="Specify the atom indexs to track bond lengths for different conformers", default=[], dest="bond", type=str, nargs=2,action='append')
+	parser.add_argument("--angle", help="Specify the atom indexs to track angles for different conformers", default=[], dest="angle", type=str, nargs=3,action='append')
+
 	#arguments for gaussian files creation
 	parser.add_argument("-l", "--level_of_theory",help="Level of Theory", default=['wB97xd'], dest="level_of_theory", type=str, nargs='*')
 	parser.add_argument("--basis_set",  help="Basis Set", default=['6-31g*'], dest="basis_set", type=str, nargs='*')

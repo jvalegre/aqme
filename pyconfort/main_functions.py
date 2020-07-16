@@ -15,7 +15,7 @@ from pyconfort.writer_functions import read_energies, write_gaussian_input_file,
 from pyconfort.filter_functions import exp_rules_output
 from pyconfort.analyzer_functions import output_analyzer, check_for_final_folder, dup_calculation
 from pyconfort.grapher import graph
-
+from pyconfort.geom_parameters import calculate_parameters
 # main function to generate conformers
 def compute_main(w_dir_initial,dup_data,args,log,start_time):
 	# input file format specified
@@ -128,6 +128,29 @@ def compute_main(w_dir_initial,dup_data,args,log,start_time):
 			i += 1
 
 	dup_data.to_csv(args.input.split('.')[0]+'-Duplicates Data.csv',index=False)
+
+
+def geom_par_main(args,log,w_dir_initial):
+	#get sdf FILES from csv
+	pd_name = pd.read_csv(args.input.split('.')[0]+'-Duplicates Data.csv')
+
+	for i in range(len(pd_name)):
+		name = pd_name.loc[i,'Molecule']
+
+		log.write("\no  Calculating paramters for molecule : {0} ".format(name))
+
+		sdf_ani,sdf_xtb = None,None
+		if args.nodihedrals:
+			sdf_rdkit =  w_dir_initial+'/rdkit_generated_sdf_files/'+name+'_rdkit.sdf'
+		elif not args.nodihedrals:
+			sdf_rdkit = w_dir_initial+'/rdkit_generated_sdf_files/'+name+'_rdkit_rotated.sdf'
+		if args.xtb:
+			sdf_xtb =  w_dir_initial+'/xtb_minimised_generated_sdf_files/'+name+'_xtb.sdf'
+		if args.ANI1ccx:
+			sdf_ani = w_dir_initial+'/ani1ccx_minimised_generated_sdf_files/'+name+'_ani.sdf'
+
+		calculate_parameters(sdf_rdkit,sdf_ani,sdf_xtb,args,log,w_dir_initial,name)
+		os.chdir(w_dir_initial)
 
 def write_gauss_main(args,log):
 
