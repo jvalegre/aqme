@@ -72,6 +72,8 @@ def plot_graph(energy_rdkit,energy_min,energy_min_dft,lot,bs,name_mol,args,type,
     if type =='ani':
         x_axis_names=['RDKit','ANI1ccx',lot+'-'+bs]
         # textstr = r'RDKit : {0}\pm{1}\t ANI1ccx : {2}\pm{3}'%(mae_rdkit, sd_rdkit,mae_min, sd_min)
+    if type =='rdkit':
+        x_axis_names=['RDKit',lot+'-'+bs]
 
     x_axis = [0,1,2]
     x_axis_2 = [0,1]
@@ -83,9 +85,10 @@ def plot_graph(energy_rdkit,energy_min,energy_min_dft,lot,bs,name_mol,args,type,
         name = energy_rdkit[i][0]
         name_all.append(name)
         list.append(energy_rdkit[i][1])
-        for i,_ in enumerate(energy_min):
-            if energy_min[i][0] == name:
-                list.append(energy_min[i][1])
+        if energy_min is not None:
+            for i,_ in enumerate(energy_min):
+                if energy_min[i][0] == name:
+                    list.append(energy_min[i][1])
         for i,_ in enumerate(energy_min_dft):
             if energy_min_dft[i][0] == name:
                 list.append(energy_min_dft[i][1])
@@ -130,6 +133,8 @@ def plot_graph(energy_rdkit,energy_min,energy_min_dft,lot,bs,name_mol,args,type,
         plt.savefig(name_mol+'_graph_ani.png',bbox_inches='tight', format='png', dpi=400)
     if type =='xtb':
         plt.savefig(name_mol+'_graph_xtb.png',bbox_inches='tight',format='png', dpi=400)
+    if type =='rdkit':
+        plt.savefig(name_mol+'_graph_rdkit.png',bbox_inches='tight',format='png', dpi=400)
     plt.close()
 
 def graph(sdf_rdkit,sdf_xtb,sdf_ani,log_files,args,log,lot,bs,name_mol,w_dir_initial):
@@ -152,23 +157,33 @@ def graph(sdf_rdkit,sdf_xtb,sdf_ani,log_files,args,log,lot,bs,name_mol,w_dir_ini
         energy_ani = rename_name(energy_ani,'ani')
         energy_ani_sc = scaling_with_lowest(energy_ani)
 
-    energy_xtb_dft,energy_ani_dft = [],[]
+    energy_rdkit_dft,energy_xtb_dft,energy_ani_dft = [],[],[]
     #get energy from log FILES
     for file in log_files:
         data = cclib.io.ccread(file)
-        if len(file.split('_ani.log')) == 2:
-            name = file.split('_ani.log')[0]
-            energy_ani_dft.append([name,data.scfenergies[0]*ev_2_kcal_mol])
-        if len(file.split('_xtb.log')) == 2:
-            name = file.split('_xtb.log')[0]
-            energy_xtb_dft.append([name,data.scfenergies[0]*ev_2_kcal_mol])
+        if len(file.split('_ani.log')) == 2 or len(file.split('_xtb.log')) == 2:
+            if len(file.split('_ani.log')) == 2:
+                name = file.split('_ani.log')[0]
+                energy_ani_dft.append([name,data.scfenergies[0]*ev_2_kcal_mol])
+            if len(file.split('_xtb.log')) == 2:
+                name = file.split('_xtb.log')[0]
+                energy_xtb_dft.append([name,data.scfenergies[0]*ev_2_kcal_mol])
+        else:
+            name = file.split('.log')[0]
+            energy_rdkit_dft.append([name,data.scfenergies[0]*ev_2_kcal_mol])
 
-    if args.ANI1ccx:
-        energy_ani_dft_sc = scaling_with_lowest(energy_ani_dft)
-    if args.xtb:
-        energy_xtb_dft_sc = scaling_with_lowest(energy_xtb_dft)
+    if args.ANI1ccx or args.xtb :
+        if args.ANI1ccx:
+            energy_ani_dft_sc = scaling_with_lowest(energy_ani_dft)
+        if args.xtb:
+            energy_xtb_dft_sc = scaling_with_lowest(energy_xtb_dft)
+    else:
+        energy_rdkit_dft_sc = scaling_with_lowest(energy_rdkit_dft)
 
-    if args.xtb:
-        plot_graph(energy_rdkit_sc,energy_xtb_sc,energy_xtb_dft_sc,lot,bs,name_mol,args,'xtb',w_dir_initial)
-    if args.ANI1ccx:
-        plot_graph(energy_rdkit_sc,energy_ani_sc,energy_ani_dft_sc,lot,bs,name_mol,args,'ani',w_dir_initial)
+    if args.ANI1ccx or args.xtb :
+        if args.xtb:
+            plot_graph(energy_rdkit_sc,energy_xtb_sc,energy_xtb_dft_sc,lot,bs,name_mol,args,'xtb',w_dir_initial)
+        if args.ANI1ccx:
+            plot_graph(energy_rdkit_sc,energy_ani_sc,energy_ani_dft_sc,lot,bs,name_mol,args,'ani',w_dir_initial)
+    else:
+        plot_graph(energy_rdkit_sc,None,energy_rdkit_dft_sc,lot,bs,name_mol,args,'rdkit',w_dir_initial)
