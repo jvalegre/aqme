@@ -11,7 +11,7 @@ import pandas as pd
 import subprocess
 from rdkit.Chem import AllChem as Chem
 from pyconfort.confgen_functions import check_for_pieces, check_charge_smi, clean_args, compute_confs, com_2_xyz_2_sdf, mol_from_sdf_or_mol_or_mol2
-from pyconfort.writer_functions import read_energies, write_gaussian_input_file, moving_sdf_files
+from pyconfort.writer_functions import read_energies, write_gaussian_input_file, moving_sdf_files, convert_xyz_to_sdf
 from pyconfort.filter_functions import exp_rules_output
 from pyconfort.analyzer_functions import output_analyzer, check_for_final_folder, dup_calculation
 from pyconfort.grapher import graph
@@ -130,6 +130,7 @@ def compute_main(w_dir_initial,dup_data,args,log,start_time):
 	dup_data.to_csv(args.input.split('.')[0]+'-Duplicates Data.csv',index=False)
 
 def write_gauss_main(args,log):
+
 	if args.exp_rules:
 		conf_files =  glob.glob('*_rules.sdf')
 	# define the SDF files to convert to COM Gaussian files
@@ -146,6 +147,12 @@ def write_gauss_main(args,log):
 	else:
 		conf_files =  glob.glob('*.sdf')
 
+	if args.com_from_xyz:
+		xyz_files =  glob.glob('*.xyz')
+		convert_xyz_to_sdf(xyz_files,args,log)
+		conf_files =  glob.glob('*.sdf')
+		print(conf_files)
+
 	# names for directories created
 	sp_dir = 'generated_sp_files'
 	g_dir = 'generated_gaussian_files'
@@ -153,7 +160,10 @@ def write_gauss_main(args,log):
 
 	if len(conf_files) != 0:
 		#read in dup_data to get the overall charge of MOLECULES
-		charge_data = pd.read_csv(args.input.split('.')[0]+'-Duplicates Data.csv', usecols=['Molecule','Overall charge'])
+		if not args.com_from_xyz:
+			charge_data = pd.read_csv(args.input.split('.')[0]+'-Duplicates Data.csv', usecols=['Molecule','Overall charge'])
+		else:
+			charge_data = None
 		for lot in args.level_of_theory:
 			for bs in args.basis_set:
 				for bs_gcp in args.basis_set_genecp_atoms:
@@ -171,7 +181,6 @@ def write_gauss_main(args,log):
 							pass
 						else:
 							raise
-
 					# writing the com files
 					# check conf_file exists, parse energies and then write DFT input
 					for file in conf_files:
@@ -203,6 +212,11 @@ def move_sdf_main(args):
 		destination_rdkit = 'rdkit_generated_sdf_files'
 		for file in all_name_conf_files:
 			moving_sdf_files(destination_rdkit,src,file)
+	if args.com_from_xyz:
+		all_xyz_conf_files = glob.glob('*.xyz')+glob.glob('*.sdf')
+		destination_xyz = 'xyz_and_sdf_files_from_xyz'
+		for file in all_xyz_conf_files:
+			moving_sdf_files(destination_xyz,src,file)
 
 def get_log_out_files():
 	log_files = []

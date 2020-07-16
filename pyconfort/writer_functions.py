@@ -87,6 +87,13 @@ def creation_of_ana_csv(args):
 		ana_data =  pd.DataFrame(columns = ['Total Files','Normal Termination', 'Imaginary frequencies', 'SCF Error','Atomic Basis Error','Other Errors','Unfinished'])
 	return ana_data
 
+
+def convert_xyz_to_sdf(xyz_files,args,log):
+	for file in xyz_files:
+		name=file.split('.xyz')[0]
+		command_xyz = ['obabel', '-ixyz', file, '-osdf', '-O'+name+'.sdf']
+		subprocess.call(command_xyz)
+
 def header_com(name,lot,bs,bs_gcp, args, log, input_route, genecp):
 	if genecp != 'None':
 		input_route_to_write = input_route
@@ -160,15 +167,17 @@ def input_route_line(args):
 def rename_file_and_charge_chk_change(read_lines,file,args,charge_com):
 	#changing the name of the files to the way they are in xTB Sdfs
 	#getting the title line
-	for i,line in enumerate(read_lines):
-		if len(line.strip()) == 0:
-			title_line = read_lines[i+1]
-			title_line = title_line.lstrip()
-			rename_file_name = title_line.replace(" ", "_")
-			break
+	if not args.com_from_xyz:
+		for i,line in enumerate(read_lines):
+			if len(line.strip()) == 0:
+				title_line = read_lines[i+1]
+				title_line = title_line.lstrip()
+				rename_file_name = title_line.replace(" ", "_")
+				break
 
-	rename_file_name = rename_file_name.strip()+'.com'
-
+		rename_file_name = rename_file_name.strip()+'.com'
+	else:
+		rename_file_name = file
 
 	#change charge and multiplicity for all molecules
 	for i,_ in enumerate(read_lines):
@@ -176,7 +185,10 @@ def rename_file_and_charge_chk_change(read_lines,file,args,charge_com):
 			if read_lines[i].find('%chk') > -1:
 				read_lines[i] = '%chk='+rename_file_name.split('.com')[0]+'.chk\n'
 		if len(read_lines[i].strip()) == 0:
-			read_lines[i+3] = str(charge_com)+' '+ str(args.complex_spin)+'\n'
+			if  args.com_from_xyz:
+				read_lines[i+1] = rename_file_name.split('.com')[0]+'\n'
+			if charge_com is not None:
+				read_lines[i+3] = str(charge_com)+' '+ str(args.complex_spin)+'\n'
 			break
 	out = open(file, 'w')
 	out.writelines(read_lines)
@@ -185,19 +197,22 @@ def rename_file_and_charge_chk_change(read_lines,file,args,charge_com):
 
 def get_name_and_charge(name,charge_data):
 
-	name_list = name.split('_')
+	if charge_data is not None:
+		name_list = name.split('_')
 
-	if 'rules' in name_list:
-		name_molecule = name[:-23]
-	elif 'xtb' in name_list or 'ani' in name_list:
-		name_molecule = name[:-4]
-	elif 'rotated' in name_list:
-		name_molecule = name[:-14]
-	elif 'rdkit' in name_list:
-		name_molecule = name[:-6]
-	for i in range(len(charge_data)):
-		if charge_data.loc[i,'Molecule'] == name_molecule:
-			charge_com = charge_data.loc[i,'Overall charge']
+		if 'rules' in name_list:
+			name_molecule = name[:-23]
+		elif 'xtb' in name_list or 'ani' in name_list:
+			name_molecule = name[:-4]
+		elif 'rotated' in name_list:
+			name_molecule = name[:-14]
+		elif 'rdkit' in name_list:
+			name_molecule = name[:-6]
+		for i in range(len(charge_data)):
+			if charge_data.loc[i,'Molecule'] == name_molecule:
+				charge_com = charge_data.loc[i,'Overall charge']
+	else:
+		charge_com = None
 
 	return charge_com
 
@@ -233,7 +248,7 @@ def get_genecp(file,args):
 	return genecp
 
 # MAIN FUNCTION TO CREATE GAUSSIAN JOBS
-def write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args, log, charge_data):
+def write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args, log, charge_data=None):
 
 	# get the names of the SDF files to read from depending on the optimizer and their suffixes. Also, get molecular charge
 	charge_com = get_name_and_charge(name,charge_data)
