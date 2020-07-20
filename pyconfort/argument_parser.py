@@ -78,6 +78,7 @@ def parser_args():
 
 	#track geometric parameters
 	parser.add_argument("--geom_par", action="store_true", default=False, help="Turn on for tracking the geometric parmeters")
+	parser.add_argument("--geom_par_name", help="Name for the geometric parameter caluculated ", default="descp", dest="geom_par_name", type=str)
 	parser.add_argument("--dihedral", help="Specify the atom indexs to track dihedrals for different conformes", default=[], dest="dihedral", type=str, nargs=4,action='append')
 	parser.add_argument("--bond", help="Specify the atom indexs to track bond lengths for different conformers", default=[], dest="bond", type=str, nargs=2,action='append')
 	parser.add_argument("--angle", help="Specify the atom indexs to track angles for different conformers", default=[], dest="angle", type=str, nargs=3,action='append')
