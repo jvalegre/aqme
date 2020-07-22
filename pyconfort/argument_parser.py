@@ -39,7 +39,7 @@ def parser_args():
 	parser.add_argument("--amplitude_ifreq", action="store",default=0.2, help="amplitude use to displace the imaginary frequencies to fix during analysis", type=float)
 	parser.add_argument("--ifreq_cutoff", action="store",default=0.0, help="Cut off for imaginary frequencies during analysis", type=float)
 	parser.add_argument("--dup",action="store_true",default=False, help="Remove Duplicates after DFT optimization")
-	parser.add_argument("-b","--boltz", action="store_true", default=False, help="Boltzmann factor for each conformers from Gaussian output files")
+	parser.add_argument("--nmr", action="store_true", default=False, help="Boltzmann averaged NMR calculation for conformers from Gaussian output files")
 	parser.add_argument("-f","--combine", action="store_true", default=False, help="Combine files of differnt molecules including boltzmann weighted energies")
 	#apply exp rules
 	parser.add_argument("--exp_rules", dest="exp_rules", default=False, help="Experimental rules applied to make Gaussian input files")
@@ -79,7 +79,8 @@ def parser_args():
 	#track geometric parameters
 	parser.add_argument("--geom_par", action="store_true", default=False, help="Turn on for tracking the geometric parmeters")
 	parser.add_argument("--geom_par_name", help="Name for the geometric parameter caluculated ", default="descp", dest="geom_par_name", type=str)
-	parser.add_argument("--dihedral", help="Specify the atom indexs to track dihedrals for different conformes", default=[], dest="dihedral", type=str, nargs=4,action='append')
+	parser.add_argument("--rot_dihedral", action="store_true", default=False, help="Turn on for tracking the geometric parmeters for tje rotatable dihedrals (Need not specify anything in the dihedral list)")
+	parser.add_argument("--dihedral", help="Specify the atom indexs to track dihedrals for different conformes only for specific dihedrals (For all rotatable dihedrals turn rot_dihedral to True)", default=[], dest="dihedral", type=str, nargs=4,action='append')
 	parser.add_argument("--bond", help="Specify the atom indexs to track bond lengths for different conformers", default=[], dest="bond", type=str, nargs=2,action='append')
 	parser.add_argument("--angle", help="Specify the atom indexs to track angles for different conformers", default=[], dest="angle", type=str, nargs=3,action='append')
 

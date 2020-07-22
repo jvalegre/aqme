@@ -10,10 +10,10 @@ from rdkit.Chem import rdMolTransforms
 import os
 import numpy as np
 import pandas as pd
+from pyconfort.confgen_functions import getDihedralMatches
 
 
 def get_data(rdkit_mols,min_mols,type,args):
-
     geom_data = pd.DataFrame()
     for j, mol_j in enumerate(rdkit_mols):
         name = mol_j.GetProp('_Name')
@@ -63,6 +63,8 @@ def calculate_parameters(sdf_rdkit,sdf_ani,sdf_xtb,args,log,w_dir_initial,name_m
             raise
     #get mol objects
     rdkit_mols = Chem.SDMolSupplier(sdf_rdkit, removeHs=False)
+    if args.rot_dihedral:
+        args.dihedral = getDihedralMatches(rdkit_mols[0], args.heavyonly,log)
     if sdf_ani is not None:
         ani_mols = Chem.SDMolSupplier(sdf_ani, removeHs=False)
     if sdf_xtb is not None:
