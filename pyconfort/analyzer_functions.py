@@ -14,7 +14,7 @@ from pyconfort.argument_parser import possible_atoms
 
 possible_atoms = possible_atoms()
 
-def moving_log_files(source, destination):
+def moving_files(source, destination):
 	if not os.path.isdir(destination):
 		os.makedirs(destination)
 	if not os.path.exists(destination+source):
@@ -51,7 +51,7 @@ def write_header_and_coords(fileout,args,keywords_opt,name,CHARGE,MULT,NATOMS,AT
 		fileout.write("\n")
 	fileout.write("\n")
 
-def write_genecp(fileout,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,bs_com,lot_com,bs_gcp_com,args,w_dir_initial,w_dir):
+def write_genecp(fileout,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,bs_com,lot_com,bs_gcp_com,args,w_dir_initial,new_gaussian_input_files):
 	for _,element_ecp in enumerate(ecp_list):
 		if element_ecp not in (args.genecp_atoms or args.gen_atoms):
 			fileout.write(element_ecp+' ')
@@ -63,7 +63,7 @@ def write_genecp(fileout,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,bs_com,l
 		if bs_gcp_com.split('.')[1] == 'txt' or bs_gcp_com.split('.')[1] == 'yaml':
 			os.chdir(w_dir_initial)
 			read_lines = open(bs_gcp_com,"r").readlines()
-			os.chdir(w_dir)
+			os.chdir(new_gaussian_input_files)
 			#getting the title line
 			for line in read_lines:
 				fileout.write(line)
@@ -85,7 +85,7 @@ def write_genecp(fileout,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,bs_com,l
 			fileout.write(bs_gcp_com+'\n\n')
 
 # CREATION OF COM FILES
-def new_com_file(w_dir,w_dir_initial,file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,TERMINATION,IM_FREQS,bs_com,lot_com,bs_gcp_com):
+def new_com_file(w_dir,w_dir_initial,new_gaussian_input_files,file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,TERMINATION,IM_FREQS,bs_com,lot_com,bs_gcp_com):
 	if args.sp:
 		if args.suffix_sp == 'None':
 			fileout = open(file.split(".")[0]+'-'+lot_com+'-'+bs_com+'.com', "w")
@@ -101,7 +101,7 @@ def new_com_file(w_dir,w_dir_initial,file,args,keywords_opt,name,CHARGE,MULT,NAT
 		fileout.write('\n\n')
 
 	if genecp == 'genecp' or  genecp == 'gen':
-		write_genecp(fileout,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,bs_com,lot_com,bs_gcp_com,args,w_dir_initial,w_dir)
+		write_genecp(fileout,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,bs_com,lot_com,bs_gcp_com,args,w_dir_initial,new_gaussian_input_files)
 
 	fileout.close()
 
@@ -272,9 +272,9 @@ def fix_imag_freqs(NATOMS, CARTESIANS, args, FREQS, NORMALMODE):
 
 	return CARTESIANS
 
-def create_folder_and_com(w_dir,log,NATOMS,ATOMTYPES,CARTESIANS,args,TERMINATION,IM_FREQS,w_dir_fin,file,lot,bs,bs_gcp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp,ERRORTYPE,input_route,w_dir_initial,name,CHARGE,MULT):
+def create_folder_and_com(w_dir,w_dir_main,round_num,log,NATOMS,ATOMTYPES,CARTESIANS,args,TERMINATION,IM_FREQS,w_dir_fin,file,lot,bs,bs_gcp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp,ERRORTYPE,input_route,w_dir_initial,name,CHARGE,MULT):
 	# creating new folder with new input gaussian files
-	new_gaussian_input_files = w_dir+'/new_gaussian_input_files/'
+	new_gaussian_input_files = w_dir_main+'/com_file/run-'+str(round_num+1)
 
 	try:
 		os.makedirs(new_gaussian_input_files)
@@ -299,45 +299,52 @@ def create_folder_and_com(w_dir,log,NATOMS,ATOMTYPES,CARTESIANS,args,TERMINATION
 	else:
 		keywords_opt = lot +'/'+ bs +' '+ input_route
 
-	new_com_file(w_dir,w_dir_initial,file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,TERMINATION,IM_FREQS,bs,lot,bs_gcp)
+	new_com_file(w_dir,w_dir_initial,new_gaussian_input_files,file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,TERMINATION,IM_FREQS,bs,lot,bs_gcp)
 
-def create_folder_move_log_files(w_dir,file,IM_FREQS,TERMINATION,ERRORTYPE,w_dir_fin,finished,unfinished,atom_error,scf_error,imag_freq,other_error):
+def create_folder_move_log_files(w_dir,w_dir_main,round_num,file,IM_FREQS,TERMINATION,ERRORTYPE,w_dir_fin,finished,unfinished,atom_error,scf_error,imag_freq,other_error):
 	source = w_dir+'/'+file
 
 	if IM_FREQS == 0 and TERMINATION == "normal":
 		destination = w_dir_fin
-		moving_log_files(source, destination)
+		moving_files(source, destination)
 		finished += 1
 
 	if IM_FREQS > 0:
-		destination = w_dir+'/imaginary_frequencies/'
-		moving_log_files(source, destination)
+		destination = w_dir_main+'/failed/run-'+str(round_num)+'/imaginary_frequencies/'
+		moving_files(source, destination)
 		imag_freq += 1
 
 	if IM_FREQS == 0 and TERMINATION == "error":
 		if ERRORTYPE == "atomicbasiserror":
-			destination = w_dir+'/failed_error/atomic_basis_error'
+			destination = w_dir_main +'/failed/run-'+str(round_num)+'/failed_error/atomic_basis_error'
 			atom_error += 1
 		elif ERRORTYPE == "SCFerror":
-			destination = w_dir+'/failed_error/SCF_error'
+			destination = w_dir_main+'/failed/run-'+str(round_num)+'/failed_error/SCF_error'
 			scf_error += 1
 		else:
-			destination = w_dir+'/failed_error/unknown_error'
+			destination = w_dir_main+'/failed/run-'+str(round_num)+'/failed_error/unknown_error'
 			other_error += 1
-		moving_log_files(source, destination)
+		moving_files(source, destination)
 
 	elif IM_FREQS == 0 and TERMINATION == "unfinished":
-		destination = w_dir+'/failed_unfinished/'
-		moving_log_files(source, destination)
+		destination = w_dir_main+'/failed/run-'+str(round_num)+'/failed_unfinished/'
+		moving_files(source, destination)
 		unfinished += 1
 
 	return finished,unfinished,atom_error,scf_error,imag_freq,other_error
 
 # DEFINTION OF OUTPUT ANALYSER and NMR FILES CREATOR
-def output_analyzer(log_files, w_dir, lot, bs, bs_gcp, args, w_dir_fin, w_dir_initial, log,ana_data):
+def output_analyzer(log_files,com_files, w_dir, w_dir_main,lot, bs, bs_gcp, args, w_dir_fin, w_dir_initial, log,ana_data,round_num):
 
 	input_route = input_route_line(args)
 	finished,unfinished,atom_error,scf_error,imag_freq,other_error = 0,0,0,0,0,0
+
+	if round_num == 1:
+		#moves the comfiles to respective folder
+		for file in com_files:
+			source = w_dir+'/'+file
+			destination = w_dir_main +'/com_file/run-'+str(round_num)
+			moving_files(source, destination)
 
 	for file in log_files:
 		# read the file
@@ -372,14 +379,14 @@ def output_analyzer(log_files, w_dir, lot, bs, bs_gcp, args, w_dir_fin, w_dir_in
 		outfile.close()
 
 		# This part places the calculations in different folders depending on the type of termination
-		finished,unfinished,atom_error,scf_error,imag_freq,other_error = create_folder_move_log_files(w_dir,file,IM_FREQS,TERMINATION,ERRORTYPE,w_dir_fin,finished,unfinished,atom_error,scf_error,imag_freq,other_error)
+		finished,unfinished,atom_error,scf_error,imag_freq,other_error = create_folder_move_log_files(w_dir,w_dir_main,round_num,file,IM_FREQS,TERMINATION,ERRORTYPE,w_dir_fin,finished,unfinished,atom_error,scf_error,imag_freq,other_error)
 
 		# check if gen or genecp are active
 		ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp =  check_for_gen_or_genecp(ATOMTYPES,args)
 
 		# create folders and set level of theory in COM files to fix imaginary freqs or not normal terminations
-		if IM_FREQS > 0 or TERMINATION != "normal" and not os.path.exists(w_dir+'/failed_error/atomic_basis_error/'+file):
-			create_folder_and_com(w_dir,log,NATOMS,ATOMTYPES,CARTESIANS,args,TERMINATION,IM_FREQS,w_dir_fin,file,lot,bs,bs_gcp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp,ERRORTYPE,input_route,w_dir_initial,name,CHARGE, MULT)
+		if IM_FREQS > 0 or TERMINATION != "normal" and not os.path.exists(w_dir_main+'/failed/run-'+str(round_num)+'/failed_error/atomic_basis_error/'+file):
+			create_folder_and_com(w_dir,w_dir_main,round_num,log,NATOMS,ATOMTYPES,CARTESIANS,args,TERMINATION,IM_FREQS,w_dir_fin,file,lot,bs,bs_gcp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp,ERRORTYPE,input_route,w_dir_initial,name,CHARGE, MULT)
 
 		# adding in the NMR componenet only to the finished files after reading from normally finished log files
 		if args.sp and TERMINATION == "normal" and IM_FREQS == 0:
@@ -398,7 +405,7 @@ def output_analyzer(log_files, w_dir, lot, bs, bs_gcp, args, w_dir_fin, w_dir_in
 						dir_name = str(lot_sp) + '-' + str(bs_sp)
 						if not os.path.isdir(single_point_input_files+'/'+dir_name):
 							os.makedirs(single_point_input_files+'/'+dir_name)
-							os.chdir(single_point_input_files+'/'+dir_name)
+						os.chdir(single_point_input_files+'/'+dir_name)
 
 						if genecp == 'genecp' or  genecp == 'gen':
 							keywords_opt = lot_sp+'/'+ genecp+' '+ args.input_for_sp
@@ -425,22 +432,22 @@ def output_analyzer(log_files, w_dir, lot, bs, bs_gcp, args, w_dir_fin, w_dir_in
 	ana_data.at[0,'Other Errors'] = other_error
 	ana_data.at[0,'Unfinished'] = unfinished
 
-	os.chdir(w_dir)
-	ana_data.to_csv('Analysis-Data-compiles.csv',index=False)
+	if not os.path.isdir(w_dir_initial+'/csv_files/analysis'):
+		os.makedirs(w_dir_initial+'/csv_files/analysis')
+	ana_data.to_csv(w_dir_initial+'/csv_files/analysis/Analysis-Data-compilesd-run-'+str(round_num)+'.csv',index=False)
 
 # CHECKS THE FOLDER OF FINAL LOG FILES
-def check_for_final_folder(w_dir,log):
-	dir_found = False
-	while not dir_found:
-		temp_dir = w_dir+'/new_gaussian_input_files'
-		if os.path.isdir(temp_dir):
-			w_dir = temp_dir
-		else:
-			dir_found =True
-	return w_dir
+def check_for_final_folder(w_dir):
+	ini_com_folder = sum(dirs.count('com_file') for _, dirs, _ in os.walk(w_dir))
+	if ini_com_folder == 0:
+		return w_dir, 1
+	else:
+		num_com_folder = sum([len(d) for r, d, folder in os.walk(w_dir+'/com_file')])
+		w_dir = w_dir+'/com_file/run-'+str(num_com_folder)
+		return w_dir, num_com_folder
 
 # CHECKING FOR DUPLICATES
-def dup_calculation(val, w_dir, args, log):
+def dup_calculation(val, w_dir,w_dir_main, args, log,round_num):
 
 	# GoodVibes must be installed as a module (through pip or conda)
 	cmd_dup = ['python', '-m', 'goodvibes', '--dup']
@@ -457,11 +464,12 @@ def dup_calculation(val, w_dir, args, log):
 			dup_file_list.append(duplines[i].split(' ')[2])
 
 	#move the files to specific directory
-	destination = w_dir+'/duplicates/'
+	destination = w_dir_main+'/duplicates/run-'+str(round_num)
+	moving_files('Goodvibes_output.dat', destination)
 	for source in dup_file_list:
 		#finding the extension
 		for file in val:
 			if file.split('.')[0] == source:
 				ext=file.split('.')[1]
 		source=source+'.'+ext
-		moving_log_files(source, destination)
+		moving_files(source, destination)

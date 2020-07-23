@@ -353,7 +353,7 @@ def write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args, log, 
 	os.chdir(path_for_file)
 
 # MOVES SDF FILES TO THEIR CORRESPONDING FOLDERS
-def moving_sdf_files(destination,src,file):
+def moving_files(destination,src,file):
 	try:
 		os.makedirs(destination)
 		shutil.move(os.path.join(src, file), os.path.join(destination, file))

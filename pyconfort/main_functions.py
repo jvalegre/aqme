@@ -11,11 +11,15 @@ import pandas as pd
 import subprocess
 from rdkit.Chem import AllChem as Chem
 from pyconfort.confgen_functions import check_for_pieces, check_charge_smi, clean_args, compute_confs, com_2_xyz_2_sdf, mol_from_sdf_or_mol_or_mol2
-from pyconfort.writer_functions import read_energies, write_gaussian_input_file, moving_sdf_files, convert_xyz_to_sdf
+from pyconfort.writer_functions import read_energies, write_gaussian_input_file, moving_files, convert_xyz_to_sdf
 from pyconfort.filter_functions import exp_rules_output
 from pyconfort.analyzer_functions import output_analyzer, check_for_final_folder, dup_calculation
 from pyconfort.grapher import graph
 from pyconfort.geom_parameters import calculate_parameters
+from pyconfort.nmr import calculate_boltz_and_nmr
+from pyconfort.writer_functions import creation_of_ana_csv
+from pyconfort.writer_functions import Logger
+
 # main function to generate conformers
 def compute_main(w_dir_initial,dup_data,args,log,start_time):
 	# input file format specified
@@ -127,12 +131,13 @@ def compute_main(w_dir_initial,dup_data,args,log,start_time):
 			compute_confs(w_dir_initial,mol,name,args,log,dup_data,counter_for_template,i,start_time)
 			i += 1
 
-	dup_data.to_csv(args.input.split('.')[0]+'-Duplicates Data.csv',index=False)
-
+	if not os.path.isdir(w_dir_initial+'/pyCONFORT_csv_files/confgen'):
+		os.makedirs(w_dir_initial+'/pyCONFORT_csv_files/confgen')
+	dup_data.to_csv(w_dir_initial+'/pyCONFORT_csv_files/confgen/'+args.input.split('.')[0]+'-Confgen-Data.csv',index=False)
 
 def geom_par_main(args,log,w_dir_initial):
 	#get sdf FILES from csv
-	pd_name = pd.read_csv(args.input.split('.')[0]+'-Duplicates Data.csv')
+	pd_name = pd.read_csv(args.input.split('.')[0]+'-Confgen-Data.csv')
 
 	for i in range(len(pd_name)):
 		name = pd_name.loc[i,'Molecule']
@@ -183,7 +188,7 @@ def write_gauss_main(args,log):
 	if len(conf_files) != 0:
 		#read in dup_data to get the overall charge of MOLECULES
 		try:
-			charge_data = pd.read_csv(args.input.split('.')[0]+'-Duplicates Data.csv', usecols=['Molecule','Overall charge'])
+			charge_data = pd.read_csv(args.input.split('.')[0]+'-Confgen-Data.csv', usecols=['Molecule','Overall charge'])
 		except:
 			charge_data = None
 		for lot in args.level_of_theory:
@@ -223,46 +228,58 @@ def move_sdf_main(args):
 		all_xtb_conf_files = glob.glob('*_xtb.sdf') + glob.glob('*_xtb_all_confs.sdf')
 		destination_xtb = src +'/xtb_minimised_generated_sdf_files'
 		for file in all_xtb_conf_files:
-			moving_sdf_files(destination_xtb,src,file)
+			moving_files(destination_xtb,src,file)
 	if args.ANI1ccx:
 		all_ani_conf_files = glob.glob('*_ani.sdf') + glob.glob('*_ani_all_confs.sdf')
 		destination_ani = src +'/ani1ccx_minimised_generated_sdf_files'
 		for file in all_ani_conf_files:
-			moving_sdf_files(destination_ani,src,file)
+			moving_files(destination_ani,src,file)
 	if args.compute or args.write_gauss:
 		all_name_conf_files = glob.glob('*_rdkit*.sdf')
 		destination_rdkit = 'rdkit_generated_sdf_files'
 		for file in all_name_conf_files:
-			moving_sdf_files(destination_rdkit,src,file)
+			moving_files(destination_rdkit,src,file)
 	if args.com_from_xyz:
 		all_xyz_conf_files = glob.glob('*.xyz')+glob.glob('*.sdf')
 		destination_xyz = 'xyz_and_sdf_files_from_xyz'
 		for file in all_xyz_conf_files:
-			moving_sdf_files(destination_xyz,src,file)
+			moving_files(destination_xyz,src,file)
 
-def get_log_out_files():
-	log_files = []
-	output_formats = ['*.log','*.LOG','*.out','*.OUT']
-	for _,output_format in enumerate(output_formats):
-		for _,file_out in enumerate(glob.glob(output_format)):
-			if file_out not in log_files:
-				log_files.append(file_out)
-	return log_files
+def move_dat_main(args, w_dir_initial):
+	os.chdir(w_dir_initial)
+	dat_files = glob.glob('*.dat')
+	destination_dat =  w_dir_initial+'/pyCONFORT_dat_files'
+	for file in dat_files:
+		moving_files(destination_dat,w_dir_initial,file)
+
+def get_com_or_log_out_files(type):
+	files = []
+	if type =='output':
+		formats = ['*.log','*.LOG','*.out','*.OUT']
+	elif type =='input':
+		formats =['*.com','*.gjf']
+	for _,format in enumerate(formats):
+		for _,file in enumerate(glob.glob(format)):
+			if file not in files:
+				files.append(file)
+	return files
 
 # main part of the analysis functions
-def analysis_main(w_dir_initial,args,log,ana_data):
+def analysis_main(w_dir_initial,args):
 	# when you run analysis in a folder full of output files
 	if args.path == '':
-		log_files = get_log_out_files()
 		w_dir = os.getcwd()
-		w_dir_fin = w_dir+'/finished'
-
+		w_dir_fin = w_dir+'/success'
 		for lot in args.level_of_theory:
 			for bs in args.basis_set:
 				for bs_gcp in args.basis_set_genecp_atoms:
 					folder = w_dir_initial
+					ana_data = creation_of_ana_csv(args)
+					log = Logger("pyCONFORT-analysis", args.output_name)
 					log.write("\no  ANALYZING OUTPUT FILES IN {}\n".format(folder))
-					output_analyzer(log_files, w_dir, lot, bs, bs_gcp, args, w_dir_fin,w_dir_initial,log,ana_data)
+					log_files = get_com_or_log_out_files('output')
+					com_files = get_com_or_log_out_files('input')
+					output_analyzer(log_files,com_files, w_dir,w_dir, lot, bs, bs_gcp, args, w_dir_fin,w_dir_initial,log,ana_data,1)
 		os.chdir(w_dir)
 	# when you specify multiple levels of theory
 	else:
@@ -270,38 +287,47 @@ def analysis_main(w_dir_initial,args,log,ana_data):
 		for lot in args.level_of_theory:
 			for bs in args.basis_set:
 				for bs_gcp in args.basis_set_genecp_atoms:
+					#for main folder
+					w_dir_main = args.path + str(lot) + '-' + str(bs)
+					#for currect w_dir folder
 					w_dir = args.path + str(lot) + '-' + str(bs)
 					#check if New_Gaussian_Input_Files folder exists
-					w_dir = check_for_final_folder(w_dir,log)
+					w_dir,round_num = check_for_final_folder(w_dir)
+
+					log = Logger("pyCONFORT-analysis-run"+str(round_num), args.output_name)
 					#assign the path to the finished directory.
-					w_dir_fin = args.path + str(lot) + '-' + str(bs) +'/finished'
+					w_dir_fin = args.path + str(lot) + '-' + str(bs) +'/success'
 					os.chdir(w_dir)
-					log_files = get_log_out_files()
-					folder = w_dir + '/' + str(lot) + '-' + str(bs)
-					log.write("\no  ANALYZING OUTPUT FILES IN {}\n".format(folder))
-					output_analyzer(log_files, w_dir, lot, bs, bs_gcp, args, w_dir_fin,w_dir_initial,log,ana_data)
+					ana_data = creation_of_ana_csv(args)
+					log.write("\no  ANALYZING OUTPUT FILES IN {}\n".format(w_dir))
+					log_files = get_com_or_log_out_files('output')
+					com_files = get_com_or_log_out_files('input')
+					output_analyzer(log_files, com_files, w_dir,w_dir_main , lot, bs, bs_gcp, args, w_dir_fin,w_dir_initial,log,ana_data,round_num)
 		os.chdir(args.path)
 
 def dup_main(args,log):
 	if args.path == '':
 		w_dir = os.getcwd()
-		log_files = get_log_out_files()
+		log_files = get_com_or_log_out_files('output')
 		if len(log_files) != 0:
-			dup_calculation(log_files,w_dir,args,log)
+			dup_calculation(log_files,w_dir,w_dir,args,log,1)
 		else:
-			log.write(' There are not any log or out files in this folder.')
+			log.write(' There are no log or out files in this folder.')
 	else:
 		# Sets the folder and find the log files to analyze
 		for lot in args.level_of_theory:
 			for bs in args.basis_set:
+				w_dir_main = args.path + str(lot) + '-' + str(bs)
 				w_dir = args.path + str(lot) + '-' + str(bs)
 				os.chdir(w_dir)
+				w_dir,round_num = check_for_final_folder(w_dir)
+				os.chdir(w_dir)
 				# change molecules to a range as files will have codes in a continous manner
-				log_files = get_log_out_files()
+				log_files = get_com_or_log_out_files('output')
 				if len(log_files) != 0:
-					dup_calculation(log_files,w_dir,args,log)
+					dup_calculation(log_files,w_dir,w_dir_main,args,log,round_num)
 				else:
-					log.write(' There are not any log or out files in this folder.')
+					log.write(' There are no any log or out files in this folder.')
 
 def qsub_main(args,log):
 	#chceck if ech level of theory has a folder New gaussin FILES
@@ -315,9 +341,8 @@ def qsub_main(args,log):
 			subprocess.call(cmd_qsub)
 
 def graph_main(args,log,w_dir_initial):
-
 	#get sdf FILES from csv
-	pd_name = pd.read_csv(args.input.split('.')[0]+'-Duplicates Data.csv')
+	pd_name = pd.read_csv(args.input.split('.')[0]+'-Confgen-Data.csv')
 
 	for i in range(len(pd_name)):
 		name = pd_name.loc[i,'Molecule']
@@ -344,6 +369,27 @@ def graph_main(args,log,w_dir_initial):
 					log_files = glob.glob(name+'_*.log')
 					graph(sdf_rdkit,sdf_xtb,sdf_ani,log_files,args,log,lot,bs,name,w_dir_initial)
 
+def nmr_main(args,log,w_dir_initial):
+
+	#get sdf FILES from csv
+	pd_name = pd.read_csv(args.input.split('.')[0]+'-Confgen-Data.csv')
+
+	for i in range(len(pd_name)):
+		name = pd_name.loc[i,'Molecule']
+
+		log.write("\no NMR analysis for molecule : {0} ".format(name))
+
+		# Sets the folder and find the log files to analyze
+		for lot in args.level_of_theory:
+			for bs in args.basis_set:
+				for bs_gcp in args.basis_set_genecp_atoms:
+					#assign the path to the finished directory.
+					w_dir_fin = args.path + str(lot) + '-' + str(bs) +'/finished'
+					os.chdir(w_dir_fin)
+					log_files = glob.glob(name+'_*.log')
+					if len(log_files) != 0:
+						val = ' '.join(log_files)
+						calculate_boltz_and_nmr(val,args,log,name,w_dir_fin)
 
 # MAIN OPTION FOR DISCARDING MOLECULES BASED ON USER INPUT DATA (REFERRED AS EXPERIMENTAL RULES)
 def exp_rules_main(args,log):
