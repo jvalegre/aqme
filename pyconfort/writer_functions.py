@@ -345,7 +345,7 @@ def write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args, log, 
 		#change file by moving to new file
 		os.rename(file,rename_file_name)
 
-		#submitting the gaussian file on summit
+		# #submitting the gaussian file on summit
 		if args.qsub:
 			cmd_qsub = [args.submission_command, rename_file_name]
 			subprocess.call(cmd_qsub)

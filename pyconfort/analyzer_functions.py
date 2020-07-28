@@ -88,11 +88,13 @@ def write_genecp(fileout,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,bs_com,l
 def new_com_file(w_dir,w_dir_initial,new_gaussian_input_files,file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,TERMINATION,IM_FREQS,bs_com,lot_com,bs_gcp_com):
 	if args.sp:
 		if args.suffix_sp == 'None':
-			fileout = open(file.split(".")[0]+'-'+lot_com+'-'+bs_com+'.com', "w")
+			file_name = file.split(".")[0]+'-'+lot_com+'-'+bs_com+'.com'
 		else:
-			fileout = open(file.split(".")[0]+'-'+args.suffix_sp+'-'+lot_com+'-'+bs_com+'.com', "w")
+			file_name = file.split(".")[0]+'-'+args.suffix_sp+'-'+lot_com+'-'+bs_com+'.com'
 	else:
-		fileout = open(file.split(".")[0]+'.com', "w")
+		file_name = file.split(".")[0]+'.com'
+
+	fileout = open(file_name, "w")
 
 	write_header_and_coords(fileout,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS)
 
@@ -104,6 +106,11 @@ def new_com_file(w_dir,w_dir_initial,new_gaussian_input_files,file,args,keywords
 		write_genecp(fileout,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,bs_com,lot_com,bs_gcp_com,args,w_dir_initial,new_gaussian_input_files)
 
 	fileout.close()
+
+	# #submitting the gaussian file on summit
+	if args.qsub:
+		cmd_qsub = [args.submission_command, file_name]
+		subprocess.call(cmd_qsub)
 
 def read_log_file(w_dir,file):
 	break_loop = False

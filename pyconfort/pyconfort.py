@@ -28,7 +28,7 @@ from __future__ import print_function
 import os
 import time
 from pyconfort.argument_parser import parser_args
-from pyconfort.main_functions import compute_main, exp_rules_main, write_gauss_main, move_sdf_main, analysis_main, dup_main, qsub_main,graph_main,geom_par_main,nmr_main,move_dat_main
+from pyconfort.main_functions import compute_main, exp_rules_main, write_gauss_main, move_sdf_main, analysis_main, dup_main,graph_main,geom_par_main,nmr_main,move_dat_main
 from pyconfort.writer_functions import creation_of_dup_csv, load_from_yaml, Logger
 
 def main():
@@ -82,11 +82,6 @@ def main():
 	if args.nmr:
 		log = Logger("pyCONFORT-nmr-analysis", args.output_name)
 		nmr_main(args,log,w_dir_initial)
-
-	# main part of the automated workflow (submission of COM files and analyzer)
-	if args.qsub:
-		log = Logger("pyCONFORT-auto-submission", args.output_name)
-		qsub_main(args,log)
 
 	# main part of the automated workflow (submission of COM files and analyzer)
 	if args.graph:

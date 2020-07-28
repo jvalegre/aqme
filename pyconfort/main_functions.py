@@ -137,7 +137,7 @@ def compute_main(w_dir_initial,dup_data,args,log,start_time):
 
 def geom_par_main(args,log,w_dir_initial):
 	#get sdf FILES from csv
-	pd_name = pd.read_csv(args.input.split('.')[0]+'-Confgen-Data.csv')
+	pd_name = pd.read_csv(w_dir_initial+'/pyCONFORT_csv_files/confgen/'+args.input.split('.')[0]+'-Confgen-Data.csv')
 
 	for i in range(len(pd_name)):
 		name = pd_name.loc[i,'Molecule']
@@ -188,7 +188,7 @@ def write_gauss_main(args,log):
 	if len(conf_files) != 0:
 		#read in dup_data to get the overall charge of MOLECULES
 		try:
-			charge_data = pd.read_csv(args.input.split('.')[0]+'-Confgen-Data.csv', usecols=['Molecule','Overall charge'])
+			charge_data = pd.read_csv(w_dir_initial+'/pyCONFORT_csv_files/confgen/'+args.input.split('.')[0]+'-Confgen-Data.csv', usecols=['Molecule','Overall charge'])
 		except:
 			charge_data = None
 		for lot in args.level_of_theory:
@@ -329,20 +329,9 @@ def dup_main(args,log):
 				else:
 					log.write(' There are no any log or out files in this folder.')
 
-def qsub_main(args,log):
-	#chceck if ech level of theory has a folder New gaussin FILES
-	for lot in args.level_of_theory:
-		for bs in args.basis_set:
-			w_dir = args.path + str(lot) + '-' + str(bs) +'/'
-			#check if New_Gaussian_Input_Files folder exists
-			w_dir = check_for_final_folder(w_dir,log)
-			os.chdir(w_dir)
-			cmd_qsub = [args.submission_command, '*.com']
-			subprocess.call(cmd_qsub)
-
 def graph_main(args,log,w_dir_initial):
 	#get sdf FILES from csv
-	pd_name = pd.read_csv(args.input.split('.')[0]+'-Confgen-Data.csv')
+	pd_name = pd.read_csv(w_dir_initial+'/pyCONFORT_csv_files/confgen/'+args.input.split('.')[0]+'-Confgen-Data.csv')
 
 	for i in range(len(pd_name)):
 		name = pd_name.loc[i,'Molecule']
@@ -372,7 +361,7 @@ def graph_main(args,log,w_dir_initial):
 def nmr_main(args,log,w_dir_initial):
 
 	#get sdf FILES from csv
-	pd_name = pd.read_csv(args.input.split('.')[0]+'-Confgen-Data.csv')
+	pd_name = pd.read_csv(w_dir_initial+'/pyCONFORT_csv_files/confgen/'+args.input.split('.')[0]+'-Confgen-Data.csv')
 
 	for i in range(len(pd_name)):
 		name = pd_name.loc[i,'Molecule']

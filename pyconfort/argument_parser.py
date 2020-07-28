@@ -79,7 +79,7 @@ def parser_args():
 	#track geometric parameters
 	parser.add_argument("--geom_par", action="store_true", default=False, help="Turn on for tracking the geometric parmeters")
 	parser.add_argument("--geom_par_name", help="Name for the geometric parameter caluculated ", default="descp", dest="geom_par_name", type=str)
-	parser.add_argument("--rot_dihedral", action="store_true", default=False, help="Turn on for tracking the geometric parmeters for tje rotatable dihedrals (Need not specify anything in the dihedral list)")
+	parser.add_argument("--rot_dihedral", action="store_true", default=False, help="Turn on for tracking the geometric parmeters for the rotatable dihedrals (Need not specify anything in the dihedral list)")
 	parser.add_argument("--dihedral", help="Specify the atom indexs to track dihedrals for different conformes only for specific dihedrals (For all rotatable dihedrals turn rot_dihedral to True)", default=[], dest="dihedral", type=str, nargs=4,action='append')
 	parser.add_argument("--bond", help="Specify the atom indexs to track bond lengths for different conformers", default=[], dest="bond", type=str, nargs=2,action='append')
 	parser.add_argument("--angle", help="Specify the atom indexs to track angles for different conformers", default=[], dest="angle", type=str, nargs=3,action='append')
@@ -117,7 +117,8 @@ def parser_args():
 	parser.add_argument("--suffix_sp", help="The suffix for single point calculation", default="None", type=str, metavar="suffix_sp")
 
 	# submission of Gaussion files
-	parser.add_argument("--qsub", action="store_true", default=False, help="Submit Gaussian files")
+	parser.add_argument("--qsub", action="store_true", default=False, help="Submit Gaussian files when they are created")
+	parser.add_argument("--qsub_ana", action="store_true", default=False, help="Submit Gaussian files after analysis")
 	parser.add_argument("--submission_command",  help="Queueing system that the submission is done on", default="qsub_summit", metavar="submission_command", type=str)
 
 	args = parser.parse_args()

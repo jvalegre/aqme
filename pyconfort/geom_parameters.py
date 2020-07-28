@@ -31,22 +31,23 @@ def get_data(rdkit_mols,min_mols,type,args):
             for b,bd in enumerate(args.angle):
                 bond_rdkit = rdMolTransforms.GetBondLength(mol_j.GetConformer(),bd[0],bd[1])
                 geom_data.at[j,args.geom_par_name+'-Bond-rdkit-'+str(bd[0])+'-'+str(bd[1])] = bond_rdkit
-        if min_mols is not None and type =='ani' or type=='xtb':
-            for i, mol_i in enumerate(min_mols):
-                if mol_i.GetProp('_Name') == name+' '+type:
-                    geom_data.at[j,'Energy-'+type] = mol_i.GetProp('Energy')
-                    if len(args.dihedral) != 0:
-                        for d,dh in enumerate(args.dihedral):
-                            dihedral_min = rdMolTransforms.GetDihedralDeg(mol_i.GetConformer(),dh[0],dh[1],dh[2],dh[3])
-                            geom_data.at[j,args.geom_par_name+'-Dihedral-'+type+'-'+str(dh[0])+'-'+str(dh[1])+'-'+str(dh[2])+'-'+str(dh[3])] = dihedral_min
-                    if len(args.angle) != 0:
-                        for a,an in enumerate(args.angle):
-                            angle_min = rdMolTransforms.GetAngleDeg(mol_i.GetConformer(),an[0],an[1],an[2])
-                            geom_data.at[j,args.geom_par_name+'-Angle-'+type+'-'+str(an[0])+'-'+str(an[1])+'-'+str(an[2])] = angle_min
-                    if len(args.bond) != 0:
-                        for b,bd in enumerate(args.angle):
-                            bond_min = rdMolTransforms.GetBondLength(mol_i.GetConformer(),bd[0],bd[1])
-                            geom_data.at[j,args.geom_par_name+'-Bond-'+type+'-'+str(bd[0])+'-'+str(bd[1])] = bond_min
+        if min_mols is not None:
+            if type =='ani' or type=='xtb':
+                for i, mol_i in enumerate(min_mols):
+                    if mol_i.GetProp('_Name') == name+' '+type:
+                        geom_data.at[j,'Energy-'+type] = mol_i.GetProp('Energy')
+                        if len(args.dihedral) != 0:
+                            for d,dh in enumerate(args.dihedral):
+                                dihedral_min = rdMolTransforms.GetDihedralDeg(mol_i.GetConformer(),dh[0],dh[1],dh[2],dh[3])
+                                geom_data.at[j,args.geom_par_name+'-Dihedral-'+type+'-'+str(dh[0])+'-'+str(dh[1])+'-'+str(dh[2])+'-'+str(dh[3])] = dihedral_min
+                        if len(args.angle) != 0:
+                            for a,an in enumerate(args.angle):
+                                angle_min = rdMolTransforms.GetAngleDeg(mol_i.GetConformer(),an[0],an[1],an[2])
+                                geom_data.at[j,args.geom_par_name+'-Angle-'+type+'-'+str(an[0])+'-'+str(an[1])+'-'+str(an[2])] = angle_min
+                        if len(args.bond) != 0:
+                            for b,bd in enumerate(args.angle):
+                                bond_min = rdMolTransforms.GetBondLength(mol_i.GetConformer(),bd[0],bd[1])
+                                geom_data.at[j,args.geom_par_name+'-Bond-'+type+'-'+str(bd[0])+'-'+str(bd[1])] = bond_min
     return geom_data
 
 
