@@ -9,19 +9,91 @@ import sys
 import os
 import pandas as pd
 import subprocess
+import yaml
 from rdkit.Chem import AllChem as Chem
-from pyconfort.confgen_functions import check_for_pieces, check_charge_smi, clean_args, compute_confs, com_2_xyz_2_sdf, mol_from_sdf_or_mol_or_mol2
-from pyconfort.writer_functions import read_energies, write_gaussian_input_file, moving_files, convert_xyz_to_sdf
-from pyconfort.filter_functions import exp_rules_output
-from pyconfort.analyzer_functions import output_analyzer, check_for_final_folder, dup_calculation
+from pyconfort.csearch import check_for_pieces, check_charge_smi, clean_args, compute_confs, com_2_xyz_2_sdf, mol_from_sdf_or_mol_or_mol2
+from pyconfort.filter import exp_rules_output
+
+from pyconfort.qprep_gaussian import read_energies, write_gaussian_input_file, moving_files, convert_xyz_to_sdf
+from pyconfort.qcorr_gaussian import output_analyzer, check_for_final_folder, dup_calculation
+
 from pyconfort.grapher import graph
-from pyconfort.geom_parameters import calculate_parameters
+from pyconfort.descp import calculate_parameters
 from pyconfort.nmr import calculate_boltz_and_nmr
-from pyconfort.writer_functions import creation_of_ana_csv
-from pyconfort.writer_functions import Logger
+#need to and in energy
+
+#class for logging
+class Logger:
+	# Class Logger to write the output to a file
+	def __init__(self, filein, append):
+		# Logger to write the output to a file
+		suffix = 'dat'
+		self.log = open('{0}_{1}.{2}'.format(filein, append, suffix), 'w')
+
+	def write(self, message):
+		print(message, end='\n')
+		self.log.write(message+ "\n")
+
+	def fatal(self, message):
+		print(message, end='\n')
+		self.log.write(message + "\n")
+		self.finalize()
+		sys.exit(1)
+
+	def finalize(self):
+		self.log.close()
+
+#load paramters from yaml file
+def load_from_yaml(args,log):
+	# Variables will be updated from YAML file
+	try:
+		if args.varfile is not None:
+			if os.path.exists(args.varfile):
+				if os.path.splitext(args.varfile)[1] == '.yaml':
+					log.write("\no  IMPORTING VARIABLES FROM " + args.varfile)
+					with open(args.varfile, 'r') as file:
+						param_list = yaml.load(file, Loader=yaml.SafeLoader)
+			for param in param_list:
+				if hasattr(args, param):
+					if getattr(args, param) != param_list[param]:
+						log.write("o  RESET " + param + " from " + str(getattr(args, param)) + " to " + str(param_list[param]))
+						setattr(args, param, param_list[param])
+					else:
+						log.write("o  DEFAULT " + param + " : " + str(getattr(args, param)))
+	except UnboundLocalError:
+		log.write("\no  The specified yaml file containing parameters was not found! Make sure that the valid params file is in the folder where you are running the code.\n")
+
+#creation of csv for csearch
+def creation_of_dup_csv(args):
+	# writing the list of DUPLICATES
+	if args.CSEARCH=='rdkit':
+		if not args.CMIN=='xtb' and not args.CMIN=='ANI1ccx':
+			dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples', 'RDKit-energy-window', 'RDKit-initial_energy_threshold','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','time (seconds)','Overall charge'])
+		elif args.CMIN=='xtb' and not args.CMIN=='ANI1ccx':
+			dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples','RDKit-energy-window', 'RDKit-initial_energy_threshold','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','xTB-Initial-samples','xTB-energy-window','xTB-initial_energy_threshold','xTB-RMSD-and-energy-duplicates','xTB-Unique-conformers','time (seconds)','Overall charge'])
+		elif args.CMIN=='ANI1ccx' and not args.CMIN=='xtb':
+			dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples','RDKit-energy-window', 'RDKit-initial_energy_threshold','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','ANI1ccx-Initial-samples','ANI1ccx-energy-window','ANI1ccx-initial_energy_threshold','ANI1ccx-RMSD-and-energy-duplicates','ANI1ccx-Unique-conformers','time (seconds)','Overall charge'])
+		elif args.CMIN=='ANI1ccx' and args.CMIN=='xtb':
+			dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples','RDKit-energy-window', 'RDKit-initial_energy_threshold','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','ANI1ccx-Initial-samples','ANI1ccx-energy-window','ANI1ccx-initial_energy_threshold','ANI1ccx-RMSD-and-energy-duplicates','ANI1ccx-Unique-conformers','xTB-Initial-samples','xTB-energy-window','xTB-initial_energy_threshold','xTB-RMSD-and-energy-duplicates','xTB-Unique-conformers','time(seconds)','Overall charge'])
+	elif args.CSEARCH=='rdkit-dihedral':
+		if not args.CMIN=='xtb' and not args.CMIN=='ANI1ccx':
+			dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples','RDKit-energy-window', 'RDKit-initial_energy_threshold','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','RDKIT-Rotated-conformers','RDKit-Rotated-energy-window', 'RDKit-Rotated-initial_energy_threshold','RDKit-Rotated-RMSD-and-energy-duplicates','RDKIT-Rotated-Unique-conformers','time (seconds)','Overall charge'])
+		elif args.CMIN=='xtb' and not args.CMIN=='ANI1ccx':
+			dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples', 'RDKit-energy-window','RDKit-initial_energy_threshold','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','RDKIT-Rotated-conformers','RDKit-Rotated-energy-window', 'RDKit-Rotated-initial_energy_threshold','RDKit-Rotated-RMSD-and-energy-duplicates','RDKIT-Rotated-Unique-conformers','xTB-Initial-samples','xTB-energy-window','xTB-initial_energy_threshold','xTB-RMSD-and-energy-duplicates','xTB-Unique-conformers','time (seconds)','Overall charge'])
+		elif args.CMIN=='ANI1ccx' and not args.CMIN=='xtb':
+			dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples','RDKit-energy-window', 'RDKit-initial_energy_threshold','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','RDKIT-Rotated-conformers','RDKit-Rotated-energy-window', 'RDKit-Rotated-initial_energy_threshold','RDKit-Rotated-RMSD-and-energy-duplicates','RDKIT-Rotated-Unique-conformers','ANI1ccx-Initial-samples','ANI1ccx-energy-window','ANI1ccx-initial_energy_threshold','ANI1ccx-RMSD-and-energy-duplicates','ANI1ccx-Unique-conformers','time (seconds)','Overall charge'])
+		elif args.CMIN=='ANI1ccx' and args.CMIN=='xtb':
+			dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples','RDKit-energy-window', 'RDKit-initial_energy_threshold','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','RDKIT-Rotated-conformers','RDKit-Rotated-energy-window', 'RDKit-Rotated-initial_energy_threshold','RDKit-Rotated-RMSD-and-energy-duplicates','RDKIT-Rotated-Unique-conformers','ANI1ccx-Initial-samples','ANI1ccx-energy-window','ANI1ccx-initial_energy_threshold','ANI1ccx-RMSD-and-energy-duplicates','ANI1ccx-Unique-conformers','xTB-Initial-samples','xTB-energy-window','xTB-initial_energy_threshold','xTB-RMSD-and-energy-duplicates','xTB-Unique-conformers','time (seconds)','Overall charge'])
+	return dup_data
+
+#creation of csv for qcorr
+def creation_of_ana_csv(args):
+	if args.QCORR=='gaussian':
+		ana_data =  pd.DataFrame(columns = ['Total Files','Normal Termination', 'Imaginary frequencies', 'SCF Error','Atomic Basis Error','Other Errors','Unfinished'])
+	return ana_data
 
 # main function to generate conformers
-def compute_main(w_dir_initial,dup_data,args,log,start_time):
+def csearch_main(w_dir_initial,dup_data,args,log,start_time):
 	# input file format specified
 	file_format = os.path.splitext(args.input)[1]
 
@@ -131,46 +203,25 @@ def compute_main(w_dir_initial,dup_data,args,log,start_time):
 			compute_confs(w_dir_initial,mol,name,args,log,dup_data,counter_for_template,i,start_time)
 			i += 1
 
-	if not os.path.isdir(w_dir_initial+'/pyCONFORT_csv_files/confgen'):
-		os.makedirs(w_dir_initial+'/pyCONFORT_csv_files/confgen')
-	dup_data.to_csv(w_dir_initial+'/pyCONFORT_csv_files/confgen/'+args.input.split('.')[0]+'-Confgen-Data.csv',index=False)
+	if not os.path.isdir(w_dir_initial+'/CSEARCH/csv_files'):
+		os.makedirs(w_dir_initial+'/CSEARCH/csv_files/')
+	dup_data.to_csv(w_dir_initial+'/CSEARCH/csv_files/'+args.output_name+'-CSEARCH-Data.csv',index=False)
 
-def geom_par_main(args,log,w_dir_initial):
-	#get sdf FILES from csv
-	pd_name = pd.read_csv(w_dir_initial+'/pyCONFORT_csv_files/confgen/'+args.input.split('.')[0]+'-Confgen-Data.csv')
-
-	for i in range(len(pd_name)):
-		name = pd_name.loc[i,'Molecule']
-
-		log.write("\no  Calculating paramters for molecule : {0} ".format(name))
-
-		sdf_ani,sdf_xtb = None,None
-		if args.nodihedrals:
-			sdf_rdkit =  w_dir_initial+'/rdkit_generated_sdf_files/'+name+'_rdkit.sdf'
-		elif not args.nodihedrals:
-			sdf_rdkit = w_dir_initial+'/rdkit_generated_sdf_files/'+name+'_rdkit_rotated.sdf'
-		if args.xtb:
-			sdf_xtb =  w_dir_initial+'/xtb_minimised_generated_sdf_files/'+name+'_xtb.sdf'
-		if args.ANI1ccx:
-			sdf_ani = w_dir_initial+'/ani1ccx_minimised_generated_sdf_files/'+name+'_ani.sdf'
-
-		calculate_parameters(sdf_rdkit,sdf_ani,sdf_xtb,args,log,w_dir_initial,name)
-		os.chdir(w_dir_initial)
-
-def write_gauss_main(args,log):
+#writing gauss main
+def qprep_gaussian_main(args,log):
 
 	if args.exp_rules:
 		conf_files =  glob.glob('*_rules.sdf')
 	# define the SDF files to convert to COM Gaussian files
-	elif not args.xtb and not args.ANI1ccx and args.nodihedrals:
+	elif not args.CMIN=='xtb' and not args.CMIN=='ANI1ccx' and args.CSEARCH=='rdkit':
 		conf_files =  glob.glob('*_rdkit.sdf')
-	elif not args.xtb and not args.ANI1ccx and not args.nodihedrals:
+	elif not args.CMIN=='xtb' and not args.CMIN=='ANI1ccx' and args.CSEARCH=='rdkit-dihedral':
 		conf_files =  glob.glob('*_rdkit_rotated.sdf')
-	elif args.xtb and not args.ANI1ccx:
+	elif args.CMIN=='xtb' and not args.CMIN=='ANI1ccx':
 		conf_files =  glob.glob('*_xtb.sdf')
-	elif args.ANI1ccx and not args.xtb:
+	elif args.CMIN=='ANI1ccx' and not args.CMIN=='xtb':
 		conf_files =  glob.glob('*_ani.sdf')
-	elif args.ANI1ccx and args.xtb:
+	elif args.CMIN=='ANI1ccx' and args.CMIN=='xtb':
 		conf_files =  glob.glob('*_ani.sdf') + glob.glob('*_xtb.sdf')
 	else:
 		conf_files =  glob.glob('*.sdf')
@@ -181,8 +232,8 @@ def write_gauss_main(args,log):
 		conf_files =  glob.glob('*.sdf')
 
 	# names for directories created
-	sp_dir = 'generated_sp_files'
-	g_dir = 'generated_gaussian_files'
+	sp_dir = 'QPREP/G16-SP'
+	g_dir = 'QPREP/G16'
 	#fixing genecp to LAL2DZ if empty
 
 	if len(conf_files) != 0:
@@ -224,34 +275,41 @@ def write_gauss_main(args,log):
 # moving files after compute and/or write_gauss
 def move_sdf_main(args):
 	src = os.getcwd()
-	if args.xtb:
-		all_xtb_conf_files = glob.glob('*_xtb.sdf') + glob.glob('*_xtb_all_confs.sdf')
-		destination_xtb = src +'/xtb_minimised_generated_sdf_files'
+	if args.CMIN=='xtb':
+		all_xtb_conf_files = glob.glob('*_xtb.sdf')
+		destination_xtb = src +'/CSEARCH/xtb'
 		for file in all_xtb_conf_files:
 			moving_files(destination_xtb,src,file)
-	if args.ANI1ccx:
-		all_ani_conf_files = glob.glob('*_ani.sdf') + glob.glob('*_ani_all_confs.sdf')
-		destination_ani = src +'/ani1ccx_minimised_generated_sdf_files'
+		all_xtb_conf_files =  glob.glob('*_xtb_all_confs.sdf')
+		destination_xtb = src +'/CSEARCH/all_confs/xtb'
+		for file in all_xtb_conf_files:
+			moving_files(destination_xtb,src,file)
+	if args.CMIN=='ANI1ccx':
+		all_ani_conf_files = glob.glob('*_ani.sdf')
+		destination_ani = src +'/CSEARCH/ani1ccx'
 		for file in all_ani_conf_files:
 			moving_files(destination_ani,src,file)
-	if args.compute or args.write_gauss:
-		all_name_conf_files = glob.glob('*_rdkit*.sdf')
-		destination_rdkit = 'rdkit_generated_sdf_files'
+		all_ani_conf_files = glob.glob('*_ani_all_confs.sdf')
+		destination_ani = src +'/CSEARCH/all_confs/ani1ccx'
+		for file in all_ani_conf_files:
+			moving_files(destination_ani,src,file)
+	if args.CSEARCH=='rdkit':
+		all_name_conf_files = glob.glob('*_rdkit.sdf')
+		destination_rdkit = src+ '/CSEARCH/rdkit'
+		for file in all_name_conf_files:
+			moving_files(destination_rdkit,src,file)
+	if args.CSEARCH=='rdkit-dihedral':
+		all_name_conf_files = glob.glob('*_rdkit_rotated.sdf')
+		destination_rdkit = src+ '/CSEARCH/rdkit-dihedral'
 		for file in all_name_conf_files:
 			moving_files(destination_rdkit,src,file)
 	if args.com_from_xyz:
 		all_xyz_conf_files = glob.glob('*.xyz')+glob.glob('*.sdf')
-		destination_xyz = 'xyz_and_sdf_files_from_xyz'
+		destination_xyz = 'QPREP/xyz_and_sdf'
 		for file in all_xyz_conf_files:
 			moving_files(destination_xyz,src,file)
 
-def move_dat_main(args, w_dir_initial):
-	os.chdir(w_dir_initial)
-	dat_files = glob.glob('*.dat')
-	destination_dat =  w_dir_initial+'/pyCONFORT_dat_files'
-	for file in dat_files:
-		moving_files(destination_dat,w_dir_initial,file)
-
+#finding the file type to move for analysis
 def get_com_or_log_out_files(type):
 	files = []
 	if type =='output':
@@ -265,7 +323,7 @@ def get_com_or_log_out_files(type):
 	return files
 
 # main part of the analysis functions
-def analysis_main(w_dir_initial,args):
+def qcorr_gaussian_main(w_dir_initial,args,log):
 	# when you run analysis in a folder full of output files
 	if args.path == '':
 		w_dir = os.getcwd()
@@ -275,7 +333,6 @@ def analysis_main(w_dir_initial,args):
 				for bs_gcp in args.basis_set_genecp_atoms:
 					folder = w_dir_initial
 					ana_data = creation_of_ana_csv(args)
-					log = Logger("pyCONFORT-analysis", args.output_name)
 					log.write("\no  ANALYZING OUTPUT FILES IN {}\n".format(folder))
 					log_files = get_com_or_log_out_files('output')
 					com_files = get_com_or_log_out_files('input')
@@ -289,12 +346,13 @@ def analysis_main(w_dir_initial,args):
 				for bs_gcp in args.basis_set_genecp_atoms:
 					#for main folder
 					w_dir_main = args.path + str(lot) + '-' + str(bs)
+					if not os.path.isdir(w_dir_main+'/dat_files/'):
+						os.makedirs(w_dir_main+'/dat_files/')
 					#for currect w_dir folder
 					w_dir = args.path + str(lot) + '-' + str(bs)
 					#check if New_Gaussian_Input_Files folder exists
 					w_dir,round_num = check_for_final_folder(w_dir)
-
-					log = Logger("pyCONFORT-analysis-run"+str(round_num), args.output_name)
+					log = Logger(w_dir_main+'/dat_files/pyCONFORT-analysis-run-'+str(round_num), args.output_name)
 					#assign the path to the finished directory.
 					w_dir_fin = args.path + str(lot) + '-' + str(bs) +'/success'
 					os.chdir(w_dir)
@@ -305,6 +363,7 @@ def analysis_main(w_dir_initial,args):
 					output_analyzer(log_files, com_files, w_dir,w_dir_main , lot, bs, bs_gcp, args, w_dir_fin,w_dir_initial,log,ana_data,round_num)
 		os.chdir(args.path)
 
+#removing the duplicates
 def dup_main(args,log):
 	if args.path == '':
 		w_dir = os.getcwd()
@@ -329,9 +388,33 @@ def dup_main(args,log):
 				else:
 					log.write(' There are no any log or out files in this folder.')
 
+#getting descriptors
+def geom_par_main(args,log,w_dir_initial):
+	#get sdf FILES from csv
+	pd_name = pd.read_csv(w_dir_initial+'/CSEARCH/csv_files/'+args.output_name+'-CSEARCH-Data.csv')
+
+	for i in range(len(pd_name)):
+		name = pd_name.loc[i,'Molecule']
+
+		log.write("\no  Calculating paramters for molecule : {0} ".format(name))
+
+		sdf_ani,sdf_xtb = None,None
+		if args.CSEARCH=='rdkit':
+			sdf_rdkit =  w_dir_initial+'/CSEARCH/rdkit/'+name+'_rdkit.sdf'
+		elif args.CSEARCH=='rdkit-dihedral':
+			sdf_rdkit = w_dir_initial+'/CSEARCH/rdkit-dihedral/'+name+'_rdkit_rotated.sdf'
+		if args.CMIN=='xtb':
+			sdf_xtb =  w_dir_initial+'/CSEARCH/xtb/'+name+'_xtb.sdf'
+		if args.CMIN=='ANI1ccx':
+			sdf_ani = w_dir_initial+'/CSEARCH/ani1ccx/'+name+'_ani.sdf'
+
+		calculate_parameters(sdf_rdkit,sdf_ani,sdf_xtb,args,log,w_dir_initial,name)
+		os.chdir(w_dir_initial)
+
+#function to plot graphs
 def graph_main(args,log,w_dir_initial):
 	#get sdf FILES from csv
-	pd_name = pd.read_csv(w_dir_initial+'/pyCONFORT_csv_files/confgen/'+args.input.split('.')[0]+'-Confgen-Data.csv')
+	pd_name = pd.read_csv(w_dir_initial+'/CSEARCH/csv_files/'+args.output_name+'-CSEARCH-Data.csv')
 
 	for i in range(len(pd_name)):
 		name = pd_name.loc[i,'Molecule']
@@ -339,14 +422,14 @@ def graph_main(args,log,w_dir_initial):
 		log.write("\no  Plotting graphs for molecule : {0} ".format(name))
 
 		sdf_ani,sdf_xtb = None,None
-		if args.nodihedrals:
-			sdf_rdkit =  w_dir_initial+'/rdkit_generated_sdf_files/'+name+'_rdkit.sdf'
-		elif not args.nodihedrals:
-			sdf_rdkit = w_dir_initial+'/rdkit_generated_sdf_files/'+name+'_rdkit_rotated.sdf'
-		if args.xtb:
-			sdf_xtb =  w_dir_initial+'/xtb_minimised_generated_sdf_files/'+name+'_xtb_all_confs.sdf'
-		if args.ANI1ccx:
-			sdf_ani = w_dir_initial+'/ani1ccx_minimised_generated_sdf_files/'+name+'_ani_all_confs.sdf'
+		if args.CSEARCH=='rdkit':
+			sdf_rdkit =  w_dir_initial+'/CSEARCH/rdkit/'+name+'_rdkit.sdf'
+		elif args.CSEARCH=='rdkit-dihedral':
+			sdf_rdkit = w_dir_initial+'/CSEARCH/rdkit-dihedral/'+name+'_rdkit_rotated.sdf'
+		if args.CMIN=='xtb':
+			sdf_xtb =  w_dir_initial+'/xtb/'+name+'_xtb_all_confs.sdf'
+		if args.CMIN=='ANI1ccx':
+			sdf_ani = w_dir_initial+'/ani1ccx/'+name+'_ani_all_confs.sdf'
 
 		# Sets the folder and find the log files to analyze
 		for lot in args.level_of_theory:
@@ -358,10 +441,11 @@ def graph_main(args,log,w_dir_initial):
 					log_files = glob.glob(name+'_*.log')
 					graph(sdf_rdkit,sdf_xtb,sdf_ani,log_files,args,log,lot,bs,name,w_dir_initial)
 
+#function for compariosn of nmr
 def nmr_main(args,log,w_dir_initial):
 
 	#get sdf FILES from csv
-	pd_name = pd.read_csv(w_dir_initial+'/pyCONFORT_csv_files/confgen/'+args.input.split('.')[0]+'-Confgen-Data.csv')
+	pd_name = pd.read_csv(w_dir_initial+'/CSEARCH/csv_files/'+args.output_name+'-CSEARCH-Data.csv')
 
 	for i in range(len(pd_name)):
 		name = pd_name.loc[i,'Molecule']
@@ -385,10 +469,10 @@ def exp_rules_main(args,log):
 	if args.verbose:
 		log.write("\n   ----- Applying experimental rules to write the new confs file -----")
 	# do 2 cases, for RDKit only and RDKIt+xTB
-	if not args.xtb:
-		if args.nodihedrals:
+	if not args.CMIN=='xtb':
+		if args.CSEARCH=='rdkit':
 			conf_files =  glob.glob('*_rdkit.sdf')
-		else:
+		elif args.CSEARCH=='rdkit-dihedral':
 			conf_files =  glob.glob('*_rdkit_rotated.sdf')
 	else:
 		conf_files =  glob.glob('*_xtb.sdf')

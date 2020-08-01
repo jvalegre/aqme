@@ -12,80 +12,12 @@ import sys
 import subprocess
 import glob
 import shutil
-import yaml
 import pandas as pd
 from rdkit.Chem import AllChem as Chem
 from pyconfort.argument_parser import possible_atoms
 
+
 possible_atoms = possible_atoms()
-
-# CLASS FOR LOGGING
-class Logger:
-	# Class Logger to write the output to a file
-	def __init__(self, filein, append):
-		# Logger to write the output to a file
-		suffix = 'dat'
-		self.log = open('{0}_{1}.{2}'.format(filein, append, suffix), 'w')
-
-	def write(self, message):
-		print(message, end='\n')
-		self.log.write(message+ "\n")
-
-	def fatal(self, message):
-		print(message, end='\n')
-		self.log.write(message + "\n")
-		self.finalize()
-		sys.exit(1)
-
-	def finalize(self):
-		self.log.close()
-
-# LOAD PARAMETERS FROM A YAML FILE
-def load_from_yaml(args,log):
-	# Variables will be updated from YAML file
-	try:
-		if args.varfile is not None:
-			if os.path.exists(args.varfile):
-				if os.path.splitext(args.varfile)[1] == '.yaml':
-					log.write("\no  IMPORTING VARIABLES FROM " + args.varfile)
-					with open(args.varfile, 'r') as file:
-						param_list = yaml.load(file, Loader=yaml.SafeLoader)
-			for param in param_list:
-				if hasattr(args, param):
-					if getattr(args, param) != param_list[param]:
-						log.write("o  RESET " + param + " from " + str(getattr(args, param)) + " to " + str(param_list[param]))
-						setattr(args, param, param_list[param])
-					else:
-						log.write("o  DEFAULT " + param + " : " + str(getattr(args, param)))
-	except UnboundLocalError:
-		log.write("\no  The specified yaml file containing parameters was not found! Make sure that the valid params file is in the folder where you are running the code.\n")
-
-def creation_of_dup_csv(args):
-	# writing the list of DUPLICATES
-	if args.nodihedrals:
-		if not args.xtb and not args.ANI1ccx:
-			dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples', 'RDKit-energy-window', 'RDKit-initial_energy_threshold','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','time (seconds)','Overall charge'])
-		elif args.xtb and not args.ANI1ccx:
-			dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples','RDKit-energy-window', 'RDKit-initial_energy_threshold','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','xTB-Initial-samples','xTB-energy-window','xTB-initial_energy_threshold','xTB-RMSD-and-energy-duplicates','xTB-Unique-conformers','time (seconds)','Overall charge'])
-		elif args.ANI1ccx and not args.xtb:
-			dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples','RDKit-energy-window', 'RDKit-initial_energy_threshold','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','ANI1ccx-Initial-samples','ANI1ccx-energy-window','ANI1ccx-initial_energy_threshold','ANI1ccx-RMSD-and-energy-duplicates','ANI1ccx-Unique-conformers','time (seconds)','Overall charge'])
-		elif args.ANI1ccx and args.xtb:
-			dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples','RDKit-energy-window', 'RDKit-initial_energy_threshold','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','ANI1ccx-Initial-samples','ANI1ccx-energy-window','ANI1ccx-initial_energy_threshold','ANI1ccx-RMSD-and-energy-duplicates','ANI1ccx-Unique-conformers','xTB-Initial-samples','xTB-energy-window','xTB-initial_energy_threshold','xTB-RMSD-and-energy-duplicates','xTB-Unique-conformers','time(seconds)','Overall charge'])
-	else:
-		if not args.xtb and not args.ANI1ccx:
-			dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples','RDKit-energy-window', 'RDKit-initial_energy_threshold','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','RDKIT-Rotated-conformers','RDKit-Rotated-energy-window', 'RDKit-Rotated-initial_energy_threshold','RDKit-Rotated-RMSD-and-energy-duplicates','RDKIT-Rotated-Unique-conformers','time (seconds)','Overall charge'])
-		elif args.xtb and not args.ANI1ccx:
-			dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples', 'RDKit-energy-window','RDKit-initial_energy_threshold','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','RDKIT-Rotated-conformers','RDKit-Rotated-energy-window', 'RDKit-Rotated-initial_energy_threshold','RDKit-Rotated-RMSD-and-energy-duplicates','RDKIT-Rotated-Unique-conformers','xTB-Initial-samples','xTB-energy-window','xTB-initial_energy_threshold','xTB-RMSD-and-energy-duplicates','xTB-Unique-conformers','time (seconds)','Overall charge'])
-		elif args.ANI1ccx and not args.xtb:
-			dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples','RDKit-energy-window', 'RDKit-initial_energy_threshold','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','RDKIT-Rotated-conformers','RDKit-Rotated-energy-window', 'RDKit-Rotated-initial_energy_threshold','RDKit-Rotated-RMSD-and-energy-duplicates','RDKIT-Rotated-Unique-conformers','ANI1ccx-Initial-samples','ANI1ccx-energy-window','ANI1ccx-initial_energy_threshold','ANI1ccx-RMSD-and-energy-duplicates','ANI1ccx-Unique-conformers','time (seconds)','Overall charge'])
-		elif args.ANI1ccx and args.xtb:
-			dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples','RDKit-energy-window', 'RDKit-initial_energy_threshold','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','RDKIT-Rotated-conformers','RDKit-Rotated-energy-window', 'RDKit-Rotated-initial_energy_threshold','RDKit-Rotated-RMSD-and-energy-duplicates','RDKIT-Rotated-Unique-conformers','ANI1ccx-Initial-samples','ANI1ccx-energy-window','ANI1ccx-initial_energy_threshold','ANI1ccx-RMSD-and-energy-duplicates','ANI1ccx-Unique-conformers','xTB-Initial-samples','xTB-energy-window','xTB-initial_energy_threshold','xTB-RMSD-and-energy-duplicates','xTB-Unique-conformers','time (seconds)','Overall charge'])
-	return dup_data
-
-def creation_of_ana_csv(args):
-	if args.analysis:
-		ana_data =  pd.DataFrame(columns = ['Total Files','Normal Termination', 'Imaginary frequencies', 'SCF Error','Atomic Basis Error','Other Errors','Unfinished'])
-	return ana_data
 
 def convert_xyz_to_sdf(xyz_files,args,log):
 	for file in xyz_files:
@@ -152,7 +84,7 @@ def input_route_line(args):
 			input_route += 'freq=noraman'
 		if args.empirical_dispersion != 'None':
 			input_route += ' empiricaldispersion={0}'.format(args.empirical_dispersion)
-		if not args.analysis:
+		if not args.QCORR:
 			input_route += ' opt=(maxcycles={0})'.format(args.max_cycle_opt)
 		else:
 			input_route += ' opt=(calcfc,maxcycles={0})'.format(args.max_cycle_opt)
@@ -260,13 +192,13 @@ def write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args, log, 
 
 	# defining path to place the new COM files
 	if args.single_point:
-		path_write_gjf_files = 'generated_sp_files/' + str(lot) + '-' + str(bs)
+		path_write_gjf_files = 'QPREP/G16-SP/' + str(lot) + '-' + str(bs)
 	else:
-		path_write_gjf_files = 'generated_gaussian_files/' + str(lot) + '-' + str(bs)
+		path_write_gjf_files = 'QPREP/G16/' + str(lot) + '-' + str(bs)
 
 	os.chdir(path_write_gjf_files)
 
-	path_for_file = '../../'
+	path_for_file = '../../../'
 
 	com = '{0}_.com'.format(name)
 	com_low = '{0}_low.com'.format(name)

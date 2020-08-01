@@ -10,7 +10,7 @@ from rdkit.Chem import rdMolTransforms
 import os
 import numpy as np
 import pandas as pd
-from pyconfort.confgen_functions import getDihedralMatches
+from pyconfort.csearch import getDihedralMatches
 
 
 def get_data(rdkit_mols,min_mols,type,args):
@@ -72,12 +72,12 @@ def calculate_parameters(sdf_rdkit,sdf_ani,sdf_xtb,args,log,w_dir_initial,name_m
         xtb_mols = Chem.SDMolSupplier(sdf_xtb, removeHs=False)
 
     #loop over only uniques
-    if args.xtb:
+    if args.CMIN=='xtb':
         geom_data = get_data(rdkit_mols,xtb_mols,'xtb',args)
         geom_data.to_csv(name_mol+'-all-geom-data-with-xtb.csv',index=False)
-    if args.ANI1ccx:
+    if args.CMIN=='ANI1ccx':
         geom_data = get_data(rdkit_mols,ani_mols,'ani',args)
         geom_data.to_csv(name_mol+'-all-geom-data-with-ani.csv',index=False)
-    if not args.xtb and not args.ANI1ccx:
+    if not args.CMIN=='xtb' and not args.CMIN=='ANI1ccx':
         geom_data = get_data(rdkit_mols,None,'rdkit-only',args)
         geom_data.to_csv(name_mol+'-all-geom-data-with-rdkit-only.csv',index=False)

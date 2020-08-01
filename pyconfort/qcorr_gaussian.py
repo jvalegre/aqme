@@ -9,7 +9,7 @@ import os
 import sys
 import subprocess
 import shutil
-from pyconfort.writer_functions import input_route_line
+from pyconfort.qprep_gaussian import input_route_line
 from pyconfort.argument_parser import possible_atoms
 
 possible_atoms = possible_atoms()
@@ -400,7 +400,7 @@ def output_analyzer(log_files,com_files, w_dir, w_dir_main,lot, bs, bs_gcp, args
 			#get coordinates
 			ATOMTYPES, CARTESIANS = get_coords_normal(outlines, stand_or, NATOMS, possible_atoms, ATOMTYPES, CARTESIANS)
 			# creating new folder with new input gaussian files
-			single_point_input_files = w_dir_fin+'/single_point_input_files'
+			single_point_input_files = w_dir_fin+'/G16-SP'
 			# Options for genecp
 			ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp = check_for_gen_or_genecp(ATOMTYPES,args)
 
@@ -428,7 +428,7 @@ def output_analyzer(log_files,com_files, w_dir, w_dir_main,lot, bs, bs_gcp, args
 						if args.mult_sp != 'None':
 							MULT = args.mult_sp
 
-						new_com_file(w_dir,w_dir_initial,file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,TERMINATION,IM_FREQS,bs_sp,lot_sp,bs_gcp_sp)
+						new_com_file(w_dir,w_dir_initial,single_point_input_files+'/'+dir_name,file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,TERMINATION,IM_FREQS,bs_sp,lot_sp,bs_gcp_sp)
 
 	#write to csv ana_data
 	ana_data.at[0,'Total Files'] = len(log_files)
@@ -439,9 +439,9 @@ def output_analyzer(log_files,com_files, w_dir, w_dir_main,lot, bs, bs_gcp, args
 	ana_data.at[0,'Other Errors'] = other_error
 	ana_data.at[0,'Unfinished'] = unfinished
 
-	if not os.path.isdir(w_dir_initial+'/csv_files/analysis'):
-		os.makedirs(w_dir_initial+'/csv_files/analysis')
-	ana_data.to_csv(w_dir_initial+'/csv_files/analysis/Analysis-Data-compilesd-run-'+str(round_num)+'.csv',index=False)
+	if not os.path.isdir(w_dir_main+'/csv_files/'):
+		os.makedirs(w_dir_main+'/csv_files/')
+	ana_data.to_csv(w_dir_main+'/csv_files/Analysis-Data-compilesd-run-'+str(round_num)+'.csv',index=False)
 
 # CHECKS THE FOLDER OF FINAL LOG FILES
 def check_for_final_folder(w_dir):

@@ -6,7 +6,7 @@
 #####################################################.
 
 
-from pyconfort.confgen_functions import rdkit_sdf_read
+from pyconfort.cmin import rdkit_sdf_read
 from rdkit.Chem import AllChem as Chem
 import numpy as np
 import matplotlib.path as mpath
@@ -144,13 +144,13 @@ def graph(sdf_rdkit,sdf_xtb,sdf_ani,log_files,args,log,lot,bs,name_mol,w_dir_ini
     energy_rdkit = get_energy(inmols_rdkit)
     energy_rdkit_sc = scaling_with_lowest(energy_rdkit)
 
-    if args.xtb:
+    if args.CMIN=='xtb':
         #get energy list for all conformers from sdfs of rdkit and minimize
         inmols_xtb =  Chem.SDMolSupplier(sdf_xtb, removeHs=False)
         energy_xtb = get_energy(inmols_xtb)
         energy_xtb = rename_name(energy_xtb,'xtb')
         energy_xtb_sc = scaling_with_lowest(energy_xtb)
-    if args.ANI1ccx:
+    if args.CMIN=='ANI1ccx':
         #get energy list for all conformers from sdfs of rdkit and minimize
         inmols_ani = Chem.SDMolSupplier(sdf_ani, removeHs=False)
         energy_ani = get_energy(inmols_ani)
@@ -172,18 +172,18 @@ def graph(sdf_rdkit,sdf_xtb,sdf_ani,log_files,args,log,lot,bs,name_mol,w_dir_ini
             name = file.split('.log')[0]
             energy_rdkit_dft.append([name,data.scfenergies[0]*ev_2_kcal_mol])
 
-    if args.ANI1ccx or args.xtb :
-        if args.ANI1ccx:
+    if args.CMIN=='ANI1ccx' or args.CMIN=='xtb' :
+        if args.CMIN=='ANI1ccx':
             energy_ani_dft_sc = scaling_with_lowest(energy_ani_dft)
-        if args.xtb:
+        if args.CMIN=='xtb':
             energy_xtb_dft_sc = scaling_with_lowest(energy_xtb_dft)
     else:
         energy_rdkit_dft_sc = scaling_with_lowest(energy_rdkit_dft)
 
-    if args.ANI1ccx or args.xtb :
-        if args.xtb:
+    if args.CMIN=='ANI1ccx' or args.CMIN=='xtb' :
+        if args.CMIN=='xtb':
             plot_graph(energy_rdkit_sc,energy_xtb_sc,energy_xtb_dft_sc,lot,bs,name_mol,args,'xtb',w_dir_initial)
-        if args.ANI1ccx:
+        if args.CMIN=='ANI1ccx':
             plot_graph(energy_rdkit_sc,energy_ani_sc,energy_ani_dft_sc,lot,bs,name_mol,args,'ani',w_dir_initial)
     else:
         plot_graph(energy_rdkit_sc,None,energy_rdkit_dft_sc,lot,bs,name_mol,args,'rdkit',w_dir_initial)
