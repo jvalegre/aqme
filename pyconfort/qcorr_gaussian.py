@@ -88,9 +88,9 @@ def write_genecp(fileout,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,bs_com,l
 def new_com_file(w_dir,w_dir_initial,new_gaussian_input_files,file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,TERMINATION,IM_FREQS,bs_com,lot_com,bs_gcp_com):
 	if args.sp:
 		if args.suffix_sp == 'None':
-			file_name = file.split(".")[0]+'-'+lot_com+'-'+bs_com+'.com'
+			file_name = file.split(".")[0]+'.com'
 		else:
-			file_name = file.split(".")[0]+'-'+args.suffix_sp+'-'+lot_com+'-'+bs_com+'.com'
+			file_name = file.split(".")[0]+'-'+args.suffix_sp+'.com'
 	else:
 		file_name = file.split(".")[0]+'.com'
 
@@ -356,6 +356,7 @@ def output_analyzer(log_files,com_files, w_dir, w_dir_main,lot, bs, bs_gcp, args
 	for file in log_files:
 		# read the file
 		outlines, outfile, break_loop = read_log_file(w_dir,file)
+
 		if break_loop:
 			break
 
@@ -400,7 +401,7 @@ def output_analyzer(log_files,com_files, w_dir, w_dir_main,lot, bs, bs_gcp, args
 			#get coordinates
 			ATOMTYPES, CARTESIANS = get_coords_normal(outlines, stand_or, NATOMS, possible_atoms, ATOMTYPES, CARTESIANS)
 			# creating new folder with new input gaussian files
-			single_point_input_files = w_dir_fin+'/G16-SP'
+			single_point_input_files = w_dir_fin+'/../G16-SP'
 			# Options for genecp
 			ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp = check_for_gen_or_genecp(ATOMTYPES,args)
 
@@ -408,7 +409,7 @@ def output_analyzer(log_files,com_files, w_dir, w_dir_main,lot, bs, bs_gcp, args
 			for lot_sp in args.level_of_theory_sp:
 				for bs_sp in args.basis_set_sp:
 					for bs_gcp_sp in args.basis_set_genecp_atoms_sp:
-						log.write('-> Creating new single point files files for {0} in ./finished/single_point_input_files/{1}-{2}\n'.format(file,lot_sp,bs_sp))
+						log.write('-> Creating new single point files files for {0} in {1}/{2}-{3}\n'.format(file,single_point_input_files,lot_sp,bs_sp))
 						dir_name = str(lot_sp) + '-' + str(bs_sp)
 						if not os.path.isdir(single_point_input_files+'/'+dir_name):
 							os.makedirs(single_point_input_files+'/'+dir_name)

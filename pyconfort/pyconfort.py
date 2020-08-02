@@ -69,7 +69,7 @@ def main():
 	if args.QCORR=='gaussian':
 		# main part of the duplicate function
 		if args.dup:
-			dup_main(args,log)
+			dup_main(args,log, w_dir_initial)
 			os.chdir(w_dir_initial)
 		qcorr_gaussian_main(w_dir_initial,args,log)
 

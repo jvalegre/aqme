@@ -72,15 +72,15 @@ def calculate_parameters(sdf_rdkit,sdf_ani,sdf_xtb,args,log,w_dir_initial,name_m
         xtb_mols = Chem.SDMolSupplier(sdf_xtb, removeHs=False)
 
     #loop over only uniques
-    if args.CMIN=='xtb':
+    if  os.path.exists(w_dir_initial+'/CSEARCH/xtb/'+name_mol+'_xtb.sdf'):
         geom_data = get_data(rdkit_mols,xtb_mols,'xtb',args)
         geom_data.to_csv(name_mol+'-all-geom-data-with-xtb.csv',index=False)
-    if args.CMIN=='ANI1ccx':
+    if os.path.exists(w_dir_initial+'/CSEARCH/ani1ccx/'+name_mol+'_ani.sdf'):
         geom_data = get_data(rdkit_mols,ani_mols,'ani',args)
         geom_data.to_csv(name_mol+'-all-geom-data-with-ani.csv',index=False)
-    if not args.CMIN=='xtb' and not args.CMIN=='ANI1ccx' and args.CSEARCH=='rdkit':
+    if os.path.exists(w_dir_initial+'/CSEARCH/rdkit/'+name_mol+'_rdkit.sdf') and not os.path.exists(w_dir_initial+'/CSEARCH/xtb/'+name_mol+'_xtb.sdf') and not os.path.exists(w_dir_initial+'/CSEARCH/ani1ccx/'+name_mol+'_ani.sdf') :
         geom_data = get_data(rdkit_mols,None,'rdkit',args)
         geom_data.to_csv(name_mol+'-all-geom-data-with-rdkit-only.csv',index=False)
-    if not args.CMIN=='xtb' and not args.CMIN=='ANI1ccx' and args.CSEARCH=='rdkit-dihedral':
+    if os.path.exists(w_dir_initial+'/CSEARCH/rdkit-dihedral/'+name_mol+'_rdkit_rotated.sdf') and not os.path.exists(w_dir_initial+'/CSEARCH/xtb/'+name_mol+'_xtb.sdf') and not os.path.exists(w_dir_initial+'/CSEARCH/ani1ccx/'+name_mol+'_ani.sdf'):
         geom_data = get_data(rdkit_mols,None,'rdkit',args)
         geom_data.to_csv(name_mol+'-all-geom-data-with-rdkit-rotated.csv',index=False)

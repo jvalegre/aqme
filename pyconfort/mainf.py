@@ -24,7 +24,7 @@ from pyconfort.nmr import calculate_boltz_and_nmr
 
 #class for logging
 class Logger:
-	# Class Logger to write the output to a file
+	# Class Logger to writargs.input.split('.')[0] output to a file
 	def __init__(self, filein, append):
 		# Logger to write the output to a file
 		suffix = 'dat'
@@ -205,7 +205,7 @@ def csearch_main(w_dir_initial,dup_data,args,log,start_time):
 
 	if not os.path.isdir(w_dir_initial+'/CSEARCH/csv_files'):
 		os.makedirs(w_dir_initial+'/CSEARCH/csv_files/')
-	dup_data.to_csv(w_dir_initial+'/CSEARCH/csv_files/'+args.output_name+'-CSEARCH-Data.csv',index=False)
+	dup_data.to_csv(w_dir_initial+'/CSEARCH/csv_files/'+args.input.split('.')[0]+'-CSEARCH-Data.csv',index=False)
 
 #writing gauss main
 def qprep_gaussian_main(args,log):
@@ -325,9 +325,9 @@ def get_com_or_log_out_files(type):
 # main part of the analysis functions
 def qcorr_gaussian_main(w_dir_initial,args,log):
 	# when you run analysis in a folder full of output files
-	if args.path == '':
+	if not os.path.exists(w_dir_initial+'/QPREP'):
 		w_dir = os.getcwd()
-		w_dir_fin = w_dir+'/success'
+		w_dir_fin = w_dir+'/success/log-files'
 		for lot in args.level_of_theory:
 			for bs in args.basis_set:
 				for bs_gcp in args.basis_set_genecp_atoms:
@@ -340,6 +340,8 @@ def qcorr_gaussian_main(w_dir_initial,args,log):
 		os.chdir(w_dir)
 	# when you specify multiple levels of theory
 	else:
+		if args.QCORR=='gaussian':
+			args.path = w_dir_initial+'/QPREP/G16/'
 		# Sets the folder and find the log files to analyze
 		for lot in args.level_of_theory:
 			for bs in args.basis_set:
@@ -354,18 +356,18 @@ def qcorr_gaussian_main(w_dir_initial,args,log):
 					w_dir,round_num = check_for_final_folder(w_dir)
 					log = Logger(w_dir_main+'/dat_files/pyCONFORT-analysis-run-'+str(round_num), args.output_name)
 					#assign the path to the finished directory.
-					w_dir_fin = args.path + str(lot) + '-' + str(bs) +'/success'
+					w_dir_fin = args.path + str(lot) + '-' + str(bs) +'/success/log-files'
 					os.chdir(w_dir)
 					ana_data = creation_of_ana_csv(args)
 					log.write("\no  ANALYZING OUTPUT FILES IN {}\n".format(w_dir))
 					log_files = get_com_or_log_out_files('output')
 					com_files = get_com_or_log_out_files('input')
-					output_analyzer(log_files, com_files, w_dir,w_dir_main , lot, bs, bs_gcp, args, w_dir_fin,w_dir_initial,log,ana_data,round_num)
+					output_analyzer(log_files, com_files, w_dir, w_dir_main , lot, bs, bs_gcp, args, w_dir_fin,w_dir_initial,log,ana_data,round_num)
 		os.chdir(args.path)
 
 #removing the duplicates
-def dup_main(args,log):
-	if args.path == '':
+def dup_main(args,log,w_dir_initial):
+	if not os.path.exists(w_dir_initial+'/QPREP'):
 		w_dir = os.getcwd()
 		log_files = get_com_or_log_out_files('output')
 		if len(log_files) != 0:
@@ -373,6 +375,8 @@ def dup_main(args,log):
 		else:
 			log.write(' There are no log or out files in this folder.')
 	else:
+		if args.QCORR=='gaussian':
+			args.path = w_dir_initial+'/QPREP/G16/'
 		# Sets the folder and find the log files to analyze
 		for lot in args.level_of_theory:
 			for bs in args.basis_set:
@@ -391,7 +395,7 @@ def dup_main(args,log):
 #getting descriptors
 def geom_par_main(args,log,w_dir_initial):
 	#get sdf FILES from csv
-	pd_name = pd.read_csv(w_dir_initial+'/CSEARCH/csv_files/'+args.output_name+'-CSEARCH-Data.csv')
+	pd_name = pd.read_csv(w_dir_initial+'/CSEARCH/csv_files/'+args.input.split('.')[0]+'-CSEARCH-Data.csv')
 
 	for i in range(len(pd_name)):
 		name = pd_name.loc[i,'Molecule']
@@ -399,14 +403,16 @@ def geom_par_main(args,log,w_dir_initial):
 		log.write("\no  Calculating paramters for molecule : {0} ".format(name))
 
 		sdf_ani,sdf_xtb = None,None
-		if args.CSEARCH=='rdkit':
-			sdf_rdkit =  w_dir_initial+'/CSEARCH/rdkit/'+name+'_rdkit.sdf'
-		elif args.CSEARCH=='rdkit-dihedral':
+		if os.path.exists(w_dir_initial+'/CSEARCH/rdkit/'+name+'_rdkit.sdf'):
+				sdf_rdkit =  w_dir_initial+'/CSEARCH/rdkit/'+name+'_rdkit.sdf'
+		elif os.path.exists(w_dir_initial+'/CSEARCH/rdkit-dihedral/'+name+'_rdkit_rotated.sdf'):
 			sdf_rdkit = w_dir_initial+'/CSEARCH/rdkit-dihedral/'+name+'_rdkit_rotated.sdf'
-		if args.CMIN=='xtb':
+		if os.path.exists(w_dir_initial+'/CSEARCH/xtb/'+name+'_xtb.sdf'):
 			sdf_xtb =  w_dir_initial+'/CSEARCH/xtb/'+name+'_xtb.sdf'
-		if args.CMIN=='ANI1ccx':
+		if os.path.exists(w_dir_initial+'/CSEARCH/ani1ccx/'+name+'_ani.sdf'):
 			sdf_ani = w_dir_initial+'/CSEARCH/ani1ccx/'+name+'_ani.sdf'
+
+		#need to add in dft
 
 		calculate_parameters(sdf_rdkit,sdf_ani,sdf_xtb,args,log,w_dir_initial,name)
 		os.chdir(w_dir_initial)
@@ -414,7 +420,7 @@ def geom_par_main(args,log,w_dir_initial):
 #function to plot graphs
 def graph_main(args,log,w_dir_initial):
 	#get sdf FILES from csv
-	pd_name = pd.read_csv(w_dir_initial+'/CSEARCH/csv_files/'+args.output_name+'-CSEARCH-Data.csv')
+	pd_name = pd.read_csv(w_dir_initial+'/CSEARCH/csv_files/'+args.input.split('.')[0]+'-CSEARCH-Data.csv')
 
 	for i in range(len(pd_name)):
 		name = pd_name.loc[i,'Molecule']
@@ -422,30 +428,31 @@ def graph_main(args,log,w_dir_initial):
 		log.write("\no  Plotting graphs for molecule : {0} ".format(name))
 
 		sdf_ani,sdf_xtb = None,None
-		if args.CSEARCH=='rdkit':
-			sdf_rdkit =  w_dir_initial+'/CSEARCH/rdkit/'+name+'_rdkit.sdf'
-		elif args.CSEARCH=='rdkit-dihedral':
+		if os.path.exists(w_dir_initial+'/CSEARCH/rdkit/'+name+'_rdkit.sdf'):
+				sdf_rdkit =  w_dir_initial+'/CSEARCH/rdkit/'+name+'_rdkit.sdf'
+		elif os.path.exists(w_dir_initial+'/CSEARCH/rdkit-dihedral/'+name+'_rdkit_rotated.sdf'):
 			sdf_rdkit = w_dir_initial+'/CSEARCH/rdkit-dihedral/'+name+'_rdkit_rotated.sdf'
-		if args.CMIN=='xtb':
-			sdf_xtb =  w_dir_initial+'/xtb/'+name+'_xtb_all_confs.sdf'
-		if args.CMIN=='ANI1ccx':
-			sdf_ani = w_dir_initial+'/ani1ccx/'+name+'_ani_all_confs.sdf'
-
-		# Sets the folder and find the log files to analyze
-		for lot in args.level_of_theory:
-			for bs in args.basis_set:
-				for bs_gcp in args.basis_set_genecp_atoms:
-					#assign the path to the finished directory.
-					w_dir = args.path + str(lot) + '-' + str(bs) +'/finished'
-					os.chdir(w_dir)
-					log_files = glob.glob(name+'_*.log')
-					graph(sdf_rdkit,sdf_xtb,sdf_ani,log_files,args,log,lot,bs,name,w_dir_initial)
+		if os.path.exists(w_dir_initial+'/CSEARCH/xtb/'+name+'_xtb.sdf'):
+			sdf_xtb =  w_dir_initial+'/CSEARCH/xtb/'+name+'_xtb.sdf'
+		if os.path.exists(w_dir_initial+'/CSEARCH/ani1ccx/'+name+'_ani.sdf'):
+			sdf_ani = w_dir_initial+'/CSEARCH/ani1ccx/'+name+'_ani.sdf'
+		if os.path.exists(w_dir_initial+'/QPREP/G16'):
+			args.path = w_dir_initial+'/QPREP/G16/'
+			# Sets the folder and find the log files to analyze
+			for lot in args.level_of_theory:
+				for bs in args.basis_set:
+					for bs_gcp in args.basis_set_genecp_atoms:
+						#assign the path to the finished directory.
+						w_dir = args.path + str(lot) + '-' + str(bs) +'/success/log-files'
+						os.chdir(w_dir)
+						log_files = glob.glob(name+'_*.log')
+						graph(sdf_rdkit,sdf_xtb,sdf_ani,log_files,args,log,lot,bs,name,w_dir_initial)
 
 #function for compariosn of nmr
 def nmr_main(args,log,w_dir_initial):
 
 	#get sdf FILES from csv
-	pd_name = pd.read_csv(w_dir_initial+'/CSEARCH/csv_files/'+args.output_name+'-CSEARCH-Data.csv')
+	pd_name = pd.read_csv(w_dir_initial+'/CSEARCH/csv_files/'+args.input.split('.')[0]+'-CSEARCH-Data.csv')
 
 	for i in range(len(pd_name)):
 		name = pd_name.loc[i,'Molecule']
