@@ -61,21 +61,16 @@ def scaling_with_lowest(energy):
         energy[i][1] = energy_sc[i]
     return energy
 
-def plot_graph(energy_rdkit,energy_min,energy_min_dft,lot,bs,name_mol,args,type,w_dir_initial):
+def plot_graph(energy_rdkit,energy_min,energy_min_dft,lot,bs,name_mol,args,type_csearch,type_min,w_dir_initial):
 
     # mae_rdkit,sd_rdkit = stats_calc(np.array(energy_min_dft[:,1]).astype(np.float64),np.array(energy_rdkit[:,1]).astype(np.float64))
     # mae_min,sd_min = stats_calc(np.array(energy_min_dft[:,1]).astype(np.float64),np.array(energy_min[:,1]).astype(np.float64))
-
-    if type =='xtb':
-        x_axis_names=['RDKit','xTB',lot+'-'+bs]
-        # textstr = r'RDKit : {0}\pm{1}\t xTB : {2}\pm{3}'%(mae_rdkit, sd_rdkit,mae_min, sd_min)
-    if type =='ani':
-        x_axis_names=['RDKit','ANI1ccx',lot+'-'+bs]
-        # textstr = r'RDKit : {0}\pm{1}\t ANI1ccx : {2}\pm{3}'%(mae_rdkit, sd_rdkit,mae_min, sd_min)
-    if type =='rdkit':
-        x_axis_names=['RDKit',lot+'-'+bs]
-    if type =='rdkit-dihedral':
-        x_axis_names=['RDKit-dihedral',lot+'-'+bs]
+    x_axis_names = []
+    x_axis_names.append(type_csearch)
+    if type_min is not None:
+        x_axis_names.append(type_min)
+    if lot is not None:
+        x_axis_names.append(lot+'-'+bs)
 
     x_axis = [0,1,2]
     x_axis_2 = [0,1]
@@ -91,9 +86,10 @@ def plot_graph(energy_rdkit,energy_min,energy_min_dft,lot,bs,name_mol,args,type,
             for i,_ in enumerate(energy_min):
                 if energy_min[i][0] == name:
                     list.append(energy_min[i][1])
-        for i,_ in enumerate(energy_min_dft):
-            if energy_min_dft[i][0] == name:
-                list.append(energy_min_dft[i][1])
+        if energy_min_dft is not None:
+            for i,_ in enumerate(energy_min_dft):
+                if energy_min_dft[i][0] == name:
+                    list.append(energy_min_dft[i][1])
         list_all.append(list)
 
     fig=plt.figure() #Creates a new figure
@@ -140,15 +136,15 @@ def plot_graph(energy_rdkit,energy_min,energy_min_dft,lot,bs,name_mol,args,type,
             os.chdir(folder)
         else:
             raise
-    if type =='ani':
-        plt.savefig(name_mol+'_graph_ani.png',bbox_inches='tight', format='png', dpi=400)
-    if type =='xtb':
-        plt.savefig(name_mol+'_graph_xtb.png',bbox_inches='tight',format='png', dpi=400)
-    if type =='rdkit':
-        plt.savefig(name_mol+'_graph_rdkit.png',bbox_inches='tight',format='png', dpi=400)
-    if type =='rdkit-dihedral':
-        plt.savefig(name_mol+'_graph_rdkit.png',bbox_inches='tight',format='png', dpi=400)
+
+    name_to_write = type_csearch
+    if type_min is not None:
+        name_to_write += '-'+type_min
+    if lot is not None:
+        name_to_write += '-'+lot+'-'+bs
+    plt.savefig(name_mol+'-'+name_to_write+'.png',bbox_inches='tight', format='png', dpi=400)
     plt.close()
+    os.chdir(w_dir_initial)
 
 def graph(sdf_rdkit,sdf_xtb,sdf_ani,log_files,args,log,lot,bs,name_mol,w_dir_initial):
 
@@ -172,31 +168,40 @@ def graph(sdf_rdkit,sdf_xtb,sdf_ani,log_files,args,log,lot,bs,name_mol,w_dir_ini
 
     energy_rdkit_dft,energy_xtb_dft,energy_ani_dft = [],[],[]
     #get energy from log FILES
-    for file in log_files:
-        data = cclib.io.ccread(file)
-        if len(file.split('_ani.log')) == 2 or len(file.split('_xtb.log')) == 2:
-            if len(file.split('_ani.log')) == 2:
-                name = file.split('_ani.log')[0]
-                energy_ani_dft.append([name,data.scfenergies[0]*ev_2_kcal_mol])
-            if len(file.split('_xtb.log')) == 2:
-                name = file.split('_xtb.log')[0]
-                energy_xtb_dft.append([name,data.scfenergies[0]*ev_2_kcal_mol])
-        else:
-            name = file.split('.log')[0]
-            energy_rdkit_dft.append([name,data.scfenergies[0]*ev_2_kcal_mol])
+    if log_files is not None:
+        for file in log_files:
+            data = cclib.io.ccread(file)
+            if len(file.split('_ani.log')) == 2 or len(file.split('_xtb.log')) == 2:
+                if len(file.split('_ani.log')) == 2:
+                    name = file.split('_ani.log')[0]
+                    energy_ani_dft.append([name,data.scfenergies[0]*ev_2_kcal_mol])
+                if len(file.split('_xtb.log')) == 2:
+                    name = file.split('_xtb.log')[0]
+                    energy_xtb_dft.append([name,data.scfenergies[0]*ev_2_kcal_mol])
+            else:
+                name = file.split('.log')[0]
+                energy_rdkit_dft.append([name,data.scfenergies[0]*ev_2_kcal_mol])
 
-    if os.path.exists(w_dir_initial+'/CSEARCH/ani1ccx/'+name_mol+'_ani.sdf'):
+    energy_ani_dft_sc, energy_xtb_dft_sc, energy_rdkit_dft_sc = [],[],[]
+    if os.path.exists(w_dir_initial+'/CSEARCH/ani1ccx/'+name_mol+'_ani.sdf') and log_files is not None:
         energy_ani_dft_sc = scaling_with_lowest(energy_ani_dft)
-    if os.path.exists(w_dir_initial+'/CSEARCH/xtb/'+name_mol+'_xtb.sdf'):
+    if os.path.exists(w_dir_initial+'/CSEARCH/xtb/'+name_mol+'_xtb.sdf') and log_files is not None:
         energy_xtb_dft_sc = scaling_with_lowest(energy_xtb_dft)
-    if not os.path.exists(w_dir_initial+'/CSEARCH/xtb/'+name_mol+'_xtb.sdf') and not os.path.exists(w_dir_initial+'/CSEARCH/ani1ccx/'+name_mol+'_ani.sdf'):
+    if not os.path.exists(w_dir_initial+'/CSEARCH/xtb/'+name_mol+'_xtb.sdf') and not os.path.exists(w_dir_initial+'/CSEARCH/ani1ccx/'+name_mol+'_ani.sdf') and log_files is not None:
         energy_rdkit_dft_sc = scaling_with_lowest(energy_rdkit_dft)
 
-    if  os.path.exists(w_dir_initial+'/CSEARCH/xtb/'+name_mol+'_xtb.sdf'):
-        plot_graph(energy_rdkit_sc,energy_xtb_sc,energy_xtb_dft_sc,lot,bs,name_mol,args,'xtb',w_dir_initial)
-    if os.path.exists(w_dir_initial+'/CSEARCH/ani1ccx/'+name_mol+'_ani.sdf'):
-        plot_graph(energy_rdkit_sc,energy_ani_sc,energy_ani_dft_sc,lot,bs,name_mol,args,'ani',w_dir_initial)
+
+    if  os.path.exists(w_dir_initial+'/CSEARCH/xtb/'+name_mol+'_xtb.sdf') and os.path.exists(w_dir_initial+'/CSEARCH/rdkit/'+name_mol+'_rdkit.sdf'):
+        plot_graph(energy_rdkit_sc,energy_xtb_sc,energy_xtb_dft_sc,lot,bs,name_mol,args,'rdkit','xtb',w_dir_initial)
+    if os.path.exists(w_dir_initial+'/CSEARCH/ani1ccx/'+name_mol+'_ani.sdf') and os.path.exists(w_dir_initial+'/CSEARCH/rdkit/'+name_mol+'_rdkit.sdf'):
+        plot_graph(energy_rdkit_sc,energy_ani_sc,energy_ani_dft_sc,lot,bs,name_mol,args,'rdkit','ani',w_dir_initial)
+
+    if  os.path.exists(w_dir_initial+'/CSEARCH/xtb/'+name_mol+'_xtb.sdf') and os.path.exists(w_dir_initial+'/CSEARCH/rdkit-dihedral/'+name_mol+'_rdkit_rotated.sdf'):
+        plot_graph(energy_rdkit_sc,energy_xtb_sc,energy_xtb_dft_sc,lot,bs,name_mol,args,'rdkit-dihedral','xtb',w_dir_initial)
+    if os.path.exists(w_dir_initial+'/CSEARCH/ani1ccx/'+name_mol+'_ani.sdf') and os.path.exists(w_dir_initial+'/CSEARCH/rdkit-dihedral/'+name_mol+'_rdkit_rotated.sdf'):
+        plot_graph(energy_rdkit_sc,energy_ani_sc,energy_ani_dft_sc,lot,bs,name_mol,args,'rdkit-dihedral','ani',w_dir_initial)
+
     if os.path.exists(w_dir_initial+'/CSEARCH/rdkit-dihedral/'+name_mol+'_rdkit_rotated.sdf') and not os.path.exists(w_dir_initial+'/CSEARCH/xtb/'+name_mol+'_xtb.sdf') and not os.path.exists(w_dir_initial+'/CSEARCH/ani1ccx/'+name_mol+'_ani.sdf'):
-        plot_graph(energy_rdkit_sc,None,energy_rdkit_dft_sc,lot,bs,name_mol,args,'rdkit-rotated',w_dir_initial)
+        plot_graph(energy_rdkit_sc,None,energy_rdkit_dft_sc,lot,bs,name_mol,args,'rdkit-rotated',None,w_dir_initial)
     if os.path.exists(w_dir_initial+'/CSEARCH/rdkit/'+name_mol+'_rdkit.sdf') and not os.path.exists(w_dir_initial+'/CSEARCH/xtb/'+name_mol+'_xtb.sdf') and not os.path.exists(w_dir_initial+'/CSEARCH/ani1ccx/'+name_mol+'_ani.sdf') :
-        plot_graph(energy_rdkit_sc,None,energy_rdkit_dft_sc,lot,bs,name_mol,args,'rdkit',w_dir_initial)
+        plot_graph(energy_rdkit_sc,None,energy_rdkit_dft_sc,lot,bs,name_mol,args,'rdkit',None,w_dir_initial)
