@@ -53,7 +53,7 @@ def get_data(rdkit_mols,min_mols,type,args):
 
 def calculate_parameters(sdf_rdkit,sdf_ani,sdf_xtb,args,log,w_dir_initial,name_mol):
     #creating folder for all molecules to write geom parameter
-    folder = w_dir_initial + '/geom_parameters'
+    folder = w_dir_initial + '/QSTAT/geom_parameters'
     try:
         os.makedirs(folder)
         os.chdir(folder)
@@ -78,6 +78,9 @@ def calculate_parameters(sdf_rdkit,sdf_ani,sdf_xtb,args,log,w_dir_initial,name_m
     if args.CMIN=='ANI1ccx':
         geom_data = get_data(rdkit_mols,ani_mols,'ani',args)
         geom_data.to_csv(name_mol+'-all-geom-data-with-ani.csv',index=False)
-    if not args.CMIN=='xtb' and not args.CMIN=='ANI1ccx':
-        geom_data = get_data(rdkit_mols,None,'rdkit-only',args)
+    if not args.CMIN=='xtb' and not args.CMIN=='ANI1ccx' and args.CSEARCH=='rdkit':
+        geom_data = get_data(rdkit_mols,None,'rdkit',args)
         geom_data.to_csv(name_mol+'-all-geom-data-with-rdkit-only.csv',index=False)
+    if not args.CMIN=='xtb' and not args.CMIN=='ANI1ccx' and args.CSEARCH=='rdkit-dihedral':
+        geom_data = get_data(rdkit_mols,None,'rdkit',args)
+        geom_data.to_csv(name_mol+'-all-geom-data-with-rdkit-rotated.csv',index=False)

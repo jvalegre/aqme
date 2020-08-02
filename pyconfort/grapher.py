@@ -74,6 +74,8 @@ def plot_graph(energy_rdkit,energy_min,energy_min_dft,lot,bs,name_mol,args,type,
         # textstr = r'RDKit : {0}\pm{1}\t ANI1ccx : {2}\pm{3}'%(mae_rdkit, sd_rdkit,mae_min, sd_min)
     if type =='rdkit':
         x_axis_names=['RDKit',lot+'-'+bs]
+    if type =='rdkit-dihedral':
+        x_axis_names=['RDKit-dihedral',lot+'-'+bs]
 
     x_axis = [0,1,2]
     x_axis_2 = [0,1]
@@ -124,16 +126,27 @@ def plot_graph(energy_rdkit,energy_min,energy_min_dft,lot,bs,name_mol,args,type,
     #plt.setp(ax1.get_xticklabels(), rotation=60, ha="right", visible=True)
     plt.grid(linestyle='--', linewidth=0.75)
     plt.setp(ax1.get_xticklabels(), rotation=0, visible=True)
-    title_string=('Graph of Energies of Conformers for different Methods : {0}'.format(name_mol))
+    title_string=('Energies of Conformers for different Methods : {0}'.format(name_mol))
     ax1.set_title(title_string, fontsize=12)
     fig.tight_layout()
     fig.subplots_adjust(top=0.92,bottom=0.2)
-    os.chdir(w_dir_initial)
+    #creating folder for all molecules to write geom parameter
+    folder = w_dir_initial + '/QSTAT/graph'
+    try:
+        os.makedirs(folder)
+        os.chdir(folder)
+    except OSError:
+        if os.path.isdir(folder):
+            os.chdir(folder)
+        else:
+            raise
     if type =='ani':
         plt.savefig(name_mol+'_graph_ani.png',bbox_inches='tight', format='png', dpi=400)
     if type =='xtb':
         plt.savefig(name_mol+'_graph_xtb.png',bbox_inches='tight',format='png', dpi=400)
     if type =='rdkit':
+        plt.savefig(name_mol+'_graph_rdkit.png',bbox_inches='tight',format='png', dpi=400)
+    if type =='rdkit-dihedral':
         plt.savefig(name_mol+'_graph_rdkit.png',bbox_inches='tight',format='png', dpi=400)
     plt.close()
 
@@ -186,4 +199,7 @@ def graph(sdf_rdkit,sdf_xtb,sdf_ani,log_files,args,log,lot,bs,name_mol,w_dir_ini
         if args.CMIN=='ANI1ccx':
             plot_graph(energy_rdkit_sc,energy_ani_sc,energy_ani_dft_sc,lot,bs,name_mol,args,'ani',w_dir_initial)
     else:
-        plot_graph(energy_rdkit_sc,None,energy_rdkit_dft_sc,lot,bs,name_mol,args,'rdkit',w_dir_initial)
+        if args.CSEARCH=='rdkit-dihedral':
+            plot_graph(energy_rdkit_sc,None,energy_rdkit_dft_sc,lot,bs,name_mol,args,'rdkit-rotated',w_dir_initial)
+        if args.CSEARCH=='rdkit':
+            plot_graph(energy_rdkit_sc,None,energy_rdkit_dft_sc,lot,bs,name_mol,args,'rdkit',w_dir_initial)
