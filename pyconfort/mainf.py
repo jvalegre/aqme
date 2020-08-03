@@ -20,6 +20,7 @@ from pyconfort.qcorr_gaussian import output_analyzer, check_for_final_folder, du
 from pyconfort.grapher import graph
 from pyconfort.descp import calculate_parameters
 from pyconfort.nmr import calculate_boltz_and_nmr
+from pyconfort.energy import calculate_boltz_and_energy,calculate_avg_and_energy
 #need to and in energy
 
 #class for logging
@@ -310,14 +311,18 @@ def move_sdf_main(args):
 			moving_files(destination_xyz,src,file)
 
 #finding the file type to move for analysis
-def get_com_or_log_out_files(type):
+def get_com_or_log_out_files(type,name=None):
 	files = []
 	if type =='output':
 		formats = ['*.log','*.LOG','*.out','*.OUT']
 	elif type =='input':
 		formats =['*.com','*.gjf']
 	for _,format in enumerate(formats):
-		for _,file in enumerate(glob.glob(format)):
+		if name is None:
+			all_files = enumerate(glob.glob(format))
+		else:
+			all_files = enumerate(glob.glob(name+format))
+		for _,file in all_files:
 			if file not in files:
 				files.append(file)
 	return files
@@ -460,18 +465,54 @@ def nmr_main(args,log,w_dir_initial):
 		name = pd_name.loc[i,'Molecule']
 
 		log.write("\no NMR analysis for molecule : {0} ".format(name))
-
+		if os.path.exists(w_dir_initial+'/QPREP/G16'):
+			args.path = w_dir_initial+'/QPREP/G16/'
 		# Sets the folder and find the log files to analyze
 		for lot in args.level_of_theory:
 			for bs in args.basis_set:
 				for bs_gcp in args.basis_set_genecp_atoms:
 					#assign the path to the finished directory.
-					w_dir_fin = args.path + str(lot) + '-' + str(bs) +'/finished'
+					w_dir_fin = args.path + str(lot) + '-' + str(bs) +'/finished/success/log-files'
 					os.chdir(w_dir_fin)
 					log_files = glob.glob(name+'_*.log')
 					if len(log_files) != 0:
 						val = ' '.join(log_files)
 						calculate_boltz_and_nmr(val,args,log,name,w_dir_fin)
+
+def energy_main(args,log,w_dir_initial):
+	#get sdf FILES from csv
+	pd_name = pd.read_csv(w_dir_initial+'/CSEARCH/csv_files/'+args.input.split('.')[0]+'-CSEARCH-Data.csv')
+
+	for i in range(len(pd_name)):
+		name = pd_name.loc[i,'Molecule']
+
+		log.write("\no Boltzmann average energy analysis for molecule : {0} ".format(name))
+		if os.path.exists(w_dir_initial+'/QPREP/G16'):
+			args.path = w_dir_initial+'/QPREP/G16/'
+		# Sets the folder and find the log files to analyze
+		for lot in args.level_of_theory:
+			for bs in args.basis_set:
+				for bs_gcp in args.basis_set_genecp_atoms:
+					#assign the path to the finished directory.
+					w_dir_fin = args.path + str(lot) + '-' + str(bs) +'/success/log-files/'
+					os.chdir(w_dir_fin)
+					log_files = get_com_or_log_out_files('output',name)
+					if len(log_files) != 0:
+						calculate_boltz_and_energy(log_files,args,log,name,w_dir_fin,w_dir_initial,lot,bs)
+
+	#combining the combining all files in different folders
+	w_dir_boltz = w_dir_initial+'/QPRED/energy/boltz/'
+
+	for lot in args.level_of_theory:
+		for bs in args.basis_set:
+			for bs_gcp in args.basis_set_genecp_atoms:
+				#assign the path to the finished directory.
+				w_dir_fin = w_dir_boltz + str(lot) + '-' + str(bs)
+				os.chdir(w_dir_fin)
+				dat_files = glob.glob('*.dat')
+				if len(dat_files) != 0:
+					calculate_avg_and_energy(dat_files,args,log,name,w_dir_fin,w_dir_initial,w_dir_boltz,lot,bs)
+
 
 # MAIN OPTION FOR DISCARDING MOLECULES BASED ON USER INPUT DATA (REFERRED AS EXPERIMENTAL RULES)
 def exp_rules_main(args,log):
