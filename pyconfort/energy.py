@@ -35,16 +35,15 @@ def calculate_avg_and_energy(val,args,log,name,w_dir_fin,w_dir_initial,w_dir_bol
 			if outlines[i].find('   ***************************************************************************************************************************************\n') > -1 and outlines[i-1].find('   Structure') > -1:
 				start_line = i+1
 			elif outlines[i].find('   ***************************************************************************************************************************************\n') > -1:
-				end_line = i-1
+				end_line = i
 
 		one_file_data,values_avg= [],[]
-		number_list_from_dat = [32,35,38,41,44,47,50]
-		number_list_to_csv = [1,2,3,4,5,6,7]
 		for i in range(start_line,end_line):
-			values = outlines[i].split(' ')
-			for j in number_list_from_dat:
-				values_avg.append(float(values[j])*float(values[52]))
+			values = outlines[i].split()
+			for j in range(2,9):
+				values_avg.append(float(values[j])*float(values[-1]))
 			one_file_data.append(values_avg)
+			values_avg = []
 
 		res = []
 		res.append(name)
