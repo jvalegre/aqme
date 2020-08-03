@@ -233,8 +233,8 @@ def qprep_gaussian_main(args,log):
 		conf_files =  glob.glob('*.sdf')
 
 	# names for directories created
-	sp_dir = 'QPREP/G16-SP'
-	g_dir = 'QPREP/G16'
+	sp_dir = 'QMCALC/G16-SP'
+	g_dir = 'QMCALC/G16'
 	#fixing genecp to LAL2DZ if empty
 
 	if len(conf_files) != 0:
@@ -306,7 +306,7 @@ def move_sdf_main(args):
 			moving_files(destination_rdkit,src,file)
 	if args.com_from_xyz:
 		all_xyz_conf_files = glob.glob('*.xyz')+glob.glob('*.sdf')
-		destination_xyz = 'QPREP/xyz_and_sdf'
+		destination_xyz = 'QMCALC/xyz_and_sdf'
 		for file in all_xyz_conf_files:
 			moving_files(destination_xyz,src,file)
 
@@ -330,7 +330,7 @@ def get_com_or_log_out_files(type,name=None):
 # main part of the analysis functions
 def qcorr_gaussian_main(w_dir_initial,args,log):
 	# when you run analysis in a folder full of output files
-	if not os.path.exists(w_dir_initial+'/QPREP'):
+	if not os.path.exists(w_dir_initial+'/QMCALC'):
 		w_dir = os.getcwd()
 		w_dir_fin = w_dir+'/success/log-files'
 		for lot in args.level_of_theory:
@@ -346,7 +346,7 @@ def qcorr_gaussian_main(w_dir_initial,args,log):
 	# when you specify multiple levels of theory
 	else:
 		if args.QCORR=='gaussian':
-			args.path = w_dir_initial+'/QPREP/G16/'
+			args.path = w_dir_initial+'/QMCALC/G16/'
 		# Sets the folder and find the log files to analyze
 		for lot in args.level_of_theory:
 			for bs in args.basis_set:
@@ -372,7 +372,7 @@ def qcorr_gaussian_main(w_dir_initial,args,log):
 
 #removing the duplicates
 def dup_main(args,log,w_dir_initial):
-	if not os.path.exists(w_dir_initial+'/QPREP'):
+	if not os.path.exists(w_dir_initial+'/QMCALC'):
 		w_dir = os.getcwd()
 		log_files = get_com_or_log_out_files('output')
 		if len(log_files) != 0:
@@ -381,7 +381,7 @@ def dup_main(args,log,w_dir_initial):
 			log.write(' There are no log or out files in this folder.')
 	else:
 		if args.QCORR=='gaussian':
-			args.path = w_dir_initial+'/QPREP/G16/'
+			args.path = w_dir_initial+'/QMCALC/G16/'
 		# Sets the folder and find the log files to analyze
 		for lot in args.level_of_theory:
 			for bs in args.basis_set:
@@ -440,8 +440,8 @@ def graph_main(args,log,w_dir_initial):
 			sdf_xtb =  w_dir_initial+'/CSEARCH/xtb/'+name+'_xtb.sdf'
 		if os.path.exists(w_dir_initial+'/CSEARCH/ani1ccx/'+name+'_ani.sdf'):
 			sdf_ani = w_dir_initial+'/CSEARCH/ani1ccx/'+name+'_ani.sdf'
-		if os.path.exists(w_dir_initial+'/QPREP/G16'):
-			args.path = w_dir_initial+'/QPREP/G16/'
+		if os.path.exists(w_dir_initial+'/QMCALC/G16'):
+			args.path = w_dir_initial+'/QMCALC/G16/'
 			# Sets the folder and find the log files to analyze
 			for lot in args.level_of_theory:
 				for bs in args.basis_set:
@@ -465,8 +465,8 @@ def nmr_main(args,log,w_dir_initial):
 		name = pd_name.loc[i,'Molecule']
 
 		log.write("\no NMR analysis for molecule : {0} ".format(name))
-		if os.path.exists(w_dir_initial+'/QPREP/G16'):
-			args.path = w_dir_initial+'/QPREP/G16/'
+		if os.path.exists(w_dir_initial+'/QMCALC/G16'):
+			args.path = w_dir_initial+'/QMCALC/G16/'
 		# Sets the folder and find the log files to analyze
 		for lot in args.level_of_theory:
 			for bs in args.basis_set:
@@ -487,8 +487,8 @@ def energy_main(args,log,w_dir_initial):
 		name = pd_name.loc[i,'Molecule']
 
 		log.write("\no Boltzmann average energy analysis for molecule : {0} ".format(name))
-		if os.path.exists(w_dir_initial+'/QPREP/G16'):
-			args.path = w_dir_initial+'/QPREP/G16/'
+		if os.path.exists(w_dir_initial+'/QMCALC/G16'):
+			args.path = w_dir_initial+'/QMCALC/G16/'
 		# Sets the folder and find the log files to analyze
 		for lot in args.level_of_theory:
 			for bs in args.basis_set:

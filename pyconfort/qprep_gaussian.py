@@ -192,9 +192,9 @@ def write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args, log, 
 
 	# defining path to place the new COM files
 	if args.single_point:
-		path_write_gjf_files = 'QPREP/G16-SP/' + str(lot) + '-' + str(bs)
+		path_write_gjf_files = 'QMCALC/G16-SP/' + str(lot) + '-' + str(bs)
 	else:
-		path_write_gjf_files = 'QPREP/G16/' + str(lot) + '-' + str(bs)
+		path_write_gjf_files = 'QMCALC/G16/' + str(lot) + '-' + str(bs)
 
 	os.chdir(path_write_gjf_files)
 
