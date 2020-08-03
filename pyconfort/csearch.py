@@ -225,13 +225,13 @@ def conformer_generation(mol,name,start_time,args,log,dup_data,dup_data_idx,coor
 						min_suffix = 'ani'
 						if args.CSEARCH=='rdkit':
 							mult_min(name+'_'+'rdkit', args, min_suffix, log, dup_data, dup_data_idx)
-						elif args.CSEARCH=='rdkit-dihedral':
+						elif args.CSEARCH=='summ':
 							mult_min(name+'_'+'rdkit'+'_'+'rotated', args, min_suffix, log, dup_data, dup_data_idx)
 					elif args.CMIN=='xtb' and status != 0:
 						min_suffix = 'xtb'
 						if args.CSEARCH=='rdkit':
 							mult_min(name+'_'+'rdkit', args, min_suffix, log, dup_data, dup_data_idx)
-						elif args.CSEARCH=='rdkit-dihedral':
+						elif args.CSEARCH=='summ':
 							mult_min(name+'_'+'rdkit'+'_'+'rotated', args, min_suffix, log, dup_data, dup_data_idx)
 					elif status == 0:
 						os.remove(name+'_'+'rdkit'+args.output)
@@ -430,7 +430,7 @@ def min_after_embed(mol,cids,name,initial_confs,rotmatches,dup_data,dup_data_idx
 		log.write("o  %d total conformations generated"%total)
 	status = 1
 
-	if args.CSEARCH=='rdkit-dihedral':
+	if args.CSEARCH=='summ':
 		dup_data.at[dup_data_idx, 'RDKIT-Rotated-conformers'] = total
 
 	return status
@@ -454,7 +454,7 @@ def rdkit_to_sdf(mol, name,args,log,dup_data,dup_data_idx, coord_Map, alg_Map, m
 	if len(rotmatches) > args.max_torsions:
 		log.write("x  Too many torsions (%d). Skipping %s" %(len(rotmatches),(name+args.output)))
 		status = -1
-	elif args.CSEARCH=='rdkit-dihedral' and len(rotmatches) == 0:
+	elif args.CSEARCH=='summ' and len(rotmatches) == 0:
 		status = 0
 	else:
 		dup_data.at[dup_data_idx, 'RDKIT-Initial-samples'] = initial_confs
@@ -468,7 +468,7 @@ def rdkit_to_sdf(mol, name,args,log,dup_data,dup_data_idx, coord_Map, alg_Map, m
 				args.ff = "UFF"
 		if args.verbose:
 			log.write("o  Optimizing "+ str(len(cids))+ " initial conformers with "+ args.ff)
-			if args.CSEARCH=='rdkit-dihedral':
+			if args.CSEARCH=='summ':
 				log.write("o  Found "+ str(len(rotmatches))+ " rotatable torsions")
 			else:
 				log.write("o  Systematic torsion rotation is set to OFF")
@@ -544,7 +544,7 @@ def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None, alg_
 	# reads the initial SDF files from RDKit and uses dihedral scan if selected
 	if status != -1 or status != 0:
 		# getting the energy and mols after rotations
-		if args.CSEARCH=='rdkit-dihedral' and len(rotmatches) != 0:
+		if args.CSEARCH=='summ' and len(rotmatches) != 0:
 			status = dihedral_filter_and_sdf(name,args,log,dup_data,dup_data_idx,coord_Map, alg_Map, mol_template)
 
 

@@ -76,7 +76,7 @@ def creation_of_dup_csv(args):
 			dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples','RDKit-energy-window', 'RDKit-initial_energy_threshold','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','ANI1ccx-Initial-samples','ANI1ccx-energy-window','ANI1ccx-initial_energy_threshold','ANI1ccx-RMSD-and-energy-duplicates','ANI1ccx-Unique-conformers','time (seconds)','Overall charge'])
 		elif args.CMIN=='ANI1ccx' and args.CMIN=='xtb':
 			dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples','RDKit-energy-window', 'RDKit-initial_energy_threshold','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','ANI1ccx-Initial-samples','ANI1ccx-energy-window','ANI1ccx-initial_energy_threshold','ANI1ccx-RMSD-and-energy-duplicates','ANI1ccx-Unique-conformers','xTB-Initial-samples','xTB-energy-window','xTB-initial_energy_threshold','xTB-RMSD-and-energy-duplicates','xTB-Unique-conformers','time(seconds)','Overall charge'])
-	elif args.CSEARCH=='rdkit-dihedral':
+	elif args.CSEARCH=='summ':
 		if not args.CMIN=='xtb' and not args.CMIN=='ANI1ccx':
 			dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples','RDKit-energy-window', 'RDKit-initial_energy_threshold','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','RDKIT-Rotated-conformers','RDKit-Rotated-energy-window', 'RDKit-Rotated-initial_energy_threshold','RDKit-Rotated-RMSD-and-energy-duplicates','RDKIT-Rotated-Unique-conformers','time (seconds)','Overall charge'])
 		elif args.CMIN=='xtb' and not args.CMIN=='ANI1ccx':
@@ -216,7 +216,7 @@ def qprep_gaussian_main(args,log):
 	# define the SDF files to convert to COM Gaussian files
 	elif not args.CMIN=='xtb' and not args.CMIN=='ANI1ccx' and args.CSEARCH=='rdkit':
 		conf_files =  glob.glob('*_rdkit.sdf')
-	elif not args.CMIN=='xtb' and not args.CMIN=='ANI1ccx' and args.CSEARCH=='rdkit-dihedral':
+	elif not args.CMIN=='xtb' and not args.CMIN=='ANI1ccx' and args.CSEARCH=='summ':
 		conf_files =  glob.glob('*_rdkit_rotated.sdf')
 	elif args.CMIN=='xtb' and not args.CMIN=='ANI1ccx':
 		conf_files =  glob.glob('*_xtb.sdf')
@@ -299,9 +299,9 @@ def move_sdf_main(args):
 		destination_rdkit = src+ '/CSEARCH/rdkit'
 		for file in all_name_conf_files:
 			moving_files(destination_rdkit,src,file)
-	if args.CSEARCH=='rdkit-dihedral':
+	if args.CSEARCH=='summ':
 		all_name_conf_files = glob.glob('*_rdkit_rotated.sdf')
-		destination_rdkit = src+ '/CSEARCH/rdkit-dihedral'
+		destination_rdkit = src+ '/CSEARCH/summ'
 		for file in all_name_conf_files:
 			moving_files(destination_rdkit,src,file)
 	if args.com_from_xyz:
@@ -410,8 +410,8 @@ def geom_par_main(args,log,w_dir_initial):
 		sdf_ani,sdf_xtb = None,None
 		if os.path.exists(w_dir_initial+'/CSEARCH/rdkit/'+name+'_rdkit.sdf'):
 				sdf_rdkit =  w_dir_initial+'/CSEARCH/rdkit/'+name+'_rdkit.sdf'
-		elif os.path.exists(w_dir_initial+'/CSEARCH/rdkit-dihedral/'+name+'_rdkit_rotated.sdf'):
-			sdf_rdkit = w_dir_initial+'/CSEARCH/rdkit-dihedral/'+name+'_rdkit_rotated.sdf'
+		elif os.path.exists(w_dir_initial+'/CSEARCH/summ/'+name+'_rdkit_rotated.sdf'):
+			sdf_rdkit = w_dir_initial+'/CSEARCH/summ/'+name+'_rdkit_rotated.sdf'
 		if os.path.exists(w_dir_initial+'/CSEARCH/xtb/'+name+'_xtb.sdf'):
 			sdf_xtb =  w_dir_initial+'/CSEARCH/xtb/'+name+'_xtb.sdf'
 		if os.path.exists(w_dir_initial+'/CSEARCH/ani1ccx/'+name+'_ani.sdf'):
@@ -434,8 +434,8 @@ def graph_main(args,log,w_dir_initial):
 		sdf_ani,sdf_xtb = None,None
 		if os.path.exists(w_dir_initial+'/CSEARCH/rdkit/'+name+'_rdkit.sdf'):
 			sdf_rdkit =  w_dir_initial+'/CSEARCH/rdkit/'+name+'_rdkit.sdf'
-		elif os.path.exists(w_dir_initial+'/CSEARCH/rdkit-dihedral/'+name+'_rdkit_rotated.sdf'):
-			sdf_rdkit = w_dir_initial+'/CSEARCH/rdkit-dihedral/'+name+'_rdkit_rotated.sdf'
+		elif os.path.exists(w_dir_initial+'/CSEARCH/summ/'+name+'_rdkit_rotated.sdf'):
+			sdf_rdkit = w_dir_initial+'/CSEARCH/summ/'+name+'_rdkit_rotated.sdf'
 		if os.path.exists(w_dir_initial+'/CSEARCH/xtb/'+name+'_xtb.sdf'):
 			sdf_xtb =  w_dir_initial+'/CSEARCH/xtb/'+name+'_xtb.sdf'
 		if os.path.exists(w_dir_initial+'/CSEARCH/ani1ccx/'+name+'_ani.sdf'):
@@ -522,7 +522,7 @@ def exp_rules_main(args,log):
 	if not args.CMIN=='xtb':
 		if args.CSEARCH=='rdkit':
 			conf_files =  glob.glob('*_rdkit.sdf')
-		elif args.CSEARCH=='rdkit-dihedral':
+		elif args.CSEARCH=='summ':
 			conf_files =  glob.glob('*_rdkit_rotated.sdf')
 	else:
 		conf_files =  glob.glob('*_xtb.sdf')

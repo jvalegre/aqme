@@ -151,7 +151,7 @@ def optimize(mol, args, program,log,dup_data,dup_data_idx):
 			if atom.GetSymbol() =='I':
 				atom.SetAtomicNum(1)
 
-	if args.metal_complex and not args.CSEARCH=='rdkit-dihedral':
+	if args.metal_complex and not args.CSEARCH=='summ':
 		set_metal_atomic_number(mol,args)
 
 	elements = ''
