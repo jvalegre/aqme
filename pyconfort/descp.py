@@ -63,6 +63,7 @@ def calculate_parameters(sdf_rdkit,sdf_ani,sdf_xtb,args,log,w_dir_initial,name_m
         else:
             raise
     #get mol objects
+    # dft_mols= []
     rdkit_mols = Chem.SDMolSupplier(sdf_rdkit, removeHs=False)
     if args.rot_dihedral:
         args.dihedral = getDihedralMatches(rdkit_mols[0], args.heavyonly,log)
@@ -70,6 +71,14 @@ def calculate_parameters(sdf_rdkit,sdf_ani,sdf_xtb,args,log,w_dir_initial,name_m
         ani_mols = Chem.SDMolSupplier(sdf_ani, removeHs=False)
     if sdf_xtb is not None:
         xtb_mols = Chem.SDMolSupplier(sdf_xtb, removeHs=False)
+    # for file_log in log_files:
+    #     obConversion = ob.OBConversion()
+    # 	obConversion.SetInAndOutFormats("log", "mol")
+    # 	ob_mol = ob.OBMol()
+    # 	obConversion.ReadFile(ob_mol, log)
+    # 	obConversion.WriteFile(ob_mol, log.split('.')[0]+'.mol')
+    # 	obConversion.CloseOutFile()
+    # 	dft_mols.append(Chem.MolFromMolFile(log.split('.')[0]+'.mol', removeHs=False))
 
     #loop over only uniques
     if  os.path.exists(w_dir_initial+'/CSEARCH/xtb/'+name_mol+'_xtb.sdf'):

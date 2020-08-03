@@ -412,19 +412,8 @@ def geom_par_main(args,log,w_dir_initial):
 		if os.path.exists(w_dir_initial+'/CSEARCH/ani1ccx/'+name+'_ani.sdf'):
 			sdf_ani = w_dir_initial+'/CSEARCH/ani1ccx/'+name+'_ani.sdf'
 
-		if os.path.exists(w_dir_initial+'/QPREP/G16'):
-			args.path = w_dir_initial+'/QPREP/G16/'
-			# Sets the folder and find the log files to analyze
-			for lot in args.level_of_theory:
-				for bs in args.basis_set:
-					for bs_gcp in args.basis_set_genecp_atoms:
-						#assign the path to the finished directory.
-						w_dir = args.path + str(lot) + '-' + str(bs) +'/success/log-files'
-						os.chdir(w_dir)
-						log_files = glob.glob(name+'_*.log')
-						graph(sdf_rdkit,sdf_xtb,sdf_ani,log_files,args,log,lot,bs,name,w_dir_initial)
+		calculate_parameters(sdf_rdkit,sdf_ani,sdf_xtb,log_files,args,log,w_dir_initial,name)
 
-		calculate_parameters(sdf_rdkit,sdf_ani,sdf_xtb,args,log,w_dir_initial,name)
 		os.chdir(w_dir_initial)
 
 #function to plot graphs
