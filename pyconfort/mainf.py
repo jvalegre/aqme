@@ -90,7 +90,7 @@ def creation_of_dup_csv(args):
 #creation of csv for qcorr
 def creation_of_ana_csv(args):
 	if args.QCORR=='gaussian':
-		ana_data =  pd.DataFrame(columns = ['Total Files','Normal Termination', 'Imaginary frequencies', 'SCF Error','Atomic Basis Error','Other Errors','Unfinished'])
+		ana_data =  pd.DataFrame(columns = ['Total Files','Normal Termination', 'Imaginary frequencies', 'SCF Error','Basis Set Error','Other Errors','Unfinished'])
 	return ana_data
 
 # main function to generate conformers
@@ -332,7 +332,7 @@ def qcorr_gaussian_main(w_dir_initial,args,log):
 	# when you run analysis in a folder full of output files
 	if not os.path.exists(w_dir_initial+'/QMCALC'):
 		w_dir = os.getcwd()
-		w_dir_fin = w_dir+'/success/log-files'
+		w_dir_fin = w_dir+'/success/output_files'
 		for lot in args.level_of_theory:
 			for bs in args.basis_set:
 				for bs_gcp in args.basis_set_genecp_atoms:
@@ -359,9 +359,9 @@ def qcorr_gaussian_main(w_dir_initial,args,log):
 					w_dir = args.path + str(lot) + '-' + str(bs)
 					#check if New_Gaussian_Input_Files folder exists
 					w_dir,round_num = check_for_final_folder(w_dir)
-					log = Logger(w_dir_main+'/dat_files/pyCONFORT-analysis-run-'+str(round_num), args.output_name)
+					log = Logger(w_dir_main+'/dat_files/pyCONFORT-analysis-run_'+str(round_num), args.output_name)
 					#assign the path to the finished directory.
-					w_dir_fin = args.path + str(lot) + '-' + str(bs) +'/success/log-files'
+					w_dir_fin = args.path + str(lot) + '-' + str(bs) +'/success/output_files'
 					os.chdir(w_dir)
 					ana_data = creation_of_ana_csv(args)
 					log.write("\no  ANALYZING OUTPUT FILES IN {}\n".format(w_dir))
@@ -447,7 +447,7 @@ def graph_main(args,log,w_dir_initial):
 				for bs in args.basis_set:
 					for bs_gcp in args.basis_set_genecp_atoms:
 						#assign the path to the finished directory.
-						w_dir = args.path + str(lot) + '-' + str(bs) +'/success/log-files'
+						w_dir = args.path + str(lot) + '-' + str(bs) +'/success/output_files'
 						os.chdir(w_dir)
 						log_files = glob.glob(name+'_*.log')
 						graph(sdf_rdkit,sdf_xtb,sdf_ani,log_files,args,log,lot,bs,name,w_dir_initial)
@@ -472,7 +472,7 @@ def nmr_main(args,log,w_dir_initial):
 			for bs in args.basis_set:
 				for bs_gcp in args.basis_set_genecp_atoms:
 					#assign the path to the finished directory.
-					w_dir_fin = args.path + str(lot) + '-' + str(bs) +'/finished/success/log-files'
+					w_dir_fin = args.path + str(lot) + '-' + str(bs) +'/success/output_files'
 					os.chdir(w_dir_fin)
 					log_files = glob.glob(name+'_*.log')
 					if len(log_files) != 0:
@@ -494,7 +494,7 @@ def energy_main(args,log,w_dir_initial):
 			for bs in args.basis_set:
 				for bs_gcp in args.basis_set_genecp_atoms:
 					#assign the path to the finished directory.
-					w_dir_fin = args.path + str(lot) + '-' + str(bs) +'/success/log-files/'
+					w_dir_fin = args.path + str(lot) + '-' + str(bs) +'/success/output_files/'
 					os.chdir(w_dir_fin)
 					log_files = get_com_or_log_out_files('output',name)
 					if len(log_files) != 0:

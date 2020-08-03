@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+basis_set#!/usr/bin/env python
 
 ######################################################.
 # 		  This file stores all the functions 	     #
@@ -281,7 +281,7 @@ def fix_imag_freqs(NATOMS, CARTESIANS, args, FREQS, NORMALMODE):
 
 def create_folder_and_com(w_dir,w_dir_main,round_num,log,NATOMS,ATOMTYPES,CARTESIANS,args,TERMINATION,IM_FREQS,w_dir_fin,file,lot,bs,bs_gcp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp,ERRORTYPE,input_route,w_dir_initial,name,CHARGE,MULT):
 	# creating new folder with new input gaussian files
-	new_gaussian_input_files = w_dir_main+'/com_file/run-'+str(round_num+1)
+	new_gaussian_input_files = w_dir_main+'/input_files/run_'+str(round_num+1)
 
 	try:
 		os.makedirs(new_gaussian_input_files)
@@ -317,24 +317,24 @@ def create_folder_move_log_files(w_dir,w_dir_main,round_num,file,IM_FREQS,TERMIN
 		finished += 1
 
 	if IM_FREQS > 0:
-		destination = w_dir_main+'/failed/run-'+str(round_num)+'/imaginary_frequencies/'
+		destination = w_dir_main+'/failed/run_'+str(round_num)+'/imag_freq/'
 		moving_files(source, destination)
 		imag_freq += 1
 
 	if IM_FREQS == 0 and TERMINATION == "error":
 		if ERRORTYPE == "atomicbasiserror":
-			destination = w_dir_main +'/failed/run-'+str(round_num)+'/failed_error/atomic_basis_error'
+			destination = w_dir_main +'/failed/run_'+str(round_num)+'/error/basis_set_error'
 			atom_error += 1
 		elif ERRORTYPE == "SCFerror":
-			destination = w_dir_main+'/failed/run-'+str(round_num)+'/failed_error/SCF_error'
+			destination = w_dir_main+'/failed/run_'+str(round_num)+'/error/scf_error'
 			scf_error += 1
 		else:
-			destination = w_dir_main+'/failed/run-'+str(round_num)+'/failed_error/unknown_error'
+			destination = w_dir_main+'/failed/run_'+str(round_num)+'/error/unknown_error'
 			other_error += 1
 		moving_files(source, destination)
 
 	elif IM_FREQS == 0 and TERMINATION == "unfinished":
-		destination = w_dir_main+'/failed/run-'+str(round_num)+'/failed_unfinished/'
+		destination = w_dir_main+'/failed/run_'+str(round_num)+'/unfinished/'
 		moving_files(source, destination)
 		unfinished += 1
 
@@ -350,7 +350,7 @@ def output_analyzer(log_files,com_files, w_dir, w_dir_main,lot, bs, bs_gcp, args
 		#moves the comfiles to respective folder
 		for file in com_files:
 			source = w_dir+'/'+file
-			destination = w_dir_main +'/com_file/run-'+str(round_num)
+			destination = w_dir_main +'/input_files/run_'+str(round_num)
 			moving_files(source, destination)
 
 	for file in log_files:
@@ -393,7 +393,7 @@ def output_analyzer(log_files,com_files, w_dir, w_dir_main,lot, bs, bs_gcp, args
 		ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp =  check_for_gen_or_genecp(ATOMTYPES,args)
 
 		# create folders and set level of theory in COM files to fix imaginary freqs or not normal terminations
-		if IM_FREQS > 0 or TERMINATION != "normal" and not os.path.exists(w_dir_main+'/failed/run-'+str(round_num)+'/failed_error/atomic_basis_error/'+file):
+		if IM_FREQS > 0 or TERMINATION != "normal" and not os.path.exists(w_dir_main+'/failed/run_'+str(round_num)+'/error/basis_set_error/'+file):
 			create_folder_and_com(w_dir,w_dir_main,round_num,log,NATOMS,ATOMTYPES,CARTESIANS,args,TERMINATION,IM_FREQS,w_dir_fin,file,lot,bs,bs_gcp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp,ERRORTYPE,input_route,w_dir_initial,name,CHARGE, MULT)
 
 		# adding in the NMR componenet only to the finished files after reading from normally finished log files
@@ -401,7 +401,7 @@ def output_analyzer(log_files,com_files, w_dir, w_dir_main,lot, bs, bs_gcp, args
 			#get coordinates
 			ATOMTYPES, CARTESIANS = get_coords_normal(outlines, stand_or, NATOMS, possible_atoms, ATOMTYPES, CARTESIANS)
 			# creating new folder with new input gaussian files
-			single_point_input_files = w_dir_fin+'/../G16-SP'
+			single_point_input_files = w_dir_fin+'/../G16-SP_input_files'
 			# Options for genecp
 			ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp = check_for_gen_or_genecp(ATOMTYPES,args)
 
@@ -436,22 +436,22 @@ def output_analyzer(log_files,com_files, w_dir, w_dir_main,lot, bs, bs_gcp, args
 	ana_data.at[0,'Normal Termination'] = finished
 	ana_data.at[0,'Imaginary frequencies'] = imag_freq
 	ana_data.at[0,'SCF Error'] = scf_error
-	ana_data.at[0,'Atomic Basis Error'] =  atom_error
+	ana_data.at[0,'Basis Set Error'] =  atom_error
 	ana_data.at[0,'Other Errors'] = other_error
 	ana_data.at[0,'Unfinished'] = unfinished
 
 	if not os.path.isdir(w_dir_main+'/csv_files/'):
 		os.makedirs(w_dir_main+'/csv_files/')
-	ana_data.to_csv(w_dir_main+'/csv_files/Analysis-Data-compilesd-run-'+str(round_num)+'.csv',index=False)
+	ana_data.to_csv(w_dir_main+'/csv_files/Analysis-Data-compilesd-run_'+str(round_num)+'.csv',index=False)
 
 # CHECKS THE FOLDER OF FINAL LOG FILES
 def check_for_final_folder(w_dir):
-	ini_com_folder = sum(dirs.count('com_file') for _, dirs, _ in os.walk(w_dir))
+	ini_com_folder = sum(dirs.count('input_files') for _, dirs, _ in os.walk(w_dir))
 	if ini_com_folder == 0:
 		return w_dir, 1
 	else:
-		num_com_folder = sum([len(d) for r, d, folder in os.walk(w_dir+'/com_file')])
-		w_dir = w_dir+'/com_file/run-'+str(num_com_folder)
+		num_com_folder = sum([len(d) for r, d, folder in os.walk(w_dir+'/input_files')])
+		w_dir = w_dir+'/input_files/run_'+str(num_com_folder)
 		return w_dir, num_com_folder
 
 # CHECKING FOR DUPLICATES
@@ -472,7 +472,7 @@ def dup_calculation(val, w_dir,w_dir_main, args, log,round_num):
 			dup_file_list.append(duplines[i].split(' ')[2])
 
 	#move the files to specific directory
-	destination = w_dir_main+'/duplicates/run-'+str(round_num)
+	destination = w_dir_main+'/duplicates/run_'+str(round_num)
 	moving_files('Goodvibes_output.dat', destination)
 	for source in dup_file_list:
 		#finding the extension
