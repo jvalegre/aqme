@@ -146,36 +146,40 @@ def get_conf_RMS(mol1, mol2, c1, c2, heavy, max_matches_RMSD,log):
 	rms = Chem.GetBestRMS(mol1,mol2,c1,c2,maxMatches=max_matches_RMSD)
 	return rms
 
-# filter based on energy window (ewin_rdkit)
+# filter based on energy window (ewin_csearch)
 def ewin_filter(sorted_all_cids,cenergy,args,dup_data,dup_data_idx,log,calc_type):
-	sortedcids,nhigh_rdkit,nhigh=[],0,0
-	if calc_type == 'rdkit' or calc_type == 'rotated_rdkit':
+	sortedcids,nhigh_csearch,nhigh=[],0,0
+	if calc_type == 'rdkit' or calc_type == 'summ' or calc_type == 'fullmonte':
 		for i,cid in enumerate(sorted_all_cids):
 			if i == 0:
 				cenergy_min = cenergy[cid]
-			if abs(cenergy[cid] - cenergy_min) < args.ewin_rdkit:
+			if abs(cenergy[cid] - cenergy_min) < args.ewin_csearch:
 				sortedcids.append(cid)
 			else:
-				nhigh_rdkit +=1
+				nhigh_csearch +=1
 	if calc_type == 'rdkit':
 		if args.verbose:
-			log.write("o  "+str(nhigh_rdkit)+ " conformers rejected based on energy window ewin_rdkit (E > "+str(args.ewin_rdkit)+" kcal/mol)")
-		dup_data.at[dup_data_idx, 'RDKit-energy-window'] = nhigh_rdkit
-	if calc_type == 'rotated_rdkit':
+			log.write("o  "+str(nhigh_csearch)+ " conformers rejected based on energy window ewin_csearch (E > "+str(args.ewin_csearch)+" kcal/mol)")
+		dup_data.at[dup_data_idx, 'RDKit-energy-window'] = nhigh_csearch
+	if calc_type == 'summ':
 		if args.verbose:
-			log.write("o  "+str(nhigh_rdkit)+ " conformers rejected after rotation based on energy window ewin_rdkit (E > "+str(args.ewin_rdkit)+" kcal/mol)")
-		dup_data.at[dup_data_idx, 'RDKit-Rotated-energy-window'] = nhigh_rdkit
+			log.write("o  "+str(nhigh_csearch)+ " conformers rejected after rotation based on energy window ewin_csearch (E > "+str(args.ewin_csearch)+" kcal/mol)")
+		dup_data.at[dup_data_idx, 'summ-energy-window'] = nhigh_csearch
+	if calc_type == 'fullmonte':
+		if args.verbose:
+			log.write("o  "+str(nhigh_csearch)+ " conformers rejected based on energy window ewin_csearch (E > "+str(args.ewin_csearch)+" kcal/mol)")
+		dup_data.at[dup_data_idx, 'FullMonte-energy-window'] = nhigh_csearch
 
 	if calc_type == 'xtb' or calc_type == 'ani':
 		for i,cid in enumerate(sorted_all_cids):
 			if i == 0:
 				cenergy_min = cenergy[cid]
-			if abs(cenergy[cid] - cenergy_min) < args.ewin_min:
+			if abs(cenergy[cid] - cenergy_min) < args.ewin_cmin:
 				sortedcids.append(cid)
 			else:
 				nhigh +=1
 		if args.verbose:
-			log.write("o  "+str(nhigh)+ " conformers rejected based on energy window ewin_min (E > "+str(args.ewin_min)+" kcal/mol)")
+			log.write("o  "+str(nhigh)+ " conformers rejected based on energy window ewin_cmin (E > "+str(args.ewin_cmin)+" kcal/mol)")
 		if calc_type == 'ani':
 			dup_data.at[dup_data_idx, 'ANI1ccx-energy-window'] = nhigh
 		elif calc_type == 'xtb':
@@ -210,8 +214,10 @@ def pre_E_filter(sortedcids,cenergy,args,dup_data,dup_data_idx,log,calc_type):
 
 	if calc_type == 'rdkit':
 		dup_data.at[dup_data_idx, 'RDKit-initial_energy_threshold'] = eng_dup
-	if calc_type == 'rotated_rdkit':
-		dup_data.at[dup_data_idx, 'RDKit-Rotated-initial_energy_threshold'] = eng_dup
+	if calc_type == 'summ':
+		dup_data.at[dup_data_idx, 'summ-initial_energy_threshold'] = eng_dup
+	if calc_type == 'fullmonte':
+		dup_data.at[dup_data_idx, 'FullMonte-initial_energy_threshold'] = eng_dup
 	elif calc_type == 'xtb' or calc_type == 'ani':
 		if calc_type == 'ani':
 			dup_data.at[dup_data_idx, 'ANI1ccx-initial_energy_threshold'] = eng_dup
@@ -240,7 +246,7 @@ def RMSD_and_E_filter(outmols,selectedcids_initial,cenergy,args,dup_data,dup_dat
 			if  E_diff < args.energy_threshold:
 				if calc_type == 'rdkit':
 					rms = get_conf_RMS(outmols[conf],outmols[conf],seenconf,conf, args.heavyonly, args.max_matches_RMSD,log)
-				elif calc_type == 'rotated_rdkit' or calc_type =='xtb' or calc_type =='ani':
+				elif calc_type == 'summ' or calc_type == 'fullmonte' or calc_type =='xtb' or calc_type =='ani':
 					rms = get_conf_RMS(outmols[conf],outmols[seenconf],-1,-1, args.heavyonly, args.max_matches_RMSD,log)
 				if rms < args.rms_threshold:
 					excluded_conf = True
@@ -260,9 +266,12 @@ def RMSD_and_E_filter(outmols,selectedcids_initial,cenergy,args,dup_data,dup_dat
 	if calc_type == 'rdkit':
 		dup_data.at[dup_data_idx, 'RDKit-RMSD-and-energy-duplicates'] = eng_rms_dup
 		dup_data.at[dup_data_idx, 'RDKIT-Unique-conformers'] = len(selectedcids)
-	if calc_type == 'rotated_rdkit':
-		dup_data.at[dup_data_idx, 'RDKit-Rotated-RMSD-and-energy-duplicates'] = eng_rms_dup
-		dup_data.at[dup_data_idx, 'RDKIT-Rotated-Unique-conformers'] = len(selectedcids)
+	if calc_type == 'fullmonte':
+		dup_data.at[dup_data_idx, 'FullMonte-RMSD-and-energy-duplicates'] = eng_rms_dup
+		dup_data.at[dup_data_idx, 'FullMonte-Unique-conformers'] = len(selectedcids)
+	if calc_type == 'summ':
+		dup_data.at[dup_data_idx, 'summ-RMSD-and-energy-duplicates'] = eng_rms_dup
+		dup_data.at[dup_data_idx, 'summ-Unique-conformers'] = len(selectedcids)
 	elif calc_type == 'ani' or calc_type == 'xtb':
 		if calc_type == 'ani':
 			dup_data.at[dup_data_idx, 'ANI1ccx-RMSD-and-energy-duplicates'] = eng_rms_dup

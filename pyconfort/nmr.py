@@ -9,7 +9,7 @@ from rdkit.Chem import AllChem as Chem
 import numpy as np
 import os,subprocess
 
-def calculate_nmr(nmr_log_files,args,log,name,w_dir_fin,lot_sp,bs_sp):
+def calculate_nmr(nmr_log_files,args,log,name,w_dir_fin,w_dir_initial,lot_sp,bs_sp,lot,bs):
 
 	#some constants which can be changed
 	TMS_H_ref = 0
@@ -60,7 +60,7 @@ def calculate_nmr(nmr_log_files,args,log,name,w_dir_fin,lot_sp,bs_sp):
 		outfile.close()
 
 		# get the Boltzmann probabilities of each conformer from a GoodVibes file
-		boltz_file = w_dir_fin + '/Goodvibes_'+name+'.dat'
+		boltz_file = w_dir_initial+'/QPRED/nmr/boltz/'+str(lot)+'-'+str(bs) + '/Goodvibes_'+name+'.dat'
 
 		boltz_outfile = open(boltz_file,"r")
 		boltz_outlines = boltz_outfile.readlines()
@@ -105,7 +105,7 @@ def calculate_nmr(nmr_log_files,args,log,name,w_dir_fin,lot_sp,bs_sp):
 			   columns =['Atom', 'Shielding'])
 
 	w_dir = os.getcwd()
-	folder = w_dir + '/NMR_averaged'
+	folder = w_dir_initial+'/QPRED/nmr/average-nmr/'+str(lot_sp)+'-'+str(bs_sp)
 	log.write("\no  Preparing final NMR results in {}".format(folder))
 	try:
 		os.makedirs(folder)
@@ -117,16 +117,25 @@ def calculate_nmr(nmr_log_files,args,log,name,w_dir_fin,lot_sp,bs_sp):
 			pass
 	export_param_excel = df.to_csv(name+'_'+lot_sp+'-'+bs_sp+'_predicted_shifts.csv', index = None, header=False)
 
-def calculate_boltz_and_nmr(val,args,log,name,w_dir_fin):
+def calculate_boltz_and_nmr(val,args,log,name,w_dir_fin,w_dir_initial,lot,bs):
+
 	# GoodVibes must be installed as a module (through pip or conda)
-	cmd_boltz = ['python','-m', 'goodvibes', '--boltz', '--output', name, val]
+	cmd_boltz = ['python','-m', 'goodvibes', '--boltz', '--output', name ]
+	for file in val:
+		cmd_boltz.append(file)
 	subprocess.call(cmd_boltz)
+
+	#writing to coorect places
+	destination = w_dir_initial+'/QPRED/nmr/boltz/'+str(lot)+'-'+str(bs)
+	moving_files('Goodvibes_'+name+'.dat', destination)
+
+
 	for lot_sp in args.level_of_theory_sp:
 		for bs_sp in args.basis_set_sp:
 			for bs_gcp_sp in args.basis_set_genecp_atoms_sp:
 				#performing the nmr calculations
-				dir_sp_nmr =  w_dir_fin+'/single_point_input_files/'+str(lot_sp)+'-'+str(bs_sp)
+				dir_sp_nmr =  w_dir_fin+'/output-files/G16-SP_input_files/'+str(lot_sp)+'-'+str(bs_sp)
 				os.chdir(dir_sp_nmr)
 				#grabbing the respective NMR files for a given molecules
 				nmr_log_files = glob.glob(name+'*_NMR.log') + glob.glob(name+'*_NMR_*.log')
-				calculate_nmr(nmr_log_files,args,log,name,w_dir_fin,lot_sp,bs_sp)
+				calculate_nmr(nmr_log_files,args,log,name,w_dir_fin,w_dir_initial,lot_sp,bs_sp,lot,bs)

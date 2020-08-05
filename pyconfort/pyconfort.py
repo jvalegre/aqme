@@ -46,7 +46,7 @@ def main():
 		args.basis_set_genecp_atoms = ['LANL2DZ']
 
 	#CSEARCH
-	if args.CSEARCH=='rdkit' or args.CSEARCH=='summ':
+	if args.CSEARCH=='rdkit' or args.CSEARCH=='summ' or args.CSEARCH=='fullmonte':
 		#creation of csv to write dup data
 		dup_data = creation_of_dup_csv(args)
 		csearch_main(w_dir_initial,dup_data,args,log,start_time)
@@ -62,7 +62,7 @@ def main():
 		qprep_gaussian_main(args,log)
 
 	# moving files after compute and/or write_gauss
-	if args.CSEARCH=='rdkit' or args.CSEARCH=='summ':
+	if args.CSEARCH=='rdkit' or args.CSEARCH=='summ' or args.CSEARCH=='fullmonte':
 		move_sdf_main(args)
 
 	#QCORR

@@ -21,6 +21,7 @@ from pyconfort.filter import filters,set_metal_atomic_number,ewin_filter,pre_E_f
 from pyconfort.argument_parser import possible_atoms
 from pyconfort.tmbuild import template_embed
 from pyconfort.cmin import mult_min, rules_get_charge, atom_groups
+from pyconfort.fullmonte import generating_conformations_fullmonte, minimize_rdkit_energy
 
 hartree_to_kcal = 627.509
 possible_atoms = possible_atoms()
@@ -226,13 +227,17 @@ def conformer_generation(mol,name,start_time,args,log,dup_data,dup_data_idx,coor
 						if args.CSEARCH=='rdkit':
 							mult_min(name+'_'+'rdkit', args, min_suffix, log, dup_data, dup_data_idx)
 						elif args.CSEARCH=='summ':
-							mult_min(name+'_'+'rdkit'+'_'+'rotated', args, min_suffix, log, dup_data, dup_data_idx)
+							mult_min(name+'_'+'summ', args, min_suffix, log, dup_data, dup_data_idx)
+						elif args.CSEARCH=='fullmonte':
+							mult_min(name+'_'+'fullmonte', args, min_suffix, log, dup_data, dup_data_idx)
 					elif args.CMIN=='xtb' and status != 0:
 						min_suffix = 'xtb'
 						if args.CSEARCH=='rdkit':
 							mult_min(name+'_'+'rdkit', args, min_suffix, log, dup_data, dup_data_idx)
 						elif args.CSEARCH=='summ':
-							mult_min(name+'_'+'rdkit'+'_'+'rotated', args, min_suffix, log, dup_data, dup_data_idx)
+							mult_min(name+'_'+'summ', args, min_suffix, log, dup_data, dup_data_idx)
+						elif args.CSEARCH=='fullmonte':
+							mult_min(name+'_'+'fullmonte', args, min_suffix, log, dup_data, dup_data_idx)
 					elif status == 0:
 						os.remove(name+'_'+'rdkit'+args.output)
 						log.write('\nx  No rotatable dihedral found. Run again with nodihedral set to TRUE')
@@ -321,25 +326,6 @@ def genConformer_r(mol, conf, i, matches, degree, sdwriter,args,name,log):
 			deg += degree
 		return total
 
-#function to get rdkit energy
-def minimize_rdkit_energy(mol,conf,args,log):
-	if args.ff == "MMFF":
-		GetFF = Chem.MMFFGetMoleculeForceField(mol, Chem.MMFFGetMoleculeProperties(mol),confId=conf)
-	elif args.ff == "UFF":
-		GetFF = Chem.UFFGetMoleculeForceField(mol,confId=conf)
-	else:
-		log.write(' Force field {} not supported!'.format(args.ff))
-		sys.exit()
-	try:
-		GetFF.Initialize()
-		GetFF.Minimize(maxIts=args.opt_steps_RDKit)
-	except:
-		#if not MMFF use UFF
-		GetFF = Chem.UFFGetMoleculeForceField(mol,confId=conf)
-		GetFF.Initialize()
-		GetFF.Minimize(maxIts=args.opt_steps_RDKit)
-	return GetFF
-
 #function to embed conformers
 def embed_conf(mol,initial_confs,args,log,coord_Map,alg_Map, mol_template):
 	if coord_Map is None and alg_Map is None and mol_template is None:
@@ -397,7 +383,7 @@ def min_after_embed(mol,cids,name,initial_confs,rotmatches,dup_data,dup_data_idx
 
 	log.write("\n\no  Applying filters to intial conformers")
 
-	# filter based on energy window ewin_rdkit
+	# filter based on energy window ewin_csearch
 	sortedcids_rdkit = ewin_filter(sorted_all_cids,cenergy,args,dup_data,dup_data_idx,log,'rdkit')
 
 	# pre-filter based on energy only
@@ -413,31 +399,38 @@ def min_after_embed(mol,cids,name,initial_confs,rotmatches,dup_data,dup_data_idx
 	else:
 		dup_data.at[dup_data_idx, 'Overall charge'] = args.charge_default
 
-	# now exhaustively drive torsions of selected conformers
-	n_confs = int(len(selectedcids_rdkit) * (360 / args.degree) ** len(rotmatches))
-	if args.verbose and len(rotmatches) != 0:
-		log.write("\n\no  Systematic generation of "+ str(n_confs)+ " confomers")
-		bar = IncrementalBar('o  Generating conformations based on dihedral rotation', max = len(selectedcids_rdkit))
-	else:
-		bar = IncrementalBar('o  Generating conformations', max = len(selectedcids_rdkit))
+	if args.CSEARCH=='summ' or args.CSEARCH=='rdkit':
+		# now exhaustively drive torsions of selected conformers
+		n_confs = int(len(selectedcids_rdkit) * (360 / args.degree) ** len(rotmatches))
+		if args.verbose and len(rotmatches) != 0:
+			log.write("\n\no  Systematic generation of "+ str(n_confs)+ " confomers")
+			bar = IncrementalBar('o  Generating conformations based on dihedral rotation', max = len(selectedcids_rdkit))
+		else:
+			bar = IncrementalBar('o  Generating conformations', max = len(selectedcids_rdkit))
 
-	total = 0
-	for conf in selectedcids_rdkit:
-		total += genConformer_r(outmols[conf], conf, 0, rotmatches, args.degree, sdwriter ,args,outmols[conf].GetProp('_Name'),log)
-		bar.next()
-	bar.finish()
-	if args.verbose and len(rotmatches) != 0:
-		log.write("o  %d total conformations generated"%total)
-	status = 1
+		total = 0
+		for conf in selectedcids_rdkit:
+			total += genConformer_r(outmols[conf], conf, 0, rotmatches, args.degree, sdwriter ,args,outmols[conf].GetProp('_Name'),log)
+			bar.next()
+		bar.finish()
+		if args.verbose and len(rotmatches) != 0:
+			log.write("o  %d total conformations generated"%total)
+		status = 1
 
 	if args.CSEARCH=='summ':
-		dup_data.at[dup_data_idx, 'RDKIT-Rotated-conformers'] = total
+		dup_data.at[dup_data_idx, 'summ-conformers'] = total
+
+	if args.CSEARCH=='fullmonte':
+		status = generating_conformations_fullmonte(name,args,rotmatches,log,selectedcids_rdkit,outmols,sdwriter,dup_data,dup_data_idx,coord_Map,alg_Map, mol_template)
 
 	return status
 
 #conversion from rdkit to sdf
 def rdkit_to_sdf(mol, name,args,log,dup_data,dup_data_idx, coord_Map, alg_Map, mol_template):
-	sdwriter = Chem.SDWriter(name+'_'+'rdkit'+args.output)
+	if args.CSEARCH =='rdkit' or args.CSEARCH =='summ':
+		sdwriter = Chem.SDWriter(name+'_'+'rdkit'+args.output)
+	elif args.CSEARCH =='fullmonte':
+		sdwriter = Chem.SDWriter(name+'_'+'fullmonte'+args.output)
 	Chem.SanitizeMol(mol)
 	mol = Chem.AddHs(mol)
 	mol.SetProp("_Name",name)
@@ -456,6 +449,8 @@ def rdkit_to_sdf(mol, name,args,log,dup_data,dup_data_idx, coord_Map, alg_Map, m
 		status = -1
 	elif args.CSEARCH=='summ' and len(rotmatches) == 0:
 		status = 0
+	elif args.CSEARCH=='fullmonte' and len(rotmatches) == 0:
+		status = 0
 	else:
 		dup_data.at[dup_data_idx, 'RDKIT-Initial-samples'] = initial_confs
 		if args.CSEARCH=='rdkit':
@@ -469,6 +464,8 @@ def rdkit_to_sdf(mol, name,args,log,dup_data,dup_data_idx, coord_Map, alg_Map, m
 		if args.verbose:
 			log.write("o  Optimizing "+ str(len(cids))+ " initial conformers with "+ args.ff)
 			if args.CSEARCH=='summ':
+				log.write("o  Found "+ str(len(rotmatches))+ " rotatable torsions")
+			elif args.CSEARCH=='fullmonte':
 				log.write("o  Found "+ str(len(rotmatches))+ " rotatable torsions")
 			else:
 				log.write("o  Systematic torsion rotation is set to OFF")
@@ -507,14 +504,14 @@ def dihedral_filter_and_sdf(name,args,log,dup_data,dup_data_idx,coord_Map, alg_M
 	rotated_cids = list(range(len(rdmols)))
 	sorted_rotated_cids = sorted(rotated_cids, key = lambda cid: rotated_energy[cid])
 
-	# filter based on energy window ewin_rdkit
-	sortedcids_rotated = ewin_filter(sorted_rotated_cids,rotated_energy,args,dup_data,dup_data_idx,log,'rotated_rdkit')
+	# filter based on energy window ewin_csearch
+	sortedcids_rotated = ewin_filter(sorted_rotated_cids,rotated_energy,args,dup_data,dup_data_idx,log,'summ')
 	# pre-filter based on energy only
-	selectedcids_initial_rotated = pre_E_filter(sortedcids_rotated,rotated_energy,args,dup_data,dup_data_idx,log,'rotated_rdkit')
+	selectedcids_initial_rotated = pre_E_filter(sortedcids_rotated,rotated_energy,args,dup_data,dup_data_idx,log,'summ')
 	# filter based on energy and RMSD
-	selectedcids_rotated = RMSD_and_E_filter(rdmols,selectedcids_initial_rotated,rotated_energy,args,dup_data,dup_data_idx,log,'rotated_rdkit')
+	selectedcids_rotated = RMSD_and_E_filter(rdmols,selectedcids_initial_rotated,rotated_energy,args,dup_data,dup_data_idx,log,'summ')
 
-	sdwriter_rd = Chem.SDWriter(name+'_'+'rdkit'+'_'+'rotated'+args.output)
+	sdwriter_rd = Chem.SDWriter(name+'_'+'summ'+args.output)
 	for i, cid in enumerate(selectedcids_rotated):
 		mol_rd = Chem.RWMol(rdmols[cid])
 		mol_rd.SetProp('_Name',rdmols[cid].GetProp('_Name')+' '+str(i))

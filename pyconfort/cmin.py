@@ -192,6 +192,7 @@ def optimize(mol, args, program,log,dup_data,dup_data_idx):
 # read SDF files from RDKit optimization
 def rdkit_sdf_read(name, args, log):
 	inmols = Chem.SDMolSupplier(name+args.output, removeHs=False)
+	print(inmols)
 	if inmols is None:
 		log.write("Could not open "+ name+args.output)
 		sys.exit(-1)
@@ -238,7 +239,7 @@ def mult_min(name, args, program,log,dup_data,dup_data_idx):
 	sdwriter.close()
 
 	log.write("\n\no  Applying filters to intial conformers after "+program+" minimization")
-	# filter based on energy window ewin_rdkit
+	# filter based on energy window ewin_csearch
 	sortedcids = ewin_filter(sorted_all_cids,cenergy,args,dup_data,dup_data_idx,log,program)
 	# pre-filter based on energy only
 	selectedcids_initial = pre_E_filter(sortedcids,cenergy,args,dup_data,dup_data_idx,log,program)

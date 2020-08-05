@@ -19,7 +19,7 @@ def parser_args():
 	parser.add_argument("--output", dest="output", default=".sdf", metavar="output", help="The extension of the SDF files written")
 
 	#work the script has to do
-	parser.add_argument("--CSEARCH", action="store", default=None, help="Perform conformational analysis with or without dihedrals",choices=['rdkit','summ'])
+	parser.add_argument("--CSEARCH", action="store", default=None, help="Perform conformational analysis with or without dihedrals",choices=['rdkit','summ','fullmonte'])
 	parser.add_argument("--CMIN", action="store", default=None, help="Perform minimization after conformational analysis",choices=['xtb','ANI1ccx'])
 	parser.add_argument("--QPREP", action="store", default=None, help="Create input files for QM calculations", choices=['gaussian'])
 	parser.add_argument("--QCORR", action="store", default=None, help="Fix the output files from QM calculations",choices=['gaussian'])
@@ -39,12 +39,12 @@ def parser_args():
 	parser.add_argument("--metal_sym",  help="Symbols of metals to be considered from list (automatically updates)", default=[], dest="metal_sym", type=str)
 
 	#argumets for CSEARCH and CMIN
-	parser.add_argument("--ewin_min", action="store",default=100.0, help="energy window to print conformers for minimization using xTB or ANI1ccx (kcal/mol)", type=float)
-	parser.add_argument("--ewin_rdkit", action="store",default=100.0, help="energy window to print conformers for RDKit (kcal/mol)", type=float)
+	parser.add_argument("--ewin_cmin", action="store",default=5.0, help="energy window to print conformers for minimization using xTB or ANI1ccx (kcal/mol)", type=float)
+	parser.add_argument("--ewin_csearch", action="store",default=5.0, help="energy window to print conformers for RDKit (kcal/mol)", type=float)
 	parser.add_argument("--opt_fmax", action="store",default=0.05, help="fmax value used in xTB and AN1 optimizations", type=float)
 	parser.add_argument("--opt_steps", action="store",default=1000, help="max cycles used in xTB and AN1 optimizations", type=int)
 	parser.add_argument("--opt_steps_RDKit", action="store",default=1000, help="max cycles used in RDKit optimizations", type=int)
-	parser.add_argument("--time","-t",action='store_true', default=False, help="request program runtime")
+	parser.add_argument("--time","-t",action='store_true', default=True, help="request program runtime")
 	parser.add_argument("--heavyonly", help="only consider torsion angles involving heavy (non H) elements (default=True)", default=True, metavar="heavyonly")
 	parser.add_argument("-d","--degree", type=float, help="Amount, in degrees, to enumerate torsions by (default 120.0)",default=120.0)
 	parser.add_argument("--max_torsions",type=int,help="Skip any molecules with more than this many torsions (default 20)",default=20)
@@ -63,6 +63,12 @@ def parser_args():
 	parser.add_argument("--xtb_accuracy", help="Numerical accuracy of the xTB calculation", action="store", default=1.0, dest="xtb_accuracy")
 	parser.add_argument("--xtb_electronic_temperature", help="Electronic temperature for TB methods", action="store", default=300.0, dest="xtb_electronic_temperature")
 	parser.add_argument("--xtb_max_iterations", help="Numerical accuracy of the xTB calculation", action="store", default=250, dest="xtb_max_iterations")
+
+	#argument for FULLMONTE
+	parser.add_argument("--ewin_fullmonte", action="store",default=5.0, help="energy window to consider conformers for FULLMONTE (default 5 kcal/mol)", type=float)
+	parser.add_argument("--nsteps_fullmonte", action="store",default=100, help="Number of step to consider for FULLMONTE (default 100)", type=int)
+	parser.add_argument("--nrot_fullmonte", action="store",default=3, help="Number of diherals to rotate for FULLMONTE (default 3) ", type=int)
+	parser.add_argument("--ang_fullmonte", action="store",default=30, help="Angle to rotate each diheral of for FULLMONTE (default 30)", type=float)
 
 	#arguments for QPREP
 	parser.add_argument("-l", "--level_of_theory",help="Level of Theory", default=['wB97xd'], dest="level_of_theory", type=str, nargs='*')

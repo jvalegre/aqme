@@ -196,12 +196,12 @@ def graph(sdf_rdkit,sdf_xtb,sdf_ani,log_files,args,log,lot,bs,name_mol,w_dir_ini
     if os.path.exists(w_dir_initial+'/CSEARCH/ani1ccx/'+name_mol+'_ani.sdf') and os.path.exists(w_dir_initial+'/CSEARCH/rdkit/'+name_mol+'_rdkit.sdf'):
         plot_graph(energy_rdkit_sc,energy_ani_sc,energy_ani_dft_sc,lot,bs,name_mol,args,'rdkit','ani',w_dir_initial)
 
-    if  os.path.exists(w_dir_initial+'/CSEARCH/xtb/'+name_mol+'_xtb.sdf') and os.path.exists(w_dir_initial+'/CSEARCH/summ/'+name_mol+'_rdkit_rotated.sdf'):
+    if  os.path.exists(w_dir_initial+'/CSEARCH/xtb/'+name_mol+'_xtb.sdf') and os.path.exists(w_dir_initial+'/CSEARCH/summ/'+name_mol+'_summ.sdf'):
         plot_graph(energy_rdkit_sc,energy_xtb_sc,energy_xtb_dft_sc,lot,bs,name_mol,args,'summ','xtb',w_dir_initial)
-    if os.path.exists(w_dir_initial+'/CSEARCH/ani1ccx/'+name_mol+'_ani.sdf') and os.path.exists(w_dir_initial+'/CSEARCH/summ/'+name_mol+'_rdkit_rotated.sdf'):
+    if os.path.exists(w_dir_initial+'/CSEARCH/ani1ccx/'+name_mol+'_ani.sdf') and os.path.exists(w_dir_initial+'/CSEARCH/summ/'+name_mol+'_summ.sdf'):
         plot_graph(energy_rdkit_sc,energy_ani_sc,energy_ani_dft_sc,lot,bs,name_mol,args,'summ','ani',w_dir_initial)
 
-    if os.path.exists(w_dir_initial+'/CSEARCH/summ/'+name_mol+'_rdkit_rotated.sdf') and not os.path.exists(w_dir_initial+'/CSEARCH/xtb/'+name_mol+'_xtb.sdf') and not os.path.exists(w_dir_initial+'/CSEARCH/ani1ccx/'+name_mol+'_ani.sdf'):
-        plot_graph(energy_rdkit_sc,None,energy_rdkit_dft_sc,lot,bs,name_mol,args,'rdkit-rotated',None,w_dir_initial)
+    if os.path.exists(w_dir_initial+'/CSEARCH/summ/'+name_mol+'_summ.sdf') and not os.path.exists(w_dir_initial+'/CSEARCH/xtb/'+name_mol+'_xtb.sdf') and not os.path.exists(w_dir_initial+'/CSEARCH/ani1ccx/'+name_mol+'_ani.sdf'):
+        plot_graph(energy_rdkit_sc,None,energy_rdkit_dft_sc,lot,bs,name_mol,args,'summ',None,w_dir_initial)
     if os.path.exists(w_dir_initial+'/CSEARCH/rdkit/'+name_mol+'_rdkit.sdf') and not os.path.exists(w_dir_initial+'/CSEARCH/xtb/'+name_mol+'_xtb.sdf') and not os.path.exists(w_dir_initial+'/CSEARCH/ani1ccx/'+name_mol+'_ani.sdf') :
         plot_graph(energy_rdkit_sc,None,energy_rdkit_dft_sc,lot,bs,name_mol,args,'rdkit',None,w_dir_initial)

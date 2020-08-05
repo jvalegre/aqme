@@ -90,6 +90,6 @@ def calculate_parameters(sdf_rdkit,sdf_ani,sdf_xtb,args,log,w_dir_initial,name_m
     if os.path.exists(w_dir_initial+'/CSEARCH/rdkit/'+name_mol+'_rdkit.sdf') and not os.path.exists(w_dir_initial+'/CSEARCH/xtb/'+name_mol+'_xtb.sdf') and not os.path.exists(w_dir_initial+'/CSEARCH/ani1ccx/'+name_mol+'_ani.sdf') :
         geom_data = get_data(rdkit_mols,None,'rdkit',args)
         geom_data.to_csv(name_mol+'-all-geom-data-with-rdkit-only.csv',index=False)
-    if os.path.exists(w_dir_initial+'/CSEARCH/summ/'+name_mol+'_rdkit_rotated.sdf') and not os.path.exists(w_dir_initial+'/CSEARCH/xtb/'+name_mol+'_xtb.sdf') and not os.path.exists(w_dir_initial+'/CSEARCH/ani1ccx/'+name_mol+'_ani.sdf'):
+    if os.path.exists(w_dir_initial+'/CSEARCH/summ/'+name_mol+'_summ.sdf') and not os.path.exists(w_dir_initial+'/CSEARCH/xtb/'+name_mol+'_xtb.sdf') and not os.path.exists(w_dir_initial+'/CSEARCH/ani1ccx/'+name_mol+'_ani.sdf'):
         geom_data = get_data(rdkit_mols,None,'rdkit',args)
-        geom_data.to_csv(name_mol+'-all-geom-data-with-rdkit-rotated.csv',index=False)
+        geom_data.to_csv(name_mol+'-all-geom-data-with-summ.csv',index=False)
