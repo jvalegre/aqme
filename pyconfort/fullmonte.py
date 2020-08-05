@@ -17,10 +17,26 @@ from rdkit.Geometry import Point3D
 from progress.bar import IncrementalBar
 
 from pyconfort.argument_parser import possible_atoms
-from pyconfort.filter import ewin_filter,pre_E_filter,RMSD_and_E_filter
+from pyconfort.filter import ewin_filter,pre_E_filter,RMSD_and_E_filter,set_metal_atomic_number
 from pyconfort.filter import get_conf_RMS
 
+
 possible_atoms = possible_atoms()
+
+#steps to realign mol
+def realign_mol(mol,conf,coord_Map, alg_Map, mol_template,args,log):
+	num_atom_match = mol.GetSubstructMatch(mol_template)
+	GetFF = Chem.UFFGetMoleculeForceField(mol,confId=conf)
+	for k, idxI in enumerate(num_atom_match):
+		for l in range(k + 1, len(num_atom_match)):
+			idxJ = num_atom_match[l]
+			d = coord_Map[idxI].Distance(coord_Map[idxJ])
+			GetFF.AddDistanceConstraint(idxI, idxJ, d, d, 10000)
+	GetFF.Initialize()
+	GetFF.Minimize(maxIts=args.opt_steps_RDKit)
+	# rotate the embedded conformation onto the core_mol:
+	rdMolAlign.AlignMol(mol, mol_template, prbCid=conf,refCid=-1,atomMap=alg_Map,reflect=True,maxIters=100)
+	return mol,GetFF
 
 #function to get rdkit energy
 def minimize_rdkit_energy(mol,conf,args,log):
@@ -67,6 +83,7 @@ def generating_conformations_fullmonte(name,args,rotmatches,log,selectedcids_rdk
 	all_unique_mol,all_unique_mol_fin,all_unique_ene_fin = [],[],[]
 	# array for each each unique from rdkit
 
+	bar = IncrementalBar('o  Generating conformations based on dihedral rotation', max = len(fmmols))
 	# no=1
 	for mol_fm in fmmols:
 
@@ -94,7 +111,6 @@ def generating_conformations_fullmonte(name,args,rotmatches,log,selectedcids_rdk
 			energy = float(GetFF.CalcEnergy())
 
 			rot_mol.SetProp("Energy", str(energy))
-
 
 			#STEP 5 : Check for DUPLICATES - energy and rms filter (reuse)
 					 #  if the conformer is unique then save it the list
@@ -127,6 +143,8 @@ def generating_conformations_fullmonte(name,args,rotmatches,log,selectedcids_rdk
 
 		#appending to all_uniq Mol
 		all_unique_mol.append(unique_mol)
+		bar.next()
+	bar.finish()
 
 	#STEP 7: from a list of list do all three FILTERS
 	for mol_list in all_unique_mol:

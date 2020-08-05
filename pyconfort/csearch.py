@@ -21,7 +21,7 @@ from pyconfort.filter import filters,set_metal_atomic_number,ewin_filter,pre_E_f
 from pyconfort.argument_parser import possible_atoms
 from pyconfort.tmbuild import template_embed
 from pyconfort.cmin import mult_min, rules_get_charge, atom_groups
-from pyconfort.fullmonte import generating_conformations_fullmonte, minimize_rdkit_energy
+from pyconfort.fullmonte import generating_conformations_fullmonte, minimize_rdkit_energy,realign_mol
 
 hartree_to_kcal = 627.509
 possible_atoms = possible_atoms()
@@ -474,21 +474,6 @@ def rdkit_to_sdf(mol, name,args,log,dup_data,dup_data_idx, coord_Map, alg_Map, m
 	sdwriter.close()
 
 	return status,rotmatches
-
-#steps to realign mol
-def realign_mol(mol,conf,coord_Map, alg_Map, mol_template,args,log):
-	num_atom_match = mol.GetSubstructMatch(mol_template)
-	GetFF = Chem.UFFGetMoleculeForceField(mol,confId=conf)
-	for k, idxI in enumerate(num_atom_match):
-		for l in range(k + 1, len(num_atom_match)):
-			idxJ = num_atom_match[l]
-			d = coord_Map[idxI].Distance(coord_Map[idxJ])
-			GetFF.AddDistanceConstraint(idxI, idxJ, d, d, 10000)
-	GetFF.Initialize()
-	GetFF.Minimize(maxIts=args.opt_steps_RDKit)
-	# rotate the embedded conformation onto the core_mol:
-	rdMolAlign.AlignMol(mol, mol_template, prbCid=conf,refCid=-1,atomMap=alg_Map,reflect=True,maxIters=100)
-	return mol,GetFF
 
 #filtering after dihydral scan to sdf
 def dihedral_filter_and_sdf(name,args,log,dup_data,dup_data_idx,coord_Map, alg_Map, mol_template):
