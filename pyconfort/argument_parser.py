@@ -117,6 +117,19 @@ def parser_args():
 	parser.add_argument("--dihedral", help="Specify the atom indexs to track dihedrals for different conformes only for specific dihedrals (For all rotatable dihedrals turn rot_dihedral to True)", default=[], dest="dihedral", type=str, nargs=4,action='append')
 	parser.add_argument("--bond", help="Specify the atom indexs to track bond lengths for different conformers", default=[], dest="bond", type=str, nargs=2,action='append')
 	parser.add_argument("--angle", help="Specify the atom indexs to track angles for different conformers", default=[], dest="angle", type=str, nargs=3,action='append')
+	parser.add_argument("--geom_par_name",action="store",dest="geom_par_name", default="descp", help="Change the prefix for the descriptors obtained")
+
+	#arguments for nmr
+	parser.add_argument("--nmr_exp", default='fromsdf', help="From where the ecperimental NMR details will be obtained",choices=['fromsdf','exp_file'])
+	parser.add_argument("--nmr_exp_file", dest="nmr_exp_file", action="store", help="Specify the NMR experimental file", default="No file passed")
+	parser.add_argument("--nmr_online", action="store_true", default=False, help="Turn to true for checking NMR scaling factors from ChesHire Database")
+	parser.add_argument("--nmr_aos", help="Specify the type of atomic basis used for nmr calculation (default = giao) ", default='giao', type=str)
+	parser.add_argument("--nmr_nucleus",help="Specify the nucleus for nmr analysis default (['13C','1H'])", default=['13C','1H'], dest="nmr_nucleus", type=str, nargs='*')
+	parser.add_argument("--nmr_slope",help="Specify the slope for each nucleus for nmr analysis default([1.0673,1.0759])", default=[1.0673,1.0759], dest="nmr_slope", type=float, nargs='*')
+	parser.add_argument("--nmr_intercept",help="Specify the intercept for each nucleus for nmr analysis default([1.0673,1.0759])", default=[1.0673,1.0759], dest="nmr_intercept", type=float, nargs='*')
+	parser.add_argument("--nmr_tms_ref",help="Specify the reference for TMS for each nucleus for nmr analysis default([0.0,0.0])", default=[0.0,0.0], dest="nmr_tms_ref", type=float, nargs='*')
+
+
 
 	# submission of Gaussion files
 	parser.add_argument("--qsub", action="store_true", default=False, help="Submit Gaussian files when they are created")

@@ -355,6 +355,7 @@ def output_analyzer(log_files,com_files, w_dir, w_dir_main,lot, bs, bs_gcp, args
 
 	for file in log_files:
 		# read the file
+		print(file)
 		outlines, outfile, break_loop = read_log_file(w_dir,file)
 
 		if break_loop:

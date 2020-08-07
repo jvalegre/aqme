@@ -292,17 +292,9 @@ def move_sdf_main(args):
 		destination_xtb = src +'/CSEARCH/xtb'
 		for file in all_xtb_conf_files:
 			moving_files(destination_xtb,src,file)
-		all_xtb_conf_files =  glob.glob('*_xtb_all_confs.sdf')
-		destination_xtb = src +'/CSEARCH/all_confs/xtb'
-		for file in all_xtb_conf_files:
-			moving_files(destination_xtb,src,file)
 	if args.CMIN=='ANI1ccx':
 		all_ani_conf_files = glob.glob('*_ani.sdf')
 		destination_ani = src +'/CSEARCH/ani1ccx'
-		for file in all_ani_conf_files:
-			moving_files(destination_ani,src,file)
-		all_ani_conf_files = glob.glob('*_ani_all_confs.sdf')
-		destination_ani = src +'/CSEARCH/all_confs/ani1ccx'
 		for file in all_ani_conf_files:
 			moving_files(destination_ani,src,file)
 	if args.CSEARCH=='rdkit':
@@ -432,8 +424,19 @@ def geom_par_main(args,log,w_dir_initial):
 			sdf_xtb =  w_dir_initial+'/CSEARCH/xtb/'+name+'_xtb.sdf'
 		if os.path.exists(w_dir_initial+'/CSEARCH/ani1ccx/'+name+'_ani.sdf'):
 			sdf_ani = w_dir_initial+'/CSEARCH/ani1ccx/'+name+'_ani.sdf'
-
-		calculate_parameters(sdf_rdkit,sdf_ani,sdf_xtb,log_files,args,log,w_dir_initial,name)
+		if os.path.exists(w_dir_initial+'/QMCALC/G16'):
+			args.path = w_dir_initial+'/QMCALC/G16/'
+			# Sets the folder and find the log files to analyze
+			for lot in args.level_of_theory:
+				for bs in args.basis_set:
+					for bs_gcp in args.basis_set_genecp_atoms:
+						#assign the path to the finished directory.
+						w_dir = args.path + str(lot) + '-' + str(bs) +'/success/output_files'
+						os.chdir(w_dir)
+						log_files = glob.glob(name+'_*.log')
+						calculate_parameters(sdf_rdkit,sdf_ani,sdf_xtb,log_files,args,log,w_dir_initial,name,lot,bs)
+		else:
+			calculate_parameters(sdf_rdkit,sdf_ani,sdf_xtb,None,args,log,w_dir_initial,name,None,None)
 
 		os.chdir(w_dir_initial)
 

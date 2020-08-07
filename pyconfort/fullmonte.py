@@ -61,7 +61,7 @@ def minimize_rdkit_energy(mol,conf,args,log):
 def rotate_dihedral(mol_rot,dih_rot,args,conf):
 	rad_range = np.arange(0.0, 360.0,args.ang_fullmonte)
 	for i,_ in enumerate(dih_rot):
-		random.seed(args.seed)
+		#random.seed(args.seed)
 		rad_ang = random.choice(rad_range)
 		rad = math.pi*rad_ang/180.0
 		rdMolTransforms.SetDihedralRad(mol_rot.GetConformer(conf),*dih_rot[i],value=rad)
@@ -100,15 +100,15 @@ def generating_conformations_fullmonte(name,args,rotmatches,log,selectedcids_rdk
 
 		while nsteps < args.nsteps_fullmonte:
 			#STEP 2: Choose mol object form unique_mol:
-			random.seed(args.seed)
+			#random.seed(4)
 			mol_rot = random.choices(unique_mol,k=1)[0]
 
 			#STEP 3: Choose randmon subset of dihedral from rotmatches
 			if len(rotmatches) > args.nrot_fullmonte:
-				random.seed(args.seed)
+				#random.seed(args.seed)
 				dih_rot = random.choices(rotmatches, k=args.nrot_fullmonte) #k can be varied base on user definitions
 			else:
-				random.seed(args.seed)
+				#random.seed(args.seed)
 				dih_rot = random.choices(rotmatches, k=len(rotmatches)) #k can be varied base on user definitions
 			#STEP 4: for the given conformation, then apply a random rotation to each torsion in the subset
 			rot_mol = rotate_dihedral(mol_rot,dih_rot,args,-1)
@@ -123,7 +123,10 @@ def generating_conformations_fullmonte(name,args,rotmatches,log,selectedcids_rdk
 			exclude_conf= False
 			# compare against allprevious conformers located
 			for j,seenmol in enumerate(unique_mol):
-				if abs(energy - c_energy[j]) < args.energy_threshold:
+				if abs(energy - c_energy[j]) < args.initial_energy_threshold:
+					exclude_conf = True
+					break
+				if  abs(energy - c_energy[j]) < args.energy_threshold:
 					rms = get_conf_RMS(rot_mol,seenmol,-1,-1, args.heavyonly, args.max_matches_RMSD,log)
 					if rms < args.rms_threshold:
 						exclude_conf = True
@@ -182,6 +185,6 @@ def generating_conformations_fullmonte(name,args,rotmatches,log,selectedcids_rdk
 
 	status = 1
 	#removes the rdkit file
-	#os.remove(name+'_'+'rdkit'+args.output)
+	os.remove(name+'_'+'rdkit'+args.output)
 
 	return status

@@ -74,6 +74,7 @@ def plot_graph(energy_rdkit,energy_min,energy_min_dft,lot,bs,name_mol,args,type_
 
     x_axis = [0,1,2]
     x_axis_2 = [0,1]
+    x_axis_3 = [0]
 
     list_all = []
     name_all = []
@@ -98,21 +99,25 @@ def plot_graph(energy_rdkit,energy_min,energy_min_dft,lot,bs,name_mol,args,type_
     cmap = get_cmap(len(list_all))
     Path = mpath.Path
     for i, list in enumerate(list_all):
-        path_patch_1 = mpatches.PathPatch(
-                Path([(x_axis[0], list[0]), (x_axis[0]+0.5, list[1]), (x_axis[1] ,list[1])],
-                     [Path.MOVETO, Path.CURVE3, Path.CURVE3]),
-                fc="none", transform=ax1.transData, color=cmap(i))
-        ax1.add_patch(path_patch_1)
-        if len(list) == 3:
-            path_patch_2 = mpatches.PathPatch(
-                    Path([(x_axis[1], list[1]), (x_axis[1]+0.5, list[2]), (x_axis[2] ,list[2])],
+        if len(list) == 2 or len(list) == 3:
+            path_patch_1 = mpatches.PathPatch(
+                    Path([(x_axis[0], list[0]), (x_axis[0]+0.5, list[1]), (x_axis[1] ,list[1])],
                          [Path.MOVETO, Path.CURVE3, Path.CURVE3]),
                     fc="none", transform=ax1.transData, color=cmap(i))
-            ax1.add_patch(path_patch_2)
-        if len(list) == 3:
-            ax1.scatter(x_axis,list,color=cmap(i), marker='o',zorder=2,edgecolors= "black",linewidth=0.5)
-        else:
-            ax1.scatter(x_axis_2,list,color=cmap(i), marker='o',zorder=2,edgecolors= "black",linewidth=0.5)
+            ax1.add_patch(path_patch_1)
+            if len(list) == 3:
+                path_patch_2 = mpatches.PathPatch(
+                        Path([(x_axis[1], list[1]), (x_axis[1]+0.5, list[2]), (x_axis[2] ,list[2])],
+                             [Path.MOVETO, Path.CURVE3, Path.CURVE3]),
+                        fc="none", transform=ax1.transData, color=cmap(i))
+                ax1.add_patch(path_patch_2)
+            if len(list) == 3:
+                ax1.scatter(x_axis,list,color=cmap(i), marker='o',zorder=2,edgecolors= "black",linewidth=0.5)
+            else:
+                ax1.scatter(x_axis_2,list,color=cmap(i), marker='o',zorder=2,edgecolors= "black",linewidth=0.5)
+        elif len(list) == 1:
+            ax1.scatter(x_axis_3,list,color=cmap(i), marker='o',zorder=2,edgecolors= "black",linewidth=0.5)
+
 
     plt.xticks(range(0,3), x_axis_names)
     # plt.text(0.5, 0, textstr , horizontalalignment='center', verticalalignment='center', transform=ax.transAxes, fontsize=14,bbox=dict(facecolor='black', alpha=0.5))
@@ -194,12 +199,12 @@ def graph(sdf_rdkit,sdf_xtb,sdf_ani,log_files,args,log,lot,bs,name_mol,w_dir_ini
     if  os.path.exists(w_dir_initial+'/CSEARCH/xtb/'+name_mol+'_xtb.sdf') and os.path.exists(w_dir_initial+'/CSEARCH/rdkit/'+name_mol+'_rdkit.sdf'):
         plot_graph(energy_rdkit_sc,energy_xtb_sc,energy_xtb_dft_sc,lot,bs,name_mol,args,'rdkit','xtb',w_dir_initial)
     if os.path.exists(w_dir_initial+'/CSEARCH/ani1ccx/'+name_mol+'_ani.sdf') and os.path.exists(w_dir_initial+'/CSEARCH/rdkit/'+name_mol+'_rdkit.sdf'):
-        plot_graph(energy_rdkit_sc,energy_ani_sc,energy_ani_dft_sc,lot,bs,name_mol,args,'rdkit','ani',w_dir_initial)
+        plot_graph(energy_rdkit_sc,energy_ani_sc,energy_ani_dft_sc,lot,bs,name_mol,args,'rdkit','ani1ccx',w_dir_initial)
 
     if  os.path.exists(w_dir_initial+'/CSEARCH/xtb/'+name_mol+'_xtb.sdf') and os.path.exists(w_dir_initial+'/CSEARCH/summ/'+name_mol+'_summ.sdf'):
         plot_graph(energy_rdkit_sc,energy_xtb_sc,energy_xtb_dft_sc,lot,bs,name_mol,args,'summ','xtb',w_dir_initial)
     if os.path.exists(w_dir_initial+'/CSEARCH/ani1ccx/'+name_mol+'_ani.sdf') and os.path.exists(w_dir_initial+'/CSEARCH/summ/'+name_mol+'_summ.sdf'):
-        plot_graph(energy_rdkit_sc,energy_ani_sc,energy_ani_dft_sc,lot,bs,name_mol,args,'summ','ani',w_dir_initial)
+        plot_graph(energy_rdkit_sc,energy_ani_sc,energy_ani_dft_sc,lot,bs,name_mol,args,'summ','ani1ccx',w_dir_initial)
 
     if os.path.exists(w_dir_initial+'/CSEARCH/summ/'+name_mol+'_summ.sdf') and not os.path.exists(w_dir_initial+'/CSEARCH/xtb/'+name_mol+'_xtb.sdf') and not os.path.exists(w_dir_initial+'/CSEARCH/ani1ccx/'+name_mol+'_ani.sdf'):
         plot_graph(energy_rdkit_sc,None,energy_rdkit_dft_sc,lot,bs,name_mol,args,'summ',None,w_dir_initial)
