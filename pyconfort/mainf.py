@@ -433,7 +433,7 @@ def geom_par_main(args,log,w_dir_initial):
 						#assign the path to the finished directory.
 						w_dir = args.path + str(lot) + '-' + str(bs) +'/success/output_files'
 						os.chdir(w_dir)
-						log_files = glob.glob(name+'_*.log')
+						log_files = get_com_or_log_out_files('output',name)
 						calculate_parameters(sdf_rdkit,sdf_ani,sdf_xtb,log_files,args,log,w_dir_initial,name,lot,bs)
 		else:
 			calculate_parameters(sdf_rdkit,sdf_ani,sdf_xtb,None,args,log,w_dir_initial,name,None,None)
@@ -468,7 +468,7 @@ def graph_main(args,log,w_dir_initial):
 						#assign the path to the finished directory.
 						w_dir = args.path + str(lot) + '-' + str(bs) +'/success/output_files'
 						os.chdir(w_dir)
-						log_files = glob.glob(name+'_*.log')
+						log_files = get_com_or_log_out_files('output',name)
 						graph(sdf_rdkit,sdf_xtb,sdf_ani,log_files,args,log,lot,bs,name,w_dir_initial)
 		else:
 			graph(sdf_rdkit,sdf_xtb,sdf_ani,None,args,log,None,None,name,w_dir_initial)
@@ -495,8 +495,7 @@ def nmr_main(args,log,w_dir_initial):
 					os.chdir(w_dir_fin)
 					log_files = get_com_or_log_out_files('output',name)
 					if len(log_files) != 0:
-						val = ' '.join(log_files)
-						calculate_boltz_and_nmr(val,args,log,name,w_dir_fin,w_dir_initial,lot,bs)
+						calculate_boltz_and_nmr(log_files,args,log,name,w_dir_fin,w_dir_initial,lot,bs)
 
 def energy_main(args,log,w_dir_initial):
 	#get sdf FILES from csv

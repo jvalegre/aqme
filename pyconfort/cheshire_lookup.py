@@ -51,7 +51,7 @@ def parse_html_table(table):
 
 
 ## Parse from local offline version of the CHESHIRE scaling factors html or directly from the web
-def cheshire(online, nucleus, opt_method, opt_basis, opt_solv, nmr_method, nmr_basis, nmr_solv, nmr_aos):
+def cheshire(online, nucleus, opt_method, opt_basis, opt_solv, nmr_method, nmr_basis, nmr_solv, nmr_aos,log):
 
     ## current time for printing
     now = datetime.datetime.now()
@@ -75,7 +75,9 @@ def cheshire(online, nucleus, opt_method, opt_basis, opt_solv, nmr_method, nmr_b
         else: print("  ", nmr_solv[0].upper()+'('+nmr_solv[1]+')-'+nmr_aos.upper()+'-'+calc_nmr+'//'+opt_solv[0].upper()+'('+opt_solv[1]+')-'+calc_opt)
 
     for table in html.find_all('table'):
+
         id = table['id']
+
         scaling_table = parse_html_table(table)
 
         # solvent details for the CHESHIRE database
@@ -98,6 +100,7 @@ def cheshire(online, nucleus, opt_method, opt_basis, opt_solv, nmr_method, nmr_b
         elif id == 'table5-water': scrf = ['pcm', 'water']
         elif id == 'table7': scrf = ['smd', 'chloroform']
         else: scrf = None
+
 
         # Look for a match between calculation and database (case insensitive)
         # Returns the first match and then breaks
@@ -122,4 +125,4 @@ def cheshire(online, nucleus, opt_method, opt_basis, opt_solv, nmr_method, nmr_b
                         #print db_nmr_solv, nmr_solv, db_opt_solv, opt_solv
                         if db_nmr_solv == nmr_solv and db_opt_solv == opt_solv:
                             print("   --- MATCH ---", id.upper()); return row['scale_'+nucleus]
-            except AttributeError: pass
+            except: pass
