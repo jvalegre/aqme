@@ -78,7 +78,7 @@ def calculate_nmr(nmr_log_files,args,log,name,w_dir_fin,w_dir_initial,lot_sp,bs_
 	for num_file,file in enumerate(nmr_log_files):
 
 		# list of H and C shieldings for each individual conformer
-		conf_H_shieldings, conf_H_idx, conf_C_shieldings, conf_C_idx, nmr_file_idx, = [],[],[],[],[]
+		conf_H_shieldings, conf_H_idx, conf_C_shieldings, conf_C_idx, nmr_file_idx,conf_H_sym,conf_C_sym = [],[],[],[],[],[],[]
 
 		# read the file and detects start and stop point enclosing the NMR section of the LOG file
 		start, stop = 0,0
@@ -106,6 +106,7 @@ def calculate_nmr(nmr_log_files,args,log,name,w_dir_fin,w_dir_initial,lot_sp,bs_
 
 						#conf_H_idx.append('H'+str(outlines[i].split()[0]))
 						conf_H_idx.append(outlines[i].split()[0])
+						conf_H_sym.append('H')
 						if TMS_H_ref is not None:
 							conf_H_shieldings.append(TMS_H_ref-float(outlines[i].split()[4]))
 						else:
@@ -114,12 +115,13 @@ def calculate_nmr(nmr_log_files,args,log,name,w_dir_fin,w_dir_initial,lot_sp,bs_
 					if outlines[i].split()[1] == 'C':
 						#assigning values from arrays
 						index = args.nmr_nucleus.index('13C')
-						TMS_H_ref = tms_ref[index]
-						slope_H = slope[index]
-						intercept_H = intercept[index]
+						TMS_C_ref = tms_ref[index]
+						slope_C = slope[index]
+						intercept_C = intercept[index]
 
 						#conf_C_idx.append('C'+str(outlines[i].split()[0]))
-						conf_H_idx.append(outlines[i].split()[0])
+						conf_C_idx.append(outlines[i].split()[0])
+						conf_C_sym.append('C')
 						if TMS_C_ref is not None:
 							conf_C_shieldings.append(TMS_C_ref-float(outlines[i].split()[4]))
 						else:
@@ -155,16 +157,20 @@ def calculate_nmr(nmr_log_files,args,log,name,w_dir_fin,w_dir_initial,lot_sp,bs_
 		final_H_shieldings = np.array(final_H_shieldings)
 		final_H_shieldings = np.sum(final_H_shieldings, axis=0)
 		conf_H_idx = np.array(conf_H_idx)
+		conf_H_sym = np.array(conf_H_sym)
+
 
 	if '13C' in args.nmr_nucleus:
 		final_C_shieldings = np.array(final_C_shieldings)
 		final_C_shieldings = np.sum(final_C_shieldings,axis=0)
 		conf_C_idx = np.array(conf_C_idx)
+		conf_C_sym = np.array(conf_C_sym)
 
 	# concatenate H and C data one after the other (for printing in the CSV)
 	if final_C_shieldings is not None:
 		all_shieldings = np.concatenate((final_H_shieldings, final_C_shieldings))
 		all_idx = np.concatenate((conf_H_idx, conf_C_idx))
+		all_sym = np.concatenate((conf_H_sym, conf_C_sym))
 
 
 	#getting experimental shiftd for get_atom
@@ -177,11 +183,17 @@ def calculate_nmr(nmr_log_files,args,log,name,w_dir_fin,w_dir_initial,lot_sp,bs_
 		for j,atom_cal in enumerate(all_idx):
 			if atom_num == atom_cal:
 				df.at[i,'Shielding-Cal'] = all_shieldings[j]
+				df.at[i,'Atom-Symbol'] = all_sym[j]
 
 	#calculation of MAE and SD
-	mae,sd = nmr_stats(df['Shielding-Exp'],df['Shielding-Cal'])
-
-	log.write("\no  The MAE and SD for molecule {0} is {1} and {2} respectively".format(name,mae,sd))
+	if '1H' in args.nmr_nucleus:
+		df_H = df.loc[df['Atom-Symbol'] == 'H']
+		mae_H,sd_H = nmr_stats(df_H['Shielding-Exp'],df_H['Shielding-Cal'])
+		log.write("\no  The MAE and SD for molecule {0} is {1} and {2} respectively for 1H".format(name,mae_H,sd_H))
+	if '13C' in args.nmr_nucleus:
+		df_C = df.loc[df['Atom-Symbol'] == 'C']
+		mae_C,sd_C = nmr_stats(df_C['Shielding-Exp'],df_C['Shielding-Cal'])
+		log.write("\no  The MAE and SD for molecule {0} is {1} and {2} respectively for 13C".format(name,mae_C,sd_C))
 
 	w_dir = os.getcwd()
 	folder = w_dir_initial+'/QPRED/nmr/average-nmr/'+str(lot_sp)+'-'+str(bs_sp)
