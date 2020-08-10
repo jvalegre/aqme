@@ -432,7 +432,9 @@ def rdkit_to_sdf(mol, name,args,log,dup_data,dup_data_idx, coord_Map, alg_Map, m
 	elif args.CSEARCH =='fullmonte':
 		sdwriter = Chem.SDWriter(name+'_'+'fullmonte'+args.output)
 	Chem.SanitizeMol(mol)
-	mol = Chem.AddHs(mol)
+	if os.path.splitext(args.input)[1] == '.csv' or os.path.splitext(args.input)[1] == '.cdx' or os.path.splitext(args.input)[1] == '.smi':
+		mol = Chem.AddHs(mol)
+
 	mol.SetProp("_Name",name)
 
 	# detects and applies auto-detection of initial number of conformers
