@@ -24,7 +24,7 @@ def nmr_stats(y_exp,y_pred):
 	sd = y_sd.std()
 	return mae,sd
 
-def get_exp_data(args,name,w_dir_initial):
+def get_exp_data(args,name,w_dir_initial,final_shieldings,conf_idx,conf_sym):
 	if args.nmr_exp == 'fromsdf':
 		sdf_file = w_dir_initial+'/'+name+'.sdf'
 		sdf_lines = open(sdf_file,'r').readlines()
@@ -39,13 +39,39 @@ def get_exp_data(args,name,w_dir_initial):
 
 		atom_num,atom_sheilding = [],[]
 		for i in range(start,stop):
-			if len(sdf_lines[i].split(',')) == 3:
-				atom_num.append(sdf_lines[i].split(',')[2].strip().split('\\')[0])
-				atom_sheilding.append(sdf_lines[i].split(',')[1].strip())
-			if len(sdf_lines[i].split(',')) > 3:
-				for j in range(2,len(sdf_lines[i].split(','))):
-					atom_num.append(sdf_lines[i].split(',')[j].strip().split('\\')[0])
-					atom_sheilding.append(sdf_lines[i].split(',')[1].strip())
+			split_line = sdf_lines[i].split(',')
+			if len(split_line) == 3:
+				if len(split_line[1].split('-'))>1:
+					split_line_sheild = split_line[1].split('-')
+					split_line_atom = split_line[2].split('-')
+					for idx, shield in zip(conf_idx,final_shieldings):
+						if idx in split_line_atom:
+							split_line_sheild_min  = split_line_sheild -  shield
+							idx_min = split_line_sheild_min.index(min(split_line_sheild_min))
+							atom_num.append(split_line_atom[idx_min])
+							atom_sheilding.append(split_line_sheild[idx_min])
+				else:
+					atom_num.append(split_line[2].strip().split('\\')[0])
+					atom_sheilding.append(split_line[1].strip())
+			if len(split_line) > 3:
+				atom_shield_cal,atom_idx_cal,sym = [],[],None
+				calcuate_idx="-"
+				for j in range(2,len(split_line)):
+					atom_idx_cal.append(j)
+					atom_shield_cal.append(final_shieldings[conf_idx.index(j)])
+					final_shieldings = final_shieldings.pop(conf_idx.index(j))
+					conf_idx = conf_idx.pop(conf_idx.index(j))
+					sym = conf_sym[(conf_idx.index(j))]
+					conf_sym = conf_sym.pop(conf_idx.index(j))
+
+				calculate_avg = np.average(atom_shield_cal)
+				calcuate_idx = calcuate_idx.join(atom_idx_cal)
+				final_shieldings.append(calculate_avg)
+				conf_idx.append(calcuate_idx)
+				conf_idx.append(sym)
+
+				atom_num.append(calcuate_idx)
+				atom_sheilding.append(split_line[1].strip())
 
 		return atom_num,atom_sheilding
 
@@ -139,7 +165,7 @@ def calculate_nmr(nmr_log_files,args,log,name,w_dir_fin,w_dir_initial,lot_sp,bs_
 	conf_sym = np.array(conf_sym)
 
 	#getting experimental shiftd for get_atom
-	atom_num_exp,atom_sheilding_exp = get_exp_data(args,name,w_dir_initial)
+	atom_num_exp,atom_sheilding_exp = get_exp_data(args,name,w_dir_initial,final_shieldings,conf_idx)
 
 	#make final array with atom_num, exp, dft
 	df = pd.DataFrame({'Atom': atom_num_exp, 'Shielding-Exp': atom_sheilding_exp }, columns=['Atom', 'Shielding-Exp'])
@@ -154,7 +180,7 @@ def calculate_nmr(nmr_log_files,args,log,name,w_dir_fin,w_dir_initial,lot_sp,bs_
 	for atom_nuc in args.nmr_nucleus:
 		df_nuc = df.loc[df['Atom-Symbol'] == atom_nuc]
 		mae_nuc,sd_nuc = nmr_stats(df_nuc['Shielding-Exp'],df_nuc['Shielding-Cal'])
-		log.write("\no  The MAE and SD for molecule {0} is {1} and {2} respectively for {2}".format(name,mae_nuc,sd_nuc,atom_nuc))
+		log.write("\no  The MAE and SD for molecule {0} is {1} and {2} respectively for {3}".format(name,mae_nuc,sd_nuc,atom_nuc))
 
 	w_dir = os.getcwd()
 	folder = w_dir_initial+'/QPRED/nmr/average-nmr/'+str(lot_sp)+'-'+str(bs_sp)

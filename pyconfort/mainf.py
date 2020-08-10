@@ -473,6 +473,8 @@ def graph_main(args,log,w_dir_initial):
 		else:
 			graph(sdf_rdkit,sdf_xtb,sdf_ani,None,args,log,None,None,name,w_dir_initial)
 
+	os.chdir(w_dir_initial)
+
 
 #function for compariosn of nmr
 def nmr_main(args,log,w_dir_initial):
@@ -496,6 +498,7 @@ def nmr_main(args,log,w_dir_initial):
 					log_files = get_com_or_log_out_files('output',name)
 					if len(log_files) != 0:
 						calculate_boltz_and_nmr(log_files,args,log,name,w_dir_fin,w_dir_initial,lot,bs)
+	os.chdir(w_dir_initial)
 
 def energy_main(args,log,w_dir_initial):
 	#get sdf FILES from csv
@@ -530,6 +533,8 @@ def energy_main(args,log,w_dir_initial):
 				dat_files = glob.glob('*.dat')
 				if len(dat_files) != 0:
 					calculate_avg_and_energy(dat_files,args,log,name,w_dir_fin,w_dir_initial,w_dir_boltz,lot,bs)
+
+	os.chdir(w_dir_initial)
 
 
 # MAIN OPTION FOR DISCARDING MOLECULES BASED ON USER INPUT DATA (REFERRED AS EXPERIMENTAL RULES)
