@@ -124,7 +124,7 @@ def parser_args():
 	parser.add_argument("--nmr_exp_file", dest="nmr_exp_file", action="store", help="Specify the NMR experimental file", default="No file passed")
 	parser.add_argument("--nmr_online", action="store_true", default=False, help="Turn to true for checking NMR scaling factors from ChesHire Database")
 	parser.add_argument("--nmr_aos", help="Specify the type of atomic basis used for nmr calculation (default = giao) ", default='giao', type=str)
-	parser.add_argument("--nmr_nucleus",help="Specify the nucleus for nmr analysis default (['13C','1H'])", default=['13C','1H'], dest="nmr_nucleus", type=str, nargs='*')
+	parser.add_argument("--nmr_nucleus",help="Specify the nucleus for nmr analysis default (['C','H'])", default=['C','H'], dest="nmr_nucleus", type=str, nargs='*')
 	parser.add_argument("--nmr_slope",help="Specify the slope for each nucleus for nmr analysis default([1.0673,1.0759])", default=[1.0673,1.0759], dest="nmr_slope", type=float, nargs='*')
 	parser.add_argument("--nmr_intercept",help="Specify the intercept for each nucleus for nmr analysis default([-15.191,-2.2094])", default=[-15.191,-2.2094], dest="nmr_intercept", type=float, nargs='*')
 	parser.add_argument("--nmr_tms_ref",help="Specify the reference for TMS for each nucleus for nmr analysis default([189.504625,31.56496667])", default=[189.504625,31.56496667], dest="nmr_tms_ref", type=float, nargs='*')
