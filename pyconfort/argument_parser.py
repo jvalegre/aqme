@@ -12,7 +12,7 @@ def parser_args():
 	#necessary input details
 	parser.add_argument("--varfile", dest="varfile", default=None, help="Parameters in YAML format")
 	parser.add_argument("-i", "--input", help="File containing molecular structure(s)",dest="input", default=" ")
-	parser.add_argument("--output_name",action="store",dest="output_name", default="output", help="Change output filename to pyCONFORT-\"output\".dat")
+	parser.add_argument("--output_name",action="store", default="output", help="Change output filename to pyCONFORT-\"output\".dat", type=str)
 
 	parser.add_argument("--path", help="Path for analysis/boltzmann factor/combining files where the gaussian folder created is present",dest="path", default="")
 	parser.add_argument("-v","--verbose",action="store_true",default=False, help="verbose output")

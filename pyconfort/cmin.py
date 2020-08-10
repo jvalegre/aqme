@@ -192,7 +192,6 @@ def optimize(mol, args, program,log,dup_data,dup_data_idx):
 # read SDF files from RDKit optimization
 def rdkit_sdf_read(name, args, log):
 	inmols = Chem.SDMolSupplier(name+args.output, removeHs=False)
-	print(inmols)
 	if inmols is None:
 		log.write("Could not open "+ name+args.output)
 		sys.exit(-1)

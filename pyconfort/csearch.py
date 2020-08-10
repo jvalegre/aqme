@@ -89,11 +89,11 @@ def substituted_mol(mol,args,log):
 #mol from sdf
 def mol_from_sdf_or_mol_or_mol2(args):
 	if os.path.splitext(args.input)[1] =='.sdf':
-		suppl = Chem.SDMolSupplier(args.input)
+		suppl = Chem.SDMolSupplier(args.input, removeHs=False)
 	elif os.path.splitext(args.input)[1] =='.mol':
-		suppl = Chem.MolFromMolFile(args.input)
+		suppl = Chem.MolFromMolFile(args.input, removeHs=False)
 	elif os.path.splitext(args.input)[1] =='.mol2':
-		suppl = Chem.MolFromMol2File(args.input)
+		suppl = Chem.MolFromMol2File(args.input, removeHs=False)
 
 	IDs,charges = [],[]
 	readlines = open(args.input,"r").readlines()

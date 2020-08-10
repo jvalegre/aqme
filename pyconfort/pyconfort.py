@@ -85,5 +85,7 @@ def main():
 	if args.QSTAT=='graph':
 		graph_main(args,log,w_dir_initial)
 
+	os.rename('pyCONFORT_output.dat','pyCONFORT_{0}.dat'.format(args.output_name))
+
 if __name__ == "__main__":
 	main()

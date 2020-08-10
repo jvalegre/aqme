@@ -152,7 +152,7 @@ def get_genecp(file,args):
 
 	try:
 		#reading the sdf to check for I atom_symbol
-		suppl = Chem.SDMolSupplier(file)
+		suppl = Chem.SDMolSupplier(file, removeHs=False)
 		for atom in suppl[0].GetAtoms():
 			if atom.GetSymbol() in args.genecp_atoms:
 				genecp = 'genecp'

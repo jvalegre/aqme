@@ -185,7 +185,7 @@ def csearch_main(w_dir_initial,dup_data,args,log,start_time):
 		#converting to sdf from comfile to preserve geometry
 		charge_com = com_2_xyz_2_sdf(args)
 		sdffile = os.path.splitext(args.input)[0]+'.sdf'
-		suppl = Chem.SDMolSupplier(sdffile)
+		suppl = Chem.SDMolSupplier(sdffile, removeHs=False)
 		name = os.path.splitext(args.input)[0]
 		counter_for_template = 0
 		i=0
