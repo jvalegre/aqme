@@ -1,0 +1,4 @@
+input : 'smi.smi'
+output_name : 'test'
+verbose : True
+CSEARCH : True

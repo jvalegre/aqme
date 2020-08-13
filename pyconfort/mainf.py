@@ -377,6 +377,7 @@ def qcorr_gaussian_main(w_dir_initial,args,log):
 					com_files = get_com_or_log_out_files('input')
 					output_analyzer(log_files, com_files, w_dir, w_dir_main , lot, bs, bs_gcp, args, w_dir_fin,w_dir_initial,log,ana_data,round_num)
 		os.chdir(args.path)
+	os.chdir(w_dir_initial)
 
 #removing the duplicates
 def dup_main(args,log,w_dir_initial):

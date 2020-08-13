@@ -26,7 +26,7 @@ def nmr_stats(y_exp,y_pred):
 
 def get_exp_data(args,name,w_dir_initial,final_shieldings,conf_idx,conf_sym):
 	if args.nmr_exp == 'fromsdf':
-		sdf_file = w_dir_initial+'/'+name+'.sdf'
+		sdf_file = w_dir_initial+'/'+name.split('_')[0]+'.sdf'
 		sdf_lines = open(sdf_file,'r').readlines()
 		found_nmr = 0
 		for i,line in enumerate(sdf_lines):
@@ -44,34 +44,76 @@ def get_exp_data(args,name,w_dir_initial,final_shieldings,conf_idx,conf_sym):
 				if len(split_line[1].split('-'))>1:
 					split_line_sheild = split_line[1].split('-')
 					split_line_atom = split_line[2].split('-')
+					split_line_atom[0] = split_line_atom[0].strip()
+					split_line_sheild[0] = split_line_sheild[0].strip()
+					split_line_atom[len(split_line_atom) -1 ] = split_line_atom[len(split_line_atom) -1 ].strip().split('\\')[0]
 					for idx, shield in zip(conf_idx,final_shieldings):
 						if idx in split_line_atom:
-							split_line_sheild_min  = split_line_sheild -  shield
-							idx_min = split_line_sheild_min.index(min(split_line_sheild_min))
-							atom_num.append(split_line_atom[idx_min])
-							atom_sheilding.append(split_line_sheild[idx_min])
+							#print(idx)
+							split_line_sheild_min  = np.array(split_line_sheild,dtype=float) - float(shield)
+							#print(split_line_sheild_min)
+							#idx_min = split_line_sheild_min.index(min(split_line_sheild_min))
+							idx_min =np.argmin(abs(split_line_sheild_min))
+							if split_line_atom[idx_min] in atom_num:
+								if split_line_atom[idx_min] != idx:
+									atom_num.append(idx)
+									atom_sheilding.append(split_line_sheild[split_line_atom.index(idx)])
+									#print(atom_num)
+									#print(atom_sheilding)
+								else:
+									if idx_min ==1:
+										atom_num.append(split_line_atom[0])
+										atom_sheilding.append(split_line_sheild[0])
+										#print(atom_num)
+										#print(atom_sheilding)
+									if idx_min ==0:
+										atom_num.append(split_line_atom[1])
+										atom_sheilding.append(split_line_sheild[1])
+										#print(atom_num)
+										#print(atom_sheilding)
+							else:
+								atom_num.append(split_line_atom[idx_min])
+								atom_sheilding.append(split_line_sheild[idx_min])
+								#print(atom_num)
+								#print(atom_sheilding)
 				else:
 					atom_num.append(split_line[2].strip().split('\\')[0])
 					atom_sheilding.append(split_line[1].strip())
 			if len(split_line) > 3:
+				for k in range(2,len(split_line)):
+					split_line[k] = split_line[k].strip()
+					if k == len(split_line) -1:
+						split_line[k] = split_line[k].strip().split('\\')[0]
+
 				atom_shield_cal,atom_idx_cal,sym = [],[],None
 				calcuate_idx="-"
 				for j in range(2,len(split_line)):
-					atom_idx_cal.append(j)
-					atom_shield_cal.append(final_shieldings[conf_idx.index(j)])
-					final_shieldings = final_shieldings.pop(conf_idx.index(j))
-					conf_idx = conf_idx.pop(conf_idx.index(j))
-					sym = conf_sym[(conf_idx.index(j))]
-					conf_sym = conf_sym.pop(conf_idx.index(j))
+					for i, id_conf in enumerate(conf_idx):
+						if id_conf == split_line[j]:
+							idx_in_conf_idx = i
+							break
+
+					atom_idx_cal.append(split_line[j])
+					atom_shield_cal.append(final_shieldings[idx_in_conf_idx])
+					final_shieldings = np.delete(final_shieldings, idx_in_conf_idx)
+					conf_idx = np.delete(conf_idx, idx_in_conf_idx)
+					sym = conf_sym[idx_in_conf_idx]
+					conf_sym = np.delete(conf_sym, idx_in_conf_idx)
 
 				calculate_avg = np.average(atom_shield_cal)
 				calcuate_idx = calcuate_idx.join(atom_idx_cal)
-				final_shieldings.append(calculate_avg)
-				conf_idx.append(calcuate_idx)
-				conf_idx.append(sym)
+				final_shieldings = np.append(final_shieldings,calculate_avg)
+				conf_idx = np.append(conf_idx,calcuate_idx)
+				conf_sym = np.append(conf_sym,sym)
 
 				atom_num.append(calcuate_idx)
 				atom_sheilding.append(split_line[1].strip())
+
+		# for i in range(len(atom_sheilding)):
+		# 	print(atom_num[i],atom_sheilding[i])
+		#
+		# for i in range(len(final_shieldings)):
+		# 	print(final_shieldings[i],conf_idx[i],conf_sym[i])
 
 		return atom_num,atom_sheilding
 
@@ -149,7 +191,7 @@ def calculate_nmr(nmr_log_files,args,log,name,w_dir_fin,w_dir_initial,lot_sp,bs_
 		boltz_outlines = boltz_outfile.readlines()
 		for i in range(len(boltz_outlines)):
 			# I remove the NMR from the file names using [0:-4]
-			if boltz_outlines[i].find(file.split('_NMR')[0]) > -1:
+			if boltz_outlines[i].find(file.split('-NMR')[0]) > -1:
 				boltz_factor = float(boltz_outlines[i].split()[-1])
 				break
 
@@ -164,8 +206,11 @@ def calculate_nmr(nmr_log_files,args,log,name,w_dir_fin,w_dir_initial,lot_sp,bs_
 	conf_idx = np.array(conf_idx)
 	conf_sym = np.array(conf_sym)
 
+	# for i in range(len(final_shieldings)):
+	# 	print(final_shieldings[i],conf_idx[i],conf_sym[i])
+
 	#getting experimental shiftd for get_atom
-	atom_num_exp,atom_sheilding_exp = get_exp_data(args,name,w_dir_initial,final_shieldings,conf_idx)
+	atom_num_exp,atom_sheilding_exp = get_exp_data(args,name,w_dir_initial,final_shieldings,conf_idx,conf_sym)
 
 	#make final array with atom_num, exp, dft
 	df = pd.DataFrame({'Atom': atom_num_exp, 'Shielding-Exp': atom_sheilding_exp }, columns=['Atom', 'Shielding-Exp'])
@@ -215,5 +260,6 @@ def calculate_boltz_and_nmr(val,args,log,name,w_dir_fin,w_dir_initial,lot,bs):
 				dir_sp_nmr =  w_dir_fin+'/../G16-SP_input_files/'+str(lot_sp)+'-'+str(bs_sp)
 				os.chdir(dir_sp_nmr)
 				#grabbing the respective NMR files for a given molecules
-				nmr_log_files = glob.glob(name+'*_NMR.log') + glob.glob(name+'*_NMR_*.log')
+				nmr_log_files = glob.glob(name+'*NMR.log') + glob.glob(name+'*NMR*.log')
+				print(nmr_log_files)
 				calculate_nmr(nmr_log_files,args,log,name,w_dir_fin,w_dir_initial,lot_sp,bs_sp,lot,bs)

@@ -71,6 +71,7 @@ def main():
 		if args.dup:
 			dup_main(args,log, w_dir_initial)
 			os.chdir(w_dir_initial)
+		log.write("\no  Writing analysis of output files in respective folders with dat_files\n")
 		qcorr_gaussian_main(w_dir_initial,args,log)
 
 	#QPRED

@@ -63,20 +63,20 @@ def scaling_with_lowest(energy):
 	return energy
 
 def plot_graph(energy_rdkit,energy_min,energy_min_dft,lot,bs,name_mol,args,type_csearch,type_min,w_dir_initial):
+
 	if energy_min_dft is not None:
 		energy_dft_mae_sd,energy_min_mae_sd,energy_rdkit_mae_sd = [],[],[]
 		for i,_ in enumerate(energy_min_dft):
-			list = []
-			name = energy_rdkit[i][0]
+			name = energy_min_dft[i][0]
 			energy_dft_mae_sd.append(float(energy_min_dft[i][1]))
 			if energy_min is not None:
-				for i,_ in enumerate(energy_min):
-					if energy_min[i][0] == name:
-						energy_min_mae_sd.append(float(energy_min[i][1]))
+				for j,_ in enumerate(energy_min):
+					if energy_min[j][0] == name:
+						energy_min_mae_sd.append(float(energy_min[j][1]))
 			if energy_rdkit is not None:
-				for i,_ in enumerate(energy_rdkit):
-					if energy_rdkit[i][0] == name:
-						energy_rdkit_mae_sd.append(float(energy_rdkit[i][1]))
+				for k,_ in enumerate(energy_rdkit):
+					if energy_rdkit[k][0] == name:
+						energy_rdkit_mae_sd.append(float(energy_rdkit[k][1]))
 
 		mae_rdkit,sd_rdkit = stats_calc(energy_dft_mae_sd,energy_rdkit_mae_sd)
 		mae_min,sd_min = stats_calc(energy_dft_mae_sd,energy_min_mae_sd)
