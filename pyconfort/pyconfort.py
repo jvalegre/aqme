@@ -45,11 +45,13 @@ def main():
 	if len(args.basis_set_genecp_atoms) == 0:
 		args.basis_set_genecp_atoms = ['LANL2DZ']
 
-	#CSEARCH
+	#CSEARCH AND CMIN
 	if args.CSEARCH=='rdkit' or args.CSEARCH=='summ' or args.CSEARCH=='fullmonte':
 		#creation of csv to write dup data
 		dup_data = creation_of_dup_csv(args)
 		csearch_main(w_dir_initial,dup_data,args,log,start_time)
+		# moving files after compute and/or write_gauss
+		move_sdf_main(args)
 
 
 	##### neeed to fix!
@@ -60,10 +62,6 @@ def main():
 	#QPREP
 	if args.QPREP=='gaussian':
 		qprep_gaussian_main(args,log)
-
-	# moving files after compute and/or write_gauss
-	if args.CSEARCH=='rdkit' or args.CSEARCH=='summ' or args.CSEARCH=='fullmonte':
-		move_sdf_main(args)
 
 	#QCORR
 	if args.QCORR=='gaussian':
@@ -86,6 +84,7 @@ def main():
 	if args.QSTAT=='graph':
 		graph_main(args,log,w_dir_initial)
 
+	log.finalize()
 	os.rename('pyCONFORT_output.dat','pyCONFORT_{0}.dat'.format(args.output_name))
 
 if __name__ == "__main__":
