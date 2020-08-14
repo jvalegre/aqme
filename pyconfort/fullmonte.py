@@ -137,10 +137,6 @@ def generating_conformations_fullmonte(name,args,rotmatches,log,selectedcids_rdk
 			c_energy.append(energy)
 			unique_mol[c_energy.index(energy)].SetProp("Energy", str(energy))
 
-		for ene in c_energy:
-			indx = c_energy.index(ene)
-
-
 		#STEP 6: ANALYSE THE UNIQUE list for lowest energy, reorder the uniques if greater the given thershold remove
 		globmin = min(c_energy)
 		for ene in reversed(c_energy):
@@ -163,7 +159,6 @@ def generating_conformations_fullmonte(name,args,rotmatches,log,selectedcids_rdk
 	#STEP 9: WRITE FINAL uniques to sdf for xtb or ani
 	for i, cid in enumerate(sorted_all_cids):
 		unique_mol[cid].SetProp('_Name',name+' '+str(i))
-		# print(c_energy[cid],unique_mol[cid].GetProp('Energy'))
 		if coord_Map is None and alg_Map is None and mol_template is None:
 			if args.metal_complex:
 				set_metal_atomic_number(unique_mol[cid],args)
