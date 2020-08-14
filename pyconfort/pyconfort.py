@@ -50,9 +50,6 @@ def main():
 		#creation of csv to write dup data
 		dup_data = creation_of_dup_csv(args)
 		csearch_main(w_dir_initial,dup_data,args,log,start_time)
-		# moving files after compute and/or write_gauss
-		move_sdf_main(args)
-
 
 	##### neeed to fix!
 	#applying rules to discard certain conformers based on rules that the user define
@@ -62,6 +59,10 @@ def main():
 	#QPREP
 	if args.QPREP=='gaussian':
 		qprep_gaussian_main(args,log)
+
+	if args.CSEARCH=='rdkit' or args.CSEARCH=='summ' or args.CSEARCH=='fullmonte':
+		# moving files after compute and/or write_gauss
+		move_sdf_main(args)
 
 	#QCORR
 	if args.QCORR=='gaussian':
@@ -85,7 +86,12 @@ def main():
 		graph_main(args,log,w_dir_initial)
 
 	log.finalize()
-	os.rename('pyCONFORT_output.dat','pyCONFORT_{0}.dat'.format(args.output_name))
+	try:
+		os.rename('pyCONFORT_output.dat','pyCONFORT_{0}.dat'.format(args.output_name))
+	except FileExistsError:
+		os.remove('pyCONFORT_{0}.dat'.format(args.output_name))
+		os.rename('pyCONFORT_output.dat','pyCONFORT_{0}.dat'.format(args.output_name))
+
 
 if __name__ == "__main__":
 	main()

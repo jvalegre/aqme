@@ -258,25 +258,33 @@ def qprep_gaussian_main(args,log):
 			for bs in args.basis_set:
 				for bs_gcp in args.basis_set_genecp_atoms:
 					# only create this directory if single point calculation is requested
+					if bs.find('**') > -1:
+						bs = bs.replace('**','(d,p)')
+					elif bs.find('*') > -1:
+						bs = bs.replace('*','(d)')
 					if args.single_point:
 						folder = sp_dir + '/' + str(lot) + '-' + str(bs)
-						log.write("\no  PREPARING SINGLE POINT INPUTS in {}".format(folder))
+						log.write("\no  Preparing single-point inputs in {}".format(folder))
 					else:
 						folder = g_dir + '/' + str(lot) + '-' + str(bs)
-						log.write("\no  Preparing Gaussian COM files in {}".format(folder))
+						log.write("\no  Preparing QM input files in {}".format(folder))
+					# this variable keeps trakc of folder creation
+					folder_error = False
 					try:
 						os.makedirs(folder)
 					except OSError:
 						if os.path.isdir(folder):
 							pass
 						else:
-							raise
+							print('\nx  The QMCALC folder from QPREP could not be created, probably due to incompatible characters')
+							folder_error = True
 					# writing the com files
 					# check conf_file exists, parse energies and then write DFT input
 					for file in conf_files:
 						if os.path.exists(file):
 							if args.verbose:
-								log.write("   -> Converting from {}".format(file))
+								if not folder_error:
+									log.write("   -> Converting from {}".format(file))
 							energies = read_energies(file,log)
 							name = file.split('.')[0]
 

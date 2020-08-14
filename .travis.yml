@@ -50,6 +50,9 @@ install:
   - pip install torch==1.5.0+cpu torchvision==0.6.0+cpu -f https://download.pytorch.org/whl/torch_stable.html
   - pip install torchani==2.0
   - pip install goodvibes==3.0.1
+  - pip install cclib==1.6.3
+  - pip install matplotlib==3.2.2
+  - pip install seaborn==0.10.1
   # for xTB
   # - pip install Cython==0.29.19
   - pip install importlib==1.0.4

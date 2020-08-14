@@ -205,11 +205,9 @@ def compute_confs(w_dir_initial,mol, name,args,log,dup_data,counter_for_template
 			else:
 				log.write("x  Cannot use templates for complexes involving more than 1 metal or for organic molecueles.")
 		else:
-			status = conformer_generation(mol,name,start_time,args,log,dup_data,i)
+			conformer_generation(mol,name,start_time,args,log,dup_data,i)
 	else:
-		 status = conformer_generation(mol,name,start_time,args,log,dup_data,i)
-
-	return status
+		 conformer_generation(mol,name,start_time,args,log,dup_data,i)
 
 # FUCNTION WORKING WITH MOL OBJECT TO CREATE CONFORMERS
 def conformer_generation(mol,name,start_time,args,log,dup_data,dup_data_idx,coord_Map=None,alg_Map=None,mol_template=None):
@@ -260,8 +258,6 @@ def conformer_generation(mol,name,start_time,args,log,dup_data,dup_data_idx,coor
 	if args.time:
 		log.write("\n Execution time: %s seconds" % (round(time.time() - start_time,2)))
 		dup_data.at[dup_data_idx, 'time (seconds)'] = round(time.time() - start_time,2)
-
-	return status
 
 # DETECTS INITIAL NUMBER OF SAMPLES AUTOMATICALLY
 def auto_sampling(mult_factor,mol,args,log):
@@ -406,7 +402,7 @@ def min_after_embed(mol,cids,name,initial_confs,rotmatches,dup_data,dup_data_idx
 			log.write("\n\no  Systematic generation of "+ str(n_confs)+ " confomers")
 			bar = IncrementalBar('o  Generating conformations based on dihedral rotation', max = len(selectedcids_rdkit))
 		else:
-			bar = IncrementalBar('o  Generating conformations', max = len(selectedcids_rdkit))
+			bar = IncrementalBar('o  Writing unique conformers into an sdf file', max = len(selectedcids_rdkit))
 
 		total = 0
 		for conf in selectedcids_rdkit:

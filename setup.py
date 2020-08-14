@@ -11,7 +11,7 @@ setup(
   name='pyconfort',
   packages=['pyconfort'],
   package_data={'pyconfort': ['templates/*']},
-  version='1.0.1',
+  version='1.1.0',
   license='MIT',
   description='Python-based conformer generation and post-processing of DFT output files',
   long_description=long_description,

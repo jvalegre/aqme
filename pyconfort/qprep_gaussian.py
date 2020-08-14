@@ -195,95 +195,101 @@ def write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args, log, 
 		path_write_gjf_files = 'QMCALC/G16-SP_input_files/' + str(lot) + '-' + str(bs)
 	else:
 		path_write_gjf_files = 'QMCALC/G16/' + str(lot) + '-' + str(bs)
+	try:
+		os.chdir(path_write_gjf_files)
 
-	os.chdir(path_write_gjf_files)
+		path_for_file = '../../../'
 
-	path_for_file = '../../../'
+		com = '{0}_.com'.format(name)
+		com_low = '{0}_low.com'.format(name)
 
-	com = '{0}_.com'.format(name)
-	com_low = '{0}_low.com'.format(name)
+		header = header_com(name,lot, bs, bs_gcp,args,log, input_route, genecp)
 
-	header = header_com(name,lot, bs, bs_gcp,args,log, input_route, genecp)
+		convert_sdf_to_com(path_for_file,file,com,com_low,energies,header,args,log)
 
-	convert_sdf_to_com(path_for_file,file,com,com_low,energies,header,args,log)
+		com_files = glob.glob('{0}_*.com'.format(name))
 
-	com_files = glob.glob('{0}_*.com'.format(name))
+		for file in com_files:
+			if genecp =='genecp' or genecp == 'gen':
+				ecp_list,ecp_genecp_atoms,ecp_gen_atoms = [],False,False
+				read_lines = open(file,"r").readlines()
 
-	for file in com_files:
-		if genecp =='genecp' or genecp == 'gen':
-			ecp_list,ecp_genecp_atoms,ecp_gen_atoms = [],False,False
-			read_lines = open(file,"r").readlines()
+				rename_file_name = rename_file_and_charge_chk_change(read_lines,file,args,charge_com)
 
-			rename_file_name = rename_file_and_charge_chk_change(read_lines,file,args,charge_com)
+				read_lines = open(file,"r").readlines()
 
-			read_lines = open(file,"r").readlines()
+				fileout = open(file, "a")
+				# Detect if there are atoms to use genecp or not (to use gen)
+				for i in range(4,len(read_lines)):
+					if read_lines[i].split(' ')[0] not in ecp_list and read_lines[i].split(' ')[0] in possible_atoms:
+						ecp_list.append(read_lines[i].split(' ')[0])
+					if read_lines[i].split(' ')[0] in args.genecp_atoms:
+					   ecp_genecp_atoms = True
+					if read_lines[i].split(' ')[0] in args.gen_atoms:
+					   ecp_gen_atoms = True
 
-			fileout = open(file, "a")
-			# Detect if there are atoms to use genecp or not (to use gen)
-			for i in range(4,len(read_lines)):
-				if read_lines[i].split(' ')[0] not in ecp_list and read_lines[i].split(' ')[0] in possible_atoms:
-					ecp_list.append(read_lines[i].split(' ')[0])
-				if read_lines[i].split(' ')[0] in args.genecp_atoms:
-				   ecp_genecp_atoms = True
-				if read_lines[i].split(' ')[0] in args.gen_atoms:
-				   ecp_gen_atoms = True
+				#error if both genecp and gen are
+				if ecp_genecp_atoms and ecp_gen_atoms:
+					sys.exit("ERROR: Can't use Gen and GenECP at the same time")
 
-			#error if both genecp and gen are
-			if ecp_genecp_atoms and ecp_gen_atoms:
-				sys.exit("ERROR: Can't use Gen and GenECP at the same time")
-
-			for _,element_ecp in enumerate(ecp_list):
-				if element_ecp not in (args.genecp_atoms or args.gen_atoms):
-					fileout.write(element_ecp+' ')
-			fileout.write('0\n')
-			fileout.write(bs+'\n')
-			fileout.write('****\n')
-			if not ecp_genecp_atoms and not ecp_gen_atoms:
-				fileout.write('\n')
-			else:
-				format_ext_genecp = ['.txt','.yaml','.yml','.rtf']
-				if len(bs_gcp.split('.')) > 1:
-					if bs_gcp.split('.')[1] in format_ext_genecp:
-						os.chdir(path_for_file)
-						read_lines = open(bs_gcp,"r").readlines()
-						os.chdir(path_write_gjf_files)
-						#chaanging the name of the files to the way they are in xTB Sdfs
-						#getting the title line
-						for line in read_lines:
-							fileout.write(line)
-						fileout.write('\n\n')
+				for _,element_ecp in enumerate(ecp_list):
+					if element_ecp not in (args.genecp_atoms or args.gen_atoms):
+						fileout.write(element_ecp+' ')
+				fileout.write('0\n')
+				fileout.write(bs+'\n')
+				fileout.write('****\n')
+				if not ecp_genecp_atoms and not ecp_gen_atoms:
+					fileout.write('\n')
 				else:
-					for _,element_ecp in enumerate(ecp_list):
-						if element_ecp in args.genecp_atoms :
-							fileout.write(element_ecp+' ')
-						elif element_ecp in args.gen_atoms :
-							fileout.write(element_ecp+' ')
-					fileout.write('0\n')
-					fileout.write(bs_gcp+'\n')
-					fileout.write('****\n\n')
-					if ecp_genecp_atoms:
+					format_ext_genecp = ['.txt','.yaml','.yml','.rtf']
+					if len(bs_gcp.split('.')) > 1:
+						if bs_gcp.split('.')[1] in format_ext_genecp:
+							os.chdir(path_for_file)
+							read_lines = open(bs_gcp,"r").readlines()
+							os.chdir(path_write_gjf_files)
+							#chaanging the name of the files to the way they are in xTB Sdfs
+							#getting the title line
+							for line in read_lines:
+								fileout.write(line)
+							fileout.write('\n\n')
+					else:
 						for _,element_ecp in enumerate(ecp_list):
-							if element_ecp in args.genecp_atoms:
+							if element_ecp in args.genecp_atoms :
+								fileout.write(element_ecp+' ')
+							elif element_ecp in args.gen_atoms :
 								fileout.write(element_ecp+' ')
 						fileout.write('0\n')
-						fileout.write(bs_gcp+'\n\n')
-			fileout.close()
+						fileout.write(bs_gcp+'\n')
+						fileout.write('****\n\n')
+						if ecp_genecp_atoms:
+							for _,element_ecp in enumerate(ecp_list):
+								if element_ecp in args.genecp_atoms:
+									fileout.write(element_ecp+' ')
+							fileout.write('0\n')
+							fileout.write(bs_gcp+'\n\n')
+				fileout.close()
 
-		else:
-			read_lines = open(file,"r").readlines()
+			else:
+				read_lines = open(file,"r").readlines()
 
-			rename_file_name = rename_file_and_charge_chk_change(read_lines,file,args,charge_com)
+				rename_file_name = rename_file_and_charge_chk_change(read_lines,file,args,charge_com)
 
-		#change file by moving to new file
-		os.rename(file,rename_file_name)
+			#change file by moving to new file
+			try:
+				os.rename(file,rename_file_name)
+			except FileExistsError:
+				os.remove(rename_file_name)
+				os.rename(file,rename_file_name)
 
-		# #submitting the gaussian file on summit
-		if args.qsub:
-			cmd_qsub = [args.submission_command, rename_file_name]
-			subprocess.call(cmd_qsub)
+			# submitting the gaussian file on summit
+			if args.qsub:
+				cmd_qsub = [args.submission_command, rename_file_name]
+				subprocess.call(cmd_qsub)
 
-	os.chdir(path_for_file)
-
+		os.chdir(path_for_file)
+	except OSError:
+		pass
+		
 # MOVES SDF FILES TO THEIR CORRESPONDING FOLDERS
 def moving_files(destination,src,file):
 	try:

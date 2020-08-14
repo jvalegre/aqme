@@ -71,7 +71,7 @@ def parser_args():
 	parser.add_argument("--ang_fullmonte", action="store",default=30, help="Angle to rotate each diheral of for FULLMONTE (default 30)", type=float)
 
 	#arguments for QPREP
-	parser.add_argument("-l", "--level_of_theory",help="Level of Theory", default=['wB97xd'], dest="level_of_theory", type=str, nargs='*')
+	parser.add_argument("-l", "--level_of_theory",help="Level of Theory", default=['wb97xd'], dest="level_of_theory", type=str, nargs='*')
 	parser.add_argument("--basis_set",  help="Basis Set", default=['6-31g*'], dest="basis_set", type=str, nargs='*')
 	parser.add_argument("--basis_set_genecp_atoms",default=['LANL2DZ'], help="Basis Set genecp/gen: Can specify only one as basis_set", dest="basis_set_genecp_atoms", type=str, nargs='?')
 	parser.add_argument("--input_for_gauss",  help="Input line for DFT optimization ", default="None", dest="input_for_gauss")
@@ -100,7 +100,7 @@ def parser_args():
 	parser.add_argument("--ifreq_cutoff", action="store",default=0.0, help="Cut off for imaginary frequencies during analysis", type=float)
 	#writing single point files
 	parser.add_argument("--sp", action="store_true", default=False, help="Resubmit Gaussian single point input files")
-	parser.add_argument("--level_of_theory_sp",help="Level of Theory for single point after optimization", default=['wB97xd'], dest="level_of_theory_sp", type=str, nargs='*')
+	parser.add_argument("--level_of_theory_sp",help="Level of Theory for single point after optimization", default=['wb97xd'], dest="level_of_theory_sp", type=str, nargs='*')
 	parser.add_argument("--basis_set_sp",  help="Basis Set for single point after optimization", default=['6-31g*'], dest="basis_set_sp", type=str, nargs='*')
 	parser.add_argument("--basis_set_genecp_atoms_sp",default=['LANL2DZ'], help="Basis Set genecp/gen: Can specify only one for single point after optimization", dest="basis_set_genecp_atoms_sp", type=str, nargs='?')
 	parser.add_argument("--empirical_dispersion_sp",  help="Type of Dispersion for single point after optimization", default="None", dest="empirical_dispersion_sp", type=str)
