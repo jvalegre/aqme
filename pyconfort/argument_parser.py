@@ -20,7 +20,7 @@ def parser_args():
 
 	#work the script has to do
 	parser.add_argument("--CSEARCH", action="store", default=None, help="Perform conformational analysis with or without dihedrals",choices=['rdkit','summ','fullmonte'])
-	parser.add_argument("--CMIN", action="store", default=None, help="Perform minimization after conformational analysis",choices=['xtb','ANI1ccx'])
+	parser.add_argument("--CMIN", action="store", default=None, help="Perform minimization after conformational analysis",choices=['xtb','ani1ccx'])
 	parser.add_argument("--QPREP", action="store", default=None, help="Create input files for QM calculations", choices=['gaussian'])
 	parser.add_argument("--QCORR", action="store", default=None, help="Fix the output files from QM calculations",choices=['gaussian'])
 	parser.add_argument("--QSTAT", action="store", default=None, help="Generate parameters for different conformers",choices=['graph','descp'])
@@ -113,10 +113,10 @@ def parser_args():
 	parser.add_argument("--suffix_sp", help="The suffix for single point calculation", default="None", type=str, metavar="suffix_sp")
 
 	#argumets for QSTAT
-	parser.add_argument("--rot_dihedral", action="store_true", default=False, help="Turn on for tracking the geometric parmeters for the rotatable dihedrals (Need not specify anything in the dihedral list)")
-	parser.add_argument("--dihedral", help="Specify the atom indexs to track dihedrals for different conformes only for specific dihedrals (For all rotatable dihedrals turn rot_dihedral to True)", default=[], dest="dihedral", type=str, nargs=4,action='append')
-	parser.add_argument("--bond", help="Specify the atom indexs to track bond lengths for different conformers", default=[], dest="bond", type=str, nargs=2,action='append')
-	parser.add_argument("--angle", help="Specify the atom indexs to track angles for different conformers", default=[], dest="angle", type=str, nargs=3,action='append')
+	parser.add_argument("--rot_dihedral", action="store_true", default=False, help="Turn on for tracking the geometric parameters for the rotatable dihedrals (Need not specify anything in the dihedral list)")
+	parser.add_argument("--dihedral", help="Specify the atom indexes to track dihedrals for different conformes only for specific dihedrals (For all rotatable dihedrals turn rot_dihedral to True)", default=[], dest="dihedral", type=str, nargs=4,action='append')
+	parser.add_argument("--bond", help="Specify the atom indexes to track bond lengths for different conformers", default=[], dest="bond", type=str, nargs=2,action='append')
+	parser.add_argument("--angle", help="Specify the atom indexes to track angles for different conformers", default=[], dest="angle", type=str, nargs=3,action='append')
 	parser.add_argument("--geom_par_name",action="store",dest="geom_par_name", default="descp", help="Change the prefix for the descriptors obtained")
 
 	#arguments for nmr
