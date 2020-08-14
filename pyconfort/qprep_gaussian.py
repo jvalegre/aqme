@@ -119,7 +119,7 @@ def rename_file_and_charge_chk_change(read_lines,file,args,charge_com):
 			if  args.com_from_xyz:
 				read_lines[i+1] = rename_file_name.split('.com')[0]+'\n'
 			if charge_com is not None:
-				read_lines[i+3] = str(charge_com)+' '+ str(args.complex_spin)+'\n'
+				read_lines[i+3] = str(charge_com)+' '+ str(args.mult)+'\n'
 			break
 	out = open(file, 'w')
 	out.writelines(read_lines)
@@ -289,7 +289,7 @@ def write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args, log, 
 		os.chdir(path_for_file)
 	except OSError:
 		pass
-		
+
 # MOVES SDF FILES TO THEIR CORRESPONDING FOLDERS
 def moving_files(destination,src,file):
 	try:

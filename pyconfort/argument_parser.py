@@ -29,7 +29,7 @@ def parser_args():
 	#arguments for TMBUILD
 	parser.add_argument("--metal_complex", action="store_true", default=False, help="Request metal complex with coord. no. 4, 5 or 6")
 	parser.add_argument("--metal",  help="Specify metallic element", default=[], dest="metal", type=str)
-	parser.add_argument("--complex_spin",  help="Multiplicity of metal complex", default="1", dest="complex_spin", type=int)
+	parser.add_argument("--mult",  help="Multiplicity of metal complex or organic complexes", default="1", dest="mult", type=int)
 	parser.add_argument("--complex_coord", help="Coord. no. of metal complex (automatically updates)", default=[], dest="complex_coord", type=int)
 	parser.add_argument("--complex_type",  help="Geometry about metal (e.g. octahedral)", default="", dest="complex_type", type=str)
 	parser.add_argument("--m_oxi",  help="Metal oxidation state", default=[], dest="m_oxi", type=int)
