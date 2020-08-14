@@ -226,16 +226,16 @@ def mult_min(name, args, program,log,dup_data,dup_data_idx):
 		outmols[cid].SetProp('Energy', cenergy[cid])
 
 	#writing all conformers to files after minimization
-	# sdwriter = Chem.SDWriter(name.split('_rdkit')[0]+'_'+program+'_all_confs'+args.output)
-	#
-	# write_all_confs = 0
-	# for cid in sorted_all_cids:
-	# 	sdwriter.write(outmols[cid])
-	# 	write_all_confs += 1
-	# sdwriter.close()
+	sdwriter = Chem.SDWriter(name.split('_rdkit')[0]+'_'+program+'_all_confs'+args.output)
 
-	# if args.verbose:
-	# 	log.write("\no  Writing "+str(write_all_confs )+ " conformers to file " + name+'_'+program+args.output)
+	write_all_confs = 0
+	for cid in sorted_all_cids:
+		sdwriter.write(outmols[cid])
+		write_all_confs += 1
+	sdwriter.close()
+
+	if args.verbose:
+		log.write("\no  Writing "+str(write_all_confs)+ " conformers to file " + name+'_'+program+args.output)
 
 	log.write("\n\no  Applying filters to intial conformers after "+program+" minimization")
 	# filter based on energy window ewin_csearch

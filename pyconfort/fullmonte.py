@@ -13,7 +13,7 @@ import numpy as np
 import math
 import random
 from rdkit.Chem import AllChem as Chem
-from rdkit.Chem import rdMolTransforms, PropertyMol, rdDistGeom, rdMolAlign, Lipinski
+from rdkit.Chem import rdMolTransforms, PropertyMol, rdDistGeom, rdMolAlign, Lipinski,rdchem
 from rdkit.Geometry import Point3D
 from progress.bar import IncrementalBar
 
@@ -61,7 +61,7 @@ def minimize_rdkit_energy(mol,conf,args,log):
 def rotate_dihedral(mol_rot,dih_rot,args,conf):
 	rad_range = np.arange(0.0, 360.0,args.ang_fullmonte)
 	for i,_ in enumerate(dih_rot):
-		#random.seed(args.seed)
+		# random.seed(args.seed)
 		rad_ang = random.choice(rad_range)
 		rad = math.pi*rad_ang/180.0
 		rdMolTransforms.SetDihedralRad(mol_rot.GetConformer(conf),*dih_rot[i],value=rad)
@@ -84,104 +84,95 @@ def generating_conformations_fullmonte(name,args,rotmatches,log,selectedcids_rdk
 		log.write("Could not open "+ name+args.output)
 		sys.exit(-1)
 
-	#array of all unique mols after fukllmonte for each unique from rdkit
-	all_unique_mol,all_unique_mol_fin,all_unique_ene_fin = [],[],[]
+
 	# array for each each unique from rdkit
+	unique_mol,c_energy = [],[]
 
-	bar = IncrementalBar('o  Generating conformations based on dihedral rotation', max = len(fmmols))
+	#STEP 1: Use start conformation for and append to unique list
+	nsteps = 1
 	for mol_fm in fmmols:
-
-		unique_mol,c_energy = [],[]
-
-		#STEP 1: Use start conformation for and append to unique list
-		nsteps = 1
 		unique_mol.append(mol_fm)
 		c_energy.append(float(mol_fm.GetProp("Energy")))
 
-		while nsteps < args.nsteps_fullmonte:
-			#STEP 2: Choose mol object form unique_mol:
-			#random.seed(4)
-			mol_rot = random.choices(unique_mol,k=1)[0]
+	bar = IncrementalBar('o  Generating conformations for Full Monte', max = args.nsteps_fullmonte)
+	while nsteps < args.nsteps_fullmonte+1:
 
-			#STEP 3: Choose randmon subset of dihedral from rotmatches
-			if len(rotmatches) > args.nrot_fullmonte:
-				#random.seed(args.seed)
-				dih_rot = random.choices(rotmatches, k=args.nrot_fullmonte) #k can be varied base on user definitions
-			else:
-				#random.seed(args.seed)
-				dih_rot = random.choices(rotmatches, k=len(rotmatches)) #k can be varied base on user definitions
-			#STEP 4: for the given conformation, then apply a random rotation to each torsion in the subset
-			rot_mol = rotate_dihedral(mol_rot,dih_rot,args,-1)
-			#STEP 4: Optimize geometry rot_mol
-			GetFF = minimize_rdkit_energy(rot_mol,-1,args,log)
-			energy = float(GetFF.CalcEnergy())
+		#STEP 2: Choose mol object form unique_mol:
+		# random.seed(args.seed)
+		mol_rot = random.choices(unique_mol,k=1)[0]
 
-			rot_mol.SetProp("Energy", str(energy))
+		#updating the location of mol object i.e., the hexadecimal locaiton to a new one so the older one isnt affected
+		mol = Chem.RWMol(mol_rot)
+		rot_mol = mol.GetMol()
 
-			#STEP 5 : Check for DUPLICATES - energy and rms filter (reuse)
-					 #  if the conformer is unique then save it the list
-			exclude_conf= False
-			# compare against allprevious conformers located
-			for j,seenmol in enumerate(unique_mol):
-				if abs(energy - c_energy[j]) < args.initial_energy_threshold:
+		#STEP 3: Choose randmon subset of dihedral from rotmatches
+		if len(rotmatches) > args.nrot_fullmonte:
+			# random.seed(args.seed)
+			dih_rot = random.choices(rotmatches, k=args.nrot_fullmonte) #k can be varied base on user definitions
+		else:
+			# random.seed(args.seed)
+			dih_rot = random.choices(rotmatches, k=len(rotmatches)) #k can be varied base on user definitions
+		#STEP 4: for the given conformation, then apply a random rotation to each torsion in the subset
+		rot_mol = rotate_dihedral(rot_mol,dih_rot,args,-1)
+
+		#STEP 4: Optimize geometry rot_mol
+		GetFF = minimize_rdkit_energy(rot_mol,-1,args,log)
+		energy = float(GetFF.CalcEnergy())
+
+		#STEP 5 : Check for DUPLICATES - energy and rms filter (reuse)
+				 #  if the conformer is unique then save it the list
+		exclude_conf= False
+		# compare against allprevious conformers located
+		for j,seenmol in enumerate(unique_mol):
+			if abs(energy - c_energy[j]) < args.initial_energy_threshold:
+				exclude_conf = True
+				break
+			if  abs(energy - c_energy[j]) < args.energy_threshold:
+				rms = get_conf_RMS(rot_mol,seenmol,-1,-1, args.heavyonly, args.max_matches_RMSD,log)
+				if rms < args.rms_threshold:
 					exclude_conf = True
 					break
-				if  abs(energy - c_energy[j]) < args.energy_threshold:
-					rms = get_conf_RMS(rot_mol,seenmol,-1,-1, args.heavyonly, args.max_matches_RMSD,log)
-					if rms < args.rms_threshold:
-						exclude_conf = True
-						break
+		if not exclude_conf:
+			unique_mol.append(rot_mol)
+			c_energy.append(energy)
+			unique_mol[c_energy.index(energy)].SetProp("Energy", str(energy))
 
-			if not exclude_conf:
-				rot_mol.SetProp('_Name',mol_fm.GetProp("_Name")+'_'+str(nsteps))
-				unique_mol.append(rot_mol)
-				c_energy.append(energy)
+		for ene in c_energy:
+			indx = c_energy.index(ene)
 
-			#STEP 6: ANALYSE THE UNIQUE list for lowest energy, reorder the uniques if greater the given thershold remove
-			globmin = min(c_energy)
-			#print(energy,globmin)
-			for ind,_ in enumerate(c_energy):
-				if  globmin - c_energy[ind] > args.ewin_fullmonte:
-					c_energy.pop(ind)
-					unique_mol.pop(ind)
-			nsteps += 1
 
-		#appending to all_uniq Mol
-		all_unique_mol.append(unique_mol)
+		#STEP 6: ANALYSE THE UNIQUE list for lowest energy, reorder the uniques if greater the given thershold remove
+		globmin = min(c_energy)
+		for ene in reversed(c_energy):
+			if abs(globmin-ene) > args.ewin_fullmonte:
+				indx = c_energy.index(ene)
+				#print(indx,unique_mol[indx].GetProp('Energy'),c_energy[indx])
+				unique_mol.pop(indx)
+				c_energy.pop(indx)
+
+		nsteps += 1
 		bar.next()
+
 	bar.finish()
 
-	#STEP 7: from a list of list do all three FILTERS
-	for mol_list in all_unique_mol:
-		all_unique_mol_fin += mol_list
+	dup_data.at[dup_data_idx, 'FullMonte-Unique-conformers'] = len(unique_mol)
 
-	dup_data.at[dup_data_idx, 'FullMonte-conformers'] = len(all_unique_mol_fin)
-
-	for i, ro_mol_i in enumerate(all_unique_mol_fin):
-		all_unique_ene_fin.append(float(ro_mol_i.GetProp('Energy')))
-
-	fm_cids = list(range(len(all_unique_mol_fin)))
-	sorted_fm_cids = sorted(fm_cids, key = lambda cid: all_unique_ene_fin[cid])
-
-	# filter based on energy window ewin_csearch
-	sortedcids_fm = ewin_filter(sorted_fm_cids,all_unique_ene_fin,args,dup_data,dup_data_idx,log,'fullmonte')
-	# pre-filter based on energy only
-	selectedcids_initial_fm = pre_E_filter(sortedcids_fm,all_unique_ene_fin,args,dup_data,dup_data_idx,log,'fullmonte')
-	# filter based on energy and RMSD
-	selectedcids_fm = RMSD_and_E_filter(all_unique_mol_fin,selectedcids_initial_fm,all_unique_ene_fin,args,dup_data,dup_data_idx,log,'fullmonte')
+	cids = list(range(len(unique_mol)))
+	sorted_all_cids = sorted(cids,key = lambda cid: c_energy[cid])
 
 	#STEP 9: WRITE FINAL uniques to sdf for xtb or ani
-	for i, cid in enumerate(selectedcids_fm):
-		mol_ro = Chem.RWMol(all_unique_mol_fin[cid])
+	for i, cid in enumerate(sorted_all_cids):
+		unique_mol[cid].SetProp('_Name',name+' '+str(i))
+		# print(c_energy[cid],unique_mol[cid].GetProp('Energy'))
 		if coord_Map is None and alg_Map is None and mol_template is None:
 			if args.metal_complex:
-				set_metal_atomic_number(mol_ro,args)
-			sdwriter.write(mol_ro)
+				set_metal_atomic_number(unique_mol[cid],args)
+			sdwriter.write(unique_mol[cid])
 		else:
-			mol_ro_realigned,_ = realign_mol(mol_ro,-1,coord_Map, alg_Map, mol_template,args,log)
+			mol_realigned,_ = realign_mol(unique_mol[cid],-1,coord_Map, alg_Map, mol_template,args,log)
 			if args.metal_complex:
-				set_metal_atomic_number(mol_ro_realigned,args)
-			sdwriter.write(mol_ro_realigned)
+				set_metal_atomic_number(mol_realigned,args)
+			sdwriter.write(mol_realigned)
 
 	status = 1
 	#removes the rdkit file
