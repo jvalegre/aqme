@@ -138,9 +138,9 @@ def plot_graph(energy_rdkit,energy_min,energy_min_dft,lot,bs,name_mol,args,type_
 
 	plt.xticks(range(0,3), x_axis_names)
 	if energy_min_dft is not None:
-		textstr = r'${0} = {1} \pm {2}$'.format(x_axis_names[0], round(mae_rdkit, 2),round(sd_rdkit, 2))+'\n'
-		textstr += r'${0} = {1} \pm {2}$'.format(x_axis_names[1],round(mae_min,2),round(sd_min,2))
-		plt.figtext(0.5, 0.01, textstr ,  ha="center", fontsize=12,bbox=dict(facecolor='black', alpha=0.5))
+		textstr = r'{0} = {1} $\pm$ {2} (kcal/mol)'.format(x_axis_names[0], round(mae_rdkit, 2),round(sd_rdkit, 2))+'\n'
+		textstr += r'{0} = {1} $\pm$ {2} (kcal/mol)'.format(x_axis_names[1],round(mae_min,2),round(sd_min,2))
+		plt.figtext(0.5, 0.01, textstr ,  ha="center", fontsize=12,bbox=dict(facecolor='grey', alpha=0.25))
 	#ax1.legend(lines,labels,loc='upper center', prop={'size':4}, bbox_to_anchor=(0.5, -0.13), fancybox=True, shadow=True, ncol=5)
 	ax1.set_xlabel('Type of Calculation',fontsize=10)
 	ax1.set_ylabel('Relative Energy (kcal/mol)',fontsize=10)
@@ -217,16 +217,16 @@ def graph(sdf_rdkit,sdf_xtb,sdf_ani,log_files,args,log,lot,bs,name_mol,w_dir_ini
 
 
 	if  os.path.exists(w_dir_initial+'/CSEARCH/xtb/'+name_mol+'_xtb.sdf') and os.path.exists(w_dir_initial+'/CSEARCH/rdkit/'+name_mol+'_rdkit.sdf'):
-		plot_graph(energy_rdkit_sc,energy_xtb_sc,energy_xtb_dft_sc,lot,bs,name_mol,args,'rdkit','xtb',w_dir_initial)
+		plot_graph(energy_rdkit_sc,energy_xtb_sc,energy_xtb_dft_sc,lot,bs,name_mol,args,'RDKit','xTB',w_dir_initial)
 	if os.path.exists(w_dir_initial+'/CSEARCH/ani1ccx/'+name_mol+'_ani.sdf') and os.path.exists(w_dir_initial+'/CSEARCH/rdkit/'+name_mol+'_rdkit.sdf'):
-		plot_graph(energy_rdkit_sc,energy_ani_sc,energy_ani_dft_sc,lot,bs,name_mol,args,'rdkit','ani1ccx',w_dir_initial)
+		plot_graph(energy_rdkit_sc,energy_ani_sc,energy_ani_dft_sc,lot,bs,name_mol,args,'RDKit','ANI1ccx',w_dir_initial)
 
 	if  os.path.exists(w_dir_initial+'/CSEARCH/xtb/'+name_mol+'_xtb.sdf') and os.path.exists(w_dir_initial+'/CSEARCH/summ/'+name_mol+'_summ.sdf'):
-		plot_graph(energy_rdkit_sc,energy_xtb_sc,energy_xtb_dft_sc,lot,bs,name_mol,args,'summ','xtb',w_dir_initial)
+		plot_graph(energy_rdkit_sc,energy_xtb_sc,energy_xtb_dft_sc,lot,bs,name_mol,args,'SUMM','xTB',w_dir_initial)
 	if os.path.exists(w_dir_initial+'/CSEARCH/ani1ccx/'+name_mol+'_ani.sdf') and os.path.exists(w_dir_initial+'/CSEARCH/summ/'+name_mol+'_summ.sdf'):
-		plot_graph(energy_rdkit_sc,energy_ani_sc,energy_ani_dft_sc,lot,bs,name_mol,args,'summ','ani1ccx',w_dir_initial)
+		plot_graph(energy_rdkit_sc,energy_ani_sc,energy_ani_dft_sc,lot,bs,name_mol,args,'SUMM','ANI1ccx',w_dir_initial)
 
 	if os.path.exists(w_dir_initial+'/CSEARCH/summ/'+name_mol+'_summ.sdf') and not os.path.exists(w_dir_initial+'/CSEARCH/xtb/'+name_mol+'_xtb.sdf') and not os.path.exists(w_dir_initial+'/CSEARCH/ani1ccx/'+name_mol+'_ani.sdf'):
-		plot_graph(energy_rdkit_sc,None,energy_rdkit_dft_sc,lot,bs,name_mol,args,'summ',None,w_dir_initial)
+		plot_graph(energy_rdkit_sc,None,energy_rdkit_dft_sc,lot,bs,name_mol,args,'SUMM',None,w_dir_initial)
 	if os.path.exists(w_dir_initial+'/CSEARCH/rdkit/'+name_mol+'_rdkit.sdf') and not os.path.exists(w_dir_initial+'/CSEARCH/xtb/'+name_mol+'_xtb.sdf') and not os.path.exists(w_dir_initial+'/CSEARCH/ani1ccx/'+name_mol+'_ani.sdf') :
-		plot_graph(energy_rdkit_sc,None,energy_rdkit_dft_sc,lot,bs,name_mol,args,'rdkit',None,w_dir_initial)
+		plot_graph(energy_rdkit_sc,None,energy_rdkit_dft_sc,lot,bs,name_mol,args,'RDKit',None,w_dir_initial)

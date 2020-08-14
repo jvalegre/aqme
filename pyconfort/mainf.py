@@ -84,7 +84,7 @@ def creation_of_dup_csv(args):
 		elif args.CMIN=='ani1ccx' and not args.CMIN=='xtb':
 			dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples', 'RDKit-energy-window', 'RDKit-initial_energy_threshold','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','FullMonte-Unique-conformers','ANI1ccx-Initial-samples','ANI1ccx-energy-window','ANI1ccx-initial_energy_threshold','ANI1ccx-RMSD-and-energy-duplicates','ANI1ccx-Unique-conformers','time (seconds)','Overall charge'])#'FullMonte-conformers','FullMonte-energy-window', 'FullMonte-initial_energy_threshold','FullMonte-RMSD-and-energy-duplicates',
 		elif args.CMIN=='ani1ccx' and args.CMIN=='xtb':
-			dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples', 'RDKit-energy-window', 'RDKit-initial_energy_threshold','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','FullMonte-conformers','FullMonte-energy-window', 'FullMonte-initial_energy_threshold','FullMonte-RMSD-and-energy-duplicates','FullMonte-Unique-conformers','ANI1ccx-Initial-samples','ANI1ccx-energy-window','ANI1ccx-initial_energy_threshold','ANI1ccx-RMSD-and-energy-duplicates','ANI1ccx-Unique-conformers','xTB-Initial-samples','xTB-energy-window','xTB-initial_energy_threshold','xTB-RMSD-and-energy-duplicates','xTB-Unique-conformers','time(seconds)','Overall charge'])
+			dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples', 'RDKit-energy-window', 'RDKit-initial_energy_threshold','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','FullMonte-Unique-conformers','ANI1ccx-Initial-samples','ANI1ccx-energy-window','ANI1ccx-initial_energy_threshold','ANI1ccx-RMSD-and-energy-duplicates','ANI1ccx-Unique-conformers','xTB-Initial-samples','xTB-energy-window','xTB-initial_energy_threshold','xTB-RMSD-and-energy-duplicates','xTB-Unique-conformers','time(seconds)','Overall charge']) #'FullMonte-conformers','FullMonte-energy-window', 'FullMonte-initial_energy_threshold','FullMonte-RMSD-and-energy-duplicates',
 	elif args.CSEARCH=='summ':
 		if not args.CMIN=='xtb' and not args.CMIN=='ani1ccx':
 			dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples','RDKit-energy-window', 'RDKit-initial_energy_threshold','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','summ-conformers','summ-energy-window', 'summ-initial_energy_threshold','summ-RMSD-and-energy-duplicates','summ-Unique-conformers','time (seconds)','Overall charge'])
@@ -464,10 +464,10 @@ def graph_main(args,log,w_dir_initial):
 			sdf_rdkit =  w_dir_initial+'/CSEARCH/rdkit/'+name+'_rdkit.sdf'
 		elif os.path.exists(w_dir_initial+'/CSEARCH/summ/'+name+'_summ.sdf'):
 			sdf_rdkit = w_dir_initial+'/CSEARCH/summ/'+name+'_summ.sdf'
-		if os.path.exists(w_dir_initial+'/CSEARCH/all_confs/'+name+'_xtb.sdf'):
-			sdf_xtb =  w_dir_initial+'/CSEARCH/all_confs/'+name+'_xtb.sdf'
-		if os.path.exists(w_dir_initial+'/CSEARCH/all_confs/'+name+'_ani.sdf'):
-			sdf_ani = w_dir_initial+'/CSEARCH/all_confs/'+name+'_ani.sdf'
+		if os.path.exists(w_dir_initial+'/CSEARCH/all_confs/xtb/'+name+'_xtb_all_confs.sdf'):
+			sdf_xtb =  w_dir_initial+'/CSEARCH/all_confs/xtb/'+name+'_xtb_all_confs.sdf'
+		if os.path.exists(w_dir_initial+'/CSEARCH/all_confs/ani1ccx/'+name+'_ani_all_confs.sdf'):
+			sdf_ani = w_dir_initial+'/CSEARCH/all_confs/ani1ccx/'+name+'_ani_all_confs.sdf'
 		if os.path.exists(w_dir_initial+'/QMCALC/G16'):
 			args.path = w_dir_initial+'/QMCALC/G16/'
 			# Sets the folder and find the log files to analyze
