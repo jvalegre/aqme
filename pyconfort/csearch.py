@@ -220,9 +220,9 @@ def conformer_generation(mol,name,start_time,args,log,dup_data,dup_data_idx,coor
 		try:
 			# the conformational search for RDKit
 			status = summ_search(mol, name,args,log,dup_data,dup_data_idx,coord_Map,alg_Map,mol_template)
-			if args.CMIN=='ANI1ccx' or args.CMIN=='xtb':
+			if args.CMIN=='ani1ccx' or args.CMIN=='xtb':
 				if status != -1:
-					if args.CMIN=='ANI1ccx' and status != 0:
+					if args.CMIN=='ani1ccx' and status != 0:
 						min_suffix = 'ani'
 						if args.CSEARCH=='rdkit':
 							mult_min(name+'_'+'rdkit', args, min_suffix, log, dup_data, dup_data_idx)
