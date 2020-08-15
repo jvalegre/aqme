@@ -179,7 +179,7 @@ def get_genecp(file,args):
 	return genecp
 
 # MAIN FUNCTION TO CREATE GAUSSIAN JOBS
-def write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args, log, charge_data=None):
+def write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args, log, charge_data):
 
 	# get the names of the SDF files to read from depending on the optimizer and their suffixes. Also, get molecular charge
 	charge_com = get_name_and_charge(name,charge_data)

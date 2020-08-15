@@ -218,7 +218,7 @@ def csearch_main(w_dir_initial,dup_data,args,log,start_time):
 	dup_data.to_csv(w_dir_initial+'/CSEARCH/csv_files/'+args.input.split('.')[0]+'-CSEARCH-Data.csv',index=False)
 
 #writing gauss main
-def qprep_gaussian_main(args,log):
+def qprep_gaussian_main(w_dir_initial,args,log):
 
 	if args.exp_rules:
 		conf_files =  glob.glob('*_rules.sdf')
@@ -251,7 +251,7 @@ def qprep_gaussian_main(args,log):
 	if len(conf_files) != 0:
 		#read in dup_data to get the overall charge of MOLECULES
 		try:
-			charge_data = pd.read_csv(w_dir_initial+'/pyCONFORT_csv_files/confgen/'+args.input.split('.')[0]+'-Confgen-Data.csv', usecols=['Molecule','Overall charge'])
+			charge_data = pd.read_csv(w_dir_initial+'/CSEARCH/csv_files/'+args.input.split('.')[0]+'-CSEARCH-Data.csv', usecols=['Molecule','Overall charge'])
 		except:
 			charge_data = None
 		for lot in args.level_of_theory:
@@ -276,7 +276,7 @@ def qprep_gaussian_main(args,log):
 						if os.path.isdir(folder):
 							pass
 						else:
-							print('\nx  The QMCALC folder from QPREP could not be created, probably due to incompatible characters')
+							log.write('\nx  The QMCALC folder from QPREP could not be created, probably due to incompatible characters')
 							folder_error = True
 					# writing the com files
 					# check conf_file exists, parse energies and then write DFT input

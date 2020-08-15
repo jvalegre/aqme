@@ -58,7 +58,7 @@ def main():
 
 	#QPREP
 	if args.QPREP=='gaussian':
-		qprep_gaussian_main(args,log)
+		qprep_gaussian_main(w_dir_initial,args,log)
 
 	if args.CSEARCH=='rdkit' or args.CSEARCH=='summ' or args.CSEARCH=='fullmonte':
 		# moving files after compute and/or write_gauss

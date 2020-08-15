@@ -31,7 +31,7 @@ def parser_args():
 	parser.add_argument("--metal",  help="Specify metallic element", default=[], dest="metal", type=str)
 	parser.add_argument("--mult",  help="Multiplicity of metal complex or organic complexes", default="1", dest="mult", type=int)
 	parser.add_argument("--complex_coord", help="Coord. no. of metal complex (automatically updates)", default=[], dest="complex_coord", type=int)
-	parser.add_argument("--complex_type",  help="Geometry about metal (e.g. octahedral)", default="", dest="complex_type", type=str)
+	parser.add_argument("--complex_type",  help="Force geometry of the metal complex (options: linear, trigonalplanar, squareplanar, squarepyramidal)", default="", dest="complex_type", type=str)
 	parser.add_argument("--m_oxi",  help="Metal oxidation state", default=[], dest="m_oxi", type=int)
 	parser.add_argument("--metal_idx",  help="Metal index (automatically updates)", default=[], dest="metal_idx", type=int)
 	parser.add_argument("--charge",  help="Charge of metal complex (automatically updates)", default=[], dest="charge", type=int)
