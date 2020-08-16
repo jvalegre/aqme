@@ -20,7 +20,7 @@ def parser_args():
 
 	#work the script has to do
 	parser.add_argument("--CSEARCH", action="store", default=None, help="Perform conformational analysis with or without dihedrals",choices=['rdkit','summ','fullmonte'])
-	parser.add_argument("--CMIN", action="store", default=None, help="Perform minimization after conformational analysis",choices=['xtb','ani1ccx'])
+	parser.add_argument("--CMIN", action="store", default=None, help="Perform minimization after conformational analysis",choices=['xtb','ani'])
 	parser.add_argument("--QPREP", action="store", default=None, help="Create input files for QM calculations", choices=['gaussian'])
 	parser.add_argument("--QCORR", action="store", default=None, help="Fix the output files from QM calculations",choices=['gaussian'])
 	parser.add_argument("--QSTAT", action="store", default=None, help="Generate parameters for different conformers",choices=['graph','descp'])
@@ -39,7 +39,7 @@ def parser_args():
 	parser.add_argument("--metal_sym",  help="Symbols of metals to be considered from list (automatically updates)", default=[], dest="metal_sym", type=str)
 
 	#argumets for CSEARCH and CMIN
-	parser.add_argument("--ewin_cmin", action="store",default=5.0, help="energy window to print conformers for minimization using xTB or ANI1ccx (kcal/mol)", type=float)
+	parser.add_argument("--ewin_cmin", action="store",default=5.0, help="energy window to print conformers for minimization using xTB or ANI (kcal/mol)", type=float)
 	parser.add_argument("--ewin_csearch", action="store",default=5.0, help="energy window to print conformers for RDKit (kcal/mol)", type=float)
 	parser.add_argument("--opt_fmax", action="store",default=0.05, help="fmax value used in xTB and AN1 optimizations", type=float)
 	parser.add_argument("--opt_steps", action="store",default=1000, help="max cycles used in xTB and AN1 optimizations", type=int)
@@ -57,8 +57,9 @@ def parser_args():
 	parser.add_argument("--energy_threshold", dest="energy_threshold",action="store",default=0.25, help="energy difference between unique conformers (default 0.25)")
 	parser.add_argument("--initial_energy_threshold", dest="initial_energy_threshold",action="store",default=0.0001, help="energy difference between unique conformers for the first filter of only E (default 0.0001)")
 	parser.add_argument("--max_MolWt", help="Max. molecular weight of molecule", default=10000, type=int, metavar="max_MolWt")
+	parser.add_argument("--ani_method", help="Specify ANI method used", default='ANI2x', dest="ani_method", type=str)
 	parser.add_argument("--STACKSIZE", help="STACKSIZE for optimization of large systems", default="1G")
-	parser.add_argument("--xtb_method", help="Specify xtb method used", default='GFN2-xTB', dest="xtb_method", type=str)
+	parser.add_argument("--xtb_method", help="Specify xTB method used", default='GFN2-xTB', dest="xtb_method", type=str)
 	parser.add_argument("--xtb_solvent", help="Specify GBSA solvent used", default='none', dest="xtb_solvent", type=str)
 	parser.add_argument("--xtb_accuracy", help="Numerical accuracy of the xTB calculation", action="store", default=1.0, dest="xtb_accuracy")
 	parser.add_argument("--xtb_electronic_temperature", help="Electronic temperature for TB methods", action="store", default=300.0, dest="xtb_electronic_temperature")

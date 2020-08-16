@@ -147,12 +147,12 @@ def check_charge_smi(smi):
 			if smi[i+1] == ']':
 				charge += 1
 			else:
-				charge += int(smi[i+1])+1
+				charge += int(smi[i+1])
 		elif smi_letter == '-':
 			if smi[i+1] == ']':
 				charge -= 1
 			else:
-				charge -= int(smi[i+1])+1
+				charge -= int(smi[i+1])
 	return charge
 
 #checks for salts
@@ -218,18 +218,13 @@ def conformer_generation(mol,name,start_time,args,log,dup_data,dup_data_idx,coor
 		try:
 			# the conformational search for RDKit
 			status = summ_search(mol, name,args,log,dup_data,dup_data_idx,coord_Map,alg_Map,mol_template)
-			if args.CMIN=='ani1ccx' or args.CMIN=='xtb':
+			if args.CMIN=='ani' or args.CMIN=='xtb':
 				if status != -1:
-					if args.CMIN=='ani1ccx' and status != 0:
-						min_suffix = 'ani'
-						if args.CSEARCH=='rdkit':
-							mult_min(name+'_'+'rdkit', args, min_suffix, log, dup_data, dup_data_idx)
-						elif args.CSEARCH=='summ':
-							mult_min(name+'_'+'summ', args, min_suffix, log, dup_data, dup_data_idx)
-						elif args.CSEARCH=='fullmonte':
-							mult_min(name+'_'+'fullmonte', args, min_suffix, log, dup_data, dup_data_idx)
-					elif args.CMIN=='xtb' and status != 0:
-						min_suffix = 'xtb'
+					if status != 0:
+						if args.CMIN=='ani':
+							min_suffix = 'ani'
+						elif args.CMIN=='xtb':
+							min_suffix = 'xtb'
 						if args.CSEARCH=='rdkit':
 							mult_min(name+'_'+'rdkit', args, min_suffix, log, dup_data, dup_data_idx)
 						elif args.CSEARCH=='summ':
@@ -330,7 +325,7 @@ def embed_conf(mol,initial_confs,args,log,coord_Map,alg_Map, mol_template):
 			log.write("o  Normal RDKit embeding process failed, trying to generate conformers with random coordinates (with "+str(initial_confs)+" possibilities)")
 			cids = rdDistGeom.EmbedMultipleConfs(mol, initial_confs, randomSeed=args.seed, useRandomCoords=True, boxSizeMult=10.0,ignoreSmoothingFailures=True, numZeroFail=1000, numThreads = 0)
 		if args.verbose:
-			log.write("o  "+ str(len(cids))+" conformers initially generated")
+			log.write("o  "+ str(len(cids))+" conformers initially generated with RDKit")
 	# case of embed for templates
 	else:
 		cids = rdDistGeom.EmbedMultipleConfs(mol, initial_confs, randomSeed=args.seed,ignoreSmoothingFailures=True, coordMap = coord_Map,numThreads = 0)
@@ -338,7 +333,7 @@ def embed_conf(mol,initial_confs,args,log,coord_Map,alg_Map, mol_template):
 			log.write("o  Normal RDKit embeding process failed, trying to generate conformers with random coordinates (with "+str(initial_confs)+" possibilities)")
 			cids = rdDistGeom.EmbedMultipleConfs(mol, initial_confs, randomSeed=args.seed, useRandomCoords=True, boxSizeMult=10.0, numZeroFail=1000,ignoreSmoothingFailures=True, coordMap = coord_Map,numThreads = 0)
 		if args.verbose:
-			log.write("o  "+ str(len(cids))+" conformers initially generated")
+			log.write("o  "+ str(len(cids))+" conformers initially generated with RDKit")
 
 	return cids
 

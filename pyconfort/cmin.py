@@ -18,35 +18,6 @@ from pyconfort.argument_parser import possible_atoms
 from pyconfort.qprep_gaussian import write_confs
 from pyconfort.filter import filters,set_metal_atomic_number,ewin_filter,pre_E_filter,RMSD_and_E_filter
 
-# imports for xTB and ANI1
-ase_installed = True
-torch_installed = True
-try:
-	import ase
-	import ase.optimize
-	from ase.units import Hartree
-except (ModuleNotFoundError,AttributeError):
-	ase_installed = False
-	print('ASE is not installed correctly - xTB and ANI1ccx are not available')
-if ase_installed:
-	try:
-		import torch
-		os.environ['KMP_DUPLICATE_LIB_OK']='True'
-		device = torch.device('cpu')
-	except (ModuleNotFoundError,AttributeError):
-		torch_installed = False
-		print('TORCH is not installed correctly - xTB and ANI1ccx are not available')
-	if torch_installed:
-		try:
-			from xtb.ase.calculator import XTB
-		except (ModuleNotFoundError,AttributeError):
-			print('xTB is not installed correctly - xTB is not available')
-		try:
-			import torchani
-			model = torchani.models.ANI1ccx()
-		except (ModuleNotFoundError,AttributeError):
-			print('Torchani is not installed correctly - ANI1ccx is not available')
-
 hartree_to_kcal = 627.509
 possible_atoms = possible_atoms()
 
@@ -91,10 +62,9 @@ def rules_get_charge(mol,args,log):
 		return charge
 
 # ANI1 OPTIMIZER AND ENERGY CALCULATOR
-def ani_calc(elements,cartesians,coordinates,args,log):
+def ani_calc(ase,torch,model,device,elements,cartesians,coordinates,args,log):
 	species = model.species_to_tensor(elements).to(device).unsqueeze(0)
 	_, ani_energy = model((species, coordinates))
-
 
 	ase_molecule = ase.Atoms(elements, positions=coordinates.tolist()[0], calculator=model.ase())
 
@@ -111,7 +81,7 @@ def ani_calc(elements,cartesians,coordinates,args,log):
 	return sqm_energy, coordinates
 
 # xTB OPTIMIZER AND ENERGY CALCULATOR
-def xtb_calc(elements,cartesians,coordinates,args,log,ase_metal,ase_metal_idx):
+def xtb_calc(ase,torch,device,elements,cartesians,coordinates,args,log,ase_metal,ase_metal_idx):
 	if args.metal_complex:
 		# passing charges metal present
 		ase_molecule = ase.Atoms(elements, positions=coordinates.tolist()[0],calculator=XTB(method=args.xtb_method,accuracy=args.xtb_accuracy,electronic_temperature=args.xtb_electronic_temperature,max_iterations=args.xtb_max_iterations,solvent=args.xtb_solvent)) #define ase molecule using GFN2 Calculator
@@ -141,6 +111,50 @@ def xtb_calc(elements,cartesians,coordinates,args,log,ase_metal,ase_metal_idx):
 
 # xTB AND ANI1 MAIN OPTIMIZATION PROCESS
 def optimize(mol, args, program,log,dup_data,dup_data_idx):
+	# imports for xTB and ANI1
+	ase_installed = True
+	torch_installed = True
+	try:
+		import ase
+		import ase.optimize
+		from ase.units import Hartree
+	except (ModuleNotFoundError,AttributeError):
+		ase_installed = False
+		log.write('ASE is not installed correctly - xTB and ANI are not available')
+	if ase_installed:
+		try:
+			import torch
+			os.environ['KMP_DUPLICATE_LIB_OK']='True'
+			device = torch.device('cpu')
+		except (ModuleNotFoundError,AttributeError):
+			torch_installed = False
+			log.write('TORCH is not installed correctly - xTB and ANI are not available')
+		if torch_installed:
+			if args.CMIN=='xtb':
+				try:
+					from xtb.ase.calculator import XTB
+				except (ModuleNotFoundError,AttributeError):
+					log.write('xTB is not installed correctly - xTB is not available')
+			if args.CMIN=='ani':
+				try:
+					import torchani
+					ANI_method = args.ani_method
+					if ANI_method == 'ANI1x':
+						model = torchani.models.ANI1x()
+					if ANI_method == 'ANI1ccx':
+						model = torchani.models.ANI1ccx()
+					if ANI_method == 'ANI2x':
+						model = torchani.models.ANI2x()
+					if ANI_method == 'ANI2ccx':
+						model = torchani.models.ANI2ccx()
+					if ANI_method == 'ANI3x':
+						model = torchani.models.ANI3x()
+					if ANI_method == 'ANI3ccx':
+						model = torchani.models.ANI3ccx()
+
+				except (ModuleNotFoundError,AttributeError):
+					log.write('Torchani is not installed correctly - ANI is not available')
+
 	# if large system increase stack size
 	if args.STACKSIZE != '1G':
 		os.environ['OMP_STACKSIZE'] = args.STACKSIZE
@@ -173,10 +187,10 @@ def optimize(mol, args, program,log,dup_data,dup_data_idx):
 	coordinates = torch.tensor([cartesians.tolist()], requires_grad=True, device=device)
 
 	if program == 'ani':
-		sqm_energy, coordinates = ani_calc(elements,cartesians,coordinates,args,log)
+		sqm_energy, coordinates = ani_calc(ase,torch,model,device,elements,cartesians,coordinates,args,log)
 
 	elif program == 'xtb':
-		sqm_energy, coordinates = xtb_calc(elements,cartesians,coordinates,args,log,ase_metal,ase_metal_idx)
+		sqm_energy, coordinates = xtb_calc(ase,torch,device,elements,cartesians,coordinates,args,log,ase_metal,ase_metal_idx)
 
 	else:
 		log.write('program not defined!')
@@ -204,7 +218,11 @@ def mult_min(name, args, program,log,dup_data,dup_data_idx):
 
 	cenergy, outmols = [],[]
 	if args.verbose:
-		log.write("\n\no  Multiple minimization of "+ name+args.output+ " with "+ program)
+		if args.CMIN=='xtb':
+			log.write("\n\no  Multiple minimization of "+ name+args.output+ " with xTB ("+args.xtb_method+")")
+		if args.CMIN=='ani':
+			log.write("\n\no  Multiple minimization of "+ name+args.output+ " with ANI ("+args.ani_method+")")
+
 	bar = IncrementalBar('o  Minimizing', max = len(inmols))
 
 	for i,mol in enumerate(inmols):
@@ -248,7 +266,7 @@ def mult_min(name, args, program,log,dup_data,dup_data_idx):
 	if program == 'xtb':
 		dup_data.at[dup_data_idx, 'xTB-Initial-samples'] = len(inmols)
 	if program == 'ani':
-		dup_data.at[dup_data_idx, 'ANI1ccx-Initial-samples'] = len(inmols)
+		dup_data.at[dup_data_idx, 'ANI-Initial-samples'] = len(inmols)
 
 	# write the filtered, ordered conformers to external file
 	write_confs(outmols, cenergy,selectedcids, name, args, program,log)
