@@ -182,7 +182,7 @@ def ewin_filter(sorted_all_cids,cenergy,args,dup_data,dup_data_idx,log,calc_type
 		if args.verbose:
 			log.write("o  "+str(nhigh)+ " conformers rejected based on energy window ewin_cmin (E > "+str(args.ewin_cmin)+" kcal/mol)")
 		if calc_type == 'ani':
-			dup_data.at[dup_data_idx, 'ANI1ccx-energy-window'] = nhigh
+			dup_data.at[dup_data_idx, 'ANI-energy-window'] = nhigh
 		elif calc_type == 'xtb':
 			dup_data.at[dup_data_idx, 'xTB-energy-window'] = nhigh
 	return sortedcids
@@ -221,7 +221,7 @@ def pre_E_filter(sortedcids,cenergy,args,dup_data,dup_data_idx,log,calc_type):
 	# 	dup_data.at[dup_data_idx, 'FullMonte-initial_energy_threshold'] = eng_dup
 	elif calc_type == 'xtb' or calc_type == 'ani':
 		if calc_type == 'ani':
-			dup_data.at[dup_data_idx, 'ANI1ccx-initial_energy_threshold'] = eng_dup
+			dup_data.at[dup_data_idx, 'ANI-initial_energy_threshold'] = eng_dup
 		elif calc_type == 'xtb':
 			dup_data.at[dup_data_idx, 'xTB-initial_energy_threshold'] = eng_dup
 
@@ -246,7 +246,7 @@ def RMSD_and_E_filter(outmols,selectedcids_initial,cenergy,args,dup_data,dup_dat
 			E_diff = abs(cenergy[conf] - cenergy[seenconf]) # in kcal/mol
 			if  E_diff < args.energy_threshold:
 				if calc_type == 'rdkit':
-					rms = get_conf_RMS(outmols[conf],outmols[conf],seenconf,conf, args.heavyonly, args.max_matches_RMSD,log)
+					rms = get_conf_RMS(outmols[seenconf],outmols[conf],seenconf,conf, args.heavyonly, args.max_matches_RMSD,log)
 				#elif calc_type == 'summ' or calc_type == 'fullmonte' or calc_type =='xtb' or calc_type =='ani':
 				elif calc_type == 'summ' or calc_type =='xtb' or calc_type =='ani':
 					rms = get_conf_RMS(outmols[conf],outmols[seenconf],-1,-1, args.heavyonly, args.max_matches_RMSD,log)
@@ -276,8 +276,8 @@ def RMSD_and_E_filter(outmols,selectedcids_initial,cenergy,args,dup_data,dup_dat
 		dup_data.at[dup_data_idx, 'summ-Unique-conformers'] = len(selectedcids)
 	elif calc_type == 'ani' or calc_type == 'xtb':
 		if calc_type == 'ani':
-			dup_data.at[dup_data_idx, 'ANI1ccx-RMSD-and-energy-duplicates'] = eng_rms_dup
-			dup_data.at[dup_data_idx, 'ANI1ccx-Unique-conformers'] = len(selectedcids)
+			dup_data.at[dup_data_idx, 'ANI-RMSD-and-energy-duplicates'] = eng_rms_dup
+			dup_data.at[dup_data_idx, 'ANI-Unique-conformers'] = len(selectedcids)
 		elif calc_type == 'xtb':
 			dup_data.at[dup_data_idx, 'xTB-RMSD-and-energy-duplicates'] = eng_rms_dup
 			dup_data.at[dup_data_idx, 'xTB-Unique-conformers'] = len(selectedcids)

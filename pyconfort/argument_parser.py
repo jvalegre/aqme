@@ -57,7 +57,7 @@ def parser_args():
 	parser.add_argument("--energy_threshold", dest="energy_threshold",action="store",default=0.25, help="energy difference between unique conformers (default 0.25)")
 	parser.add_argument("--initial_energy_threshold", dest="initial_energy_threshold",action="store",default=0.0001, help="energy difference between unique conformers for the first filter of only E (default 0.0001)")
 	parser.add_argument("--max_MolWt", help="Max. molecular weight of molecule", default=10000, type=int, metavar="max_MolWt")
-	parser.add_argument("--ani_method", help="Specify ANI method used", default='ANI2x', dest="ani_method", type=str)
+	parser.add_argument("--ani_method", help="Specify ANI method used (i.e. ANI1x, ANI1ccx, ANI2x)", default='ANI2x', dest="ani_method", type=str)
 	parser.add_argument("--STACKSIZE", help="STACKSIZE for optimization of large systems", default="1G")
 	parser.add_argument("--xtb_method", help="Specify xTB method used", default='GFN2-xTB', dest="xtb_method", type=str)
 	parser.add_argument("--xtb_solvent", help="Specify GBSA solvent used", default='none', dest="xtb_solvent", type=str)
@@ -78,8 +78,8 @@ def parser_args():
 	parser.add_argument("--input_for_gauss",  help="Input line for DFT optimization ", default="None", dest="input_for_gauss")
 	parser.add_argument("--genecp_atoms",  help="genecp atoms",default=[], dest="genecp_atoms",type=str, nargs='*')
 	parser.add_argument("--gen_atoms",  help="gen atoms",default=[], dest="gen_atoms",type=str, nargs='*')
-	parser.add_argument("--max_cycle_opt", help="Number of cycles for DFT optimization", default="300", type=int, dest="max_cycle_opt")
-	parser.add_argument("--frequencies",action="store_true", default=False, help="Request only optimization without any frequency calculation")
+	parser.add_argument("--max_cycle_opt", help="Number of cycles for DFT optimization", default="100", type=int, dest="max_cycle_opt")
+	parser.add_argument("--frequencies",action="store_true", default=True, help="Request only optimization without any frequency calculation")
 	parser.add_argument("--single_point",action="store_true", default=False, help="Request only single point calculation")
 	parser.add_argument("--lowest_only", action="store_true", default=False, help="Lowest conformer to write for gaussian")
 	parser.add_argument("--lowest_n", action="store_true", default=False, help="Lowest Number of conformers to write for gaussian")
@@ -93,7 +93,7 @@ def parser_args():
 	#other options for QPREP
 	parser.add_argument("--com_from_xyz", action="store_true", default=False, help="Create input files for Gaussian from an xyz file")
 
-	#arguments for QCORR includong the ones from QPREP
+	#arguments for QCORR including the ones from QPREP
 	#analysis of files
 	parser.add_argument("--dup",action="store_true",default=False, help="Remove Duplicates after DFT optimization")
 	#sorting of files

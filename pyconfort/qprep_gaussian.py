@@ -135,8 +135,8 @@ def get_name_and_charge(name,charge_data):
 			name_molecule = name[:-23]
 		elif 'xtb' in name_list or 'ani' in name_list:
 			name_molecule = name[:-4]
-		elif 'rotated' in name_list:
-			name_molecule = name[:-14]
+		elif 'summ' in name_list:
+			name_molecule = name[:-5]
 		elif 'rdkit' in name_list:
 			name_molecule = name[:-6]
 		for i in range(len(charge_data)):

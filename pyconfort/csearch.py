@@ -506,9 +506,6 @@ def dihedral_filter_and_sdf(name,args,log,dup_data,dup_data_idx,coord_Map, alg_M
 	sdwriter_rd.close()
 	status = 1
 
-	#removes the rdkit file
-	os.remove(name+'_'+'rdkit'+args.output)
-
 	return status
 
 # EMBEDS, OPTIMIZES AND FILTERS RDKIT CONFORMERS
@@ -522,5 +519,7 @@ def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None, alg_
 		if args.CSEARCH=='summ' and len(rotmatches) != 0:
 			status = dihedral_filter_and_sdf(name,args,log,dup_data,dup_data_idx,coord_Map, alg_Map, mol_template)
 
+			#removes the rdkit file
+			os.remove(name+'_'+'rdkit'+args.output)
 
 	return status
