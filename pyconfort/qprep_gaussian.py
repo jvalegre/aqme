@@ -139,6 +139,7 @@ def get_name_and_charge(name,charge_data):
 			name_molecule = name[:-5]
 		elif 'rdkit' in name_list:
 			name_molecule = name[:-6]
+
 		for i in range(len(charge_data)):
 			if charge_data.loc[i,'Molecule'] == name_molecule:
 				charge_com = charge_data.loc[i,'Overall charge']
@@ -241,13 +242,13 @@ def write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args, log, 
 				if not ecp_genecp_atoms and not ecp_gen_atoms:
 					fileout.write('\n')
 				else:
-					format_ext_genecp = ['.txt','.yaml','.yml','.rtf']
+					format_ext_genecp = ['txt','yaml','yml','rtf']
 					if len(bs_gcp.split('.')) > 1:
 						if bs_gcp.split('.')[1] in format_ext_genecp:
 							os.chdir(path_for_file)
 							read_lines = open(bs_gcp,"r").readlines()
 							os.chdir(path_write_gjf_files)
-							#chaanging the name of the files to the way they are in xTB Sdfs
+							#changing the name of the files to the way they are in xTB Sdfs
 							#getting the title line
 							for line in read_lines:
 								fileout.write(line)
@@ -304,7 +305,7 @@ def moving_files(destination,src,file):
 # WRITE SDF FILES FOR xTB AND ANI1
 def write_confs(conformers, energies,selectedcids, name, args, program,log):
 	if len(conformers) > 0:
-		name = name.split('_rdkit')[0]# a bit hacky
+		name = name.split('_'+args.CSEARCH)[0]# a bit hacky
 		sdwriter = Chem.SDWriter(name+'_'+program+args.output)
 
 		write_confs = 0

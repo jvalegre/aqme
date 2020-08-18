@@ -244,7 +244,7 @@ def mult_min(name, args, program,log,dup_data,dup_data_idx):
 		outmols[cid].SetProp('Energy', cenergy[cid])
 
 	#writing all conformers to files after minimization
-	sdwriter = Chem.SDWriter(name.split('_rdkit')[0]+'_'+program+'_all_confs'+args.output)
+	sdwriter = Chem.SDWriter(name.split('_'+args.CSEARCH)[0]+'_'+program+'_all_confs'+args.output)
 
 	write_all_confs = 0
 	for cid in sorted_all_cids:
