@@ -50,14 +50,16 @@ def header_com(name,lot,bs,bs_gcp, args, log, input_route, genecp):
 def convert_sdf_to_com(path_for_file,file,com,com_low,energies,header,args,log):
 
 	if args.lowest_only and args.lowest_n:
-		log.write('x  Both lowest \'n\' and lowest are turned on. Writing lowest \'n\'')
+		log.write('x  The lowest_n and lowest_only options are both True, lowest_n will be used')
 		args.lowest_only = False
 
 	if args.lowest_only:
 		command_lowest = ['obabel', '-isdf', path_for_file+file, '-ocom', '-O'+com_low,'-l' , '1', '-xk', '\n'.join(header)]
 		subprocess.call(command_lowest) #takes the lowest conformer which is the first in the file
+		log.write('o  The lowest_only option is activated (only using the lowest energy conformer)')
 
 	elif args.lowest_n:
+		log.write('o  The lowest_n option is True (only using conformers within the specified E window)')
 		no_to_write = 0
 		if len(energies) != 1:
 			for i,_ in enumerate(energies):
@@ -72,6 +74,7 @@ def convert_sdf_to_com(path_for_file,file,com,com_low,energies,header,args,log):
 		else:
 			command_n_3 = ['obabel', '-isdf', path_for_file+file, '-ocom', '-O'+com,'-m', '-xk', '\n'.join(header)]
 			subprocess.call(command_n_3)
+
 	else:
 		command_no_lowest = ['obabel', '-isdf', path_for_file+file, '-ocom', '-O'+com,'-m', '-xk', '\n'.join(header)]
 		subprocess.call(command_no_lowest)

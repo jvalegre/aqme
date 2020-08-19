@@ -81,7 +81,7 @@ def ani_calc(ase,torch,model,device,elements,cartesians,coordinates,args,log):
 	return sqm_energy, coordinates
 
 # xTB OPTIMIZER AND ENERGY CALCULATOR
-def xtb_calc(ase,torch,device,elements,cartesians,coordinates,args,log,ase_metal,ase_metal_idx):
+def xtb_calc(ase,torch,device,XTB,Hartree,elements,cartesians,coordinates,args,log,ase_metal,ase_metal_idx):
 	if args.metal_complex:
 		# passing charges metal present
 		ase_molecule = ase.Atoms(elements, positions=coordinates.tolist()[0],calculator=XTB(method=args.xtb_method,accuracy=args.xtb_accuracy,electronic_temperature=args.xtb_electronic_temperature,max_iterations=args.xtb_max_iterations,solvent=args.xtb_solvent)) #define ase molecule using GFN2 Calculator
@@ -190,7 +190,7 @@ def optimize(mol, args, program,log,dup_data,dup_data_idx):
 		sqm_energy, coordinates = ani_calc(ase,torch,model,device,elements,cartesians,coordinates,args,log)
 
 	elif program == 'xtb':
-		sqm_energy, coordinates = xtb_calc(ase,torch,device,elements,cartesians,coordinates,args,log,ase_metal,ase_metal_idx)
+		sqm_energy, coordinates = xtb_calc(ase,torch,device,XTB,Hartree,elements,cartesians,coordinates,args,log,ase_metal,ase_metal_idx)
 
 	else:
 		log.write('program not defined!')
@@ -219,7 +219,10 @@ def mult_min(name, args, program,log,dup_data,dup_data_idx):
 	cenergy, outmols = [],[]
 	if args.verbose:
 		if args.CMIN=='xtb':
-			log.write("\n\no  Multiple minimization of "+ name+args.output+ " with xTB ("+args.xtb_method+")")
+			if args.xtb_solvent == 'none':
+				log.write("\n\no  Multiple minimization of "+ name+args.output+ " with xTB ("+args.xtb_method+")")
+			else:
+				log.write("\n\no  Multiple minimization of "+ name+args.output+ " with xTB ("+args.xtb_method+"in "+args.xtb_solvent+")")
 		if args.CMIN=='ani':
 			log.write("\n\no  Multiple minimization of "+ name+args.output+ " with ANI ("+args.ani_method+")")
 

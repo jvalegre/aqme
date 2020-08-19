@@ -5,32 +5,14 @@
 # 	    	  used for genrating a graph      	    #
 #####################################################.
 
-
+import os
 from pyconfort.cmin import rdkit_sdf_read
 from rdkit.Chem import AllChem as Chem
 import numpy as np
-import matplotlib.path as mpath
-import matplotlib.patches as mpatches
 from sklearn.metrics import mean_absolute_error
 import statistics as stats
 
-import os
-cclib_installed = True
-matplotlib_installed = True
-if cclib_installed:
-	try:
-		import cclib
-	except (ModuleNotFoundError,AttributeError):
-		cclib_installed = False
-		print('cclib is not installed correctly')
-if matplotlib_installed:
-	try:
-		import matplotlib.pyplot as plt
-	except (ModuleNotFoundError,AttributeError):
-		matplotlib_installed = False
-		print('matplotlib is not installed correctly')
-
-ev_2_kcal_mol = 23 #ev to kcal/mol
+ev_2_kcal_mol = 23.061 #ev to kcal/mol
 
 def stats_calc(y_dft,y):
 	y_diff = abs(np.subtract(y, y_dft))
@@ -63,6 +45,13 @@ def scaling_with_lowest(energy):
 	return energy
 
 def plot_graph(energy_rdkit,energy_min,energy_min_dft,lot,bs,name_mol,args,type_csearch,type_min,w_dir_initial):
+
+	try:
+		import matplotlib.path as mpath
+		import matplotlib.patches as mpatches
+		import matplotlib.pyplot as plt
+	except (ModuleNotFoundError,AttributeError):
+	    log.write('The Matplotlib module is not installed correctly - the graphing functions are not available')
 
 	if energy_min_dft is not None:
 		energy_dft_mae_sd,energy_min_mae_sd,energy_rdkit_mae_sd = [],[],[]
@@ -172,6 +161,11 @@ def plot_graph(energy_rdkit,energy_min,energy_min_dft,lot,bs,name_mol,args,type_
 	os.chdir(w_dir_initial)
 
 def graph(sdf_rdkit,sdf_xtb,sdf_ani,log_files,args,log,lot,bs,name_mol,w_dir_initial):
+
+	try:
+		import cclib
+	except (ModuleNotFoundError,AttributeError):
+		log.write('The cclib module is not installed correctly - the graph funtcion is not available')
 
 	inmols_rdkit = Chem.SDMolSupplier(sdf_rdkit, removeHs=False)
 	#get the energy from sdf

@@ -10,8 +10,8 @@ from pyconfort.qcorr_gaussian import moving_files
 from rdkit.Chem import AllChem as Chem
 import numpy as np
 import pandas as pd
-import os,subprocess
-
+import os
+import subprocess
 
 def calculate_boltz_and_energy(val,args,log,name,w_dir_fin,w_dir_initial,lot,bs):
 	# GoodVibes must be installed as a module (through pip or conda)

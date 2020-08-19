@@ -1,9 +1,11 @@
 #!/usr/bin/env python
 from __future__ import print_function
 
-import datetime, requests, sys, unicodedata
+import datetime
+import requests
+import sys
+import unicodedata
 import pandas as pd
-from bs4 import BeautifulSoup
 
 ## convert HTML table to Pandas dataframe
 def parse_html_table(table):
@@ -52,6 +54,10 @@ def parse_html_table(table):
 
 ## Parse from local offline version of the CHESHIRE scaling factors html or directly from the web
 def cheshire(online, nucleus, opt_method, opt_basis, opt_solv, nmr_method, nmr_basis, nmr_solv, nmr_aos,log):
+    try:
+        from bs4 import BeautifulSoup
+    except (ModuleNotFoundError,AttributeError):
+        log.write('The bs4 module is not installed correctly - CHESHIRE search is not available')
 
     ## current time for printing
     now = datetime.datetime.now()
