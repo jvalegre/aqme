@@ -307,12 +307,11 @@ def genConformer_r(mol, conf, i, matches, degree, sdwriter,args,name,log):
 		deg = 0
 		while deg < 360.0:
 			rad = math.pi*deg / 180.0
-
 			rdMolTransforms.SetDihedralRad(mol.GetConformer(conf),*matches[i],value=rad)
 			#recalculating energies after rotation
-			GetFF = minimize_rdkit_energy(mol,conf,args,log)
-			mol.SetProp("Energy",GetFF.CalcEnergy())
-			mol.SetProp('_Name',name)
+			# GetFF = minimize_rdkit_energy(mol,conf,args,log)
+			# mol.SetProp("Energy",GetFF.CalcEnergy())
+			# mol.SetProp('_Name',name)
 			total += genConformer_r(mol, conf, i+1, matches, degree, sdwriter,args,name,log)
 			deg += degree
 		return total
@@ -476,8 +475,22 @@ def dihedral_filter_and_sdf(name,args,log,dup_data,dup_data_idx,coord_Map, alg_M
 		log.write("Could not open "+ name+args.output)
 		sys.exit(-1)
 
+
 	for i, rd_mol_i in enumerate(rdmols):
-		rotated_energy.append(float(rd_mol_i.GetProp('Energy')))
+		# print(rd_mol_i.GetProp('Energy'))
+		# GetFF = minimize_rdkit_energy(rd_mol_i,-1,args,log)
+		# rotated_energy.append(GetFF.CalcEnergy())
+
+		# rotated_energy.append(float(rd_mol_i.GetProp('Energy')))
+
+		if coord_Map is None and alg_Map is None and mol_template is None:
+			GetFF = minimize_rdkit_energy(rd_mol_i,-1,args,log)
+			rotated_energy.append(GetFF.CalcEnergy())
+
+		# id template realign before doing calculations
+		else:
+			rd_mol_i,GetFF = realign_mol(rd_mol_i,-1,coord_Map, alg_Map, mol_template,args,log)
+			rotated_energy.append(GetFF.CalcEnergy())
 
 	rotated_cids = list(range(len(rdmols)))
 	sorted_rotated_cids = sorted(rotated_cids, key = lambda cid: rotated_energy[cid])
@@ -493,15 +506,15 @@ def dihedral_filter_and_sdf(name,args,log,dup_data,dup_data_idx,coord_Map, alg_M
 	for i, cid in enumerate(selectedcids_rotated):
 		mol_rd = Chem.RWMol(rdmols[cid])
 		mol_rd.SetProp('_Name',rdmols[cid].GetProp('_Name')+' '+str(i))
-		if coord_Map is None and alg_Map is None and mol_template is None:
-			if args.metal_complex:
-				set_metal_atomic_number(mol_rd,args)
-			sdwriter_rd.write(mol_rd)
-		else:
-			mol_rd_realigned,_ = realign_mol(mol_rd,-1,coord_Map, alg_Map, mol_template,args,log)
-			if args.metal_complex:
-				set_metal_atomic_number(mol_rd_realigned,args)
-			sdwriter_rd.write(mol_rd_realigned)
+		# if coord_Map is None and alg_Map is None and mol_template is None:
+		if args.metal_complex:
+			set_metal_atomic_number(mol_rd,args)
+		sdwriter_rd.write(mol_rd)
+		# else:
+		# 	# mol_rd_realigned,_ = realign_mol(mol_rd,-1,coord_Map, alg_Map, mol_template,args,log)
+		# 	if args.metal_complex:
+		# 		set_metal_atomic_number(mol_rd_realigned,args)
+		# 	sdwriter_rd.write(mol_rd_realigned)
 
 	sdwriter_rd.close()
 	status = 1

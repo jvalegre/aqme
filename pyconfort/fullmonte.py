@@ -86,7 +86,7 @@ def generating_conformations_fullmonte(name,args,rotmatches,log,selectedcids_rdk
 
 
 	# array for each each unique from rdkit
-	unique_mol,c_energy = [],[]
+	unique_mol,c_energy,unique_mol_sample  = [],[],[]
 
 	#STEP 1: Use start conformation for and append to unique list
 	nsteps = 1
@@ -94,12 +94,18 @@ def generating_conformations_fullmonte(name,args,rotmatches,log,selectedcids_rdk
 		unique_mol.append(mol_fm)
 		c_energy.append(float(mol_fm.GetProp("Energy")))
 
+	#defining unique mol sample for choosing
+	globmin = min(c_energy)
+	for ene in reversed(c_energy):
+		if abs(globmin-ene) < args.ewin_sample_fullmonte:
+			unique_mol_sample.append(unique_mol[c_energy.index(ene)])
+
 	bar = IncrementalBar('o  Generating conformations for Full Monte', max = args.nsteps_fullmonte)
 	while nsteps < args.nsteps_fullmonte+1:
 
 		#STEP 2: Choose mol object form unique_mol:
 		# random.seed(args.seed)
-		mol_rot = random.choices(unique_mol,k=1)[0]
+		mol_rot = random.choices(unique_mol_sample,k=1)[0]
 
 		#updating the location of mol object i.e., the hexadecimal locaiton to a new one so the older one isnt affected
 		mol = Chem.RWMol(mol_rot)
@@ -137,14 +143,18 @@ def generating_conformations_fullmonte(name,args,rotmatches,log,selectedcids_rdk
 			c_energy.append(energy)
 			unique_mol[c_energy.index(energy)].SetProp("Energy", str(energy))
 
+		unique_mol_sample = []
 		#STEP 6: ANALYSE THE UNIQUE list for lowest energy, reorder the uniques if greater the given thershold remove
 		globmin = min(c_energy)
 		for ene in reversed(c_energy):
+			indx = c_energy.index(ene)
 			if abs(globmin-ene) > args.ewin_fullmonte:
-				indx = c_energy.index(ene)
 				#print(indx,unique_mol[indx].GetProp('Energy'),c_energy[indx])
 				unique_mol.pop(indx)
 				c_energy.pop(indx)
+			if abs(globmin-ene) < args.ewin_sample_fullmonte:
+
+				unique_mol_sample.append(unique_mol[indx])
 
 		nsteps += 1
 		bar.next()
