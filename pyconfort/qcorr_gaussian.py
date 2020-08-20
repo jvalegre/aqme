@@ -9,7 +9,8 @@ import os
 import sys
 import subprocess
 import shutil
-from pyconfort.qprep_gaussian import input_route_line
+import numpy as np
+from pyconfort.qprep_gaussian import input_route_line,check_for_gen_or_genecp,write_genecp
 from pyconfort.argument_parser import possible_atoms
 
 possible_atoms = possible_atoms()
@@ -17,27 +18,12 @@ possible_atoms = possible_atoms()
 def moving_files(source, destination):
 	if not os.path.isdir(destination):
 		os.makedirs(destination)
-	if not os.path.exists(destination+source):
+	try:
 		shutil.move(source, destination)
-
-# DETECTION OF GEN/GENECP
-def check_for_gen_or_genecp(ATOMTYPES,args):
-	# Options for genecp
-	ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp = [],False,False,None
-
-	for _,atomtype in enumerate(ATOMTYPES):
-		if atomtype not in ecp_list and atomtype in possible_atoms:
-			ecp_list.append(atomtype)
-		if atomtype in args.genecp_atoms:
-			ecp_genecp_atoms = True
-		if atomtype in args.gen_atoms:
-			ecp_gen_atoms = True
-	if ecp_gen_atoms:
-		genecp = 'gen'
-	if ecp_genecp_atoms:
-		genecp = 'genecp'
-
-	return ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp
+	except (FileExistsError,shutil.Error):
+		os.chdir(destination)
+		os.remove(source.split('/')[-1])
+		shutil.move(source, destination)
 
 def write_header_and_coords(fileout,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS):
 	fileout.write("%mem="+str(args.mem)+"\n")
@@ -51,47 +37,15 @@ def write_header_and_coords(fileout,args,keywords_opt,name,CHARGE,MULT,NATOMS,AT
 		fileout.write("\n")
 	fileout.write("\n")
 
-def write_genecp(fileout,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,bs_com,lot_com,bs_gcp_com,args,w_dir_initial,new_gaussian_input_files):
-	for _,element_ecp in enumerate(ecp_list):
-		if element_ecp not in (args.genecp_atoms or args.gen_atoms):
-			fileout.write(element_ecp+' ')
-	fileout.write('0\n')
-	fileout.write(bs_com+'\n')
-	fileout.write('****\n')
-
-	if len(bs_gcp_com.split('.')) > 1:
-		if bs_gcp_com.split('.')[1] == 'txt' or bs_gcp_com.split('.')[1] == 'yaml':
-			os.chdir(w_dir_initial)
-			read_lines = open(bs_gcp_com,"r").readlines()
-			os.chdir(new_gaussian_input_files)
-			#getting the title line
-			for line in read_lines:
-				fileout.write(line)
-			fileout.write('\n\n')
-	else:
-		for _,element_ecp in enumerate(ecp_list):
-			if element_ecp in args.genecp_atoms :
-				fileout.write(element_ecp+' ')
-			elif element_ecp in args.gen_atoms :
-				fileout.write(element_ecp+' ')
-		fileout.write('0\n')
-		fileout.write(bs_gcp_com+'\n')
-		fileout.write('****\n\n')
-		if ecp_genecp_atoms:
-			for _,element_ecp in enumerate(ecp_list):
-				if element_ecp in args.genecp_atoms:
-					fileout.write(element_ecp+' ')
-			fileout.write('0\n')
-			fileout.write(bs_gcp_com+'\n\n')
-
 # CREATION OF COM FILES
-def new_com_file(w_dir,w_dir_initial,new_gaussian_input_files,file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,TERMINATION,IM_FREQS,bs_com,lot_com,bs_gcp_com):
-	if args.sp:
+def new_com_file(com_type,w_dir,w_dir_initial,new_gaussian_input_files,file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,TERMINATION,IM_FREQS,bs_com,lot_com,bs_gcp_com):
+
+	if com_type == 'sp':
 		if args.suffix_sp == 'None':
 			file_name = file.split(".")[0]+'.com'
 		else:
-			file_name = file.split(".")[0]+'-'+args.suffix_sp+'.com'
-	else:
+			file_name = file.split(".")[0]+'_'+args.suffix_sp+'.com'
+	elif com_type == 'analysis':
 		file_name = file.split(".")[0]+'.com'
 
 	fileout = open(file_name, "w")
@@ -102,8 +56,14 @@ def new_com_file(w_dir,w_dir_initial,new_gaussian_input_files,file,args,keywords
 		fileout.write(args.last_line_for_sp)
 		fileout.write('\n\n')
 
+	# write genecp/gen part
 	if genecp == 'genecp' or  genecp == 'gen':
-		write_genecp(fileout,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,bs_com,lot_com,bs_gcp_com,args,w_dir_initial,new_gaussian_input_files)
+		if com_type == 'sp':
+			type_gen = 'sp'
+		elif com_type == 'analysis':
+			type_gen = 'qcorr'
+
+		write_genecp(type_gen,fileout,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,bs_com,lot_com,bs_gcp_com,args,w_dir_initial,new_gaussian_input_files)
 
 	fileout.close()
 
@@ -198,7 +158,7 @@ def get_geom_and_freq_for_normal(outlines, args, TERMINATION, NATOMS, FREQS, NOR
 				for j in range(2, nfreqs):
 					FREQS.append(float(outlines[i].split()[j]))
 					NORMALMODE.append([])
-					if float(outlines[i].split()[j]) < args.ifreq_cutoff:
+					if float(outlines[i].split()[j]) < 0 and np.absolute(float(outlines[i].split()[j])) > args.ifreq_cutoff:
 						IM_FREQS += 1
 				for j in range(3, nfreqs+1):
 					READMASS.append(float(outlines[i+1].split()[j]))
@@ -293,11 +253,11 @@ def create_folder_and_com(w_dir,w_dir_main,round_num,log,NATOMS,ATOMTYPES,CARTES
 	os.chdir(new_gaussian_input_files)
 	log.write('-> Creating new gaussian input file for {0} in {1}/{2}'.format(file,lot,bs))
 
-	ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp =  check_for_gen_or_genecp(ATOMTYPES,args)
+	ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp = check_for_gen_or_genecp(ATOMTYPES,args)
 
 	#error if both genecp and gen are
 	if ecp_genecp_atoms and ecp_gen_atoms:
-		sys.exit("ERROR: Can't use Gen and GenECP at the same time")
+		sys.exit("x  ERROR: Can't use Gen and GenECP at the same time")
 
 	if ERRORTYPE == 'SCFerror':
 		input_route += ' scf=qc'
@@ -306,7 +266,8 @@ def create_folder_and_com(w_dir,w_dir_main,round_num,log,NATOMS,ATOMTYPES,CARTES
 	else:
 		keywords_opt = lot +'/'+ bs +' '+ input_route
 
-	new_com_file(w_dir,w_dir_initial,new_gaussian_input_files,file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,TERMINATION,IM_FREQS,bs,lot,bs_gcp)
+	com_type = 'analysis'
+	new_com_file(com_type, w_dir,w_dir_initial,new_gaussian_input_files,file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,TERMINATION,IM_FREQS,bs,lot,bs_gcp)
 
 def create_folder_move_log_files(w_dir,w_dir_main,round_num,file,IM_FREQS,TERMINATION,ERRORTYPE,w_dir_fin,finished,unfinished,atom_error,scf_error,imag_freq,other_error):
 	source = w_dir+'/'+file
@@ -341,7 +302,7 @@ def create_folder_move_log_files(w_dir,w_dir_main,round_num,file,IM_FREQS,TERMIN
 	return finished,unfinished,atom_error,scf_error,imag_freq,other_error
 
 # DEFINTION OF OUTPUT ANALYSER and NMR FILES CREATOR
-def output_analyzer(log_files,com_files, w_dir, w_dir_main,lot, bs, bs_gcp, args, w_dir_fin, w_dir_initial, log,ana_data,round_num):
+def output_analyzer(duplicates,log_files,com_files, w_dir, w_dir_main,lot, bs, bs_gcp, args, w_dir_fin, w_dir_initial, log, ana_data, round_num):
 
 	input_route = input_route_line(args)
 	finished,unfinished,atom_error,scf_error,imag_freq,other_error = 0,0,0,0,0,0
@@ -429,21 +390,23 @@ def output_analyzer(log_files,com_files, w_dir, w_dir_main,lot, bs, bs_gcp, args
 							CHARGE = args.charge_sp
 						if args.mult_sp != 'None':
 							MULT = args.mult_sp
-
-						new_com_file(w_dir,w_dir_initial,single_point_input_files+'/'+dir_name,file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,TERMINATION,IM_FREQS,bs_sp,lot_sp,bs_gcp_sp)
+						com_type = 'sp'
+						new_com_file(com_type, w_dir,w_dir_initial,single_point_input_files+'/'+dir_name,file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,TERMINATION,IM_FREQS,bs_sp,lot_sp,bs_gcp_sp)
 
 	#write to csv ana_data
-	ana_data.at[0,'Total Files'] = len(log_files)
-	ana_data.at[0,'Normal Termination'] = finished
+	ana_data.at[0,'Total files'] = len(log_files)
+	ana_data.at[0,'Normal termination'] = finished
 	ana_data.at[0,'Imaginary frequencies'] = imag_freq
-	ana_data.at[0,'SCF Error'] = scf_error
-	ana_data.at[0,'Basis Set Error'] =  atom_error
-	ana_data.at[0,'Other Errors'] = other_error
+	ana_data.at[0,'SCF error'] = scf_error
+	ana_data.at[0,'Basis set error'] =  atom_error
+	ana_data.at[0,'Other errors'] = other_error
 	ana_data.at[0,'Unfinished'] = unfinished
+	if duplicates != False:
+		ana_data.at[0,'Duplicates'] = duplicates
 
 	if not os.path.isdir(w_dir_main+'/csv_files/'):
 		os.makedirs(w_dir_main+'/csv_files/')
-	ana_data.to_csv(w_dir_main+'/csv_files/Analysis-Data-compilesd-run_'+str(round_num)+'.csv',index=False)
+	ana_data.to_csv(w_dir_main+'/csv_files/Analysis-Data-QCORR-run_'+str(round_num)+'.csv',index=False)
 
 # CHECKS THE FOLDER OF FINAL LOG FILES
 def check_for_final_folder(w_dir):
@@ -472,9 +435,13 @@ def dup_calculation(val, w_dir,w_dir_main, args, log,round_num):
 		if duplines[i].find('duplicate') > -1:
 			dup_file_list.append(duplines[i].split(' ')[2])
 
+	duplicates = len(dup_file_list)
+
 	#move the files to specific directory
 	destination = w_dir_main+'/duplicates/run_'+str(round_num)
-	moving_files('Goodvibes_output.dat', destination)
+	source = w_dir_main+'/Goodvibes_output.dat'
+	moving_files(source, destination)
+
 	for source in dup_file_list:
 		#finding the extension
 		for file in val:
@@ -482,3 +449,5 @@ def dup_calculation(val, w_dir,w_dir_main, args, log,round_num):
 				ext=file.split('.')[1]
 		source=source+'.'+ext
 		moving_files(source, destination)
+
+	return duplicates

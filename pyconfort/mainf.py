@@ -96,10 +96,14 @@ def creation_of_dup_csv(args):
 			dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples','RDKit-energy-window', 'RDKit-initial_energy_threshold','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','summ-conformers','summ-energy-window', 'summ-initial_energy_threshold','summ-RMSD-and-energy-duplicates','summ-Unique-conformers','ANI-Initial-samples','ANI-energy-window','ANI-initial_energy_threshold','ANI-RMSD-and-energy-duplicates','ANI-Unique-conformers','xTB-Initial-samples','xTB-energy-window','xTB-initial_energy_threshold','xTB-RMSD-and-energy-duplicates','xTB-Unique-conformers','time (seconds)','Overall charge'])
 	return dup_data
 
-#creation of csv for qcorr
-def creation_of_ana_csv(args):
-	if args.QCORR=='gaussian':
-		ana_data =  pd.DataFrame(columns = ['Total Files','Normal Termination', 'Imaginary frequencies', 'SCF Error','Basis Set Error','Other Errors','Unfinished'])
+#creation of csv for QCORR
+def creation_of_ana_csv(args,duplicates):
+
+	if not duplicates:
+		ana_data = pd.DataFrame(columns = ['Total files', 'Normal termination', 'Imaginary frequencies', 'SCF error', 'Basis set error', 'Other errors', 'Unfinished'])
+	else:
+		ana_data = pd.DataFrame(columns = ['Total files', 'Normal termination', 'Duplicates', 'Imaginary frequencies', 'SCF error', 'Basis set error', 'Other errors', 'Unfinished'])
+
 	return ana_data
 
 # main function to generate conformers
@@ -107,7 +111,7 @@ def csearch_main(w_dir_initial,dup_data,args,log,start_time):
 	# input file format specified
 	file_format = os.path.splitext(args.input)[1]
 
-	if file_format not in ['.smi', '.sdf', '.cdx', '.csv','.com','.gjf','.mol','.mol2','.xyz','.txt']:
+	if file_format not in ['.smi', '.sdf', '.cdx', '.csv','.com','.gjf','.mol','.mol2','.xyz','.txt','.yaml','.yml','.rtf']:
 		log.write("\nx  INPUT FILETYPE NOT CURRENTLY SUPPORTED!")
 		sys.exit()
 
@@ -120,7 +124,8 @@ def csearch_main(w_dir_initial,dup_data,args,log,start_time):
 	ori_charge = args.charge_default
 
 	# SMILES input specified
-	if file_format == '.smi' or file_format =='.txt':
+	smi_derivatives = ['.smi', '.txt', '.yaml', '.yml', '.rtf']
+	if file_format in smi_derivatives:
 		smifile = open(args.input)
 		#used only for template
 		counter_for_template = 0
@@ -288,7 +293,7 @@ def qprep_gaussian_main(w_dir_initial,args,log):
 							energies = read_energies(file,log)
 							name = file.split('.')[0]
 
-							write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args, log, charge_data)
+							write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args, log, charge_data, w_dir_initial)
 	else:
 		log.write('\nx  No SDF files detected to convert to gaussian COM files')
 
@@ -344,7 +349,10 @@ def get_com_or_log_out_files(type,name=None):
 	return files
 
 # main part of the analysis functions
-def qcorr_gaussian_main(w_dir_initial,args,log):
+def qcorr_gaussian_main(duplicates,w_dir_initial,args,log):
+
+	# create csv file with summary
+	ana_data = creation_of_ana_csv(args,duplicates)
 	# when you run analysis in a folder full of output files
 	if not os.path.exists(w_dir_initial+'/QMCALC'):
 		w_dir = os.getcwd()
@@ -353,11 +361,11 @@ def qcorr_gaussian_main(w_dir_initial,args,log):
 			for bs in args.basis_set:
 				for bs_gcp in args.basis_set_genecp_atoms:
 					folder = w_dir_initial
-					ana_data = creation_of_ana_csv(args)
-					log.write("\no  ANALYZING OUTPUT FILES IN {}\n".format(folder))
+					ana_data = creation_of_ana_csv(args,duplicates)
+					log.write("\no  Analyzing output files in {}\n".format(folder))
 					log_files = get_com_or_log_out_files('output')
 					com_files = get_com_or_log_out_files('input')
-					output_analyzer(log_files,com_files, w_dir,w_dir, lot, bs, bs_gcp, args, w_dir_fin,w_dir_initial,log,ana_data,1)
+					output_analyzer(duplicates,log_files, com_files, w_dir,w_dir, lot, bs, bs_gcp, args, w_dir_fin, w_dir_initial, log, ana_data, 1)
 		os.chdir(w_dir)
 	# when you specify multiple levels of theory
 	else:
@@ -375,15 +383,14 @@ def qcorr_gaussian_main(w_dir_initial,args,log):
 					w_dir = args.path + str(lot) + '-' + str(bs)
 					#check if New_Gaussian_Input_Files folder exists
 					w_dir,round_num = check_for_final_folder(w_dir)
-					log = Logger(w_dir_main+'/dat_files/pyCONFORT-analysis-run_'+str(round_num), args.output_name)
+					log = Logger(w_dir_main+'/dat_files/pyCONFORT-QCORR-run_'+str(round_num), args.output_name)
 					#assign the path to the finished directory.
 					w_dir_fin = args.path + str(lot) + '-' + str(bs) +'/success/output_files'
 					os.chdir(w_dir)
-					ana_data = creation_of_ana_csv(args)
-					log.write("\no  ANALYZING OUTPUT FILES IN {}\n".format(w_dir))
+					log.write("\no  Analyzing output files in {}\n".format(w_dir))
 					log_files = get_com_or_log_out_files('output')
 					com_files = get_com_or_log_out_files('input')
-					output_analyzer(log_files, com_files, w_dir, w_dir_main , lot, bs, bs_gcp, args, w_dir_fin,w_dir_initial,log,ana_data,round_num)
+					output_analyzer(duplicates,log_files, com_files, w_dir, w_dir_main , lot, bs, bs_gcp, args, w_dir_fin, w_dir_initial, log, ana_data, round_num)
 		os.chdir(args.path)
 	os.chdir(w_dir_initial)
 
@@ -393,9 +400,11 @@ def dup_main(args,log,w_dir_initial):
 		w_dir = os.getcwd()
 		log_files = get_com_or_log_out_files('output')
 		if len(log_files) != 0:
-			dup_calculation(log_files,w_dir,w_dir,args,log,1)
+			duplicates = dup_calculation(log_files,w_dir,w_dir,args,log,1)
 		else:
 			log.write(' There are no log or out files in this folder.')
+			duplicates = 'None'
+		os.chdir(w_dir)
 	else:
 		if args.QCORR=='gaussian':
 			args.path = w_dir_initial+'/QMCALC/G16/'
@@ -410,9 +419,11 @@ def dup_main(args,log,w_dir_initial):
 				# change molecules to a range as files will have codes in a continous manner
 				log_files = get_com_or_log_out_files('output')
 				if len(log_files) != 0:
-					dup_calculation(log_files,w_dir,w_dir_main,args,log,round_num)
+					duplicates = dup_calculation(log_files,w_dir,w_dir_main,args,log,round_num)
 				else:
 					log.write(' There are no any log or out files in this folder.')
+					duplicates = 'None'
+	return duplicates
 
 #getting descriptors
 def geom_par_main(args,log,w_dir_initial):

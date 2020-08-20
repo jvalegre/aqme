@@ -27,10 +27,8 @@ def convert_xyz_to_sdf(xyz_files,args,log):
 
 def header_com(name,lot,bs,bs_gcp, args, log, input_route, genecp):
 	if genecp != 'None':
-		input_route_to_write = input_route
 		genecp_or_bs_to_write = genecp
 	else:
-		input_route_to_write = input_route
 		genecp_or_bs_to_write = bs
 	#chk option
 	if args.chk:
@@ -38,23 +36,23 @@ def header_com(name,lot,bs,bs_gcp, args, log, input_route, genecp):
 			'%chk={}.chk'.format(name),
 			'%mem={}'.format(args.mem),
 			'%nprocshared={}'.format(args.nprocs),
-			'# {0}'.format(lot)+ '/'+ genecp_or_bs_to_write + ' '+ input_route_to_write ]
+			'# {0}'.format(lot)+ '/'+ genecp_or_bs_to_write + ' '+ input_route]
 	else:
 		header = [
 			'%mem={}'.format(args.mem),
 			'%nprocshared={}'.format(args.nprocs),
-			'# {0}'.format(lot)+ '/'+ genecp_or_bs_to_write + ' '+ input_route_to_write]
+			'# {0}'.format(lot)+ '/'+ genecp_or_bs_to_write + ' '+ input_route]
 
 	return header
 
-def convert_sdf_to_com(path_for_file,file,com,com_low,energies,header,args,log):
+def convert_sdf_to_com(w_dir_initial,file,com,com_low,energies,header,args,log):
 
 	if args.lowest_only and args.lowest_n:
 		log.write('x  The lowest_n and lowest_only options are both True, lowest_n will be used')
 		args.lowest_only = False
 
 	if args.lowest_only:
-		command_lowest = ['obabel', '-isdf', path_for_file+file, '-ocom', '-O'+com_low,'-l' , '1', '-xk', '\n'.join(header)]
+		command_lowest = ['obabel', '-isdf', w_dir_initial+'/'+file, '-ocom', '-O'+com_low,'-l' , '1', '-xk', '\n'.join(header)]
 		subprocess.call(command_lowest) #takes the lowest conformer which is the first in the file
 		log.write('o  The lowest_only option is activated (only using the lowest energy conformer)')
 
@@ -66,17 +64,17 @@ def convert_sdf_to_com(path_for_file,file,com,com_low,energies,header,args,log):
 				energy_diff = energies[i] - energies[0]
 				if energy_diff < args.energy_threshold_for_gaussian: # thershold is in kcal/mol and energies are in kcal/mol as well
 					no_to_write +=1
-			command_n = ['obabel', '-isdf', path_for_file+file, '-f', '1', '-l' , str(no_to_write), '-osdf', '-Otemp.sdf']
+			command_n = ['obabel', '-isdf', w_dir_initial+'/'+file, '-f', '1', '-l' , str(no_to_write), '-osdf', '-Otemp.sdf']
 			subprocess.call(command_n)
 			command_n_2 =  ['obabel', '-isdf', 'temp.sdf', '-ocom', '-O'+com,'-m', '-xk', '\n'.join(header)]
 			subprocess.call(command_n_2)
 			os.remove('temp.sdf')
 		else:
-			command_n_3 = ['obabel', '-isdf', path_for_file+file, '-ocom', '-O'+com,'-m', '-xk', '\n'.join(header)]
+			command_n_3 = ['obabel', '-isdf', w_dir_initial+'/'+file, '-ocom', '-O'+com,'-m', '-xk', '\n'.join(header)]
 			subprocess.call(command_n_3)
 
 	else:
-		command_no_lowest = ['obabel', '-isdf', path_for_file+file, '-ocom', '-O'+com,'-m', '-xk', '\n'.join(header)]
+		command_no_lowest = ['obabel', '-isdf', w_dir_initial+'/'+file, '-ocom', '-O'+com,'-m', '-xk', '\n'.join(header)]
 		subprocess.call(command_no_lowest)
 
 def input_route_line(args):
@@ -87,7 +85,7 @@ def input_route_line(args):
 			input_route += 'freq=noraman'
 		if args.empirical_dispersion != 'None':
 			input_route += ' empiricaldispersion={0}'.format(args.empirical_dispersion)
-		if not args.QCORR:
+		if not args.calcfc:
 			input_route += ' opt=(maxcycles={0})'.format(args.max_cycle_opt)
 		else:
 			input_route += ' opt=(calcfc,maxcycles={0})'.format(args.max_cycle_opt)
@@ -151,6 +149,26 @@ def get_name_and_charge(name,charge_data):
 
 	return charge_com
 
+# DETECTION AND LISTING OF GEN/GENECP FROM COM FILES
+def check_for_gen_or_genecp(ATOMTYPES,args):
+	# Options for genecp
+	ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp = [],False,False,None
+
+	for _,atomtype in enumerate(ATOMTYPES):
+		if atomtype not in ecp_list and atomtype in possible_atoms:
+			ecp_list.append(atomtype)
+		if atomtype in args.genecp_atoms:
+			ecp_genecp_atoms = True
+		if atomtype in args.gen_atoms:
+			ecp_gen_atoms = True
+	if ecp_gen_atoms:
+		genecp = 'gen'
+	if ecp_genecp_atoms:
+		genecp = 'genecp'
+
+	return ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp
+
+# DETECTION OF GEN/GENECP FROM SDF FILES
 def get_genecp(file,args):
 	genecp = 'None'
 
@@ -182,12 +200,58 @@ def get_genecp(file,args):
 
 	return genecp
 
+# write genecp/gen part
+def write_genecp(type_gen,fileout,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,bs_com,lot_com,bs_gcp_com,args,w_dir_initial,new_gaussian_input_files):
+
+	for _,element_ecp in enumerate(ecp_list):
+		if type_gen == 'sp':
+			if element_ecp not in (args.genecp_atoms_sp or args.gen_atoms_sp):
+				fileout.write(element_ecp+' ')
+		else:
+			if element_ecp not in (args.genecp_atoms or args.gen_atoms):
+				fileout.write(element_ecp+' ')
+	fileout.write('0\n')
+	fileout.write(bs_com+'\n')
+	fileout.write('****\n')
+
+	if len(bs_gcp_com.split('.')) > 1:
+		if bs_gcp_com.split('.')[1] == ('txt' or 'yaml' or 'yml' or 'rtf'):
+			os.chdir(w_dir_initial)
+			read_lines = open(bs_gcp_com,"r").readlines()
+			os.chdir(new_gaussian_input_files)
+			#getting the title line
+			for line in read_lines:
+				fileout.write(line)
+			fileout.write('\n\n')
+	else:
+		for _,element_ecp in enumerate(ecp_list):
+			if type_gen == 'sp':
+				if element_ecp in (args.genecp_atoms_sp or args.gen_atoms_sp):
+					fileout.write(element_ecp+' ')
+			else:
+				if element_ecp in (args.genecp_atoms or args.gen_atoms):
+					fileout.write(element_ecp+' ')
+
+		fileout.write('0\n')
+		fileout.write(bs_gcp_com+'\n')
+		fileout.write('****\n\n')
+		if ecp_genecp_atoms:
+			for _,element_ecp in enumerate(ecp_list):
+				if type_gen == 'sp':
+					if element_ecp in args.genecp_atoms_sp:
+						fileout.write(element_ecp+' ')
+				else:
+					if element_ecp in args.genecp_atoms:
+						fileout.write(element_ecp+' ')
+
+			fileout.write('0\n')
+			fileout.write(bs_gcp_com+'\n\n')
+
 # MAIN FUNCTION TO CREATE GAUSSIAN JOBS
-def write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args, log, charge_data):
+def write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args, log, charge_data, w_dir_initial):
 
 	# get the names of the SDF files to read from depending on the optimizer and their suffixes. Also, get molecular charge
 	charge_com = get_name_and_charge(name,charge_data)
-
 
 	input_route = input_route_line(args)
 
@@ -196,20 +260,19 @@ def write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args, log, 
 
 	# defining path to place the new COM files
 	if args.single_point:
-		path_write_gjf_files = 'QMCALC/G16-SP_input_files/' + str(lot) + '-' + str(bs)
+		path_write_input_files = '/QMCALC/G16-SP_input_files/' + str(lot) + '-' + str(bs)
 	else:
-		path_write_gjf_files = 'QMCALC/G16/' + str(lot) + '-' + str(bs)
+		path_write_input_files = '/QMCALC/G16/' + str(lot) + '-' + str(bs)
+
+	os.chdir(w_dir_initial+path_write_input_files)
+
 	try:
-		os.chdir(path_write_gjf_files)
-
-		path_for_file = '../../../'
-
 		com = '{0}_.com'.format(name)
 		com_low = '{0}_low.com'.format(name)
 
 		header = header_com(name,lot, bs, bs_gcp,args,log, input_route, genecp)
 
-		convert_sdf_to_com(path_for_file,file,com,com_low,energies,header,args,log)
+		convert_sdf_to_com(w_dir_initial,file,com,com_low,energies,header,args,log)
 
 		com_files = glob.glob('{0}_*.com'.format(name))
 
@@ -223,64 +286,36 @@ def write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args, log, 
 				read_lines = open(file,"r").readlines()
 
 				fileout = open(file, "a")
+
 				# Detect if there are atoms to use genecp or not (to use gen)
+				ATOMTYPES = []
 				for i in range(4,len(read_lines)):
-					if read_lines[i].split(' ')[0] not in ecp_list and read_lines[i].split(' ')[0] in possible_atoms:
-						ecp_list.append(read_lines[i].split(' ')[0])
-					if read_lines[i].split(' ')[0] in args.genecp_atoms:
-					   ecp_genecp_atoms = True
-					if read_lines[i].split(' ')[0] in args.gen_atoms:
-					   ecp_gen_atoms = True
+					if read_lines[i].split(' ')[0] not in ATOMTYPES and read_lines[i].split(' ')[0] in possible_atoms:
+						ATOMTYPES.append(read_lines[i].split(' ')[0])
+
+				# define genecp/gen atoms
+				ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp = check_for_gen_or_genecp(ATOMTYPES,args)
 
 				#error if both genecp and gen are
 				if ecp_genecp_atoms and ecp_gen_atoms:
-					sys.exit("ERROR: Can't use Gen and GenECP at the same time")
+					sys.exit("x  ERROR: Can't use Gen and GenECP at the same time")
 
-				for _,element_ecp in enumerate(ecp_list):
-					if element_ecp not in (args.genecp_atoms or args.gen_atoms):
-						fileout.write(element_ecp+' ')
-				fileout.write('0\n')
-				fileout.write(bs+'\n')
-				fileout.write('****\n')
-				if not ecp_genecp_atoms and not ecp_gen_atoms:
-					fileout.write('\n')
-				else:
-					format_ext_genecp = ['txt','yaml','yml','rtf']
-					if len(bs_gcp.split('.')) > 1:
-						if bs_gcp.split('.')[1] in format_ext_genecp:
-							os.chdir(path_for_file)
-							read_lines = open(bs_gcp,"r").readlines()
-							os.chdir(path_write_gjf_files)
-							#changing the name of the files to the way they are in xTB Sdfs
-							#getting the title line
-							for line in read_lines:
-								fileout.write(line)
-							fileout.write('\n\n')
-					else:
-						for _,element_ecp in enumerate(ecp_list):
-							if element_ecp in args.genecp_atoms :
-								fileout.write(element_ecp+' ')
-							elif element_ecp in args.gen_atoms :
-								fileout.write(element_ecp+' ')
-						fileout.write('0\n')
-						fileout.write(bs_gcp+'\n')
-						fileout.write('****\n\n')
-						if ecp_genecp_atoms:
-							for _,element_ecp in enumerate(ecp_list):
-								if element_ecp in args.genecp_atoms:
-									fileout.write(element_ecp+' ')
-							fileout.write('0\n')
-							fileout.write(bs_gcp+'\n\n')
-				fileout.close()
+				# write genecp/gen part
+				type_gen = 'qprep'
+
+				write_genecp(type_gen,fileout,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,bs,lot,bs_gcp,args,w_dir_initial,path_write_input_files)
 
 			else:
 				read_lines = open(file,"r").readlines()
 
 				rename_file_name = rename_file_and_charge_chk_change(read_lines,file,args,charge_com)
 
+			fileout.close()
+
 			#change file by moving to new file
 			try:
 				os.rename(file,rename_file_name)
+
 			except FileExistsError:
 				os.remove(rename_file_name)
 				os.rename(file,rename_file_name)
@@ -290,7 +325,6 @@ def write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args, log, 
 				cmd_qsub = [args.submission_command, rename_file_name]
 				subprocess.call(cmd_qsub)
 
-		os.chdir(path_for_file)
 	except OSError:
 		pass
 

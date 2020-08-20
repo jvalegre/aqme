@@ -454,6 +454,7 @@ def rdkit_to_sdf(mol, name,args,log,dup_data,dup_data_idx, coord_Map, alg_Map, m
 		#identify the atoms and decide Force Field
 		for atom in mol.GetAtoms():
 			if atom.GetAtomicNum() > 36: #up to Kr for MMFF, if not the code will use UFF
+				log.write("x  "+args.ff+" is not compatible with the molecule, changing to UFF")
 				args.ff = "UFF"
 		if args.verbose:
 			log.write("o  Optimizing "+ str(len(cids))+ " initial conformers with "+ args.ff)

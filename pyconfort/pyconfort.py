@@ -28,7 +28,7 @@ from __future__ import print_function
 import os
 import time
 from pyconfort.argument_parser import parser_args
-from pyconfort.mainf import csearch_main, exp_rules_main, qprep_gaussian_main, move_sdf_main, qcorr_gaussian_main,dup_main,graph_main,geom_par_main,nmr_main,energy_main,creation_of_dup_csv, load_from_yaml, Logger
+from pyconfort.mainf import csearch_main, exp_rules_main, qprep_gaussian_main, move_sdf_main, qcorr_gaussian_main,dup_main,graph_main,geom_par_main,nmr_main,energy_main,creation_of_dup_csv,load_from_yaml,Logger,creation_of_ana_csv
 
 def main():
 	# working directory and arguments
@@ -50,42 +50,54 @@ def main():
 		#creation of csv to write dup data
 		dup_data = creation_of_dup_csv(args)
 		csearch_main(w_dir_initial,dup_data,args,log,start_time)
+		os.chdir(w_dir_initial)
 
 	##### neeed to fix!
 	#applying rules to discard certain conformers based on rules that the user define
 	if args.exp_rules:
 		exp_rules_main(args,log)
+		os.chdir(w_dir_initial)
 
 	#QPREP
 	if args.QPREP=='gaussian':
 		qprep_gaussian_main(w_dir_initial,args,log)
+		os.chdir(w_dir_initial)
 
 	if args.CSEARCH=='rdkit' or args.CSEARCH=='summ' or args.CSEARCH=='fullmonte':
 		# moving files after compute and/or write_gauss
 		move_sdf_main(args)
+		os.chdir(w_dir_initial)
 
 	#QCORR
 	if args.QCORR=='gaussian':
+		log.write("\no  Writing analysis of output files in respective folders in csv_files\n")
 		# main part of the duplicate function
 		if args.dup:
-			dup_main(args,log, w_dir_initial)
+			duplicates = dup_main(args, log, w_dir_initial)
 			os.chdir(w_dir_initial)
-		log.write("\no  Writing analysis of output files in respective folders with dat_files\n")
-		qcorr_gaussian_main(w_dir_initial,args,log)
+		else:
+			duplicates = False
+
+		# main part of the output file analyzer for errors/imag freqs
+		qcorr_gaussian_main(duplicates,w_dir_initial,args,log)
+		os.chdir(w_dir_initial)
 
 	#QPRED
 	if args.QPRED=='nmr':
 		nmr_main(args,log,w_dir_initial)
 	if args.QPRED=='energy':
 		energy_main(args,log,w_dir_initial)
+	os.chdir(w_dir_initial)
 
 	#QSTAT
 	if args.QSTAT=='descp':
 		geom_par_main(args,log,w_dir_initial)
 	if args.QSTAT=='graph':
 		graph_main(args,log,w_dir_initial)
+	os.chdir(w_dir_initial)
 
 	log.finalize()
+	
 	try:
 		os.rename('pyCONFORT_output.dat','pyCONFORT_{0}.dat'.format(args.output_name))
 	except FileExistsError:
