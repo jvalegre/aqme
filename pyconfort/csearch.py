@@ -311,6 +311,8 @@ def genConformer_r(mol, conf, i, matches, degree, sdwriter,args,name,log):
 
 #function to embed conformers
 def embed_conf(mol,initial_confs,args,log,coord_Map,alg_Map, mol_template):
+	if os.path.splitext(args.input)[1] == '.sdf' or os.path.splitext(args.input)[1] == '.mol' or os.path.splitext(args.input)[1] == '.mol2':
+		Chem.AssignStereochemistryFrom3D(mol)
 	if coord_Map is None and alg_Map is None and mol_template is None:
 		cids = rdDistGeom.EmbedMultipleConfs(mol, initial_confs,ignoreSmoothingFailures=True, randomSeed=args.seed,numThreads = 0)
 		if len(cids) == 0 or len(cids) == 1 and initial_confs != 1:
@@ -326,6 +328,11 @@ def embed_conf(mol,initial_confs,args,log,coord_Map,alg_Map, mol_template):
 			cids = rdDistGeom.EmbedMultipleConfs(mol, initial_confs, randomSeed=args.seed, useRandomCoords=True, boxSizeMult=10.0, numZeroFail=1000,ignoreSmoothingFailures=True, coordMap = coord_Map,numThreads = 0)
 		if args.verbose:
 			log.write("o  "+ str(len(cids))+" conformers initially generated with RDKit")
+
+	if os.path.splitext(args.input)[1] == '.sdf' or os.path.splitext(args.input)[1] == '.mol' or os.path.splitext(args.input)[1] == '.mol2':
+		#preserving AssignStereochemistryFrom3D
+		for id in cids:
+			Chem.AssignAtomChiralTagsFromStructure(mol,confId=id)
 
 	return cids
 
@@ -455,6 +462,7 @@ def rdkit_to_sdf(mol, name,args,log,dup_data,dup_data_idx, coord_Map, alg_Map, m
 	if args.CSEARCH=='rdkit':
 		rotmatches =[]
 	cids = embed_conf(mol,initial_confs,args,log,coord_Map,alg_Map, mol_template)
+
 	#energy minimize all to get more realistic results
 	#identify the atoms and decide Force Field
 	for atom in mol.GetAtoms():
