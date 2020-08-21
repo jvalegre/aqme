@@ -259,41 +259,39 @@ def qprep_gaussian_main(w_dir_initial,args,log):
 			charge_data = pd.read_csv(w_dir_initial+'/CSEARCH/csv_files/'+args.input.split('.')[0]+'-CSEARCH-Data.csv', usecols=['Molecule','Overall charge'])
 		except:
 			charge_data = None
-		for lot in args.level_of_theory:
-			for bs in args.basis_set:
-				for bs_gcp in args.basis_set_genecp_atoms:
-					# only create this directory if single point calculation is requested
-					if bs.find('**') > -1:
-						bs = bs.replace('**','(d,p)')
-					elif bs.find('*') > -1:
-						bs = bs.replace('*','(d)')
-					if args.single_point:
-						folder = sp_dir + '/' + str(lot) + '-' + str(bs)
-						log.write("\no  Preparing single-point inputs in {}".format(folder))
-					else:
-						folder = g_dir + '/' + str(lot) + '-' + str(bs)
-						log.write("\no  Preparing QM input files in {}".format(folder))
-					# this variable keeps trakc of folder creation
-					folder_error = False
-					try:
-						os.makedirs(folder)
-					except OSError:
-						if os.path.isdir(folder):
-							pass
-						else:
-							log.write('\nx  The QMCALC folder from QPREP could not be created, probably due to incompatible characters')
-							folder_error = True
-					# writing the com files
-					# check conf_file exists, parse energies and then write DFT input
-					for file in conf_files:
-						if os.path.exists(file):
-							if args.verbose:
-								if not folder_error:
-									log.write("   -> Converting from {}".format(file))
-							energies = read_energies(file,log)
-							name = file.split('.')[0]
+		for lot,bs,bs_gcp in zip(args.level_of_theory, args.basis_set,args.basis_set_genecp_atoms):
+			# only create this directory if single point calculation is requested
+			if bs.find('**') > -1:
+				bs = bs.replace('**','(d,p)')
+			elif bs.find('*') > -1:
+				bs = bs.replace('*','(d)')
+			if args.single_point:
+				folder = sp_dir + '/' + str(lot) + '-' + str(bs)
+				log.write("\no  Preparing single-point inputs in {}".format(folder))
+			else:
+				folder = g_dir + '/' + str(lot) + '-' + str(bs)
+				log.write("\no  Preparing QM input files in {}".format(folder))
+			# this variable keeps trakc of folder creation
+			folder_error = False
+			try:
+				os.makedirs(folder)
+			except OSError:
+				if os.path.isdir(folder):
+					pass
+				else:
+					log.write('\nx  The QMCALC folder from QPREP could not be created, probably due to incompatible characters')
+					folder_error = True
+			# writing the com files
+			# check conf_file exists, parse energies and then write DFT input
+			for file in conf_files:
+				if os.path.exists(file):
+					if args.verbose:
+						if not folder_error:
+							log.write("   -> Converting from {}".format(file))
+					energies = read_energies(file,log)
+					name = file.split('.')[0]
 
-							write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args, log, charge_data, w_dir_initial)
+					write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args, log, charge_data, w_dir_initial)
 	else:
 		log.write('\nx  No SDF files detected to convert to gaussian COM files')
 
@@ -365,40 +363,36 @@ def qcorr_gaussian_main(duplicates,w_dir_initial,args,log):
 	if not os.path.exists(w_dir_initial+'/QMCALC'):
 		w_dir = os.getcwd()
 		w_dir_fin = w_dir+'/success/output_files'
-		for lot in args.level_of_theory:
-			for bs in args.basis_set:
-				for bs_gcp in args.basis_set_genecp_atoms:
-					folder = w_dir_initial
-					ana_data = creation_of_ana_csv(args,duplicates)
-					log.write("\no  Analyzing output files in {}\n".format(folder))
-					log_files = get_com_or_log_out_files('output')
-					com_files = get_com_or_log_out_files('input')
-					output_analyzer(duplicates,log_files, com_files, w_dir,w_dir, lot, bs, bs_gcp, args, w_dir_fin, w_dir_initial, log, ana_data, 1)
+		for lot,bs,bs_gcp in zip(args.level_of_theory, args.basis_set,args.basis_set_genecp_atoms):
+			folder = w_dir_initial
+			ana_data = creation_of_ana_csv(args,duplicates)
+			log.write("\no  Analyzing output files in {}\n".format(folder))
+			log_files = get_com_or_log_out_files('output')
+			com_files = get_com_or_log_out_files('input')
+			output_analyzer(duplicates,log_files, com_files, w_dir,w_dir, lot, bs, bs_gcp, args, w_dir_fin, w_dir_initial, log, ana_data, 1)
 		os.chdir(w_dir)
 	# when you specify multiple levels of theory
 	else:
 		if args.QCORR=='gaussian':
 			args.path = w_dir_initial+'/QMCALC/G16/'
 		# Sets the folder and find the log files to analyze
-		for lot in args.level_of_theory:
-			for bs in args.basis_set:
-				for bs_gcp in args.basis_set_genecp_atoms:
-					#for main folder
-					w_dir_main = args.path + str(lot) + '-' + str(bs)
-					if not os.path.isdir(w_dir_main+'/dat_files/'):
-						os.makedirs(w_dir_main+'/dat_files/')
-					#for currect w_dir folder
-					w_dir = args.path + str(lot) + '-' + str(bs)
-					#check if New_Gaussian_Input_Files folder exists
-					w_dir,round_num = check_for_final_folder(w_dir)
-					log = Logger(w_dir_main+'/dat_files/pyCONFORT-QCORR-run_'+str(round_num), args.output_name)
-					#assign the path to the finished directory.
-					w_dir_fin = args.path + str(lot) + '-' + str(bs) +'/success/output_files'
-					os.chdir(w_dir)
-					log.write("\no  Analyzing output files in {}\n".format(w_dir))
-					log_files = get_com_or_log_out_files('output')
-					com_files = get_com_or_log_out_files('input')
-					output_analyzer(duplicates,log_files, com_files, w_dir, w_dir_main , lot, bs, bs_gcp, args, w_dir_fin, w_dir_initial, log, ana_data, round_num)
+		for lot,bs,bs_gcp in zip(args.level_of_theory, args.basis_set,args.basis_set_genecp_atoms):
+			#for main folder
+			w_dir_main = args.path + str(lot) + '-' + str(bs)
+			if not os.path.isdir(w_dir_main+'/dat_files/'):
+				os.makedirs(w_dir_main+'/dat_files/')
+			#for currect w_dir folder
+			w_dir = args.path + str(lot) + '-' + str(bs)
+			#check if New_Gaussian_Input_Files folder exists
+			w_dir,round_num = check_for_final_folder(w_dir)
+			log = Logger(w_dir_main+'/dat_files/pyCONFORT-QCORR-run_'+str(round_num), args.output_name)
+			#assign the path to the finished directory.
+			w_dir_fin = args.path + str(lot) + '-' + str(bs) +'/success/output_files'
+			os.chdir(w_dir)
+			log.write("\no  Analyzing output files in {}\n".format(w_dir))
+			log_files = get_com_or_log_out_files('output')
+			com_files = get_com_or_log_out_files('input')
+			output_analyzer(duplicates,log_files, com_files, w_dir, w_dir_main , lot, bs, bs_gcp, args, w_dir_fin, w_dir_initial, log, ana_data, round_num)
 		os.chdir(args.path)
 	os.chdir(w_dir_initial)
 
@@ -417,20 +411,19 @@ def dup_main(args,log,w_dir_initial):
 		if args.QCORR=='gaussian':
 			args.path = w_dir_initial+'/QMCALC/G16/'
 		# Sets the folder and find the log files to analyze
-		for lot in args.level_of_theory:
-			for bs in args.basis_set:
-				w_dir_main = args.path + str(lot) + '-' + str(bs)
-				w_dir = args.path + str(lot) + '-' + str(bs)
-				os.chdir(w_dir)
-				w_dir,round_num = check_for_final_folder(w_dir)
-				os.chdir(w_dir)
-				# change molecules to a range as files will have codes in a continous manner
-				log_files = get_com_or_log_out_files('output')
-				if len(log_files) != 0:
-					duplicates = dup_calculation(log_files,w_dir,w_dir_main,args,log,round_num)
-				else:
-					log.write(' There are no any log or out files in this folder.')
-					duplicates = 'None'
+		for lot,bs,bs_gcp in zip(args.level_of_theory, args.basis_set,args.basis_set_genecp_atoms):
+			w_dir_main = args.path + str(lot) + '-' + str(bs)
+			w_dir = args.path + str(lot) + '-' + str(bs)
+			os.chdir(w_dir)
+			w_dir,round_num = check_for_final_folder(w_dir)
+			os.chdir(w_dir)
+			# change molecules to a range as files will have codes in a continous manner
+			log_files = get_com_or_log_out_files('output')
+			if len(log_files) != 0:
+				duplicates = dup_calculation(log_files,w_dir,w_dir_main,args,log,round_num)
+			else:
+				log.write(' There are no any log or out files in this folder.')
+				duplicates = 'None'
 	return duplicates
 
 #getting descriptors
@@ -455,14 +448,12 @@ def geom_par_main(args,log,w_dir_initial):
 		if os.path.exists(w_dir_initial+'/QMCALC/G16'):
 			args.path = w_dir_initial+'/QMCALC/G16/'
 			# Sets the folder and find the log files to analyze
-			for lot in args.level_of_theory:
-				for bs in args.basis_set:
-					for bs_gcp in args.basis_set_genecp_atoms:
-						#assign the path to the finished directory.
-						w_dir = args.path + str(lot) + '-' + str(bs) +'/success/output_files'
-						os.chdir(w_dir)
-						log_files = get_com_or_log_out_files('output',name)
-						calculate_parameters(sdf_rdkit,sdf_ani,sdf_xtb,log_files,args,log,w_dir_initial,name,lot,bs)
+			for lot,bs,bs_gcp in zip(args.level_of_theory, args.basis_set,args.basis_set_genecp_atoms):
+				#assign the path to the finished directory.
+				w_dir = args.path + str(lot) + '-' + str(bs) +'/success/output_files'
+				os.chdir(w_dir)
+				log_files = get_com_or_log_out_files('output',name)
+				calculate_parameters(sdf_rdkit,sdf_ani,sdf_xtb,log_files,args,log,w_dir_initial,name,lot,bs)
 		else:
 			calculate_parameters(sdf_rdkit,sdf_ani,sdf_xtb,None,args,log,w_dir_initial,name,None,None)
 
@@ -490,14 +481,12 @@ def graph_main(args,log,w_dir_initial):
 		if os.path.exists(w_dir_initial+'/QMCALC/G16'):
 			args.path = w_dir_initial+'/QMCALC/G16/'
 			# Sets the folder and find the log files to analyze
-			for lot in args.level_of_theory:
-				for bs in args.basis_set:
-					for bs_gcp in args.basis_set_genecp_atoms:
-						#assign the path to the finished directory.
-						w_dir = args.path + str(lot) + '-' + str(bs) +'/success/output_files'
-						os.chdir(w_dir)
-						log_files = get_com_or_log_out_files('output',name)
-						graph(sdf_rdkit,sdf_xtb,sdf_ani,log_files,args,log,lot,bs,name,w_dir_initial)
+			for lot,bs,bs_gcp in zip(args.level_of_theory, args.basis_set,args.basis_set_genecp_atoms):
+				#assign the path to the finished directory.
+				w_dir = args.path + str(lot) + '-' + str(bs) +'/success/output_files'
+				os.chdir(w_dir)
+				log_files = get_com_or_log_out_files('output',name)
+				graph(sdf_rdkit,sdf_xtb,sdf_ani,log_files,args,log,lot,bs,name,w_dir_initial)
 		else:
 			graph(sdf_rdkit,sdf_xtb,sdf_ani,None,args,log,None,None,name,w_dir_initial)
 
@@ -517,15 +506,13 @@ def nmr_main(args,log,w_dir_initial):
 		if os.path.exists(w_dir_initial+'/QMCALC/G16'):
 			args.path = w_dir_initial+'/QMCALC/G16/'
 		# Sets the folder and find the log files to analyze
-		for lot in args.level_of_theory:
-			for bs in args.basis_set:
-				for bs_gcp in args.basis_set_genecp_atoms:
-					#assign the path to the finished directory.
-					w_dir_fin = args.path + str(lot) + '-' + str(bs) +'/success/output_files'
-					os.chdir(w_dir_fin)
-					log_files = get_com_or_log_out_files('output',name)
-					if len(log_files) != 0:
-						calculate_boltz_and_nmr(log_files,args,log,name,w_dir_fin,w_dir_initial,lot,bs)
+		for lot,bs,bs_gcp in zip(args.level_of_theory, args.basis_set,args.basis_set_genecp_atoms):
+			#assign the path to the finished directory.
+			w_dir_fin = args.path + str(lot) + '-' + str(bs) +'/success/output_files'
+			os.chdir(w_dir_fin)
+			log_files = get_com_or_log_out_files('output',name)
+			if len(log_files) != 0:
+				calculate_boltz_and_nmr(log_files,args,log,name,w_dir_fin,w_dir_initial,lot,bs)
 	os.chdir(w_dir_initial)
 
 def energy_main(args,log,w_dir_initial):
@@ -539,28 +526,24 @@ def energy_main(args,log,w_dir_initial):
 		if os.path.exists(w_dir_initial+'/QMCALC/G16'):
 			args.path = w_dir_initial+'/QMCALC/G16/'
 		# Sets the folder and find the log files to analyze
-		for lot in args.level_of_theory:
-			for bs in args.basis_set:
-				for bs_gcp in args.basis_set_genecp_atoms:
-					#assign the path to the finished directory.
-					w_dir_fin = args.path + str(lot) + '-' + str(bs) +'/success/output_files/'
-					os.chdir(w_dir_fin)
-					log_files = get_com_or_log_out_files('output',name)
-					if len(log_files) != 0:
-						calculate_boltz_and_energy(log_files,args,log,name,w_dir_fin,w_dir_initial,lot,bs)
+		for lot,bs,bs_gcp in zip(args.level_of_theory, args.basis_set,args.basis_set_genecp_atoms):
+			#assign the path to the finished directory.
+			w_dir_fin = args.path + str(lot) + '-' + str(bs) +'/success/output_files/'
+			os.chdir(w_dir_fin)
+			log_files = get_com_or_log_out_files('output',name)
+			if len(log_files) != 0:
+				calculate_boltz_and_energy(log_files,args,log,name,w_dir_fin,w_dir_initial,lot,bs)
 
 	#combining the combining all files in different folders
 	w_dir_boltz = w_dir_initial+'/QPRED/energy/boltz/'
 
-	for lot in args.level_of_theory:
-		for bs in args.basis_set:
-			for bs_gcp in args.basis_set_genecp_atoms:
-				#assign the path to the finished directory.
-				w_dir_fin = w_dir_boltz + str(lot) + '-' + str(bs)
-				os.chdir(w_dir_fin)
-				dat_files = glob.glob('*.dat')
-				if len(dat_files) != 0:
-					calculate_avg_and_energy(dat_files,args,log,name,w_dir_fin,w_dir_initial,w_dir_boltz,lot,bs)
+	for lot,bs,bs_gcp in zip(args.level_of_theory, args.basis_set,args.basis_set_genecp_atoms):
+		#assign the path to the finished directory.
+		w_dir_fin = w_dir_boltz + str(lot) + '-' + str(bs)
+		os.chdir(w_dir_fin)
+		dat_files = glob.glob('*.dat')
+		if len(dat_files) != 0:
+			calculate_avg_and_energy(dat_files,args,log,name,w_dir_fin,w_dir_initial,w_dir_boltz,lot,bs)
 
 	os.chdir(w_dir_initial)
 

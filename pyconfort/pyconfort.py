@@ -41,10 +41,6 @@ def main():
 	#if needed to load from a yaml file
 	load_from_yaml(args,log)
 
-	#setting defaults back
-	if len(args.basis_set_genecp_atoms) == 0:
-		args.basis_set_genecp_atoms = ['LANL2DZ']
-
 	#CSEARCH AND CMIN
 	if args.CSEARCH=='rdkit' or args.CSEARCH=='summ' or args.CSEARCH=='fullmonte':
 		#creation of csv to write dup data
@@ -97,7 +93,7 @@ def main():
 	os.chdir(w_dir_initial)
 
 	log.finalize()
-	
+
 	try:
 		os.rename('pyCONFORT_output.dat','pyCONFORT_{0}.dat'.format(args.output_name))
 	except FileExistsError:
