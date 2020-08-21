@@ -571,10 +571,11 @@ def exp_rules_main(args,log):
 			sys.exit(-1)
 
 		sdwriter = Chem.SDWriter(file.split('.')[0]+'_filter_exp_rules.sdf')
-
+		print_error_exp_rules = 0
 		for mol in allmols:
 			check_mol = True
-			check_mol = exp_rules_output(mol,args,log)
+			check_mol = exp_rules_output(mol,args,log,file,print_error_exp_rules)
+			print_error_exp_rules += 1
 			if check_mol:
 				sdwriter.write(mol)
 		sdwriter.close()

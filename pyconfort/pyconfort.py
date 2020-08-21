@@ -56,9 +56,8 @@ def main():
 		csearch_main(w_dir_initial,dup_data,args,log,start_time)
 		os.chdir(w_dir_initial)
 
-	##### neeed to fix!
 	#applying rules to discard certain conformers based on rules that the user define
-	if args.exp_rules:
+	if args.exp_rules != False:
 		exp_rules_main(args,log)
 		os.chdir(w_dir_initial)
 

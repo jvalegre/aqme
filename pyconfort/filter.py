@@ -20,7 +20,7 @@ def set_metal_atomic_number(mol,args):
 			atom.SetAtomicNum(atomic_number)
 
 # RULES TO GET EXPERIMENTAL CONFORMERS
-def exp_rules_output(mol, args,log):
+def exp_rules_output(mol, args,log,file,print_error_exp_rules):
 	if args.exp_rules == 'Ir_bidentate_x3':
 		passing = True
 		ligand_links = []
@@ -117,7 +117,51 @@ def exp_rules_output(mol, args,log):
 		# it filters off molecules that the SDF only detects 5 Ir neighbours
 		else:
 			passing = False
-		return passing
+
+
+	else:
+		atoms_filter = args.exp_rules[0].split(',')[0].split('-')
+		angle_rules = args.exp_rules[0].split(',')[1]
+		# the elements of this initial list will be replaced by the corresponding atom id numebrs
+		atom_idx = ['ATOM1','ATOM2','ATOM3']
+
+		print(atom_idx)
+		passing = True
+		find_angle = 0
+		for atom in mol.GetAtoms():
+			matches = 0
+			# Finds the Ir atom and gets the atom types and indexes of all its neighbours
+			if atom.GetSymbol() == atoms_filter[1]:
+				# idx of the central atom
+				atom_idx[1] = atom.GetIdx()
+				for x in atom.GetNeighbors():
+					if matches > 2:
+						if print_error_exp_rules == 0:
+							log.write('x  There are multiple options in exp_rules for '+ file + ', this filter will be turned off')
+					if x.GetSymbol() == (atoms_filter[0] or atoms_filter[2]):
+						matches += 1
+						if matches == 1:
+							atom_idx[0] = x.GetIdx()
+						elif matches == 2:
+							atom_idx[2] = x.GetIdx()
+				if matches == 2:
+					find_angle += 1
+		if find_angle == 0:
+			if print_error_exp_rules == 0:
+				log.write('x No angles matching the description from exp_rules in '+ file + ', this filter will be turned off')
+
+		else:
+			print(atom_idx)
+			# I need to get the only 3D conformer generated in that mol object for rdMolTransforms
+			mol_conf = mol.GetConformer(0)
+
+			# Calculate the angle between the 3 elements
+			angle = rdMolTransforms.GetAngleDeg(mol_conf,atom_idx[0],atom_idx[1],atom_idx[2])
+			if (angle_rules - args.angle_off) <= angle <= (angle_rules + args.angle_off):
+				passing = False
+
+		print(angle)
+	return passing
 
 # FILTER TO BE APPLIED FOR SMILES
 def filters(mol,args,log):

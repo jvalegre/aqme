@@ -147,8 +147,8 @@ def parser_args():
 	parser.add_argument("--submission_command",  help="Queueing system that the submission is done on", default="qsub_summit", metavar="submission_command", type=str)
 
 	#apply exp rules
-	parser.add_argument("--exp_rules", dest="exp_rules", default=False, help="Experimental rules applied to make Gaussian input files")
-	parser.add_argument("--angle_off", type=float, help="Any limit to set for check rules",default=30)
+	parser.add_argument("--exp_rules", dest="exp_rules", default=False, help="Discarding rules applied to filter-off conformers (based on experimental observation for example). Format: ['ATOM1-ATOM2-ATOM3, ANGLE'] (i.e. ['C-Pd-C, 180'])")
+	parser.add_argument("--angle_off", type=float, help="Deviation to discard in exp_rules (i.e. 180 +- 30 degrees)",default=30)
 
 	##### further additions #####
 	#NCI complex
