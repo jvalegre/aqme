@@ -41,6 +41,14 @@ def main():
 	#if needed to load from a yaml file
 	load_from_yaml(args,log)
 
+	#setting variable if needed
+	for i,_ in enumerate(args.basis_set):
+		if len(args.basis_set) != len(args.basis_set_genecp_atoms):
+			args.basis_set_genecp_atoms.append('')
+	for i,_ in enumerate(args.basis_set_sp):
+		if len(args.basis_set_sp) != len(args.basis_set_genecp_atoms_sp):
+			args.basis_set_genecp_atoms_sp.append('')
+
 	#CSEARCH AND CMIN
 	if args.CSEARCH=='rdkit' or args.CSEARCH=='summ' or args.CSEARCH=='fullmonte':
 		#creation of csv to write dup data

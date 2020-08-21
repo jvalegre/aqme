@@ -368,30 +368,28 @@ def output_analyzer(duplicates,log_files,com_files, w_dir, w_dir_main,lot, bs, b
 			ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp = check_for_gen_or_genecp(ATOMTYPES,args)
 
 			# Sets the folder and find the log files to analyze
-			for lot_sp in args.level_of_theory_sp:
-				for bs_sp in args.basis_set_sp:
-					for bs_gcp_sp in args.basis_set_genecp_atoms_sp:
-						log.write('-> Creating new single point files files for {0} in {1}/{2}-{3}\n'.format(file,single_point_input_files,lot_sp,bs_sp))
-						dir_name = str(lot_sp) + '-' + str(bs_sp)
-						if not os.path.isdir(single_point_input_files+'/'+dir_name):
-							os.makedirs(single_point_input_files+'/'+dir_name)
-						os.chdir(single_point_input_files+'/'+dir_name)
+			for lot_sp,bs_sp,bs_gcp_sp in zip(args.level_of_theory_sp,args.basis_set_sp,args.basis_set_genecp_atoms_sp):
+				log.write('-> Creating new single point files files for {0} in {1}/{2}-{3}\n'.format(file,single_point_input_files,lot_sp,bs_sp))
+				dir_name = str(lot_sp) + '-' + str(bs_sp)
+				if not os.path.isdir(single_point_input_files+'/'+dir_name):
+					os.makedirs(single_point_input_files+'/'+dir_name)
+				os.chdir(single_point_input_files+'/'+dir_name)
 
-						if genecp == 'genecp' or  genecp == 'gen':
-							keywords_opt = lot_sp+'/'+ genecp+' '+ args.input_for_sp
-						else:
-							keywords_opt = lot_sp+'/'+ bs_sp+' '+ args.input_for_sp
-						if args.empirical_dispersion_sp != 'None':
-							keywords_opt += ' empiricaldispersion={0}'.format(args.empirical_dispersion_sp)
-						if args.solvent_model_sp != 'gas_phase':
-							keywords_opt += ' scrf=({0},solvent={1})'.format(args.solvent_model_sp,args.solvent_name_sp)
+				if genecp == 'genecp' or  genecp == 'gen':
+					keywords_opt = lot_sp+'/'+ genecp+' '+ args.input_for_sp
+				else:
+					keywords_opt = lot_sp+'/'+ bs_sp+' '+ args.input_for_sp
+				if args.empirical_dispersion_sp != 'None':
+					keywords_opt += ' empiricaldispersion={0}'.format(args.empirical_dispersion_sp)
+				if args.solvent_model_sp != 'gas_phase':
+					keywords_opt += ' scrf=({0},solvent={1})'.format(args.solvent_model_sp,args.solvent_name_sp)
 
-						if args.charge_sp != 'None':
-							CHARGE = args.charge_sp
-						if args.mult_sp != 'None':
-							MULT = args.mult_sp
-						com_type = 'sp'
-						new_com_file(com_type, w_dir,w_dir_initial,single_point_input_files+'/'+dir_name,file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,TERMINATION,IM_FREQS,bs_sp,lot_sp,bs_gcp_sp)
+				if args.charge_sp != 'None':
+					CHARGE = args.charge_sp
+				if args.mult_sp != 'None':
+					MULT = args.mult_sp
+				com_type = 'sp'
+				new_com_file(com_type, w_dir,w_dir_initial,single_point_input_files+'/'+dir_name,file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,TERMINATION,IM_FREQS,bs_sp,lot_sp,bs_gcp_sp)
 
 	#write to csv ana_data
 	ana_data.at[0,'Total files'] = len(log_files)
