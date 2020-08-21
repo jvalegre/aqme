@@ -334,6 +334,8 @@ def write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args, log, 
 	except OSError:
 		pass
 
+	os.chdir(w_dir_initial)
+
 # MOVES SDF FILES TO THEIR CORRESPONDING FOLDERS
 def moving_files(destination,src,file):
 	try:
