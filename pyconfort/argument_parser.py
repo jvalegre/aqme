@@ -92,6 +92,8 @@ def parser_args():
 	parser.add_argument("--nprocs", help="Number of Processors", default=24, type=int, dest="nprocs")
 	parser.add_argument("--mem", help="Memory", default="96GB", type=str, dest="mem")
 	parser.add_argument("--chk", action="store_true", default=False, help="Create .chk files for Gaussian")
+	parser.add_argument("--last_line_for_input",  help="Last input line for DFT optimization ", default="None", dest="last_line_for_input", type=str)
+
 	#other options for QPREP
 	parser.add_argument("--com_from_xyz", action="store_true", default=False, help="Create input files for Gaussian from an xyz file")
 

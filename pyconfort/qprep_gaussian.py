@@ -279,7 +279,7 @@ def write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args, log, 
 		com_files = glob.glob('{0}_*.com'.format(name))
 
 		for file in com_files:
-			if genecp =='genecp' or genecp == 'gen':
+			if genecp =='genecp' or genecp == 'gen' or args.last_line_for_input != 'None':
 				ecp_list,ecp_genecp_atoms,ecp_gen_atoms = [],False,False
 				read_lines = open(file,"r").readlines()
 
@@ -289,23 +289,26 @@ def write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args, log, 
 
 				fileout = open(file, "a")
 
-				# Detect if there are atoms to use genecp or not (to use gen)
-				ATOMTYPES = []
-				for i in range(4,len(read_lines)):
-					if read_lines[i].split(' ')[0] not in ATOMTYPES and read_lines[i].split(' ')[0] in possible_atoms:
-						ATOMTYPES.append(read_lines[i].split(' ')[0])
+				if args.last_line_for_input != 'None':
+					fileout.write(args.last_line_for_input+'\n\n')
 
-				# define genecp/gen atoms
-				ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp = check_for_gen_or_genecp(ATOMTYPES,args)
+				if genecp =='genecp' or genecp == 'gen':
+					# Detect if there are atoms to use genecp or not (to use gen)
+					ATOMTYPES = []
+					for i in range(4,len(read_lines)):
+						if read_lines[i].split(' ')[0] not in ATOMTYPES and read_lines[i].split(' ')[0] in possible_atoms:
+							ATOMTYPES.append(read_lines[i].split(' ')[0])
 
-				#error if both genecp and gen are
-				if ecp_genecp_atoms and ecp_gen_atoms:
-					sys.exit("x  ERROR: Can't use Gen and GenECP at the same time")
+					# define genecp/gen atoms
+					ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp = check_for_gen_or_genecp(ATOMTYPES,args)
+					#error if both genecp and gen are
+					if ecp_genecp_atoms and ecp_gen_atoms:
+						sys.exit("x  ERROR: Can't use Gen and GenECP at the same time")
 
-				# write genecp/gen part
-				type_gen = 'qprep'
+					# write genecp/gen part
+					type_gen = 'qprep'
 
-				write_genecp(type_gen,fileout,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,bs,lot,bs_gcp,args,w_dir_initial,path_write_input_files)
+					write_genecp(type_gen,fileout,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,bs,lot,bs_gcp,args,w_dir_initial,path_write_input_files)
 
 				fileout.close()
 
