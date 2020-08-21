@@ -140,6 +140,8 @@ def get_name_and_charge(name,charge_data):
 			name_molecule = name[:-5]
 		elif 'rdkit' in name_list:
 			name_molecule = name[:-6]
+		elif 'fullmonte' in name_list:
+			name_molecule = name[:-10]
 
 		for i in range(len(charge_data)):
 			if charge_data.loc[i,'Molecule'] == name_molecule:

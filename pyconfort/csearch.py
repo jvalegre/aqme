@@ -217,27 +217,23 @@ def conformer_generation(mol,name,start_time,args,log,dup_data,dup_data_idx,coor
 			log.write("\n   ----- {} -----".format(name))
 		try:
 			# the conformational search for RDKit
-			status = summ_search(mol, name,args,log,dup_data,dup_data_idx,coord_Map,alg_Map,mol_template)
+			status,update_to_rdkit = summ_search(mol, name,args,log,dup_data,dup_data_idx,coord_Map,alg_Map,mol_template)
 			if args.CMIN=='ani' or args.CMIN=='xtb':
 				if status != -1:
-					if status != 0:
-						if args.CMIN=='ani':
-							min_suffix = 'ani'
-						elif args.CMIN=='xtb':
-							min_suffix = 'xtb'
-						if args.CSEARCH=='rdkit':
-							mult_min(name+'_'+'rdkit', args, min_suffix, log, dup_data, dup_data_idx)
-						elif args.CSEARCH=='summ':
-							mult_min(name+'_'+'summ', args, min_suffix, log, dup_data, dup_data_idx)
-						elif args.CSEARCH=='fullmonte':
-							mult_min(name+'_'+'fullmonte', args, min_suffix, log, dup_data, dup_data_idx)
-					elif status == 0:
-						os.remove(name+'_'+'rdkit'+args.output)
-						log.write('\nx  No rotatable dihedral found. Run again with nodihedral set to TRUE')
-			else:
-				if status == 0:
-					os.remove(name+'_'+'rdkit'+args.output)
-					log.write('\nx  No rotatable dihedral found. Run again with nodihedral set to TRUE')
+					if args.CMIN=='ani':
+						min_suffix = 'ani'
+					elif args.CMIN=='xtb':
+						min_suffix = 'xtb'
+					if args.CSEARCH=='rdkit':
+						mult_min(name+'_'+'rdkit', args, min_suffix, log, dup_data, dup_data_idx)
+					elif args.CSEARCH=='summ' and not update_to_rdkit :
+						mult_min(name+'_'+'summ', args, min_suffix, log, dup_data, dup_data_idx)
+					elif args.CSEARCH=='summ' and update_to_rdkit :
+						mult_min(name+'_'+'rdkit', args, min_suffix, log, dup_data, dup_data_idx)
+					elif args.CSEARCH=='fullmonte' and not update_to_rdkit:
+						mult_min(name+'_'+'fullmonte', args, min_suffix, log, dup_data, dup_data_idx)
+					elif args.CSEARCH=='fullmonte' and update_to_rdkit:
+						mult_min(name+'_'+'rdkit', args, min_suffix, log, dup_data, dup_data_idx)
 
 		except (KeyboardInterrupt, SystemExit):
 			raise
@@ -356,14 +352,13 @@ def min_and_E_calc(mol,cids,args,log,coord_Map,alg_Map,mol_template):
 	return outmols,cenergy
 
 # minimizes, gets the energy and filters RDKit conformers after embeding
-def min_after_embed(mol,cids,name,initial_confs,rotmatches,dup_data,dup_data_idx,sdwriter,args,log,coord_Map,alg_Map, mol_template):
+def min_after_embed(mol,cids,name,initial_confs,rotmatches,dup_data,dup_data_idx,sdwriter,args,log,update_to_rdkit,coord_Map,alg_Map, mol_template):
 	# gets optimized mol objects and energies
 	outmols,cenergy = min_and_E_calc(mol,cids,args,log,coord_Map,alg_Map,mol_template)
 
 	for i, cid in enumerate(cids):
 		outmols[cid].SetProp('_Name', name +' '+ str(i+1))
 		outmols[cid].SetProp('Energy', str(cenergy[cid]))
-
 
 	# sorts the energies
 	cids = list(range(len(outmols)))
@@ -398,7 +393,7 @@ def min_after_embed(mol,cids,name,initial_confs,rotmatches,dup_data,dup_data_idx
 
 		total = 0
 		for conf in selectedcids_rdkit:
-			if args.CSEARCH=='summ':
+			if args.CSEARCH=='summ' and not update_to_rdkit:
 				sdwriter.write(outmols[conf],conf)
 				for m in rotmatches:
 					rdMolTransforms.SetDihedralDeg(outmols[conf].GetConformer(conf),*m,180.0)
@@ -419,10 +414,7 @@ def min_after_embed(mol,cids,name,initial_confs,rotmatches,dup_data,dup_data_idx
 
 #conversion from rdkit to sdf
 def rdkit_to_sdf(mol, name,args,log,dup_data,dup_data_idx, coord_Map, alg_Map, mol_template):
-	if args.CSEARCH =='rdkit' or args.CSEARCH =='summ':
-		sdwriter = Chem.SDWriter(name+'_'+'rdkit'+args.output)
-	elif args.CSEARCH =='fullmonte':
-		sdwriter = Chem.SDWriter(name+'_'+'fullmonte'+args.output)
+
 	Chem.SanitizeMol(mol)
 	if os.path.splitext(args.input)[1] == '.csv' or os.path.splitext(args.input)[1] == '.cdx' or os.path.splitext(args.input)[1] == '.smi':
 		mol = Chem.AddHs(mol)
@@ -437,38 +429,51 @@ def rdkit_to_sdf(mol, name,args,log,dup_data,dup_data_idx, coord_Map, alg_Map, m
 
 	dup_data.at[dup_data_idx, 'Molecule'] = name
 
+	update_to_rdkit=False
+
 	rotmatches = getDihedralMatches(mol, args.heavyonly,log)
 	if len(rotmatches) > args.max_torsions:
 		log.write("x  Too many torsions (%d). Skipping %s" %(len(rotmatches),(name+args.output)))
 		status = -1
 	elif args.CSEARCH=='summ' and len(rotmatches) == 0:
-		status = 0
+		update_to_rdkit = True
+		log.write('\nx  No rotatable dihedral found. Updating to CSEARCH to RDKit')
 	elif args.CSEARCH=='fullmonte' and len(rotmatches) == 0:
-		status = 0
-	else:
-		dup_data.at[dup_data_idx, 'RDKIT-Initial-samples'] = initial_confs
-		if args.CSEARCH=='rdkit':
-			rotmatches =[]
-		cids = embed_conf(mol,initial_confs,args,log,coord_Map,alg_Map, mol_template)
-		#energy minimize all to get more realistic results
-		#identify the atoms and decide Force Field
-		for atom in mol.GetAtoms():
-			if atom.GetAtomicNum() > 36: #up to Kr for MMFF, if not the code will use UFF
-				log.write("x  "+args.ff+" is not compatible with the molecule, changing to UFF")
-				args.ff = "UFF"
-		if args.verbose:
-			log.write("o  Optimizing "+ str(len(cids))+ " initial conformers with "+ args.ff)
-			if args.CSEARCH=='summ':
-				log.write("o  Found "+ str(len(rotmatches))+ " rotatable torsions")
-			elif args.CSEARCH=='fullmonte':
-				log.write("o  Found "+ str(len(rotmatches))+ " rotatable torsions")
-			else:
-				log.write("o  Systematic torsion rotation is set to OFF")
+		update_to_rdkit = True
+		log.write('\nx  No rotatable dihedral found. Updating to CSEARCH to RDKit')
 
-		status = min_after_embed(mol,cids,name,initial_confs,rotmatches,dup_data,dup_data_idx,sdwriter,args,log,coord_Map,alg_Map, mol_template)
+	if update_to_rdkit and args.CSEARCH =='summ' :
+		sdwriter = Chem.SDWriter(name+'_'+'summ'+args.output)
+	elif update_to_rdkit and args.CSEARCH =='fullmonte':
+		sdwriter = Chem.SDWriter(name+'_'+'fullmonte'+args.output)
+	elif args.CSEARCH =='fullmonte':
+		sdwriter = Chem.SDWriter(name+'_'+'fullmonte'+args.output)
+	else:
+		sdwriter = Chem.SDWriter(name+'_'+'rdkit'+args.output)
+
+	dup_data.at[dup_data_idx, 'RDKIT-Initial-samples'] = initial_confs
+	if args.CSEARCH=='rdkit':
+		rotmatches =[]
+	cids = embed_conf(mol,initial_confs,args,log,coord_Map,alg_Map, mol_template)
+	#energy minimize all to get more realistic results
+	#identify the atoms and decide Force Field
+	for atom in mol.GetAtoms():
+		if atom.GetAtomicNum() > 36: #up to Kr for MMFF, if not the code will use UFF
+			log.write("x  "+args.ff+" is not compatible with the molecule, changing to UFF")
+			args.ff = "UFF"
+	if args.verbose:
+		log.write("o  Optimizing "+ str(len(cids))+ " initial conformers with "+ args.ff)
+		if args.CSEARCH=='summ':
+			log.write("o  Found "+ str(len(rotmatches))+ " rotatable torsions")
+		elif args.CSEARCH=='fullmonte':
+			log.write("o  Found "+ str(len(rotmatches))+ " rotatable torsions")
+		else:
+			log.write("o  Systematic torsion rotation is set to OFF")
+
+	status = min_after_embed(mol,cids,name,initial_confs,rotmatches,dup_data,dup_data_idx,sdwriter,args,log,update_to_rdkit,coord_Map,alg_Map, mol_template)
 	sdwriter.close()
 
-	return status,rotmatches
+	return status,rotmatches,update_to_rdkit
 
 #filtering after dihydral scan to sdf
 def dihedral_filter_and_sdf(name,args,log,dup_data,dup_data_idx,coord_Map, alg_Map, mol_template):
@@ -513,7 +518,7 @@ def dihedral_filter_and_sdf(name,args,log,dup_data,dup_data_idx,coord_Map, alg_M
 # EMBEDS, OPTIMIZES AND FILTERS RDKIT CONFORMERS
 def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None, alg_Map=None, mol_template=None):
 	# writes sdf for the first RDKit conformer generation
-	status,rotmatches = rdkit_to_sdf(mol, name,args,log,dup_data,dup_data_idx, coord_Map, alg_Map, mol_template)
+	status,rotmatches,update_to_rdkit = rdkit_to_sdf(mol, name,args,log,dup_data,dup_data_idx, coord_Map, alg_Map, mol_template)
 
 	# reads the initial SDF files from RDKit and uses dihedral scan if selected
 	if status != -1 or status != 0:
@@ -524,4 +529,4 @@ def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None, alg_
 			# removes the rdkit file
 			# os.remove(name+'_'+'rdkit'+args.output)
 
-	return status
+	return status,update_to_rdkit
