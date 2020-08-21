@@ -364,8 +364,10 @@ def qcorr_gaussian_main(duplicates,w_dir_initial,args,log):
 		w_dir = os.getcwd()
 		w_dir_fin = w_dir+'/success/output_files'
 		for lot,bs,bs_gcp in zip(args.level_of_theory, args.basis_set,args.basis_set_genecp_atoms):
+			if not os.path.isdir(w_dir+'/dat_files/'):
+				os.makedirs(w_dir+'/dat_files/')
 			w_dir,round_num = check_for_final_folder(w_dir)
-			log = Logger(w_dir_main+'/dat_files/pyCONFORT-QCORR-run_'+str(round_num), args.output_name)
+			log = Logger(w_dir+'/dat_files/pyCONFORT-QCORR-run_'+str(round_num), args.output_name)
 			ana_data = creation_of_ana_csv(args,duplicates)
 			log.write("\no  Analyzing output files in {}\n".format(w_dir))
 			log_files = get_com_or_log_out_files('output')
