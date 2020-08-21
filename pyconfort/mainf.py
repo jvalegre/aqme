@@ -305,11 +305,19 @@ def move_sdf_main(args):
 		destination_xtb = src +'/CSEARCH/xtb'
 		for file in all_xtb_conf_files:
 			moving_files(destination_xtb,src,file)
+		all_xtb_conf_files_all = glob.glob('*_xtb_all_confs.sdf')
+		destination_xtb_all = src +'/CSEARCH/xtb_all_confs'
+		for file in all_xtb_conf_files_all:
+			moving_files(destination_xtb_all,src,file)
 	if args.CMIN=='ani':
 		all_ani_conf_files = glob.glob('*_ani.sdf')
 		destination_ani = src +'/CSEARCH/ani'
 		for file in all_ani_conf_files:
 			moving_files(destination_ani,src,file)
+		all_ani_conf_files_all = glob.glob('*_ani_all_confs.sdf')
+		destination_ani_all = src +'/CSEARCH/ani_all_confs'
+		for file in all_ani_conf_files_all:
+			moving_files(destination_ani_all,src,file)
 	if args.CSEARCH=='rdkit':
 		all_name_conf_files = glob.glob('*_rdkit.sdf')
 		destination_rdkit = src+ '/CSEARCH/rdkit'

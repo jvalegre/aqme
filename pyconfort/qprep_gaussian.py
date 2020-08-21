@@ -305,12 +305,13 @@ def write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args, log, 
 
 				write_genecp(type_gen,fileout,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,bs,lot,bs_gcp,args,w_dir_initial,path_write_input_files)
 
+				fileout.close()
+
 			else:
 				read_lines = open(file,"r").readlines()
 
 				rename_file_name = rename_file_and_charge_chk_change(read_lines,file,args,charge_com)
 
-			fileout.close()
 
 			#change file by moving to new file
 			try:
