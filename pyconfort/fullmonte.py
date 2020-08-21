@@ -163,6 +163,9 @@ def generating_conformations_fullmonte(name,args,rotmatches,log,selectedcids_rdk
 
 	dup_data.at[dup_data_idx, 'FullMonte-Unique-conformers'] = len(unique_mol)
 
+	if args.verbose:
+		log.write("o  "+ str(len(unique_mol))+" unique conformers remain")
+
 	cids = list(range(len(unique_mol)))
 	sorted_all_cids = sorted(cids,key = lambda cid: c_energy[cid])
 
