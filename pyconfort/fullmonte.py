@@ -183,7 +183,5 @@ def generating_conformations_fullmonte(name,args,rotmatches,log,selectedcids_rdk
 			sdwriter.write(mol_realigned)
 
 	status = 1
-	#removes the rdkit file
-	os.remove(name+'_'+'rdkit'+args.output)
 
 	return status

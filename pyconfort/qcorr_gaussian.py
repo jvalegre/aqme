@@ -12,6 +12,7 @@ import shutil
 import numpy as np
 from pyconfort.qprep_gaussian import input_route_line,check_for_gen_or_genecp,write_genecp
 from pyconfort.argument_parser import possible_atoms
+from pyconfort.filter import exp_rules_output
 
 possible_atoms = possible_atoms()
 
@@ -269,20 +270,20 @@ def create_folder_and_com(w_dir,w_dir_main,round_num,log,NATOMS,ATOMTYPES,CARTES
 	com_type = 'analysis'
 	new_com_file(com_type, w_dir,w_dir_initial,new_gaussian_input_files,file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,TERMINATION,IM_FREQS,bs,lot,bs_gcp)
 
-def create_folder_move_log_files(w_dir,w_dir_main,round_num,file,IM_FREQS,TERMINATION,ERRORTYPE,w_dir_fin,finished,unfinished,atom_error,scf_error,imag_freq,other_error):
+def create_folder_move_log_files(w_dir,w_dir_main,round_num,file,IM_FREQS,TERMINATION,ERRORTYPE,w_dir_fin,finished,unfinished,atom_error,scf_error,imag_freq,other_error,exp_rules_qcorr,passing_rules):
 	source = w_dir+'/'+file
 
-	if IM_FREQS == 0 and TERMINATION == "normal":
+	if IM_FREQS == 0 and TERMINATION == "normal" and passing_rules:
 		destination = w_dir_fin
 		moving_files(source, destination)
 		finished += 1
 
-	if IM_FREQS > 0:
+	elif IM_FREQS > 0:
 		destination = w_dir_main+'/failed/run_'+str(round_num)+'/imag_freq/'
 		moving_files(source, destination)
 		imag_freq += 1
 
-	if IM_FREQS == 0 and TERMINATION == "error":
+	elif IM_FREQS == 0 and TERMINATION == "error":
 		if ERRORTYPE == "atomicbasiserror":
 			destination = w_dir_main +'/failed/run_'+str(round_num)+'/error/basis_set_error'
 			atom_error += 1
@@ -299,13 +300,43 @@ def create_folder_move_log_files(w_dir,w_dir_main,round_num,file,IM_FREQS,TERMIN
 		moving_files(source, destination)
 		unfinished += 1
 
-	return finished,unfinished,atom_error,scf_error,imag_freq,other_error
+	elif not passing_rules:
+		destination = w_dir_main+'/failed/run_'+str(round_num)+'/exp_rules_filter/'
+		moving_files(source, destination)
+		exp_rules_qcorr += 1
+
+	return finished,unfinished,atom_error,scf_error,imag_freq,other_error,exp_rules_qcorr
+
+# Output file to mol converter
+def output_to_mol(file,format):
+	ob_compat = True
+	try:
+		from openbabel import openbabel as ob
+	except (ModuleNotFoundError,AttributeError):
+		ob_compat = False
+	try:
+		from rdkit.Chem import AllChem as Chem
+	except (ModuleNotFoundError,AttributeError):
+		log.write('x  RDKit is not installed correctly, the exp_rules and check_geom filters will be disabled')
+		rdkit_compat = False
+
+
+	# transforms output file into mol object
+	obConversion = ob.OBConversion()
+	obConversion.SetInAndOutFormats(format, 'mol')
+	ob_mol = ob.OBMol()
+	obConversion.ReadFile(ob_mol, file)
+	obConversion.WriteFile(ob_mol, file.split('.')[0]+'.mol')
+	mol = Chem.MolFromMolFile(file.split('.')[0]+'.mol')
+	obConversion.CloseOutFile()
+
+	return mol,ob_compat,rdkit_compat
 
 # DEFINTION OF OUTPUT ANALYSER and NMR FILES CREATOR
 def output_analyzer(duplicates,log_files,com_files, w_dir, w_dir_main,lot, bs, bs_gcp, args, w_dir_fin, w_dir_initial, log, ana_data, round_num):
 
 	input_route = input_route_line(args)
-	finished,unfinished,atom_error,scf_error,imag_freq,other_error = 0,0,0,0,0,0
+	finished,unfinished,atom_error,scf_error,imag_freq,other_error,exp_rules_qcorr = 0,0,0,0,0,0,0
 
 	if round_num == 1:
 		#moves the comfiles to respective folder
@@ -316,7 +347,7 @@ def output_analyzer(duplicates,log_files,com_files, w_dir, w_dir_main,lot, bs, b
 
 	for file in log_files:
 		# read the file
-		print(file)
+		log.write(file)
 		outlines, outfile, break_loop = read_log_file(w_dir,file)
 
 		if break_loop:
@@ -341,6 +372,7 @@ def output_analyzer(duplicates,log_files,com_files, w_dir, w_dir_main,lot, bs, b
 		# Get he coordinates for jobs that did not finished or finished with an error
 		if TERMINATION != "normal":
 			ATOMTYPES, CARTESIANS,NATOMS = get_coords_not_normal(outlines, stop_rms, stand_or, dist_rot_or, NATOMS, possible_atoms, ATOMTYPES, CARTESIANS)
+
 		# This part fixes imaginary freqs (if any)
 		if IM_FREQS > 0:
 			CARTESIANS = fix_imag_freqs(NATOMS, CARTESIANS, args, FREQS, NORMALMODE)
@@ -348,11 +380,32 @@ def output_analyzer(duplicates,log_files,com_files, w_dir, w_dir_main,lot, bs, b
 		#close the file
 		outfile.close()
 
+		# this part filters off conformers based on user-defined exp_rules
+		passing_rules = True
+		if args.exp_rules != False:
+			if TERMINATION == "normal" and IM_FREQS == 0:
+				log.write("\n   ----- Exp_rules filter(s) will be applied to the output file -----")
+				mol,ob_compat,rdkit_compat = output_to_mol(file,format='log')
+				print_error_exp_rules=False
+				passing_rules = exp_rules_output(mol,args,log,file,print_error_exp_rules,ob_compat,rdkit_compat)
+				os.remove(file.split('.')[0]+'.mol')
+
+		passing_geom = True
+		if args.check_geom:
+			if TERMINATION == "normal" and IM_FREQS == 0:
+				log.write("\n   ----- Geometrical check will be applied to the output file -----")
+				# this creates a mol object from the optimized log file
+				mol,ob_compat,rdkit_compat = output_to_mol(file,format='log')
+				# this creates a mol object from the input file
+				mol2,_,_ = output_to_mol(file,format='com')
+				passing_geom = check_geom_filter(mol,mol2)
+				os.remove(file.split('.')[0]+'.mol')
+
 		# This part places the calculations in different folders depending on the type of termination
-		finished,unfinished,atom_error,scf_error,imag_freq,other_error = create_folder_move_log_files(w_dir,w_dir_main,round_num,file,IM_FREQS,TERMINATION,ERRORTYPE,w_dir_fin,finished,unfinished,atom_error,scf_error,imag_freq,other_error)
+		finished,unfinished,atom_error,scf_error,imag_freq,other_error,exp_rules_qcorr = create_folder_move_log_files(w_dir,w_dir_main,round_num,file,IM_FREQS,TERMINATION,ERRORTYPE,w_dir_fin,finished,unfinished,atom_error,scf_error,imag_freq,other_error,exp_rules_qcorr,passing_rules)
 
 		# check if gen or genecp are active
-		ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp =  check_for_gen_or_genecp(ATOMTYPES,args)
+		ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp = check_for_gen_or_genecp(ATOMTYPES,args)
 
 		# create folders and set level of theory in COM files to fix imaginary freqs or not normal terminations
 		if IM_FREQS > 0 or TERMINATION != "normal" and not os.path.exists(w_dir_main+'/failed/run_'+str(round_num)+'/error/basis_set_error/'+file):
@@ -399,8 +452,10 @@ def output_analyzer(duplicates,log_files,com_files, w_dir, w_dir_main,lot, bs, b
 	ana_data.at[0,'Basis set error'] =  atom_error
 	ana_data.at[0,'Other errors'] = other_error
 	ana_data.at[0,'Unfinished'] = unfinished
-	if duplicates != False:
+	if args.dup != False:
 		ana_data.at[0,'Duplicates'] = duplicates
+	if args.exp_rules != False:
+		ana_data.at[0,'Exp_rules filter'] = exp_rules_qcorr
 
 	if not os.path.isdir(w_dir_main+'/csv_files/'):
 		os.makedirs(w_dir_main+'/csv_files/')

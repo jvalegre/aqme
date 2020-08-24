@@ -20,18 +20,14 @@ def set_metal_atomic_number(mol,args):
 			atom.SetAtomicNum(atomic_number)
 
 # RULES TO GET EXPERIMENTAL CONFORMERS
-def exp_rules_output(mol, args,log,file,print_error_exp_rules):
-	if args.exp_rules == 'Ir_bidentate_x3':
+def exp_rules_output(mol,args,log,file,print_error_exp_rules,ob_compat,rdkit_compat):
+	if args.exp_rules == 'Ir_bidentate_x3' and rdkit_compat:
 		passing = True
 		ligand_links = []
 		atom_indexes = []
+		# Finds the Ir atom and gets the atom types and indexes of all its neighbours
 		for atom in mol.GetAtoms():
-			# Finds the Ir atom and gets the atom types and indexes of all its neighbours
-			if atom.GetSymbol() in args.metal:
-				atomic_number = possible_atoms.index(atom.GetSymbol())
-				atom.SetAtomicNum(atomic_number)
-		for atom in mol.GetAtoms():
-			if atom.GetAtomicNum() == atomic_number:
+			if atom.GetAtomicNum() == 77:
 				metal_idx = atom.GetIdx()
 				for x in atom.GetNeighbors():
 					ligand_links.append(x.GetSymbol())
@@ -41,7 +37,7 @@ def exp_rules_output(mol, args,log,file,print_error_exp_rules):
 		# This part will identify the pairs of C and N atoms that are part of the same Ph_Py ligand.
 		# The shape of the atom pairs is '[[C1_ATOM_NUMBER, N1_ATOM_NUMBER],[C2, N2],...]'.
 		# This information is required for the subsequent filtering process based on angles
-		if len(atom_indexes) == args.complex_coord[0]:
+		if len(atom_indexes) == 6:
 			ligand_atoms = []
 			for i,_ in enumerate(atom_indexes):
 				# This is a filter that excludes molecules that fell apart during DFT geometry
@@ -118,50 +114,99 @@ def exp_rules_output(mol, args,log,file,print_error_exp_rules):
 		else:
 			passing = False
 
+	elif rdkit_compat:
+		if ob_compat:
+			for rule in args.exp_rules:
+				passing = True
+				try:
+					atoms_filter = rule.split(',')[0].split('-')
+					angle_rules = rule.split(',')[1]
+				except IndexError:
+					log.write('x  The exp_rules parameter(s) was not correctly defined, this filter will be turned off')
+					break
+				# the elements of this initial list will be replaced by the corresponding atom id numebrs
+				atom_idx = ['ATOM1','ATOM2','ATOM3']
 
-	else:
-		atoms_filter = args.exp_rules[0].split(',')[0].split('-')
-		angle_rules = args.exp_rules[0].split(',')[1]
-		# the elements of this initial list will be replaced by the corresponding atom id numebrs
-		atom_idx = ['ATOM1','ATOM2','ATOM3']
+				find_angle = 0
+				incompatibility = False
+				for atom in mol.GetAtoms():
+					# count matches
+					neigh_count_first = 0
+					neigh_count_second = 0
+					# Finds the metal atom and gets the atom types and indexes of all its neighbours
+					if atom.GetSymbol() == atoms_filter[1]:
+						# idx of the central atom
+						atom_idx[1] = atom.GetIdx()
+						for x in atom.GetNeighbors():
+							if x.GetSymbol() == atoms_filter[0] or x.GetSymbol() == atoms_filter[2]:
+								# this ensures that both neighbours are used
+								if x.GetSymbol() == atoms_filter[0] and x.GetSymbol() == atoms_filter[2]:
+									if neigh_count_first <= neigh_count_second:
+										neigh_count_first += 1
+										atom_idx[0] = x.GetIdx()
+									else:
+										neigh_count_second += 1
+										atom_idx[2] = x.GetIdx()
+								elif x.GetSymbol() == atoms_filter[0]:
+									neigh_count_first += 1
+									atom_idx[0] = x.GetIdx()
+								elif x.GetSymbol() == atoms_filter[2]:
+									neigh_count_second += 1
+									atom_idx[2] = x.GetIdx()
+								# count matches
+								matches = neigh_count_first + neigh_count_second
+								if matches > 2:
+									if print_error_exp_rules == 0:
+										log.write('x  There are multiple options in exp_rules for '+ file + ', this filter will be turned off')
+										incompatibility = True
+										break
+						if neigh_count_first == 1 and neigh_count_second == 1:
+							find_angle += 1
+				if find_angle == 0 and not incompatibility:
+					if print_error_exp_rules == 0:
+						log.write('x  No angles matching the description from exp_rules in '+ file + ', this filter will be turned off')
+				elif find_angle > 1:
+						log.write('x  '+ file + ' contain more than one atom that meets the exp_rules criteria, this filter will be turned off')
+				elif find_angle == 1:
+					# I need to get the only 3D conformer generated in that mol object for rdMolTransforms
+					mol_conf = mol.GetConformer(0)
 
-		print(atom_idx)
-		passing = True
-		find_angle = 0
-		for atom in mol.GetAtoms():
-			matches = 0
-			# Finds the Ir atom and gets the atom types and indexes of all its neighbours
-			if atom.GetSymbol() == atoms_filter[1]:
-				# idx of the central atom
-				atom_idx[1] = atom.GetIdx()
-				for x in atom.GetNeighbors():
-					if matches > 2:
-						if print_error_exp_rules == 0:
-							log.write('x  There are multiple options in exp_rules for '+ file + ', this filter will be turned off')
-					if x.GetSymbol() == (atoms_filter[0] or atoms_filter[2]):
-						matches += 1
-						if matches == 1:
-							atom_idx[0] = x.GetIdx()
-						elif matches == 2:
-							atom_idx[2] = x.GetIdx()
-				if matches == 2:
-					find_angle += 1
-		if find_angle == 0:
-			if print_error_exp_rules == 0:
-				log.write('x No angles matching the description from exp_rules in '+ file + ', this filter will be turned off')
+					# Calculate the angle between the 3 elements
+					angle = rdMolTransforms.GetAngleDeg(mol_conf,atom_idx[0],atom_idx[1],atom_idx[2])
+					if (int(angle_rules) - args.angle_off) <= angle <= (int(angle_rules) + args.angle_off):
+						passing = False
+				if not passing:
+					break
 
 		else:
-			print(atom_idx)
-			# I need to get the only 3D conformer generated in that mol object for rdMolTransforms
-			mol_conf = mol.GetConformer(0)
+			log.write('x  Open Babel is not installed correctly, the exp_rules filter will be disabled')
 
-			# Calculate the angle between the 3 elements
-			angle = rdMolTransforms.GetAngleDeg(mol_conf,atom_idx[0],atom_idx[1],atom_idx[2])
-			if (angle_rules - args.angle_off) <= angle <= (angle_rules + args.angle_off):
-				passing = False
-
-		print(angle)
 	return passing
+
+# COMPARES THE BOND LENGTHS BETWEEN AN INPUT AND AN OPTIMIZED OUTPUT FILES
+def check_geom_filter(mol,mol2):
+	passing_geom = True
+	mol_bonds = []
+	for atom in mol.GetAtoms():
+		for x in atom.GetNeighbors():
+			indiv_bond = [atom.GetIdx(),x.GetIdx()]
+			mol_bonds.append(indiv_bond)
+
+	# I need to get the only 3D conformer generated in that mol object for rdMolTransforms
+	mol_conf = mol.GetConformer(0)
+	mol_conf2 = mol2.GetConformer(0)
+	for bond in mol_bonds:
+		bond_length = rdMolTransforms.GetBondLength(mol_conf,bond[0],bond[1])
+		bond_length2 = rdMolTransforms.GetBondLength(mol_conf2,bond[0],bond[1])
+		if bond_length < bond_length2:
+			smaller_bond = bond_length
+			bigger_bond = bond_length2
+		else:
+			smaller_bond = bond_length2
+			bigger_bond = bond_length
+
+		if bigger_bond > args.length_criteria*smaller_bond:
+			passing_geom = False
 
 # FILTER TO BE APPLIED FOR SMILES
 def filters(mol,args,log):

@@ -99,9 +99,11 @@ def parser_args():
 
 	#arguments for QCORR including the ones from QPREP
 	#analysis of files
-	parser.add_argument("--dup",action="store_true",default=False, help="Remove Duplicates after DFT optimization")
+	parser.add_argument("--dup",action="store_true",default=False, help="Remove duplicates after DFT optimization")
+	parser.add_argument("--check_geom",action="store_true",default=False, help="Checks that geometries mantain the same connectivity after DFT optimization")
+	parser.add_argument("--length_criteria", action="store",default=1.3, help="Factor used to determine whether a bond broke/formed during DFT optimization for check_geom", type=float)
 	#sorting of files
-	parser.add_argument("--amplitude_ifreq", action="store",default=0.2, help="amplitude use to displace the imaginary frequencies to fix during analysis", type=float)
+	parser.add_argument("--amplitude_ifreq", action="store",default=0.2, help="Amplitude used to displace the imaginary frequencies to fix during analysis", type=float)
 	parser.add_argument("--ifreq_cutoff", action="store",default=0.0, help="Cut off for imaginary frequencies during analysis", type=float)
 	#writing single point files
 	parser.add_argument("--sp", action="store_true", default=False, help="Resubmit Gaussian single point input files")

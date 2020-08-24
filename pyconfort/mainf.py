@@ -51,9 +51,13 @@ def load_from_yaml(args,log):
 		if args.varfile is not None:
 			if os.path.exists(args.varfile):
 				if os.path.splitext(args.varfile)[1] == '.yaml':
-					log.write("\no  IMPORTING VARIABLES FROM " + args.varfile)
+					log.write("\no  Importing pyCONFORT parameters from " + args.varfile)
 					with open(args.varfile, 'r') as file:
-						param_list = yaml.load(file, Loader=yaml.SafeLoader)
+						try:
+							param_list = yaml.load(file, Loader=yaml.SafeLoader)
+						except yaml.scanner.ScannerError:
+							log.write("\nx  Error while reading " + args.varfile+ ". Edit the yaml file and try again (i.e. use ':' instead of '=' to specify variables)")
+							sys.exit()
 			for param in param_list:
 				if hasattr(args, param):
 					if getattr(args, param) != param_list[param]:
@@ -298,6 +302,8 @@ def qprep_gaussian_main(w_dir_initial,args,log):
 # moving files after compute and/or write_gauss
 def move_sdf_main(args):
 	src = os.getcwd()
+	if args.exp_rules != False:
+		exp_rules_files = glob.glob('*_filter_exp_rules.sdf')
 	if args.CMIN=='xtb':
 		all_xtb_conf_files = glob.glob('*_xtb.sdf')
 		destination_xtb = src +'/CSEARCH/xtb'
@@ -307,6 +313,10 @@ def move_sdf_main(args):
 		destination_xtb_all = src +'/CSEARCH/xtb_all_confs'
 		for file in all_xtb_conf_files_all:
 			moving_files(destination_xtb_all,src,file)
+		if args.exp_rules != False:
+			destination_exp_rules = src +'/CSEARCH/xtb/filter_exp_rules/'
+			for file in exp_rules_files:
+				moving_files(destination_exp_rules,src,file)
 	if args.CMIN=='ani':
 		all_ani_conf_files = glob.glob('*_ani.sdf')
 		destination_ani = src +'/CSEARCH/ani'
@@ -316,21 +326,41 @@ def move_sdf_main(args):
 		destination_ani_all = src +'/CSEARCH/ani_all_confs'
 		for file in all_ani_conf_files_all:
 			moving_files(destination_ani_all,src,file)
-	if args.CSEARCH=='rdkit':
+		if args.exp_rules != False:
+			destination_exp_rules = src +'/CSEARCH/ani/filter_exp_rules/'
+			for file in exp_rules_files:
+				moving_files(destination_exp_rules,src,file)
+
+	if args.CSEARCH=='rdkit' and args.CMIN is None:
 		all_name_conf_files = glob.glob('*_rdkit.sdf')
 		destination_rdkit = src+ '/CSEARCH/rdkit'
 		for file in all_name_conf_files:
 			moving_files(destination_rdkit,src,file)
+		if args.exp_rules != False:
+			destination_exp_rules = src +'/CSEARCH/rdkit/filter_exp_rules/'
+			for file in exp_rules_files:
+				moving_files(destination_exp_rules,src,file)
+
 	if args.CSEARCH=='summ':
 		all_name_conf_files = glob.glob('*_summ.sdf')
 		destination_rdkit = src+ '/CSEARCH/summ'
 		for file in all_name_conf_files:
 			moving_files(destination_rdkit,src,file)
+		if args.exp_rules != False and args.CMIN is None:
+			destination_exp_rules = src +'/CSEARCH/summ/filter_exp_rules/'
+			for file in exp_rules_files:
+				moving_files(destination_exp_rules,src,file)
+
 	if args.CSEARCH=='fullmonte':
 		all_name_conf_files = glob.glob('*_fullmonte.sdf')
 		destination_rdkit = src+ '/CSEARCH/fullmonte'
 		for file in all_name_conf_files:
 			moving_files(destination_rdkit,src,file)
+		if args.exp_rules != False and args.CMIN is None:
+			destination_exp_rules = src +'/CSEARCH/fullmonte/filter_exp_rules/'
+			for file in exp_rules_files:
+				moving_files(destination_exp_rules,src,file)
+
 	if args.com_from_xyz:
 		all_xyz_conf_files = glob.glob('*.xyz')+glob.glob('*.sdf')
 		destination_xyz = 'QMCALC/xyz_and_sdf'
@@ -338,7 +368,7 @@ def move_sdf_main(args):
 			moving_files(destination_xyz,src,file)
 
 #finding the file type to move for analysis
-def get_com_or_log_out_files(type,name=None):
+def get_com_or_log_out_files(type,name):
 	files = []
 	if type =='output':
 		formats = ['*.log','*.LOG','*.out','*.OUT']
@@ -361,18 +391,20 @@ def qcorr_gaussian_main(duplicates,w_dir_initial,args,log):
 	ana_data = creation_of_ana_csv(args,duplicates)
 	# when you run analysis in a folder full of output files
 	if not os.path.exists(w_dir_initial+'/QMCALC'):
-		w_dir = os.getcwd()
-		w_dir_fin = w_dir+'/success/output_files'
+		w_dir_main = os.getcwd()
+		w_dir_fin = w_dir_main+'/success/output_files'
 		for lot,bs,bs_gcp in zip(args.level_of_theory, args.basis_set,args.basis_set_genecp_atoms):
-			if not os.path.isdir(w_dir+'/dat_files/'):
-				os.makedirs(w_dir+'/dat_files/')
-			w_dir,round_num = check_for_final_folder(w_dir)
-			log = Logger(w_dir+'/dat_files/pyCONFORT-QCORR-run_'+str(round_num), args.output_name)
+			os.chdir(w_dir_main)
+			if not os.path.isdir(w_dir_main+'/dat_files/'):
+				os.makedirs(w_dir_main+'/dat_files/')
+			w_dir,round_num = check_for_final_folder(w_dir_main)
+			log = Logger(w_dir_main+'/dat_files/pyCONFORT-QCORR-run_'+str(round_num), args.output_name)
 			ana_data = creation_of_ana_csv(args,duplicates)
 			log.write("\no  Analyzing output files in {}\n".format(w_dir))
-			log_files = get_com_or_log_out_files('output')
-			com_files = get_com_or_log_out_files('input')
-			output_analyzer(duplicates,log_files, com_files, w_dir,w_dir, lot, bs, bs_gcp, args, w_dir_fin, w_dir_initial, log, ana_data, 1)
+			log_files = get_com_or_log_out_files('output',None)
+			print(log_files)
+			com_files = get_com_or_log_out_files('input',None)
+			output_analyzer(duplicates,log_files, com_files, w_dir, w_dir_main, lot, bs, bs_gcp, args, w_dir_fin, w_dir_initial, log, ana_data, 1)
 		os.chdir(w_dir)
 	# when you specify multiple levels of theory
 	else:
@@ -393,8 +425,8 @@ def qcorr_gaussian_main(duplicates,w_dir_initial,args,log):
 			w_dir_fin = args.path + str(lot) + '-' + str(bs) +'/success/output_files'
 			os.chdir(w_dir)
 			log.write("\no  Analyzing output files in {}\n".format(w_dir))
-			log_files = get_com_or_log_out_files('output')
-			com_files = get_com_or_log_out_files('input')
+			log_files = get_com_or_log_out_files('output',None)
+			com_files = get_com_or_log_out_files('input',None)
 			output_analyzer(duplicates,log_files, com_files, w_dir, w_dir_main , lot, bs, bs_gcp, args, w_dir_fin, w_dir_initial, log, ana_data, round_num)
 		os.chdir(args.path)
 	os.chdir(w_dir_initial)
@@ -403,11 +435,11 @@ def qcorr_gaussian_main(duplicates,w_dir_initial,args,log):
 def dup_main(args,log,w_dir_initial):
 	if not os.path.exists(w_dir_initial+'/QMCALC'):
 		w_dir = os.getcwd()
-		log_files = get_com_or_log_out_files('output')
+		log_files = get_com_or_log_out_files('output',None)
 		if len(log_files) != 0:
 			duplicates = dup_calculation(log_files,w_dir,w_dir,args,log,1)
 		else:
-			log.write(' There are no log or out files in this folder.')
+			log.write(' There are no output files in this folder.')
 			duplicates = 'None'
 		os.chdir(w_dir)
 	else:
@@ -421,11 +453,11 @@ def dup_main(args,log,w_dir_initial):
 			w_dir,round_num = check_for_final_folder(w_dir)
 			os.chdir(w_dir)
 			# change molecules to a range as files will have codes in a continous manner
-			log_files = get_com_or_log_out_files('output')
+			log_files = get_com_or_log_out_files('output',None)
 			if len(log_files) != 0:
 				duplicates = dup_calculation(log_files,w_dir,w_dir_main,args,log,round_num)
 			else:
-				log.write(' There are no any log or out files in this folder.')
+				log.write(' There are no output files in this folder.')
 				duplicates = 'None'
 	return duplicates
 
@@ -552,30 +584,37 @@ def energy_main(args,log,w_dir_initial):
 
 
 # MAIN OPTION FOR DISCARDING MOLECULES BASED ON USER INPUT DATA (REFERRED AS EXPERIMENTAL RULES)
-def exp_rules_main(args,log):
-	if args.verbose:
-		log.write("\n   ----- Applying experimental rules to write the new confs file -----")
-	# do 2 cases, for RDKit only and RDKIt+xTB
-	if not args.CMIN=='xtb':
-		if args.CSEARCH=='rdkit':
-			conf_files =  glob.glob('*_rdkit.sdf')
-		elif args.CSEARCH=='summ':
-			conf_files =  glob.glob('*_summ.sdf')
-	else:
-		conf_files =  glob.glob('*_xtb.sdf')
+def exp_rules_main(args,log,exp_rules_active):
+	if exp_rules_active:
+		if args.verbose:
+			log.write("\n   ----- Applying experimental rules to write the new confs file -----")
+		# do 2 cases, for RDKit only and RDKIt+xTB
+		if args.CMIN == 'xtb':
+			conf_files =  glob.glob('*_xtb.sdf')
+		if args.CMIN == 'ani':
+			conf_files =  glob.glob('*_ani.sdf')
+		if args.CMIN is None:
+			if args.CSEARCH=='rdkit':
+				conf_files =  glob.glob('*_rdkit.sdf')
+			elif args.CSEARCH=='summ':
+				conf_files =  glob.glob('*_summ.sdf')
+			elif args.CSEARCH=='fullmonte':
+				conf_files =  glob.glob('*_fullmonte.sdf')
 
-	for file in conf_files:
-		allmols = Chem.SDMolSupplier(file, removeHs=False)
-		if allmols is None:
-			log.write("Could not open "+ file)
-			sys.exit(-1)
+		for file in conf_files:
+			allmols = Chem.SDMolSupplier(file, removeHs=False)
+			if allmols is None:
+				log.write("Could not open "+ file)
+				sys.exit(-1)
 
-		sdwriter = Chem.SDWriter(file.split('.')[0]+'_filter_exp_rules.sdf')
-		print_error_exp_rules = 0
-		for mol in allmols:
-			check_mol = True
-			check_mol = exp_rules_output(mol,args,log,file,print_error_exp_rules)
-			print_error_exp_rules += 1
-			if check_mol:
-				sdwriter.write(mol)
-		sdwriter.close()
+			sdwriter = Chem.SDWriter(file.split('.')[0]+'_filter_exp_rules.sdf')
+			print_error_exp_rules = 0
+			for mol in allmols:
+				check_mol = True
+				ob_compat = True
+				rdkit_compat = True
+				check_mol = exp_rules_output(mol,args,log,file,print_error_exp_rules,ob_compat,rdkit_compat)
+				print_error_exp_rules += 1
+				if check_mol:
+					sdwriter.write(mol)
+			sdwriter.close()

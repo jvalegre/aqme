@@ -416,6 +416,8 @@ def min_after_embed(mol,cids,name,initial_confs,rotmatches,dup_data,dup_data_idx
 
 	if args.CSEARCH=='fullmonte':
 		status = generating_conformations_fullmonte(name,args,rotmatches,log,selectedcids_rdkit,outmols,sdwriter,dup_data,dup_data_idx,coord_Map,alg_Map, mol_template)
+		#removes the rdkit file
+		os.remove(name+'_'+'rdkit'+args.output)
 
 	return status
 
@@ -535,6 +537,6 @@ def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None, alg_
 			status = dihedral_filter_and_sdf(name,args,log,dup_data,dup_data_idx,coord_Map, alg_Map, mol_template)
 
 			# removes the rdkit file
-			# os.remove(name+'_'+'rdkit'+args.output)
+			os.remove(name+'_'+'rdkit'+args.output)
 
 	return status,update_to_rdkit

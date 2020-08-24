@@ -58,7 +58,10 @@ def main():
 
 	#applying rules to discard certain conformers based on rules that the user define
 	if args.exp_rules != False:
-		exp_rules_main(args,log)
+		exp_rules_active = True
+		if args.QCORR=='gaussian':
+			exp_rules_active = False
+		exp_rules_main(args,log,exp_rules_active)
 		os.chdir(w_dir_initial)
 
 	#QPREP

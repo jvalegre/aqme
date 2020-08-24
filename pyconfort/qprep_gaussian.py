@@ -132,16 +132,26 @@ def get_name_and_charge(name,charge_data):
 	if charge_data is not None:
 		name_list = name.split('_')
 
-		if 'rules' in name_list:
-			name_molecule = name[:-23]
-		elif 'xtb' in name_list or 'ani' in name_list:
-			name_molecule = name[:-4]
+		if 'xtb' in name_list or 'ani' in name_list:
+			if 'filter' in name_list:
+				name_molecule = name[:-21]
+			else:
+				name_molecule = name[:-4]
 		elif 'summ' in name_list:
-			name_molecule = name[:-5]
+			if 'filter' in name_list:
+				name_molecule = name[:-22]
+			else:
+				name_molecule = name[:-5]
 		elif 'rdkit' in name_list:
-			name_molecule = name[:-6]
+			if 'filter' in name_list:
+				name_molecule = name[:-23]
+			else:
+				name_molecule = name[:-6]
 		elif 'fullmonte' in name_list:
-			name_molecule = name[:-10]
+			if 'filter' in name_list:
+				name_molecule = name[:-27]
+			else:
+				name_molecule = name[:-10]
 
 		for i in range(len(charge_data)):
 			if charge_data.loc[i,'Molecule'] == name_molecule:
