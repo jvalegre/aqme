@@ -27,39 +27,46 @@ hartree_to_kcal = 627.509
 possible_atoms = possible_atoms()
 
 #com to xyz to sdf for obabel
-def com_2_xyz_2_sdf(args):
+def com_2_xyz_2_sdf(args,start_point=None):
 
-	if os.path.splitext(args.input)[1] =='.com' or os.path.splitext(args.input)[1] =='.gjf' :
+	if start_point is None:
+		if os.path.splitext(args.input)[1] =='.com' or os.path.splitext(args.input)[1] =='.gjf' :
+			file = args.input
 
-		comfile = open(args.input,"r")
-		comlines = comfile.readlines()
+	elif start_point is not None:
+		file = start_point
 
-		emptylines=[]
+	comfile = open(file,"r")
+	comlines = comfile.readlines()
 
-		for i, line in enumerate(comlines):
-			if len(line.strip()) == 0:
-				emptylines.append(i)
+	emptylines=[]
 
-		#assigning the charges
-		charge_com = comlines[(emptylines[1]+1)].split(' ')[0]
+	for i, line in enumerate(comlines):
+		if len(line.strip()) == 0:
+			emptylines.append(i)
 
-		xyzfile = open(os.path.splitext(args.input)[0]+'.xyz',"w")
-		xyzfile.write(str(emptylines[2]- (emptylines[1]+2)))
-		xyzfile.write('\n')
-		xyzfile.write(os.path.splitext(args.input)[0])
-		xyzfile.write('\n')
-		for i in range((emptylines[1]+2), emptylines[2]):
-			xyzfile.write(comlines[i])
+	#assigning the charges
+	charge_com = comlines[(emptylines[1]+1)].split(' ')[0]
 
-		xyzfile.close()
-		comfile.close()
+	xyzfile = open(os.path.splitext(file)[0]+'.xyz',"w")
+	xyzfile.write(str(emptylines[2]- (emptylines[1]+2)))
+	xyzfile.write('\n')
+	xyzfile.write(os.path.splitext(file)[0])
+	xyzfile.write('\n')
+	for i in range((emptylines[1]+2), emptylines[2]):
+		xyzfile.write(comlines[i])
 
-	cmd_obabel = ['obabel', '-ixyz', os.path.splitext(args.input)[0]+'.xyz', '-osdf', '-O', os.path.splitext(args.input)[0]+'.sdf','--gen3D']
+	xyzfile.close()
+	comfile.close()
+
+	cmd_obabel = ['obabel', '-ixyz', os.path.splitext(file)[0]+'.xyz', '-osdf', '-O', os.path.splitext(file)[0]+'.sdf']
 	subprocess.run(cmd_obabel)
-	if os.path.splitext(args.input)[1] =='.com' or os.path.splitext(args.input)[1] =='.gjf':
-		return charge_com
-	else:
-		return args.charge_default
+
+	if start_point is None:
+		if os.path.splitext(args.input)[1] =='.com' or os.path.splitext(args.input)[1] =='.gjf':
+			return charge_com
+		else:
+			return args.charge_default
 
 # SUBSTITUTION WITH I
 def substituted_mol(mol,args,log):

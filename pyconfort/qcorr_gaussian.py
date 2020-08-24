@@ -12,7 +12,8 @@ import shutil
 import numpy as np
 from pyconfort.qprep_gaussian import input_route_line,check_for_gen_or_genecp,write_genecp
 from pyconfort.argument_parser import possible_atoms
-from pyconfort.filter import exp_rules_output
+from pyconfort.filter import exp_rules_output,check_geom_filter
+from pyconfort.csearch import com_2_xyz_2_sdf
 
 possible_atoms = possible_atoms()
 
@@ -39,7 +40,7 @@ def write_header_and_coords(fileout,args,keywords_opt,name,CHARGE,MULT,NATOMS,AT
 	fileout.write("\n")
 
 # CREATION OF COM FILES
-def new_com_file(com_type,w_dir,w_dir_initial,new_gaussian_input_files,file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,TERMINATION,IM_FREQS,bs_com,lot_com,bs_gcp_com):
+def new_com_file(com_type,w_dir_initial,new_gaussian_input_files,file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,TERMINATION,IM_FREQS,bs_com,lot_com,bs_gcp_com):
 
 	if com_type == 'sp':
 		if args.suffix_sp == 'None':
@@ -240,7 +241,7 @@ def fix_imag_freqs(NATOMS, CARTESIANS, args, FREQS, NORMALMODE):
 
 	return CARTESIANS
 
-def create_folder_and_com(w_dir,w_dir_main,round_num,log,NATOMS,ATOMTYPES,CARTESIANS,args,TERMINATION,IM_FREQS,w_dir_fin,file,lot,bs,bs_gcp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp,ERRORTYPE,input_route,w_dir_initial,name,CHARGE,MULT):
+def create_folder_and_com(w_dir_main,round_num,log,NATOMS,ATOMTYPES,CARTESIANS,args,TERMINATION,IM_FREQS,w_dir_fin,file,lot,bs,bs_gcp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp,ERRORTYPE,input_route,w_dir_initial,name,CHARGE,MULT):
 	# creating new folder with new input gaussian files
 	new_gaussian_input_files = w_dir_main+'/input_files/run_'+str(round_num+1)
 
@@ -268,12 +269,11 @@ def create_folder_and_com(w_dir,w_dir_main,round_num,log,NATOMS,ATOMTYPES,CARTES
 		keywords_opt = lot +'/'+ bs +' '+ input_route
 
 	com_type = 'analysis'
-	new_com_file(com_type, w_dir,w_dir_initial,new_gaussian_input_files,file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,TERMINATION,IM_FREQS,bs,lot,bs_gcp)
+	new_com_file(com_type, w_dir_initial,new_gaussian_input_files,file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,TERMINATION,IM_FREQS,bs,lot,bs_gcp)
 
-def create_folder_move_log_files(w_dir,w_dir_main,round_num,file,IM_FREQS,TERMINATION,ERRORTYPE,w_dir_fin,finished,unfinished,atom_error,scf_error,imag_freq,other_error,exp_rules_qcorr,passing_rules):
-	source = w_dir+'/'+file
-
-	if IM_FREQS == 0 and TERMINATION == "normal" and passing_rules:
+def create_folder_move_log_files(w_dir_main,round_num,file,IM_FREQS,TERMINATION,ERRORTYPE,w_dir_fin,finished,unfinished,atom_error,scf_error,imag_freq,other_error,exp_rules_qcorr,passing_rules,passing_geom,check_geom_qcorr):
+	source = w_dir_main+'/'+file
+	if IM_FREQS == 0 and TERMINATION == "normal" and passing_rules and passing_geom:
 		destination = w_dir_fin
 		moving_files(source, destination)
 		finished += 1
@@ -305,11 +305,17 @@ def create_folder_move_log_files(w_dir,w_dir_main,round_num,file,IM_FREQS,TERMIN
 		moving_files(source, destination)
 		exp_rules_qcorr += 1
 
-	return finished,unfinished,atom_error,scf_error,imag_freq,other_error,exp_rules_qcorr
+	elif not passing_geom:
+		destination = w_dir_main+'/failed/run_'+str(round_num)+'/geometry_changed/'
+		moving_files(source, destination)
+		check_geom_qcorr += 1
+
+	return finished,unfinished,atom_error,scf_error,imag_freq,other_error,exp_rules_qcorr,check_geom_qcorr
 
 # Output file to mol converter
-def output_to_mol(file,format):
+def output_to_mol(file,format,mol_name):
 	ob_compat = True
+	rdkit_compat = True
 	try:
 		from openbabel import openbabel as ob
 	except (ModuleNotFoundError,AttributeError):
@@ -320,35 +326,32 @@ def output_to_mol(file,format):
 		log.write('x  RDKit is not installed correctly, the exp_rules and check_geom filters will be disabled')
 		rdkit_compat = False
 
-
 	# transforms output file into mol object
-	obConversion = ob.OBConversion()
-	obConversion.SetInAndOutFormats(format, 'mol')
-	ob_mol = ob.OBMol()
-	obConversion.ReadFile(ob_mol, file)
-	obConversion.WriteFile(ob_mol, file.split('.')[0]+'.mol')
-	mol = Chem.MolFromMolFile(file.split('.')[0]+'.mol')
-	obConversion.CloseOutFile()
+	# obConversion = ob.OBConversion()
+	# obConversion.SetInAndOutFormats(format, 'mol')
+	# ob_mol = ob.OBMol()
+	# obConversion.ReadFile(ob_mol, file)
+	# obConversion.WriteFile(ob_mol, mol_name.split('.')[0]+'.mol')
+	if format == 'xyz':
+		cmd_obabel = ['obabel', '-ixyz', os.path.splitext(file)[0]+'.xyz', '-omol', '-O', os.path.splitext(file)[0]+'.mol']
+	if format == 'log':
+		cmd_obabel = ['obabel', '-ilog', os.path.splitext(file)[0]+'.log', '-omol', '-O', os.path.splitext(file)[0]+'.mol']
+	subprocess.run(cmd_obabel)
+	mol = Chem.MolFromMolFile(mol_name.split('.')[0]+'.mol')
+	# obConversion.CloseOutFile()
 
 	return mol,ob_compat,rdkit_compat
 
 # DEFINTION OF OUTPUT ANALYSER and NMR FILES CREATOR
-def output_analyzer(duplicates,log_files,com_files, w_dir, w_dir_main,lot, bs, bs_gcp, args, w_dir_fin, w_dir_initial, log, ana_data, round_num):
+def output_analyzer(duplicates,log_files,com_files, w_dir_main,lot, bs, bs_gcp, args, w_dir_fin, w_dir_initial, log, ana_data, round_num):
 
 	input_route = input_route_line(args)
-	finished,unfinished,atom_error,scf_error,imag_freq,other_error,exp_rules_qcorr = 0,0,0,0,0,0,0
-
-	if round_num == 1:
-		#moves the comfiles to respective folder
-		for file in com_files:
-			source = w_dir+'/'+file
-			destination = w_dir_main +'/input_files/run_'+str(round_num)
-			moving_files(source, destination)
+	finished,unfinished,atom_error,scf_error,imag_freq,other_error,exp_rules_qcorr,check_geom_qcorr = 0,0,0,0,0,0,0,0
 
 	for file in log_files:
 		# read the file
 		log.write(file)
-		outlines, outfile, break_loop = read_log_file(w_dir,file)
+		outlines, outfile, break_loop = read_log_file(w_dir_main,file)
 
 		if break_loop:
 			break
@@ -384,35 +387,43 @@ def output_analyzer(duplicates,log_files,com_files, w_dir, w_dir_main,lot, bs, b
 		passing_rules = True
 		if args.exp_rules != False:
 			if TERMINATION == "normal" and IM_FREQS == 0:
-				log.write("\n   ----- Exp_rules filter(s) will be applied to the output file -----")
-				mol,ob_compat,rdkit_compat = output_to_mol(file,format='log')
+				log.write("  ----- Exp_rules filter(s) will be applied to the output file -----\n")
+				mol,ob_compat,rdkit_compat = output_to_mol(file,'log',file)
 				print_error_exp_rules=False
 				passing_rules = exp_rules_output(mol,args,log,file,print_error_exp_rules,ob_compat,rdkit_compat)
 				os.remove(file.split('.')[0]+'.mol')
 
 		passing_geom = True
-		if args.check_geom:
+		if args.check_geom and passing_rules:
 			if TERMINATION == "normal" and IM_FREQS == 0:
-				log.write("\n   ----- Geometrical check will be applied to the output file -----")
+				log.write("  ----- Geometrical check will be applied to the output file -----\n")
 				# this creates a mol object from the optimized log file
-				mol,ob_compat,rdkit_compat = output_to_mol(file,format='log')
+				mol,ob_compat,rdkit_compat = output_to_mol(file,'log',file)
 				# this creates a mol object from the input file
-				mol2,_,_ = output_to_mol(file,format='com')
-				passing_geom = check_geom_filter(mol,mol2)
-				os.remove(file.split('.')[0]+'.mol')
+				try:
+					com_2_xyz_2_sdf(args,os.path.splitext(file)[0]+'.com')
+					mol2,ob_compat,rdkit_compat = output_to_mol(file,'xyz',file)
+					# mol2,ob_compat,rdkit_compat = output_to_mol(file,'xyz',os.path.splitext(file)[0]+'2.com')
+					passing_geom = check_geom_filter(mol,mol2,args)
+					# remove created files
+					os.remove(file.split('.')[0]+'.xyz')
+					os.remove(file.split('.')[0]+'.sdf')
+				except FileNotFoundError:
+					log.write("x  No com file were found for "+file+", the check_geom test will be disabled for this calculation")
 
+				os.remove(file.split('.')[0]+'.mol')
 		# This part places the calculations in different folders depending on the type of termination
-		finished,unfinished,atom_error,scf_error,imag_freq,other_error,exp_rules_qcorr = create_folder_move_log_files(w_dir,w_dir_main,round_num,file,IM_FREQS,TERMINATION,ERRORTYPE,w_dir_fin,finished,unfinished,atom_error,scf_error,imag_freq,other_error,exp_rules_qcorr,passing_rules)
+		finished,unfinished,atom_error,scf_error,imag_freq,other_error,exp_rules_qcorr,check_geom_qcorr = create_folder_move_log_files(w_dir_main,round_num,file,IM_FREQS,TERMINATION,ERRORTYPE,w_dir_fin,finished,unfinished,atom_error,scf_error,imag_freq,other_error,exp_rules_qcorr,passing_rules,passing_geom,check_geom_qcorr)
 
 		# check if gen or genecp are active
 		ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp = check_for_gen_or_genecp(ATOMTYPES,args)
 
 		# create folders and set level of theory in COM files to fix imaginary freqs or not normal terminations
 		if IM_FREQS > 0 or TERMINATION != "normal" and not os.path.exists(w_dir_main+'/failed/run_'+str(round_num)+'/error/basis_set_error/'+file):
-			create_folder_and_com(w_dir,w_dir_main,round_num,log,NATOMS,ATOMTYPES,CARTESIANS,args,TERMINATION,IM_FREQS,w_dir_fin,file,lot,bs,bs_gcp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp,ERRORTYPE,input_route,w_dir_initial,name,CHARGE, MULT)
+			create_folder_and_com(w_dir_main,round_num,log,NATOMS,ATOMTYPES,CARTESIANS,args,TERMINATION,IM_FREQS,w_dir_fin,file,lot,bs,bs_gcp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp,ERRORTYPE,input_route,w_dir_initial,name,CHARGE, MULT)
 
 		# adding in the NMR componenet only to the finished files after reading from normally finished log files
-		if args.sp and TERMINATION == "normal" and IM_FREQS == 0:
+		if args.sp and TERMINATION == "normal" and IM_FREQS == 0 and passing_rules and passing_geom:
 			#get coordinates
 			ATOMTYPES, CARTESIANS = get_coords_normal(outlines, stand_or, NATOMS, possible_atoms, ATOMTYPES, CARTESIANS)
 			# creating new folder with new input gaussian files
@@ -444,6 +455,13 @@ def output_analyzer(duplicates,log_files,com_files, w_dir, w_dir_main,lot, bs, b
 				com_type = 'sp'
 				new_com_file(com_type, w_dir,w_dir_initial,single_point_input_files+'/'+dir_name,file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,TERMINATION,IM_FREQS,bs_sp,lot_sp,bs_gcp_sp)
 
+	if round_num == 1:
+		#moves the comfiles to respective folder
+		for file in com_files:
+			source = w_dir_main+'/'+file
+			destination = w_dir_main +'/input_files/run_'+str(round_num)
+			moving_files(source, destination)
+
 	#write to csv ana_data
 	ana_data.at[0,'Total files'] = len(log_files)
 	ana_data.at[0,'Normal termination'] = finished
@@ -452,10 +470,12 @@ def output_analyzer(duplicates,log_files,com_files, w_dir, w_dir_main,lot, bs, b
 	ana_data.at[0,'Basis set error'] =  atom_error
 	ana_data.at[0,'Other errors'] = other_error
 	ana_data.at[0,'Unfinished'] = unfinished
-	if args.dup != False:
+	if args.dup:
 		ana_data.at[0,'Duplicates'] = duplicates
 	if args.exp_rules != False:
 		ana_data.at[0,'Exp_rules filter'] = exp_rules_qcorr
+	if args.check_geom:
+		ana_data.at[0,'Geometry changed'] = check_geom_qcorr
 
 	if not os.path.isdir(w_dir_main+'/csv_files/'):
 		os.makedirs(w_dir_main+'/csv_files/')
@@ -465,11 +485,10 @@ def output_analyzer(duplicates,log_files,com_files, w_dir, w_dir_main,lot, bs, b
 def check_for_final_folder(w_dir):
 	ini_com_folder = sum(dirs.count('input_files') for _, dirs, _ in os.walk(w_dir))
 	if ini_com_folder == 0:
-		return w_dir, 1
+		return 1
 	else:
 		num_com_folder = sum([len(d) for r, d, folder in os.walk(w_dir+'/input_files')])
-		w_dir = w_dir+'/input_files/run_'+str(num_com_folder)
-		return w_dir, num_com_folder
+		return num_com_folder
 
 # CHECKING FOR DUPLICATES
 def dup_calculation(val, w_dir,w_dir_main, args, log,round_num):

@@ -397,15 +397,14 @@ def qcorr_gaussian_main(duplicates,w_dir_initial,args,log):
 			os.chdir(w_dir_main)
 			if not os.path.isdir(w_dir_main+'/dat_files/'):
 				os.makedirs(w_dir_main+'/dat_files/')
-			w_dir,round_num = check_for_final_folder(w_dir_main)
+			round_num = check_for_final_folder(w_dir_main)
 			log = Logger(w_dir_main+'/dat_files/pyCONFORT-QCORR-run_'+str(round_num), args.output_name)
 			ana_data = creation_of_ana_csv(args,duplicates)
-			log.write("\no  Analyzing output files in {}\n".format(w_dir))
+			log.write("\no  Analyzing output files in {}\n".format(w_dir_main))
 			log_files = get_com_or_log_out_files('output',None)
-			print(log_files)
 			com_files = get_com_or_log_out_files('input',None)
-			output_analyzer(duplicates,log_files, com_files, w_dir, w_dir_main, lot, bs, bs_gcp, args, w_dir_fin, w_dir_initial, log, ana_data, 1)
-		os.chdir(w_dir)
+			output_analyzer(duplicates,log_files, com_files, w_dir_main, lot, bs, bs_gcp, args, w_dir_fin, w_dir_initial, log, ana_data, 1)
+		os.chdir(w_dir_main)
 	# when you specify multiple levels of theory
 	else:
 		if args.QCORR=='gaussian':
@@ -419,7 +418,7 @@ def qcorr_gaussian_main(duplicates,w_dir_initial,args,log):
 			#for currect w_dir folder
 			w_dir = args.path + str(lot) + '-' + str(bs)
 			#check if New_Gaussian_Input_Files folder exists
-			w_dir,round_num = check_for_final_folder(w_dir)
+			round_num = check_for_final_folder(w_dir)
 			log = Logger(w_dir_main+'/dat_files/pyCONFORT-QCORR-run_'+str(round_num), args.output_name)
 			#assign the path to the finished directory.
 			w_dir_fin = args.path + str(lot) + '-' + str(bs) +'/success/output_files'
@@ -450,7 +449,7 @@ def dup_main(args,log,w_dir_initial):
 			w_dir_main = args.path + str(lot) + '-' + str(bs)
 			w_dir = args.path + str(lot) + '-' + str(bs)
 			os.chdir(w_dir)
-			w_dir,round_num = check_for_final_folder(w_dir)
+			round_num = check_for_final_folder(w_dir)
 			os.chdir(w_dir)
 			# change molecules to a range as files will have codes in a continous manner
 			log_files = get_com_or_log_out_files('output',None)

@@ -184,7 +184,7 @@ def exp_rules_output(mol,args,log,file,print_error_exp_rules,ob_compat,rdkit_com
 	return passing
 
 # COMPARES THE BOND LENGTHS BETWEEN AN INPUT AND AN OPTIMIZED OUTPUT FILES
-def check_geom_filter(mol,mol2):
+def check_geom_filter(mol,mol2,args):
 	passing_geom = True
 	mol_bonds = []
 	for atom in mol.GetAtoms():
