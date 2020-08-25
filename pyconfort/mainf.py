@@ -187,6 +187,7 @@ def csearch_main(w_dir_initial,dup_data,args,log,start_time):
 			name = 'comp' + str(i)+'_'
 			compute_confs(w_dir_initial,mol,name,args,log,dup_data,counter_for_template,i,start_time)
 
+		smifile.close()
 		os.remove('cdx.smi')
 
 	# COM file
