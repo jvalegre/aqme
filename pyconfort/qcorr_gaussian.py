@@ -433,7 +433,7 @@ def output_analyzer(duplicates,log_files,com_files, w_dir_main,lot, bs, bs_gcp, 
 
 			# Sets the folder and find the log files to analyze
 			for lot_sp,bs_sp,bs_gcp_sp in zip(args.level_of_theory_sp,args.basis_set_sp,args.basis_set_genecp_atoms_sp):
-				log.write('-> Creating new single point files files for {0} in {1}/{2}-{3}\n'.format(file,single_point_input_files,lot_sp,bs_sp))
+				log.write('-> Creating new single point files files for {0} in {1}/{2}-{3}'.format(file,single_point_input_files,lot_sp,bs_sp))
 				dir_name = str(lot_sp) + '-' + str(bs_sp)
 				if not os.path.isdir(single_point_input_files+'/'+dir_name):
 					os.makedirs(single_point_input_files+'/'+dir_name)
@@ -453,7 +453,7 @@ def output_analyzer(duplicates,log_files,com_files, w_dir_main,lot, bs, bs_gcp, 
 				if args.mult_sp != 'None':
 					MULT = args.mult_sp
 				com_type = 'sp'
-				new_com_file(com_type, w_dir,w_dir_initial,single_point_input_files+'/'+dir_name,file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,TERMINATION,IM_FREQS,bs_sp,lot_sp,bs_gcp_sp)
+				new_com_file(com_type,w_dir_initial,single_point_input_files+'/'+dir_name,file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,TERMINATION,IM_FREQS,bs_sp,lot_sp,bs_gcp_sp)
 
 	if round_num == 1:
 		#moves the comfiles to respective folder
@@ -463,7 +463,7 @@ def output_analyzer(duplicates,log_files,com_files, w_dir_main,lot, bs, bs_gcp, 
 			moving_files(source, destination)
 
 	#write to csv ana_data
-	ana_data.at[0,'Total files'] = len(log_files)
+	ana_data.at[0,'Total files'] = len(log_files)+int(duplicates) # since duplicates are moved before anything else
 	ana_data.at[0,'Normal termination'] = finished
 	ana_data.at[0,'Imaginary frequencies'] = imag_freq
 	ana_data.at[0,'SCF error'] = scf_error

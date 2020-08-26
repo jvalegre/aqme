@@ -79,8 +79,13 @@ def main():
 		log.write("\no  Writing analysis of output files in respective folders in csv_files\n")
 		# main part of the duplicate function
 		if args.dup:
-			duplicates = dup_main(args, log, w_dir_initial)
-			os.chdir(w_dir_initial)
+			try:
+				import goodvibes
+				duplicates = dup_main(args, log, w_dir_initial)
+				os.chdir(w_dir_initial)
+			except (ModuleNotFoundError,AttributeError):
+				log.write("\nx  GoodVibes is not installed as a module (pip or conda), the duplicate option will be disabled in QCORR\n")
+
 		else:
 			duplicates = False
 
