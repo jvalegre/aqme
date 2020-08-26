@@ -24,7 +24,7 @@ def parser_args():
 	parser.add_argument("--QPREP", action="store", default=None, help="Create input files for QM calculations", choices=['gaussian'])
 	parser.add_argument("--QCORR", action="store", default=None, help="Fix the output files from QM calculations",choices=['gaussian'])
 	parser.add_argument("--QSTAT", action="store", default=None, help="Generate parameters for different conformers",choices=['graph','descp'])
-	parser.add_argument("--QPRED", action="store", default=None, help="Perform predictions for different conformers", choices=['nmr','energy'])
+	parser.add_argument("--QPRED", action="store", default=None, help="Perform predictions for different conformers", choices=['nmr','energy','dbstep'])
 
 	#arguments for TMBUILD
 	parser.add_argument("--metal_complex", action="store_true", default=False, help="Request metal complex with coord. no. 4, 5 or 6")
@@ -107,6 +107,7 @@ def parser_args():
 	parser.add_argument("--ifreq_cutoff", action="store",default=0.0, help="Cut off for imaginary frequencies during analysis", type=float)
 	#writing single point files
 	parser.add_argument("--sp", action="store_true", default=False, help="Resubmit Gaussian single point input files")
+	parser.add_argument("--nics", action="store_true", default=False, help="Create input files for NICS")
 	parser.add_argument("--level_of_theory_sp",help="Level of Theory for single point after optimization", default=['wb97xd'], dest="level_of_theory_sp", type=str, nargs='*')
 	parser.add_argument("--basis_set_sp",  help="Basis Set for single point after optimization", default=['6-31g*'], dest="basis_set_sp", type=str, nargs='*')
 	parser.add_argument("--genecp_atoms_sp",  help="genecp atoms for single-point calculations",default=[], dest="genecp_atoms_sp",type=str, nargs='*')
@@ -127,6 +128,8 @@ def parser_args():
 	parser.add_argument("--bond", help="Specify the atom indexes to track bond lengths for different conformers", default=[], dest="bond", type=str, nargs=2,action='append')
 	parser.add_argument("--angle", help="Specify the atom indexes to track angles for different conformers", default=[], dest="angle", type=str, nargs=3,action='append')
 	parser.add_argument("--geom_par_name",action="store",dest="geom_par_name", default="descp", help="Change the prefix for the descriptors obtained")
+	parser.add_argument("--dbstep_param", action="store_true", default=False, help="Turn on for tracking the steric parameters for the molecule")
+	parser.add_argument("--dbstep_cen_lig_file",help="Center for DBSTEP steric paramters in a txt ( FORMAT : name, center, ligand)", action="store", default="No file passed",dest="dbstep_cen_lig_file")
 
 	#arguments for nmr
 	parser.add_argument("--nmr_exp", default='fromsdf', help="From where the ecperimental NMR details will be obtained",choices=['fromsdf','exp_file'])
@@ -138,10 +141,11 @@ def parser_args():
 	parser.add_argument("--nmr_intercept",help="Specify the intercept for each nucleus for nmr analysis default([-15.191,-2.2094])", default=[-15.191,-2.2094], dest="nmr_intercept", type=float, nargs='*')
 	parser.add_argument("--nmr_tms_ref",help="Specify the reference for TMS for each nucleus for nmr analysis default([189.504625,31.56496667])", default=[189.504625,31.56496667], dest="nmr_tms_ref", type=float, nargs='*')
 
-	# parser.add_argument("--nmr_nucleus",help="Specify the nucleus for nmr analysis default (['1H'])", default=['1H'], dest="nmr_nucleus", type=str, nargs='*')
-	# parser.add_argument("--nmr_slope",help="Specify the slope for each nucleus for nmr analysis default([1.0759])", default=[1.0759], dest="nmr_slope", type=float, nargs='*')
-	# parser.add_argument("--nmr_intercept",help="Specify the intercept for each nucleus for nmr analysis default([-2.2094])", default=[-2.2094], dest="nmr_intercept", type=float, nargs='*')
-	# parser.add_argument("--nmr_tms_ref",help="Specify the reference for TMS for each nucleus for nmr analysis default([31.56496667])", default=[31.56496667], dest="nmr_tms_ref", type=float, nargs='*')
+	#arguments for NICS
+	parser.add_argument("--nics_range",help="Range to calculate NICS along a given axis", default=4, dest="nics_range")
+	parser.add_argument("--nics_number",help="Step size to calculate NICS along a given axis", default=16, dest="nics_number")
+	parser.add_argument("--nics_atoms_file",help="NICS atoms in a txt ( FORMAT : name, atom1, atom2, atom3..)", action="store", default="No file passed",dest="nics_atoms_file")
+	# parser.add_argument("--nics_atoms",help="Specify the ring atoms for calcualtions of NICS", default=[], dest="nics_atoms", type=str, nargs='*')
 
 	# submission of Gaussion files
 	parser.add_argument("--qsub", action="store_true", default=False, help="Submit Gaussian files when they are created")

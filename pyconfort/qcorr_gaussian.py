@@ -14,6 +14,7 @@ from pyconfort.qprep_gaussian import input_route_line,check_for_gen_or_genecp,wr
 from pyconfort.argument_parser import possible_atoms
 from pyconfort.filter import exp_rules_output,check_geom_filter
 from pyconfort.csearch import com_2_xyz_2_sdf
+from pyconfort.nics import update_coord
 
 possible_atoms = possible_atoms()
 
@@ -27,7 +28,10 @@ def moving_files(source, destination):
 		os.remove(source.split('/')[-1])
 		shutil.move(source, destination)
 
-def write_header_and_coords(fileout,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS):
+def write_header_and_coords(fileout,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,w_dir_initial,log,com_type=None):
+	print(name)
+	if com_type == 'nics':
+		NATOMS,ATOMTYPES,CARTESIANS = update_coord(NATOMS,ATOMTYPES,CARTESIANS,args,log,name,w_dir_initial)
 	fileout.write("%mem="+str(args.mem)+"\n")
 	fileout.write("%nprocshared="+str(args.nprocs)+"\n")
 	fileout.write("# "+keywords_opt+"\n")
@@ -40,7 +44,7 @@ def write_header_and_coords(fileout,args,keywords_opt,name,CHARGE,MULT,NATOMS,AT
 	fileout.write("\n")
 
 # CREATION OF COM FILES
-def new_com_file(com_type,w_dir_initial,new_gaussian_input_files,file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,TERMINATION,IM_FREQS,bs_com,lot_com,bs_gcp_com):
+def new_com_file(com_type,w_dir_initial,log,new_gaussian_input_files,file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,TERMINATION,IM_FREQS,bs_com,lot_com,bs_gcp_com):
 
 	if com_type == 'sp':
 		if args.suffix_sp == 'None':
@@ -49,10 +53,12 @@ def new_com_file(com_type,w_dir_initial,new_gaussian_input_files,file,args,keywo
 			file_name = file.split(".")[0]+'_'+args.suffix_sp+'.com'
 	elif com_type == 'analysis':
 		file_name = file.split(".")[0]+'.com'
+	elif com_type == 'nics':
+		file_name = file.split(".")[0]+'_nics.com'
 
 	fileout = open(file_name, "w")
 
-	write_header_and_coords(fileout,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS)
+	write_header_and_coords(fileout,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,w_dir_initial,log,com_type)
 
 	if args.sp and TERMINATION == "normal" and IM_FREQS == 0 :
 		fileout.write(args.last_line_for_sp)
@@ -269,7 +275,7 @@ def create_folder_and_com(w_dir_main,round_num,log,NATOMS,ATOMTYPES,CARTESIANS,a
 		keywords_opt = lot +'/'+ bs +' '+ input_route
 
 	com_type = 'analysis'
-	new_com_file(com_type, w_dir_initial,new_gaussian_input_files,file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,TERMINATION,IM_FREQS,bs,lot,bs_gcp)
+	new_com_file(com_type, w_dir_initial,log,new_gaussian_input_files,file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,TERMINATION,IM_FREQS,bs,lot,bs_gcp)
 
 def create_folder_move_log_files(w_dir_main,round_num,file,IM_FREQS,TERMINATION,ERRORTYPE,w_dir_fin,finished,unfinished,atom_error,scf_error,imag_freq,other_error,exp_rules_qcorr,passing_rules,passing_geom,check_geom_qcorr):
 	source = w_dir_main+'/'+file
@@ -423,22 +429,25 @@ def output_analyzer(duplicates,log_files,com_files, w_dir_main,lot, bs, bs_gcp, 
 			create_folder_and_com(w_dir_main,round_num,log,NATOMS,ATOMTYPES,CARTESIANS,args,TERMINATION,IM_FREQS,w_dir_fin,file,lot,bs,bs_gcp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp,ERRORTYPE,input_route,w_dir_initial,name,CHARGE, MULT)
 
 		# adding in the NMR componenet only to the finished files after reading from normally finished log files
-		if args.sp and TERMINATION == "normal" and IM_FREQS == 0 and passing_rules and passing_geom:
+		if args.sp or args.nics and TERMINATION == "normal" and IM_FREQS == 0 and passing_rules and passing_geom:
 			#get coordinates
 			ATOMTYPES, CARTESIANS = get_coords_normal(outlines, stand_or, NATOMS, possible_atoms, ATOMTYPES, CARTESIANS)
-			# creating new folder with new input gaussian files
-			single_point_input_files = w_dir_fin+'/../G16-SP_input_files'
+			if args.sp:
+				# creating new folder with new input gaussian files
+				single_point_input_files = w_dir_fin+'/../G16-SP_input_files'
+			if args.nics:
+				nics_input_files = w_dir_fin+'/../G16-NICS_input_files'
 			# Options for genecp
 			ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp = check_for_gen_or_genecp(ATOMTYPES,args)
 
 			# Sets the folder and find the log files to analyze
 			for lot_sp,bs_sp,bs_gcp_sp in zip(args.level_of_theory_sp,args.basis_set_sp,args.basis_set_genecp_atoms_sp):
-				log.write('-> Creating new single point files files for {0} in {1}/{2}-{3}'.format(file,single_point_input_files,lot_sp,bs_sp))
-				dir_name = str(lot_sp) + '-' + str(bs_sp)
-				if not os.path.isdir(single_point_input_files+'/'+dir_name):
-					os.makedirs(single_point_input_files+'/'+dir_name)
-				os.chdir(single_point_input_files+'/'+dir_name)
+				if args.sp:
+					log.write('-> Creating new single point files for {0} in {1}/{2}-{3}'.format(file,single_point_input_files,lot_sp,bs_sp))
+				if args.nics:
+					log.write('-> Creating NICS input files for {0} in {1}/{2}-{3}'.format(file,nics_input_files,lot_sp,bs_sp))
 
+				dir_name = str(lot_sp) + '-' + str(bs_sp)
 				if genecp == 'genecp' or  genecp == 'gen':
 					keywords_opt = lot_sp+'/'+ genecp+' '+ args.input_for_sp
 				else:
@@ -452,8 +461,16 @@ def output_analyzer(duplicates,log_files,com_files, w_dir_main,lot, bs, bs_gcp, 
 					CHARGE = args.charge_sp
 				if args.mult_sp != 'None':
 					MULT = args.mult_sp
-				com_type = 'sp'
-				new_com_file(com_type,w_dir_initial,single_point_input_files+'/'+dir_name,file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,TERMINATION,IM_FREQS,bs_sp,lot_sp,bs_gcp_sp)
+				if args.sp:
+					if not os.path.isdir(single_point_input_files+'/'+dir_name):
+						os.makedirs(single_point_input_files+'/'+dir_name)
+					os.chdir(single_point_input_files+'/'+dir_name)
+					new_com_file('sp',w_dir_initial,log,single_point_input_files+'/'+dir_name,file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,TERMINATION,IM_FREQS,bs_sp,lot_sp,bs_gcp_sp)
+				if args.nics:
+					if not os.path.isdir(nics_input_files+'/'+dir_name):
+						os.makedirs(nics_input_files+'/'+dir_name)
+					os.chdir(nics_input_files+'/'+dir_name)
+					new_com_file('nics',w_dir_initial,log,single_point_input_files+'/'+dir_name,file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,TERMINATION,IM_FREQS,bs_sp,lot_sp,bs_gcp_sp)
 
 	if round_num == 1:
 		#moves the comfiles to respective folder
