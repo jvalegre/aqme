@@ -29,7 +29,6 @@ def moving_files(source, destination):
 		shutil.move(source, destination)
 
 def write_header_and_coords(fileout,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,w_dir_initial,log,com_type=None):
-	print(name)
 	if com_type == 'nics':
 		NATOMS,ATOMTYPES,CARTESIANS = update_coord(NATOMS,ATOMTYPES,CARTESIANS,args,log,name,w_dir_initial)
 	fileout.write("%mem="+str(args.mem)+"\n")
@@ -195,8 +194,7 @@ def get_coords_normal(outlines, stand_or, NATOMS, possible_atoms, ATOMTYPES, CAR
 			atom_symbol = "XX"
 		ATOMTYPES.append(atom_symbol)
 		CARTESIANS.append([float(outlines[i].split()[3]), float(outlines[i].split()[4]), float(outlines[i].split()[5])])
-
-	return ATOMTYPES, CARTESIANS
+	return ATOMTYPES, CARTESIANS,stand_or
 
 def get_coords_not_normal(outlines, stop_rms, stand_or, dist_rot_or, NATOMS, possible_atoms, ATOMTYPES, CARTESIANS):
 	if stop_rms == 0:
@@ -217,10 +215,8 @@ def get_coords_not_normal(outlines, stop_rms, stand_or, dist_rot_or, NATOMS, pos
 			if outlines[i-1].find("-------") > -1:
 				dist_rot_or = i
 				stop_get_details_dis_rot += 1
-
-	ATOMTYPES, CARTESIANS = get_coords_normal(outlines, stand_or, NATOMS, possible_atoms, ATOMTYPES, CARTESIANS)
-
-	return ATOMTYPES, CARTESIANS, NATOMS
+	ATOMTYPES, CARTESIANS,stand_or = get_coords_normal(outlines, stand_or, NATOMS, possible_atoms, ATOMTYPES, CARTESIANS)
+	return ATOMTYPES, CARTESIANS, NATOMS,stand_or
 
 def fix_imag_freqs(NATOMS, CARTESIANS, args, FREQS, NORMALMODE):
 	# Multiplies the imaginary normal mode vector by this amount (from -1 to 1).
@@ -247,7 +243,7 @@ def fix_imag_freqs(NATOMS, CARTESIANS, args, FREQS, NORMALMODE):
 
 	return CARTESIANS
 
-def create_folder_and_com(w_dir_main,round_num,log,NATOMS,ATOMTYPES,CARTESIANS,args,TERMINATION,IM_FREQS,w_dir_fin,file,lot,bs,bs_gcp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp,ERRORTYPE,input_route,w_dir_initial,name,CHARGE,MULT):
+def create_folder_and_com(w_dir,w_dir_main,round_num,log,NATOMS,ATOMTYPES,CARTESIANS,args,TERMINATION,IM_FREQS,w_dir_fin,file,lot,bs,bs_gcp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp,ERRORTYPE,input_route,w_dir_initial,name,CHARGE,MULT):
 	# creating new folder with new input gaussian files
 	new_gaussian_input_files = w_dir_main+'/input_files/run_'+str(round_num+1)
 
@@ -275,10 +271,10 @@ def create_folder_and_com(w_dir_main,round_num,log,NATOMS,ATOMTYPES,CARTESIANS,a
 		keywords_opt = lot +'/'+ bs +' '+ input_route
 
 	com_type = 'analysis'
-	new_com_file(com_type, w_dir_initial,log,new_gaussian_input_files,file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,TERMINATION,IM_FREQS,bs,lot,bs_gcp)
+	new_com_file(com_type,w_dir_initial,log,new_gaussian_input_files,file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,TERMINATION,IM_FREQS,bs,lot,bs_gcp)
 
-def create_folder_move_log_files(w_dir_main,round_num,file,IM_FREQS,TERMINATION,ERRORTYPE,w_dir_fin,finished,unfinished,atom_error,scf_error,imag_freq,other_error,exp_rules_qcorr,passing_rules,passing_geom,check_geom_qcorr):
-	source = w_dir_main+'/'+file
+def create_folder_move_log_files(w_dir,w_dir_main,round_num,file,IM_FREQS,TERMINATION,ERRORTYPE,w_dir_fin,finished,unfinished,atom_error,scf_error,imag_freq,other_error,exp_rules_qcorr,passing_rules,passing_geom,check_geom_qcorr):
+	source = w_dir+'/'+file
 	if IM_FREQS == 0 and TERMINATION == "normal" and passing_rules and passing_geom:
 		destination = w_dir_fin
 		moving_files(source, destination)
@@ -349,15 +345,22 @@ def output_to_mol(file,format,mol_name):
 	return mol,ob_compat,rdkit_compat
 
 # DEFINTION OF OUTPUT ANALYSER and NMR FILES CREATOR
-def output_analyzer(duplicates,log_files,com_files, w_dir_main,lot, bs, bs_gcp, args, w_dir_fin, w_dir_initial, log, ana_data, round_num):
+def output_analyzer(duplicates,log_files,com_files, w_dir, w_dir_main,lot, bs, bs_gcp, args, w_dir_fin, w_dir_initial, log, ana_data, round_num):
 
 	input_route = input_route_line(args)
 	finished,unfinished,atom_error,scf_error,imag_freq,other_error,exp_rules_qcorr,check_geom_qcorr = 0,0,0,0,0,0,0,0
 
+	if round_num == 1:
+		#moves the comfiles to respective folder
+		for file in com_files:
+			source = w_dir+'/'+file
+			destination = w_dir_main +'/input_files/run_'+str(round_num)
+			moving_files(source, destination)
+
 	for file in log_files:
 		# read the file
 		log.write(file)
-		outlines, outfile, break_loop = read_log_file(w_dir_main,file)
+		outlines, outfile, break_loop = read_log_file(w_dir,file)
 
 		if break_loop:
 			break
@@ -376,12 +379,11 @@ def output_analyzer(duplicates,log_files,com_files, w_dir_main,lot, bs, bs_gcp, 
 
 		# Get the coordinates for jobs that finished well with and without imag. freqs
 		if TERMINATION == "normal" and IM_FREQS>0:
-			ATOMTYPES, CARTESIANS = get_coords_normal(outlines, stand_or, NATOMS, possible_atoms, ATOMTYPES, CARTESIANS)
+			ATOMTYPES, CARTESIANS, stand_or = get_coords_normal(outlines, stand_or, NATOMS, possible_atoms, ATOMTYPES, CARTESIANS)
 
 		# Get he coordinates for jobs that did not finished or finished with an error
 		if TERMINATION != "normal":
-			ATOMTYPES, CARTESIANS,NATOMS = get_coords_not_normal(outlines, stop_rms, stand_or, dist_rot_or, NATOMS, possible_atoms, ATOMTYPES, CARTESIANS)
-
+			ATOMTYPES, CARTESIANS,NATOMS, stand_or = get_coords_not_normal(outlines, stop_rms, stand_or, dist_rot_or, NATOMS, possible_atoms, ATOMTYPES, CARTESIANS)
 		# This part fixes imaginary freqs (if any)
 		if IM_FREQS > 0:
 			CARTESIANS = fix_imag_freqs(NATOMS, CARTESIANS, args, FREQS, NORMALMODE)
@@ -419,19 +421,19 @@ def output_analyzer(duplicates,log_files,com_files, w_dir_main,lot, bs, bs_gcp, 
 
 				os.remove(file.split('.')[0]+'.mol')
 		# This part places the calculations in different folders depending on the type of termination
-		finished,unfinished,atom_error,scf_error,imag_freq,other_error,exp_rules_qcorr,check_geom_qcorr = create_folder_move_log_files(w_dir_main,round_num,file,IM_FREQS,TERMINATION,ERRORTYPE,w_dir_fin,finished,unfinished,atom_error,scf_error,imag_freq,other_error,exp_rules_qcorr,passing_rules,passing_geom,check_geom_qcorr)
+		finished,unfinished,atom_error,scf_error,imag_freq,other_error,exp_rules_qcorr,check_geom_qcorr = create_folder_move_log_files(w_dir,w_dir_main,round_num,file,IM_FREQS,TERMINATION,ERRORTYPE,w_dir_fin,finished,unfinished,atom_error,scf_error,imag_freq,other_error,exp_rules_qcorr,passing_rules,passing_geom,check_geom_qcorr)
 
 		# check if gen or genecp are active
 		ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp = check_for_gen_or_genecp(ATOMTYPES,args)
 
 		# create folders and set level of theory in COM files to fix imaginary freqs or not normal terminations
 		if IM_FREQS > 0 or TERMINATION != "normal" and not os.path.exists(w_dir_main+'/failed/run_'+str(round_num)+'/error/basis_set_error/'+file):
-			create_folder_and_com(w_dir_main,round_num,log,NATOMS,ATOMTYPES,CARTESIANS,args,TERMINATION,IM_FREQS,w_dir_fin,file,lot,bs,bs_gcp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp,ERRORTYPE,input_route,w_dir_initial,name,CHARGE, MULT)
+			create_folder_and_com(w_dir,w_dir_main,round_num,log,NATOMS,ATOMTYPES,CARTESIANS,args,TERMINATION,IM_FREQS,w_dir_fin,file,lot,bs,bs_gcp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp,ERRORTYPE,input_route,w_dir_initial,name,CHARGE, MULT)
 
 		# adding in the NMR componenet only to the finished files after reading from normally finished log files
-		if args.sp or args.nics and TERMINATION == "normal" and IM_FREQS == 0 and passing_rules and passing_geom:
+		if (args.sp or args.nics) and TERMINATION == "normal" and IM_FREQS == 0 and passing_rules and passing_geom:
 			#get coordinates
-			ATOMTYPES, CARTESIANS = get_coords_normal(outlines, stand_or, NATOMS, possible_atoms, ATOMTYPES, CARTESIANS)
+			ATOMTYPES, CARTESIANS,stand_or = get_coords_normal(outlines, stand_or, NATOMS, possible_atoms, ATOMTYPES, CARTESIANS)
 			if args.sp:
 				# creating new folder with new input gaussian files
 				single_point_input_files = w_dir_fin+'/../G16-SP_input_files'
@@ -470,17 +472,14 @@ def output_analyzer(duplicates,log_files,com_files, w_dir_main,lot, bs, bs_gcp, 
 					if not os.path.isdir(nics_input_files+'/'+dir_name):
 						os.makedirs(nics_input_files+'/'+dir_name)
 					os.chdir(nics_input_files+'/'+dir_name)
-					new_com_file('nics',w_dir_initial,log,single_point_input_files+'/'+dir_name,file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,TERMINATION,IM_FREQS,bs_sp,lot_sp,bs_gcp_sp)
+					new_com_file('nics',w_dir_initial,log,nics_input_files+'/'+dir_name,file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,TERMINATION,IM_FREQS,bs_sp,lot_sp,bs_gcp_sp)
 
-	if round_num == 1:
-		#moves the comfiles to respective folder
-		for file in com_files:
-			source = w_dir_main+'/'+file
-			destination = w_dir_main +'/input_files/run_'+str(round_num)
-			moving_files(source, destination)
 
 	#write to csv ana_data
-	ana_data.at[0,'Total files'] = len(log_files)+int(duplicates) # since duplicates are moved before anything else
+	if duplicates=='None':
+		ana_data.at[0,'Total files'] = len(log_files)
+	else:
+		ana_data.at[0,'Total files'] = len(log_files)+int(duplicates) # since duplicates are moved before anything else
 	ana_data.at[0,'Normal termination'] = finished
 	ana_data.at[0,'Imaginary frequencies'] = imag_freq
 	ana_data.at[0,'SCF error'] = scf_error
@@ -502,10 +501,11 @@ def output_analyzer(duplicates,log_files,com_files, w_dir_main,lot, bs, bs_gcp, 
 def check_for_final_folder(w_dir):
 	ini_com_folder = sum(dirs.count('input_files') for _, dirs, _ in os.walk(w_dir))
 	if ini_com_folder == 0:
-		return 1
+		return w_dir, 1
 	else:
 		num_com_folder = sum([len(d) for r, d, folder in os.walk(w_dir+'/input_files')])
-		return num_com_folder
+		w_dir = w_dir+'/input_files/run_'+str(num_com_folder)
+		return w_dir, num_com_folder
 
 # CHECKING FOR DUPLICATES
 def dup_calculation(val, w_dir,w_dir_main, args, log,round_num):
@@ -528,7 +528,7 @@ def dup_calculation(val, w_dir,w_dir_main, args, log,round_num):
 
 	#move the files to specific directory
 	destination = w_dir_main+'/duplicates/run_'+str(round_num)
-	source = w_dir_main+'/Goodvibes_output.dat'
+	source = 'Goodvibes_output.dat'
 	moving_files(source, destination)
 
 	for source in dup_file_list:

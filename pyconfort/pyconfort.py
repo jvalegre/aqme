@@ -76,16 +76,16 @@ def main():
 
 	#QCORR
 	if args.QCORR=='gaussian':
-		log.write("\no  Writing analysis of output files in respective folders in csv_files\n")
+		log.write("\no  Writing analysis of output files in respective folders\n")
 		# main part of the duplicate function
 		if args.dup:
 			try:
 				import goodvibes
+				print(os.getcwd())
 				duplicates = dup_main(args, log, w_dir_initial)
 				os.chdir(w_dir_initial)
 			except (ModuleNotFoundError,AttributeError):
 				log.write("\nx  GoodVibes is not installed as a module (pip or conda), the duplicate option will be disabled in QCORR\n")
-
 		else:
 			duplicates = False
 
@@ -98,6 +98,10 @@ def main():
 		nmr_main(args,log,w_dir_initial)
 	if args.QPRED=='energy':
 		energy_main(args,log,w_dir_initial)
+	if args.QPRED=='dbstep':
+		dbstep_par_main(args,log,w_dir_initial)
+	if args.QPRED=='dbstep':
+		nics_par_main(args,log,w_dir_initial)
 	os.chdir(w_dir_initial)
 
 	#QSTAT
