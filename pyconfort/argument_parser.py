@@ -24,7 +24,7 @@ def parser_args():
 	parser.add_argument("--QPREP", action="store", default=None, help="Create input files for QM calculations", choices=['gaussian'])
 	parser.add_argument("--QCORR", action="store", default=None, help="Fix the output files from QM calculations",choices=['gaussian'])
 	parser.add_argument("--QSTAT", action="store", default=None, help="Generate parameters for different conformers",choices=['graph','descp'])
-	parser.add_argument("--QPRED", action="store", default=None, help="Perform predictions for different conformers", choices=['nmr','energy','dbstep'])
+	parser.add_argument("--QPRED", action="store", default=None, help="Perform predictions for different conformers", choices=['nmr','energy','dbstep','nics'])
 
 	#arguments for TMBUILD
 	parser.add_argument("--metal_complex", action="store_true", default=False, help="Request metal complex with coord. no. 4, 5 or 6")
@@ -128,7 +128,6 @@ def parser_args():
 	parser.add_argument("--bond", help="Specify the atom indexes to track bond lengths for different conformers", default=[], dest="bond", type=str, nargs=2,action='append')
 	parser.add_argument("--angle", help="Specify the atom indexes to track angles for different conformers", default=[], dest="angle", type=str, nargs=3,action='append')
 	parser.add_argument("--geom_par_name",action="store",dest="geom_par_name", default="descp", help="Change the prefix for the descriptors obtained")
-	parser.add_argument("--dbstep_param", action="store_true", default=False, help="Turn on for tracking the steric parameters for the molecule")
 	parser.add_argument("--dbstep_cen_lig_file",help="Center for DBSTEP steric paramters in a txt ( FORMAT : name, center, ligand)", action="store", default="No file passed",dest="dbstep_cen_lig_file")
 
 	#arguments for nmr

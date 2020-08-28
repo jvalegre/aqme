@@ -21,6 +21,7 @@ from pyconfort.grapher import graph
 from pyconfort.descp import calculate_parameters
 from pyconfort.nmr import calculate_boltz_and_nmr
 from pyconfort.energy import calculate_boltz_and_energy,calculate_avg_and_energy
+from pyconfort.dbstep_conf import calculate_db_parameters,calculate_boltz_and_dbstep
 #need to and in energy
 
 #class for logging
@@ -404,7 +405,6 @@ def qcorr_gaussian_main(duplicates,w_dir_initial,args,log):
 			ana_data = creation_of_ana_csv(args,duplicates)
 			log.write("\no  Analyzing output files in {}\n".format(w_dir))
 			log_files = get_com_or_log_out_files('output',None)
-			print(log_files)
 			com_files = get_com_or_log_out_files('input',None)
 			output_analyzer(duplicates,log_files, com_files, w_dir, w_dir_main, lot, bs, bs_gcp, args, w_dir_fin, w_dir_initial, log, ana_data, round_num)
 		os.chdir(w_dir_main)
@@ -602,12 +602,32 @@ def dbstep_par_main(args,log,w_dir_initial):
 				w_dir = args.path + str(lot) + '-' + str(bs) +'/success/output_files'
 				os.chdir(w_dir)
 				log_files = get_com_or_log_out_files('output',name)
-				calculate_db_parameters(log_files,args,log,w_dir_initial,name_mol,lot,bs)
-				calculate_boltz_and_dbstep(log_files,args,log,name,w_dir_fin,w_dir_initial,lot,bs)
+				calculate_db_parameters(log_files,args,log,w_dir_initial,name,lot,bs)
+				calculate_boltz_and_dbstep(log_files,args,log,name,w_dir,w_dir_initial,lot,bs)
 		os.chdir(w_dir_initial)
 	return 0
 
 def nics_par_main(args,log,w_dir_initial):
+	#get sdf FILES from csv
+	pd_name = pd.read_csv(w_dir_initial+'/CSEARCH/csv_files/'+args.input.split('.')[0]+'-CSEARCH-Data.csv')
+
+	for i in range(len(pd_name)):
+		name = pd_name.loc[i,'Molecule']
+
+		log.write("\no  Calculating nics for molecule : {0} ".format(name))
+
+		if os.path.exists(w_dir_initial+'/QMCALC/G16'):
+			args.path = w_dir_initial+'/QMCALC/G16/'
+			# Sets the folder and find the log files to analyze
+			for lot,bs,bs_gcp in zip(args.level_of_theory, args.basis_set,args.basis_set_genecp_atoms):
+				#assign the path to the finished directory.
+				w_dir = args.path + str(lot) + '-' + str(bs) +'/success/output_files'
+				os.chdir(w_dir)
+				log_files = get_com_or_log_out_files('output',name)
+				calculate_nics_parameters(log_files,args,log,w_dir_initial,name_mol,lot,bs)
+				calculate_boltz_and_nics(log_files,args,log,name,w_dir_fin,w_dir_initial,lot,bs)
+		os.chdir(w_dir_initial)
+
 	return 0
 
 # MAIN OPTION FOR DISCARDING MOLECULES BASED ON USER INPUT DATA (REFERRED AS EXPERIMENTAL RULES)
@@ -627,6 +647,8 @@ def exp_rules_main(args,log,exp_rules_active):
 				conf_files =  glob.glob('*_summ.sdf')
 			elif args.CSEARCH=='fullmonte':
 				conf_files =  glob.glob('*_fullmonte.sdf')
+			else:
+				conf_files =  glob.glob('*.sdf')
 
 		for file in conf_files:
 			allmols = Chem.SDMolSupplier(file, removeHs=False)
