@@ -22,6 +22,7 @@ from pyconfort.descp import calculate_parameters
 from pyconfort.nmr import calculate_boltz_and_nmr
 from pyconfort.energy import calculate_boltz_and_energy,calculate_avg_and_energy
 from pyconfort.dbstep_conf import calculate_db_parameters,calculate_boltz_and_dbstep
+from pyconfort.nics_conf import calculate_nics_parameters,calculate_boltz_for_nics,calculate_avg_nics
 #need to and in energy
 
 #class for logging
@@ -624,8 +625,14 @@ def nics_par_main(args,log,w_dir_initial):
 				w_dir = args.path + str(lot) + '-' + str(bs) +'/success/output_files'
 				os.chdir(w_dir)
 				log_files = get_com_or_log_out_files('output',name)
-				calculate_nics_parameters(log_files,args,log,w_dir_initial,name_mol,lot,bs)
-				calculate_boltz_and_nics(log_files,args,log,name,w_dir_fin,w_dir_initial,lot,bs)
+				#do boltz firsst
+				calculate_boltz_for_nics(log_files,args,log,name,w_dir,w_dir_initial,lot,bs)
+				for lot_sp,bs_sp,bs_gcp_sp in zip(args.level_of_theory_sp, args.basis_set_sp,args.basis_set_genecp_atoms_sp):
+					w_dir_sp = args.path + str(lot) + '-' + str(bs) +'/success/G16-NICS_input_files/'+str(lot_sp)+'-'+str(bs_sp)
+					os.chdir(w_dir_sp)
+					log_files_sp = get_com_or_log_out_files('output',name)
+					calculate_nics_parameters(log_files_sp,args,log,w_dir_initial,name,lot_sp,bs_sp)
+					calculate_avg_nics(log_files_sp,args,log,name,w_dir_sp,w_dir_initial,lot_sp,bs_sp)
 		os.chdir(w_dir_initial)
 
 	return 0

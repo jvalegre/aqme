@@ -20,7 +20,6 @@ def calculate_db_parameters(log_files,args,log,w_dir_initial,name_mol,lot,bs):
 	filelines =  open(w_dir_initial+'/'+args.dbstep_cen_lig_file,'r').readlines()
 
 	for counter,log in enumerate(log_files):
-
 		for line in (filelines):
 			split_line = line.strip().split(',')
 			if split_line[0] == name_mol:
@@ -29,7 +28,7 @@ def calculate_db_parameters(log_files,args,log,w_dir_initial,name_mol,lot,bs):
 				break
 		sterics = db.dbstep(log, center=str(C),ligand=str(L), volume=True, commandline=True)
 		total_data.at[counter,'Name'] = name_mol
-		total_data.at[counter,'log'] = log.split('.log')
+		total_data.at[counter,'log'] = log.split('.log')[0]
 		total_data.at[counter,'bv'] = sterics.bur_vol
 		total_data.at[counter,'bmax'] = sterics.Bmax
 		total_data.at[counter,'bmin'] = sterics.Bmin

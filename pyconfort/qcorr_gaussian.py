@@ -30,7 +30,7 @@ def moving_files(source, destination):
 
 def write_header_and_coords(fileout,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,w_dir_initial,log,com_type=None):
 	if com_type == 'nics':
-		NATOMS,ATOMTYPES,CARTESIANS = update_coord(NATOMS,ATOMTYPES,CARTESIANS,args,log,name,w_dir_initial)
+		NATOMS,ATOMTYPES,CARTESIANS = update_coord(NATOMS,ATOMTYPES,CARTESIANS,args,log,name,w_dir_initial,'write')
 	fileout.write("%mem="+str(args.mem)+"\n")
 	fileout.write("%nprocshared="+str(args.nprocs)+"\n")
 	fileout.write("# "+keywords_opt+"\n")
@@ -329,13 +329,10 @@ def output_to_mol(file,format,mol_name):
 		rdkit_compat = False
 
 	# transforms output file into mol object
-	# obConversion = ob.OBConversion()
-	# obConversion.SetInAndOutFormats(format, 'mol')
-	# ob_mol = ob.OBMol()
-	# obConversion.ReadFile(ob_mol, file)
-	# obConversion.WriteFile(ob_mol, mol_name.split('.')[0]+'.mol')
+	# for input (from com to xyz to mol)
 	if format == 'xyz':
 		cmd_obabel = ['obabel', '-ixyz', os.path.splitext(file)[0]+'.xyz', '-omol', '-O', os.path.splitext(file)[0]+'.mol']
+	# for output (from log to mol)
 	if format == 'log':
 		cmd_obabel = ['obabel', '-ilog', os.path.splitext(file)[0]+'.log', '-omol', '-O', os.path.splitext(file)[0]+'.mol']
 	subprocess.run(cmd_obabel)
