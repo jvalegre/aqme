@@ -14,7 +14,7 @@ from pyconfort.qprep_gaussian import input_route_line,check_for_gen_or_genecp,wr
 from pyconfort.argument_parser import possible_atoms
 from pyconfort.filter import exp_rules_output,check_geom_filter
 from pyconfort.csearch import com_2_xyz_2_sdf
-from pyconfort.nics import update_coord
+from pyconfort.nics_conf import update_coord,get_coords_normal
 
 possible_atoms = possible_atoms()
 
@@ -149,7 +149,7 @@ def get_geom_and_freq_for_normal(outlines, args, TERMINATION, NATOMS, FREQS, NOR
 				if outlines[i-1].find("-------") > -1:
 					dist_rot_or = i
 					stop_get_details_dis_rot += 1
-			if outlines[i].find("Standard orientation") > -1 and stop_get_details_stand_or !=1 :
+			if (outlines[i].find("Standard orientation") > -1 or outlines[i].find("Input orientation") > -1) and stop_get_details_stand_or !=1 :
 				stand_or = i
 				NATOMS = dist_rot_or-i-6
 				stop_get_details_stand_or += 1
@@ -185,16 +185,6 @@ def get_geom_and_freq_for_normal(outlines, args, TERMINATION, NATOMS, FREQS, NOR
 						rms = 10000
 	return TERMINATION, NATOMS, FREQS, NORMALMODE, IM_FREQS, READMASS, FORCECONST, nfreqs, freqs_so_far, rms, stop_rms, dist_rot_or, stand_or
 
-def get_coords_normal(outlines, stand_or, NATOMS, possible_atoms, ATOMTYPES, CARTESIANS):
-	for i in range(stand_or+5,stand_or+5+NATOMS):
-		massno = int(outlines[i].split()[1])
-		if massno < len(possible_atoms):
-			atom_symbol = possible_atoms[massno]
-		else:
-			atom_symbol = "XX"
-		ATOMTYPES.append(atom_symbol)
-		CARTESIANS.append([float(outlines[i].split()[3]), float(outlines[i].split()[4]), float(outlines[i].split()[5])])
-	return ATOMTYPES, CARTESIANS,stand_or
 
 def get_coords_not_normal(outlines, stop_rms, stand_or, dist_rot_or, NATOMS, possible_atoms, ATOMTYPES, CARTESIANS):
 	if stop_rms == 0:
@@ -431,6 +421,7 @@ def output_analyzer(duplicates,log_files,com_files, w_dir, w_dir_main,lot, bs, b
 		if (args.sp or args.nics) and TERMINATION == "normal" and IM_FREQS == 0 and passing_rules and passing_geom:
 			#get coordinates
 			ATOMTYPES, CARTESIANS,stand_or = get_coords_normal(outlines, stand_or, NATOMS, possible_atoms, ATOMTYPES, CARTESIANS)
+
 			if args.sp:
 				# creating new folder with new input gaussian files
 				single_point_input_files = w_dir_fin+'/../G16-SP_input_files'

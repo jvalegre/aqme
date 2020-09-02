@@ -24,7 +24,7 @@ def parser_args():
 	parser.add_argument("--QPREP", action="store", default=None, help="Create input files for QM calculations", choices=['gaussian'])
 	parser.add_argument("--QCORR", action="store", default=None, help="Fix the output files from QM calculations",choices=['gaussian'])
 	parser.add_argument("--QSTAT", action="store", default=None, help="Generate parameters for different conformers",choices=['graph','descp'])
-	parser.add_argument("--QPRED", action="store", default=None, help="Perform predictions for different conformers", choices=['nmr','energy','dbstep','nics'])
+	parser.add_argument("--QPRED", action="store", default=None, help="Perform predictions for different conformers", choices=['nmr','energy','dbstep','nics','cclib-json'])
 
 	#arguments for TMBUILD
 	parser.add_argument("--metal_complex", action="store_true", default=False, help="Request metal complex with coord. no. 4, 5 or 6")
@@ -144,7 +144,8 @@ def parser_args():
 	parser.add_argument("--nics_range",help="Range to calculate NICS along a given axis", default=4, dest="nics_range")
 	parser.add_argument("--nics_number",help="Step size to calculate NICS along a given axis", default=16, dest="nics_number")
 	parser.add_argument("--nics_atoms_file",help="NICS atoms in a txt ( FORMAT : name, atom1, atom2, atom3..)", action="store", default="No file passed",dest="nics_atoms_file")
-	# parser.add_argument("--nics_atoms",help="Specify the ring atoms for calcualtions of NICS", default=[], dest="nics_atoms", type=str, nargs='*')
+
+	#arguments for cclib
 
 	# submission of Gaussion files
 	parser.add_argument("--qsub", action="store_true", default=False, help="Submit Gaussian files when they are created")

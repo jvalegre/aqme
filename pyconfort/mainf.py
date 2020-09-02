@@ -23,6 +23,7 @@ from pyconfort.nmr import calculate_boltz_and_nmr
 from pyconfort.energy import calculate_boltz_and_energy,calculate_avg_and_energy
 from pyconfort.dbstep_conf import calculate_db_parameters,calculate_boltz_and_dbstep
 from pyconfort.nics_conf import calculate_nics_parameters,calculate_boltz_for_nics,calculate_avg_nics
+from pyconfort.cclib_conf import calculate_cclib,calcualte_average_cclib_parameter,calculate_boltz_for_cclib
 #need to and in energy
 
 #class for logging
@@ -378,7 +379,7 @@ def move_sdf_main(args):
 def get_com_or_log_out_files(type,name):
 	files = []
 	if type =='output':
-		formats = ['*.log','*.LOG','*.out','*.OUT']
+		formats = ['*.log','*.LOG','*.out','*.OUT','*json']
 	elif type =='input':
 		formats =['*.com','*.gjf']
 	for _,format in enumerate(formats):
@@ -606,7 +607,6 @@ def dbstep_par_main(args,log,w_dir_initial):
 				calculate_db_parameters(log_files,args,log,w_dir_initial,name,lot,bs)
 				calculate_boltz_and_dbstep(log_files,args,log,name,w_dir,w_dir_initial,lot,bs)
 		os.chdir(w_dir_initial)
-	return 0
 
 def nics_par_main(args,log,w_dir_initial):
 	#get sdf FILES from csv
@@ -635,7 +635,29 @@ def nics_par_main(args,log,w_dir_initial):
 					calculate_avg_nics(log_files_sp,args,log,name,w_dir_sp,w_dir_initial,lot_sp,bs_sp)
 		os.chdir(w_dir_initial)
 
-	return 0
+def cclib_main(args,log,w_dir_initial):
+	#get sdf FILES from csv
+	pd_name = pd.read_csv(w_dir_initial+'/CSEARCH/csv_files/'+args.input.split('.')[0]+'-CSEARCH-Data.csv')
+
+	for i in range(len(pd_name)):
+		name = pd_name.loc[i,'Molecule']
+
+		log.write("\no  Calculating cclib paramters for molecule : {0} ".format(name))
+		if os.path.exists(w_dir_initial+'/QMCALC/G16'):
+			args.path = w_dir_initial+'/QMCALC/G16/'
+			# Sets the folder and find the log files to analyze
+			for lot,bs,bs_gcp in zip(args.level_of_theory, args.basis_set,args.basis_set_genecp_atoms):
+				#assign the path to the finished directory.
+				w_dir = args.path + str(lot) + '-' + str(bs) +'/success/output_files'
+				os.chdir(w_dir)
+				log_files = get_com_or_log_out_files('output',name)
+				#do boltz firsst
+				calculate_cclib(log_files,args,log,name,w_dir,w_dir_initial,lot,bs)
+				calculate_boltz_for_cclib(log_files,args,log,name,w_dir,w_dir_initial,lot,bs)
+				os.chdir(w_dir_initial + '/QPRED/cclib-json/all_confs_cclib/'+str(lot)+'-'+str(bs))
+				json_files = get_com_or_log_out_files('output',name)
+				calcualte_average_cclib_parameter(json_files,args,log,name,w_dir,w_dir_initial,lot,bs)
+
 
 # MAIN OPTION FOR DISCARDING MOLECULES BASED ON USER INPUT DATA (REFERRED AS EXPERIMENTAL RULES)
 def exp_rules_main(args,log,exp_rules_active):

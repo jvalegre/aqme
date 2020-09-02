@@ -9,86 +9,97 @@ from numpy import *
 import subprocess, sys, os, math
 from pyconfort.qprep_gaussian import moving_files
 import pandas as pd
-from pyconfort.qcorr_gaussian import get_coords_normal
 from pyconfort.argument_parser import possible_atoms
 
 possible_atoms = possible_atoms()
 
-def find_centroid(ringatoms,CARTESIANS):
-		xtot = 0; xvals=[]; yvals=[]; zvals=[]
-		for x in ringatoms:
-				#print "CARTS", fileData.CARTESIANS[x]
-				xtot = xtot + CARTESIANS[x][0]
-				xvals.append(CARTESIANS[x][0])
-		xav = xtot/len(ringatoms)
-		ytot = 0
-		for x in ringatoms:
-				ytot = ytot + CARTESIANS[x][1]
-				yvals.append(CARTESIANS[x][1])
-		yav = ytot/len(ringatoms)
-		ztot = 0
-		for x in ringatoms:
-				ztot = ztot + CARTESIANS[x][2]
-				zvals.append(CARTESIANS[x][2])
-		zav = ztot/len(ringatoms)
+def get_coords_normal(outlines, stand_or, NATOMS, possible_atoms, ATOMTYPES, CARTESIANS):
+	for i in range(stand_or+5,stand_or+5+NATOMS):
+		massno = int(outlines[i].split()[1])
+		if massno < len(possible_atoms):
+			atom_symbol = possible_atoms[massno]
+		else:
+			atom_symbol = "XX"
+		ATOMTYPES.append(atom_symbol)
+		CARTESIANS.append([float(outlines[i].split()[3]), float(outlines[i].split()[4]), float(outlines[i].split()[5])])
+	return ATOMTYPES, CARTESIANS,stand_or
 
-		#print "Centroid at:", xav, yav, zav  #gives position of centroid
-		return xvals, yvals, zvals, xav, yav, zav
+
+def find_centroid(ringatoms,CARTESIANS):
+	xtot = 0; xvals=[]; yvals=[]; zvals=[]
+	for x in ringatoms:
+		#print "CARTS", fileData.CARTESIANS[x]
+		xtot = xtot + CARTESIANS[x][0]
+		xvals.append(CARTESIANS[x][0])
+	xav = xtot/len(ringatoms)
+	ytot = 0
+	for x in ringatoms:
+		ytot = ytot + CARTESIANS[x][1]
+		yvals.append(CARTESIANS[x][1])
+	yav = ytot/len(ringatoms)
+	ztot = 0
+	for x in ringatoms:
+		ztot = ztot + CARTESIANS[x][2]
+		zvals.append(CARTESIANS[x][2])
+	zav = ztot/len(ringatoms)
+
+	#print "Centroid at:", xav, yav, zav  #gives position of centroid
+	return xvals, yvals, zvals, xav, yav, zav
 
 def get_squares_list(ringatoms, xvals, yvals, zvals):
 ####################Necessary summations
-		xysum = 0; y2sum = 0; x2sum = 0; zsum = 0; ysum = 0; xsum = 0; xzsum = 0; yzsum = 0
-		for n in range(len(ringatoms)):
-				xy = xvals[n]*yvals[n]
-				xysum = xy+xysum
-				xz = xvals[n]*zvals[n]
-				xzsum = xz+xzsum
-				yz = yvals[n]*zvals[n]
-				yzsum = yz+yzsum
-				x = xvals[n]
-				xsum = x+xsum
-				y = yvals[n]
-				ysum = y+ysum
-				z = zvals[n]
-				zsum = z+zsum
-				x2 = xvals[n]*xvals[n]
-				x2sum = x2+x2sum
-				y2 = yvals[n]*yvals[n]
-				y2sum = y2+y2sum
-		return xzsum, xysum, xsum, ysum, zsum, x2sum, y2sum, yzsum
+	xysum = 0; y2sum = 0; x2sum = 0; zsum = 0; ysum = 0; xsum = 0; xzsum = 0; yzsum = 0
+	for n in range(len(ringatoms)):
+		xy = xvals[n]*yvals[n]
+		xysum = xy+xysum
+		xz = xvals[n]*zvals[n]
+		xzsum = xz+xzsum
+		yz = yvals[n]*zvals[n]
+		yzsum = yz+yzsum
+		x = xvals[n]
+		xsum = x+xsum
+		y = yvals[n]
+		ysum = y+ysum
+		z = zvals[n]
+		zsum = z+zsum
+		x2 = xvals[n]*xvals[n]
+		x2sum = x2+x2sum
+		y2 = yvals[n]*yvals[n]
+		y2sum = y2+y2sum
+	return xzsum, xysum, xsum, ysum, zsum, x2sum, y2sum, yzsum
 
 def do_matrix_stuff(xzsum, xysum, xsum, ysum, zsum, x2sum, y2sum, yzsum, ringatoms):
-		###################Matrix and vector used for least squares best fit plane
-		a=matrix([[x2sum, xysum, xsum],[xysum, y2sum, ysum],[xsum, ysum, len(ringatoms)]]) #3x3 matrix
-		b=matrix([[xzsum],[yzsum],[zsum]]) #3x1 matrix
-		try: coeffplane=a.I*b
-		except linalg.linalg.LinAlgError: coeffplane = matrix([[0.0],[0.0],[0.0]])
-		return coeffplane
+	###################Matrix and vector used for least squares best fit plane
+	a=matrix([[x2sum, xysum, xsum],[xysum, y2sum, ysum],[xsum, ysum, len(ringatoms)]]) #3x3 matrix
+	b=matrix([[xzsum],[yzsum],[zsum]]) #3x1 matrix
+	try: coeffplane=a.I*b
+	except linalg.linalg.LinAlgError: coeffplane = matrix([[0.0],[0.0],[0.0]])
+	return coeffplane
 
 def find_coeffplane(ringatoms, CARTESIANS):
-		rotated = 0
-		xvals, yvals, zvals, xav, yav, zav = find_centroid(ringatoms,CARTESIANS)
-		#print xvals, yvals, zvals
+	rotated = 0
+	xvals, yvals, zvals, xav, yav, zav = find_centroid(ringatoms,CARTESIANS)
+	#print xvals, yvals, zvals
+	xzsum, xysum, xsum, ysum, zsum, x2sum, y2sum, yzsum = get_squares_list(ringatoms, xvals, yvals, zvals)
+	if xsum == 0.0 and ysum == 0.0:
+		rotated = 3
+		print("Can't define a ring by points in a line")
+		print("This is going to go horribly wrong")
+	if xsum == 0.0:
+		new_xvals = yvals
+		new_yvals = zvals
+		new_zvals = xvals
 		xzsum, xysum, xsum, ysum, zsum, x2sum, y2sum, yzsum = get_squares_list(ringatoms, xvals, yvals, zvals)
-		if xsum == 0.0 and ysum == 0.0:
-			rotated = 3
-			print("Can't define a ring by points in a line")
-			print("This is going to go horribly wrong")
-		if xsum == 0.0:
-			new_xvals = yvals
-			new_yvals = zvals
-			new_zvals = xvals
-			xzsum, xysum, xsum, ysum, zsum, x2sum, y2sum, yzsum = get_squares_list(ringatoms, xvals, yvals, zvals)
-			rotated = 1
-		if ysum == 0.0:
-			new_xvals = zvals
-			new_yvals = xvals
-			new_zvals = yvals
-			xzsum, xysum, xsum, ysum, zsum, x2sum, y2sum, yzsum = get_squares_list(ringatoms, xvals, yvals, zvals)
-			rotated = 2
+		rotated = 1
+	if ysum == 0.0:
+		new_xvals = zvals
+		new_yvals = xvals
+		new_zvals = yvals
+		xzsum, xysum, xsum, ysum, zsum, x2sum, y2sum, yzsum = get_squares_list(ringatoms, xvals, yvals, zvals)
+		rotated = 2
 
-		coeffplane = do_matrix_stuff(xzsum, xysum, xsum, ysum, zsum, x2sum, y2sum, yzsum, ringatoms)
-		return coeffplane, xav, yav, zav, rotated
+	coeffplane = do_matrix_stuff(xzsum, xysum, xsum, ysum, zsum, x2sum, y2sum, yzsum, ringatoms)
+	return coeffplane, xav, yav, zav, rotated
 
 def update_coord(NATOMS,ATOMTYPES,CARTESIANS,args,log,name,w_dir_initial,type):
 	#find the ring atoms in the File

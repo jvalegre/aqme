@@ -28,7 +28,7 @@ from __future__ import print_function
 import os
 import time
 from pyconfort.argument_parser import parser_args
-from pyconfort.mainf import csearch_main, exp_rules_main, qprep_gaussian_main, move_sdf_main, qcorr_gaussian_main,dup_main,graph_main,geom_par_main,nmr_main,energy_main,creation_of_dup_csv,load_from_yaml,Logger,creation_of_ana_csv,dbstep_par_main,nics_par_main
+from pyconfort.mainf import csearch_main, exp_rules_main, qprep_gaussian_main, move_sdf_main, qcorr_gaussian_main,dup_main,graph_main,geom_par_main,nmr_main,energy_main,creation_of_dup_csv,load_from_yaml,Logger,creation_of_ana_csv,dbstep_par_main,nics_par_main,cclib_main
 
 def main():
 	# working directory and arguments
@@ -102,6 +102,8 @@ def main():
 		dbstep_par_main(args,log,w_dir_initial)
 	if args.QPRED=='nics':
 		nics_par_main(args,log,w_dir_initial)
+	if args.QPRED=='cclib-json':
+		cclib_main(args,log,w_dir_initial)
 	os.chdir(w_dir_initial)
 
 	#QSTAT
