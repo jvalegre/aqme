@@ -44,10 +44,7 @@ def exp_rules_output(mol,args,log,file,print_error_exp_rules,ob_compat,rdkit_com
 				# optimization (i.e. a N atom from one of the ligands separated from Ir). The
 				# max distance allowed can be tuned in length_filter
 				bond_length = rdMolTransforms.GetBondLength(mol_conf,metal_idx,atom_indexes[i])
-				if ligand_links[i] == 'P':
-					length_filter = 2.60
-				else:
-					length_filter = 2.45
+				length_filter = 2.60 # based on observation from DFT optimized geometries
 				if bond_length > length_filter:
 					passing = False
 					break
@@ -70,13 +67,13 @@ def exp_rules_output(mol,args,log,file,print_error_exp_rules,ob_compat,rdkit_com
 							# If this ring is broken, atom_indexes[j] will not be part of a 5-membered ring (atom.IsInRingSize(5) == False) which means that
 							# this atom was initially inside the same ligand as the parent C of atom_indexes[i])
 							if not five_mem:
-								if not new_mol.GetAtomWithIdx(atom_indexes[j]).IsInRingSize(5):
-									bond_2 = mol.GetBondBetweenAtoms(atom_indexes[j], metal_idx)
-									new_mol_2 = Chem.FragmentOnBonds(mol, [bond_2.GetIdx()],addDummies=True, dummyLabels=[(atom_indexes[j], metal_idx)])
-									#doing backwards as well eg. Ir N bond
-									if not new_mol_2.GetAtomWithIdx(atom_indexes[i]).IsInRingSize(5):
-										ligand_atoms.append([atom_indexes[i],atom_indexes[j]])
-										break
+								bond_2 = mol.GetBondBetweenAtoms(atom_indexes[j], metal_idx)
+								new_mol_2 = Chem.FragmentOnBonds(mol, [bond_2.GetIdx()],addDummies=True, dummyLabels=[(atom_indexes[j], metal_idx)])
+								#doing backwards as well eg. Ir N bond
+								if not new_mol_2.GetAtomWithIdx(atom_indexes[i]).IsInRingSize(5):
+									ligand_atoms.append([atom_indexes[i],atom_indexes[j]])
+									break
+
 							else:
 								if not new_mol.GetAtomWithIdx(atom_indexes[j]).IsInRingSize(5):
 									if mol.GetAtomWithIdx(atom_indexes[j]).IsInRingSize(5):

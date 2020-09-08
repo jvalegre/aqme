@@ -5,7 +5,6 @@
 # 	 used for genrating all parameters from DBSTEP  #
 #####################################################.
 
-import dbstep.Dbstep as db
 import os
 import numpy as np
 import pandas as pd
@@ -13,6 +12,11 @@ import subprocess
 from pyconfort.qprep_gaussian import moving_files
 
 def calculate_db_parameters(log_files,args,log,w_dir_initial,name_mol,lot,bs):
+
+	try:
+		import dbstep.Dbstep as db
+	except (ModuleNotFoundError,AttributeError):
+		log.write('DBSTEP is not installed correctly - DBSTEP is not available')
 
 	total_data = pd.DataFrame()
 

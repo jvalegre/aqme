@@ -1,0 +1,162 @@
+# --- (1) SET-UP AND PERFORMANCE OPTIONS
+# MODULES
+CSEARCH : False # Conformer generators. Options: rdkit, summ, fullmonte
+CMIN : False # Conformer refiners. Options: ani, xtb
+QPREP : False # options: gaussian
+QCORR : False # options: gaussian
+QSTAT : False # options: descp, graph
+QPRED : False # options: nmr, energy
+
+# performance
+verbose : True # request verbose mode
+time : True # request running time
+
+
+# --- (2) CONFORMER GENERATION AND REFINEMENT: CSEARCH AND CMIN
+# INPUT FILE AND PREFIX
+input : 'FILENAME.smi' # input file
+prefix : None # if prefix : NAME, set a generic name for the different molecules (i.e. comp_1, comp_2, etc)
+
+# COMMON OPTIONS
+sample : 'auto' # number of conformers to sample to get non-torsional differences. If sample = 'auto', the program will calculate the number of conformers to sample
+# energy windows in kcal/mol for the different methods (conformers with E higher than ewin will be discarded)
+ewin_rdkit : 5 # for RDKit and SUMM
+ewin_fullmonte : 5 # for Full Monte
+ewin_min : 5 # for ANI1ccx and xTB
+
+# OPTIONS FOR METALS AND ATOMS WITH UNCOMMON HYBRIDIZATIONS (i.e. pentacoordinated phosphorus)
+metal_complex : True # True to activate this option
+metal : ['Pd'] # specify the metal(s) or atom(s) with uncommon hybridization, in the format ['Pd','Ir','P',...]
+m_oxi : [2] # oxidation number of the atom (it is used to calculate the charge of the molecule), in the format [1,1,0,...]
+complex_type : 'squareplanar' # predefined complex geometries. Options: linear, trigonalplanar, squareplanar or squarepyramidal
+exp_rules : False # Discarding rules applied to filter-off conformers (based on experimental observation for example). Format: i) manual: ['ATOM1-ATOM2-ATOM3, ANGLE'] (i.e. ['C-Pd-C, 180']), ii) pre-set: 'Ir_bidentate_x3'
+angle_off : 30 # Deviation to discard in exp_rules (i.e. 180 +- 30 degrees)
+
+
+# --- (3) QM INPUT FILE GENERATION: QPREP
+# COMMON OPTIONS
+# conformer filter
+lowest_only : False # only makes a COM file with the lowest energy conformer from the SDF file
+lowest_n : False # if this is true, you need to specify an energy threshold below to grab conformers within that threshold (compared to the most stable conformer)
+energy_threshold_for_gaussian : 100  # in kcal/mol, lowest_n must be True to apply this energy threshold
+
+# charge and multiplicity
+charge_default : 'auto' # charge of the molecule (when the metal option = False). If charge_default = 'auto', the program will calculate the charge for you
+mult : 1 # final multiplicity of the molecule (the code does not calculate spin, it must be defined by the user)
+
+# input keywords
+## freq and opt
+frequencies : True # include frequency calculation
+max_cycle_opt : 100 # maxcycles for the optimization
+calcfc : False # include calcfc in the optimization
+## include chk line, number of processors and memory
+chk : False # include a %chk line at the beginning of the COM file
+nprocs : 12 # number of processors in %nprocshared
+mem: '24GB' # amount of memory in %mem
+## this part will override the default input keywords for the COM files. Use None for using the default options
+input_for_gauss : None # specify the input keywords (except functional, basis set, solvent and dispersion)
+
+# level of theory
+## basis set and functional
+basis_set : ['6-31+G(d,p)'] # basis set(s). Format: ['6-31+G(d,p)','Def2TZVP',...]
+level_of_theory : ['B3LYP'] # functional(s). Format: ['B3LYP','wB97XD',...]
+## atoms included in gen/genecp and their level of theory (it admits .txt or .yaml files with the basis set information)
+genecp_atoms : [] # list of atoms included in the genecp part (do not use genecp_atoms and gen_atoms at the same time!). Format: ['Pd','Ir','Pt',...]
+gen_atoms : [] # list of atoms included in the gen part (do not use genecp_atoms and gen_atoms at the same time!). Format: ['Pd','Ir','Pt',...]
+basis_set_genecp_atoms : [] # basis set for the gen/genecp part
+## dispersion correction
+empirical_dispersion : None # type of dispersion correction
+## solvation model
+solvent_model : 'gas_phase' # type of solvation model. Options: gas_phase or any solvation model (i.e. SMD, IEFPCM, CPCM)
+solvent_name : '' # solvent used (i.e. chloroform, toluene, etc)
+
+# OPTIONS FOR SINGLE-POINT COM FILES (ONLY IF sp : True IN QCORR)
+# charge and multiplicity
+charge_sp : None # charge of the single-point calculations. If charge_sp = None, the program takes the charge from the original LOG file
+mult_sp : None # multiplicity of the single-point calculations. If mult_sp = None, the program takes the multiplicity from the original LOG file
+# specify input line and final line (if last_line_for_sp = None, no final line is added)
+input_for_sp : 'nmr' # specify the input keywords (except functional, basis set, solvent and dispersion)
+last_line_for_sp : None # last line to add for single point
+# level of theory
+## basis set and functional
+basis_set_sp : [] # basis set for single-points. Format: ['6-311+G(2d,p)']
+level_of_theory_sp : ['B3LYP'] # functional for single-points
+## atoms included in gen/genecp and their level of theory (it admits .txt or .yaml files with the basis set information)
+genecp_atoms_sp : [] # list of atoms included in the genecp part (do not use genecp_atoms and gen_atoms at the same time!). Format: ['Pd','Ir','Pt',...]
+gen_atoms_sp : [] # list of atoms included in the gen part (do not use genecp_atoms and gen_atoms at the same time!). Format: ['Pd','Ir','Pt',...]
+basis_set_genecp_atoms_sp : [] # basis set for the genecp part of the single-points. Format: ['6-311+G(2d,p)']
+## dispersion correction
+empirical_dispersion : None # type of dispersion correction
+## solvation model
+solvent_model_sp : 'gas_phase' # type of solvation model. Options: gas_phase or any solvation model (i.e. SMD, IEFPCM, CPCM)
+solvent_name_sp : '' # solvent used (i.e. chloroform, toluene, etc)
+
+
+# --- (4) ANALYSIS OF QM OUTPUT FILES (REQUIRES QPREP): QCORR
+# OPTIONS
+path : '' # path to guassian folder(s) with QM output files. If path = '', the program takes the LOG/OUT files from the current working directoy
+dup : True # if dup = True, analysis will also separate duplicate LOG files
+amplitude_ifreq : 0.2 # amplitude use to displace the imaginary frequencies to fix during analysis
+ifreq_cutoff : 0 # Cut off for imaginary frequencies during analysis (i.e. if ifreq_cutoff = 20, all the negative freqs from 0 to -20 will be considered positive and the output files won't be discarded)
+# if sp = True, the program will generate new COM files (from normally terminated LOG files) with the options selected from the user
+sp : True # write single-point COM files after analysis (options in QPREP)
+suffix_sp : None # adds a suffix at the end of the single-point COM filename (i.e. FILENAME_suffix.com). If suffix_sp = None, no suffixes are added
+check_geom : True # Checks that geometries mantain the same connectivity after DFT optimization
+length_criteria : 1.3 # Factor used to determine whether a bond broke/formed during DFT optimization for check_geom
+
+
+# --- (5) PREDICTION OF BOLTZMANN AVERAGED SPECTRA AND ENERGIES: QPRED
+# OPTIONS:
+rot_dihedral: True # if True, the program retrieves information about all the rotatable dihedral angles
+bond : [] # retrieves the lengths of the bonds chosen (i.e. [1,2],[3,5],etc)
+angle : [] # retrieves the values of the angles chosen (i.e. [1,2,3],[3,5,6],etc)
+dihedral : [] # retrieves the angles of the dihedrals chosen (i.e. [1,2,3,5],[3,5,6,7],etc)
+geom_par_name : descp # change the prefix for the descriptors obtained
+
+
+# --- (6) PREDICTION OF BOLTZMANN AVERAGED SPECTRA AND ENERGIES: QSTAT
+# OPTIONS:
+MISSING Options
+
+
+#------PRE-DEFINED PARAMETERS OF CSEARCH AND CMIN, DO NOT MODIFY THIS PART UNLESS YOU KNOW WHAT YOU ARE DOING!------#
+# FOR UNIQUE CONFORMER SELECTION FOR RDKIT, XTB AND ANI1
+rms_threshold : 0.25 #cutoff for considering sampled conformers the same (default 0.25) for RDKit and xTB duplicate filters
+energy_threshold : 0.25 # energy difference in kcal/mol between unique conformers for RDKit and xTB duplicate filters
+initial_energy_threshold : 0.0001 # energy difference for the first RDKit filter based on E only
+max_matches_RMSD : 1000 # max iterations to find optimal RMSD in RDKit duplicate filter
+                            # The higher the number the longer the duplicate filter takes but
+                            # the more duplicates are filtered off
+heavyonly : True # If True, H from OH, NH, etc. will not be used to generate conformers (recommended: False with molecules that contain OH groups)
+auto_sample : 20 # final factor to multiply in the auto mode for the sample option (default 20)
+
+# FILTERS FOR RDKIT OPTIMIZATION
+max_torsions : 20 # Skip any molecules with more than this many torsions (default 5)
+max_MolWt : 10000 # Skip any molecules with molecular weights higher than this number
+
+# DIHEDRAL PROTOCOL FOR RDKIT OPTIMIZATION (SLOW SINCE IT SCANS MANY DIHEDRALS)
+degree : 30 # amount, in degrees, to enumerate torsions if CSEARCH = summ
+
+# PARAMETERS FOR RDKIT OPTIMIZATION
+ff : "MMFF" # force field used in the RDKit optimization. Options: MMFF or UFF
+seed : 62609 # random seed (default 62609) for ETKDG
+opt_steps_RDKit : 1000
+
+# DEFAULT PARAMETERS FOR ANI1 and xTB OPTIMIZATION
+opt_steps : 1000 # max number of cycles during optimization
+opt_fmax : 0.05 # fmax value to achieve optimization
+
+# DEFAULT PARAMETERS ONLY FOR ANI1 OPTIMIZATION
+constraints : None
+
+# DEFAULT PARAMETERS ONLY FOR xTB OPTIMIZATION
+xtb_method : 'GFN2-xTB' # Specify xtb method used. Options: 'GFN2-xTB', 'GFN1-xTB', 'GFN0-xTB', 'GFN-FF' (maybe more, check the xTB webpage)
+xtb_solvent : none # Specify GBSA solvent. For a list of solvents, check the xTB webpage
+xtb_accuracy : 1.0 # Numerical accuracy of the xTB calculation
+xtb_electronic_temperature : 300.0 # Electronic temperature for TB methods
+xtb_max_iterations : 250 # Iterations for self-consistent evaluation
+large_sys : True
+STACKSIZE : '1G' #set for large system
+
+# DEFAULT PARAMETERS ONLY FOR ANI OPTIMIZATION
+ani_method : ANI2x

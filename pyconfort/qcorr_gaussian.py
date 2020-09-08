@@ -59,7 +59,7 @@ def new_com_file(com_type,w_dir_initial,log,new_gaussian_input_files,file,args,k
 
 	write_header_and_coords(fileout,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,w_dir_initial,log,com_type)
 
-	if args.sp and TERMINATION == "normal" and IM_FREQS == 0 :
+	if args.sp and TERMINATION == "normal" and IM_FREQS == 0 and args.last_line_for_sp != 'None':
 		fileout.write(args.last_line_for_sp)
 		fileout.write('\n\n')
 
@@ -327,7 +327,6 @@ def output_to_mol(file,format,mol_name):
 		cmd_obabel = ['obabel', '-ilog', os.path.splitext(file)[0]+'.log', '-omol', '-O', os.path.splitext(file)[0]+'.mol']
 	subprocess.run(cmd_obabel)
 	mol = Chem.MolFromMolFile(mol_name.split('.')[0]+'.mol')
-	# obConversion.CloseOutFile()
 
 	return mol,ob_compat,rdkit_compat
 
@@ -380,16 +379,22 @@ def output_analyzer(duplicates,log_files,com_files, w_dir, w_dir_main,lot, bs, b
 
 		# this part filters off conformers based on user-defined exp_rules
 		passing_rules = True
+		valid_mol_gen = True
 		if args.exp_rules != False:
 			if TERMINATION == "normal" and IM_FREQS == 0:
 				log.write("  ----- Exp_rules filter(s) will be applied to the output file -----\n")
-				mol,ob_compat,rdkit_compat = output_to_mol(file,'log',file)
-				print_error_exp_rules=False
-				passing_rules = exp_rules_output(mol,args,log,file,print_error_exp_rules,ob_compat,rdkit_compat)
-				os.remove(file.split('.')[0]+'.mol')
+				try:
+					mol,ob_compat,rdkit_compat = output_to_mol(file,'log',file)
+					print_error_exp_rules=False
+					passing_rules = exp_rules_output(mol,args,log,file,print_error_exp_rules,ob_compat,rdkit_compat)
+					os.remove(file.split('.')[0]+'.mol')
+				except AttributeError:
+					valid_mol_gen = False
+					os.remove(file.split('.')[0]+'.mol')
+					log.write("The file could not be converted into a mol object, exp_rules filter(s) will be disabled\n")
 
 		passing_geom = True
-		if args.check_geom and passing_rules:
+		if args.check_geom and passing_rules and valid_mol_gen:
 			if TERMINATION == "normal" and IM_FREQS == 0:
 				log.write("  ----- Geometrical check will be applied to the output file -----\n")
 				# this creates a mol object from the optimized log file
@@ -398,7 +403,6 @@ def output_analyzer(duplicates,log_files,com_files, w_dir, w_dir_main,lot, bs, b
 				try:
 					com_2_xyz_2_sdf(args,os.path.splitext(file)[0]+'.com')
 					mol2,ob_compat,rdkit_compat = output_to_mol(file,'xyz',file)
-					# mol2,ob_compat,rdkit_compat = output_to_mol(file,'xyz',os.path.splitext(file)[0]+'2.com')
 					passing_geom = check_geom_filter(mol,mol2,args)
 					# remove created files
 					os.remove(file.split('.')[0]+'.xyz')
@@ -407,6 +411,10 @@ def output_analyzer(duplicates,log_files,com_files, w_dir, w_dir_main,lot, bs, b
 					log.write("x  No com file were found for "+file+", the check_geom test will be disabled for this calculation")
 
 				os.remove(file.split('.')[0]+'.mol')
+				
+		elif args.check_geom and not valid_mol_gen:
+			log.write("The file could not be converted into a mol object, check_geom test will be disabled\n")
+
 		# This part places the calculations in different folders depending on the type of termination
 		finished,unfinished,atom_error,scf_error,imag_freq,other_error,exp_rules_qcorr,check_geom_qcorr = create_folder_move_log_files(w_dir,w_dir_main,round_num,file,IM_FREQS,TERMINATION,ERRORTYPE,w_dir_fin,finished,unfinished,atom_error,scf_error,imag_freq,other_error,exp_rules_qcorr,passing_rules,passing_geom,check_geom_qcorr)
 
