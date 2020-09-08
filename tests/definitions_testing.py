@@ -54,53 +54,54 @@ def remove_data(path, folder, smiles):
         os.chdir(path+'/'+folder+'/'+smiles.split('.')[0])
     all_data = glob.glob('*')
     discard_ext = ['sdf','csv','dat']
-    exceptions = ['charged.csv','charged.sdf','pentane_n_lowest.sdf']
+    exceptions = ['charged.csv','charged.sdf','pentane_n_lowest.sdf','Ir_4.sdf','Ir_4.csv']
     for _,file in enumerate(all_data):
         if len(file.split('.')) == 1:
             shutil.rmtree(file, ignore_errors=True)
         elif file not in exceptions:
-            if file.split('.')[1] in discard_ext:
+            if file.split('.')[1] in discard_ext or file == 'cdx.smi':
                 os.remove(file)
 
-def rdkit_tests(df_output,dihedral,xTB_ANI1,cmd_pyconfort):
+def rdkit_tests(df_output,dihedral,xTB_ANI,cmd_pyconfort):
     if not dihedral:
-        if not xTB_ANI1:
+        if not xTB_ANI:
             test_init_rdkit_confs = df_output['RDKIT-Initial-samples']
             test_prefilter_rdkit_confs = df_output['RDKit-initial_energy_threshold']
             test_filter_rdkit_confs = df_output['RDKit-RMSD-and-energy-duplicates']
             test_unique_confs = 'nan'
-        elif xTB_ANI1 == 'xTB':
+        elif xTB_ANI == 'xTB':
             test_init_rdkit_confs = df_output['xTB-Initial-samples']
             test_prefilter_rdkit_confs = df_output['xTB-initial_energy_threshold']
             test_filter_rdkit_confs = df_output['xTB-RMSD-and-energy-duplicates']
             test_unique_confs = 'nan'
-        elif xTB_ANI1 == 'ANI1ccx':
-            test_init_rdkit_confs = df_output['ANI1ccx-Initial-samples']
-            test_prefilter_rdkit_confs = df_output['ANI1ccx-initial_energy_threshold']
-            test_filter_rdkit_confs = df_output['ANI1ccx-RMSD-and-energy-duplicates']
+        elif xTB_ANI == 'ANI':
+            test_init_rdkit_confs = df_output['ANI-Initial-samples']
+            test_prefilter_rdkit_confs = df_output['ANI-initial_energy_threshold']
+            test_filter_rdkit_confs = df_output['ANI-RMSD-and-energy-duplicates']
             test_unique_confs = 'nan'
     else:
         if cmd_pyconfort[4] == 'params_Cu_test2.yaml':
-            test_unique_confs = df_output['RDKIT-Rotated-conformers']
+            test_unique_confs = df_output['summ-conformers']
             test_init_rdkit_confs = df_output['RDKIT-Initial-samples']
         else:
-            test_init_rdkit_confs = df_output['RDKIT-Rotated-conformers']
-            test_unique_confs = df_output['RDKIT-Rotated-Unique-conformers']
+            test_init_rdkit_confs = df_output['summ-conformers']
+            test_unique_confs = df_output['summ-Unique-conformers']
         test_prefilter_rdkit_confs = 'nan'
         test_filter_rdkit_confs = 'nan'
 
     return test_init_rdkit_confs, test_prefilter_rdkit_confs, test_filter_rdkit_confs, test_unique_confs
 
-def conf_gen(path, precision, cmd_pyconfort, folder, smiles, E_confs, dihedral, xTB_ANI1, metal, template):
+def conf_gen(path, precision, cmd_pyconfort, folder, smiles, E_confs, dihedral, xTB_ANI, metal, template):
     # open right folder and run the code
     os.chdir(path+'/'+folder+'/'+smiles.split('.')[0])
     subprocess.call(cmd_pyconfort)
 
     # Retrieving the generated CSV file
-    df_output = pd.read_csv(smiles.split('.')[0]+'-Duplicates Data.csv')
+    os.chdir(path+'/'+folder+'/'+smiles.split('.')[0]+'/CSEARCH/csv_files')
+    df_output = pd.read_csv(smiles.split('.')[0]+'-CSEARCH-Data.csv')
 
     # tests for RDKit
-    test_init_rdkit_confs, test_prefilter_rdkit_confs, test_filter_rdkit_confs, test_unique_confs = rdkit_tests(df_output,dihedral,xTB_ANI1,cmd_pyconfort)
+    test_init_rdkit_confs, test_prefilter_rdkit_confs, test_filter_rdkit_confs, test_unique_confs = rdkit_tests(df_output,dihedral,xTB_ANI,cmd_pyconfort)
 
     # file_smi is a variable used for finding SDF and COM files
     if folder == 'Multiple':
@@ -110,30 +111,33 @@ def conf_gen(path, precision, cmd_pyconfort, folder, smiles, E_confs, dihedral, 
 
     # read the energies of the conformers
     try:
-        if not xTB_ANI1:
-            os.chdir(path+'/'+folder+'/'+smiles.split('.')[0]+'/rdkit_generated_sdf_files')
+        if not xTB_ANI:
+            if not dihedral:
+                os.chdir(path+'/'+folder+'/'+smiles.split('.')[0]+'/CSEARCH/rdkit')
+            else:
+                os.chdir(path+'/'+folder+'/'+smiles.split('.')[0]+'/CSEARCH/summ')
             # this is to tests smi files with multiple smiles
             if folder == 'Multiple':
                 if not dihedral:
                     test_rdkit_E_confs = calc_energy(file_smi+'_rdkit.sdf')
                 else:
-                    test_rdkit_E_confs = calc_energy(file_smi+'_rdkit_rotated.sdf')
+                    test_rdkit_E_confs = calc_energy(file_smi+'_summ.sdf')
             else:
                 if template == 'squareplanar' or template == 'squarepyramidal':
                     if not dihedral:
                         test_rdkit_E_confs = calc_energy(file_smi+'_0_rdkit.sdf')
                     else:
-                        test_rdkit_E_confs = calc_energy(file_smi+'_0_rdkit_rotated.sdf')
+                        test_rdkit_E_confs = calc_energy(file_smi+'_0_summ.sdf')
                 else:
-                    if not dihedral or cmd_pyconfort[4] == 'params_Cu_test2.yaml':
+                    if not dihedral:
                         test_rdkit_E_confs = calc_energy(file_smi+'_rdkit.sdf')
                     else:
-                        test_rdkit_E_confs = calc_energy(file_smi+'_rdkit_rotated.sdf')
-        elif xTB_ANI1 == 'xTB':
-            os.chdir(path+'/'+folder+'/'+smiles.split('.')[0]+'/xtb_minimised_generated_sdf_files')
+                        test_rdkit_E_confs = calc_energy(file_smi+'_summ.sdf')
+        elif xTB_ANI == 'xTB':
+            os.chdir(path+'/'+folder+'/'+smiles.split('.')[0]+'/CSEARCH/xtb')
             test_rdkit_E_confs = calc_energy(file_smi+'_xtb.sdf')
-        elif xTB_ANI1 == 'ANI1ccx':
-            os.chdir(path+'/'+folder+'/'+smiles.split('.')[0]+'/ani1ccx_minimised_generated_sdf_files')
+        elif xTB_ANI == 'ANI':
+            os.chdir(path+'/'+folder+'/'+smiles.split('.')[0]+'/CSEARCH/ani')
             test_rdkit_E_confs = calc_energy(file_smi+'_ani.sdf')
 
         # test for energies
@@ -148,7 +152,7 @@ def conf_gen(path, precision, cmd_pyconfort, folder, smiles, E_confs, dihedral, 
         # tests charge
         test_charge = df_output['Overall charge']
 
-        os.chdir(path+'/'+folder+'/'+smiles.split('.')[0]+'/generated_gaussian_files/wb97xd-def2svp')
+        os.chdir(path+'/'+folder+'/'+smiles.split('.')[0]+'/QMCALC/G16/wb97xd-6-31g(d)')
 
         file_gen = glob.glob(file_smi+'*.com')[0]
         if metal != False:
@@ -177,96 +181,62 @@ def find_coordinates(file,coordinates):
             break
     return coordinates_found
 
-def check_log_files(path, folder, file):
-    if file == 'CH4_Normal_termination.log':
-        os.chdir(path+'/'+folder+'/finished')
-        assert file in glob.glob('*.*')
-    elif file == 'Basis_set_error1.LOG' or file == 'Basis_set_error2.LOG':
-        os.chdir(path+'/'+folder+'/failed_error/atomic_basis_error')
-        assert file in glob.glob('*.*')
-    elif file == 'MeOH_Error_termination.LOG':
-        os.chdir(path+'/'+folder+'/failed_error/unknown_error')
-        assert file in glob.glob('*.*')
-    elif file == 'Imag_freq.log':
-        os.chdir(path+'/'+folder+'/imaginary_frequencies')
-        assert file in glob.glob('*.*')
-    elif file == 'MeOH_SCF_error.out':
-        os.chdir(path+'/'+folder+'/failed_error/SCF_error')
-        assert file in glob.glob('*.*')
-    elif file == 'MeOH_Unfinished.OUT':
-        os.chdir(path+'/'+folder+'/failed_unfinished')
-        assert file in glob.glob('*.*')
+def com_lines(file):
+    try:
+        com_file = file.split('.')[0]+'.com'
+        outfile = open(com_file,"r")
+        outlines = outfile.readlines()
+    except:
+        outlines = None
 
-def check_com_files(path, folder, file):
-    if file == 'Basis_set_error1.LOG' or file == 'Basis_set_error2.LOG':
-        assert file.split('.')[0]+'.com' not in glob.glob('*.*')
-    elif file == 'MeOH_Error_termination.LOG':
-        coordinates = 'H  -1.14928800  -0.80105100  -0.00024300'
-        coordinates_error_found = find_coordinates(file,coordinates)
-        assert coordinates_error_found == 1
-        com_input_line_error = '# wb97xd/def2svp freq=noraman empiricaldispersion=GD3BJ opt=(calcfc,maxcycles=100) scrf=(SMD,solvent=Chloroform)'
-        input_found_error = find_coordinates(file,com_input_line_error)
-        assert input_found_error == 1
-    elif file == 'Imag_freq.log':
-        coordinates = 'H  -0.56133100   0.63933100  -0.67133100'
-        coordinates_imag_found = find_coordinates(file,coordinates)
-        assert coordinates_imag_found == 1
-        com_input_line_imag = '# wb97xd/def2svp freq=noraman empiricaldispersion=GD3BJ opt=(calcfc,maxcycles=100) scrf=(SMD,solvent=Chloroform)'
-        input_found_imag = find_coordinates(file,com_input_line_imag)
-        assert input_found_imag == 1
-    elif file == 'MeOH_SCF_error.out':
-        coordinates = 'H  -1.04798700   0.80281000  -0.68030200'
-        coordinates_scf_found = find_coordinates(file,coordinates)
-        assert coordinates_scf_found == 1
-        com_input_line_scf = '# wb97xd/def2svp freq=noraman empiricaldispersion=GD3BJ opt=(calcfc,maxcycles=100) scrf=(SMD,solvent=Chloroform) scf=qc'
-        input_found_scf = find_coordinates(file,com_input_line_scf)
-        assert input_found_scf == 1
-    elif file == 'MeOH_Unfinished.OUT':
-        coordinates = 'H  -1.04779100   0.87481300  -0.58663200'
-        coordinates_unfinished_found = find_coordinates(file,coordinates)
-        assert coordinates_unfinished_found == 1
-        com_input_line_unfinished = '# wb97xd/def2svp freq=noraman empiricaldispersion=GD3BJ opt=(calcfc,maxcycles=100) scrf=(SMD,solvent=Chloroform)'
-        input_found_unfinished = find_coordinates(file,com_input_line_unfinished)
-        assert input_found_unfinished == 1
+    return outlines
 
 def analysis(path, cmd_pyconfort, folder, file):
     os.chdir(path+'/'+folder)
-    # the code will move the files the first time, this 'if' avoids errors
+    df_QCORR,dat_files = [],[]
+
+    # the code will move the files the first time, this 'if' statement avoids errors
     files = glob.glob('*.log')
     if len(files) > 0:
         subprocess.call(cmd_pyconfort)
-    # make sure the LOG files are in the right folders after analysis
-    check_log_files(path, folder, file)
-    # make sure the generated COM files have the right level of theory and geometries
-    os.chdir(path+'/'+folder+'/new_gaussian_input_files/')
-    check_com_files(path, folder, file)
 
-def single_point(path, cmd_pyconfort, folder, file):
-    os.chdir(path+'/'+folder)
-    files = glob.glob('*.*')
-    if len(files) > 0:
-        subprocess.call(cmd_pyconfort)
-    os.chdir(path+'/'+folder+'/finished/single_point_input_files/wb97xd-def2svp')
-    assert len(glob.glob('*.*')) == 2
+    if file != 'csv' and file != 'dat':
+        # copy the lines from the generated COM files
+        os.chdir(path+'/'+folder+'/input_files/run_2')
+        outlines = com_lines(file)
 
-    if file == 'Pd_SP.LOG':
-        count,NBO,pop,opt,_,_ = calc_genecp(file.split('.')[0]+'.com', ['Pd'])
+        return outlines
 
-    elif file == 'CH4_freq.log':
-        count,NBO,pop,opt,_,_ = calc_genecp(file.split('.')[0]+'.com', ['C H'])
+    elif file == 'csv':
+        os.chdir(path+'/'+folder+'/csv_files')
+        df_QCORR = pd.read_csv('Analysis-Data-QCORR-run_1.csv')
+        return df_QCORR, dat_files
 
-    return count,NBO,pop,opt
+    elif file == 'dat':
+        os.chdir(path+'/'+folder+'/dat_files')
+        dat_files = glob.glob('*.dat')
+        return df_QCORR, dat_files
 
-def conf_gen_exp_rules(path, folder, precision, cmd_exp_rules, smiles, E_confs_no_rules, E_confs_rules):
+def single_point(path_analysis_dup_sp, folder, file):
+    # copy the lines from the generated COM files
+    os.chdir(path_analysis_dup_sp+'/'+folder+'/success/G16-SP_input_files/b3lyp-321g')
+    outlines = com_lines(file.split('.')[0]+'_SPC.com')
+
+    return outlines
+
+def Ir_exp_rules(path, folder, precision, cmd_exp_rules, smiles, E_confs_no_rules, E_confs_rules):
     # open right folder and run the code
     os.chdir(path+'/'+folder)
-    if smiles == 'Ir_1':
+    if folder == 'Ir_exp_rules' and smiles == 'Ir_1':
+        subprocess.call(cmd_exp_rules)
+    elif folder == 'Ir_exp_rules2':
         subprocess.call(cmd_exp_rules)
 
     # read the energies of the conformers with and without the exp_rules filter
-    os.chdir(path+'/'+folder+'/rdkit_generated_sdf_files')
-
+    os.chdir(path+'/'+folder+'/CSEARCH/rdkit')
     test_E_confs_no_rules = calc_energy(smiles+'_rdkit.sdf')
+
+    os.chdir(path+'/'+folder+'/CSEARCH/rdkit/filter_exp_rules')
     test_E_confs_rules = calc_energy(smiles+'_rdkit_filter_exp_rules.sdf')
 
     # test the energies and number of conformers with and without filtering
@@ -277,23 +247,61 @@ def conf_gen_exp_rules(path, folder, precision, cmd_exp_rules, smiles, E_confs_n
     round_E_confs_rules = [round(num, precision) for num in E_confs_rules]
 
     # tests charge and genecp
-    os.chdir(path+'/'+folder+'/generated_gaussian_files/wb97xd-def2svp')
+    os.chdir(path+'/'+folder+'/QMCALC/G16/wb97xd-6-31g(d)')
     file_exp_rules = glob.glob(smiles+'*')[0]
     test_com_files = len(glob.glob(smiles+'*'))
     _,_,_,_,test_charge,_ = calc_genecp(file_exp_rules, ['Ir'])
 
-    if smiles == 'Ir_6':
+    if smiles == 'Ir_7' or folder == 'Ir_exp_rules2':
         remove_data(path, folder, smiles=False)
 
     return round_E_confs_no_rules,round_E_confs_rules,test_round_E_confs_no_rules,test_round_E_confs_rules,test_charge,test_com_files
 
-def misc_sdf_test(path_misc, smiles):
-    # run the code and get to the folder where the SDF files are created
-    os.chdir(path_misc+'/'+'Misc/rdkit_generated_sdf_files')
+def get_not_empty_files(folder_for_files,variable,format):
+    os.chdir(folder_for_files)
+    for file in glob.glob('*.'+format):
+        if os.stat(file).st_size > 0:
+            variable += 1
+    return variable
 
-    # find how many SDF files were generated
-    test_goal = len(glob.glob(smiles.split('.')[0]+'*_rdkit.sdf'))
-    test_goal_2 = len(glob.glob(smiles.split('.')[0]+'*_rdkit_rotated.sdf'))
+def Pd_exp_rules(path, folder, precision_exp_rules, cmd_exp_rules, smiles):
+
+    test_sdf_created,test_sdf_final,test_com_files = 0,0,0
+
+    # run the code
+    os.chdir(path+'/'+folder)
+    subprocess.call(cmd_exp_rules)
+
+    # check the amount of rdkit sdf files before and after exp_rules with size > 0
+    rdkit_sdf_folder = path+'/'+folder+'/CSEARCH/rdkit'
+    test_sdf_created = get_not_empty_files(rdkit_sdf_folder,test_sdf_created,'sdf')
+
+    exp_rules_sdf_folder = path+'/'+folder+'/CSEARCH/rdkit/filter_exp_rules'
+    test_sdf_final = get_not_empty_files(exp_rules_sdf_folder,test_sdf_final,'sdf')
+
+    # check the amount of com files created
+    com_files_folder = path+'/'+folder+'/QMCALC/G16/wb97xd-6-31g(d)'
+    test_com_files = get_not_empty_files(com_files_folder,test_com_files,'com')
+
+    remove_data(path, folder, smiles=False)
+
+    return test_sdf_created,test_sdf_final,test_com_files
+
+def misc_sdf_test(path_misc, smiles):
+
+    try:
+        # run the code and get to the folder where the SDF files are created
+        os.chdir(path_misc+'/'+'Misc/CSEARCH/rdkit')
+        # find how many SDF files were generated
+        test_goal = len(glob.glob(smiles.split('.')[0]+'*_rdkit.sdf'))
+    except:
+        test_goal = 'None'
+
+    try:
+        os.chdir(path_misc+'/'+'Misc/CSEARCH/summ')
+        test_goal_2 = len(glob.glob(smiles.split('.')[0]+'*_summ.sdf'))
+    except:
+        test_goal_2 = 0
 
     remove_data(path_misc, 'Misc', smiles=False)
 
@@ -301,7 +309,7 @@ def misc_sdf_test(path_misc, smiles):
 
 def misc_com_test(path_misc, smiles):
     # get the amount of COM files created
-    os.chdir(path_misc+'/'+'Misc/generated_gaussian_files/wb97xd-def2svp')
+    os.chdir(path_misc+'/'+'Misc/QMCALC/G16/wb97xd-6-31g(d)')
     test_goal = len(glob.glob(smiles.split('.')[0]+'*.com'))
 
     remove_data(path_misc, 'Misc', smiles=False)
@@ -309,7 +317,7 @@ def misc_com_test(path_misc, smiles):
     return test_goal
 
 def misc_genecp_test(path_misc, smiles):
-    os.chdir(path_misc+'/'+'Misc/generated_gaussian_files/wb97xd-def2svp')
+    os.chdir(path_misc+'/'+'Misc/QMCALC/G16/wb97xd-6-31g(d)')
     com_gen_files = glob.glob(smiles.split('.')[0]+'*.com')
     # I take just the first COM file (the others should be the same)
     file_gen = com_gen_files[0]
@@ -325,16 +333,16 @@ def misc_genecp_test(path_misc, smiles):
     return gen_found,ecp_found
 
 def misc_freq_test(path_misc, smiles):
-    os.chdir(path_misc+'/'+'Misc/generated_gaussian_files/wb97xd-def2svp')
+    os.chdir(path_misc+'/'+'Misc/QMCALC/G16/wb97xd-6-31g(d)')
     com_freq_files = glob.glob(smiles.split('.')[0]+'*.com')
     # I take just the first COM file (the others should be the same)
     file_freq = com_freq_files[0]
 
     freq_input = 'freq'
     max_input = 'opt=(maxcycles=250)'
-    chk_input = '%chk=pentane_conformer'
+    chk_input = '%chk=pentane'
     mem_input = '%mem=20GB'
-    nprocs_input = '%nprocshared=24'
+    nprocs_input = '%nprocshared=15'
     solvent_input = 'scrf=(SMD,solvent=hexane)'
     dispersion_input = 'empiricaldispersion=GD3'
 
@@ -355,7 +363,7 @@ def misc_lot_test(path_misc, smiles):
     genecp_lots = ['LANL2DZ','midix','LANL2TZ']
     for i,lot in enumerate(lots):
         try:
-            os.chdir(path_misc+'/'+'Misc/generated_gaussian_files/'+lot)
+            os.chdir(path_misc+'/'+'Misc/QMCALC/G16/'+lot)
             com_lot_files = glob.glob(smiles.split('.')[0]+'*.com')
             if len(com_lot_files) > 0:
                 # I take just the first COM file (the others should be the same)
@@ -364,14 +372,19 @@ def misc_lot_test(path_misc, smiles):
             else:
                 # a two here means that the folder are created with no files inside
                 files_found = 2
+                break
 
         except FileNotFoundError:
             files_found = 0
+            break
         if files_found == 1:
             gen_lot_found = find_coordinates(file_lot,genecp_lots[i])
+            if gen_lot_found == 0:
+                break
         else:
             # a two here means that the problem comes from the previous part
             gen_lot_found = 2
+            break
 
     remove_data(path_misc, 'Misc', smiles=False)
 
@@ -380,15 +393,15 @@ def misc_lot_test(path_misc, smiles):
 def misc_nocom_test(path_misc, smiles):
     # finds the folder where COM files are generated normally
     try:
-        os.chdir(path_misc+'/'+'Misc/generated_gaussian_files/wb97xd-def2svp')
+        os.chdir(path_misc+'/'+'Misc/QMCALC/G16/wb97xd-6-31g(d)')
         test_goal = 1
     except:
         test_goal = 0
         # run the code and get to the folder where the SDF files are created
-        os.chdir(path_misc+'/'+'Misc/rdkit_generated_sdf_files')
+        os.chdir(path_misc+'/'+'Misc/CSEARCH/rdkit')
 
     # find if the code generates SDF files
-    if len(glob.glob(smiles.split('.')[0]+'*_rdkit.sdf')) > 0:
+    if len(glob.glob(smiles.split('.')[0]+'_rdkit.sdf')) > 0:
         test_goal_2 = 1
     else:
         test_goal_2 = 0
