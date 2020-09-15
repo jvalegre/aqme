@@ -103,6 +103,7 @@ def mol_from_sdf_or_mol_or_mol2(args):
 		suppl = Chem.MolFromMol2File(args.input, removeHs=False)
 
 	IDs,charges = [],[]
+
 	readlines = open(args.input,"r").readlines()
 
 	for i, line in enumerate(readlines):
@@ -118,6 +119,10 @@ def mol_from_sdf_or_mol_or_mol2(args):
 						charge_line[j] = charge_line[j].split('\n')[0]
 					charge += int(charge_line[j])
 			charges.append(charge)
+		if line.find('$$$$') > -1:
+			if len(IDs) != len(charges):
+				charges.append(0)
+
 	if IDs == []:
 		if os.path.splitext(args.input)[1] =='.sdf':
 			for i,_ in enumerate(suppl):
@@ -236,11 +241,11 @@ def conformer_generation(mol,name,start_time,args,log,dup_data,dup_data_idx,coor
 					elif args.CSEARCH=='summ' and not update_to_rdkit :
 						mult_min(name+'_'+'summ', args, min_suffix, log, dup_data, dup_data_idx)
 					elif args.CSEARCH=='summ' and update_to_rdkit :
-						mult_min(name+'_'+'rdkit', args, min_suffix, log, dup_data, dup_data_idx)
+						mult_min(name+'_'+'summ', args, min_suffix, log, dup_data, dup_data_idx)
 					elif args.CSEARCH=='fullmonte' and not update_to_rdkit:
 						mult_min(name+'_'+'fullmonte', args, min_suffix, log, dup_data, dup_data_idx)
 					elif args.CSEARCH=='fullmonte' and update_to_rdkit:
-						mult_min(name+'_'+'rdkit', args, min_suffix, log, dup_data, dup_data_idx)
+						mult_min(name+'_'+'fullmonte', args, min_suffix, log, dup_data, dup_data_idx)
 
 		except (KeyboardInterrupt, SystemExit):
 			raise
@@ -453,10 +458,10 @@ def rdkit_to_sdf(mol, name,args,log,dup_data,dup_data_idx, coord_Map, alg_Map, m
 		status = -1
 	elif args.CSEARCH=='summ' and len(rotmatches) == 0:
 		update_to_rdkit = True
-		log.write('\nx  No rotatable dihedral found. Updating to CSEARCH to RDKit')
+		log.write('\nx  No rotatable dihedral found. Updating to CSEARCH to RDKit, writing to SUMM SDF')
 	elif args.CSEARCH=='fullmonte' and len(rotmatches) == 0:
 		update_to_rdkit = True
-		log.write('\nx  No rotatable dihedral found. Updating to CSEARCH to RDKit')
+		log.write('\nx  No rotatable dihedral found. Updating to CSEARCH to RDKit, writing to FULLMONTE SDF')
 
 	if update_to_rdkit and args.CSEARCH =='summ' :
 		sdwriter = Chem.SDWriter(name+'_'+'summ'+args.output)

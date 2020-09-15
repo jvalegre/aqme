@@ -153,7 +153,7 @@ def parser_args():
 	parser.add_argument("--nmr_nucleus",help="Specify the nucleus for nmr analysis default (['C','H'])", default=['C','H'], dest="nmr_nucleus", type=str, nargs='*')
 	parser.add_argument("--nmr_slope",help="Specify the slope for each nucleus for nmr analysis default([1.0673,1.0759])", default=[1.0673,1.0759], dest="nmr_slope", type=float, nargs='*')
 	parser.add_argument("--nmr_intercept",help="Specify the intercept for each nucleus for nmr analysis default([-15.191,-2.2094])", default=[-15.191,-2.2094], dest="nmr_intercept", type=float, nargs='*')
-	parser.add_argument("--nmr_tms_ref",help="Specify the reference for TMS for each nucleus for nmr analysis default([189.504625,31.56496667])", default=[189.504625,31.56496667], dest="nmr_tms_ref", type=float, nargs='*')
+	parser.add_argument("--nmr_tms_ref",help="Specify the reference for TMS for each nucleus for nmr analysis default([191.79,31.39])", default=[191.79,31.39], dest="nmr_tms_ref", type=float, nargs='*')
 
 	#arguments for NICS
 	parser.add_argument("--nics_range",help="Range to calculate NICS along a given axis", default=4, dest="nics_range")

@@ -241,13 +241,14 @@ def mult_min(name, args, program,log,dup_data,dup_data_idx):
 	cids = list(range(len(outmols)))
 	sorted_all_cids = sorted(cids, key = lambda cid: cenergy[cid])
 
-	name_mol = name.split('_rdkit')[0]
+	name_mol = name.split('_'+args.CSEARCH)[0]
+
 	for i, cid in enumerate(sorted_all_cids):
 		outmols[cid].SetProp('_Name', outmols[cid].GetProp('_Name') +' '+program)
 		outmols[cid].SetProp('Energy', cenergy[cid])
 
 	#writing all conformers to files after minimization
-	sdwriter = Chem.SDWriter(name.split('_'+args.CSEARCH)[0]+'_'+program+'_all_confs'+args.output)
+	sdwriter = Chem.SDWriter(name_mol+'_'+program+'_all_confs'+args.output)
 
 	write_all_confs = 0
 	for cid in sorted_all_cids:
@@ -256,7 +257,7 @@ def mult_min(name, args, program,log,dup_data,dup_data_idx):
 	sdwriter.close()
 
 	if args.verbose:
-		log.write("\no  Writing "+str(write_all_confs)+ " conformers to file " + name+'_'+program+args.output)
+		log.write("\no  Writing "+str(write_all_confs)+ " conformers to file " + name_mol+'_'+program+'_all_confs'+args.output)
 
 	log.write("\n\no  Applying filters to intial conformers after "+program+" minimization")
 	# filter based on energy window ewin_csearch
@@ -272,4 +273,4 @@ def mult_min(name, args, program,log,dup_data,dup_data_idx):
 		dup_data.at[dup_data_idx, 'ANI-Initial-samples'] = len(inmols)
 
 	# write the filtered, ordered conformers to external file
-	write_confs(outmols, cenergy,selectedcids, name, args, program,log)
+	write_confs(outmols, cenergy,selectedcids, name_mol, args, program,log)

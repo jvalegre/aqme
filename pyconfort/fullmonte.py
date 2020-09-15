@@ -58,10 +58,10 @@ def minimize_rdkit_energy(mol,conf,args,log):
 		GetFF.Minimize(maxIts=args.opt_steps_RDKit)
 	return GetFF
 
-def rotate_dihedral(mol_rot,dih_rot,args,conf):
+def rotate_dihedral(mol_rot,dih_rot,args,conf,nsteps):
 	rad_range = np.arange(0.0, 360.0,args.ang_fullmonte)
 	for i,_ in enumerate(dih_rot):
-		# random.seed(args.seed)
+		random.seed(nsteps)
 		rad_ang = random.choice(rad_range)
 		rad = math.pi*rad_ang/180.0
 		rdMolTransforms.SetDihedralRad(mol_rot.GetConformer(conf),*dih_rot[i],value=rad)
@@ -104,7 +104,7 @@ def generating_conformations_fullmonte(name,args,rotmatches,log,selectedcids_rdk
 	while nsteps < args.nsteps_fullmonte+1:
 
 		#STEP 2: Choose mol object form unique_mol:
-		# random.seed(args.seed)
+		random.seed(nsteps)
 		mol_rot = random.choices(unique_mol_sample,k=1)[0]
 
 		#updating the location of mol object i.e., the hexadecimal locaiton to a new one so the older one isnt affected
@@ -113,13 +113,13 @@ def generating_conformations_fullmonte(name,args,rotmatches,log,selectedcids_rdk
 
 		#STEP 3: Choose randmon subset of dihedral from rotmatches
 		if len(rotmatches) > args.nrot_fullmonte:
-			# random.seed(args.seed)
+			random.seed(nsteps)
 			dih_rot = random.choices(rotmatches, k=args.nrot_fullmonte) #k can be varied base on user definitions
 		else:
-			# random.seed(args.seed)
+			random.seed(nsteps)
 			dih_rot = random.choices(rotmatches, k=len(rotmatches)) #k can be varied base on user definitions
 		#STEP 4: for the given conformation, then apply a random rotation to each torsion in the subset
-		rot_mol = rotate_dihedral(rot_mol,dih_rot,args,-1)
+		rot_mol = rotate_dihedral(rot_mol,dih_rot,args,-1,nsteps)
 
 		#STEP 4: Optimize geometry rot_mol
 		GetFF = minimize_rdkit_energy(rot_mol,-1,args,log)

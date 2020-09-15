@@ -31,11 +31,6 @@ def rename_name(energy,type):
 		energy[i][0] = energy[i][0].split('_'+type)[0]
 	return energy
 
-def get_cmap(n, name='viridis'):
-	'''Returns a function that maps each index in 0, 1, ..., n-1 to a distinct
-	RGB color; the keyword argument name must be a standard mpl colormap name.'''
-	return plt.cm.get_cmap(name, n)
-
 def scaling_with_lowest(energy):
 	#scaling arrays
 	v = np.array(energy)[:, 1].astype(np.float)
@@ -52,6 +47,11 @@ def plot_graph(energy_rdkit,energy_min,energy_min_dft,lot,bs,name_mol,args,type_
 		import matplotlib.pyplot as plt
 	except (ModuleNotFoundError,AttributeError):
 	    log.write('The Matplotlib module is not installed correctly - the graphing functions are not available')
+
+	def get_cmap(n, name='viridis'):
+		'''Returns a function that maps each index in 0, 1, ..., n-1 to a distinct
+		RGB color; the keyword argument name must be a standard mpl colormap name.'''
+		return plt.cm.get_cmap(name, n)
 
 	if energy_min_dft is not None:
 		energy_dft_mae_sd,energy_min_mae_sd,energy_rdkit_mae_sd = [],[],[]

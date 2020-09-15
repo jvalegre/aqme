@@ -348,7 +348,7 @@ def move_sdf_main(args):
 			for file in exp_rules_files:
 				moving_files(destination_exp_rules,src,file)
 
-	if args.CSEARCH=='rdkit' and args.CMIN is None:
+	if args.CSEARCH=='rdkit':
 		all_name_conf_files = glob.glob('*_rdkit.sdf')
 		destination_rdkit = src+ '/CSEARCH/rdkit'
 		for file in all_name_conf_files:
@@ -536,19 +536,16 @@ def graph_main(args,log,w_dir_initial):
 			sdf_rdkit =  w_dir_initial+'/CSEARCH/rdkit/'+name+'_rdkit.sdf'
 		elif os.path.exists(w_dir_initial+'/CSEARCH/summ/'+name+'_summ.sdf'):
 			sdf_rdkit = w_dir_initial+'/CSEARCH/summ/'+name+'_summ.sdf'
-		if os.path.exists(w_dir_initial+'/CSEARCH/all_confs/xtb/'+name+'_xtb_all_confs.sdf'):
-			sdf_xtb =  w_dir_initial+'/CSEARCH/all_confs/xtb/'+name+'_xtb_all_confs.sdf'
-		if os.path.exists(w_dir_initial+'/CSEARCH/all_confs/ani/'+name+'_ani_all_confs.sdf'):
-			sdf_ani = w_dir_initial+'/CSEARCH/all_confs/ani/'+name+'_ani_all_confs.sdf'
+		if os.path.exists(w_dir_initial+'/CSEARCH/xtb_all_confs/'+name+'_xtb_all_confs.sdf'):
+			sdf_xtb =  w_dir_initial+'/CSEARCH/xtb_all_confs/'+name+'_xtb_all_confs.sdf'
+		if os.path.exists(w_dir_initial+'/CSEARCH/ani_all_confs/'+name+'_ani_all_confs.sdf'):
+			sdf_ani = w_dir_initial+'/CSEARCH/ani_all_confs/'+name+'_ani_all_confs.sdf'
 		if os.path.exists(w_dir_initial+'/QMCALC/G16'):
 			args.path = w_dir_initial+'/QMCALC/G16/'
 			# Sets the folder and find the log files to analyze
 			for lot,bs,bs_gcp in zip(args.level_of_theory, args.basis_set,args.basis_set_genecp_atoms):
 				#assign the path to the finished directory.
-				if str(bs).find('/') > -1:
-					w_dir = args.path + str(lot) + '-' + str(bs).split('/')[0] +'/success/output_files'
-				else:
-					w_dir = args.path + str(lot) + '-' + str(bs) +'/success/output_files'
+				w_dir = args.path + str(lot) + '-' + str(bs) +'/success/output_files'
 				os.chdir(w_dir)
 				log_files = get_com_or_log_out_files('output',name)
 				graph(sdf_rdkit,sdf_xtb,sdf_ani,log_files,args,log,lot,bs,name,w_dir_initial)

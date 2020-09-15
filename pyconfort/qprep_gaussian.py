@@ -208,13 +208,14 @@ def get_genecp(file,args):
 	try:
 		#reading the sdf to check for I atom_symbol
 		suppl = Chem.SDMolSupplier(file, removeHs=False)
-		for atom in suppl[0].GetAtoms():
-			if atom.GetSymbol() in args.genecp_atoms:
-				genecp = 'genecp'
-				break
-			elif atom.GetSymbol() in args.gen_atoms:
-				genecp = 'gen'
-				break
+		if len(suppl) != 0:
+			for atom in suppl[0].GetAtoms():
+				if atom.GetSymbol() in args.genecp_atoms:
+					genecp = 'genecp'
+					break
+				elif atom.GetSymbol() in args.gen_atoms:
+					genecp = 'gen'
+					break
 	except OSError:
 		outfile = open(file,"r")
 		outlines = outfile.readlines()
@@ -487,7 +488,7 @@ def moving_files(destination,src,file):
 # WRITE SDF FILES FOR xTB AND ANI1
 def write_confs(conformers, energies,selectedcids, name, args, program,log):
 	if len(conformers) > 0:
-		name = name.split('_'+args.CSEARCH)[0]# a bit hacky
+		# name = name.split('_'+args.CSEARCH)[0]# a bit hacky
 		sdwriter = Chem.SDWriter(name+'_'+program+args.output)
 
 		write_confs = 0

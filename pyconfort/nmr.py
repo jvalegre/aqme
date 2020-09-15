@@ -194,7 +194,7 @@ def calculate_nmr(nmr_log_files,args,log,name,w_dir_fin,w_dir_initial,lot_sp,bs_
 		boltz_outlines = boltz_outfile.readlines()
 		for i in range(len(boltz_outlines)):
 			# I remove the NMR from the file names using [0:-4]
-			if boltz_outlines[i].find(file.split('-NMR')[0]) > -1:
+			if boltz_outlines[i].find(file.split('_NMR')[0]) > -1:
 				boltz_factor = float(boltz_outlines[i].split()[-1])
 				break
 
@@ -267,6 +267,6 @@ def calculate_boltz_and_nmr(val,args,log,name,w_dir_fin,w_dir_initial,lot,bs):
 				dir_sp_nmr =  w_dir_fin+'/../G16-SP_input_files/'+str(lot_sp)+'-'+str(bs_sp)
 				os.chdir(dir_sp_nmr)
 				#grabbing the respective NMR files for a given molecules
-				nmr_log_files = glob.glob(name+'*NMR.log') + glob.glob(name+'*NMR*.log')
+				nmr_log_files = glob.glob(name+'*NMR.log')
 				print(nmr_log_files)
 				calculate_nmr(nmr_log_files,args,log,name,w_dir_fin,w_dir_initial,lot_sp,bs_sp,lot,bs)
