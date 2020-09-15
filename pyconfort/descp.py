@@ -111,21 +111,38 @@ def calculate_parameters(sdf_rdkit,sdf_ani,sdf_xtb,log_files,args,log,w_dir_init
 		geom_data = get_data(rdkit_mols,ani_mols,dft_mols,lot,bs,name_mol,args,'rdkit','ani',w_dir_initial)
 		geom_data.to_csv(name_mol+'-all-geom-data-with-rdkit-ani.csv',index=False)
 
-	if  os.path.exists(w_dir_initial+'/CSEARCH/xtb/'+name_mol+'_xtb.sdf') and os.path.exists(w_dir_initial+'/CSEARCH/summ/'+name_mol+'_summ.sdf'):
-		geom_data = get_data(rdkit_mols,ani_mols,dft_mols,lot,bs,name_mol,args,'summ','xtb',w_dir_initial)
-		geom_data.to_csv(name_mol+'-all-geom-data-with-summ-xtb_mols.csv',index=False)
+		##########
 
+	if  os.path.exists(w_dir_initial+'/CSEARCH/xtb/'+name_mol+'_xtb.sdf') and os.path.exists(w_dir_initial+'/CSEARCH/summ/'+name_mol+'_summ.sdf'):
+		geom_data = get_data(rdkit_mols,xtb_mols,dft_mols,lot,bs,name_mol,args,'summ','xtb',w_dir_initial)
+		geom_data.to_csv(name_mol+'-all-geom-data-with-summ-xtb.csv',index=False)
 
 	if os.path.exists(w_dir_initial+'/CSEARCH/ani/'+name_mol+'_ani.sdf') and os.path.exists(w_dir_initial+'/CSEARCH/summ/'+name_mol+'_summ.sdf'):
 		geom_data = get_data(rdkit_mols,ani_mols,dft_mols,lot,bs,name_mol,args,'summ','ani',w_dir_initial)
 		geom_data.to_csv(name_mol+'-all-geom-data-with-summ-ani.csv',index=False)
 
+		#############
+
+	if  os.path.exists(w_dir_initial+'/CSEARCH/xtb/'+name_mol+'_xtb.sdf') and os.path.exists(w_dir_initial+'/CSEARCH/fullmonte/'+name_mol+'_fullmonte.sdf'):
+		geom_data = get_data(rdkit_mols,xtb_mols,dft_mols,lot,bs,name_mol,args,'fullmonte','xtb',w_dir_initial)
+		geom_data.to_csv(name_mol+'-all-geom-data-with-fullmonte-xtb.csv',index=False)
+
+
+	if os.path.exists(w_dir_initial+'/CSEARCH/ani/'+name_mol+'_ani.sdf') and os.path.exists(w_dir_initial+'/CSEARCH/fullmonte/'+name_mol+'_fullmonte.sdf'):
+		geom_data = get_data(rdkit_mols,ani_mols,dft_mols,lot,bs,name_mol,args,'fullmonte','ani',w_dir_initial)
+		geom_data.to_csv(name_mol+'-all-geom-data-with-fullmonte-ani.csv',index=False)
+
+		############
 
 	if os.path.exists(w_dir_initial+'/CSEARCH/summ/'+name_mol+'_summ.sdf') and not os.path.exists(w_dir_initial+'/CSEARCH/xtb/'+name_mol+'_xtb.sdf') and not os.path.exists(w_dir_initial+'/CSEARCH/ani/'+name_mol+'_ani.sdf'):
-		geom_data = get_data(rdkit_mols,ani_mols,dft_mols,lot,bs,name_mol,args,'summ',None,w_dir_initial)
+		geom_data = get_data(rdkit_mols,None,dft_mols,lot,bs,name_mol,args,'summ',None,w_dir_initial)
 		geom_data.to_csv(name_mol+'-all-geom-data-with-summ.csv',index=False)
 
 
 	if os.path.exists(w_dir_initial+'/CSEARCH/rdkit/'+name_mol+'_rdkit.sdf') and not os.path.exists(w_dir_initial+'/CSEARCH/xtb/'+name_mol+'_xtb.sdf') and not os.path.exists(w_dir_initial+'/CSEARCH/ani/'+name_mol+'_ani.sdf') :
-		geom_data = get_data(rdkit_mols,ani_mols,dft_mols,lot,bs,name_mol,args,'rdkit',None,w_dir_initial)
+		geom_data = get_data(rdkit_mols,None,dft_mols,lot,bs,name_mol,args,'rdkit',None,w_dir_initial)
 		geom_data.to_csv(name_mol+'-all-geom-data-with-rdkit.csv',index=False)
+
+	if os.path.exists(w_dir_initial+'/CSEARCH/fullmonte/'+name_mol+'_fullmonte.sdf') and not os.path.exists(w_dir_initial+'/CSEARCH/xtb/'+name_mol+'_xtb.sdf') and not os.path.exists(w_dir_initial+'/CSEARCH/ani/'+name_mol+'_ani.sdf') :
+		geom_data = get_data(rdkit_mols,None,dft_mols,lot,bs,name_mol,args,'rdkit',None,w_dir_initial)
+		geom_data.to_csv(name_mol+'-all-geom-data-with-fullmonte.csv',index=False)

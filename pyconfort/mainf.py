@@ -500,6 +500,8 @@ def geom_par_main(args,log,w_dir_initial):
 				sdf_rdkit =  w_dir_initial+'/CSEARCH/rdkit/'+name+'_rdkit.sdf'
 		elif os.path.exists(w_dir_initial+'/CSEARCH/summ/'+name+'_summ.sdf'):
 			sdf_rdkit = w_dir_initial+'/CSEARCH/summ/'+name+'_summ.sdf'
+		elif os.path.exists(w_dir_initial+'/CSEARCH/fullmonte/'+name+'_fullmonte.sdf'):
+			sdf_rdkit = w_dir_initial+'/CSEARCH/fullmonte/'+name+'_fullmonte.sdf'
 		if os.path.exists(w_dir_initial+'/CSEARCH/xtb/'+name+'_xtb.sdf'):
 			sdf_xtb =  w_dir_initial+'/CSEARCH/xtb/'+name+'_xtb.sdf'
 		if os.path.exists(w_dir_initial+'/CSEARCH/ani/'+name+'_ani.sdf'):
@@ -536,6 +538,8 @@ def graph_main(args,log,w_dir_initial):
 			sdf_rdkit =  w_dir_initial+'/CSEARCH/rdkit/'+name+'_rdkit.sdf'
 		elif os.path.exists(w_dir_initial+'/CSEARCH/summ/'+name+'_summ.sdf'):
 			sdf_rdkit = w_dir_initial+'/CSEARCH/summ/'+name+'_summ.sdf'
+		elif os.path.exists(w_dir_initial+'/CSEARCH/fullmonte/'+name+'_fullmonte.sdf'):
+			sdf_rdkit = w_dir_initial+'/CSEARCH/fullmonte/'+name+'_fullmonte.sdf'
 		if os.path.exists(w_dir_initial+'/CSEARCH/xtb_all_confs/'+name+'_xtb_all_confs.sdf'):
 			sdf_xtb =  w_dir_initial+'/CSEARCH/xtb_all_confs/'+name+'_xtb_all_confs.sdf'
 		if os.path.exists(w_dir_initial+'/CSEARCH/ani_all_confs/'+name+'_ani_all_confs.sdf'):
