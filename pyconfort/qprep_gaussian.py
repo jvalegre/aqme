@@ -168,23 +168,38 @@ def get_name_and_charge(name,charge_data):
 	return charge_com
 
 # DETECTION AND LISTING OF GEN/GENECP FROM COM FILES
-def check_for_gen_or_genecp(ATOMTYPES,args):
+def check_for_gen_or_genecp(ATOMTYPES,args,type_of_check,program_gen):
 	# Options for genecp
-	ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp = [],False,False,None
+	ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp,orca_aux_section = [],False,False,None,False
+	if type_of_check == 'analysis':
+		genecp_atoms_include = args.genecp_atoms
+		gen_atoms_include = args.gen_atoms
+		aux_atoms_include = args.aux_atoms_orca
+
+	elif type_of_check == 'sp':
+		genecp_atoms_include = args.genecp_atoms_sp
+		gen_atoms_include = args.gen_atoms_sp
+		aux_atoms_include = args.aux_atoms_orca_sp
 
 	for _,atomtype in enumerate(ATOMTYPES):
-		if atomtype not in ecp_list and atomtype in possible_atoms:
-			ecp_list.append(atomtype)
-		if atomtype in args.genecp_atoms:
-			ecp_genecp_atoms = True
-		if atomtype in args.gen_atoms:
-			ecp_gen_atoms = True
+		if program_gen == 'orca':
+			if atomtype in aux_atoms_include:
+				orca_aux_section = True
+
+		if program_gen == 'gaussian':
+			if atomtype not in ecp_list and atomtype in possible_atoms:
+				ecp_list.append(atomtype)
+			if atomtype in genecp_atoms_include:
+				ecp_genecp_atoms = True
+			if atomtype in gen_atoms_include:
+				ecp_gen_atoms = True
+
 	if ecp_gen_atoms:
 		genecp = 'gen'
 	if ecp_genecp_atoms:
 		genecp = 'genecp'
 
-	return ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp
+	return ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp,orca_aux_section
 
 # DETECTION OF GEN/GENECP FROM SDF FILES
 def get_genecp(file,args):
@@ -265,7 +280,7 @@ def write_genecp(type_gen,fileout,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms
 			fileout.write('0\n')
 			fileout.write(bs_gcp_com+'\n\n')
 
-def orca_file_gen(read_lines,rename_file_name,bs,lot,genecp,ecp_list,bs_gcp,charge_com,mult_com,args):
+def orca_file_gen(read_lines,rename_file_name,bs,lot,genecp,ecp_list,bs_gcp,bs_gcp_fit,charge_com,mult_com,orca_aux_section,args,extra_input,solvation,solvent_orca,cpcm_input_orca,scf_iters_orca,orca_mdci,print_mini):
 	try:
 		write_orca_lines = open(rename_file_name,"w")
 
@@ -284,42 +299,43 @@ def orca_file_gen(read_lines,rename_file_name,bs,lot,genecp,ecp_list,bs_gcp,char
 	write_orca_lines.write("%maxcore "+ str(mem_orca) + "\n")
 	write_orca_lines.write("# Number of processors\n")
 	write_orca_lines.write("%pal nprocs " + str(args.nprocs) +" end\n")
-	if args.set_input_line != 'None':
-		write_orca_lines.write("! " + bs + " " + lot + " " + args.set_input_line +"\n")
+
+	if extra_input != 'None':
+		write_orca_lines.write("! " + bs + " " + lot + " " + extra_input +"\n")
 	else:
 		write_orca_lines.write("! " + bs + " " + lot + "\n")
-	if genecp =='genecp' or genecp == 'gen':
+	if orca_aux_section:
 		write_orca_lines.write("%basis\n")
 		gen_orca_line_1 = 'NewGTO '
 		gen_orca_line_2 = 'NewAuxCGTO '
-		for gen_orca_atom in args.aux_atoms_orca:
+		for gen_orca_atom in ecp_list:
 			gen_orca_line_1 += str(possible_atoms.index(gen_orca_atom))+' '
 			gen_orca_line_2 += str(possible_atoms.index(gen_orca_atom))+' '
 		gen_orca_line_1 += '"' + bs_gcp + '" end\n'
-		gen_orca_line_2 += '"' + args.aux_basis_set_genecp_atoms[0] + '" end\n'
+		gen_orca_line_2 += '"' + bs_gcp_fit + '" end\n'
 		write_orca_lines.write(gen_orca_line_1)
 		write_orca_lines.write(gen_orca_line_2)
 		write_orca_lines.write("end\n")
-	if args.solvent_model != 'gas_phase':
-		if args.solvent_model == "CPCM" or args.solvent_model == 'cpcm':
-			write_orca_lines.write("!CPCM("+args.solvent_name+")\n")
-		if args.cpcm_input != 'None' or args.solvent_model == 'SMD' or args.solvent_model == 'smd':
+	if solvation != 'gas_phase':
+		if solvation == "CPCM" or solvation == 'cpcm':
+			write_orca_lines.write("!CPCM("+solvent_orca+")\n")
+		if cpcm_input_orca != 'None' or solvation.lower() == 'smd':
 			write_orca_lines.write("%cpcm\n")
-			if args.cpcm_input != 'None':
-				for cpcm_line in args.cpcm_input:
+			if cpcm_input_orca != 'None':
+				for cpcm_line in cpcm_input_orca:
 					write_orca_lines.write(cpcm_line+'\n')
-			if args.solvent_model == 'SMD' or args.solvent_model == 'smd':
+			if solvation.lower() == 'smd':
 				write_orca_lines.write("smd true\n")
-				write_orca_lines.write('SMDsolvent "'+args.solvent_name+'"\n')
+				write_orca_lines.write('SMDsolvent "'+solvent_orca+'"\n')
 			write_orca_lines.write("end\n")
-	write_orca_lines.write("%scf maxiter "+str(args.orca_scf_iters)+"\n")
+	write_orca_lines.write("%scf maxiter "+str(scf_iters_orca)+"\n")
 	write_orca_lines.write("end\n")
-	if args.mdci_orca != 'None':
+	if orca_mdci != 'None':
 		write_orca_lines.write("% mdci\n")
-		for mdci_line in args.mdci_orca:
+		for mdci_line in orca_mdci:
 			write_orca_lines.write(mdci_line+'\n')
 		write_orca_lines.write("end\n")
-	if args.print_mini_orca:
+	if print_mini:
 		write_orca_lines.write("% output\n")
 		write_orca_lines.write("printlevel mini\n")
 		write_orca_lines.write("print[ P_SCFInfo ] 1\n")
@@ -405,15 +421,15 @@ def write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args, log, 
 					if read_lines[i].split(' ')[0] not in ATOMTYPES and read_lines[i].split(' ')[0] in possible_atoms:
 						ATOMTYPES.append(read_lines[i].split(' ')[0])
 
-				# define genecp/gen atoms
-				ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp = check_for_gen_or_genecp(ATOMTYPES,args)
-				#error if both genecp and gen are
-				if ecp_genecp_atoms and ecp_gen_atoms:
-					sys.exit("x  ERROR: Can't use Gen and GenECP at the same time")
-
 				# write genecp/gen part
 				type_gen = 'qprep'
 				if args.QPREP == 'gaussian':
+					# define genecp/gen atoms
+					ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp,orca_aux_section = check_for_gen_or_genecp(ATOMTYPES,args,'analysis','gaussian')
+
+					#error if both genecp and gen are
+					if ecp_genecp_atoms and ecp_gen_atoms:
+						sys.exit("x  ERROR: Can't use Gen and GenECP at the same time")
 					fileout = open(file, "a")
 
 					if args.last_line_for_input != 'None':
@@ -437,12 +453,15 @@ def write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args, log, 
 
 			if args.QPREP == 'orca':
 
+				# define auxiliary atoms
+				ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp,orca_aux_section = check_for_gen_or_genecp(ATOMTYPES,args,'analysis','orca')
+
 				read_lines = open(file,"r").readlines()
 
 				rename_file_name = rename_file_and_charge_chk_change(read_lines,file,args,charge_com)
 
 				#create input file
-				orca_file_gen(read_lines,rename_file_name,bs,lot,genecp,ecp_list,bs_gcp,charge_com,args.mult,args)
+				orca_file_gen(read_lines,rename_file_name,bs,lot,genecp,args.aux_atoms_orca,args.aux_basis_set_genecp_atoms[0],args.aux_fit_genecp_atoms[0],charge_com,args.mult,orca_aux_section,args,args.set_input_line,args.solvent_model,args.solvent_name,args.cpcm_input,args.orca_scf_iters,args.mdci_orca,args.print_mini_orca)
 
 			# submitting the input file on a HPC
 			if args.qsub:

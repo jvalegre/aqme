@@ -43,7 +43,7 @@ def write_header_and_coords(fileout,args,keywords_opt,name,CHARGE,MULT,NATOMS,AT
 	fileout.write("\n")
 
 # CREATION OF COM FILES
-def new_com_file(com_type,w_dir_initial,log,new_gaussian_input_files,file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,TERMINATION,IM_FREQS,bs_com,lot_com,bs_gcp_com):
+def new_com_file(com_type,w_dir_initial,log,new_gaussian_input_files,file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,TERMINATION,IM_FREQS,bs_com,lot_com,bs_gcp_com,orca_aux_section):
 
 	if com_type == 'sp':
 		if args.suffix_sp == 'None':
@@ -83,9 +83,9 @@ def new_com_file(com_type,w_dir_initial,log,new_gaussian_input_files,file,args,k
 	if args.sp == 'orca':
 		fileout.close()
 		read_lines = open(file_name,"r").readlines()
-		
+
 		#create input file
-		orca_file_gen(read_lines,file_name.split('.')[0]+'.inp',bs_com,lot_com,genecp,ecp_list,bs_gcp_com,CHARGE,MULT,args)
+		orca_file_gen(read_lines,file_name.split('.')[0]+'.inp',args.basis_set_sp[0],args.level_of_theory_sp[0],genecp,args.aux_atoms_orca_sp,args.aux_basis_set_genecp_atoms_sp[0],args.aux_fit_genecp_atoms_sp[0],CHARGE,MULT,orca_aux_section,args,args.set_input_line_sp,args.solvent_model_sp,args.solvent_name_sp,args.cpcm_input_sp,args.orca_scf_iters_sp,args.mdci_orca_sp,args.print_mini_orca_sp)
 
 		# removes the initial com file
 		os.remove(file_name)
@@ -263,8 +263,6 @@ def create_folder_and_com(w_dir,w_dir_main,round_num,log,NATOMS,ATOMTYPES,CARTES
 	os.chdir(new_gaussian_input_files)
 	log.write('-> Creating new gaussian input file for {0} in {1}/{2}'.format(file,lot,bs))
 
-	ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp = check_for_gen_or_genecp(ATOMTYPES,args)
-
 	#error if both genecp and gen are
 	if ecp_genecp_atoms and ecp_gen_atoms:
 		sys.exit("x  ERROR: Can't use Gen and GenECP at the same time")
@@ -277,7 +275,7 @@ def create_folder_and_com(w_dir,w_dir_main,round_num,log,NATOMS,ATOMTYPES,CARTES
 		keywords_opt = lot +'/'+ bs +' '+ input_route
 
 	com_type = 'analysis'
-	new_com_file(com_type,w_dir_initial,log,new_gaussian_input_files,file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,TERMINATION,IM_FREQS,bs,lot,bs_gcp)
+	new_com_file(com_type,w_dir_initial,log,new_gaussian_input_files,file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,TERMINATION,IM_FREQS,bs,lot,bs_gcp,orca_aux_section)
 
 def create_folder_move_log_files(w_dir,w_dir_main,round_num,file,IM_FREQS,TERMINATION,ERRORTYPE,w_dir_fin,finished,unfinished,atom_error,scf_error,imag_freq,other_error,exp_rules_qcorr,passing_rules,passing_geom,check_geom_qcorr):
 	source = w_dir+'/'+file
@@ -435,7 +433,8 @@ def output_analyzer(duplicates,log_files,com_files, w_dir, w_dir_main,lot, bs, b
 		finished,unfinished,atom_error,scf_error,imag_freq,other_error,exp_rules_qcorr,check_geom_qcorr = create_folder_move_log_files(w_dir,w_dir_main,round_num,file,IM_FREQS,TERMINATION,ERRORTYPE,w_dir_fin,finished,unfinished,atom_error,scf_error,imag_freq,other_error,exp_rules_qcorr,passing_rules,passing_geom,check_geom_qcorr)
 
 		# check if gen or genecp are active
-		ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp = check_for_gen_or_genecp(ATOMTYPES,args)
+		# right now, QCORR is only working with Gaussian output files
+		ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp,orca_aux_section = check_for_gen_or_genecp(ATOMTYPES,args,'analysis','gaussian')
 
 		# create folders and set level of theory in COM files to fix imaginary freqs or not normal terminations
 		if IM_FREQS > 0 or TERMINATION != "normal" and not os.path.exists(w_dir_main+'/failed/run_'+str(round_num)+'/error/basis_set_error/'+file):
@@ -459,21 +458,32 @@ def output_analyzer(duplicates,log_files,com_files, w_dir, w_dir_main,lot, bs, b
 				nics_input_files = w_dir_fin+'/../G16-NICS_input_files'
 
 			# Options for genecp
-			ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp = check_for_gen_or_genecp(ATOMTYPES,args)
+			if args.sp == 'gaussian':
+				ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp,orca_aux_section = check_for_gen_or_genecp(ATOMTYPES,args,'sp','gaussian')
 
-			# Sets the folder and find the log files to analyze
+			elif args.sp == 'orca':
+				ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp,orca_aux_section = check_for_gen_or_genecp(ATOMTYPES,args,'sp','orca')
+
+			# this avoids problems related to genecp
 			if genecp == None:
 				basis_set_for_genecp = args.basis_set_sp
 			elif genecp == 'genecp' or genecp == 'gen':
 				basis_set_for_genecp = args.basis_set_genecp_atoms_sp
 
+			# Sets the folder and find the log files to analyze
 			for lot_sp,bs_sp,bs_gcp_sp in zip(args.level_of_theory_sp,args.basis_set_sp,basis_set_for_genecp):
 				if args.sp == 'gaussian' or args.sp == 'orca':
-					log.write('-> Creating new single point files for {0} in {1}/{2}-{3}'.format(file,single_point_input_files,lot_sp,bs_sp))
+					if str(bs_sp).find('/') > -1:
+						log.write('-> Creating new single point files for {0} in {1}/{2}-{3}'.format(file,single_point_input_files,lot_sp,bs_sp.split('/')[0]))
+					else:
+						log.write('-> Creating new single point files for {0} in {1}/{2}-{3}'.format(file,single_point_input_files,lot_sp,bs_sp))
 				if args.nics:
 					log.write('-> Creating NICS input files for {0} in {1}/{2}-{3}'.format(file,nics_input_files,lot_sp,bs_sp))
 
-				dir_name = str(lot_sp) + '-' + str(bs_sp)
+				if str(bs_sp).find('/') > -1:
+					dir_name = str(lot_sp) + '-' + str(bs_sp.split('/')[0])
+				else:
+					dir_name = str(lot_sp) + '-' + str(bs_sp)
 				keywords_opt = ''
 				if args.sp == 'gaussian':
 					if genecp == 'genecp' or  genecp == 'gen':
@@ -495,13 +505,13 @@ def output_analyzer(duplicates,log_files,com_files, w_dir, w_dir_main,lot, bs, b
 					if not os.path.isdir(single_point_input_files+'/'+dir_name):
 						os.makedirs(single_point_input_files+'/'+dir_name)
 					os.chdir(single_point_input_files+'/'+dir_name)
-					new_com_file('sp',w_dir_initial,log,single_point_input_files+'/'+dir_name,file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,TERMINATION,IM_FREQS,bs_sp,lot_sp,bs_gcp_sp)
+					new_com_file('sp',w_dir_initial,log,single_point_input_files+'/'+dir_name,file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,TERMINATION,IM_FREQS,bs_sp,lot_sp,bs_gcp_sp,orca_aux_section)
 
 				if args.nics:
 					if not os.path.isdir(nics_input_files+'/'+dir_name):
 						os.makedirs(nics_input_files+'/'+dir_name)
 					os.chdir(nics_input_files+'/'+dir_name)
-					new_com_file('nics',w_dir_initial,log,nics_input_files+'/'+dir_name,file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,TERMINATION,IM_FREQS,bs_sp,lot_sp,bs_gcp_sp)
+					new_com_file('nics',w_dir_initial,log,nics_input_files+'/'+dir_name,file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,TERMINATION,IM_FREQS,bs_sp,lot_sp,bs_gcp_sp,orca_aux_section)
 
 	#write to csv ana_data
 	if duplicates=='None':
