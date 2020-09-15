@@ -70,6 +70,14 @@ empirical_dispersion : None # type of dispersion correction
 solvent_model : 'gas_phase' # type of solvation model. Options: gas_phase or any solvation model (i.e. SMD, IEFPCM, CPCM)
 solvent_name : '' # solvent used (i.e. chloroform, toluene, etc)
 
+# SPECIFIC OPTIONS FOR ORCA
+aux_basis_set_genecp_atoms : [] # Auxiliary basis set for genecp/gen in ORCA
+cpcm_input : [] # Additional lines for ORCA input files in the %cpcm section. Format: ['LINE1','LINE2',etc]
+orca_scf_iters : 500 # Number of SCF iterations in ORCA
+mdci_orca : ['Density None'] # %mdci section in ORCA. Format: ['LINE1','LINE2',etc]
+print_mini_orca : True # Option to print 'mini' (reduced outputs) in ORCA
+aux_atoms_orca : ['Ir'] # list of atoms included in the aux part when using multiple basis sets in ORCA. Format: ['Pd','Ir','Pt',...]
+
 # OPTIONS FOR SINGLE-POINT COM FILES (ONLY IF sp : True IN QCORR)
 # charge and multiplicity
 charge_sp : None # charge of the single-point calculations. If charge_sp = None, the program takes the charge from the original LOG file

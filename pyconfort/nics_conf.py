@@ -242,7 +242,10 @@ def calculate_nics_parameters(log_files,args,log,w_dir_initial,name_mol,lot,bs):
 
 
 	#creating folder for all molecules to write geom parameter
-	folder = w_dir_initial + '/QPRED/nics/all_confs_nics/'+str(lot)+'-'+str(bs)
+	if str(bs).find('/') > -1:
+		folder = w_dir_initial + '/QPRED/nics/all_confs_nics/'+str(lot)+'-'+str(bs).split('/')[0]
+	else:
+		folder = w_dir_initial + '/QPRED/nics/all_confs_nics/'+str(lot)+'-'+str(bs)
 	try:
 		os.makedirs(folder)
 	except OSError:
@@ -261,21 +264,28 @@ def calculate_boltz_for_nics(val,args,log,name,w_dir_fin,w_dir_initial,lot,bs):
 	subprocess.call(cmd_boltz)
 
 	#writing to coorect places
-	destination = w_dir_initial+'/QPRED/nics/boltz/'+str(lot)+'-'+str(bs)
+	if str(bs).find('/') > -1:
+		destination = w_dir_initial+'/QPRED/nics/boltz/'+str(lot)+'-'+str(bs).split('/')[0]
+	else:
+		destination = w_dir_initial+'/QPRED/nics/boltz/'+str(lot)+'-'+str(bs)
 	moving_files(destination, os.getcwd(),'Goodvibes_'+name+'.dat')
 
 
 def calculate_avg_nics(val,args,log,name,w_dir_fin,w_dir_initial,lot,bs):
+	if str(bs).find('/') > -1:
+		nics_file = w_dir_initial + '/QPRED/nics/all_confs_nics/'+str(lot)+'-'+str(bs).split('/')[0]+'/'+name+'-all-nics-data.csv'
+		dist_file = w_dir_initial + '/QPRED/nics/all_confs_nics/'+str(lot)+'-'+str(bs).split('/')[0]+'/'+name+'-all-nics-dist-data.csv'
+		file = w_dir_initial+'/QPRED/nics/boltz/'+str(lot)+'-'+str(bs).split('/')[0]+'/Goodvibes_'+name+'.dat'
+	else:
+		nics_file = w_dir_initial + '/QPRED/nics/all_confs_nics/'+str(lot)+'-'+str(bs)+'/'+name+'-all-nics-data.csv'
+		dist_file = w_dir_initial + '/QPRED/nics/all_confs_nics/'+str(lot)+'-'+str(bs)+'/'+name+'-all-nics-dist-data.csv'
+		file = w_dir_initial+'/QPRED/nics/boltz/'+str(lot)+'-'+str(bs)+'/Goodvibes_'+name+'.dat'
 
-	nics_file = w_dir_initial + '/QPRED/nics/all_confs_nics/'+str(lot)+'-'+str(bs)+'/'+name+'-all-nics-data.csv'
 	df_nics =  pd.read_csv(nics_file)
-
-	dist_file = w_dir_initial + '/QPRED/nics/all_confs_nics/'+str(lot)+'-'+str(bs)+'/'+name+'-all-nics-dist-data.csv'
 	df_dist =  pd.read_csv(dist_file)
-
-	file = w_dir_initial+'/QPRED/nics/boltz/'+str(lot)+'-'+str(bs)+'/Goodvibes_'+name+'.dat'
 	outlines = open(file,"r").readlines()
-	#reading the data from boltz fileyiu
+
+	#reading the data from boltz file
 	for i in range(len(outlines)):
 		# I remove the NMR from the file names using [0:-4]
 		if outlines[i].find('   ***************************************************************************************************************************************\n') > -1 and outlines[i-1].find('   Structure') > -1:
@@ -323,8 +333,10 @@ def calculate_avg_nics(val,args,log,name,w_dir_fin,w_dir_initial,lot,bs):
 	avg_data_oop['Atom-Number'] = avg_data_oop.index
 	avg_data_ip['Atom-Number'] = avg_data_ip.index
 	avg_data_iso['Atom-Number'] = avg_data_iso.index
-
-	folder = w_dir_initial + '/QPRED/nics/average_nics/'+str(lot)+'-'+str(bs)
+	if str(bs).find('/') > -1:
+		folder = w_dir_initial + '/QPRED/nics/average_nics/'+str(lot)+'-'+str(bs).split('/')[0]
+	else:
+		folder = w_dir_initial + '/QPRED/nics/average_nics/'+str(lot)+'-'+str(bs)
 	try:
 		os.makedirs(folder)
 	except OSError:

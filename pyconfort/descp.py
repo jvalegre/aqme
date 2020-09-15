@@ -92,13 +92,18 @@ def calculate_parameters(sdf_rdkit,sdf_ani,sdf_xtb,log_files,args,log,w_dir_init
 	obConversion.SetInAndOutFormats("log", "mol")
 	ob_mol = ob.OBMol()
 	for file in log_files:
-		obConversion.ReadFile(ob_mol, args.path + str(lot) + '-' + str(bs) +'/success/output_files/'+file)
-		obConversion.WriteFile(ob_mol, args.path + str(lot) + '-' + str(bs) +'/success/output_files/'+file.split('.')[0]+'.mol')
-		obConversion.CloseOutFile()
-		dft_mols.append(Chem.MolFromMolFile(args.path + str(lot) + '-' + str(bs) +'/success/output_files/'+file.split('.')[0]+'.mol', removeHs=False))
+		if str(bs).find('/') > -1:
+			obConversion.ReadFile(ob_mol, args.path + str(lot) + '-' + str(bs).split('/')[0] +'/success/output_files/'+file)
+			obConversion.WriteFile(ob_mol, args.path + str(lot) + '-' + str(bs).split('/')[0] +'/success/output_files/'+file.split('.')[0]+'.mol')
+			obConversion.CloseOutFile()
+			dft_mols.append(Chem.MolFromMolFile(args.path + str(lot) + '-' + str(bs).split('/')[0] +'/success/output_files/'+file.split('.')[0]+'.mol', removeHs=False))
+		else:
+			obConversion.ReadFile(ob_mol, args.path + str(lot) + '-' + str(bs) +'/success/output_files/'+file)
+			obConversion.WriteFile(ob_mol, args.path + str(lot) + '-' + str(bs) +'/success/output_files/'+file.split('.')[0]+'.mol')
+			obConversion.CloseOutFile()
+			dft_mols.append(Chem.MolFromMolFile(args.path + str(lot) + '-' + str(bs) +'/success/output_files/'+file.split('.')[0]+'.mol', removeHs=False))
 
-
-	if  os.path.exists(w_dir_initial+'/CSEARCH/xtb/'+name_mol+'_xtb.sdf') and os.path.exists(w_dir_initial+'/CSEARCH/rdkit/'+name_mol+'_rdkit.sdf'):
+	if os.path.exists(w_dir_initial+'/CSEARCH/xtb/'+name_mol+'_xtb.sdf') and os.path.exists(w_dir_initial+'/CSEARCH/rdkit/'+name_mol+'_rdkit.sdf'):
 		geom_data = get_data(rdkit_mols,xtb_mols,dft_mols,lot,bs,name_mol,args,'rdkit','xtb',w_dir_initial)
 		geom_data.to_csv(name_mol+'-all-geom-data-with-rdkit-xtb.csv',index=False)
 

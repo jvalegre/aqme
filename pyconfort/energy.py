@@ -21,7 +21,10 @@ def calculate_boltz_and_energy(val,args,log,name,w_dir_fin,w_dir_initial,lot,bs)
 	subprocess.call(cmd_boltz)
 
 	#writing to coorect places
-	destination = w_dir_initial+'/QPRED/energy/boltz/'+str(lot)+'-'+str(bs)
+	if str(bs).find('/') > -1:
+		destination = w_dir_initial+'/QPRED/energy/boltz/'+str(lot)+'-'+str(bs).split('/')[0]
+	else:
+		destination = w_dir_initial+'/QPRED/energy/boltz/'+str(lot)+'-'+str(bs)
 	moving_files('Goodvibes_'+name+'.dat', destination)
 
 def calculate_avg_and_energy(val,args,log,name,w_dir_fin,w_dir_initial,w_dir_boltz,lot,bs):
@@ -53,8 +56,10 @@ def calculate_avg_and_energy(val,args,log,name,w_dir_fin,w_dir_initial,w_dir_bol
 				tmp = tmp + one_file_data[i][j]
 			res.append(tmp)
 		all_file_data.append(res)
-
-	folder = w_dir_initial+'/QPRED/energy/average-energy/'+str(lot)+'-'+str(bs)
+	if str(bs).find('/') > -1:
+		folder = w_dir_initial+'/QPRED/energy/average-energy/'+str(lot)+'-'+str(bs).split('/')[0]
+	else:
+		folder = w_dir_initial+'/QPRED/energy/average-energy/'+str(lot)+'-'+str(bs)
 	try:
 		os.makedirs(folder)
 		os.chdir(folder)
@@ -64,4 +69,7 @@ def calculate_avg_and_energy(val,args,log,name,w_dir_fin,w_dir_initial,w_dir_bol
 		else:
 			raise
 	all_file_data_df = pd.DataFrame(all_file_data,columns = ['Structure', 'E', 'ZPE', 'H', 'T.S', 'T.qh-S', 'G(T)', 'qh-G(T)'])
-	all_file_data_df.to_csv(w_dir_initial+'/QPRED/energy/average-energy/'+str(lot)+'-'+str(bs)+'/'+args.input.split('.')[0]+'.csv', index=False)
+	if str(bs).find('/') > -1:
+		all_file_data_df.to_csv(w_dir_initial+'/QPRED/energy/average-energy/'+str(lot)+'-'+str(bs).split('/')[0]+'/'+args.input.split('.')[0]+'.csv', index=False)
+	else:
+		all_file_data_df.to_csv(w_dir_initial+'/QPRED/energy/average-energy/'+str(lot)+'-'+str(bs)+'/'+args.input.split('.')[0]+'.csv', index=False)

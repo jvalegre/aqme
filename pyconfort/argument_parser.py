@@ -21,7 +21,7 @@ def parser_args():
 	#work the script has to do
 	parser.add_argument("--CSEARCH", action="store", default=None, help="Perform conformational analysis with or without dihedrals",choices=['rdkit','summ','fullmonte'])
 	parser.add_argument("--CMIN", action="store", default=None, help="Perform minimization after conformational analysis",choices=['xtb','ani'])
-	parser.add_argument("--QPREP", action="store", default=None, help="Create input files for QM calculations", choices=['gaussian'])
+	parser.add_argument("--QPREP", action="store", default=None, help="Create input files for QM calculations", choices=['gaussian','orca'])
 	parser.add_argument("--QCORR", action="store", default=None, help="Fix the output files from QM calculations",choices=['gaussian'])
 	parser.add_argument("--QSTAT", action="store", default=None, help="Generate parameters for different conformers",choices=['graph','descp'])
 	parser.add_argument("--QPRED", action="store", default=None, help="Perform predictions for different conformers", choices=['nmr','energy','dbstep','nics','cclib-json'])
@@ -76,7 +76,13 @@ def parser_args():
 	parser.add_argument("-l", "--level_of_theory",help="Level of Theory", default=['wb97xd'], dest="level_of_theory", type=str, nargs='*')
 	parser.add_argument("--basis_set",  help="Basis Set", default=['6-31g*'], dest="basis_set", type=str, nargs='*')
 	parser.add_argument("--basis_set_genecp_atoms",default=[''], help="Basis Set genecp/gen: Can specify only one as basis_set", dest="basis_set_genecp_atoms", type=str, nargs='?')
-	parser.add_argument("--input_for_gauss",  help="Input line for DFT optimization ", default="None", dest="input_for_gauss")
+	parser.add_argument("--aux_atoms_orca",default=[''], help="List of atoms included in the aux part when using multiple basis sets in ORCA", dest="aux_atoms_orca", type=str, nargs='?')
+	parser.add_argument("--aux_basis_set_genecp_atoms",default=[''], help="Auxiliary basis set for genecp/gen in ORCA", dest="aux_basis_set_genecp_atoms", type=str, nargs='?')
+	parser.add_argument("--cpcm_input",default=[], help="Additional lines for ORCA input files in the cpcm section", dest="cpcm_input", type=str, nargs='?')
+	parser.add_argument("--orca_scf_iters",default=[], help="Number of SCF iterations in ORCA", dest="orca_scf_iters", type=str, nargs='?')
+	parser.add_argument("--mdci_orca",default='None', help="mdci section in ORCA", dest="mdci_orca", type=str, nargs='?')
+	parser.add_argument("--print_mini_orca",action="store_true",default=True, help="Option to print 'mini' (reduced outputs) in ORCA")
+	parser.add_argument("--set_input_line",  help="Input line for DFT optimization ", default="None", dest="set_input_line")
 	parser.add_argument("--genecp_atoms",  help="genecp atoms",default=[], dest="genecp_atoms",type=str, nargs='*')
 	parser.add_argument("--gen_atoms",  help="gen atoms",default=[], dest="gen_atoms",type=str, nargs='*')
 	parser.add_argument("--max_cycle_opt", help="Number of cycles for DFT optimization", default="100", type=int, dest="max_cycle_opt")
@@ -106,7 +112,7 @@ def parser_args():
 	parser.add_argument("--amplitude_ifreq", action="store",default=0.2, help="Amplitude used to displace the imaginary frequencies to fix during analysis", type=float)
 	parser.add_argument("--ifreq_cutoff", action="store",default=0.0, help="Cut off for imaginary frequencies during analysis", type=float)
 	#writing single point files
-	parser.add_argument("--sp", action="store_true", default=False, help="Resubmit Gaussian single point input files")
+	parser.add_argument("--sp", help="Create Gaussian single point input files", default="None", dest="sp", type=str)
 	parser.add_argument("--nics", action="store_true", default=False, help="Create input files for NICS")
 	parser.add_argument("--level_of_theory_sp",help="Level of Theory for single point after optimization", default=['wb97xd'], dest="level_of_theory_sp", type=str, nargs='*')
 	parser.add_argument("--basis_set_sp",  help="Basis Set for single point after optimization", default=['6-31g*'], dest="basis_set_sp", type=str, nargs='*')
@@ -117,7 +123,7 @@ def parser_args():
 	parser.add_argument("--solvent_model_sp",  help="Type of solvent model for single point after optimization", default="gas_phase", dest="solvent_model_sp", type=str)
 	parser.add_argument("--solvent_name_sp",  help="Name of Solvent for single point after optimization", default="Acetonitrile", dest="solvent_name_sp", type=str)
 	parser.add_argument("--input_for_sp",  help="Input line for Single point after DFT optimization ", default="", dest="input_for_sp", type=str)
-	parser.add_argument("--last_line_for_sp",  help="Last input line for Single point after DFT optimization ", default="", dest="last_line_for_sp", type=str)
+	parser.add_argument("--last_line_for_sp",  help="Last input line for Single point after DFT optimization ", default="None", dest="last_line_for_sp", type=str)
 	parser.add_argument("--charge_sp", help="The charge for single point calculation", default="None", metavar="charge_sp")
 	parser.add_argument("--mult_sp", help="The multiplicity for single point calculation", default="None", metavar="mult_sp")
 	parser.add_argument("--suffix_sp", help="The suffix for single point calculation", default="None", type=str, metavar="suffix_sp")
@@ -153,7 +159,7 @@ def parser_args():
 	parser.add_argument("--submission_command",  help="Queueing system that the submission is done on", default="qsub_summit", metavar="submission_command", type=str)
 
 	#apply exp rules
-	parser.add_argument("--exp_rules", dest="exp_rules", default=False, help="Discarding rules applied to filter-off conformers (based on experimental observation for example). Format: i) Automatic rules: Ir_bidentate_x3, ii) manual rules: ['ATOM1-ATOM2-ATOM3, ANGLE'] (i.e. ['C-Pd-C, 180'])")
+	parser.add_argument("--exp_rules", dest="exp_rules", default='None', help="Discarding rules applied to filter-off conformers (based on experimental observation for example). Format: i) Automatic rules: Ir_bidentate_x3, ii) manual rules: ['ATOM1-ATOM2-ATOM3, ANGLE'] (i.e. ['C-Pd-C, 180'])")
 	parser.add_argument("--angle_off", type=float, help="Deviation to discard in exp_rules (i.e. 180 +- 30 degrees)",default=30)
 
 	##### further additions #####

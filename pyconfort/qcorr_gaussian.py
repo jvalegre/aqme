@@ -10,7 +10,7 @@ import sys
 import subprocess
 import shutil
 import numpy as np
-from pyconfort.qprep_gaussian import input_route_line,check_for_gen_or_genecp,write_genecp
+from pyconfort.qprep_gaussian import input_route_line,check_for_gen_or_genecp,write_genecp,orca_file_gen
 from pyconfort.argument_parser import possible_atoms
 from pyconfort.filter import exp_rules_output,check_geom_filter
 from pyconfort.csearch import com_2_xyz_2_sdf
@@ -48,10 +48,14 @@ def new_com_file(com_type,w_dir_initial,log,new_gaussian_input_files,file,args,k
 	if com_type == 'sp':
 		if args.suffix_sp == 'None':
 			file_name = file.split(".")[0]+'.com'
+
 		else:
 			file_name = file.split(".")[0]+'_'+args.suffix_sp+'.com'
+
+
 	elif com_type == 'analysis':
 		file_name = file.split(".")[0]+'.com'
+
 	elif com_type == 'nics':
 		file_name = file.split(".")[0]+'_nics.com'
 
@@ -59,22 +63,34 @@ def new_com_file(com_type,w_dir_initial,log,new_gaussian_input_files,file,args,k
 
 	write_header_and_coords(fileout,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,w_dir_initial,log,com_type)
 
-	if args.sp and TERMINATION == "normal" and IM_FREQS == 0 and args.last_line_for_sp != 'None':
-		fileout.write(args.last_line_for_sp)
-		fileout.write('\n\n')
+	if args.sp == 'gaussian':
+		# final line for SP
+		if args.last_line_for_sp != 'None':
+			fileout.write(args.last_line_for_sp)
+			fileout.write('\n\n')
 
-	# write genecp/gen part
-	if genecp == 'genecp' or  genecp == 'gen':
-		if com_type == 'sp':
-			type_gen = 'sp'
-		elif com_type == 'analysis':
-			type_gen = 'qcorr'
+		# write genecp/gen part
+		if genecp == 'genecp' or  genecp == 'gen':
+			if com_type == 'sp':
+				type_gen = 'sp'
+			elif com_type == 'analysis':
+				type_gen = 'qcorr'
 
-		write_genecp(type_gen,fileout,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,bs_com,lot_com,bs_gcp_com,args,w_dir_initial,new_gaussian_input_files)
+			write_genecp(type_gen,fileout,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,bs_com,lot_com,bs_gcp_com,args,w_dir_initial,new_gaussian_input_files)
 
-	fileout.close()
+		fileout.close()
 
-	# #submitting the gaussian file on summit
+	if args.sp == 'orca':
+		fileout.close()
+		read_lines = open(file_name,"r").readlines()
+		
+		#create input file
+		orca_file_gen(read_lines,file_name.split('.')[0]+'.inp',bs_com,lot_com,genecp,ecp_list,bs_gcp_com,CHARGE,MULT,args)
+
+		# removes the initial com file
+		os.remove(file_name)
+
+	#submitting the gaussian file on summit
 	if args.qsub:
 		cmd_qsub = [args.submission_command, file_name]
 		subprocess.call(cmd_qsub)
@@ -380,7 +396,7 @@ def output_analyzer(duplicates,log_files,com_files, w_dir, w_dir_main,lot, bs, b
 		# this part filters off conformers based on user-defined exp_rules
 		passing_rules = True
 		valid_mol_gen = True
-		if args.exp_rules != False:
+		if args.exp_rules != 'None':
 			if TERMINATION == "normal" and IM_FREQS == 0:
 				log.write("  ----- Exp_rules filter(s) will be applied to the output file -----\n")
 				try:
@@ -411,7 +427,7 @@ def output_analyzer(duplicates,log_files,com_files, w_dir, w_dir_main,lot, bs, b
 					log.write("x  No com file were found for "+file+", the check_geom test will be disabled for this calculation")
 
 				os.remove(file.split('.')[0]+'.mol')
-				
+
 		elif args.check_geom and not valid_mol_gen:
 			log.write("The file could not be converted into a mol object, check_geom test will be disabled\n")
 
@@ -426,50 +442,66 @@ def output_analyzer(duplicates,log_files,com_files, w_dir, w_dir_main,lot, bs, b
 			create_folder_and_com(w_dir,w_dir_main,round_num,log,NATOMS,ATOMTYPES,CARTESIANS,args,TERMINATION,IM_FREQS,w_dir_fin,file,lot,bs,bs_gcp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp,ERRORTYPE,input_route,w_dir_initial,name,CHARGE, MULT)
 
 		# adding in the NMR componenet only to the finished files after reading from normally finished log files
-		if (args.sp or args.nics) and TERMINATION == "normal" and IM_FREQS == 0 and passing_rules and passing_geom:
+		if args.sp == 'gaussian' or args.sp == 'orca' or args.nics and TERMINATION == "normal" and IM_FREQS == 0 and passing_rules and passing_geom:
+
 			#get coordinates
 			ATOMTYPES, CARTESIANS,stand_or = get_coords_normal(outlines, stand_or, NATOMS, possible_atoms, ATOMTYPES, CARTESIANS)
 
-			if args.sp:
+			if args.sp == 'gaussian':
 				# creating new folder with new input gaussian files
 				single_point_input_files = w_dir_fin+'/../G16-SP_input_files'
+
+			elif args.sp == 'orca':
+				# creating new folder with new input gaussian files
+				single_point_input_files = w_dir_fin+'/../ORCA-SP_input_files'
+
 			if args.nics:
 				nics_input_files = w_dir_fin+'/../G16-NICS_input_files'
+
 			# Options for genecp
 			ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp = check_for_gen_or_genecp(ATOMTYPES,args)
 
 			# Sets the folder and find the log files to analyze
-			for lot_sp,bs_sp,bs_gcp_sp in zip(args.level_of_theory_sp,args.basis_set_sp,args.basis_set_genecp_atoms_sp):
-				if args.sp:
+			if genecp == None:
+				basis_set_for_genecp = args.basis_set_sp
+			elif genecp == 'genecp' or genecp == 'gen':
+				basis_set_for_genecp = args.basis_set_genecp_atoms_sp
+
+			for lot_sp,bs_sp,bs_gcp_sp in zip(args.level_of_theory_sp,args.basis_set_sp,basis_set_for_genecp):
+				if args.sp == 'gaussian' or args.sp == 'orca':
 					log.write('-> Creating new single point files for {0} in {1}/{2}-{3}'.format(file,single_point_input_files,lot_sp,bs_sp))
 				if args.nics:
 					log.write('-> Creating NICS input files for {0} in {1}/{2}-{3}'.format(file,nics_input_files,lot_sp,bs_sp))
 
 				dir_name = str(lot_sp) + '-' + str(bs_sp)
-				if genecp == 'genecp' or  genecp == 'gen':
-					keywords_opt = lot_sp+'/'+ genecp+' '+ args.input_for_sp
-				else:
-					keywords_opt = lot_sp+'/'+ bs_sp+' '+ args.input_for_sp
-				if args.empirical_dispersion_sp != 'None':
-					keywords_opt += ' empiricaldispersion={0}'.format(args.empirical_dispersion_sp)
-				if args.solvent_model_sp != 'gas_phase':
-					keywords_opt += ' scrf=({0},solvent={1})'.format(args.solvent_model_sp,args.solvent_name_sp)
+				keywords_opt = ''
+				if args.sp == 'gaussian':
+					if genecp == 'genecp' or  genecp == 'gen':
+						keywords_opt = lot_sp+'/'+ genecp+' '+ args.input_for_sp
+					else:
+						keywords_opt = lot_sp+'/'+ bs_sp+' '+ args.input_for_sp
+					if args.empirical_dispersion_sp != 'None':
+						keywords_opt += ' empiricaldispersion={0}'.format(args.empirical_dispersion_sp)
+					if args.solvent_model_sp != 'gas_phase':
+						keywords_opt += ' scrf=({0},solvent={1})'.format(args.solvent_model_sp,args.solvent_name_sp)
 
 				if args.charge_sp != 'None':
 					CHARGE = args.charge_sp
+
 				if args.mult_sp != 'None':
 					MULT = args.mult_sp
-				if args.sp:
+
+				if args.sp == 'gaussian' or args.sp == 'orca':
 					if not os.path.isdir(single_point_input_files+'/'+dir_name):
 						os.makedirs(single_point_input_files+'/'+dir_name)
 					os.chdir(single_point_input_files+'/'+dir_name)
 					new_com_file('sp',w_dir_initial,log,single_point_input_files+'/'+dir_name,file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,TERMINATION,IM_FREQS,bs_sp,lot_sp,bs_gcp_sp)
+
 				if args.nics:
 					if not os.path.isdir(nics_input_files+'/'+dir_name):
 						os.makedirs(nics_input_files+'/'+dir_name)
 					os.chdir(nics_input_files+'/'+dir_name)
 					new_com_file('nics',w_dir_initial,log,nics_input_files+'/'+dir_name,file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,TERMINATION,IM_FREQS,bs_sp,lot_sp,bs_gcp_sp)
-
 
 	#write to csv ana_data
 	if duplicates=='None':
@@ -484,7 +516,7 @@ def output_analyzer(duplicates,log_files,com_files, w_dir, w_dir_main,lot, bs, b
 	ana_data.at[0,'Unfinished'] = unfinished
 	if args.dup:
 		ana_data.at[0,'Duplicates'] = duplicates
-	if args.exp_rules != False:
+	if args.exp_rules != 'None':
 		ana_data.at[0,'Exp_rules filter'] = exp_rules_qcorr
 	if args.check_geom:
 		ana_data.at[0,'Geometry changed'] = check_geom_qcorr

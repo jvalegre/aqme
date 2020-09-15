@@ -39,7 +39,11 @@ def calculate_db_parameters(log_files,args,log,w_dir_initial,name_mol,lot,bs):
 		total_data.at[counter,'L'] = sterics.L
 
 	#creating folder for all molecules to write geom parameter
-	folder = w_dir_initial + '/QPRED/dbstep_parameters/all_confs_sterics/'+str(lot)+'-'+str(bs)
+	if str(bs).find('/') > -1:
+		folder = w_dir_initial + '/QPRED/dbstep_parameters/all_confs_sterics/'+str(lot)+'-'+str(bs).split('/')[0]
+	else:
+		folder = w_dir_initial + '/QPRED/dbstep_parameters/all_confs_sterics/'+str(lot)+'-'+str(bs)
+
 	try:
 		os.makedirs(folder)
 	except OSError:
@@ -57,14 +61,26 @@ def calculate_boltz_and_dbstep(val,args,log,name,w_dir,w_dir_initial,lot,bs):
 	subprocess.call(cmd_boltz)
 
 	#writing to coorect places
-	destination = w_dir_initial+'/QPRED/dbstep_parameters/boltz/'+str(lot)+'-'+str(bs)
+	if str(bs).find('/') > -1:
+		destination = w_dir_initial+'/QPRED/dbstep_parameters/boltz/'+str(lot)+'-'+str(bs).split('/')[0]
+	else:
+		destination = w_dir_initial+'/QPRED/dbstep_parameters/boltz/'+str(lot)+'-'+str(bs)
+
 	moving_files(destination, os.getcwd(),'Goodvibes_'+name+'.dat')
 
-	dbstep_parm_file = w_dir_initial + '/QPRED/dbstep_parameters/all_confs_sterics/'+str(lot)+'-'+str(bs)+'/'+name+'-all-steric-data.csv'
+	if str(bs).find('/') > -1:
+		dbstep_parm_file = w_dir_initial + '/QPRED/dbstep_parameters/all_confs_sterics/'+str(lot)+'-'+str(bs).split('/')[0]+'/'+name+'-all-steric-data.csv'
+	else:
+		dbstep_parm_file = w_dir_initial + '/QPRED/dbstep_parameters/all_confs_sterics/'+str(lot)+'-'+str(bs)+'/'+name+'-all-steric-data.csv'
+
+
 	df_dbstep =  pd.read_csv(dbstep_parm_file)
 
+	if str(bs).find('/') > -1:
+		file = w_dir_initial+'/QPRED/dbstep_parameters/boltz/'+str(lot)+'-'+str(bs).split('/')[0]+'/Goodvibes_'+name+'.dat'
+	else:
+		file = w_dir_initial+'/QPRED/dbstep_parameters/boltz/'+str(lot)+'-'+str(bs)+'/Goodvibes_'+name+'.dat'
 
-	file = w_dir_initial+'/QPRED/dbstep_parameters/boltz/'+str(lot)+'-'+str(bs)+'/Goodvibes_'+name+'.dat'
 	outlines = open(file,"r").readlines()
 	#reading the data from boltz fileyiu
 	for i in range(len(outlines)):
@@ -95,7 +111,11 @@ def calculate_boltz_and_dbstep(val,args,log,name,w_dir,w_dir_initial,lot,bs):
 	avg_data.at[0,'bmax'] = df_dbstep.sum().bmax
 	avg_data.at[0,'L'] = df_dbstep.sum().L
 
-	folder = w_dir_initial + '/QPRED/dbstep_parameters/average_sterics/'+str(lot)+'-'+str(bs)
+	if str(bs).find('/') > -1:
+		folder = w_dir_initial + '/QPRED/dbstep_parameters/average_sterics/'+str(lot)+'-'+str(bs).split('/')[0]
+	else:
+		folder = w_dir_initial + '/QPRED/dbstep_parameters/average_sterics/'+str(lot)+'-'+str(bs)
+
 	try:
 		os.makedirs(folder)
 	except OSError:

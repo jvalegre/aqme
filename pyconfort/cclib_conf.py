@@ -23,11 +23,18 @@ def calculate_boltz_for_cclib(val,args,log,name,w_dir_fin,w_dir_initial,lot,bs):
 	subprocess.call(cmd_boltz)
 
 	#writing to coorect places
-	destination = w_dir_initial+'/QPRED/cclib-json/boltz/'+str(lot)+'-'+str(bs)
+	if str(bs).find('/') > -1:
+		destination = w_dir_initial+'/QPRED/cclib-json/boltz/'+str(lot)+'-'+str(bs).split('/')[0]
+	else:
+		destination = w_dir_initial+'/QPRED/cclib-json/boltz/'+str(lot)+'-'+str(bs)
+
 	moving_files(destination, os.getcwd(),'Goodvibes_'+name+'.dat')
 
 def log_json(log_file,w_dir_initial,args,lot,bs):
-	folder = w_dir_initial + '/QPRED/cclib-json/all_confs_cclib/'+str(lot)+'-'+str(bs)
+	if str(bs).find('/') > -1:
+		folder = w_dir_initial + '/QPRED/cclib-json/all_confs_cclib/'+str(lot)+'-'+str(bs).split('/')[0]
+	else:
+		folder = w_dir_initial + '/QPRED/cclib-json/all_confs_cclib/'+str(lot)+'-'+str(bs)
 	try:
 		os.makedirs(folder)
 	except OSError:
@@ -50,7 +57,10 @@ def calcualte_average_cclib_parameter(json_files,args,log,name,w_dir,w_dir_initi
 		mol_data = json.load(mol)
 
 		# get the Boltzmann probabilities of each conformer from a GoodVibes file
-		boltz_file = w_dir_initial+'/QPRED/cclib-json/boltz/'+str(lot)+'-'+str(bs) + '/Goodvibes_'+name+'.dat'
+		if str(bs).find('/') > -1:
+			boltz_file = w_dir_initial+'/QPRED/cclib-json/boltz/'+str(lot)+'-'+str(bs).split('/')[0] + '/Goodvibes_'+name+'.dat'
+		else:
+			boltz_file = w_dir_initial+'/QPRED/cclib-json/boltz/'+str(lot)+'-'+str(bs) + '/Goodvibes_'+name+'.dat'
 
 		boltz_outfile = open(boltz_file,"r")
 		boltz_outlines = boltz_outfile.readlines()
@@ -70,7 +80,11 @@ def calcualte_average_cclib_parameter(json_files,args,log,name,w_dir,w_dir_initi
 
 	dict_param = {'name': name,'atomcharges': charge, 'dipole': dipole}
 
-	folder = w_dir_initial + '/QPRED/cclib-json/average_cclib/'+str(lot)+'-'+str(bs)
+	if str(bs).find('/') > -1:
+		folder = w_dir_initial + '/QPRED/cclib-json/average_cclib/'+str(lot)+'-'+str(bs).split('/')[0]
+	else:
+		folder = w_dir_initial + '/QPRED/cclib-json/average_cclib/'+str(lot)+'-'+str(bs)
+
 	try:
 		os.makedirs(folder)
 	except OSError:

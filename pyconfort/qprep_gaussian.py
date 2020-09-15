@@ -79,20 +79,21 @@ def convert_sdf_to_com(w_dir_initial,file,com,com_low,energies,header,args,log):
 
 def input_route_line(args):
 	#definition of input_route lines
-	if args.input_for_gauss == 'None':
+	if args.set_input_line == 'None':
 		input_route = ''
-		if args.frequencies:
-			input_route += 'freq=noraman'
-		if args.empirical_dispersion != 'None':
-			input_route += ' empiricaldispersion={0}'.format(args.empirical_dispersion)
-		if not args.calcfc:
-			input_route += ' opt=(maxcycles={0})'.format(args.max_cycle_opt)
-		else:
-			input_route += ' opt=(calcfc,maxcycles={0})'.format(args.max_cycle_opt)
-		if args.solvent_model != 'gas_phase':
-			input_route += ' scrf=({0},solvent={1})'.format(args.solvent_model,args.solvent_name)
+		if args.QPREP == 'gaussian' or args.QCORR == 'gaussian':
+			if args.frequencies:
+				input_route += 'freq=noraman'
+			if args.empirical_dispersion != 'None':
+				input_route += ' empiricaldispersion={0}'.format(args.empirical_dispersion)
+			if not args.calcfc:
+				input_route += ' opt=(maxcycles={0})'.format(args.max_cycle_opt)
+			else:
+				input_route += ' opt=(calcfc,maxcycles={0})'.format(args.max_cycle_opt)
+			if args.solvent_model != 'gas_phase':
+				input_route += ' scrf=({0},solvent={1})'.format(args.solvent_model,args.solvent_name)
 	else:
-		input_route = args.input_for_gauss
+		input_route = args.set_input_line
 
 	return input_route
 
@@ -107,24 +108,29 @@ def rename_file_and_charge_chk_change(read_lines,file,args,charge_com):
 				rename_file_name = title_line.replace(" ", "_")
 				break
 
-		rename_file_name = rename_file_name.strip()+'.com'
+		if args.QPREP == 'gaussian':
+			rename_file_name = rename_file_name.strip()+'.com'
+		elif args.QPREP == 'orca':
+			rename_file_name = rename_file_name.strip()+'.inp'
 	else:
 		rename_file_name = file
 
-	#change charge and multiplicity for all molecules
-	for i,_ in enumerate(read_lines):
-		if args.chk:
-			if read_lines[i].find('%chk') > -1:
-				read_lines[i] = '%chk='+rename_file_name.split('.com')[0]+'.chk\n'
-		if len(read_lines[i].strip()) == 0:
-			if  args.com_from_xyz:
-				read_lines[i+1] = rename_file_name.split('.com')[0]+'\n'
-			if charge_com is not None:
-				read_lines[i+3] = str(charge_com)+' '+ str(args.mult)+'\n'
-			break
-	out = open(file, 'w')
-	out.writelines(read_lines)
-	out.close()
+	if args.QPREP == 'gaussian':
+		#change charge and multiplicity for all molecules
+		for i,_ in enumerate(read_lines):
+			if args.chk:
+				if read_lines[i].find('%chk') > -1:
+					read_lines[i] = '%chk='+rename_file_name.split('.com')[0]+'.chk\n'
+			if len(read_lines[i].strip()) == 0:
+				if  args.com_from_xyz:
+					read_lines[i+1] = rename_file_name.split('.com')[0]+'\n'
+				if charge_com is not None:
+					read_lines[i+3] = str(charge_com)+' '+ str(args.mult)+'\n'
+				break
+		out = open(file, 'w')
+		out.writelines(read_lines)
+		out.close()
+
 	return rename_file_name
 
 def get_name_and_charge(name,charge_data):
@@ -259,6 +265,86 @@ def write_genecp(type_gen,fileout,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms
 			fileout.write('0\n')
 			fileout.write(bs_gcp_com+'\n\n')
 
+def orca_file_gen(read_lines,rename_file_name,bs,lot,genecp,ecp_list,bs_gcp,charge_com,mult_com,args):
+	try:
+		write_orca_lines = open(rename_file_name,"w")
+
+	except FileExistsError:
+		os.remove(rename_file_name)
+		write_orca_lines = open(rename_file_name,"w")
+
+	write_orca_lines.write("# "+rename_file_name.split('.')[0]+"\n")
+	write_orca_lines.write("# Memory per core\n")
+	# calculate memory for ORCA input
+	if args.mem.find('GB') > -1 or args.mem.find('gb') > -1:
+		mem_orca = int(args.mem[:-2])*1000
+	elif args.mem.find('MB') > -1 or args.mem.find('mb') > -1:
+		mem_orca = int(args.mem[:-2])
+
+	write_orca_lines.write("%maxcore "+ str(mem_orca) + "\n")
+	write_orca_lines.write("# Number of processors\n")
+	write_orca_lines.write("%pal nprocs " + str(args.nprocs) +" end\n")
+	if args.set_input_line != 'None':
+		write_orca_lines.write("! " + bs + " " + lot + " " + args.set_input_line +"\n")
+	else:
+		write_orca_lines.write("! " + bs + " " + lot + "\n")
+	if genecp =='genecp' or genecp == 'gen':
+		write_orca_lines.write("%basis\n")
+		gen_orca_line_1 = 'NewGTO '
+		gen_orca_line_2 = 'NewAuxCGTO '
+		for gen_orca_atom in args.aux_atoms_orca:
+			gen_orca_line_1 += str(possible_atoms.index(gen_orca_atom))+' '
+			gen_orca_line_2 += str(possible_atoms.index(gen_orca_atom))+' '
+		gen_orca_line_1 += '"' + bs_gcp + '" end\n'
+		gen_orca_line_2 += '"' + args.aux_basis_set_genecp_atoms[0] + '" end\n'
+		write_orca_lines.write(gen_orca_line_1)
+		write_orca_lines.write(gen_orca_line_2)
+		write_orca_lines.write("end\n")
+	if args.solvent_model != 'gas_phase':
+		if args.solvent_model == "CPCM" or args.solvent_model == 'cpcm':
+			write_orca_lines.write("!CPCM("+args.solvent_name+")\n")
+		if args.cpcm_input != 'None' or args.solvent_model == 'SMD' or args.solvent_model == 'smd':
+			write_orca_lines.write("%cpcm\n")
+			if args.cpcm_input != 'None':
+				for cpcm_line in args.cpcm_input:
+					write_orca_lines.write(cpcm_line+'\n')
+			if args.solvent_model == 'SMD' or args.solvent_model == 'smd':
+				write_orca_lines.write("smd true\n")
+				write_orca_lines.write('SMDsolvent "'+args.solvent_name+'"\n')
+			write_orca_lines.write("end\n")
+	write_orca_lines.write("%scf maxiter "+str(args.orca_scf_iters)+"\n")
+	write_orca_lines.write("end\n")
+	if args.mdci_orca != 'None':
+		write_orca_lines.write("% mdci\n")
+		for mdci_line in args.mdci_orca:
+			write_orca_lines.write(mdci_line+'\n')
+		write_orca_lines.write("end\n")
+	if args.print_mini_orca:
+		write_orca_lines.write("% output\n")
+		write_orca_lines.write("printlevel mini\n")
+		write_orca_lines.write("print[ P_SCFInfo ] 1\n")
+		write_orca_lines.write("print[ P_SCFIterInfo ] 1\n")
+		write_orca_lines.write("print[ P_OrbEn ] 0\n")
+		write_orca_lines.write("print[ P_Cartesian ] 0\n")
+		write_orca_lines.write("end\n")
+		write_orca_lines.write("% elprop\n")
+		write_orca_lines.write("Dipole False\n")
+		write_orca_lines.write("end\n")
+	write_orca_lines.write("* xyz "+str(charge_com)+" "+str(mult_com)+"\n")
+	# this part gets the coordinates from above
+	start_coords = 10000
+	for i,line in enumerate(read_lines):
+		if len(line.split()) > 0:
+			# this if statement gets where the coordinates start
+			if line.split()[0] == '#':
+				start_coords = i+5
+		if i >= start_coords:
+			if len(line.split()) == 0:
+				break
+			write_orca_lines.write(line)
+	write_orca_lines.write("*")
+	write_orca_lines.close()
+
 # MAIN FUNCTION TO CREATE GAUSSIAN JOBS
 def write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args, log, charge_data, w_dir_initial):
 
@@ -272,9 +358,27 @@ def write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args, log, 
 
 	# defining path to place the new COM files
 	if args.single_point:
-		path_write_input_files = '/QMCALC/G16-SP_input_files/' + str(lot) + '-' + str(bs)
+		if args.QPREP == 'gaussian':
+			if str(bs).find('/') > -1:
+				path_write_input_files = '/QMCALC/G16-SP_input_files/' + str(lot) + '-' + str(bs).split('/')[0]
+			else:
+				path_write_input_files = '/QMCALC/G16-SP_input_files/' + str(lot) + '-' + str(bs)
+		elif args.QPREP == 'orca':
+			if str(bs).find('/') > -1:
+				path_write_input_files = '/QMCALC/ORCA-SP_input_files/' + str(lot) + '-' + str(bs).split('/')[0]
+			else:
+				path_write_input_files = '/QMCALC/ORCA-SP_input_files/' + str(lot) + '-' + str(bs)
 	else:
-		path_write_input_files = '/QMCALC/G16/' + str(lot) + '-' + str(bs)
+		if args.QPREP == 'gaussian':
+			if str(bs).find('/') > -1:
+				path_write_input_files = '/QMCALC/G16/' + str(lot) + '-' + str(bs).split('/')[0]
+			else:
+				path_write_input_files = '/QMCALC/G16/' + str(lot) + '-' + str(bs)
+		elif args.QPREP == 'orca':
+			if str(bs).find('/') > -1:
+				path_write_input_files = '/QMCALC/ORCA/' + str(lot) + '-' + str(bs).split('/')[0]
+			else:
+				path_write_input_files = '/QMCALC/ORCA/' + str(lot) + '-' + str(bs)
 
 	os.chdir(w_dir_initial+path_write_input_files)
 
@@ -289,54 +393,58 @@ def write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args, log, 
 		com_files = glob.glob('{0}_*.com'.format(name))
 
 		for file in com_files:
+			ecp_list,ecp_genecp_atoms,ecp_gen_atoms = [],False,False
 			if genecp =='genecp' or genecp == 'gen' or args.last_line_for_input != 'None':
-				ecp_list,ecp_genecp_atoms,ecp_gen_atoms = [],False,False
 				read_lines = open(file,"r").readlines()
-
 				rename_file_name = rename_file_and_charge_chk_change(read_lines,file,args,charge_com)
-
 				read_lines = open(file,"r").readlines()
 
-				fileout = open(file, "a")
+				# Detect if there are atoms to use genecp or not (to use gen)
+				ATOMTYPES = []
+				for i in range(4,len(read_lines)):
+					if read_lines[i].split(' ')[0] not in ATOMTYPES and read_lines[i].split(' ')[0] in possible_atoms:
+						ATOMTYPES.append(read_lines[i].split(' ')[0])
 
-				if args.last_line_for_input != 'None':
-					fileout.write(args.last_line_for_input+'\n\n')
+				# define genecp/gen atoms
+				ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp = check_for_gen_or_genecp(ATOMTYPES,args)
+				#error if both genecp and gen are
+				if ecp_genecp_atoms and ecp_gen_atoms:
+					sys.exit("x  ERROR: Can't use Gen and GenECP at the same time")
 
-				if genecp =='genecp' or genecp == 'gen':
-					# Detect if there are atoms to use genecp or not (to use gen)
-					ATOMTYPES = []
-					for i in range(4,len(read_lines)):
-						if read_lines[i].split(' ')[0] not in ATOMTYPES and read_lines[i].split(' ')[0] in possible_atoms:
-							ATOMTYPES.append(read_lines[i].split(' ')[0])
+				# write genecp/gen part
+				type_gen = 'qprep'
+				if args.QPREP == 'gaussian':
+					fileout = open(file, "a")
 
-					# define genecp/gen atoms
-					ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp = check_for_gen_or_genecp(ATOMTYPES,args)
-					#error if both genecp and gen are
-					if ecp_genecp_atoms and ecp_gen_atoms:
-						sys.exit("x  ERROR: Can't use Gen and GenECP at the same time")
-
-					# write genecp/gen part
-					type_gen = 'qprep'
+					if args.last_line_for_input != 'None':
+						fileout.write(args.last_line_for_input+'\n\n')
 
 					write_genecp(type_gen,fileout,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,bs,lot,bs_gcp,args,w_dir_initial,path_write_input_files)
 
-				fileout.close()
+					fileout.close()
 
-			else:
+					read_lines = open(file,"r").readlines()
+
+					rename_file_name = rename_file_and_charge_chk_change(read_lines,file,args,charge_com)
+
+					#change file by moving to new file
+					try:
+						os.rename(file,rename_file_name)
+
+					except FileExistsError:
+						os.remove(rename_file_name)
+						os.rename(file,rename_file_name)
+
+			if args.QPREP == 'orca':
+
 				read_lines = open(file,"r").readlines()
 
 				rename_file_name = rename_file_and_charge_chk_change(read_lines,file,args,charge_com)
 
+				#create input file
+				orca_file_gen(read_lines,rename_file_name,bs,lot,genecp,ecp_list,bs_gcp,charge_com,args.mult,args)
 
-			#change file by moving to new file
-			try:
-				os.rename(file,rename_file_name)
-
-			except FileExistsError:
-				os.remove(rename_file_name)
-				os.rename(file,rename_file_name)
-
-			# submitting the gaussian file on summit
+			# submitting the input file on a HPC
 			if args.qsub:
 				cmd_qsub = [args.submission_command, rename_file_name]
 				subprocess.call(cmd_qsub)

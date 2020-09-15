@@ -28,7 +28,7 @@ from __future__ import print_function
 import os
 import time
 from pyconfort.argument_parser import parser_args
-from pyconfort.mainf import csearch_main, exp_rules_main, qprep_gaussian_main, move_sdf_main, qcorr_gaussian_main,dup_main,graph_main,geom_par_main,nmr_main,energy_main,creation_of_dup_csv,load_from_yaml,Logger,creation_of_ana_csv,dbstep_par_main,nics_par_main,cclib_main
+from pyconfort.mainf import csearch_main, exp_rules_main, qprep_main, move_sdf_main, qcorr_gaussian_main,dup_main,graph_main,geom_par_main,nmr_main,energy_main,creation_of_dup_csv,load_from_yaml,Logger,creation_of_ana_csv,dbstep_par_main,nics_par_main,cclib_main
 
 def main():
 	# working directory and arguments
@@ -57,7 +57,7 @@ def main():
 		os.chdir(w_dir_initial)
 
 	#applying rules to discard certain conformers based on rules that the user define
-	if args.exp_rules != False:
+	if args.exp_rules != 'None':
 		exp_rules_active = True
 		if args.QCORR=='gaussian':
 			exp_rules_active = False
@@ -65,8 +65,8 @@ def main():
 		os.chdir(w_dir_initial)
 
 	#QPREP
-	if args.QPREP=='gaussian':
-		qprep_gaussian_main(w_dir_initial,args,log)
+	if args.QPREP=='gaussian' or args.QPREP=='orca':
+		qprep_main(w_dir_initial,args,log)
 		os.chdir(w_dir_initial)
 
 	if args.CSEARCH=='rdkit' or args.CSEARCH=='summ' or args.CSEARCH=='fullmonte':

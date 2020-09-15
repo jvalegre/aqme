@@ -185,7 +185,10 @@ def calculate_nmr(nmr_log_files,args,log,name,w_dir_fin,w_dir_initial,lot_sp,bs_
 		outfile.close()
 
 		# get the Boltzmann probabilities of each conformer from a GoodVibes file
-		boltz_file = w_dir_initial+'/QPRED/nmr/boltz/'+str(lot)+'-'+str(bs) + '/Goodvibes_'+name+'.dat'
+		if str(bs).find('/') > -1:
+			boltz_file = w_dir_initial+'/QPRED/nmr/boltz/'+str(lot)+'-'+str(bs).split('/')[0] + '/Goodvibes_'+name+'.dat'
+		else:
+			boltz_file = w_dir_initial+'/QPRED/nmr/boltz/'+str(lot)+'-'+str(bs) + '/Goodvibes_'+name+'.dat'
 
 		boltz_outfile = open(boltz_file,"r")
 		boltz_outlines = boltz_outfile.readlines()
@@ -248,8 +251,12 @@ def calculate_boltz_and_nmr(val,args,log,name,w_dir_fin,w_dir_initial,lot,bs):
 		cmd_boltz.append(file)
 	subprocess.call(cmd_boltz)
 
-	#writing to coorect places
-	destination = w_dir_initial+'/QPRED/nmr/boltz/'+str(lot)+'-'+str(bs)
+	#writing to correct places
+	if str(bs).find('/') > -1:
+		destination = w_dir_initial+'/QPRED/nmr/boltz/'+str(lot)+'-'+str(bs).split('/')[0]
+	else:
+		destination = w_dir_initial+'/QPRED/nmr/boltz/'+str(lot)+'-'+str(bs)
+
 	moving_files(destination, os.getcwd(),'Goodvibes_'+name+'.dat')
 
 
