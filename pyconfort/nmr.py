@@ -145,7 +145,7 @@ def calculate_nmr(nmr_log_files,args,log,name,w_dir_fin,w_dir_initial,lot_sp,bs_
 	final_shieldings = []
 
 	for num_file,file in enumerate(nmr_log_files):
-
+		# if file.split('.log')[0] == 'QN-exp_0_413_ani_NMR':
 		# list of H and C shieldings for each individual conformer
 		conf_shieldings, conf_idx,conf_sym = [],[],[]
 
@@ -169,17 +169,22 @@ def calculate_nmr(nmr_log_files,args,log,name,w_dir_fin,w_dir_initial,lot_sp,bs_
 					atom_nuc = outlines[i].split()[1]
 					#assigning values from arrays
 					index = args.nmr_nucleus.index(atom_nuc)
-					TMS_ref_nuc = tms_ref[index]
+					if not args.nmr_online:
+						TMS_ref_nuc = tms_ref[index]
+					else:
+						pass
 					slope_nuc = slope[index]
 					intercept_nuc = intercept[index]
 
 					conf_idx.append(outlines[i].split()[0])
 					conf_sym.append(atom_nuc)
-
-					if TMS_ref_nuc is not None:
-						conf_shieldings.append(TMS_ref_nuc-float(outlines[i].split()[4]))
+					if args.nmr_online:
+						scaled_nmr = (intercept_nuc-float(outlines[i].split()[4]))/(-slope_nuc)
+						conf_shieldings.append(scaled_nmr)
 					else:
-						conf_shieldings.append((intercept_nuc-float(outlines[i].split()[4])/(-slope_nuc)))
+						scaled_nmr = (intercept_nuc-float(outlines[i].split()[4]))/(-slope_nuc)
+						conf_shieldings.append(TMS_ref_nuc-scaled_nmr)
+						# conf_shieldings.append(scaled_nmr)
 			except: pass
 
 		outfile.close()
@@ -209,6 +214,7 @@ def calculate_nmr(nmr_log_files,args,log,name,w_dir_fin,w_dir_initial,lot_sp,bs_
 	conf_idx = np.array(conf_idx)
 	conf_sym = np.array(conf_sym)
 
+
 	# for i in range(len(final_shieldings)):
 	# 	print(final_shieldings[i],conf_idx[i],conf_sym[i])
 
@@ -220,6 +226,10 @@ def calculate_nmr(nmr_log_files,args,log,name,w_dir_fin,w_dir_initial,lot_sp,bs_
 
 	for i, atom_num in enumerate(atom_num_exp):
 		for j,atom_cal in enumerate(conf_idx):
+			if len(atom_num.split('-')) > 1:
+				if atom_cal == atom_num.split('-')[0] or atom_cal == atom_num.split('-')[1] or atom_cal == atom_num.split('-')[2]:
+					df.at[i,'Shielding-Cal'] = final_shieldings[j]
+					df.at[i,'Atom-Symbol'] = conf_sym[j]
 			if atom_num == atom_cal:
 				df.at[i,'Shielding-Cal'] = final_shieldings[j]
 				df.at[i,'Atom-Symbol'] = conf_sym[j]
@@ -268,5 +278,4 @@ def calculate_boltz_and_nmr(val,args,log,name,w_dir_fin,w_dir_initial,lot,bs):
 				os.chdir(dir_sp_nmr)
 				#grabbing the respective NMR files for a given molecules
 				nmr_log_files = glob.glob(name+'*NMR.log')
-				print(nmr_log_files)
 				calculate_nmr(nmr_log_files,args,log,name,w_dir_fin,w_dir_initial,lot_sp,bs_sp,lot,bs)

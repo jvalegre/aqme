@@ -257,12 +257,14 @@ def graph(sdf_rdkit,sdf_xtb,sdf_ani,log_files,sp_files,args,log,lot,bs,lot_sp,bs
 		os.chdir(w_dir_sp)
 		for file in sp_files:
 			data_sp = cclib.io.ccread(file)
-			if len(file.split('_ani.log')) == 2 or len(file.split('_xtb.log')) == 2:
-				if len(file.split('_ani.log')) == 2:
-					name = file.split('_ani.log')[0]
+			print(file)
+			print(dir(data_sp))
+			if len(file.split('_ani_'+args.suffix_sp+'.log')) == 2 or len(file.split('_xtb_'+args.suffix_sp+'.log')) == 2:
+				if len(file.split('_ani_'+args.suffix_sp+'.log')) == 2:
+					name = file.split('_ani_'+args.suffix_sp+'.log')[0]
 					sp_ani_dft.append([name,data_sp.scfenergies[0]*ev_2_kcal_mol])
-				if len(file.split('_xtb.log')) == 2:
-					name = file.split('_xtb.log')[0]
+				if len(file.split('_xtb_'+args.suffix_sp+'.log')) == 2:
+					name = file.split('_xtb_'+args.suffix_sp+'.log')[0]
 					sp_xtb_dft.append([name,data_sp.scfenergies[0]*ev_2_kcal_mol])
 			else:
 				name = file.split('.log')[0]

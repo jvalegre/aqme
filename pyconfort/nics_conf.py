@@ -28,7 +28,6 @@ def get_coords_normal(outlines, stand_or, NATOMS, possible_atoms, ATOMTYPES, CAR
 def find_centroid(ringatoms,CARTESIANS):
 	xtot = 0; xvals=[]; yvals=[]; zvals=[]
 	for x in ringatoms:
-		#print "CARTS", fileData.CARTESIANS[x]
 		xtot = xtot + CARTESIANS[x][0]
 		xvals.append(CARTESIANS[x][0])
 	xav = xtot/len(ringatoms)
