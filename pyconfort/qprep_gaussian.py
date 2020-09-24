@@ -441,16 +441,24 @@ def write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args, log, 
 					fileout.close()
 
 					read_lines = open(file,"r").readlines()
-
 					rename_file_name = rename_file_and_charge_chk_change(read_lines,file,args,charge_com)
 
-					#change file by moving to new file
-					try:
-						os.rename(file,rename_file_name)
+			else:
+				print('else')
+				read_lines = open(file,"r").readlines()
+				rename_file_name = rename_file_and_charge_chk_change(read_lines,file,args,charge_com)
+				print(rename_file_name)
 
-					except FileExistsError:
-						os.remove(rename_file_name)
-						os.rename(file,rename_file_name)
+			#change file by moving to new file
+			try:
+				print(file,rename_file_name)
+				os.rename(file,rename_file_name)
+
+			except FileExistsError:
+				print('here-2')
+				os.remove(rename_file_name)
+				os.rename(file,rename_file_name)
+
 
 			if args.QPREP == 'orca':
 
