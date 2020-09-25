@@ -56,8 +56,6 @@ max_cycle_opt : 100 # maxcycles for the optimization
 calcfc : False # include calcfc in the optimization
 ## include chk line
 chk : False # include a %chk line at the beginning of the COM file
-## this part will override the default input keywords for the COM files. Use None for using the default options
-input_for_gauss : None # specify the input keywords (except functional, basis set, solvent and dispersion)
 
 # level of theory
 ## basis set and functional
@@ -66,6 +64,7 @@ level_of_theory : ['B3LYP'] # functional(s). Format: ['B3LYP','wB97XD',...]
 ## solvation model
 solvent_model : 'gas_phase' # type of solvation model. Options: gas_phase or any solvation model (i.e. SMD, IEFPCM, CPCM)
 solvent_name : '' # solvent used (i.e. chloroform, toluene, etc)
+set_input_line : 'NormalPNO TightSCF printbasis' # (i) keywords used in Gaussian input files (overiding opt and freq) or (ii) additional keywords for the ORCA input line
 
 # Specific options of level of theory for Gaussian
 ## dispersion correction
@@ -83,7 +82,6 @@ orca_scf_iters : 500 # Number of SCF iterations in ORCA
 mdci_orca : ['Density None'] # %mdci section in ORCA. Format: ['LINE1','LINE2',etc]
 print_mini_orca : True # Option to print 'mini' (reduced outputs) in ORCA
 aux_atoms_orca : ['Ir'] # list of atoms included in the aux part when using multiple basis sets in ORCA. Format: ['Pd','Ir','Pt',...]
-set_input_line : 'NormalPNO TightSCF printbasis' # additional keywords for the ORCA input line
 
 # OPTIONS FOR SINGLE-POINT COM FILES (ONLY IF sp IS ACTIVE IN QCORR)
 # charge and multiplicity
@@ -126,7 +124,7 @@ path : '' # path to guassian folder(s) with QM output files. If path = '', the p
 dup : True # if dup = True, analysis will also separate duplicate LOG files
 amplitude_ifreq : 0.2 # amplitude use to displace the imaginary frequencies to fix during analysis
 ifreq_cutoff : 0 # Cut off for imaginary frequencies during analysis (i.e. if ifreq_cutoff = 20, all the negative freqs from 0 to -20 will be considered positive and the output files won't be discarded)
-# if sp = True, the program will generate new COM files (from normally terminated LOG files) with the options selected from the user
+# if sp : gaussian, the program will generate new COM files (from normally terminated LOG files) with the options selected from the user
 sp : None # write single-point COM files after analysis (options in QPREP)
 suffix_sp : None # adds a suffix at the end of the single-point COM filename (i.e. FILENAME_suffix.com). If suffix_sp : None, no suffixes are added
 check_geom : True # Checks that geometries mantain the same connectivity after DFT optimization

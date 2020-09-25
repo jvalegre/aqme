@@ -83,7 +83,7 @@ def parser_args():
 	parser.add_argument("--orca_scf_iters",default=[], help="Number of SCF iterations in ORCA", dest="orca_scf_iters", type=str, nargs='?')
 	parser.add_argument("--mdci_orca",default='None', help="mdci section in ORCA", dest="mdci_orca", type=str, nargs='?')
 	parser.add_argument("--print_mini_orca",action="store_true",default=True, help="Option to print 'mini' (reduced outputs) in ORCA")
-	parser.add_argument("--set_input_line",  help="Extra keywords for ORCA calculations", default="None", dest="set_input_line")
+	parser.add_argument("--set_input_line",  help="(i) keywords used in Gaussian input files (overiding opt and freq) or (ii) additional keywords for the ORCA input line", default="None", dest="set_input_line")
 	parser.add_argument("--genecp_atoms",  help="genecp atoms",default=[], dest="genecp_atoms",type=str, nargs='*')
 	parser.add_argument("--gen_atoms",  help="gen atoms",default=[], dest="gen_atoms",type=str, nargs='*')
 	parser.add_argument("--max_cycle_opt", help="Number of cycles for DFT optimization", default="100", type=int, dest="max_cycle_opt")

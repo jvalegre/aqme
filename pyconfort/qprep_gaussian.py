@@ -433,10 +433,10 @@ def write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args, log, 
 						sys.exit("x  ERROR: Can't use Gen and GenECP at the same time")
 					fileout = open(file, "a")
 
+					write_genecp(type_gen,fileout,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,bs,lot,bs_gcp,args,w_dir_initial,path_write_input_files)
+
 					if args.last_line_for_input != 'None':
 						fileout.write(args.last_line_for_input+'\n\n')
-
-					write_genecp(type_gen,fileout,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,bs,lot,bs_gcp,args,w_dir_initial,path_write_input_files)
 
 					fileout.close()
 

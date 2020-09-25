@@ -62,6 +62,15 @@ def new_com_file(com_type,w_dir_initial,log,new_gaussian_input_files,file,args,k
 
 	write_header_and_coords(fileout,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,w_dir_initial,log,com_type)
 
+	# write genecp/gen part
+	if genecp == 'genecp' or  genecp == 'gen':
+		if com_type == 'sp':
+			type_gen = 'sp'
+		elif com_type == 'analysis':
+			type_gen = 'qcorr'
+
+		write_genecp(type_gen,fileout,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,bs_com,lot_com,bs_gcp_com,args,w_dir_initial,new_gaussian_input_files)
+
 	if args.sp == 'gaussian' and com_type == 'sp':
 		# final line for SP
 		if args.last_line_for_sp != 'None':
@@ -73,15 +82,6 @@ def new_com_file(com_type,w_dir_initial,log,new_gaussian_input_files,file,args,k
 		if args.last_line_for_input != 'None':
 			fileout.write(args.last_line_for_input)
 			fileout.write('\n\n')
-
-	# write genecp/gen part
-	if genecp == 'genecp' or  genecp == 'gen':
-		if com_type == 'sp':
-			type_gen = 'sp'
-		elif com_type == 'analysis':
-			type_gen = 'qcorr'
-
-		write_genecp(type_gen,fileout,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,bs_com,lot_com,bs_gcp_com,args,w_dir_initial,new_gaussian_input_files)
 
 	fileout.close()
 
@@ -449,7 +449,7 @@ def output_analyzer(duplicates,log_files,com_files, w_dir, w_dir_main,lot, bs, b
 		# adding in the NMR componenet only to the finished files after reading from normally finished log files
 		if TERMINATION == "normal" and IM_FREQS == 0 and passing_rules and passing_geom:
 			if args.sp == 'gaussian' or args.sp == 'orca' or args.nics:
-				
+
 				#get coordinates
 				ATOMTYPES, CARTESIANS,stand_or = get_coords_normal(outlines, stand_or, NATOMS, possible_atoms, ATOMTYPES, CARTESIANS)
 
