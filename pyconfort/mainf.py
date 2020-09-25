@@ -552,23 +552,23 @@ def graph_main(args,log,w_dir_initial):
 				w_dir = args.path + str(lot) + '-' + str(bs) +'/success/output_files'
 				os.chdir(w_dir)
 				log_files = get_com_or_log_out_files('output',name)
-				# if os.path.exists(args.path + str(lot) + '-' + str(bs) +'/success/G16-SP_input_files'):
-				# 	for lot_sp,bs_sp,bs_gcp_sp in zip(args.level_of_theory_sp,args.basis_set_sp,args.basis_set_genecp_atoms_sp):
-				# 		w_dir_sp = args.path + str(lot) + '-' + str(bs) +'/success/G16-SP_input_files'+'/'+str(lot_sp)+'-'+str(bs_sp)
-				# 		sp_files = get_com_or_log_out_files('output',name)
-				# 		graph(sdf_rdkit,sdf_xtb,sdf_ani,log_files,sp_files,args,log,lot,bs,lot_sp,bs_sp,name,w_dir_initial,w_dir_sp,w_dir)
+				if os.path.exists(args.path + str(lot) + '-' + str(bs) +'/success/G16-SP_input_files'):
+					for lot_sp,bs_sp,bs_gcp_sp in zip(args.level_of_theory_sp,args.basis_set_sp,args.basis_set_genecp_atoms_sp):
+						w_dir_sp = args.path + str(lot) + '-' + str(bs) +'/success/G16-SP_input_files'+'/'+str(lot_sp)+'-'+str(bs_sp)
+						sp_files = get_com_or_log_out_files('output',name)
+						graph(sdf_rdkit,sdf_xtb,sdf_ani,log_files,sp_files,args,log,lot,bs,lot_sp,bs_sp,name,w_dir_initial,w_dir_sp,w_dir,'g16')
 				if os.path.exists(args.path + str(lot) + '-' + str(bs) +'/success/ORCA-SP_input_files'):
 					for lot_sp,bs_sp,bs_gcp_sp in zip(args.level_of_theory_sp,args.basis_set_sp,args.basis_set_genecp_atoms_sp):
 						w_dir_sp = args.path + str(lot) + '-' + str(bs) +'/success/ORCA-SP_input_files'+'/'+str(lot_sp)+'-'+str(bs_sp)
 						os.chdir(w_dir_sp)
 						sp_files = get_com_or_log_out_files('output',name)
 						os.chdir(w_dir)
-						graph(sdf_rdkit,sdf_xtb,sdf_ani,log_files,sp_files,args,log,lot,bs,lot_sp,bs_sp,name,w_dir_initial,w_dir_sp,w_dir)
+						graph(sdf_rdkit,sdf_xtb,sdf_ani,log_files,sp_files,args,log,lot,bs,lot_sp,bs_sp,name,w_dir_initial,w_dir_sp,w_dir,'orca')
 				else:
-					graph(sdf_rdkit,sdf_xtb,sdf_ani,log_files,None,args,log,lot,bs,None,None,name,w_dir_initial,None,w_dir)
+					graph(sdf_rdkit,sdf_xtb,sdf_ani,log_files,None,args,log,lot,bs,None,None,name,w_dir_initial,None,w_dir,None)
 
 		else:
-			graph(sdf_rdkit,sdf_xtb,sdf_ani,None,None,args,log,None,None,None,None,name,w_dir_initial,None,None)
+			graph(sdf_rdkit,sdf_xtb,sdf_ani,None,None,args,log,None,None,None,None,name,w_dir_initial,None,None,None)
 
 	os.chdir(w_dir_initial)
 

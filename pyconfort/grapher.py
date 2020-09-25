@@ -13,6 +13,7 @@ from sklearn.metrics import mean_absolute_error
 import statistics as stats
 
 ev_2_kcal_mol = 23.061 #ev to kcal/mol
+hartree_to_kcal = 627.509
 
 def stats_calc(y_dft,y):
 	y_diff = abs(np.subtract(y, y_dft))
@@ -97,9 +98,9 @@ def plot_graph(energy_rdkit,energy_min,energy_min_dft,lot,bs,energy_min_dft_sp,l
 	if type_min is not None:
 		x_axis_names.append(type_min)
 	if lot is not None:
-		x_axis_names.append(lot+'-'+bs)
+		x_axis_names.append(lot+'\n'+bs)
 	if lot_sp is not None:
-		x_axis_names.append(lot_sp+'-'+bs_sp)
+		x_axis_names.append(lot_sp+'\n'+bs_sp)
 
 	x_axis = [0,1,2,3]
 	x_axis_1 = [0,1,2]
@@ -211,7 +212,7 @@ def plot_graph(energy_rdkit,energy_min,energy_min_dft,lot,bs,energy_min_dft_sp,l
 	plt.close()
 	os.chdir(w_dir_initial)
 
-def graph(sdf_rdkit,sdf_xtb,sdf_ani,log_files,sp_files,args,log,lot,bs,lot_sp,bs_sp,name_mol,w_dir_initial,w_dir_sp,w_dir):
+def graph(sdf_rdkit,sdf_xtb,sdf_ani,log_files,sp_files,args,log,lot,bs,lot_sp,bs_sp,name_mol,w_dir_initial,w_dir_sp,w_dir,type):
 
 	try:
 		import cclib
@@ -255,21 +256,36 @@ def graph(sdf_rdkit,sdf_xtb,sdf_ani,log_files,sp_files,args,log,lot,bs,lot_sp,bs
 
 	if sp_files is not None:
 		os.chdir(w_dir_sp)
-		for file in sp_files:
-			data_sp = cclib.io.ccread(file)
-			print(file)
-			print(dir(data_sp))
-			if len(file.split('_ani_'+args.suffix_sp+'.log')) == 2 or len(file.split('_xtb_'+args.suffix_sp+'.log')) == 2:
-				if len(file.split('_ani_'+args.suffix_sp+'.log')) == 2:
-					name = file.split('_ani_'+args.suffix_sp+'.log')[0]
-					sp_ani_dft.append([name,data_sp.scfenergies[0]*ev_2_kcal_mol])
-				if len(file.split('_xtb_'+args.suffix_sp+'.log')) == 2:
-					name = file.split('_xtb_'+args.suffix_sp+'.log')[0]
-					sp_xtb_dft.append([name,data_sp.scfenergies[0]*ev_2_kcal_mol])
-			else:
-				name = file.split('.log')[0]
-				sp_rdkit_dft.append([name,data_sp.scfenergies[0]*ev_2_kcal_mol])
+		if type=='g16':
+			for file in sp_files:
+				data_sp = cclib.io.ccread(file)
+				if len(file.split('_ani_'+args.suffix_sp+'.log')) == 2 or len(file.split('_xtb_'+args.suffix_sp+'.log')) == 2:
+					if len(file.split('_ani_'+args.suffix_sp+'.log')) == 2:
+						name = file.split('_ani_'+args.suffix_sp+'.log')[0]
+						sp_ani_dft.append([name,data_sp.scfenergies[0]*ev_2_kcal_mol])
+					if len(file.split('_xtb_'+args.suffix_sp+'.log')) == 2:
+						name = file.split('_xtb_'+args.suffix_sp+'.log')[0]
+						sp_xtb_dft.append([name,data_sp.scfenergies[0]*ev_2_kcal_mol])
+				else:
+					name = file.split('.log')[0]
+					sp_rdkit_dft.append([name,data_sp.scfenergies[0]*ev_2_kcal_mol])
+		if type=='orca':
+			for file in sp_files:
+				sp_lines = open(file,"r").readlines()
+				for i,line in enumerate(sp_lines):
+					if sp_lines[i].find('FINAL SINGLE POINT ENERGY') > -1:
+						if len(file.split('_ani_'+args.suffix_sp+'.out')) == 2 or len(file.split('_xtb_'+args.suffix_sp+'.out')) == 2:
+							if len(file.split('_ani_'+args.suffix_sp+'.out')) == 2:
+								name = file.split('_ani_'+args.suffix_sp+'.out')[0]
+								sp_ani_dft.append([name,float(sp_lines[i].split()[-1])*hartree_to_kcal])
+							if len(file.split('_xtb_'+args.suffix_sp+'.out')) == 2:
+								name = file.split('_xtb_'+args.suffix_sp+'.out')[0]
+								sp_xtb_dft.append([name,float(sp_lines[i].split()[-1])*hartree_to_kcal])
+						else:
+							name = file.split('.out')[0]
+							sp_rdkit_dft.append([name,float(sp_lines[i].split()[-1])*hartree_to_kcal])
 	os.chdir(w_dir)
+
 
 	energy_ani_dft_sc, energy_xtb_dft_sc, energy_rdkit_dft_sc = [],[],[]
 	if os.path.exists(w_dir_initial+'/CSEARCH/ani/'+name_mol+'_ani.sdf') and log_files is not None:
