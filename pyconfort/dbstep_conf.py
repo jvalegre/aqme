@@ -30,7 +30,7 @@ def calculate_db_parameters(log_files,args,log,w_dir_initial,name_mol,lot,bs):
 				C = split_line[1]
 				L =  split_line[2]
 				break
-		sterics = db.dbstep(log, center=str(C),ligand=str(L), volume=True, commandline=True)
+		sterics = db.dbstep(log, atom1=str(C),atom2=str(L), volume=True, sterimol=True, commandline=True)
 		total_data.at[counter,'Name'] = name_mol
 		total_data.at[counter,'log'] = log.split('.log')[0]
 		total_data.at[counter,'bv'] = sterics.bur_vol
