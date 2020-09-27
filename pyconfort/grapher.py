@@ -55,6 +55,7 @@ def plot_graph(energy_rdkit,energy_min,energy_min_dft,lot,bs,energy_min_dft_sp,l
 		return plt.cm.get_cmap(name, n)
 
 	if len(energy_min_dft_sp)  != 0:
+		print('sp')
 		energy_dft_sp_mae_sd,energy_dft_mae_sd,energy_min_mae_sd,energy_rdkit_mae_sd = [],[],[],[]
 		for i,_ in enumerate(energy_min_dft_sp):
 			name = energy_min_dft_sp[i][0]
@@ -188,7 +189,7 @@ def plot_graph(energy_rdkit,energy_min,energy_min_dft,lot,bs,energy_min_dft_sp,l
 	elif len(energy_min_dft) != 0:
 		textstr = r'{0} = {1} $\pm$ {2} (kcal/mol)'.format(x_axis_names_mae[0], round(mae_rdkit, 2),round(sd_rdkit, 2))+'\n'
 		textstr += r'{0} = {1} $\pm$ {2} (kcal/mol)'.format(x_axis_names_mae[1],round(mae_min,2),round(sd_min,2))
-		plt.figtext(0.5, 0.01, textstr ,  ha="center", fontsize=12,bbox=dict(facecolor='grey', alpha=0.25))
+		plt.figtext(0.5, -0.03, textstr ,  ha="center", fontsize=12,bbox=dict(facecolor='grey', alpha=0.25))
 	#ax1.legend(lines,labels,loc='upper center', prop={'size':4}, bbox_to_anchor=(0.5, -0.13), fancybox=True, shadow=True, ncol=5)
 	ax1.set_xlabel('Type of Calculation',fontsize=10)
 	ax1.set_ylabel('Relative Energy (kcal/mol)',fontsize=10)

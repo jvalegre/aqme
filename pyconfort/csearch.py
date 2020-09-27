@@ -106,6 +106,7 @@ def mol_from_sdf_or_mol_or_mol2(args):
 
 	readlines = open(args.input,"r").readlines()
 
+	molecule_count = 0
 	for i, line in enumerate(readlines):
 		if line.find('>  <ID>') > -1:
 			ID = readlines[i+1].split()[0]
@@ -120,7 +121,8 @@ def mol_from_sdf_or_mol_or_mol2(args):
 					charge += int(charge_line[j])
 			charges.append(charge)
 		if line.find('$$$$') > -1:
-			if len(IDs) != len(charges):
+			molecule_count += 1
+			if molecule_count != len(charges):
 				charges.append(0)
 
 	if IDs == []:
