@@ -90,7 +90,7 @@ def new_com_file(com_type,w_dir_initial,log,new_gaussian_input_files,file,args,k
 		read_lines = open(file_name,"r").readlines()
 
 		#create input file
-		orca_file_gen(read_lines,file_name.split('.')[0]+'.inp',args.basis_set_sp[0],args.level_of_theory_sp[0],genecp,args.aux_atoms_orca_sp,args.aux_basis_set_genecp_atoms_sp[0],args.aux_fit_genecp_atoms_sp[0],CHARGE,MULT,orca_aux_section,args,args.set_input_line_sp,args.solvent_model_sp,args.solvent_name_sp,args.cpcm_input_sp,args.orca_scf_iters_sp,args.mdci_orca_sp,args.print_mini_orca_sp)
+		orca_file_gen(read_lines,file_name.split('.')[0]+'.inp',bs_com,lot_com,genecp,args.aux_atoms_orca_sp,args.aux_basis_set_genecp_atoms_sp,args.aux_fit_genecp_atoms_sp,CHARGE,MULT,orca_aux_section,args,args.set_input_line_sp,args.solvent_model_sp,args.solvent_name_sp,args.cpcm_input_sp,args.orca_scf_iters_sp,args.mdci_orca_sp,args.print_mini_orca_sp)
 
 		# removes the initial com file
 		os.remove(file_name)

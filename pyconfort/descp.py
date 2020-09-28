@@ -23,15 +23,15 @@ def get_data(rdkit_mols,min_mols,dft_mols,lot,bs,name_mol,args,type_csearch,type
 		if len(args.dihedral) != 0:
 			for d,dh in enumerate(args.dihedral):
 				dihedral_rdkit = rdMolTransforms.GetDihedralDeg(mol_j.GetConformer(),dh[0],dh[1],dh[2],dh[3])
-				geom_data.at[j,args.geom_par_name+'-Dihedral-rdkit-'+str(dh[0])+'-'+str(dh[1])+'-'+str(dh[2])+'-'+str(dh[3])] = dihedral_rdkit
+				geom_data.at[j,args.geom_par_name+'-Dihedral-'+type_csearch+'-'+str(dh[0])+'-'+str(dh[1])+'-'+str(dh[2])+'-'+str(dh[3])] = dihedral_rdkit
 		if len(args.angle) != 0:
 			for a,an in enumerate(args.angle):
 				angle_rdkit = rdMolTransforms.GetAngleDeg(mol_j.GetConformer(),an[0],an[1],an[2])
-				geom_data.at[j,args.geom_par_name+'-Angle-rdkit-'+str(an[0])+'-'+str(an[1])+'-'+str(an[2])] = angle_rdkit
+				geom_data.at[j,args.geom_par_name+'-Angle-'+type_csearch+'-'+str(an[0])+'-'+str(an[1])+'-'+str(an[2])] = angle_rdkit
 		if len(args.bond) != 0:
 			for b,bd in enumerate(args.angle):
 				bond_rdkit = rdMolTransforms.GetBondLength(mol_j.GetConformer(),bd[0],bd[1])
-				geom_data.at[j,args.geom_par_name+'-Bond-rdkit-'+str(bd[0])+'-'+str(bd[1])] = bond_rdkit
+				geom_data.at[j,args.geom_par_name+'-Bond-'+type_csearch+'-'+str(bd[0])+'-'+str(bd[1])] = bond_rdkit
 		if min_mols is not None:
 			if type_min =='ani' or type_min=='xtb':
 				for i, mol_i in enumerate(min_mols):

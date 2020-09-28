@@ -14,7 +14,7 @@ from pyconfort.qprep_gaussian import moving_files
 def calculate_db_parameters(log_files,args,log,w_dir_initial,name_mol,lot,bs):
 
 	try:
-		import dbstep.Dbstep as db
+		from dbstep.Dbstep import dbstep
 	except (ModuleNotFoundError,AttributeError):
 		log.write('DBSTEP is not installed correctly - DBSTEP is not available')
 
@@ -30,7 +30,7 @@ def calculate_db_parameters(log_files,args,log,w_dir_initial,name_mol,lot,bs):
 				C = split_line[1]
 				L =  split_line[2]
 				break
-		sterics = db.dbstep(log, atom1=str(C),atom2=str(L), volume=True, sterimol=True, commandline=True)
+		sterics = dbstep(log, atom1=str(C),atom2=str(L), volume=True, sterimol=True, commandline=True)
 		total_data.at[counter,'Name'] = name_mol
 		total_data.at[counter,'log'] = log.split('.log')[0]
 		total_data.at[counter,'bv'] = sterics.bur_vol

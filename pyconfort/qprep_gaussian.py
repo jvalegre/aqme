@@ -312,8 +312,10 @@ def orca_file_gen(read_lines,rename_file_name,bs,lot,genecp,ecp_list,bs_gcp,bs_g
 		for gen_orca_atom in ecp_list:
 			gen_orca_line_1 += str(possible_atoms.index(gen_orca_atom))+' '
 			gen_orca_line_2 += str(possible_atoms.index(gen_orca_atom))+' '
-		gen_orca_line_1 += '"' + bs_gcp + '" end\n'
-		gen_orca_line_2 += '"' + bs_gcp_fit + '" end\n'
+		if len(bs_gcp) != 0:
+			gen_orca_line_1 += '"' + bs_gcp[0] + '" end\n'
+		if len(bs_gcp_fit) != 0:
+			gen_orca_line_2 += '"' + bs_gcp_fit[0] + '" end\n'
 		write_orca_lines.write(gen_orca_line_1)
 		write_orca_lines.write(gen_orca_line_2)
 		write_orca_lines.write("end\n")

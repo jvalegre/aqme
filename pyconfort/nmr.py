@@ -30,7 +30,7 @@ def get_exp_data(args,name,w_dir_initial,final_shieldings,conf_idx,conf_sym):
 		sdf_lines = open(sdf_file,'r').readlines()
 		found_nmr = 0
 		for i,line in enumerate(sdf_lines):
-			if line.find('> <NMREDATA_ASSIGNMENT>') > -1:
+			if line.find('>  <NMREDATA_ASSIGNMENT>') > -1:
 				start = i+1
 				found_nmr = 1
 			if len(line.strip()) == 0 and found_nmr == 1 :

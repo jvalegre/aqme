@@ -55,21 +55,25 @@ def plot_graph(energy_rdkit,energy_min,energy_min_dft,lot,bs,energy_min_dft_sp,l
 		return plt.cm.get_cmap(name, n)
 
 	if len(energy_min_dft_sp)  != 0:
-		print('sp')
+		#print('sp')
 		energy_dft_sp_mae_sd,energy_dft_mae_sd,energy_min_mae_sd,energy_rdkit_mae_sd = [],[],[],[]
-		for i,_ in enumerate(energy_min_dft_sp):
-			name = energy_min_dft_sp[i][0]
-			energy_dft_sp_mae_sd.append(float(energy_min_dft_sp[i][1]))
+		for l,_ in enumerate(energy_min_dft_sp):
+			name = energy_min_dft_sp[l][0]
+			#print(name)
+			energy_dft_sp_mae_sd.append(float(energy_min_dft_sp[l][1]))
 			for i,_ in enumerate(energy_min_dft):
 				if energy_min_dft[i][0] == name:
+					#print('dft',energy_min_dft[i][0],name)
 					energy_dft_mae_sd.append(float(energy_min_dft[i][1]))
 			if energy_min is not None:
 				for j,_ in enumerate(energy_min):
 					if energy_min[j][0] == name:
+						#print('min',energy_min[j][0],name)
 						energy_min_mae_sd.append(float(energy_min[j][1]))
 			if energy_rdkit is not None:
 				for k,_ in enumerate(energy_rdkit):
 					if energy_rdkit[k][0] == name:
+						#print('rdkit',energy_rdkit[k][0],name)
 						energy_rdkit_mae_sd.append(float(energy_rdkit[k][1]))
 
 		mae_rdkit,sd_rdkit = stats_calc(energy_dft_sp_mae_sd,energy_rdkit_mae_sd)
@@ -126,17 +130,20 @@ def plot_graph(energy_rdkit,energy_min,energy_min_dft,lot,bs,energy_min_dft_sp,l
 		name_all.append(name)
 		list.append(energy_rdkit[i][1])
 		if energy_min is not None:
-			for i,_ in enumerate(energy_min):
-				if energy_min[i][0] == name:
-					list.append(energy_min[i][1])
+			for j,_ in enumerate(energy_min):
+				if energy_min[j][0] == name:
+					list.append(energy_min[j][1])
 		if energy_min_dft is not None:
-			for i,_ in enumerate(energy_min_dft):
-				if energy_min_dft[i][0] == name:
-					list.append(energy_min_dft[i][1])
+			for k,_ in enumerate(energy_min_dft):
+				if energy_min_dft[k][0] == name:
+					list.append(energy_min_dft[k][1])
+					if energy_min_dft[k][1] > 15 :
+						print(energy_min_dft[k][0],energy_min_dft[k][1])
 		if energy_min_dft_sp is not None:
-			for i,_ in enumerate(energy_min_dft_sp):
-				if energy_min_dft_sp[i][0] == name:
-					list.append(energy_min_dft_sp[i][1])
+			for l,_ in enumerate(energy_min_dft_sp):
+				if energy_min_dft_sp[l][0] == name:
+					list.append(energy_min_dft_sp[l][1])
+		print(list)
 		list_all.append(list)
 
 	fig=plt.figure() #Creates a new figure
@@ -310,7 +317,9 @@ def graph(sdf_rdkit,sdf_xtb,sdf_ani,log_files,sp_files,args,log,lot,bs,lot_sp,bs
 	if os.path.exists(w_dir_initial+'/CSEARCH/ani/'+name_mol+'_ani.sdf') and sp_files is not None:
 		sp_ani_dft_sc = scaling_with_lowest(sp_ani_dft)
 	if os.path.exists(w_dir_initial+'/CSEARCH/xtb/'+name_mol+'_xtb.sdf') and sp_files is not None:
+		print(sp_xtb_dft)
 		sp_xtb_dft_sc = scaling_with_lowest(sp_xtb_dft)
+		print(sp_xtb_dft_sc)
 	if not os.path.exists(w_dir_initial+'/CSEARCH/xtb/'+name_mol+'_xtb.sdf') and not os.path.exists(w_dir_initial+'/CSEARCH/ani/'+name_mol+'_ani.sdf') and sp_files is not None:
 		sp_rdkit_dft_sc = scaling_with_lowest(sp_rdkit_dft)
 
