@@ -16,7 +16,8 @@ def calculate_db_parameters(log_files,args,log,w_dir_initial,name_mol,lot,bs):
 	try:
 		from dbstep.Dbstep import dbstep
 	except (ModuleNotFoundError,AttributeError):
-		log.write('DBSTEP is not installed correctly - DBSTEP is not available')
+		log.write('\nx  DBSTEP is not installed correctly - DBSTEP is not available')
+		sys.exit()
 
 	total_data = pd.DataFrame()
 

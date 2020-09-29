@@ -120,7 +120,8 @@ def optimize(mol, args, program,log,dup_data,dup_data_idx):
 		from ase.units import Hartree
 	except (ModuleNotFoundError,AttributeError):
 		ase_installed = False
-		log.write('ASE is not installed correctly - xTB and ANI are not available')
+		log.write('\nx  ASE is not installed correctly - xTB and ANI are not available')
+		sys.exit()
 	if ase_installed:
 		try:
 			import torch
@@ -128,13 +129,15 @@ def optimize(mol, args, program,log,dup_data,dup_data_idx):
 			device = torch.device('cpu')
 		except (ModuleNotFoundError,AttributeError):
 			torch_installed = False
-			log.write('TORCH is not installed correctly - xTB and ANI are not available')
+			log.write('\nx  TORCH is not installed correctly - xTB and ANI are not available')
+			sys.exit()
 		if torch_installed:
 			if args.CMIN=='xtb':
 				try:
 					from xtb.ase.calculator import XTB
 				except (ModuleNotFoundError,AttributeError):
-					log.write('xTB is not installed correctly - xTB is not available')
+					log.write('\nx  xTB is not installed correctly - xTB is not available')
+					sys.exit()
 			if args.CMIN=='ani':
 				try:
 					import torchani
@@ -153,7 +156,8 @@ def optimize(mol, args, program,log,dup_data,dup_data_idx):
 						model = torchani.models.ANI3ccx()
 
 				except (ModuleNotFoundError,AttributeError):
-					log.write('Torchani is not installed correctly - ANI is not available')
+					log.write('\nx  Torchani is not installed correctly - ANI is not available')
+					sys.exit()
 
 	# if large system increase stack size
 	if args.STACKSIZE != '1G':
@@ -187,13 +191,19 @@ def optimize(mol, args, program,log,dup_data,dup_data_idx):
 	coordinates = torch.tensor([cartesians.tolist()], requires_grad=True, device=device)
 
 	if program == 'ani':
-		sqm_energy, coordinates = ani_calc(ase,torch,model,device,elements,cartesians,coordinates,args,log)
+		ani_incompatible = False
+		try:
+			sqm_energy, coordinates = ani_calc(ase,torch,model,device,elements,cartesians,coordinates,args,log)
+		except KeyError:
+			log.write('\nx  '+args.ani_method+' could not optimize this molecule (i.e. check of atoms that are not compatible)')
+			ani_incompatible = True
+			sqm_energy, coordinates = 0,0
 
 	elif program == 'xtb':
 		sqm_energy, coordinates = xtb_calc(ase,torch,device,XTB,Hartree,elements,cartesians,coordinates,args,log,ase_metal,ase_metal_idx)
 
 	else:
-		log.write('program not defined!')
+		log.write('x  Option not compatible with CMIN (check the available options)!')
 
 	energy, cartesians = sqm_energy, np.array(coordinates.tolist()[0])
 	# update coordinates of mol object
@@ -201,7 +211,7 @@ def optimize(mol, args, program,log,dup_data,dup_data_idx):
 		[x,y,z] = cartesians[j]
 		mol.GetConformer().SetAtomPosition(j,Point3D(x,y,z))
 
-	return mol, energy
+	return mol, energy, ani_incompatible
 
 # read SDF files from RDKit optimization
 def rdkit_sdf_read(name, args, log):
@@ -232,10 +242,11 @@ def mult_min(name, args, program,log,dup_data,dup_data_idx):
 		bar.next()
 		if mol is not None:
 			# optimize this structure and record the energy
-			mol,energy = optimize(mol, args, program,log,dup_data,dup_data_idx)
-			pmol = PropertyMol.PropertyMol(mol)
-			outmols.append(pmol)
-			cenergy.append(energy)
+			mol,energy,ani_incompatible = optimize(mol, args, program,log,dup_data,dup_data_idx)
+			if not ani_incompatible:
+				pmol = PropertyMol.PropertyMol(mol)
+				outmols.append(pmol)
+				cenergy.append(energy)
 
 	# if SQM energy exists, overwrite RDKIT energies and geometries
 	cids = list(range(len(outmols)))

@@ -446,18 +446,14 @@ def write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args, log, 
 					rename_file_name = rename_file_and_charge_chk_change(read_lines,file,args,charge_com)
 
 			else:
-				print('else')
 				read_lines = open(file,"r").readlines()
 				rename_file_name = rename_file_and_charge_chk_change(read_lines,file,args,charge_com)
-				print(rename_file_name)
 
 			#change file by moving to new file
 			try:
-				print(file,rename_file_name)
 				os.rename(file,rename_file_name)
 
 			except FileExistsError:
-				print('here-2')
 				os.remove(rename_file_name)
 				os.rename(file,rename_file_name)
 

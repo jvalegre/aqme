@@ -57,8 +57,9 @@ def cheshire(online, nucleus, opt_method, opt_basis, opt_solv, nmr_method, nmr_b
     try:
         from bs4 import BeautifulSoup
     except (ModuleNotFoundError,AttributeError):
-        log.write('The bs4 module is not installed correctly - CHESHIRE search is not available')
-
+        log.write('\nThe bs4 module is not installed correctly - CHESHIRE search is not available')
+        sys.exit()
+        
     ## current time for printing
     now = datetime.datetime.now()
 

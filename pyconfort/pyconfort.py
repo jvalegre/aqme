@@ -81,7 +81,6 @@ def main():
 		if args.dup:
 			try:
 				import goodvibes
-				print(os.getcwd())
 				duplicates = dup_main(args, log, w_dir_initial)
 				os.chdir(w_dir_initial)
 			except (ModuleNotFoundError,AttributeError):

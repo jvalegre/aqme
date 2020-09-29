@@ -334,7 +334,7 @@ def output_to_mol(file,format,mol_name):
 	try:
 		from rdkit.Chem import AllChem as Chem
 	except (ModuleNotFoundError,AttributeError):
-		log.write('x  RDKit is not installed correctly, the exp_rules and check_geom filters will be disabled')
+		log.write('\nx  RDKit is not installed correctly, the exp_rules and check_geom filters will be disabled')
 		rdkit_compat = False
 
 	# transforms output file into mol object
@@ -420,15 +420,19 @@ def output_analyzer(duplicates,log_files,com_files, w_dir, w_dir_main,lot, bs, b
 				mol,ob_compat,rdkit_compat = output_to_mol(file,'log',file)
 				# this creates a mol object from the input file
 				try:
+					os.chdir(w_dir_main +'/input_files/run_'+str(round_num))
 					com_2_xyz_2_sdf(args,os.path.splitext(file)[0]+'.com')
 					mol2,ob_compat,rdkit_compat = output_to_mol(file,'xyz',file)
 					passing_geom = check_geom_filter(mol,mol2,args)
 					# remove created files
 					os.remove(file.split('.')[0]+'.xyz')
 					os.remove(file.split('.')[0]+'.sdf')
+					os.remove(file.split('.')[0]+'.mol')
+
 				except FileNotFoundError:
 					log.write("x  No com file were found for "+file+", the check_geom test will be disabled for this calculation")
 
+				os.chdir(w_dir)
 				os.remove(file.split('.')[0]+'.mol')
 
 		elif args.check_geom and not valid_mol_gen:

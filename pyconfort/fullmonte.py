@@ -149,7 +149,6 @@ def generating_conformations_fullmonte(name,args,rotmatches,log,selectedcids_rdk
 		for ene in reversed(c_energy):
 			indx = c_energy.index(ene)
 			if abs(globmin-ene) > args.ewin_fullmonte:
-				#print(indx,unique_mol[indx].GetProp('Energy'),c_energy[indx])
 				unique_mol.pop(indx)
 				c_energy.pop(indx)
 			if abs(globmin-ene) < args.ewin_sample_fullmonte:

@@ -9,16 +9,14 @@ import os
 from pyconfort.cmin import rdkit_sdf_read
 from rdkit.Chem import AllChem as Chem
 import numpy as np
-from sklearn.metrics import mean_absolute_error
-import statistics as stats
 
 ev_2_kcal_mol = 23.061 #ev to kcal/mol
 hartree_to_kcal = 627.509
 
 def stats_calc(y_dft,y):
 	y_diff = abs(np.subtract(y, y_dft))
-	mae = mean_absolute_error(y, y_dft)
-	sd = stats.stdev(y_diff)
+	mae = np.mean(y_diff)
+	sd = np.std(y_diff)
 	return mae,sd
 
 def get_energy(inmols_min):
@@ -47,33 +45,29 @@ def plot_graph(energy_rdkit,energy_min,energy_min_dft,lot,bs,energy_min_dft_sp,l
 		import matplotlib.patches as mpatches
 		import matplotlib.pyplot as plt
 	except (ModuleNotFoundError,AttributeError):
-	    log.write('The Matplotlib module is not installed correctly - the graphing functions are not available')
+		log.write('\nx  The Matplotlib module is not installed correctly - the graphing functions are not available')
+		sys.exit()
 
 	def get_cmap(n, name='viridis'):
-		'''Returns a function that maps each index in 0, 1, ..., n-1 to a distinct
-		RGB color; the keyword argument name must be a standard mpl colormap name.'''
+		# Returns a function that maps each index in 0, 1, ..., n-1 to a distinct
+		# RGB color; the keyword argument name must be a standard mpl colormap name
 		return plt.cm.get_cmap(name, n)
 
 	if len(energy_min_dft_sp)  != 0:
-		#print('sp')
 		energy_dft_sp_mae_sd,energy_dft_mae_sd,energy_min_mae_sd,energy_rdkit_mae_sd = [],[],[],[]
 		for l,_ in enumerate(energy_min_dft_sp):
 			name = energy_min_dft_sp[l][0]
-			#print(name)
 			energy_dft_sp_mae_sd.append(float(energy_min_dft_sp[l][1]))
 			for i,_ in enumerate(energy_min_dft):
 				if energy_min_dft[i][0] == name:
-					#print('dft',energy_min_dft[i][0],name)
 					energy_dft_mae_sd.append(float(energy_min_dft[i][1]))
 			if energy_min is not None:
 				for j,_ in enumerate(energy_min):
 					if energy_min[j][0] == name:
-						#print('min',energy_min[j][0],name)
 						energy_min_mae_sd.append(float(energy_min[j][1]))
 			if energy_rdkit is not None:
 				for k,_ in enumerate(energy_rdkit):
 					if energy_rdkit[k][0] == name:
-						#print('rdkit',energy_rdkit[k][0],name)
 						energy_rdkit_mae_sd.append(float(energy_rdkit[k][1]))
 
 		mae_rdkit,sd_rdkit = stats_calc(energy_dft_sp_mae_sd,energy_rdkit_mae_sd)
@@ -137,13 +131,11 @@ def plot_graph(energy_rdkit,energy_min,energy_min_dft,lot,bs,energy_min_dft_sp,l
 			for k,_ in enumerate(energy_min_dft):
 				if energy_min_dft[k][0] == name:
 					list.append(energy_min_dft[k][1])
-					if energy_min_dft[k][1] > 15 :
-						print(energy_min_dft[k][0],energy_min_dft[k][1])
 		if energy_min_dft_sp is not None:
 			for l,_ in enumerate(energy_min_dft_sp):
 				if energy_min_dft_sp[l][0] == name:
 					list.append(energy_min_dft_sp[l][1])
-		print(list)
+
 		list_all.append(list)
 
 	fig=plt.figure() #Creates a new figure
@@ -178,7 +170,6 @@ def plot_graph(energy_rdkit,energy_min,energy_min_dft,lot,bs,energy_min_dft_sp,l
 			ax1.scatter(x_axis_2,list,color=cmap(i), marker='o',zorder=2,edgecolors= "black",linewidth=0.5)
 		elif len(list) == 1:
 			ax1.scatter(x_axis_3,list,color=cmap(i), marker='o',zorder=2,edgecolors= "black",linewidth=0.5)
-
 
 	plt.xticks(range(0,1), x_axis_names)
 	if type_min is not None:
@@ -234,7 +225,8 @@ def graph(sdf_rdkit,sdf_xtb,sdf_ani,log_files,sp_files,args,log,lot,bs,lot_sp,bs
 	try:
 		import cclib
 	except (ModuleNotFoundError,AttributeError):
-		log.write('The cclib module is not installed correctly - the graph funtcion is not available')
+		log.write('\nx  The cclib module is not installed correctly - the graph function is not available')
+		sys.exit()
 
 	inmols_rdkit = Chem.SDMolSupplier(sdf_rdkit, removeHs=False)
 	#get the energy from sdf
@@ -303,7 +295,6 @@ def graph(sdf_rdkit,sdf_xtb,sdf_ani,log_files,sp_files,args,log,lot,bs,lot_sp,bs
 							sp_rdkit_dft.append([name,float(sp_lines[i].split()[-1])*hartree_to_kcal])
 	os.chdir(w_dir)
 
-
 	energy_ani_dft_sc, energy_xtb_dft_sc, energy_rdkit_dft_sc = [],[],[]
 	if os.path.exists(w_dir_initial+'/CSEARCH/ani/'+name_mol+'_ani.sdf') and log_files is not None:
 		energy_ani_dft_sc = scaling_with_lowest(energy_ani_dft)
@@ -317,9 +308,7 @@ def graph(sdf_rdkit,sdf_xtb,sdf_ani,log_files,sp_files,args,log,lot,bs,lot_sp,bs
 	if os.path.exists(w_dir_initial+'/CSEARCH/ani/'+name_mol+'_ani.sdf') and sp_files is not None:
 		sp_ani_dft_sc = scaling_with_lowest(sp_ani_dft)
 	if os.path.exists(w_dir_initial+'/CSEARCH/xtb/'+name_mol+'_xtb.sdf') and sp_files is not None:
-		print(sp_xtb_dft)
 		sp_xtb_dft_sc = scaling_with_lowest(sp_xtb_dft)
-		print(sp_xtb_dft_sc)
 	if not os.path.exists(w_dir_initial+'/CSEARCH/xtb/'+name_mol+'_xtb.sdf') and not os.path.exists(w_dir_initial+'/CSEARCH/ani/'+name_mol+'_ani.sdf') and sp_files is not None:
 		sp_rdkit_dft_sc = scaling_with_lowest(sp_rdkit_dft)
 

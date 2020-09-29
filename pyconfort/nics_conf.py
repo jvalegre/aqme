@@ -75,15 +75,15 @@ def do_matrix_stuff(xzsum, xysum, xsum, ysum, zsum, x2sum, y2sum, yzsum, ringato
 	except linalg.linalg.LinAlgError: coeffplane = matrix([[0.0],[0.0],[0.0]])
 	return coeffplane
 
-def find_coeffplane(ringatoms, CARTESIANS):
+def find_coeffplane(ringatoms, CARTESIANS,log):
 	rotated = 0
 	xvals, yvals, zvals, xav, yav, zav = find_centroid(ringatoms,CARTESIANS)
 	#print xvals, yvals, zvals
 	xzsum, xysum, xsum, ysum, zsum, x2sum, y2sum, yzsum = get_squares_list(ringatoms, xvals, yvals, zvals)
 	if xsum == 0.0 and ysum == 0.0:
 		rotated = 3
-		print("Can't define a ring by points in a line")
-		print("This is going to go horribly wrong")
+		log.write("x  Can't define a ring by points in a line")
+
 	if xsum == 0.0:
 		new_xvals = yvals
 		new_yvals = zvals
@@ -112,7 +112,7 @@ def update_coord(NATOMS,ATOMTYPES,CARTESIANS,args,log,name,w_dir_initial,type):
 				ringatoms.append(int(split_line[i])-1)
 			break
 
-	coeffplane, xav, yav, zav, rotated = find_coeffplane(ringatoms,CARTESIANS)
+	coeffplane, xav, yav, zav, rotated = find_coeffplane(ringatoms,CARTESIANS,log)
 
 	xcoeff= coeffplane.tolist()[0][0]
 	ycoeff= coeffplane.tolist()[1][0]

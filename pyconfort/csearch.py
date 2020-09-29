@@ -183,7 +183,7 @@ def load_template(args):
 	try:
 		os.chdir(os.path.join(pyconfort.__path__[0])+'/templates/')
 	except FileNotFoundError:
-		print('x The templates folder was not found, probably due to a problem while installing pyCONFORT')
+		log.write('x The templates folder was not found, probably due to a problem while installing pyCONFORT')
 		sys.exit()
 	if args.complex_type == 'squareplanar' or args.complex_type == 'squarepyramidal':
 		file_template = 'template-4-and-5.sdf'

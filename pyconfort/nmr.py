@@ -7,7 +7,8 @@
 
 from rdkit.Chem import AllChem as Chem
 import numpy as np
-import os,subprocess
+import os
+import subprocess
 import glob
 import pandas as pd
 
@@ -49,33 +50,22 @@ def get_exp_data(args,name,w_dir_initial,final_shieldings,conf_idx,conf_sym):
 					split_line_atom[len(split_line_atom) -1 ] = split_line_atom[len(split_line_atom) -1 ].strip().split('\\')[0]
 					for idx, shield in zip(conf_idx,final_shieldings):
 						if idx in split_line_atom:
-							#print(idx)
 							split_line_sheild_min  = np.array(split_line_sheild,dtype=float) - float(shield)
-							#print(split_line_sheild_min)
-							#idx_min = split_line_sheild_min.index(min(split_line_sheild_min))
 							idx_min =np.argmin(abs(split_line_sheild_min))
 							if split_line_atom[idx_min] in atom_num:
 								if split_line_atom[idx_min] != idx:
 									atom_num.append(idx)
 									atom_sheilding.append(split_line_sheild[split_line_atom.index(idx)])
-									#print(atom_num)
-									#print(atom_sheilding)
 								else:
 									if idx_min ==1:
 										atom_num.append(split_line_atom[0])
 										atom_sheilding.append(split_line_sheild[0])
-										#print(atom_num)
-										#print(atom_sheilding)
 									if idx_min ==0:
 										atom_num.append(split_line_atom[1])
 										atom_sheilding.append(split_line_sheild[1])
-										#print(atom_num)
-										#print(atom_sheilding)
 							else:
 								atom_num.append(split_line_atom[idx_min])
 								atom_sheilding.append(split_line_sheild[idx_min])
-								#print(atom_num)
-								#print(atom_sheilding)
 				else:
 					atom_num.append(split_line[2].strip().split('\\')[0])
 					atom_sheilding.append(split_line[1].strip())
@@ -108,12 +98,6 @@ def get_exp_data(args,name,w_dir_initial,final_shieldings,conf_idx,conf_sym):
 
 				atom_num.append(calcuate_idx)
 				atom_sheilding.append(split_line[1].strip())
-
-		# for i in range(len(atom_sheilding)):
-		# 	print(atom_num[i],atom_sheilding[i])
-		#
-		# for i in range(len(final_shieldings)):
-		# 	print(final_shieldings[i],conf_idx[i],conf_sym[i])
 
 		return atom_num,atom_sheilding
 
@@ -213,10 +197,6 @@ def calculate_nmr(nmr_log_files,args,log,name,w_dir_fin,w_dir_initial,lot_sp,bs_
 	final_shieldings = np.sum(final_shieldings, axis=0)
 	conf_idx = np.array(conf_idx)
 	conf_sym = np.array(conf_sym)
-
-
-	# for i in range(len(final_shieldings)):
-	# 	print(final_shieldings[i],conf_idx[i],conf_sym[i])
 
 	#getting experimental shiftd for get_atom
 	atom_num_exp,atom_sheilding_exp = get_exp_data(args,name,w_dir_initial,final_shieldings,conf_idx,conf_sym)

@@ -176,7 +176,7 @@ def exp_rules_output(mol,args,log,file,print_error_exp_rules,ob_compat,rdkit_com
 					break
 
 		else:
-			log.write('x  Open Babel is not installed correctly, the exp_rules filter will be disabled')
+			log.write('\nx  Open Babel is not installed correctly, the exp_rules filter will be disabled')
 
 	return passing
 
@@ -194,7 +194,12 @@ def check_geom_filter(mol,mol2,args):
 	mol_conf2 = mol2.GetConformer(0)
 	for bond in mol_bonds:
 		bond_length = rdMolTransforms.GetBondLength(mol_conf,bond[0],bond[1])
-		bond_length2 = rdMolTransforms.GetBondLength(mol_conf2,bond[0],bond[1])
+		try:
+			bond_length2 = rdMolTransforms.GetBondLength(mol_conf2,bond[0],bond[1])
+		except RuntimeError:
+			passing_geom = False
+			break
+
 		if bond_length < bond_length2:
 			smaller_bond = bond_length
 			bigger_bond = bond_length2
@@ -204,6 +209,8 @@ def check_geom_filter(mol,mol2,args):
 
 		if bigger_bond > args.length_criteria*smaller_bond:
 			passing_geom = False
+
+	return passing_geom
 
 # FILTER TO BE APPLIED FOR SMILES
 def filters(mol,args,log):

@@ -4,6 +4,7 @@
 #   	  This file stores all the functions 	    #
 #    used in template based conformer generation	#
 #####################################################.
+
 from rdkit.Chem import AllChem as Chem
 from rdkit.Chem import rdDistGeom, rdMolAlign
 from pyconfort.filter import get_conf_RMS

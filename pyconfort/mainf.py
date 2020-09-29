@@ -147,15 +147,18 @@ def csearch_main(w_dir_initial,dup_data,args,log,start_time):
 			smi = toks[0]
 			smi = check_for_pieces(smi)
 			mol = Chem.MolFromSmiles(smi)
-			clean_args(args,ori_ff,mol,ori_charge)
-			if args.charge_default == 'auto':
-				if not args.metal_complex:
-					args.charge_default = check_charge_smi(smi)
-			if args.prefix == 'None':
-				name = ''.join(toks[1:])
-			else:
-				name = str(args.prefix)+str(i)+'_'+''.join(toks[1:])
-			compute_confs(w_dir_initial,mol,name,args,log,dup_data,counter_for_template,i,start_time)
+			try:
+				clean_args(args,ori_ff,mol,ori_charge)
+				if args.charge_default == 'auto':
+					if not args.metal_complex:
+						args.charge_default = check_charge_smi(smi)
+				if args.prefix == 'None':
+					name = ''.join(toks[1:])
+				else:
+					name = str(args.prefix)+str(i)+'_'+''.join(toks[1:])
+				compute_confs(w_dir_initial,mol,name,args,log,dup_data,counter_for_template,i,start_time)
+			except AttributeError:
+				log.write("\nx  Wrong SMILES string ("+smi+") found (not compatible with RDKit or ANI/xTB if selected)! This compound will be omitted\n")
 
 	# CSV file with one columns SMILES and code_name
 	elif os.path.splitext(args.input)[1] == '.csv':
