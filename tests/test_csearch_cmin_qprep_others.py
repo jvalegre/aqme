@@ -46,7 +46,7 @@ precision_others = 5
 # NOT TRIED     ('Input_files', 'pentane.yaml', 'params_format_test24.yaml', 20, 16, 0, [-5.27175,-4.44184,-3.84858,-1.57172], 5, 3, False, False, False, False), # test yaml
 # NOT TRIED     ('Input_files', 'pentane.yml', 'params_format_test25.yaml', 20, 16, 0, [-5.27175,-4.44184,-3.84858,-1.57172], 5, 3, False, False, False, False), # test yml
 # NOT TRIED     ('Input_files', 'pentane.rtf', 'params_format_test26.yaml', 20, 16, 0, [-5.27175,-4.44184,-3.84858,-1.57172], 5, 3, False, False, False, False), # test rtf
-# NOT SET UP YET     ('Input_files', 'sdf_database.sdf', 'params_format_test27.yaml', 20, 16, 0, [-5.27175,-4.44184,-3.84858,-1.57172], 5, 3, False, False, False, False), # test if all the compounds of the database are used and they have the right filenames
+# NOT SET UP YET, include neutral compounds mixed with charged compounds     ('Input_files', 'sdf_database.sdf', 'params_format_test27.yaml', 20, 16, 0, [-5.27175,-4.44184,-3.84858,-1.57172], 5, 3, False, False, False, False), # test if all the compounds of the database are used and they have the right filenames
     # tests that will check if the code crushes when using combinations of organic molecules and metal complexes
 # MISSING    # ('Multiple', 'pentane_Pd_blank_lines.smi', 'params_comb_test1.yaml', 20, 17, 0, [-5.27175, -4.44184, -3.84858], 0, 1, False, False, False, False), # test pentane + Pd complex with blank lines
     # ('Multiple', 'pentane_Pd.smi', 'params_comb_test2.yaml', 20, 17, 0, [-5.27175, -4.44184, -3.84858], 0, 1, False, False, False, False), # test pentane + Pd complex

@@ -29,8 +29,8 @@ precision_cmin = 5
     ('params_xtb_test4.yaml', 'H           1.56550         0.21490         0.12170', [-5165.02187], 'xtb'), # test with solvent = water
     ('params_xtb_test5.yaml', 'H           1.56490         0.21230         0.11960', [-5161.96243], 'xtb'), # test with accuracy = 100000
     ('params_xtb_test6.yaml', 'H           1.56380         0.21220         0.11950', [-5161.96111], 'xtb'), # test with max_iterations = 1
-    # tests for confSormer generation with ANI
-    ('params_ani_teSst1.yaml', 'H           1.57430         0.20860         0.11690', [-72590.69313], 'ani'), # test with ani_method = ANI1x
+    # tests for conformer generation with ANI
+    ('params_ani_test1.yaml', 'H           1.57430         0.20860         0.11690', [-72590.69313], 'ani'), # test with ani_method = ANI1x
     ('params_ani_test2.yaml', 'H           1.57220         0.20940         0.11750', [-72554.92451], 'ani'), # test with ani_method = ANI1ccx
     ('params_ani_test3.yaml', 'H           1.56290         0.21390         0.12070', [-72590.57106], 'ani'), # test with ani_method = ANI2x
 ])

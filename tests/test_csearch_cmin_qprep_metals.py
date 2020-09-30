@@ -38,6 +38,8 @@ precision_metals = 5
     ('Metal_complexes', 'Rh_squarepyramidal.smi', 'params_Rh_test1.yaml', 10, 6, 0, [250.30172, 250.67941, 253.9259, 254.21842], 0, 1, False, False, 'genecp', ['Rh'], 'squarepyramidal'), # test squarepyramidal with 2 same ligands
     ('Metal_complexes', 'Rh_squarepyramidal.smi', 'params_Rh_test2.yaml', 12, 'nan', 4, [250.30172, 250.67941, 253.9259, 254.21842], 0, 1, True, False, 'genecp', ['Rh'], 'squarepyramidal'), # test SUMM
     ('Metal_complexes', 'Rh_squarepyramidal2.smi', 'params_Rh_test3.yaml', 10, 5, 2, [225.29346, 225.51244, 225.7681], 1, 1, False, False, 'genecp', ['Rh'], 'squarepyramidal'), # test squarepyramidal with 3 same ligands
+    # checks that the program tolerates atoms in the metal option with different hybridizations
+    ('Metal_complexes', 'P_hybrid.smi', 'params_hybrid_test1.yaml', 10, 8, 0, ['NOT ASSIGNED YET!'], 0, 1, False, False, False, False, False), # test squarepyramidal with 3 same ligands
 ])
 
 def test_confgen_metals(folder, smiles, params_file, n_confs, prefilter_confs_rdkit, filter_confs_rdkit, E_confs, charge, multiplicity, dihedral, xTB_ANI1, genecp, metal, template):
@@ -69,6 +71,3 @@ def test_confgen_metals(folder, smiles, params_file, n_confs, prefilter_confs_rd
     # make sure the COM files have the right charge and multiplicity
     assert str(charge_com) == str(charge)
     assert str(multiplicity_com) == str(multiplicity)
-
-# MISSING:
-# xTB with metals

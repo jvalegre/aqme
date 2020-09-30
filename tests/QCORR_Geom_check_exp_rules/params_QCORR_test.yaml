@@ -8,4 +8,4 @@ QCORR : gaussian
 # OPTIONS
 exp_rules : Ir_bidentate_x3
 check_geom : True
-sp : True
+sp : gaussian

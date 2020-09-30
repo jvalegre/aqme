@@ -51,6 +51,23 @@ def test_confgen_exp_rules(folder, smiles, params_file, E_confs_no_rules, E_conf
         assert str(charge) == str(test_charge)
         assert str(com_files) == str(test_com_files)
 
+        if folder == 'Ir_exp_rules':
+            # this part detects the charges that QPREP assigned to the SDF files
+            os.chdir(path_exp_rules+'/Ir_exp_rules/CSEARCH/rdkit')
+
+            outfile = open(smiles+'_rdkit.sdf',"r")
+            outlines = outfile.readlines()
+
+            sdf_charge = 'charge_not_found'
+            for i,line in enumerate(outlines):
+                if line.find('>  <Real charge>  (1)') > -1:
+                    sdf_charge = outlines[i+1]
+                    break
+
+            outfile.close()
+
+            assert str(charge) == str(sdf_charge)
+
     if folder in Pd_rules:
         # readjusting the names of the variables
         sdf_created = E_confs_no_rules

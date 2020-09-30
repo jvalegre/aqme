@@ -44,10 +44,29 @@ def test_analysis_qcorr_exp_rules(folder, params_file):
     assert len(glob.glob('*.out')) == 0
     assert len(glob.glob('*.OUT')) == 0
 
-    # look for paths of the files
+    # look for the LOG files
     os.chdir(path_analysis_qcorr+'/'+folder+'/success/output_files')
     assert len(glob.glob('*.log')) == 1
     os.chdir(path_analysis_qcorr+'/'+folder+'/failed/run_1/exp_rules_filter')
     assert len(glob.glob('*.log')) == 1
     os.chdir(path_analysis_qcorr+'/'+folder+'/failed/run_1/geometry_changed')
     assert len(glob.glob('*.log')) == 2
+
+    # look for the COM files
+    os.chdir(path_analysis_qcorr+'/'+folder+'/success/G16-SP_input_files')
+    assert len(glob.glob('*.com')) == 1
+
+    # this tests that when the last line option for SP is deactivated, the program does not print None in the com file
+    com_file = glob.glob('*.com')[0]
+
+    outfile = open(com_file,"r")
+    outlines = outfile.readlines()
+
+    last_line_found = False
+    for line in outlines:
+        if line.find('None') > -1:
+            last_line_found = True
+
+    assert last_line_found == False
+
+    outfile.close()

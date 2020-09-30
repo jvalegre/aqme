@@ -55,7 +55,7 @@ def remove_data(path, folder, smiles):
         os.chdir(path+'/'+folder+'/'+smiles.split('.')[0])
     all_data = glob.glob('*')
     discard_ext = ['sdf','csv','dat']
-    exceptions = ['charged.csv','charged.sdf','pentane_n_lowest.sdf','Ir_4.sdf','Ir_4.csv']
+    exceptions = ['charged.csv','charged.sdf','pentane_n_lowest.sdf','Ir_4.sdf','Ir_4.csv','Ir_1_charge_0_passes_exp_rules.sdf','Ir_2_charge_1_passes_exp_rules.sdf','Ir_3_charge_1_fails_exp_rules.sdf']
     for _,file in enumerate(all_data):
         if len(file.split('.')) == 1:
             shutil.rmtree(file, ignore_errors=True)

@@ -148,6 +148,7 @@ def test_analysis_dup_sp(folder, file, params_file, type_of_job):
         # test the input files are generate correctly
         os.chdir(path_analysis_dup_sp+'/Analysis/success/G16-SP_input_files/b3lyp-321g')
         files_sp = glob.glob('*.com')
+        # only normal terminations generate COM files for SP
         assert len(files_sp) == 2
         # test for the suffix option
         assert 'CH4_Normal_termination_SPC.com' in files_sp
@@ -168,26 +169,26 @@ def test_analysis_dup_sp(folder, file, params_file, type_of_job):
         assert outlines[line_number3].find(line3) > -1
 
         line4 = 'C 0'
-        line_number4 = 15
+        line_number4 = 13
         assert outlines[line_number4].find(line4) > -1
 
         line5 = '321g'
-        line_number5 = 16
+        line_number5 = 14
         assert outlines[line_number5].find(line5) > -1
 
         line6 = 'H 0'
-        line_number6 = 18
+        line_number6 = 16
         assert outlines[line_number6].find(line6) > -1
 
         line7 = 'LANL2TZ'
-        line_number7 = 19
+        line_number7 = 17
         assert outlines[line_number7].find(line7) > -1
 
         line8 = 'H 0'
-        line_number8 = 22
+        line_number8 = 20
         assert outlines[line_number8].find(line8) > -1
 
         # extra test for final line in SP
         line9 = '-1'
-        line_number9 = 13
+        line_number9 = 23
         assert outlines[line_number9].find(line9) > -1

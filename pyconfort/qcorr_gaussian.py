@@ -498,9 +498,11 @@ def output_analyzer(duplicates,log_files,com_files, w_dir, w_dir_main,lot, bs, b
 					keywords_opt = ''
 					if args.sp == 'gaussian':
 						if genecp == 'genecp' or  genecp == 'gen':
-							keywords_opt = lot_sp+'/'+ genecp+' '+ args.input_for_sp
+							keywords_opt = lot_sp + '/' + genecp
 						else:
-							keywords_opt = lot_sp+'/'+ bs_sp+' '+ args.input_for_sp
+							keywords_opt = lot_sp + '/' + bs_sp
+						if args.set_input_line_sp != 'None':
+							keywords_opt += ' {0}'.format(args.set_input_line_sp)
 						if args.empirical_dispersion_sp != 'None':
 							keywords_opt += ' empiricaldispersion={0}'.format(args.empirical_dispersion_sp)
 						if args.solvent_model_sp != 'gas_phase':
