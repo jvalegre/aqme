@@ -2,7 +2,7 @@
 
 ######################################################.
 # 		        Testing with pytest: 	             #
-#          template number of files tests            #
+#               Miscellaneous tests                  #
 ######################################################.
 
 import os

@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 
 ######################################################.
-# 	        Testing analysis with pytest 	         #
+# 	        Testing QCORR with pytest                #
+#           using the exp_rules filter	             #
 ######################################################.
 
 import os

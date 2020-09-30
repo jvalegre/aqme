@@ -65,10 +65,10 @@ def parser_args():
 	parser.add_argument("--xtb_electronic_temperature", help="Electronic temperature for TB methods", action="store", default=300.0, dest="xtb_electronic_temperature")
 	parser.add_argument("--xtb_max_iterations", help="Numerical accuracy of the xTB calculation", action="store", default=250, dest="xtb_max_iterations")
 
-	#argument for FULLMONTE
+	#arguments for FULLMONTE
 	parser.add_argument("--ewin_sample_fullmonte", action="store",default=2.0, help="energy window to consider conformers for sampling in FULLMONTE (default 2 kcal/mol)", type=float)
 	parser.add_argument("--ewin_fullmonte", action="store",default=5.0, help="energy window to consider conformers for FULLMONTE (default 5 kcal/mol)", type=float)
-	parser.add_argument("--nsteps_fullmonte", action="store",default=100, help="Number of step to consider for FULLMONTE (default 100)", type=int)
+	parser.add_argument("--nsteps_fullmonte", action="store",default=100, help="Number of steps to consider for FULLMONTE (default 100)", type=int)
 	parser.add_argument("--nrot_fullmonte", action="store",default=3, help="Number of diherals to rotate for FULLMONTE (default 3) ", type=int)
 	parser.add_argument("--ang_fullmonte", action="store",default=30, help="Angle to rotate each diheral of for FULLMONTE (default 30)", type=float)
 

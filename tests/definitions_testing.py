@@ -17,7 +17,8 @@ def calc_energy(file):
     readlines = f.readlines()
     for i,line in enumerate(readlines):
         if line.find('>  <Energy>') > -1:
-            energy.append(float(readlines[i+1].split()[0]))
+            energy_value = readlines[i+1].split()[0]
+            energy.append(float(energy_value))
     f.close()
 
     return energy

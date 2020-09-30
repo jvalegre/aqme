@@ -71,7 +71,7 @@ def rotate_dihedral(mol_rot,dih_rot,args,conf,nsteps):
 def generating_conformations_fullmonte(name,args,rotmatches,log,selectedcids_rdkit,outmols,sdwriter,dup_data,dup_data_idx,coord_Map,alg_Map, mol_template):
 
 	##wroking with fullmonte
-	log.write("\n\no  Generation of confomers using FULLMONTE using {0} uniques conformer as starting points".format(len(selectedcids_rdkit)))
+	log.write("\n\no  Generation of confomers using FULLMONTE using {0} unique conformer(s) as starting point(s)".format(len(selectedcids_rdkit)))
 
 	#Writing the conformers as mol objects to sdf
 	sdtemp = Chem.SDWriter(name+'_'+'rdkit'+args.output)

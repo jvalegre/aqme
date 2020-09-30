@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 ######################################################.
-# 	        Testing analysis with pytest 	         #
+# 	        Testing QCORR with pytest 	             #
 ######################################################.
 
 import os
