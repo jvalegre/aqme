@@ -37,10 +37,10 @@ before_install:
   - sudo apt-get update
 
 install:
+  - conda install -c rdkit rdkit
   - conda install -c conda-forge openbabel
   - pip install PyYAML
   - pip install pandas
-  - conda install -c rdkit rdkit
   - pip install pytest
   - python setup.py install
   - pip install progress
@@ -48,7 +48,6 @@ install:
   - pip install codecov
   - pip install ase
   - pip install torch==1.5.0+cpu torchvision==0.6.0+cpu -f https://download.pytorch.org/whl/torch_stable.html
-  # - pip install torchani==2.0 (only if 2.2 doesn't work)
   - pip install torchani==2.2
   - pip install goodvibes
   - pip install cclib
