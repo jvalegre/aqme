@@ -10,8 +10,10 @@ import os
 import pandas as pd
 import subprocess
 import yaml
+import concurrent.futures as futures
+from progress.bar import IncrementalBar
 from rdkit.Chem import AllChem as Chem
-from pyconfort.csearch import check_for_pieces, check_charge_smi, clean_args, compute_confs, com_2_xyz_2_sdf, mol_from_sdf_or_mol_or_mol2
+from pyconfort.csearch import check_for_pieces, check_charge_smi, clean_args, compute_confs, com_2_xyz_2_sdf, mol_from_sdf_or_mol_or_mol2,creation_of_dup_csv,Logger
 from pyconfort.filter import exp_rules_output
 
 from pyconfort.qprep_gaussian import read_energies, write_gaussian_input_file, moving_files, convert_xyz_to_sdf
@@ -25,27 +27,6 @@ from pyconfort.dbstep_conf import calculate_db_parameters,calculate_boltz_and_db
 from pyconfort.nics_conf import calculate_nics_parameters,calculate_boltz_for_nics,calculate_avg_nics
 from pyconfort.cclib_conf import calculate_cclib,calcualte_average_cclib_parameter,calculate_boltz_for_cclib
 #need to and in energy
-
-#class for logging
-class Logger:
-	# Class Logger to writargs.input.split('.')[0] output to a file
-	def __init__(self, filein, append):
-		# Logger to write the output to a file
-		suffix = 'dat'
-		self.log = open('{0}_{1}.{2}'.format(filein, append, suffix), 'w')
-
-	def write(self, message):
-		print(message, end='\n')
-		self.log.write(message+ "\n")
-
-	def fatal(self, message):
-		print(message, end='\n')
-		self.log.write(message + "\n")
-		self.finalize()
-		sys.exit(1)
-
-	def finalize(self):
-		self.log.close()
 
 #load paramters from yaml file
 def load_from_yaml(args,log):
@@ -71,37 +52,6 @@ def load_from_yaml(args,log):
 	except UnboundLocalError:
 		log.write("\no  The specified yaml file containing parameters was not found! Make sure that the valid params file is in the folder where you are running the code.\n")
 
-#creation of csv for csearch
-def creation_of_dup_csv(args):
-	# writing the list of DUPLICATES
-	if args.CSEARCH=='rdkit':
-		if not args.CMIN=='xtb' and not args.CMIN=='ani':
-			dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples', 'RDKit-energy-window', 'RDKit-initial_energy_threshold','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','time (seconds)','Overall charge'])
-		elif args.CMIN=='xtb' and not args.CMIN=='ani':
-			dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples','RDKit-energy-window', 'RDKit-initial_energy_threshold','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','xTB-Initial-samples','xTB-energy-window','xTB-initial_energy_threshold','xTB-RMSD-and-energy-duplicates','xTB-Unique-conformers','time (seconds)','Overall charge'])
-		elif args.CMIN=='ani' and not args.CMIN=='xtb':
-			dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples','RDKit-energy-window', 'RDKit-initial_energy_threshold','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','ANI-Initial-samples','ANI-energy-window','ANI-initial_energy_threshold','ANI-RMSD-and-energy-duplicates','ANI-Unique-conformers','time (seconds)','Overall charge'])
-		elif args.CMIN=='ani' and args.CMIN=='xtb':
-			dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples','RDKit-energy-window', 'RDKit-initial_energy_threshold','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','ANI-Initial-samples','ANI-energy-window','ANI-initial_energy_threshold','ANI-RMSD-and-energy-duplicates','ANI-Unique-conformers','xTB-Initial-samples','xTB-energy-window','xTB-initial_energy_threshold','xTB-RMSD-and-energy-duplicates','xTB-Unique-conformers','time(seconds)','Overall charge'])
-	elif args.CSEARCH=='fullmonte':
-		if not args.CMIN=='xtb' and not args.CMIN=='ani':
-			dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples', 'RDKit-energy-window', 'RDKit-initial_energy_threshold','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','FullMonte-Unique-conformers','time (seconds)','Overall charge'])# ,'FullMonte-conformers','FullMonte-energy-window', 'FullMonte-initial_energy_threshold','FullMonte-RMSD-and-energy-duplicates',
-		elif args.CMIN=='xtb' and not args.CMIN=='ani':
-			dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples', 'RDKit-energy-window', 'RDKit-initial_energy_threshold','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','FullMonte-Unique-conformers','xTB-Initial-samples','xTB-energy-window','xTB-initial_energy_threshold','xTB-RMSD-and-energy-duplicates','xTB-Unique-conformers','time (seconds)','Overall charge']) #'FullMonte-conformers','FullMonte-energy-window', 'FullMonte-initial_energy_threshold','FullMonte-RMSD-and-energy-duplicates',
-		elif args.CMIN=='ani' and not args.CMIN=='xtb':
-			dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples', 'RDKit-energy-window', 'RDKit-initial_energy_threshold','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','FullMonte-Unique-conformers','ANI-Initial-samples','ANI-energy-window','ANI-initial_energy_threshold','ANI-RMSD-and-energy-duplicates','ANI-Unique-conformers','time (seconds)','Overall charge'])#'FullMonte-conformers','FullMonte-energy-window', 'FullMonte-initial_energy_threshold','FullMonte-RMSD-and-energy-duplicates',
-		elif args.CMIN=='ani' and args.CMIN=='xtb':
-			dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples', 'RDKit-energy-window', 'RDKit-initial_energy_threshold','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','FullMonte-Unique-conformers','ANI-Initial-samples','ANI-energy-window','ANI-initial_energy_threshold','ANI-RMSD-and-energy-duplicates','ANI-Unique-conformers','xTB-Initial-samples','xTB-energy-window','xTB-initial_energy_threshold','xTB-RMSD-and-energy-duplicates','xTB-Unique-conformers','time(seconds)','Overall charge']) #'FullMonte-conformers','FullMonte-energy-window', 'FullMonte-initial_energy_threshold','FullMonte-RMSD-and-energy-duplicates',
-	elif args.CSEARCH=='summ':
-		if not args.CMIN=='xtb' and not args.CMIN=='ani':
-			dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples','RDKit-energy-window', 'RDKit-initial_energy_threshold','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','summ-conformers','summ-energy-window', 'summ-initial_energy_threshold','summ-RMSD-and-energy-duplicates','summ-Unique-conformers','time (seconds)','Overall charge'])
-		elif args.CMIN=='xtb' and not args.CMIN=='ani':
-			dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples', 'RDKit-energy-window','RDKit-initial_energy_threshold','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','summ-conformers','summ-energy-window', 'summ-initial_energy_threshold','summ-RMSD-and-energy-duplicates','summ-Unique-conformers','xTB-Initial-samples','xTB-energy-window','xTB-initial_energy_threshold','xTB-RMSD-and-energy-duplicates','xTB-Unique-conformers','time (seconds)','Overall charge'])
-		elif args.CMIN=='ani' and not args.CMIN=='xtb':
-			dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples','RDKit-energy-window', 'RDKit-initial_energy_threshold','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','summ-conformers','summ-energy-window', 'summ-initial_energy_threshold','summ-RMSD-and-energy-duplicates','summ-Unique-conformers','ANI-Initial-samples','ANI-energy-window','ANI-initial_energy_threshold','ANI-RMSD-and-energy-duplicates','ANI-Unique-conformers','time (seconds)','Overall charge'])
-		elif args.CMIN=='ani' and args.CMIN=='xtb':
-			dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples','RDKit-energy-window', 'RDKit-initial_energy_threshold','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','summ-conformers','summ-energy-window', 'summ-initial_energy_threshold','summ-RMSD-and-energy-duplicates','summ-Unique-conformers','ANI-Initial-samples','ANI-energy-window','ANI-initial_energy_threshold','ANI-RMSD-and-energy-duplicates','ANI-Unique-conformers','xTB-Initial-samples','xTB-energy-window','xTB-initial_energy_threshold','xTB-RMSD-and-energy-duplicates','xTB-Unique-conformers','time (seconds)','Overall charge'])
-	return dup_data
 
 #creation of csv for QCORR
 def creation_of_ana_csv(args,duplicates):
@@ -118,124 +68,146 @@ def creation_of_ana_csv(args,duplicates):
 	return ana_data
 
 # main function to generate conformers
-def csearch_main(w_dir_initial,dup_data,args,log,start_time):
+def csearch_main(w_dir_initial,args,log_overall):
 	# input file format specified
 	file_format = os.path.splitext(args.input)[1]
 
 	if file_format not in ['.smi', '.sdf', '.cdx', '.csv','.com','.gjf','.mol','.mol2','.xyz','.txt','.yaml','.yml','.rtf']:
-		log.write("\nx  INPUT FILETYPE NOT CURRENTLY SUPPORTED!")
+		log_overall.write("\nx  INPUT FILETYPE NOT CURRENTLY SUPPORTED!")
 		sys.exit()
 
 	if not os.path.exists(args.input):
-		log.write("\nx  INPUT FILE NOT FOUND!")
+		log_overall.write("\nx  INPUT FILE NOT FOUND!")
 		sys.exit()
 
 	# sets up the chosen force field (this fixes some problems in case MMFF is replaced by UFF)
 	ori_ff = args.ff
 	ori_charge = args.charge_default
 
-	# SMILES input specified
-	smi_derivatives = ['.smi', '.txt', '.yaml', '.yml', '.rtf']
-	if file_format in smi_derivatives:
-		smifile = open(args.input)
-		#used only for template
-		counter_for_template = 0
+	with futures.ProcessPoolExecutor(max_workers=args.cpus) as executor:
+		# Submit a set of asynchronous jobs
+		jobs = []
+		# SMILES input specified
+		smi_derivatives = ['.smi', '.txt', '.yaml', '.yml', '.rtf']
+		if file_format in smi_derivatives:
+			smifile = open(args.input)
 
-		for i, line in enumerate(smifile):
-			toks = line.split()
-			#editing part
-			smi = toks[0]
-			smi = check_for_pieces(smi)
-			mol = Chem.MolFromSmiles(smi)
-			try:
+			for i, line in enumerate(smifile):
+				toks = line.split()
+				#editing part
+				smi = toks[0]
+				smi = check_for_pieces(smi)
+				mol = Chem.MolFromSmiles(smi)
+				try:
+					clean_args(args,ori_ff,mol,ori_charge)
+					if args.charge_default == 'auto':
+						if not args.metal_complex:
+							args.charge_default = check_charge_smi(smi)
+					if args.prefix == 'None':
+						name = ''.join(toks[1:])
+					else:
+						name = str(args.prefix)+str(i)+'_'+''.join(toks[1:])
+
+					job = executor.submit(compute_confs,w_dir_initial,mol,name,args,i)
+					jobs.append(job)
+
+					# compute_confs(w_dir_initial,mol,name,args,log,dup_data,counter_for_template,i,start_time)
+				except AttributeError:
+					log_overall.write("\nx  Wrong SMILES string ("+smi+") found (not compatible with RDKit or ANI/xTB if selected)! This compound will be omitted\n")
+
+
+		# CSV file with one columns SMILES and code_name
+		elif os.path.splitext(args.input)[1] == '.csv':
+			csv_smiles = pd.read_csv(args.input)
+			for i in range(len(csv_smiles)):
+				#assigning names and smi i  each loop
+				smi = csv_smiles.loc[i, 'SMILES']
+				smi = check_for_pieces(smi)
+				mol = Chem.MolFromSmiles(smi)
 				clean_args(args,ori_ff,mol,ori_charge)
 				if args.charge_default == 'auto':
 					if not args.metal_complex:
 						args.charge_default = check_charge_smi(smi)
 				if args.prefix == 'None':
-					name = ''.join(toks[1:])
+					name = csv_smiles.loc[i, 'code_name']
 				else:
-					name = str(args.prefix)+str(i)+'_'+''.join(toks[1:])
-				compute_confs(w_dir_initial,mol,name,args,log,dup_data,counter_for_template,i,start_time)
-			except AttributeError:
-				log.write("\nx  Wrong SMILES string ("+smi+") found (not compatible with RDKit or ANI/xTB if selected)! This compound will be omitted\n")
+					name = 'comp_'+str(i)+'_'+csv_smiles.loc[i, 'code_name']
+				job = executor.submit(compute_confs,w_dir_initial,mol,name,args,i)
+				jobs.append(job)
+				# compute_confs(w_dir_initial,mol,name,args,log,dup_data,counter_for_template,i,start_time)
 
-	# CSV file with one columns SMILES and code_name
-	elif os.path.splitext(args.input)[1] == '.csv':
-		csv_smiles = pd.read_csv(args.input)
-		counter_for_template =0
-		for i in range(len(csv_smiles)):
-			#assigning names and smi i  each loop
-			smi = csv_smiles.loc[i, 'SMILES']
-			smi = check_for_pieces(smi)
-			mol = Chem.MolFromSmiles(smi)
-			clean_args(args,ori_ff,mol,ori_charge)
-			if args.charge_default == 'auto':
-				if not args.metal_complex:
-					args.charge_default = check_charge_smi(smi)
-			if args.prefix == 'None':
-				name = csv_smiles.loc[i, 'code_name']
-			else:
-				name = 'comp_'+str(i)+'_'+csv_smiles.loc[i, 'code_name']
-			compute_confs(w_dir_initial,mol,name,args,log,dup_data,counter_for_template,i,start_time)
+		# CDX file
+		elif os.path.splitext(args.input)[1] == '.cdx':
+			#converting to smiles from chemdraw
+			cmd_cdx = ['obabel', '-icdx', args.input, '-osmi', '-O', 'cdx.smi']
+			subprocess.call(cmd_cdx)
+			smifile = open('cdx.smi',"r")
 
-	# CDX file
-	elif os.path.splitext(args.input)[1] == '.cdx':
-		#converting to smiles from chemdraw
-		cmd_cdx = ['obabel', '-icdx', args.input, '-osmi', '-O', 'cdx.smi']
-		subprocess.call(cmd_cdx)
-		smifile = open('cdx.smi',"r")
-
-		counter_for_template = 0
-		for i, smi in enumerate(smifile):
-			smi = check_for_pieces(smi)
-			mol = Chem.MolFromSmiles(smi)
-			clean_args(args,ori_ff,mol,ori_charge)
-			if args.charge_default == 'auto':
-				if not args.metal_complex:
-					args.charge_default = check_charge_smi(smi)
-			name = 'comp' + str(i)+'_'
-			compute_confs(w_dir_initial,mol,name,args,log,dup_data,counter_for_template,i,start_time)
-
-		smifile.close()
-		os.remove('cdx.smi')
-
-	# COM file
-	elif os.path.splitext(args.input)[1] == '.gjf' or os.path.splitext(args.input)[1] == '.com' or  os.path.splitext(args.input)[1] == '.xyz' :
-		#converting to sdf from comfile to preserve geometry
-		charge_com = com_2_xyz_2_sdf(args)
-		sdffile = os.path.splitext(args.input)[0]+'.sdf'
-		suppl = Chem.SDMolSupplier(sdffile, removeHs=False)
-		name = os.path.splitext(args.input)[0]
-		counter_for_template = 0
-		i=0
-		for mol in suppl:
-			clean_args(args,ori_ff,mol,ori_charge)
-			args.charge_default = charge_com
-			compute_confs(w_dir_initial,mol,name,args,log,dup_data,counter_for_template,i,start_time)
-			i += 1
-
-	# SDF file
-	elif os.path.splitext(args.input)[1] == '.sdf' or os.path.splitext(args.input)[1] == '.mol' or os.path.splitext(args.input)[1] == '.mol2':
-		suppl, IDs, charges = mol_from_sdf_or_mol_or_mol2(args)
-		counter_for_template = 0
-		i=0
-		if os.path.splitext(args.input)[1] == '.sdf':
-			for mol,name,charge_sdf in zip(suppl,IDs,charges):
+			for i, smi in enumerate(smifile):
+				smi = check_for_pieces(smi)
+				mol = Chem.MolFromSmiles(smi)
 				clean_args(args,ori_ff,mol,ori_charge)
-				args.charge_default = charge_sdf
+				if args.charge_default == 'auto':
+					if not args.metal_complex:
+						args.charge_default = check_charge_smi(smi)
+				name = 'comp' + str(i)+'_'
+				job = executor.submit(compute_confs,w_dir_initial,mol,name,args,i)
+				jobs.append(job)
+
+			smifile.close()
+			os.remove('cdx.smi')
+
+		# COM file
+		elif os.path.splitext(args.input)[1] == '.gjf' or os.path.splitext(args.input)[1] == '.com' or  os.path.splitext(args.input)[1] == '.xyz' :
+			#converting to sdf from comfile to preserve geometry
+			charge_com = com_2_xyz_2_sdf(args)
+			sdffile = os.path.splitext(args.input)[0]+'.sdf'
+			suppl = Chem.SDMolSupplier(sdffile, removeHs=False)
+			name = os.path.splitext(args.input)[0]
+			counter_for_template = 0
+			i=0
+			for mol in suppl:
+				clean_args(args,ori_ff,mol,ori_charge)
+				args.charge_default = charge_com
+				job = executor.submit(compute_confs,w_dir_initial,mol,name,args,i)
+				jobs.append(job)
+				i += 1
+
+		# SDF file
+		elif os.path.splitext(args.input)[1] == '.sdf' or os.path.splitext(args.input)[1] == '.mol' or os.path.splitext(args.input)[1] == '.mol2':
+			suppl, IDs, charges = mol_from_sdf_or_mol_or_mol2(args)
+			counter_for_template = 0
+			i=0
+			if os.path.splitext(args.input)[1] == '.sdf':
+				for mol,name,charge_sdf in zip(suppl,IDs,charges):
+					clean_args(args,ori_ff,mol,ori_charge)
+					args.charge_default = charge_sdf
+					job = executor.submit(compute_confs,w_dir_initial,mol,name,args,i)
+					jobs.append(job)
+					i += 1
+			elif os.path.splitext(args.input)[1] == '.mol' or os.path.splitext(args.input)[1] == '.mol2':
+				args.charge_default = charges[0]
+				name = IDs[0]
+				mol = suppl
 				compute_confs(w_dir_initial,mol,name,args,log,dup_data,counter_for_template,i,start_time)
 				i += 1
-		elif os.path.splitext(args.input)[1] == '.mol' or os.path.splitext(args.input)[1] == '.mol2':
-			args.charge_default = charges[0]
-			name = IDs[0]
-			mol = suppl
-			compute_confs(w_dir_initial,mol,name,args,log,dup_data,counter_for_template,i,start_time)
-			i += 1
 
-	if not os.path.isdir(w_dir_initial+'/CSEARCH/csv_files'):
-		os.makedirs(w_dir_initial+'/CSEARCH/csv_files/')
-	dup_data.to_csv(w_dir_initial+'/CSEARCH/csv_files/'+args.input.split('.')[0]+'-CSEARCH-Data.csv',index=False)
+		final_dup_data = creation_of_dup_csv(args)
+		# Process the job results (in submission order) and save the conformers.
+		for i,job in enumerate(jobs):
+			total_data = job.result()
+			frames = [final_dup_data, total_data]
+			final_dup_data = pd.concat(frames)
+
+		if not os.path.isdir(w_dir_initial+'/CSEARCH/csv_files'):
+			os.makedirs(w_dir_initial+'/CSEARCH/csv_files/')
+		final_dup_data.to_csv(w_dir_initial+'/CSEARCH/csv_files/'+args.input.split('.')[0]+'-CSEARCH-Data.csv',index=False)
+
+		# removing temporary files
+		temp_files = ['gfn2.out', 'xTB_opt.traj', 'ANI1_opt.traj', 'wbo', 'xtbrestart','ase.opt','xtb.opt','gfnff_topo']
+		for file in temp_files:
+			if os.path.exists(file):
+				os.remove(file)
 
 #writing gauss main
 def qprep_main(w_dir_initial,args,log):

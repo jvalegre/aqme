@@ -279,7 +279,7 @@ def ewin_filter(sorted_all_cids,cenergy,args,dup_data,dup_data_idx,log,calc_type
 # pre-energy filter for RDKit
 def pre_E_filter(sortedcids,cenergy,args,dup_data,dup_data_idx,log,calc_type):
 	selectedcids_initial, eng_dup =[],-1
-	bar = IncrementalBar('o  Filtering based on energy (pre-filter)', max = len(sortedcids))
+	# bar = IncrementalBar('o  Filtering based on energy (pre-filter)', max = len(sortedcids))
 	for i, conf in enumerate(sortedcids):
 		# This keeps track of whether or not your conformer is unique
 		excluded_conf = False
@@ -296,8 +296,8 @@ def pre_E_filter(sortedcids,cenergy,args,dup_data,dup_data_idx,log,calc_type):
 		if not excluded_conf:
 			if conf not in selectedcids_initial:
 				selectedcids_initial.append(conf)
-		bar.next()
-	bar.finish()
+		# bar.next()
+	# bar.finish()
 
 	if args.verbose:
 		log.write("o  "+str(eng_dup)+ " duplicates removed  pre-energy filter (E < "+str(args.initial_energy_threshold)+" kcal/mol)")
@@ -320,7 +320,7 @@ def pre_E_filter(sortedcids,cenergy,args,dup_data,dup_data_idx,log,calc_type):
 def RMSD_and_E_filter(outmols,selectedcids_initial,cenergy,args,dup_data,dup_data_idx,log,calc_type):
 	if args.verbose:
 		log.write("o  Removing duplicate conformers (RMSD < "+ str(args.rms_threshold)+ " and E difference < "+str(args.energy_threshold)+" kcal/mol)")
-	bar = IncrementalBar('o  Filtering based on energy and RMSD', max = len(selectedcids_initial))
+	# bar = IncrementalBar('o  Filtering based on energy and RMSD', max = len(selectedcids_initial))
 
 	selectedcids,eng_rms_dup = [],-1
 	for i, conf in enumerate(selectedcids_initial):
@@ -346,8 +346,8 @@ def RMSD_and_E_filter(outmols,selectedcids_initial,cenergy,args,dup_data,dup_dat
 		if not excluded_conf:
 			if conf not in selectedcids:
 				selectedcids.append(conf)
-		bar.next()
-	bar.finish()
+		# bar.next()
+	# bar.finish()
 
 	if args.verbose:
 		log.write("o  "+str(eng_rms_dup)+ " duplicates removed (RMSD < "+str(args.rms_threshold)+" / E < "+str(args.energy_threshold)+" kcal/mol)")

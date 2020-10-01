@@ -64,6 +64,7 @@ def parser_args():
 	parser.add_argument("--xtb_accuracy", help="Numerical accuracy of the xTB calculation", action="store", default=1.0, dest="xtb_accuracy")
 	parser.add_argument("--xtb_electronic_temperature", help="Electronic temperature for TB methods", action="store", default=300.0, dest="xtb_electronic_temperature")
 	parser.add_argument("--xtb_max_iterations", help="Numerical accuracy of the xTB calculation", action="store", default=250, dest="xtb_max_iterations")
+	parser.add_argument("--cpus", action="store",default=96, help="Maximum number of CPUs to parallelize on", type=int)
 
 	#arguments for FULLMONTE
 	parser.add_argument("--ewin_sample_fullmonte", action="store",default=2.0, help="energy window to consider conformers for sampling in FULLMONTE (default 2 kcal/mol)", type=float)

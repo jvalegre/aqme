@@ -28,18 +28,17 @@ from __future__ import print_function
 import os
 import time
 from pyconfort.argument_parser import parser_args
-from pyconfort.mainf import csearch_main, exp_rules_main, qprep_main, move_sdf_main, qcorr_gaussian_main,dup_main,graph_main,geom_par_main,nmr_main,energy_main,creation_of_dup_csv,load_from_yaml,Logger,creation_of_ana_csv,dbstep_par_main,nics_par_main,cclib_main
+from pyconfort.mainf import csearch_main, exp_rules_main, qprep_main, move_sdf_main, qcorr_gaussian_main,dup_main,graph_main,geom_par_main,nmr_main,energy_main,load_from_yaml,creation_of_ana_csv,dbstep_par_main,nics_par_main,cclib_main
+from pyconfort.csearch import Logger
 
 def main():
 	# working directory and arguments
 	w_dir_initial = os.getcwd()
 	args = parser_args()
 
-	log = Logger("pyCONFORT", args.output_name)
-	#time
-	start_time = time.time()
+	log_overall = Logger("pyCONFORT", args.output_name)
 	#if needed to load from a yaml file
-	load_from_yaml(args,log)
+	load_from_yaml(args,log_overall)
 
 	#setting variable if needed
 	for i,_ in enumerate(args.basis_set):
@@ -51,9 +50,10 @@ def main():
 
 	#CSEARCH AND CMIN
 	if args.CSEARCH=='rdkit' or args.CSEARCH=='summ' or args.CSEARCH=='fullmonte':
-		#creation of csv to write dup data
-		dup_data = creation_of_dup_csv(args)
-		csearch_main(w_dir_initial,dup_data,args,log,start_time)
+		start_time_overall = time.time()
+		csearch_main(w_dir_initial,args,log_overall)
+		if args.time:
+			log_overall.write("\n All molecules execution time: %s seconds" % (round(time.time() - start_time_overall,2)))
 		os.chdir(w_dir_initial)
 
 	#applying rules to discard certain conformers based on rules that the user define
@@ -61,12 +61,12 @@ def main():
 		exp_rules_active = True
 		if args.QCORR=='gaussian':
 			exp_rules_active = False
-		exp_rules_main(args,log,exp_rules_active)
+		exp_rules_main(args,log_overall,exp_rules_active)
 		os.chdir(w_dir_initial)
 
 	#QPREP
 	if args.QPREP=='gaussian' or args.QPREP=='orca':
-		qprep_main(w_dir_initial,args,log)
+		qprep_main(w_dir_initial,args,log_overall)
 		os.chdir(w_dir_initial)
 
 	if args.CSEARCH=='rdkit' or args.CSEARCH=='summ' or args.CSEARCH=='fullmonte':
@@ -76,43 +76,43 @@ def main():
 
 	#QCORR
 	if args.QCORR=='gaussian':
-		log.write("\no  Writing analysis of output files in respective folders\n")
+		log_overall.write("\no  Writing analysis of output files in respective folders\n")
 		# main part of the duplicate function
 		if args.dup:
 			try:
 				import goodvibes
-				duplicates = dup_main(args, log, w_dir_initial)
+				duplicates = dup_main(args, log_overall, w_dir_initial)
 				os.chdir(w_dir_initial)
 			except (ModuleNotFoundError,AttributeError):
-				log.write("\nx  GoodVibes is not installed as a module (pip or conda), the duplicate option will be disabled in QCORR\n")
+				log_overall.write("\nx  GoodVibes is not installed as a module (pip or conda), the duplicate option will be disabled in QCORR\n")
 		else:
 			duplicates = False
 
 		# main part of the output file analyzer for errors/imag freqs
-		qcorr_gaussian_main(duplicates,w_dir_initial,args,log)
+		qcorr_gaussian_main(duplicates,w_dir_initial,args,log_overall)
 		os.chdir(w_dir_initial)
 
 	#QPRED
 	if args.QPRED=='nmr':
-		nmr_main(args,log,w_dir_initial)
+		nmr_main(args,log_overall,w_dir_initial)
 	if args.QPRED=='energy':
-		energy_main(args,log,w_dir_initial)
+		energy_main(args,log_overall,w_dir_initial)
 	if args.QPRED=='dbstep':
-		dbstep_par_main(args,log,w_dir_initial)
+		dbstep_par_main(args,log_overall,w_dir_initial)
 	if args.QPRED=='nics':
-		nics_par_main(args,log,w_dir_initial)
+		nics_par_main(args,log_overall,w_dir_initial)
 	if args.QPRED=='cclib-json':
-		cclib_main(args,log,w_dir_initial)
+		cclib_main(args,log_overall,w_dir_initial)
 	os.chdir(w_dir_initial)
 
 	#QSTAT
 	if args.QSTAT=='descp':
-		geom_par_main(args,log,w_dir_initial)
+		geom_par_main(args,log_overall,w_dir_initial)
 	if args.QSTAT=='graph':
-		graph_main(args,log,w_dir_initial)
+		graph_main(args,log_overall,w_dir_initial)
 	os.chdir(w_dir_initial)
 
-	log.finalize()
+	log_overall.finalize()
 
 	try:
 		os.rename('pyCONFORT_output.dat','pyCONFORT_{0}.dat'.format(args.output_name))

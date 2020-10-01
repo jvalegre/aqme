@@ -236,10 +236,10 @@ def mult_min(name, args, program,log,dup_data,dup_data_idx):
 		if args.CMIN=='ani':
 			log.write("\n\no  Multiple minimization of "+ name+args.output+ " with ANI ("+args.ani_method+")")
 
-	bar = IncrementalBar('o  Minimizing', max = len(inmols))
+	# bar = IncrementalBar('o  Minimizing', max = len(inmols))
 
 	for i,mol in enumerate(inmols):
-		bar.next()
+		# bar.next()
 		if mol is not None:
 			# optimize this structure and record the energy
 			mol,energy,ani_incompatible = optimize(mol, args, program,log,dup_data,dup_data_idx)

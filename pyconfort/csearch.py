@@ -11,6 +11,7 @@ import sys
 import subprocess
 import time
 import numpy as np
+import pandas as pd
 from rdkit.Chem import AllChem as Chem
 from rdkit.Chem import rdMolTransforms, PropertyMol, rdDistGeom, rdMolAlign, Lipinski
 from rdkit.Geometry import Point3D
@@ -23,8 +24,63 @@ from pyconfort.tmbuild import template_embed
 from pyconfort.cmin import mult_min, rules_get_charge, atom_groups
 from pyconfort.fullmonte import generating_conformations_fullmonte, minimize_rdkit_energy,realign_mol
 
+
 hartree_to_kcal = 627.509
 possible_atoms = possible_atoms()
+
+
+#class for logging
+class Logger:
+	# Class Logger to writargs.input.split('.')[0] output to a file
+	def __init__(self, filein, append):
+		# Logger to write the output to a file
+		suffix = 'dat'
+		self.log = open('{0}_{1}.{2}'.format(filein, append, suffix), 'w')
+
+	def write(self, message):
+		#print(message, end='\n')
+		self.log.write(message+ "\n")
+
+	def fatal(self, message):
+		#print(message, end='\n')
+		self.log.write(message + "\n")
+		self.finalize()
+		sys.exit(1)
+
+	def finalize(self):
+		self.log.close()
+
+#creation of csv for csearch
+def creation_of_dup_csv(args):
+	# writing the list of DUPLICATES
+	if args.CSEARCH=='rdkit':
+		if not args.CMIN=='xtb' and not args.CMIN=='ani':
+			dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples', 'RDKit-energy-window', 'RDKit-initial_energy_threshold','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','time (seconds)','Overall charge'])
+		elif args.CMIN=='xtb' and not args.CMIN=='ani':
+			dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples','RDKit-energy-window', 'RDKit-initial_energy_threshold','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','xTB-Initial-samples','xTB-energy-window','xTB-initial_energy_threshold','xTB-RMSD-and-energy-duplicates','xTB-Unique-conformers','time (seconds)','Overall charge'])
+		elif args.CMIN=='ani' and not args.CMIN=='xtb':
+			dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples','RDKit-energy-window', 'RDKit-initial_energy_threshold','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','ANI-Initial-samples','ANI-energy-window','ANI-initial_energy_threshold','ANI-RMSD-and-energy-duplicates','ANI-Unique-conformers','time (seconds)','Overall charge'])
+		elif args.CMIN=='ani' and args.CMIN=='xtb':
+			dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples','RDKit-energy-window', 'RDKit-initial_energy_threshold','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','ANI-Initial-samples','ANI-energy-window','ANI-initial_energy_threshold','ANI-RMSD-and-energy-duplicates','ANI-Unique-conformers','xTB-Initial-samples','xTB-energy-window','xTB-initial_energy_threshold','xTB-RMSD-and-energy-duplicates','xTB-Unique-conformers','time(seconds)','Overall charge'])
+	elif args.CSEARCH=='fullmonte':
+		if not args.CMIN=='xtb' and not args.CMIN=='ani':
+			dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples', 'RDKit-energy-window', 'RDKit-initial_energy_threshold','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','FullMonte-Unique-conformers','time (seconds)','Overall charge'])# ,'FullMonte-conformers','FullMonte-energy-window', 'FullMonte-initial_energy_threshold','FullMonte-RMSD-and-energy-duplicates',
+		elif args.CMIN=='xtb' and not args.CMIN=='ani':
+			dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples', 'RDKit-energy-window', 'RDKit-initial_energy_threshold','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','FullMonte-Unique-conformers','xTB-Initial-samples','xTB-energy-window','xTB-initial_energy_threshold','xTB-RMSD-and-energy-duplicates','xTB-Unique-conformers','time (seconds)','Overall charge']) #'FullMonte-conformers','FullMonte-energy-window', 'FullMonte-initial_energy_threshold','FullMonte-RMSD-and-energy-duplicates',
+		elif args.CMIN=='ani' and not args.CMIN=='xtb':
+			dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples', 'RDKit-energy-window', 'RDKit-initial_energy_threshold','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','FullMonte-Unique-conformers','ANI-Initial-samples','ANI-energy-window','ANI-initial_energy_threshold','ANI-RMSD-and-energy-duplicates','ANI-Unique-conformers','time (seconds)','Overall charge'])#'FullMonte-conformers','FullMonte-energy-window', 'FullMonte-initial_energy_threshold','FullMonte-RMSD-and-energy-duplicates',
+		elif args.CMIN=='ani' and args.CMIN=='xtb':
+			dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples', 'RDKit-energy-window', 'RDKit-initial_energy_threshold','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','FullMonte-Unique-conformers','ANI-Initial-samples','ANI-energy-window','ANI-initial_energy_threshold','ANI-RMSD-and-energy-duplicates','ANI-Unique-conformers','xTB-Initial-samples','xTB-energy-window','xTB-initial_energy_threshold','xTB-RMSD-and-energy-duplicates','xTB-Unique-conformers','time(seconds)','Overall charge']) #'FullMonte-conformers','FullMonte-energy-window', 'FullMonte-initial_energy_threshold','FullMonte-RMSD-and-energy-duplicates',
+	elif args.CSEARCH=='summ':
+		if not args.CMIN=='xtb' and not args.CMIN=='ani':
+			dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples','RDKit-energy-window', 'RDKit-initial_energy_threshold','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','summ-conformers','summ-energy-window', 'summ-initial_energy_threshold','summ-RMSD-and-energy-duplicates','summ-Unique-conformers','time (seconds)','Overall charge'])
+		elif args.CMIN=='xtb' and not args.CMIN=='ani':
+			dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples', 'RDKit-energy-window','RDKit-initial_energy_threshold','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','summ-conformers','summ-energy-window', 'summ-initial_energy_threshold','summ-RMSD-and-energy-duplicates','summ-Unique-conformers','xTB-Initial-samples','xTB-energy-window','xTB-initial_energy_threshold','xTB-RMSD-and-energy-duplicates','xTB-Unique-conformers','time (seconds)','Overall charge'])
+		elif args.CMIN=='ani' and not args.CMIN=='xtb':
+			dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples','RDKit-energy-window', 'RDKit-initial_energy_threshold','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','summ-conformers','summ-energy-window', 'summ-initial_energy_threshold','summ-RMSD-and-energy-duplicates','summ-Unique-conformers','ANI-Initial-samples','ANI-energy-window','ANI-initial_energy_threshold','ANI-RMSD-and-energy-duplicates','ANI-Unique-conformers','time (seconds)','Overall charge'])
+		elif args.CMIN=='ani' and args.CMIN=='xtb':
+			dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples','RDKit-energy-window', 'RDKit-initial_energy_threshold','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','summ-conformers','summ-energy-window', 'summ-initial_energy_threshold','summ-RMSD-and-energy-duplicates','summ-Unique-conformers','ANI-Initial-samples','ANI-energy-window','ANI-initial_energy_threshold','ANI-RMSD-and-energy-duplicates','ANI-Unique-conformers','xTB-Initial-samples','xTB-energy-window','xTB-initial_energy_threshold','xTB-RMSD-and-energy-duplicates','xTB-Unique-conformers','time (seconds)','Overall charge'])
+	return dup_data
 
 #com to xyz to sdf for obabel
 def com_2_xyz_2_sdf(args,start_point=None):
@@ -195,7 +251,14 @@ def load_template(args):
 	return file_template
 
 #function to start conf generation
-def compute_confs(w_dir_initial,mol, name,args,log,dup_data,counter_for_template,i,start_time):
+def compute_confs(w_dir_initial, mol, name, args,i):
+	try:
+		os.makedirs(w_dir_initial+'/CSEARCH/dat_files')
+	except OSError:
+		if os.path.isdir(w_dir_initial+'/CSEARCH/dat_files'):
+			pass
+
+	log = Logger(w_dir_initial+'/CSEARCH/dat_files/'+name, args.output_name)
 	# Converts each line to a rdkit mol object
 	if args.verbose:
 		log.write("   -> Input Molecule {} is {}".format(i, Chem.MolToSmiles(mol)))
@@ -213,18 +276,24 @@ def compute_confs(w_dir_initial,mol, name,args,log,dup_data,counter_for_template
 				mol_objects_from_template, name_mol, coord_Map, alg_Map, mol_template = template_embed(mol,temp,name,args,log)
 				for j,_ in enumerate(mol_objects_from_template):
 					mol_objects.append([mol_objects_from_template[j],name_mol[j],coord_Map[j],alg_Map[j],mol_template[j]])
+				total_data = creation_of_dup_csv(args)
 				for [mol_object, name_mol, coord_Map, alg_Map, mol_template] in mol_objects:
-					status = conformer_generation(mol_object,name_mol,start_time,args,log,dup_data,counter_for_template,coord_Map,alg_Map,mol_template)
-					counter_for_template += 1
+					data = conformer_generation(mol_object,name_mol,args,log,coord_Map,alg_Map,mol_template)
+					frames = [total_data, data]
+					total_data = pd.concat(frames)
 			else:
 				log.write("x  Cannot use templates for complexes involving more than 1 metal or for organic molecueles.")
 		else:
-			conformer_generation(mol,name,start_time,args,log,dup_data,i)
+			total_data = conformer_generation(mol,name,args,log)
 	else:
-		 conformer_generation(mol,name,start_time,args,log,dup_data,i)
+		 total_data = conformer_generation(mol,name,args,log)
+	return total_data
 
 # FUCNTION WORKING WITH MOL OBJECT TO CREATE CONFORMERS
-def conformer_generation(mol,name,start_time,args,log,dup_data,dup_data_idx,coord_Map=None,alg_Map=None,mol_template=None):
+def conformer_generation(mol,name,args,log,coord_Map=None,alg_Map=None,mol_template=None):
+	dup_data = creation_of_dup_csv(args)
+	dup_data_idx = 0
+	start_time = time.time()
 	valid_structure = filters(mol, args,log)
 	if valid_structure:
 		if args.verbose:
@@ -254,15 +323,11 @@ def conformer_generation(mol,name,start_time,args,log,dup_data,dup_data_idx,coor
 	else:
 		log.write("\nx  ERROR: The structure is not valid")
 
-	# removing temporary files
-	temp_files = ['gfn2.out', 'xTB_opt.traj', 'ANI1_opt.traj', 'wbo', 'xtbrestart','ase.opt','xtb.opt','gfnff_topo']
-	for file in temp_files:
-		if os.path.exists(file):
-			os.remove(file)
-
 	if args.time:
 		log.write("\n Execution time: %s seconds" % (round(time.time() - start_time,2)))
 		dup_data.at[dup_data_idx, 'time (seconds)'] = round(time.time() - start_time,2)
+
+	return dup_data
 
 # DETECTS INITIAL NUMBER OF SAMPLES AUTOMATICALLY
 def auto_sampling(mult_factor,mol,args,log):
@@ -353,7 +418,7 @@ def embed_conf(mol,initial_confs,args,log,coord_Map,alg_Map, mol_template):
 # minimization and E calculation with RDKit after embeding
 def min_and_E_calc(mol,cids,args,log,coord_Map,alg_Map,mol_template):
 	cenergy,outmols = [],[]
-	bar = IncrementalBar('o  Minimizing', max = len(cids))
+	#bar = IncrementalBar('o  Minimizing', max = len(cids))
 	for _, conf in enumerate(cids):
 		if coord_Map is None and alg_Map is None and mol_template is None:
 			GetFF = minimize_rdkit_energy(mol,conf,args,log)
@@ -368,8 +433,8 @@ def min_and_E_calc(mol,cids,args,log,coord_Map,alg_Map,mol_template):
 		# with the energies of the parent mol objects. We measured the computing time and it's the same as using only 1 parent mol object with 10 conformers, but we couldn'temp SetProp correctly
 		pmol = PropertyMol.PropertyMol(mol)
 		outmols.append(pmol)
-		bar.next()
-	bar.finish()
+		#bar.next()
+	#bar.finish()
 	return outmols,cenergy
 
 # minimizes, gets the energy and filters RDKit conformers after embeding
@@ -409,9 +474,9 @@ def min_after_embed(mol,cids,name,initial_confs,rotmatches,dup_data,dup_data_idx
 		n_confs = int(len(selectedcids_rdkit) * (360 / args.degree) ** len(rotmatches))
 		if args.verbose and len(rotmatches) != 0:
 			log.write("\n\no  Systematic generation of "+ str(n_confs)+ " confomers")
-			bar = IncrementalBar('o  Generating conformations based on dihedral rotation', max = len(selectedcids_rdkit))
-		else:
-			bar = IncrementalBar('o  Writing unique conformers into an sdf file', max = len(selectedcids_rdkit))
+			#bar = IncrementalBar('o  Generating conformations based on dihedral rotation', max = len(selectedcids_rdkit))
+		# else:
+		# 	bar = IncrementalBar('o  Writing unique conformers into an sdf file', max = len(selectedcids_rdkit))
 
 		total = 0
 		for conf in selectedcids_rdkit:
@@ -420,8 +485,8 @@ def min_after_embed(mol,cids,name,initial_confs,rotmatches,dup_data,dup_data_idx
 				for m in rotmatches:
 					rdMolTransforms.SetDihedralDeg(outmols[conf].GetConformer(conf),*m,180.0)
 			total += genConformer_r(outmols[conf], conf, 0, rotmatches, args.degree, sdwriter ,args,outmols[conf].GetProp('_Name'),log)
-			bar.next()
-		bar.finish()
+			# bar.next()
+		# bar.finish()
 		if args.verbose and len(rotmatches) != 0:
 			log.write("o  %d total conformations generated"%total)
 		status = 1
