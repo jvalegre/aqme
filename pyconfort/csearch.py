@@ -377,9 +377,17 @@ def min_after_embed(mol,cids,name,initial_confs,rotmatches,dup_data,dup_data_idx
 	# gets optimized mol objects and energies
 	outmols,cenergy = min_and_E_calc(mol,cids,args,log,coord_Map,alg_Map,mol_template)
 
+	# writing charges after RDKIT
+	if os.path.splitext(args.input)[1] == '.cdx' or os.path.splitext(args.input)[1] == '.smi' or os.path.splitext(args.input)[1] == '.csv':
+		args.charge = rules_get_charge(mol,args,log)
+		dup_data.at[dup_data_idx, 'Overall charge'] = np.sum(args.charge)
+	else:
+		dup_data.at[dup_data_idx, 'Overall charge'] = args.charge_default
+
 	for i, cid in enumerate(cids):
 		outmols[cid].SetProp('_Name', name +' '+ str(i+1))
 		outmols[cid].SetProp('Energy', str(cenergy[cid]))
+		outmols[cid].SetProp('Real charge', str(dup_data.at[dup_data_idx, 'Overall charge']))
 
 	# sorts the energies
 	cids = list(range(len(outmols)))
@@ -395,13 +403,6 @@ def min_after_embed(mol,cids,name,initial_confs,rotmatches,dup_data,dup_data_idx
 
 	# filter based on energy and RMSD
 	selectedcids_rdkit = RMSD_and_E_filter(outmols,selectedcids_initial_rdkit,cenergy,args,dup_data,dup_data_idx,log,'rdkit')
-
-	# writing charges after RDKIT
-	if os.path.splitext(args.input)[1] == '.cdx' or os.path.splitext(args.input)[1] == '.smi' or os.path.splitext(args.input)[1] == '.csv':
-		args.charge = rules_get_charge(mol,args,log)
-		dup_data.at[dup_data_idx, 'Overall charge'] = np.sum(args.charge)
-	else:
-		dup_data.at[dup_data_idx, 'Overall charge'] = args.charge_default
 
 	if args.CSEARCH=='summ' or args.CSEARCH=='rdkit':
 		# now exhaustively drive torsions of selected conformers
