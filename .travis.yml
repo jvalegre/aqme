@@ -37,7 +37,7 @@ before_install:
   - sudo apt-get update
 
 install:
-  - conda install -c openbabel openbabel==2.4.1
+  - conda install -c openbabel openbabel==3.0.0
   - pip install PyYAML==5.3.1
   - pip install pandas==1.0.3
   - conda install -c rdkit rdkit=2020.03.2.0

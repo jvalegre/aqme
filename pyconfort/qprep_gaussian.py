@@ -413,17 +413,17 @@ def write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args, log, 
 
 		for file in com_files:
 			ecp_list,ecp_genecp_atoms,ecp_gen_atoms = [],False,False
+			read_lines = open(file,"r").readlines()
+			rename_file_name = rename_file_and_charge_chk_change(read_lines,file,args,charge_com)
+			read_lines = open(file,"r").readlines()
+
+			# Detect if there are atoms to use genecp or not (to use gen)
+			ATOMTYPES = []
+			for i in range(4,len(read_lines)):
+				if read_lines[i].split(' ')[0] not in ATOMTYPES and read_lines[i].split(' ')[0] in possible_atoms:
+					ATOMTYPES.append(read_lines[i].split(' ')[0])
+
 			if genecp =='genecp' or genecp == 'gen' or args.last_line_for_input != 'None':
-				read_lines = open(file,"r").readlines()
-				rename_file_name = rename_file_and_charge_chk_change(read_lines,file,args,charge_com)
-				read_lines = open(file,"r").readlines()
-
-				# Detect if there are atoms to use genecp or not (to use gen)
-				ATOMTYPES = []
-				for i in range(4,len(read_lines)):
-					if read_lines[i].split(' ')[0] not in ATOMTYPES and read_lines[i].split(' ')[0] in possible_atoms:
-						ATOMTYPES.append(read_lines[i].split(' ')[0])
-
 				# write genecp/gen part
 				type_gen = 'qprep'
 				if args.QPREP == 'gaussian':
@@ -457,18 +457,15 @@ def write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args, log, 
 				os.remove(rename_file_name)
 				os.rename(file,rename_file_name)
 
-
 			if args.QPREP == 'orca':
 
 				# define auxiliary atoms
 				ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp,orca_aux_section = check_for_gen_or_genecp(ATOMTYPES,args,'analysis','orca')
 
-				read_lines = open(file,"r").readlines()
-
 				rename_file_name = rename_file_and_charge_chk_change(read_lines,file,args,charge_com)
-
+				
 				#create input file
-				orca_file_gen(read_lines,rename_file_name,bs,lot,genecp,args.aux_atoms_orca,args.aux_basis_set_genecp_atoms[0],args.aux_fit_genecp_atoms[0],charge_com,args.mult,orca_aux_section,args,args.set_input_line,args.solvent_model,args.solvent_name,args.cpcm_input,args.orca_scf_iters,args.mdci_orca,args.print_mini_orca)
+				orca_file_gen(read_lines,rename_file_name,bs,lot,genecp,args.aux_atoms_orca,args.aux_basis_set_genecp_atoms,args.aux_fit_genecp_atoms,charge_com,args.mult,orca_aux_section,args,args.set_input_line,args.solvent_model,args.solvent_name,args.cpcm_input,args.orca_scf_iters,args.mdci_orca,args.print_mini_orca)
 
 			# submitting the input file on a HPC
 			if args.qsub:

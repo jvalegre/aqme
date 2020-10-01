@@ -328,8 +328,9 @@ def output_to_mol(file,format,mol_name):
 	ob_compat = True
 	rdkit_compat = True
 	try:
-		from openbabel import openbabel as ob
+		import openbabel as ob
 	except (ModuleNotFoundError,AttributeError):
+		log.write('\nx  Open Babel is not installed correctly, the exp_rules filter will be disabled')
 		ob_compat = False
 	try:
 		from rdkit.Chem import AllChem as Chem
@@ -405,7 +406,8 @@ def output_analyzer(duplicates,log_files,com_files, w_dir, w_dir_main,lot, bs, b
 				try:
 					mol,ob_compat,rdkit_compat = output_to_mol(file,'log',file)
 					print_error_exp_rules=False
-					passing_rules = exp_rules_output(mol,args,log,file,print_error_exp_rules,ob_compat,rdkit_compat)
+					if ob_compat and rdkit_compat:
+						passing_rules = exp_rules_output(mol,args,log,file,print_error_exp_rules,ob_compat,rdkit_compat)
 					os.remove(file.split('.')[0]+'.mol')
 				except AttributeError:
 					valid_mol_gen = False

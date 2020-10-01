@@ -73,6 +73,8 @@ def parser_args():
 	parser.add_argument("--ang_fullmonte", action="store",default=30, help="Angle to rotate each diheral of for FULLMONTE (default 30)", type=float)
 
 	#arguments for QPREP
+	parser.add_argument("--nprocs", help="Number of processors for the DFT calculations", default=24, type=int, dest="nprocs")
+	parser.add_argument("--mem", help="Memory for the DFT calculations (i) Gaussian: total memory; (ii) ORCA: memory per processor", default="96GB", type=str, dest="mem")
 	parser.add_argument("-l", "--level_of_theory",help="Level of Theory", default=['wb97xd'], dest="level_of_theory", type=str, nargs='*')
 	parser.add_argument("--basis_set",  help="Basis Set", default=['6-31g*'], dest="basis_set", type=str, nargs='*')
 	parser.add_argument("--basis_set_genecp_atoms",default=[], help="Basis Set genecp/gen: Can specify only one as basis_set", dest="basis_set_genecp_atoms", type=str, nargs='?')
@@ -80,7 +82,7 @@ def parser_args():
 	parser.add_argument("--aux_basis_set_genecp_atoms",default=[], help="Auxiliary basis set for genecp/gen in ORCA", dest="aux_basis_set_genecp_atoms", type=str, nargs='?')
 	parser.add_argument("--aux_fit_genecp_atoms",default=[], help="Fitting for the auxiliary basis set in ORCA (i.e. ['def2-TZVPP/C'])", dest="aux_fit_genecp_atoms", type=str, nargs='?')
 	parser.add_argument("--cpcm_input",default=[], help="Additional lines for ORCA input files in the cpcm section", dest="cpcm_input", type=str, nargs='?')
-	parser.add_argument("--orca_scf_iters",default=[], help="Number of SCF iterations in ORCA", dest="orca_scf_iters", type=str, nargs='?')
+	parser.add_argument("--orca_scf_iters",default=500, help="Number of SCF iterations in ORCA", dest="orca_scf_iters", type=str, nargs='?')
 	parser.add_argument("--mdci_orca",default='None', help="mdci section in ORCA", dest="mdci_orca", type=str, nargs='?')
 	parser.add_argument("--print_mini_orca",action="store_true",default=True, help="Option to print 'mini' (reduced outputs) in ORCA")
 	parser.add_argument("--set_input_line",  help="(i) keywords used in Gaussian input files (overiding opt and freq) or (ii) additional keywords for the ORCA input line", default="None", dest="set_input_line")
@@ -94,10 +96,8 @@ def parser_args():
 	parser.add_argument("--lowest_n", action="store_true", default=False, help="Lowest Number of conformers to write in Gaussian")
 	parser.add_argument("--energy_threshold_for_gaussian", help="Cut-off for considering sampled conformers in Gaussian inputs", default="100.0", type=float, dest="energy_threshold_for_gaussian")
 	parser.add_argument("--empirical_dispersion",  help="Type of dispersion in Gaussian", default="None", dest="empirical_dispersion", type=str)
-	parser.add_argument("--solvent_model",  help="Type of solvent model in Gaussian", default="gas_phase", dest="solvent_model", type=str)
-	parser.add_argument("--solvent_name",  help="Name of the solvent in Gaussian", default="Acetonitrile", dest="solvent_name", type=str)
-	parser.add_argument("--nprocs", help="Number of processors for the DFT calculations", default=24, type=int, dest="nprocs")
-	parser.add_argument("--mem", help="Memory for the DFT calculations (i) Gaussian: total memory; (ii) ORCA: memory per processor", default="96GB", type=str, dest="mem")
+	parser.add_argument("--solvent_model",  help="Type of solvent model in Gaussian and ORCA", default="gas_phase", dest="solvent_model", type=str)
+	parser.add_argument("--solvent_name",  help="Name of the solvent in Gaussian and ORCA", default="Acetonitrile", dest="solvent_name", type=str)
 	parser.add_argument("--chk", action="store_true", default=False, help="Create .chk files for Gaussian")
 	parser.add_argument("--last_line_for_input",  help="Last input line for Gaussian", default="None", dest="last_line_for_input", type=str)
 

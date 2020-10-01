@@ -21,7 +21,7 @@ def set_metal_atomic_number(mol,args):
 
 # RULES TO GET EXPERIMENTAL CONFORMERS
 def exp_rules_output(mol,args,log,file,print_error_exp_rules,ob_compat,rdkit_compat):
-	if args.exp_rules == 'Ir_bidentate_x3' and rdkit_compat:
+	if args.exp_rules == 'Ir_bidentate_x3':
 		passing = True
 		ligand_links = []
 		atom_indexes = []
@@ -111,72 +111,68 @@ def exp_rules_output(mol,args,log,file,print_error_exp_rules,ob_compat,rdkit_com
 		else:
 			passing = False
 
-	elif rdkit_compat:
-		if ob_compat:
-			for rule in args.exp_rules:
-				passing = True
-				try:
-					atoms_filter = rule.split(',')[0].split('-')
-					angle_rules = rule.split(',')[1]
-				except IndexError:
-					log.write('x  The exp_rules parameter(s) was not correctly defined, this filter will be turned off')
-					break
-				# the elements of this initial list will be replaced by the corresponding atom id numebrs
-				atom_idx = ['ATOM1','ATOM2','ATOM3']
+	else:
+		for rule in args.exp_rules:
+			passing = True
+			try:
+				atoms_filter = rule.split(',')[0].split('-')
+				angle_rules = rule.split(',')[1]
+			except IndexError:
+				log.write('x  The exp_rules parameter(s) was not correctly defined, this filter will be turned off')
+				break
+			# the elements of this initial list will be replaced by the corresponding atom id numebrs
+			atom_idx = ['ATOM1','ATOM2','ATOM3']
 
-				find_angle = 0
-				incompatibility = False
-				for atom in mol.GetAtoms():
-					# count matches
-					neigh_count_first = 0
-					neigh_count_second = 0
-					# Finds the metal atom and gets the atom types and indexes of all its neighbours
-					if atom.GetSymbol() == atoms_filter[1]:
-						# idx of the central atom
-						atom_idx[1] = atom.GetIdx()
-						for x in atom.GetNeighbors():
-							if x.GetSymbol() == atoms_filter[0] or x.GetSymbol() == atoms_filter[2]:
-								# this ensures that both neighbours are used
-								if x.GetSymbol() == atoms_filter[0] and x.GetSymbol() == atoms_filter[2]:
-									if neigh_count_first <= neigh_count_second:
-										neigh_count_first += 1
-										atom_idx[0] = x.GetIdx()
-									else:
-										neigh_count_second += 1
-										atom_idx[2] = x.GetIdx()
-								elif x.GetSymbol() == atoms_filter[0]:
+			find_angle = 0
+			incompatibility = False
+			for atom in mol.GetAtoms():
+				# count matches
+				neigh_count_first = 0
+				neigh_count_second = 0
+				# Finds the metal atom and gets the atom types and indexes of all its neighbours
+				if atom.GetSymbol() == atoms_filter[1]:
+					# idx of the central atom
+					atom_idx[1] = atom.GetIdx()
+					for x in atom.GetNeighbors():
+						if x.GetSymbol() == atoms_filter[0] or x.GetSymbol() == atoms_filter[2]:
+							# this ensures that both neighbours are used
+							if x.GetSymbol() == atoms_filter[0] and x.GetSymbol() == atoms_filter[2]:
+								if neigh_count_first <= neigh_count_second:
 									neigh_count_first += 1
 									atom_idx[0] = x.GetIdx()
-								elif x.GetSymbol() == atoms_filter[2]:
+								else:
 									neigh_count_second += 1
 									atom_idx[2] = x.GetIdx()
-								# count matches
-								matches = neigh_count_first + neigh_count_second
-								if matches > 2:
-									if print_error_exp_rules == 0:
-										log.write('x  There are multiple options in exp_rules for '+ file + ', this filter will be turned off')
-										incompatibility = True
-										break
-						if neigh_count_first == 1 and neigh_count_second == 1:
-							find_angle += 1
-				if find_angle == 0 and not incompatibility:
-					if print_error_exp_rules == 0:
-						log.write('x  No angles matching the description from exp_rules in '+ file + ', this filter will be turned off')
-				elif find_angle > 1:
-						log.write('x  '+ file + ' contain more than one atom that meets the exp_rules criteria, this filter will be turned off')
-				elif find_angle == 1:
-					# I need to get the only 3D conformer generated in that mol object for rdMolTransforms
-					mol_conf = mol.GetConformer(0)
+							elif x.GetSymbol() == atoms_filter[0]:
+								neigh_count_first += 1
+								atom_idx[0] = x.GetIdx()
+							elif x.GetSymbol() == atoms_filter[2]:
+								neigh_count_second += 1
+								atom_idx[2] = x.GetIdx()
+							# count matches
+							matches = neigh_count_first + neigh_count_second
+							if matches > 2:
+								if print_error_exp_rules == 0:
+									log.write('x  There are multiple options in exp_rules for '+ file + ', this filter will be turned off')
+									incompatibility = True
+									break
+					if neigh_count_first == 1 and neigh_count_second == 1:
+						find_angle += 1
+			if find_angle == 0 and not incompatibility:
+				if print_error_exp_rules == 0:
+					log.write('x  No angles matching the description from exp_rules in '+ file + ', this filter will be turned off')
+			elif find_angle > 1:
+					log.write('x  '+ file + ' contain more than one atom that meets the exp_rules criteria, this filter will be turned off')
+			elif find_angle == 1:
+				# I need to get the only 3D conformer generated in that mol object for rdMolTransforms
+				mol_conf = mol.GetConformer(0)
 
-					# Calculate the angle between the 3 elements
-					angle = rdMolTransforms.GetAngleDeg(mol_conf,atom_idx[0],atom_idx[1],atom_idx[2])
-					if (int(angle_rules) - args.angle_off) <= angle <= (int(angle_rules) + args.angle_off):
-						passing = False
-				if not passing:
-					break
-
-		else:
-			log.write('\nx  Open Babel is not installed correctly, the exp_rules filter will be disabled')
+				# Calculate the angle between the 3 elements
+				angle = rdMolTransforms.GetAngleDeg(mol_conf,atom_idx[0],atom_idx[1],atom_idx[2])
+				if (int(angle_rules) - args.angle_off) <= angle <= (int(angle_rules) + args.angle_off):
+					passing = False
+			if not passing:
+				break
 
 	return passing
 

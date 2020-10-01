@@ -190,8 +190,8 @@ def optimize(mol, args, program,log,dup_data,dup_data_idx):
 	cartesians = mol.GetConformers()[0].GetPositions()
 	coordinates = torch.tensor([cartesians.tolist()], requires_grad=True, device=device)
 
+	ani_incompatible = False
 	if program == 'ani':
-		ani_incompatible = False
 		try:
 			sqm_energy, coordinates = ani_calc(ase,torch,model,device,elements,cartesians,coordinates,args,log)
 		except KeyError:

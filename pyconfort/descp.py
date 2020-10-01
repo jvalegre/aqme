@@ -11,7 +11,6 @@ import os
 import numpy as np
 import pandas as pd
 from pyconfort.csearch import getDihedralMatches
-from openbabel import openbabel as ob
 
 
 def get_data(rdkit_mols,min_mols,dft_mols,lot,bs,name_mol,args,type_csearch,type_min,w_dir_initial):
@@ -87,62 +86,69 @@ def calculate_parameters(sdf_rdkit,sdf_ani,sdf_xtb,log_files,args,log,w_dir_init
 		ani_mols = Chem.SDMolSupplier(sdf_ani, removeHs=False)
 	if sdf_xtb is not None:
 		xtb_mols = Chem.SDMolSupplier(sdf_xtb, removeHs=False)
+	ob_compat = True
+	try:
+		import openbabel as ob
+	except (ModuleNotFoundError,AttributeError):
+		ob_compat = False
+		log.write('\nx  Open Babel is not installed correctly, it is not possible to get molecular descriptors')
 
-	obConversion = ob.OBConversion()
-	obConversion.SetInAndOutFormats("log", "mol")
-	ob_mol = ob.OBMol()
-	for file in log_files:
-		if str(bs).find('/') > -1:
-			obConversion.ReadFile(ob_mol, args.path + str(lot) + '-' + str(bs).split('/')[0] +'/success/output_files/'+file)
-			obConversion.WriteFile(ob_mol, args.path + str(lot) + '-' + str(bs).split('/')[0] +'/success/output_files/'+file.split('.')[0]+'.mol')
-			obConversion.CloseOutFile()
-			dft_mols.append(Chem.MolFromMolFile(args.path + str(lot) + '-' + str(bs).split('/')[0] +'/success/output_files/'+file.split('.')[0]+'.mol', removeHs=False))
-		else:
-			obConversion.ReadFile(ob_mol, args.path + str(lot) + '-' + str(bs) +'/success/output_files/'+file)
-			obConversion.WriteFile(ob_mol, args.path + str(lot) + '-' + str(bs) +'/success/output_files/'+file.split('.')[0]+'.mol')
-			obConversion.CloseOutFile()
-			dft_mols.append(Chem.MolFromMolFile(args.path + str(lot) + '-' + str(bs) +'/success/output_files/'+file.split('.')[0]+'.mol', removeHs=False))
+	if ob_compat:
+		obConversion = ob.OBConversion()
+		obConversion.SetInAndOutFormats("log", "mol")
+		ob_mol = ob.OBMol()
+		for file in log_files:
+			if str(bs).find('/') > -1:
+				obConversion.ReadFile(ob_mol, args.path + str(lot) + '-' + str(bs).split('/')[0] +'/success/output_files/'+file)
+				obConversion.WriteFile(ob_mol, args.path + str(lot) + '-' + str(bs).split('/')[0] +'/success/output_files/'+file.split('.')[0]+'.mol')
+				obConversion.CloseOutFile()
+				dft_mols.append(Chem.MolFromMolFile(args.path + str(lot) + '-' + str(bs).split('/')[0] +'/success/output_files/'+file.split('.')[0]+'.mol', removeHs=False))
+			else:
+				obConversion.ReadFile(ob_mol, args.path + str(lot) + '-' + str(bs) +'/success/output_files/'+file)
+				obConversion.WriteFile(ob_mol, args.path + str(lot) + '-' + str(bs) +'/success/output_files/'+file.split('.')[0]+'.mol')
+				obConversion.CloseOutFile()
+				dft_mols.append(Chem.MolFromMolFile(args.path + str(lot) + '-' + str(bs) +'/success/output_files/'+file.split('.')[0]+'.mol', removeHs=False))
 
-	if os.path.exists(w_dir_initial+'/CSEARCH/xtb/'+name_mol+'_xtb.sdf') and os.path.exists(w_dir_initial+'/CSEARCH/rdkit/'+name_mol+'_rdkit.sdf'):
-		geom_data = get_data(rdkit_mols,xtb_mols,dft_mols,lot,bs,name_mol,args,'rdkit','xtb',w_dir_initial)
-		geom_data.to_csv(name_mol+'-all-geom-data-with-rdkit-xtb.csv',index=False)
+		if os.path.exists(w_dir_initial+'/CSEARCH/xtb/'+name_mol+'_xtb.sdf') and os.path.exists(w_dir_initial+'/CSEARCH/rdkit/'+name_mol+'_rdkit.sdf'):
+			geom_data = get_data(rdkit_mols,xtb_mols,dft_mols,lot,bs,name_mol,args,'rdkit','xtb',w_dir_initial)
+			geom_data.to_csv(name_mol+'-all-geom-data-with-rdkit-xtb.csv',index=False)
 
-	if os.path.exists(w_dir_initial+'/CSEARCH/ani/'+name_mol+'_ani.sdf') and os.path.exists(w_dir_initial+'/CSEARCH/rdkit/'+name_mol+'_rdkit.sdf'):
-		geom_data = get_data(rdkit_mols,ani_mols,dft_mols,lot,bs,name_mol,args,'rdkit','ani',w_dir_initial)
-		geom_data.to_csv(name_mol+'-all-geom-data-with-rdkit-ani.csv',index=False)
+		if os.path.exists(w_dir_initial+'/CSEARCH/ani/'+name_mol+'_ani.sdf') and os.path.exists(w_dir_initial+'/CSEARCH/rdkit/'+name_mol+'_rdkit.sdf'):
+			geom_data = get_data(rdkit_mols,ani_mols,dft_mols,lot,bs,name_mol,args,'rdkit','ani',w_dir_initial)
+			geom_data.to_csv(name_mol+'-all-geom-data-with-rdkit-ani.csv',index=False)
 
-		##########
+			##########
 
-	if  os.path.exists(w_dir_initial+'/CSEARCH/xtb/'+name_mol+'_xtb.sdf') and os.path.exists(w_dir_initial+'/CSEARCH/summ/'+name_mol+'_summ.sdf'):
-		geom_data = get_data(rdkit_mols,xtb_mols,dft_mols,lot,bs,name_mol,args,'summ','xtb',w_dir_initial)
-		geom_data.to_csv(name_mol+'-all-geom-data-with-summ-xtb.csv',index=False)
+		if  os.path.exists(w_dir_initial+'/CSEARCH/xtb/'+name_mol+'_xtb.sdf') and os.path.exists(w_dir_initial+'/CSEARCH/summ/'+name_mol+'_summ.sdf'):
+			geom_data = get_data(rdkit_mols,xtb_mols,dft_mols,lot,bs,name_mol,args,'summ','xtb',w_dir_initial)
+			geom_data.to_csv(name_mol+'-all-geom-data-with-summ-xtb.csv',index=False)
 
-	if os.path.exists(w_dir_initial+'/CSEARCH/ani/'+name_mol+'_ani.sdf') and os.path.exists(w_dir_initial+'/CSEARCH/summ/'+name_mol+'_summ.sdf'):
-		geom_data = get_data(rdkit_mols,ani_mols,dft_mols,lot,bs,name_mol,args,'summ','ani',w_dir_initial)
-		geom_data.to_csv(name_mol+'-all-geom-data-with-summ-ani.csv',index=False)
+		if os.path.exists(w_dir_initial+'/CSEARCH/ani/'+name_mol+'_ani.sdf') and os.path.exists(w_dir_initial+'/CSEARCH/summ/'+name_mol+'_summ.sdf'):
+			geom_data = get_data(rdkit_mols,ani_mols,dft_mols,lot,bs,name_mol,args,'summ','ani',w_dir_initial)
+			geom_data.to_csv(name_mol+'-all-geom-data-with-summ-ani.csv',index=False)
 
-		#############
+			#############
 
-	if  os.path.exists(w_dir_initial+'/CSEARCH/xtb/'+name_mol+'_xtb.sdf') and os.path.exists(w_dir_initial+'/CSEARCH/fullmonte/'+name_mol+'_fullmonte.sdf'):
-		geom_data = get_data(rdkit_mols,xtb_mols,dft_mols,lot,bs,name_mol,args,'fullmonte','xtb',w_dir_initial)
-		geom_data.to_csv(name_mol+'-all-geom-data-with-fullmonte-xtb.csv',index=False)
-
-
-	if os.path.exists(w_dir_initial+'/CSEARCH/ani/'+name_mol+'_ani.sdf') and os.path.exists(w_dir_initial+'/CSEARCH/fullmonte/'+name_mol+'_fullmonte.sdf'):
-		geom_data = get_data(rdkit_mols,ani_mols,dft_mols,lot,bs,name_mol,args,'fullmonte','ani',w_dir_initial)
-		geom_data.to_csv(name_mol+'-all-geom-data-with-fullmonte-ani.csv',index=False)
-
-		############
-
-	if os.path.exists(w_dir_initial+'/CSEARCH/summ/'+name_mol+'_summ.sdf') and not os.path.exists(w_dir_initial+'/CSEARCH/xtb/'+name_mol+'_xtb.sdf') and not os.path.exists(w_dir_initial+'/CSEARCH/ani/'+name_mol+'_ani.sdf'):
-		geom_data = get_data(rdkit_mols,None,dft_mols,lot,bs,name_mol,args,'summ',None,w_dir_initial)
-		geom_data.to_csv(name_mol+'-all-geom-data-with-summ.csv',index=False)
+		if  os.path.exists(w_dir_initial+'/CSEARCH/xtb/'+name_mol+'_xtb.sdf') and os.path.exists(w_dir_initial+'/CSEARCH/fullmonte/'+name_mol+'_fullmonte.sdf'):
+			geom_data = get_data(rdkit_mols,xtb_mols,dft_mols,lot,bs,name_mol,args,'fullmonte','xtb',w_dir_initial)
+			geom_data.to_csv(name_mol+'-all-geom-data-with-fullmonte-xtb.csv',index=False)
 
 
-	if os.path.exists(w_dir_initial+'/CSEARCH/rdkit/'+name_mol+'_rdkit.sdf') and not os.path.exists(w_dir_initial+'/CSEARCH/xtb/'+name_mol+'_xtb.sdf') and not os.path.exists(w_dir_initial+'/CSEARCH/ani/'+name_mol+'_ani.sdf') :
-		geom_data = get_data(rdkit_mols,None,dft_mols,lot,bs,name_mol,args,'rdkit',None,w_dir_initial)
-		geom_data.to_csv(name_mol+'-all-geom-data-with-rdkit.csv',index=False)
+		if os.path.exists(w_dir_initial+'/CSEARCH/ani/'+name_mol+'_ani.sdf') and os.path.exists(w_dir_initial+'/CSEARCH/fullmonte/'+name_mol+'_fullmonte.sdf'):
+			geom_data = get_data(rdkit_mols,ani_mols,dft_mols,lot,bs,name_mol,args,'fullmonte','ani',w_dir_initial)
+			geom_data.to_csv(name_mol+'-all-geom-data-with-fullmonte-ani.csv',index=False)
 
-	if os.path.exists(w_dir_initial+'/CSEARCH/fullmonte/'+name_mol+'_fullmonte.sdf') and not os.path.exists(w_dir_initial+'/CSEARCH/xtb/'+name_mol+'_xtb.sdf') and not os.path.exists(w_dir_initial+'/CSEARCH/ani/'+name_mol+'_ani.sdf') :
-		geom_data = get_data(rdkit_mols,None,dft_mols,lot,bs,name_mol,args,'rdkit',None,w_dir_initial)
-		geom_data.to_csv(name_mol+'-all-geom-data-with-fullmonte.csv',index=False)
+			############
+
+		if os.path.exists(w_dir_initial+'/CSEARCH/summ/'+name_mol+'_summ.sdf') and not os.path.exists(w_dir_initial+'/CSEARCH/xtb/'+name_mol+'_xtb.sdf') and not os.path.exists(w_dir_initial+'/CSEARCH/ani/'+name_mol+'_ani.sdf'):
+			geom_data = get_data(rdkit_mols,None,dft_mols,lot,bs,name_mol,args,'summ',None,w_dir_initial)
+			geom_data.to_csv(name_mol+'-all-geom-data-with-summ.csv',index=False)
+
+
+		if os.path.exists(w_dir_initial+'/CSEARCH/rdkit/'+name_mol+'_rdkit.sdf') and not os.path.exists(w_dir_initial+'/CSEARCH/xtb/'+name_mol+'_xtb.sdf') and not os.path.exists(w_dir_initial+'/CSEARCH/ani/'+name_mol+'_ani.sdf') :
+			geom_data = get_data(rdkit_mols,None,dft_mols,lot,bs,name_mol,args,'rdkit',None,w_dir_initial)
+			geom_data.to_csv(name_mol+'-all-geom-data-with-rdkit.csv',index=False)
+
+		if os.path.exists(w_dir_initial+'/CSEARCH/fullmonte/'+name_mol+'_fullmonte.sdf') and not os.path.exists(w_dir_initial+'/CSEARCH/xtb/'+name_mol+'_xtb.sdf') and not os.path.exists(w_dir_initial+'/CSEARCH/ani/'+name_mol+'_ani.sdf') :
+			geom_data = get_data(rdkit_mols,None,dft_mols,lot,bs,name_mol,args,'rdkit',None,w_dir_initial)
+			geom_data.to_csv(name_mol+'-all-geom-data-with-fullmonte.csv',index=False)
