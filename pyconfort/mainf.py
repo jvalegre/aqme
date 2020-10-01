@@ -200,7 +200,7 @@ def csearch_main(w_dir_initial,args,log_overall):
 				i += 1
 
 		final_dup_data = creation_of_dup_csv(args)
-		bar = IncrementalBar('o  Current number of molecules', max = count_mol)
+		bar = IncrementalBar('o  Number of finished jobs from CSEARCH/CMIN', max = count_mol)
 		# Process the job results (in submission order) and save the conformers.
 		for i,job in enumerate(jobs):
 			total_data = job.result()

@@ -320,8 +320,8 @@ def orca_file_gen(read_lines,rename_file_name,bs,lot,genecp,ecp_list,bs_gcp,bs_g
 		write_orca_lines.write(gen_orca_line_2)
 		write_orca_lines.write("end\n")
 	if solvation != 'gas_phase':
-		if solvation == "CPCM" or solvation == 'cpcm':
-			write_orca_lines.write("!CPCM("+solvent_orca+")\n")
+		if solvation.lower() == 'cpcm':
+			write_orca_lines.write("! CPCM("+solvent_orca+")\n")
 		if cpcm_input_orca != 'None' or solvation.lower() == 'smd':
 			write_orca_lines.write("%cpcm\n")
 			if cpcm_input_orca != 'None':
@@ -463,7 +463,7 @@ def write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args, log, 
 				ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp,orca_aux_section = check_for_gen_or_genecp(ATOMTYPES,args,'analysis','orca')
 
 				rename_file_name = rename_file_and_charge_chk_change(read_lines,file,args,charge_com)
-				
+
 				#create input file
 				orca_file_gen(read_lines,rename_file_name,bs,lot,genecp,args.aux_atoms_orca,args.aux_basis_set_genecp_atoms,args.aux_fit_genecp_atoms,charge_com,args.mult,orca_aux_section,args,args.set_input_line,args.solvent_model,args.solvent_name,args.cpcm_input,args.orca_scf_iters,args.mdci_orca,args.print_mini_orca)
 
