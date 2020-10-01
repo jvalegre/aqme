@@ -87,11 +87,11 @@ def csearch_main(w_dir_initial,args,log_overall):
 	with futures.ProcessPoolExecutor(max_workers=args.cpus) as executor:
 		# Submit a set of asynchronous jobs
 		jobs = []
+		count_mol = 0
 		# SMILES input specified
 		smi_derivatives = ['.smi', '.txt', '.yaml', '.yml', '.rtf']
 		if file_format in smi_derivatives:
 			smifile = open(args.input)
-
 			for i, line in enumerate(smifile):
 				toks = line.split()
 				#editing part
@@ -110,6 +110,7 @@ def csearch_main(w_dir_initial,args,log_overall):
 
 					job = executor.submit(compute_confs,w_dir_initial,mol,name,args,i)
 					jobs.append(job)
+					count_mol +=1
 
 					# compute_confs(w_dir_initial,mol,name,args,log,dup_data,counter_for_template,i,start_time)
 				except AttributeError:
@@ -134,6 +135,7 @@ def csearch_main(w_dir_initial,args,log_overall):
 					name = 'comp_'+str(i)+'_'+csv_smiles.loc[i, 'code_name']
 				job = executor.submit(compute_confs,w_dir_initial,mol,name,args,i)
 				jobs.append(job)
+				count_mol +=1
 				# compute_confs(w_dir_initial,mol,name,args,log,dup_data,counter_for_template,i,start_time)
 
 		# CDX file
@@ -153,6 +155,7 @@ def csearch_main(w_dir_initial,args,log_overall):
 				name = 'comp' + str(i)+'_'
 				job = executor.submit(compute_confs,w_dir_initial,mol,name,args,i)
 				jobs.append(job)
+				count_mol +=1
 
 			smifile.close()
 			os.remove('cdx.smi')
@@ -171,6 +174,7 @@ def csearch_main(w_dir_initial,args,log_overall):
 				args.charge_default = charge_com
 				job = executor.submit(compute_confs,w_dir_initial,mol,name,args,i)
 				jobs.append(job)
+				count_mol +=1
 				i += 1
 
 		# SDF file
@@ -184,20 +188,26 @@ def csearch_main(w_dir_initial,args,log_overall):
 					args.charge_default = charge_sdf
 					job = executor.submit(compute_confs,w_dir_initial,mol,name,args,i)
 					jobs.append(job)
+					count_mol +=1
 					i += 1
 			elif os.path.splitext(args.input)[1] == '.mol' or os.path.splitext(args.input)[1] == '.mol2':
 				args.charge_default = charges[0]
 				name = IDs[0]
 				mol = suppl
-				compute_confs(w_dir_initial,mol,name,args,log,dup_data,counter_for_template,i,start_time)
+				job = executor.submit(compute_confs,w_dir_initial,mol,name,args,i)
+				jobs.append(job)
+				count_mol +=1
 				i += 1
 
 		final_dup_data = creation_of_dup_csv(args)
+		bar = IncrementalBar('o  Current number of molecules', max = count_mol)
 		# Process the job results (in submission order) and save the conformers.
 		for i,job in enumerate(jobs):
 			total_data = job.result()
 			frames = [final_dup_data, total_data]
 			final_dup_data = pd.concat(frames)
+			bar.next()
+		bar.finish()
 
 		if not os.path.isdir(w_dir_initial+'/CSEARCH/csv_files'):
 			os.makedirs(w_dir_initial+'/CSEARCH/csv_files/')
