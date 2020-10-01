@@ -12,7 +12,7 @@ from definitions_testing import Ir_exp_rules,Pd_exp_rules
 # saves the working directory
 path_exp_rules = os.getcwd()
 # decimal digits for comparing E
-precision_exp_rules = 5
+precision_exp_rules = 2
 
 # tests for individual organic molecules and metal complexes
 @pytest.mark.parametrize("folder, smiles, params_file, E_confs_no_rules, E_confs_rules, com_files, charge, format",

@@ -11,8 +11,6 @@ from definitions_testing import conf_gen
 
 # saves the working directory
 path_organic = os.getcwd()
-# decimal digits for comparing E
-precision_organic = 5
 
 # tests for individual organic molecules and metal complexes
 @pytest.mark.parametrize("folder, smiles, params_file, charge_orca, multiplicity_orca, param, job_type",

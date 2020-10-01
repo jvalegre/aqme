@@ -15,7 +15,7 @@ from definitions_testing import calc_energy,get_not_empty_files,com_lines,remove
 # saves the working directory
 path_misc2 = os.getcwd()
 # decimal digits for comparing E
-precision_misc2 = 5
+precision_misc2 = 2
 
 # tests for individual organic molecules and metal complexes
 @pytest.mark.parametrize("folder, smiles, params_file, final_confs_misc2, E_confs, folders_in_CSEARCH, job_type",

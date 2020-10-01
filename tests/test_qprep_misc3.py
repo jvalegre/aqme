@@ -12,8 +12,6 @@ from definitions_testing import get_not_empty_files,calc_genecp,remove_data
 
 # saves the working directory
 path_misc3 = os.getcwd()
-# decimal digits for comparing E
-precision_misc3 = 5
 
 # tests for individual organic molecules and metal complexes
 @pytest.mark.parametrize("folder, params_file, com_files",

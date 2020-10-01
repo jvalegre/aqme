@@ -15,7 +15,7 @@ from definitions_testing import calc_energy, find_coordinates, remove_data
 # saves the working directory
 path_cmin = os.getcwd()
 # decimal digits for comparing E
-precision_cmin = 5
+precision_cmin = 2
 
 # tests for individual organic molecules and metal complexes
 @pytest.mark.parametrize("params_file, coordinates, E_cmin, cmin_type",

@@ -12,7 +12,7 @@ from definitions_testing import conf_gen
 # saves the working directory
 path_others = os.getcwd()
 # decimal digits for comparing E
-precision_others = 5
+precision_others = 2
 
 # tests for individual organic molecules and metal complexes
 @pytest.mark.parametrize("folder, smiles, params_file, n_confs_others, prefilter_confs_rdkit_others, filter_confs_rdkit, E_confs, charge, multiplicity_others, dihedral, xTB_ANI1, metal, template",

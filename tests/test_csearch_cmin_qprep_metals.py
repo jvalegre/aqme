@@ -12,7 +12,7 @@ from definitions_testing import conf_gen
 # saves the working directory
 path_metals = os.getcwd()
 # decimal digits for comparing E
-precision_metals = 5
+precision_metals = 2
 
 # tests for individual metal complexes
 @pytest.mark.parametrize("folder, smiles, params_file, n_confs, prefilter_confs_rdkit, filter_confs_rdkit, E_confs, charge, multiplicity, dihedral, xTB_ANI1, genecp, metal, template",

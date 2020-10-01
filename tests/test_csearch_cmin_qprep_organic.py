@@ -12,7 +12,7 @@ from definitions_testing import conf_gen
 # saves the working directory
 path_organic = os.getcwd()
 # decimal digits for comparing E
-precision_organic = 5
+precision_organic = 2
 
 # tests for individual organic molecules and metal complexes
 @pytest.mark.parametrize("folder, smiles, params_file, n_confs_organic, prefilter_confs_rdkit_organic_organic, filter_confs_rdkit_organic, E_confs, charge_organic, multiplicity_organic, dihedral, xTB_ANI",
