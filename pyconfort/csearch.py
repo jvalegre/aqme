@@ -86,34 +86,35 @@ def creation_of_dup_csv(args):
 def com_2_xyz_2_sdf(args,start_point=None):
 
 	if start_point is None:
-		if os.path.splitext(args.input)[1] =='.com' or os.path.splitext(args.input)[1] =='.gjf' :
+		if os.path.splitext(args.input)[1] =='.com' or os.path.splitext(args.input)[1] =='.gjf' or os.path.splitext(args.input)[1] =='.xyz':
 			file = args.input
 
 	elif start_point is not None:
 		file = start_point
 
-	comfile = open(file,"r")
-	comlines = comfile.readlines()
+	if os.path.splitext(args.input)[1] !='.xyz':
+		comfile = open(file,"r")
+		comlines = comfile.readlines()
 
-	emptylines=[]
+		emptylines=[]
 
-	for i, line in enumerate(comlines):
-		if len(line.strip()) == 0:
-			emptylines.append(i)
+		for i, line in enumerate(comlines):
+			if len(line.strip()) == 0:
+				emptylines.append(i)
 
-	#assigning the charges
-	charge_com = comlines[(emptylines[1]+1)].split(' ')[0]
+		#assigning the charges
+		charge_com = comlines[(emptylines[1]+1)].split(' ')[0]
 
-	xyzfile = open(os.path.splitext(file)[0]+'.xyz',"w")
-	xyzfile.write(str(emptylines[2]- (emptylines[1]+2)))
-	xyzfile.write('\n')
-	xyzfile.write(os.path.splitext(file)[0])
-	xyzfile.write('\n')
-	for i in range((emptylines[1]+2), emptylines[2]):
-		xyzfile.write(comlines[i])
+		xyzfile = open(os.path.splitext(file)[0]+'.xyz',"w")
+		xyzfile.write(str(emptylines[2]- (emptylines[1]+2)))
+		xyzfile.write('\n')
+		xyzfile.write(os.path.splitext(file)[0])
+		xyzfile.write('\n')
+		for i in range((emptylines[1]+2), emptylines[2]):
+			xyzfile.write(comlines[i])
 
-	xyzfile.close()
-	comfile.close()
+		xyzfile.close()
+		comfile.close()
 
 	cmd_obabel = ['obabel', '-ixyz', os.path.splitext(file)[0]+'.xyz', '-osdf', '-O', os.path.splitext(file)[0]+'.sdf']
 	subprocess.run(cmd_obabel)
@@ -150,17 +151,17 @@ def substituted_mol(mol,args,log):
 	return mol,args.metal_idx,args.complex_coord,args.metal_sym
 
 #mol from sdf
-def mol_from_sdf_or_mol_or_mol2(args):
-	if os.path.splitext(args.input)[1] =='.sdf':
-		suppl = Chem.SDMolSupplier(args.input, removeHs=False)
-	elif os.path.splitext(args.input)[1] =='.mol':
-		suppl = Chem.MolFromMolFile(args.input, removeHs=False)
-	elif os.path.splitext(args.input)[1] =='.mol2':
-		suppl = Chem.MolFromMol2File(args.input, removeHs=False)
+def mol_from_sdf_or_mol_or_mol2(input):
+	if os.path.splitext(input)[1] =='.sdf':
+		suppl = Chem.SDMolSupplier(input, removeHs=False)
+	elif os.path.splitext(input)[1] =='.mol':
+		suppl = Chem.MolFromMolFile(input, removeHs=False)
+	elif os.path.splitext(input)[1] =='.mol2':
+		suppl = Chem.MolFromMol2File(input, removeHs=False)
 
 	IDs,charges = [],[]
 
-	readlines = open(args.input,"r").readlines()
+	readlines = open(input,"r").readlines()
 
 	molecule_count = 0
 	for i, line in enumerate(readlines):
@@ -182,13 +183,13 @@ def mol_from_sdf_or_mol_or_mol2(args):
 				charges.append(0)
 
 	if IDs == []:
-		if os.path.splitext(args.input)[1] =='.sdf':
+		if os.path.splitext(input)[1] =='.sdf':
 			for i,_ in enumerate(suppl):
-				IDs.append(os.path.splitext(args.input)[0]+'_'+str(i))
+				IDs.append(os.path.splitext(input)[0]+'_'+str(i))
 		else:
-			IDs.append(os.path.splitext(args.input)[0])
+			IDs.append(os.path.splitext(input)[0])
 	if charges == []:
-		if os.path.splitext(args.input)[1] =='.sdf':
+		if os.path.splitext(input)[1] =='.sdf':
 			for i,_ in enumerate(suppl):
 				charges.append(0)
 		else:

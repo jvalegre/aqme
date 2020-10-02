@@ -165,13 +165,18 @@ def csearch_main(w_dir_initial,args,log_overall):
 			#converting to sdf from comfile to preserve geometry
 			charge_com = com_2_xyz_2_sdf(args)
 			sdffile = os.path.splitext(args.input)[0]+'.sdf'
-			suppl = Chem.SDMolSupplier(sdffile, removeHs=False)
+			if os.path.splitext(args.input)[1] == '.gjf' or os.path.splitext(args.input)[1] == '.com':
+				suppl, _, _ = mol_from_sdf_or_mol_or_mol2(sdffile)
+			if  os.path.splitext(args.input)[1] == '.xyz':
+				suppl, _, charge_com_list = mol_from_sdf_or_mol_or_mol2(sdffile)
+				charge_com = charge_com_list[0]
 			name = os.path.splitext(args.input)[0]
 			counter_for_template = 0
 			i=0
 			for mol in suppl:
 				clean_args(args,ori_ff,mol,ori_charge)
-				args.charge_default = charge_com
+				if args.charge_default == 'auto':
+					args.charge_default = charge_com
 				job = executor.submit(compute_confs,w_dir_initial,mol,name,args,i)
 				jobs.append(job)
 				count_mol +=1
@@ -179,7 +184,7 @@ def csearch_main(w_dir_initial,args,log_overall):
 
 		# SDF file
 		elif os.path.splitext(args.input)[1] == '.sdf' or os.path.splitext(args.input)[1] == '.mol' or os.path.splitext(args.input)[1] == '.mol2':
-			suppl, IDs, charges = mol_from_sdf_or_mol_or_mol2(args)
+			suppl, IDs, charges = mol_from_sdf_or_mol_or_mol2(args.input)
 			counter_for_template = 0
 			i=0
 			if os.path.splitext(args.input)[1] == '.sdf':
