@@ -1,4 +1,4 @@
-%chk=C:\Users\leahw\github\pyCONFORT\tests\Input_files\charged\charged.chk
+%chk=C:\Users\charged.chk
 # hf/3-21g geom=connectivity
 
 Title
