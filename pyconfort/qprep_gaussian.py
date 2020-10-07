@@ -159,9 +159,11 @@ def get_name_and_charge(name,charge_data):
 			else:
 				name_molecule = name[:-10]
 
+		print(name_molecule)
 		for i in range(len(charge_data)):
 			if charge_data.loc[i,'Molecule'] == name_molecule:
 				charge_com = charge_data.loc[i,'Overall charge']
+		print(charge_com)
 	else:
 		charge_com = None
 

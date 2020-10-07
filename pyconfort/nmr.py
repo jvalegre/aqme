@@ -118,7 +118,7 @@ def calculate_nmr(nmr_log_files,args,log,name,w_dir_fin,w_dir_initial,lot_sp,bs_
 			except AttributeError:
 				log.write("   No scaling factors found for this level of theory! Input the values as arguments for pyCONFORT!"); exit()
 
-			log.write("\no   The slope for nucleus {0} = {1}".format(nuc, slope))
+			log.write("\no  The slope for nucleus {0} = {1}".format(nuc, slope))
 			log.write("\no  The intercept for nucleus {0} = {1}".format(nuc, intercept))
 
 	else:

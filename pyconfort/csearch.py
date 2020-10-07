@@ -446,6 +446,7 @@ def min_after_embed(mol,cids,name,initial_confs,rotmatches,dup_data,dup_data_idx
 	# writing charges after RDKIT
 	if os.path.splitext(args.input)[1] == '.cdx' or os.path.splitext(args.input)[1] == '.smi' or os.path.splitext(args.input)[1] == '.csv':
 		args.charge = rules_get_charge(mol,args,log)
+		print(np.sum(args.charge))
 		dup_data.at[dup_data_idx, 'Overall charge'] = np.sum(args.charge)
 	else:
 		dup_data.at[dup_data_idx, 'Overall charge'] = args.charge_default
@@ -506,8 +507,8 @@ def min_after_embed(mol,cids,name,initial_confs,rotmatches,dup_data,dup_data_idx
 def rdkit_to_sdf(mol, name,args,log,dup_data,dup_data_idx, coord_Map, alg_Map, mol_template):
 
 	Chem.SanitizeMol(mol)
-	if os.path.splitext(args.input)[1] == '.csv' or os.path.splitext(args.input)[1] == '.cdx' or os.path.splitext(args.input)[1] == '.smi':
-		mol = Chem.AddHs(mol)
+
+	mol = Chem.AddHs(mol)
 
 	mol.SetProp("_Name",name)
 

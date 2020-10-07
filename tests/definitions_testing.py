@@ -90,6 +90,7 @@ def rdkit_tests(df_output,dihedral,xTB_ANI,cmd_pyconfort):
         test_prefilter_rdkit_confs = 'nan'
         test_filter_rdkit_confs = 'nan'
 
+
     return test_init_rdkit_confs, test_prefilter_rdkit_confs, test_filter_rdkit_confs, test_unique_confs
 
 def conf_gen(path, precision, cmd_pyconfort, folder, smiles, E_confs, dihedral, xTB_ANI, metal, template):
@@ -99,7 +100,9 @@ def conf_gen(path, precision, cmd_pyconfort, folder, smiles, E_confs, dihedral, 
 
     # Retrieving the generated CSV file
     os.chdir(path+'/'+folder+'/'+smiles.split('.')[0]+'/CSEARCH/csv_files')
+
     df_output = pd.read_csv(smiles.split('.')[0]+'-CSEARCH-Data.csv')
+
 
     # tests for RDKit
     test_init_rdkit_confs, test_prefilter_rdkit_confs, test_filter_rdkit_confs, test_unique_confs = rdkit_tests(df_output,dihedral,xTB_ANI,cmd_pyconfort)
@@ -131,9 +134,15 @@ def conf_gen(path, precision, cmd_pyconfort, folder, smiles, E_confs, dihedral, 
                         test_rdkit_E_confs = calc_energy(file_smi+'_0_summ.sdf')
                 else:
                     if not dihedral:
-                        test_rdkit_E_confs = calc_energy(file_smi+'_rdkit.sdf')
+                        if smiles.split('.')[1] == 'sdf' or smiles.split('.')[1] == 'cdx':
+                            test_rdkit_E_confs = calc_energy(file_smi+'_0_rdkit.sdf')
+                        else:
+                            test_rdkit_E_confs = calc_energy(file_smi+'_rdkit.sdf')
                     else:
-                        test_rdkit_E_confs = calc_energy(file_smi+'_summ.sdf')
+                        if smiles.split('.')[1] == 'sdf' or smiles.split('.')[1] == 'cdx':
+                            test_rdkit_E_confs = calc_energy(file_smi+'_0_summ.sdf')
+                        else:
+                            test_rdkit_E_confs = calc_energy(file_smi+'_summ.sdf')
         elif xTB_ANI == 'xTB':
             os.chdir(path+'/'+folder+'/'+smiles.split('.')[0]+'/CSEARCH/xtb')
             test_rdkit_E_confs = calc_energy(file_smi+'_xtb.sdf')
