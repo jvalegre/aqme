@@ -493,10 +493,17 @@ def output_analyzer(duplicates,log_files,com_files, w_dir, w_dir_main,lot, bs, b
 					if args.nics:
 						log.write('-> Creating NICS input files for {0} in {1}/{2}-{3}'.format(file,nics_input_files,lot_sp,bs_sp))
 
+					# eliminates * from the name (since folders cannot contain * in their names)
+					if bs_sp.find('**') > -1:
+						bs_sp = bs_sp.replace('**','(d,p)')
+					elif bs_sp.find('*') > -1:
+						bs_sp = bs_sp.replace('*','(d)')
+
 					if str(bs_sp).find('/') > -1:
 						dir_name = str(lot_sp) + '-' + str(bs_sp.split('/')[0])
 					else:
 						dir_name = str(lot_sp) + '-' + str(bs_sp)
+						
 					keywords_opt = ''
 					if args.sp == 'gaussian':
 						if genecp == 'genecp' or  genecp == 'gen':

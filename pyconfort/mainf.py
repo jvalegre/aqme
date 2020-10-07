@@ -258,10 +258,8 @@ def qprep_main(w_dir_initial,args,log):
 
 	# names for directories created
 	if args.QPREP == 'gaussian':
-		sp_dir = 'QMCALC/G16-SP'
 		g_dir = 'QMCALC/G16'
 	elif args.QPREP == 'orca':
-		sp_dir = 'QMCALC/ORCA-SP'
 		g_dir = 'QMCALC/ORCA'
 
 	if len(conf_files) != 0:
@@ -276,18 +274,13 @@ def qprep_main(w_dir_initial,args,log):
 				bs = bs.replace('**','(d,p)')
 			elif bs.find('*') > -1:
 				bs = bs.replace('*','(d)')
-			if args.single_point:
-				if str(bs).find('/') > -1:
-					folder = sp_dir + '/' + str(lot) + '-' + str(bs).split('/')[0]
-				else:
-					folder = sp_dir + '/' + str(lot) + '-' + str(bs)
-				log.write("\no  Preparing single-point inputs in {}".format(folder))
+
+			if str(bs).find('/') > -1:
+				folder = g_dir + '/' + str(lot) + '-' + str(bs).split('/')[0]
 			else:
-				if str(bs).find('/') > -1:
-					folder = g_dir + '/' + str(lot) + '-' + str(bs).split('/')[0]
-				else:
-					folder = g_dir + '/' + str(lot) + '-' + str(bs)
-				log.write("\no  Preparing QM input files in {}".format(folder))
+				folder = g_dir + '/' + str(lot) + '-' + str(bs)
+			log.write("\no  Preparing QM input files in {}".format(folder))
+
 			# this variable keeps trakc of folder creation
 			folder_error = False
 			try:
