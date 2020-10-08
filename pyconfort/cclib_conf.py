@@ -73,7 +73,6 @@ def calcualte_average_cclib_parameter(json_files,args,log,name,w_dir,w_dir_initi
 		charge.append(np.array(mol_data['atomcharges']['0']['mulliken']).astype(float)*boltz_factor)
 		#dipole
 		dipole.append(np.linalg.norm(np.array(mol_data['moments']['0'][1]))*boltz_factor)
-		# print(mol_data['moments']['0'][1] )
 
 	charge = np.sum(charge, axis=0).tolist()
 	dipole = np.sum(dipole)

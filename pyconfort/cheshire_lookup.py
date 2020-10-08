@@ -23,17 +23,14 @@ def parse_html_table(table):
 
     n_columns = len(column_names)
 
-# Determine the number of rows in the table
+    # Determine the number of rows in the table
     i = 1
     for row in rows[2:]:
         td_tags = row.find_all('td')
-        #if len(td_tags) > 0:
-            #print row.find_all('td')[1].find_all('p')
         if len(td_tags) == n_columns:
             n_rows+=1
 
     columns = column_names
-    #if len(column_names) > 0 else range(0,n_columns)
     df = pd.DataFrame(columns = columns,
                       index= list(range(0,n_rows)))
 
@@ -59,7 +56,7 @@ def cheshire(online, nucleus, opt_method, opt_basis, opt_solv, nmr_method, nmr_b
     except (ModuleNotFoundError,AttributeError):
         log.write('\nThe bs4 module is not installed correctly - CHESHIRE search is not available')
         sys.exit()
-        
+
     ## current time for printing
     now = datetime.datetime.now()
 
@@ -76,10 +73,10 @@ def cheshire(online, nucleus, opt_method, opt_basis, opt_solv, nmr_method, nmr_b
     calc_nmr = nmr_method.upper()+'/'+nmr_basis
 
     if nmr_solv == None:
-        print("  ", nmr_aos.upper()+'-'+calc_nmr+'//'+calc_opt)
+        log.write("  ", nmr_aos.upper()+'-'+calc_nmr+'//'+calc_opt)
     else:
-        if opt_solv == None: print("  ", nmr_solv[0].upper()+'('+nmr_solv[1]+')-'+nmr_aos.upper()+'-'+calc_nmr+'//'+calc_opt)
-        else: print("  ", nmr_solv[0].upper()+'('+nmr_solv[1]+')-'+nmr_aos.upper()+'-'+calc_nmr+'//'+opt_solv[0].upper()+'('+opt_solv[1]+')-'+calc_opt)
+        if opt_solv == None: log.write("  ", nmr_solv[0].upper()+'('+nmr_solv[1]+')-'+nmr_aos.upper()+'-'+calc_nmr+'//'+calc_opt)
+        else: log.write("  ", nmr_solv[0].upper()+'('+nmr_solv[1]+')-'+nmr_aos.upper()+'-'+calc_nmr+'//'+opt_solv[0].upper()+'('+opt_solv[1]+')-'+calc_opt)
 
     for table in html.find_all('table'):
 
@@ -131,5 +128,5 @@ def cheshire(online, nucleus, opt_method, opt_basis, opt_solv, nmr_method, nmr_b
                         #print "matched levels of theory"
                         #print db_nmr_solv, nmr_solv, db_opt_solv, opt_solv
                         if db_nmr_solv == nmr_solv and db_opt_solv == opt_solv:
-                            print("   --- MATCH ---", id.upper()); return row['scale_'+nucleus]
+                            log.write("   --- MATCH ---", id.upper()); return row['scale_'+nucleus]
             except: pass

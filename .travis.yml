@@ -38,7 +38,7 @@ before_install:
 
 install:
   - conda install -c openbabel openbabel==2.4.1 # for some reason, openbabel v3.0.0 is not compatible with RDKit
-  - conda install -c rdkit rdkit
+  - conda install -c rdkit rdkit=2020.03.2.0 # different versions of RDKit lead to different amount of conformers and E, which messes up the test results
   - pip install PyYAML
   - pip install pandas
   - pip install pytest

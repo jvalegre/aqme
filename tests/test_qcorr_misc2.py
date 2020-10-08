@@ -13,11 +13,11 @@ from definitions_testing import analysis,single_point
 # saves the working directory
 path_qcorr = os.getcwd()
 
-# tests for individual organic molecules and metal complexes
+# tests for QCORR using multiple levels of theory
 @pytest.mark.parametrize("folder, params_file",
 [
     # miscellaneous tests of the analysis part
-    ('Analysis_misc', 'params_QCORR_misc_test.yaml'), # test QCORR and SP
+    ('Analysis_misc', 'params_QCORR_misc_test.yaml'), # tests for QCORR using multiple levels of theory
 ])
 
 def test_analysis_dup_sp(folder, params_file):

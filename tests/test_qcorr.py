@@ -146,49 +146,67 @@ def test_analysis_dup_sp(folder, file, params_file, type_of_job):
         assert 'wb97xd-def2svp' in glob.glob('*')
 
         # test the input files are generate correctly
-        os.chdir(path_analysis_dup_sp+'/Analysis/success/G16-SP_input_files/b3lyp-321g')
-        files_sp = glob.glob('*.com')
-        # only normal terminations generate COM files for SP
-        assert len(files_sp) == 2
-        # test for the suffix option
-        assert 'CH4_Normal_termination_SPC.com' in files_sp
+        LoTs_SP = ['b3lyp-321g','wb97xd-def2svp']
+        for LoT_SP in LoTs_SP:
+            os.chdir(path_analysis_dup_sp+'/Analysis/success/G16-SP_input_files/'+LoT_SP)
+            files_sp = glob.glob('*.com')
+            # only normal terminations generate COM files for SP
+            assert len(files_sp) == 2
+            # test for the suffix option
+            assert 'CH4_Normal_termination_SPC.com' in files_sp
 
-        # test the content of the input files
-        outlines = single_point(path_analysis_dup_sp, 'Analysis', file)
+            # test the content of the input files
+            outlines = single_point(path_analysis_dup_sp, 'Analysis', file)
 
-        line = '# b3lyp/genecp nmr = giao'
-        line_number = 2
-        assert outlines[line_number].find(line) > -1
+            if LoT_SP == 'b3lyp-321g':
+                line = '# b3lyp/genecp nmr = giao'
+            else:
+                line = '# wb97xd/genecp nmr = giao'
+            line_number = 2
+            assert outlines[line_number].find(line) > -1
 
-        line2 = '5 3'
-        line_number2 = 6
-        assert outlines[line_number2].find(line2) > -1
+            line2 = '5 3'
+            line_number2 = 6
+            assert outlines[line_number2].find(line2) > -1
 
-        line3 = 'H   0.63133100  -0.63133100  -0.63133100'
-        line_number3 = 11
-        assert outlines[line_number3].find(line3) > -1
+            line3 = 'H   0.63133100  -0.63133100  -0.63133100'
+            line_number3 = 11
+            assert outlines[line_number3].find(line3) > -1
 
-        line4 = 'C 0'
-        line_number4 = 13
-        assert outlines[line_number4].find(line4) > -1
+            line4 = 'C 0'
+            line_number4 = 13
+            assert outlines[line_number4].find(line4) > -1
 
-        line5 = '321g'
-        line_number5 = 14
-        assert outlines[line_number5].find(line5) > -1
+            if LoT_SP == 'b3lyp-321g':
+                line5 = '321g'
+            else:
+                line5 = 'def2svp'
+            line_number5 = 14
+            assert outlines[line_number5].find(line5) > -1
 
-        line6 = 'H 0'
-        line_number6 = 16
-        assert outlines[line_number6].find(line6) > -1
+            line6 = 'H 0'
+            line_number6 = 16
+            assert outlines[line_number6].find(line6) > -1
 
-        line7 = 'LANL2TZ'
-        line_number7 = 17
-        assert outlines[line_number7].find(line7) > -1
+            if LoT_SP == 'b3lyp-321g':
+                line7 = 'LANL2TZ'
+            else:
+                line7 = 'LANL2DZ'
+            line_number7 = 17
+            assert outlines[line_number7].find(line7) > -1
 
-        line8 = 'H 0'
-        line_number8 = 20
-        assert outlines[line_number8].find(line8) > -1
+            line8 = 'H 0'
+            line_number8 = 20
+            assert outlines[line_number8].find(line8) > -1
 
-        # extra test for final line in SP
-        line9 = '-1'
-        line_number9 = 23
-        assert outlines[line_number9].find(line9) > -1
+            if LoT_SP == 'b3lyp-321g':
+                line9 = 'LANL2TZ'
+            else:
+                line9 = 'LANL2DZ'
+            line_number9 = 21
+            assert outlines[line_number9].find(line9) > -1
+
+            # extra test for final line in SP
+            line10 = '-1'
+            line_number10 = 23
+            assert outlines[line_number10].find(line10) > -1

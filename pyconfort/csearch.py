@@ -446,7 +446,6 @@ def min_after_embed(mol,cids,name,initial_confs,rotmatches,dup_data,dup_data_idx
 	# writing charges after RDKIT
 	if os.path.splitext(args.input)[1] == '.cdx' or os.path.splitext(args.input)[1] == '.smi' or os.path.splitext(args.input)[1] == '.csv':
 		args.charge = rules_get_charge(mol,args,log)
-		print(np.sum(args.charge))
 		dup_data.at[dup_data_idx, 'Overall charge'] = np.sum(args.charge)
 	else:
 		dup_data.at[dup_data_idx, 'Overall charge'] = args.charge_default

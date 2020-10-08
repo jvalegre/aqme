@@ -18,17 +18,17 @@ path_orca = os.getcwd()
 @pytest.mark.parametrize("folder, smiles, params_file, job_type",
 [
     # tests for ORCA in QPREP
-    # ('Organic_molecules', 'pentane.smi', 'params_test28.yaml', False), # ref test for ORCA (all default options)
-    # ('Organic_molecules', 'pentane.smi', 'params_test29.yaml', 'nprocs'), # test for nprocs in ORCA
-    # ('Organic_molecules', 'pentane.smi', 'params_test30.yaml', 'mem'), # test for mem in ORCA
-    # ('Organic_molecules', 'pentane.smi', 'params_test31.yaml', 'mdci_orca'), # test for mdci_orca in ORCA
-    # ('Organic_molecules', 'pentane.smi', 'params_test32.yaml', 'print_mini_orca'), # test for print_mini_orca in ORCA
-    # ('Organic_molecules', 'pentane.smi', 'params_test33.yaml', 'set_input_line'), # test for set_input_line in ORCA
-    # ('Organic_molecules', 'pentane.smi', 'params_test34.yaml', 'solvent_CPCM'), # test for solvent_CPCM in ORCA
-    # ('Organic_molecules', 'pentane.smi', 'params_test35.yaml', 'solvent_SMD'), # test for solvent_SMD in ORCA
-    # ('Organic_molecules', 'pentane.smi', 'params_test36.yaml', 'cpcm_input'), # test for cpcm_input in ORCA
-    # ('Organic_molecules', 'pentane.smi', 'params_test37.yaml', 'orca_scf_iters'), # test for orca_scf_iters in ORCA
-    # ('Metal_complexes', 'Ir_hexacoord.smi', 'params_Ir_test6.yaml', 'aux'), # test with metals and auxiliary basis sets in ORCA
+    ('Organic_molecules', 'pentane.smi', 'params_test28.yaml', False), # ref test for ORCA (all default options)
+    ('Organic_molecules', 'pentane.smi', 'params_test29.yaml', 'nprocs'), # test for nprocs in ORCA
+    ('Organic_molecules', 'pentane.smi', 'params_test30.yaml', 'mem'), # test for mem in ORCA
+    ('Organic_molecules', 'pentane.smi', 'params_test31.yaml', 'mdci_orca'), # test for mdci_orca in ORCA
+    ('Organic_molecules', 'pentane.smi', 'params_test32.yaml', 'print_mini_orca'), # test for print_mini_orca in ORCA
+    ('Organic_molecules', 'pentane.smi', 'params_test33.yaml', 'set_input_line'), # test for set_input_line in ORCA
+    ('Organic_molecules', 'pentane.smi', 'params_test34.yaml', 'solvent_CPCM'), # test for solvent_CPCM in ORCA
+    ('Organic_molecules', 'pentane.smi', 'params_test35.yaml', 'solvent_SMD'), # test for solvent_SMD in ORCA
+    ('Organic_molecules', 'pentane.smi', 'params_test36.yaml', 'cpcm_input'), # test for cpcm_input in ORCA
+    ('Organic_molecules', 'pentane.smi', 'params_test37.yaml', 'orca_scf_iters'), # test for orca_scf_iters in ORCA
+    ('Metal_complexes', 'Ir_hexacoord.smi', 'params_Ir_test6.yaml', 'aux'), # test with metals and auxiliary basis sets in ORCA
     ('Analysis_ORCA', 'NaN', 'params_QCORR_ORCA_test.yaml', 'sp'), # test with the SP option with ORCA
 ])
 

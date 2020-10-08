@@ -159,11 +159,9 @@ def get_name_and_charge(name,charge_data):
 			else:
 				name_molecule = name[:-10]
 
-		print(name_molecule)
 		for i in range(len(charge_data)):
 			if charge_data.loc[i,'Molecule'] == name_molecule:
 				charge_com = charge_data.loc[i,'Overall charge']
-		print(charge_com)
 	else:
 		charge_com = None
 
@@ -378,28 +376,16 @@ def write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args, log, 
 	genecp = get_genecp(file,args)
 
 	# defining path to place the new COM files
-	if args.single_point:
-		if args.QPREP == 'gaussian':
-			if str(bs).find('/') > -1:
-				path_write_input_files = '/QMCALC/G16-SP_input_files/' + str(lot) + '-' + str(bs).split('/')[0]
-			else:
-				path_write_input_files = '/QMCALC/G16-SP_input_files/' + str(lot) + '-' + str(bs)
-		elif args.QPREP == 'orca':
-			if str(bs).find('/') > -1:
-				path_write_input_files = '/QMCALC/ORCA-SP_input_files/' + str(lot) + '-' + str(bs).split('/')[0]
-			else:
-				path_write_input_files = '/QMCALC/ORCA-SP_input_files/' + str(lot) + '-' + str(bs)
-	else:
-		if args.QPREP == 'gaussian':
-			if str(bs).find('/') > -1:
-				path_write_input_files = '/QMCALC/G16/' + str(lot) + '-' + str(bs).split('/')[0]
-			else:
-				path_write_input_files = '/QMCALC/G16/' + str(lot) + '-' + str(bs)
-		elif args.QPREP == 'orca':
-			if str(bs).find('/') > -1:
-				path_write_input_files = '/QMCALC/ORCA/' + str(lot) + '-' + str(bs).split('/')[0]
-			else:
-				path_write_input_files = '/QMCALC/ORCA/' + str(lot) + '-' + str(bs)
+	if args.QPREP == 'gaussian':
+		if str(bs).find('/') > -1:
+			path_write_input_files = '/QMCALC/G16/' + str(lot) + '-' + str(bs).split('/')[0]
+		else:
+			path_write_input_files = '/QMCALC/G16/' + str(lot) + '-' + str(bs)
+	elif args.QPREP == 'orca':
+		if str(bs).find('/') > -1:
+			path_write_input_files = '/QMCALC/ORCA/' + str(lot) + '-' + str(bs).split('/')[0]
+		else:
+			path_write_input_files = '/QMCALC/ORCA/' + str(lot) + '-' + str(bs)
 
 	os.chdir(w_dir_initial+path_write_input_files)
 

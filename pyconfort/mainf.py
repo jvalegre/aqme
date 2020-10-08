@@ -149,9 +149,7 @@ def csearch_main(w_dir_initial,args,log_overall):
 			smifile = open('cdx.smi',"r")
 
 			for i, smi in enumerate(smifile):
-				print(smi)
 				smi = check_for_pieces(smi)
-				print(smi)
 				mol = Chem.MolFromSmiles(smi)
 				clean_args(args,ori_ff,mol,ori_charge)
 				if args.charge_default == 'auto':
