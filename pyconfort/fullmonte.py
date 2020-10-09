@@ -100,7 +100,7 @@ def generating_conformations_fullmonte(name,args,rotmatches,log,selectedcids_rdk
 		if abs(globmin-ene) < args.ewin_sample_fullmonte:
 			unique_mol_sample.append(unique_mol[c_energy.index(ene)])
 
-	bar = IncrementalBar('o  Generating conformations for Full Monte', max = args.nsteps_fullmonte)
+	# bar = IncrementalBar('o  Generating conformations for Full Monte', max = args.nsteps_fullmonte)
 	while nsteps < args.nsteps_fullmonte+1:
 
 		#STEP 2: Choose mol object form unique_mol:
@@ -122,8 +122,12 @@ def generating_conformations_fullmonte(name,args,rotmatches,log,selectedcids_rdk
 		rot_mol = rotate_dihedral(rot_mol,dih_rot,args,-1,nsteps)
 
 		#STEP 4: Optimize geometry rot_mol
-		GetFF = minimize_rdkit_energy(rot_mol,-1,args,log)
-		energy = float(GetFF.CalcEnergy())
+		if coord_Map is None and alg_Map is None and mol_template is None:
+			GetFF = minimize_rdkit_energy(rot_mol,-1,args,log)
+			energy = float(GetFF.CalcEnergy())
+		else:
+			mol,GetFF = realign_mol(rot_mol,-1,coord_Map, alg_Map, mol_template,args,log)
+			energy = float(GetFF.CalcEnergy())
 
 		#STEP 5 : Check for DUPLICATES - energy and rms filter (reuse)
 				 #  if the conformer is unique then save it the list
@@ -156,9 +160,9 @@ def generating_conformations_fullmonte(name,args,rotmatches,log,selectedcids_rdk
 				unique_mol_sample.append(unique_mol[indx])
 
 		nsteps += 1
-		bar.next()
-
-	bar.finish()
+	# 	bar.next()
+	#
+	# bar.finish()
 
 	dup_data.at[dup_data_idx, 'FullMonte-Unique-conformers'] = len(unique_mol)
 

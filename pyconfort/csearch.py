@@ -371,10 +371,16 @@ def getDihedralMatches(mol, heavy,log):
 
 # IF NOT USING DIHEDRALS, THIS REPLACES I BACK TO THE METAL WHEN METAL = TRUE
 # AND WRITES THE RDKIT SDF FILES. WITH DIHEDRALS, IT OPTIMIZES THE ROTAMERS
-def genConformer_r(mol, conf, i, matches, degree, sdwriter,args,name,log):
+def genConformer_r(mol, conf, i, matches, degree, sdwriter,args,name,log,coord_Map,alg_Map, mol_template):
 	if i >= len(matches): # base case, torsions should be set in conf
 		#setting the metal back instead of I
 		if args.metal_complex and args.CSEARCH=='rdkit':
+			if coord_Map is None and alg_Map is None and mol_template is None:
+				GetFF = minimize_rdkit_energy(mol,conf,args,log)
+				mol.SetProp('Energy',str(GetFF.CalcEnergy()))
+			else:
+				mol,GetFF = realign_mol(mol,conf,coord_Map, alg_Map, mol_template,args,log)
+				mol.SetProp('Energy',str(GetFF.CalcEnergy()))
 			set_metal_atomic_number(mol,args)
 		sdwriter.write(mol,conf)
 		return 1
@@ -385,7 +391,7 @@ def genConformer_r(mol, conf, i, matches, degree, sdwriter,args,name,log):
 			rad = math.pi*deg / 180.0
 			rdMolTransforms.SetDihedralRad(mol.GetConformer(conf),*matches[i],value=rad)
 			mol.SetProp('_Name',name)
-			total += genConformer_r(mol, conf, i+1, matches, degree, sdwriter,args,name,log)
+			total += genConformer_r(mol, conf, i+1, matches, degree, sdwriter,args,name,log,coord_Map,alg_Map, mol_template)
 			deg += degree
 		return total
 
@@ -485,7 +491,7 @@ def min_after_embed(mol,cids,name,initial_confs,rotmatches,dup_data,dup_data_idx
 				sdwriter.write(outmols[conf],conf)
 				for m in rotmatches:
 					rdMolTransforms.SetDihedralDeg(outmols[conf].GetConformer(conf),*m,180.0)
-			total += genConformer_r(outmols[conf], conf, 0, rotmatches, args.degree, sdwriter ,args,outmols[conf].GetProp('_Name'),log)
+			total += genConformer_r(outmols[conf], conf, 0, rotmatches, args.degree, sdwriter ,args,outmols[conf].GetProp('_Name'),log,coord_Map,alg_Map, mol_template)
 			# bar.next()
 		# bar.finish()
 		if args.verbose and len(rotmatches) != 0:
@@ -600,10 +606,8 @@ def dihedral_filter_and_sdf(name,args,log,dup_data,dup_data_idx,coord_Map, alg_M
 		if args.metal_complex:
 			set_metal_atomic_number(mol_rd,args)
 		sdwriter_rd.write(mol_rd)
-
 	sdwriter_rd.close()
 	status = 1
-
 	return status
 
 # EMBEDS, OPTIMIZES AND FILTERS RDKIT CONFORMERS
