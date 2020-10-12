@@ -1,0 +1,12 @@
+input : 'QN-exp-add-connectivity.sdf' #name of input
+output_name : 'NMR' #name for output
+verbose : True
+
+QPRED : 'nmr'
+
+level_of_theory : ['pbe1pbe'] # level of theory
+basis_set : ['cc-pvtz'] # basis set
+
+level_of_theory_sp : ['pbe1pbe'] # level of theory
+basis_set_sp : ['cc-pvtz'] # basis set
+

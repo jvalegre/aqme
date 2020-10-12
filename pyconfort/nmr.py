@@ -27,7 +27,7 @@ def nmr_stats(y_exp,y_pred):
 
 def get_exp_data(args,name,w_dir_initial,final_shieldings,conf_idx,conf_sym):
 	if args.nmr_exp == 'fromsdf':
-		sdf_file = w_dir_initial+'/'+name.split('_')[0]+'.sdf'
+		sdf_file = w_dir_initial+'/'+args.input
 		sdf_lines = open(sdf_file,'r').readlines()
 		found_nmr = 0
 		for i,line in enumerate(sdf_lines):
@@ -107,7 +107,19 @@ def calculate_nmr(nmr_log_files,args,log,name,w_dir_fin,w_dir_initial,lot_sp,bs_
 	[opt_method, opt_basis, opt_solv] = [lot,bs,[args.solvent_model,args.solvent_name]]
 	[nmr_method, nmr_basis, nmr_solv] = [lot_sp,bs_sp,[args.solvent_model_sp,args.solvent_name]]
 
-	## Matching against the CHESHIRE database of scaling factors
+	log.write("\no  Calculating NMR shieldings with this combination of methods:")
+
+	if args.solvent_model == 'gas_phase':
+		log.write("\no  Optimization: {0}/{1} (gas phase)".format(opt_method, opt_basis))
+	else:
+		log.write("\no  Optimization: {0}/{1} ({2}, solvent = {3})".format(opt_method, opt_basis, opt_solv[0], opt_solv[1]))
+
+	if args.solvent_model_sp == 'gas_phase':
+		log.write("\no  NMR calculation: {0}/{1} (gas phase)".format(nmr_method, nmr_basis))
+	else:
+		log.write("\no  NMR calculation: {0}/{1} ({2}, solvent = {3})".format(nmr_method, nmr_basis, nmr_solv[0], nmr_solv[1]))
+
+	# Matching against the CHESHIRE database of scaling factors
 	if args.nmr_online:
 		slope, intercept,tms_ref = [],[], None
 		for nuc in args.nmr_nucleus:
@@ -116,7 +128,7 @@ def calculate_nmr(nmr_log_files,args,log,name,w_dir_fin,w_dir_initial,lot_sp,bs_
 				slope.append(float(scale.split()[1]))
 				intercept.append(float(scale.split()[3]))
 			except AttributeError:
-				log.write("   No scaling factors found for this level of theory! Input the values as arguments for pyCONFORT!"); exit()
+				log.write("x   No scaling factors found for this level of theory! Input the values as arguments for pyCONFORT!"); exit()
 
 			log.write("\no  The slope for nucleus {0} = {1}".format(nuc, slope))
 			log.write("\no  The intercept for nucleus {0} = {1}".format(nuc, intercept))
@@ -126,10 +138,13 @@ def calculate_nmr(nmr_log_files,args,log,name,w_dir_fin,w_dir_initial,lot_sp,bs_
 		intercept = args.nmr_intercept
 		tms_ref = args.nmr_tms_ref
 
+		for i,nuc in enumerate(args.nmr_nucleus):
+			log.write("\no  The slope for nucleus {0} = {1}".format(nuc, slope[i]))
+			log.write("\no  The intercept for nucleus {0} = {1}".format(nuc, intercept[i]))
+
 	final_shieldings = []
 
 	for num_file,file in enumerate(nmr_log_files):
-		# if file.split('.log')[0] == 'QN-exp_0_413_ani_NMR':
 		# list of H and C shieldings for each individual conformer
 		conf_shieldings, conf_idx,conf_sym = [],[],[]
 
@@ -191,36 +206,39 @@ def calculate_nmr(nmr_log_files,args,log,name,w_dir_fin,w_dir_initial,lot_sp,bs_
 		conf_shieldings = [x * boltz_factor for x in conf_shieldings]
 		final_shieldings.append(conf_shieldings)
 
-
-	#final additons
+	#final additions
 	final_shieldings = np.array(final_shieldings)
 	final_shieldings = np.sum(final_shieldings, axis=0)
 	conf_idx = np.array(conf_idx)
 	conf_sym = np.array(conf_sym)
 
-	#getting experimental shiftd for get_atom
-	atom_num_exp,atom_sheilding_exp = get_exp_data(args,name,w_dir_initial,final_shieldings,conf_idx,conf_sym)
+	if args.nmr_exp != 'None':
+		#getting experimental shiftd for get_atom
+		atom_num_exp,atom_sheilding_exp = get_exp_data(args,name,w_dir_initial,final_shieldings,conf_idx,conf_sym)
 
-	#make final array with atom_num, exp, dft
-	df = pd.DataFrame({'Atom': atom_num_exp, 'Shielding-Exp': atom_sheilding_exp }, columns=['Atom', 'Shielding-Exp'])
+		#make final array with atom_num, exp, dft
+		df = pd.DataFrame({'Atom': atom_num_exp, 'Shielding-Exp': atom_sheilding_exp }, columns=['Atom', 'Shielding-Exp'])
 
-	for i, atom_num in enumerate(atom_num_exp):
-		for j,atom_cal in enumerate(conf_idx):
-			if len(atom_num.split('-')) > 1:
-				if atom_cal == atom_num.split('-')[0] or atom_cal == atom_num.split('-')[1] or atom_cal == atom_num.split('-')[2]:
-					df.at[i,'Shielding-Cal'] = final_shieldings[j]
+		for i, atom_num in enumerate(atom_num_exp):
+			for j,atom_cal in enumerate(conf_idx):
+				if len(atom_num.split('-')) > 1:
+					if atom_cal == atom_num.split('-')[0] or atom_cal == atom_num.split('-')[1] or atom_cal == atom_num.split('-')[2]:
+						df.at[i,'Shielding-Calc'] = final_shieldings[j]
+						df.at[i,'Atom-Symbol'] = conf_sym[j]
+				if atom_num == atom_cal:
+					df.at[i,'Shielding-Calc'] = final_shieldings[j]
 					df.at[i,'Atom-Symbol'] = conf_sym[j]
-			if atom_num == atom_cal:
-				df.at[i,'Shielding-Cal'] = final_shieldings[j]
-				df.at[i,'Atom-Symbol'] = conf_sym[j]
 
-	#calculation of MAE and SD
-	for atom_nuc in args.nmr_nucleus:
-		df_nuc = df.loc[df['Atom-Symbol'] == atom_nuc]
-		mae_nuc,sd_nuc = nmr_stats(df_nuc['Shielding-Exp'],df_nuc['Shielding-Cal'])
-		log.write("\no  The MAE and SD for molecule {0} is {1} and {2} respectively for {3}".format(name,mae_nuc,sd_nuc,atom_nuc))
+		#calculation of MAE and SD
+		for atom_nuc in args.nmr_nucleus:
+			df_nuc = df.loc[df['Atom-Symbol'] == atom_nuc]
+			mae_nuc,sd_nuc = nmr_stats(df_nuc['Shielding-Exp'],df_nuc['Shielding-Calc'])
+			log.write("\no  The MAE and SD for molecule {0} is {1} and {2} respectively for {3}".format(name,mae_nuc,sd_nuc,atom_nuc))
 
-	w_dir = os.getcwd()
+	else:
+		#make final array with atom_num, exp, dft
+		df = pd.DataFrame({'Atom': conf_idx, 'Atom-Symbol': conf_sym, 'Shielding-Calc': final_shieldings}, columns=['Atom', 'Atom-Symbol', 'Shielding-Calc'])
+
 	folder = w_dir_initial+'/QPRED/nmr/average-nmr/'+str(lot_sp)+'-'+str(bs_sp)
 	log.write("\no  Preparing final NMR results in {}".format(folder))
 	try:
@@ -231,6 +249,7 @@ def calculate_nmr(nmr_log_files,args,log,name,w_dir_fin,w_dir_initial,lot_sp,bs_
 			os.chdir(folder)
 		else:
 			pass
+
 	export_param_excel = df.to_csv(name+'_'+lot_sp+'-'+bs_sp+'_predicted_shifts.csv', index = None)
 
 def calculate_boltz_and_nmr(val,args,log,name,w_dir_fin,w_dir_initial,lot,bs):
@@ -248,7 +267,6 @@ def calculate_boltz_and_nmr(val,args,log,name,w_dir_fin,w_dir_initial,lot,bs):
 		destination = w_dir_initial+'/QPRED/nmr/boltz/'+str(lot)+'-'+str(bs)
 
 	moving_files(destination, os.getcwd(),'Goodvibes_'+name+'.dat')
-
 
 	for lot_sp in args.level_of_theory_sp:
 		for bs_sp in args.basis_set_sp:

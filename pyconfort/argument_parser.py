@@ -145,8 +145,7 @@ def parser_args():
 	parser.add_argument("--dbstep_cen_lig_file",help="Center for DBSTEP steric paramters in a txt ( FORMAT : name, center, ligand)", action="store", default="No file passed",dest="dbstep_cen_lig_file")
 
 	#arguments for nmr
-	parser.add_argument("--nmr_exp", default='fromsdf', help="From where the ecperimental NMR details will be obtained",choices=['fromsdf','exp_file'])
-	parser.add_argument("--nmr_exp_file", dest="nmr_exp_file", action="store", help="Specify the NMR experimental file", default="No file passed")
+	parser.add_argument("--nmr_exp", default='fromsdf', help="From where the experimental NMR details will be obtained")
 	parser.add_argument("--nmr_online", action="store_true", default=False, help="Turn to true for checking NMR scaling factors from ChesHire Database")
 	parser.add_argument("--nmr_aos", help="Specify the type of atomic basis used for nmr calculation (default = giao) ", default='giao', type=str)
 	parser.add_argument("--nmr_nucleus",help="Specify the nucleus for nmr analysis default (['C','H'])", default=['C','H'], dest="nmr_nucleus", type=str, nargs='*')

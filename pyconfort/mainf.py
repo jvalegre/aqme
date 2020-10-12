@@ -560,18 +560,49 @@ def graph_main(args,log,w_dir_initial):
 	os.chdir(w_dir_initial)
 
 
-#function for compariosn of nmr
+#function for comparison of nmr
 def nmr_main(args,log,w_dir_initial):
 
+	if os.path.exists(w_dir_initial+'/QMCALC/G16'):
+		args.path = w_dir_initial+'/QMCALC/G16/'
+	else:
+		log.write('\nx  The path for NMR analysis was not set up properly! (check the tutorials for more information)')
+
 	#get sdf FILES from csv
-	pd_name = pd.read_csv(w_dir_initial+'/CSEARCH/csv_files/'+args.input.split('.')[0]+'-CSEARCH-Data.csv')
+	try:
+		pd_name = pd.read_csv(w_dir_initial+'/CSEARCH/csv_files/'+args.input.split('.')[0]+'-CSEARCH-Data.csv')
+
+	except FileNotFoundError:
+		# detects all the unique molecules from the success folder
+		if str(args.basis_set[0]).find('/') > -1:
+			w_dir_fin = args.path + str(args.level_of_theory[0]) + '-' + str(args.basis_set[0]).split('/')[0] +'/success/output_files'
+		else:
+			w_dir_fin = args.path + str(args.level_of_theory[0]) + '-' + str(args.basis_set[0]) +'/success/output_files'
+		os.chdir(w_dir_fin)
+
+		nmr_list = []
+		standard_suffixes = ['xtb','ani']
+		for name_nmr in glob.glob('*.*'):
+			# discard_charact keeps track of the extra characters after the name of the molecule
+			discard_charact = len(name_nmr.split('.')[1])+1
+			potential_unique = name_nmr.split('.')[0].split('_')
+			for i in reversed(range(len(potential_unique))):
+				try:
+					if potential_unique[i] not in standard_suffixes:
+						 int(potential_unique[i])
+					discard_charact += len(potential_unique[i])
+					discard_charact += 1
+				except ValueError:
+						original_name = name_nmr[:-discard_charact]
+						if original_name not in nmr_list:
+							nmr_list.append(original_name)
+		pd_name = pd.DataFrame(data=nmr_list, columns=['Molecule'])
 
 	for i in range(len(pd_name)):
 		name = pd_name.loc[i,'Molecule']
 
 		log.write("\no NMR analysis for molecule : {0} ".format(name))
-		if os.path.exists(w_dir_initial+'/QMCALC/G16'):
-			args.path = w_dir_initial+'/QMCALC/G16/'
+
 		# Sets the folder and find the log files to analyze
 		for lot,bs,bs_gcp in zip(args.level_of_theory, args.basis_set,args.basis_set_genecp_atoms):
 			#assign the path to the finished directory.
@@ -580,6 +611,7 @@ def nmr_main(args,log,w_dir_initial):
 			else:
 				w_dir_fin = args.path + str(lot) + '-' + str(bs) +'/success/output_files'
 			os.chdir(w_dir_fin)
+			
 			log_files = get_com_or_log_out_files('output',name)
 			if len(log_files) != 0:
 				calculate_boltz_and_nmr(log_files,args,log,name,w_dir_fin,w_dir_initial,lot,bs)
