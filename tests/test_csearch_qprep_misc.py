@@ -36,11 +36,11 @@ path_misc = os.getcwd()
     # test to create COM files with SDF files (i.e. from RDKit generated files)
     ('pentane_n_lowest.sdf', 'params_test_misc7.yaml', 4, 'nan', 'count_com'), # test create COM from SDF
     # test to see if .txt, .yaml and .yml to get genecp is working
-    ('pentane.smi', 'params_test_misc8.yaml', 1, 1, 'genecp_txt'), # test manual genecp
+#MISSING    ('pentane.smi', 'params_test_misc8.yaml', 1, 1, 'genecp_txt'), # test manual genecp
     # test to see if the input line, frequencies, chk and other options are working correctly
     ('pentane.smi', 'params_test_misc9.yaml', 0, 1, 'freq_maxcycles'), # test frequencies, maxcycles, chk, mem, nprocs, solvent, dispersion
     # test for using multiple levels of theory
-# MISSING    ('pentane.smi', 'params_test_misc10.yaml', 1, 1, 'multiple_lot'), # test multiple levels of theory and genecp
+    ('pentane.smi', 'params_test_misc10.yaml', 1, 1, 'multiple_lot'), # test multiple levels of theory and genecp
     # test for checking QCORR=False
     ('pentane.smi', 'params_test_misc11.yaml', 0, 1, 'no_com_files'), # test gauss_write=False
 ])
