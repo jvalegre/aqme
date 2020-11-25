@@ -69,7 +69,7 @@ def main():
 		qprep_main(w_dir_initial,args,log_overall)
 		os.chdir(w_dir_initial)
 
-	if args.CSEARCH=='rdkit' or args.CSEARCH=='summ' or args.CSEARCH=='fullmonte':
+	if args.CSEARCH=='rdkit' or args.CSEARCH=='summ' or args.CSEARCH=='fullmonte' or args.QPREP is not None:
 		# moving files after compute and/or write_gauss
 		move_sdf_main(args)
 		os.chdir(w_dir_initial)

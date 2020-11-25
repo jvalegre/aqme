@@ -2,7 +2,6 @@
 from __future__ import print_function
 
 import datetime
-import requests
 import sys
 import unicodedata
 import pandas as pd
@@ -64,6 +63,7 @@ def cheshire(online, nucleus, opt_method, opt_basis, opt_solv, nmr_method, nmr_b
         log.write("   READING FROM LOCAL VERSION OF CHESHIRE {0}".format( now.strftime("%Y-%m-%d %H:%M")))
         html = BeautifulSoup(open('./scaling_factors.html'), "lxml")
     else:
+        import requests
         log.write("   READING FROM http://cheshirenmr.info/ScalingFactors.htm {0}".format(now.strftime("%Y-%m-%d %H:%M")))
         url = 'http://cheshirenmr.info/ScalingFactors.htm'
         response = requests.get(url)

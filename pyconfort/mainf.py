@@ -16,7 +16,7 @@ from rdkit.Chem import AllChem as Chem
 from pyconfort.csearch import check_for_pieces, check_charge_smi, clean_args, compute_confs, com_2_xyz_2_sdf, mol_from_sdf_or_mol_or_mol2,creation_of_dup_csv,Logger
 from pyconfort.filter import exp_rules_output
 
-from pyconfort.qprep_gaussian import read_energies, write_gaussian_input_file, moving_files, convert_xyz_to_sdf
+from pyconfort.qprep_gaussian import read_energies, write_gaussian_input_file, moving_files, convert_xyz_to_sdf, get_name_and_charge
 from pyconfort.qcorr_gaussian import output_analyzer, check_for_final_folder, dup_calculation
 
 from pyconfort.grapher import graph
@@ -262,10 +262,26 @@ def qprep_main(w_dir_initial,args,log):
 
 	if len(conf_files) != 0:
 		#read in dup_data to get the overall charge of MOLECULES
+		invalid_files = []
 		try:
 			charge_data = pd.read_csv(w_dir_initial+'/CSEARCH/csv_files/'+args.input.split('.')[0]+'-CSEARCH-Data.csv', usecols=['Molecule','Overall charge'])
 		except:
-			charge_data = None
+			charge_data = pd.DataFrame()
+			for i,conf_file in enumerate(conf_files):
+				suppl = Chem.SDMolSupplier(conf_file, removeHs=False)
+				if suppl:
+					mol = suppl[0]
+					charge = mol.GetProp('Real charge')
+					charge_data.at[i,'Overall charge'] = charge
+
+				else:
+					invalid_files.append(conf_file)
+					charge_data.at[i,'Overall charge'] = 'Invalid'
+
+				name = get_name_and_charge(conf_file.split('.')[0],None)
+				charge_data.at[i,'Molecule'] = name
+
+
 		for lot,bs,bs_gcp in zip(args.level_of_theory, args.basis_set,args.basis_set_genecp_atoms):
 			# only create this directory if single point calculation is requested
 			if bs.find('**') > -1:
@@ -289,17 +305,19 @@ def qprep_main(w_dir_initial,args,log):
 				else:
 					log.write('\nx  The QMCALC folder from QPREP could not be created, probably due to incompatible characters')
 					folder_error = True
+
 			# writing the com files
 			# check conf_file exists, parse energies and then write DFT input
 			for file in conf_files:
-				if os.path.exists(file):
-					if args.verbose:
-						if not folder_error:
-							log.write("   -> Converting from {}".format(file))
-					energies = read_energies(file,log)
-					name = file.split('.')[0]
+				if file not in invalid_files:
+					if os.path.exists(file):
+						if args.verbose:
+							if not folder_error:
+								log.write("   -> Converting from {}".format(file))
+						energies = read_energies(file,log)
+						name = file.split('.')[0]
 
-					write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args, log, charge_data, w_dir_initial)
+						write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args, log, charge_data, w_dir_initial)
 	else:
 		log.write('\nx  No SDF files detected to convert to gaussian COM files')
 
@@ -364,6 +382,18 @@ def move_sdf_main(args):
 			destination_exp_rules = src +'/CSEARCH/fullmonte/filter_exp_rules/'
 			for file in exp_rules_files:
 				moving_files(destination_exp_rules,src,file)
+
+	if args.CSEARCH is None:
+		if args.exp_rules != 'None':
+			destination_exp_rules = src +'/QMCALC/SDF_input/filter_exp_rules/'
+			for file in exp_rules_files:
+				moving_files(destination_exp_rules,src,file)
+
+		all_conf_files = glob.glob('*.sdf')
+		destination = src +'/QMCALC/SDF_input/'
+		for file in all_conf_files:
+			moving_files(destination,src,file)
+
 
 	if args.com_from_xyz:
 		all_xyz_conf_files = glob.glob('*.xyz')+glob.glob('*.sdf')
@@ -611,7 +641,7 @@ def nmr_main(args,log,w_dir_initial):
 			else:
 				w_dir_fin = args.path + str(lot) + '-' + str(bs) +'/success/output_files'
 			os.chdir(w_dir_fin)
-			
+
 			log_files = get_com_or_log_out_files('output',name)
 			if len(log_files) != 0:
 				calculate_boltz_and_nmr(log_files,args,log,name,w_dir_fin,w_dir_initial,lot,bs)
@@ -765,18 +795,16 @@ def exp_rules_main(args,log,exp_rules_active):
 
 		for file in conf_files:
 			allmols = Chem.SDMolSupplier(file, removeHs=False)
-			if allmols is None:
-				log.write("Could not open "+ file)
-				sys.exit(-1)
+			if allmols:
+				sdwriter = Chem.SDWriter(file.split('.')[0]+'_filter_exp_rules.sdf')
+				print_error_exp_rules = 0
+				for mol in allmols:
+					check_mol = True
+					ob_compat = True
+					rdkit_compat = True
+					check_mol = exp_rules_output(mol,args,log,file,print_error_exp_rules,ob_compat,rdkit_compat)
+					print_error_exp_rules += 1
+					if check_mol:
+						sdwriter.write(mol)
 
-			sdwriter = Chem.SDWriter(file.split('.')[0]+'_filter_exp_rules.sdf')
-			print_error_exp_rules = 0
-			for mol in allmols:
-				check_mol = True
-				ob_compat = True
-				rdkit_compat = True
-				check_mol = exp_rules_output(mol,args,log,file,print_error_exp_rules,ob_compat,rdkit_compat)
-				print_error_exp_rules += 1
-				if check_mol:
-					sdwriter.write(mol)
-			sdwriter.close()
+				sdwriter.close()
