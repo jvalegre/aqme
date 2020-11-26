@@ -16,6 +16,7 @@ Conformer generator followed by generation of com files for Gaussian starting fr
 
 XXX COPY DESCRIPTION FROM INTRO OF PAPER XXX
 
+
 ## Features
 XXX MODIFY BASED ON WHAT WE SAY IN THE PAPER XXX
 Allows for creation of different input files by varying the following:
@@ -36,8 +37,17 @@ Analysis for Boltzmann averaging and combining files
 1. Respective files for each molecule are grabbed and outputs for each molecule are written to a .csv files
 2. All the .csv for each molecule are grabbed and all thermodynamic data are written to three different .csv (all data, average data, comparison of lowest vs avg G)
 
+## Requirements
+* Python 3.6, or 3.7 (true?)
+
+## Conda and PyPI (`pip`)
+- Basic Instructions go here
+
 ## Extended documentation (installation, use, examples, etc)
 XXX LINK READTHEDOCS WEBPAGE XXX
+
+## Acknowledgements
+go here
 
 ## Reference
 XXX DOI FOR PAPER XXX
