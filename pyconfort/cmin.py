@@ -45,13 +45,25 @@ def rules_get_charge(mol,args,log):
 			for neighbour in neighbours:
 				if neighbour.GetTotalValence()== 4:
 					if neighbour.GetSymbol() in C_group:
-						charge[charge_idx] = charge[charge_idx] - 1
+						carbene_like = False
+						for inside_neighbour in neighbour.GetNeighbors():
+							if inside_neighbour.GetSymbol() in N_group:
+								if inside_neighbour.GetTotalValence() == 4:
+									carbene_like = True
+						if not carbene_like:
+							charge[charge_idx] = charge[charge_idx] - 1
 				elif neighbour.GetTotalValence()== 3:
 					if neighbour.GetSymbol() in N_group:
 						charge[charge_idx] = charge[charge_idx] - 1
 				elif neighbour.GetTotalValence() == 2:
 					if neighbour.GetSymbol() in O_group:
-						charge[charge_idx] = charge[charge_idx] - 1
+						nitrone_like = False
+						for inside_neighbour in neighbour.GetNeighbors():
+							if inside_neighbour.GetSymbol() in N_group:
+								nitrone_like = True
+						if not nitrone_like:
+							charge[charge_idx] = charge[charge_idx] - 1
+
 				elif neighbour.GetTotalValence() == 1:
 					if neighbour.GetSymbol() in F_group:
 						charge[charge_idx] = charge[charge_idx] - 1
