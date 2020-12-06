@@ -84,6 +84,10 @@ def csearch_main(w_dir_initial,args,log_overall):
 	ori_ff = args.ff
 	ori_charge = args.charge_default
 
+	# if large system increase stack size
+	if args.STACKSIZE != '1G':
+		os.environ['OMP_STACKSIZE'] = args.STACKSIZE
+
 	with futures.ProcessPoolExecutor(max_workers=args.cpus) as executor:
 		# Submit a set of asynchronous jobs
 		jobs = []

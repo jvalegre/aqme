@@ -171,9 +171,9 @@ def optimize(mol, args, program,log,dup_data,dup_data_idx):
 					log.write('\nx  Torchani is not installed correctly - ANI is not available')
 					sys.exit()
 
-	# if large system increase stack size
-	if args.STACKSIZE != '1G':
-		os.environ['OMP_STACKSIZE'] = args.STACKSIZE
+	# # if large system increase stack size
+	# if args.STACKSIZE != '1G':
+	# 	os.environ['OMP_STACKSIZE'] = args.STACKSIZE
 
 	# removing the Ba atom if NCI complexes
 	if args.nci_complex:
