@@ -21,17 +21,20 @@ def set_metal_atomic_number(mol,args):
 
 # RULES TO GET EXPERIMENTAL CONFORMERS
 def exp_rules_output(mol,args,log,file,print_error_exp_rules,ob_compat,rdkit_compat):
+	passing = True
 	if args.exp_rules == 'Ir_bidentate_x3':
-		passing = True
 		ligand_links = []
 		atom_indexes = []
 		# Finds the Ir atom and gets the atom types and indexes of all its neighbours
+		# the filter is compatible with molecules that do not contain Ir (always passing)
+		metal_idx = None
 		for atom in mol.GetAtoms():
 			if atom.GetAtomicNum() == 77:
 				metal_idx = atom.GetIdx()
 				for x in atom.GetNeighbors():
 					ligand_links.append(x.GetSymbol())
 					atom_indexes.append(x.GetIdx())
+
 		# I need to get the only 3D conformer generated in that mol object for rdMolTransforms
 		mol_conf = mol.GetConformer(0)
 		# This part will identify the pairs of C and N atoms that are part of the same Ph_Py ligand.
@@ -109,7 +112,8 @@ def exp_rules_output(mol,args,log,file,print_error_exp_rules,ob_compat,rdkit_com
 							passing = False
 		# it filters off molecules that the SDF only detects 5 Ir neighbours
 		else:
-			passing = False
+			if metal_idx is not None:
+				passing = False
 
 	else:
 		for rule in args.exp_rules:
