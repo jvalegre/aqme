@@ -73,6 +73,31 @@ def rules_get_charge(mol,args,log):
 	else:
 		return charge
 
+# SUBSTITUTION WITH I
+def substituted_mol(mol,args,log):
+	for atom in mol.GetAtoms():
+		if atom.GetSymbol() in args.metal:
+			args.metal_sym.append(atom.GetSymbol() )
+			atom.SetAtomicNum(53)
+			if len(atom.GetNeighbors()) == 2:
+				atom.SetFormalCharge(-3)
+			if len(atom.GetNeighbors()) == 3:
+				atom.SetFormalCharge(-2)
+			if len(atom.GetNeighbors()) == 4:
+				atom.SetFormalCharge(-1)
+			if len(atom.GetNeighbors()) == 5:
+				atom.SetFormalCharge(0)
+			if len(atom.GetNeighbors()) == 6:
+				atom.SetFormalCharge(1)
+			if len(atom.GetNeighbors()) == 7:
+				atom.SetFormalCharge(2)
+			if len(atom.GetNeighbors()) == 8:
+				atom.SetFormalCharge(3)
+			args.metal_idx.append(atom.GetIdx())
+			args.complex_coord.append(len(atom.GetNeighbors()))
+
+	return mol,args.metal_idx,args.complex_coord,args.metal_sym
+
 # ANI1 OPTIMIZER AND ENERGY CALCULATOR
 def ani_calc(ase,torch,model,device,elements,cartesians,coordinates,args,log):
 	species = model.species_to_tensor(elements).to(device).unsqueeze(0)
@@ -254,6 +279,11 @@ def mult_min(name, args, program,log,dup_data,dup_data_idx):
 		# bar.next()
 		if mol is not None:
 			# optimize this structure and record the energy
+			if args.metal_complex:
+				args.metal_idx = []
+				args.complex_coord = []
+				args.metal_sym = []
+				mol,args.metal_idx,args.complex_coord,args.metal_sym = substituted_mol(mol,args,log)
 			mol,energy,ani_incompatible = optimize(mol, args, program,log,dup_data,dup_data_idx)
 			if not ani_incompatible:
 				pmol = PropertyMol.PropertyMol(mol)

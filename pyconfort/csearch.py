@@ -21,7 +21,7 @@ from pyconfort.qprep_gaussian import write_confs
 from pyconfort.filter import filters,set_metal_atomic_number,ewin_filter,pre_E_filter,RMSD_and_E_filter
 from pyconfort.argument_parser import possible_atoms
 from pyconfort.tmbuild import template_embed
-from pyconfort.cmin import mult_min, rules_get_charge, atom_groups
+from pyconfort.cmin import mult_min, rules_get_charge, atom_groups,substituted_mol
 from pyconfort.fullmonte import generating_conformations_fullmonte, minimize_rdkit_energy,realign_mol
 
 
@@ -125,30 +125,6 @@ def com_2_xyz_2_sdf(args,start_point=None):
 		else:
 			return args.charge_default
 
-# SUBSTITUTION WITH I
-def substituted_mol(mol,args,log):
-	for atom in mol.GetAtoms():
-		if atom.GetSymbol() in args.metal:
-			args.metal_sym.append(atom.GetSymbol() )
-			atom.SetAtomicNum(53)
-			if len(atom.GetNeighbors()) == 2:
-				atom.SetFormalCharge(-3)
-			if len(atom.GetNeighbors()) == 3:
-				atom.SetFormalCharge(-2)
-			if len(atom.GetNeighbors()) == 4:
-				atom.SetFormalCharge(-1)
-			if len(atom.GetNeighbors()) == 5:
-				atom.SetFormalCharge(0)
-			if len(atom.GetNeighbors()) == 6:
-				atom.SetFormalCharge(1)
-			if len(atom.GetNeighbors()) == 7:
-				atom.SetFormalCharge(2)
-			if len(atom.GetNeighbors()) == 8:
-				atom.SetFormalCharge(3)
-			args.metal_idx.append(atom.GetIdx())
-			args.complex_coord.append(len(atom.GetNeighbors()))
-
-	return mol,args.metal_idx,args.complex_coord,args.metal_sym
 
 #mol from sdf
 def mol_from_sdf_or_mol_or_mol2(input):
