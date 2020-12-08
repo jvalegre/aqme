@@ -28,7 +28,7 @@ from __future__ import print_function
 import os
 import time
 from pyconfort.argument_parser import parser_args
-from pyconfort.mainf import csearch_main, exp_rules_main, qprep_main, move_sdf_main, qcorr_gaussian_main,dup_main,graph_main,geom_par_main,nmr_main,energy_main,load_from_yaml,creation_of_ana_csv,dbstep_par_main,nics_par_main,cclib_main
+from pyconfort.mainf import csearch_main, exp_rules_main, qprep_main, move_sdf_main, qcorr_gaussian_main,dup_main,graph_main,geom_par_main,nmr_main,energy_main,load_from_yaml,creation_of_ana_csv,dbstep_par_main,nics_par_main,cclib_main,cmin_main
 from pyconfort.csearch import Logger
 
 def main():
@@ -51,10 +51,26 @@ def main():
 	#CSEARCH AND CMIN
 	if args.CSEARCH=='rdkit' or args.CSEARCH=='summ' or args.CSEARCH=='fullmonte':
 		start_time_overall = time.time()
-		csearch_main(w_dir_initial,args,log_overall)
+		csearch_dup_data = csearch_main(w_dir_initial,args,log_overall)
 		if args.time:
-			log_overall.write("\n All molecules execution time: %s seconds" % (round(time.time() - start_time_overall,2)))
+			log_overall.write("\n All molecules execution time CSEARCH: %s seconds" % (round(time.time() - start_time_overall,2)))
 		os.chdir(w_dir_initial)
+		if args.CMIN is None:
+			if not os.path.isdir(w_dir_initial+'/CSEARCH/csv_files'):
+				os.makedirs(w_dir_initial+'/CSEARCH/csv_files/')
+			csearch_dup_data.to_csv(w_dir_initial+'/CSEARCH/csv_files/'+args.input.split('.')[0]+'-CSEARCH-Data.csv',index=False)
+
+	#Separating CMIN
+	if args.CSEARCH != None and (args.CMIN=='xtb' or args.CMIN=='ani'):
+		start_time_overall = time.time()
+		cmin_dup_data = cmin_main(w_dir_initial,args,log_overall,csearch_dup_data)
+		if args.time:
+			log_overall.write("\n All molecules execution time CMIN: %s seconds" % (round(time.time() - start_time_overall,2)))
+		os.chdir(w_dir_initial)
+		if not os.path.isdir(w_dir_initial+'/CMIN/csv_files'):
+			os.makedirs(w_dir_initial+'/CMIN/csv_files/')
+		cmin_dup_data.to_csv(w_dir_initial+'/CMIN/csv_files/'+args.input.split('.')[0]+'-CMIN-Data.csv',index=False)
+
 
 	#applying rules to discard certain conformers based on rules that the user define
 	if args.exp_rules != 'None':

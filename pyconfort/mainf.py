@@ -26,6 +26,7 @@ from pyconfort.energy import calculate_boltz_and_energy,calculate_avg_and_energy
 from pyconfort.dbstep_conf import calculate_db_parameters,calculate_boltz_and_dbstep
 from pyconfort.nics_conf import calculate_nics_parameters,calculate_boltz_for_nics,calculate_avg_nics
 from pyconfort.cclib_conf import calculate_cclib,calcualte_average_cclib_parameter,calculate_boltz_for_cclib
+from pyconfort.cmin import mult_min
 #need to and in energy
 
 #load paramters from yaml file
@@ -85,8 +86,8 @@ def csearch_main(w_dir_initial,args,log_overall):
 	ori_charge = args.charge_default
 
 	# if large system increase stack size
-	if args.STACKSIZE != '1G':
-		os.environ['OMP_STACKSIZE'] = args.STACKSIZE
+	# if args.STACKSIZE != '1G':
+	# 	os.environ['OMP_STACKSIZE'] = args.STACKSIZE
 
 	with futures.ProcessPoolExecutor(max_workers=args.cpus) as executor:
 		# Submit a set of asynchronous jobs
@@ -213,24 +214,60 @@ def csearch_main(w_dir_initial,args,log_overall):
 				i += 1
 
 		final_dup_data = creation_of_dup_csv(args)
-		bar = IncrementalBar('o  Number of finished jobs from CSEARCH/CMIN', max = count_mol)
+		bar = IncrementalBar('o  Number of finished jobs from CSEARCH', max = count_mol)
 		# Process the job results (in submission order) and save the conformers.
 		for i,job in enumerate(jobs):
 			total_data = job.result()
 			frames = [final_dup_data, total_data]
-			final_dup_data = pd.concat(frames)
+			final_dup_data = pd.concat(frames,ignore_index=True,sort=True)
 			bar.next()
 		bar.finish()
-
-		if not os.path.isdir(w_dir_initial+'/CSEARCH/csv_files'):
-			os.makedirs(w_dir_initial+'/CSEARCH/csv_files/')
-		final_dup_data.to_csv(w_dir_initial+'/CSEARCH/csv_files/'+args.input.split('.')[0]+'-CSEARCH-Data.csv',index=False)
 
 		# removing temporary files
 		temp_files = ['gfn2.out', 'xTB_opt.traj', 'ANI1_opt.traj', 'wbo', 'xtbrestart','ase.opt','xtb.opt','gfnff_topo']
 		for file in temp_files:
 			if os.path.exists(file):
 				os.remove(file)
+
+	return final_dup_data
+
+
+def cmin_main(w_dir_initial,args,log_overall,dup_data):
+	try:
+		os.makedirs(w_dir_initial+'/CMIN/dat_files')
+	except OSError:
+		if os.path.isdir(w_dir_initial+'/CMIN/dat_files'):
+			pass
+	bar = IncrementalBar('o  Number of finished jobs from CMIN', max = len(dup_data))
+	for dup_data_idx in range(len(dup_data)):
+		update_to_rdkit = dup_data.at[dup_data_idx,'update_to_rdkit']
+		name = dup_data.at[dup_data_idx,'Molecule']
+		log = Logger(w_dir_initial+'/CMIN/dat_files/'+name, args.output_name)
+		if dup_data.at[dup_data_idx,'status'] != -1:
+			if args.CMIN=='ani':
+				min_suffix = 'ani'
+			elif args.CMIN=='xtb':
+				min_suffix = 'xtb'
+			if args.CSEARCH=='rdkit':
+				mult_min(name+'_'+'rdkit', args, min_suffix, log, dup_data, dup_data_idx)
+			elif args.CSEARCH=='summ' and not update_to_rdkit :
+				mult_min(name+'_'+'summ', args, min_suffix, log, dup_data, dup_data_idx)
+			elif args.CSEARCH=='summ' and update_to_rdkit :
+				mult_min(name+'_'+'summ', args, min_suffix, log, dup_data, dup_data_idx)
+			elif args.CSEARCH=='fullmonte' and not update_to_rdkit:
+				mult_min(name+'_'+'fullmonte', args, min_suffix, log, dup_data, dup_data_idx)
+			elif args.CSEARCH=='fullmonte' and update_to_rdkit:
+				mult_min(name+'_'+'fullmonte', args, min_suffix, log, dup_data, dup_data_idx)
+		bar.next()
+	bar.finish()
+
+	# removing temporary files
+	temp_files = ['gfn2.out', 'xTB_opt.traj', 'ANI1_opt.traj', 'wbo', 'xtbrestart','ase.opt','xtb.opt','gfnff_topo']
+	for file in temp_files:
+		if os.path.exists(file):
+			os.remove(file)
+
+	return dup_data
 
 #writing gauss main
 def qprep_main(w_dir_initial,args,log):
@@ -332,28 +369,28 @@ def move_sdf_main(args):
 		exp_rules_files = glob.glob('*_filter_exp_rules.sdf')
 	if args.CMIN=='xtb':
 		all_xtb_conf_files = glob.glob('*_xtb.sdf')
-		destination_xtb = src +'/CSEARCH/xtb'
+		destination_xtb = src +'/CMIN/xtb'
 		for file in all_xtb_conf_files:
 			moving_files(destination_xtb,src,file)
 		all_xtb_conf_files_all = glob.glob('*_xtb_all_confs.sdf')
-		destination_xtb_all = src +'/CSEARCH/xtb_all_confs'
+		destination_xtb_all = src +'/CMIN/xtb_all_confs'
 		for file in all_xtb_conf_files_all:
 			moving_files(destination_xtb_all,src,file)
 		if args.exp_rules != 'None':
-			destination_exp_rules = src +'/CSEARCH/xtb/filter_exp_rules/'
+			destination_exp_rules = src +'/CMIN/xtb/filter_exp_rules/'
 			for file in exp_rules_files:
 				moving_files(destination_exp_rules,src,file)
 	if args.CMIN=='ani':
 		all_ani_conf_files = glob.glob('*_ani.sdf')
-		destination_ani = src +'/CSEARCH/ani'
+		destination_ani = src +'/CMIN/ani'
 		for file in all_ani_conf_files:
 			moving_files(destination_ani,src,file)
 		all_ani_conf_files_all = glob.glob('*_ani_all_confs.sdf')
-		destination_ani_all = src +'/CSEARCH/ani_all_confs'
+		destination_ani_all = src +'/CMIN/ani_all_confs'
 		for file in all_ani_conf_files_all:
 			moving_files(destination_ani_all,src,file)
 		if args.exp_rules != 'None':
-			destination_exp_rules = src +'/CSEARCH/ani/filter_exp_rules/'
+			destination_exp_rules = src +'/CMIN/ani/filter_exp_rules/'
 			for file in exp_rules_files:
 				moving_files(destination_exp_rules,src,file)
 
@@ -523,10 +560,10 @@ def geom_par_main(args,log,w_dir_initial):
 			sdf_rdkit = w_dir_initial+'/CSEARCH/summ/'+name+'_summ.sdf'
 		elif os.path.exists(w_dir_initial+'/CSEARCH/fullmonte/'+name+'_fullmonte.sdf'):
 			sdf_rdkit = w_dir_initial+'/CSEARCH/fullmonte/'+name+'_fullmonte.sdf'
-		if os.path.exists(w_dir_initial+'/CSEARCH/xtb/'+name+'_xtb.sdf'):
-			sdf_xtb =  w_dir_initial+'/CSEARCH/xtb/'+name+'_xtb.sdf'
-		if os.path.exists(w_dir_initial+'/CSEARCH/ani/'+name+'_ani.sdf'):
-			sdf_ani = w_dir_initial+'/CSEARCH/ani/'+name+'_ani.sdf'
+		if os.path.exists(w_dir_initial+'/CMIN/xtb/'+name+'_xtb.sdf'):
+			sdf_xtb =  w_dir_initial+'/CMIN/xtb/'+name+'_xtb.sdf'
+		if os.path.exists(w_dir_initial+'/CMIN/ani/'+name+'_ani.sdf'):
+			sdf_ani = w_dir_initial+'/CMIN/ani/'+name+'_ani.sdf'
 		if os.path.exists(w_dir_initial+'/QMCALC/G16'):
 			args.path = w_dir_initial+'/QMCALC/G16/'
 			# Sets the folder and find the log files to analyze
@@ -561,10 +598,10 @@ def graph_main(args,log,w_dir_initial):
 			sdf_rdkit = w_dir_initial+'/CSEARCH/summ/'+name+'_summ.sdf'
 		elif os.path.exists(w_dir_initial+'/CSEARCH/fullmonte/'+name+'_fullmonte.sdf'):
 			sdf_rdkit = w_dir_initial+'/CSEARCH/fullmonte/'+name+'_fullmonte.sdf'
-		if os.path.exists(w_dir_initial+'/CSEARCH/xtb_all_confs/'+name+'_xtb_all_confs.sdf'):
-			sdf_xtb =  w_dir_initial+'/CSEARCH/xtb_all_confs/'+name+'_xtb_all_confs.sdf'
-		if os.path.exists(w_dir_initial+'/CSEARCH/ani_all_confs/'+name+'_ani_all_confs.sdf'):
-			sdf_ani = w_dir_initial+'/CSEARCH/ani_all_confs/'+name+'_ani_all_confs.sdf'
+		if os.path.exists(w_dir_initial+'/CMIN/xtb_all_confs/'+name+'_xtb_all_confs.sdf'):
+			sdf_xtb =  w_dir_initial+'/CMIN/xtb_all_confs/'+name+'_xtb_all_confs.sdf'
+		if os.path.exists(w_dir_initial+'/CMIN/ani_all_confs/'+name+'_ani_all_confs.sdf'):
+			sdf_ani = w_dir_initial+'/CMIN/ani_all_confs/'+name+'_ani_all_confs.sdf'
 		if os.path.exists(w_dir_initial+'/QMCALC/G16'):
 			args.path = w_dir_initial+'/QMCALC/G16/'
 			# Sets the folder and find the log files to analyze
