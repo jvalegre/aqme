@@ -73,7 +73,7 @@ def main():
 
 
 	#applying rules to discard certain conformers based on rules that the user define
-	if args.exp_rules != 'None':
+	if len(args.exp_rules) >= 1:
 		exp_rules_active = True
 		if args.QCORR=='gaussian':
 			exp_rules_active = False

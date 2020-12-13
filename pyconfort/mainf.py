@@ -60,7 +60,7 @@ def creation_of_ana_csv(args,duplicates):
 	columns_list = ['Total files', 'Normal termination', 'Imaginary frequencies', 'SCF error', 'Basis set error', 'Other errors', 'Unfinished']
 	if args.dup:
 		columns_list.append('Duplicates')
-	if args.exp_rules != 'None':
+	if len(args.exp_rules) >= 1:
 		columns_list.append('Exp_rules filter')
 	if args.check_geom:
 		columns_list.append('Geometry changed')
@@ -272,7 +272,7 @@ def cmin_main(w_dir_initial,args,log_overall,dup_data):
 #writing gauss main
 def qprep_main(w_dir_initial,args,log):
 
-	if args.exp_rules != 'None':
+	if len(args.exp_rules) >= 1:
 		conf_files =  glob.glob('*_rules.sdf')
 	# define the SDF files to convert to COM Gaussian files
 	elif not args.CMIN=='xtb' and not args.CMIN=='ani' and args.CSEARCH=='rdkit':
@@ -365,7 +365,7 @@ def qprep_main(w_dir_initial,args,log):
 # moving files after compute and/or write_gauss
 def move_sdf_main(args):
 	src = os.getcwd()
-	if args.exp_rules != 'None':
+	if len(args.exp_rules) >= 1:
 		exp_rules_files = glob.glob('*_filter_exp_rules.sdf')
 	if args.CMIN=='xtb':
 		all_xtb_conf_files = glob.glob('*_xtb.sdf')
@@ -376,7 +376,7 @@ def move_sdf_main(args):
 		destination_xtb_all = src +'/CMIN/xtb_all_confs'
 		for file in all_xtb_conf_files_all:
 			moving_files(destination_xtb_all,src,file)
-		if args.exp_rules != 'None':
+		if len(args.exp_rules) >= 1:
 			destination_exp_rules = src +'/CMIN/xtb/filter_exp_rules/'
 			for file in exp_rules_files:
 				moving_files(destination_exp_rules,src,file)
@@ -389,7 +389,7 @@ def move_sdf_main(args):
 		destination_ani_all = src +'/CMIN/ani_all_confs'
 		for file in all_ani_conf_files_all:
 			moving_files(destination_ani_all,src,file)
-		if args.exp_rules != 'None':
+		if len(args.exp_rules) >= 1:
 			destination_exp_rules = src +'/CMIN/ani/filter_exp_rules/'
 			for file in exp_rules_files:
 				moving_files(destination_exp_rules,src,file)
@@ -399,7 +399,7 @@ def move_sdf_main(args):
 		destination_rdkit = src+ '/CSEARCH/rdkit'
 		for file in all_name_conf_files:
 			moving_files(destination_rdkit,src,file)
-		if args.exp_rules != 'None':
+		if len(args.exp_rules) >= 1:
 			destination_exp_rules = src +'/CSEARCH/rdkit/filter_exp_rules/'
 			for file in exp_rules_files:
 				moving_files(destination_exp_rules,src,file)
@@ -409,7 +409,7 @@ def move_sdf_main(args):
 		destination_rdkit = src+ '/CSEARCH/summ'
 		for file in all_name_conf_files:
 			moving_files(destination_rdkit,src,file)
-		if args.exp_rules != 'None' and args.CMIN is None:
+		if len(args.exp_rules) >= 1 and args.CMIN is None:
 			destination_exp_rules = src +'/CSEARCH/summ/filter_exp_rules/'
 			for file in exp_rules_files:
 				moving_files(destination_exp_rules,src,file)
@@ -419,13 +419,13 @@ def move_sdf_main(args):
 		destination_rdkit = src+ '/CSEARCH/fullmonte'
 		for file in all_name_conf_files:
 			moving_files(destination_rdkit,src,file)
-		if args.exp_rules != 'None' and args.CMIN is None:
+		if len(args.exp_rules) >= 1 and args.CMIN is None:
 			destination_exp_rules = src +'/CSEARCH/fullmonte/filter_exp_rules/'
 			for file in exp_rules_files:
 				moving_files(destination_exp_rules,src,file)
 
 	if args.CSEARCH is None:
-		if args.exp_rules != 'None':
+		if len(args.exp_rules) >= 1:
 			destination_exp_rules = src +'/QMCALC/SDF_input/filter_exp_rules/'
 			for file in exp_rules_files:
 				moving_files(destination_exp_rules,src,file)

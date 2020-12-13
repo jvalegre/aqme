@@ -30,7 +30,7 @@ metal_complex : True # True to activate this option
 metal : ['Pd'] # specify the metal(s) or atom(s) with uncommon hybridization, in the format ['Pd','Ir','P',...]
 m_oxi : [2] # oxidation number of the atom (it is used to calculate the charge of the molecule), in the format [1,1,0,...]
 complex_type : 'squareplanar' # predefined complex geometries. Options: linear, trigonalplanar, squareplanar or squarepyramidal
-exp_rules : False # Discarding rules applied to filter-off conformers (based on experimental observation for example). Format: i) manual: ['ATOM1-ATOM2-ATOM3, ANGLE'] (i.e. ['C-Pd-C, 180']), ii) pre-set: 'Ir_bidentate_x3'
+exp_rules : [] # Discarding rules applied to filter-off conformers (based on experimental observation for example). Format: i) manual: ['ATOM1-ATOM2-ATOM3, ANGLE'] (i.e. ['C-Pd-C, 180']), ii) pre-set: 'Ir_bidentate_x3'
 angle_off : 30 # Deviation to discard in exp_rules (i.e. 180 +- 30 degrees)
 
 

@@ -400,7 +400,7 @@ def output_analyzer(duplicates,log_files,com_files, w_dir, w_dir_main,lot, bs, b
 		# this part filters off conformers based on user-defined exp_rules
 		passing_rules = True
 		valid_mol_gen = True
-		if args.exp_rules != 'None':
+		if len(args.exp_rules) >= 1:
 			if TERMINATION == "normal" and IM_FREQS == 0:
 				log.write("  ----- Exp_rules filter(s) will be applied to the output file -----\n")
 				try:
@@ -503,7 +503,7 @@ def output_analyzer(duplicates,log_files,com_files, w_dir, w_dir_main,lot, bs, b
 						dir_name = str(lot_sp) + '-' + str(bs_sp.split('/')[0])
 					else:
 						dir_name = str(lot_sp) + '-' + str(bs_sp)
-						
+
 					keywords_opt = ''
 					if args.sp == 'gaussian':
 						if genecp == 'genecp' or  genecp == 'gen':
@@ -548,7 +548,7 @@ def output_analyzer(duplicates,log_files,com_files, w_dir, w_dir_main,lot, bs, b
 	ana_data.at[0,'Unfinished'] = unfinished
 	if args.dup:
 		ana_data.at[0,'Duplicates'] = duplicates
-	if args.exp_rules != 'None':
+	if len(args.exp_rules) >= 1:
 		ana_data.at[0,'Exp_rules filter'] = exp_rules_qcorr
 	if args.check_geom:
 		ana_data.at[0,'Geometry changed'] = check_geom_qcorr
