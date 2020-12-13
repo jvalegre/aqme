@@ -64,7 +64,7 @@ def parser_args():
 	parser.add_argument("--xtb_accuracy", help="Numerical accuracy of the xTB calculation", action="store", default=1.0, dest="xtb_accuracy")
 	parser.add_argument("--xtb_electronic_temperature", help="Electronic temperature for TB methods", action="store", default=300.0, dest="xtb_electronic_temperature")
 	parser.add_argument("--xtb_max_iterations", help="Numerical accuracy of the xTB calculation", action="store", default=250, dest="xtb_max_iterations")
-	parser.add_argument("--cpus", action="store",default=60, help="Maximum number of threads to parallelize on while running CSEARCH and CMIN", type=int)
+	parser.add_argument("--cpus", action="store",default=12, help="Maximum number of threads to parallelize on while running CSEARCH and CMIN", type=int)
 
 	#arguments for FULLMONTE
 	parser.add_argument("--ewin_sample_fullmonte", action="store",default=2.0, help="energy window to consider conformers for sampling in FULLMONTE (default 2 kcal/mol)", type=float)
@@ -166,7 +166,7 @@ def parser_args():
 	parser.add_argument("--submission_command",  help="Queueing system that the submission is done on", default="qsub_summit", metavar="submission_command", type=str)
 
 	#apply exp rules
-	parser.add_argument("--exp_rules", dest="exp_rules", default='None', help="Discarding rules applied to filter-off conformers (based on experimental observation for example). Format: i) Automatic rules: Ir_bidentate_x3, ii) manual rules: ['ATOM1-ATOM2-ATOM3, ANGLE'] (i.e. ['C-Pd-C, 180'])")
+	parser.add_argument("--exp_rules", dest="exp_rules", default=[], help="Discarding rules applied to filter-off conformers (based on experimental observation for example). Format: i) Automatic rules: Ir_bidentate_x3, ii) manual rules: ['ATOM1-ATOM2-ATOM3, ANGLE'] (i.e. ['C-Pd-C, 180'])")
 	parser.add_argument("--angle_off", type=float, help="Deviation to discard in exp_rules (i.e. 180 +- 30 degrees)",default=30)
 
 	##### further additions #####
