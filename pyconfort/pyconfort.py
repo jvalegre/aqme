@@ -62,7 +62,6 @@ def main():
 
 	#Separating CMIN
 	if args.CSEARCH != None and (args.CMIN=='xtb' or args.CMIN=='ani'):
-		start_time_overall = time.time()
 		cmin_dup_data = cmin_main(w_dir_initial,args,log_overall,csearch_dup_data)
 		if args.time:
 			log_overall.write("\n All molecules execution time CMIN: %s seconds" % (round(time.time() - start_time_overall,2)))
