@@ -241,7 +241,7 @@ def cmin_main(w_dir_initial,args,log_overall,dup_data):
 			pass
 	bar = IncrementalBar('o  Number of finished jobs from CMIN', max = len(dup_data))
 	for dup_data_idx in range(len(dup_data)):
-		start_time_overall = time.time()
+		start_time = time.time()
 		update_to_rdkit = dup_data.at[dup_data_idx,'update_to_rdkit']
 		name = dup_data.at[dup_data_idx,'Molecule']
 		log = Logger(w_dir_initial+'/CMIN/dat_files/'+name, args.output_name)
