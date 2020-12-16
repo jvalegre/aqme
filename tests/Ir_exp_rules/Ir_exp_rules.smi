@@ -5,3 +5,4 @@ CC1=[O+][Ir]2(C3=C4C=CC=C3)([N+]5=CC=CC=C54)([N+]6=CC=CC=C6C7=C2C=CC=C7)OC(C)=C1
 CC1=[N+](C)[Ir]2([N+]3=CC=CC=C34)([N+]5=CC=CC=C5C6=C2C=CS6)(N(C)C(C)=C1)C7=C4SC=C7 Ir_5
 F[P-](F)(F)(F)(F)F.C1(C=CC=C2)=C2C3=CC=CC=[N+]3[Ir]14([N+]5=C6SC=C5)([N+]7=CC=CC=C7C8=C4C=CC=C8)[N+]9=C6SC=C9 Ir_6
 [H]C1=C(O[Ir+]23(c4c(c5[n+]2cc[nH]5)c([H])c([H])c([H])c4[H])(c6c(c7[n+]3cc[nH]7)c([H])c([H])c([H])c6[H])[O+]=C1C([H])([H])[H])C([H])([H])[H] Ir_7
+C[N+](C=CN1C2=CC=CC=C23)=C1[Ir]435(C6=[N+](C=CN6C7=CC=CC=C75)C)C8=CC=CC=C8N9C=C[N+](C)=C94 Ir_8

@@ -25,6 +25,7 @@ precision_exp_rules = 2
     ('Ir_exp_rules', 'Ir_5', 'params_Ir_exp_rules_test.yaml', [122.76353, 123.88455, 124.00555, 125.27744, 125.43099], [125.43099], 1, 0, None), # test single metal with genecp
     ('Ir_exp_rules', 'Ir_6', 'params_Ir_exp_rules_test.yaml', [129.91109, 130.12558, 130.49653], [129.91109], 1, 1, None), # test single metal with genecp
     ('Ir_exp_rules', 'Ir_7', 'params_Ir_exp_rules_test.yaml', [124.00469, 124.09251, 124.10256], [124.09251], 1, 0, None), # test single metal with genecp
+    ('Ir_exp_rules', 'Ir_8', 'params_Ir_exp_rules_test.yaml', [176.99729, 177.46537], [176.99729], 1, 0, None), # test single metal with genecp
     # tests from other input formats with Ir_bidentate_x3 rules
 # MISSING - charges are messed up    ('Ir_exp_rules2', 'Ir_4', 'params_Ir_exp_rules_test_sdf.yaml', [57.24954, 57.4422, 57.48444, 57.84497], [57.24954], 1, 0, 'sdf'), # test from sdf
 # MISSING - charges are messed up    ('Ir_exp_rules2', 'Ir_4', 'params_Ir_exp_rules_test_csv.yaml', [57.24954, 57.4422, 57.48444, 57.84497], [57.24954], 1, 0, 'csv'), # test from csv

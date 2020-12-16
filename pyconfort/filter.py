@@ -55,34 +55,41 @@ def exp_rules_output(mol,args,log,file,print_error_exp_rules,ob_compat,rdkit_com
 					for j,_ in enumerate(atom_indexes):
 						# Avoid combinations of the same atom with itself
 						if atom_indexes[i] != atom_indexes[j]:
-							# We know that the ligands never have 2 carbon atoms bonding the Ir atom. We
-							# only use atom_indexes[i] for C atoms, and atom_indexes[j] for the potential
+							# We know that the ligands never have 2 carbon atoms bonding the Ir atom except
+							# for carbenes. We only use atom_indexes[i] for C atoms, and atom_indexes[j] for the potential
 							# N atoms that are part of the same Ph_Py ligand
 							if ligand_links[i] == 'C':
-								# This part detects the Ir-C bond and breaks it, breaking the Ph_Py ring
-								bond = mol.GetBondBetweenAtoms(atom_indexes[i], metal_idx)
-								new_mol = Chem.FragmentOnBonds(mol, [bond.GetIdx()],addDummies=True, dummyLabels=[(atom_indexes[i], metal_idx)])
-								if new_mol.GetAtomWithIdx(atom_indexes[i]).IsInRingSize(5):
-									five_mem = True
-								else:
-									five_mem = False
-								# identify whether or not the initial 5-membered ring formed between [-Ir-C-C-C-N-] is broken when we break the Ir-C bond. This works
-								# because Ph_Py units bind Ir in the same way always, through 1 C and 1 N that are in the same position, forming a 5-membered ring.
-								# If this ring is broken, atom_indexes[j] will not be part of a 5-membered ring (atom.IsInRingSize(5) == False) which means that
-								# this atom was initially inside the same ligand as the parent C of atom_indexes[i])
-								if not five_mem:
-									bond_2 = mol.GetBondBetweenAtoms(atom_indexes[j], metal_idx)
-									new_mol_2 = Chem.FragmentOnBonds(mol, [bond_2.GetIdx()],addDummies=True, dummyLabels=[(atom_indexes[j], metal_idx)])
-									#doing backwards as well eg. Ir N bond
-									if not new_mol_2.GetAtomWithIdx(atom_indexes[i]).IsInRingSize(5):
-										ligand_atoms.append([atom_indexes[i],atom_indexes[j]])
-										break
-
-								else:
-									if not new_mol.GetAtomWithIdx(atom_indexes[j]).IsInRingSize(5):
-										if mol.GetAtomWithIdx(atom_indexes[j]).IsInRingSize(5):
+								carbene_like = False
+								for inside_neighbour in mol.GetAtoms()[atom_indexes[i]].GetNeighbors():
+									N_group = ['N', 'P', 'As']
+									if inside_neighbour.GetSymbol() in N_group:
+										if inside_neighbour.GetTotalValence() == 4:
+											carbene_like = True
+								if not carbene_like:
+									# This part detects the Ir-C bond and breaks it, breaking the Ph_Py ring
+									bond = mol.GetBondBetweenAtoms(atom_indexes[i], metal_idx)
+									new_mol = Chem.FragmentOnBonds(mol, [bond.GetIdx()],addDummies=True, dummyLabels=[(atom_indexes[i], metal_idx)])
+									if new_mol.GetAtomWithIdx(atom_indexes[i]).IsInRingSize(5):
+										five_mem = True
+									else:
+										five_mem = False
+									# identify whether or not the initial 5-membered ring formed between [-Ir-C-C-C-N-] is broken when we break the Ir-C bond. This works
+									# because Ph_Py units bind Ir in the same way always, through 1 C and 1 N that are in the same position, forming a 5-membered ring.
+									# If this ring is broken, atom_indexes[j] will not be part of a 5-membered ring (atom.IsInRingSize(5) == False) which means that
+									# this atom was initially inside the same ligand as the parent C of atom_indexes[i])
+									if not five_mem:
+										bond_2 = mol.GetBondBetweenAtoms(atom_indexes[j], metal_idx)
+										new_mol_2 = Chem.FragmentOnBonds(mol, [bond_2.GetIdx()],addDummies=True, dummyLabels=[(atom_indexes[j], metal_idx)])
+										#doing backwards as well eg. Ir N bond
+										if not new_mol_2.GetAtomWithIdx(atom_indexes[i]).IsInRingSize(5):
 											ligand_atoms.append([atom_indexes[i],atom_indexes[j]])
 											break
+
+									else:
+										if not new_mol.GetAtomWithIdx(atom_indexes[j]).IsInRingSize(5):
+											if mol.GetAtomWithIdx(atom_indexes[j]).IsInRingSize(5):
+												ligand_atoms.append([atom_indexes[i],atom_indexes[j]])
+												break
 				if passing:
 					# This stop variable and the breaks inside the inner loops will break the nested loop if there
 					# is one angle that does not meet the criteria for valid conformers
