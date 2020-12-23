@@ -246,21 +246,24 @@ def cmin_main(w_dir_initial,args,log_overall,dup_data):
 		name = dup_data.at[dup_data_idx,'Molecule']
 		log = Logger(w_dir_initial+'/CMIN/dat_files/'+name, args.output_name)
 		if dup_data.at[dup_data_idx,'status'] != -1:
-			if args.CMIN=='ani':
-				min_suffix = 'ani'
-			elif args.CMIN=='xtb':
-				min_suffix = 'xtb'
-			if args.CSEARCH=='rdkit':
-				mult_min(name+'_'+'rdkit', args, min_suffix, log, dup_data, dup_data_idx)
-			elif args.CSEARCH=='summ' and not update_to_rdkit :
-				mult_min(name+'_'+'summ', args, min_suffix, log, dup_data, dup_data_idx)
-			elif args.CSEARCH=='summ' and update_to_rdkit :
-				mult_min(name+'_'+'summ', args, min_suffix, log, dup_data, dup_data_idx)
-			elif args.CSEARCH=='fullmonte' and not update_to_rdkit:
-				mult_min(name+'_'+'fullmonte', args, min_suffix, log, dup_data, dup_data_idx)
-			elif args.CSEARCH=='fullmonte' and update_to_rdkit:
-				mult_min(name+'_'+'fullmonte', args, min_suffix, log, dup_data, dup_data_idx)
-			dup_data.at[dup_data_idx, 'CMIN time (seconds)'] = round(time.time() - start_time,2)
+			try:
+				if args.CMIN=='ani':
+					min_suffix = 'ani'
+				elif args.CMIN=='xtb':
+					min_suffix = 'xtb'
+				if args.CSEARCH=='rdkit':
+					mult_min(name+'_'+'rdkit', args, min_suffix, log, dup_data, dup_data_idx)
+				elif args.CSEARCH=='summ' and not update_to_rdkit :
+					mult_min(name+'_'+'summ', args, min_suffix, log, dup_data, dup_data_idx)
+				elif args.CSEARCH=='summ' and update_to_rdkit :
+					mult_min(name+'_'+'summ', args, min_suffix, log, dup_data, dup_data_idx)
+				elif args.CSEARCH=='fullmonte' and not update_to_rdkit:
+					mult_min(name+'_'+'fullmonte', args, min_suffix, log, dup_data, dup_data_idx)
+				elif args.CSEARCH=='fullmonte' and update_to_rdkit:
+					mult_min(name+'_'+'fullmonte', args, min_suffix, log, dup_data, dup_data_idx)
+				dup_data.at[dup_data_idx, 'CMIN time (seconds)'] = round(time.time() - start_time,2)
+			except:
+				pass
 		bar.next()
 	bar.finish()
 
@@ -396,7 +399,6 @@ def move_sdf_main(args):
 			destination_exp_rules = src +'/CMIN/ani/filter_exp_rules/'
 			for file in exp_rules_files:
 				moving_files(destination_exp_rules,src,file)
-
 	if args.CSEARCH=='rdkit':
 		all_name_conf_files = glob.glob('*_rdkit.sdf')
 		destination_rdkit = src+ '/CSEARCH/rdkit'

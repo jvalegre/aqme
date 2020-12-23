@@ -257,7 +257,7 @@ def compute_confs(w_dir_initial, mol, name, args,i):
 				for [mol_object, name_mol, coord_Map, alg_Map, mol_template] in mol_objects:
 					data = conformer_generation(mol_object,name_mol,args,log,coord_Map,alg_Map,mol_template)
 					frames = [total_data, data]
-					total_data = pd.concat(frames)
+					total_data = pd.concat(frames,sort=True)
 			else:
 				log.write("x  Cannot use templates for complexes involving more than 1 metal or for organic molecueles.")
 		else:
