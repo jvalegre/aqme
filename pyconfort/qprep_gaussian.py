@@ -157,11 +157,21 @@ def get_name_and_charge(name,charge_data):
 			name_molecule = name[:-27]
 		else:
 			name_molecule = name[:-10]
-
 	if charge_data is not None:
 		for i in range(len(charge_data)):
 			if charge_data.loc[i,'Molecule'] == name_molecule:
 				charge_com = charge_data.loc[i,'Overall charge']
+			else:
+				try:
+					suppl = Chem.SDMolSupplier(name+'.sdf', removeHs=False)
+				except OSError:
+					suppl = False
+				if suppl:
+					mol = suppl[0]
+					charge_com = mol.GetProp('Real charge')
+				else:
+					charge_com = 'Invalid'
+
 		return charge_com
 
 	else:
@@ -370,98 +380,99 @@ def write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args, log, 
 	# get the names of the SDF files to read from depending on the optimizer and their suffixes. Also, get molecular charge
 	charge_com = get_name_and_charge(name,charge_data)
 
-	input_route = input_route_line(args)
+	if charge_com != 'Invalid':
+		input_route = input_route_line(args)
 
-	#defining genecp
-	genecp = get_genecp(file,args)
+		#defining genecp
+		genecp = get_genecp(file,args)
 
-	# defining path to place the new COM files
-	if args.QPREP == 'gaussian':
-		if str(bs).find('/') > -1:
-			path_write_input_files = '/QMCALC/G16/' + str(lot) + '-' + str(bs).split('/')[0]
-		else:
-			path_write_input_files = '/QMCALC/G16/' + str(lot) + '-' + str(bs)
-	elif args.QPREP == 'orca':
-		if str(bs).find('/') > -1:
-			path_write_input_files = '/QMCALC/ORCA/' + str(lot) + '-' + str(bs).split('/')[0]
-		else:
-			path_write_input_files = '/QMCALC/ORCA/' + str(lot) + '-' + str(bs)
+		# defining path to place the new COM files
+		if args.QPREP == 'gaussian':
+			if str(bs).find('/') > -1:
+				path_write_input_files = '/QMCALC/G16/' + str(lot) + '-' + str(bs).split('/')[0]
+			else:
+				path_write_input_files = '/QMCALC/G16/' + str(lot) + '-' + str(bs)
+		elif args.QPREP == 'orca':
+			if str(bs).find('/') > -1:
+				path_write_input_files = '/QMCALC/ORCA/' + str(lot) + '-' + str(bs).split('/')[0]
+			else:
+				path_write_input_files = '/QMCALC/ORCA/' + str(lot) + '-' + str(bs)
 
-	os.chdir(w_dir_initial+path_write_input_files)
+		os.chdir(w_dir_initial+path_write_input_files)
 
-	try:
-		com = '{0}_.com'.format(name)
-		com_low = '{0}_low.com'.format(name)
+		try:
+			com = '{0}_.com'.format(name)
+			com_low = '{0}_low.com'.format(name)
 
-		header = header_com(name,lot, bs, bs_gcp,args,log, input_route, genecp)
+			header = header_com(name,lot, bs, bs_gcp,args,log, input_route, genecp)
 
-		convert_sdf_to_com(w_dir_initial,file,com,com_low,energies,header,args,log)
+			convert_sdf_to_com(w_dir_initial,file,com,com_low,energies,header,args,log)
 
-		com_files = glob.glob('{0}_*.com'.format(name))
+			com_files = glob.glob('{0}_*.com'.format(name))
 
-		for file in com_files:
-			ecp_list,ecp_genecp_atoms,ecp_gen_atoms = [],False,False
-			read_lines = open(file,"r").readlines()
-			rename_file_name = rename_file_and_charge_chk_change(read_lines,file,args,charge_com)
-			read_lines = open(file,"r").readlines()
+			for file in com_files:
+				ecp_list,ecp_genecp_atoms,ecp_gen_atoms = [],False,False
+				read_lines = open(file,"r").readlines()
+				rename_file_name = rename_file_and_charge_chk_change(read_lines,file,args,charge_com)
+				read_lines = open(file,"r").readlines()
 
-			# Detect if there are atoms to use genecp or not (to use gen)
-			ATOMTYPES = []
-			for i in range(4,len(read_lines)):
-				if read_lines[i].split(' ')[0] not in ATOMTYPES and read_lines[i].split(' ')[0] in possible_atoms:
-					ATOMTYPES.append(read_lines[i].split(' ')[0])
+				# Detect if there are atoms to use genecp or not (to use gen)
+				ATOMTYPES = []
+				for i in range(4,len(read_lines)):
+					if read_lines[i].split(' ')[0] not in ATOMTYPES and read_lines[i].split(' ')[0] in possible_atoms:
+						ATOMTYPES.append(read_lines[i].split(' ')[0])
 
-			if genecp =='genecp' or genecp == 'gen' or args.last_line_for_input != 'None':
-				# write genecp/gen part
-				type_gen = 'qprep'
-				if args.QPREP == 'gaussian':
-					# define genecp/gen atoms
-					ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp,orca_aux_section = check_for_gen_or_genecp(ATOMTYPES,args,'analysis','gaussian')
+				if genecp =='genecp' or genecp == 'gen' or args.last_line_for_input != 'None':
+					# write genecp/gen part
+					type_gen = 'qprep'
+					if args.QPREP == 'gaussian':
+						# define genecp/gen atoms
+						ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp,orca_aux_section = check_for_gen_or_genecp(ATOMTYPES,args,'analysis','gaussian')
 
-					#error if both genecp and gen are
-					if ecp_genecp_atoms and ecp_gen_atoms:
-						sys.exit("x  ERROR: Can't use Gen and GenECP at the same time")
-					fileout = open(file, "a")
+						#error if both genecp and gen are
+						if ecp_genecp_atoms and ecp_gen_atoms:
+							sys.exit("x  ERROR: Can't use Gen and GenECP at the same time")
+						fileout = open(file, "a")
 
-					write_genecp(type_gen,fileout,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,bs,lot,bs_gcp,args,w_dir_initial,path_write_input_files)
+						write_genecp(type_gen,fileout,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,bs,lot,bs_gcp,args,w_dir_initial,path_write_input_files)
 
-					if args.last_line_for_input != 'None':
-						fileout.write(args.last_line_for_input+'\n\n')
+						if args.last_line_for_input != 'None':
+							fileout.write(args.last_line_for_input+'\n\n')
 
-					fileout.close()
+						fileout.close()
 
+						read_lines = open(file,"r").readlines()
+						rename_file_name = rename_file_and_charge_chk_change(read_lines,file,args,charge_com)
+
+				else:
 					read_lines = open(file,"r").readlines()
 					rename_file_name = rename_file_and_charge_chk_change(read_lines,file,args,charge_com)
 
-			else:
-				read_lines = open(file,"r").readlines()
-				rename_file_name = rename_file_and_charge_chk_change(read_lines,file,args,charge_com)
+				#change file by moving to new file
+				try:
+					os.rename(file,rename_file_name)
 
-			#change file by moving to new file
-			try:
-				os.rename(file,rename_file_name)
+				except FileExistsError:
+					os.remove(rename_file_name)
+					os.rename(file,rename_file_name)
 
-			except FileExistsError:
-				os.remove(rename_file_name)
-				os.rename(file,rename_file_name)
+				if args.QPREP == 'orca':
 
-			if args.QPREP == 'orca':
+					# define auxiliary atoms
+					ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp,orca_aux_section = check_for_gen_or_genecp(ATOMTYPES,args,'analysis','orca')
 
-				# define auxiliary atoms
-				ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp,orca_aux_section = check_for_gen_or_genecp(ATOMTYPES,args,'analysis','orca')
+					rename_file_name = rename_file_and_charge_chk_change(read_lines,file,args,charge_com)
 
-				rename_file_name = rename_file_and_charge_chk_change(read_lines,file,args,charge_com)
+					#create input file
+					orca_file_gen(read_lines,rename_file_name,bs,lot,genecp,args.aux_atoms_orca,args.aux_basis_set_genecp_atoms,args.aux_fit_genecp_atoms,charge_com,args.mult,orca_aux_section,args,args.set_input_line,args.solvent_model,args.solvent_name,args.cpcm_input,args.orca_scf_iters,args.mdci_orca,args.print_mini_orca)
 
-				#create input file
-				orca_file_gen(read_lines,rename_file_name,bs,lot,genecp,args.aux_atoms_orca,args.aux_basis_set_genecp_atoms,args.aux_fit_genecp_atoms,charge_com,args.mult,orca_aux_section,args,args.set_input_line,args.solvent_model,args.solvent_name,args.cpcm_input,args.orca_scf_iters,args.mdci_orca,args.print_mini_orca)
+				# submitting the input file on a HPC
+				if args.qsub:
+					cmd_qsub = [args.submission_command, rename_file_name]
+					subprocess.call(cmd_qsub)
 
-			# submitting the input file on a HPC
-			if args.qsub:
-				cmd_qsub = [args.submission_command, rename_file_name]
-				subprocess.call(cmd_qsub)
-
-	except OSError:
-		pass
+		except OSError:
+			pass
 
 	os.chdir(w_dir_initial)
 

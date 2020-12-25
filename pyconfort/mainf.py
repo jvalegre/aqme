@@ -315,19 +315,20 @@ def qprep_main(w_dir_initial,args,log):
 		except:
 			charge_data = pd.DataFrame()
 			for i,conf_file in enumerate(conf_files):
-				suppl = Chem.SDMolSupplier(conf_file, removeHs=False)
+				try:
+					suppl = Chem.SDMolSupplier(conf_file, removeHs=False)
+				except OSError:
+					suppl = False
 				if suppl:
 					mol = suppl[0]
 					charge = mol.GetProp('Real charge')
 					charge_data.at[i,'Overall charge'] = charge
-
 				else:
 					invalid_files.append(conf_file)
 					charge_data.at[i,'Overall charge'] = 'Invalid'
 
 				name = get_name_and_charge(conf_file.split('.')[0],None)
 				charge_data.at[i,'Molecule'] = name
-
 
 		for lot,bs,bs_gcp in zip(args.level_of_theory, args.basis_set,args.basis_set_genecp_atoms):
 			# only create this directory if single point calculation is requested
@@ -840,7 +841,10 @@ def exp_rules_main(args,log,exp_rules_active):
 				conf_files =  glob.glob('*.sdf')
 
 		for file in conf_files:
-			allmols = Chem.SDMolSupplier(file, removeHs=False)
+			try:
+				allmols = Chem.SDMolSupplier(file, removeHs=False)
+			except OSError:
+				pass
 			if allmols:
 				sdwriter = Chem.SDWriter(file.split('.')[0]+'_filter_exp_rules.sdf')
 				print_error_exp_rules = 0

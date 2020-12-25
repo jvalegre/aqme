@@ -239,14 +239,22 @@ def compute_confs(w_dir_initial, mol, name, args,i):
 	# Converts each line to a rdkit mol object
 	if args.verbose:
 		log.write("   -> Input Molecule {} is {}".format(i, Chem.MolToSmiles(mol)))
-	if args.metal_complex:
-		mol,args.metal_idx,args.complex_coord,args.metal_sym = substituted_mol(mol,args,log)
 
 	if args.metal_complex:
-		# get manually for square planar and squarepyramidal
+		for i,_ in enumerate(args.metal):
+			args.metal_idx.append(None)
+			args.complex_coord.append(None)
+			args.metal_sym.append(None)
+
+		mol,args.metal_idx,args.complex_coord,args.metal_sym = substituted_mol(mol,args,log)
+
+		# get pre-determined geometries for metal complexes
 		if args.complex_type == 'squareplanar' or args.complex_type == 'squarepyramidal' or args.complex_type == 'linear' or args.complex_type == 'trigonalplanar':
-			mol_objects = []
-			if len(args.metal_idx) == 1:
+			mol_objects, count_metals = [],0
+			for i,metal_idx_ind in enumerate(args.metal_idx):
+				if metal_idx_ind is not None:
+					count_metals += 1
+			if count_metals == 1:
 				file_template = load_template(args)
 				temp = Chem.SDMolSupplier(file_template)
 				os.chdir(w_dir_initial)
@@ -260,10 +268,11 @@ def compute_confs(w_dir_initial, mol, name, args,i):
 					total_data = pd.concat(frames,sort=True)
 			else:
 				log.write("x  Cannot use templates for complexes involving more than 1 metal or for organic molecueles.")
+				total_data = None
 		else:
 			total_data = conformer_generation(mol,name,args,log)
 	else:
-		 total_data = conformer_generation(mol,name,args,log)
+		total_data = conformer_generation(mol,name,args,log)
 	return total_data
 
 # FUCNTION WORKING WITH MOL OBJECT TO CREATE CONFORMERS

@@ -32,29 +32,41 @@ def atom_groups():
 
 # AUTOMATICALLY SETS THE CHARGE FOR METAL COMPLEXES
 def rules_get_charge(mol,args,log):
+
 	C_group,N_group,O_group,F_group = atom_groups()
 
-	neighbours = []
-	charge = np.empty(len(args.metal_idx), dtype=int)
-	#get the neighbours of metal atom
+	M_ligands, N_carbenes, bridge_atoms, neighbours = [],[],[],[]
+	charge_rules = np.zeros(len(args.metal_idx), dtype=int)
+
 	for atom in mol.GetAtoms():
+		# get the neighbours of metal atom and calculate the charge of metal center + ligands
 		if atom.GetIdx() in args.metal_idx:
 			charge_idx = args.metal_idx.index(atom.GetIdx())
 			neighbours = atom.GetNeighbors()
-			charge[charge_idx] = args.m_oxi[charge_idx]
+			charge_rules[charge_idx] = args.m_oxi[charge_idx]
 			for neighbour in neighbours:
+				M_ligands.append(neighbour.GetIdx())
 				if neighbour.GetTotalValence()== 4:
 					if neighbour.GetSymbol() in C_group:
 						carbene_like = False
+						bridge_ligand = False
 						for inside_neighbour in neighbour.GetNeighbors():
 							if inside_neighbour.GetSymbol() in N_group:
 								if inside_neighbour.GetTotalValence() == 4:
-									carbene_like = True
+									for N_neighbour in inside_neighbour.GetNeighbors():
+										# this option detects bridge ligands that connect two metals such as M--CN--M
+										# we use I since the M is still represented as I at this point
+										if N_neighbour.GetSymbol() == 'I':
+											bridge_ligand = True
+											bridge_atoms.append(inside_neighbour.GetIdx())
+									if not bridge_ligand:
+										carbene_like = True
+										N_carbenes.append(inside_neighbour.GetIdx())
 						if not carbene_like:
-							charge[charge_idx] = charge[charge_idx] - 1
+							charge_rules[charge_idx] = charge_rules[charge_idx] - 1
 				elif neighbour.GetTotalValence()== 3:
 					if neighbour.GetSymbol() in N_group:
-						charge[charge_idx] = charge[charge_idx] - 1
+						charge_rules[charge_idx] = charge_rules[charge_idx] - 1
 				elif neighbour.GetTotalValence() == 2:
 					if neighbour.GetSymbol() in O_group:
 						nitrone_like = False
@@ -62,22 +74,38 @@ def rules_get_charge(mol,args,log):
 							if inside_neighbour.GetSymbol() in N_group:
 								nitrone_like = True
 						if not nitrone_like:
-							charge[charge_idx] = charge[charge_idx] - 1
+							charge_rules[charge_idx] = charge_rules[charge_idx] - 1
 
 				elif neighbour.GetTotalValence() == 1:
 					if neighbour.GetSymbol() in F_group:
-						charge[charge_idx] = charge[charge_idx] - 1
+						charge_rules[charge_idx] = charge_rules[charge_idx] - 1
+
+	# recognizes charged N and O atoms in metal ligands (added to the first metal of the list as default)
+	# this group contains atoms that do not count as separate charge groups (i.e. N from Py ligands)
+	if len(neighbours) > 0:
+		invalid_charged_atoms = M_ligands + N_carbenes + bridge_atoms
+		for atom in mol.GetAtoms():
+			if atom.GetIdx() not in invalid_charged_atoms:
+				if atom.GetSymbol() in N_group:
+					if atom.GetTotalValence() == 4:
+						charge_rules[0] = charge_rules[0] + 1
+				if atom.GetSymbol() in O_group:
+					if atom.GetTotalValence() == 1:
+						charge_rules[0] = charge_rules[0] - 1
+
 	if len(neighbours) == 0:
-		#no update in charge as it is an organic molecule
+		# no update in charge as it is an organic molecule
 		return args.charge_default
 	else:
-		return charge
+		return charge_rules
 
 # SUBSTITUTION WITH I
 def substituted_mol(mol,args,log):
 	for atom in mol.GetAtoms():
 		if atom.GetSymbol() in args.metal:
-			args.metal_sym.append(atom.GetSymbol() )
+			args.metal_sym[args.metal.index(atom.GetSymbol())] = atom.GetSymbol()
+			args.metal_idx[args.metal.index(atom.GetSymbol())] = atom.GetIdx()
+			args.complex_coord[args.metal.index(atom.GetSymbol())] = len(atom.GetNeighbors())
 			atom.SetAtomicNum(53)
 			if len(atom.GetNeighbors()) == 2:
 				atom.SetFormalCharge(-3)
@@ -93,8 +121,6 @@ def substituted_mol(mol,args,log):
 				atom.SetFormalCharge(2)
 			if len(atom.GetNeighbors()) == 8:
 				atom.SetFormalCharge(3)
-			args.metal_idx.append(atom.GetIdx())
-			args.complex_coord.append(len(atom.GetNeighbors()))
 
 	return mol,args.metal_idx,args.complex_coord,args.metal_sym
 
@@ -220,6 +246,10 @@ def optimize(mol, args, program,log,dup_data,dup_data_idx):
 
 	if os.path.splitext(args.input)[1] == '.cdx' or os.path.splitext(args.input)[1] == '.smi' or os.path.splitext(args.input)[1] == '.csv':
 		args.charge = rules_get_charge(mol,args,log)
+		# replace None values if there are metals that are not used
+		for i,_ in enumerate(args.charge):
+			if args.charge[i] is None:
+				args.charge[i] = 0
 		dup_data.at[dup_data_idx, 'Overall charge'] = np.sum(args.charge)
 	else:
 		dup_data.at[dup_data_idx, 'Overall charge'] = args.charge_default
@@ -283,6 +313,12 @@ def mult_min(name, args, program,log,dup_data,dup_data_idx):
 				args.metal_idx = []
 				args.complex_coord = []
 				args.metal_sym = []
+				# fill the lists with None for every metal in the option
+				for metal in args.metal:
+					args.metal_idx.append(None)
+					args.complex_coord.append(None)
+					args.metal_sym.append(None)
+
 				mol,args.metal_idx,args.complex_coord,args.metal_sym = substituted_mol(mol,args,log)
 			mol,energy,ani_incompatible = optimize(mol, args, program,log,dup_data,dup_data_idx)
 			if not ani_incompatible:

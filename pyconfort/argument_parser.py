@@ -58,7 +58,7 @@ def parser_args():
 	parser.add_argument("--initial_energy_threshold", dest="initial_energy_threshold",action="store",default=0.0001, help="energy difference between unique conformers for the first filter of only E (default 0.0001)")
 	parser.add_argument("--max_MolWt", help="Max. molecular weight of molecule", default=10000, type=int, metavar="max_MolWt")
 	parser.add_argument("--ani_method", help="Specify ANI method used (i.e. ANI1x, ANI1ccx, ANI2x)", default='ANI2x', dest="ani_method", type=str)
-	parser.add_argument("--STACKSIZE", help="STACKSIZE for optimization of large systems", default="1G")
+	parser.add_argument("--STACKSIZE", help="Stack size available for xTB calculations", default="1G")
 	parser.add_argument("--xtb_method", help="Specify xTB method used", default='GFN2-xTB', dest="xtb_method", type=str)
 	parser.add_argument("--xtb_solvent", help="Specify GBSA solvent used", default='none', dest="xtb_solvent", type=str)
 	parser.add_argument("--xtb_accuracy", help="Numerical accuracy of the xTB calculation", action="store", default=1.0, dest="xtb_accuracy")
@@ -166,7 +166,7 @@ def parser_args():
 	parser.add_argument("--submission_command",  help="Queueing system that the submission is done on", default="qsub_summit", metavar="submission_command", type=str)
 
 	#apply exp rules
-	parser.add_argument("--exp_rules", dest="exp_rules", default=[], help="Discarding rules applied to filter-off conformers (based on experimental observation for example). Format: i) Automatic rules: Ir_bidentate_x3, ii) manual rules: ['ATOM1-ATOM2-ATOM3, ANGLE'] (i.e. ['C-Pd-C, 180'])")
+	parser.add_argument("--exp_rules", dest="exp_rules", default=[], help="Discarding rules applied to filter-off conformers (based on experimental observation for example). Format: i) Automatic rules: ['Ir_bidentate_x3'], ii) manual rules: ['ATOM1-ATOM2-ATOM3, ANGLE'] (i.e. ['C-Pd-C, 180'])")
 	parser.add_argument("--angle_off", type=float, help="Deviation to discard in exp_rules (i.e. 180 +- 30 degrees)",default=30)
 
 	##### further additions #####
