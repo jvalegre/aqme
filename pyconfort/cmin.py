@@ -37,7 +37,7 @@ def rules_get_charge(mol,args,log):
 
 	M_ligands, N_carbenes, bridge_atoms, neighbours = [],[],[],[]
 	charge_rules = np.zeros(len(args.metal_idx), dtype=int)
-
+	neighbours = []
 	for atom in mol.GetAtoms():
 		# get the neighbours of metal atom and calculate the charge of metal center + ligands
 		if atom.GetIdx() in args.metal_idx:
@@ -94,8 +94,10 @@ def rules_get_charge(mol,args,log):
 						charge_rules[0] = charge_rules[0] - 1
 
 	if len(neighbours) == 0:
+		charge_as_list = []
 		# no update in charge as it is an organic molecule
-		return args.charge_default
+		charge_as_list.append(args.charge_default)
+		return charge_as_list
 	else:
 		return charge_rules
 
@@ -252,7 +254,7 @@ def optimize(mol, args, program,log,dup_data,dup_data_idx):
 				args.charge[i] = 0
 		dup_data.at[dup_data_idx, 'Overall charge'] = np.sum(args.charge)
 	else:
-		dup_data.at[dup_data_idx, 'Overall charge'] = args.charge_default
+		dup_data.at[dup_data_idx, 'Overall charge'] = np.sum(args.charge)
 
 	cartesians = mol.GetConformers()[0].GetPositions()
 	coordinates = torch.tensor([cartesians.tolist()], requires_grad=True, device=device)
@@ -308,6 +310,7 @@ def mult_min(name, args, program,log,dup_data,dup_data_idx):
 	for i,mol in enumerate(inmols):
 		# bar.next()
 		if mol is not None:
+
 			# optimize this structure and record the energy
 			if args.metal_complex:
 				args.metal_idx = []
@@ -320,6 +323,7 @@ def mult_min(name, args, program,log,dup_data,dup_data_idx):
 					args.metal_sym.append(None)
 
 				mol,args.metal_idx,args.complex_coord,args.metal_sym = substituted_mol(mol,args,log)
+
 			mol,energy,ani_incompatible = optimize(mol, args, program,log,dup_data,dup_data_idx)
 			if not ani_incompatible:
 				pmol = PropertyMol.PropertyMol(mol)
@@ -335,6 +339,7 @@ def mult_min(name, args, program,log,dup_data,dup_data_idx):
 	for i, cid in enumerate(sorted_all_cids):
 		outmols[cid].SetProp('_Name', outmols[cid].GetProp('_Name') +' '+program)
 		outmols[cid].SetProp('Energy', cenergy[cid])
+
 
 	#writing all conformers to files after minimization
 	sdwriter = Chem.SDWriter(name_mol+'_'+program+'_all_confs'+args.output)
