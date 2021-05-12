@@ -34,13 +34,13 @@ from pyconfort.mainf import (csearch_main, exp_rules_main, qprep_main,
                              graph_main,geom_par_main,nmr_main,energy_main,
                              load_from_yaml,creation_of_ana_csv,dbstep_par_main,
                              nics_par_main,cclib_main,cmin_main)
-from pyconfort.csearch import Logger
+from pyconfort.utils import Logger
 
 def main():
     # working directory and arguments
     w_dir_initial = os.getcwd()
     base_path = Path(w_dir_initial)
-    
+
     args = parser_args()
     name = args.input.split('.')[0]
 

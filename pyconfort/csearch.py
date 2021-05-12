@@ -23,32 +23,11 @@ from pyconfort.argument_parser import possible_atoms
 from pyconfort.tmbuild import template_embed
 from pyconfort.cmin import mult_min, rules_get_charge, atom_groups,substituted_mol
 from pyconfort.fullmonte import generating_conformations_fullmonte, minimize_rdkit_energy,realign_mol
-
+from pyconfort.utils import Logger
 
 hartree_to_kcal = 627.509
 possible_atoms = possible_atoms()
 
-
-#class for logging
-class Logger:
-    # Class Logger to writargs.input.split('.')[0] output to a file
-    def __init__(self, filein, append):
-        # Logger to write the output to a file
-        suffix = 'dat'
-        self.log = open('{0}_{1}.{2}'.format(filein, append, suffix), 'w')
-
-    def write(self, message):
-        #print(message, end='\n')
-        self.log.write(message+ "\n")
-
-    def fatal(self, message):
-        #print(message, end='\n')
-        self.log.write(message + "\n")
-        self.finalize()
-        sys.exit(1)
-
-    def finalize(self):
-        self.log.close()
 
 #creation of csv for csearch
 def creation_of_dup_csv(args):
@@ -212,7 +191,7 @@ def check_for_pieces(smi):
     return smi
 
 #if template activated, loads it
-def load_template(args):
+def load_template(args,log):
     try:
         os.chdir(os.path.join(pyconfort.__path__[0])+'/templates/')
     except FileNotFoundError:
