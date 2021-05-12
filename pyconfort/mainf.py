@@ -20,8 +20,7 @@ from pyconfort.csearch import (check_for_pieces, check_charge_smi, clean_args,
 from pyconfort.filter import exp_rules_output
 
 from pyconfort.qprep_gaussian import (read_energies, write_gaussian_input_file, 
-                                      moving_files, convert_xyz_to_sdf, 
-                                      get_name_and_charge)
+                                      convert_xyz_to_sdf, get_name_and_charge)
 from pyconfort.qcorr_gaussian import output_analyzer, check_for_final_folder, dup_calculation
 
 from pyconfort.grapher import graph
@@ -32,7 +31,7 @@ from pyconfort.dbstep_conf import calculate_db_parameters,calculate_boltz_and_db
 from pyconfort.nics_conf import calculate_nics_parameters,calculate_boltz_for_nics,calculate_avg_nics
 from pyconfort.cclib_conf import calculate_cclib,calcualte_average_cclib_parameter,calculate_boltz_for_cclib
 from pyconfort.cmin import mult_min
-from pyconfort.utils import Logger
+from pyconfort.utils import Logger, moving_files
 #need to and in energy
 
 #load paramters from yaml file
@@ -826,8 +825,8 @@ def cclib_main(args,log,w_dir_initial):
                 os.chdir(w_dir)
                 log_files = get_com_or_log_out_files('output',name)
                 #do boltz firsst
-                calculate_cclib(log_files,args,log,name,w_dir,w_dir_initial,lot,bs)
-                calculate_boltz_for_cclib(log_files,args,log,name,w_dir,w_dir_initial,lot,bs)
+                calculate_cclib(log_files,w_dir_initial,lot,bs)
+                calculate_boltz_for_cclib(log_files,name,w_dir_initial,lot,bs)
                 if str(bs).find('/') > -1:
                     os.chdir(w_dir_initial + '/QPRED/cclib-json/all_confs_cclib/'+str(lot)+'-'+str(bs).split('/')[0])
                 else:

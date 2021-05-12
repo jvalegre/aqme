@@ -5,7 +5,7 @@
 #        used for genrating details for energy      #
 #####################################################.
 
-from pyconfort.qcorr_gaussian import moving_files
+from pyconfort.utils import moving_files
 
 import pandas as pd
 import os

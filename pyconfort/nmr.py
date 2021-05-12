@@ -12,7 +12,7 @@ import glob
 import pandas as pd
 
 from pyconfort.cheshire_lookup import cheshire
-from pyconfort.qprep_gaussian import moving_files
+from pyconfort.utils import moving_files
 
 
 def nmr_stats(y_exp,y_pred):

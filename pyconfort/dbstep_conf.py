@@ -8,7 +8,7 @@ import sys
 import os
 import pandas as pd
 import subprocess
-from pyconfort.qprep_gaussian import moving_files
+from pyconfort.utils import moving_files
 
 def calculate_db_parameters(log_files,args,log,w_dir_initial,name_mol,lot,bs):
 

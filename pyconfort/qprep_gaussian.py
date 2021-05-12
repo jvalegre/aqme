@@ -473,16 +473,6 @@ def write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args, log, 
 
     os.chdir(w_dir_initial)
 
-# MOVES SDF FILES TO THEIR CORRESPONDING FOLDERS
-def moving_files(destination,src,file):
-    try:
-        os.makedirs(destination)
-        shutil.move(os.path.join(src, file), os.path.join(destination, file))
-    except OSError:
-        if  os.path.isdir(destination):
-            shutil.move(os.path.join(src, file), os.path.join(destination, file))
-        else:
-            raise
 
 # WRITE SDF FILES FOR xTB AND ANI1
 def write_confs(conformers, energies,selectedcids, name, args, program,log):

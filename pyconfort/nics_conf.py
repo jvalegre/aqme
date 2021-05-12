@@ -7,7 +7,7 @@
 
 from numpy import *
 import subprocess, os
-from pyconfort.qprep_gaussian import moving_files
+from pyconfort.utils import moving_files
 import pandas as pd
 from pyconfort.utils import possible_atoms
 

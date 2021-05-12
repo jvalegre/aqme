@@ -1,6 +1,8 @@
 """
 This module contains some classes and functions that are used from other modules
 """
+import os 
+import shutil 
 
 #class for logging
 class Logger:
@@ -48,3 +50,27 @@ possible_atoms = ["", "H", "He", "Li", "Be", "B", "C", "N", "O", "F", "Ne", "Na"
                  "Au", "Hg", "Tl", "Pb", "Bi", "Po", "At", "Rn", "Fr", "Ra", "Ac", "Th", "Pa", "U", "Np", "Pu",
                  "Am", "Cm", "Bk", "Cf", "Es", "Fm", "Md", "No", "Lr", "Rf", "Db", "Sg", "Bh", "Hs", "Mt", "Ds",
                  "Rg", "Uub", "Uut", "Uuq", "Uup", "Uuh", "Uus", "Uuo"]
+
+
+def moving_files(destination,src,file):
+    """
+    Moves files from the source folder to the destination folder and creates 
+    the destination folders when needed.
+
+    Parameters
+    ----------
+    destination : str
+        path to the destination folder
+    src : str
+        path to the source folder
+    file : str
+        full name of the file (file + extension)
+    """
+    try:
+        os.makedirs(destination)
+        shutil.move(os.path.join(src, file), os.path.join(destination, file))
+    except OSError:
+        if  os.path.isdir(destination):
+            shutil.move(os.path.join(src, file), os.path.join(destination, file))
+        else:
+            raise

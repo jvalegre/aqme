@@ -6,7 +6,8 @@
 #####################################################.
 
 import subprocess, os
-from pyconfort.qprep_gaussian import moving_files
+
+from pyconfort.utils import moving_files
 import json
 import numpy as np
 
