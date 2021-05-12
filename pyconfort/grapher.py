@@ -6,7 +6,6 @@
 #####################################################.
 
 import os
-from pyconfort.cmin import rdkit_sdf_read
 from rdkit.Chem import AllChem as Chem
 import numpy as np
 from sklearn.metrics import mean_absolute_error

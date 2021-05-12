@@ -8,7 +8,6 @@
 from rdkit.Chem import AllChem as Chem
 from rdkit.Chem import rdMolTransforms
 import os
-import numpy as np
 import pandas as pd
 from pyconfort.csearch import getDihedralMatches
 

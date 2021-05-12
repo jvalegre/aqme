@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
 #####################################################.
-#            This file stores all the functions         #
-#               used in conformer generation            #
+#            This file stores all the functions     #
+#               used in conformer generation        #
 #####################################################.
 
 import math
@@ -13,15 +13,14 @@ import time
 import numpy as np
 import pandas as pd
 from rdkit.Chem import AllChem as Chem
-from rdkit.Chem import rdMolTransforms, PropertyMol, rdDistGeom, rdMolAlign, Lipinski
-from rdkit.Geometry import Point3D
-from progress.bar import IncrementalBar
+from rdkit.Chem import rdMolTransforms, PropertyMol, rdDistGeom, Lipinski
 import pyconfort
-from pyconfort.qprep_gaussian import write_confs
-from pyconfort.filter import filters,set_metal_atomic_number,ewin_filter,pre_E_filter,RMSD_and_E_filter
+from pyconfort.filter import (filters, set_metal_atomic_number,
+                              ewin_filter, pre_E_filter, RMSD_and_E_filter)
 from pyconfort.tmbuild import template_embed
-from pyconfort.cmin import mult_min, rules_get_charge, atom_groups,substituted_mol
-from pyconfort.fullmonte import generating_conformations_fullmonte, minimize_rdkit_energy,realign_mol
+from pyconfort.cmin import rules_get_charge, substituted_mol
+from pyconfort.fullmonte import (generating_conformations_fullmonte, 
+                                 minimize_rdkit_energy, realign_mol)
 from pyconfort.utils import Logger
 
 hartree_to_kcal = 627.509

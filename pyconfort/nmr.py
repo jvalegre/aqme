@@ -5,7 +5,6 @@
 #          used for genrating details for nmr       #
 #####################################################.
 
-from rdkit.Chem import AllChem as Chem
 import numpy as np
 import os
 import subprocess

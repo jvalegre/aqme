@@ -4,9 +4,8 @@
 #        This file stores all the functions         #
 #    used for genrating all parameters from DBSTEP  #
 #####################################################.
-
+import sys
 import os
-import numpy as np
 import pandas as pd
 import subprocess
 from pyconfort.qprep_gaussian import moving_files

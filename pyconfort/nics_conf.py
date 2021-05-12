@@ -6,7 +6,7 @@
 #####################################################.
 
 from numpy import *
-import subprocess, sys, os, math
+import subprocess, os
 from pyconfort.qprep_gaussian import moving_files
 import pandas as pd
 from pyconfort.utils import possible_atoms

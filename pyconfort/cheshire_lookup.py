@@ -1,9 +1,6 @@
 #!/usr/bin/env python
-from __future__ import print_function
-
 import datetime
 import sys
-import unicodedata
 import pandas as pd
 
 ## convert HTML table to Pandas dataframe

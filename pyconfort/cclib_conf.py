@@ -5,9 +5,8 @@
 #      used for genrating all paramets from cclib       #
 #####################################################.
 
-import subprocess, sys, os, math
+import subprocess, os
 from pyconfort.qprep_gaussian import moving_files
-import pandas as pd
 import json
 import numpy as np
 

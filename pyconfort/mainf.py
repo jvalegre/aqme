@@ -14,10 +14,14 @@ import yaml
 import concurrent.futures as futures
 from progress.bar import IncrementalBar
 from rdkit.Chem import AllChem as Chem
-from pyconfort.csearch import check_for_pieces, check_charge_smi, clean_args, compute_confs, com_2_xyz_2_sdf, mol_from_sdf_or_mol_or_mol2,creation_of_dup_csv
+from pyconfort.csearch import (check_for_pieces, check_charge_smi, clean_args, 
+                               compute_confs, com_2_xyz_2_sdf, 
+                               mol_from_sdf_or_mol_or_mol2, creation_of_dup_csv)
 from pyconfort.filter import exp_rules_output
 
-from pyconfort.qprep_gaussian import read_energies, write_gaussian_input_file, moving_files, convert_xyz_to_sdf, get_name_and_charge
+from pyconfort.qprep_gaussian import (read_energies, write_gaussian_input_file, 
+                                      moving_files, convert_xyz_to_sdf, 
+                                      get_name_and_charge)
 from pyconfort.qcorr_gaussian import output_analyzer, check_for_final_folder, dup_calculation
 
 from pyconfort.grapher import graph

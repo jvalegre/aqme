@@ -5,19 +5,14 @@
 #     used for genrating details for fullmonte      #
 #####################################################.
 
-import os
 import sys
-import subprocess
-import time
 import numpy as np
 import math
 import random
 from rdkit.Chem import AllChem as Chem
-from rdkit.Chem import rdMolTransforms, PropertyMol, rdDistGeom, rdMolAlign, Lipinski,rdchem
-from rdkit.Geometry import Point3D
-from progress.bar import IncrementalBar
+from rdkit.Chem import rdMolTransforms, rdMolAlign
 
-from pyconfort.filter import ewin_filter,pre_E_filter,RMSD_and_E_filter,set_metal_atomic_number
+from pyconfort.filter import set_metal_atomic_number
 from pyconfort.filter import get_conf_RMS
 
 #steps to realign mol

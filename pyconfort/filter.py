@@ -5,7 +5,6 @@
 #             used for filtering                    #
 #####################################################.
 
-from progress.bar import IncrementalBar
 from rdkit.Chem import AllChem as Chem
 from rdkit.Chem import rdMolTransforms, Descriptors
 from pyconfort.utils import possible_atoms

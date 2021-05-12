@@ -7,8 +7,6 @@
 
 from pyconfort.qcorr_gaussian import moving_files
 
-from rdkit.Chem import AllChem as Chem
-import numpy as np
 import pandas as pd
 import os
 import subprocess
