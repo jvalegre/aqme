@@ -27,6 +27,7 @@
 from __future__ import print_function
 import os
 import time
+from pathlib import Path
 from pyconfort.argument_parser import parser_args
 from pyconfort.mainf import (csearch_main, exp_rules_main, qprep_main, 
                              move_sdf_main, qcorr_gaussian_main,dup_main,
@@ -38,6 +39,8 @@ from pyconfort.csearch import Logger
 def main():
     # working directory and arguments
     w_dir_initial = os.getcwd()
+    base_path = Path(w_dir_initial)
+    
     args = parser_args()
     name = args.input.split('.')[0]
 
@@ -62,9 +65,10 @@ def main():
             log_overall.write(f"\n All molecules execution time CSEARCH: {elapsed_time} seconds")
         os.chdir(w_dir_initial)
         if args.CMIN is None:
-            if not os.path.isdir(f'{w_dir_initial}/CSEARCH/csv_files'):
-                os.makedirs(f'{w_dir_initial}/CSEARCH/csv_files/')
-            csearch_dup_data.to_csv(f'{w_dir_initial}/CSEARCH/csv_files/{name}-CSEARCH-Data.csv',index=False)
+            csearch_csv_folder = base_path.joinpath('/CSEARCH/csv_files')
+            csearch_csv_folder.mkdir(exist_ok=True)
+            csearch_csv_file = csearch_csv_folder.joinpath(f'{name}-CSEARCH-Data.csv')
+            csearch_dup_data.to_csv(csearch_csv_file,index=False)
 
     #Separating CMIN
     if args.CSEARCH != None and args.CMIN in ['xtb','ani']:
@@ -73,9 +77,10 @@ def main():
             elapsed_time = round(time.time() - start_time_overall,2) 
             log_overall.write(f"\n All molecules execution time CMIN: {elapsed_time} seconds")
         os.chdir(w_dir_initial)
-        if not os.path.isdir(f'{w_dir_initial}/CMIN/csv_files'):
-            os.makedirs(f'{w_dir_initial}/CMIN/csv_files/')
-        cmin_dup_data.to_csv(f'{w_dir_initial}/CMIN/csv_files/{name}-CMIN-Data.csv',index=False)
+        cmin_csv_folder = base_path.joinpath('/CMIN/csv_files')
+        cmin_csv_folder.mkdir(exist_ok=True)
+        cmin_csv_file = cmin_csv_folder.joinpath(f'{name}-CMIN-Data.csv')
+        cmin_dup_data.to_csv(cmin_csv_file,index=False)
 
 
     #applying rules to discard certain conformers based on rules that the user define
@@ -138,11 +143,9 @@ def main():
 
     log_overall.finalize()
 
-    try:
-        os.rename(f'pyCONFORT_output.dat','pyCONFORT_{args.output_name}.dat')
-    except FileExistsError:
-        os.remove(f'pyCONFORT_{args.output_name}.dat')
-        os.rename(f'pyCONFORT_output.dat','pyCONFORT_{args.output_name}.dat')
+    out_data_file = Path(f'pyCONFORT_output.dat')
+    if out_data_file.exists():
+        out_data_file.replace(f'pyCONFORT_{args.output_name}.dat')
 
 
 if __name__ == "__main__":
