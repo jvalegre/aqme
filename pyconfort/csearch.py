@@ -19,14 +19,12 @@ from progress.bar import IncrementalBar
 import pyconfort
 from pyconfort.qprep_gaussian import write_confs
 from pyconfort.filter import filters,set_metal_atomic_number,ewin_filter,pre_E_filter,RMSD_and_E_filter
-from pyconfort.argument_parser import possible_atoms
 from pyconfort.tmbuild import template_embed
 from pyconfort.cmin import mult_min, rules_get_charge, atom_groups,substituted_mol
 from pyconfort.fullmonte import generating_conformations_fullmonte, minimize_rdkit_energy,realign_mol
 from pyconfort.utils import Logger
 
 hartree_to_kcal = 627.509
-possible_atoms = possible_atoms()
 
 
 #creation of csv for csearch

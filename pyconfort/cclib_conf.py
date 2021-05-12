@@ -8,11 +8,8 @@
 import subprocess, sys, os, math
 from pyconfort.qprep_gaussian import moving_files
 import pandas as pd
-from pyconfort.argument_parser import possible_atoms
 import json
 import numpy as np
-
-possible_atoms = possible_atoms()
 
 def calculate_boltz_for_cclib(val,args,log,name,w_dir_fin,w_dir_initial,lot,bs):
 

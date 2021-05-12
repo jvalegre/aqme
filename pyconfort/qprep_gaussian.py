@@ -14,7 +14,7 @@ import glob
 import shutil
 import pandas as pd
 from rdkit.Chem import AllChem as Chem
-from pyconfort.argument_parser import possible_atoms
+from pyconfort.utils import possible_atoms
 
 
 possible_atoms = possible_atoms()

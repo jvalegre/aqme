@@ -9,7 +9,7 @@ from numpy import *
 import subprocess, sys, os, math
 from pyconfort.qprep_gaussian import moving_files
 import pandas as pd
-from pyconfort.argument_parser import possible_atoms
+from pyconfort.utils import possible_atoms
 
 possible_atoms = possible_atoms()
 

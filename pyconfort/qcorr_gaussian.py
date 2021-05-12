@@ -11,7 +11,7 @@ import subprocess
 import shutil
 import numpy as np
 from pyconfort.qprep_gaussian import input_route_line,check_for_gen_or_genecp,write_genecp,orca_file_gen
-from pyconfort.argument_parser import possible_atoms
+from pyconfort.utils import possible_atoms
 from pyconfort.filter import exp_rules_output,check_geom_filter
 from pyconfort.csearch import com_2_xyz_2_sdf
 from pyconfort.nics_conf import update_coord,get_coords_normal

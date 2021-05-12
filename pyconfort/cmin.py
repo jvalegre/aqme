@@ -14,12 +14,10 @@ from rdkit.Chem import AllChem as Chem
 from rdkit.Chem import rdMolTransforms, PropertyMol, rdDistGeom, rdMolAlign, Lipinski
 from rdkit.Geometry import Point3D
 from progress.bar import IncrementalBar
-from pyconfort.argument_parser import possible_atoms
 from pyconfort.qprep_gaussian import write_confs
 from pyconfort.filter import filters,set_metal_atomic_number,ewin_filter,pre_E_filter,RMSD_and_E_filter
 
 hartree_to_kcal = 627.509
-possible_atoms = possible_atoms()
 
 #definition of atom groups for rules to get charge
 def atom_groups():
