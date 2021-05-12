@@ -32,6 +32,17 @@ from pyconfort.cmin import mult_min
 
 #load paramters from yaml file
 def load_from_yaml(args,log):
+    """
+    Loads the parameters for the calculation from a yaml if specified. Otherwise
+    does nothing.
+
+    Parameters
+    ----------
+    args : argparse.args
+        Dataclass
+    log : Logger
+        Where to log the program progress
+    """
     # Variables will be updated from YAML file
     try:
         if args.varfile is not None:
@@ -51,7 +62,7 @@ def load_from_yaml(args,log):
                         setattr(args, param, param_list[param])
                     else:
                         log.write("o  DEFAULT " + param + " : " + str(getattr(args, param)))
-    except UnboundLocalError:
+    except UnboundLocalError: # RAUL: Is it just me or this only happens when the file exists, and ens in .yaml and is empty or does not end in .yaml? 
         log.write("\no  The specified yaml file containing parameters was not found! Make sure that the valid params file is in the folder where you are running the code.\n")
 
 

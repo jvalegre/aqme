@@ -41,15 +41,15 @@ def main():
     load_from_yaml(args,log_overall)
 
     #setting variable if needed
-    for i,_ in enumerate(args.basis_set):
+    for _ in args.basis_set:
         if len(args.basis_set) != len(args.basis_set_genecp_atoms):
             args.basis_set_genecp_atoms.append('')
-    for i,_ in enumerate(args.basis_set_sp):
+    for _ in args.basis_set_sp:
         if len(args.basis_set_sp) != len(args.basis_set_genecp_atoms_sp):
             args.basis_set_genecp_atoms_sp.append('')
 
     #CSEARCH AND CMIN
-    if args.CSEARCH=='rdkit' or args.CSEARCH=='summ' or args.CSEARCH=='fullmonte':
+    if args.CSEARCH in ['rdkit', 'summ', 'fullmonte']: # RAUL: Is there any other posibilities or just None?
         start_time_overall = time.time()
         csearch_dup_data = csearch_main(w_dir_initial,args,log_overall)
         if args.time:
@@ -84,7 +84,7 @@ def main():
         qprep_main(w_dir_initial,args,log_overall)
         os.chdir(w_dir_initial)
 
-    if args.CSEARCH=='rdkit' or args.CSEARCH=='summ' or args.CSEARCH=='fullmonte' or args.QPREP is not None:
+    if args.CSEARCH in ['rdkit', 'summ', 'fullmonte'] or args.QPREP is not None:
         # moving files after compute and/or write_gauss
         move_sdf_main(args)
         os.chdir(w_dir_initial)
