@@ -28,13 +28,18 @@ from __future__ import print_function
 import os
 import time
 from pyconfort.argument_parser import parser_args
-from pyconfort.mainf import csearch_main, exp_rules_main, qprep_main, move_sdf_main, qcorr_gaussian_main,dup_main,graph_main,geom_par_main,nmr_main,energy_main,load_from_yaml,creation_of_ana_csv,dbstep_par_main,nics_par_main,cclib_main,cmin_main
+from pyconfort.mainf import (csearch_main, exp_rules_main, qprep_main, 
+                             move_sdf_main, qcorr_gaussian_main,dup_main,
+                             graph_main,geom_par_main,nmr_main,energy_main,
+                             load_from_yaml,creation_of_ana_csv,dbstep_par_main,
+                             nics_par_main,cclib_main,cmin_main)
 from pyconfort.csearch import Logger
 
 def main():
     # working directory and arguments
     w_dir_initial = os.getcwd()
     args = parser_args()
+    name = args.input.split('.')[0]
 
     log_overall = Logger("pyCONFORT", args.output_name)
     #if needed to load from a yaml file
@@ -53,22 +58,24 @@ def main():
         start_time_overall = time.time()
         csearch_dup_data = csearch_main(w_dir_initial,args,log_overall)
         if args.time:
-            log_overall.write("\n All molecules execution time CSEARCH: %s seconds" % (round(time.time() - start_time_overall,2)))
+            elapsed_time = round(time.time() - start_time_overall,2) 
+            log_overall.write(f"\n All molecules execution time CSEARCH: {elapsed_time} seconds")
         os.chdir(w_dir_initial)
         if args.CMIN is None:
-            if not os.path.isdir(w_dir_initial+'/CSEARCH/csv_files'):
-                os.makedirs(w_dir_initial+'/CSEARCH/csv_files/')
-            csearch_dup_data.to_csv(w_dir_initial+'/CSEARCH/csv_files/'+args.input.split('.')[0]+'-CSEARCH-Data.csv',index=False)
+            if not os.path.isdir(f'{w_dir_initial}/CSEARCH/csv_files'):
+                os.makedirs(f'{w_dir_initial}/CSEARCH/csv_files/')
+            csearch_dup_data.to_csv(f'{w_dir_initial}/CSEARCH/csv_files/{name}-CSEARCH-Data.csv',index=False)
 
     #Separating CMIN
-    if args.CSEARCH != None and (args.CMIN=='xtb' or args.CMIN=='ani'):
+    if args.CSEARCH != None and args.CMIN in ['xtb','ani']:
         cmin_dup_data = cmin_main(w_dir_initial,args,log_overall,csearch_dup_data)
         if args.time:
-            log_overall.write("\n All molecules execution time CMIN: %s seconds" % (round(time.time() - start_time_overall,2)))
+            elapsed_time = round(time.time() - start_time_overall,2) 
+            log_overall.write(f"\n All molecules execution time CMIN: {elapsed_time} seconds")
         os.chdir(w_dir_initial)
-        if not os.path.isdir(w_dir_initial+'/CMIN/csv_files'):
-            os.makedirs(w_dir_initial+'/CMIN/csv_files/')
-        cmin_dup_data.to_csv(w_dir_initial+'/CMIN/csv_files/'+args.input.split('.')[0]+'-CMIN-Data.csv',index=False)
+        if not os.path.isdir(f'{w_dir_initial}/CMIN/csv_files'):
+            os.makedirs(f'{w_dir_initial}/CMIN/csv_files/')
+        cmin_dup_data.to_csv(f'{w_dir_initial}/CMIN/csv_files/{name}-CMIN-Data.csv',index=False)
 
 
     #applying rules to discard certain conformers based on rules that the user define
@@ -96,10 +103,12 @@ def main():
         if args.dup:
             try:
                 import goodvibes
-                duplicates = dup_main(args, log_overall, w_dir_initial)
-                os.chdir(w_dir_initial)
             except (ModuleNotFoundError,AttributeError):
                 log_overall.write("\nx  GoodVibes is not installed as a module (pip or conda), the duplicate option will be disabled in QCORR\n")
+            else:
+                # If the AttributeError can happen here do not accept the change
+                duplicates = dup_main(args, log_overall, w_dir_initial) 
+                os.chdir(w_dir_initial)
         else:
             duplicates = False
 
@@ -130,10 +139,10 @@ def main():
     log_overall.finalize()
 
     try:
-        os.rename('pyCONFORT_output.dat','pyCONFORT_{0}.dat'.format(args.output_name))
+        os.rename(f'pyCONFORT_output.dat','pyCONFORT_{args.output_name}.dat')
     except FileExistsError:
-        os.remove('pyCONFORT_{0}.dat'.format(args.output_name))
-        os.rename('pyCONFORT_output.dat','pyCONFORT_{0}.dat'.format(args.output_name))
+        os.remove(f'pyCONFORT_{args.output_name}.dat')
+        os.rename(f'pyCONFORT_output.dat','pyCONFORT_{args.output_name}.dat')
 
 
 if __name__ == "__main__":
