@@ -16,8 +16,6 @@ from pyconfort.filter import exp_rules_output,check_geom_filter
 from pyconfort.csearch import com_2_xyz_2_sdf
 from pyconfort.nics_conf import update_coord,get_coords_normal
 
-possible_atoms = possible_atoms()
-
 def moving_files(source, destination):
     if not os.path.isdir(destination):
         os.makedirs(destination)

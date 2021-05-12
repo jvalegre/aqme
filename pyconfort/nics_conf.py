@@ -11,8 +11,6 @@ from pyconfort.qprep_gaussian import moving_files
 import pandas as pd
 from pyconfort.utils import possible_atoms
 
-possible_atoms = possible_atoms()
-
 def get_coords_normal(outlines, stand_or, NATOMS, possible_atoms, ATOMTYPES, CARTESIANS):
     for i in range(stand_or+5,stand_or+5+NATOMS):
         massno = int(outlines[i].split()[1])

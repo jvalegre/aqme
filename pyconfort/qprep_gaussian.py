@@ -16,9 +16,6 @@ import pandas as pd
 from rdkit.Chem import AllChem as Chem
 from pyconfort.utils import possible_atoms
 
-
-possible_atoms = possible_atoms()
-
 def convert_xyz_to_sdf(xyz_files,args,log):
     for file in xyz_files:
         name=file.split('.xyz')[0]

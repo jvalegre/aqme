@@ -10,8 +10,6 @@ from rdkit.Chem import AllChem as Chem
 from rdkit.Chem import rdMolTransforms, Descriptors
 from pyconfort.utils import possible_atoms
 
-possible_atoms = possible_atoms()
-
 def set_metal_atomic_number(mol,args):
     for atom in mol.GetAtoms():
         if atom.GetIdx() in args.metal_idx:
