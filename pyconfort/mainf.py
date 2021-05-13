@@ -832,7 +832,7 @@ def cclib_main(args,log,w_dir_initial):
                 else:
                     os.chdir(w_dir_initial + '/QPRED/cclib-json/all_confs_cclib/'+str(lot)+'-'+str(bs))
                 json_files = get_com_or_log_out_files('output',name)
-                calcualte_average_cclib_parameter(json_files,args,log,name,w_dir,w_dir_initial,lot,bs)
+                calcualte_average_cclib_parameter(json_files,name,w_dir_initial,lot,bs)
 
 
 # MAIN OPTION FOR DISCARDING MOLECULES BASED ON USER INPUT DATA (REFERRED AS EXPERIMENTAL RULES)
