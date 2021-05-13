@@ -312,7 +312,7 @@ def create_folder_move_log_files(w_dir,w_dir_main,round_num,file,IM_FREQS,TERMIN
     return finished,unfinished,atom_error,scf_error,imag_freq,other_error,exp_rules_qcorr,check_geom_qcorr
 
 # Output file to mol converter
-def output_to_mol(file,format,mol_name):
+def output_to_mol(file,format,mol_name,log):
     ob_compat = True
     rdkit_compat = True
     try:
@@ -392,7 +392,7 @@ def output_analyzer(duplicates,log_files,com_files, w_dir, w_dir_main,lot, bs, b
             if TERMINATION == "normal" and IM_FREQS == 0:
                 log.write("  ----- Exp_rules filter(s) will be applied to the output file -----\n")
                 try:
-                    mol,ob_compat,rdkit_compat = output_to_mol(file,'log',file)
+                    mol,ob_compat,rdkit_compat = output_to_mol(file,'log',file,log)
                     print_error_exp_rules=False
                     if ob_compat and rdkit_compat:
                         passing_rules = exp_rules_output(mol,args,log,file,print_error_exp_rules,ob_compat,rdkit_compat)
@@ -407,12 +407,12 @@ def output_analyzer(duplicates,log_files,com_files, w_dir, w_dir_main,lot, bs, b
             if TERMINATION == "normal" and IM_FREQS == 0:
                 log.write("  ----- Geometrical check will be applied to the output file -----\n")
                 # this creates a mol object from the optimized log file
-                mol,ob_compat,rdkit_compat = output_to_mol(file,'log',file)
+                mol,ob_compat,rdkit_compat = output_to_mol(file,'log',file,log)
                 # this creates a mol object from the input file
                 try:
                     os.chdir(w_dir_main +'/input_files/run_'+str(round_num))
                     com_2_xyz_2_sdf(args,os.path.splitext(file)[0]+'.com')
-                    mol2,ob_compat,rdkit_compat = output_to_mol(file,'xyz',file)
+                    mol2,ob_compat,rdkit_compat = output_to_mol(file,'xyz',file,log)
                     passing_geom = check_geom_filter(mol,mol2,args)
                     # remove created files
                     os.remove(file.split('.')[0]+'.xyz')
