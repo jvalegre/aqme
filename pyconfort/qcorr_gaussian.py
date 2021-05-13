@@ -8,23 +8,13 @@
 import os
 import sys
 import subprocess
-import shutil
 import numpy as np
 from pyconfort.qprep_gaussian import input_route_line,check_for_gen_or_genecp,write_genecp,orca_file_gen
 from pyconfort.utils import possible_atoms
 from pyconfort.filter import exp_rules_output,check_geom_filter
 from pyconfort.csearch import com_2_xyz_2_sdf
 from pyconfort.nics_conf import update_coord,get_coords_normal
-
-def move_file_from_folder(source, destination):
-    if not os.path.isdir(destination):
-        os.makedirs(destination)
-    try:
-        shutil.move(source, destination)
-    except (FileExistsError,shutil.Error):
-        os.chdir(destination)
-        os.remove(source.split('/')[-1])
-        shutil.move(source, destination)
+from pyconfort.utils import move_file
 
 def write_header_and_coords(fileout,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,w_dir_initial,log,com_type=None):
     if com_type == 'nics':
@@ -284,12 +274,12 @@ def create_folder_move_log_files(w_dir,w_dir_main,round_num,file,IM_FREQS,TERMIN
     source = w_dir+'/'+file
     if IM_FREQS == 0 and TERMINATION == "normal" and passing_rules and passing_geom:
         destination = w_dir_fin
-        move_file_from_folder(source, destination)
+        move_file(source, destination)
         finished += 1
 
     elif IM_FREQS > 0:
         destination = w_dir_main+'/failed/run_'+str(round_num)+'/imag_freq/'
-        move_file_from_folder(source, destination)
+        move_file(source, destination)
         imag_freq += 1
 
     elif IM_FREQS == 0 and TERMINATION == "error":
@@ -302,21 +292,21 @@ def create_folder_move_log_files(w_dir,w_dir_main,round_num,file,IM_FREQS,TERMIN
         else:
             destination = w_dir_main+'/failed/run_'+str(round_num)+'/error/unknown_error'
             other_error += 1
-        move_file_from_folder(source, destination)
+        move_file(source, destination)
 
     elif IM_FREQS == 0 and TERMINATION == "unfinished":
         destination = w_dir_main+'/failed/run_'+str(round_num)+'/unfinished/'
-        move_file_from_folder(source, destination)
+        move_file(source, destination)
         unfinished += 1
 
     elif not passing_rules:
         destination = w_dir_main+'/failed/run_'+str(round_num)+'/exp_rules_filter/'
-        move_file_from_folder(source, destination)
+        move_file(source, destination)
         exp_rules_qcorr += 1
 
     elif not passing_geom:
         destination = w_dir_main+'/failed/run_'+str(round_num)+'/geometry_changed/'
-        move_file_from_folder(source, destination)
+        move_file(source, destination)
         check_geom_qcorr += 1
 
     return finished,unfinished,atom_error,scf_error,imag_freq,other_error,exp_rules_qcorr,check_geom_qcorr
@@ -359,7 +349,7 @@ def output_analyzer(duplicates,log_files,com_files, w_dir, w_dir_main,lot, bs, b
         for file in com_files:
             source = w_dir+'/'+file
             destination = w_dir_main +'/input_files/run_'+str(round_num)
-            move_file_from_folder(source, destination)
+            move_file(source, destination)
 
     for file in log_files:
         # read the file
@@ -587,7 +577,7 @@ def dup_calculation(val, w_dir,w_dir_main, args, log,round_num):
     #move the files to specific directory
     destination = w_dir_main+'/duplicates/run_'+str(round_num)
     source = 'Goodvibes_output.dat'
-    move_file_from_folder(source, destination)
+    move_file(source, destination)
 
     for source in dup_file_list:
         #finding the extension
@@ -595,6 +585,6 @@ def dup_calculation(val, w_dir,w_dir_main, args, log,round_num):
             if file.split('.')[0] == source:
                 ext=file.split('.')[1]
         source=source+'.'+ext
-        move_file_from_folder(source, destination)
+        move_file(source, destination)
 
     return duplicates
