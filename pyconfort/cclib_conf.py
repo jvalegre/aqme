@@ -37,7 +37,7 @@ def calculate_boltz_for_cclib(log_files,name,w_dir_initial,lot,bs):
     subprocess.call(cmd_boltz)
 
     #writing to correct places
-    if str(bs).endswith('/'):
+    if '/' in str(bs):
         end = str(bs).split('/')[0]
     else:
         end = str(bs)
@@ -46,7 +46,7 @@ def calculate_boltz_for_cclib(log_files,name,w_dir_initial,lot,bs):
     move_file_from_folder(destination, os.getcwd(),'Goodvibes_{name}.dat')
 
 def log_json(log_file,w_dir_initial,lot,bs):
-    if str(bs).endswith('/'):
+    if '/' in str(bs):
         end = str(bs).split('/')[0]
     else:
         end = str(bs)
@@ -73,7 +73,7 @@ def calcualte_average_cclib_parameter(json_files,name,w_dir_initial,lot,bs):
             mol_data = json.load(molfile)
 
         # get the Boltzmann probabilities of each conformer from a GoodVibes file
-        if str(bs).endswith('/'):
+        if '/' in str(bs):
             end = str(bs).split('/')[0]
         else:
             end = str(bs)
@@ -84,7 +84,7 @@ def calcualte_average_cclib_parameter(json_files,name,w_dir_initial,lot,bs):
         token = file.rsplit('.',1)[0]
         for line in boltz_outlines:
             # I remove the NMR from the file names using [0:-4]
-            if line.endswith(token):
+            if token in line:
                 boltz_factor = float(line.split()[-1])
                 break
         #charge
@@ -97,7 +97,7 @@ def calcualte_average_cclib_parameter(json_files,name,w_dir_initial,lot,bs):
 
     dict_param = {'name': name,'atomcharges': charge, 'dipole': dipole}
 
-    if str(bs).endswith('/'):
+    if '/' in str(bs):
         end = str(bs).split('/')[0]
     else:
         end = str(bs)
