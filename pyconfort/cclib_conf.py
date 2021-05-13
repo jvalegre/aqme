@@ -7,7 +7,7 @@
 
 import subprocess, os
 
-from pyconfort.utils import moving_files
+from pyconfort.utils import move_file_from_folder
 import json
 import numpy as np
 
@@ -25,7 +25,7 @@ def calculate_boltz_for_cclib(val,args,log,name,w_dir_fin,w_dir_initial,lot,bs):
     else:
         destination = w_dir_initial+'/QPRED/cclib-json/boltz/'+str(lot)+'-'+str(bs)
 
-    moving_files(destination, os.getcwd(),'Goodvibes_'+name+'.dat')
+    move_file_from_folder(destination, os.getcwd(),'Goodvibes_'+name+'.dat')
 
 def log_json(log_file,w_dir_initial,args,lot,bs):
     if str(bs).find('/') > -1:

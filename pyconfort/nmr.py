@@ -12,7 +12,7 @@ import glob
 import pandas as pd
 
 from pyconfort.cheshire_lookup import cheshire
-from pyconfort.utils import moving_files
+from pyconfort.utils import move_file_from_folder
 
 
 def nmr_stats(y_exp,y_pred):
@@ -265,7 +265,7 @@ def calculate_boltz_and_nmr(val,args,log,name,w_dir_fin,w_dir_initial,lot,bs):
     else:
         destination = w_dir_initial+'/QPRED/nmr/boltz/'+str(lot)+'-'+str(bs)
 
-    moving_files(destination, os.getcwd(),'Goodvibes_'+name+'.dat')
+    move_file_from_folder(destination, os.getcwd(),'Goodvibes_'+name+'.dat')
 
     for lot_sp in args.level_of_theory_sp:
         for bs_sp in args.basis_set_sp:

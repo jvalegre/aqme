@@ -31,7 +31,7 @@ from pyconfort.dbstep_conf import calculate_db_parameters,calculate_boltz_and_db
 from pyconfort.nics_conf import calculate_nics_parameters,calculate_boltz_for_nics,calculate_avg_nics
 from pyconfort.cclib_conf import calculate_cclib,calcualte_average_cclib_parameter,calculate_boltz_for_cclib
 from pyconfort.cmin import mult_min
-from pyconfort.utils import Logger, moving_files
+from pyconfort.utils import Logger, move_file_from_folder
 #need to and in energy
 
 #load paramters from yaml file
@@ -393,75 +393,75 @@ def move_sdf_main(args):
         all_xtb_conf_files = glob.glob('*_xtb.sdf')
         destination_xtb = src +'/CMIN/xtb'
         for file in all_xtb_conf_files:
-            moving_files(destination_xtb,src,file)
+            move_file_from_folder(destination_xtb,src,file)
         all_xtb_conf_files_all = glob.glob('*_xtb_all_confs.sdf')
         destination_xtb_all = src +'/CMIN/xtb_all_confs'
         for file in all_xtb_conf_files_all:
-            moving_files(destination_xtb_all,src,file)
+            move_file_from_folder(destination_xtb_all,src,file)
         if len(args.exp_rules) >= 1:
             destination_exp_rules = src +'/CMIN/xtb/filter_exp_rules/'
             for file in exp_rules_files:
-                moving_files(destination_exp_rules,src,file)
+                move_file_from_folder(destination_exp_rules,src,file)
     if args.CMIN=='ani':
         all_ani_conf_files = glob.glob('*_ani.sdf')
         destination_ani = src +'/CMIN/ani'
         for file in all_ani_conf_files:
-            moving_files(destination_ani,src,file)
+            move_file_from_folder(destination_ani,src,file)
         all_ani_conf_files_all = glob.glob('*_ani_all_confs.sdf')
         destination_ani_all = src +'/CMIN/ani_all_confs'
         for file in all_ani_conf_files_all:
-            moving_files(destination_ani_all,src,file)
+            move_file_from_folder(destination_ani_all,src,file)
         if len(args.exp_rules) >= 1:
             destination_exp_rules = src +'/CMIN/ani/filter_exp_rules/'
             for file in exp_rules_files:
-                moving_files(destination_exp_rules,src,file)
+                move_file_from_folder(destination_exp_rules,src,file)
     if args.CSEARCH=='rdkit':
         all_name_conf_files = glob.glob('*_rdkit.sdf')
         destination_rdkit = src+ '/CSEARCH/rdkit'
         for file in all_name_conf_files:
-            moving_files(destination_rdkit,src,file)
+            move_file_from_folder(destination_rdkit,src,file)
         if len(args.exp_rules) >= 1:
             destination_exp_rules = src +'/CSEARCH/rdkit/filter_exp_rules/'
             for file in exp_rules_files:
-                moving_files(destination_exp_rules,src,file)
+                move_file_from_folder(destination_exp_rules,src,file)
 
     if args.CSEARCH=='summ':
         all_name_conf_files = glob.glob('*_summ.sdf')
         destination_rdkit = src+ '/CSEARCH/summ'
         for file in all_name_conf_files:
-            moving_files(destination_rdkit,src,file)
+            move_file_from_folder(destination_rdkit,src,file)
         if len(args.exp_rules) >= 1 and args.CMIN is None:
             destination_exp_rules = src +'/CSEARCH/summ/filter_exp_rules/'
             for file in exp_rules_files:
-                moving_files(destination_exp_rules,src,file)
+                move_file_from_folder(destination_exp_rules,src,file)
 
     if args.CSEARCH=='fullmonte':
         all_name_conf_files = glob.glob('*_fullmonte.sdf')
         destination_rdkit = src+ '/CSEARCH/fullmonte'
         for file in all_name_conf_files:
-            moving_files(destination_rdkit,src,file)
+            move_file_from_folder(destination_rdkit,src,file)
         if len(args.exp_rules) >= 1 and args.CMIN is None:
             destination_exp_rules = src +'/CSEARCH/fullmonte/filter_exp_rules/'
             for file in exp_rules_files:
-                moving_files(destination_exp_rules,src,file)
+                move_file_from_folder(destination_exp_rules,src,file)
 
     if args.CSEARCH is None:
         if len(args.exp_rules) >= 1:
             destination_exp_rules = src +'/QMCALC/SDF_input/filter_exp_rules/'
             for file in exp_rules_files:
-                moving_files(destination_exp_rules,src,file)
+                move_file_from_folder(destination_exp_rules,src,file)
 
         all_conf_files = glob.glob('*.sdf')
         destination = src +'/QMCALC/SDF_input/'
         for file in all_conf_files:
-            moving_files(destination,src,file)
+            move_file_from_folder(destination,src,file)
 
 
     if args.com_from_xyz:
         all_xyz_conf_files = glob.glob('*.xyz')+glob.glob('*.sdf')
         destination_xyz = 'QMCALC/xyz_and_sdf'
         for file in all_xyz_conf_files:
-            moving_files(destination_xyz,src,file)
+            move_file_from_folder(destination_xyz,src,file)
 
 #finding the file type to move for analysis
 def get_com_or_log_out_files(type,name):

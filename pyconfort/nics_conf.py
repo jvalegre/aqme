@@ -7,7 +7,7 @@
 
 from numpy import *
 import subprocess, os
-from pyconfort.utils import moving_files
+from pyconfort.utils import move_file_from_folder
 import pandas as pd
 from pyconfort.utils import possible_atoms
 
@@ -265,7 +265,7 @@ def calculate_boltz_for_nics(val,args,log,name,w_dir_fin,w_dir_initial,lot,bs):
         destination = w_dir_initial+'/QPRED/nics/boltz/'+str(lot)+'-'+str(bs).split('/')[0]
     else:
         destination = w_dir_initial+'/QPRED/nics/boltz/'+str(lot)+'-'+str(bs)
-    moving_files(destination, os.getcwd(),'Goodvibes_'+name+'.dat')
+    move_file_from_folder(destination, os.getcwd(),'Goodvibes_'+name+'.dat')
 
 
 def calculate_avg_nics(val,args,log,name,w_dir_fin,w_dir_initial,lot,bs):

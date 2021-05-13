@@ -8,7 +8,7 @@ import sys
 import os
 import pandas as pd
 import subprocess
-from pyconfort.utils import moving_files
+from pyconfort.utils import move_file_from_folder
 
 def calculate_db_parameters(log_files,args,log,w_dir_initial,name_mol,lot,bs):
 
@@ -66,7 +66,7 @@ def calculate_boltz_and_dbstep(val,args,log,name,w_dir,w_dir_initial,lot,bs):
     else:
         destination = w_dir_initial+'/QPRED/dbstep_parameters/boltz/'+str(lot)+'-'+str(bs)
 
-    moving_files(destination, os.getcwd(),'Goodvibes_'+name+'.dat')
+    move_file_from_folder(destination, os.getcwd(),'Goodvibes_'+name+'.dat')
 
     if str(bs).find('/') > -1:
         dbstep_parm_file = w_dir_initial + '/QPRED/dbstep_parameters/all_confs_sterics/'+str(lot)+'-'+str(bs).split('/')[0]+'/'+name+'-all-steric-data.csv'

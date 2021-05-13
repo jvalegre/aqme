@@ -52,7 +52,7 @@ possible_atoms = ["", "H", "He", "Li", "Be", "B", "C", "N", "O", "F", "Ne", "Na"
                  "Rg", "Uub", "Uut", "Uuq", "Uup", "Uuh", "Uus", "Uuo"]
 
 
-def moving_files(destination,src,file):
+def move_file_from_folder(destination,src,file):
     """
     Moves files from the source folder to the destination folder and creates 
     the destination folders when needed.

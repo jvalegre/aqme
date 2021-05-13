@@ -5,7 +5,7 @@
 #        used for genrating details for energy      #
 #####################################################.
 
-from pyconfort.utils import moving_files
+from pyconfort.utils import move_file_from_folder
 
 import pandas as pd
 import os
@@ -23,7 +23,7 @@ def calculate_boltz_and_energy(val,args,log,name,w_dir_fin,w_dir_initial,lot,bs)
         destination = w_dir_initial+'/QPRED/energy/boltz/'+str(lot)+'-'+str(bs).split('/')[0]
     else:
         destination = w_dir_initial+'/QPRED/energy/boltz/'+str(lot)+'-'+str(bs)
-    moving_files('Goodvibes_'+name+'.dat', destination)
+    move_file_from_folder('Goodvibes_'+name+'.dat', destination)
 
 def calculate_avg_and_energy(val,args,log,name,w_dir_fin,w_dir_initial,w_dir_boltz,lot,bs):
 
