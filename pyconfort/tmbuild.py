@@ -5,7 +5,7 @@
 
 from rdkit.Chem import AllChem as Chem
 from rdkit.Chem import rdDistGeom, rdMolAlign
-from pyconfort.filter import get_conf_RMS
+from pyconfort.utils import get_conf_RMS
 
 # GET NUMBER OF NEIGHBOURS OF THE METAL CENTER
 def calc_neighbours(molecule,args):
@@ -315,7 +315,7 @@ def filter_template_mol(molecule_new, mol_objects,args,log):
         check = True
         #check if molecule also exixts in the mol_objects
         for mol in mol_objects:
-            rms = get_conf_RMS(mol, molecule_new, -1, -1, args.heavyonly, args.max_matches_RMSD,log)
+            rms = get_conf_RMS(mol, molecule_new, -1, -1, args.heavyonly, args.max_matches_RMSD)
             if rms < 0.5:
                 check = False
                 break

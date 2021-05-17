@@ -393,7 +393,7 @@ def output_analyzer(duplicates,log_files,com_files, w_dir, w_dir_main,lot, bs, b
                     mol,ob_compat,rdkit_compat = output_to_mol(file,'log',file,log)
                     print_error_exp_rules=False
                     if ob_compat and rdkit_compat:
-                        passing_rules = exp_rules_output(mol,args,log,file,print_error_exp_rules,ob_compat,rdkit_compat)
+                        passing_rules = exp_rules_output(mol,args,log,file,print_error_exp_rules)
                     os.remove(file.split('.')[0]+'.mol')
                 except AttributeError:
                     valid_mol_gen = False

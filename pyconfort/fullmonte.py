@@ -10,8 +10,7 @@ import random
 from rdkit.Chem import AllChem as Chem
 from rdkit.Chem import rdMolTransforms, rdMolAlign
 
-from pyconfort.utils import set_metal_atomic_number
-from pyconfort.filter import get_conf_RMS
+from pyconfort.utils import set_metal_atomic_number, get_conf_RMS
 
 #steps to realign mol
 def realign_mol(mol,conf,coord_Map, alg_Map, mol_template,args,log):
@@ -127,7 +126,7 @@ def generating_conformations_fullmonte(name,args,rotmatches,log,selectedcids_rdk
                 exclude_conf = True
                 break
             if  abs(energy - c_energy[j]) < args.energy_threshold:
-                rms = get_conf_RMS(rot_mol,seenmol,-1,-1, args.heavyonly, args.max_matches_RMSD,log)
+                rms = get_conf_RMS(rot_mol,seenmol,-1,-1, args.heavyonly, args.max_matches_RMSD)
                 if rms < args.rms_threshold:
                     exclude_conf = True
                     break

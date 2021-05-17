@@ -5,10 +5,10 @@
 
 from rdkit.Chem import AllChem as Chem
 from rdkit.Chem import rdMolTransforms, Descriptors
-from pyconfort.utils import possible_atoms
+from pyconfort.utils import possible_atoms, get_conf_RMS
 
 # RULES TO GET EXPERIMENTAL CONFORMERS
-def exp_rules_output(mol,args,log,file,print_error_exp_rules,ob_compat,rdkit_compat):
+def exp_rules_output(mol,args,log,file,print_error_exp_rules):
     passing = True
     for rule in args.exp_rules:
         if rule == 'Ir_bidentate_x3':
@@ -225,14 +225,6 @@ def filters(mol,args,log):
             log.write(" Exiting as total molar mass > {0}".format(args.max_MolWt))
     return valid_structure
 
-# CALCULATES RMSD between two molecules
-def get_conf_RMS(mol1, mol2, c1, c2, heavy, max_matches_RMSD,log):
-    if heavy:
-         mol1 = Chem.RemoveHs(mol1)
-         mol2 = Chem.RemoveHs(mol2)
-    rms = Chem.GetBestRMS(mol1,mol2,c1,c2,maxMatches=max_matches_RMSD)
-    return rms
-
 # filter based on energy window (ewin_csearch)
 def ewin_filter(sorted_all_cids,cenergy,args,dup_data,dup_data_idx,log,calc_type):
     sortedcids,nhigh_csearch,nhigh=[],0,0
@@ -333,10 +325,10 @@ def RMSD_and_E_filter(outmols,selectedcids_initial,cenergy,args,dup_data,dup_dat
             E_diff = abs(cenergy[conf] - cenergy[seenconf]) # in kcal/mol
             if  E_diff < args.energy_threshold:
                 if calc_type == 'rdkit':
-                    rms = get_conf_RMS(outmols[seenconf],outmols[conf],seenconf,conf, args.heavyonly, args.max_matches_RMSD,log)
+                    rms = get_conf_RMS(outmols[seenconf],outmols[conf],seenconf,conf, args.heavyonly, args.max_matches_RMSD)
                 #elif calc_type == 'summ' or calc_type == 'fullmonte' or calc_type =='xtb' or calc_type =='ani':
                 elif calc_type == 'summ' or calc_type =='xtb' or calc_type =='ani':
-                    rms = get_conf_RMS(outmols[conf],outmols[seenconf],-1,-1, args.heavyonly, args.max_matches_RMSD,log)
+                    rms = get_conf_RMS(outmols[conf],outmols[seenconf],-1,-1, args.heavyonly, args.max_matches_RMSD)
                 if rms < args.rms_threshold:
                     excluded_conf = True
                     eng_rms_dup += 1

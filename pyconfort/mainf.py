@@ -865,7 +865,7 @@ def exp_rules_main(args,log,exp_rules_active):
                     check_mol = True
                     ob_compat = True
                     rdkit_compat = True
-                    check_mol = exp_rules_output(mol,args,log,file,print_error_exp_rules,ob_compat,rdkit_compat)
+                    check_mol = exp_rules_output(mol,args,log,file,print_error_exp_rules)
                     print_error_exp_rules += 1
                     if check_mol:
                         sdwriter.write(mol)
