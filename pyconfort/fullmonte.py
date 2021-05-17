@@ -10,7 +10,7 @@ import random
 from rdkit.Chem import AllChem as Chem
 from rdkit.Chem import rdMolTransforms, rdMolAlign
 
-from pyconfort.filter import set_metal_atomic_number
+from pyconfort.utils import set_metal_atomic_number
 from pyconfort.filter import get_conf_RMS
 
 #steps to realign mol
@@ -166,12 +166,12 @@ def generating_conformations_fullmonte(name,args,rotmatches,log,selectedcids_rdk
         unique_mol[cid].SetProp('_Name',name+' '+str(i))
         if coord_Map is None and alg_Map is None and mol_template is None:
             if args.metal_complex:
-                set_metal_atomic_number(unique_mol[cid],args)
+                set_metal_atomic_number(unique_mol[cid],args.metal_idx,args.metal_sym)
             sdwriter.write(unique_mol[cid])
         else:
             mol_realigned,_ = realign_mol(unique_mol[cid],-1,coord_Map, alg_Map, mol_template,args,log)
             if args.metal_complex:
-                set_metal_atomic_number(mol_realigned,args)
+                set_metal_atomic_number(mol_realigned,args.metal_idx,args.metal_sym)
             sdwriter.write(mol_realigned)
 
     status = 1

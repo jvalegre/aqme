@@ -10,8 +10,8 @@ from rdkit.Chem import AllChem as Chem
 from rdkit.Chem.PropertyMol import PropertyMol
 from rdkit.Geometry import Point3D
 from pyconfort.qprep_gaussian import write_confs
-from pyconfort.filter import (set_metal_atomic_number, ewin_filter,
-                              pre_E_filter, RMSD_and_E_filter)
+from pyconfort.filter import (ewin_filter, pre_E_filter, RMSD_and_E_filter)
+from pyconfort.utils import set_metal_atomic_number
 
 hartree_to_kcal = 627.509
 

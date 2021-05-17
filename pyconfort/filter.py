@@ -7,13 +7,6 @@ from rdkit.Chem import AllChem as Chem
 from rdkit.Chem import rdMolTransforms, Descriptors
 from pyconfort.utils import possible_atoms
 
-def set_metal_atomic_number(mol,args):
-    for atom in mol.GetAtoms():
-        if atom.GetIdx() in args.metal_idx:
-            re_symbol = args.metal_sym[args.metal_idx.index(atom.GetIdx())]
-            atomic_number = possible_atoms.index(re_symbol)
-            atom.SetAtomicNum(atomic_number)
-
 # RULES TO GET EXPERIMENTAL CONFORMERS
 def exp_rules_output(mol,args,log,file,print_error_exp_rules,ob_compat,rdkit_compat):
     passing = True

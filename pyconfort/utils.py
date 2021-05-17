@@ -50,6 +50,27 @@ class Logger:
         """ Closes the file """
         self.log.close()
 
+def set_metal_atomic_number(mol,metal_idx,metal_sym):
+    """
+    Changes the atomic number of the metal atoms using their indices. 
+
+    Parameters
+    ----------
+    mol : rdkit.Chem.Mol
+        rdkit molecule object
+    metal_idx : list
+        sorted list that contains the indices of the metal atoms in the molecule
+    metal_sym : list
+        sorted list (same order as metal_idx) that contains the symbols of the 
+        metals in the molecule. 
+    """
+
+    for atom in mol.GetAtoms():
+        if atom.GetIdx() in metal_idx:
+            re_symbol = metal_sym[metal_idx.index(atom.GetIdx())]
+            atomic_number = possible_atoms.index(re_symbol)
+            atom.SetAtomicNum(atomic_number)
+
 def move_file(file, destination):
     """
     Moves a file to a destination folder. If the file exists rewrites it.

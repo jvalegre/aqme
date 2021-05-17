@@ -13,13 +13,13 @@ import pandas as pd
 from rdkit.Chem import AllChem as Chem
 from rdkit.Chem import rdMolTransforms, PropertyMol, rdDistGeom, Lipinski
 import pyconfort
-from pyconfort.filter import (filters, set_metal_atomic_number,
-                              ewin_filter, pre_E_filter, RMSD_and_E_filter)
+from pyconfort.filter import (filters, ewin_filter, 
+                              pre_E_filter, RMSD_and_E_filter)
 from pyconfort.tmbuild import template_embed
 from pyconfort.cmin import rules_get_charge, substituted_mol
 from pyconfort.fullmonte import (generating_conformations_fullmonte, 
                                  minimize_rdkit_energy, realign_mol)
-from pyconfort.utils import Logger
+from pyconfort.utils import Logger, set_metal_atomic_number
 
 hartree_to_kcal = 627.509
 
@@ -324,7 +324,7 @@ def genConformer_r(mol, conf, i, matches, degree, sdwriter,args,name,log,update_
             else:
                 mol,GetFF = realign_mol(mol,conf,coord_Map, alg_Map, mol_template,args,log)
                 mol.SetProp('Energy',str(GetFF.CalcEnergy()))
-            set_metal_atomic_number(mol,args)
+            set_metal_atomic_number(mol,args.metal_idx,args.metal_sym)
         sdwriter.write(mol,conf)
         return 1
     else:
@@ -549,7 +549,7 @@ def dihedral_filter_and_sdf(name,args,log,dup_data,dup_data_idx,coord_Map, alg_M
         mol_rd.SetProp('_Name',rdmols[cid].GetProp('_Name')+' '+str(i))
         mol_rd.SetProp('Energy',str(rotated_energy[cid]))
         if args.metal_complex:
-            set_metal_atomic_number(mol_rd,args)
+            set_metal_atomic_number(mol_rd,args.metal_idx,args.metal_sym)
         sdwriter_rd.write(mol_rd)
     sdwriter_rd.close()
     status = 1
