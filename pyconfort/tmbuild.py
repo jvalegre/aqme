@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 #####################################################.
 #        This file stores all the functions         #
 #    used in template based conformer generation    #
