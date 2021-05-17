@@ -441,7 +441,7 @@ def optimize(mol, args, program,log,dup_data,dup_data_idx):
                 atom.SetAtomicNum(1)
 
     if args.metal_complex and not args.CSEARCH=='summ':
-        set_metal_atomic_number(mol,args)
+        set_metal_atomic_number(mol,args.metal_idx,args.metal_sym)
 
     elements = ''
     ase_metal = []
