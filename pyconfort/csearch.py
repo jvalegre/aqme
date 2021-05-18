@@ -581,7 +581,7 @@ def genConformer_r(mol, conf, i, matches, degree, sdwriter,args,name,log,update_
             if coord_Map is None and alg_Map is None and mol_template is None:
                 GetFF = minimize_rdkit_energy(mol,conf,args,log)
             else:
-                mol,GetFF = realign_mol(mol,conf,coord_Map, alg_Map, mol_template,args,log)
+                mol,GetFF = realign_mol(mol,conf,coord_Map, alg_Map, mol_template,args.opt_steps_RDKit)
             mol.SetProp('Energy',str(GetFF.CalcEnergy()))
             set_metal_atomic_number(mol,args.metal_idx,args.metal_sym)
         sdwriter.write(mol,conf)
@@ -696,7 +696,7 @@ def min_and_E_calc(mol,cids,args,log,coord_Map,alg_Map,mol_template):
 
         # id template realign before doing calculations
         else:
-            mol,GetFF = realign_mol(mol,conf,coord_Map, alg_Map, mol_template,args,log)
+            mol,GetFF = realign_mol(mol,conf,coord_Map, alg_Map, mol_template,args.opt_steps_RDKit)
             cenergy.append(GetFF.CalcEnergy())
         pmol = PropertyMol.PropertyMol(mol)
         outmols.append(pmol)
@@ -938,7 +938,7 @@ def dihedral_filter_and_sdf(name,args,log,dup_data,dup_data_idx,coord_Map, alg_M
             GetFF = minimize_rdkit_energy(rd_mol_i,-1,args,log)
             rotated_energy.append(float(GetFF.CalcEnergy()))
         else:
-            rd_mol_i,GetFF = realign_mol(rd_mol_i,-1,coord_Map, alg_Map, mol_template,args,log)
+            rd_mol_i,GetFF = realign_mol(rd_mol_i,-1,coord_Map, alg_Map, mol_template,args.opt_steps_RDKit)
             rotated_energy.append(float(GetFF.CalcEnergy()))
 
     rotated_cids = list(range(len(rdmols)))

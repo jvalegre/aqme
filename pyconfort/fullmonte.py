@@ -13,19 +13,43 @@ from rdkit.Chem import rdMolTransforms, rdMolAlign
 from pyconfort.utils import set_metal_atomic_number, get_conf_RMS
 
 #steps to realign mol
-def realign_mol(mol,conf,coord_Map, alg_Map, mol_template,args,log):
+def realign_mol(mol,conf,coord_Map, alg_Map, mol_template,optimization_steps):
+    """
+    Minimizes and aligns the molecule provided freezing the atoms that match 
+    the mol_template.
+
+    Parameters
+    ----------
+    mol : rdkit.Chem.Mol
+        Molecule to be minimized and aligned. 
+    conf : int?
+        Number that indicates which conformation of the molecule will be 
+        minimized and aligned. 
+    coord_Map : [type]
+        [description]
+    alg_Map : [type]
+        [description]
+    mol_template : [type]
+        [description]
+    optimization_steps : int
+        Maximum number of iterations in FF minimization.
+
+    Returns
+    -------
+    mol,forcefield
+        The updated mol object and the forcefield used with its constrains.
+    """
     num_atom_match = mol.GetSubstructMatch(mol_template)
-    GetFF = Chem.UFFGetMoleculeForceField(mol,confId=conf)
-    for k, idxI in enumerate(num_atom_match):
-        for l in range(k + 1, len(num_atom_match)):
-            idxJ = num_atom_match[l]
+    forcefield = Chem.UFFGetMoleculeForceField(mol,confId=conf)
+    for i, idxI in enumerate(num_atom_match):
+        for idxJ in num_atom_match[i+1:]:
             d = coord_Map[idxI].Distance(coord_Map[idxJ])
-            GetFF.AddDistanceConstraint(idxI, idxJ, d, d, 10000)
-    GetFF.Initialize()
-    GetFF.Minimize(maxIts=args.opt_steps_RDKit)
+            forcefield.AddDistanceConstraint(idxI, idxJ, d, d, 10000)
+    forcefield.Initialize()
+    forcefield.Minimize(maxIts=optimization_steps)
     # rotate the embedded conformation onto the core_mol:
     rdMolAlign.AlignMol(mol, mol_template, prbCid=conf,refCid=-1,atomMap=alg_Map,reflect=True,maxIters=100)
-    return mol,GetFF
+    return mol,forcefield
 
 #function to get rdkit energy
 def minimize_rdkit_energy(mol,conf,args,log):
@@ -114,7 +138,7 @@ def generating_conformations_fullmonte(name,args,rotmatches,log,selectedcids_rdk
             GetFF = minimize_rdkit_energy(rot_mol,-1,args,log)
             energy = float(GetFF.CalcEnergy())
         else:
-            mol,GetFF = realign_mol(rot_mol,-1,coord_Map, alg_Map, mol_template,args,log)
+            mol,GetFF = realign_mol(rot_mol,-1,coord_Map, alg_Map, mol_template,args.opt_steps_RDKit)
             energy = float(GetFF.CalcEnergy())
 
         #STEP 5 : Check for DUPLICATES - energy and rms filter (reuse)
@@ -168,7 +192,7 @@ def generating_conformations_fullmonte(name,args,rotmatches,log,selectedcids_rdk
                 set_metal_atomic_number(unique_mol[cid],args.metal_idx,args.metal_sym)
             sdwriter.write(unique_mol[cid])
         else:
-            mol_realigned,_ = realign_mol(unique_mol[cid],-1,coord_Map, alg_Map, mol_template,args,log)
+            mol_realigned,_ = realign_mol(unique_mol[cid],-1,coord_Map, alg_Map, mol_template,args.opt_steps_RDKit)
             if args.metal_complex:
                 set_metal_atomic_number(mol_realigned,args.metal_idx,args.metal_sym)
             sdwriter.write(mol_realigned)
