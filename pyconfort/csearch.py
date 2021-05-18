@@ -24,6 +24,147 @@ from pyconfort.utils import Logger, set_metal_atomic_number
 hartree_to_kcal = 627.509
 
 
+#checks the charge on the smi string
+def check_charge_smi(smi):
+    charge = 0
+    for i,smi_letter in enumerate(smi):
+        if smi_letter == '+':
+            if smi[i+1] == ']':
+                charge += 1
+            else:
+                charge += int(smi[i+1])
+        elif smi_letter == '-':
+            if smi[i+1] == ']':
+                charge -= 1
+            else:
+                charge -= int(smi[i+1])
+    return charge
+
+#checks for salts
+def check_for_pieces(smi):
+    #taking largest component for salts
+    pieces = smi.split('.')
+    if len(pieces) > 1:
+        # take largest component by length
+        smi = max(pieces, key=len)
+    return smi
+
+#mol from sdf
+def mol_from_sdf_or_mol_or_mol2(input):
+    if os.path.splitext(input)[1] =='.sdf':
+        suppl = Chem.SDMolSupplier(input, removeHs=False)
+    elif os.path.splitext(input)[1] =='.mol':
+        suppl = Chem.MolFromMolFile(input, removeHs=False)
+    elif os.path.splitext(input)[1] =='.mol2':
+        suppl = Chem.MolFromMol2File(input, removeHs=False)
+
+    IDs,charges = [],[]
+
+    readlines = open(input,"r").readlines()
+
+    molecule_count = 0
+    for i, line in enumerate(readlines):
+        if line.find('>  <ID>') > -1:
+            ID = readlines[i+1].split()[0]
+            IDs.append(ID)
+        if line.find('M  CHG') > -1:
+            charge_line =  line.split('  ')
+            charge = 0
+            for j in range(4,len(charge_line)):
+                if (j % 2) == 0:
+                    if j == len(charge_line) - 1:
+                        charge_line[j] = charge_line[j].split('\n')[0]
+                    charge += int(charge_line[j])
+            charges.append(charge)
+        if line.find('$$$$') > -1:
+            molecule_count += 1
+            if molecule_count != len(charges):
+                charges.append(0)
+
+    if IDs == []:
+        if os.path.splitext(input)[1] =='.sdf':
+            for i,_ in enumerate(suppl):
+                IDs.append(os.path.splitext(input)[0]+'_'+str(i))
+        else:
+            IDs.append(os.path.splitext(input)[0])
+    if charges == []:
+        if os.path.splitext(input)[1] =='.sdf':
+            for i,_ in enumerate(suppl):
+                charges.append(0)
+        else:
+            charges.append(0)
+    return suppl, IDs, charges
+
+# DETECTS DIHEDRALS IN THE MOLECULE
+def getDihedralMatches(mol, heavy,log):
+    #this is rdkit's "strict" pattern
+    pattern = r"*~[!$(*#*)&!D1&!$(C(F)(F)F)&!$(C(Cl)(Cl)Cl)&!$(C(Br)(Br)Br)&!$(C([CH3])([CH3])[CH3])&!$([CD3](=[N,O,S])-!@[#7,O,S!D1])&!$([#7,O,S!D1]-!@[CD3]=[N,O,S])&!$([CD3](=[N+])-!@[#7!D1])&!$([#7!D1]-!@[CD3]=[N+])]-!@[!$(*#*)&!D1&!$(C(F)(F)F)&!$(C(Cl)(Cl)Cl)&!$(C(Br)(Br)Br)&!$(C([CH3])([CH3])[CH3])]~*"
+    qmol = Chem.MolFromSmarts(pattern)
+    matches = mol.GetSubstructMatches(qmol)
+
+    #these are all sets of 4 atoms, uniquify by middle two
+    uniqmatches = []
+    seen = set()
+    for (a,b,c,d) in matches:
+        if (b,c) not in seen and (c,b) not in seen:
+            if heavy:
+                if mol.GetAtomWithIdx(a).GetSymbol() != 'H' and mol.GetAtomWithIdx(d).GetSymbol() != 'H':
+                    seen.add((b,c))
+                    uniqmatches.append((a,b,c,d))
+            if not heavy:
+                if mol.GetAtomWithIdx(c).GetSymbol() == 'C' and mol.GetAtomWithIdx(d).GetSymbol() == 'H':
+                    pass
+                else:
+                    seen.add((b,c))
+                    uniqmatches.append((a,b,c,d))
+    return uniqmatches
+
+def getDihedralMatches_v2(mol, heavy,log): #New version using openbabel
+    # If this version is selected, bring the import to the top
+    import pybel # from openbabel import pybel for openbabel>=3.0.0
+    AtomInTripleBond = '$(*#*)'
+    TerminalAtom = 'D1'
+    CF3 = '$(C(F)(F)F)'
+    CCl3 = '$(C(Cl)(Cl)Cl)'
+    CBr3 = '$(C(Br)(Br)Br)'
+    tBut = '$(C([CH3])([CH3])[CH3])'
+    # A 3-bonded C with a double bond to (N, O or S) 
+    # singlgy bonded to not ring bonded to a non-terminal N,O or S.
+    CD3_1d = '$([CD3](=[N,O,S])-!@[#7,O,S!D1])' 
+    CD3_1r = '$([#7,O,S!D1]-!@[CD3]=[N,O,S])' # Backwards version
+    # A 3-bonded C with a double bond to (N+) 
+    # singlgy bonded to not ring bonded to Any non-terminal N
+    CD3_2d = '$([CD3](=[N+])-!@[#7!D1])'
+    CD3_2r = '$([#7!D1]-!@[CD3]=[N+])' # Backwards version 
+    Atom1 = '*'
+    Atom2 =  f'!{AtomInTripleBond}&!{TerminalAtom}'
+    Atom2 += f'&!{CF3}&!{CCl3}&!{CBr3}&!{tBut}'
+    Atom2 += f'&!{CD3_1d}&!{CD3_1r}&!{CD3_2d}&!{CD3_2r}'
+    Atom3 =  f'!{AtomInTripleBond}&!{TerminalAtom}'
+    Atom3 += f'&!{CF3}&!{CCl3}&!{CBr3}&!{tBut}'
+    Atom4 = '*'
+    pattern = f'{Atom1}~[{Atom2}]-!@[{Atom3}]~{Atom4}'
+    smarts = pybel.Smarts(pattern)
+    matches = smarts.findall(mol)
+
+    #these are all sets of 4 atoms, uniquify by middle two
+    H_atoms = set(pybel.Smarts('[#1]').findall(mol))
+    C_atoms = set(pybel.Smarts('[#6]').findall(mol))
+    uniqmatches = []
+    seen = set()
+    for (a,b,c,d) in matches:
+        if (b,c) not in seen and (c,b) not in seen:
+            if heavy:
+                if a not in H_atoms and d not in H_atoms:
+                    seen.add((b,c))
+                    uniqmatches.append((a,b,c,d))
+            if not heavy:
+                # So what if a == 'H' and b == 'C'? is that valid ¿? 
+                if c not in C_atoms or d not in H_atoms:
+                    seen.add((b,c))
+                    uniqmatches.append((a,b,c,d))
+
+
 #creation of csv for csearch
 def creation_of_dup_csv(csearch,cmin):
     """
@@ -148,53 +289,6 @@ def com_2_xyz_2_sdf(args,start_point=None):
         else:
             return args.charge_default
 
-
-#mol from sdf
-def mol_from_sdf_or_mol_or_mol2(input):
-    if os.path.splitext(input)[1] =='.sdf':
-        suppl = Chem.SDMolSupplier(input, removeHs=False)
-    elif os.path.splitext(input)[1] =='.mol':
-        suppl = Chem.MolFromMolFile(input, removeHs=False)
-    elif os.path.splitext(input)[1] =='.mol2':
-        suppl = Chem.MolFromMol2File(input, removeHs=False)
-
-    IDs,charges = [],[]
-
-    readlines = open(input,"r").readlines()
-
-    molecule_count = 0
-    for i, line in enumerate(readlines):
-        if line.find('>  <ID>') > -1:
-            ID = readlines[i+1].split()[0]
-            IDs.append(ID)
-        if line.find('M  CHG') > -1:
-            charge_line =  line.split('  ')
-            charge = 0
-            for j in range(4,len(charge_line)):
-                if (j % 2) == 0:
-                    if j == len(charge_line) - 1:
-                        charge_line[j] = charge_line[j].split('\n')[0]
-                    charge += int(charge_line[j])
-            charges.append(charge)
-        if line.find('$$$$') > -1:
-            molecule_count += 1
-            if molecule_count != len(charges):
-                charges.append(0)
-
-    if IDs == []:
-        if os.path.splitext(input)[1] =='.sdf':
-            for i,_ in enumerate(suppl):
-                IDs.append(os.path.splitext(input)[0]+'_'+str(i))
-        else:
-            IDs.append(os.path.splitext(input)[0])
-    if charges == []:
-        if os.path.splitext(input)[1] =='.sdf':
-            for i,_ in enumerate(suppl):
-                charges.append(0)
-        else:
-            charges.append(0)
-    return suppl, IDs, charges
-
 # returns the arguments to their original value after each calculation
 def clean_args(args,ori_ff,mol,ori_charge):
     for atom in mol.GetAtoms():
@@ -208,31 +302,6 @@ def clean_args(args,ori_ff,mol,ori_charge):
     args.metal_idx = []
     args.complex_coord = []
     args.metal_sym = []
-
-#checks the charge on the smi string
-def check_charge_smi(smi):
-    charge = 0
-    for i,smi_letter in enumerate(smi):
-        if smi_letter == '+':
-            if smi[i+1] == ']':
-                charge += 1
-            else:
-                charge += int(smi[i+1])
-        elif smi_letter == '-':
-            if smi[i+1] == ']':
-                charge -= 1
-            else:
-                charge -= int(smi[i+1])
-    return charge
-
-#checks for salts
-def check_for_pieces(smi):
-    #taking largest component for salts
-    pieces = smi.split('.')
-    if len(pieces) > 1:
-        # take largest component by length
-        smi = max(pieces, key=len)
-    return smi
 
 #if template activated, loads it
 def load_template(args,log):
@@ -336,30 +405,6 @@ def auto_sampling(mult_factor,mol,args,log):
     else:
         auto_samples = mult_factor*auto_samples
     return auto_samples
-
-# DETECTS DIHEDRALS IN THE MOLECULE
-def getDihedralMatches(mol, heavy,log):
-    #this is rdkit's "strict" pattern
-    pattern = r"*~[!$(*#*)&!D1&!$(C(F)(F)F)&!$(C(Cl)(Cl)Cl)&!$(C(Br)(Br)Br)&!$(C([CH3])([CH3])[CH3])&!$([CD3](=[N,O,S])-!@[#7,O,S!D1])&!$([#7,O,S!D1]-!@[CD3]=[N,O,S])&!$([CD3](=[N+])-!@[#7!D1])&!$([#7!D1]-!@[CD3]=[N+])]-!@[!$(*#*)&!D1&!$(C(F)(F)F)&!$(C(Cl)(Cl)Cl)&!$(C(Br)(Br)Br)&!$(C([CH3])([CH3])[CH3])]~*"
-    qmol = Chem.MolFromSmarts(pattern)
-    matches = mol.GetSubstructMatches(qmol)
-
-    #these are all sets of 4 atoms, uniquify by middle two
-    uniqmatches = []
-    seen = set()
-    for (a,b,c,d) in matches:
-        if (b,c) not in seen and (c,b) not in seen:
-            if heavy:
-                if mol.GetAtomWithIdx(a).GetSymbol() != 'H' and mol.GetAtomWithIdx(d).GetSymbol() != 'H':
-                    seen.add((b,c))
-                    uniqmatches.append((a,b,c,d))
-            if not heavy:
-                if mol.GetAtomWithIdx(c).GetSymbol() == 'C' and mol.GetAtomWithIdx(d).GetSymbol() == 'H':
-                    pass
-                else:
-                    seen.add((b,c))
-                    uniqmatches.append((a,b,c,d))
-    return uniqmatches
 
 # IF NOT USING DIHEDRALS, THIS REPLACES I BACK TO THE METAL WHEN METAL = TRUE
 # AND WRITES THE RDKit SDF FILES. WITH DIHEDRALS, IT OPTIMIZES THE ROTAMERS
