@@ -36,8 +36,8 @@ def realign_mol(mol,conf,coord_Map, alg_Map, mol_template,optimization_steps):
 
     Returns
     -------
-    mol,forcefield
-        The updated mol object and the forcefield used with its constrains.
+    mol,energy
+        The updated mol object and the final forcefield energy.
     """
     num_atom_match = mol.GetSubstructMatch(mol_template)
     forcefield = Chem.UFFGetMoleculeForceField(mol,confId=conf)
@@ -49,7 +49,8 @@ def realign_mol(mol,conf,coord_Map, alg_Map, mol_template,optimization_steps):
     forcefield.Minimize(maxIts=optimization_steps)
     # rotate the embedded conformation onto the core_mol:
     rdMolAlign.AlignMol(mol, mol_template, prbCid=conf,refCid=-1,atomMap=alg_Map,reflect=True,maxIters=100)
-    return mol,forcefield
+    energy = float(forcefield.CalcEnergy())
+    return mol,energy
 
 #function to get rdkit energy
 def minimize_rdkit_energy(mol,conf,args,log):
@@ -138,8 +139,7 @@ def generating_conformations_fullmonte(name,args,rotmatches,log,selectedcids_rdk
             GetFF = minimize_rdkit_energy(rot_mol,-1,args,log)
             energy = float(GetFF.CalcEnergy())
         else:
-            mol,GetFF = realign_mol(rot_mol,-1,coord_Map, alg_Map, mol_template,args.opt_steps_RDKit)
-            energy = float(GetFF.CalcEnergy())
+            mol,energy = realign_mol(rot_mol,-1,coord_Map, alg_Map, mol_template,args.opt_steps_RDKit)
 
         #STEP 5 : Check for DUPLICATES - energy and rms filter (reuse)
                  #  if the conformer is unique then save it the list
