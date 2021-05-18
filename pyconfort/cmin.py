@@ -246,7 +246,7 @@ def mult_min(name, args, program,log,dup_data,dup_data_idx):
 
     log.write(f"\n\no  Applying filters to intial conformers after {program} minimization")
     # filter based on energy window ewin_csearch
-    sortedcids = ewin_filter(sorted_all_cids,cenergy,args,dup_data,dup_data_idx,log,program)
+    sortedcids = ewin_filter(sorted_all_cids,cenergy,args,dup_data,dup_data_idx,log,program,args.ewin_csearch)
     # pre-filter based on energy only
     selectedcids_initial = pre_E_filter(sortedcids,cenergy,dup_data,dup_data_idx,log,program,args.initial_energy_threshold,args.verbose)
     # filter based on energy and RMSD

@@ -254,7 +254,7 @@ def conformer_generation(mol,name,args,log,coord_Map=None,alg_Map=None,mol_templ
     dup_data = creation_of_dup_csv(args)
     dup_data_idx = 0
     start_time = time.time()
-    valid_structure = filters(mol, args,log)
+    valid_structure = filters(mol,log,args.max_MolWt,args.verbose)
     if valid_structure:
         if args.verbose:
             log.write("\n   ----- {} -----".format(name))
@@ -411,7 +411,7 @@ def min_after_embed(mol,cids,name,initial_confs,rotmatches,dup_data,dup_data_idx
     log.write("\n\no  Applying filters to intial conformers")
 
     # filter based on energy window ewin_csearch
-    sortedcids_rdkit = ewin_filter(sorted_all_cids,cenergy,args,dup_data,dup_data_idx,log,'rdkit')
+    sortedcids_rdkit = ewin_filter(sorted_all_cids,cenergy,args,dup_data,dup_data_idx,log,'rdkit',args.ewin_csearch)
 
     # pre-filter based on energy only
     selectedcids_initial_rdkit = pre_E_filter(sortedcids_rdkit,cenergy,dup_data,dup_data_idx,log,'rdkit',args.initial_energy_threshold,args.verbose)
@@ -537,7 +537,7 @@ def dihedral_filter_and_sdf(name,args,log,dup_data,dup_data_idx,coord_Map, alg_M
     sorted_rotated_cids = sorted(rotated_cids, key = lambda cid: rotated_energy[cid])
 
     # filter based on energy window ewin_csearch
-    sortedcids_rotated = ewin_filter(sorted_rotated_cids,rotated_energy,args,dup_data,dup_data_idx,log,'summ')
+    sortedcids_rotated = ewin_filter(sorted_rotated_cids,rotated_energy,args,dup_data,dup_data_idx,log,'summ',args.ewin_csearch)
     # pre-filter based on energy only
     selectedcids_initial_rotated = pre_E_filter(sortedcids_rotated,rotated_energy,dup_data,dup_data_idx,log,'summ',args.initial_energy_threshold,args.verbose)
     # filter based on energy and RMSD

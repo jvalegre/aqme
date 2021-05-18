@@ -344,64 +344,114 @@ def check_geom_filter(mol,mol2,length_factor):
 
     return passing_geom
 
-# FILTER TO BE APPLIED FOR SMILES
-def filters(mol,args,log):
-    valid_structure = True
-    # Second filter: molecular weight
-    if Descriptors.MolWt(mol) < args.max_MolWt:
-        # Third filter: this filters salts off (2 separated components)
-        #if len(Chem.MolToSmiles(mol).split('.')) == 1:
-        for atom in mol.GetAtoms():
-            #Fourth filter: atoms outside the scope chosen in 'possible_atoms'
-            if atom.GetSymbol() not in possible_atoms:
-                valid_structure = False
-                if args.verbose:
-                    log.write(" Exiting as atom isn't in atoms in the periodic table")
-    else:
-        valid_structure = False
-        if args.verbose:
-            log.write(" Exiting as total molar mass > {0}".format(args.max_MolWt))
-    return valid_structure
+def filters(mol,log,molwt_cutoff,verbose):
+    """
+    Applies some basic filters (molwt, salts[currently off], weird atom symbols)
+    that only require SMILES data from a compound and returns if the molecule 
+    passes the filters or not. 
 
-# filter based on energy window (ewin_csearch)
-def ewin_filter(sorted_all_cids,cenergy,args,dup_data,dup_data_idx,log,calc_type):
-    sortedcids,nhigh_csearch,nhigh=[],0,0
-    #if calc_type == 'rdkit' or calc_type == 'summ' or calc_type == 'fullmonte':
-    if calc_type == 'rdkit' or calc_type == 'summ':
-        for i,cid in enumerate(sorted_all_cids):
-            if i == 0:
-                cenergy_min = cenergy[cid]
-            if abs(cenergy[cid] - cenergy_min) < args.ewin_csearch:
-                sortedcids.append(cid)
-            else:
-                nhigh_csearch +=1
-    if calc_type == 'rdkit':
-        if args.verbose:
-            log.write("o  "+str(nhigh_csearch)+ " conformers rejected based on energy window ewin_csearch (E > "+str(args.ewin_csearch)+" kcal/mol)")
-        dup_data.at[dup_data_idx, 'RDKit-energy-window'] = nhigh_csearch
-    if calc_type == 'summ':
-        if args.verbose:
-            log.write("o  "+str(nhigh_csearch)+ " conformers rejected after rotation based on energy window ewin_csearch (E > "+str(args.ewin_csearch)+" kcal/mol)")
-        dup_data.at[dup_data_idx, 'summ-energy-window'] = nhigh_csearch
-    # if calc_type == 'fullmonte':
-    #     if args.verbose:
-    #         log.write("o  "+str(nhigh_csearch)+ " conformers rejected based on energy window ewin_csearch (E > "+str(args.ewin_csearch)+" kcal/mol)")
-    #     dup_data.at[dup_data_idx, 'FullMonte-energy-window'] = nhigh_csearch
+    Parameters
+    ----------
+    mol : rdkit.Chem.Mol
+        [description]
+    args : argparse.args
+        [description]
+    log : Logger
+        [description]
+    molwt_cutoff : float
+        Maximum Acceptable Molecular weight. 
+    verbose : bool
+        Controls extra printing in the log. If True writing to the log will be 
+        enabled otherwise no logging will be produced from this function. 
 
-    if calc_type == 'xtb' or calc_type == 'ani':
-        for i,cid in enumerate(sorted_all_cids):
-            if i == 0:
-                cenergy_min = cenergy[cid]
-            if abs(cenergy[cid] - cenergy_min) < args.ewin_cmin:
-                sortedcids.append(cid)
-            else:
-                nhigh +=1
-        if args.verbose:
-            log.write("o  "+str(nhigh)+ " conformers rejected based on energy window ewin_cmin (E > "+str(args.ewin_cmin)+" kcal/mol)")
-        if calc_type == 'ani':
-            dup_data.at[dup_data_idx, 'ANI-energy-window'] = nhigh
-        elif calc_type == 'xtb':
-            dup_data.at[dup_data_idx, 'xTB-energy-window'] = nhigh
+
+    Returns
+    -------
+    bool
+        True if it passes the filters, False if it should be discarded.
+    """
+    
+    # Filter 1
+    if Descriptors.MolWt(mol) >= molwt_cutoff:
+        if verbose:
+            log.write(f" Exiting as total molar mass > {molwt_cutoff}")
+        return False
+    
+    # Filter 2
+    #if len(Chem.MolToSmiles(mol).split('.')) > 1: # Disconnected Molecule
+    #    return False
+    
+    # Filter 3
+    symbols = [atom.GetSymbol() for atom in mol.GetAtoms()]
+    unknown_atoms = list(set(symbols) - set(possible_atoms))
+    if unknown_atoms:
+        if verbose:
+            log.write(f" Exiting as atoms [{','.join(unknown_atoms)}] are not in the periodic table")
+        return False
+    
+    # Passed
+    return True
+
+def ewin_filter(sorted_all_cids,cenergy,args,dup_data,dup_data_idx,log,calc_type,energy_window):
+    """
+    Given a sorted list of Compound Ids and a sorted list of their energies 
+    it discards all compound Ids that have an energy higher than the 
+    args.ewin_csearch with respect to the lowest one. 
+
+    Parameters
+    ----------
+    sorted_all_cids : list
+        [description]
+    cenergy : list
+        [description]
+    args : argparse.args
+        [description]
+    dup_data : pd.Dataframe
+        [description]
+    dup_data_idx : pd.Dataframe?
+        [description]
+    log : Logger
+        [description]
+    calc_type : str
+        A string that points towards the column of the dataframe that should 
+        be filled with the number of duplicates. The current choices are: 
+        ['rdkit','summ','ani','xtb']
+    energy_window : float
+        Minimum energy difference with respect to the lowest compound 
+        discard a compound. 
+
+    Returns
+    -------
+    list
+        list of cids accepted
+    """
+    verbose = args.verbose
+
+    sortedcids = []
+    count = 0
+
+    cenergy_min = cenergy[sorted_all_cids[0]]
+    # Filter by Energy Window
+    for cid in sorted_all_cids:
+        if abs(cenergy[cid] - cenergy_min) < energy_window:
+            sortedcids.append(cid)
+        else:
+            count += 1
+
+    log_msg = ''
+    if calc_type == 'rdkit':  key = 'RDKit'
+    elif calc_type == 'summ': key = 'summ'
+    elif calc_type == 'ani':  key = 'ANI'
+    elif calc_type == 'xtb':  key = 'xTB'
+    
+    # Write it 
+    dup_data.at[dup_data_idx, f'{key}-energy-window'] = count
+
+    # Log it
+    if verbose:
+        msg = 'o  {} conformers rejected {}based on energy window ewin_csearch (E > {} kcal/mol)'
+        log.write(msg.format(count,log_msg,energy_window))
+
     return sortedcids
 
 def pre_E_filter(sortedcids,cenergy,dup_data,dup_data_idx,log,calc_type,threshold,verbose):
