@@ -227,7 +227,7 @@ def csearch_main(w_dir_initial,args,log_overall):
                 count_mol +=1
                 i += 1
 
-        final_dup_data = creation_of_dup_csv(args)
+        final_dup_data = creation_of_dup_csv(args.CSEARCH,args.CMIN)
         bar = IncrementalBar('o  Number of finished jobs from CSEARCH', max = count_mol)
         # Process the job results (in submission order) and save the conformers.
         for i,job in enumerate(jobs):

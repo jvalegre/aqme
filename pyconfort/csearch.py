@@ -25,36 +25,85 @@ hartree_to_kcal = 627.509
 
 
 #creation of csv for csearch
-def creation_of_dup_csv(args):
-    # writing the list of DUPLICATES
-    if args.CSEARCH=='rdkit':
-        if not args.CMIN=='xtb' and not args.CMIN=='ani':
-            dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples', 'RDKit-energy-window', 'RDKit-initial_energy_threshold','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','CSEARCH time (seconds)','Overall charge'])
-        elif args.CMIN=='xtb' and not args.CMIN=='ani':
-            dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples','RDKit-energy-window', 'RDKit-initial_energy_threshold','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','xTB-Initial-samples','xTB-energy-window','xTB-initial_energy_threshold','xTB-RMSD-and-energy-duplicates','xTB-Unique-conformers','CSEARCH time (seconds)','CMIN time (seconds)','Overall charge'])
-        elif args.CMIN=='ani' and not args.CMIN=='xtb':
-            dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples','RDKit-energy-window', 'RDKit-initial_energy_threshold','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','ANI-Initial-samples','ANI-energy-window','ANI-initial_energy_threshold','ANI-RMSD-and-energy-duplicates','ANI-Unique-conformers','CSERACH time (seconds)','CMIN time (seconds)','Overall charge'])
-        elif args.CMIN=='ani' and args.CMIN=='xtb':
-            dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples','RDKit-energy-window', 'RDKit-initial_energy_threshold','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','ANI-Initial-samples','ANI-energy-window','ANI-initial_energy_threshold','ANI-RMSD-and-energy-duplicates','ANI-Unique-conformers','xTB-Initial-samples','xTB-energy-window','xTB-initial_energy_threshold','xTB-RMSD-and-energy-duplicates','xTB-Unique-conformers','CSEARCH time (seconds)','CMIN time (seconds)','Overall charge'])
-    elif args.CSEARCH=='fullmonte':
-        if not args.CMIN=='xtb' and not args.CMIN=='ani':
-            dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples', 'RDKit-energy-window', 'RDKit-initial_energy_threshold','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','FullMonte-Unique-conformers','CSEARCH time (seconds)','Overall charge'])# ,'FullMonte-conformers','FullMonte-energy-window', 'FullMonte-initial_energy_threshold','FullMonte-RMSD-and-energy-duplicates',
-        elif args.CMIN=='xtb' and not args.CMIN=='ani':
-            dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples', 'RDKit-energy-window', 'RDKit-initial_energy_threshold','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','FullMonte-Unique-conformers','xTB-Initial-samples','xTB-energy-window','xTB-initial_energy_threshold','xTB-RMSD-and-energy-duplicates','xTB-Unique-conformers','CSEARCH time (seconds)','CMIN time (seconds)','Overall charge']) #'FullMonte-conformers','FullMonte-energy-window', 'FullMonte-initial_energy_threshold','FullMonte-RMSD-and-energy-duplicates',
-        elif args.CMIN=='ani' and not args.CMIN=='xtb':
-            dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples', 'RDKit-energy-window', 'RDKit-initial_energy_threshold','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','FullMonte-Unique-conformers','ANI-Initial-samples','ANI-energy-window','ANI-initial_energy_threshold','ANI-RMSD-and-energy-duplicates','ANI-Unique-conformers','CSEARCH time (seconds)','CMIN time (seconds)','Overall charge'])#'FullMonte-conformers','FullMonte-energy-window', 'FullMonte-initial_energy_threshold','FullMonte-RMSD-and-energy-duplicates',
-        elif args.CMIN=='ani' and args.CMIN=='xtb':
-            dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples', 'RDKit-energy-window', 'RDKit-initial_energy_threshold','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','FullMonte-Unique-conformers','ANI-Initial-samples','ANI-energy-window','ANI-initial_energy_threshold','ANI-RMSD-and-energy-duplicates','ANI-Unique-conformers','xTB-Initial-samples','xTB-energy-window','xTB-initial_energy_threshold','xTB-RMSD-and-energy-duplicates','xTB-Unique-conformers','CSEARCH time (seconds)','CMIN time (seconds)','Overall charge']) #'FullMonte-conformers','FullMonte-energy-window', 'FullMonte-initial_energy_threshold','FullMonte-RMSD-and-energy-duplicates',
-    elif args.CSEARCH=='summ':
-        if not args.CMIN=='xtb' and not args.CMIN=='ani':
-            dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples','RDKit-energy-window', 'RDKit-initial_energy_threshold','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','summ-conformers','summ-energy-window', 'summ-initial_energy_threshold','summ-RMSD-and-energy-duplicates','summ-Unique-conformers','CSEARCH time (seconds)','Overall charge'])
-        elif args.CMIN=='xtb' and not args.CMIN=='ani':
-            dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples', 'RDKit-energy-window','RDKit-initial_energy_threshold','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','summ-conformers','summ-energy-window', 'summ-initial_energy_threshold','summ-RMSD-and-energy-duplicates','summ-Unique-conformers','xTB-Initial-samples','xTB-energy-window','xTB-initial_energy_threshold','xTB-RMSD-and-energy-duplicates','xTB-Unique-conformers','CSEARCH time (seconds)','CMIN time (seconds)','Overall charge'])
-        elif args.CMIN=='ani' and not args.CMIN=='xtb':
-            dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples','RDKit-energy-window', 'RDKit-initial_energy_threshold','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','summ-conformers','summ-energy-window', 'summ-initial_energy_threshold','summ-RMSD-and-energy-duplicates','summ-Unique-conformers','ANI-Initial-samples','ANI-energy-window','ANI-initial_energy_threshold','ANI-RMSD-and-energy-duplicates','ANI-Unique-conformers','CSEARCH time (seconds)','CMIN time (seconds)','Overall charge'])
-        elif args.CMIN=='ani' and args.CMIN=='xtb':
-            dup_data =  pd.DataFrame(columns = ['Molecule','RDKIT-Initial-samples','RDKit-energy-window', 'RDKit-initial_energy_threshold','RDKit-RMSD-and-energy-duplicates','RDKIT-Unique-conformers','summ-conformers','summ-energy-window', 'summ-initial_energy_threshold','summ-RMSD-and-energy-duplicates','summ-Unique-conformers','ANI-Initial-samples','ANI-energy-window','ANI-initial_energy_threshold','ANI-RMSD-and-energy-duplicates','ANI-Unique-conformers','xTB-Initial-samples','xTB-energy-window','xTB-initial_energy_threshold','xTB-RMSD-and-energy-duplicates','xTB-Unique-conformers','CSEARCH time (seconds)',' CMIN time (seconds)','Overall charge'])
-    return dup_data
+def creation_of_dup_csv(csearch,cmin):
+    """
+    Generates a pandas.DataFrame object with the appropiate columns for the 
+    conformational search and the minimization. 
+
+    Parameters
+    ----------
+    csearch : str
+        Conformational search method. Current valid methods are: 
+        ['rdkit','fullmonte','summ']
+    cmin : str
+        Minimization method. Current valid methods are: 
+        ['xtb','ani']
+
+    Returns
+    -------
+    pandas.DataFrame
+    """
+    # Boolean aliases from args
+    is_rdkit = csearch=='rdkit'
+    is_fullmonte = csearch=='fullmonte'
+    is_summ = csearch=='summ'
+    is_xtb = cmin == 'xtb'
+    is_ani = cmin == 'ani'
+    
+    # column blocks definitions
+    base_columns = ['Molecule',
+                    'RDKIT-Initial-samples',
+                    'RDKit-energy-window',
+                    'RDKit-initial_energy_threshold',
+                    'RDKit-RMSD-and-energy-duplicates',
+                    'RDKIT-Unique-conformers']
+    xtb_columns = ['xTB-Initial-samples',
+                   'xTB-energy-window',
+                   'xTB-initial_energy_threshold',
+                   'xTB-RMSD-and-energy-duplicates',
+                   'xTB-Unique-conformers']
+    ANI_columns = ['ANI-Initial-samples',
+                   'ANI-energy-window',
+                   'ANI-initial_energy_threshold',
+                   'ANI-RMSD-and-energy-duplicates',
+                   'ANI-Unique-conformers']
+    end_columns_no_min = ['CSEARCH time (seconds)',
+                          'Overall charge']
+    end_columns_min = ['CSEARCH time (seconds)',
+                       'CMIN time (seconds)',
+                       'Overall charge']
+    fullmonte_columns = ['FullMonte-Unique-conformers',] 
+                        #'FullMonte-conformers',
+                        #'FullMonte-energy-window',
+                        #'FullMonte-initial_energy_threshold',
+                        #'FullMonte-RMSD-and-energy-duplicates']
+    summ_columns = ['summ-conformers',
+                    'summ-energy-window',
+                    'summ-initial_energy_threshold',
+                    'summ-RMSD-and-energy-duplicates',
+                    'summ-Unique-conformers']
+    
+    # Check Conformer Search method
+    if is_rdkit:
+        columns = base_columns
+    elif is_fullmonte:
+        columns = base_columns + fullmonte_columns
+    elif is_summ:
+        columns = base_columns + summ_columns
+    else:
+        return None
+    
+    # Check Minimization Method
+    if is_ani: 
+        columns += ANI_columns
+    if is_xtb:  # is_ani and is_xtb will not happen, but this is what was written
+        columns += xtb_columns
+    if is_ani or is_xtb: 
+        columns += end_columns_min
+    else:
+        columns += end_columns_no_min
+    
+    return pd.DataFrame(columns=columns)
 
 #com to xyz to sdf for obabel
 def com_2_xyz_2_sdf(args,start_point=None):
@@ -235,7 +284,7 @@ def compute_confs(w_dir_initial, mol, name, args,i):
                 mol_objects_from_template, name_mol, coord_Map, alg_Map, mol_template = template_embed(mol,temp,name,args,log)
                 for j,_ in enumerate(mol_objects_from_template):
                     mol_objects.append([mol_objects_from_template[j],name_mol[j],coord_Map[j],alg_Map[j],mol_template[j]])
-                total_data = creation_of_dup_csv(args)
+                total_data = creation_of_dup_csv(args.CSEARCH,args.CMIN)
                 for [mol_object, name_mol, coord_Map, alg_Map, mol_template] in mol_objects:
                     data = conformer_generation(mol_object,name_mol,args,log,coord_Map,alg_Map,mol_template)
                     frames = [total_data, data]
@@ -251,7 +300,7 @@ def compute_confs(w_dir_initial, mol, name, args,i):
 
 # FUCNTION WORKING WITH MOL OBJECT TO CREATE CONFORMERS
 def conformer_generation(mol,name,args,log,coord_Map=None,alg_Map=None,mol_template=None):
-    dup_data = creation_of_dup_csv(args)
+    dup_data = creation_of_dup_csv(args.CSEARCH,args.CMIN)
     dup_data_idx = 0
     start_time = time.time()
     valid_structure = filters(mol,log,args.max_MolWt,args.verbose)
