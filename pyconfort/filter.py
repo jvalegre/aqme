@@ -604,16 +604,16 @@ def RMSD_and_E_filter(outmols,selectedcids_initial,cenergy,args,dup_data,dup_dat
         log.write(f"o  {len(selectedcids)} unique conformers remain")
 
     # Write the found duplicates:
-    if calc_type == 'rdkit': key1,key2 = 'RDKit', 'RDKIT'
-    elif calc_type == 'summ': key1 = key2 = 'summ' 
-    elif calc_type == 'ani': key1 = key2 = 'ANI'
-    elif calc_type == 'xtb': key1 = key2 = 'xTB'
-    else: key1,key2 = '',''
+    if calc_type == 'rdkit':  key = 'RDKit'
+    elif calc_type == 'summ': key = 'summ' 
+    elif calc_type == 'ani':  key = 'ANI'
+    elif calc_type == 'xtb':  key = 'xTB'
+    else: key = ''
     
-    if key1 and key2:
-        duplicates_format = '{}-RMSD-and-energy-duplicates'.format
-        uniques_format = '{}-Unique-conformers'.format
-        dup_data.at[dup_data_idx, duplicates_format(key1)] = eng_rms_dup
-        dup_data.at[dup_data_idx, uniques_format(key2)] = len(selectedcids)
+    if key:
+        duplicates_column = f'{key}-RMSD-and-energy-duplicates'
+        uniques_column = f'{key}-Unique-conformers'
+        dup_data.at[dup_data_idx, duplicates_column] = eng_rms_dup
+        dup_data.at[dup_data_idx, uniques_column] = len(selectedcids)
 
     return selectedcids

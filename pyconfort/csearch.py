@@ -52,11 +52,11 @@ def creation_of_dup_csv(csearch,cmin):
     
     # column blocks definitions
     base_columns = ['Molecule',
-                    'RDKIT-Initial-samples',
+                    'RDKit-Initial-samples',
                     'RDKit-energy-window',
                     'RDKit-initial_energy_threshold',
                     'RDKit-RMSD-and-energy-duplicates',
-                    'RDKIT-Unique-conformers']
+                    'RDKit-Unique-conformers']
     xtb_columns = ['xTB-Initial-samples',
                    'xTB-energy-window',
                    'xTB-initial_energy_threshold',
@@ -362,7 +362,7 @@ def getDihedralMatches(mol, heavy,log):
     return uniqmatches
 
 # IF NOT USING DIHEDRALS, THIS REPLACES I BACK TO THE METAL WHEN METAL = TRUE
-# AND WRITES THE RDKIT SDF FILES. WITH DIHEDRALS, IT OPTIMIZES THE ROTAMERS
+# AND WRITES THE RDKit SDF FILES. WITH DIHEDRALS, IT OPTIMIZES THE ROTAMERS
 def genConformer_r(mol, conf, i, matches, degree, sdwriter,args,name,log,update_to_rdkit,coord_Map,alg_Map, mol_template):
     if i >= len(matches): # base case, torsions should be set in conf
         #setting the metal back instead of I
@@ -441,7 +441,7 @@ def min_after_embed(mol,cids,name,initial_confs,rotmatches,dup_data,dup_data_idx
     # gets optimized mol objects and energies
     outmols,cenergy = min_and_E_calc(mol,cids,args,log,coord_Map,alg_Map,mol_template)
 
-    # writing charges after RDKIT
+    # writing charges after RDKit
     if os.path.splitext(args.input)[1] == '.cdx' or os.path.splitext(args.input)[1] == '.smi' or os.path.splitext(args.input)[1] == '.csv':
         args.charge = rules_get_charge(mol,args,log)
         dup_data.at[dup_data_idx, 'Overall charge'] = np.sum(args.charge)
@@ -539,7 +539,7 @@ def rdkit_to_sdf(mol, name,args,log,dup_data,dup_data_idx, coord_Map, alg_Map, m
     else:
         sdwriter = Chem.SDWriter(name+'_'+'rdkit'+args.output)
 
-    dup_data.at[dup_data_idx, 'RDKIT-Initial-samples'] = initial_confs
+    dup_data.at[dup_data_idx, 'RDKit-Initial-samples'] = initial_confs
     if args.CSEARCH=='rdkit':
         rotmatches =[]
     cids = embed_conf(mol,initial_confs,args,log,coord_Map,alg_Map, mol_template)
@@ -604,7 +604,7 @@ def dihedral_filter_and_sdf(name,args,log,dup_data,dup_data_idx,coord_Map, alg_M
     status = 1
     return status
 
-# EMBEDS, OPTIMIZES AND FILTERS RDKIT CONFORMERS
+# EMBEDS, OPTIMIZES AND FILTERS RDKit CONFORMERS
 def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None, alg_Map=None, mol_template=None):
     # writes sdf for the first RDKit conformer generation
     status,rotmatches,update_to_rdkit = rdkit_to_sdf(mol, name,args,log,dup_data,dup_data_idx, coord_Map, alg_Map, mol_template)

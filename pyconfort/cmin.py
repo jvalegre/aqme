@@ -221,7 +221,7 @@ def mult_min(name, args, program,log,dup_data,dup_data_idx):
                 outmols.append(pmol)
                 cenergy.append(energy)
 
-    # if SQM energy exists, overwrite RDKIT energies and geometries
+    # if SQM energy exists, overwrite RDKit energies and geometries
     cids = list(range(len(outmols)))
     sorted_all_cids = sorted(cids, key = lambda cid: cenergy[cid])
 
