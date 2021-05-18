@@ -579,8 +579,7 @@ def genConformer_r(mol, conf, i, matches, degree, sdwriter,args,name,log,update_
         #setting the metal back instead of I
         if args.metal_complex and (args.CSEARCH=='rdkit' or update_to_rdkit):
             if coord_Map is None and alg_Map is None and mol_template is None:
-                GetFF = minimize_rdkit_energy(mol,conf,args,log)
-                energy = GetFF.CalcEnergy()
+                energy = minimize_rdkit_energy(mol,conf,log,args.ff,args.opt_steps_RDKit)
             else:
                 mol,energy = realign_mol(mol,conf,coord_Map, alg_Map, mol_template,args.opt_steps_RDKit)
             mol.SetProp('Energy',str(energy))
@@ -692,13 +691,10 @@ def min_and_E_calc(mol,cids,args,log,coord_Map,alg_Map,mol_template):
     #bar = IncrementalBar('o  Minimizing', max = len(cids))
     for _, conf in enumerate(cids):
         if coord_Map is None and alg_Map is None and mol_template is None:
-            GetFF = minimize_rdkit_energy(mol,conf,args,log)
-            cenergy.append(GetFF.CalcEnergy())
-
-        # id template realign before doing calculations
-        else:
+            energy = minimize_rdkit_energy(mol,conf,log,args.ff,args.opt_steps_RDKit)
+        else: # id template realign before doing calculations
             mol,energy = realign_mol(mol,conf,coord_Map, alg_Map, mol_template,args.opt_steps_RDKit)
-            cenergy.append(energy)
+        cenergy.append(energy)
         pmol = PropertyMol.PropertyMol(mol)
         outmols.append(pmol)
         #bar.next()
@@ -936,11 +932,10 @@ def dihedral_filter_and_sdf(name,args,log,dup_data,dup_data_idx,coord_Map, alg_M
 
     for i, rd_mol_i in enumerate(rdmols):
         if coord_Map is None and alg_Map is None and mol_template is None:
-            GetFF = minimize_rdkit_energy(rd_mol_i,-1,args,log)
-            rotated_energy.append(float(GetFF.CalcEnergy()))
+            energy = minimize_rdkit_energy(rd_mol_i,-1,log,args.ff,args.opt_steps_RDKit)
         else:
             rd_mol_i,energy = realign_mol(rd_mol_i,-1,coord_Map, alg_Map, mol_template,args.opt_steps_RDKit)
-            rotated_energy.append(energy)
+        rotated_energy.append(energy)
 
     rotated_cids = list(range(len(rdmols)))
     sorted_rotated_cids = sorted(rotated_cids, key = lambda cid: rotated_energy[cid])

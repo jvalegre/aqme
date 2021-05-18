@@ -12,8 +12,7 @@ from rdkit.Chem import rdMolTransforms, rdMolAlign
 
 from pyconfort.utils import set_metal_atomic_number, get_conf_RMS
 
-#steps to realign mol
-def realign_mol(mol,conf,coord_Map, alg_Map, mol_template,optimization_steps):
+def realign_mol(mol,conf,coord_Map, alg_Map, mol_template, maxsteps):  # RAUL: This function requires a clear separation between minimization and alignment.
     """
     Minimizes and aligns the molecule provided freezing the atoms that match 
     the mol_template.
@@ -31,7 +30,7 @@ def realign_mol(mol,conf,coord_Map, alg_Map, mol_template,optimization_steps):
         [description]
     mol_template : [type]
         [description]
-    optimization_steps : int
+    maxsteps : int
         Maximum number of iterations in FF minimization.
 
     Returns
@@ -46,45 +45,92 @@ def realign_mol(mol,conf,coord_Map, alg_Map, mol_template,optimization_steps):
             d = coord_Map[idxI].Distance(coord_Map[idxJ])
             forcefield.AddDistanceConstraint(idxI, idxJ, d, d, 10000)
     forcefield.Initialize()
-    forcefield.Minimize(maxIts=optimization_steps)
+    forcefield.Minimize(maxIts=maxsteps)
     # rotate the embedded conformation onto the core_mol:
-    rdMolAlign.AlignMol(mol, mol_template, prbCid=conf,refCid=-1,atomMap=alg_Map,reflect=True,maxIters=100)
+    rdMolAlign.AlignMol(mol, 
+                        mol_template, 
+                        prbCid=conf,
+                        refCid=-1,
+                        atomMap=alg_Map,
+                        reflect=True,
+                        maxIters=100)
     energy = float(forcefield.CalcEnergy())
     return mol,energy
 
-#function to get rdkit energy
-def minimize_rdkit_energy(mol,conf,args,log):
-    if args.ff == "MMFF":
-        GetFF = Chem.MMFFGetMoleculeForceField(mol, Chem.MMFFGetMoleculeProperties(mol),confId=conf)
-    elif args.ff == "UFF":
-        GetFF = Chem.UFFGetMoleculeForceField(mol,confId=conf)
-    else:
-        log.write(' Force field {} not supported!'.format(args.ff))
-        sys.exit()
-    try:
-        GetFF.Initialize()
-        GetFF.Minimize(maxIts=args.opt_steps_RDKit)
-    except:
-        #if not MMFF use UFF
-        GetFF = Chem.UFFGetMoleculeForceField(mol,confId=conf)
-        GetFF.Initialize()
-        GetFF.Minimize(maxIts=args.opt_steps_RDKit)
-    return GetFF
+def minimize_rdkit_energy(mol,conf,log,FF,maxsteps):
+    """
+    Minimizes a conformer of a molecule and returns the final energy.
 
-def rotate_dihedral(mol_rot,dih_rot,args,conf,nsteps):
-    rad_range = np.arange(0.0, 360.0,args.ang_fullmonte)
-    for i,_ in enumerate(dih_rot):
-        random.seed(nsteps)
+    Parameters
+    ----------
+    mol : rdkit.Chem.Mol
+        [description]
+    conf : int?
+        Number that indicates which conformation of the molecule will be 
+        minimized and aligned.
+    args : [type]
+        [description]
+    log : [type]
+        [description]
+    FF : str
+        A valid forcefield name. Currently only 'UFF' and 'MMFF' supported.
+    maxsteps : int
+        Maximum number of iterations in FF minimization.
+
+    Returns
+    -------
+    float
+        Final energy of the minimization
+    """
+
+    if FF == "MMFF":
+        properties = Chem.MMFFGetMoleculeProperties(mol)
+        forcefield = Chem.MMFFGetMoleculeForceField(mol,properties,confId=conf)
+
+    if FF == "UFF" or forcefield is None:
+        # if forcefield is None means that MMFF will not work. Attempt UFF.
+        forcefield = Chem.UFFGetMoleculeForceField(mol,confId=conf)
+    else:
+        log.write(f' Force field {FF} not supported!')
+        sys.exit()
+
+    # RAUL: If UFF fails to be set up -> 'forcefield is None'
+    #       Should we log it and exit?
+    forcefield.Initialize()
+    forcefield.Minimize(maxIts=maxsteps)
+    energy = float(forcefield.CalcEnergy())
+
+    return energy
+
+def rotate_dihedrals(conformer,dihedrals,seed,stepsize):
+    """
+    Applies a random rotation to all the dihedrals  
+
+    Parameters
+    ----------
+    conformer : rdkit.Chem.rdchem.Conformer
+        The conformer whose angles are going to be rotated. 
+        (conformer = mol.GetConformer(cid)) 
+    dihedrals : list
+        A list of tuples of all the dihedrals that are going to be rotated. 
+    seed : int
+        seed for the random module
+    stepsize : float
+        Angle in Degrees to do the steps between 0.0 and 360.0
+    """
+    rad_range = np.arange(0.0, 360.0,stepsize)
+    for dihedral in dihedrals:
+        random.seed(seed)                                                       # RAUL: Any good reason to keep reseting the seed ? 
         rad_ang = random.choice(rad_range)
         rad = math.pi*rad_ang/180.0
-        rdMolTransforms.SetDihedralRad(mol_rot.GetConformer(conf),*dih_rot[i],value=rad)
-    return mol_rot
-
+        rdMolTransforms.SetDihedralRad(conformer,*dihedral,value=rad)
 
 def generating_conformations_fullmonte(name,args,rotmatches,log,selectedcids_rdkit,outmols,sdwriter,dup_data,dup_data_idx,coord_Map,alg_Map, mol_template):
 
-    ##wroking with fullmonte
-    log.write("\n\no  Generation of confomers using FULLMONTE using {0} unique conformer(s) as starting point(s)".format(len(selectedcids_rdkit)))
+    ##working with fullmonte
+    n_unique_conformers = len(selectedcids_rdkit)
+    log.write(f"\n\no  Generation of confomers using FULLMONTE using "  \
+              f"{n_unique_conformers} unique conformer(s) as starting point(s)")
 
     #Writing the conformers as mol objects to sdf
     sdtemp = Chem.SDWriter(name+'_'+'rdkit'+args.output)
@@ -115,33 +161,33 @@ def generating_conformations_fullmonte(name,args,rotmatches,log,selectedcids_rdk
 
     # bar = IncrementalBar('o  Generating conformations for Full Monte', max = args.nsteps_fullmonte)
     while nsteps < args.nsteps_fullmonte+1:
+        
+        seed = nsteps
 
         #STEP 2: Choose mol object form unique_mol:
-        random.seed(nsteps)
+        random.seed(seed)
         mol_rot = random.choices(unique_mol_sample,k=1)[0]
 
         #updating the location of mol object i.e., the hexadecimal locaiton to a new one so the older one isnt affected
         mol = Chem.RWMol(mol_rot)
         rot_mol = mol.GetMol()
 
-        #STEP 3: Choose randmon subset of dihedral from rotmatches
-        if len(rotmatches) > args.nrot_fullmonte:
-            random.seed(nsteps)
-            dih_rot = random.choices(rotmatches, k=args.nrot_fullmonte) #k can be varied base on user definitions
-        else:
-            random.seed(nsteps)
-            dih_rot = random.choices(rotmatches, k=len(rotmatches)) #k can be varied base on user definitions
+        #STEP 3: Choose random subset of dihedral from rotmatches
+        random.seed(seed)                                                       # RAUL: Any good reason to keep reseting the seed ? 
+        k = min(len(rotmatches),args.nrot_fullmonte)
+        mutable_dihedrals = random.choices(rotmatches, k=k)
+        
         #STEP 4: for the given conformation, then apply a random rotation to each torsion in the subset
-        rot_mol = rotate_dihedral(rot_mol,dih_rot,args,-1,nsteps)
+        conformer = rot_mol.GetConformer(conf)
+        rot_mol = rotate_dihedrals(conformer,mutable_dihedrals,seed,args.ang_fullmonte)
 
-        #STEP 4: Optimize geometry rot_mol
-        if coord_Map is None and alg_Map is None and mol_template is None:
-            GetFF = minimize_rdkit_energy(rot_mol,-1,args,log)
-            energy = float(GetFF.CalcEnergy())
+        #STEP 5: Optimize geometry rot_mol
+        if (coord_Map, alg_Map, mol_template) == (None, None, None):
+            energy = minimize_rdkit_energy(rot_mol,-1,log,args.ff,args.opt_steps_RDKit)
         else:
             mol,energy = realign_mol(rot_mol,-1,coord_Map, alg_Map, mol_template,args.opt_steps_RDKit)
 
-        #STEP 5 : Check for DUPLICATES - energy and rms filter (reuse)
+        #STEP 6 : Check for DUPLICATES - energy and rms filter (reuse)
                  #  if the conformer is unique then save it the list
         exclude_conf= False
         # compare against allprevious conformers located
@@ -160,7 +206,7 @@ def generating_conformations_fullmonte(name,args,rotmatches,log,selectedcids_rdk
             unique_mol[c_energy.index(energy)].SetProp("Energy", str(energy))
 
         unique_mol_sample = []
-        #STEP 6: ANALYSE THE UNIQUE list for lowest energy, reorder the uniques if greater the given thershold remove
+        #STEP 7: ANALYSE THE UNIQUE list for lowest energy, reorder the uniques if greater the given thershold remove
         globmin = min(c_energy)
         for ene in reversed(c_energy):
             indx = c_energy.index(ene)
