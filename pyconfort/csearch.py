@@ -414,7 +414,7 @@ def min_after_embed(mol,cids,name,initial_confs,rotmatches,dup_data,dup_data_idx
     sortedcids_rdkit = ewin_filter(sorted_all_cids,cenergy,args,dup_data,dup_data_idx,log,'rdkit')
 
     # pre-filter based on energy only
-    selectedcids_initial_rdkit = pre_E_filter(sortedcids_rdkit,cenergy,args,dup_data,dup_data_idx,log,'rdkit')
+    selectedcids_initial_rdkit = pre_E_filter(sortedcids_rdkit,cenergy,dup_data,dup_data_idx,log,'rdkit',args.initial_energy_threshold,args.verbose)
 
     # filter based on energy and RMSD
     selectedcids_rdkit = RMSD_and_E_filter(outmols,selectedcids_initial_rdkit,cenergy,args,dup_data,dup_data_idx,log,'rdkit')
@@ -539,7 +539,7 @@ def dihedral_filter_and_sdf(name,args,log,dup_data,dup_data_idx,coord_Map, alg_M
     # filter based on energy window ewin_csearch
     sortedcids_rotated = ewin_filter(sorted_rotated_cids,rotated_energy,args,dup_data,dup_data_idx,log,'summ')
     # pre-filter based on energy only
-    selectedcids_initial_rotated = pre_E_filter(sortedcids_rotated,rotated_energy,args,dup_data,dup_data_idx,log,'summ')
+    selectedcids_initial_rotated = pre_E_filter(sortedcids_rotated,rotated_energy,dup_data,dup_data_idx,log,'summ',args.initial_energy_threshold,args.verbose)
     # filter based on energy and RMSD
     selectedcids_rotated = RMSD_and_E_filter(rdmols,selectedcids_initial_rotated,rotated_energy,args,dup_data,dup_data_idx,log,'summ')
 

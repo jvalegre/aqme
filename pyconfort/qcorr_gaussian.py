@@ -411,7 +411,7 @@ def output_analyzer(duplicates,log_files,com_files, w_dir, w_dir_main,lot, bs, b
                     os.chdir(w_dir_main +'/input_files/run_'+str(round_num))
                     com_2_xyz_2_sdf(args,os.path.splitext(file)[0]+'.com')
                     mol2,ob_compat,rdkit_compat = output_to_mol(file,'xyz',file,log)
-                    passing_geom = check_geom_filter(mol,mol2,args)
+                    passing_geom = check_geom_filter(mol,mol2,args.length_criteria)
                     # remove created files
                     os.remove(file.split('.')[0]+'.xyz')
                     os.remove(file.split('.')[0]+'.sdf')

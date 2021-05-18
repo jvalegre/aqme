@@ -248,7 +248,7 @@ def mult_min(name, args, program,log,dup_data,dup_data_idx):
     # filter based on energy window ewin_csearch
     sortedcids = ewin_filter(sorted_all_cids,cenergy,args,dup_data,dup_data_idx,log,program)
     # pre-filter based on energy only
-    selectedcids_initial = pre_E_filter(sortedcids,cenergy,args,dup_data,dup_data_idx,log,program)
+    selectedcids_initial = pre_E_filter(sortedcids,cenergy,dup_data,dup_data_idx,log,program,args.initial_energy_threshold,args.verbose)
     # filter based on energy and RMSD
     selectedcids = RMSD_and_E_filter(outmols,selectedcids_initial,cenergy,args,dup_data,dup_data_idx,log,program)
 

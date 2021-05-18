@@ -860,7 +860,7 @@ def exp_rules_main(args,log,exp_rules_active):
                 pass
             if allmols:
                 sdwriter = Chem.SDWriter(file.split('.')[0]+'_filter_exp_rules.sdf')
-                print_error_exp_rules = 0
+                print_error_exp_rules = False
                 for mol in allmols:
                     check_mol = True
                     ob_compat = True
