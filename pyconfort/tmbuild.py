@@ -7,144 +7,149 @@ from rdkit.Chem import AllChem as Chem
 from rdkit.Chem import rdDistGeom, rdMolAlign
 from pyconfort.utils import get_conf_RMS
 
-# GET NUMBER OF NEIGHBOURS OF THE METAL CENTER
 def calc_neighbours(molecule,args):
+    """
+    Changes the atomic number (and charge) of the first metal found 
+    and returns its neighbours, the number of neighbours and the idx of the 
+    metal.
+
+    Parameters
+    ----------
+    molecule : rdkit.Chem.Mol
+        [description]
+    args : [type]
+        [description]
+
+    Returns
+    -------
+    list
+        list of neighbour atoms
+    """
+    bonds2AtNum = dict()
+    bonds2AtNum[5] = 14
+    bonds2AtNum[4] = 14
+    bonds2AtNum[3] = 53
+    bonds2AtNum[2] = 53
+    metals_idx = args.metal_idx
+    # RAUL: Are we interested in the first Metal found in the molecule or do we 
+    #       know beforehand the idx of the Metal atom?. If we know beforehand:  
+    #idx = metals_idx[0]
+    #atom = molecule.GetAtomWithIdx(idx)
+    #n_bonds = len(atom.GetBonds())
+    #atom.SetAtomicNum(bonds2AtNum[n_bonds])
+    #if n_bonds == 5: 
+    #    atom.SetFormalCharge(1)
+    #neighbours = atom.GetNeighbors()
+    #return idx, neighbours
     for atom in molecule.GetAtoms():
-        if atom.GetIdx() in args.metal_idx:
-            if len(atom.GetBonds()) == 5:
-                atom.SetAtomicNum(14)
+        idx = atom.GetIdx() 
+        if idx in metals_idx:
+            n_bonds = len(atom.GetBonds())
+            AtNum = bonds2AtNum[n_bonds]
+            atom.SetAtomicNum(AtNum)        
+            if n_bonds == 5:
                 atom.SetFormalCharge(1)
-            if len(atom.GetBonds()) == 4:
-                atom.SetAtomicNum(14)
-            if len(atom.GetBonds()) == 2:
-                atom.SetAtomicNum(53)
-            if len(atom.GetBonds()) == 3:
-                atom.SetAtomicNum(53)
-            center_idx = atom.GetIdx()
-            number_of_neighbours = len(atom.GetNeighbors())
             neighbours = atom.GetNeighbors()
-            break
-    return number_of_neighbours,center_idx,neighbours
+            return neighbours
+    return []
 
 #GET THE LINEAR GEOMETRY
-def two_embed(molecule_embed,molecule,mol_1,number_of_neighbours,center_idx,neighbours_ret,name_input,args,log):
-    mol_objects,name_return,coord_Map,alg_Map,mol_template = [],[],[],[],[]
-    for atom in mol_1.GetAtoms():
-        if atom.GetIdx()  == 2:
-            atom.SetAtomicNum(53)
-        if atom.GetIdx()  == 0:
-            atom.SetAtomicNum(neighbours_ret[0].GetAtomicNum())
-        if atom.GetIdx()  == 1:
-            atom.SetAtomicNum(neighbours_ret[1].GetAtomicNum())
+def two_embed(molecule_embed, molecule, mol_template, 
+              neighbours, name_input, args, log):
+    
+    mol_template.GetAtomWithIdx(0).setAtomicNum(neighbours[0].GetAtomicNum())
+    mol_template.GetAtomWithIdx(1).setAtomicNum(neighbours[1].GetAtomicNum())
+    mol_template.GetAtomWithIdx(2).setAtomicNum(53)
 
     #assigning and embedding onto the core
-    molecule_new, coordMap, algMap,ci = template_embed_optimize(molecule_embed,molecule,mol_1,args,log)
+    mol_obj, coord_map, alg_map,ci = template_embed_optimize(molecule_embed,
+                                                             molecule,
+                                                             mol_template,
+                                                             args, log)
+    if ci >= 0: #writing to mol_object file
+        return [mol_obj], [name_input], [coord_map], [alg_map], [mol_template]
 
-    if ci>=0:
-        #writing to mol_object file
-        name_final = name_input
-        mol_objects.append(molecule_new)
-        name_return.append(name_final)
-        coord_Map.append(coordMap)
-        alg_Map.append(algMap)
-        mol_template.append(mol_1)
-    else:
-        pass
-
-    return mol_objects, name_return, coord_Map, alg_Map, mol_template
+    return [], [], [], [], []
 
 # GET THE TRIGONAL PLANAR GEOMETRY
-def three_embed(molecule_embed,molecule,mol_1,number_of_neighbours,center_idx,neighbours_ret,name_input,args,log):
-    mol_objects,name_return,coord_Map,alg_Map,mol_template = [],[],[],[],[]
-    for atom in mol_1.GetAtoms():
-        if atom.GetIdx()  == 0:
-            atom.SetAtomicNum(53)
-        if atom.GetIdx()  == 1:
-            atom.SetAtomicNum(neighbours_ret[0].GetAtomicNum())
-        if atom.GetIdx()  == 2:
-            atom.SetAtomicNum(neighbours_ret[1].GetAtomicNum())
-        if atom.GetIdx()  == 3:
-            atom.SetAtomicNum(neighbours_ret[2].GetAtomicNum())
+def three_embed(molecule_embed,molecule,mol_template,neighbours,name_input,args,log):
+
+    mol_template.GetAtomWithIdx(0).setAtomicNum(53)
+    mol_template.GetAtomWithIdx(1).setAtomicNum(neighbours[0].GetAtomicNum())
+    mol_template.GetAtomWithIdx(2).setAtomicNum(neighbours[1].GetAtomicNum())
+    mol_template.GetAtomWithIdx(3).setAtomicNum(neighbours[2].GetAtomicNum())
 
     #assigning and embedding onto the core
-    molecule_new, coordMap, algMap,ci = template_embed_optimize(molecule_embed,molecule,mol_1,args,log)
-    if ci>=0:
-        #writing to mol_object file
-        name_final = name_input
-        mol_objects.append(molecule_new)
-        name_return.append(name_final)
-        coord_Map.append(coordMap)
-        alg_Map.append(algMap)
-        mol_template.append(mol_1)
-    else:
-        pass
+    mol_obj, coord_map, alg_map,ci = template_embed_optimize(molecule_embed,
+                                                             molecule,
+                                                             mol_template,
+                                                             args, log)
+    if ci>=0: #writing to mol_object file
+        return [mol_obj], [name_input], [coord_map], [alg_map], [mol_template]
 
-    return mol_objects, name_return, coord_Map, alg_Map, mol_template
+    return [], [], [], [], []
 
 # GET THE SQUAREPLANAR GEOMETRY
-def four_embed(molecule_embed,molecule,mol_1,number_of_neighbours,center_idx,neighbours_ret,name_input,args,log):
-    mol_objects,name_return,coord_Map,alg_Map,mol_template = [],[],[],[],[]
+def four_embed(molecule_embed,molecule,mol_1,neighbours,name_input,args,log):
+
+    mol_objects = []
+    name_return = []
+    coord_Map = []
+    alg_Map = []
+    mol_template = []
+    
+    # Remove F atoms from the template
+    mol_template = Chem.RWMol(mol_template)
+    for atom in mol_template.GetAtoms():
+        if atom.GetSymbol() == 'F': 
+            mol_template.RemoveAtom(atom.GetIdx())
+    mol_template = mol_template.GetMol()
+
     #three cases for square planar
-    for name in range(3):
-        #assigning neighbours
-        neighbours = neighbours_ret
+    atn0 = neighbours[0].GetAtomicNum()
+    atn1 = neighbours[1].GetAtomicNum()
+    atn2 = neighbours[2].GetAtomicNum()
+    atn3 = neighbours[3].GetAtomicNum()
+    replacements_list = [(atn0,atn1,atn2,atn3,14),
+                         (atn0,atn2,atn3,atn1,14),
+                         (atn0,atn3,atn1,atn2,14)]
 
-        #assigning order of replacement
-        if name == 0:
-            j = [1,2,3]
-        elif name == 1:
-            j = [2,3,1]
-        elif name == 2:
-            j = [3,1,2]
+    for i,replacements in enumerate(replacements_list):
+        
+        # Create a copy of the mol object 
+        mol_1 = Chem.Mol(mol_template)
 
-        #checking for same atom neighbours and assigning in the templates for all mols in suppl!
-        for atom in mol_1.GetAtoms():
-            if atom.GetSymbol() == 'F':
-                mol_1 = Chem.RWMol(mol_1)
-                idx = atom.GetIdx()
-                mol_1.RemoveAtom(idx)
-                mol_1 = mol_1.GetMol()
-
-        for atom in mol_1.GetAtoms():
-            if atom.GetIdx() == 4:
-                atom.SetAtomicNum(14)
-            if atom.GetIdx() == 0:
-                atom.SetAtomicNum(neighbours[0].GetAtomicNum())
-            if atom.GetIdx() == 3:
-                atom.SetAtomicNum(neighbours[j[0]].GetAtomicNum())
-            if atom.GetIdx() == 2:
-                atom.SetAtomicNum(neighbours[j[1]].GetAtomicNum())
-            if atom.GetIdx() == 1:
-                atom.SetAtomicNum(neighbours[j[2]].GetAtomicNum())
-
+        # Assign atomic numbers to neighbour atoms
+        for idx,atn in enumerate(replacements):
+            mol_1.GetAtomWithIdx(idx).setAtomicNum(atn)
+        
         #embedding of the molecule onto the core
-        molecule_new, coordMap, algMap,ci = template_embed_optimize(molecule_embed,molecule,mol_1,args,log)
+        mol_obj, coord_map, alg_map,ci = template_embed_optimize(molecule_embed,
+                                                                 molecule,
+                                                                 mol_1,
+                                                                 args, log)
 
-        if ci>=0:
-            check=filter_template_mol(molecule_new, mol_objects,args,log)
+        if ci >= 0:
+            check = filter_template_mol(mol_obj, mol_objects,args,log)
             if check:
                 #writing to mol_object file
-
-                name_final = name_input.split()[0]+'_'+ str(name)
-                mol_objects.append(molecule_new)
-                name_return.append(name_final)
-                coord_Map.append(coordMap)
-                alg_Map.append(algMap)
+                name = f'{name_input.split()[0]}_{i}'
+                mol_objects.append(mol_obj)
+                name_return.append(name)
+                coord_Map.append(coord_map)
+                alg_Map.append(alg_map)
                 mol_template.append(mol_1)
-        else:
-            pass
 
     return mol_objects, name_return, coord_Map, alg_Map, mol_template
 
 # GET THE SQUAREPYRAMIDAL GEOMETRY
-def five_embed(molecule_embed,molecule,mol_1,number_of_neighbours,center_idx,neighbours_ret,name_input,args,log):
+def five_embed(molecule_embed,molecule,mol_1,neighbours,name_input,args,log):
     mol_objects,name_return,coord_Map,alg_Map,mol_template = [],[],[],[],[]
+    
     #fifteen cases for square pyrimidal
     counter = 0
     for name_1 in range(5):
         for name_2 in range(3):
-            #assigning neighbours
-            neighbours = neighbours_ret
 
             # assigning order of replacement for the top
             if name_1 == 0:
@@ -240,21 +245,25 @@ def five_embed(molecule_embed,molecule,mol_1,number_of_neighbours,center_idx,nei
 
 # TEMPLATE GENERATION FOR SQUAREPLANAR AND squarepyramidal
 def template_embed(molecule,temp,name_input,args,log):
-    number_of_neighbours,center_idx,neighbours_ret = calc_neighbours(molecule,args)
+    neighbours = calc_neighbours(molecule,args)
+    number_of_neighbours = len(neighbours)
+
     mol_objects,name_return,coord_Map,alg_Map,mol_template = [],[],[],[],[]
 
+    # RAUL: Is there more than one? In that case what's the purpose of 
+    #       mol_objects, name_return, coord_Map, alg_Map, mol_template?
     for mol_1 in temp:
         if number_of_neighbours == 2:
-            mol_objects, name_return, coord_Map, alg_Map, mol_template=two_embed(molecule,molecule,mol_1,number_of_neighbours,center_idx,neighbours_ret,name_input,args,log)
+            mol_objects, name_return, coord_Map, alg_Map, mol_template = two_embed(molecule,molecule,mol_1,neighbours,name_input,args,log)
 
         elif number_of_neighbours == 3:
-            mol_objects, name_return, coord_Map, alg_Map, mol_template=three_embed(molecule,molecule,mol_1,number_of_neighbours,center_idx,neighbours_ret,name_input,args,log)
+            mol_objects, name_return, coord_Map, alg_Map, mol_template = three_embed(molecule,molecule,mol_1,neighbours,name_input,args,log)
 
         elif number_of_neighbours == 4:
-            mol_objects, name_return, coord_Map, alg_Map, mol_template = four_embed(molecule,molecule,mol_1,number_of_neighbours,center_idx,neighbours_ret,name_input,args,log)
+            mol_objects, name_return, coord_Map, alg_Map, mol_template = four_embed(molecule,molecule,mol_1,neighbours,name_input,args,log)
 
         elif number_of_neighbours == 5:
-            mol_objects, name_return, coord_Map, alg_Map, mol_template=five_embed(molecule,molecule,mol_1,number_of_neighbours,center_idx,neighbours_ret,name_input,args,log)
+            mol_objects, name_return, coord_Map, alg_Map, mol_template = five_embed(molecule,molecule,mol_1,neighbours,name_input,args,log)
 
     return mol_objects, name_return, coord_Map, alg_Map, mol_template
 
