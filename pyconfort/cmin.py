@@ -455,7 +455,7 @@ def optimize(mol, args, program,log,dup_data,dup_data_idx):
 
     extension = os.path.splitext(args.input)[1]
     if  extension in ['.cdx', '.smi', '.csv']:
-        args.charge = rules_get_charge(mol,args,log)
+        args.charge = rules_get_charge(mol,args)
         # replace None values if there are metals that are not used
         for i,charge in enumerate(args.charge):
             if charge is None:
