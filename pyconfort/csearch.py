@@ -359,30 +359,6 @@ def clean_args(args,ori_ff,mol,ori_charge):                                # RAU
     args.complex_coord = []
     args.metal_sym = []
 
-def load_template(complex_type,log):
-    """
-    Checks if the templates are reachable and if so returns the name of the 
-    filename that corresponds to the complex_type. 
-
-    Returns
-    -------
-    str
-        file_template name of the file with the template
-    """
-    type2template = dict() 
-    type2template['squareplanar'] = 'template-4-and-5.sdf'
-    type2template['squarepyramidal'] = 'template-4-and-5.sdf'
-    type2template['linear'] = 'template-2.sdf'
-    type2template['trigonalplanar'] = 'template-3.sdf'
-
-    try:
-        os.chdir(os.path.join(pyconfort.__path__[0])+'/templates/')           # TODO, LETS DO A PROPER SETUP FILE TO AVOID THIS
-    except FileNotFoundError:
-        log.write('x The templates folder was not found, probably due to a problem while installing pyCONFORT')
-        sys.exit()
-
-    return type2template[complex_type]
-
 def compute_confs(w_dir_initial, mol, name, args,i):
     """
     function to start conf generation
@@ -434,10 +410,8 @@ def compute_confs(w_dir_initial, mol, name, args,i):
                 if metal_idx_ind is not None:
                     count_metals += 1
             if count_metals == 1:
-                file_template = load_template(args.complex_type,log)
-                temp = Chem.SDMolSupplier(file_template)
                 os.chdir(w_dir_initial)
-                mol_objects_from_template, name_mol, coord_Map, alg_Map, mol_template = template_embed(mol,temp,name,args,log)
+                mol_objects_from_template, name_mol, coord_Map, alg_Map, mol_template = template_embed(mol,name,args,log)
                 for j,_ in enumerate(mol_objects_from_template):
                     mol_objects.append([mol_objects_from_template[j],name_mol[j],coord_Map[j],alg_Map[j],mol_template[j]])
                 total_data = creation_of_dup_csv(args.CSEARCH,args.CMIN)

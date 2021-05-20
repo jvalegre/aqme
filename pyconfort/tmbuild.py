@@ -2,10 +2,43 @@
 #        This file stores all the functions         #
 #    used in template based conformer generation    #
 #####################################################.
+import os
+import sys
+from pathlib import Path
 
 from rdkit.Chem import AllChem as Chem
 from rdkit.Chem import rdDistGeom, rdMolAlign
+
+import pyconfort
 from pyconfort.utils import get_conf_RMS
+
+def load_template(complex_type,log):
+    """
+    Checks if the templates are reachable and if so returns the name of the 
+    filename that corresponds to the complex_type. 
+
+    Returns
+    -------
+    str
+        file_template name of the file with the template
+    """
+    type2template = dict() 
+    type2template['squareplanar'] = 'template-4-and-5.sdf'
+    type2template['squarepyramidal'] = 'template-4-and-5.sdf'
+    type2template['linear'] = 'template-2.sdf'
+    type2template['trigonalplanar'] = 'template-3.sdf'
+
+    folder = Path(pyconfort.__path__[0])/Path('templates')
+    
+    if not folder.exists(): 
+        log.write('x The templates folder was not found, probably due to a problem while installing pyCONFORT')
+        sys.exit()
+
+    file_template = folder/Path(type2template[complex_type])
+    templates = list(Chem.SDMolSupplier(file_template))
+    template = templates[-1] # RAUL: I'm assuming that there is only one molecule per template and in case there are several, it's the last one
+
+    return template
 
 def calc_neighbours(molecule,args):
     """
@@ -54,8 +87,7 @@ def calc_neighbours(molecule,args):
     return []
 
 #GET THE LINEAR GEOMETRY
-def two_embed(molecule_embed, molecule, mol_template, 
-              neighbours, name_input, args, log):
+def two_embed(molecule_embed, mol_template, neighbours, name_input, args, log):
     
     mol_template.GetAtomWithIdx(0).setAtomicNum(neighbours[0].GetAtomicNum())
     mol_template.GetAtomWithIdx(1).setAtomicNum(neighbours[1].GetAtomicNum())
@@ -63,7 +95,6 @@ def two_embed(molecule_embed, molecule, mol_template,
 
     #assigning and embedding onto the core
     mol_obj, coord_map, alg_map,ci = template_embed_optimize(molecule_embed,
-                                                             molecule,
                                                              mol_template,
                                                              args, log)
     if ci >= 0: #writing to mol_object file
@@ -72,7 +103,7 @@ def two_embed(molecule_embed, molecule, mol_template,
     return [], [], [], [], []
 
 # GET THE TRIGONAL PLANAR GEOMETRY
-def three_embed(molecule_embed,molecule,mol_template,neighbours,name_input,args,log):
+def three_embed(molecule_embed, mol_template,neighbours,name_input,args,log):
 
     mol_template.GetAtomWithIdx(0).setAtomicNum(53)
     mol_template.GetAtomWithIdx(1).setAtomicNum(neighbours[0].GetAtomicNum())
@@ -80,26 +111,25 @@ def three_embed(molecule_embed,molecule,mol_template,neighbours,name_input,args,
     mol_template.GetAtomWithIdx(3).setAtomicNum(neighbours[2].GetAtomicNum())
 
     #assigning and embedding onto the core
-    mol_obj, coord_map, alg_map,ci = template_embed_optimize(molecule_embed,
-                                                             molecule,
-                                                             mol_template,
-                                                             args, log)
-    if ci>=0: #writing to mol_object file
+    mol_obj, coord_map, alg_map, conf_id = template_embed_optimize(molecule_embed,
+                                                                   mol_template,
+                                                                   args, log)
+    if conf_id >= 0: #writing to mol_object file
         return [mol_obj], [name_input], [coord_map], [alg_map], [mol_template]
 
     return [], [], [], [], []
 
 # GET THE SQUAREPLANAR GEOMETRY
-def four_embed(molecule_embed,molecule,mol_1,neighbours,name_input,args,log):
+def four_embed(molecule_embed, mol_1,neighbours,name_input,args,log):
 
     mol_objects = []
     name_return = []
-    coord_Map = []
-    alg_Map = []
-    mol_template = []
+    coord_maps = []
+    alg_maps = []
+    mol_templates = []
     
     # Remove F atoms from the template
-    mol_template = Chem.RWMol(mol_template)
+    mol_template = Chem.RWMol(mol_1)
     for atom in mol_template.GetAtoms():
         if atom.GetSymbol() == 'F': 
             mol_template.RemoveAtom(atom.GetIdx())
@@ -124,208 +154,192 @@ def four_embed(molecule_embed,molecule,mol_1,neighbours,name_input,args,log):
             mol_1.GetAtomWithIdx(idx).setAtomicNum(atn)
         
         #embedding of the molecule onto the core
-        mol_obj, coord_map, alg_map,ci = template_embed_optimize(molecule_embed,
-                                                                 molecule,
-                                                                 mol_1,
-                                                                 args, log)
+        mol_obj, coord_map, alg_map, conf_id = template_embed_optimize(molecule_embed,
+                                                                       mol_1,
+                                                                       args, log)
 
-        if ci >= 0:
-            check = filter_template_mol(mol_obj, mol_objects,args,log)
+        if conf_id >= 0:
+            check = filter_template_mol(mol_obj, mol_objects,args)
             if check:
                 #writing to mol_object file
                 name = f'{name_input.split()[0]}_{i}'
                 mol_objects.append(mol_obj)
                 name_return.append(name)
-                coord_Map.append(coord_map)
-                alg_Map.append(alg_map)
-                mol_template.append(mol_1)
+                coord_maps.append(coord_map)
+                alg_maps.append(alg_map)
+                mol_templates.append(mol_1)
 
-    return mol_objects, name_return, coord_Map, alg_Map, mol_template
+    return mol_objects, name_return, coord_maps, alg_maps, mol_templates
 
 # GET THE SQUAREPYRAMIDAL GEOMETRY
-def five_embed(molecule_embed,molecule,mol_1,neighbours,name_input,args,log):
-    mol_objects,name_return,coord_Map,alg_Map,mol_template = [],[],[],[],[]
-    
-    #fifteen cases for square pyrimidal
+def five_embed(molecule_embed, mol_template,neighbours,name_input,args,log):
+    mol_objects   = []
+    name_return   = []
+    coord_maps    = []
+    alg_maps      = []
+    mol_templates = []
     counter = 0
-    for name_1 in range(5):
-        for name_2 in range(3):
+    atomic_numbers = [mol_template.GetAtomWithIdx(i).GetAtomicNum() for i in neighbours]
+    replacements = [[4,0,1,2,3],
+                    [4,0,2,3,1],
+                    [4,0,3,1,2],
+                    [3,0,1,2,4],
+                    [3,0,2,4,1],
+                    [3,0,4,1,2],
+                    [2,0,1,4,3],
+                    [2,0,4,3,1],
+                    [2,0,4,1,3],
+                    [1,0,4,2,3],
+                    [1,0,2,3,4],
+                    [1,0,3,4,2],
+                    [0,4,1,2,3],
+                    [0,4,2,3,1],
+                    [0,4,3,1,2]]
+    for replacement in replacements:
+        at0,at1,at2,at3,at4 = [atomic_numbers[r] for r in replacement]
+        mol_template.GetAtomWithIdx(0).SetAtomicNum(at0)
+        mol_template.GetAtomWithIdx(1).SetAtomicNum(at1)
+        mol_template.GetAtomWithIdx(2).SetAtomicNum(at2)
+        mol_template.GetAtomWithIdx(3).SetAtomicNum(at3)
+        mol_template.GetAtomWithIdx(4).SetAtomicNum(at4)
+        mol_template.GetAtomWithIdx(5).SetAtomicNum(14)
+        mol_template.GetAtomWithIdx(5).SetFormalCharge(1)
 
-            # assigning order of replacement for the top
-            if name_1 == 0:
-                k = 4
-            elif name_1== 1:
-                k = 3
-            elif name_1 == 2:
-                k = 2
-            elif name_1== 3:
-                k = 1
-            elif name_1 == 4:
-                k = 0
-
-            # assigning order of replacement for the plane
-            if name_2 == 0 and k == 4:
-                j = [1,2,3]
-            elif name_2 == 1 and k == 4:
-                j = [2,3,1]
-            elif name_2 == 2 and k == 4:
-                j = [3,1,2]
-
-            # assigning order of replacement for the plane
-            if name_2 == 0 and k == 3:
-                j = [1,2,4]
-            elif name_2 == 1 and k == 3:
-                j = [2,4,1]
-            elif name_2 == 2 and k == 3:
-                j = [4,1,2]
-
-            # assigning order of replacement for the plane
-            if name_2 == 0 and k == 2:
-                j = [1,4,3]
-            elif name_2 == 1 and k == 2:
-                j = [4,3,1]
-            elif name_2 == 2 and k == 2:
-                j = [4,1,3]
-
-            # assigning order of replacement for the plane
-            if name_2 == 0 and k == 1:
-                j = [4,2,3]
-            elif name_2 == 1 and k == 1:
-                j = [2,3,4]
-            elif name_2 == 2 and k == 1:
-                j = [3,4,2]
-
-            # assigning order of replacement for the plane
-            if name_2 == 0 and k == 0:
-                j = [1,2,3]
-            elif name_2 == 1 and k == 0:
-                j = [2,3,1]
-            elif name_2 == 2 and k == 0:
-                j = [3,1,2]
-
-            #checking for same atom neighbours and assigning in the templates for all mols in suppl!
-            for atom in mol_1.GetAtoms():
-                if atom.GetIdx()  == 5:
-                    atom.SetAtomicNum(14)
-                    atom.SetFormalCharge(1)
-                if atom.GetIdx()  == 1:
-                    if k!= 0:
-                        atom.SetAtomicNum(neighbours[0].GetAtomicNum())
-                    elif k == 0:
-                        atom.SetAtomicNum(neighbours[4].GetAtomicNum())
-                elif atom.GetIdx()  == 2:
-                    atom.SetAtomicNum(neighbours[j[0]].GetAtomicNum())
-                elif atom.GetIdx()  == 3:
-                    atom.SetAtomicNum(neighbours[j[1]].GetAtomicNum())
-                elif atom.GetIdx()  == 4:
-                    atom.SetAtomicNum(neighbours[j[2]].GetAtomicNum())
-                elif atom.GetIdx()  == 0:
-                    if k!= 0:
-                        atom.SetAtomicNum(neighbours[k].GetAtomicNum())
-                    elif k == 0:
-                        atom.SetAtomicNum(neighbours[0].GetAtomicNum())
-
-            #assigning and embedding onto the core
-            molecule_new, coordMap, algMap,ci = template_embed_optimize(molecule_embed,molecule,mol_1,args,log)
-            if ci>=0:
-                check=filter_template_mol(molecule_new, mol_objects,args,log)
-                if check:
-                    name = str(counter)
-                    #writing to mol_object file
-                    name_final = name_input +'_'+name
-                    mol_objects.append(molecule_new)
-                    name_return.append(name_final)
-                    coord_Map.append(coordMap)
-                    alg_Map.append(algMap)
-                    mol_template.append(mol_1)
-            else:
-                pass
+        #assigning and embedding onto the core
+        mol_obj, coord_map, alg_map, conf_id = template_embed_optimize(molecule_embed,
+                                                                       mol_template,
+                                                                       args,log)
+        if conf_id >= 0:
+            check = filter_template_mol(mol_obj, mol_objects, args)
+            if check:
+                #writing to mol_object file
+                name = f'{name_input}_{counter}'
+                mol_objects.append(mol_obj)
+                name_return.append(name)
+                coord_maps.append(coord_map)
+                alg_maps.append(alg_map)
+                mol_templates.append(mol_template)
             counter += 1
-    return mol_objects, name_return, coord_Map, alg_Map, mol_template
+    return mol_objects, name_return, coord_maps, alg_maps, mol_templates
+
+# Auxiliar function to get the mappings of the core atoms
+def get_mappings(molecule,template,conformer_id=-1):
+    match = molecule.GetSubstructMatch(template)
+    conformer = template.GetConformer(conformer_id)
+    coordMap = {}
+    algMap = []
+    for i,atomidx in enumerate(match):
+        algMap.append((atomidx,i))
+        coordMap[atomidx] = conformer.GetAtomPosition(i)
+    return coordMap, algMap
+def get_distance_constrains(coordMap):
+    atom_idxs = list(coordMap.keys())
+    constrains = []
+    for k, i in enumerate(atom_idxs):
+        for j in atom_idxs[k+1:]:
+            d = coordMap[i].Distance(coordMap[j])
+            constrains.append((i,j,d))
+    return constrains
 
 # TEMPLATE GENERATION FOR SQUAREPLANAR AND squarepyramidal
-def template_embed(molecule,temp,name_input,args,log):
+def template_embed(molecule,name_input,args,log):
+    """
+    Wrapper function to select automatically the appropiate embedding function
+    depending on the number of neighbours of the metal center.
+
+    Parameters
+    ----------
+    molecule : [type]
+        [description]
+    temp : [type]
+        [description]
+    name_input : [type]
+        [description]
+    args : [type]
+        [description]
+    log : [type]
+        [description]
+
+    Returns
+    -------
+    tuple
+        mol_objects, name_return, coord_maps, alg_maps, mol_templates
+    """
+    embed_functions = dict()
+    embed_functions[2] = two_embed
+    embed_functions[3] = three_embed
+    embed_functions[4] = four_embed
+    embed_functions[5] = five_embed
+
+    template = load_template(args.complex_type,log) 
+
     neighbours = calc_neighbours(molecule,args)
-    number_of_neighbours = len(neighbours)
+    embed = embed_functions[len(neighbours)]
+    
+    return embed(molecule,template,neighbours,name_input,args,log)
 
-    mol_objects,name_return,coord_Map,alg_Map,mol_template = [],[],[],[],[]
+def template_embed_optimize(target,template,args,log):
+    """
+    Embeds a new conformation into a molecule, optimizes it using UFF and 
+    realigns it.
 
-    # RAUL: Is there more than one? In that case what's the purpose of 
-    #       mol_objects, name_return, coord_Map, alg_Map, mol_template?
-    for mol_1 in temp:
-        if number_of_neighbours == 2:
-            mol_objects, name_return, coord_Map, alg_Map, mol_template = two_embed(molecule,molecule,mol_1,neighbours,name_input,args,log)
+    Parameters
+    ----------
+    target : rdkit.Chem.Mol
+        Molecule where you want to embed the new conformation
+    mol_template : rdkit.Chem.Mol?
+        Template molecule to identify the core of the molecule that will have
+        its distances frozen in the optimization.   
+    args : argparse.args
+        [description]
+    log : Logger
+        [description]
 
-        elif number_of_neighbours == 3:
-            mol_objects, name_return, coord_Map, alg_Map, mol_template = three_embed(molecule,molecule,mol_1,neighbours,name_input,args,log)
+    Returns
+    -------
+    molecule, coordMap, algMap, conf_id
+        molecule embedded, mapping to the atom instances, 
+        list of tuples with position and id and int with the conformer id. 
+    """
+    
+    seed = -1
+    force_constant = 10000
 
-        elif number_of_neighbours == 4:
-            mol_objects, name_return, coord_Map, alg_Map, mol_template = four_embed(molecule,molecule,mol_1,neighbours,name_input,args,log)
-
-        elif number_of_neighbours == 5:
-            mol_objects, name_return, coord_Map, alg_Map, mol_template = five_embed(molecule,molecule,mol_1,neighbours,name_input,args,log)
-
-    return mol_objects, name_return, coord_Map, alg_Map, mol_template
-
-# TEMPLATE EMBED OPTIMIZE
-def template_embed_optimize(molecule_embed,molecule,mol_1,args,log):
-
-    #assigning and embedding onto the core
-    num_atom_match = molecule_embed.GetSubstructMatch(mol_1)
+    coord_map, alg_map = get_mappings(target,template,conformer_id=-1)
 
     #add H's to molecule
-    molecule_embed = Chem.AddHs(molecule_embed)
+    molecule = Chem.AddHs(target)
+    
+    conf_id = rdDistGeom.EmbedMolecule(molecule, coordMap=coord_map, randomSeed=seed)
 
-    #definition of coordmap, the coreconfID(the firstone =-1)
-    coordMap = {}
-    coreConfId=-1
-    randomseed=-1
-    force_constant=10000
-
-    # This part selects which atoms from molecule are the atoms of the core
-    try:
-        coreConf = mol_1.GetConformer(coreConfId)
-    except:
-        pass
-    for k, idxI in enumerate(num_atom_match):
-        core_mol_1 = coreConf.GetAtomPosition(k)
-        coordMap[idxI] = core_mol_1
-
-    ci = rdDistGeom.EmbedMolecule(molecule_embed, coordMap=coordMap, randomSeed=randomseed)
-
-    if ci < 0:
+    if conf_id < 0:
         log.write('Could not embed molecule.')
-        coordMap = None
-        algMap = None
+        return molecule, None, None, conf_id
 
-    if ci >= 0:
-        GetFF = Chem.UFFGetMoleculeForceField(molecule_embed,confId=-1)
+    forcefield = Chem.UFFGetMoleculeForceField(molecule,confId=conf_id)
 
-        #algin molecule to the core
-        algMap = [(k, l) for l, k in enumerate(num_atom_match)]
+    constraints = get_distance_constrains(coord_map)
+    for i,j,d in constraints: 
+        forcefield.AddDistanceConstraint(i, j, d, d, force_constant)
+    forcefield.Initialize()
+    forcefield.Minimize(maxIts=args.opt_steps_RDKit)
+    # rotate the embedded conformation onto the core_mol:
+    rdMolAlign.AlignMol(molecule, template, 
+                        atomMap=alg_map,
+                        reflect=True,
+                        maxIters=100)
 
-        for k, idxI in enumerate(num_atom_match):
-            for l in range(k + 1, len(num_atom_match)):
-                idxJ = num_atom_match[l]
-                d = coordMap[idxI].Distance(coordMap[idxJ])
-                GetFF.AddDistanceConstraint(idxI, idxJ, d, d, force_constant)
-        GetFF.Initialize()
-        GetFF.Minimize(maxIts=args.opt_steps_RDKit)
-        # rotate the embedded conformation onto the core_mol:
-        rdMolAlign.AlignMol(molecule_embed, mol_1, atomMap=algMap,reflect=True,maxIters=100)
-
-    return molecule_embed, coordMap, algMap, ci
+    return molecule, coord_map, alg_map, conf_id
 
 # FILTER FOR REMOVING MOLS IF LIGANDS ARE THE SAME
-def filter_template_mol(molecule_new, mol_objects,args,log):
-    if len(mol_objects) ==0:
-        check = True
-    else:
-        check = True
-        #check if molecule also exixts in the mol_objects
-        for mol in mol_objects:
-            rms = get_conf_RMS(mol, molecule_new, -1, -1, args.heavyonly, args.max_matches_RMSD)
-            if rms < 0.5:
-                check = False
-                break
-    return check
+def filter_template_mol(molecule_new, mol_objects,args):
+
+    if not mol_objects:
+        return True
+    
+    #check if molecule also exixts in the mol_objects
+    for mol in mol_objects:
+        rms = get_conf_RMS(mol, molecule_new, -1, -1, args.heavyonly, args.max_matches_RMSD)
+        if rms < 0.5:
+            return False
+    return True
