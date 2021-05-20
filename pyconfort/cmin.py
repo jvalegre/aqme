@@ -130,8 +130,9 @@ def substituted_mol(mol,args):
             args.complex_coord[args.metal.index(symbol)] = len(atom.GetNeighbors())
             atom.SetAtomicNum(53)
             n_neighbors = len(atom.GetNeighbors())
-            formal_charge = Neighbors2FormalCharge[n_neighbors]
-            atom.SetFormalCharge(formal_charge)
+            if n_neighbors > 1: 
+                formal_charge = Neighbors2FormalCharge[n_neighbors]
+                atom.SetFormalCharge(formal_charge)
 
     return mol,args.metal_idx,args.complex_coord,args.metal_sym
 
