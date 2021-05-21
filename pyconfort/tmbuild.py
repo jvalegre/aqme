@@ -14,13 +14,12 @@ from pyconfort.utils import get_conf_RMS
 
 def load_template(complex_type,log):
     """
-    Checks if the templates are reachable and if so returns the name of the 
-    filename that corresponds to the complex_type. 
+    Checks if the templates are reachable and if so returns the molecule object. 
 
     Returns
     -------
-    str
-        file_template name of the file with the template
+    rdkit.Chem.Mol
+        The molecule file of the corresponding template.
     """
     type2template = dict() 
     type2template['squareplanar'] = 'template-4-and-5.sdf'
