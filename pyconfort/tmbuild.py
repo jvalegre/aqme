@@ -5,12 +5,14 @@
 import os
 import sys
 from pathlib import Path
+from pkg_resources import resource_filename 
 
 from rdkit.Chem import AllChem as Chem
 from rdkit.Chem import rdDistGeom, rdMolAlign
 
-import pyconfort
 from pyconfort.utils import get_conf_RMS
+
+TEMPLATES_PATH = Path(resource_filename('pyconfort','templates'))
 
 def load_template(complex_type,log):
     """
@@ -27,7 +29,7 @@ def load_template(complex_type,log):
     type2template['linear'] = 'template-2.sdf'
     type2template['trigonalplanar'] = 'template-3.sdf'
 
-    folder = Path(pyconfort.__path__[0])/Path('templates')
+    folder = TEMPLATES_PATH
     
     if not folder.exists(): 
         log.write('x The templates folder was not found, probably due to a problem while installing pyCONFORT')
