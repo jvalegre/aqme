@@ -2,7 +2,6 @@
 #        This file stores all the functions         #
 #    used in template based conformer generation    #
 #####################################################.
-import os
 import sys
 from pathlib import Path
 from pkg_resources import resource_filename 
