@@ -1,8 +1,9 @@
 """
 This module contains some classes and functions that are used from other modules
 """
-import os 
-import shutil
+from pathlib import Path
+import subprocess
+import os
 
 from rdkit.Chem.rdMolAlign import GetBestRMS
 from rdkit.Chem.rdmolops import RemoveHs
@@ -69,14 +70,11 @@ def move_file(file, destination):
     destination : str
         path towards a folder
     """
-    if not os.path.isdir(destination):
-        os.makedirs(destination)
-    try:
-        shutil.move(file, destination)
-    except (FileExistsError,shutil.Error):
-        os.chdir(destination)
-        os.remove(file.split('/')[-1])
-        shutil.move(file, destination)
+    dest = Path(destination)
+    dest.mkdir(exist_ok=True)
+    filepath = Path(file)
+    filename = filepath.name
+    file.rename(dest/filename)
 
 def move_file_from_folder(destination,src,file):
     """
@@ -92,15 +90,77 @@ def move_file_from_folder(destination,src,file):
     file : str
         full name of the file (file + extension)
     """
-    try:
-        os.makedirs(destination)
-        shutil.move(os.path.join(src, file), os.path.join(destination, file))
-    except OSError:
-        if  os.path.isdir(destination):
-            shutil.move(os.path.join(src, file), os.path.join(destination, file))
+    dest = Path(destination)
+    source = Path(src)
+    dest.mkdir(exist_ok=True,parents=True)
+    filepath = source / file
+    filepath.rename(dest / file)
+
+# openbabel utils 
+
+#com to xyz to sdf for obabel
+def com_2_xyz_2_sdf(args,start_point=None):
+    """
+    com to xyz to sdf for obabel
+
+    Parameters
+    ----------
+    args : argparse.args
+        [description]
+    start_point : str, optional
+        file(path/name?) to the starting point, by default None
+
+    Returns
+    -------
+    int?
+        charge or None? 
+    """
+    input = args.input
+    default_charge = args.default_charge
+
+    extension = os.path.splitext(input)[1]
+
+    if start_point is None:
+        if extension in ['.com','.gjf','.xyz']:
+            file = args.input
+
+    elif start_point is not None:
+        file = start_point
+
+    filename = os.path.splitext(file)[0]
+
+    if extension != '.xyz':                                                  #  RAUL: Originally this pointed towards args.input, shouldn't it be to args.file? 
+        with open(file,"r") as comfile:
+            comlines = comfile.readlines()
+
+        emptylines=[]
+
+        for i, line in enumerate(comlines):
+            if len(line.strip()) == 0:
+                emptylines.append(i)
+
+        #assigning the charges
+        charge_com = comlines[(emptylines[1]+1)].split(' ')[0]
+
+        with open(f'{filename}.xyz','w') as xyzfile:
+            xyzfile.write(str(emptylines[2]- (emptylines[1]+2)))
+            xyzfile.write('\n')
+            xyzfile.write(filename)
+            xyzfile.write('\n')
+            for i in range((emptylines[1]+2), emptylines[2]):
+                xyzfile.write(comlines[i])
+
+    cmd_obabel = ['obabel',                                                 # RAUL: Again this could be done with openbabel's pybel
+                  '-ixyz', f'{filename}.xyz', 
+                  '-osdf', '-O', f'{filename}.sdf']
+    subprocess.run(cmd_obabel)
+
+    if start_point is None:
+        if extension in ['.com','.gjf']:
+            return charge_com
         else:
-            raise
-        
+            return default_charge
+
 # RDKit Utils 
 
 def set_metal_atomic_number(mol,metal_idx,metal_sym):

@@ -13,7 +13,7 @@ import concurrent.futures as futures
 from progress.bar import IncrementalBar
 from rdkit.Chem import AllChem as Chem
 from pyconfort.csearch import (check_for_pieces, check_charge_smi, clean_args, 
-                               compute_confs, com_2_xyz_2_sdf, 
+                               compute_confs, 
                                mol_from_sdf_or_mol_or_mol2, creation_of_dup_csv)
 from pyconfort.filter import exp_rules_output
 
@@ -29,7 +29,7 @@ from pyconfort.dbstep_conf import calculate_db_parameters,calculate_boltz_and_db
 from pyconfort.nics_conf import calculate_nics_parameters,calculate_boltz_for_nics,calculate_avg_nics
 from pyconfort.cclib_conf import calculate_cclib,calcualte_average_cclib_parameter,calculate_boltz_for_cclib
 from pyconfort.cmin import mult_min
-from pyconfort.utils import Logger, move_file_from_folder
+from pyconfort.utils import Logger, move_file_from_folder, com_2_xyz_2_sdf
 #need to and in energy
 
 #load paramters from yaml file

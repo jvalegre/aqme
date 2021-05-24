@@ -10,9 +10,8 @@ import numpy as np
 from pyconfort.qprep_gaussian import input_route_line,check_for_gen_or_genecp,write_genecp,orca_file_gen
 from pyconfort.utils import possible_atoms
 from pyconfort.filter import exp_rules_output,check_geom_filter
-from pyconfort.csearch import com_2_xyz_2_sdf
 from pyconfort.nics_conf import update_coord,get_coords_normal
-from pyconfort.utils import move_file
+from pyconfort.utils import move_file, com_2_xyz_2_sdf
 
 def write_header_and_coords(fileout,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,w_dir_initial,log,com_type=None):
     if com_type == 'nics':

@@ -8,6 +8,7 @@ import os
 import sys
 import subprocess
 import time
+from pathlib import Path
 import concurrent.futures as futures     # RAUL: This is for the main
 
 import numpy as np
@@ -16,14 +17,13 @@ from rdkit.Chem import AllChem as Chem
 from rdkit.Chem import rdMolTransforms, PropertyMol, rdDistGeom, Lipinski
 from progress.bar import IncrementalBar  # RAUL: This is for the main
 
-import pyconfort
 from pyconfort.filter import (filters, ewin_filter, 
                               pre_E_filter, RMSD_and_E_filter)
 from pyconfort.tmbuild import template_embed
 from pyconfort.cmin import rules_get_charge, substituted_mol
 from pyconfort.fullmonte import (generating_conformations_fullmonte, 
                                  minimize_rdkit_energy, realign_mol)
-from pyconfort.utils import Logger, set_metal_atomic_number
+from pyconfort.utils import Logger, set_metal_atomic_number, com_2_xyz_2_sdf
 
 SUPPORTED_INPUTS = ['.smi', '.sdf', '.cdx', 
                     '.csv', '.com', '.gjf', 
@@ -269,69 +269,6 @@ def creation_of_dup_csv(csearch,cmin):
     
     return pd.DataFrame(columns=columns)
 
-#com to xyz to sdf for obabel
-def com_2_xyz_2_sdf(args,start_point=None):
-    """
-    com to xyz to sdf for obabel
-
-    Parameters
-    ----------
-    args : argparse.args
-        [description]
-    start_point : str, optional
-        file(path/name?) to the starting point, by default None
-
-    Returns
-    -------
-    int?
-        charge or None? 
-    """
-    input = args.input
-    default_charge = args.default_charge
-
-    extension = os.path.splitext(input)[1]
-
-    if start_point is None:
-        if extension in ['.com','.gjf','.xyz']:
-            file = args.input
-
-    elif start_point is not None:
-        file = start_point
-
-    filename = os.path.splitext(file)[0]
-
-    if extension != '.xyz':                                                  #  RAUL: Originally this pointed towards args.input, shouldn't it be to args.file? 
-        with open(file,"r") as comfile:
-            comlines = comfile.readlines()
-
-        emptylines=[]
-
-        for i, line in enumerate(comlines):
-            if len(line.strip()) == 0:
-                emptylines.append(i)
-
-        #assigning the charges
-        charge_com = comlines[(emptylines[1]+1)].split(' ')[0]
-
-        with open(f'{filename}.xyz','w') as xyzfile:
-            xyzfile.write(str(emptylines[2]- (emptylines[1]+2)))
-            xyzfile.write('\n')
-            xyzfile.write(filename)
-            xyzfile.write('\n')
-            for i in range((emptylines[1]+2), emptylines[2]):
-                xyzfile.write(comlines[i])
-
-    cmd_obabel = ['obabel',                                                 # RAUL: Again this could be done with openbabel's pybel
-                  '-ixyz', f'{filename}.xyz', 
-                  '-osdf', '-O', f'{filename}.sdf']
-    subprocess.run(cmd_obabel)
-
-    if start_point is None:
-        if extension in ['.com','.gjf']:
-            return charge_com
-        else:
-            return default_charge
-
 def clean_args(args,ori_ff,mol,ori_charge):                                # RAUL: I hope this function does not survive the clean-ups
     """
     returns the arguments to their original value after each calculation
@@ -379,14 +316,11 @@ def compute_confs(w_dir_initial, mol, name, args,i):
     pandas.Dataframe
         total_data
     """
-
-    try:
-        os.makedirs(w_dir_initial+'/CSEARCH/dat_files')
-    except OSError:
-        if os.path.isdir(w_dir_initial+'/CSEARCH/dat_files'):
-            pass
-
-    log = Logger(w_dir_initial+'/CSEARCH/dat_files/'+name, args.output_name)
+    csearch_dir = Path(w_dir_initial) / 'CSEARCH/'
+    dat_dir = csearch_dir / 'dat_files'
+    dat_dir.mkdir(parents=True, exist_ok=True)
+    
+    log = Logger(dat_dir/name, args.output_name)
     # Converts each line to a rdkit mol object
     if args.verbose:
         log.write(f"   -> Input Molecule {i} is {Chem.MolToSmiles(mol)}")
