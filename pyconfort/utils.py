@@ -8,6 +8,8 @@ import os
 from rdkit.Chem.rdMolAlign import GetBestRMS
 from rdkit.Chem.rdmolops import RemoveHs
 
+import pybel
+
 items = """X
            H                                                                                                  He
           Li Be  B                                                                             C   N   O   F  Ne
@@ -99,14 +101,14 @@ def move_file_from_folder(destination,src,file):
 # openbabel utils 
 
 #com to xyz to sdf for obabel
-def com_2_xyz_2_sdf(args,start_point=None):
+def com_2_xyz_2_sdf(input,default_charge,start_point=None):
     """
     com to xyz to sdf for obabel
 
     Parameters
     ----------
-    args : argparse.args
-        [description]
+    input : str
+        path to the file to convert
     start_point : str, optional
         file(path/name?) to the starting point, by default None
 
@@ -115,52 +117,95 @@ def com_2_xyz_2_sdf(args,start_point=None):
     int?
         charge or None? 
     """
-    input = args.input
-    default_charge = args.default_charge
-
-    extension = os.path.splitext(input)[1]
+    extension = Path(input).suffix
 
     if start_point is None:
-        if extension in ['.com','.gjf','.xyz']:
-            file = args.input
+        if extension in ['com','gjf','xyz']:
+            file = Path(input)
 
-    elif start_point is not None:
-        file = start_point
+    else:
+        file = Path(start_point)
 
-    filename = os.path.splitext(file)[0]
+    filename = Path.stem
+    
+    # Create the 'xyz' file and/or get the total charge
+    if extension != 'xyz':                                                      #  RAUL: Originally this pointed towards args.input, shouldn't it be to args.file?
+        xyz,charge = get_charge_and_xyz_from_com(file)
 
-    if extension != '.xyz':                                                  #  RAUL: Originally this pointed towards args.input, shouldn't it be to args.file? 
-        with open(file,"r") as comfile:
-            comlines = comfile.readlines()
+        with open(f'{filename}.xyz','w') as F: 
+            F.write(f"{len(xyz)}\n{filename}\n{'\n'.join(xyz)}\n")
+    else:
+        charge = default_charge
 
-        emptylines=[]
+    xyz_2_sdf(f'{filename}.xyz')
 
-        for i, line in enumerate(comlines):
-            if len(line.strip()) == 0:
-                emptylines.append(i)
+    return charge
+def xyz_2_sdf(file,dir=None):
+    """
+    Creates a .sdf file from a .xyz in the specified directory. If no directory
+    is specified then the files are created in the current directory. 
 
-        #assigning the charges
-        charge_com = comlines[(emptylines[1]+1)].split(' ')[0]
+    Parameters
+    ----------
+    file : str
+        filename and extension of an existing .xyz file
+    dir : str or pathlib.Path, optional
+        a path to the directory where the .xyz file is located
+    """
+    if dir is None: 
+        dir = Path('')
+    else:
+        dir = Path(dir)
+    mol = next(pybel.readfile('xyz',dir/file))
+    ofile = Path(file).stem + '.sdf'
+    mol.write('sdf', dir/ofile)
+def get_charge_and_xyz_from_com(file):
+    """
+     Takes a .gjf or .com file and retrieves the coordinates of the atoms and the
+    total charge. 
 
-        with open(f'{filename}.xyz','w') as xyzfile:
-            xyzfile.write(str(emptylines[2]- (emptylines[1]+2)))
-            xyzfile.write('\n')
-            xyzfile.write(filename)
-            xyzfile.write('\n')
-            for i in range((emptylines[1]+2), emptylines[2]):
-                xyzfile.write(comlines[i])
+    Parameters
+    ----------
+    file : str or pathlib.Path
+        A path pointing to a valid .com or .gjf file
 
-    cmd_obabel = ['obabel',                                                 # RAUL: Again this could be done with openbabel's pybel
-                  '-ixyz', f'{filename}.xyz', 
-                  '-osdf', '-O', f'{filename}.sdf']
-    subprocess.run(cmd_obabel)
+    Returns
+    -------
+    coordinates : list
+        A list of strings (without \\n) that contain the xyz coordinates of the
+        .gjf or .com file 
+    charge : str
+        A str with the number corresponding to the total charge of the .com or 
+        .gjf file
+    """
 
-    if start_point is None:
-        if extension in ['.com','.gjf']:
-            return charge_com
-        else:
-            return default_charge
+    with open(file,"r") as comfile:
+        comlines = comfile.readlines()
 
+    _iter = comlines.__iter__()
+    
+    line = ''
+    # Find the command line
+    while '#' not in line: 
+        line = next(_iter)
+
+    # pass the title lines
+    _ = next(_iter)
+    while line:
+        line = next(_iter).strip()
+    
+    # Read the charge from the charge | spin line
+    charge,spin = next(_iter).strip().split()
+
+    # Store the coordinates until next empty line. 
+    coordinates = []
+    line = next(_iter).strip()
+    while line: 
+        coordinates.append(line.strip())
+        line = next(_iter).strip()
+    
+    return coordinates, charge
+    
 # RDKit Utils 
 
 def set_metal_atomic_number(mol,metal_idx,metal_sym):

@@ -185,7 +185,7 @@ def csearch_main(w_dir_initial,args,log_overall):
         # COM file
         elif os.path.splitext(args.input)[1] == '.gjf' or os.path.splitext(args.input)[1] == '.com' or  os.path.splitext(args.input)[1] == '.xyz' :
             #converting to sdf from comfile to preserve geometry
-            charge_com = com_2_xyz_2_sdf(args)
+            charge_com = com_2_xyz_2_sdf(args.input,args.default_charge)
             sdffile = os.path.splitext(args.input)[0]+'.sdf'
             if os.path.splitext(args.input)[1] == '.gjf' or os.path.splitext(args.input)[1] == '.com':
                 suppl, _, _ = mol_from_sdf_or_mol_or_mol2(sdffile)

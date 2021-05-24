@@ -1068,7 +1068,7 @@ def generate_mol_from_cdx(args):
 
 def prepare_gaussian_files(args,ori_ff,ori_charge,w_dir_initial):
     job_inputs = []
-    charge_com = com_2_xyz_2_sdf(args)
+    charge_com = com_2_xyz_2_sdf(args.input,args.default_charge)
     name = os.path.splitext(args.input)[0]
     sdffile = f'{name}.sdf'
     suppl, _, _ = mol_from_sdf_or_mol_or_mol2(sdffile)
