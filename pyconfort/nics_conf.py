@@ -2,169 +2,113 @@
 #        This file stores all the functions         #
 #    used for genrating all nics input/output       #
 #####################################################.
+import os
+import subprocess
+from pathlib import Path
 
-from numpy import *
-import subprocess, os
-from pyconfort.utils import move_file_from_folder
 import pandas as pd
-from pyconfort.utils import possible_atoms
+import numpy as np
+from numpy.linalg.linalg import LinAlgError
 
-def get_coords_normal(outlines, stand_or, NATOMS, possible_atoms, ATOMTYPES, CARTESIANS):
-    for i in range(stand_or+5,stand_or+5+NATOMS):
+from pyconfort.utils import possible_atoms, move_file_from_folder
+
+def get_coords_normal(outlines, stand_or, natoms, possible_atoms, atomtypes, cartesians):
+    for i in range(stand_or+5,stand_or+5+natoms):
         massno = int(outlines[i].split()[1])
         if massno < len(possible_atoms):
             atom_symbol = possible_atoms[massno]
         else:
             atom_symbol = "XX"
-        ATOMTYPES.append(atom_symbol)
-        CARTESIANS.append([float(outlines[i].split()[3]), float(outlines[i].split()[4]), float(outlines[i].split()[5])])
-    return ATOMTYPES, CARTESIANS,stand_or
-
-
-def find_centroid(ringatoms,CARTESIANS):
-    xtot = 0; xvals=[]; yvals=[]; zvals=[]
-    for x in ringatoms:
-        xtot = xtot + CARTESIANS[x][0]
-        xvals.append(CARTESIANS[x][0])
-    xav = xtot/len(ringatoms)
-    ytot = 0
-    for x in ringatoms:
-        ytot = ytot + CARTESIANS[x][1]
-        yvals.append(CARTESIANS[x][1])
-    yav = ytot/len(ringatoms)
-    ztot = 0
-    for x in ringatoms:
-        ztot = ztot + CARTESIANS[x][2]
-        zvals.append(CARTESIANS[x][2])
-    zav = ztot/len(ringatoms)
-
-    #print "Centroid at:", xav, yav, zav  #gives position of centroid
-    return xvals, yvals, zvals, xav, yav, zav
-
-def get_squares_list(ringatoms, xvals, yvals, zvals):
-####################Necessary summations
-    xysum = 0; y2sum = 0; x2sum = 0; zsum = 0; ysum = 0; xsum = 0; xzsum = 0; yzsum = 0
-    for n in range(len(ringatoms)):
-        xy = xvals[n]*yvals[n]
-        xysum = xy+xysum
-        xz = xvals[n]*zvals[n]
-        xzsum = xz+xzsum
-        yz = yvals[n]*zvals[n]
-        yzsum = yz+yzsum
-        x = xvals[n]
-        xsum = x+xsum
-        y = yvals[n]
-        ysum = y+ysum
-        z = zvals[n]
-        zsum = z+zsum
-        x2 = xvals[n]*xvals[n]
-        x2sum = x2+x2sum
-        y2 = yvals[n]*yvals[n]
-        y2sum = y2+y2sum
-    return xzsum, xysum, xsum, ysum, zsum, x2sum, y2sum, yzsum
-
-def do_matrix_stuff(xzsum, xysum, xsum, ysum, zsum, x2sum, y2sum, yzsum, ringatoms):
-    ###################Matrix and vector used for least squares best fit plane
-    a=matrix([[x2sum, xysum, xsum],[xysum, y2sum, ysum],[xsum, ysum, len(ringatoms)]]) #3x3 matrix
-    b=matrix([[xzsum],[yzsum],[zsum]]) #3x1 matrix
-    try: coeffplane=a.I*b
-    except linalg.linalg.LinAlgError: coeffplane = matrix([[0.0],[0.0],[0.0]])
-    return coeffplane
+        atomtypes.append(atom_symbol)
+        cartesians.append([float(outlines[i].split()[3]), float(outlines[i].split()[4]), float(outlines[i].split()[5])])
+    return atomtypes, cartesians,stand_or
 
 def find_coeffplane(ringatoms, CARTESIANS,log):
     rotated = 0
-    xvals, yvals, zvals, xav, yav, zav = find_centroid(ringatoms,CARTESIANS)
-    #print xvals, yvals, zvals
-    xzsum, xysum, xsum, ysum, zsum, x2sum, y2sum, yzsum = get_squares_list(ringatoms, xvals, yvals, zvals)
-    if xsum == 0.0 and ysum == 0.0:
+    xyz = np.array([CARTESIANS[i] for i in ringatoms])
+    n,_ = xyz.shape
+    centroid = xyz.sum(axis=0)/n
+    x = xyz[:,0]
+    y = xyz[:,1]
+    z = xyz[:,2]
+
+    A = np.array([[np.sum(x**2), np.sum(x*y), np.sum(x)],
+                  [np.sum(x*y) , np.sum(y**2),np.sum(y)],
+                  [np.sum(x)   , np.sum(y)   ,    n    ]])
+    b = np.array([[np.sum(x*z)],
+                  [np.sum(y*z)],
+                  [np.sum(z)  ]])
+
+    if A[0,2] == 0.0 and A[1,2] == 0.0:
         rotated = 3
         log.write("x  Can't define a ring by points in a line")
-
-    if xsum == 0.0:
-        new_xvals = yvals
-        new_yvals = zvals
-        new_zvals = xvals
-        xzsum, xysum, xsum, ysum, zsum, x2sum, y2sum, yzsum = get_squares_list(ringatoms, xvals, yvals, zvals)
+    if A[0,2] == 0.0:
         rotated = 1
-    if ysum == 0.0:
-        new_xvals = zvals
-        new_yvals = xvals
-        new_zvals = yvals
-        xzsum, xysum, xsum, ysum, zsum, x2sum, y2sum, yzsum = get_squares_list(ringatoms, xvals, yvals, zvals)
+    if A[1,2] == 0.0:
         rotated = 2
 
-    coeffplane = do_matrix_stuff(xzsum, xysum, xsum, ysum, zsum, x2sum, y2sum, yzsum, ringatoms)
-    return coeffplane, xav, yav, zav, rotated
+    try: 
+        coeff = np.linalg.solve(A, b)
+    except LinAlgError: 
+        coeff = np.zeros(shape=(3,1))
 
-def update_coord(NATOMS,ATOMTYPES,CARTESIANS,args,log,name,w_dir_initial,type):
+    return coeff, centroid, rotated
+
+def update_coord(natoms,atomtypes,cartesians,args,log,name,w_dir_initial,type):
     #find the ring atoms in the File
-
-    filelines =  open(w_dir_initial+'/'+args.nics_atoms_file,'r').readlines()
+    with open(w_dir_initial+'/'+args.nics_atoms_file,'r') as F:
+        filelines = F.readlines()
     ringatoms = []
-    for line in (filelines):
+    for line in filelines:
         split_line = line.strip().split(',')
         if split_line[0] == name.strip().split()[0]:
             for i in range(1,len(split_line)):
                 ringatoms.append(int(split_line[i])-1)
             break
 
-    coeffplane, xav, yav, zav, rotated = find_coeffplane(ringatoms,CARTESIANS,log)
+    coeffplane, centroid, rotated = find_coeffplane(ringatoms,cartesians,log)
 
     xcoeff= coeffplane.tolist()[0][0]
     ycoeff= coeffplane.tolist()[1][0]
     cval= coeffplane.tolist()[2][0]
 
-    rawvector=array([xcoeff,ycoeff,-1]) #Need to make into unit vector
+    rawvector=np.array([xcoeff,ycoeff,-1]) #Need to make into unit vector
+    vector_norm = rawvector/np.linalg.norm(rawvector)
 
-    x=float(rawvector[0])
-    y=float(rawvector[1])
-    z=float(rawvector[2])
-    #print x,y,z
-    normfactor=1/(x**2+y**2+z**2)**0.5
-    x=x*normfactor; y=y*normfactor; z=z*normfactor
-    if z<0: z=-z;y=-y;x=-x #Sign flip if z is negative
-    #print "Unit vector:", x, y, z #The length of this vector is 1
-    #print "NICS 1 point", x+xav, y+yav, z+zav
+    if vector_norm[2] < 0: 
+        vector_norm = -vector_norm
+
     if rotated == 1:
         log.write("************ coordinated system was rotated! ***********")
-        old_x = z
-        old_y = x
-        old_z = y
-        if old_z<0: old_z=-old_z;old_y=-old_y;old_x=-old_x
-        log.write("Unit vector:", old_x, old_y, old_z)
-        x = old_x
-        y = old_y
-        z = old_z
+        if vector_norm[2] < 0: 
+            vector_norm = -vector_norm
+        log.write(f"Unit vector: {vector_norm}")
     if rotated == 2:
         log.write("************ coordinated system was rotated! ***********")
-        old_x = y
-        old_y = z
-        old_z = x
-        if old_z<0: old_z=-old_z;old_y=-old_y;old_x=-old_x
-        log.write("Unit vector:", old_x, old_y, old_z)
-        x = old_x
-        y = old_y
-        z = old_z
+        if vector_norm[2] < 0: 
+            vector_norm = -vector_norm
+        log.write(f"Unit vector: {vector_norm}")
     if rotated == 3:
         log.write("didn't I tell you this was a bad idea?")
-
+    
     if type=='write':
         spacing = float(args.nics_range)/float(args.nics_number)
         for w in range(-args.nics_number,args.nics_number+1):
             scalefactor = w*spacing
-            xscale=x*scalefactor
-            yscale=y*scalefactor
-            zscale=z*scalefactor
-            NATOMS += 1
-            ATOMTYPES.append("Bq")
-            CARTESIANS.append([xav+xscale, yav+yscale, zav+zscale])
+            vector_final = vector_norm*scalefactor + centroid
+            x,y,z = vector_final
+            natoms += 1
+            atomtypes.append("Bq")
+            cartesians.append([x,y,z])
 
-        return NATOMS,ATOMTYPES,CARTESIANS
+        return natoms,atomtypes,cartesians
+
     if type=='read':
-        return x,y,z,xav, yav, zav
+        return vector_norm,centroid
 
 def getSHIELDING(outlines,args,log):
-    NATOMS,stand_or = 0,0
+    NATOMS = 0
+    stand_or = 0
     ATOMTYPES, CARTESIANS,NMR  = [],[],[]
     #find NATOMS
     for i in range(0,len(outlines)):
@@ -203,15 +147,19 @@ def getSHIELDING(outlines,args,log):
 
 def calculate_nics_parameters(log_files,args,log,w_dir_initial,name_mol,lot,bs):
 
+    directory = Path(w_dir_initial)
+
     total_data = pd.DataFrame()
     dist_data = pd.DataFrame()
 
     for counter,log in enumerate(log_files):
         name = log.split('.log')[0]
 
-        outlines =  open(log,'r').readlines()
-        NMR, CARTESIANS,NATOMS,ATOMTYPES = getSHIELDING(outlines,args,log)
-        x,y,z,xav, yav, zav = update_coord(NATOMS,ATOMTYPES,CARTESIANS,args,log,name_mol,w_dir_initial,'read')
+        with open(log,'r') as F: 
+            outlines =  F.readlines()
+
+        NMR, cartesians,NATOMS,ATOMTYPES = getSHIELDING(outlines,args,log)
+        vector_norm,centroid = update_coord(NATOMS,ATOMTYPES,cartesians,args,log,name_mol,w_dir_initial,'read')
 
         total_data.at[counter,'Name'] = name_mol
         total_data.at[counter,'log'] = name
@@ -220,35 +168,33 @@ def calculate_nics_parameters(log_files,args,log,w_dir_initial,name_mol,lot,bs):
 
         for tensor in NMR:
             if tensor['elementID'] == "Bq":
-                xdist = CARTESIANS[(tensor['atom_index']-1)][0] - xav
-                ydist = CARTESIANS[(tensor['atom_index']-1)][1] - yav
-                zdist = CARTESIANS[(tensor['atom_index']-1)][2] - zav
-                dist = xdist*x + ydist*y + zdist*z
-
+                at_idx = tensor['atom_index']
+                
                 nics_iso = tensor['isotropic']*-1
-                nics_oop = (tensor['xx']*x+tensor['yy']*y+tensor['zz']*z)*-1
+                w = np.array([tensor['xx'],tensor['yy'],tensor['zz']])
+                nics_oop = -np.dot(w,vector_norm)
                 nics_ip = (nics_iso * 3 - nics_oop)/2
 
-                total_data.at[counter,'iso-Bq-'+str(tensor['atom_index'])] = nics_iso
-                total_data.at[counter,'oop-Bq-'+str(tensor['atom_index'])] = nics_oop
-                total_data.at[counter,'ip-Bq-'+str(tensor['atom_index'])] = nics_ip
+                total_data.at[counter,f'iso-Bq-{at_idx}'] = nics_iso
+                total_data.at[counter,f'oop-Bq-{at_idx}'] = nics_oop
+                total_data.at[counter,f'ip-Bq-{at_idx}' ] = nics_ip
 
-                dist_data.at[counter,str(tensor['atom_index'])] = dist
+                v = np.array(cartesians[(at_idx-1)])
+                dist = np.dot((v - centroid),vector_norm)
+                dist_data.at[counter,str(at_idx)] = dist
 
 
     #creating folder for all molecules to write geom parameter
+    
     if str(bs).find('/') > -1:
-        folder = w_dir_initial + '/QPRED/nics/all_confs_nics/'+str(lot)+'-'+str(bs).split('/')[0]
+        folder = directory / f'/QPRED/nics/all_confs_nics/{lot}-{bs.split("/")[0]}'
     else:
-        folder = w_dir_initial + '/QPRED/nics/all_confs_nics/'+str(lot)+'-'+str(bs)
-    try:
-        os.makedirs(folder)
-    except OSError:
-        if os.path.isdir(folder):
-            pass
+        folder = directory / f'/QPRED/nics/all_confs_nics/{lot}-{bs}'
 
-    total_data.to_csv(folder+'/'+name_mol+'-all-nics-data.csv',index=False)
-    dist_data.to_csv(folder+'/'+name_mol+'-all-nics-dist-data.csv',index=False)
+    folder.mkdir(parents=True,exist_ok=True)
+
+    total_data.to_csv(folder/f'{name_mol}-all-nics-data.csv',index=False)
+    dist_data.to_csv(folder/f'{name_mol}-all-nics-dist-data.csv',index=False)
 
 def calculate_boltz_for_nics(val,args,log,name,w_dir_fin,w_dir_initial,lot,bs):
 
@@ -264,7 +210,6 @@ def calculate_boltz_for_nics(val,args,log,name,w_dir_fin,w_dir_initial,lot,bs):
     else:
         destination = w_dir_initial+'/QPRED/nics/boltz/'+str(lot)+'-'+str(bs)
     move_file_from_folder(destination, os.getcwd(),'Goodvibes_'+name+'.dat')
-
 
 def calculate_avg_nics(val,args,log,name,w_dir_fin,w_dir_initial,lot,bs):
     if str(bs).find('/') > -1:
