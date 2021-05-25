@@ -131,9 +131,9 @@ def com_2_xyz_2_sdf(input,default_charge,start_point=None):
     # Create the 'xyz' file and/or get the total charge
     if extension != 'xyz':                                                      #  RAUL: Originally this pointed towards args.input, shouldn't it be to args.file?
         xyz,charge = get_charge_and_xyz_from_com(file)
-
+        xyz_txt = '\n'.join(xyz)
         with open(f'{filename}.xyz','w') as F: 
-            F.write(f"{len(xyz)}\n{filename}\n{'\n'.join(xyz)}\n")
+            F.write(f"{len(xyz)}\n{filename}\n{xyz_txt}\n")
     else:
         charge = default_charge
 
