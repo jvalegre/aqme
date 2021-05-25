@@ -140,7 +140,7 @@ def com_2_xyz_2_sdf(input,default_charge,start_point=None):
     xyz_2_sdf(f'{filename}.xyz')
 
     return charge
-def xyz_2_sdf(file,dir=None):
+def xyz_2_sdf(file,parent_dir=None):
     """
     Creates a .sdf file from a .xyz in the specified directory. If no directory
     is specified then the files are created in the current directory. 
@@ -152,13 +152,13 @@ def xyz_2_sdf(file,dir=None):
     dir : str or pathlib.Path, optional
         a path to the directory where the .xyz file is located
     """
-    if dir is None: 
-        dir = Path('')
+    if parent_dir is None: 
+        parent_dir = Path('')
     else:
-        dir = Path(dir)
-    mol = next(pybel.readfile('xyz',dir/file))
+        parent_dir = Path(parent_dir)
+    mol = next(pybel.readfile('xyz',parent_dir/file))
     ofile = Path(file).stem + '.sdf'
-    mol.write('sdf', dir/ofile)
+    mol.write('sdf', parent_dir/ofile)
 def get_charge_and_xyz_from_com(file):
     """
      Takes a .gjf or .com file and retrieves the coordinates of the atoms and the
