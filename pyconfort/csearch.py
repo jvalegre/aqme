@@ -316,7 +316,7 @@ def compute_confs(w_dir_initial, mol, name, args,i):
     pandas.Dataframe
         total_data
     """
-    csearch_dir = Path(w_dir_initial) / 'CSEARCH/'
+    csearch_dir = Path(w_dir_initial) / 'CSEARCH'
     dat_dir = csearch_dir / 'dat_files'
     dat_dir.mkdir(parents=True, exist_ok=True)
     
@@ -339,18 +339,25 @@ def compute_confs(w_dir_initial, mol, name, args,i):
                                   'linear',
                                   'trigonalplanar']
         if args.complex_type in accepted_complex_types:
-            mol_objects, count_metals = [],0
+            count_metals = 0
             for metal_idx_ind in args.metal_idx:
                 if metal_idx_ind is not None:
                     count_metals += 1
             if count_metals == 1:
                 os.chdir(w_dir_initial)
-                mol_objects_from_template, name_mol, coord_Map, alg_Map, mol_template = template_embed(mol,name,args,log)
-                for j,_ in enumerate(mol_objects_from_template):
-                    mol_objects.append([mol_objects_from_template[j],name_mol[j],coord_Map[j],alg_Map[j],mol_template[j]])
+                template_kwargs = dict() 
+                template_kwargs['complex_type'] = args.complex_type
+                template_kwargs['metal_idx'] = args.metal_idx
+                template_kwargs['maxsteps'] = args.opt_steps_RDKit
+                template_kwargs['heavyonly'] = args.heavyonly
+                template_kwargs['maxmatches'] = args.max_matches_RMSD
+                items = template_embed(mol,name,log,**template_kwargs)
+
                 total_data = creation_of_dup_csv(args.CSEARCH,args.CMIN)
-                for [mol_object, name_mol, coord_Map, alg_Map, mol_template] in mol_objects:
-                    data = conformer_generation(mol_object,name_mol,args,log,coord_Map,alg_Map,mol_template)
+                
+                for mol_obj, name_in, coord_map, alg_map, template in zip(*items):
+                    data = conformer_generation(mol_obj, name_in, args, log,
+                                                coord_map, alg_map, template)
                     frames = [total_data, data]
                     total_data = pd.concat(frames,sort=True)
             else:
