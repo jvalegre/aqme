@@ -644,14 +644,15 @@ class Filter(object):
         A list of accepted items from the dataset.
     """
     def __init__(self,function=None):
-        if function is None: 
-            function = lambda x: True
-        self.function = function
+        if function is not None: 
+            self.function = function
+        elif getattr(self,'function',None) is None:
+            self.function = lambda x: True
         self.dataset = None
         self.outcomes = None
         self._discarded = None
         self._accepted = None
-    
+
     def add_dummy_parameter(self,function):
         """
         Adds a dummy parameter as the first positional parameter to a given 
@@ -965,3 +966,198 @@ class CompoundFilter(Filter):
         if self._accepted is None and self.dataset is not None: 
             self._accepted = self.accepted_from(-1)
         return self._accepted
+
+class RMSDFilter(Filter):
+    """
+    This filter inputs tuples of (molecule,cid). Each time a conformer that 
+    passes the filter is found it is added to the pool of conformers. 
+
+    Note: The RMSD calculation done by rdkit has the side effect of leaving the 
+    target conformer aligned to the probe conformer. 
+
+    Parameters
+    ----------
+    threshold : float
+        Minimum RMSD to accept a conformer. 
+    maxmatches : int 
+        maximum number of atoms should match in the alignment previous to the 
+        RMSD calculation. 
+    heavyonly : [type], optional
+        [description], by default True.
+    reverse : bool, optional
+        Reverses the threshold. If True, only conformers with an RMSD < threshold
+        will be accepted. by default False. 
+    is_rdkit : bool
+        If the conformers to compare have been generated with rdkit and the 
+        cid to use to access the conformer is the one provided instead of -1.
+        by default False.
+
+    """
+    def __init__(self,threshold,maxmatches,heavyonly=True,reverse=False,is_rdkit=False):
+        self.threshold = threshold
+        self.maxmatches = maxmatches 
+        self.heavyonly = heavyonly
+        self.pool = []
+        self.is_rdkit = is_rdkit
+        super().__init__(function=self.function)
+    
+    def set_initial_pool(self,pool,key=None):
+        """
+        Sets the initial pool of seen conformers.
+
+        Parameters
+        ----------
+        pool : list
+            A list of conformers ( or things convertible to conformers through 
+            the key function)  
+        key : function, optional
+            A function to convert each item in the pool to a conformer that 
+            can be subjected to the filter, by default None.
+            i.e 
+            >>> myconformers[cid<-int] = conformer 
+            >>> pool = [cid1,cid2,...,cidn]
+            >>> key = lambda x: myconformers[x]
+        """
+        if key is not None:
+            pool = list(map(key,pool)) 
+        self.pool = pool
+    def clean(self,also_pool=True):
+        """
+        Resets the state of the Filter removing all the information stored 
+        about the last application of the of the filter to a set of data. 
+
+        Parameters
+        ----------
+
+        also_pool : bool
+            If true it will also clear the initial pool of conformers. 
+        """
+        if also_pool: 
+            self.pool = []
+        super().__init__()
+    def function(self,item):
+        """
+        main function of the filter. inputs a tuple (molecule,cid) aligns it to 
+        all the previously stored molecules and if it passes the filter, stores 
+        it and returns True, otherwise returns False.
+        """
+        probe, cid_p = item
+        if item in self.pool:
+            return True
+        for target,cid_t in self.pool:
+            c1 = c2 = -1
+            if self.is_rdkit: 
+                probe,target = target,probe
+                c1,c2 = cid_t,cid_p
+            rms = get_conf_RMS(probe,target,c1,c2,self.heavyonly,self.maxmatches)
+            if self.reverse: 
+                reject = rms < self.threshold
+            else: 
+                reject = rms > self.threshold
+            if reject: 
+                return False
+        else:
+            self.pool.append(item)
+            return True
+class EnergyFilter(Filter):
+    """
+    This filter inputs tuples of (molecule,cid). Each time a conformer that 
+    passes the filter is found it is added to the pool of conformers. 
+
+    Note: The RMSD calculation done by rdkit has the side effect of leaving the 
+    target conformer aligned to the probe conformer. 
+
+    Parameters
+    ----------
+    threshold : float
+        Energy threshold in kcal/mol. 
+    mode : str, ['difference','window']
+        'difference' accepts all the conformers whose energy difference
+        with respect to all the previous conformers found is larger than 
+        the threshold. 
+        'window' accepts all the conformers whose energy difference with respect
+        to the lowest in energy is smaller than the threshold. 
+
+    Attributes
+    ----------
+    pool : list 
+        In window mode, it is the list of minima used to calculate the energy
+        window. If the lowest conformer was either set as initial pool or 
+        provided as the first item of the dataset the pool will remain of len=1.
+        In difference mode, it corresponds to all the conformers accepted.
+    """
+    def __init__(self,threshold,mode):
+        self.mode = mode # difference or window
+        self.threshold = threshold
+        self.pool = []
+        super().__init__()
+    
+    def set_initial_pool(self,pool,key=None):
+        """
+        Sets the initial pool of seen conformers.
+
+        Parameters
+        ----------
+        pool : list
+            A list of conformers ( or things convertible to conformers through 
+            the key function)  
+        key : function, optional
+            A function to convert each item in the pool to a conformer that 
+            can be subjected to the filter, by default None.
+            i.e 
+            >>> myconformers[cid<-int] = conformer 
+            >>> pool = [cid1,cid2,...,cidn]
+            >>> key = lambda x: myconformers[x]
+        """
+        if key is not None:
+            pool = list(map(key,pool)) 
+        self.pool = pool
+    def clean(self,also_pool=True):
+        """
+        Resets the state of the Filter removing all the information stored 
+        about the last application of the of the filter to a set of data. 
+
+        Parameters
+        ----------
+
+        also_pool : bool
+            If true it will also clear the initial pool of conformers. 
+        """
+        if also_pool: 
+            self.pool = []
+        super().__init__()
+    def function(self,item):
+        """
+        main function of the filter. Inputs a tuple (cid,energy) and accepts or 
+        rejects the item depending on the energy threshold and filter mode.
+        """
+        assert self.mode in ['window','difference']
+        if self.mode == 'window': 
+            out = self._window(item)
+        else: 
+            out = self._difference(item)
+        return out
+    def _difference(self,item): 
+        cid_p,energy_p = item
+        if item in self.pool:
+            return True
+        for cid_t,energy_t in self.pool:
+            if abs(energy_p - energy_t) < self.threshold: 
+                return False
+        else:
+            self.pool.append(item)
+            return True
+    def _window(self,item):
+        if not self.pool: # Ensure the pool has len = 1
+            self.pool.append(item)
+            return True
+        cid_p, energy_p = item
+        cid_t, energy_t = self.pool[-1]
+        reject = abs(energy_p - energy_t) < self.threshold
+        is_lowest = energy_p < energy_t
+        if reject: 
+            return False
+        if is_lowest:
+            self.pool.append(item)
+        return True
+

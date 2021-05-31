@@ -127,6 +127,28 @@ class TestFilter(unittest.TestCase):
         self.assertIsNone(A.accepted)
         self.assertIsNone(A.discarded)
 
+    def test_subclass_function(self): 
+        class A(Filter):
+            @staticmethod 
+            def function(x):
+                return False
+        class B(Filter):
+            def function(self,other):
+                return False
+        filter1 = A()
+        filter2 = B()
+        items = ['asdfqwerfg'[random.randint(0,9)] for _ in range(20)]
+        filter1.apply(items)
+        filter2.apply(items)
+        self.assertEqual(items,filter1.discarded)
+        self.assertEqual(items,filter2.discarded)
+        self.assertEqual([],filter1.accepted)
+        self.assertEqual([],filter2.accepted)
+        filter3 = Filter()
+        filter3.apply(items)
+        self.assertEqual([],filter3.discarded)
+        self.assertEqual(items,filter3.accepted)
+
 class TestCompoundFilter(unittest.TestCase):
     @classmethod
     def setUpClass(cls): 
