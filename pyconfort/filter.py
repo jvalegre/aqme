@@ -3,6 +3,7 @@
 #             used for filtering                    #
 #####################################################.
 from functools import partial
+from itertools import chain 
 
 from rdkit.Chem import AllChem as Chem
 from rdkit.Chem import rdMolTransforms, Descriptors
@@ -617,3 +618,350 @@ def RMSD_and_E_filter(outmols,selectedcids_initial,cenergy,args,dup_data,dup_dat
         dup_data.at[dup_data_idx, uniques_column] = len(selectedcids)
 
     return selectedcids
+
+# Base classes for the filters 
+
+class Filter(object): 
+    """
+    Base class for the definition of different types of filters. Defines the 
+    basic API that any Filter object should have. 
+
+    Parameters
+    ----------
+    function : Function
+        A single parameter function that returns true when the item should pass 
+        the filter and False otherwise. 
+
+    Attributes
+    ----------
+    dataset : list or None
+        A list containing a reference to all the elements that where filtered.
+    outcomes : list or None 
+        A list of booleans with the same order as the dataset elements. 
+    discarded : list or None
+        A list of discarded items from the dataset. 
+    accepted : list or None
+        A list of accepted items from the dataset.
+    """
+    def __init__(self,function=None):
+        if function is None: 
+            function = lambda x: True
+        self.function = function
+        self.dataset = None
+        self.outcomes = None
+        self._discarded = None
+        self._accepted = None
+    
+    def add_dummy_parameter(self,function):
+        """
+        Adds a dummy parameter as the first positional parameter to a given 
+        function and returns the wrapped function. 
+        """
+        def f(dummy,parameter):
+            return function(parameter)
+        return f 
+    
+    def apply(self,dataset,key=None,force=False):
+        """
+        Applies the filter to an iterable. Setting the 'dataset' and 'outcomes' 
+        attributes of the Filter in the process.
+
+        Parameters
+        ----------
+        dataset : iterable
+            Iterable that contains the items to run the filtering
+        key : [type], optional
+            [description], by default None
+        force : bool, optional
+            A True value will apply the filter to the dataset forcefully, 
+            overwriting any previous usage of the filter to other dataset.
+
+        Raises
+        ------
+        ValueError
+            If the dataset has been already applied to a dataset and the force 
+            keyword is set to 'false'
+        """
+        if self.dataset is not None and not force:
+            msg = "Attempting to apply a previously applied filter with force='false'"
+            raise ValueError(msg)
+        elif self.dataset is not None:
+            self.clean() 
+
+        if key is None: 
+            key = lambda x: x
+        self.dataset = list(dataset)
+        outcomes = self.calc_outcomes(dataset,key)
+        self.outcomes = tuple(outcomes)
+    def calc_outcomes(self,dataset,key):
+        """
+        Runs the filter on a dataset and returns the outcomes without storing
+        the values.
+
+        Parameters
+        ----------
+        dataset : iterable
+            Iterable that contains the items to run the filtering
+        key : function
+            [description]
+        """
+        return tuple(self.function(key(data)) for data in dataset)
+        
+    def extend(self,dataset,key=None):
+        """
+        Extends the current dataset with the new dataset and includes the 
+        outcomes of applying the filter to the new dataset.  
+
+        Parameters
+        ----------
+        dataset : iterable
+            Iterable that contains the items to run the filtering
+        key : [type], optional
+            [description], by default None
+        """
+        if key is None:
+            key = lambda x: x
+        new = list(dataset)
+        outcomes = self.calc_outcomes(new,key)
+        
+        self.dataset = self.dataset + new
+        self.outcomes = tuple(i for i in chain(self.outcomes,outcomes))
+        # And resets the cache of discarded and accepted 
+        self._accepted = None
+        self._discarded = None
+    def clean(self): 
+        """
+        Resets the state of the Filter removing all the information stored 
+        about the last application of the of the filter to a set of data. 
+        """
+        self.dataset = None
+        self.outcomes = None
+        self._discarded = None
+        self._accepted = None
+
+    @property
+    def discarded(self): 
+        if self._discarded is None and self.dataset is not None: 
+            self._discarded = [d for out,d in zip(self.outcomes,self.dataset) if not out]
+        return self._discarded
+
+    @property
+    def accepted(self):
+        if self._accepted is None and self.dataset is not None: 
+            self._accepted = [d for out,d in zip(self.outcomes,self.dataset) if out]
+        return self._accepted
+class CompoundFilter(Filter): 
+    """
+    Class used to apply several filters to a same dataset in a certain order and 
+    store the information about which ones were discarded in which filter.
+
+    Parameters
+    ----------
+    *filters : Filter
+        An undefined number of Filter objects
+
+    Attributes
+    ----------
+    filters : list
+        List of Filter objects in application order. 
+    dataset : list or None
+        A list containing a reference to all the elements that where filtered.
+    outcomes : list or None 
+        A list of booleans with the same order as the dataset elements. 
+    discarded : list or None
+        A list of discarded items from the dataset. 
+    accepted : list or None
+        A list of accepted items from the dataset.
+    """
+    def __init__(self,*filters):
+        self.filters = filters
+        super().__init__()
+
+    def insert(self, index, item):
+        """
+        Inserts a filter before the index position. 
+
+        Parameters
+        ----------
+        item : Filter
+            The filter object to include. 
+        """
+        self.filters.insert(index,item)
+    def pop(self, index=-1): 
+        """
+        Remove and return a filter at index (default last).
+        """
+        return self.filters.pop(index)
+
+    def apply(self,dataset,key=None,force=False):
+        """
+        Applies the filter to an iterable. Setting the 'dataset' and 'outcomes' 
+        attributes of each Filter in the process.
+
+        Parameters
+        ----------
+        dataset : iterable
+            Iterable that contains the items to run the filtering
+        key : [type], optional
+            [description], by default None
+        force : bool, optional
+            A True value will apply the filter to the dataset forcefully, 
+            overwriting any previous usage of the filter to other dataset.
+
+        Raises
+        ------
+        ValueError
+            If the dataset has been already applied to a dataset and the force 
+            keyword is set to 'false'
+        """
+        if self.dataset is not None and not force:
+            msg = "Attempting to apply a previously applied filter with force='false'"
+            raise ValueError(msg)
+        elif any([f.dataset is not None for f in self.filters]) and not force: 
+            msg = "At least one of the filters has already been applied and force='false'"
+            raise ValueError(msg)
+        elif force:
+            self.clean() 
+
+        if key is None: 
+            key = lambda x: x
+
+        self.dataset = dataset
+        outcomes = self.calc_outcomes(dataset,key)
+
+        # Set the attributes for all the Filters
+        self.filters[0].dataset = dataset
+        self.filters[0].outcomes = outcomes[0]
+        out_old = outcomes[0]
+        for f,out in zip(self.filters[1:],outcomes[1:]): 
+            dataset_n = [d for i,d in zip(out_old,self.dataset) if i]
+            f.dataset = dataset_n
+            f.outcomes = out 
+            out_old = out
+
+        # Set the attributes for the current object
+        outcomes = self.homogenize_outcomes(outcomes)
+        
+        self.outcomes = outcomes
+
+    def calc_outcomes(self,dataset,key):
+        """
+        Runs the filter on a dataset and returns the outcomes without storing
+        the values.
+
+        Parameters
+        ----------
+        dataset : iterable
+            Iterable that contains the items to run the filtering
+        key : function
+            [description]
+        """
+        outcomes = []
+        dataset_old = dataset
+        #outcomes_old = (True,)*len(dataset)
+        for f in self.filters:
+            # Use the filter and get the dataset for the next filter
+            out = f.calc_outcomes(dataset_old,key=key)
+            dataset_old = [d for i,d in zip(out,dataset_old) if i]
+            outcomes.append(tuple(out))
+        return outcomes
+
+    def homogenize_outcomes(self,outcomes): 
+        """
+        Returns a list of tuples where all tuples are the same size. 
+
+        Parameters
+        ----------
+        outcomes : list
+            List of tuples with the outcomes of each of the filters.
+        n : int
+            size of the dataset
+
+        Returns 
+        -------
+        list 
+            list of the homogenized tuples. 
+        """
+        homogenized = []
+        outcomes_old = (True,)*len(outcomes[0])
+        for _,out in zip(self.filters,outcomes):
+            _iter = out.__iter__()
+            outcomes_new = [False if not i else next(_iter) for i in outcomes_old]
+            homogenized.append(tuple(outcomes_new))
+            outcomes_old = outcomes_new
+        return homogenized
+
+    def extend(self,dataset,key=None):
+        """
+        Extends the current dataset with the new dataset and includes the 
+        outcomes of applying the filter to the new dataset.  
+
+        Parameters
+        ----------
+        dataset : iterable
+            Iterable that contains the items to run the filtering
+        key : [type], optional
+            [description], by default None
+        """
+        if key is None:
+            key = lambda x: x
+        new = list(dataset)
+        
+        _outcomes = self.outcomes
+        outcomes = self.calc_outcomes(new,key)
+
+        # Set the attributes for the current object
+        self.dataset = self.dataset + new
+        
+        # reset the cache of the properties 
+        self._accepted = None
+        self._discarded = None
+        
+        # Set the attributes for all the Filters
+        self.filters[0].dataset = self.dataset
+        self.filters[0].outcomes = self.filters[0].outcomes + outcomes[0]
+        out_old = outcomes[0]
+        for f,out in zip(self.filters[1:],outcomes[1:]):
+            dataset_n = [d for i,d in zip(out_old,self.dataset) if i]
+            f.dataset = f.dataset + dataset_n
+            f.outcomes = f.outcomes + out
+            # reset the cache of the properties 
+            f._accepted = None
+            f._discarded = None
+        outcomes = self.homogenize_outcomes(outcomes)
+        self.outcomes = [out_old + out_new for out_old,out_new in zip(_outcomes,outcomes)]
+
+    def clean(self): 
+        """
+        Resets the state of the CompoundFilter removing all the information 
+        stored about the last application of the of the filter to a set of data.
+        It cleans all the component filters.  
+        """
+        super().clean()
+        for f in self.filters: 
+            f.clean()
+        
+
+    def accepted_from(self,index):
+        """
+        returns the list of accepted items at the specified filter.
+        """
+        return [d for out,d in zip(self.outcomes[index],self.dataset) if out]
+
+    def discarded_from(self,index):
+        """
+        returns the total list of discarded items after the specified filter.
+        """
+        return [d for out,d in zip(self.outcomes[index],self.dataset) if not out]
+
+    @Filter.discarded.getter
+    def discarded(self): 
+        if self._discarded is None and self.dataset is not None: 
+            self._discarded = self.discarded_from(-1)
+        return self._discarded
+        
+    @Filter.accepted.getter
+    def accepted(self):
+        if self._accepted is None and self.dataset is not None: 
+            self._accepted = self.accepted_from(-1)
+        return self._accepted
