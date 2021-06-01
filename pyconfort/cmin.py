@@ -3,6 +3,7 @@
 #               used in conformer minimization      #
 #####################################################.
 
+from functools import total_ordering
 import os
 import sys
 import numpy as np
@@ -10,7 +11,7 @@ from rdkit.Chem import AllChem as Chem
 from rdkit.Chem.PropertyMol import PropertyMol
 from rdkit.Geometry import Point3D
 from pyconfort.qprep_gaussian import write_confs
-from pyconfort.filter import (ewin_filter, pre_E_filter, RMSD_and_E_filter)
+from pyconfort.filter import (CompoundFilter, EnergyFilter, RMSDFilter, ewin_filter, pre_E_filter, RMSD_and_E_filter)
 from pyconfort.utils import set_metal_atomic_number
 
 hartree_to_kcal = 627.509
@@ -247,16 +248,44 @@ def mult_min(name, args, program,log,dup_data,dup_data_idx):
 
     log.write(f"\n\no  Applying filters to intial conformers after {program} minimization")
     # filter based on energy window ewin_csearch
-    sortedcids = ewin_filter(sorted_all_cids,cenergy,args,dup_data,dup_data_idx,log,program,args.ewin_csearch)
+    Ewindow_filter = EnergyFilter(args.ewin_csearch,'window')
+    Ediff_filter1 = EnergyFilter(args.initial_energy_threshold,'difference')
+    Ediff_filter2 = EnergyFilter(args.energy_threshold,'difference')
+    RMSD_filter = RMSDFilter(args.rms_threshold,args.max_matches_RMSD,args.heavyonly)
+    Ediff_RMSD = CompoundFilter(Ediff_filter2,RMSD_filter)
+
+    items = [(cid,energy,mol) for cid,energy,mol in zip(sorted_all_cids,cenergy,outmols)]
+    keys = [lambda x: (x[0],x[1]),
+            lambda x: (x[0],x[1]),
+            [lambda x: (x[0],x[1]),lambda x: (x[0],x[2])]]
+    total_filter = CompoundFilter(Ewindow_filter,Ediff_filter1,Ediff_RMSD)
+    total_filter.apply(items,keys=keys)
+    #sortedcids = ewin_filter(sorted_all_cids,cenergy,args,dup_data,dup_data_idx,log,program,args.ewin_csearch)
     # pre-filter based on energy only
-    selectedcids_initial = pre_E_filter(sortedcids,cenergy,dup_data,dup_data_idx,log,program,args.initial_energy_threshold,args.verbose)
+    #selectedcids_initial = pre_E_filter(sortedcids,cenergy,dup_data,dup_data_idx,log,program,args.initial_energy_threshold,args.verbose)
     # filter based on energy and RMSD
-    selectedcids = RMSD_and_E_filter(outmols,selectedcids_initial,cenergy,args,dup_data,dup_data_idx,log,program)
+    #selectedcids = RMSD_and_E_filter(outmols,selectedcids_initial,cenergy,args,dup_data,dup_data_idx,log,program)
+    
+    columns = ['energy-window',
+               'initial_energy_threshold',
+               'RMSD-and-energy-duplicates']
+    
+    program2name = {'rdkit': 'RDKit',
+                    'summ':'summ',
+                    'ani': 'ANI',
+                    'xtb': 'xTB'}
+    
+    prog = program2name[program]
+    for i,col in enumerate(columns):
+        duplicates = total_filter.discarded_from(i)
+        dup_data.at[dup_data_idx, f'{prog}-{col}'] = len(duplicates)
+    dup_data.at[dup_data_idx, f'{prog}-Unique-conformers'] = len(total_filter.accepted)
 
     if program == 'xtb':
-        dup_data.at[dup_data_idx, 'xTB-Initial-samples'] = len(inmols)
+        dup_data.at[dup_data_idx, f'{prog}-Initial-samples'] = len(inmols)
     if program == 'ani':
-        dup_data.at[dup_data_idx, 'ANI-Initial-samples'] = len(inmols)
+        dup_data.at[dup_data_idx, f'{prog}-Initial-samples'] = len(inmols)
+    selectedcids, cenergy, outmols = zip(*total_filter.accepted)
 
     # write the filtered, ordered conformers to external file
     write_confs(outmols, cenergy,selectedcids, name_mol, args, program,log)

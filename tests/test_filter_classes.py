@@ -174,7 +174,8 @@ class TestCompoundFilter(unittest.TestCase):
         A = Filter(f1) 
         B = Filter(f3)
         C = CompoundFilter(A,B)
-        test = C.calc_outcomes(self.dataset1,key=lambda x: x)
+        keys = [lambda x: x, lambda x:x ]
+        test = C.calc_outcomes(self.dataset1,keys)
         outA = tuple(i=='1' for i in '00000011111111111111')
         outB = tuple(i=='1' for i in '11111111100000')
         self.assertEqual(test,[outA,outB])

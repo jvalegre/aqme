@@ -751,6 +751,7 @@ class Filter(object):
         if self._accepted is None and self.dataset is not None: 
             self._accepted = [d for out,d in zip(self.outcomes,self.dataset) if out]
         return self._accepted
+    
 class CompoundFilter(Filter): 
     """
     Class used to apply several filters to a same dataset in a certain order and 
@@ -794,7 +795,7 @@ class CompoundFilter(Filter):
         """
         return self.filters.pop(index)
 
-    def apply(self,dataset,key=None,force=False):
+    def apply(self,dataset,key=None,keys=None,force=False):
         """
         Applies the filter to an iterable. Setting the 'dataset' and 'outcomes' 
         attributes of each Filter in the process.
@@ -803,8 +804,12 @@ class CompoundFilter(Filter):
         ----------
         dataset : iterable
             Iterable that contains the items to run the filtering
-        key : [type], optional
-            [description], by default None
+        key : function, optional
+            If no function is provided it is assumed that the filter can process
+            each item in the dataset without any change, by default None.
+        keys : iterable, optional
+            Iterable of functions with the same length as the number of filters 
+            to provide different, by default None. Overrides the key argument.
         force : bool, optional
             A True value will apply the filter to the dataset forcefully, 
             overwriting any previous usage of the filter to other dataset.
@@ -824,11 +829,15 @@ class CompoundFilter(Filter):
         elif force:
             self.clean() 
 
-        if key is None: 
+        # Assign the keys iterable
+        if keys is None and key is None: 
             key = lambda x: x
+            keys = [key for _ in self.filters]
+        elif key is not None: 
+            keys = [key for _ in self.filters]
 
         self.dataset = dataset
-        outcomes = self.calc_outcomes(dataset,key)
+        outcomes = self.calc_outcomes(dataset,keys)
 
         # Set the attributes for all the Filters
         self.filters[0].dataset = dataset
@@ -845,7 +854,7 @@ class CompoundFilter(Filter):
         
         self.outcomes = outcomes
 
-    def calc_outcomes(self,dataset,key):
+    def calc_outcomes(self,dataset,keys):
         """
         Runs the filter on a dataset and returns the outcomes without storing
         the values.
@@ -854,13 +863,13 @@ class CompoundFilter(Filter):
         ----------
         dataset : iterable
             Iterable that contains the items to run the filtering
-        key : function
-            [description]
+        keys : iterable
+            Iterable of functions that ensure proper input per each filter.
         """
         outcomes = []
         dataset_old = dataset
         #outcomes_old = (True,)*len(dataset)
-        for f in self.filters:
+        for f,key in zip(self.filters,keys):
             # Use the filter and get the dataset for the next filter
             out = f.calc_outcomes(dataset_old,key=key)
             dataset_old = [d for i,d in zip(out,dataset_old) if i]
@@ -892,7 +901,7 @@ class CompoundFilter(Filter):
             outcomes_old = outcomes_new
         return homogenized
 
-    def extend(self,dataset,key=None):
+    def extend(self,dataset,key=None,keys=None):
         """
         Extends the current dataset with the new dataset and includes the 
         outcomes of applying the filter to the new dataset.  
@@ -901,15 +910,24 @@ class CompoundFilter(Filter):
         ----------
         dataset : iterable
             Iterable that contains the items to run the filtering
-        key : [type], optional
-            [description], by default None
+        key : function, optional
+            If no function is provided it is assumed that the filter can process
+            each item in the dataset without any change, by default None.
+        keys : iterable, optional
+            Iterable of functions with the same length as the number of filters 
+            to provide different, by default None. Overrides the key argument.
         """
-        if key is None:
+        # Assign the keys iterable
+        if keys is None and key is None: 
             key = lambda x: x
+            keys = [key for _ in self.filters]
+        elif key is not None: 
+            keys = [key for _ in self.filters]
+
         new = list(dataset)
         
         _outcomes = self.outcomes
-        outcomes = self.calc_outcomes(new,key)
+        outcomes = self.calc_outcomes(new,keys)
 
         # Set the attributes for the current object
         self.dataset = self.dataset + new
@@ -1160,4 +1178,3 @@ class EnergyFilter(Filter):
         if is_lowest:
             self.pool.append(item)
         return True
-
