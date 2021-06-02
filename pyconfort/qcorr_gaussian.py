@@ -54,7 +54,7 @@ def new_com_file(com_type,w_dir_initial,log,new_gaussian_input_files,file,args,k
         elif com_type == 'analysis':
             type_gen = 'qcorr'
 
-        write_genecp(type_gen,fileout,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,bs_com,lot_com,bs_gcp_com,args,w_dir_initial,new_gaussian_input_files)
+        write_genecp(type_gen,fileout,ecp_list,ecp_genecp_atoms,bs_com,bs_gcp_com,args,w_dir_initial,new_gaussian_input_files)
 
     if args.sp == 'gaussian' and com_type == 'sp':
         # final line for SP
