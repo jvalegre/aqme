@@ -6,10 +6,11 @@ import glob
 import sys
 import os
 import time
-import pandas as pd
 import subprocess
 import yaml
 import concurrent.futures as futures
+from pathlib import Path
+import pandas as pd
 from progress.bar import IncrementalBar
 from rdkit.Chem import AllChem as Chem
 from pyconfort.csearch import (check_for_pieces, check_charge_smi, clean_args, 
@@ -247,43 +248,34 @@ def csearch_main(w_dir_initial,args,log_overall):
 
 
 def cmin_main(w_dir_initial,args,log_overall,dup_data):
-    try:
-        os.makedirs(w_dir_initial+'/CMIN/dat_files')
-    except OSError:
-        if os.path.isdir(w_dir_initial+'/CMIN/dat_files'):
-            pass
+    dat_folder = Path(w_dir_initial+'/CMIN/dat_files')
+    dat_folder.mkdir(exist_ok=True,parents=True)
     bar = IncrementalBar('o  Number of finished jobs from CMIN', max = len(dup_data))
     for dup_data_idx in range(len(dup_data)):
         start_time = time.time()
-        update_to_rdkit = dup_data.at[dup_data_idx,'update_to_rdkit']
+        #update_to_rdkit = dup_data.at[dup_data_idx,'update_to_rdkit']
         name = dup_data.at[dup_data_idx,'Molecule']
-        log = Logger(w_dir_initial+'/CMIN/dat_files/'+name, args.output_name)
+        log = Logger(dat_folder/name, args.output_name)
         if dup_data.at[dup_data_idx,'status'] != -1:
-            try:
-                if args.CMIN=='ani':
-                    min_suffix = 'ani'
-                elif args.CMIN=='xtb':
-                    min_suffix = 'xtb'
-                if args.CSEARCH=='rdkit':
-                    mult_min(name+'_'+'rdkit', args, min_suffix, log, dup_data, dup_data_idx)
-                elif args.CSEARCH=='summ' and not update_to_rdkit :
-                    mult_min(name+'_'+'summ', args, min_suffix, log, dup_data, dup_data_idx)
-                elif args.CSEARCH=='summ' and update_to_rdkit :
-                    mult_min(name+'_'+'summ', args, min_suffix, log, dup_data, dup_data_idx)
-                elif args.CSEARCH=='fullmonte' and not update_to_rdkit:
-                    mult_min(name+'_'+'fullmonte', args, min_suffix, log, dup_data, dup_data_idx)
-                elif args.CSEARCH=='fullmonte' and update_to_rdkit:
-                    mult_min(name+'_'+'fullmonte', args, min_suffix, log, dup_data, dup_data_idx)
+            if args.CMIN=='ani':
+                min_suffix = 'ani'
+            elif args.CMIN=='xtb':
+                min_suffix = 'xtb'
+            if args.CSEARCH in ['rdkit','summ','fullmonte']: 
+                fullname = f'{name}_{args.CSEARCH}'
+                try:
+                    mult_min(fullname, args, min_suffix, log, dup_data, dup_data_idx)
+                except:
+                    pass
                 dup_data.at[dup_data_idx, 'CMIN time (seconds)'] = round(time.time() - start_time,2)
-            except:
-                pass
         bar.next()
     bar.finish()
 
     # removing temporary files
-    temp_files = ['gfn2.out', 'xTB_opt.traj', 'ANI1_opt.traj', 'wbo', 'xtbrestart','ase.opt','xtb.opt','gfnff_topo']
+    temp_files = ['gfn2.out', 'xTB_opt.traj', 'ANI1_opt.traj', 
+                  'wbo', 'xtbrestart','ase.opt','xtb.opt','gfnff_topo']
     for file in temp_files:
-        if os.path.exists(file):
+        if Path(file).exists():
             os.remove(file)
 
     return dup_data
