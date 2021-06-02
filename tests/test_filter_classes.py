@@ -1,4 +1,3 @@
-from datetime import date
 import unittest
 import random
 from datetime import datetime

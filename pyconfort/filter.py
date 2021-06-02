@@ -1079,7 +1079,7 @@ class RMSDFilter(Filter):
             return True
 class EnergyFilter(Filter):
     """
-    This filter inputs tuples of (molecule,cid). Each time a conformer that 
+    This filter inputs energy values. Each time a conformer that 
     passes the filter is found it is added to the pool of conformers. 
 
     Note: The RMSD calculation done by rdkit has the side effect of leaving the 

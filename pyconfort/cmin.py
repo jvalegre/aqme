@@ -3,7 +3,7 @@
 #               used in conformer minimization      #
 #####################################################.
 
-from functools import total_ordering
+from operator import itemgetter
 import os
 import sys
 import numpy as np
@@ -11,7 +11,7 @@ from rdkit.Chem import AllChem as Chem
 from rdkit.Chem.PropertyMol import PropertyMol
 from rdkit.Geometry import Point3D
 from pyconfort.qprep_gaussian import write_confs
-from pyconfort.filter import (CompoundFilter, EnergyFilter, RMSDFilter, ewin_filter, pre_E_filter, RMSD_and_E_filter)
+from pyconfort.filter import CompoundFilter, EnergyFilter, RMSDFilter
 from pyconfort.utils import set_metal_atomic_number
 
 hartree_to_kcal = 627.509
@@ -161,6 +161,36 @@ def rdkit_sdf_read(name, args, log):
         sys.exit(-1)
     return inmols
 
+def filter_to_pandas(compfilter,dataframe,row,program):
+    """
+    Writes the results of a filter in a dataframe at the specified row.
+
+    Parameters
+    ----------
+    compfilter : CompoundFilter
+        A filter with a dataset != None. 
+    dataframe : pd.Dataframe
+        The dataframe where the results are to be added. 
+    row : int
+        row of the dataframe where the results are to be stored. 
+    program : str
+        program for the conformer search. ['rdkit','summ','ani','xtb']
+    """
+    columns = ['energy-window',
+               'initial_energy_threshold',
+               'RMSD-and-energy-duplicates']
+    
+    program2name = {'rdkit': 'RDKit',
+                    'summ':'summ',
+                    'ani': 'ANI',
+                    'xtb': 'xTB'}
+    
+    prog = program2name[program]
+    for i,col in enumerate(columns):
+        duplicates = compfilter.discarded_from(i)
+        dataframe.at[row, f'{prog}-{col}'] = len(duplicates)
+    dataframe.at[row, f'{prog}-Unique-conformers'] = len(compfilter.accepted)
+
 def mult_min(name, args, program,log,dup_data,dup_data_idx):
     """
     READ FILES FOR xTB AND ANI1 OPTIMIZATION, FILTER AND WRITING SDF FILES
@@ -251,13 +281,16 @@ def mult_min(name, args, program,log,dup_data,dup_data_idx):
     Ewindow_filter = EnergyFilter(args.ewin_csearch,'window')
     Ediff_filter1 = EnergyFilter(args.initial_energy_threshold,'difference')
     Ediff_filter2 = EnergyFilter(args.energy_threshold,'difference')
-    RMSD_filter = RMSDFilter(args.rms_threshold,args.max_matches_RMSD,args.heavyonly)
+    RMSD_filter = RMSDFilter(threshold=args.rms_threshold,
+                             maxmatches=args.max_matches_RMSD,
+                             heavyonly=args.heavyonly,
+                             is_rdkit=program=='rdkit')
     Ediff_RMSD = CompoundFilter(Ediff_filter2,RMSD_filter)
 
     items = [(cid,energy,mol) for cid,energy,mol in zip(sorted_all_cids,cenergy,outmols)]
-    keys = [lambda x: (x[0],x[1]),
-            lambda x: (x[0],x[1]),
-            [lambda x: (x[0],x[1]),lambda x: (x[0],x[2])]]
+    keys = [itemgetter(1),
+            itemgetter(1),
+            [itemgetter(1),itemgetter(0,2)]]
     total_filter = CompoundFilter(Ewindow_filter,Ediff_filter1,Ediff_RMSD)
     total_filter.apply(items,keys=keys)
     #sortedcids = ewin_filter(sorted_all_cids,cenergy,args,dup_data,dup_data_idx,log,program,args.ewin_csearch)
@@ -266,29 +299,17 @@ def mult_min(name, args, program,log,dup_data,dup_data_idx):
     # filter based on energy and RMSD
     #selectedcids = RMSD_and_E_filter(outmols,selectedcids_initial,cenergy,args,dup_data,dup_data_idx,log,program)
     
-    columns = ['energy-window',
-               'initial_energy_threshold',
-               'RMSD-and-energy-duplicates']
-    
-    program2name = {'rdkit': 'RDKit',
-                    'summ':'summ',
-                    'ani': 'ANI',
-                    'xtb': 'xTB'}
-    
-    prog = program2name[program]
-    for i,col in enumerate(columns):
-        duplicates = total_filter.discarded_from(i)
-        dup_data.at[dup_data_idx, f'{prog}-{col}'] = len(duplicates)
-    dup_data.at[dup_data_idx, f'{prog}-Unique-conformers'] = len(total_filter.accepted)
+    filter_to_pandas(total_filter,dup_data,dup_data_idx,program)
 
-    if program == 'xtb':
-        dup_data.at[dup_data_idx, f'{prog}-Initial-samples'] = len(inmols)
-    if program == 'ani':
-        dup_data.at[dup_data_idx, f'{prog}-Initial-samples'] = len(inmols)
+    if program == 'xtb': 
+        dup_data.at[dup_data_idx, 'xTB-Initial-samples'] = len(inmols)
+    elif program == 'ani':
+        dup_data.at[dup_data_idx, 'ANI-Initial-samples'] = len(inmols)
+
     selectedcids, cenergy, outmols = zip(*total_filter.accepted)
 
     # write the filtered, ordered conformers to external file
-    write_confs(outmols, cenergy,selectedcids, name_mol, args, program,log)
+    write_confs(outmols, cenergy, selectedcids, name_mol, args, program,log)
 
 ############# ASE  AND TORCH AND TORCHANI DEPENDENT FUNCTIONS ##################
 
@@ -298,8 +319,9 @@ log = 'something' # RAUL: When the Logger is refactored This has to be changed a
 try:
     import ase
 except (ModuleNotFoundError,AttributeError):
+    err_msg = 'ASE is not installed correctly - xTB and ANI are not available'
     log.write('\nx  ASE is not installed correctly - xTB and ANI are not available')
-    raise ModuleNotFoundError
+    raise ModuleNotFoundError(err_msg)
 else:
     import ase.optimize
     from ase.units import Hartree
@@ -307,8 +329,9 @@ else:
 try:
     import torch
 except (ModuleNotFoundError,AttributeError):
+    err_msg = 'TORCH is not installed correctly - xTB and ANI are not available'
     log.write('\nx  TORCH is not installed correctly - xTB and ANI are not available')
-    raise ModuleNotFoundError
+    raise ModuleNotFoundError(err_msg)
 else:
     os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
     DEVICE = torch.device('cpu')
