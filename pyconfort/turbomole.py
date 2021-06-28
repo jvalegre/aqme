@@ -187,7 +187,14 @@ class TurbomoleOutput(object):
         the 'out.cosmo' file.
         """
         file = self.folder / 'out.cosmo'
-        return file.exists()
+        if file.exists(): 
+            return True
+        # Check in the control file
+        regex = re.compile('cosmo') 
+        with open(self.folder/'control','r') as F: 
+            txt = F.read()
+        match = regex.findall(txt)
+        return bool(match)
     def calc_thermo(self,executable=None):
         """
         Runs the appropiate executable to calculate the thermochemistry to 
