@@ -4,6 +4,7 @@ import shutil
 import shlex
 import re
 from collections import namedtuple
+import glob
 from pathlib import Path
 
 # ensure a proper import of pybel for openbabel v2 and v3
@@ -112,14 +113,15 @@ class TurbomoleOutput(object):
         file = self.folder / 'ridft.out'
         with open(file,'r') as F: 
             lines = [line.strip() for line in F if line.strip()]
-        if 'ridft ended normally' in lines[-1]:
-            return 'converged'
-        
+
         for line in lines: 
             if 'ridft did not converge!' in line: 
                 return 'failed'
+        
+        if 'ridft ended normally' in lines[-1]:
+            return 'converged'
+        
         return 'running' 
-            
     def _guess_calculation_state_optfreq(self):
         """
         Guesses the current state of the calculation depending on the existence
@@ -428,39 +430,590 @@ class TurbomoleOutput(object):
         return self.energy + self._gibbs
 
 class TurbomoleInput(object):
-    def __init__(self):
-        pass
-        # geometry
-        # control file 
-        # basis file 
-        # auxbasis file
-        # coord file 
-        # mos file ? 
-    def write_files(self,folder=None):
+    """
+    Turbomole Input Generator class. This class provides a simplified interface 
+    for automating the usage of the 'define' command of Turbomole. For more 
+    details on the options check turbomole define's manual.
+
+    Parameters
+    ----------
+    folder : str
+        Valid path to the folder where the input is going to be generated.
+        If the folder does not exist it will be created. If parent folders 
+        do not exist it will raise an error.  
+    functional : str, optional
+        dft functional to use or 'hf' or 'hf-3c', by default 'TPSS'. Ensure that
+        the functional is written as in Turbomole. 
+    basis : str, optional
+        basis set to use for all atoms, by default 'def2-SVP'.
+    auxbasis : str, optional
+        auxiliar basis set, by default it attempts to use the same as the 
+        selected basis set.
+    dispersion : str, optional
+        Whether to include dft dispersion and which kind, by default 'off'. 
+    charge : int, optional
+        Formal Charge, by default 0
+    multiplicity : int, optional
+        Overall multiplicity 's','d','t' are also accepted as arguments but 
+        integer argument is preferred, by default 1
+    grid : str, optional
+        DFT integration grid, by default 'm4'
+    epsilon : float, optional
+        Dielectric constant of the cosmo solvation or 'gas' or 'infinity', 
+        by default 'gas'
+    maxcore : int, optional
+        Maximum memory per core in MB, by default 200
+    ricore : int, optional
+        Maximum memory per core in MB for the RI formalism, by default 200
+    disable_ired : bool, optional
+        If True it will not generate internal redundant coordinates, 
+        by default False
+    cavity : str, optional
+        Solvent cavity definition for cosmo, by default 'fine'
+    title : str, optional
+        title of the calculation, by default ''
+    """
+    def __init__(self,folder, functional='TPSS',basis='def2-SVP', 
+                 auxbasis=None,dispersion='off',charge=0,
+                 multiplicity=1,grid='m4',epsilon='gas',maxcore=200,
+                 ricore=200,disable_ired=False,cavity='fine',title=''):
+        self.folder = Path(folder)
+        self.folder
+        self.ofile = self.folder/f'{self.folder.stem}.sh' 
+        self.cwd = Path(os.path.abspath(os.getcwd()))
+
+        self.title = title
+
+        self.functional = functional
+        self.basis = basis
+        self.auxbasis = auxbasis
+        self.dispersion = dispersion
+        self.charge = charge
+        # initialize multiplicity
+        self.multiplicity = multiplicity
+        self.check_multiplicity()
+        self.grid = grid
+        self.epsilon = epsilon
+        self.maxcore = maxcore
+        self.ricore = ricore
+        self.disable_ired = disable_ired
+        self.cavity = cavity
+
+        self.atoms = []
+        self.check_atom_list()
+        self.check_auxbasis_availability()
+    
+    def __str__(self):
+        output = f'\nInformation for directory\n\n{self.folder}\n\n'
+        output += f'Functional: {self.functional}\n'
+        output += f'Basis set: {self.basis}\n'
+        output += f'Auxilary basis set: {self.auxbasis}\n'
+        if self.dispersion == 'on': 
+            disp = 'd3(0)'
+        else: 
+            disp = self.dispersion
+        output += f'Dispersion: {disp}\n'
+        output += f'Charge: {self.charge}\n'
+        output += f'Multiplicity: {self.multiplicity}\n'
+        output += f'ricore: {self.ricore}\n'
+        output += f'maxcore: {self.maxcore}\n'
+        output += f'Grid: {self.grid}\n'
+        #Infinity, gas or a number a.bcd
+        if not self.cavity :
+            output += f"COSMO settings: {self.epsilon} with {self.cavity}\n"
+        else :
+            output += f"COSMO settings: {self.epsilon}\n"
+
+        return output
+
+    # Initialization methods
+    def check_multiplicity(self):
         """
-        Writes and creates (If it does not exist) the input files in the 
-        specified folder. Otherwise it creates the files in the current working 
-        directory. 
+        Checks the 'multiplicity' attribute and ensures proper values for the 
+        'multiplicity', 'is_closed_shell' and 'unpaired_electrons' attributes. 
+        """
+        # Ensure that multiplicity is a integer
+        m = self.multiplicity
+        if m == 's': 
+            multiplicity = 1
+        elif m == 'd':
+            multiplicity = 2
+        elif m == 't': 
+            multiplicity = 3
+        else:
+            multiplicity = m
+        # Calculate check for restricted/unrestricted and number of unpaired 
+        # electrons
+        if multiplicity != 1:
+            is_closed_shell = False 
+            unpaired_electrons = multiplicity-1
+        else:
+            is_closed_shell = True
+            unpaired_electrons = 0
+        # Assign the new object attributes
+        self.multiplicity = multiplicity
+        self.is_closed_shell = is_closed_shell
+        self.unpaired_electrons = unpaired_electrons
+    def check_atom_list(self):
+        """
+        Gets a list of the different atoms present in the molecule in the 'atoms'
+        attribute.
+        """
+        coord_file = self.folder/'coord' 
+        if coord_file.exists():
+            mol = next(pybel.readfile('tmol',str(coord_file)))
+            lines = mol.write('xyz').split('\n')
+        else: 
+            xyzfiles = glob.glob(str(self.folder)+'/*.xyz')
+            if xyzfiles: 
+                with open(xyzfiles[0],'r') as F: 
+                    lines = F.read().split('\n')
+            else: 
+                return
+
+        atoms = set([line.strip().split()[0] for line in lines[2:] if line.strip()])
+        self.atoms = [element.lower() for element in list(atoms)]
+    def check_auxbasis_availability(self):
+        """
+        Checks availability of the auxiliar basis sets in the jbasen and jkbasen
+        directories in of turbomole. If the auxiliar basis set is not specified
+        it assumes that the auxiliar basis set = basis set. 
+
+        Raises
+        ------
+        ValueError
+            If a basis set for a certain set of atoms is not specified.
+        """
+        if self.auxbasis is None and self.basis == 'minix':
+            auxbasis = 'universal'
+        elif self.auxbasis is None:  
+            auxbasis = self.basis
+        else: 
+            auxbasis = self.auxbasis
+
+        turbodir = Path(os.environ['TURBODIR'])
+        self.use_jkbasis_as_jbasis = False
+        found_list  = []
+        for atom in self.atoms: 
+            jbasen = turbodir/f'jbasen/{atom}'
+            jkbasen = turbodir/f'jkbasen/{atom}'
+            basis_name = f'{atom} {auxbasis}'
+            found_jbasis = self.find_basis_in_file(basis_name,jbasen)
+            found_jkbasis = self.find_basis_in_file(basis_name,jkbasen)
+            found_list.append((atom,found_jbasis,found_jkbasis))
+       
+        errors = []
+        for atom,found_jbasis,found_jkbasis in found_list:
+            if not found_jbasis and not found_jkbasis:
+                errors.append((atom,auxbasis))
+            elif not found_jbasis:
+                self.use_jkbasis_as_jbasis = True
+
+        if errors:
+            msg = ','.join([f"'{atom} {basis}'" for atom,basis in errors])
+            raise ValueError(f'Basis sets [{msg}] are not found in jkbasen nor jbasen')
+    
+        self.auxbasis = auxbasis
+
+    @staticmethod
+    def find_basis_in_file(basis,file):
+        """
+        Attempts to find a basis set in the specified file. 
 
         Parameters
         ----------
-        folder : str, optional
-            A valid path to a folder. The folder may not exist, but its parents 
-            should exist, by default creates the files in the current directory.
+        basis : str
+            basis set in the format '[sym] [basis name]' where the symbol is 
+            lowercased. 
+        file : Path
+            Path to the file where the basis is to be searched. 
+
+        Returns
+        -------
+        bool
+            True if the basis is found within the file.
         """
-        pass
-
-    def write_coord_file(self): 
-        pass
+        assert file.exists()
+        with open(file,'r') as F: 
+            for line in F: 
+                if basis in line:
+                    return True        
+        return False
     
-    def write_basis_file(self):
-        pass
+    # Generation methods
+    def write_input_command(self,script):
+        """
+        Writes a file named 'input_command' with a line of text that contains 
+        the necessary options used for the generation of the input file. 
+        It is legacy code for input generation scripts.  
 
-    def write_auxbasis_file(self):
-        pass
+        Parameters
+        ----------
+        script : str
+            name of the python script used to generate the turbomole input. If 
+            none it uses this file's name. 
+        """
+        if script is None: 
+            script = __file__
+        options = [('f',self.functional),
+                   ('bs',self.basis),
+                   ('d',self.dispersion),
+                   ('c',self.charge),
+                   ('u',self.multiplicity),
+                   ('rm',self.ricore),
+                   ('m',self.maxcore),
+                   ('g',self.grid),
+                   ('s',self.epsilon)]
+        if not self.disable_ired: 
+            options.append(('ired',''))
+        if self.cavity == 'fine': 
+            options.append(('fine',''))
+        
+        input_str = f'#python {script} '
+        input_str += ' '.join([f'-{k} {val}' for k,val in options])
+        with open(self.folder/'input_command','w') as F: 
+            F.write(input_str)
+    def create_coord(self):
+        """
+        Ensures the existence of a 'coord' file. Uses pybel to transform from 
+        xyz to tmol format in case that a 'coord' file does not exist but a .xyz
+        does exist.
+        In case of several .xyz files (not recommended), it will use the first 
+        one in alphabetical order. 
 
-    def coord_file(self):
-        pass
+        Raises
+        ------
+        Run
+            If no xyz or coord file is found in the folder it will stop 
+            completely. 
+        """
+        coord_file = self.folder/'coord' 
+        if coord_file.exists():
+            return 
+        #print("File coord was not found in the folder.")
+        xyzfiles = glob.glob(str(self.folder)+'/*.xyz')
+        if xyzfiles:
+            #print("File coord will be generated from an .xyz-file.")
+            mol = next(pybel.readfile('xyz',xyzfiles[0]))
+            mol.write('tmol',str(self.folder/'coord'))
+        else:
+            msg = "There is no .xyz-file either in the folder. Exiting the script."
+            raise RuntimeError(msg)
     
-    def mos_file(self):
-        pass
+    # define's interfacing methods
+    def write_geometry_menu(self):
+        """
+        Encapsulates the interactions with 'define' related with the 
+        geometry menu and returns a string with those interactions.
+        """
+        output = 'a coord\n'         # Add coordinates file 'coord'
+        if not self.disable_ired:    # 
+            output += '*\nno\n'
+        else:
+            output += 'ired\n*\n'
+        return output
+    def write_atom_attr_menu(self):
+        """
+        Encapsulates the interactions with 'define' related with the 
+        Atom Attributes menu (Essentially, Isotope definition and Basis set 
+        definition) and returns a string with those interactions.
+        """
+        # TODO special treatment of different basis sets for different atoms.
+        # example for defining only for H:   b "h" def-SV(P)
+        return f'b all {self.basis}\n*\n'
+    def write_occupation_MO_menu(self):
+        """
+        Encapsulates the interactions with 'define' related with the 
+        Occupation and Molecular Orbitals menu and returns a string with those 
+        interactions.
+        """
+        output = ''
+        if 'cu' in self.atoms: 
+            # RAUL: Maybe there is an extra newline between eht and charge
+            output = f'eht\n\n\n{self.charge}\n'
+        else:
+            output = f'eht\n\n{self.charge}\n'
+
+        if not self.is_closed_shell and self.unpaired_electrons != 0:
+            output += f'n\nu {self.unpaired_electrons}\n*\n\n'
+        elif not self.is_closed_shell:
+            output += f'n\n{self.unpaired_electrons}\n*\n\n'
+        else:
+            output += f'y\n'
+
+        return output
+    
+    def write_dft_submenu(self):
+        """
+        Encapsulates the interactions with 'define' related with the 
+        DFT submenu within the General Menu and returns a string with those 
+        interactions.
+        """
+        if self.functional in ['hf','hf-3c']:
+            return ''
+        output = 'dft\n'                         # Enter the DFT menu
+        output += 'on\n'                         # Enable DFT
+        output += f'func {self.functional}\n'    # Set the functional
+        output += f'grid {self.grid}\n'          # Set the integration grid
+        output += f'\n'                          # End the DFT menu
+        return output
+    def write_auxbasis_submenu(self):
+        """
+        Encapsulates the interactions with 'define' related with the 
+        Auxiliary Basis sets submenu within the RI menu and returns a 
+        string with those interactions.
+        """
+        basis_definition = ''
+        if self.basis != self.auxbasis: 
+            for atom in self.atoms:
+                basis_definition += f'nick {atom} {self.auxbasis}\n'
+        basis_definition += f'b all {self.auxbasis}\n'
+        # TODO Check the comment on write_atom_attr_menu. 
+        return f'jbas\n{basis_definition}*\n'
+    def write_ri_submenu(self):
+        """
+        Encapsulates the interactions with 'define' related with the 
+        RI submenu within the General menu and returns a string with those 
+        interactions.
+        """
+        # TODO LEGACY CODE, this comment should be removed when we are 
+        # sure that it is definetly not usefull. 
+        ## hybrid_or_HF = ['b2-plyp','b3-lyp','tpssh','pw6b95',
+        ##                 'pbe0','m06-2x','bhlyp','hf','hf-3c']
+        ## is_hybrid_or_HF = self.functional in hybrid_or_HF
+
+        if self.use_jkbasis_as_jbasis:
+            output  = 'rijk\n'    # Enter the RI-JK-HF menu
+            output += 'on\n'      # Activate it
+            #output += f'm {self.ricore}\n'   # Set the maximum memory per core in MB
+            output += '\n'        # Exit the RI-JK-HF menu
+            return output
+
+        auxbasis_menu = self.write_auxbasis_submenu()
+        output  = 'ri\n'                 # Enter the RI menu
+        output += 'on\n'                 # Activate it 
+        output += f'm {self.ricore}\n'   # Set the maximum memory per core in MB
+        output += f'{auxbasis_menu}'     # Enter and exit the auxbasis submenu
+        output += '\n'                   # Exit the RI menu 
+        return output    
+    def write_multipole_menu(self):
+        """
+        Encapsulates the interactions with 'define' related with the 
+        Multipole submenu within the General menu and returns a string with 
+        those interactions.
+        """
+        output = 'marij\n'   # Enter the multipole RI menu
+        output += '\n'       # Accept defaults and exit
+        return output
+    def write_dispersion_menu(self):
+        """
+        Encapsulates the interactions with 'define' related with the 
+        Dispersion submenu within the General menu and returns a string with 
+        those interactions.
+        """
+        output = 'dsp\n'                    # Enter the dispersion menu
+        output += f'{self.dispersion}\n'    # Set the dispersion
+        output += '\n'                      # End the menu
+        return output
+    def write_ricc_menu(self):
+        """
+        Encapsulates the interactions with 'define' related with the 
+        RICC submenu within the General menu and returns a string with those 
+        interactions.
+        """
+        output = 'cc\n'                     # Enter the ricc menu
+        output += f'memory {self.maxcore}'  # Set the maximum memory per core
+        output += '*\n'                     # End the ricc menu
+        return f'cc\nmemory {self.maxcore}\n*\n'
+    def write_scf_menu(self):
+        """
+        Encapsulates the interactions with 'define' related with the 
+        SCF submenu within the General menu and returns a string with those 
+        interactions.
+        """
+        output  = 'scf\n'   # Enter the scf menu
+        output += 'iter\n'  # Select the max iterations property for editing
+        output += '300\n'   # Set it to 300 iterations
+        output += '\n'      # End the scf menu 
+        return output
+    def write_general_menu(self):
+        """
+        Encapsulates the interactions with 'define' related with the 
+        the General menu and centralizes all the interactions of its submenus. 
+        returns a string with all interactions.
+        """
+        dft_menu = self.write_dft_submenu()
+        ri_menu = self.write_ri_submenu()
+        multipole_menu = self.write_multipole_menu()
+        dispersion_menu = self.write_dispersion_menu()
+        ricc_menu = self.write_ricc_menu()
+        scf_menu = self.write_scf_menu()
+        
+        general_menu = ''
+        general_menu += dft_menu
+        general_menu += ri_menu
+        general_menu += multipole_menu
+        general_menu += dispersion_menu
+        general_menu += ricc_menu
+        general_menu += scf_menu
+        general_menu += '*\n'
+
+        return general_menu
+
+    def generate_cosmoprep_string(self):
+        """
+        Centralizes the generation of all the interactions with the 'cosmoprep'
+        command and returns them in the appropiate format as a single string.
+        """
+        if self.epsilon == 'gas': 
+            return ''                # No-solvation
+        output  = '\n'*12
+        output += 'r all b\n'
+        output += '*\n'
+        output += 'out.cosmo\n'
+        output += 'n\n'
+        output += '\n'
+        return output
+    def generate_define_string(self):
+        """
+        Centralizes the generation of all the interactions with the 'define'
+        command and returns them in the appropiate format as a single string. 
+        """
+        molecular_geom = self.write_geometry_menu()
+        atom_attrib = self.write_atom_attr_menu()
+        ocupation_MO = self.write_occupation_MO_menu()
+        general_menu = self.write_general_menu()
+
+        exec_str = f'\n{self.title}\n'
+        exec_str += f'{molecular_geom}'
+        exec_str += f'{atom_attrib}'
+        exec_str += f'{ocupation_MO}'
+        
+        exec_str += general_menu
+        return exec_str
+    
+    # Post-generation modification methods
+    def modify_generated_control_file(self):
+        """
+        Modifies the generated control file: 
+        - Adds a scftol of 1d-16
+        - Adds the cosmo_isorad keyword when needed
+        - Ensures that if the jkbasis were used, they are treated as jbasis and 
+          removes the rik keyword
+        - Ensures proper dispersion treatment with hf-3c.  
+        """
+        with open(self.folder/'control','r') as F:
+            txt = F.read()
+        
+        head = f'$scftol 1d-16\n'
+        if self.cavity == 'fine':
+            head += '$cosmo_isorad\n'
+        
+        txt = head + txt
+        
+        if self.use_jkbasis_as_jbasis: 
+            newtxt = txt.replace('jkbas','jbas')
+            lines = [line for line in newtxt.split('\n') if '$rik' not in line]
+            txt = '\n'.join(lines)
+
+        if self.functional == 'hf-3c': 
+            txt = txt.replace('disp3 bj','disp3 bj func hf-3c')
+        
+        with open(self.folder/'control','w') as F: 
+            F.write(txt)
+    def modify_generated_auxbasis_file(self):
+        """
+        Modifies the generated auxbasis file:
+        - If no jkbases were used, it does nothing
+        - Otherwise ensures that any jkbasis is treated as jbasis 
+        """
+        if not self.use_jkbasis_as_jbasis:
+            return
+        
+        with open(self.folder/'auxbasis','r') as F:
+            txt = F.read()
+
+        newtxt = txt.replace('jkbas','jbas')
+        
+        with open(self.folder/'auxbasis','w') as F: 
+            F.write(newtxt)
+    def modify_generated_files(self):
+        """
+        Applies custom post-modifications to generated files. Currently only 
+        the control and auxbasis files might be modified. 
+        """
+        self.modify_generated_control_file()
+        self.modify_generated_auxbasis_file()
+
+    # Main API
+    def generate(self):
+        """
+        Ensures the existence of the coord file, and generates the input 
+        interacting with 'define' and 'cosmoprep' commands. Requires that 
+        'define' and 'cosmoprep' are accessible at the current path.  
+        """
+        self.create_coord()
+        define_str = self.generate_define_string()
+        cosmo_str = self.generate_cosmoprep_string()
+        # the define command requires to be started in the folder of the 
+        # calculation
+        os.chdir(self.folder)
+        # Run the define and the cosmoprep processes
+        p_echo1 = subprocess.Popen(shlex.split(f'echo "{define_str}"'),
+                                              stdout=subprocess.PIPE)
+        p_define = subprocess.Popen(shlex.split('define'),
+                                    stdin=p_echo1.stdout, 
+                                    stdout=subprocess.PIPE,
+                                    stderr=subprocess.DEVNULL)
+        p_echo1.wait()
+        p_define.wait()
+        p_echo1.stdout.close()
+        p_define.stdout.close()
+
+        if cosmo_str:
+            p_echo2 = subprocess.Popen(shlex.split(f'echo "{cosmo_str}"'),
+                                                  stdout=subprocess.PIPE)
+            p_cosmoprep = subprocess.Popen(shlex.split('cosmoprep'),
+                                           stdin=p_echo2.stdout, 
+                                           stdout=subprocess.PIPE,
+                                           stderr=subprocess.DEVNULL)
+            p_echo2.wait()
+            p_echo2.stdout.close()
+            p_cosmoprep.wait()
+            p_cosmoprep.stdout.close()
+        
+        # After the define and cosmoprep are finished return to the original 
+        # directory 
+        os.chdir(self.cwd)
+
+        # Apply the post-modifications to the generated files (will look for the
+        # files in the folder, so no need to be in the same directory).
+        self.modify_generated_files()
+    
+
+def create_tmol_input_from_args(args):
+    solvents = dict()
+    solvents['dicloromethane'] = 4.32
+
+    folder = ''
+    
+    if 'cosmo' in args.solvent_model.lower():
+        epsilon = solvents[args.solvent_name]
+    elif 'gas' in args.solvent_model.lower():
+        epsilon='gas'
+
+    kwargs = dict()
+    kwargs['functional'] = args.level_of_theory[0]
+    kwargs['basis'] = args.basis_set[0]
+    kwargs['dispersion'] = args.empirical_dispersion
+    kwargs['charge'] = 0
+    kwargs['multiplicity'] = 1
+    kwargs['grid'] = 'm4'
+    kwargs['epsilon'] = epsilon
+    kwargs['maxcore'] = 200
+    kwargs['ricore'] = 200
+    kwargs['disable_ired'] = False
+    kwargs['cavity'] = 'fine'
+    kwargs['title'] = ''
+    tmol_input = TurbomoleInput(folder,**kwargs)
+    tmol_input.generate()
