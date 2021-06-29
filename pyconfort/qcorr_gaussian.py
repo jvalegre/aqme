@@ -94,6 +94,10 @@ def new_com_file(com_type,w_dir_initial,log,new_gaussian_input_files,file,args,k
 
 		# removes the initial com file
 		os.remove(file_name)
+	
+	if args.sp == 'turbomole' and com_type == 'sp':
+		# Do stuff
+		pass
 
 	#submitting the gaussian file on summit
 	if args.qsub:
@@ -454,7 +458,7 @@ def output_analyzer(duplicates,log_files,com_files, w_dir, w_dir_main,lot, bs, b
 
 		# adding in the NMR componenet only to the finished files after reading from normally finished log files
 		if TERMINATION == "normal" and IM_FREQS == 0 and passing_rules and passing_geom:
-			if args.sp == 'gaussian' or args.sp == 'orca' or args.nics:
+			if args.sp == 'gaussian' or args.sp == 'orca' or args.sp == 'turbomole' or args.nics:
 
 				#get coordinates
 				ATOMTYPES, CARTESIANS,stand_or = get_coords_normal(outlines, stand_or, NATOMS, possible_atoms, ATOMTYPES, CARTESIANS)
@@ -466,6 +470,10 @@ def output_analyzer(duplicates,log_files,com_files, w_dir, w_dir_main,lot, bs, b
 				elif args.sp == 'orca':
 					# creating new folder with new input gaussian files
 					single_point_input_files = w_dir_fin+'/../ORCA-SP_input_files'
+				
+				elif args.sp == 'turbomole':
+					# creating new folder with new input gaussian files
+					single_point_input_files = w_dir_fin+'/../TURBOMOLE-SP_input_files'
 
 				if args.nics:
 					nics_input_files = w_dir_fin+'/../G16-NICS_input_files'
@@ -477,6 +485,10 @@ def output_analyzer(duplicates,log_files,com_files, w_dir, w_dir_main,lot, bs, b
 				elif args.sp == 'orca':
 					ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp,orca_aux_section = check_for_gen_or_genecp(ATOMTYPES,args,'sp','orca')
 
+				elif args.sp == 'turbomole':
+					# Check for gen or genecp
+					pass
+
 				# this avoids problems related to genecp
 				if genecp == None:
 					basis_set_for_genecp = args.basis_set_sp
@@ -485,7 +497,7 @@ def output_analyzer(duplicates,log_files,com_files, w_dir, w_dir_main,lot, bs, b
 
 				# Sets the folder and find the log files to analyze
 				for lot_sp,bs_sp,bs_gcp_sp in zip(args.level_of_theory_sp,args.basis_set_sp,basis_set_for_genecp):
-					if args.sp == 'gaussian' or args.sp == 'orca':
+					if args.sp == 'gaussian' or args.sp == 'orca' or args.sp == 'turbomole':
 						if str(bs_sp).find('/') > -1:
 							log.write('-> Creating new single point files for {0} in {1}/{2}-{3}'.format(file,single_point_input_files,lot_sp,bs_sp.split('/')[0]))
 						else:
@@ -523,7 +535,7 @@ def output_analyzer(duplicates,log_files,com_files, w_dir, w_dir_main,lot, bs, b
 					if args.mult_sp != 'None':
 						MULT = args.mult_sp
 
-					if args.sp == 'gaussian' or args.sp == 'orca':
+					if args.sp == 'gaussian' or args.sp == 'orca' or args.sp == 'turbomole':
 						if not os.path.isdir(single_point_input_files+'/'+dir_name):
 							os.makedirs(single_point_input_files+'/'+dir_name)
 						os.chdir(single_point_input_files+'/'+dir_name)

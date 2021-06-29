@@ -306,6 +306,8 @@ def qprep_main(w_dir_initial,args,log):
 		g_dir = 'QMCALC/G16'
 	elif args.QPREP == 'orca':
 		g_dir = 'QMCALC/ORCA'
+	elif args.QPREP == 'turbomole':
+		g_dir = 'QMCALC/TURBOMOLE'
 
 	if len(conf_files) != 0:
 		#read in dup_data to get the overall charge of MOLECULES
@@ -621,6 +623,13 @@ def graph_main(args,log,w_dir_initial):
 						w_dir_sp = args.path + str(lot) + '-' + str(bs) +'/success/G16-SP_input_files'+'/'+str(lot_sp)+'-'+str(bs_sp)
 						sp_files = get_com_or_log_out_files('output',name)
 						graph(sdf_rdkit,sdf_xtb,sdf_ani,log_files,sp_files,args,log,lot,bs,lot_sp,bs_sp,name,w_dir_initial,w_dir_sp,w_dir,'g16')
+				if os.path.exists(args.path + str(lot) + '-' + str(bs) +'/success/TURBOMOLE-SP_input_files'):
+					for lot_sp,bs_sp,bs_gcp_sp in zip(args.level_of_theory_sp,args.basis_set_sp,args.basis_set_genecp_atoms_sp):
+						w_dir_sp = args.path + str(lot) + '-' + str(bs) +'/success/TURBOMOLE-SP_input_files'+'/'+str(lot_sp)+'-'+str(bs_sp.split('/')[0])
+						os.chdir(w_dir_sp)
+						sp_files = get_com_or_log_out_files('output',name)
+						os.chdir(w_dir)
+						graph(sdf_rdkit,sdf_xtb,sdf_ani,log_files,sp_files,args,log,lot,bs,lot_sp,bs_sp.split('/')[0],name,w_dir_initial,w_dir_sp,w_dir,'turbomole')
 				if os.path.exists(args.path + str(lot) + '-' + str(bs) +'/success/ORCA-SP_input_files'):
 					for lot_sp,bs_sp,bs_gcp_sp in zip(args.level_of_theory_sp,args.basis_set_sp,args.basis_set_genecp_atoms_sp):
 						w_dir_sp = args.path + str(lot) + '-' + str(bs) +'/success/ORCA-SP_input_files'+'/'+str(lot_sp)+'-'+str(bs_sp.split('/')[0])

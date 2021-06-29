@@ -80,7 +80,7 @@ def main():
 		os.chdir(w_dir_initial)
 
 	#QPREP
-	if args.QPREP=='gaussian' or args.QPREP=='orca':
+	if args.QPREP=='gaussian' or args.QPREP=='orca' or args.QPREP=='turbomole':
 		qprep_main(w_dir_initial,args,log_overall)
 		os.chdir(w_dir_initial)
 

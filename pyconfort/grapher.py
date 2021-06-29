@@ -11,6 +11,7 @@ from rdkit.Chem import AllChem as Chem
 import numpy as np
 from sklearn.metrics import mean_absolute_error
 import statistics as stats
+from pyconfort.turbomole import TurbomoleOutput
 
 ev_2_kcal_mol = 23.061 #ev to kcal/mol
 hartree_to_kcal = 627.509
@@ -280,19 +281,48 @@ def graph(sdf_rdkit,sdf_xtb,sdf_ani,log_files,sp_files,args,log,lot,bs,lot_sp,bs
 					sp_rdkit_dft.append([name,data_sp.scfenergies[0]*ev_2_kcal_mol])
 		if type=='orca':
 			for file in sp_files:
-				sp_lines = open(file,"r").readlines()
-				for i,line in enumerate(sp_lines):
-					if sp_lines[i].find('FINAL SINGLE POINT ENERGY') > -1:
-						if len(file.split('_ani_'+args.suffix_sp+'.out')) == 2 or len(file.split('_xtb_'+args.suffix_sp+'.out')) == 2:
-							if len(file.split('_ani_'+args.suffix_sp+'.out')) == 2:
-								name = file.split('_ani_'+args.suffix_sp+'.out')[0]
-								sp_ani_dft.append([name,float(sp_lines[i].split()[-1])*hartree_to_kcal])
-							if len(file.split('_xtb_'+args.suffix_sp+'.out')) == 2:
-								name = file.split('_xtb_'+args.suffix_sp+'.out')[0]
-								sp_xtb_dft.append([name,float(sp_lines[i].split()[-1])*hartree_to_kcal])
+				with open(file,"r") as F: 
+					sp_lines = F.readlines()
+				is_ani = '_ani_' in file
+				is_xtb = '_xtb_' in file
+				for line in sp_lines:
+					if 'FINAL SINGLE POINT ENERGY' in line:
+						if is_ani: 
+							spacer = f'_ani_{args.suffix_sp}.out'
+							list_to_append = sp_ani_dft
+						elif is_xtb: 
+							spacer = f'_xtb_{args.suffix_sp}.out'
+							list_to_append = sp_xtb_dft
 						else:
-							name = file.split('.out')[0]
-							sp_rdkit_dft.append([name,float(sp_lines[i].split()[-1])*hartree_to_kcal])
+							spacer = '.out'
+							list_to_append = sp_rdkit_dft
+						
+						items = file.split(spacer)
+						name = items[0]
+						energy = float(line.split()[-1])*hartree_to_kcal
+						list_to_append.append([name,energy])
+		if type=='turbomole':
+			for file in sp_files:
+				# In Turbomole a "file" is a folder
+				folder = file
+				is_ani = '_ani_' in file
+				is_xtb = '_xtb_' in file
+				tmol_out = TurbomoleOutput(folder)
+				if is_ani: 
+					spacer = f'_ani_{args.suffix_sp}.out'
+					list_to_append = sp_ani_dft
+				elif is_xtb: 
+					spacer = f'_xtb_{args.suffix_sp}.out'
+					list_to_append = sp_xtb_dft
+				else:
+					spacer = '.out'
+					list_to_append = sp_rdkit_dft
+				
+				items = file.split(spacer)
+				name = items[0]
+				energy = float(tmol_out.energy)*hartree_to_kcal
+				list_to_append.append([name,energy])
+
 	os.chdir(w_dir)
 
 

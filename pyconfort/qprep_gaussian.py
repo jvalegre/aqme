@@ -112,6 +112,8 @@ def rename_file_and_charge_chk_change(read_lines,file,args,charge_com):
 			rename_file_name = rename_file_name.strip()+'.com'
 		elif args.QPREP == 'orca':
 			rename_file_name = rename_file_name.strip()+'.inp'
+		elif args.QPREP == 'turbomole':
+			rename_file_name = rename_file_name.strip()+'.inp' # Probably Not needed? 
 	else:
 		rename_file_name = file
 
@@ -203,6 +205,10 @@ def check_for_gen_or_genecp(ATOMTYPES,args,type_of_check,program_gen):
 				ecp_genecp_atoms = True
 			if atomtype in gen_atoms_include:
 				ecp_gen_atoms = True
+		
+		if program_gen == 'turbomole': 
+			# Do stuff? 
+			pass
 
 	if ecp_gen_atoms:
 		genecp = 'gen'
@@ -397,7 +403,12 @@ def write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args, log, 
 				path_write_input_files = '/QMCALC/ORCA/' + str(lot) + '-' + str(bs).split('/')[0]
 			else:
 				path_write_input_files = '/QMCALC/ORCA/' + str(lot) + '-' + str(bs)
-
+		elif args.QPREP == 'turbomole':
+			if str(bs).find('/') > -1:
+				path_write_input_files = '/QMCALC/TURBOMOLE/' + str(lot) + '-' + str(bs).split('/')[0]
+			else:
+				path_write_input_files = '/QMCALC/TURBOMOLE/' + str(lot) + '-' + str(bs)
+		
 		os.chdir(w_dir_initial+path_write_input_files)
 
 		try:
@@ -465,6 +476,14 @@ def write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args, log, 
 
 					#create input file
 					orca_file_gen(read_lines,rename_file_name,bs,lot,genecp,args.aux_atoms_orca,args.aux_basis_set_genecp_atoms,args.aux_fit_genecp_atoms,charge_com,args.mult,orca_aux_section,args,args.set_input_line,args.solvent_model,args.solvent_name,args.cpcm_input,args.orca_scf_iters,args.mdci_orca,args.print_mini_orca)
+
+				if args.QPREP == 'turbomole': 
+
+					# define auxiliary atoms
+					## do stuff
+					# rename_file_name, whatever it means
+					# Create input file
+					pass
 
 				# submitting the input file on a HPC
 				if args.qsub:
