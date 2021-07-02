@@ -12,6 +12,7 @@ import pandas as pd
 import subprocess
 import yaml
 import concurrent.futures as futures
+from pathlib import Path
 from progress.bar import IncrementalBar
 from rdkit.Chem import AllChem as Chem
 from pyconfort.csearch import check_for_pieces, check_charge_smi, clean_args, compute_confs, com_2_xyz_2_sdf, mol_from_sdf_or_mol_or_mol2,creation_of_dup_csv,Logger
@@ -615,24 +616,30 @@ def graph_main(args,log,w_dir_initial):
 			# Sets the folder and find the log files to analyze
 			for lot,bs,bs_gcp in zip(args.level_of_theory, args.basis_set,args.basis_set_genecp_atoms):
 				#assign the path to the finished directory.
-				w_dir = args.path + str(lot) + '-' + str(bs) +'/success/output_files'
+				w_dir = f'{args.path}{lot}-{bs}/success/output_files'
 				os.chdir(w_dir)
 				log_files = get_com_or_log_out_files('output',name)
-				if os.path.exists(args.path + str(lot) + '-' + str(bs) +'/success/G16-SP_input_files'):
+				path_g16 = f'{args.path}{lot}-{bs}/success/G16-SP_input_files'
+				if os.path.exists(path_g16):
 					for lot_sp,bs_sp,bs_gcp_sp in zip(args.level_of_theory_sp,args.basis_set_sp,args.basis_set_genecp_atoms_sp):
-						w_dir_sp = args.path + str(lot) + '-' + str(bs) +'/success/G16-SP_input_files'+'/'+str(lot_sp)+'-'+str(bs_sp)
+						w_dir_sp = f'{path_g16}/{lot_sp}-{bs_sp}'
 						sp_files = get_com_or_log_out_files('output',name)
 						graph(sdf_rdkit,sdf_xtb,sdf_ani,log_files,sp_files,args,log,lot,bs,lot_sp,bs_sp,name,w_dir_initial,w_dir_sp,w_dir,'g16')
-				if os.path.exists(args.path + str(lot) + '-' + str(bs) +'/success/TURBOMOLE-SP_input_files'):
+				path_turbomole = f'{args.path}{lot}-{bs}/success/TURBOMOLE-SP_input_files'
+				if os.path.exists(path_turbomole):
 					for lot_sp,bs_sp,bs_gcp_sp in zip(args.level_of_theory_sp,args.basis_set_sp,args.basis_set_genecp_atoms_sp):
-						w_dir_sp = args.path + str(lot) + '-' + str(bs) +'/success/TURBOMOLE-SP_input_files'+'/'+str(lot_sp)+'-'+str(bs_sp.split('/')[0])
+						w_dir_sp = f"{path_turbomole}/{lot_sp}-{bs_sp.split('/')[0]}"
 						os.chdir(w_dir_sp)
-						sp_files = get_com_or_log_out_files('output',name)
+						sp_files = []
+						for path in Path(w_dir_sp).iterdir(): 
+							if path.is_dir() and '_SP' in path.stem: 
+								sp_files.append(path)
 						os.chdir(w_dir)
 						graph(sdf_rdkit,sdf_xtb,sdf_ani,log_files,sp_files,args,log,lot,bs,lot_sp,bs_sp.split('/')[0],name,w_dir_initial,w_dir_sp,w_dir,'turbomole')
-				if os.path.exists(args.path + str(lot) + '-' + str(bs) +'/success/ORCA-SP_input_files'):
+				path_orca = f'{args.path}{lot}-{bs}/success/ORCA-SP_input_files'
+				if os.path.exists(path_orca):
 					for lot_sp,bs_sp,bs_gcp_sp in zip(args.level_of_theory_sp,args.basis_set_sp,args.basis_set_genecp_atoms_sp):
-						w_dir_sp = args.path + str(lot) + '-' + str(bs) +'/success/ORCA-SP_input_files'+'/'+str(lot_sp)+'-'+str(bs_sp.split('/')[0])
+						w_dir_sp = f"{path_orca}/{lot_sp}-{bs_sp.split('/')[0]}"
 						os.chdir(w_dir_sp)
 						sp_files = get_com_or_log_out_files('output',name)
 						os.chdir(w_dir)
