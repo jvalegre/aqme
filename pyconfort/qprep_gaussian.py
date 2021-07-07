@@ -12,6 +12,7 @@ import sys
 import subprocess
 import glob
 import shutil
+import shlex
 import pandas as pd
 from rdkit.Chem import AllChem as Chem
 from pyconfort.argument_parser import possible_atoms
@@ -411,6 +412,9 @@ def write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args, log, 
 			com_files = glob.glob('{0}_*.com'.format(name))
 
 			for file in com_files:
+				#patch for Isotopes
+				cmd = shlex.split(r"sed -i 's/\([a-zA-Z]\{1,3\}\)[^(]*\([(]Iso\)/\1\2/g' "+file)
+				subprocess.call(cmd)
 				ecp_list,ecp_genecp_atoms,ecp_gen_atoms = [],False,False
 				read_lines = open(file,"r").readlines()
 				rename_file_name = rename_file_and_charge_chk_change(read_lines,file,args,charge_com)
