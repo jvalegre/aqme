@@ -10,13 +10,203 @@ import sys
 import subprocess
 import shutil
 import numpy as np
-from pyconfort.qprep_gaussian import input_route_line,check_for_gen_or_genecp,write_genecp,orca_file_gen
 from pyconfort.argument_parser import possible_atoms
 from pyconfort.filter import exp_rules_output,check_geom_filter
 from pyconfort.csearch import com_2_xyz_2_sdf
 from pyconfort.nics_conf import update_coord,get_coords_normal
 
 possible_atoms = possible_atoms()
+
+# Functions copied from qprep
+
+def input_route_line(args):
+	#definition of input_route lines
+	if args.set_input_line == 'None':
+		input_route = ''
+		if args.QPREP == 'gaussian' or args.QCORR == 'gaussian':
+			if args.frequencies:
+				input_route += 'freq=noraman'
+			if args.empirical_dispersion != 'None':
+				input_route += ' empiricaldispersion={0}'.format(args.empirical_dispersion)
+			if not args.calcfc:
+				input_route += ' opt=(maxcycles={0})'.format(args.max_cycle_opt)
+			else:
+				input_route += ' opt=(calcfc,maxcycles={0})'.format(args.max_cycle_opt)
+			if args.solvent_model != 'gas_phase':
+				input_route += ' scrf=({0},solvent={1})'.format(args.solvent_model,args.solvent_name)
+	else:
+		input_route = args.set_input_line
+
+	return input_route
+
+# DETECTION AND LISTING OF GEN/GENECP FROM COM FILES
+def check_for_gen_or_genecp(ATOMTYPES,args,type_of_check,program_gen):
+	# Options for genecp
+	ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp,orca_aux_section = [],False,False,None,False
+	if type_of_check == 'analysis':
+		genecp_atoms_include = args.genecp_atoms
+		gen_atoms_include = args.gen_atoms
+		aux_atoms_include = args.aux_atoms_orca
+
+	elif type_of_check == 'sp':
+		genecp_atoms_include = args.genecp_atoms_sp
+		gen_atoms_include = args.gen_atoms_sp
+		aux_atoms_include = args.aux_atoms_orca_sp
+
+	for _,atomtype in enumerate(ATOMTYPES):
+		if program_gen == 'orca':
+			if atomtype in aux_atoms_include:
+				orca_aux_section = True
+
+		if program_gen == 'gaussian':
+			if atomtype not in ecp_list and atomtype in possible_atoms:
+				ecp_list.append(atomtype)
+			if atomtype in genecp_atoms_include:
+				ecp_genecp_atoms = True
+			if atomtype in gen_atoms_include:
+				ecp_gen_atoms = True
+		
+		if program_gen == 'turbomole': 
+			# Do stuff? 
+			pass
+
+	if ecp_gen_atoms:
+		genecp = 'gen'
+	if ecp_genecp_atoms:
+		genecp = 'genecp'
+
+	return ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp,orca_aux_section
+
+# write genecp/gen part
+def write_genecp(type_gen,fileout,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,bs_com,lot_com,bs_gcp_com,args,w_dir_initial,new_gaussian_input_files):
+
+	for _,element_ecp in enumerate(ecp_list):
+		if type_gen == 'sp':
+			if element_ecp not in (args.genecp_atoms_sp or args.gen_atoms_sp):
+				fileout.write(element_ecp+' ')
+		else:
+			if element_ecp not in (args.genecp_atoms or args.gen_atoms):
+				fileout.write(element_ecp+' ')
+	fileout.write('0\n')
+	fileout.write(bs_com+'\n')
+	fileout.write('****\n')
+
+	if len(bs_gcp_com.split('.')) > 1:
+		if bs_gcp_com.split('.')[1] == ('txt' or 'yaml' or 'yml' or 'rtf'):
+			os.chdir(w_dir_initial)
+			read_lines = open(bs_gcp_com,"r").readlines()
+			os.chdir(new_gaussian_input_files)
+			#getting the title line
+			for line in read_lines:
+				fileout.write(line)
+			fileout.write('\n\n')
+	else:
+		for _,element_ecp in enumerate(ecp_list):
+			if type_gen == 'sp':
+				if element_ecp in (args.genecp_atoms_sp or args.gen_atoms_sp):
+					fileout.write(element_ecp+' ')
+			else:
+				if element_ecp in (args.genecp_atoms or args.gen_atoms):
+					fileout.write(element_ecp+' ')
+
+		fileout.write('0\n')
+		fileout.write(bs_gcp_com+'\n')
+		fileout.write('****\n\n')
+		if ecp_genecp_atoms:
+			for _,element_ecp in enumerate(ecp_list):
+				if type_gen == 'sp':
+					if element_ecp in args.genecp_atoms_sp:
+						fileout.write(element_ecp+' ')
+				else:
+					if element_ecp in args.genecp_atoms:
+						fileout.write(element_ecp+' ')
+
+def orca_file_gen(mol,rename_file_name,bs,lot,
+					ecp_list,bs_gcp,bs_gcp_fit,
+					orca_aux_section,memory,nprocs,
+					extra_input,solvation,solvent_orca,
+					cpcm_input_orca,scf_iters_orca,orca_mdci,print_mini):
+		
+	title = mol.title
+	lines = [f'# {title}',
+			f'# Memory per core']
+
+	# calculate memory for ORCA input
+	mem_orca = int(memory[:-2])
+	is_GB = 'gb' in memory.lower() 
+	if is_GB:
+		mem_orca *= 1000
+	else:
+		# assume MB
+		pass
+	lines.append(f'%maxcore {mem_orca}')
+	
+	lines.append('# Number of processors')
+	lines.append(f'%pal nprocs {nprocs} end')
+
+	commandline = f'! {bs} {lot}' 
+	if extra_input != 'None':
+		commandline += f' {extra_input}'
+	lines.append(commandline)
+
+	if orca_aux_section:
+		lines.append("%basis")
+
+		ecp_atoms = ' '.join([str(possible_atoms.index(atom)) for atom in ecp_list])
+		gen_orca_line_1 = f'NewGTO {ecp_atoms}'
+		gen_orca_line_2 = f'NewAuxCGTO {ecp_atoms}'
+
+		if len(bs_gcp) != 0:
+			gen_orca_line_1 += f' "{bs_gcp[0]}" end'
+		if len(bs_gcp_fit) != 0:
+			gen_orca_line_2 += f' "{bs_gcp_fit[0]}" end'
+
+		lines.append(gen_orca_line_1)
+		lines.append(gen_orca_line_2)
+		lines.append('end')
+
+	if solvation != 'gas_phase':
+		if solvation.lower() == 'smd':
+			lines.append('%cpcm') 
+			lines.append('smd true')
+			lines.append(f'SMDsolvent "{solvent_orca}"')
+		elif solvation.lower() == 'cpcm':
+			lines.append(f'! CPCM({solvent_orca})')
+			if cpcm_input_orca != 'None':
+				lines.append('%cpcm')
+				for cpcm_line in cpcm_input_orca:
+					lines.append(cpcm_line)
+		lines.append('end')
+	
+	lines.append(f'%scf maxiter {scf_iters_orca}')
+	lines.append(f'end')
+
+	if orca_mdci != 'None':
+		mdci_lines = ['% mdci',] + orca_mdci + ['end',]
+		lines.extend(mdci_lines)
+	
+	if print_mini:
+		mini_lines = [  '% output',
+						'printlevel mini',
+						'print[ P_SCFInfo ] 1',
+						'print[ P_SCFIterInfo ] 1',
+						'print[ P_OrbEn ] 0',
+						'print[ P_Cartesian ] 0',
+						'end',
+						'% elprop',
+						'Dipole False',
+						'end']
+		lines.extend(mini_lines)
+
+	# this part gets the coordinates from above
+	xyz_lines = mol.write('orcainp').split('\n')[3:]
+	lines.extend(xyz_lines)
+
+	# Write to file 
+	with open(rename_file_name,'w') as F: 
+		F.write('\n'.join(lines))
+
+### End of qprep functions 
 
 def moving_files(source, destination):
 	if not os.path.isdir(destination):
@@ -90,7 +280,7 @@ def new_com_file(com_type,w_dir_initial,log,new_gaussian_input_files,file,args,k
 		read_lines = open(file_name,"r").readlines()
 
 		#create input file
-		orca_file_gen(read_lines,file_name.split('.')[0]+'.inp',bs_com,lot_com,genecp,args.aux_atoms_orca_sp,args.aux_basis_set_genecp_atoms_sp,args.aux_fit_genecp_atoms_sp,CHARGE,MULT,orca_aux_section,args,args.set_input_line_sp,args.solvent_model_sp,args.solvent_name_sp,args.cpcm_input_sp,args.orca_scf_iters_sp,args.mdci_orca_sp,args.print_mini_orca_sp)
+		orca_file_gen(read_lines,file_name.split('.')[0]+'.inp',bs_com,lot_com,args.aux_atoms_orca_sp,args.aux_basis_set_genecp_atoms_sp,args.aux_fit_genecp_atoms_sp,CHARGE,MULT,orca_aux_section,args,args.set_input_line_sp,args.solvent_model_sp,args.solvent_name_sp,args.cpcm_input_sp,args.orca_scf_iters_sp,args.mdci_orca_sp,args.print_mini_orca_sp)
 
 		# removes the initial com file
 		os.remove(file_name)

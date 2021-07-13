@@ -444,11 +444,13 @@ class TurbomoleInput(object):
     functional : str, optional
         dft functional to use or 'hf' or 'hf-3c', by default 'TPSS'. Ensure that
         the functional is written as in Turbomole. 
-    basis : str, optional
+    basis : str or dict, optional
         basis set to use for all atoms, by default 'def2-SVP'.
-    auxbasis : str, optional
+    auxbasis : str or dict, optional
         auxiliar basis set, by default it attempts to use the same as the 
         selected basis set.
+    ecp : dict, optional
+        dictionary of atom -> ecp for the calculation.
     dispersion : str, optional
         Whether to include dft dispersion and which kind, by default 'off'. 
     charge : int, optional
@@ -474,11 +476,10 @@ class TurbomoleInput(object):
         title of the calculation, by default ''
     """
     def __init__(self,folder, functional='TPSS',basis='def2-SVP', 
-                 auxbasis=None,dispersion='off',charge=0,
+                 auxbasis=None,ecp=None,dispersion='off',charge=0,
                  multiplicity=1,grid='m4',epsilon='gas',maxcore=200,
-                 ricore=200,disable_ired=False,cavity='fine',title=''):
+                 ricore=200,disable_ired=False,cavity='none',title=''):
         self.folder = Path(folder)
-        self.folder
         self.ofile = self.folder/f'{self.folder.stem}.sh' 
         self.cwd = Path(os.path.abspath(os.getcwd()))
 
@@ -487,6 +488,7 @@ class TurbomoleInput(object):
         self.functional = functional
         self.basis = basis
         self.auxbasis = auxbasis
+        self.ecp = ecp
         self.dispersion = dispersion
         self.charge = charge
         # initialize multiplicity
@@ -541,7 +543,7 @@ class TurbomoleInput(object):
         elif m == 't': 
             multiplicity = 3
         else:
-            multiplicity = m
+            multiplicity = int(m)
         # Calculate check for restricted/unrestricted and number of unpaired 
         # electrons
         if multiplicity != 1:
@@ -584,20 +586,35 @@ class TurbomoleInput(object):
         ValueError
             If a basis set for a certain set of atoms is not specified.
         """
-        if self.auxbasis is None and self.basis == 'minix':
-            auxbasis = 'universal'
-        elif self.auxbasis is None:  
-            auxbasis = self.basis
-        else: 
-            auxbasis = self.auxbasis
+        if self.auxbasis is None and self.basis == 'minix':  
+            self.auxbasis = 'universal'
+        elif self.auxbasis is None: 
+            self.auxbasis = self.basis
 
+        if type(self.auxbasis) == str:
+            self._check_auxbasis_availability_all() 
+        else:
+            self._check_auxbasis_availability_per_atom()
+
+    def _check_auxbasis_availability_all(self):
+        """
+        Checks availability of the auxiliar basis sets in the jbasen and jkbasen
+        directories in of turbomole. If the auxiliar basis set is not specified
+        it assumes that the auxiliar basis set = basis set. Assumes both the 
+        basis and auxiliar basis are specified for "all" atoms. 
+
+        Raises
+        ------
+        ValueError
+            If a basis set for a certain set of atoms is not specified.
+        """
         turbodir = Path(os.environ['TURBODIR'])
         self.use_jkbasis_as_jbasis = False
         found_list  = []
         for atom in self.atoms: 
             jbasen = turbodir/f'jbasen/{atom}'
             jkbasen = turbodir/f'jkbasen/{atom}'
-            basis_name = f'{atom} {auxbasis}'
+            basis_name = f'{atom} {self.auxbasis}'
             found_jbasis = self.find_basis_in_file(basis_name,jbasen)
             found_jkbasis = self.find_basis_in_file(basis_name,jkbasen)
             found_list.append((atom,found_jbasis,found_jkbasis))
@@ -605,15 +622,50 @@ class TurbomoleInput(object):
         errors = []
         for atom,found_jbasis,found_jkbasis in found_list:
             if not found_jbasis and not found_jkbasis:
-                errors.append((atom,auxbasis))
+                errors.append((atom,self.auxbasis))
             elif not found_jbasis:
                 self.use_jkbasis_as_jbasis = True
 
         if errors:
             msg = ','.join([f"'{atom} {basis}'" for atom,basis in errors])
             raise ValueError(f'Basis sets [{msg}] are not found in jkbasen nor jbasen')
-    
-        self.auxbasis = auxbasis
+    def _check_auxbasis_availability_per_atom(self):
+        """
+        Checks availability of the auxiliar basis sets in the jbasen and jkbasen
+        directories in of turbomole. If the auxiliar basis set is not specified
+        it assumes that the auxiliar basis set = basis set. Assumes both the 
+        basis and auxiliar basis are specified per each atom as a dictionary. 
+
+        Raises
+        ------
+        ValueError
+            If a basis set for a certain set of atoms is not specified.
+        """
+        turbodir = Path(os.environ['TURBODIR'])
+        self.use_jkbasis_as_jbasis = False
+        found_list  = []
+        for atom,auxbasis in self.auxbasis.items():
+            sym = atom.lower()
+            jbasen = turbodir/f'jbasen/{sym}'
+            jkbasen = turbodir/f'jkbasen/{sym}'
+            basis_name = f'{sym} {auxbasis}'
+            found_jbasis = found_jkbasis = False
+            if jbasen.exists():
+                found_jbasis = self.find_basis_in_file(basis_name,jbasen)
+            if jkbasen.exists():
+                found_jkbasis = self.find_basis_in_file(basis_name,jkbasen)
+            found_list.append((sym,auxbasis,found_jbasis,found_jkbasis))
+       
+        errors = []
+        for sym,auxbasis,found_jbasis,found_jkbasis in found_list:
+            if not found_jbasis and not found_jkbasis:
+                errors.append((sym,auxbasis))
+            elif not found_jbasis:
+                self.use_jkbasis_as_jbasis = True
+
+        if errors:
+            msg = ','.join([f"'{atom} {basis}'" for atom,basis in errors])
+            raise ValueError(f'Basis sets [{msg}] are not found in jkbasen nor jbasen')
 
     @staticmethod
     def find_basis_in_file(basis,file):
@@ -718,9 +770,20 @@ class TurbomoleInput(object):
         Atom Attributes menu (Essentially, Isotope definition and Basis set 
         definition) and returns a string with those interactions.
         """
-        # TODO special treatment of different basis sets for different atoms.
-        # example for defining only for H:   b "h" def-SV(P)
-        return f'b all {self.basis}\n*\n'
+        if type(self.basis) == str: 
+            return f'b all {self.basis}\n*\n' # Asign the basis set to all atoms and exit
+        output = ''
+        for key,val in self.basis.items(): 
+            output += f'b "{key}" {val}\n'        # Add basis set per atom
+        if self.ecp is not None: 
+            ecps = [(k,val) for k,val in self.ecp.items()]
+            output += 'ecp\n'                     # Enter ecp menu
+            if ecps:
+                for key,val in ecps:
+                    output += f'"{key}" {val}\n'  # Add ecps
+            output += '\n'                        # Exit the ecp menu
+        output += '*\n'                           # Exit the atom attribute menu
+        return output
     def write_occupation_MO_menu(self):
         """
         Encapsulates the interactions with 'define' related with the 
@@ -763,12 +826,19 @@ class TurbomoleInput(object):
         Auxiliary Basis sets submenu within the RI menu and returns a 
         string with those interactions.
         """
-        basis_definition = ''
-        if self.basis != self.auxbasis: 
-            for atom in self.atoms:
-                basis_definition += f'nick {atom} {self.auxbasis}\n'
-        basis_definition += f'b all {self.auxbasis}\n'
-        # TODO Check the comment on write_atom_attr_menu. 
+        if type(self.auxbasis) == str: 
+            basis_definition = ''
+            if self.basis != self.auxbasis: 
+                for atom in self.atoms:
+                    basis_definition += f'nick {atom} {self.auxbasis}\n'
+            basis_definition += f'b all {self.auxbasis}\n'
+        else:
+            basis_definition = ''
+            if self.basis != self.auxbasis: 
+                for atom,auxbasis in self.basis.items():
+                    basis_definition += f'nick {atom} {auxbasis}\n'
+            for atom,auxbasis in self.basis.items():
+                basis_definition += f'b "{atom}" {auxbasis}\n'
         return f'jbas\n{basis_definition}*\n'
     def write_ri_submenu(self):
         """
@@ -890,6 +960,7 @@ class TurbomoleInput(object):
         exec_str += f'{ocupation_MO}'
         
         exec_str += general_menu
+        exec_str += '*\n'
         return exec_str
     
     # Post-generation modification methods
@@ -991,29 +1062,103 @@ class TurbomoleInput(object):
         self.modify_generated_files()
     
 
-def create_tmol_input_from_args(args):
-    solvents = dict()
-    solvents['dicloromethane'] = 4.32
+def read_basiset_file(filepath):
+    """
+    Reads a file containing information on basis sets, auxiliar basis sets and 
+    ECPs. The file follows the following format: 
+    $basis
+    sym1 basis1
+    sym2 basis2
+    ...
+    $auxbasis
+    sym1 auxbasis1
+    sym2 auxbasis2
+    ...
+    $ecp
+    sym1 ecp1
+    sym2 ecp2
+    ...
+    $end
 
-    folder = ''
+    Parameters
+    ----------
+    filepath : str or Path
+        a valid path to a file with the previously specified format.
+
+    Returns
+    -------
+    dict or None
+        basis, auxbasis, ecp
+    """
+    regex = r'\$([^\$]*)'
+    regex = re.compile(regex)
+    with open(filepath,'r') as F: 
+        txt = F.read()
+    keywords = dict()
+    kwblocks = regex.findall(txt)
+    for block in kwblocks: 
+        lines = [line for line in block.split('\n') if line]
+        kw_line = lines[0]
+        keyword = kw_line.split(' ')[0]
+        if keyword == 'end':
+            continue
+        keywords[keyword] = dict()
+        for line in lines[1:]:
+            sym,basis = line.split(' ',1)
+            keywords[keyword][sym.lower()] = basis.strip()
+    basis = keywords.get('basis',None)
+    auxbasis = keywords.get('auxbasis',None)
+    ecp = keywords.get('ecp',None)
+    return basis,auxbasis,ecp
+
+def create_tmol_input_opt_from_args(base_folder,args):
+    folder_name = ''
+    folder = f'{base_folder}/{folder_name}'
     
-    if 'cosmo' in args.solvent_model.lower():
-        epsilon = solvents[args.solvent_name]
-    elif 'gas' in args.solvent_model.lower():
-        epsilon='gas'
-
     kwargs = dict()
-    kwargs['functional'] = args.level_of_theory[0]
-    kwargs['basis'] = args.basis_set[0]
-    kwargs['dispersion'] = args.empirical_dispersion
+    kwargs['functional'] = args.tmfunctional
+    if args.tmbasis is not None: 
+        kwargs['basis'] = args.tmbasis
+    else: 
+        basis,auxbasis,ecp = read_basiset_file(args.tmbasisfile)
+        kwargs['basis'] = basis
+        kwargs['auxbasis'] = auxbasis
+        kwargs['ecp'] = ecp
+        
+    kwargs['dispersion'] = args.tmdispersion
     kwargs['charge'] = 0
     kwargs['multiplicity'] = 1
-    kwargs['grid'] = 'm4'
-    kwargs['epsilon'] = epsilon
-    kwargs['maxcore'] = 200
-    kwargs['ricore'] = 200
-    kwargs['disable_ired'] = False
-    kwargs['cavity'] = 'fine'
+    kwargs['grid'] = args.tmgrid
+    kwargs['epsilon'] = args.tmepsilon
+    kwargs['maxcore'] = args.tmmaxcore
+    kwargs['ricore'] = args.tmricore
+    kwargs['cavity'] = args.tmcavity
+    kwargs['title'] = ''
+    tmol_input = TurbomoleInput(folder,**kwargs)
+    tmol_input.generate()
+
+def create_tmol_input_SP_from_args(base_folder,args):
+    folder_name = ''
+    folder = f'{base_folder}/{folder_name}'
+    
+    kwargs = dict()
+    kwargs['functional'] = args.tmfunctionalsp
+    if args.tmbasissp is not None: 
+        kwargs['basis'] = args.tmbasissp
+    else: 
+        basis,auxbasis,ecp = read_basiset_file(args.tmbasisfilesp)
+        kwargs['basis'] = basis
+        kwargs['auxbasis'] = auxbasis
+        kwargs['ecp'] = ecp
+        
+    kwargs['dispersion'] = args.tmdispersion
+    kwargs['charge'] = 0
+    kwargs['multiplicity'] = 1
+    kwargs['grid'] = args.tmgrid
+    kwargs['epsilon'] = args.tmepsilon
+    kwargs['maxcore'] = args.tmmaxcore
+    kwargs['ricore'] = args.tmricore
+    kwargs['cavity'] = args.tmcavity
     kwargs['title'] = ''
     tmol_input = TurbomoleInput(folder,**kwargs)
     tmol_input.generate()

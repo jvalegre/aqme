@@ -18,7 +18,7 @@ from rdkit.Chem import AllChem as Chem
 from pyconfort.csearch import check_for_pieces, check_charge_smi, clean_args, compute_confs, com_2_xyz_2_sdf, mol_from_sdf_or_mol_or_mol2,creation_of_dup_csv,Logger
 from pyconfort.filter import exp_rules_output
 
-from pyconfort.qprep_gaussian import read_energies, write_gaussian_input_file, moving_files, convert_xyz_to_sdf, get_name_and_charge
+from pyconfort.utils import moving_files
 from pyconfort.qcorr_gaussian import output_analyzer, check_for_final_folder, dup_calculation
 
 from pyconfort.grapher import graph
@@ -275,102 +275,6 @@ def cmin_main(w_dir_initial,args,log_overall,dup_data):
 			os.remove(file)
 
 	return dup_data
-
-#writing gauss main
-def qprep_main(w_dir_initial,args,log):
-
-	if len(args.exp_rules) >= 1:
-		conf_files =  glob.glob('*_rules.sdf')
-	# define the SDF files to convert to COM Gaussian files
-	elif not args.CMIN=='xtb' and not args.CMIN=='ani' and args.CSEARCH=='rdkit':
-		conf_files =  glob.glob('*_rdkit.sdf')
-	elif not args.CMIN=='xtb' and not args.CMIN=='ani' and args.CSEARCH=='summ':
-		conf_files =  glob.glob('*_summ.sdf')
-	elif not args.CMIN=='xtb' and not args.CMIN=='ani' and args.CSEARCH=='fullmonte':
-		conf_files =  glob.glob('*_fullmonte.sdf')
-	elif args.CMIN=='xtb' and not args.CMIN=='ani':
-		conf_files =  glob.glob('*_xtb.sdf')
-	elif args.CMIN=='ani' and not args.CMIN=='xtb':
-		conf_files =  glob.glob('*_ani.sdf')
-	elif args.CMIN=='ani' and args.CMIN=='xtb':
-		conf_files =  glob.glob('*_ani.sdf') + glob.glob('*_xtb.sdf')
-	else:
-		conf_files =  glob.glob('*.sdf')
-
-	if args.com_from_xyz:
-		xyz_files =  glob.glob('*.xyz')
-		convert_xyz_to_sdf(xyz_files,args,log)
-		conf_files =  glob.glob('*.sdf')
-
-	# names for directories created
-	if args.QPREP == 'gaussian':
-		g_dir = 'QMCALC/G16'
-	elif args.QPREP == 'orca':
-		g_dir = 'QMCALC/ORCA'
-	elif args.QPREP == 'turbomole':
-		g_dir = 'QMCALC/TURBOMOLE'
-
-	if len(conf_files) != 0:
-		#read in dup_data to get the overall charge of MOLECULES
-		invalid_files = []
-		try:
-			charge_data = pd.read_csv(w_dir_initial+'/CSEARCH/csv_files/'+args.input.split('.')[0]+'-CSEARCH-Data.csv', usecols=['Molecule','Overall charge'])
-		except:
-			charge_data = pd.DataFrame()
-			for i,conf_file in enumerate(conf_files):
-				try:
-					suppl = Chem.SDMolSupplier(conf_file, removeHs=False)
-				except OSError:
-					suppl = False
-				if suppl:
-					mol = suppl[0]
-					charge = mol.GetProp('Real charge')
-					charge_data.at[i,'Overall charge'] = charge
-				else:
-					invalid_files.append(conf_file)
-					charge_data.at[i,'Overall charge'] = 'Invalid'
-
-				name = get_name_and_charge(conf_file.split('.')[0],None)
-				charge_data.at[i,'Molecule'] = name
-
-		for lot,bs,bs_gcp in zip(args.level_of_theory, args.basis_set,args.basis_set_genecp_atoms):
-			# only create this directory if single point calculation is requested
-			if bs.find('**') > -1:
-				bs = bs.replace('**','(d,p)')
-			elif bs.find('*') > -1:
-				bs = bs.replace('*','(d)')
-
-			if str(bs).find('/') > -1:
-				folder = g_dir + '/' + str(lot) + '-' + str(bs).split('/')[0]
-			else:
-				folder = g_dir + '/' + str(lot) + '-' + str(bs)
-			log.write("\no  Preparing QM input files in {}".format(folder))
-
-			# this variable keeps trakc of folder creation
-			folder_error = False
-			try:
-				os.makedirs(folder)
-			except OSError:
-				if os.path.isdir(folder):
-					pass
-				else:
-					log.write('\nx  The QMCALC folder from QPREP could not be created, probably due to incompatible characters')
-					folder_error = True
-
-			# writing the com files
-			# check conf_file exists, parse energies and then write DFT input
-			for file in conf_files:
-				if file not in invalid_files:
-					if os.path.exists(file):
-						if args.verbose:
-							if not folder_error:
-								log.write("   -> Converting from {}".format(file))
-						energies = read_energies(file,log)
-						name = file.split('.')[0]
-
-						write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args, log, charge_data, w_dir_initial)
-	else:
-		log.write('\nx  No SDF files detected to convert to gaussian COM files')
 
 # moving files after compute and/or write_gauss
 def move_sdf_main(args):

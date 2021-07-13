@@ -17,7 +17,7 @@ from rdkit.Chem import rdMolTransforms, PropertyMol, rdDistGeom, rdMolAlign, Lip
 from rdkit.Geometry import Point3D
 from progress.bar import IncrementalBar
 import pyconfort
-from pyconfort.qprep_gaussian import write_confs
+from pyconfort.utils import write_confs
 from pyconfort.filter import filters,set_metal_atomic_number,ewin_filter,pre_E_filter,RMSD_and_E_filter
 from pyconfort.argument_parser import possible_atoms
 from pyconfort.tmbuild import template_embed

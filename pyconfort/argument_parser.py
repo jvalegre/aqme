@@ -73,6 +73,12 @@ def parser_args():
 	parser.add_argument("--nrot_fullmonte", action="store",default=3, help="Number of diherals to rotate for FULLMONTE (default 3) ", type=int)
 	parser.add_argument("--ang_fullmonte", action="store",default=30, help="Angle to rotate each diheral of for FULLMONTE (default 30)", type=float)
 
+	#QM calculations arguments
+	parser.add_argument("--basis_sets",default=[],nargs='*',help="list of basis sets names to be used for all atoms")
+	parser.add_argument("--basis_sets_sp",default=[], nargs='*',help="list of basis sets names to be used for all atoms in SP calculations")
+	parser.add_argument("--basisfiles",default=[], nargs='*', help="list of basissets files")
+	parser.add_argument("--basisfiles_sp",default=[], nargs='*', help="list of basissets files to be used in SP calculations")
+
 	#arguments for QPREP
 	parser.add_argument("--nprocs", help="Number of processors for the DFT calculations", default=24, type=int, dest="nprocs")
 	parser.add_argument("--mem", help="Memory for the DFT calculations (i) Gaussian: total memory; (ii) ORCA: memory per processor", default="96GB", type=str, dest="mem")
@@ -100,6 +106,19 @@ def parser_args():
 	parser.add_argument("--empirical_dispersion",  help="Type of dispersion in Gaussian", default="None", dest="empirical_dispersion", type=str)
 	parser.add_argument("--chk", action="store_true", default=False, help="Create .chk files for Gaussian")
 	parser.add_argument("--last_line_for_input",  help="Last input line for Gaussian", default="None", dest="last_line_for_input", type=str)
+
+	parser.add_argument('--tmfunctional',help="Turbomole functionals",type=str, nargs='*',default=['TPSS',])
+	parser.add_argument('--tmfunctionalsp',help="Turbomole functionals for SP",type=str, nargs='*',default=['TPSS',])
+	parser.add_argument('--tmbasis',help="Turbomole basis set for all atoms for the optimization.")
+	parser.add_argument('--tmbasisfile',help="Turbomole basis set file for the optimization.")
+	parser.add_argument('--tmbasissp',help="Turbomole basis set for all atoms for SP",nargs='*')
+	parser.add_argument('--tmbasisfilesp',help="Turbomole basis set files for SP",nargs='*')
+	parser.add_argument('--tmgrid',help="Turbomole integration grid", default='m4', choices=['1','2','3','4','5','6','7','m3','m4','m5'])
+	parser.add_argument('--tmdispersion',help="Turbomole dispersion",default='off',choices=['off','on','bj','d4'])
+	parser.add_argument('--tmepsilon',help="Turbomole dielectric constant for COSMO",default='gas')
+	parser.add_argument('--tmcavity',help="Turbomole solvent cavity for COSMO-RS", default='none')
+	parser.add_argument('--tmricore',help="Turbomole max RIcore memory in MB",default=200,type=int)
+	parser.add_argument('--tmmaxcore',help="Turbomole max per core memory in MB",default=200,type=int)
 
 	#other options for QPREP
 	parser.add_argument("--com_from_xyz", action="store_true", default=False, help="Create input files for Gaussian from an xyz file")
