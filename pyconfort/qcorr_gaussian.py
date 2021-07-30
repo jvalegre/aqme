@@ -4,20 +4,25 @@
 # 		  This file stores all the functions 	     #
 # 	   	    used in the LOG file analyzer	    	 #
 ######################################################.
-
 import os
+from pyconfort.mainf import creation_of_ana_csv
 import sys
 import subprocess
 import shutil
+from pathlib import Path
 import numpy as np
 import pandas as pd 
 from pyconfort.utils import periodic_table
 from pyconfort.filter import exp_rules_output,check_geom_filter
-from pyconfort.csearch import com_2_xyz_2_sdf
+from pyconfort.csearch import com_2_xyz_2_sdf, Logger
 from pyconfort.nics_conf import update_coord,get_coords_normal
 
 
-# Functions copied from qprep
+
+INPUT_SUFFIXES = ['com','gjf']
+OUTPUT_SUFFIXES = ['log','LOG','out','OUT','json']
+
+### Functions copied from qprep
 
 def input_route_line(args):
 	#definition of input_route lines
@@ -207,6 +212,39 @@ def orca_file_gen(mol,rename_file_name,bs,lot,
 		F.write('\n'.join(lines))
 
 ### End of qprep functions 
+
+### Functions copied from mainf
+#creation of csv for QCORR
+def creation_of_ana_csv(args):
+
+	columns_list = ['Total files', 'Normal termination', 'Imaginary frequencies', 
+					'SCF error', 'Basis set error', 'Other errors', 'Unfinished']
+	if args.dup:
+		columns_list.append('Duplicates')
+	if len(args.exp_rules) >= 1:
+		columns_list.append('Exp_rules filter')
+	if args.check_geom:
+		columns_list.append('Geometry changed')
+	ana_data = pd.DataFrame(columns = columns_list)
+
+	return ana_data
+#finding the file type to move for analysis
+def get_com_or_log_out_files(type,name):
+	files = []
+	if type =='output':
+		formats = ['*.log','*.LOG','*.out','*.OUT','*json']
+	elif type =='input':
+		formats =['*.com','*.gjf']
+	for _,format in enumerate(formats):
+		if name is None:
+			all_files = enumerate(glob.glob(format))
+		else:
+			all_files = enumerate(glob.glob(name+format))
+		for _,file in all_files:
+			if file not in files:
+				files.append(file)
+	return files
+### End of mainf functions
 
 def moving_files(source, destination):
 	if not os.path.isdir(destination):
@@ -769,6 +807,19 @@ def check_for_final_folder(w_dir):
 		w_dir = w_dir+'/input_files/run_'+str(num_com_folder)
 		return w_dir, num_com_folder
 
+def check_for_final_folderv2(w_dir):
+	base_folder = Path(w_dir)
+	inputs_folder = base_folder/'input_files'
+	if not inputs_folder.exists():
+		return w_dir, 1
+	folders = [item for item in inputs_folder.iterdir() if item.isdir() and 'run_' in item.stem]
+	get_number = lambda x: int(x.stem.rsplit('_',1)[1]) 
+	last_folder = sorted(folders,key=get_number)[-1]
+	last_number = get_number(last_folder)
+	return str(last_folder), last_number
+
+
+
 # CHECKING FOR DUPLICATES
 def dup_calculation(val, w_dir,w_dir_main, args, log,round_num):
 
@@ -802,3 +853,46 @@ def dup_calculation(val, w_dir,w_dir_main, args, log,round_num):
 		moving_files(source, destination)
 
 	return duplicates
+
+# main part of the analysis functions
+def qcorr_gaussian_main(duplicates,w_dir_initial,args,log):
+	# when you run analysis in a folder full of output files
+	qmcalc_folder = Path(f'{w_dir_initial}/QMCALC')
+	if not qmcalc_folder.exists():
+		w_dir_main = os.getcwd()
+		w_dir_fin = w_dir_main+'/success/output_files'
+		for lot,bs,bs_gcp in zip(args.level_of_theory, args.basis_set,args.basis_set_genecp_atoms):
+			if not os.path.isdir(w_dir_main+'/dat_files/'):
+				os.makedirs(w_dir_main+'/dat_files/')
+			w_dir,round_num = check_for_final_folder(w_dir_main)
+			os.chdir(w_dir)
+			log = Logger(w_dir_main+'/dat_files/pyCONFORT-QCORR-run_'+str(round_num), args.output_name)
+			ana_data = creation_of_ana_csv(args)
+			log.write("\no  Analyzing output files in {}\n".format(w_dir))
+			log_files = get_com_or_log_out_files('output',None)
+			if len(log_files) == 0:
+				log.write('x  There are no output files in this folder.')
+			com_files = get_com_or_log_out_files('input',None)
+			output_analyzer(duplicates,log_files, com_files, w_dir, w_dir_main, lot, bs, bs_gcp, args, w_dir_fin, w_dir_initial, log, ana_data, round_num)
+			os.chdir(w_dir_main)
+	# when you specify multiple levels of theory
+	else:
+		args.path = str(qmcalc_folder/'G16')
+		folders = [item for item in (qmcalc_folder/'G16').iterdir() if item.isdir()]
+		dat_folders = []
+		for folder in folders: 
+			dat_folder = folder/'dat_files'
+			dat_folder.mkdir(exist_ok=True)
+			last_run, number = check_for_final_folderv2(str(folder))
+			dat_file = dat_folder/f'pyCONFORT-QCORR-run_{number:02d}'
+			log = Logger(str(dat_file),args.output_name)
+			outputs_folder = folder/'success/output_files'
+			ana_data = creation_of_ana_csv(args)
+			log.write(f"\no  Analyzing output files in {last_run}\n")
+			is_output = lambda x: x.is_file() and x.suffix in OUTPUT_SUFFIXES
+			is_input = lambda x: x.is_file() and x.suffix in OUTPUT_SUFFIXES
+			outputs = [file for file in folder.iterdir() if is_output(file)]
+			inputs = [file for file in folder.iterdir() if is_input(file)]
+			output_analyzer(duplicates, outputs, inputs, w_dir, w_dir_main , 
+							lot, bs, bs_gcp, args, w_dir_fin, w_dir_initial, 
+							log, ana_data, round_num)

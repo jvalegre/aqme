@@ -19,7 +19,7 @@ from pyconfort.csearch import check_for_pieces, check_charge_smi, clean_args, co
 from pyconfort.filter import exp_rules_output
 
 from pyconfort.utils import moving_files
-from pyconfort.qcorr_gaussian import output_analyzer, check_for_final_folder, dup_calculation
+from pyconfort.qcorr_gaussian import check_for_final_folder, dup_calculation
 
 from pyconfort.grapher import graph
 from pyconfort.descp import calculate_parameters
@@ -55,20 +55,6 @@ def load_from_yaml(args,log):
 	except UnboundLocalError:
 		log.write("\no  The specified yaml file containing parameters was not found! Make sure that the valid params file is in the folder where you are running the code.\n")
 
-
-#creation of csv for QCORR
-def creation_of_ana_csv(args,duplicates):
-
-	columns_list = ['Total files', 'Normal termination', 'Imaginary frequencies', 'SCF error', 'Basis set error', 'Other errors', 'Unfinished']
-	if args.dup:
-		columns_list.append('Duplicates')
-	if len(args.exp_rules) >= 1:
-		columns_list.append('Exp_rules filter')
-	if args.check_geom:
-		columns_list.append('Geometry changed')
-	ana_data = pd.DataFrame(columns = columns_list)
-
-	return ana_data
 
 # main function to generate conformers
 def csearch_main(w_dir_initial,args,log_overall):
@@ -371,55 +357,6 @@ def get_com_or_log_out_files(type,name):
 			if file not in files:
 				files.append(file)
 	return files
-
-# main part of the analysis functions
-def qcorr_gaussian_main(duplicates,w_dir_initial,args,log):
-	# when you run analysis in a folder full of output files
-	if not os.path.exists(w_dir_initial+'/QMCALC'):
-		w_dir_main = os.getcwd()
-		w_dir_fin = w_dir_main+'/success/output_files'
-		for lot,bs,bs_gcp in zip(args.level_of_theory, args.basis_set,args.basis_set_genecp_atoms):
-			if not os.path.isdir(w_dir_main+'/dat_files/'):
-				os.makedirs(w_dir_main+'/dat_files/')
-			w_dir,round_num = check_for_final_folder(w_dir_main)
-			os.chdir(w_dir)
-			log = Logger(w_dir_main+'/dat_files/pyCONFORT-QCORR-run_'+str(round_num), args.output_name)
-			ana_data = creation_of_ana_csv(args,duplicates)
-			log.write("\no  Analyzing output files in {}\n".format(w_dir))
-			log_files = get_com_or_log_out_files('output',None)
-			if len(log_files) == 0:
-				log.write('x  There are no output files in this folder.')
-			com_files = get_com_or_log_out_files('input',None)
-			output_analyzer(duplicates,log_files, com_files, w_dir, w_dir_main, lot, bs, bs_gcp, args, w_dir_fin, w_dir_initial, log, ana_data, round_num)
-		os.chdir(w_dir_main)
-	# when you specify multiple levels of theory
-	else:
-		args.path = w_dir_initial+'/QMCALC/G16/'
-		# Sets the folder and find the log files to analyze
-		for lot,bs,bs_gcp in zip(args.level_of_theory, args.basis_set,args.basis_set_genecp_atoms):
-			#for main folder
-			if str(bs).find('/') > -1:
-				w_dir_main = args.path + str(lot) + '-' + str(bs).split('/')[0]
-			else:
-				w_dir_main = args.path + str(lot) + '-' + str(bs)
-			if not os.path.isdir(w_dir_main+'/dat_files/'):
-				os.makedirs(w_dir_main+'/dat_files/')
-			#check if New_Gaussian_Input_Files folder exists
-			w_dir,round_num = check_for_final_folder(w_dir_main)
-			log = Logger(w_dir_main+'/dat_files/pyCONFORT-QCORR-run_'+str(round_num), args.output_name)
-			#assign the path to the finished directory.
-			if str(bs).find('/') > -1:
-				w_dir_fin = args.path + str(lot) + '-' + str(bs).split('/')[0] +'/success/output_files'
-			else:
-				w_dir_fin = args.path + str(lot) + '-' + str(bs) +'/success/output_files'
-			os.chdir(w_dir)
-			ana_data = creation_of_ana_csv(args,duplicates)
-			log.write("\no  Analyzing output files in {}\n".format(w_dir))
-			log_files = get_com_or_log_out_files('output',None)
-			com_files = get_com_or_log_out_files('input',None)
-			output_analyzer(duplicates,log_files, com_files, w_dir, w_dir_main , lot, bs, bs_gcp, args, w_dir_fin, w_dir_initial, log, ana_data, round_num)
-		os.chdir(args.path)
-	os.chdir(w_dir_initial)
 
 #removing the duplicates
 def dup_main(args,log,w_dir_initial):
