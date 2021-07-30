@@ -28,8 +28,9 @@ from __future__ import print_function
 import os
 import time
 from pyconfort.argument_parser import parser_args
-from pyconfort.mainf import csearch_main, exp_rules_main, move_sdf_main, qcorr_gaussian_main,dup_main,graph_main,geom_par_main,nmr_main,energy_main,load_from_yaml,creation_of_ana_csv,dbstep_par_main,nics_par_main,cclib_main,cmin_main
-from pyconfort.qprep_gaussian import qprep_main
+from pyconfort.mainf import csearch_main, exp_rules_main, move_sdf_main,dup_main,graph_main,geom_par_main,nmr_main,energy_main,load_from_yaml,dbstep_par_main,nics_par_main,cclib_main,cmin_main
+from pyconfort.qm_io.qprep import main as qprep_main
+from pyconfort.qm_io.qcorr import main as qcorr_main
 from pyconfort.csearch import Logger
 
 def main():
@@ -105,7 +106,7 @@ def main():
 			duplicates = False
 
 		# main part of the output file analyzer for errors/imag freqs
-		qcorr_gaussian_main(duplicates,w_dir_initial,args,log_overall)
+		qcorr_main(duplicates,w_dir_initial,args,log_overall)
 		os.chdir(w_dir_initial)
 
 	#QPRED

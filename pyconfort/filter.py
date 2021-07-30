@@ -186,38 +186,6 @@ def exp_rules_output(mol,args,log,file,print_error_exp_rules,ob_compat,rdkit_com
 
 	return passing
 
-# COMPARES THE BOND LENGTHS BETWEEN AN INPUT AND AN OPTIMIZED OUTPUT FILES
-def check_geom_filter(mol,mol2,args):
-	passing_geom = True
-	mol_bonds = []
-	for atom in mol.GetAtoms():
-		for x in atom.GetNeighbors():
-			indiv_bond = [atom.GetIdx(),x.GetIdx()]
-			mol_bonds.append(indiv_bond)
-
-	# I need to get the only 3D conformer generated in that mol object for rdMolTransforms
-	mol_conf = mol.GetConformer(0)
-	mol_conf2 = mol2.GetConformer(0)
-	for bond in mol_bonds:
-		bond_length = rdMolTransforms.GetBondLength(mol_conf,bond[0],bond[1])
-		try:
-			bond_length2 = rdMolTransforms.GetBondLength(mol_conf2,bond[0],bond[1])
-		except RuntimeError:
-			passing_geom = False
-			break
-
-		if bond_length < bond_length2:
-			smaller_bond = bond_length
-			bigger_bond = bond_length2
-		else:
-			smaller_bond = bond_length2
-			bigger_bond = bond_length
-
-		if bigger_bond > args.length_criteria*smaller_bond:
-			passing_geom = False
-
-	return passing_geom
-
 # FILTER TO BE APPLIED FOR SMILES
 def filters(mol,args,log):
 	valid_structure = True

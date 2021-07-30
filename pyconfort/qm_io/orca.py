@@ -1,0 +1,2 @@
+class OrcaOutputFile(object):
+	pass
