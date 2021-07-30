@@ -10,12 +10,12 @@ import sys
 import subprocess
 import shutil
 import numpy as np
-from pyconfort.argument_parser import possible_atoms
+import pandas as pd 
+from pyconfort.utils import periodic_table
 from pyconfort.filter import exp_rules_output,check_geom_filter
 from pyconfort.csearch import com_2_xyz_2_sdf
 from pyconfort.nics_conf import update_coord,get_coords_normal
 
-possible_atoms = possible_atoms()
 
 # Functions copied from qprep
 
@@ -59,7 +59,7 @@ def check_for_gen_or_genecp(ATOMTYPES,args,type_of_check,program_gen):
 				orca_aux_section = True
 
 		if program_gen == 'gaussian':
-			if atomtype not in ecp_list and atomtype in possible_atoms:
+			if atomtype not in ecp_list and atomtype in periodic_table:
 				ecp_list.append(atomtype)
 			if atomtype in genecp_atoms_include:
 				ecp_genecp_atoms = True
@@ -152,7 +152,7 @@ def orca_file_gen(mol,rename_file_name,bs,lot,
 	if orca_aux_section:
 		lines.append("%basis")
 
-		ecp_atoms = ' '.join([str(possible_atoms.index(atom)) for atom in ecp_list])
+		ecp_atoms = ' '.join([str(periodic_table.index(atom)) for atom in ecp_list])
 		gen_orca_line_1 = f'NewGTO {ecp_atoms}'
 		gen_orca_line_2 = f'NewAuxCGTO {ecp_atoms}'
 
@@ -401,7 +401,7 @@ def get_geom_and_freq_for_normal(outlines, args, TERMINATION, NATOMS, FREQS, NOR
 	return TERMINATION, NATOMS, FREQS, NORMALMODE, IM_FREQS, READMASS, FORCECONST, nfreqs, freqs_so_far, rms, stop_rms, dist_rot_or, stand_or
 
 
-def get_coords_not_normal(outlines, stop_rms, stand_or, dist_rot_or, NATOMS, possible_atoms, ATOMTYPES, CARTESIANS):
+def get_coords_not_normal(outlines, stop_rms, stand_or, dist_rot_or, NATOMS, periodic_table, ATOMTYPES, CARTESIANS):
 	if stop_rms == 0:
 		last_line = len(outlines)
 	else:
@@ -420,7 +420,7 @@ def get_coords_not_normal(outlines, stop_rms, stand_or, dist_rot_or, NATOMS, pos
 			if outlines[i-1].find("-------") > -1:
 				dist_rot_or = i
 				stop_get_details_dis_rot += 1
-	ATOMTYPES, CARTESIANS,stand_or = get_coords_normal(outlines, stand_or, NATOMS, possible_atoms, ATOMTYPES, CARTESIANS)
+	ATOMTYPES, CARTESIANS,stand_or = get_coords_normal(outlines, stand_or, NATOMS, periodic_table, ATOMTYPES, CARTESIANS)
 	return ATOMTYPES, CARTESIANS, NATOMS,stand_or
 
 def fix_imag_freqs(NATOMS, CARTESIANS, args, FREQS, NORMALMODE):
@@ -579,11 +579,11 @@ def output_analyzer(duplicates,log_files,com_files, w_dir, w_dir_main,lot, bs, b
 
 		# Get the coordinates for jobs that finished well with and without imag. freqs
 		if TERMINATION == "normal" and IM_FREQS>0:
-			ATOMTYPES, CARTESIANS, stand_or = get_coords_normal(outlines, stand_or, NATOMS, possible_atoms, ATOMTYPES, CARTESIANS)
+			ATOMTYPES, CARTESIANS, stand_or = get_coords_normal(outlines, stand_or, NATOMS, periodic_table, ATOMTYPES, CARTESIANS)
 
 		# Get he coordinates for jobs that did not finished or finished with an error
 		if TERMINATION != "normal":
-			ATOMTYPES, CARTESIANS,NATOMS, stand_or = get_coords_not_normal(outlines, stop_rms, stand_or, dist_rot_or, NATOMS, possible_atoms, ATOMTYPES, CARTESIANS)
+			ATOMTYPES, CARTESIANS,NATOMS, stand_or = get_coords_not_normal(outlines, stop_rms, stand_or, dist_rot_or, NATOMS, periodic_table, ATOMTYPES, CARTESIANS)
 		# This part fixes imaginary freqs (if any)
 		if IM_FREQS > 0:
 			CARTESIANS = fix_imag_freqs(NATOMS, CARTESIANS, args, FREQS, NORMALMODE)
@@ -651,7 +651,7 @@ def output_analyzer(duplicates,log_files,com_files, w_dir, w_dir_main,lot, bs, b
 			if args.sp == 'gaussian' or args.sp == 'orca' or args.sp == 'turbomole' or args.nics:
 
 				#get coordinates
-				ATOMTYPES, CARTESIANS,stand_or = get_coords_normal(outlines, stand_or, NATOMS, possible_atoms, ATOMTYPES, CARTESIANS)
+				ATOMTYPES, CARTESIANS,stand_or = get_coords_normal(outlines, stand_or, NATOMS, periodic_table, ATOMTYPES, CARTESIANS)
 
 				if args.sp == 'gaussian':
 					# creating new folder with new input gaussian files

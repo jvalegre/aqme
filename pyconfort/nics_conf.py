@@ -9,15 +9,15 @@ from numpy import *
 import subprocess, sys, os, math
 from pyconfort.utils import moving_files
 import pandas as pd
-from pyconfort.argument_parser import possible_atoms
+from pyconfort.utils import periodic_table
 
-possible_atoms = possible_atoms()
 
-def get_coords_normal(outlines, stand_or, NATOMS, possible_atoms, ATOMTYPES, CARTESIANS):
+
+def get_coords_normal(outlines, stand_or, NATOMS, periodic_table, ATOMTYPES, CARTESIANS):
 	for i in range(stand_or+5,stand_or+5+NATOMS):
 		massno = int(outlines[i].split()[1])
-		if massno < len(possible_atoms):
-			atom_symbol = possible_atoms[massno]
+		if massno < len(periodic_table):
+			atom_symbol = periodic_table[massno]
 		else:
 			atom_symbol = "XX"
 		ATOMTYPES.append(atom_symbol)
@@ -178,7 +178,7 @@ def getSHIELDING(outlines,args,log):
 			NATOMS = i-stand_or-6
 			break
 
-	ATOMTYPES, CARTESIANS,stand_or = get_coords_normal(outlines, stand_or, NATOMS, possible_atoms, ATOMTYPES, CARTESIANS)
+	ATOMTYPES, CARTESIANS,stand_or = get_coords_normal(outlines, stand_or, NATOMS, periodic_table, ATOMTYPES, CARTESIANS)
 
 	NMR = []
 	for i in range(0,len(outlines)):

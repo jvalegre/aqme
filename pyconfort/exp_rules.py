@@ -1,5 +1,5 @@
 import pybel 
-from pyconfort.argument_parser import possible_atoms
+from pyconfort.utils import periodic_table
 
 
 
@@ -21,7 +21,7 @@ def apply_general_rule(rule,mol,offset=0.0):
 	except IndexError:
 		log.write('x  The exp_rules parameter(s) was not correctly defined, this filter will be turned off')
 		raise ValueError(f'rule "{rule}" is not properly defined')
-	atnums = [possible_atoms.index(sym) for sym in syms]
+	atnums = [periodic_table.index(sym) for sym in syms]
 	smarts = pybel.Smarts('[#{}]~[#{}]~[#{}]'.format(*atnums))
 	matches = smarts.findall(mol)
 	if len(matches) >= 2: 

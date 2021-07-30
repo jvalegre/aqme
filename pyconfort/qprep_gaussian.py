@@ -15,7 +15,7 @@ from itertools import groupby
 from pathlib import Path
 import pandas as pd
 import rdkit
-from pyconfort.argument_parser import possible_atoms
+from pyconfort.utils import periodic_table
 from pyconfort.turbomole import TurbomoleInput
 
 try:
@@ -23,7 +23,7 @@ try:
 except ImportError:
     from openbabel import pybel
 
-possible_atoms = possible_atoms()
+
 
 # Hotfixes
 def fix_obabel_isotopes(gjf_lines):
@@ -139,7 +139,7 @@ class BasisSet(object):
 			elif isinstance(molecule,pybel.Molecule):
 				atoms = [atom for atom in molecule.atoms]
 				atnums = [atom.OBAtom.GetAtomicNum() for atom in atoms]
-				syms = [possible_atoms[atnum] for atnum in atnums]
+				syms = [periodic_table[atnum] for atnum in atnums]
 			else:
 				raise ValueError(f'{molecule.__class__} is not a valid molecule object')
 			elements.update(syms)

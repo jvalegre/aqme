@@ -8,15 +8,15 @@
 from progress.bar import IncrementalBar
 from rdkit.Chem import AllChem as Chem
 from rdkit.Chem import rdMolTransforms, Descriptors
-from pyconfort.argument_parser import possible_atoms
+from pyconfort.utils import periodic_table
 
-possible_atoms = possible_atoms()
+
 
 def set_metal_atomic_number(mol,args):
 	for atom in mol.GetAtoms():
 		if atom.GetIdx() in args.metal_idx:
 			re_symbol = args.metal_sym[args.metal_idx.index(atom.GetIdx())]
-			atomic_number = possible_atoms.index(re_symbol)
+			atomic_number = periodic_table.index(re_symbol)
 			atom.SetAtomicNum(atomic_number)
 
 # RULES TO GET EXPERIMENTAL CONFORMERS
@@ -227,7 +227,7 @@ def filters(mol,args,log):
 		#if len(Chem.MolToSmiles(mol).split('.')) == 1:
 		for atom in mol.GetAtoms():
 			#Fourth filter: atoms outside the scope chosen in 'possible_atoms'
-			if atom.GetSymbol() not in possible_atoms:
+			if atom.GetSymbol() not in periodic_table:
 				valid_structure = False
 				if args.verbose:
 					log.write(" Exiting as atom isn't in atoms in the periodic table")
