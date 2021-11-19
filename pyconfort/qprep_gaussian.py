@@ -213,51 +213,36 @@ def check_for_gen_or_genecp(ATOMTYPES,args,type_of_check,program_gen):
 	return ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp,orca_aux_section
 
 # DETECTION OF GEN/GENECP FROM SDF FILES
-def get_genecp(file,args):
+def get_genecp(args):
 	genecp = 'None'
 
-	try:
-		#reading the sdf to check for I atom_symbol
-		suppl = Chem.SDMolSupplier(file, removeHs=False)
-		if len(suppl) != 0:
-			for atom in suppl[0].GetAtoms():
-				if atom.GetSymbol() in args.genecp_atoms:
-					genecp = 'genecp'
-					break
-				elif atom.GetSymbol() in args.gen_atoms:
-					genecp = 'gen'
-					break
-	except OSError:
-		outfile = open(file,"r")
-		outlines = outfile.readlines()
-		for _,line in enumerate(outlines):
-			if args.genecp_atoms:
-				for atom in args.genecp_atoms:
-					if line.find(atom)>-1:
-						genecp = 'genecp'
-						break
-			elif args.gen_atoms:
-				for atom in args.gen_atoms:
-					if line.find(atom)>-1:
-						genecp = 'gen'
-						break
-		outfile.close()
+	if len(args.genecp_atoms) > 0:
+		genecp = 'genecp'
+
+	if len(args.gen_atoms) > 0:
+		genecp = 'gen'
 
 	return genecp
 
 # write genecp/gen part
-def write_genecp(type_gen,fileout,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,bs_com,lot_com,bs_gcp_com,args,w_dir_initial,new_gaussian_input_files):
+def write_genecp(ATOMTYPES,type_gen,fileout,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,bs_com,lot_com,bs_gcp_com,args,w_dir_initial,new_gaussian_input_files):
 
+	ecp_not_used = 0
 	for _,element_ecp in enumerate(ecp_list):
-		if type_gen == 'sp':
-			if element_ecp not in (args.genecp_atoms_sp or args.gen_atoms_sp):
-				fileout.write(element_ecp+' ')
-		else:
-			if element_ecp not in (args.genecp_atoms or args.gen_atoms):
-				fileout.write(element_ecp+' ')
-	fileout.write('0\n')
-	fileout.write(bs_com+'\n')
-	fileout.write('****\n')
+		if element_ecp in ATOMTYPES and element_ecp != '':
+			if type_gen == 'sp':
+				if element_ecp not in (args.genecp_atoms_sp or args.gen_atoms_sp):
+					fileout.write(element_ecp+' ')
+					ecp_not_used += 1
+			else:
+				if element_ecp not in (args.genecp_atoms or args.gen_atoms):
+					fileout.write(element_ecp+' ')
+					ecp_not_used += 1
+
+	if ecp_not_used > 0:
+		fileout.write('0\n')
+		fileout.write(bs_com+'\n')
+		fileout.write('****\n')
 
 	if len(bs_gcp_com.split('.')) > 1:
 		if bs_gcp_com.split('.')[1] == ('txt' or 'yaml' or 'yml' or 'rtf'):
@@ -269,17 +254,25 @@ def write_genecp(type_gen,fileout,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms
 				fileout.write(line)
 			fileout.write('\n\n')
 	else:
+		ecp_used = 0
 		for _,element_ecp in enumerate(ecp_list):
 			if type_gen == 'sp':
 				if element_ecp in (args.genecp_atoms_sp or args.gen_atoms_sp):
 					fileout.write(element_ecp+' ')
+					ecp_used += 1
 			else:
 				if element_ecp in (args.genecp_atoms or args.gen_atoms):
 					fileout.write(element_ecp+' ')
+					ecp_used += 1
 
-		fileout.write('0\n')
-		fileout.write(bs_gcp_com+'\n')
-		fileout.write('****\n\n')
+		if ecp_used > 0:
+			fileout.write('0\n')
+			fileout.write(bs_gcp_com+'\n')
+			fileout.write('****\n\n')
+
+		else:
+			fileout.write('\n')
+
 		if ecp_genecp_atoms:
 			for _,element_ecp in enumerate(ecp_list):
 				if type_gen == 'sp':
