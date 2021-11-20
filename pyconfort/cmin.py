@@ -10,12 +10,12 @@ import numpy as np
 from rdkit.Chem import AllChem as Chem
 from rdkit.Chem.PropertyMol import PropertyMol
 from rdkit.Geometry import Point3D
+
 from pyconfort.qprep_gaussian import write_confs
 from pyconfort.filter import CompoundFilter, EnergyFilter, RMSDFilter
 from pyconfort.utils import set_metal_atomic_number
 
 hartree_to_kcal = 627.509
-
 
 def rules_get_charge(mol,args):
     """

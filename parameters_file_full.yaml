@@ -84,6 +84,26 @@ mdci_orca : ['Density None'] # %mdci section in ORCA. Format: ['LINE1','LINE2',e
 print_mini_orca : True # Option to print 'mini' (reduced outputs) in ORCA
 aux_atoms_orca : ['Ir'] # list of atoms included in the aux part when using multiple basis sets in ORCA. Format: ['Pd','Ir','Pt',...]
 
+# Specific options of Turbomole calculations
+tmfunctional : ['TPSS',] # functional(s) written as in turbomole's define for optimizations.  
+tmfunctionalsp : ['TPSS',] # functional(s) written as in turbomole's define for SP calculations.
+tmbasis : None           # If all atoms use the same basis set this option avoids the usage of a basisfile
+tmbasisfile : []         # In absence of basis set file it defaults to def2-SVP to all atoms
+tmbasissp : None         # If all atoms use the same basis set this option avoids the usage of a basisfile
+tmbasisfilesp : []       # basis set files for single-points
+tmgrid : 'm4'            # Integration grid. options: '1','2','3','4','5','6','7','m3','m4','m5'
+tmdispersion : 'off'     # Dispersion. options: 'off','on','bj','d4'
+tmepsilon : 'gas'        # Dielectric constant for the solvent. number or 'gas'.
+tmcavity : 'none'        # solvent cavity. Currently only 'none' and 'fine' are considered. 
+tmricore : 200           # max RIcore memory in MB
+tmmaxcore : 200          # max per core memory in MB
+
+# QM options
+basis_sets : []      #list of basis sets names to be used for all atoms
+basis_sets_sp : []   #list of basis sets names to be used for all atoms in SP calculations
+basisfiles : []      #list of basissets files
+basisfiles_sp : []   #list of basissets files to be used in SP calculations
+
 # OPTIONS FOR SINGLE-POINT COM FILES (ONLY IF sp IS ACTIVE IN QCORR)
 # charge and multiplicity
 charge_sp : None # charge of the single-point calculations. If charge_sp = None, the program takes the charge from the original LOG file

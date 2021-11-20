@@ -107,43 +107,44 @@ def update_coord(natoms,atomtypes,cartesians,args,log,name,w_dir_initial,type):
         return vector_norm,centroid
 
 def getSHIELDING(outlines,args,log):
-    NATOMS = 0
-    stand_or = 0
-    ATOMTYPES, CARTESIANS,NMR  = [],[],[]
-    #find NATOMS
-    for i in range(0,len(outlines)):
-        if outlines[i].find("Input orientation") > -1:
-            stand_or = i
-        if outlines[i].find("Rotational constants") > -1 and outlines[i-1].find("-------") > -1:
-            NATOMS = i-stand_or-6
-            break
+  NATOMS = 0
+  stand_or = 0
+  ATOMTYPES, CARTESIANS,NMR  = [],[],[]
+  #find NATOMS
+  for i in range(0,len(outlines)):
+      if outlines[i].find("Input orientation") > -1:
+          stand_or = i
+      if outlines[i].find("Rotational constants") > -1 and outlines[i-1].find("-------") > -1:
+          NATOMS = i-stand_or-6
+          break
 
-    ATOMTYPES, CARTESIANS,stand_or = get_coords_normal(outlines, stand_or, NATOMS, possible_atoms, ATOMTYPES, CARTESIANS)
+  ATOMTYPES, CARTESIANS,stand_or = get_coords_normal(outlines, stand_or, NATOMS, possible_atoms, ATOMTYPES, CARTESIANS)
 
-    NMR = []
-    for i in range(0,len(outlines)):
-        if outlines[i].find(" SCF GIAO Magnetic shielding tensor (ppm):") > -1:
-            j = 0
-            while j < NATOMS*5:
-                item = {}
-                item['atom_index'] = int(outlines[i+1+j].split()[0])
-                item['elementID'] = outlines[i+1+j].split()[1]
-                item['isotropic'] = float(outlines[i+1+j].split()[4])
-                item['anisotropy'] = float(outlines[i+1+j].split()[7])
-                item['xx'] = float(outlines[i+2+j].split()[1])
-                item['yx'] = float(outlines[i+2+j].split()[3])
-                item['zx'] = float(outlines[i+2+j].split()[5])
-                item['xy'] = float(outlines[i+3+j].split()[1])
-                item['yy'] = float(outlines[i+3+j].split()[3])
-                item['zy'] = float(outlines[i+3+j].split()[5])
-                item['xz'] = float(outlines[i+4+j].split()[1])
-                item['yz'] = float(outlines[i+4+j].split()[3])
-                item['zz'] = float(outlines[i+4+j].split()[5])
-                item['eigenvalues'] = [float(outlines[i+5+j].split()[1]), float(outlines[i+5+j].split()[2]), float(outlines[i+5+j].split()[3])]
-                NMR.append(item)
-                j += 5
+  NMR = []
+  for i in range(0,len(outlines)):
+      if outlines[i].find(" SCF GIAO Magnetic shielding tensor (ppm):") > -1:
+          j = 0
+          while j < NATOMS*5:
+              item = {}
+              item['atom_index'] = int(outlines[i+1+j].split()[0])
+              item['elementID'] = outlines[i+1+j].split()[1]
+              item['isotropic'] = float(outlines[i+1+j].split()[4])
+              item['anisotropy'] = float(outlines[i+1+j].split()[7])
+              item['xx'] = float(outlines[i+2+j].split()[1])
+              item['yx'] = float(outlines[i+2+j].split()[3])
+              item['zx'] = float(outlines[i+2+j].split()[5])
+              item['xy'] = float(outlines[i+3+j].split()[1])
+              item['yy'] = float(outlines[i+3+j].split()[3])
+              item['zy'] = float(outlines[i+3+j].split()[5])
+              item['xz'] = float(outlines[i+4+j].split()[1])
+              item['yz'] = float(outlines[i+4+j].split()[3])
+              item['zz'] = float(outlines[i+4+j].split()[5])
+              item['eigenvalues'] = [float(outlines[i+5+j].split()[1]), float(outlines[i+5+j].split()[2]), float(outlines[i+5+j].split()[3])]
+              NMR.append(item)
+              j += 5
 
-    return NMR, CARTESIANS,NATOMS,ATOMTYPES
+  return NMR, CARTESIANS,NATOMS,ATOMTYPES
+
 
 def calculate_nics_parameters(log_files,args,log,w_dir_initial,name_mol,lot,bs):
 

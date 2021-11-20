@@ -259,3 +259,4 @@ def get_conf_RMS(mol1, mol2, c1, c2, heavy, max_matches_RMSD):
          mol1 = RemoveHs(mol1)
          mol2 = RemoveHs(mol2)
     return GetBestRMS(mol1,mol2,c1,c2,maxMatches=max_matches_RMSD)
+

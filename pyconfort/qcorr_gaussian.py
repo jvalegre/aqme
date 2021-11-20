@@ -2,12 +2,13 @@
 #        This file stores all the functions          #
 #          used in the LOG file analyzer             #
 ######################################################.
-
 import os
+from pyconfort.mainf import creation_of_ana_csv
 import sys
 import subprocess
 import numpy as np
 from pyconfort.qprep_gaussian import input_route_line,check_for_gen_or_genecp,write_genecp,orca_file_gen
+# the import for check and write genecp is probably inside the genecp function of qprep now, FIX!
 from pyconfort.utils import possible_atoms
 from pyconfort.filter import exp_rules_output,check_geom_filter
 from pyconfort.nics_conf import update_coord,get_coords_normal
@@ -79,6 +80,10 @@ def new_com_file(com_type,w_dir_initial,log,new_gaussian_input_files,file,args,k
 
         # removes the initial com file
         os.remove(file_name)
+       
+    if args.sp == 'turbomole' and com_type == 'sp':
+	    # Do stuff, MISSING PART
+		  pass
 
     #submitting the gaussian file on summit
     if args.qsub:
@@ -213,6 +218,7 @@ def get_coords_not_normal(outlines, stop_rms, stand_or, dist_rot_or, NATOMS, pos
                 stop_get_details_dis_rot += 1
     ATOMTYPES, CARTESIANS,stand_or = get_coords_normal(outlines, stand_or, NATOMS, possible_atoms, ATOMTYPES, CARTESIANS)
     return ATOMTYPES, CARTESIANS, NATOMS,stand_or
+  
 
 def fix_imag_freqs(NATOMS, CARTESIANS, args, FREQS, NORMALMODE):
     # Multiplies the imaginary normal mode vector by this amount (from -1 to 1).
@@ -439,18 +445,22 @@ def output_analyzer(duplicates,log_files,com_files, w_dir, w_dir_main,lot, bs, b
 
         # adding in the NMR componenet only to the finished files after reading from normally finished log files
         if TERMINATION == "normal" and IM_FREQS == 0 and passing_rules and passing_geom:
-            if args.sp == 'gaussian' or args.sp == 'orca' or args.nics:
+            if args.sp == 'gaussian' or args.sp == 'orca' or args.sp == 'turbomole' or args.nics:
 
                 #get coordinates
                 ATOMTYPES, CARTESIANS,stand_or = get_coords_normal(outlines, stand_or, NATOMS, possible_atoms, ATOMTYPES, CARTESIANS)
 
                 if args.sp == 'gaussian':
-                    # creating new folder with new input gaussian files
+                    # creating new folder with new input Gaussian files
                     single_point_input_files = w_dir_fin+'/../G16-SP_input_files'
 
                 elif args.sp == 'orca':
-                    # creating new folder with new input gaussian files
+                    # creating new folder with new input ORCA files
                     single_point_input_files = w_dir_fin+'/../ORCA-SP_input_files'
+
+                elif args.sp == 'turbomole':
+                  # creating new folder with new input Turbomole files
+                  single_point_input_files = w_dir_fin+'/../TURBOMOLE-SP_input_files'
 
                 if args.nics:
                     nics_input_files = w_dir_fin+'/../G16-NICS_input_files'
@@ -462,7 +472,11 @@ def output_analyzer(duplicates,log_files,com_files, w_dir, w_dir_main,lot, bs, b
                 elif args.sp == 'orca':
                     ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp,orca_aux_section = check_for_gen_or_genecp(ATOMTYPES,args,'sp','orca')
 
-                # this avoids problems related to genecp
+                elif args.sp == 'turbomole':
+                    # Check for gen or genecp
+                    pass
+
+                # NEED TO FIX THIS PART FOR GENECP WITH SP!
                 if genecp == None:
                     basis_set_for_genecp = args.basis_set_sp
                 elif genecp == 'genecp' or genecp == 'gen':
@@ -470,7 +484,7 @@ def output_analyzer(duplicates,log_files,com_files, w_dir, w_dir_main,lot, bs, b
 
                 # Sets the folder and find the log files to analyze
                 for lot_sp,bs_sp,bs_gcp_sp in zip(args.level_of_theory_sp,args.basis_set_sp,basis_set_for_genecp):
-                    if args.sp == 'gaussian' or args.sp == 'orca':
+                    if args.sp == 'gaussian' or args.sp == 'orca' or args.sp == 'turbomole':
                         if str(bs_sp).find('/') > -1:
                             log.write('-> Creating new single point files for {0} in {1}/{2}-{3}'.format(file,single_point_input_files,lot_sp,bs_sp.split('/')[0]))
                         else:
@@ -508,7 +522,7 @@ def output_analyzer(duplicates,log_files,com_files, w_dir, w_dir_main,lot, bs, b
                     if args.mult_sp != 'None':
                         MULT = args.mult_sp
 
-                    if args.sp == 'gaussian' or args.sp == 'orca':
+                    if args.sp == 'gaussian' or args.sp == 'orca' or args.sp == 'turbomole':
                         if not os.path.isdir(single_point_input_files+'/'+dir_name):
                             os.makedirs(single_point_input_files+'/'+dir_name)
                         os.chdir(single_point_input_files+'/'+dir_name)
@@ -541,6 +555,7 @@ def output_analyzer(duplicates,log_files,com_files, w_dir, w_dir_main,lot, bs, b
     if not os.path.isdir(w_dir_main+'/csv_files/'):
         os.makedirs(w_dir_main+'/csv_files/')
     ana_data.to_csv(w_dir_main+'/csv_files/Analysis-Data-QCORR-run_'+str(round_num)+'.csv',index=False)
+    
 
 # CHECKS THE FOLDER OF FINAL LOG FILES
 def check_for_final_folder(w_dir):
@@ -551,6 +566,19 @@ def check_for_final_folder(w_dir):
         num_com_folder = sum([len(d) for r, d, folder in os.walk(w_dir+'/input_files')])
         w_dir = w_dir+'/input_files/run_'+str(num_com_folder)
         return w_dir, num_com_folder
+
+def check_for_final_folderv2(w_dir):
+	base_folder = Path(w_dir)
+	inputs_folder = base_folder/'input_files'
+	if not inputs_folder.exists():
+		return w_dir, 1
+	folders = [item for item in inputs_folder.iterdir() if item.isdir() and 'run_' in item.stem]
+	get_number = lambda x: int(x.stem.rsplit('_',1)[1]) 
+	last_folder = sorted(folders,key=get_number)[-1]
+	last_number = get_number(last_folder)
+	return str(last_folder), last_number
+
+
 
 # CHECKING FOR DUPLICATES
 def dup_calculation(val, w_dir,w_dir_main, args, log,round_num):

@@ -7,6 +7,7 @@ from itertools import chain
 
 from rdkit.Chem import AllChem as Chem
 from rdkit.Chem import rdMolTransforms, Descriptors
+
 from pyconfort.utils import possible_atoms, get_conf_RMS
 
 # Aux functions for passes_Ir_bidentate_x3_rule

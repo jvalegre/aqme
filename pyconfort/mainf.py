@@ -10,6 +10,7 @@ import subprocess
 import yaml
 import concurrent.futures as futures
 from pathlib import Path
+
 import pandas as pd
 from progress.bar import IncrementalBar
 from rdkit.Chem import AllChem as Chem
@@ -82,6 +83,7 @@ def creation_of_ana_csv(args,duplicates):
     ana_data = pd.DataFrame(columns = columns_list)
 
     return ana_data
+
 
 # main function to generate conformers
 def csearch_main(w_dir_initial,args,log_overall):
@@ -280,7 +282,8 @@ def cmin_main(w_dir_initial,args,log_overall,dup_data):
 
     return dup_data
 
-#writing gauss main
+  
+# writing gauss main
 def qprep_main(w_dir_initial,args,log):
 
     if len(args.exp_rules) >= 1:
@@ -373,6 +376,7 @@ def qprep_main(w_dir_initial,args,log):
                         write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args, log, charge_data, w_dir_initial)
     else:
         log.write('\nx  No SDF files detected to convert to gaussian COM files')
+
 
 # moving files after compute and/or write_gauss
 def move_sdf_main(args):
@@ -470,6 +474,7 @@ def get_com_or_log_out_files(type,name):
                 files.append(file)
     return files
 
+  
 # main part of the analysis functions
 def qcorr_gaussian_main(duplicates,w_dir_initial,args,log):
     # when you run analysis in a folder full of output files
@@ -518,6 +523,7 @@ def qcorr_gaussian_main(duplicates,w_dir_initial,args,log):
             output_analyzer(duplicates,log_files, com_files, w_dir, w_dir_main , lot, bs, bs_gcp, args, w_dir_fin, w_dir_initial, log, ana_data, round_num)
         os.chdir(args.path)
     os.chdir(w_dir_initial)
+
 
 #removing the duplicates
 def dup_main(args,log,w_dir_initial):
@@ -594,52 +600,63 @@ def geom_par_main(args,log,w_dir_initial):
 
 #function to plot graphs
 def graph_main(args,log,w_dir_initial):
-    #get sdf FILES from csv
-    pd_name = pd.read_csv(w_dir_initial+'/CSEARCH/csv_files/'+args.input.split('.')[0]+'-CSEARCH-Data.csv')
+  #get sdf FILES from csv
+  pd_name = pd.read_csv(w_dir_initial+'/CSEARCH/csv_files/'+args.input.split('.')[0]+'-CSEARCH-Data.csv')
 
-    for i in range(len(pd_name)):
-        name = pd_name.loc[i,'Molecule']
+  for i in range(len(pd_name)):
+      name = pd_name.loc[i,'Molecule']
 
-        log.write("\no  Plotting graphs for molecule : {0} ".format(name))
+      log.write("\no  Plotting graphs for molecule : {0} ".format(name))
 
-        sdf_ani,sdf_xtb = None,None
-        if os.path.exists(w_dir_initial+'/CSEARCH/rdkit/'+name+'_rdkit.sdf'):
-            sdf_rdkit =  w_dir_initial+'/CSEARCH/rdkit/'+name+'_rdkit.sdf'
-        elif os.path.exists(w_dir_initial+'/CSEARCH/summ/'+name+'_summ.sdf'):
-            sdf_rdkit = w_dir_initial+'/CSEARCH/summ/'+name+'_summ.sdf'
-        elif os.path.exists(w_dir_initial+'/CSEARCH/fullmonte/'+name+'_fullmonte.sdf'):
-            sdf_rdkit = w_dir_initial+'/CSEARCH/fullmonte/'+name+'_fullmonte.sdf'
-        if os.path.exists(w_dir_initial+'/CMIN/xtb_all_confs/'+name+'_xtb_all_confs.sdf'):
-            sdf_xtb =  w_dir_initial+'/CMIN/xtb_all_confs/'+name+'_xtb_all_confs.sdf'
-        if os.path.exists(w_dir_initial+'/CMIN/ani_all_confs/'+name+'_ani_all_confs.sdf'):
-            sdf_ani = w_dir_initial+'/CMIN/ani_all_confs/'+name+'_ani_all_confs.sdf'
-        if os.path.exists(w_dir_initial+'/QMCALC/G16'):
-            args.path = w_dir_initial+'/QMCALC/G16/'
-            # Sets the folder and find the log files to analyze
-            for lot,bs,bs_gcp in zip(args.level_of_theory, args.basis_set,args.basis_set_genecp_atoms):
-                #assign the path to the finished directory.
-                w_dir = args.path + str(lot) + '-' + str(bs) +'/success/output_files'
-                os.chdir(w_dir)
-                log_files = get_com_or_log_out_files('output',name)
-                if os.path.exists(args.path + str(lot) + '-' + str(bs) +'/success/G16-SP_input_files'):
-                    for lot_sp,bs_sp,bs_gcp_sp in zip(args.level_of_theory_sp,args.basis_set_sp,args.basis_set_genecp_atoms_sp):
-                        w_dir_sp = args.path + str(lot) + '-' + str(bs) +'/success/G16-SP_input_files'+'/'+str(lot_sp)+'-'+str(bs_sp)
-                        sp_files = get_com_or_log_out_files('output',name)
-                        graph(sdf_rdkit,sdf_xtb,sdf_ani,log_files,sp_files,args,log,lot,bs,lot_sp,bs_sp,name,w_dir_initial,w_dir_sp,w_dir,'g16')
-                if os.path.exists(args.path + str(lot) + '-' + str(bs) +'/success/ORCA-SP_input_files'):
-                    for lot_sp,bs_sp,bs_gcp_sp in zip(args.level_of_theory_sp,args.basis_set_sp,args.basis_set_genecp_atoms_sp):
-                        w_dir_sp = args.path + str(lot) + '-' + str(bs) +'/success/ORCA-SP_input_files'+'/'+str(lot_sp)+'-'+str(bs_sp.split('/')[0])
-                        os.chdir(w_dir_sp)
-                        sp_files = get_com_or_log_out_files('output',name)
-                        os.chdir(w_dir)
-                        graph(sdf_rdkit,sdf_xtb,sdf_ani,log_files,sp_files,args,log,lot,bs,lot_sp,bs_sp.split('/')[0],name,w_dir_initial,w_dir_sp,w_dir,'orca')
-                else:
-                    graph(sdf_rdkit,sdf_xtb,sdf_ani,log_files,None,args,log,lot,bs,None,None,name,w_dir_initial,None,w_dir,None)
+      sdf_ani,sdf_xtb = None,None
+      if os.path.exists(w_dir_initial+'/CSEARCH/rdkit/'+name+'_rdkit.sdf'):
+          sdf_rdkit =  w_dir_initial+'/CSEARCH/rdkit/'+name+'_rdkit.sdf'
+      elif os.path.exists(w_dir_initial+'/CSEARCH/summ/'+name+'_summ.sdf'):
+          sdf_rdkit = w_dir_initial+'/CSEARCH/summ/'+name+'_summ.sdf'
+      elif os.path.exists(w_dir_initial+'/CSEARCH/fullmonte/'+name+'_fullmonte.sdf'):
+          sdf_rdkit = w_dir_initial+'/CSEARCH/fullmonte/'+name+'_fullmonte.sdf'
+      if os.path.exists(w_dir_initial+'/CMIN/xtb_all_confs/'+name+'_xtb_all_confs.sdf'):
+          sdf_xtb =  w_dir_initial+'/CMIN/xtb_all_confs/'+name+'_xtb_all_confs.sdf'
+      if os.path.exists(w_dir_initial+'/CMIN/ani_all_confs/'+name+'_ani_all_confs.sdf'):
+          sdf_ani = w_dir_initial+'/CMIN/ani_all_confs/'+name+'_ani_all_confs.sdf'
+      if os.path.exists(w_dir_initial+'/QMCALC/G16'):
+          args.path = w_dir_initial+'/QMCALC/G16/'
+          # Sets the folder and find the log files to analyze
+          for lot,bs,bs_gcp in zip(args.level_of_theory, args.basis_set,args.basis_set_genecp_atoms):
+              #assign the path to the finished directory.
+              w_dir = args.path + str(lot) + '-' + str(bs) +'/success/output_files'
+              os.chdir(w_dir)
+              log_files = get_com_or_log_out_files('output',name)
+              if os.path.exists(args.path + str(lot) + '-' + str(bs) +'/success/G16-SP_input_files'):
+                  for lot_sp,bs_sp,bs_gcp_sp in zip(args.level_of_theory_sp,args.basis_set_sp,args.basis_set_genecp_atoms_sp):
+                      w_dir_sp = args.path + str(lot) + '-' + str(bs) +'/success/G16-SP_input_files'+'/'+str(lot_sp)+'-'+str(bs_sp)
+                      sp_files = get_com_or_log_out_files('output',name)
+                      graph(sdf_rdkit,sdf_xtb,sdf_ani,log_files,sp_files,args,log,lot,bs,lot_sp,bs_sp,name,w_dir_initial,w_dir_sp,w_dir,'g16')
+              if os.path.exists(f'{args.path}{lot}-{bs}/success/TURBOMOLE-SP_input_files'):
+                for lot_sp,bs_sp,bs_gcp_sp in zip(args.level_of_theory_sp,args.basis_set_sp,args.basis_set_genecp_atoms_sp):
+                  w_dir_sp = f"{path_turbomole}/{lot_sp}-{bs_sp.split('/')[0]}"
+                  os.chdir(w_dir_sp)
+                  sp_files = []
+                  for path in Path(w_dir_sp).iterdir(): 
+                    if path.is_dir() and '_SP' in path.stem: 
+                      sp_files.append(path)
+                  os.chdir(w_dir)
+                  graph(sdf_rdkit,sdf_xtb,sdf_ani,log_files,sp_files,args,log,lot,bs,lot_sp,bs_sp.split('/')[0],name,w_dir_initial,w_dir_sp,w_dir,'turbomole')
 
-        else:
-            graph(sdf_rdkit,sdf_xtb,sdf_ani,None,None,args,log,None,None,None,None,name,w_dir_initial,None,None,None)
+              if os.path.exists(args.path + str(lot) + '-' + str(bs) +'/success/ORCA-SP_input_files'):
+                  for lot_sp,bs_sp,bs_gcp_sp in zip(args.level_of_theory_sp,args.basis_set_sp,args.basis_set_genecp_atoms_sp):
+                      w_dir_sp = args.path + str(lot) + '-' + str(bs) +'/success/ORCA-SP_input_files'+'/'+str(lot_sp)+'-'+str(bs_sp.split('/')[0])
+                      os.chdir(w_dir_sp)
+                      sp_files = get_com_or_log_out_files('output',name)
+                      os.chdir(w_dir)
+                      graph(sdf_rdkit,sdf_xtb,sdf_ani,log_files,sp_files,args,log,lot,bs,lot_sp,bs_sp.split('/')[0],name,w_dir_initial,w_dir_sp,w_dir,'orca')
+              else:
+                  graph(sdf_rdkit,sdf_xtb,sdf_ani,log_files,None,args,log,lot,bs,None,None,name,w_dir_initial,None,w_dir,None)
 
-    os.chdir(w_dir_initial)
+      else:
+          graph(sdf_rdkit,sdf_xtb,sdf_ani,None,None,args,log,None,None,None,None,name,w_dir_initial,None,None,None)
+
+  os.chdir(w_dir_initial)
 
 
 #function for comparison of nmr

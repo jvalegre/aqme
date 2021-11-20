@@ -1,6 +1,6 @@
 #####################################################.
 #            This file stores all the functions         #
-#      used for genrating all paramets from cclib       #
+#      used for generating all paramets from cclib       #
 #####################################################.
 
 import subprocess, os

@@ -28,6 +28,7 @@ import os
 import time
 from pathlib import Path
 from pyconfort.argument_parser import parser_args
+
 from pyconfort.mainf import (csearch_main, exp_rules_main, qprep_main, 
                              move_sdf_main, qcorr_gaussian_main,dup_main,
                              graph_main,geom_par_main,nmr_main,energy_main,
@@ -91,7 +92,7 @@ def main():
         os.chdir(w_dir_initial)
 
     #QPREP
-    if args.QPREP=='gaussian' or args.QPREP=='orca':
+    if args.QPREP=='gaussian' or args.QPREP=='orca' or args.QPREP=='turbomole':
         qprep_main(w_dir_initial,args,log_overall)
         os.chdir(w_dir_initial)
 
