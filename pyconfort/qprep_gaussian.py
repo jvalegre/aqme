@@ -10,6 +10,7 @@ import sys
 import subprocess
 import glob
 import shutil
+import shlex
 import pandas as pd
 from rdkit.Chem import AllChem as Chem
 from pyconfort.utils import possible_atoms
@@ -206,89 +207,77 @@ def check_for_gen_or_genecp(ATOMTYPES,args,type_of_check,program_gen):
     return ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp,orca_aux_section
 
 # DETECTION OF GEN/GENECP FROM SDF FILES
-def get_genecp(file,args):
-    genecp = 'None'
+def get_genecp(args):
+	genecp = 'None'
 
-    try:
-        #reading the sdf to check for I atom_symbol
-        suppl = Chem.SDMolSupplier(file, removeHs=False)
-        if len(suppl) != 0:
-            for atom in suppl[0].GetAtoms():
-                if atom.GetSymbol() in args.genecp_atoms:
-                    genecp = 'genecp'
-                    break
-                elif atom.GetSymbol() in args.gen_atoms:
-                    genecp = 'gen'
-                    break
-    except OSError:
-        outfile = open(file,"r")
-        outlines = outfile.readlines()
-        for _,line in enumerate(outlines):
-            if args.genecp_atoms:
-                for atom in args.genecp_atoms:
-                    if line.find(atom)>-1:
-                        genecp = 'genecp'
-                        break
-            elif args.gen_atoms:
-                for atom in args.gen_atoms:
-                    if line.find(atom)>-1:
-                        genecp = 'gen'
-                        break
-        outfile.close()
+	if len(args.genecp_atoms) > 0:
+		genecp = 'genecp'
 
-    return genecp
+	if len(args.gen_atoms) > 0:
+		genecp = 'gen'
+
+	return genecp
 
 # write genecp/gen part
-def write_genecp(type_gen,fileout,ecp_list,ecp_genecp_atoms,bs_com,bs_gcp_com,args,w_dir_initial,new_gaussian_input_files):
-    ecp_used = False
-    for element_ecp in ecp_list:
-        if type_gen == 'sp':
-            is_missing = element_ecp in args.genecp_atoms_sp or element_ecp in args.gen_atoms_sp
-        else:
-            is_missing = element_ecp in args.genecp_atoms or element_ecp in args.gen_atoms
-        if is_missing:
-            ecp_used = True 
-            fileout.write(element_ecp+' ')
-    if ecp_used: 
-        fileout.write('0\n')
-        fileout.write(bs_com+'\n')
-        fileout.write('****\n')
+def write_genecp(ATOMTYPES,type_gen,fileout,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,bs_com,lot_com,bs_gcp_com,args,w_dir_initial,new_gaussian_input_files):
 
-    if len(bs_gcp_com.split('.')) > 1:
-        if bs_gcp_com.split('.')[1] == ('txt' or 'yaml' or 'yml' or 'rtf'):
-            os.chdir(w_dir_initial)
-            with open(bs_gcp_com,"r") as F: 
-                read_lines = F.readlines()
-            os.chdir(new_gaussian_input_files)
-            #getting the title line
-            for line in read_lines:
-                fileout.write(line)
-            fileout.write('\n\n')
-    else:
-        ecp_used = True
-        for element_ecp in ecp_list:
-            if type_gen == 'sp':
-                is_missing = element_ecp in args.genecp_atoms_sp or element_ecp in args.gen_atoms_sp
-            else:
-                is_missing = element_ecp in args.genecp_atoms or element_ecp in args.gen_atoms
-            if is_missing: 
-                fileout.write(element_ecp+' ')
-        if ecp_used: 
-            fileout.write('0\n')
-            fileout.write(bs_gcp_com+'\n')
-            fileout.write('****\n\n')
+	ecp_not_used = 0
+	for _,element_ecp in enumerate(ecp_list):
+		if element_ecp in ATOMTYPES and element_ecp != '':
+			if type_gen == 'sp':
+				if element_ecp not in (args.genecp_atoms_sp or args.gen_atoms_sp):
+					fileout.write(element_ecp+' ')
+					ecp_not_used += 1
+			else:
+				if element_ecp not in (args.genecp_atoms or args.gen_atoms):
+					fileout.write(element_ecp+' ')
+					ecp_not_used += 1
 
-        if ecp_genecp_atoms:
-            for element_ecp in ecp_list:
-                if type_gen == 'sp':
-                    if element_ecp in args.genecp_atoms_sp:
-                        fileout.write(element_ecp+' ')
-                else:
-                    if element_ecp in args.genecp_atoms:
-                        fileout.write(element_ecp+' ')
+	if ecp_not_used > 0:
+		fileout.write('0\n')
+		fileout.write(bs_com+'\n')
+		fileout.write('****\n')
 
-            fileout.write('0\n')
-            fileout.write(bs_gcp_com+'\n\n')
+	if len(bs_gcp_com.split('.')) > 1:
+		if bs_gcp_com.split('.')[1] == ('txt' or 'yaml' or 'yml' or 'rtf'):
+			os.chdir(w_dir_initial)
+			read_lines = open(bs_gcp_com,"r").readlines()
+			os.chdir(new_gaussian_input_files)
+			#getting the title line
+			for line in read_lines:
+				fileout.write(line)
+			fileout.write('\n\n')
+	else:
+		ecp_used = 0
+		for _,element_ecp in enumerate(ecp_list):
+			if type_gen == 'sp':
+				if element_ecp in (args.genecp_atoms_sp or args.gen_atoms_sp):
+					fileout.write(element_ecp+' ')
+					ecp_used += 1
+			else:
+				if element_ecp in (args.genecp_atoms or args.gen_atoms):
+					fileout.write(element_ecp+' ')
+					ecp_used += 1
+
+		if ecp_used > 0:
+			fileout.write('0\n')
+			fileout.write(bs_gcp_com+'\n')
+			fileout.write('****\n\n')
+
+		else:
+			fileout.write('\n')
+
+		if ecp_genecp_atoms:
+			for _,element_ecp in enumerate(ecp_list):
+				if type_gen == 'sp':
+					if element_ecp in args.genecp_atoms_sp:
+						fileout.write(element_ecp+' ')
+				else:
+					if element_ecp in args.genecp_atoms:
+						fileout.write(element_ecp+' ')
+
+			fileout.write('0\n')
+			fileout.write(bs_gcp_com+'\n\n')
 
 def orca_file_gen(read_lines,rename_file_name,bs,lot,genecp,ecp_list,bs_gcp,bs_gcp_fit,charge_com,mult_com,orca_aux_section,args,extra_input,solvation,solvent_orca,cpcm_input_orca,scf_iters_orca,orca_mdci,print_mini):
     try:
@@ -400,8 +389,14 @@ def write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args, log, 
         path_write_input_files = f'/QMCALC/{folder}/{lot}-{bs_name}'
     os.chdir(w_dir_initial+path_write_input_files)
 
-    com = f'{name}_.com'
-    com_low = f'{name}_low.com'
+    for file in com_files:
+      #patch for Isotopes
+      cmd = shlex.split(r"sed -i 's/\([a-zA-Z]\{1,3\}\)[^(]*\([(]Iso\)/\1\2/g' "+file)
+      subprocess.call(cmd)
+      ecp_list,ecp_genecp_atoms,ecp_gen_atoms = [],False,False
+      read_lines = open(file,"r").readlines()
+      rename_file_name = rename_file_and_charge_chk_change(read_lines,file,args,charge_com)
+      read_lines = open(file,"r").readlines()
 
     header = header_com(name,lot, bs, bs_gcp,args,log, input_route, genecp)
     try:
