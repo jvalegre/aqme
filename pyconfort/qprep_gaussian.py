@@ -1,29 +1,18 @@
-#!/usr/bin/env python
-
 #########################################################.
-# 		   This file stores all the functions 		    #
-# 	       used in writing SDF and COM files,           #
+#        This file stores all the functions             #
+#          used in writing SDF and COM files,           #
 #              as well as the logger and                #
-#                 yaml file importer		            #
+#                 yaml file importer                    #
 #########################################################.
 
 import subprocess
 import glob
-import re
-from operator import itemgetter
-from itertools import groupby
-from pathlib import Path
+import shutil
+import shlex
 import pandas as pd
-import rdkit
-from pyconfort.utils import periodic_table
+from rdkit.Chem import AllChem as Chem
+from pyconfort.utils import possible_atoms
 from pyconfort.turbomole import TurbomoleInput
-
-try:
-    import pybel
-except ImportError:
-    from openbabel import pybel
-
-
 
 # Hotfixes
 def fix_obabel_isotopes(gjf_lines):
@@ -311,12 +300,15 @@ class GaussianTemplate(object):
 	def genecp(self):
 		ecp_genecp_atoms = self.basisset.ecp is not None
 		ecp_gen_atoms = bool(self.basisset.elements)
-		if ecp_genecp_atoms:
-			return 'genecp'
-		elif ecp_gen_atoms:
-			return 'gen'
-		else:
-			return ''
+
+    if len(args.genecp_atoms) > 0:
+      genecp = 'genecp'
+
+    if len(args.gen_atoms) > 0:
+      genecp = 'gen'
+
+    return genecp
+    
 	@property
 	def basis(self):
 		if self.genecp:
@@ -392,7 +384,7 @@ class GaussianTemplate(object):
 		return txt
 	def get_tail(self):
 		txt = ''
-		# write basis set section
+		# write basis set section THHIS PART COMES FROM RAUL, NEEDS TO UPDATE AS PART BELOW to avoid bugs when using all atoms in gen 
 		basisset = self.basisset.basis
 		if self.genecp:
 			def_basis = basisset.get('all','')
@@ -414,6 +406,68 @@ class GaussianTemplate(object):
 			txt += f'{self.last_line_for_input}\n'
 		txt += '\n'
 		return txt
+    # FIXED PART TO WRITE GENECP FROM NEWER COMMITS
+    # write genecp/gen part
+def write_genecp(ATOMTYPES,type_gen,fileout,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,bs_com,lot_com,bs_gcp_com,args,w_dir_initial,new_gaussian_input_files):
+
+	ecp_not_used = 0
+	for _,element_ecp in enumerate(ecp_list):
+		if element_ecp in ATOMTYPES and element_ecp != '':
+			if type_gen == 'sp':
+				if element_ecp not in (args.genecp_atoms_sp or args.gen_atoms_sp):
+					fileout.write(element_ecp+' ')
+					ecp_not_used += 1
+			else:
+				if element_ecp not in (args.genecp_atoms or args.gen_atoms):
+					fileout.write(element_ecp+' ')
+					ecp_not_used += 1
+
+	if ecp_not_used > 0:
+		fileout.write('0\n')
+		fileout.write(bs_com+'\n')
+		fileout.write('****\n')
+
+	if len(bs_gcp_com.split('.')) > 1:
+		if bs_gcp_com.split('.')[1] == ('txt' or 'yaml' or 'yml' or 'rtf'):
+			os.chdir(w_dir_initial)
+			read_lines = open(bs_gcp_com,"r").readlines()
+			os.chdir(new_gaussian_input_files)
+			#getting the title line
+			for line in read_lines:
+				fileout.write(line)
+			fileout.write('\n\n')
+	else:
+		ecp_used = 0
+		for _,element_ecp in enumerate(ecp_list):
+			if type_gen == 'sp':
+				if element_ecp in (args.genecp_atoms_sp or args.gen_atoms_sp):
+					fileout.write(element_ecp+' ')
+					ecp_used += 1
+			else:
+				if element_ecp in (args.genecp_atoms or args.gen_atoms):
+					fileout.write(element_ecp+' ')
+					ecp_used += 1
+
+		if ecp_used > 0:
+			fileout.write('0\n')
+			fileout.write(bs_gcp_com+'\n')
+			fileout.write('****\n\n')
+
+		else:
+			fileout.write('\n')
+
+		if ecp_genecp_atoms:
+			for _,element_ecp in enumerate(ecp_list):
+				if type_gen == 'sp':
+					if element_ecp in args.genecp_atoms_sp:
+						fileout.write(element_ecp+' ')
+				else:
+					if element_ecp in args.genecp_atoms:
+						fileout.write(element_ecp+' ')
+
+			fileout.write('0\n')
+			fileout.write(bs_gcp_com+'\n\n')
+      
 	def write(self,destination,molecule): 
 		stem = molecule.title.lstrip().replace(' ','_')
 		comfile = f'{destination}/{stem}.com'

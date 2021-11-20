@@ -1,265 +1,262 @@
-import shutil
+"""
+This module contains some classes and functions that are used from other modules
+"""
+from pathlib import Path
+import subprocess
 import os
-import re
-from pathlib import Path 
 
-import rdkit
-from rdkit import Chem
+from rdkit.Chem.rdMolAlign import GetBestRMS
+from rdkit.Chem.rdmolops import RemoveHs
 
-try:
-	import pybel
-except ImportError:
-	from openbabel import pybel
+import pybel
 
-# Basis set class
-class BasisSet(object):
-	"""
-	Representation of the neccesary information related with basis sets. May 
-	contain information about auxiliary basis sets and ECPs. 
+items = """X
+           H                                                                                                  He
+          Li Be  B                                                                             C   N   O   F  Ne
+          Na Mg Al                                                                            Si   P   S  Cl  Ar
+           K Ca Sc                                           Ti  V Cr Mn Fe Co Ni Cu  Zn  Ga  Ge  As  Se  Br  Kr
+          Rb Sr  Y                                           Zr Nb Mo Tc Ru Rh Pd Ag  Cd  In  Sn  Sb  Te   I  Xe
+          Cs Ba La Ce Pr Nd Pm Sm Eu Gd Tb Dy Ho Er Tm Yb Lu Hf Ta  W Re Os Ir Pt Au  Hg  Tl  Pb  Bi  Po  At  Rn
+          Fr Ra Ac Th Pa  U Np Pu Am Cm Bk Cf Es Fm Md No Lr Rf Db Sg Bh Hs Mt Ds Rg Uub Uut Uuq Uup Uuh Uus Uuo
+        """
+possible_atoms = items.replace('\n',' ').strip().split()
+possible_atoms[0] = ''
 
-	Parameters
-	----------
-	basis : dict, optional
-		dictionary with element symbols as keys and their corresponding basis 
-		set as value. 'all' and 'default' are accepted as keys, by default None
-	auxbasis : dict, optional
-		dictionary with element symbols as keys and their corresponding auxiliary 
-		basis set as value. 'all' and 'default' are accepted as keys, by default 
-		None
-	ecp : dict, optional
-		dictionary with element symbols as keys and their corresponding ECP 
-		as value. 'all' and 'default' are not accepted as keys, by default None.
-	"""
-	_counter = 0
+#class for logging
+class Logger:
+    """
+    Class that wraps a file object to abstract the logging.
+    """
+    # Class Logger to writargs.input.split('.')[0] output to a file
+    def __init__(self, filein, append, suffix='dat'):
+        self.log = open(f'{filein}_{append}.{suffix}', 'w')
 
-	def __init__(self,basis=None,auxbasis=None,ecp=None,name=None):
-		self.basis = basis
-		if basis is None: 
-			self._basis = None
-		else: 
-			self._basis = dict()
-			self._basis.update(self.basis)
-		self.auxbasis = auxbasis
-		if auxbasis is None: 
-			self._auxbasis = None
-		else: 
-			self._auxbasis = dict()
-			self._auxbasis.update(self.auxbasis)
-		self.elements = set()
-		self._elements = set() # Hardcopy to allow reset behaviour
-		reserved_keys = ['all','default']
-		if not(ecp is None) and any(key in reserved_keys for key in ecp): 
-			raise ValueError("'all' or 'default' key found in the ecp parameter")
-		self.ecp = ecp
-		items = [basis,auxbasis,ecp]
-		for item in items:
-			if item is None:
-				continue 
-			keys = [key for key in item if key not in reserved_keys] 
-			self.elements.update(keys)
-			self._elements.update(keys)
-		if name is None:
-			default_name = f'basisset_{self._counter:02d}'
-			name = self.basis('all','') or self.basis('default','')
-			if not name: 
-				name = default_name
-				self._counter += 1
-		self.name = self._homogenize_name(name)
+    def write(self, message):
+        """
+        Appends a newline character to the message and writes it into the file.
+   
+        Parameters
+        ----------
+        message : str
+           text to be written in the log file.
+        """
+        self.log.write(f'{message}\n')
 
-	def _homogenize_name(self,name):
-		"""
-		Ensures that the name of the basis set can be used as a folder name. 
+    def fatal(self, message):
+        """
+        Writes the message to the file. Closes the file and raises an error exit
+   
+        Parameters
+        ----------
+        message : str
+           text to be written in the log file.
+        """
+        self.write(message)
+        self.finalize()
+        raise SystemExit(1)
 
-		Parameters
-		----------
-		name : str
-			initialized name
+    def finalize(self):
+        """ Closes the file """
+        self.log.close()
 
-		Returns
-		-------
-		str
-			modified name
-		"""
-		if name.find('**') > -1:
-			name = name.replace('**','(d,p)')
-		elif name.find('*') > -1:
-			name = name.replace('*','(d)')
+# OS utils 
 
-		if str(name).find('/') > -1: 
-			new_name =  str(name).split('/')[0]
-		else:
-			new_name = name
-		return new_name
+def move_file(file, destination):
+    """
+    Moves a file to a destination folder. If the file exists rewrites it.
 
-	def update_atomtypes(self,molecules):
-		"""
-		Updates the elements of the basisset with an iterable of molecules.
+    Parameters
+    ----------
+    file : str
+        path towards a file
+    destination : str
+        path towards a folder
+    """
+    dest = Path(destination)
+    dest.mkdir(exist_ok=True)
+    filepath = Path(file)
+    filename = filepath.name
+    file.rename(dest/filename)
 
-		Parameters
-		----------
-		molecules : list
-			list of RDKit Molecule objects
-		"""
-		elements = set()
-		for molecule in molecules: 
-			if isinstance(molecule,rdkit.Chem.rdchem.Mol): 
-				atoms = [atom for atom in molecule.GetAtoms()]
-				syms = [atom.GetSymbol() for atom in atoms]
-			elif isinstance(molecule,pybel.Molecule):
-				atoms = [atom for atom in molecule.atoms]
-				atnums = [atom.OBAtom.GetAtomicNum() for atom in atoms]
-				syms = [possible_atoms[atnum] for atnum in atnums]
-			else:
-				raise ValueError(f'{molecule.__class__} is not a valid molecule object')
-			elements.update(syms)
-		self.elements.update(elements)
-		# Now update the basis,auxbasis and ecp dictionaries
-		for element in elements:
-			for item in [self.basis,self.auxbasis]: 
-				if item is None:
-					continue
-				val = item.get(element,'') or item.get('default','') or item.get('all','')
-				item[element] = val
-		
-	def clear_atomtypes(self): 
-		"""
-		Resets the state of the Basisset to its initialization state.
+def move_file_from_folder(destination,src,file):
+    """
+    Moves files from the source folder to the destination folder and creates 
+    the destination folders when needed.
 
-		Parameters
-		----------
-		molecules : list
-			list of RDKit Molecule objects
-		"""
-		self.elements = set()
-		self.elements.update(self._elements)
-		for attr in ['basis','auxbasis']:
-			val = getattr(self,attr) 
-			if val is None:
-				continue
-			backup = getattr(self,f'_{attr}')
-			new_val = dict()
-			new_val.update(backup)
-			setattr(self,attr,new_val)
-		
-	def write_basisfile(self,filepath):
-		"""
-		Writes a basis set file that can be read back into a basis set object.
+    Parameters
+    ----------
+    destination : str
+        path to the destination folder
+    src : str
+        path to the source folder
+    file : str
+        full name of the file (file + extension)
+    """
+    dest = Path(destination)
+    source = Path(src)
+    dest.mkdir(exist_ok=True,parents=True)
+    filepath = source / file
+    filepath.rename(dest / file)
 
-		Parameters
-		----------
-		filepath : str or Path
-			path to the desired basis set file. 
-		"""
-		lines = []
-		for attr in ['basis','auxbasis','ecp']:
-			mappable = getattr(self,attr)
-			if mappable is None: 
-				continue
-			lines.append(f'${attr}')
-			k_all = mappable.get('all',None)
-			k_default = mappable.get('default',None)
-			if k_all is not None:
-				value = k_all
-				lines.append(f'all {value}')
-			elif k_default is not None:
-				value = k_default
-				lines.append(f'default {value}')
-			for element in self.elements:
-				item = mappable.get(element,value)
-				lines.append(f'{element} {item}')
-		lines.append('$end')
-		with open(filepath,'w') as F:
-			F.write('\n'.join(lines))
+# openbabel utils 
 
-	@classmethod
-	def from_file(cls,filepath):
-		"""
-		Reads a file containing information on basis sets, auxiliar basis sets and 
-		ECPs. The file follows the following format: 
-		$basis
-		sym1 basis1
-		sym2 basis2
-		...
-		$auxbasis
-		sym1 auxbasis1
-		sym2 auxbasis2
-		...
-		$ecp
-		sym1 ecp1
-		sym2 ecp2
-		...
-		$end
+#com to xyz to sdf for obabel
+def com_2_xyz_2_sdf(input,default_charge,start_point=None):
+    """
+    com to xyz to sdf for obabel
 
-		Parameters
-		----------
-		filepath : str or Path
-			a valid path to a file with the previously specified format.
+    Parameters
+    ----------
+    input : str
+        path to the file to convert
+    start_point : str, optional
+        file(path/name?) to the starting point, by default None
 
-		Returns
-		-------
-		dict or None
-			basis, auxbasis, ecp
-		"""
-		regex = r'\$([^\$]*)'
-		regex = re.compile(regex)
-		name = Path(filepath).stem
-		with open(filepath,'r') as F: 
-			txt = F.read()
-		keywords = dict()
-		kwblocks = regex.findall(txt)
-		for block in kwblocks: 
-			lines = [line for line in block.split('\n') if line]
-			kw_line = lines[0]
-			keyword = kw_line.split(' ')[0]
-			if keyword == 'end':
-				continue
-			keywords[keyword] = dict()
-			for line in lines[1:]:
-				sym,basis = line.split(' ',1)
-				keywords[keyword][sym] = basis.strip()
-		basis = keywords.get('basis',None)
-		auxbasis = keywords.get('auxbasis',None)
-		ecp = keywords.get('ecp',None)
-		return cls(basis,auxbasis,ecp,name)
+    Returns
+    -------
+    int?
+        charge or None? 
+    """
+    extension = Path(input).suffix
 
-#  Functions brought from qprep
+    if start_point is None:
+        if extension in ['com','gjf','xyz']:
+            file = Path(input)
 
-# WRITE SDF FILES FOR xTB AND ANI1
-def write_confs(conformers, energies,selectedcids, name, args, program,log):
-	if len(conformers) > 0:
-		# name = name.split('_'+args.CSEARCH)[0]# a bit hacky
-		sdwriter = Chem.SDWriter(name+'_'+program+args.output)
+    else:
+        file = Path(start_point)
 
-		write_confs = 0
-		for cid in selectedcids:
-			sdwriter.write(conformers[cid])
-			write_confs += 1
+    filename = Path.stem
+    
+    # Create the 'xyz' file and/or get the total charge
+    if extension != 'xyz':                                                      #  RAUL: Originally this pointed towards args.input, shouldn't it be to args.file?
+        xyz,charge = get_charge_and_xyz_from_com(file)
+        xyz_txt = '\n'.join(xyz)
+        with open(f'{filename}.xyz','w') as F: 
+            F.write(f"{len(xyz)}\n{filename}\n{xyz_txt}\n")
+    else:
+        charge = default_charge
 
-		if args.verbose:
-			log.write("o  Writing "+str(write_confs)+ " conformers to file " + name+'_'+program+args.output)
-		sdwriter.close()
-	else:
-		log.write("x  No conformers found!")
+    xyz_2_sdf(f'{filename}.xyz')
 
-# MOVES SDF FILES TO THEIR CORRESPONDING FOLDERS
-def moving_files(destination,src,file):
-	try:
-		os.makedirs(destination)
-		shutil.move(os.path.join(src, file), os.path.join(destination, file))
-	except OSError:
-		if  os.path.isdir(destination):
-			shutil.move(os.path.join(src, file), os.path.join(destination, file))
-		else:
-			raise
+    return charge
+def xyz_2_sdf(file,parent_dir=None):
+    """
+    Creates a .sdf file from a .xyz in the specified directory. If no directory
+    is specified then the files are created in the current directory. 
 
+    Parameters
+    ----------
+    file : str
+        filename and extension of an existing .xyz file
+    dir : str or pathlib.Path, optional
+        a path to the directory where the .xyz file is located
+    """
+    if parent_dir is None: 
+        parent_dir = Path('')
+    else:
+        parent_dir = Path(parent_dir)
+    mol = next(pybel.readfile('xyz',parent_dir/file))
+    ofile = Path(file).stem + '.sdf'
+    mol.write('sdf', parent_dir/ofile)
+def get_charge_and_xyz_from_com(file):
+    """
+     Takes a .gjf or .com file and retrieves the coordinates of the atoms and the
+    total charge. 
 
-items= """X
- H                                                                                                  He
-Li Be                                                                            B   C   N   O   F  Ne
-Na Mg                                                                           Al  Si   P   S  Cl  Ar
- K Ca Sc                                           Ti  V Cr Mn Fe Co Ni Cu  Zn  Ga  Ge  As  Se  Br  Kr
-Rb Sr  Y                                           Zr Nb Mo Tc Ru Rh Pd Ag  Cd  In  Sn  Sb  Te   I  Xe
-Cs Ba La Ce Pr Nd Pm Sm Eu Gd Tb Dy Ho Er Tm Yb Lu Hf Ta  W Re Os Ir Pt Au  Hg  Tl  Pb  Bi  Po  At  Rn
-Fr Ra Ac Th Pa  U Np Pu Am Cm Bk Cf Es Fm Md No Lr Rf Db Sg Bh Hs Mt Ds Rg Uub Uut Uuq Uup Uuh Uus Uuo
-""" # The "X" is necessary to ensure that index == AtNum
-periodic_table = items.replace('\n',' ').strip().split()
+    Parameters
+    ----------
+    file : str or pathlib.Path
+        A path pointing to a valid .com or .gjf file
+
+    Returns
+    -------
+    coordinates : list
+        A list of strings (without \\n) that contain the xyz coordinates of the
+        .gjf or .com file 
+    charge : str
+        A str with the number corresponding to the total charge of the .com or 
+        .gjf file
+    """
+
+    with open(file,"r") as comfile:
+        comlines = comfile.readlines()
+
+    _iter = comlines.__iter__()
+    
+    line = ''
+    # Find the command line
+    while '#' not in line: 
+        line = next(_iter)
+
+    # pass the title lines
+    _ = next(_iter)
+    while line:
+        line = next(_iter).strip()
+    
+    # Read the charge from the charge | spin line
+    charge,spin = next(_iter).strip().split()
+
+    # Store the coordinates until next empty line. 
+    coordinates = []
+    line = next(_iter).strip()
+    while line: 
+        coordinates.append(line.strip())
+        line = next(_iter).strip()
+    
+    return coordinates, charge
+    
+# RDKit Utils 
+
+def set_metal_atomic_number(mol,metal_idx,metal_sym):
+    """
+    Changes the atomic number of the metal atoms using their indices. 
+
+    Parameters
+    ----------
+    mol : rdkit.Chem.Mol
+        rdkit molecule object
+    metal_idx : list
+        sorted list that contains the indices of the metal atoms in the molecule
+    metal_sym : list
+        sorted list (same order as metal_idx) that contains the symbols of the 
+        metals in the molecule. 
+    """
+
+    for atom in mol.GetAtoms():
+        if atom.GetIdx() in metal_idx:
+            re_symbol = metal_sym[metal_idx.index(atom.GetIdx())]
+            atomic_number = possible_atoms.index(re_symbol)
+            atom.SetAtomicNum(atomic_number)
+
+def get_conf_RMS(mol1, mol2, c1, c2, heavy, max_matches_RMSD):
+    """
+    Takes in two rdkit.Chem.Mol objects and calculates the RMSD between them.
+    (As side efect mol1 is left in the aligned state, if heavy is specified 
+    the side efect will not happen)
+
+    Parameters
+    ----------
+    mol1 : rdkit.Chem.Mol
+        Probe molecule
+    mol2 : rdkit.Chem.Mol
+        Target molecule. The probe is aligned to the target to compute the RMSD.
+    c1 : int
+        conformation of mol1 to use for the RMSD
+    c2 : int
+        conformation of mol2 to use for the RMSD
+    heavy : bool
+        If True it will ignore the H atoms when computing the RMSD.
+    max_matches_RMSD : int
+        the max number of matches found in a SubstructMatch()
+
+    Returns
+    -------
+    float
+        Returns the best RMSD found.
+    """
+    if heavy:
+         mol1 = RemoveHs(mol1)
+         mol2 = RemoveHs(mol2)
+    return GetBestRMS(mol1,mol2,c1,c2,maxMatches=max_matches_RMSD)
+

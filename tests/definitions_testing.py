@@ -66,7 +66,7 @@ def remove_data(path, folder, smiles):
 def rdkit_tests(df_output,dihedral,xTB_ANI,cmd_pyconfort):
     if not dihedral:
         if not xTB_ANI:
-            test_init_rdkit_confs = df_output['RDKIT-Initial-samples']
+            test_init_rdkit_confs = df_output['RDKit-Initial-samples']
             test_prefilter_rdkit_confs = df_output['RDKit-initial_energy_threshold']
             test_filter_rdkit_confs = df_output['RDKit-RMSD-and-energy-duplicates']
             test_unique_confs = 'nan'
@@ -83,7 +83,7 @@ def rdkit_tests(df_output,dihedral,xTB_ANI,cmd_pyconfort):
     else:
         if cmd_pyconfort[4] == 'params_Cu_test2.yaml':
             test_unique_confs = df_output['summ-conformers']
-            test_init_rdkit_confs = df_output['RDKIT-Initial-samples']
+            test_init_rdkit_confs = df_output['RDKit-Initial-samples']
         else:
             test_init_rdkit_confs = df_output['summ-conformers']
             test_unique_confs = df_output['summ-Unique-conformers']
