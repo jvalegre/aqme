@@ -7,11 +7,7 @@
 
 import subprocess
 import glob
-import shutil
-import shlex
 import pandas as pd
-from rdkit.Chem import AllChem as Chem
-from pyconfort.utils import possible_atoms
 from pyconfort.turbomole import TurbomoleInput
 
 # Hotfixes
@@ -301,13 +297,13 @@ class GaussianTemplate(object):
 		ecp_genecp_atoms = self.basisset.ecp is not None
 		ecp_gen_atoms = bool(self.basisset.elements)
 
-    if len(args.genecp_atoms) > 0:
-      genecp = 'genecp'
+		if len(args.genecp_atoms) > 0:
+			genecp = 'genecp'
 
-    if len(args.gen_atoms) > 0:
-      genecp = 'gen'
+		if len(args.gen_atoms) > 0:
+			genecp = 'gen'
 
-    return genecp
+		return genecp
     
 	@property
 	def basis(self):

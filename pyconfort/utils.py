@@ -2,8 +2,6 @@
 This module contains some classes and functions that are used from other modules
 """
 from pathlib import Path
-import subprocess
-import os
 
 from rdkit.Chem.rdMolAlign import GetBestRMS
 from rdkit.Chem.rdmolops import RemoveHs

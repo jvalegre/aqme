@@ -102,17 +102,17 @@ def parser_args():
 
   # QPREP with Turbomole
   parser.add_argument('--tmfunctional',help="Turbomole functionals",type=str, nargs='*',default=['TPSS',])
-	parser.add_argument('--tmfunctionalsp',help="Turbomole functionals for SP",type=str, nargs='*',default=['TPSS',])
-	parser.add_argument('--tmbasis',help="Turbomole basis set for all atoms for the optimization.")
-	parser.add_argument('--tmbasisfile',help="Turbomole basis set file for the optimization.")
-	parser.add_argument('--tmbasissp',help="Turbomole basis set for all atoms for SP",nargs='*')
-	parser.add_argument('--tmbasisfilesp',help="Turbomole basis set files for SP",nargs='*')
-	parser.add_argument('--tmgrid',help="Turbomole integration grid", default='m4', choices=['1','2','3','4','5','6','7','m3','m4','m5'])
-	parser.add_argument('--tmdispersion',help="Turbomole dispersion",default='off',choices=['off','on','bj','d4'])
-	parser.add_argument('--tmepsilon',help="Turbomole dielectric constant for COSMO",default='gas')
-	parser.add_argument('--tmcavity',help="Turbomole solvent cavity for COSMO-RS", default='none')
-	parser.add_argument('--tmricore',help="Turbomole max RIcore memory in MB",default=200,type=int)
-	parser.add_argument('--tmmaxcore',help="Turbomole max per core memory in MB",default=200,type=int)
+  parser.add_argument('--tmfunctionalsp',help="Turbomole functionals for SP",type=str, nargs='*',default=['TPSS',])
+  parser.add_argument('--tmbasis',help="Turbomole basis set for all atoms for the optimization.")
+  parser.add_argument('--tmbasisfile',help="Turbomole basis set file for the optimization.")
+  parser.add_argument('--tmbasissp',help="Turbomole basis set for all atoms for SP",nargs='*')
+  parser.add_argument('--tmbasisfilesp',help="Turbomole basis set files for SP",nargs='*')
+  parser.add_argument('--tmgrid',help="Turbomole integration grid", default='m4', choices=['1','2','3','4','5','6','7','m3','m4','m5'])
+  parser.add_argument('--tmdispersion',help="Turbomole dispersion",default='off',choices=['off','on','bj','d4'])
+  parser.add_argument('--tmepsilon',help="Turbomole dielectric constant for COSMO",default='gas')
+  parser.add_argument('--tmcavity',help="Turbomole solvent cavity for COSMO-RS", default='none')
+  parser.add_argument('--tmricore',help="Turbomole max RIcore memory in MB",default=200,type=int)
+  parser.add_argument('--tmmaxcore',help="Turbomole max per core memory in MB",default=200,type=int)
   
   #other options for QPREP
   parser.add_argument("--com_from_xyz", action="store_true", default=False, help="Create input files for Gaussian from an xyz file")
