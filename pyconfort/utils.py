@@ -8,17 +8,20 @@ from rdkit.Chem.rdmolops import RemoveHs
 
 import pybel
 
-items = """X
-           H                                                                                                  He
-          Li Be  B                                                                             C   N   O   F  Ne
-          Na Mg Al                                                                            Si   P   S  Cl  Ar
-           K Ca Sc                                           Ti  V Cr Mn Fe Co Ni Cu  Zn  Ga  Ge  As  Se  Br  Kr
-          Rb Sr  Y                                           Zr Nb Mo Tc Ru Rh Pd Ag  Cd  In  Sn  Sb  Te   I  Xe
-          Cs Ba La Ce Pr Nd Pm Sm Eu Gd Tb Dy Ho Er Tm Yb Lu Hf Ta  W Re Os Ir Pt Au  Hg  Tl  Pb  Bi  Po  At  Rn
-          Fr Ra Ac Th Pa  U Np Pu Am Cm Bk Cf Es Fm Md No Lr Rf Db Sg Bh Hs Mt Ds Rg Uub Uut Uuq Uup Uuh Uus Uuo
-        """
-possible_atoms = items.replace('\n',' ').strip().split()
-possible_atoms[0] = ''
+def periodic_table():
+    items = """X
+            H                                                                                                  He
+            Li Be  B                                                                             C   N   O   F  Ne
+            Na Mg Al                                                                            Si   P   S  Cl  Ar
+            K Ca Sc                                           Ti  V Cr Mn Fe Co Ni Cu  Zn  Ga  Ge  As  Se  Br  Kr
+            Rb Sr  Y                                           Zr Nb Mo Tc Ru Rh Pd Ag  Cd  In  Sn  Sb  Te   I  Xe
+            Cs Ba La Ce Pr Nd Pm Sm Eu Gd Tb Dy Ho Er Tm Yb Lu Hf Ta  W Re Os Ir Pt Au  Hg  Tl  Pb  Bi  Po  At  Rn
+            Fr Ra Ac Th Pa  U Np Pu Am Cm Bk Cf Es Fm Md No Lr Rf Db Sg Bh Hs Mt Ds Rg Uub Uut Uuq Uup Uuh Uus Uuo
+            """
+    periodic_table = items.replace('\n',' ').strip().split()
+    periodic_table[0] = ''
+    return periodic_table
+
 
 #class for logging
 class Logger:
@@ -224,7 +227,7 @@ def set_metal_atomic_number(mol,metal_idx,metal_sym):
     for atom in mol.GetAtoms():
         if atom.GetIdx() in metal_idx:
             re_symbol = metal_sym[metal_idx.index(atom.GetIdx())]
-            atomic_number = possible_atoms.index(re_symbol)
+            atomic_number = periodic_table.index(re_symbol)
             atom.SetAtomicNum(atomic_number)
 
 def get_conf_RMS(mol1, mol2, c1, c2, heavy, max_matches_RMSD):

@@ -1,5 +1,5 @@
 import numpy 
-from pyconfort.argument_parser import possible_atoms
+from pyconfort.argument_parser import periodic_table
 
 class GaussianOutputFile(object): 
 	def __init__(self,file): 
@@ -84,7 +84,7 @@ class GaussianOutputFile(object):
 		atoms = []
 		for line in self.lines[start:stop]:
 			_, atnum, _, x,y,z = line.strip().split()
-			atoms.append(possible_atoms.index(int(atnum)))
+			atoms.append(periodic_table.index(int(atnum)))
 			cartesians.append(list(map(float,[x,y,z])))
 		return atoms,cartesians
 	def _get_frequencies(self): 

@@ -10,7 +10,7 @@ except ImportError:
 	from openbabel import pybel
 
 from pyconfort.exp_rules import passes_custom_rules
-from pyconfort.argument_parser import possible_atoms
+from pyconfort.argument_parser import periodic_table
 
 from .gaussian import GaussianOutputFile
 from .templates import GaussianTemplate,OrcaTemplate,TurbomoleTemplate
@@ -60,7 +60,7 @@ def check_for_gen_or_genecp(ATOMTYPES,args,type_of_check,program_gen):
 				orca_aux_section = True
 
 		if program_gen == 'gaussian':
-			if atomtype not in ecp_list and atomtype in possible_atoms:
+			if atomtype not in ecp_list and atomtype in periodic_table:
 				ecp_list.append(atomtype)
 			if atomtype in genecp_atoms_include:
 				ecp_genecp_atoms = True
@@ -153,7 +153,7 @@ def orca_file_gen(mol,rename_file_name,bs,lot,
 	if orca_aux_section:
 		lines.append("%basis")
 
-		ecp_atoms = ' '.join([str(possible_atoms.index(atom)) for atom in ecp_list])
+		ecp_atoms = ' '.join([str(periodic_table.index(atom)) for atom in ecp_list])
 		gen_orca_line_1 = f'NewGTO {ecp_atoms}'
 		gen_orca_line_2 = f'NewAuxCGTO {ecp_atoms}'
 
@@ -448,7 +448,7 @@ def output_analyzer(duplicates,log_files,com_files, w_dir, w_dir_main,lot, bs, b
 			if args.sp == 'gaussian' or args.sp == 'orca' or args.sp == 'turbomole' or args.nics:
 
 				#get coordinates
-				ATOMTYPES, CARTESIANS,stand_or = get_coords_normal(outlines, stand_or, NATOMS, possible_atoms, ATOMTYPES, CARTESIANS)
+				ATOMTYPES, CARTESIANS,stand_or = get_coords_normal(outlines, stand_or, NATOMS, periodic_table, ATOMTYPES, CARTESIANS)
 
 				if args.sp == 'gaussian':
 					# creating new folder with new input gaussian files
@@ -633,7 +633,7 @@ def analyze_single_output(file,log,w_dir,args):
 		if args.sp == 'gaussian' or args.sp == 'orca' or args.sp == 'turbomole' or args.nics:
 
 			#get coordinates
-			ATOMTYPES, CARTESIANS,stand_or = get_coords_normal(outlines, stand_or, NATOMS, possible_atoms, ATOMTYPES, CARTESIANS)
+			ATOMTYPES, CARTESIANS,stand_or = get_coords_normal(outlines, stand_or, NATOMS, periodic_table, ATOMTYPES, CARTESIANS)
 
 			if args.sp == 'gaussian':
 				# creating new folder with new input gaussian files

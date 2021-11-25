@@ -19,8 +19,7 @@ from pyconfort.csearch import (check_for_pieces, check_charge_smi, clean_args,
                                mol_from_sdf_or_mol_or_mol2, creation_of_dup_csv)
 from pyconfort.filter import exp_rules_output
 
-from pyconfort.qprep_gaussian import (read_energies, write_gaussian_input_file, 
-                                      convert_xyz_to_sdf, get_name_and_charge)
+from pyconfort.qprep_gaussian import (read_energies, GaussianTemplate, get_name_and_charge, write_gaussian_input_file)
 from pyconfort.qcorr_gaussian import output_analyzer, check_for_final_folder, dup_calculation
 
 from pyconfort.grapher import graph
@@ -136,8 +135,8 @@ def csearch_main(w_dir_initial,args,log_overall):
                         job = executor.submit(compute_confs,w_dir_initial,mol,name,args,i)
                         jobs.append(job)
                         count_mol +=1
-
-                        # compute_confs(w_dir_initial,mol,name,args,log,dup_data,counter_for_template,i,start_time)
+                        
+                        # compute_confs(w_dir_initial,mol,name,args,log_overall,dup_data,counter_for_template,i,start_time)
                     except AttributeError:
                         log_overall.write("\nx  Wrong SMILES string ("+smi+") found (not compatible with RDKit or ANI/xTB if selected)! This compound will be omitted\n")
 
@@ -161,7 +160,7 @@ def csearch_main(w_dir_initial,args,log_overall):
                 job = executor.submit(compute_confs,w_dir_initial,mol,name,args,i)
                 jobs.append(job)
                 count_mol +=1
-                # compute_confs(w_dir_initial,mol,name,args,log,dup_data,counter_for_template,i,start_time)
+                # compute_confs(w_dir_initial,mol,name,args,log_overall,dup_data,counter_for_template,i,start_time)
 
         # CDX file
         elif os.path.splitext(args.input)[1] == '.cdx':
@@ -304,10 +303,11 @@ def qprep_main(w_dir_initial,args,log):
     else:
         conf_files =  glob.glob('*.sdf')
 
-    if args.com_from_xyz:
-        xyz_files =  glob.glob('*.xyz')
-        convert_xyz_to_sdf(xyz_files,args,log)
-        conf_files =  glob.glob('*.sdf')
+    # # NEED TO UPDATE THIS PART TO START FROM JSON!
+    # if args.com_from_xyz:
+    #     xyz_files =  glob.glob('*.xyz')
+    #     convert_xyz_to_sdf(xyz_files,args,log)
+    #     conf_files =  glob.glob('*.sdf')
 
     # names for directories created
     if args.QPREP == 'gaussian':

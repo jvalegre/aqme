@@ -90,7 +90,8 @@ def minimize_rdkit_energy(mol,conf,log,FF,maxsteps):
     if FF == "UFF" or forcefield is None:
         # if forcefield is None means that MMFF will not work. Attempt UFF.
         forcefield = Chem.UFFGetMoleculeForceField(mol,confId=conf)
-    else:
+
+    if FF not in ["MMFF","UFF"] or forcefield is None:
         log.write(f' Force field {FF} not supported!')
         sys.exit()
 

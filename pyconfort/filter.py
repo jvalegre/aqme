@@ -8,7 +8,7 @@ from itertools import chain
 from rdkit.Chem import AllChem as Chem
 from rdkit.Chem import rdMolTransforms, Descriptors
 
-from pyconfort.utils import possible_atoms, get_conf_RMS
+from pyconfort.utils import periodic_table, get_conf_RMS
 
 # Aux functions for passes_Ir_bidentate_x3_rule
 def is_carbene_like(neighbours):
@@ -385,7 +385,8 @@ def filters(mol,log,molwt_cutoff,verbose):
     
     # Filter 3
     symbols = [atom.GetSymbol() for atom in mol.GetAtoms()]
-    unknown_atoms = list(set(symbols) - set(possible_atoms))
+
+    unknown_atoms = list(set(symbols) - set(periodic_table()))
     if unknown_atoms:
         if verbose:
             log.write(f" Exiting as atoms [{','.join(unknown_atoms)}] are not in the periodic table")

@@ -11,9 +11,8 @@ from rdkit.Chem import AllChem as Chem
 from rdkit.Chem.PropertyMol import PropertyMol
 from rdkit.Geometry import Point3D
 
-from pyconfort.qprep_gaussian import write_confs
 from pyconfort.filter import CompoundFilter, EnergyFilter, RMSDFilter
-from pyconfort.utils import set_metal_atomic_number
+from pyconfort.utils import set_metal_atomic_number,Logger
 
 hartree_to_kcal = 627.509
 
@@ -211,6 +210,28 @@ def mult_min(name, args, program,log,dup_data,dup_data_idx):
         [description]
     """
 
+    ############# ASE  AND TORCH AND TORCHANI DEPENDENT FUNCTIONS ##################
+
+    # imports for xTB and ANI1
+    try:
+        import ase
+        import ase.optimize
+        from ase.units import Hartree
+    except (ModuleNotFoundError,AttributeError):
+        err_msg = 'ASE is not installed correctly - xTB and ANI are not available'
+        log.write('\nx  ASE is not installed correctly - xTB and ANI are not available')
+        raise ModuleNotFoundError(err_msg)
+
+
+    try:
+        import torch
+        os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
+        DEVICE = torch.device('cpu')
+    except (ModuleNotFoundError,AttributeError):
+        err_msg = 'TORCH is not installed correctly - xTB and ANI are not available'
+        log.write('\nx  TORCH is not installed correctly - xTB and ANI are not available')
+        raise ModuleNotFoundError(err_msg)
+
     if args.verbose:
         if args.CMIN=='xtb':
             if args.xtb_solvent == 'none':
@@ -311,174 +332,153 @@ def mult_min(name, args, program,log,dup_data,dup_data_idx):
     # write the filtered, ordered conformers to external file
     write_confs(outmols, cenergy, selectedcids, name_mol, args, program,log)
 
-############# ASE  AND TORCH AND TORCHANI DEPENDENT FUNCTIONS ##################
-
-log = 'something' # RAUL: When the Logger is refactored This has to be changed appropiatedly 
-
-# imports for xTB and ANI1
-try:
-    import ase
-except (ModuleNotFoundError,AttributeError):
-    err_msg = 'ASE is not installed correctly - xTB and ANI are not available'
-    log.write('\nx  ASE is not installed correctly - xTB and ANI are not available')
-    raise ModuleNotFoundError(err_msg)
-else:
-    import ase.optimize
-    from ase.units import Hartree
-
-try:
-    import torch
-except (ModuleNotFoundError,AttributeError):
-    err_msg = 'TORCH is not installed correctly - xTB and ANI are not available'
-    log.write('\nx  TORCH is not installed correctly - xTB and ANI are not available')
-    raise ModuleNotFoundError(err_msg)
-else:
-    os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
-    DEVICE = torch.device('cpu')
 
 # Attempt an XTB import, if it fails log it and mock xtb_calc to delay the 
 # system exit until it is used. 
-try:
-    from xtb.ase.calculator import XTB
-except (ModuleNotFoundError,AttributeError):
-    log.write('\nx  xTB is not installed correctly - xTB is not available')
-    xtb_calc = lambda *x,**y: sys.exit()
-else: 
-    def xtb_calc(elements,coordinates,args,log,ase_metal,ase_metal_idx):
-        """
-        Run an xtb optimization and return the optimized coordinates and the energy
-        of the molecule. 
+# try:
+#     from xtb.ase.calculator import XTB
+# except (ModuleNotFoundError,AttributeError):
+#     log.write('\nx  xTB is not installed correctly - xTB is not available')
+#     xtb_calc = lambda *x,**y: sys.exit()
+# # Attempt a torchani import, if it fails log it and mock ani_calc function
+# # to raise a sys.exit() if called 
+# try:
+#     import torchani
+# except (ModuleNotFoundError,AttributeError):
+#     log.write('\nx  Torchani is not installed correctly - ANI is not available')
+#     ani_calc = lambda *x,**y: sys.exit()
 
-        Parameters
-        ----------
-        elements : [type]
-            [description]
-        coordinates : [type]
-            [description]
-        args : argparse.args
-            [description]
-        log : Logger
-            [description]
-        ase_metal : [type]
-            [description]
-        ase_metal_idx : [type]
-            [description]
 
-        Returns
-        -------
-        tuple
-            sqm_energy, coordinates
-        """
+
+
+def xtb_calc(elements,coordinates,args,log,ase_metal,ase_metal_idx):
+    """
+    Run an xtb optimization and return the optimized coordinates and the energy
+    of the molecule. 
+
+    Parameters
+    ----------
+    elements : [type]
+        [description]
+    coordinates : [type]
+        [description]
+    args : argparse.args
+        [description]
+    log : Logger
+        [description]
+    ase_metal : [type]
+        [description]
+    ase_metal_idx : [type]
+        [description]
+
+    Returns
+    -------
+    tuple
+        sqm_energy, coordinates
+    """
+    
+    xtb_calculator = XTB(method=args.xtb_method,
+                    accuracy=args.xtb_accuracy,
+                    electronic_temperature=args.xtb_electronic_temperature,
+                    max_iterations=args.xtb_max_iterations,
+                    solvent=args.xtb_solvent)
+
+    #define ase molecule using GFN2 Calculator
+    ase_molecule = ase.Atoms(elements, 
+                            positions=coordinates.tolist()[0],
+                            calculator=xtb_calculator)
+    
+    # Adjust the charge of the metal atoms
+    if args.metal_complex:
+        extension = os.path.splitext(args.input)[1]
+        if extension in ['.csv','.cdx','.smi']:
+            for i,atom in enumerate(ase_molecule):
+                if i in ase_metal:
+                    ase_charge = args.charge[args.metal_idx.index(ase_metal_idx[ase_metal.index(i)])]
+                    # will update only for cdx, smi, and csv formats.
+                    atom.charge = ase_charge
+            else:
+                atom.charge = args.charge_default
+                if args.verbose:
+                    log.write('o  The Overall charge is read from the .com file ')
+    
         
-        xtb_calculator = XTB(method=args.xtb_method,
-                        accuracy=args.xtb_accuracy,
-                        electronic_temperature=args.xtb_electronic_temperature,
-                        max_iterations=args.xtb_max_iterations,
-                        solvent=args.xtb_solvent)
+    optimizer = ase.optimize.BFGS(ase_molecule, 
+                                trajectory='xTB_opt.traj',
+                                logfile='xtb.opt')
 
-        #define ase molecule using GFN2 Calculator
-        ase_molecule = ase.Atoms(elements, 
-                                positions=coordinates.tolist()[0],
-                                calculator=xtb_calculator)
-        
-        # Adjust the charge of the metal atoms
-        if args.metal_complex:
-            extension = os.path.splitext(args.input)[1]
-            if extension in ['.csv','.cdx','.smi']:
-                for i,atom in enumerate(ase_molecule):
-                    if i in ase_metal:
-                        ase_charge = args.charge[args.metal_idx.index(ase_metal_idx[ase_metal.index(i)])]
-                        # will update only for cdx, smi, and csv formats.
-                        atom.charge = ase_charge
-                else:
-                    atom.charge = args.charge_default
-                    if args.verbose:
-                        log.write('o  The Overall charge is read from the .com file ')
-        
-            
-        optimizer = ase.optimize.BFGS(ase_molecule, 
-                                    trajectory='xTB_opt.traj',
-                                    logfile='xtb.opt')
+    optimizer.run(fmax=args.opt_fmax, steps=args.opt_steps)
 
-        optimizer.run(fmax=args.opt_fmax, steps=args.opt_steps)
+    if len(ase.io.Trajectory('xTB_opt.traj', mode='r')) != (args.opt_steps+1):
+        species_coords = ase_molecule.get_positions().tolist()
+        coordinates = torch.tensor([species_coords], requires_grad=True, device=DEVICE)
+    
+    # Now let's compute energy:
+    xtb_energy = ase_molecule.get_potential_energy()
+    sqm_energy = (xtb_energy / Hartree)* hartree_to_kcal
 
-        if len(ase.io.Trajectory('xTB_opt.traj', mode='r')) != (args.opt_steps+1):
-            species_coords = ase_molecule.get_positions().tolist()
-            coordinates = torch.tensor([species_coords], requires_grad=True, device=DEVICE)
-        
-        # Now let's compute energy:
-        xtb_energy = ase_molecule.get_potential_energy()
-        sqm_energy = (xtb_energy / Hartree)* hartree_to_kcal
+    return sqm_energy, coordinates
 
-        return sqm_energy, coordinates
 
-# Attempt a torchani import, if it fails log it and mock ani_calc function
-# to raise a sys.exit() if called 
-try:
-    import torchani
-except (ModuleNotFoundError,AttributeError):
-    log.write('\nx  Torchani is not installed correctly - ANI is not available')
-    ani_calc = lambda *x,**y: sys.exit()
-else:
-    def ani_calc(elements,coordinates,args):
-        """
-        Run a ANI1 optimization and return the energy and optimized coordinates. 
+def ani_calc(elements,coordinates,args):
+    """
+    Run a ANI1 optimization and return the energy and optimized coordinates. 
 
-        Parameters
-        ----------
-        ase : [type]
-            [description]
-        torch : [type]
-            [description]
-        model : [type]
-            [description]
-        device : [type]
-            [description]
-        elements : [type]
-            [description]
-        coordinates : [type]
-            [description]
-        args : [type]
-            [description]
+    Parameters
+    ----------
+    ase : [type]
+        [description]
+    torch : [type]
+        [description]
+    model : [type]
+        [description]
+    device : [type]
+        [description]
+    elements : [type]
+        [description]
+    coordinates : [type]
+        [description]
+    args : [type]
+        [description]
 
-        Returns
-        -------
-        tuple
-            sqm_energy, coordinates
-        """
-        # Select the model
-        ANI_method = args.ani_method
-        if ANI_method == 'ANI1x':
-            model = torchani.models.ANI1x()
-        if ANI_method == 'ANI1ccx':
-            model = torchani.models.ANI1ccx()
-        if ANI_method == 'ANI2x':
-            model = torchani.models.ANI2x()
-        if ANI_method == 'ANI2ccx':
-            model = torchani.models.ANI2ccx()
-        if ANI_method == 'ANI3x':
-            model = torchani.models.ANI3x()
-        if ANI_method == 'ANI3ccx':
-            model = torchani.models.ANI3ccx()
-        # A bit Fancier
-        #model = getattr(torchani.models,ANI_method)()
-        
-        species = model.species_to_tensor(elements).to(DEVICE).unsqueeze(0)
-        _, ani_energy = model((species, coordinates))
+    Returns
+    -------
+    tuple
+        sqm_energy, coordinates
+    """
+    # Select the model
+    ANI_method = args.ani_method
+    if ANI_method == 'ANI1x':
+        model = torchani.models.ANI1x()
+    if ANI_method == 'ANI1ccx':
+        model = torchani.models.ANI1ccx()
+    if ANI_method == 'ANI2x':
+        model = torchani.models.ANI2x()
+    if ANI_method == 'ANI2ccx':
+        model = torchani.models.ANI2ccx()
+    if ANI_method == 'ANI3x':
+        model = torchani.models.ANI3x()
+    if ANI_method == 'ANI3ccx':
+        model = torchani.models.ANI3ccx()
+    # A bit Fancier
+    #model = getattr(torchani.models,ANI_method)()
+    
+    species = model.species_to_tensor(elements).to(DEVICE).unsqueeze(0)
+    _, ani_energy = model((species, coordinates))
 
-        ase_molecule = ase.Atoms(elements, positions=coordinates.tolist()[0], calculator=model.ase())
+    ase_molecule = ase.Atoms(elements, positions=coordinates.tolist()[0], calculator=model.ase())
 
-        optimizer = ase.optimize.BFGS(ase_molecule, trajectory='ANI1_opt.traj', logfile='ase.opt' )
-        optimizer.run(fmax=args.opt_fmax, steps=args.opt_steps)
-        if len(ase.io.Trajectory('ANI1_opt.traj', mode='r')) != (args.opt_steps+1):
-            species_coords = ase_molecule.get_positions().tolist()
-            coordinates = torch.tensor([species_coords], requires_grad=True, device=DEVICE)
+    optimizer = ase.optimize.BFGS(ase_molecule, trajectory='ANI1_opt.traj', logfile='ase.opt' )
+    optimizer.run(fmax=args.opt_fmax, steps=args.opt_steps)
+    if len(ase.io.Trajectory('ANI1_opt.traj', mode='r')) != (args.opt_steps+1):
+        species_coords = ase_molecule.get_positions().tolist()
+        coordinates = torch.tensor([species_coords], requires_grad=True, device=DEVICE)
 
-        # Now let's compute energy:
-        _, ani_energy = model((species, coordinates))
-        sqm_energy = ani_energy.item() * hartree_to_kcal # Hartree to kcal/mol
+    # Now let's compute energy:
+    _, ani_energy = model((species, coordinates))
+    sqm_energy = ani_energy.item() * hartree_to_kcal # Hartree to kcal/mol
 
-        return sqm_energy, coordinates
+    return sqm_energy, coordinates
 
 # xTB AND ANI1 MAIN OPTIMIZATION PROCESS
 def optimize(mol, args, program,log,dup_data,dup_data_idx):

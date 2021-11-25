@@ -3,13 +3,12 @@
 #          used in the LOG file analyzer             #
 ######################################################.
 import os
-from pyconfort.mainf import creation_of_ana_csv
 import sys
 import subprocess
 import numpy as np
-from pyconfort.qprep_gaussian import input_route_line,check_for_gen_or_genecp,write_genecp,orca_file_gen
+from pyconfort.qcorr_rework import input_route_line,check_for_gen_or_genecp,write_genecp,orca_file_gen
 # the import for check and write genecp is probably inside the genecp function of qprep now, FIX!
-from pyconfort.utils import possible_atoms
+from pyconfort.utils import periodic_table
 from pyconfort.filter import exp_rules_output,check_geom_filter
 from pyconfort.nics_conf import update_coord,get_coords_normal
 from pyconfort.utils import move_file, com_2_xyz_2_sdf
@@ -83,7 +82,7 @@ def new_com_file(com_type,w_dir_initial,log,new_gaussian_input_files,file,args,k
        
     if args.sp == 'turbomole' and com_type == 'sp':
 	    # Do stuff, MISSING PART
-		  pass
+        pass
 
     #submitting the gaussian file on summit
     if args.qsub:
@@ -197,7 +196,7 @@ def get_geom_and_freq_for_normal(outlines, args, TERMINATION, NATOMS, FREQS, NOR
     return TERMINATION, NATOMS, FREQS, NORMALMODE, IM_FREQS, READMASS, FORCECONST, nfreqs, freqs_so_far, rms, stop_rms, dist_rot_or, stand_or
 
 
-def get_coords_not_normal(outlines, stop_rms, stand_or, dist_rot_or, NATOMS, possible_atoms, ATOMTYPES, CARTESIANS):
+def get_coords_not_normal(outlines, stop_rms, stand_or, dist_rot_or, NATOMS, periodic_table, ATOMTYPES, CARTESIANS):
     if stop_rms == 0:
         last_line = len(outlines)
     else:
@@ -216,7 +215,7 @@ def get_coords_not_normal(outlines, stop_rms, stand_or, dist_rot_or, NATOMS, pos
             if outlines[i-1].find("-------") > -1:
                 dist_rot_or = i
                 stop_get_details_dis_rot += 1
-    ATOMTYPES, CARTESIANS,stand_or = get_coords_normal(outlines, stand_or, NATOMS, possible_atoms, ATOMTYPES, CARTESIANS)
+    ATOMTYPES, CARTESIANS,stand_or = get_coords_normal(outlines, stand_or, NATOMS, periodic_table, ATOMTYPES, CARTESIANS)
     return ATOMTYPES, CARTESIANS, NATOMS,stand_or
   
 
@@ -376,11 +375,11 @@ def output_analyzer(duplicates,log_files,com_files, w_dir, w_dir_main,lot, bs, b
 
         # Get the coordinates for jobs that finished well with and without imag. freqs
         if TERMINATION == "normal" and IM_FREQS>0:
-            ATOMTYPES, CARTESIANS, stand_or = get_coords_normal(outlines, stand_or, NATOMS, possible_atoms, ATOMTYPES, CARTESIANS)
+            ATOMTYPES, CARTESIANS, stand_or = get_coords_normal(outlines, stand_or, NATOMS, periodic_table, ATOMTYPES, CARTESIANS)
 
         # Get he coordinates for jobs that did not finished or finished with an error
         if TERMINATION != "normal":
-            ATOMTYPES, CARTESIANS,NATOMS, stand_or = get_coords_not_normal(outlines, stop_rms, stand_or, dist_rot_or, NATOMS, possible_atoms, ATOMTYPES, CARTESIANS)
+            ATOMTYPES, CARTESIANS,NATOMS, stand_or = get_coords_not_normal(outlines, stop_rms, stand_or, dist_rot_or, NATOMS, periodic_table, ATOMTYPES, CARTESIANS)
         # This part fixes imaginary freqs (if any)
         if IM_FREQS > 0:
             CARTESIANS = fix_imag_freqs(NATOMS, CARTESIANS, args, FREQS, NORMALMODE)
@@ -448,7 +447,7 @@ def output_analyzer(duplicates,log_files,com_files, w_dir, w_dir_main,lot, bs, b
             if args.sp == 'gaussian' or args.sp == 'orca' or args.sp == 'turbomole' or args.nics:
 
                 #get coordinates
-                ATOMTYPES, CARTESIANS,stand_or = get_coords_normal(outlines, stand_or, NATOMS, possible_atoms, ATOMTYPES, CARTESIANS)
+                ATOMTYPES, CARTESIANS,stand_or = get_coords_normal(outlines, stand_or, NATOMS, periodic_table, ATOMTYPES, CARTESIANS)
 
                 if args.sp == 'gaussian':
                     # creating new folder with new input Gaussian files

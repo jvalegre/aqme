@@ -317,6 +317,7 @@ def compute_confs(w_dir_initial, mol, name, args,i):
     pandas.Dataframe
         total_data
     """
+    
     csearch_dir = Path(w_dir_initial) / 'CSEARCH'
     dat_dir = csearch_dir / 'dat_files'
     dat_dir.mkdir(parents=True, exist_ok=True)
@@ -368,6 +369,7 @@ def compute_confs(w_dir_initial, mol, name, args,i):
             total_data = conformer_generation(mol,name,args,log)
     else:
         total_data = conformer_generation(mol,name,args,log)
+    
     return total_data
 
 def conformer_generation(mol,name,args,log,coord_Map=None,alg_Map=None,mol_template=None):
@@ -397,6 +399,7 @@ def conformer_generation(mol,name,args,log,coord_Map=None,alg_Map=None,mol_templ
         dup_data
     """
     dup_data = creation_of_dup_csv(args.CSEARCH,args.CMIN)
+    
     dup_data_idx = 0
     start_time = time.time()
     valid_structure = filters(mol,log,args.max_MolWt,args.verbose)
@@ -603,6 +606,7 @@ def min_and_E_calc(mol,cids,args,log,coord_Map,alg_Map,mol_template):
         same as using only 1 parent mol object with 10 conformers, but we 
         couldn'temp SetProp correctly.
     """
+    
     cenergy,outmols = [],[]
     #bar = IncrementalBar('o  Minimizing', max = len(cids))
     for _, conf in enumerate(cids):
@@ -657,9 +661,10 @@ def min_after_embed(mol,cids,name,initial_confs,rotmatches,dup_data,dup_data_idx
     int
         status
     """
+    
     # gets optimized mol objects and energies
     outmols,cenergy = min_and_E_calc(mol,cids,args,log,coord_Map,alg_Map,mol_template)
-
+    
     # writing charges after RDKit
     if os.path.splitext(args.input)[1] == '.cdx' or os.path.splitext(args.input)[1] == '.smi' or os.path.splitext(args.input)[1] == '.csv':
         args.charge = rules_get_charge(mol,args)
@@ -749,6 +754,7 @@ def rdkit_to_sdf(mol, name,args,log,dup_data,dup_data_idx, coord_Map, alg_Map, m
     tuple
         status,rotmatches,update_to_rdkit
     """
+
     Chem.SanitizeMol(mol)
 
     mol = Chem.AddHs(mol)
@@ -789,7 +795,7 @@ def rdkit_to_sdf(mol, name,args,log,dup_data,dup_data_idx, coord_Map, alg_Map, m
     if args.CSEARCH=='rdkit':
         rotmatches =[]
     cids = embed_conf(mol,initial_confs,args,log,coord_Map,alg_Map, mol_template)
-
+    
     #energy minimize all to get more realistic results
     #identify the atoms and decide Force Field
     for atom in mol.GetAtoms():
@@ -804,7 +810,7 @@ def rdkit_to_sdf(mol, name,args,log,dup_data,dup_data_idx, coord_Map, alg_Map, m
             log.write("o  Found "+ str(len(rotmatches))+ " rotatable torsions")
         else:
             log.write("o  Systematic torsion rotation is set to OFF")
-
+    
     status = min_after_embed(mol,cids,name,initial_confs,rotmatches,dup_data,dup_data_idx,sdwriter,args,log,update_to_rdkit,coord_Map,alg_Map, mol_template)
     sdwriter.close()
 
@@ -905,9 +911,10 @@ def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None, alg_
     tuple
         status, update_to_rdkit
     """
+    
     # writes sdf for the first RDKit conformer generation
     status,rotmatches,update_to_rdkit = rdkit_to_sdf(mol, name,args,log,dup_data,dup_data_idx, coord_Map, alg_Map, mol_template)
-
+    
     # reads the initial SDF files from RDKit and uses dihedral scan if selected
     if status != -1 or status != 0:
         # getting the energy and mols after rotations

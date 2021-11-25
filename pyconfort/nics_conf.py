@@ -10,13 +10,13 @@ import pandas as pd
 import numpy as np
 from numpy.linalg.linalg import LinAlgError
 
-from pyconfort.utils import possible_atoms, move_file_from_folder
+from pyconfort.utils import periodic_table, move_file_from_folder
 
-def get_coords_normal(outlines, stand_or, natoms, possible_atoms, atomtypes, cartesians):
+def get_coords_normal(outlines, stand_or, natoms, periodic_table, atomtypes, cartesians):
     for i in range(stand_or+5,stand_or+5+natoms):
         massno = int(outlines[i].split()[1])
-        if massno < len(possible_atoms):
-            atom_symbol = possible_atoms[massno]
+        if massno < len(periodic_table):
+            atom_symbol = periodic_table[massno]
         else:
             atom_symbol = "XX"
         atomtypes.append(atom_symbol)
@@ -118,7 +118,7 @@ def getSHIELDING(outlines,args,log):
           NATOMS = i-stand_or-6
           break
 
-  ATOMTYPES, CARTESIANS,stand_or = get_coords_normal(outlines, stand_or, NATOMS, possible_atoms, ATOMTYPES, CARTESIANS)
+  ATOMTYPES, CARTESIANS,stand_or = get_coords_normal(outlines, stand_or, NATOMS, periodic_table, ATOMTYPES, CARTESIANS)
 
   NMR = []
   for i in range(0,len(outlines)):

@@ -42,12 +42,14 @@ def main():
     base_path = Path(w_dir_initial)
 
     args = parser_args()
-    name = args.input.split('.')[0]
 
     log_overall = Logger("pyCONFORT", args.output_name)
     #if needed to load from a yaml file
     load_from_yaml(args,log_overall)
 
+    name = args.input.split('.')[0]
+
+    # IS THIS NECESSARY?!
     #setting variable if needed
     for _ in args.basis_set:
         if len(args.basis_set) != len(args.basis_set_genecp_atoms):
@@ -65,7 +67,7 @@ def main():
             log_overall.write(f"\n All molecules execution time CSEARCH: {elapsed_time} seconds")
         os.chdir(w_dir_initial)
         if args.CMIN is None:
-            csearch_csv_folder = base_path.joinpath('/CSEARCH/csv_files')
+            csearch_csv_folder = base_path.joinpath('CSEARCH/csv_files')
             csearch_csv_folder.mkdir(exist_ok=True)
             csearch_csv_file = csearch_csv_folder.joinpath(f'{name}-CSEARCH-Data.csv')
             csearch_dup_data.to_csv(csearch_csv_file,index=False)

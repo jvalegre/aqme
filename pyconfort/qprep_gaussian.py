@@ -6,7 +6,9 @@
 #########################################################.
 
 import subprocess
+import os
 import glob
+import shlex
 import pandas as pd
 from pyconfort.turbomole import TurbomoleInput
 
@@ -404,65 +406,65 @@ class GaussianTemplate(object):
 		return txt
     # FIXED PART TO WRITE GENECP FROM NEWER COMMITS
     # write genecp/gen part
-def write_genecp(ATOMTYPES,type_gen,fileout,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,bs_com,lot_com,bs_gcp_com,args,w_dir_initial,new_gaussian_input_files):
+	# def write_genecp(ATOMTYPES,type_gen,fileout,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,bs_com,lot_com,bs_gcp_com,args,w_dir_initial,new_gaussian_input_files):
 
-	ecp_not_used = 0
-	for _,element_ecp in enumerate(ecp_list):
-		if element_ecp in ATOMTYPES and element_ecp != '':
-			if type_gen == 'sp':
-				if element_ecp not in (args.genecp_atoms_sp or args.gen_atoms_sp):
-					fileout.write(element_ecp+' ')
-					ecp_not_used += 1
-			else:
-				if element_ecp not in (args.genecp_atoms or args.gen_atoms):
-					fileout.write(element_ecp+' ')
-					ecp_not_used += 1
+	# 	ecp_not_used = 0
+	# 	for _,element_ecp in enumerate(ecp_list):
+	# 		if element_ecp in ATOMTYPES and element_ecp != '':
+	# 			if type_gen == 'sp':
+	# 				if element_ecp not in (args.genecp_atoms_sp or args.gen_atoms_sp):
+	# 					fileout.write(element_ecp+' ')
+	# 					ecp_not_used += 1
+	# 			else:
+	# 				if element_ecp not in (args.genecp_atoms or args.gen_atoms):
+	# 					fileout.write(element_ecp+' ')
+	# 					ecp_not_used += 1
 
-	if ecp_not_used > 0:
-		fileout.write('0\n')
-		fileout.write(bs_com+'\n')
-		fileout.write('****\n')
+	# 	if ecp_not_used > 0:
+	# 		fileout.write('0\n')
+	# 		fileout.write(bs_com+'\n')
+	# 		fileout.write('****\n')
 
-	if len(bs_gcp_com.split('.')) > 1:
-		if bs_gcp_com.split('.')[1] == ('txt' or 'yaml' or 'yml' or 'rtf'):
-			os.chdir(w_dir_initial)
-			read_lines = open(bs_gcp_com,"r").readlines()
-			os.chdir(new_gaussian_input_files)
-			#getting the title line
-			for line in read_lines:
-				fileout.write(line)
-			fileout.write('\n\n')
-	else:
-		ecp_used = 0
-		for _,element_ecp in enumerate(ecp_list):
-			if type_gen == 'sp':
-				if element_ecp in (args.genecp_atoms_sp or args.gen_atoms_sp):
-					fileout.write(element_ecp+' ')
-					ecp_used += 1
-			else:
-				if element_ecp in (args.genecp_atoms or args.gen_atoms):
-					fileout.write(element_ecp+' ')
-					ecp_used += 1
+	# 	if len(bs_gcp_com.split('.')) > 1:
+	# 		if bs_gcp_com.split('.')[1] == ('txt' or 'yaml' or 'yml' or 'rtf'):
+	# 			os.chdir(w_dir_initial)
+	# 			read_lines = open(bs_gcp_com,"r").readlines()
+	# 			os.chdir(new_gaussian_input_files)
+	# 			#getting the title line
+	# 			for line in read_lines:
+	# 				fileout.write(line)
+	# 			fileout.write('\n\n')
+	# 	else:
+	# 		ecp_used = 0
+	# 		for _,element_ecp in enumerate(ecp_list):
+	# 			if type_gen == 'sp':
+	# 				if element_ecp in (args.genecp_atoms_sp or args.gen_atoms_sp):
+	# 					fileout.write(element_ecp+' ')
+	# 					ecp_used += 1
+	# 			else:
+	# 				if element_ecp in (args.genecp_atoms or args.gen_atoms):
+	# 					fileout.write(element_ecp+' ')
+	# 					ecp_used += 1
 
-		if ecp_used > 0:
-			fileout.write('0\n')
-			fileout.write(bs_gcp_com+'\n')
-			fileout.write('****\n\n')
+	# 		if ecp_used > 0:
+	# 			fileout.write('0\n')
+	# 			fileout.write(bs_gcp_com+'\n')
+	# 			fileout.write('****\n\n')
 
-		else:
-			fileout.write('\n')
+	# 		else:
+	# 			fileout.write('\n')
 
-		if ecp_genecp_atoms:
-			for _,element_ecp in enumerate(ecp_list):
-				if type_gen == 'sp':
-					if element_ecp in args.genecp_atoms_sp:
-						fileout.write(element_ecp+' ')
-				else:
-					if element_ecp in args.genecp_atoms:
-						fileout.write(element_ecp+' ')
+	# 		if ecp_genecp_atoms:
+	# 			for _,element_ecp in enumerate(ecp_list):
+	# 				if type_gen == 'sp':
+	# 					if element_ecp in args.genecp_atoms_sp:
+	# 						fileout.write(element_ecp+' ')
+	# 				else:
+	# 					if element_ecp in args.genecp_atoms:
+	# 						fileout.write(element_ecp+' ')
 
-			fileout.write('0\n')
-			fileout.write(bs_gcp_com+'\n\n')
+	# 			fileout.write('0\n')
+	# 			fileout.write(bs_gcp_com+'\n\n')
       
 	def write(self,destination,molecule): 
 		stem = molecule.title.lstrip().replace(' ','_')
@@ -930,3 +932,306 @@ def qprep_main(w_dir_initial,args,log):
 			for qm_file in qm_files: 
 				cmd_qsub = [args.submission_command, qm_file]
 				subprocess.call(cmd_qsub)
+
+# FUNCTIONS FROM THE OLD CODE JUST TO MAKE RAUL'S VERSION WORK!
+
+# PARSES THE ENERGIES FROM SDF FILES
+def read_energies(file,log): # parses the energies from sdf files - then used to filter conformers
+	energies = []
+	f = open(file,"r")
+	readlines = f.readlines()
+	for i,_ in enumerate(readlines):
+		if readlines[i].find('>  <Energy>') > -1:
+			energies.append(float(readlines[i+1].split()[0]))
+	f.close()
+	return energies
+
+def get_name_and_charge(name,charge_data):
+
+	name_list = name.split('_')
+
+	if 'xtb' in name_list or 'ani' in name_list:
+		if 'filter' in name_list:
+			name_molecule = name[:-21]
+		else:
+			name_molecule = name[:-4]
+	elif 'summ' in name_list:
+		if 'filter' in name_list:
+			name_molecule = name[:-22]
+		else:
+			name_molecule = name[:-5]
+	elif 'rdkit' in name_list:
+		if 'filter' in name_list:
+			name_molecule = name[:-23]
+		else:
+			name_molecule = name[:-6]
+	elif 'fullmonte' in name_list:
+		if 'filter' in name_list:
+			name_molecule = name[:-27]
+		else:
+			name_molecule = name[:-10]
+	if charge_data is not None:
+		for i in range(len(charge_data)):
+			if charge_data.loc[i,'Molecule'] == name_molecule:
+				charge_com = charge_data.loc[i,'Overall charge']
+			else:
+				try:
+					suppl = Chem.SDMolSupplier(name+'.sdf', removeHs=False)
+				except OSError:
+					suppl = False
+				if suppl:
+					mol = suppl[0]
+					charge_com = mol.GetProp('Real charge')
+				else:
+					charge_com = 'Invalid'
+
+		return charge_com
+
+	else:
+		return name_molecule
+
+# MAIN FUNCTION TO CREATE GAUSSIAN JOBS
+def write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args, log, charge_data, w_dir_initial):
+
+	# get the names of the SDF files to read from depending on the optimizer and their suffixes. Also, get molecular charge
+	charge_com = get_name_and_charge(name,charge_data)
+
+	if charge_com != 'Invalid':
+		input_route = input_route_line(args)
+
+		#defining genecp
+		genecp = get_genecp(args)
+
+		# defining path to place the new COM files
+		if args.QPREP == 'gaussian':
+			if str(bs).find('/') > -1:
+				path_write_input_files = '/QMCALC/G16/' + str(lot) + '-' + str(bs).split('/')[0]
+			else:
+				path_write_input_files = '/QMCALC/G16/' + str(lot) + '-' + str(bs)
+		elif args.QPREP == 'orca':
+			if str(bs).find('/') > -1:
+				path_write_input_files = '/QMCALC/ORCA/' + str(lot) + '-' + str(bs).split('/')[0]
+			else:
+				path_write_input_files = '/QMCALC/ORCA/' + str(lot) + '-' + str(bs)
+
+		os.chdir(w_dir_initial+path_write_input_files)
+
+		try:
+			com = '{0}_.com'.format(name)
+			com_low = '{0}_low.com'.format(name)
+
+			header = header_com(name,lot, bs, bs_gcp,args,log, input_route, genecp)
+
+			convert_sdf_to_com(w_dir_initial,file,com,com_low,energies,header,args,log)
+
+			com_files = glob.glob('{0}_*.com'.format(name))
+
+			for file in com_files:
+				#patch for Isotopes
+				cmd = shlex.split(r"sed -i 's/\([a-zA-Z]\{1,3\}\)[^(]*\([(]Iso\)/\1\2/g' "+file)
+				subprocess.call(cmd)
+				ecp_list,ecp_genecp_atoms,ecp_gen_atoms = [],False,False
+				read_lines = open(file,"r").readlines()
+				rename_file_name = rename_file_and_charge_chk_change(read_lines,file,args,charge_com)
+				read_lines = open(file,"r").readlines()
+
+				# Detect if there are atoms to use genecp or not (to use gen)
+				ATOMTYPES = []
+				for i in range(4,len(read_lines)):
+					if read_lines[i].split(' ')[0] not in ATOMTYPES and read_lines[i].split(' ')[0] in possible_atoms:
+						ATOMTYPES.append(read_lines[i].split(' ')[0])
+
+				# write genecp/gen part
+				type_gen = 'qprep'
+				if args.QPREP == 'gaussian':
+					# define genecp/gen atoms
+					ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp,orca_aux_section = check_for_gen_or_genecp(ATOMTYPES,args,'analysis','gaussian')
+
+					#error if both genecp and gen are
+					if ecp_genecp_atoms and ecp_gen_atoms:
+						sys.exit("x  ERROR: Can't use Gen and GenECP at the same time")
+					fileout = open(file, "a")
+
+					if genecp != 'None':
+						write_genecp(ATOMTYPES,type_gen,fileout,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,bs,lot,bs_gcp,args,w_dir_initial,path_write_input_files)
+
+					if args.last_line_for_input != 'None':
+						fileout.write(args.last_line_for_input+'\n\n')
+
+					fileout.close()
+
+					read_lines = open(file,"r").readlines()
+					rename_file_name = rename_file_and_charge_chk_change(read_lines,file,args,charge_com)
+
+				#change file by moving to new file
+				try:
+					os.rename(file,rename_file_name)
+
+				except FileExistsError:
+					os.remove(rename_file_name)
+					os.rename(file,rename_file_name)
+
+				if args.QPREP == 'orca':
+
+					# define auxiliary atoms
+					ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp,orca_aux_section = check_for_gen_or_genecp(ATOMTYPES,args,'analysis','orca')
+
+					rename_file_name = rename_file_and_charge_chk_change(read_lines,file,args,charge_com)
+
+					#create input file
+					orca_file_gen(read_lines,rename_file_name,bs,lot,genecp,args.aux_atoms_orca,args.aux_basis_set_genecp_atoms,args.aux_fit_genecp_atoms,charge_com,args.mult,orca_aux_section,args,args.set_input_line,args.solvent_model,args.solvent_name,args.cpcm_input,args.orca_scf_iters,args.mdci_orca,args.print_mini_orca)
+
+				# submitting the input file on a HPC
+				if args.qsub:
+					cmd_qsub = [args.submission_command, rename_file_name]
+					subprocess.call(cmd_qsub)
+
+		except OSError:
+			pass
+
+	os.chdir(w_dir_initial)
+
+def input_route_line(args):
+	#definition of input_route lines
+	if args.set_input_line == 'None':
+		input_route = ''
+		if args.QPREP == 'gaussian' or args.QCORR == 'gaussian':
+			if args.frequencies:
+				input_route += 'freq=noraman'
+			if args.empirical_dispersion != 'None':
+				input_route += ' empiricaldispersion={0}'.format(args.empirical_dispersion)
+			if not args.calcfc:
+				input_route += ' opt=(maxcycles={0})'.format(args.max_cycle_opt)
+			else:
+				input_route += ' opt=(calcfc,maxcycles={0})'.format(args.max_cycle_opt)
+			if args.solvent_model != 'gas_phase':
+				input_route += ' scrf=({0},solvent={1})'.format(args.solvent_model,args.solvent_name)
+	else:
+		input_route = args.set_input_line
+
+	return input_route
+
+# DETECTION OF GEN/GENECP FROM SDF FILES
+def get_genecp(args):
+	genecp = 'None'
+
+	if len(args.genecp_atoms) > 0:
+		genecp = 'genecp'
+
+	if len(args.gen_atoms) > 0:
+		genecp = 'gen'
+
+	return genecp
+
+# write genecp/gen part
+def write_genecp(ATOMTYPES,type_gen,fileout,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,bs_com,lot_com,bs_gcp_com,args,w_dir_initial,new_gaussian_input_files):
+
+	ecp_not_used = 0
+	for _,element_ecp in enumerate(ecp_list):
+		if element_ecp in ATOMTYPES and element_ecp != '':
+			if type_gen == 'sp':
+				if element_ecp not in (args.genecp_atoms_sp or args.gen_atoms_sp):
+					fileout.write(element_ecp+' ')
+					ecp_not_used += 1
+			else:
+				if element_ecp not in (args.genecp_atoms or args.gen_atoms):
+					fileout.write(element_ecp+' ')
+					ecp_not_used += 1
+
+	if ecp_not_used > 0:
+		fileout.write('0\n')
+		fileout.write(bs_com+'\n')
+		fileout.write('****\n')
+
+	if len(bs_gcp_com.split('.')) > 1:
+		if bs_gcp_com.split('.')[1] == ('txt' or 'yaml' or 'yml' or 'rtf'):
+			os.chdir(w_dir_initial)
+			read_lines = open(bs_gcp_com,"r").readlines()
+			os.chdir(new_gaussian_input_files)
+			#getting the title line
+			for line in read_lines:
+				fileout.write(line)
+			fileout.write('\n\n')
+	else:
+		ecp_used = 0
+		for _,element_ecp in enumerate(ecp_list):
+			if type_gen == 'sp':
+				if element_ecp in (args.genecp_atoms_sp or args.gen_atoms_sp):
+					fileout.write(element_ecp+' ')
+					ecp_used += 1
+			else:
+				if element_ecp in (args.genecp_atoms or args.gen_atoms):
+					fileout.write(element_ecp+' ')
+					ecp_used += 1
+
+		if ecp_used > 0:
+			fileout.write('0\n')
+			fileout.write(bs_gcp_com+'\n')
+			fileout.write('****\n\n')
+
+		else:
+			fileout.write('\n')
+
+		if ecp_genecp_atoms:
+			for _,element_ecp in enumerate(ecp_list):
+				if type_gen == 'sp':
+					if element_ecp in args.genecp_atoms_sp:
+						fileout.write(element_ecp+' ')
+				else:
+					if element_ecp in args.genecp_atoms:
+						fileout.write(element_ecp+' ')
+
+			fileout.write('0\n')
+			fileout.write(bs_gcp_com+'\n\n')
+
+def header_com(name,lot,bs,bs_gcp, args, log, input_route, genecp):
+	if genecp != 'None':
+		genecp_or_bs_to_write = genecp
+	else:
+		genecp_or_bs_to_write = bs
+	#chk option
+	if args.chk:
+		header = [
+			'%chk={}.chk'.format(name),
+			'%mem={}'.format(args.mem),
+			'%nprocshared={}'.format(args.nprocs),
+			'# {0}'.format(lot)+ '/'+ genecp_or_bs_to_write + ' '+ input_route]
+	else:
+		header = [
+			'%mem={}'.format(args.mem),
+			'%nprocshared={}'.format(args.nprocs),
+			'# {0}'.format(lot)+ '/'+ genecp_or_bs_to_write + ' '+ input_route]
+
+	return header
+
+def convert_sdf_to_com(w_dir_initial,file,com,com_low,energies,header,args,log):
+
+	if args.lowest_only and args.lowest_n:
+		log.write('x  The lowest_n and lowest_only options are both True, lowest_n will be used')
+		args.lowest_only = False
+
+	if args.lowest_only:
+		command_lowest = ['obabel', '-isdf', w_dir_initial+'/'+file, '-ocom', '-O'+com_low,'-l' , '1', '-xk', '\n'.join(header)]
+		subprocess.call(command_lowest) #takes the lowest conformer which is the first in the file
+		log.write('o  The lowest_only option is activated (only using the lowest energy conformer)')
+
+	elif args.lowest_n:
+		log.write('o  The lowest_n option is True (only using conformers within the specified E window)')
+		no_to_write = 0
+		if len(energies) != 1:
+			for i,_ in enumerate(energies):
+				energy_diff = energies[i] - energies[0]
+				if energy_diff < args.energy_threshold_for_gaussian: # thershold is in kcal/mol and energies are in kcal/mol as well
+					no_to_write +=1
+			command_n = ['obabel', '-isdf', w_dir_initial+'/'+file, '-f', '1', '-l' , str(no_to_write), '-osdf', '-Otemp.sdf']
+			subprocess.call(command_n)
+			command_n_2 =  ['obabel', '-isdf', 'temp.sdf', '-ocom', '-O'+com,'-m', '-xk', '\n'.join(header)]
+			subprocess.call(command_n_2)
+			os.remove('temp.sdf')
+		else:
+			command_n_3 = ['obabel', '-isdf', w_dir_initial+'/'+file, '-ocom', '-O'+com,'-m', '-xk', '\n'.join(header)]
+			subprocess.call(command_n_3)
+
+	else:
+		command_no_lowest = ['obabel', '-isdf', w_dir_initial+'/'+file, '-ocom', '-O'+com,'-m', '-xk', '\n'.join(header)]
+		subprocess.call(command_no_lowest)

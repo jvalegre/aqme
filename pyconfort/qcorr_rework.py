@@ -168,6 +168,7 @@ class GaussianOutputFile(object):
 		else:
 			return 10000, -1
 		return rms,last_line
+
 	def _get_rms_error_termination(self):
 		for i,line in reversed(enumerate(self.lines)):
 			if 'Cartesian Forces:  Max' in line:
@@ -190,6 +191,8 @@ class GaussianOutputFile(object):
 			xyz = xyz + amplitude*mode
 		cartesians = xyz.tolist()
 		return cartesians
+
+	# ADAPT THIS FUNCTION TO THE OTHER XYZ GENERATOR!
 	def to_xyz(self,cartesians=None):
 		if cartesians is None: 
 			cartesians = self.cartesians
@@ -197,7 +200,8 @@ class GaussianOutputFile(object):
 		xyz = []
 		for sym,(x,y,z) in zip(self.atomtypes,cartesians): 
 			xyz.append(f'{sym}    {x: 0.6f}    {y: 0.6f}    {z: 0.6f}')
-		return f"{n_atoms}\n{self.name}\n{'\n'.join(xyz)}\n"
+		xyz_print = str(n_atoms)+'\n'+str(self.name)+'\n'+'\n'.join(xyz)+'\n'
+		return xyz_print
 
 
 ### Functions copied from qprep
@@ -514,7 +518,10 @@ def read_com_as_xyz(file):
 		while line:
 			xyz.append(line)
 			line = next(_iter).strip()
-	return f"{len(xyz)}\n{'\n'.join(title)}\n{'\n'.join(xyz)}"
+	
+	xyz_print = str(len(xyz))+'\n'+str(title)+'\n'+'\n'.join(xyz)+'\n'
+	return xyz_print
+	
 
 # Aux functions
 def check_for_final_folder(w_dir):
