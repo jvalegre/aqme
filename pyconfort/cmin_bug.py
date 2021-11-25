@@ -256,7 +256,7 @@ def mult_min(name, args, program,log,dup_data,dup_data_idx):
     # if SQM energy exists, overwrite RDKit energies and geometries
     cids = list(range(len(outmols)))
     sorted_all_cids = sorted(cids, key = lambda cid: cenergy[cid])
-    
+
     name_mol = name.split('_'+args.CSEARCH)[0]
 
     for cid in sorted_all_cids:
@@ -275,43 +275,38 @@ def mult_min(name, args, program,log,dup_data,dup_data_idx):
 
     if args.verbose:
         log.write(f"\no  Writing {str(write_all_confs)} conformers to file {name_mol}_{program}_all_confs{args.output}")
-    
+
     log.write(f"\n\no  Applying filters to intial conformers after {program} minimization")
+    # filter based on energy window ewin_csearch
+    Ewindow_filter = EnergyFilter(args.ewin_csearch,'window')
+    Ediff_filter1 = EnergyFilter(args.initial_energy_threshold,'difference')
+    Ediff_filter2 = EnergyFilter(args.energy_threshold,'difference')
+    RMSD_filter = RMSDFilter(threshold=args.rms_threshold,
+                             maxmatches=args.max_matches_RMSD,
+                             heavyonly=args.heavyonly,
+                             is_rdkit=program=='rdkit')
+    Ediff_RMSD = CompoundFilter(Ediff_filter2,RMSD_filter)
 
-    # THIS IS THE VERSION FROM RAUL, NEED TO ADAPT THIS!
-    # # filter based on energy window ewin_csearch
-    # Ewindow_filter = EnergyFilter(args.ewin_csearch,'window')
-    # Ediff_filter1 = EnergyFilter(args.initial_energy_threshold,'difference')
-    # Ediff_filter2 = EnergyFilter(args.energy_threshold,'difference')
-    # RMSD_filter = RMSDFilter(threshold=args.rms_threshold,
-    #                          maxmatches=args.max_matches_RMSD,
-    #                          heavyonly=args.heavyonly,
-    #                          is_rdkit=program=='rdkit')
-    # Ediff_RMSD = CompoundFilter(Ediff_filter2,RMSD_filter)
-
-    # items = [(cid,energy,mol) for cid,energy,mol in zip(sorted_all_cids,cenergy,outmols)]
-    # keys = [itemgetter(1),
-    #         itemgetter(1),
-    #         [itemgetter(1),itemgetter(0,2)]]
-    # total_filter = CompoundFilter(Ewindow_filter,Ediff_filter1,Ediff_RMSD)
-
-    # total_filter.apply(items,keys=keys)
-
-    # filter_to_pandas(total_filter,dup_data,dup_data_idx,program)
-
-    # selectedcids, cenergy, outmols = zip(*total_filter.accepted)
-
-    from pyconfort.filter import ewin_filter, pre_E_filter, RMSD_and_E_filter
-    sortedcids = ewin_filter(sorted_all_cids,cenergy,args,dup_data,dup_data_idx,log,program,args.ewin_csearch)
+    items = [(cid,energy,mol) for cid,energy,mol in zip(sorted_all_cids,cenergy,outmols)]
+    keys = [itemgetter(1),
+            itemgetter(1),
+            [itemgetter(1),itemgetter(0,2)]]
+    total_filter = CompoundFilter(Ewindow_filter,Ediff_filter1,Ediff_RMSD)
+    total_filter.apply(items,keys=keys)
+    #sortedcids = ewin_filter(sorted_all_cids,cenergy,args,dup_data,dup_data_idx,log,program,args.ewin_csearch)
     # pre-filter based on energy only
-    selectedcids_initial = pre_E_filter(sortedcids,cenergy,dup_data,dup_data_idx,log,program,args.initial_energy_threshold,args.verbose)
+    #selectedcids_initial = pre_E_filter(sortedcids,cenergy,dup_data,dup_data_idx,log,program,args.initial_energy_threshold,args.verbose)
     # filter based on energy and RMSD
-    selectedcids = RMSD_and_E_filter(outmols,selectedcids_initial,cenergy,args,dup_data,dup_data_idx,log,program)
+    #selectedcids = RMSD_and_E_filter(outmols,selectedcids_initial,cenergy,args,dup_data,dup_data_idx,log,program)
+    
+    filter_to_pandas(total_filter,dup_data,dup_data_idx,program)
 
     if program == 'xtb': 
         dup_data.at[dup_data_idx, 'xTB-Initial-samples'] = len(inmols)
     elif program == 'ani':
         dup_data.at[dup_data_idx, 'ANI-Initial-samples'] = len(inmols)
+
+    selectedcids, cenergy, outmols = zip(*total_filter.accepted)
 
     # write the filtered, ordered conformers to external file
     write_confs(outmols, cenergy, selectedcids, name_mol, args, program,log)
@@ -343,14 +338,6 @@ def xtb_calc(elements,coordinates,args,log,ase_metal,ase_metal_idx):
         sqm_energy, coordinates
     """
     
-    import ase
-    import ase.optimize
-    from ase.units import Hartree
-    import torch
-    os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
-    DEVICE = torch.device('cpu')
-    from xtb.ase.calculator import XTB
-
     xtb_calculator = XTB(method=args.xtb_method,
                     accuracy=args.xtb_accuracy,
                     electronic_temperature=args.xtb_electronic_temperature,
@@ -542,20 +529,16 @@ def optimize(mol, args, program,log,dup_data,dup_data_idx):
 
     ani_incompatible = False
     if program == 'ani':
-        try:
-            # VERY DIRTY HACK! WE NEED TO FIX THE IMPORTS THROUGH CMIN!
-            from pyconfort.cmin_bug import ani_calc
-            energy, coordinates = ani_calc(elements,coordinates,args)
+        # try:
+        energy, coordinates = ani_calc(elements,coordinates,args)
             
-        except KeyError:
-            log.write(f'\nx  {args.ani_method} could not optimize this molecule (i.e. check of atoms that are not compatible)')
-            ani_incompatible = True
-            energy = 0
-            coordinates = np.zeros((1,3))
+        # except KeyError:
+        #     log.write(f'\nx  {args.ani_method} could not optimize this molecule (i.e. check of atoms that are not compatible)')
+        #     ani_incompatible = True
+        #     energy = 0
+        #     coordinates = np.zeros((1,3))
 
     elif program == 'xtb':
-        # VERY DIRTY HACK! WE NEED TO FIX THE IMPORTS THROUGH CMIN!
-        from pyconfort.cmin_bug import xtb_calc
         energy, coordinates = xtb_calc(elements,coordinates,args,log,ase_metal,ase_metal_idx)
 
     else:

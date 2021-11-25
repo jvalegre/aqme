@@ -17,6 +17,7 @@ def parser_args():
   parser.add_argument("-v","--verbose",action="store_true",default=False, help="verbose output")
   parser.add_argument("--output", dest="output", default=".sdf", metavar="output", help="The extension of the SDF files written")
 
+  # EXPAND QPREP TO GAUSSIAN, ORCA; TURBOMOLE!
   #work the script has to do
   parser.add_argument("--CSEARCH", action="store", default=None, help="Perform conformational analysis with or without dihedrals",choices=['rdkit','summ','fullmonte'])
   parser.add_argument("--CMIN", action="store", default=None, help="Perform minimization after conformational analysis",choices=['xtb','ani'])

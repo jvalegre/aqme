@@ -93,6 +93,10 @@ def move_file_from_folder(destination,src,file):
     file : str
         full name of the file (file + extension)
     """
+
+    # IF YOU RUN THE PROGRAM 2 TIMES WITH CMIN, YOU GET THIS ERROR:
+    # FileExistsError: [WinError 183] Cannot create a file when that file already exists
+    # FIX IT!
     dest = Path(destination)
     source = Path(src)
     dest.mkdir(exist_ok=True,parents=True)

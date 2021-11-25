@@ -189,11 +189,11 @@ ff : "MMFF" # force field used in the RDKit optimization. Options: MMFF or UFF
 seed : 62609 # random seed (default 62609) for ETKDG
 opt_steps_RDKit : 1000
 
-# DEFAULT PARAMETERS FOR ANI1 and xTB OPTIMIZATION
+# DEFAULT PARAMETERS FOR ANI and xTB OPTIMIZATION
 opt_steps : 1000 # max number of cycles during optimization
 opt_fmax : 0.05 # fmax value to achieve optimization
 
-# DEFAULT PARAMETERS ONLY FOR ANI1 OPTIMIZATION
+# DEFAULT PARAMETERS ONLY FOR ANI OPTIMIZATION
 constraints : None
 
 # DEFAULT PARAMETERS ONLY FOR xTB OPTIMIZATION

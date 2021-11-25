@@ -4,7 +4,7 @@
 #########################################################################################
 ###                                                                                   ###
 ###  pyCONFORT is a tool that allows to carry out automated:                          ###
-###  (1) Conformational searches and creation of COM files using RDKit, xTB and ANI1  ###
+###  (1) Conformational searches and creation of COM files using RDKit, xTB and ANI   ###
 ###  (2) LOG file processing (detects imaginary freqs and error terminations          ###
 ###      and creates new COM files)                                                   ###
 ###  (3) Use LOG files to create new COM files with new keywords (i.e. single-point   ###
@@ -79,7 +79,7 @@ def main():
             elapsed_time = round(time.time() - start_time_overall,2) 
             log_overall.write(f"\n All molecules execution time CMIN: {elapsed_time} seconds")
         os.chdir(w_dir_initial)
-        cmin_csv_folder = base_path.joinpath('/CMIN/csv_files')
+        cmin_csv_folder = base_path.joinpath('CMIN/csv_files')
         cmin_csv_folder.mkdir(exist_ok=True)
         cmin_csv_file = cmin_csv_folder.joinpath(f'{name}-CMIN-Data.csv')
         cmin_dup_data.to_csv(cmin_csv_file,index=False)

@@ -264,10 +264,10 @@ def cmin_main(w_dir_initial,args,log_overall,dup_data):
                 min_suffix = 'xtb'
             if args.CSEARCH in ['rdkit','summ','fullmonte']: 
                 fullname = f'{name}_{args.CSEARCH}'
-                try:
-                    mult_min(fullname, args, min_suffix, log, dup_data, dup_data_idx)
-                except:
-                    pass
+                # try:
+                mult_min(fullname, args, min_suffix, log, dup_data, dup_data_idx)
+                # except:
+                #     pass
                 dup_data.at[dup_data_idx, 'CMIN time (seconds)'] = round(time.time() - start_time,2)
         bar.next()
     bar.finish()

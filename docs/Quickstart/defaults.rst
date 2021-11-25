@@ -182,11 +182,11 @@ Pre-Optimised Parameters
   seed : 62609 # random seed (default 62609) for ETKDG
   opt_steps_RDKit : 1000
 
-  # (4) DEFAULT PARAMETERS FOR ANI1 and xTB OPTIMIZATION
+  # (4) DEFAULT PARAMETERS FOR ANI and xTB OPTIMIZATION
   opt_steps : 1000 # max number of cycles during optimization
   opt_fmax : 0.05 # fmax value to achieve optimization
 
-  # (5) DEFAULT PARAMETERS ONLY FOR ANI1 OPTIMIZATION
+  # (5) DEFAULT PARAMETERS ONLY FOR ANI OPTIMIZATION
   constraints : None
 
   # (6) DEFAULT PARAMETERS ONLY FOR xTB OPTIMIZATION
