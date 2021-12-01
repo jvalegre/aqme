@@ -65,7 +65,7 @@ level_of_theory : ['B3LYP'] # functional(s). Format: ['B3LYP','wB97XD',...]
 ## solvation model
 solvent_model : 'gas_phase' # type of solvation model. Options: gas_phase or any solvation model (i.e. SMD, IEFPCM, CPCM)
 solvent_name : '' # solvent used (i.e. chloroform, toluene, etc)
-set_input_line : 'NormalPNO TightSCF printbasis' # (i) keywords used in Gaussian input files (overiding opt and freq) or (ii) additional keywords for the ORCA input line
+qm_input : 'NormalPNO TightSCF printbasis' # (i) keywords used in Gaussian input files (overiding opt and freq) or (ii) additional keywords for the ORCA input line
 
 # Specific options of level of theory for Gaussian
 ## dispersion correction
@@ -118,9 +118,9 @@ solvent_model_sp : 'gas_phase' # type of solvation model. Options: gas_phase or 
 solvent_name_sp : '' # solvent used (i.e. chloroform, toluene, etc)
 
 # Specific options of level of theory for single-points for Gaussian
-# specify input line and final line (if last_line_for_sp = None, no final line is added)
+# specify input line and final line (if qm_input_end_sp = None, no final line is added)
 input_for_sp : 'nmr' # specify the input keywords (except functional, basis set, solvent and dispersion)
-last_line_for_sp : None # last line to add for single point
+qm_input_end_sp : None # last line to add for single point
 ## atoms included in gen/genecp and their level of theory (it admits .txt or .yaml files with the basis set information)
 genecp_atoms_sp : [] # list of atoms included in the genecp part (do not use genecp_atoms and gen_atoms at the same time!). Format: ['Pd','Ir','Pt',...]
 gen_atoms_sp : [] # list of atoms included in the gen part (do not use genecp_atoms and gen_atoms at the same time!). Format: ['Pd','Ir','Pt',...]
@@ -136,7 +136,7 @@ orca_scf_iters_sp : 500 # Number of SCF iterations in ORCA
 mdci_orca_sp : ['Density None'] # %mdci section in ORCA. Format: ['LINE1','LINE2',etc]
 print_mini_orca_sp : True # Option to print 'mini' (reduced outputs) in ORCA
 aux_atoms_orca_sp : ['Ir'] # list of atoms included in the aux part when using multiple basis sets in ORCA. Format: ['Pd','Ir','Pt',...]
-set_input_line_sp : '' # additional keywords for the ORCA input line. Format: 'LINE'
+qm_input_sp : '' # additional keywords for the ORCA input line. Format: 'LINE'
 
 
 # --- (4) ANALYSIS OF QM OUTPUT FILES (REQUIRES QPREP): QCORR

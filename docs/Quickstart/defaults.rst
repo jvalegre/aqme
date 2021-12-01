@@ -127,7 +127,7 @@ Common Parameters to Edit
 
   # (5.10) INPUT LINE AND LAST LINE FOR SINGLE POINT
   input_for_sp : 'nmr=giao' #Input line for Single point after DFT optimization
-  last_line_for_sp : '' #Last input line for Single point after DFT optimization
+  qm_input_end_sp : '' #Last input line for Single point after DFT optimization
 
 
   # (5.10) DEFAULT PARAMETERS FOR GAUSSIAN OPTIMIZATION

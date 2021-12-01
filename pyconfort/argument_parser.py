@@ -76,10 +76,6 @@ def parser_args():
   #arguments for QPREP
   parser.add_argument("--nprocs", help="Number of processors for the DFT calculations", default=24, type=int, dest="nprocs")
   parser.add_argument("--mem", help="Memory for the DFT calculations (i) Gaussian: total memory; (ii) ORCA: memory per processor", default="96GB", type=str, dest="mem")
-  parser.add_argument("-l", "--level_of_theory",help="Level of Theory", default=['wb97xd'], dest="level_of_theory", type=str, nargs='*')
-  parser.add_argument("--basis_set",  help="Basis Set", default=['6-31g*'], dest="basis_set", type=str, nargs='*')
-  parser.add_argument("--solvent_model",  help="Type of solvent model in Gaussian and ORCA", default="gas_phase", dest="solvent_model", type=str)
-  parser.add_argument("--solvent_name",  help="Name of the solvent in Gaussian and ORCA", default="Acetonitrile", dest="solvent_name", type=str)
   parser.add_argument("--basis_set_genecp_atoms",default=[], help="Basis Set genecp/gen: Can specify only one as basis_set", dest="basis_set_genecp_atoms", type=str, nargs='?')
   parser.add_argument("--aux_atoms_orca",default=[], help="List of atoms included in the aux part when using multiple basis sets in ORCA", dest="aux_atoms_orca", type=str, nargs='?')
   parser.add_argument("--aux_basis_set_genecp_atoms",default=[], help="Auxiliary basis set for genecp/gen in ORCA", dest="aux_basis_set_genecp_atoms", type=str, nargs='?')
@@ -88,18 +84,15 @@ def parser_args():
   parser.add_argument("--orca_scf_iters",default=500, help="Number of SCF iterations in ORCA", dest="orca_scf_iters", type=str, nargs='?')
   parser.add_argument("--mdci_orca",default='None', help="mdci section in ORCA. Format: ['LINE1','LINE2',etc]", dest="mdci_orca", type=str, nargs='?')
   parser.add_argument("--print_mini_orca",action="store_true",default=True, help="Option to print 'mini' (reduced outputs) in ORCA")
-  parser.add_argument("--set_input_line",  help="(i) keywords used in Gaussian input files (overiding opt and freq) or (ii) additional keywords for the ORCA input line", default="None", dest="set_input_line")
+  parser.add_argument("--qm_input",  help="(i) keywords used in Gaussian input files (overiding opt and freq) or (ii) additional keywords for the ORCA input line", default=None, dest="qm_input")
+  parser.add_argument("--ts_input",  help="OPT options in Gaussian in QCORR for input files of TSs", default='opt=(calcfc,noeigen,ts,maxstep=5)', dest="ts_input")
+  parser.add_argument("--qm_input_end",  help="Last input line for Gaussian", default="None", dest="qm_input_end", type=str)
   parser.add_argument("--genecp_atoms",  help="GenECP atoms for Gaussian",default=[], dest="genecp_atoms",type=str, nargs='*')
   parser.add_argument("--gen_atoms",  help="Gen atoms for Gaussian",default=[], dest="gen_atoms",type=str, nargs='*')
-  parser.add_argument("--max_cycle_opt", help="Number of cycles for DFT optimization in Gaussian", default="100", type=int, dest="max_cycle_opt")
-  parser.add_argument("--frequencies",action="store_true", default=True, help="Request only optimization without any frequency calculations in Gaussian")
-  parser.add_argument("--calcfc",action="store_true", default=False, help="Request calcfc in the optimization in Gaussian")
   parser.add_argument("--lowest_only", action="store_true", default=False, help="Lowest conformer to write in Gaussian")
   parser.add_argument("--lowest_n", action="store_true", default=False, help="Lowest Number of conformers to write in Gaussian")
   parser.add_argument("--energy_threshold_for_gaussian", help="Cut-off for considering sampled conformers in Gaussian inputs", default="100.0", type=float, dest="energy_threshold_for_gaussian")
-  parser.add_argument("--empirical_dispersion",  help="Type of dispersion in Gaussian", default="None", dest="empirical_dispersion", type=str)
   parser.add_argument("--chk", action="store_true", default=False, help="Create .chk files for Gaussian")
-  parser.add_argument("--last_line_for_input",  help="Last input line for Gaussian", default="None", dest="last_line_for_input", type=str)
 
   # QPREP with Turbomole
   parser.add_argument('--tmfunctional',help="Turbomole functionals",type=str, nargs='*',default=['TPSS',])
@@ -118,29 +111,25 @@ def parser_args():
   #other options for QPREP
   parser.add_argument("--com_from_xyz", action="store_true", default=False, help="Create input files for Gaussian from an xyz file")
 
-  #arguments for QCORR including the ones from QPREP
+  #arguments for QCORR (besides related functions from QPREP)
   #analysis of files
-  parser.add_argument("--dup",action="store_true",default=False, help="Remove duplicates after DFT optimization")
+  parser.add_argument("--dup",action="store",default=True, help="Remove duplicates after DFT optimization")
+  parser.add_argument("--dup_threshold",action="store",default=0.0001, help="Energy difference (in Hartree) for E+ZPE, H and G considered in the duplicate filter", type=float)
   parser.add_argument("--check_geom",action="store_true",default=False, help="Checks that geometries mantain the same connectivity after DFT optimization")
   parser.add_argument("--length_criteria", action="store",default=1.4, help="Factor used to determine whether a bond broke/formed during DFT optimization for check_geom", type=float)
-  #sorting of files
   parser.add_argument("--amplitude_ifreq", action="store",default=0.2, help="Amplitude used to displace the imaginary frequencies to fix during analysis", type=float)
   parser.add_argument("--ifreq_cutoff", action="store",default=0.0, help="Cut off for imaginary frequencies during analysis", type=float)
+  parser.add_argument("--s2_threshold", action="store",default=10.0, help="Cut off for spin contamination during analysis in \%\ of the expected value (i.e. multiplicity 3 has an the expected <S**2> of 2.0, if s2_threshold = 10 the <S**2> value is allowed to be 2.0 +- 0.2). Set s2_threshold = 0 to deactivate this option.", type=float)  
   #writing single point files
-  parser.add_argument("--sp", help="Create Gaussian single point input files", default="None", dest="sp", type=str)
+  parser.add_argument("--sp", help="Create Gaussian single point input files", default=None, dest="sp", type=str)
   parser.add_argument("--nics", action="store_true", default=False, help="Create input files for NICS")
-  parser.add_argument("--charge_sp", help="The charge for single point calculation in Gaussian and ORCA", default="None", metavar="charge_sp")
-  parser.add_argument("--mult_sp", help="The multiplicity for single point calculation in Gaussian and ORCA", default="None", metavar="mult_sp")
-  parser.add_argument("--level_of_theory_sp",help="Level of Theory for single point after optimization in Gaussian and ORCA", default=['wb97xd'], dest="level_of_theory_sp", type=str, nargs='*')
-  parser.add_argument("--basis_set_sp",  help="Basis Set for single point calculations in Gaussian and ORCA", default=['6-31g*'], dest="basis_set_sp", type=str, nargs='*')
-  parser.add_argument("--set_input_line_sp", help="Extra keywords for single-point calculations in Gaussian and ORCA", default="None", dest="set_input_line_sp")
+  parser.add_argument("--charge_sp", help="The charge for single point calculation in Gaussian and ORCA", default=None, metavar="charge_sp")
+  parser.add_argument("--mult_sp", help="The multiplicity for single point calculation in Gaussian and ORCA", default=None, metavar="mult_sp")
+  parser.add_argument("--qm_input_sp", help="Extra keywords for single-point calculations in Gaussian and ORCA", default=None, dest="qm_input_sp")
+  parser.add_argument("--qm_input_end_sp",  help="Last input line for single point calculations in Gaussian", default="None", dest="qm_input_end_sp", type=str)
   parser.add_argument("--genecp_atoms_sp",  help="GenECP atoms for single-point calculations in Gaussian",default=[], dest="genecp_atoms_sp",type=str, nargs='*')
   parser.add_argument("--gen_atoms_sp",  help="Gen atoms for single-point calculations in Gaussian",default=[], dest="gen_atoms_sp",type=str, nargs='*')
   parser.add_argument("--basis_set_genecp_atoms_sp",default=['LANL2DZ'], help="Genecp/gen basis set(s) for single point calculations in Gaussian", dest="basis_set_genecp_atoms_sp", type=str, nargs='*')
-  parser.add_argument("--empirical_dispersion_sp",  help="Type of Dispersion for single point after optimization in Gaussian", default="None", dest="empirical_dispersion_sp", type=str)
-  parser.add_argument("--solvent_model_sp",  help="Type of solvent model for single point after optimization in Gaussian", default="gas_phase", dest="solvent_model_sp", type=str)
-  parser.add_argument("--solvent_name_sp",  help="Name of Solvent for single point after optimization in Gaussian", default="Acetonitrile", dest="solvent_name_sp", type=str)
-  parser.add_argument("--last_line_for_sp",  help="Last input line for single point calculations in Gaussian", default="None", dest="last_line_for_sp", type=str)
   parser.add_argument("--suffix_sp", help="The suffix for single point calculation in Gaussian and ORCA", default="None", type=str, metavar="suffix_sp")
   parser.add_argument("--aux_atoms_orca_sp",default=[], help="List of atoms included in the aux part when using multiple basis sets in ORCA single-point calculations", dest="aux_atoms_orca_sp", type=str,nargs='*')
   parser.add_argument("--aux_basis_set_genecp_atoms_sp",default=[], help="Auxiliary basis set for genecp/gen in ORCA single-point calculations", dest="aux_basis_set_genecp_atoms_sp", type=str, nargs='*')
@@ -174,7 +163,7 @@ def parser_args():
 
   #arguments for cclib
 
-  # submission of Gaussion files
+  # submission of Gaussian files
   parser.add_argument("--qsub", action="store_true", default=False, help="Submit Gaussian files when they are created")
   parser.add_argument("--qsub_ana", action="store_true", default=False, help="Submit Gaussian files after analysis")
   parser.add_argument("--submission_command",  help="Queueing system that the submission is done on", default="qsub_summit", metavar="submission_command", type=str)

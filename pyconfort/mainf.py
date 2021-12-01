@@ -373,7 +373,7 @@ def qprep_main(w_dir_initial,args,log):
                         energies = read_energies(file,log)
                         name = file.split('.')[0]
 
-                        write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, args, log, charge_data, w_dir_initial)
+                        write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, keywords_line, args, log, charge_data, w_dir_initial)
     else:
         log.write('\nx  No SDF files detected to convert to gaussian COM files')
 
@@ -481,19 +481,18 @@ def qcorr_gaussian_main(duplicates,w_dir_initial,args,log):
     if not os.path.exists(w_dir_initial+'/QMCALC'):
         w_dir_main = os.getcwd()
         w_dir_fin = w_dir_main+'/success/output_files'
-        for lot,bs,bs_gcp in zip(args.level_of_theory, args.basis_set,args.basis_set_genecp_atoms):
-            if not os.path.isdir(w_dir_main+'/dat_files/'):
-                os.makedirs(w_dir_main+'/dat_files/')
-            w_dir,round_num = check_for_final_folder(w_dir_main)
-            os.chdir(w_dir)
-            log = Logger(w_dir_main+'/dat_files/pyCONFORT-QCORR-run_'+str(round_num), args.output_name)
-            ana_data = creation_of_ana_csv(args,duplicates)
-            log.write("\no  Analyzing output files in {}\n".format(w_dir))
-            log_files = get_com_or_log_out_files('output',None)
-            if len(log_files) == 0:
-                log.write('x  There are no output files in this folder.')
-            com_files = get_com_or_log_out_files('input',None)
-            output_analyzer(duplicates,log_files, com_files, w_dir, w_dir_main, lot, bs, bs_gcp, args, w_dir_fin, w_dir_initial, log, ana_data, round_num)
+        if not os.path.isdir(w_dir_main+'/dat_files/'):
+            os.makedirs(w_dir_main+'/dat_files/')
+        w_dir,round_num = check_for_final_folder(w_dir_main)
+        os.chdir(w_dir)
+        log = Logger(w_dir_main+'/dat_files/pyCONFORT-QCORR-run_'+str(round_num), args.output_name)
+        ana_data = creation_of_ana_csv(args,duplicates)
+        log.write("\no  Analyzing output files in {}\n".format(w_dir))
+        log_files = get_com_or_log_out_files('output',None)
+        if len(log_files) == 0:
+            log.write('x  There are no output files in this folder.')
+        com_files = get_com_or_log_out_files('input',None)
+        output_analyzer(log_files, com_files, w_dir, w_dir_main, args, w_dir_fin, w_dir_initial, log, ana_data, round_num)
         os.chdir(w_dir_main)
     # when you specify multiple levels of theory
     else:
@@ -520,7 +519,7 @@ def qcorr_gaussian_main(duplicates,w_dir_initial,args,log):
             log.write("\no  Analyzing output files in {}\n".format(w_dir))
             log_files = get_com_or_log_out_files('output',None)
             com_files = get_com_or_log_out_files('input',None)
-            output_analyzer(duplicates,log_files, com_files, w_dir, w_dir_main , lot, bs, bs_gcp, args, w_dir_fin, w_dir_initial, log, ana_data, round_num)
+            output_analyzer(duplicates,log_files, com_files, w_dir, w_dir_main, args, w_dir_fin, w_dir_initial, log, ana_data, round_num)
         os.chdir(args.path)
     os.chdir(w_dir_initial)
 

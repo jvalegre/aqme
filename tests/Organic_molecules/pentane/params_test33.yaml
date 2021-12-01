@@ -12,4 +12,4 @@ QPREP : orca
 sample : 'auto' # number of conformers to sample to get non-torsional differences (default 100)
 basis_set : ['cc-pVTZ/C'] # basis set(s). Format: ['6-31+G(d,p)','Def2TZVP',...]
 level_of_theory : ['DLPNO-CCSD(T)'] # functional(s). Format: ['B3LYP','wB97XD',...]
-set_input_line: 'NormalPNO TightSCF Extrapolate(2/3,cc)'
+qm_input: 'NormalPNO TightSCF Extrapolate(2/3,cc)'

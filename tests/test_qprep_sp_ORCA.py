@@ -23,7 +23,7 @@ path_orca = os.getcwd()
     ('Organic_molecules', 'pentane.smi', 'params_test30.yaml', 'mem'), # test for mem in ORCA
     ('Organic_molecules', 'pentane.smi', 'params_test31.yaml', 'mdci_orca'), # test for mdci_orca in ORCA
     ('Organic_molecules', 'pentane.smi', 'params_test32.yaml', 'print_mini_orca'), # test for print_mini_orca in ORCA
-    ('Organic_molecules', 'pentane.smi', 'params_test33.yaml', 'set_input_line'), # test for set_input_line in ORCA
+    ('Organic_molecules', 'pentane.smi', 'params_test33.yaml', 'qm_input'), # test for qm_input in ORCA
     ('Organic_molecules', 'pentane.smi', 'params_test34.yaml', 'solvent_CPCM'), # test for solvent_CPCM in ORCA
     ('Organic_molecules', 'pentane.smi', 'params_test35.yaml', 'solvent_SMD'), # test for solvent_SMD in ORCA
     ('Organic_molecules', 'pentane.smi', 'params_test36.yaml', 'cpcm_input'), # test for cpcm_input in ORCA
@@ -72,7 +72,7 @@ def test_confgen_organic(folder, smiles, params_file, job_type):
         elif job_type == 'print_mini_orca':
             assert outlines[8].find('* xyz 0 1') > -1
 
-        elif job_type == 'set_input_line':
+        elif job_type == 'qm_input':
             assert outlines[5].find('! cc-pVTZ/C DLPNO-CCSD(T) NormalPNO TightSCF Extrapolate(2/3,cc)') > -1
 
         elif job_type == 'solvent_CPCM':

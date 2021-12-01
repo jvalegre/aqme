@@ -10,7 +10,7 @@ class GaussianTemplate(object):
 				commandline=None,solvation='gas_phase',solvent='',
 				max_opt_cycles=500,dispersion=None,enable_chk=False, 
 				optimization=True,frequencies=True,calcfc=False,
-				last_line_for_input=''): 
+				qm_input_end=''): 
 		self.basisset = basisset
 		self.functional = functional
 		#Link0
@@ -35,7 +35,7 @@ class GaussianTemplate(object):
 			commandline = ''
 		self._commandline = commandline
 		# other tail
-		self.last_line_for_input = last_line_for_input
+		self.qm_input_end = qm_input_end
 
 	def to_dict(self):
 		kwargs = dict()
@@ -54,7 +54,7 @@ class GaussianTemplate(object):
 		kwargs['calcfc'] = self.calcfc
 		kwargs['solvation'] = self.solvation
 		kwargs['solvent'] = self.solvent
-		kwargs['last_line_for_input'] = self.last_line_for_input
+		kwargs['qm_input_end'] = self.qm_input_end
 		kwargs['max_opt_cycles'] = self.max_opt_cycles
 		return kwargs
 
@@ -121,14 +121,14 @@ class GaussianTemplate(object):
 		new.memory = args.mem
 		new.nprocs = args.nprocs
 		new.enable_chk = args.chk
-		new.extra_input = args.set_input_line
+		new.extra_input = args.qm_input
 		new.frequencies = args.frequencies
 		if args.empirical_dispersion != None: 
 			new.dispersion = args.empirical_dispersion
 		new.calcfc = args.calcfc
 		new.solvation = args.solvent_model
 		new.solvent = args.solvent_name
-		new.last_line_of_input = args.last_line_for_input
+		new.last_line_of_input = args.qm_input_end
 		new.max_opt_cycles = args.max_cycle_opt
 		return new
 
@@ -161,8 +161,8 @@ class GaussianTemplate(object):
 				elements = ' '.join([f'-{sym}' for sym,_ in pairs])
 				txt += f'{elements} 0\n{basis}\n****\n'
 			txt += '\n'
-		if self.last_line_for_input: 
-			txt += f'{self.last_line_for_input}\n'
+		if self.qm_input_end: 
+			txt += f'{self.qm_input_end}\n'
 		txt += '\n'
 		return txt
 	def write(self,destination,molecule): 
@@ -289,7 +289,7 @@ class OrcaTemplate(object):
 		# Standard stuff
 		new.memory = args.mem
 		new.nprocs = args.nprocs
-		new.extra_commandline = args.set_input_line 
+		new.extra_commandline = args.qm_input 
 		new.solvation = args.solvent_model
 		new.solvent = args.solvent_name
 		new.extra_cpcm_input = args.cpcm_input

@@ -22,7 +22,7 @@ OUTPUT_SUFFIXES = ['log','LOG','out','OUT','json']
 
 def input_route_line(args):
 	#definition of input_route lines
-	if args.set_input_line == 'None':
+	if args.qm_input == 'None':
 		input_route = ''
 		if args.QPREP == 'gaussian' or args.QCORR == 'gaussian':
 			if args.frequencies:
@@ -36,7 +36,7 @@ def input_route_line(args):
 			if args.solvent_model != 'gas_phase':
 				input_route += ' scrf=({0},solvent={1})'.format(args.solvent_model,args.solvent_name)
 	else:
-		input_route = args.set_input_line
+		input_route = args.qm_input
 
 	return input_route
 
@@ -380,7 +380,7 @@ def output_analyzer(duplicates,log_files,com_files, w_dir, w_dir_main,lot, bs, b
 
 		passes_rules = True
 		if args.exp_rules:
-			passes_rules = passes_custom_rules(out_mol,args)
+			passes_rules = passes_custom_rules(out_mol,args,log)
 		
 		if args.check_geom and passes_rules:
 			xyz_str = read_com_as_xyz()
@@ -391,11 +391,12 @@ def output_analyzer(duplicates,log_files,com_files, w_dir, w_dir_main,lot, bs, b
 		# this part filters off conformers based on user-defined exp_rules
 		passing_rules = True
 		valid_mol_gen = True
+		format_file = file.split('.')[1]
 		if len(args.exp_rules) >= 1:
 			if TERMINATION == "normal" and IM_FREQS == 0:
 				log.write("  ----- Exp_rules filter(s) will be applied to the output file -----\n")
 				try:
-					mol,ob_compat,rdkit_compat = output_to_mol(file,'log',file)
+					mol,ob_compat,rdkit_compat = output_to_mol(file,format_file,log)
 					print_error_exp_rules=False
 					if ob_compat and rdkit_compat:
 						passing_rules = exp_rules_output(mol,args,log,file,print_error_exp_rules,ob_compat,rdkit_compat)
@@ -410,12 +411,12 @@ def output_analyzer(duplicates,log_files,com_files, w_dir, w_dir_main,lot, bs, b
 			if TERMINATION == "normal" and IM_FREQS == 0:
 				log.write("  ----- Geometrical check will be applied to the output file -----\n")
 				# this creates a mol object from the optimized log file
-				mol,ob_compat,rdkit_compat = output_to_mol(file,'log',file)
+				mol,ob_compat,rdkit_compat = output_to_mol(file,format_file,log)
 				# this creates a mol object from the input file
 				try:
 					os.chdir(w_dir_main +'/input_files/run_'+str(round_num))
 					com_2_xyz_2_sdf(args,os.path.splitext(file)[0]+'.com')
-					mol2,ob_compat,rdkit_compat = output_to_mol(file,'xyz',file)
+					mol2,ob_compat,rdkit_compat = output_to_mol(file,'xyz',log)
 					passing_geom = check_geom_filter(mol,mol2,args)
 					# remove created files
 					os.remove(file.split('.')[0]+'.xyz')
@@ -432,7 +433,7 @@ def output_analyzer(duplicates,log_files,com_files, w_dir, w_dir_main,lot, bs, b
 			log.write("The file could not be converted into a mol object, check_geom test will be disabled\n")
 
 		# This part places the calculations in different folders depending on the type of termination
-		finished,unfinished,atom_error,scf_error,imag_freq,other_error,exp_rules_qcorr,check_geom_qcorr = create_folder_move_log_files(w_dir,w_dir_main,round_num,file,IM_FREQS,TERMINATION,ERRORTYPE,w_dir_fin,finished,unfinished,atom_error,scf_error,imag_freq,other_error,exp_rules_qcorr,passing_rules,passing_geom,check_geom_qcorr)
+		finished,unfinished,atom_error,scf_error,imag_freq,other_error,exp_rules_qcorr,check_geom_qcorr = organize_outputs(w_dir,w_dir_main,round_num,file,IM_FREQS,TERMINATION,ERRORTYPE,w_dir_fin,finished,unfinished,atom_error,scf_error,imag_freq,other_error,exp_rules_qcorr,passing_rules,passing_geom,check_geom_qcorr)
 
 		# check if gen or genecp are active
 		# right now, QCORR is only working with Gaussian output files
@@ -448,7 +449,7 @@ def output_analyzer(duplicates,log_files,com_files, w_dir, w_dir_main,lot, bs, b
 			if args.sp == 'gaussian' or args.sp == 'orca' or args.sp == 'turbomole' or args.nics:
 
 				#get coordinates
-				ATOMTYPES, CARTESIANS,stand_or = get_coords_normal(outlines, stand_or, NATOMS, periodic_table, ATOMTYPES, CARTESIANS)
+				ATOMTYPES, CARTESIANS,stand_or = get_coords(outlines, stand_or, NATOMS, periodic_table, ATOMTYPES, CARTESIANS)
 
 				if args.sp == 'gaussian':
 					# creating new folder with new input gaussian files
@@ -509,8 +510,8 @@ def output_analyzer(duplicates,log_files,com_files, w_dir, w_dir_main,lot, bs, b
 							keywords_opt = lot_sp + '/' + genecp
 						else:
 							keywords_opt = lot_sp + '/' + bs_sp
-						if args.set_input_line_sp != 'None':
-							keywords_opt += ' {0}'.format(args.set_input_line_sp)
+						if args.qm_input_sp != 'None':
+							keywords_opt += ' {0}'.format(args.qm_input_sp)
 						if args.empirical_dispersion_sp != 'None':
 							keywords_opt += ' empiricaldispersion={0}'.format(args.empirical_dispersion_sp)
 						if args.solvent_model_sp != 'gas_phase':
@@ -576,11 +577,12 @@ def analyze_single_output(file,log,w_dir,args):
 	valid_mol_gen = True
 	xyz_str = GOF.to_xyz(cartesians)
 	mol = pybel.readstring('xyz',xyz_str)
+	format_file = file.split('.')[1]
 	if len(args.exp_rules) >= 1:
 		if TERMINATION == "normal" and IM_FREQS == 0:
 			log.write("  ----- Exp_rules filter(s) will be applied to the output file -----\n")
 			try:
-				mol,ob_compat,rdkit_compat = output_to_mol(file,'log',file)
+				mol,ob_compat,rdkit_compat = output_to_mol(file,format_file,log)
 				print_error_exp_rules=False
 				if ob_compat and rdkit_compat:
 					passing_rules = exp_rules_output(mol,args,log,file,print_error_exp_rules,ob_compat,rdkit_compat)
@@ -595,12 +597,12 @@ def analyze_single_output(file,log,w_dir,args):
 		if TERMINATION == "normal" and IM_FREQS == 0:
 			log.write("  ----- Geometrical check will be applied to the output file -----\n")
 			# this creates a mol object from the optimized log file
-			mol,ob_compat,rdkit_compat = output_to_mol(file,'log',file)
+			mol,ob_compat,rdkit_compat = output_to_mol(file,format_file,log)
 			# this creates a mol object from the input file
 			try:
 				os.chdir(w_dir_main +'/input_files/run_'+str(round_num))
 				com_2_xyz_2_sdf(args,os.path.splitext(file)[0]+'.com')
-				mol2,ob_compat,rdkit_compat = output_to_mol(file,'xyz',file)
+				mol2,ob_compat,rdkit_compat = output_to_mol(file,'xyz',log)
 				passing_geom = check_geom_filter(mol,mol2,args)
 				# remove created files
 				os.remove(file.split('.')[0]+'.xyz')
@@ -617,7 +619,7 @@ def analyze_single_output(file,log,w_dir,args):
 		log.write("The file could not be converted into a mol object, check_geom test will be disabled\n")
 
 	# This part places the calculations in different folders depending on the type of termination
-	finished,unfinished,atom_error,scf_error,imag_freq,other_error,exp_rules_qcorr,check_geom_qcorr = create_folder_move_log_files(w_dir,w_dir_main,round_num,file,IM_FREQS,TERMINATION,ERRORTYPE,w_dir_fin,finished,unfinished,atom_error,scf_error,imag_freq,other_error,exp_rules_qcorr,passing_rules,passing_geom,check_geom_qcorr)
+	finished,unfinished,atom_error,scf_error,imag_freq,other_error,exp_rules_qcorr,check_geom_qcorr = organize_outputs(w_dir,w_dir_main,round_num,file,IM_FREQS,TERMINATION,ERRORTYPE,w_dir_fin,finished,unfinished,atom_error,scf_error,imag_freq,other_error,exp_rules_qcorr,passing_rules,passing_geom,check_geom_qcorr)
 
 	# check if gen or genecp are active
 	# right now, QCORR is only working with Gaussian output files
@@ -633,7 +635,7 @@ def analyze_single_output(file,log,w_dir,args):
 		if args.sp == 'gaussian' or args.sp == 'orca' or args.sp == 'turbomole' or args.nics:
 
 			#get coordinates
-			ATOMTYPES, CARTESIANS,stand_or = get_coords_normal(outlines, stand_or, NATOMS, periodic_table, ATOMTYPES, CARTESIANS)
+			ATOMTYPES, CARTESIANS,stand_or = get_coords(outlines, stand_or, NATOMS, periodic_table, ATOMTYPES, CARTESIANS)
 
 			if args.sp == 'gaussian':
 				# creating new folder with new input gaussian files
@@ -694,8 +696,8 @@ def analyze_single_output(file,log,w_dir,args):
 						keywords_opt = lot_sp + '/' + genecp
 					else:
 						keywords_opt = lot_sp + '/' + bs_sp
-					if args.set_input_line_sp != 'None':
-						keywords_opt += ' {0}'.format(args.set_input_line_sp)
+					if args.qm_input_sp != 'None':
+						keywords_opt += ' {0}'.format(args.qm_input_sp)
 					if args.empirical_dispersion_sp != 'None':
 						keywords_opt += ' empiricaldispersion={0}'.format(args.empirical_dispersion_sp)
 					if args.solvent_model_sp != 'gas_phase':
@@ -770,7 +772,7 @@ def create_gaussian_template(args):
 	kwargs['memory'] = args.mem
 	kwargs['nprocs'] = args.nprocs
 	kwargs['enable_chk'] = args.chk
-	kwargs['extra_input'] = args.set_input_line
+	kwargs['extra_input'] = args.qm_input
 	kwargs['optimization'] = True
 	kwargs['frequencies'] = args.frequencies
 	if args.empirical_dispersion != None: 
@@ -778,7 +780,7 @@ def create_gaussian_template(args):
 	kwargs['calcfc'] = args.calcfc
 	kwargs['solvation'] = args.solvent_model
 	kwargs['solvent'] = args.solvent_name
-	kwargs['last_line_of_input'] = args.last_line_for_input
+	kwargs['last_line_of_input'] = args.qm_input_end
 	kwargs['max_opt_cycles'] = args.max_cycle_opt
 
 	template = GaussianTemplate(**kwargs)
@@ -789,7 +791,7 @@ def create_gaussian_sp_template(args):
 	kwargs['memory'] = args.mem
 	kwargs['nprocs'] = args.nprocs
 	kwargs['enable_chk'] = args.chk
-	kwargs['extra_input'] = args.set_input_line
+	kwargs['extra_input'] = args.qm_input
 	kwargs['optimization'] = False
 	kwargs['frequencies'] = False
 	if args.empirical_dispersion != None: 
@@ -797,7 +799,7 @@ def create_gaussian_sp_template(args):
 	kwargs['calcfc'] = False
 	kwargs['solvation'] = args.solvent_model_sp
 	kwargs['solvent'] = args.solvent_name_sp
-	kwargs['last_line_of_input'] = args.last_line_for_input
+	kwargs['last_line_of_input'] = args.qm_input_end
 	kwargs['max_opt_cycles'] = args.max_cycle_opt
 
 	template = GaussianTemplate(**kwargs)
@@ -807,7 +809,7 @@ def create_orca_template(args):
 
 	kwargs['memory'] = args.mem
 	kwargs['nprocs'] = args.nprocs
-	kwargs['extra_commandline'] = args.set_input_line
+	kwargs['extra_commandline'] = args.qm_input
 	kwargs['solvation'] = args.solvent_model
 	kwargs['solvent'] = args.solvent_name
 	kwargs['extra_cpcm_input'] = args.cpcm_input
@@ -822,7 +824,7 @@ def create_orca_template(args):
 
 	kwargs['memory'] = args.mem
 	kwargs['nprocs'] = args.nprocs
-	kwargs['extra_commandline'] = args.set_input_line
+	kwargs['extra_commandline'] = args.qm_input
 	kwargs['solvation'] = args.solvent_model_sp
 	kwargs['solvent'] = args.solvent_name_sp
 	kwargs['extra_cpcm_input'] = args.cpcm_input

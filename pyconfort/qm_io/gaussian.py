@@ -12,7 +12,7 @@ class GaussianOutputFile(object):
 		self.name = name
 		self.charge = charge
 		self.multiplicity = multiplicity
-		termination,errortype = self._get_termination_type()
+		termination,errortype = self._get_qcorr_params()
 		self.termination = termination
 		self.errortype = errortype
 		rms,rms_line = self._get_rms()
@@ -46,7 +46,7 @@ class GaussianOutputFile(object):
 				multiplicity = int(line.split()[5].rstrip("\n"))
 				stop_name += 1
 		return name, charge, multiplicity
-	def _get_termination_type(self): 
+	def _get_qcorr_params(self): 
 		# use reversed loops to find type of termination (faster than forward loops)
 		lines = reversed(self.lines[-16:])
 		termination = 'unfinished'

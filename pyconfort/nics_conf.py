@@ -12,17 +12,6 @@ from numpy.linalg.linalg import LinAlgError
 
 from pyconfort.utils import periodic_table, move_file_from_folder
 
-def get_coords_normal(outlines, stand_or, natoms, periodic_table, atomtypes, cartesians):
-    for i in range(stand_or+5,stand_or+5+natoms):
-        massno = int(outlines[i].split()[1])
-        if massno < len(periodic_table):
-            atom_symbol = periodic_table[massno]
-        else:
-            atom_symbol = "XX"
-        atomtypes.append(atom_symbol)
-        cartesians.append([float(outlines[i].split()[3]), float(outlines[i].split()[4]), float(outlines[i].split()[5])])
-    return atomtypes, cartesians,stand_or
-
 def find_coeffplane(ringatoms, CARTESIANS,log):
     rotated = 0
     xyz = np.array([CARTESIANS[i] for i in ringatoms])
@@ -118,7 +107,7 @@ def getSHIELDING(outlines,args,log):
           NATOMS = i-stand_or-6
           break
 
-  ATOMTYPES, CARTESIANS,stand_or = get_coords_normal(outlines, stand_or, NATOMS, periodic_table, ATOMTYPES, CARTESIANS)
+  ATOMTYPES, CARTESIANS,stand_or = get_coords(outlines, stand_or, NATOMS, periodic_table, ATOMTYPES, CARTESIANS)
 
   NMR = []
   for i in range(0,len(outlines)):

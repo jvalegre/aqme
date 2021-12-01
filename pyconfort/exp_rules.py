@@ -1,20 +1,19 @@
 import pybel 
 from pyconfort.utils import periodic_table
 
-
-
-def passes_custom_rules(mol,args):
+def passes_custom_rules(mol,args,log):
 	offset = args.angle_off
 	for rule in args.exp_rules:
-		passing = apply_rule(rule,mol,offset)
+		passing = apply_rule(rule,mol,log,offset)
 		if not passing:
 			return False
 	return True
-def apply_rule(rule,mol,offset=0.0):
+def apply_rule(rule,mol,log,offset=0.0):
 	if rule == 'Ir_bidentate_x3':
 		return apply_Ir_rule(mol,offset)
-	return apply_general_rule(rule,mol,offset)
-def apply_general_rule(rule,mol,offset=0.0):
+	return apply_general_rule(rule,mol,log,offset)
+
+def apply_general_rule(rule,mol,log,offset=0.0):
 	try:
 		syms = rule.split(',')[0].split('-')
 		target_angle = float(rule.split(',')[1])

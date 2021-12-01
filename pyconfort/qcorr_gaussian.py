@@ -5,22 +5,22 @@
 import os
 import sys
 import subprocess
-import numpy as np
-from pyconfort.qcorr_rework import input_route_line,check_for_gen_or_genecp,write_genecp,orca_file_gen
+from pyconfort.qcorr_rework import input_route_line,write_genecp,orca_file_gen
 # the import for check and write genecp is probably inside the genecp function of qprep now, FIX!
 from pyconfort.utils import periodic_table
 from pyconfort.filter import exp_rules_output,check_geom_filter
-from pyconfort.nics_conf import update_coord,get_coords_normal
+from pyconfort.nics_conf import update_coord
 from pyconfort.utils import move_file, com_2_xyz_2_sdf
+from pyconfort.qprep_gaussian import write_gaussian_input_file
 
-def write_header_and_coords(fileout,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,w_dir_initial,log,com_type=None):
+def write_header_and_coords(fileout,args,keywords_opt,file_name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,w_dir_initial,log,com_type=None):
     if com_type == 'nics':
-        NATOMS,ATOMTYPES,CARTESIANS = update_coord(NATOMS,ATOMTYPES,CARTESIANS,args,log,name,w_dir_initial,'write')
+        NATOMS,ATOMTYPES,CARTESIANS = update_coord(NATOMS,ATOMTYPES,CARTESIANS,args,log,file_name,w_dir_initial,'write')
     fileout.write("%mem="+str(args.mem)+"\n")
     fileout.write("%nprocshared="+str(args.nprocs)+"\n")
     fileout.write("# "+keywords_opt+"\n")
     fileout.write("\n")
-    fileout.write(name+"\n")
+    fileout.write(file_name.split('.')[0]+"\n")
     fileout.write(str(CHARGE)+' '+str(MULT)+'\n')
     for atom in range(0,NATOMS):
         fileout.write('{0:>2} {1:12.8f} {2:12.8f} {3:12.8f}'.format(ATOMTYPES[atom], CARTESIANS[atom][0],  CARTESIANS[atom][1],  CARTESIANS[atom][2]))
@@ -28,7 +28,7 @@ def write_header_and_coords(fileout,args,keywords_opt,name,CHARGE,MULT,NATOMS,AT
     fileout.write("\n")
 
 # CREATION OF COM FILES
-def new_com_file(com_type,w_dir_initial,log,new_gaussian_input_files,file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,TERMINATION,IM_FREQS,bs_com,lot_com,bs_gcp_com,orca_aux_section):
+def new_com_file(com_type,w_dir_initial,log,new_gaussian_input_files,file,args,keywords_opt,file_name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,bs_com,lot_com,bs_gcp_com,orca_aux_section):
 
     if com_type == 'sp':
         if args.suffix_sp == 'None':
@@ -45,10 +45,10 @@ def new_com_file(com_type,w_dir_initial,log,new_gaussian_input_files,file,args,k
 
     fileout = open(file_name, "w")
 
-    write_header_and_coords(fileout,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,w_dir_initial,log,com_type)
+    write_header_and_coords(fileout,args,keywords_opt,file_name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,w_dir_initial,log,com_type)
 
     # write genecp/gen part
-    if genecp == 'genecp' or  genecp == 'gen':
+    if bs_com.lower() == 'genecp' or  bs_com.lower() == 'gen':
         if com_type == 'sp':
             type_gen = 'sp'
         elif com_type == 'analysis':
@@ -58,14 +58,14 @@ def new_com_file(com_type,w_dir_initial,log,new_gaussian_input_files,file,args,k
 
     if args.sp == 'gaussian' and com_type == 'sp':
         # final line for SP
-        if args.last_line_for_sp != 'None':
-            fileout.write(args.last_line_for_sp)
+        if args.qm_input_end_sp != 'None':
+            fileout.write(args.qm_input_end_sp)
             fileout.write('\n\n')
 
     if args.QCORR == 'gaussian' and com_type == 'analysis':
         # final line for analysis
-        if args.last_line_for_input != 'None':
-            fileout.write(args.last_line_for_input)
+        if args.qm_input_end != 'None':
+            fileout.write(args.qm_input_end)
             fileout.write('\n\n')
 
     fileout.close()
@@ -75,7 +75,7 @@ def new_com_file(com_type,w_dir_initial,log,new_gaussian_input_files,file,args,k
         read_lines = open(file_name,"r").readlines()
 
         #create input file
-        orca_file_gen(read_lines,file_name.split('.')[0]+'.inp',bs_com,lot_com,genecp,args.aux_atoms_orca_sp,args.aux_basis_set_genecp_atoms_sp,args.aux_fit_genecp_atoms_sp,CHARGE,MULT,orca_aux_section,args,args.set_input_line_sp,args.solvent_model_sp,args.solvent_name_sp,args.cpcm_input_sp,args.orca_scf_iters_sp,args.mdci_orca_sp,args.print_mini_orca_sp)
+        orca_file_gen(read_lines,file_name.split('.')[0]+'.inp',bs_com,lot_com,genecp,args.aux_atoms_orca_sp,args.aux_basis_set_genecp_atoms_sp,args.aux_fit_genecp_atoms_sp,CHARGE,MULT,orca_aux_section,args,args.qm_input_sp,args.solvent_model_sp,args.solvent_name_sp,args.cpcm_input_sp,args.orca_scf_iters_sp,args.mdci_orca_sp,args.print_mini_orca_sp)
 
         # removes the initial com file
         os.remove(file_name)
@@ -84,10 +84,6 @@ def new_com_file(com_type,w_dir_initial,log,new_gaussian_input_files,file,args,k
 	    # Do stuff, MISSING PART
         pass
 
-    #submitting the gaussian file on summit
-    if args.qsub:
-        cmd_qsub = [args.submission_command, file_name]
-        subprocess.call(cmd_qsub)
 
 def read_log_file(w_dir,file):
     break_loop = False
@@ -101,15 +97,9 @@ def read_log_file(w_dir,file):
 
     return outlines, outfile, break_loop
 
-def get_initial_variables():
-    rms = 10000
-    stop_rms,stand_or,NATOMS,IM_FREQS,freqs_so_far,stop_name,stop_term,nfreqs,dist_rot_or = 0,0,0,0,0,0,0,0,0
-    ATOMTYPES, CARTESIANS, FREQS, READMASS, FORCECONST, NORMALMODE = [],[],[],[],[],[]
-    TERMINATION,ERRORTYPE  = 'unfinished','unknown'
-
-    return rms,stop_rms,stand_or,NATOMS,IM_FREQS,freqs_so_far,stop_name,stop_term,nfreqs,ATOMTYPES,CARTESIANS,FREQS,READMASS,FORCECONST,NORMALMODE,TERMINATION,ERRORTYPE,dist_rot_or
-
-def get_name_charge_multiplicity(outlines,stop_name):
+def get_name_charge_multiplicity(outlines):
+    name, CHARGE, MULT = '', None, None
+    stop_name = 0
     # only for name an and charge
     for i,outline in enumerate(outlines):
         if stop_name == 2:
@@ -123,9 +113,14 @@ def get_name_charge_multiplicity(outlines,stop_name):
             CHARGE = int(outline.split()[2])
             MULT = int(outline.split()[5].rstrip("\n"))
             stop_name += 1
+
     return name, CHARGE, MULT
 
-def get_termination_type(outlines,stop_term,TERMINATION,ERRORTYPE):
+def get_qcorr_params(outlines,default_lot,default_bs,preset_keywords_line,ts_opt,sp_calcs,charge_sp,mult_sp):
+    TERMINATION,ERRORTYPE  = 'unfinished','unknown'
+    stop_term, initial_IM_FREQS, NATOMS = 0, 0, 0
+    symbol_z_line, gradgrad_line = None, None
+
     # use reversed loops to find type of termination (faster than forward loops)
     for i in reversed(range(len(outlines)-15,len(outlines))):
         if stop_term == 1:
@@ -133,6 +128,7 @@ def get_termination_type(outlines,stop_term,TERMINATION,ERRORTYPE):
         # Determine the kind of job termination
         if outlines[i].find("Normal termination") > -1:
             TERMINATION = "normal"
+            ERRORTYPE = None
             stop_term += 1
         elif outlines[i].find("Error termination") > -1:
             TERMINATION = "error"
@@ -141,85 +137,237 @@ def get_termination_type(outlines,stop_term,TERMINATION,ERRORTYPE):
             if outlines[i-3].find("SCF Error SCF Error SCF Error SCF Error SCF Error SCF Error SCF Error SCF Error") > -1:
                 ERRORTYPE = "SCFerror"
             stop_term += 1
-    return TERMINATION,ERRORTYPE
 
-def get_geom_and_freq_for_normal(outlines, args, TERMINATION, NATOMS, FREQS, NORMALMODE, IM_FREQS, READMASS, FORCECONST, nfreqs, freqs_so_far, rms, stop_rms, dist_rot_or, stand_or):
-    stop_get_details_stand_or, stop_get_details_dis_rot,finding_freq_line,stop_finding_freq_line = 0,0,0,0
-    # reverse loop to speed up the reading of the output files
-    for i in reversed(range(0,len(outlines))):
-        if TERMINATION == "normal":
-            if not args.frequencies:
-                if stop_get_details_stand_or == 1 and stop_get_details_dis_rot == 1:
-                    break
+    # if the calculation ends normally with no imaginary freqs, no more read_lines are necessary (saves time)
+    # the nimag_line is defined so that part of the file is not read again
+    nimag_line = len(outlines)
+    if TERMINATION == 'normal':
+        for i in reversed(range(60,len(outlines)-5)):
+            if outlines[i].finds('NImag=') or outlines[i].finds('PG='):
+                nimag_line = i
+                # merge a few lines since 'NIMag=' sometimes appears in two different lines
+                line_with_ifreq = outlines[i-1].rstrip("\n")+outlines[i].rstrip("\n")+outlines[i+1].rstrip("\n")
+                for part_line in line_with_ifreq.split('\\'):
+                    if part_line.find('NImag=') > -1:
+                        initial_IM_FREQS = part_line.split('=')[1]
+                        break
+
+    # get functional, basis set and NATOMS
+    if TERMINATION != "normal" or initial_IM_FREQS > 0  or sp_calcs != None:
+        end_keywords = False
+        keywords_line = ''
+
+        # range optimized to skip Gaussian information (short for loop just to get charge, multiplicity and n of atoms)
+        for i in range(60,len(outlines)):
+            # retrieve the input line
+            if outlines[i].startswith('#'):
+                keywords_line += outlines[i].rstrip("\n")
+                for j in range(i,i+5):
+                    if outlines[j].finds('----------'):
+                        end_keywords = True
+                    if not end_keywords:
+                        keywords_line += outlines[j].rstrip("\n")
+
+            # get number of atoms
+            if outlines[i].find('Symbolic Z-matrix:') > -1:
+                symbol_z_line = i
+            elif outlines[i].find('GradGrad') > -1:
+                gradgrad_line = i
+            if symbol_z_line != None and gradgrad_line != None:
+                NATOMS = gradgrad_line-symbol_z_line-4
+            
+            # Determine charge and multiplicity
+            if outlines[i].find("Charge = ") > -1:
+                if charge_sp != None:
+                    CHARGE = charge_sp
+                else:
+                    CHARGE = int(outlines[i].split()[2])
+                if mult_sp != None:
+                    MULT = mult_sp
+                else:
+                    MULT = int(outlines[i].split()[5].rstrip("\n"))
+
+            if NATOMS != 0:
+                break
+
+        # find if the calculation was for a ground or transition state
+        calcfc_found, ts_found = False, False
+        for keyword in keywords_line.split():
+            if keyword.lower().find('calcfc') > -1:
+                calcfc_found = True
+            if keyword.lower().find('ts') > -1:
+                ts_found = True
+
+        calc_type = 'ground_state'
+        if calcfc_found and ts_found:
+            calc_type = 'transition_state'
+
+        # substract the imaginary frequency from the TS in normal terminations
+        if calc_type == 'transition_state':
+            initial_IM_FREQS -= 1
+
+        # if a preset input line was defined in args.qm_input, this overwrites the automatic protocol
+        if preset_keywords_line != None:
+            keywords_line = preset_keywords_line
+            # add the ts options if an external input line was defined
+            if calc_type == 'transition_state':
+                new_preset_keywords_line = '# '
+                for keyword in preset_keywords_line.split():
+                    if keyword.lower().startswith('opt') > -1:
+                        if keyword.lower().find('ts') > -1:
+                            pass
+                        else:
+                            keyword = ts_opt
+                    new_preset_keywords_line += keyword
+                    new_preset_keywords_line += ' '
+                keywords_line = new_preset_keywords_line
+                
+        # detect calcs that finish before the functional or basis set was included    
+        if default_lot == None or default_bs == None:
+            if ERRORTYPE == 'unknown':
+                ERRORTYPE = 'before_E_calculation'
+
+        # helps to fix SCF convergence errors
+        if ERRORTYPE == 'SCFerror':
+            if keywords_line.find(' scf=qc') > -1:
+                pass
             else:
-                if stop_get_details_stand_or == 1 and stop_get_details_dis_rot == 1 and stop_finding_freq_line ==1 :
-                    break
+                keywords_line += ' scf=qc'
+
+    return TERMINATION,ERRORTYPE,initial_IM_FREQS,NATOMS,CHARGE,MULT,keywords_line,calc_type,nimag_line
+
+
+def get_input_geom(file, outlines, keywords_line, NATOMS, MULT, TERMINATION, ERRORTYPE, initial_IM_FREQS, nimag_line, calc_type, duplicate_filter, single_point, ifreq_threshold, amplitude_ifreq, s2_threshold, amplitude_ifreq, file_list, E_dup, H_dup, G_dup):
+    
+    stand_or,NATOMS,IM_FREQS = 0,0,0
+    rms,stop_rms = 10000,0
+    spin_contamination,freq_only = False, False
+
+    # reverse loop to speed up the reading of the output files 
+    # (also skips final part for normal termination which was already read plus dipole/multipole information)
+    if duplicate_filter:
+        file_list.append(file)
+
+    if TERMINATION == "normal":
+        for i in reversed(range(0,nimag_line-(10*NATOMS))):
             # Sets where the final coordinates are inside the file
-            if stop_get_details_dis_rot !=1 and (outlines[i].find("Distance matrix") > -1 or outlines[i].find("Rotational constants") >-1) :
-                if outlines[i-1].find("-------") > -1:
-                    dist_rot_or = i
-                    stop_get_details_dis_rot += 1
-            if (outlines[i].find("Standard orientation") > -1 or outlines[i].find("Input orientation") > -1) and stop_get_details_stand_or !=1 :
+            if (outlines[i].find("Standard orientation:") > -1 or outlines[i].find("Input orientation:") > -1) and stop_get_details_stand_or !=1 :
                 stand_or = i
-                NATOMS = dist_rot_or-i-6
-                stop_get_details_stand_or += 1
-            if args.frequencies:
-                if outlines[i].find(" Harmonic frequencies") > -1 and stop_finding_freq_line !=1 :
-                    finding_freq_line = i
+                break
 
-    if args.frequencies:
-        for i in range(finding_freq_line,len(outlines)):
-            # Get the frequencies and identifies negative frequencies
-            if outlines[i].find(" Frequencies -- ") > -1:
-                nfreqs = len(outlines[i].split())
-                for j in range(2, nfreqs):
-                    FREQS.append(float(outlines[i].split()[j]))
-                    NORMALMODE.append([])
-                    if float(outlines[i].split()[j]) < 0 and np.absolute(float(outlines[i].split()[j])) > args.ifreq_cutoff:
-                        IM_FREQS += 1
-                for j in range(3, nfreqs+1):
-                    READMASS.append(float(outlines[i+1].split()[j]))
-                for j in range(3, nfreqs+1):
-                    FORCECONST.append(float(outlines[i+2].split()[j]))
-                for j in range(0,NATOMS):
-                    for k in range(0, nfreqs-2):
-                        NORMALMODE[(freqs_so_far + k)].append([float(outlines[i+5+j].split()[3*k+2]), float(outlines[i+5+j].split()[3*k+3]), float(outlines[i+5+j].split()[3*k+4])])
-                freqs_so_far = freqs_so_far + nfreqs - 2
-            if TERMINATION != "normal":
-                if outlines[i].find('Cartesian Forces:  Max') > -1:
-                    try:
-                        if float(outlines[i].split()[5]) < rms:
-                            rms = float(outlines[i].split()[5])
-                            stop_rms = i
-                    except ValueError:
-                        rms = 10000
-    return TERMINATION, NATOMS, FREQS, NORMALMODE, IM_FREQS, READMASS, FORCECONST, nfreqs, freqs_so_far, rms, stop_rms, dist_rot_or, stand_or
+            if duplicate_filter:
+                start_dup = False
+                if not start_dup:
+                    if outlines[i].find('E (Thermal)'):
+                        start_dup = True
+                else:
+                    if outlines[i].find('Sum of electronic and zero-point Energies=') > -1:
+                        E_dup.append()
+                    elif outlines[i].find('Sum of electronic and thermal Enthalpies=') > -1:
+                        H_dup.append()
+                    elif outlines[i].find('Sum of electronic and thermal Free Energies=') > -1:
+                        G_dup.append()
 
+            if initial_IM_FREQS != 0:
+                # Get the negative frequencies and their modes (up to three negative frequencies)
+                if outlines[i].find(" Frequencies -- ") > -1:
+                    FREQS, NORMALMODE  = [],[]
+                    nfreqs = len(outlines[i].split())
+                    for j in range(2, nfreqs):
+                        if float(outlines[i].split()[j]) < 0 and abs(float(outlines[i].split()[j])) > abs(ifreq_threshold):
+                            IM_FREQS += 1
+                            FREQS.append(float(outlines[i].split()[j]))
+                            NORMALMODE.append([])
+                            for k in range(0,NATOMS):
+                                NORMALMODE[(j-2)].append([float(outlines[i+5+k].split()[3*(j-2)+2]), float(outlines[i+5+k].split()[3*(j-2)+3]), float(outlines[i+5+k].split()[3*(j-2)+4])])
 
-def get_coords_not_normal(outlines, stop_rms, stand_or, dist_rot_or, NATOMS, periodic_table, ATOMTYPES, CARTESIANS):
-    if stop_rms == 0:
-        last_line = len(outlines)
+            # analyze spin contamination. If the <S**2> operator deviates more than (s2_threshold) %
+            # compared to the expected value, the calculation contains spin contamination
+            elif s2_threshold > 0.0:
+                if outlines[i].find('S**2 before annihilation') > -1:
+                    s2_value = outlines[i].split()[-1].rstrip("\n")
+                    unpaired_e = MULT-1
+                    spin = unpaired_e*0.5
+                    s2_expected_value = spin*(spin+1)
+                    spin_diff = abs(s2_value-s2_expected_value)
+                    if spin_diff > abs(s2_threshold/100)*s2_expected_value:
+                        spin_contamination = True
+
+        # exclude TS imag frequency
+        if calc_type == 'transition_state':
+            IM_FREQS -= 1
+            FREQS.pop(0)
+            NORMALMODE.pop(0)
+
+        if IM_FREQS > 0:
+            ERRORTYPE = 'extra_imag_freq'
+
+        if IM_FREQS < 0:
+            ERRORTYPE = 'ts_no_imag_freq'
+
+        if spin_contamination:
+            ERRORTYPE = 'spin_contaminated'
+
     else:
-        last_line = stop_rms
-    stop_get_details_stand_or = 0
-    stop_get_details_dis_rot = 0
-    for i in reversed(range(0,last_line)):
-        if stop_get_details_stand_or == 1 and stop_get_details_dis_rot == 1:
-            break
-        # Sets where the final coordinates are inside the file
-        if outlines[i].find("Standard orientation") > -1 and stop_get_details_stand_or != 1:
-            stand_or = i
-            NATOMS = dist_rot_or-i-6
-            stop_get_details_stand_or += 1
-        if stop_get_details_stand_or != 1 and (outlines[i].find("Distance matrix") > -1 or outlines[i].find("Rotational constants") >-1):
-            if outlines[i-1].find("-------") > -1:
-                dist_rot_or = i
-                stop_get_details_dis_rot += 1
-    ATOMTYPES, CARTESIANS,stand_or = get_coords_normal(outlines, stand_or, NATOMS, periodic_table, ATOMTYPES, CARTESIANS)
-    return ATOMTYPES, CARTESIANS, NATOMS,stand_or
+        normal_term_found, opt_found = False, False
+        for i in reversed(range(60,len(outlines))):
+            if outlines[i].find('Cartesian Forces:  Max') > -1:
+                try:
+                    if float(outlines[i].split()[5]) < rms:
+                        rms = float(outlines[i].split()[5])
+                        stop_rms = i
+                    if normal_term_found and opt_found:
+                        freq_only = True
+                        break
+                # sometimes Gaussian does not print valid numbers in this section
+                except ValueError:
+                    pass
+                        
+            if not normal_term_found and not opt_found:
+                if outlines[i].find("Normal termination") > -1:
+                    normal_term_found = True
+                elif outlines[i].strip().find('\\FOpt\\') > -1 or outlines[i].strip().find('\\FTS\\') > -1:
+                    opt_found = True
+
+        # only include Freq calculations to molecules that are already optimized (no OPT)
+        if freq_only:
+            new_keywords_line = '# '
+            for keyword in keywords_line.split():
+                if keyword.lower().startswith('opt') > -1:
+                    keyword = ''
+                new_keywords_line += keyword
+                new_keywords_line += ' '
+            keywords_line = new_keywords_line
+
+        if stop_rms == 0:
+            last_line = len(outlines)
+        else:
+            last_line = stop_rms
+
+        for i in reversed(range(0,last_line)):
+            # Sets where the final coordinates are inside the file
+            if outlines[i].find("Standard orientation") > -1:
+                stand_or = i
+                break
+
+    # get atom types fro the calculation and the cartesian coordinates to use in each case
+    ATOMTYPES, CARTESIANS = [],[]
+    for i in range(stand_or+5,stand_or+5+NATOMS):
+        massno = int(outlines[i].split()[1])
+        if massno < len(periodic_table):
+            atom_symbol = periodic_table[massno]
+        else:
+            atom_symbol = "XX"
+        ATOMTYPES.append(atom_symbol)
+        CARTESIANS.append([float(outlines[i].split()[3]), float(outlines[i].split()[4]), float(outlines[i].split()[5])])
+
+    if ERRORTYPE == 'extra_imag_freq':
+        CARTESIANS = fix_imag_freqs(NATOMS, CARTESIANS, FREQS, NORMALMODE, amplitude_ifreq)
+
+    return file_list, E_dup, H_dup, G_dup, ERRORTYPE, keywords_line, ATOMTYPES, CARTESIANS
   
 
-def fix_imag_freqs(NATOMS, CARTESIANS, args, FREQS, NORMALMODE):
+def fix_imag_freqs(NATOMS, CARTESIANS, FREQS, NORMALMODE, amplitude):
     # Multiplies the imaginary normal mode vector by this amount (from -1 to 1).
     amplitude = args.amplitude_ifreq # 0.2 is the default in the pyQRC script (GitHub, user: bobbypaton)
     shift = []
@@ -231,7 +379,7 @@ def fix_imag_freqs(NATOMS, CARTESIANS, args, FREQS, NORMALMODE):
 
     # could get rid of atomic units here, if zpe_rat definition is changed
     for mode,_ in enumerate(FREQS):
-        # Either moves along any and all imaginary freqs, or a specific mode requested by the user
+        # Either moves along all imaginary freqs, or a specific mode requested by the user
         if FREQS[mode] < 0.0:
             shift.append(amplitude)
         else:
@@ -244,7 +392,7 @@ def fix_imag_freqs(NATOMS, CARTESIANS, args, FREQS, NORMALMODE):
 
     return CARTESIANS
 
-def create_folder_and_com(w_dir,w_dir_main,round_num,log,NATOMS,ATOMTYPES,CARTESIANS,args,TERMINATION,IM_FREQS,w_dir_fin,file,lot,bs,bs_gcp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp,ERRORTYPE,input_route,w_dir_initial,name,CHARGE,MULT,orca_aux_section):
+def create_folder_and_com(w_dir_main,round_num,log,NATOMS,ATOMTYPES,CARTESIANS,args,TERMINATION,file,lot,bs,bs_gcp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp,ERRORTYPE,input_route,w_dir_initial,name,CHARGE,MULT,orca_aux_section):
     # creating new folder with new input gaussian files
     new_gaussian_input_files = w_dir_main+'/input_files/run_'+str(round_num+1)
 
@@ -259,62 +407,79 @@ def create_folder_and_com(w_dir,w_dir_main,round_num,log,NATOMS,ATOMTYPES,CARTES
     log.write('-> Creating new gaussian input file for {0} in {1}/{2}'.format(file,lot,bs))
 
     #error if both genecp and gen are
-    if ecp_genecp_atoms and ecp_gen_atoms:
+    if args.genecp_atoms != [] and args.gen_atoms != []:
         sys.exit("x  ERROR: Can't use Gen and GenECP at the same time")
 
-    if ERRORTYPE == 'SCFerror':
-        input_route += ' scf=qc'
-    if genecp == 'genecp' or  genecp == 'gen':
-        keywords_opt = lot +'/'+ genecp+' '+ input_route
-    else:
-        keywords_opt = lot +'/'+ bs +' '+ input_route
-
     com_type = 'analysis'
-    new_com_file(com_type,w_dir_initial,log,new_gaussian_input_files,file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,TERMINATION,IM_FREQS,bs,lot,bs_gcp,orca_aux_section)
+    adapt this for write_gaussian_input_file, also change the function in qprep_gaussian
+    new_com_file(com_type,w_dir_initial,log,new_gaussian_input_files,file,args,keywords_line,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,bs,lot,bs_gcp,orca_aux_section)
 
-def create_folder_move_log_files(w_dir,w_dir_main,round_num,file,IM_FREQS,TERMINATION,ERRORTYPE,w_dir_fin,finished,unfinished,atom_error,scf_error,imag_freq,other_error,exp_rules_qcorr,passing_rules,passing_geom,check_geom_qcorr):
+def organize_outputs(w_dir,w_dir_main,round_num,file,TERMINATION,ERRORTYPE,w_dir_fin,check_geom_qcorr):
     source = w_dir+'/'+file
-    if IM_FREQS == 0 and TERMINATION == "normal" and passing_rules and passing_geom:
+
+    finished,imag_freq,ts_no_imag_freq,spin_contaminated,duplicate_calc = 0,0,0,0,0
+    atom_error, scf_error, before_E_error, other_error = 0,0,0,0
+    unfinished, exp_rules_qcorr, check_geom_qcorr = 0,0,0
+
+    if ERRORTYPE == None and TERMINATION == "normal":
         destination = w_dir_fin
         move_file(source, destination)
         finished += 1
 
-    elif IM_FREQS > 0:
+    elif ERRORTYPE == 'extra_imag_freq':
         destination = w_dir_main+'/failed/run_'+str(round_num)+'/imag_freq/'
         move_file(source, destination)
         imag_freq += 1
 
-    elif IM_FREQS == 0 and TERMINATION == "error":
+    elif ERRORTYPE == 'ts_no_imag_freq':
+        destination = w_dir_main+'/failed/run_'+str(round_num)+'/ts_no_imag_freq/'
+        move_file(source, destination)
+        ts_no_imag_freq += 1
+
+    elif ERRORTYPE == 'spin_contaminated':
+        destination = w_dir_main+'/failed/run_'+str(round_num)+'/spin_contaminated/'
+        move_file(source, destination)
+        spin_contaminated += 1
+
+    elif ERRORTYPE == 'duplicate_calc':
+        destination = w_dir_main+'/duplicates/run_'+str(round_num)
+        move_file(source, destination)
+        duplicate_calc += 1
+
+    elif TERMINATION == "error":
         if ERRORTYPE == "atomicbasiserror":
             destination = w_dir_main +'/failed/run_'+str(round_num)+'/error/basis_set_error'
             atom_error += 1
         elif ERRORTYPE == "SCFerror":
             destination = w_dir_main+'/failed/run_'+str(round_num)+'/error/scf_error'
             scf_error += 1
+        elif ERRORTYPE == "before_E_calculation":
+            destination = w_dir_main+'/failed/run_'+str(round_num)+'/error/before_E_calculation'
+            before_E_error += 1        
         else:
             destination = w_dir_main+'/failed/run_'+str(round_num)+'/error/unknown_error'
             other_error += 1
         move_file(source, destination)
 
-    elif IM_FREQS == 0 and TERMINATION == "unfinished":
+    elif TERMINATION == "unfinished":
         destination = w_dir_main+'/failed/run_'+str(round_num)+'/unfinished/'
         move_file(source, destination)
         unfinished += 1
 
-    elif not passing_rules:
+    elif ERRORTYPE == 'fail_exp_rules':
         destination = w_dir_main+'/failed/run_'+str(round_num)+'/exp_rules_filter/'
         move_file(source, destination)
         exp_rules_qcorr += 1
 
-    elif not passing_geom:
+    elif ERRORTYPE == 'isomerization':
         destination = w_dir_main+'/failed/run_'+str(round_num)+'/geometry_changed/'
         move_file(source, destination)
         check_geom_qcorr += 1
 
-    return finished,unfinished,atom_error,scf_error,imag_freq,other_error,exp_rules_qcorr,check_geom_qcorr
+    return finished,unfinished,atom_error,scf_error,before_E_error,imag_freq,ts_no_imag_freq,spin_contaminated,duplicate_calc,other_error,exp_rules_qcorr,check_geom_qcorr
 
 # Output file to mol converter
-def output_to_mol(file,format,mol_name,log):
+def output_to_mol(file,format,log):
     ob_compat = True
     rdkit_compat = True
     try:
@@ -333,27 +498,30 @@ def output_to_mol(file,format,mol_name,log):
     if format == 'xyz':
         cmd_obabel = ['obabel', '-ixyz', os.path.splitext(file)[0]+'.xyz', '-omol', '-O', os.path.splitext(file)[0]+'.mol']
     # for output (from log to mol)
-    if format == 'log':
-        cmd_obabel = ['obabel', '-ilog', os.path.splitext(file)[0]+'.log', '-omol', '-O', os.path.splitext(file)[0]+'.mol']
+    if format in ['log','out']:
+        cmd_obabel = ['obabel', '-ilog', os.path.splitext(file)[0]+'.'+format, '-omol', '-O', os.path.splitext(file)[0]+'.mol']
     subprocess.run(cmd_obabel)
-    mol = Chem.MolFromMolFile(mol_name.split('.')[0]+'.mol')
+    mol = Chem.MolFromMolFile(file.split('.')[0]+'.mol')
 
     return mol,ob_compat,rdkit_compat
 
 # DEFINTION OF OUTPUT ANALYSER and NMR FILES CREATOR
-def output_analyzer(duplicates,log_files,com_files, w_dir, w_dir_main,lot, bs, bs_gcp, args, w_dir_fin, w_dir_initial, log, ana_data, round_num):
+def output_analyzer(log_files,com_files, w_dir, w_dir_main, args, w_dir_fin, w_dir_initial, log, ana_data, round_num):
 
     input_route = input_route_line(args)
-    finished,unfinished,atom_error,scf_error,imag_freq,other_error,exp_rules_qcorr,check_geom_qcorr = 0,0,0,0,0,0,0,0
 
     if round_num == 1:
-        #moves the comfiles to respective folder
+        # moves the com files to respective folder
         for file in com_files:
             source = w_dir+'/'+file
             destination = w_dir_main +'/input_files/run_'+str(round_num)
             move_file(source, destination)
+            
+    # these lists will track duplicates if args.dup is activated
+    file_list, E_dup, H_dup, G_dup = [],[],[],[]
 
     for file in log_files:
+
         # read the file
         log.write(file)
         outlines, outfile, break_loop = read_log_file(w_dir,file)
@@ -361,61 +529,55 @@ def output_analyzer(duplicates,log_files,com_files, w_dir, w_dir_main,lot, bs, b
         if break_loop:
             break
 
-        # get initial parameters
-        rms,stop_rms,stand_or,NATOMS,IM_FREQS,freqs_so_far,stop_name,stop_term,nfreqs,ATOMTYPES,CARTESIANS,FREQS,READMASS,FORCECONST,NORMALMODE,TERMINATION,ERRORTYPE,dist_rot_or = get_initial_variables()
+        # get parameters from the calculations (i.e. termination and error types, n of atoms, charge, mult, etc)
+        TERMINATION, ERRORTYPE, initial_IM_FREQS, NATOMS, CHARGE, MULT, keywords_line, calc_type, nimag_line = get_qcorr_params(outlines,args.level_of_theory,args.basis_set,args.qm_input,args.ts_input,args.sp,args.charge_sp,args.mult_sp)
 
-        # get name, charge and multiplicity
-        name, CHARGE, MULT = get_name_charge_multiplicity(outlines,stop_name)
+        # get new coordinates as input files to fix error (unless the errors cannot be fixed automatically
+        # such as in atomic basis errors or errors happening too early on the calculation)
+        if ERRORTYPE not in ['before_E_calculation',"atomicbasiserror"]:
 
-        # get termination type
-        TERMINATION,ERRORTYPE = get_termination_type(outlines,stop_term,TERMINATION,ERRORTYPE)
+            # whats trhe difference between this function and the 2 functions below?!
+            # get geometry parameters and frequency information
+            if TERMINATION != "normal" or initial_IM_FREQS != 0 or args.s2_threshold > 0.0 or args.sp != None or args.dup:
+                file_list, E_dup, H_dup, G_dup, ERRORTYPE, keywords_line, ATOMTYPES, CARTESIANS = get_input_geom(file, outlines, keywords_line, NATOMS, MULT, TERMINATION, ERRORTYPE, initial_IM_FREQS, nimag_line, calc_type, args.dup, args.sp, args.ifreq_cutoff, args.amplitude_ifreq, args.s2_threshold, args.args.amplitude_ifreq, file_list, E_dup, H_dup, G_dup)
 
-        # get geometry parameters and frequency information
-        TERMINATION, NATOMS, FREQS, NORMALMODE, IM_FREQS, READMASS, FORCECONST, nfreqs, freqs_so_far, rms, stop_rms, dist_rot_or, stand_or = get_geom_and_freq_for_normal(outlines, args, TERMINATION, NATOMS, FREQS, NORMALMODE, IM_FREQS, READMASS, FORCECONST, nfreqs, freqs_so_far, rms, stop_rms, dist_rot_or, stand_or)
-
-        # Get the coordinates for jobs that finished well with and without imag. freqs
-        if TERMINATION == "normal" and IM_FREQS>0:
-            ATOMTYPES, CARTESIANS, stand_or = get_coords_normal(outlines, stand_or, NATOMS, periodic_table, ATOMTYPES, CARTESIANS)
-
-        # Get he coordinates for jobs that did not finished or finished with an error
-        if TERMINATION != "normal":
-            ATOMTYPES, CARTESIANS,NATOMS, stand_or = get_coords_not_normal(outlines, stop_rms, stand_or, dist_rot_or, NATOMS, periodic_table, ATOMTYPES, CARTESIANS)
-        # This part fixes imaginary freqs (if any)
-        if IM_FREQS > 0:
-            CARTESIANS = fix_imag_freqs(NATOMS, CARTESIANS, args, FREQS, NORMALMODE)
-
-        #close the file
+        # is it necessary to close the file?!
+        # close the file
         outfile.close()
 
         # this part filters off conformers based on user-defined exp_rules
         passing_rules = True
         valid_mol_gen = True
-        if len(args.exp_rules) >= 1:
-            if TERMINATION == "normal" and IM_FREQS == 0:
+        passing_geom = True
+        format_file = file.split('.')[1]
+        if TERMINATION == "normal" and ERRORTYPE == None:
+            if len(args.exp_rules) >= 1:
                 log.write("  ----- Exp_rules filter(s) will be applied to the output file -----\n")
                 try:
-                    mol,ob_compat,rdkit_compat = output_to_mol(file,'log',file,log)
+                    mol,ob_compat,rdkit_compat = output_to_mol(file,format_file,log)
                     print_error_exp_rules=False
                     if ob_compat and rdkit_compat:
                         passing_rules = exp_rules_output(mol,args,log,file,print_error_exp_rules)
+                        if not passing_rules:
+                            ERRORTYPE = 'fail_exp_rules'
                     os.remove(file.split('.')[0]+'.mol')
                 except AttributeError:
                     valid_mol_gen = False
                     os.remove(file.split('.')[0]+'.mol')
                     log.write("The file could not be converted into a mol object, exp_rules filter(s) will be disabled\n")
 
-        passing_geom = True
-        if args.check_geom and passing_rules and valid_mol_gen:
-            if TERMINATION == "normal" and IM_FREQS == 0:
+            if args.check_geom and ERRORTYPE == None:
                 log.write("  ----- Geometrical check will be applied to the output file -----\n")
                 # this creates a mol object from the optimized log file
-                mol,ob_compat,rdkit_compat = output_to_mol(file,'log',file,log)
+                mol,ob_compat,rdkit_compat = output_to_mol(file,format_file,log)
                 # this creates a mol object from the input file
                 try:
                     os.chdir(w_dir_main +'/input_files/run_'+str(round_num))
                     com_2_xyz_2_sdf(args.input,args.default_charge,os.path.splitext(file)[0]+'.com')
-                    mol2,ob_compat,rdkit_compat = output_to_mol(file,'xyz',file,log)
+                    mol2,ob_compat,rdkit_compat = output_to_mol(file,'xyz',log)
                     passing_geom = check_geom_filter(mol,mol2,args.length_criteria)
+                    if not passing_geom:
+                        ERRORTYPE = 'isomerization'
                     # remove created files
                     os.remove(file.split('.')[0]+'.xyz')
                     os.remove(file.split('.')[0]+'.sdf')
@@ -430,24 +592,29 @@ def output_analyzer(duplicates,log_files,com_files, w_dir, w_dir_main,lot, bs, b
         elif args.check_geom and not valid_mol_gen:
             log.write("The file could not be converted into a mol object, check_geom test will be disabled\n")
 
+        # detects if this calculation is a duplicate
+        if args.dup:
+            for i,energy_value in enumerate(E_dup):
+                if abs(energy_value - E_dup[file_list.index(file)]) < abs(args.dup_threshold):
+                    if abs(H_dup[i] - H_dup[file_list.index(file)]) < abs(args.dup_threshold):
+                        if abs(G_dup[i] - G_dup[file_list.index(file)]) < abs(args.dup_threshold):                        
+                            ERRORTYPE = 'duplicate_calc'
+
         # This part places the calculations in different folders depending on the type of termination
-        finished,unfinished,atom_error,scf_error,imag_freq,other_error,exp_rules_qcorr,check_geom_qcorr = create_folder_move_log_files(w_dir,w_dir_main,round_num,file,IM_FREQS,TERMINATION,ERRORTYPE,w_dir_fin,finished,unfinished,atom_error,scf_error,imag_freq,other_error,exp_rules_qcorr,passing_rules,passing_geom,check_geom_qcorr)
+        finished,unfinished,atom_error,scf_error,before_E_error,imag_freq,ts_no_imag_freq,spin_contaminated,duplicate_calc,other_error,exp_rules_qcorr,check_geom_qcorr = organize_outputs(w_dir,w_dir_main,round_num,file,TERMINATION,ERRORTYPE,w_dir_fin,check_geom_qcorr)
 
         # check if gen or genecp are active
         # right now, QCORR is only working with Gaussian output files
-
-        ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp,orca_aux_section = check_for_gen_or_genecp(ATOMTYPES,args,'analysis','gaussian')
+        if args.genecp_atoms != [] or args.gen_atoms != []:
+            ecp_list = check_for_gen_or_genecp(ATOMTYPES,args,'analysis','gaussian')
 
         # create folders and set level of theory in COM files to fix imaginary freqs or not normal terminations
-        if IM_FREQS > 0 or TERMINATION != "normal" and not os.path.exists(w_dir_main+'/failed/run_'+str(round_num)+'/error/basis_set_error/'+file):
-            create_folder_and_com(w_dir,w_dir_main,round_num,log,NATOMS,ATOMTYPES,CARTESIANS,args,TERMINATION,IM_FREQS,w_dir_fin,file,lot,bs,bs_gcp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp,ERRORTYPE,input_route,w_dir_initial,name,CHARGE, MULT, orca_aux_section)
+        if TERMINATION != "normal" or ERRORTYPE != None:
+            create_folder_and_com(w_dir_main,round_num,log,NATOMS,ATOMTYPES,CARTESIANS,args,TERMINATION,file,lot,bs,bs_gcp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp,ERRORTYPE,input_route,w_dir_initial,name,CHARGE, MULT, orca_aux_section)
 
-        # adding in the NMR componenet only to the finished files after reading from normally finished log files
-        if TERMINATION == "normal" and IM_FREQS == 0 and passing_rules and passing_geom:
-            if args.sp == 'gaussian' or args.sp == 'orca' or args.sp == 'turbomole' or args.nics:
-
-                #get coordinates
-                ATOMTYPES, CARTESIANS,stand_or = get_coords_normal(outlines, stand_or, NATOMS, periodic_table, ATOMTYPES, CARTESIANS)
+        # this part creates input files for single-point energy calcs after reading from normally finished log files
+        if TERMINATION == "normal" and ERRORTYPE == None:
+            if args.sp != None or args.nics:
 
                 if args.sp == 'gaussian':
                     # creating new folder with new input Gaussian files
@@ -466,10 +633,10 @@ def output_analyzer(duplicates,log_files,com_files, w_dir, w_dir_main,lot, bs, b
 
                 # Options for genecp
                 if args.sp == 'gaussian':
-                    ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp,orca_aux_section = check_for_gen_or_genecp(ATOMTYPES,args,'sp','gaussian')
+                    ecp_list = check_for_gen_or_genecp(ATOMTYPES,args,'sp','gaussian')
 
                 elif args.sp == 'orca':
-                    ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp,orca_aux_section = check_for_gen_or_genecp(ATOMTYPES,args,'sp','orca')
+                    orca_aux_section = check_for_gen_or_genecp(ATOMTYPES,args,'sp','orca')
 
                 elif args.sp == 'turbomole':
                     # Check for gen or genecp
@@ -508,8 +675,8 @@ def output_analyzer(duplicates,log_files,com_files, w_dir, w_dir_main,lot, bs, b
                             keywords_opt = lot_sp + '/' + genecp
                         else:
                             keywords_opt = lot_sp + '/' + bs_sp
-                        if args.set_input_line_sp != 'None':
-                            keywords_opt += ' {0}'.format(args.set_input_line_sp)
+                        if args.qm_input_sp != 'None':
+                            keywords_opt += ' {0}'.format(args.qm_input_sp)
                         if args.empirical_dispersion_sp != 'None':
                             keywords_opt += ' empiricaldispersion={0}'.format(args.empirical_dispersion_sp)
                         if args.solvent_model_sp != 'gas_phase':
@@ -521,31 +688,31 @@ def output_analyzer(duplicates,log_files,com_files, w_dir, w_dir_main,lot, bs, b
                     if args.mult_sp != 'None':
                         MULT = args.mult_sp
 
-                    if args.sp == 'gaussian' or args.sp == 'orca' or args.sp == 'turbomole':
+                    if args.sp != None:
                         if not os.path.isdir(single_point_input_files+'/'+dir_name):
                             os.makedirs(single_point_input_files+'/'+dir_name)
                         os.chdir(single_point_input_files+'/'+dir_name)
-                        new_com_file('sp',w_dir_initial,log,single_point_input_files+'/'+dir_name,file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,TERMINATION,IM_FREQS,bs_sp,lot_sp,bs_gcp_sp,orca_aux_section)
+                        new_com_file('sp',w_dir_initial,log,single_point_input_files+'/'+dir_name,file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,bs_sp,lot_sp,bs_gcp_sp,orca_aux_section)
 
                     if args.nics:
                         if not os.path.isdir(nics_input_files+'/'+dir_name):
                             os.makedirs(nics_input_files+'/'+dir_name)
                         os.chdir(nics_input_files+'/'+dir_name)
-                        new_com_file('nics',w_dir_initial,log,nics_input_files+'/'+dir_name,file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,TERMINATION,IM_FREQS,bs_sp,lot_sp,bs_gcp_sp,orca_aux_section)
+                        new_com_file('nics',w_dir_initial,log,nics_input_files+'/'+dir_name,file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,bs_sp,lot_sp,bs_gcp_sp,orca_aux_section)
 
     #write to csv ana_data
-    if duplicates=='None':
-        ana_data.at[0,'Total files'] = len(log_files)
-    else:
-        ana_data.at[0,'Total files'] = len(log_files)+int(duplicates) # since duplicates are moved before anything else
+    ana_data.at[0,'Total files'] = len(log_files)
     ana_data.at[0,'Normal termination'] = finished
     ana_data.at[0,'Imaginary frequencies'] = imag_freq
+    ana_data.at[0,'Spin contamination'] = spin_contaminated
+    ana_data.at[0,'TS with no imag. freq.'] = ts_no_imag_freq
     ana_data.at[0,'SCF error'] = scf_error
+    ana_data.at[0,'Error before SCF'] = before_E_error
     ana_data.at[0,'Basis set error'] =  atom_error
     ana_data.at[0,'Other errors'] = other_error
     ana_data.at[0,'Unfinished'] = unfinished
     if args.dup:
-        ana_data.at[0,'Duplicates'] = duplicates
+        ana_data.at[0,'Duplicates'] = duplicate_calc
     if len(args.exp_rules) >= 1:
         ana_data.at[0,'Exp_rules filter'] = exp_rules_qcorr
     if args.check_geom:
@@ -554,7 +721,45 @@ def output_analyzer(duplicates,log_files,com_files, w_dir, w_dir_main,lot, bs, b
     if not os.path.isdir(w_dir_main+'/csv_files/'):
         os.makedirs(w_dir_main+'/csv_files/')
     ana_data.to_csv(w_dir_main+'/csv_files/Analysis-Data-QCORR-run_'+str(round_num)+'.csv',index=False)
+
+
+ # DETECTION AND LISTING OF GEN/GENECP FROM COM FILES
+def check_for_gen_or_genecp(ATOMTYPES,args,type_of_check,program_gen):
+
+    ecp_list,ecp_atoms_include,orca_aux_section = [],[],False
+    if type_of_check == 'analysis':
+        if program_gen == 'gaussian':
+            if args.genecp_atoms != []:
+                ecp_atoms_include = args.genecp_atoms
+            elif args.gen_atoms != []:
+                ecp_atoms_include = args.gen_atoms
+        elif program_gen == 'orca':
+            if args.aux_atoms_orca != []:
+                aux_atoms_include = args.aux_atoms_orca
+                
+    elif type_of_check == 'sp':
+        if program_gen == 'gaussian':
+            if args.genecp_atoms_sp != []:
+                ecp_atoms_include = args.genecp_atoms_sp
+            elif args.gen_atoms_sp != []:
+                ecp_atoms_include = args.gen_atoms_sp
+        elif program_gen == 'orca':
+            if args.aux_atoms_orca_sp != []:
+                aux_atoms_include = args.aux_atoms_orca_sp
     
+    for _,atomtype in enumerate(ATOMTYPES):
+        if program_gen == 'gaussian':
+            if atomtype not in ecp_list and atomtype in periodic_table and atomtype in ecp_atoms_include:
+                ecp_list.append(atomtype)
+        elif program_gen == 'orca':
+            if atomtype in aux_atoms_include:
+                orca_aux_section = True
+
+    if program_gen == 'gaussian':
+    	return ecp_list  
+    elif program_gen == 'orca':
+        return orca_aux_section
+
 
 # CHECKS THE FOLDER OF FINAL LOG FILES
 def check_for_final_folder(w_dir):
@@ -576,39 +781,3 @@ def check_for_final_folderv2(w_dir):
 	last_folder = sorted(folders,key=get_number)[-1]
 	last_number = get_number(last_folder)
 	return str(last_folder), last_number
-
-
-
-# CHECKING FOR DUPLICATES
-def dup_calculation(val, w_dir,w_dir_main, args, log,round_num):
-
-    # GoodVibes must be installed as a module (through pip or conda)
-    cmd_dup = ['python', '-m', 'goodvibes', '--dup']
-    for file in val:
-        cmd_dup.append(file)
-    subprocess.call(cmd_dup)
-
-    #reading the txt files to get the DUPLICATES
-    dup_file_list = []
-    duplines = open('Goodvibes_output.dat',"r").readlines()
-
-    for i,_ in enumerate(duplines):
-        if duplines[i].find('duplicate') > -1:
-            dup_file_list.append(duplines[i].split(' ')[2])
-
-    duplicates = len(dup_file_list)
-
-    #move the files to specific directory
-    destination = w_dir_main+'/duplicates/run_'+str(round_num)
-    source = 'Goodvibes_output.dat'
-    move_file(source, destination)
-
-    for source in dup_file_list:
-        #finding the extension
-        for file in val:
-            if file.split('.')[0] == source:
-                ext=file.split('.')[1]
-        source=source+'.'+ext
-        move_file(source, destination)
-
-    return duplicates
