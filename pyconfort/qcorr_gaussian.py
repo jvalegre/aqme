@@ -79,7 +79,7 @@ def new_com_file(com_type,w_dir_initial,log,new_gaussian_input_files,file,args,k
 
         # removes the initial com file
         os.remove(file_name)
-       
+
     if args.sp == 'turbomole' and com_type == 'sp':
 	    # Do stuff, MISSING PART
         pass
@@ -175,7 +175,7 @@ def get_qcorr_params(outlines,default_lot,default_bs,preset_keywords_line,ts_opt
                 gradgrad_line = i
             if symbol_z_line != None and gradgrad_line != None:
                 NATOMS = gradgrad_line-symbol_z_line-4
-            
+
             # Determine charge and multiplicity
             if outlines[i].find("Charge = ") > -1:
                 if charge_sp != None:
@@ -221,8 +221,8 @@ def get_qcorr_params(outlines,default_lot,default_bs,preset_keywords_line,ts_opt
                     new_preset_keywords_line += keyword
                     new_preset_keywords_line += ' '
                 keywords_line = new_preset_keywords_line
-                
-        # detect calcs that finish before the functional or basis set was included    
+
+        # detect calcs that finish before the functional or basis set was included
         if default_lot == None or default_bs == None:
             if ERRORTYPE == 'unknown':
                 ERRORTYPE = 'before_E_calculation'
@@ -237,13 +237,13 @@ def get_qcorr_params(outlines,default_lot,default_bs,preset_keywords_line,ts_opt
     return TERMINATION,ERRORTYPE,initial_IM_FREQS,NATOMS,CHARGE,MULT,keywords_line,calc_type,nimag_line
 
 
-def get_input_geom(file, outlines, keywords_line, NATOMS, MULT, TERMINATION, ERRORTYPE, initial_IM_FREQS, nimag_line, calc_type, duplicate_filter, single_point, ifreq_threshold, amplitude_ifreq, s2_threshold, amplitude_ifreq, file_list, E_dup, H_dup, G_dup):
-    
+def get_input_geom(file, outlines, keywords_line, NATOMS, MULT, TERMINATION, ERRORTYPE, initial_IM_FREQS, nimag_line, calc_type, duplicate_filter, single_point, ifreq_threshold, s2_threshold, amplitude_ifreq, file_list, E_dup, H_dup, G_dup):
+
     stand_or,NATOMS,IM_FREQS = 0,0,0
     rms,stop_rms = 10000,0
     spin_contamination,freq_only = False, False
 
-    # reverse loop to speed up the reading of the output files 
+    # reverse loop to speed up the reading of the output files
     # (also skips final part for normal termination which was already read plus dipole/multipole information)
     if duplicate_filter:
         file_list.append(file)
@@ -322,7 +322,7 @@ def get_input_geom(file, outlines, keywords_line, NATOMS, MULT, TERMINATION, ERR
                 # sometimes Gaussian does not print valid numbers in this section
                 except ValueError:
                     pass
-                        
+
             if not normal_term_found and not opt_found:
                 if outlines[i].find("Normal termination") > -1:
                     normal_term_found = True
@@ -365,7 +365,7 @@ def get_input_geom(file, outlines, keywords_line, NATOMS, MULT, TERMINATION, ERR
         CARTESIANS = fix_imag_freqs(NATOMS, CARTESIANS, FREQS, NORMALMODE, amplitude_ifreq)
 
     return file_list, E_dup, H_dup, G_dup, ERRORTYPE, keywords_line, ATOMTYPES, CARTESIANS
-  
+
 
 def fix_imag_freqs(NATOMS, CARTESIANS, FREQS, NORMALMODE, amplitude):
     # Multiplies the imaginary normal mode vector by this amount (from -1 to 1).
@@ -411,7 +411,7 @@ def create_folder_and_com(w_dir_main,round_num,log,NATOMS,ATOMTYPES,CARTESIANS,a
         sys.exit("x  ERROR: Can't use Gen and GenECP at the same time")
 
     com_type = 'analysis'
-    adapt this for write_gaussian_input_file, also change the function in qprep_gaussian
+    # adapt this for write_gaussian_input_file, also change the function in qprep_gaussian
     new_com_file(com_type,w_dir_initial,log,new_gaussian_input_files,file,args,keywords_line,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,bs,lot,bs_gcp,orca_aux_section)
 
 def organize_outputs(w_dir,w_dir_main,round_num,file,TERMINATION,ERRORTYPE,w_dir_fin,check_geom_qcorr):
@@ -455,7 +455,7 @@ def organize_outputs(w_dir,w_dir_main,round_num,file,TERMINATION,ERRORTYPE,w_dir
             scf_error += 1
         elif ERRORTYPE == "before_E_calculation":
             destination = w_dir_main+'/failed/run_'+str(round_num)+'/error/before_E_calculation'
-            before_E_error += 1        
+            before_E_error += 1
         else:
             destination = w_dir_main+'/failed/run_'+str(round_num)+'/error/unknown_error'
             other_error += 1
@@ -516,7 +516,7 @@ def output_analyzer(log_files,com_files, w_dir, w_dir_main, args, w_dir_fin, w_d
             source = w_dir+'/'+file
             destination = w_dir_main +'/input_files/run_'+str(round_num)
             move_file(source, destination)
-            
+
     # these lists will track duplicates if args.dup is activated
     file_list, E_dup, H_dup, G_dup = [],[],[],[]
 
@@ -539,7 +539,7 @@ def output_analyzer(log_files,com_files, w_dir, w_dir_main, args, w_dir_fin, w_d
             # whats trhe difference between this function and the 2 functions below?!
             # get geometry parameters and frequency information
             if TERMINATION != "normal" or initial_IM_FREQS != 0 or args.s2_threshold > 0.0 or args.sp != None or args.dup:
-                file_list, E_dup, H_dup, G_dup, ERRORTYPE, keywords_line, ATOMTYPES, CARTESIANS = get_input_geom(file, outlines, keywords_line, NATOMS, MULT, TERMINATION, ERRORTYPE, initial_IM_FREQS, nimag_line, calc_type, args.dup, args.sp, args.ifreq_cutoff, args.amplitude_ifreq, args.s2_threshold, args.args.amplitude_ifreq, file_list, E_dup, H_dup, G_dup)
+                file_list, E_dup, H_dup, G_dup, ERRORTYPE, keywords_line, ATOMTYPES, CARTESIANS = get_input_geom(file, outlines, keywords_line, NATOMS, MULT, TERMINATION, ERRORTYPE, initial_IM_FREQS, nimag_line, calc_type, args.dup, args.sp, args.ifreq_cutoff, args.amplitude_ifreq, args.s2_threshold, file_list, E_dup, H_dup, G_dup)
 
         # is it necessary to close the file?!
         # close the file
@@ -597,7 +597,7 @@ def output_analyzer(log_files,com_files, w_dir, w_dir_main, args, w_dir_fin, w_d
             for i,energy_value in enumerate(E_dup):
                 if abs(energy_value - E_dup[file_list.index(file)]) < abs(args.dup_threshold):
                     if abs(H_dup[i] - H_dup[file_list.index(file)]) < abs(args.dup_threshold):
-                        if abs(G_dup[i] - G_dup[file_list.index(file)]) < abs(args.dup_threshold):                        
+                        if abs(G_dup[i] - G_dup[file_list.index(file)]) < abs(args.dup_threshold):
                             ERRORTYPE = 'duplicate_calc'
 
         # This part places the calculations in different folders depending on the type of termination
@@ -736,7 +736,7 @@ def check_for_gen_or_genecp(ATOMTYPES,args,type_of_check,program_gen):
         elif program_gen == 'orca':
             if args.aux_atoms_orca != []:
                 aux_atoms_include = args.aux_atoms_orca
-                
+
     elif type_of_check == 'sp':
         if program_gen == 'gaussian':
             if args.genecp_atoms_sp != []:
@@ -746,7 +746,7 @@ def check_for_gen_or_genecp(ATOMTYPES,args,type_of_check,program_gen):
         elif program_gen == 'orca':
             if args.aux_atoms_orca_sp != []:
                 aux_atoms_include = args.aux_atoms_orca_sp
-    
+
     for _,atomtype in enumerate(ATOMTYPES):
         if program_gen == 'gaussian':
             if atomtype not in ecp_list and atomtype in periodic_table and atomtype in ecp_atoms_include:
@@ -756,7 +756,7 @@ def check_for_gen_or_genecp(ATOMTYPES,args,type_of_check,program_gen):
                 orca_aux_section = True
 
     if program_gen == 'gaussian':
-    	return ecp_list  
+    	return ecp_list
     elif program_gen == 'orca':
         return orca_aux_section
 
@@ -777,7 +777,7 @@ def check_for_final_folderv2(w_dir):
 	if not inputs_folder.exists():
 		return w_dir, 1
 	folders = [item for item in inputs_folder.iterdir() if item.isdir() and 'run_' in item.stem]
-	get_number = lambda x: int(x.stem.rsplit('_',1)[1]) 
+	get_number = lambda x: int(x.stem.rsplit('_',1)[1])
 	last_folder = sorted(folders,key=get_number)[-1]
 	last_number = get_number(last_folder)
 	return str(last_folder), last_number

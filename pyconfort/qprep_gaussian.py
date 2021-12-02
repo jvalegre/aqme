@@ -16,7 +16,7 @@ from pyconfort.turbomole import TurbomoleInput
 def fix_obabel_isotopes(gjf_lines):
 	"""
 	Ensures that gaussian input lines with isotopes ('H  (Iso=2)  x  y  z')
-	have the appropiate format for gaussian inputs ('H(Iso=2)  x  y  z'). 
+	have the appropiate format for gaussian inputs ('H(Iso=2)  x  y  z').
 	Modifies in-place the input list.
 
 	Parameters
@@ -32,61 +32,61 @@ def fix_obabel_isotopes(gjf_lines):
 # Basis set class
 class BasisSet(object):
 	"""
-	Representation of the neccesary information related with basis sets. May 
-	contain information about auxiliary basis sets and ECPs. 
+	Representation of the neccesary information related with basis sets. May
+	contain information about auxiliary basis sets and ECPs.
 
 	Parameters
 	----------
 	basis : dict, optional
-		dictionary with element symbols as keys and their corresponding basis 
+		dictionary with element symbols as keys and their corresponding basis
 		set as value. 'all' and 'default' are accepted as keys, by default None
 	auxbasis : dict, optional
-		dictionary with element symbols as keys and their corresponding auxiliary 
-		basis set as value. 'all' and 'default' are accepted as keys, by default 
+		dictionary with element symbols as keys and their corresponding auxiliary
+		basis set as value. 'all' and 'default' are accepted as keys, by default
 		None
 	ecp : dict, optional
-		dictionary with element symbols as keys and their corresponding ECP 
+		dictionary with element symbols as keys and their corresponding ECP
 		as value. 'all' and 'default' are not accepted as keys, by default None.
 	"""
 	_counter = 0
 
 	def __init__(self,basis=None,auxbasis=None,ecp=None,name=None):
 		self.basis = basis
-		if basis is None: 
+		if basis is None:
 			self._basis = None
-		else: 
+		else:
 			self._basis = dict()
 			self._basis.update(self.basis)
 		self.auxbasis = auxbasis
-		if auxbasis is None: 
+		if auxbasis is None:
 			self._auxbasis = None
-		else: 
+		else:
 			self._auxbasis = dict()
 			self._auxbasis.update(self.auxbasis)
 		self.elements = set()
 		self._elements = set() # Hardcopy to allow reset behaviour
 		reserved_keys = ['all','default']
-		if not(ecp is None) and any(key in reserved_keys for key in ecp): 
+		if not(ecp is None) and any(key in reserved_keys for key in ecp):
 			raise ValueError("'all' or 'default' key found in the ecp parameter")
 		self.ecp = ecp
 		items = [basis,auxbasis,ecp]
 		for item in items:
 			if item is None:
-				continue 
-			keys = [key for key in item if key not in reserved_keys] 
+				continue
+			keys = [key for key in item if key not in reserved_keys]
 			self.elements.update(keys)
 			self._elements.update(keys)
 		if name is None:
 			default_name = f'basisset_{self._counter:02d}'
 			name = self.basis('all','') or self.basis('default','')
-			if not name: 
+			if not name:
 				name = default_name
 				self._counter += 1
 		self.name = self._homogenize_name(name)
 
 	def _homogenize_name(self,name):
 		"""
-		Ensures that the name of the basis set can be used as a folder name. 
+		Ensures that the name of the basis set can be used as a folder name.
 
 		Parameters
 		----------
@@ -103,7 +103,7 @@ class BasisSet(object):
 		elif name.find('*') > -1:
 			name = name.replace('*','(d)')
 
-		if str(name).find('/') > -1: 
+		if str(name).find('/') > -1:
 			new_name =  str(name).split('/')[0]
 		else:
 			new_name = name
@@ -119,8 +119,8 @@ class BasisSet(object):
 			list of RDKit Molecule objects
 		"""
 		elements = set()
-		for molecule in molecules: 
-			if isinstance(molecule,rdkit.Chem.rdchem.Mol): 
+		for molecule in molecules:
+			if isinstance(molecule,rdkit.Chem.rdchem.Mol):
 				atoms = [atom for atom in molecule.GetAtoms()]
 				syms = [atom.GetSymbol() for atom in atoms]
 			elif isinstance(molecule,pybel.Molecule):
@@ -133,13 +133,13 @@ class BasisSet(object):
 		self.elements.update(elements)
 		# Now update the basis,auxbasis and ecp dictionaries
 		for element in elements:
-			for item in [self.basis,self.auxbasis]: 
+			for item in [self.basis,self.auxbasis]:
 				if item is None:
 					continue
 				val = item.get(element,'') or item.get('default','') or item.get('all','')
 				item[element] = val
-		
-	def clear_atomtypes(self): 
+
+	def clear_atomtypes(self):
 		"""
 		Resets the state of the Basisset to its initialization state.
 
@@ -151,14 +151,14 @@ class BasisSet(object):
 		self.elements = set()
 		self.elements.update(self._elements)
 		for attr in ['basis','auxbasis']:
-			val = getattr(self,attr) 
+			val = getattr(self,attr)
 			if val is None:
 				continue
 			backup = getattr(self,f'_{attr}')
 			new_val = dict()
 			new_val.update(backup)
 			setattr(self,attr,new_val)
-		
+
 	def write_basisfile(self,filepath):
 		"""
 		Writes a basis set file that can be read back into a basis set object.
@@ -166,12 +166,12 @@ class BasisSet(object):
 		Parameters
 		----------
 		filepath : str or Path
-			path to the desired basis set file. 
+			path to the desired basis set file.
 		"""
 		lines = []
 		for attr in ['basis','auxbasis','ecp']:
 			mappable = getattr(self,attr)
-			if mappable is None: 
+			if mappable is None:
 				continue
 			lines.append(f'${attr}')
 			k_all = mappable.get('all',None)
@@ -192,8 +192,8 @@ class BasisSet(object):
 	@classmethod
 	def from_file(cls,filepath):
 		"""
-		Reads a file containing information on basis sets, auxiliar basis sets and 
-		ECPs. The file follows the following format: 
+		Reads a file containing information on basis sets, auxiliar basis sets and
+		ECPs. The file follows the following format:
 		$basis
 		sym1 basis1
 		sym2 basis2
@@ -221,11 +221,11 @@ class BasisSet(object):
 		regex = r'\$([^\$]*)'
 		regex = re.compile(regex)
 		name = Path(filepath).stem
-		with open(filepath,'r') as F: 
+		with open(filepath,'r') as F:
 			txt = F.read()
 		keywords = dict()
 		kwblocks = regex.findall(txt)
-		for block in kwblocks: 
+		for block in kwblocks:
 			lines = [line for line in block.split('\n') if line]
 			kw_line = lines[0]
 			keyword = kw_line.split(' ')[0]
@@ -241,12 +241,12 @@ class BasisSet(object):
 		return cls(basis,auxbasis,ecp,name)
 
 # template classes
-class GaussianTemplate(object): 
+class GaussianTemplate(object):
 	def __init__(self,basisset=None,functional=None,memory='24GB',nprocs=12,
 				commandline=None,solvation='gas_phase',solvent='',
-				max_opt_cycles=500,dispersion=None,enable_chk=False, 
+				max_opt_cycles=500,dispersion=None,enable_chk=False,
 				optimization=True,frequencies=True,calcfc=False,
-				qm_input_end=''): 
+				qm_input_end=''):
 		self.basisset = basisset
 		self.functional = functional
 		#Link0
@@ -263,7 +263,7 @@ class GaussianTemplate(object):
 		self.solvation = solvation
 		self.solvent = solvent
 		# dispersion
-		if dispersion is None: 
+		if dispersion is None:
 			dispersion = ''
 		self.dispersion = dispersion
 		# other commands
@@ -276,11 +276,11 @@ class GaussianTemplate(object):
 	def to_dict(self):
 		kwargs = dict()
 		kwargs['functional'] = self.functional
-		if self.basisset is not None: 
+		if self.basisset is not None:
 			kwargs['basis'] = self.basisset.basis
 			kwargs['auxbasis'] = self.basisset.auxbasis
 			kwargs['ecp'] = self.basisset.ecp
-			
+
 		kwargs['memory'] = self.memory
 		kwargs['nprocs'] = self.nprocs
 		kwargs['extra_input'] = self.extra_input
@@ -306,7 +306,7 @@ class GaussianTemplate(object):
 			genecp = 'gen'
 
 		return genecp
-    
+
 	@property
 	def basis(self):
 		if self.genecp:
@@ -317,31 +317,31 @@ class GaussianTemplate(object):
 		basis_default = self.basisset.basis.get('default','')
 		if basis_default:
 			return basis_default
-		raise RuntimeError("""Could not determine basis keyword: 
+		raise RuntimeError("""Could not determine basis keyword:
 		No 'all' nor 'default' basis set specified and no element specified""")
-	
+
 	@property
-	def commandline(self): 
+	def commandline(self):
 		if self._commandline:
 			return self._commandline
 		return self.get_commandline()
 
 	def get_commandline(self):
 		opt_k = ''
-		if self.optimization: 
+		if self.optimization:
 			opt_sub = f'(maxcycles={self.max_opt_cycles}'
 			if self.calcfc:
 				opt_sub += ',calcfc'
 			opt_sub += ')'
 			opt_k = f'opt={opt_sub}'
 		freq_k = ''
-		if self.frequencies: 
+		if self.frequencies:
 			freq_k = 'freq=noraman'
 		disp_k = ''
 		if self.dispersion:
 			disp_k = f'empiricaldispersion={self.dispersion}'
 		scrf_k = ''
-		if self.solvation != 'gas_phase': 
+		if self.solvation != 'gas_phase':
 			scrf_k = f'scrf=({self.solvation},solvent={self.solvent})'
 		commandline = f'{self.functional} {self.basis} {opt_k} {freq_k} {disp_k} {scrf_k}'
 		return ' '.join(commandline.split())
@@ -355,14 +355,14 @@ class GaussianTemplate(object):
 		new.gen_atoms_sp = args.gen_atoms_sp
 		new.genecp_atoms = args.genecp_atoms
 		new.gen_atoms = args.gen_atoms
-		
+
 		#Standard stuff
 		new.memory = args.mem
 		new.nprocs = args.nprocs
 		new.enable_chk = args.chk
 		new.extra_input = args.qm_input
 		new.frequencies = args.frequencies
-		if args.empirical_dispersion != None: 
+		if args.empirical_dispersion != None:
 			new.dispersion = args.empirical_dispersion
 		new.calcfc = args.calcfc
 		new.solvation = args.solvent_model
@@ -374,7 +374,7 @@ class GaussianTemplate(object):
 	def get_header(self,filename='',title=''):
 		txt = ''
 		#Link0
-		if self.enable_chk: 
+		if self.enable_chk:
 			txt += f'%chk={filename}.chk\n'
 		txt += f'%nprocshared={self.nprocs}\n'
 		txt += f'%mem={self.memory}\n'
@@ -382,7 +382,7 @@ class GaussianTemplate(object):
 		return txt
 	def get_tail(self):
 		txt = ''
-		# write basis set section THHIS PART COMES FROM RAUL, NEEDS TO UPDATE AS PART BELOW to avoid bugs when using all atoms in gen 
+		# write basis set section THHIS PART COMES FROM RAUL, NEEDS TO UPDATE AS PART BELOW to avoid bugs when using all atoms in gen
 		basisset = self.basisset.basis
 		if self.genecp:
 			def_basis = basisset.get('all','')
@@ -394,13 +394,13 @@ class GaussianTemplate(object):
 				txt += f'{elements} 0\n{basis}\n****\n'
 			txt += '\n'
 		# write ecp section
-		if self.genecp == 'genecp': 
+		if self.genecp == 'genecp':
 			items = sorted(list(self.basisset.ecp.items()),key=itemgetter(1))
 			for basis,pairs in groupby(items,key=itemgetter(1)):
 				elements = ' '.join([f'-{sym}' for sym,_ in pairs])
 				txt += f'{elements} 0\n{basis}\n****\n'
 			txt += '\n'
-		if self.qm_input_end: 
+		if self.qm_input_end:
 			txt += f'{self.qm_input_end}\n'
 		txt += '\n'
 		return txt
@@ -465,11 +465,11 @@ class GaussianTemplate(object):
 
 	# 			fileout.write('0\n')
 	# 			fileout.write(bs_gcp_com+'\n\n')
-      
-	def write(self,destination,molecule): 
+
+	def write(self,destination,molecule):
 		stem = molecule.title.lstrip().replace(' ','_')
 		comfile = f'{destination}/{stem}.com'
-		
+
 		header = self.get_header(filename=stem)
 
 		lines = molecule.write('gjf',opt=dict(k=header)).split('\n')
@@ -520,7 +520,7 @@ class OrcaTemplate(object):
 		self.functional = functional
 		# calculate memory for ORCA input
 		mem_orca = int(memory[:-2])
-		is_GB = 'gb' in memory.lower() 
+		is_GB = 'gb' in memory.lower()
 		if is_GB:
 			mem_orca *= 1000
 		else:
@@ -528,16 +528,16 @@ class OrcaTemplate(object):
 			pass
 		self.memory = mem_orca # in MB
 		self.nprocs = nprocs
-		if extra_commandline is None: 
+		if extra_commandline is None:
 			extra_commandline = ''
 		self.extra_commandline = extra_commandline
 		self.solvation = solvation
 		self.solvent = solvent
-		if extra_cpcm_input is None: 
+		if extra_cpcm_input is None:
 			extra_cpcm_input = []
 		self.extra_cpcm_input = extra_cpcm_input
 		self.scf_iters = scf_iters
-		if mdci is None: 
+		if mdci is None:
 			mdci = ['Density None']
 		self.mdci = mdci
 		self.print_mini = print_mini
@@ -545,11 +545,11 @@ class OrcaTemplate(object):
 	def to_dict(self):
 		kwargs = dict()
 		kwargs['functional'] = self.functional
-		if self.basisset is not None: 
+		if self.basisset is not None:
 			kwargs['basis'] = self.basisset.basis
 			kwargs['auxbasis'] = self.basisset.auxbasis
 			kwargs['ecp'] = self.basisset.ecp
-	
+
 		kwargs['ecp_list'] = self.aux_atoms_orca
 		kwargs['bs_gcp'] = self.aux_basis_set_genecp_atoms
 		kwargs['bs_gcp_fit'] = self.aux_fit_genecp_atoms
@@ -584,7 +584,7 @@ class OrcaTemplate(object):
 		# Standard stuff
 		new.memory = args.mem
 		new.nprocs = args.nprocs
-		new.extra_commandline = args.qm_input 
+		new.extra_commandline = args.qm_input
 		new.solvation = args.solvent_model
 		new.solvent = args.solvent_name
 		new.extra_cpcm_input = args.cpcm_input
@@ -599,29 +599,29 @@ class OrcaTemplate(object):
 		# basis set block
 		def_basis = self.basis
 		items = []
-		for sym in self.basisset.elements: 
+		for sym in self.basisset.elements:
 			basis = self.basisset.basis.get(sym,'')
-			if basis and basis == def_basis: 
+			if basis and basis == def_basis:
 				continue
 			items.append((sym,basis))
-		if items: 
+		if items:
 			items = sorted(items,key=itemgetter(1))
 			for basis,pairs in groupby(items,key=itemgetter(1)):
 				elements = ' '.join([f'{sym}' for sym,_ in pairs])
 				txt += f'NewGTO {elements} {basis} end\n'
 		# Auxiliary Basis set block
 		# TODO
-		if self.basisset.ecp is None: 
+		if self.basisset.ecp is None:
 			txt += 'end'
 			return txt
 		# ECP block
 		items = []
-		for sym in self.basisset.ecp: 
+		for sym in self.basisset.ecp:
 			ecp = self.basisset.ecp.get(sym,'')
-			if basis and basis == def_basis: 
+			if basis and basis == def_basis:
 				continue
 			items.append((sym,ecp))
-		if items: 
+		if items:
 			items = sorted(items,key=itemgetter(1))
 			for ecp,pairs in groupby(items,key=itemgetter(1)):
 				elements = ' '.join([f'{sym}' for sym,_ in pairs])
@@ -662,13 +662,13 @@ class OrcaTemplate(object):
 
 		if self.solvation != 'gas_phase':
 			sections.append(self.get_solvation_section())
-		
+
 		sections.append(f'%scf maxiter {self.scf_iters}\nend')
 
 		if self.mdci:
 			mdci_lines = ['% mdci',] + self.mdci + ['end',]
 			sections.append('\n'.join(mdci_lines))
-		
+
 		if self.print_mini:
 			mini_lines = [  '%output',
 							'printlevel mini',
@@ -689,8 +689,8 @@ class OrcaTemplate(object):
 		infile = f'{destination}/{stem}.inp'
 		header = self.get_header(molecule.title)
 		xyz_lines = molecule.write('orcainp').split('\n')[3:]
-		
-		with open(infile,'w') as F: 
+
+		with open(infile,'w') as F:
 			F.write(header)
 			F.write('\n'.join(xyz_lines))
 
@@ -698,7 +698,7 @@ class OrcaTemplate(object):
 
 class TurbomoleTemplate(object):
 	def __init__(self,basisset=None,functional=None,dispersion='off',
-				grid='m4',epsilon='gas',maxcore=200,ricore=200,cavity='none'): 
+				grid='m4',epsilon='gas',maxcore=200,ricore=200,cavity='none'):
 		self.basisset = basisset
 		self.functional = functional
 		self.dispersion =  dispersion
@@ -707,15 +707,15 @@ class TurbomoleTemplate(object):
 		self.maxcore = maxcore
 		self.ricore = ricore
 		self.cavity =  cavity
-	
+
 	def to_dict(self):
 		kwargs = dict()
 		kwargs['functional'] = self.functional
-		if self.basisset is not None: 
+		if self.basisset is not None:
 			kwargs['basis'] = self.basisset.basis
 			kwargs['auxbasis'] = self.basisset.auxbasis
 			kwargs['ecp'] = self.basisset.ecp
-			
+
 		kwargs['dispersion'] = self.dispersion
 		kwargs['grid'] = self.grid
 		kwargs['epsilon'] = self.epsilon
@@ -735,13 +735,13 @@ class TurbomoleTemplate(object):
 		new.cavity = args.tmcavity
 
 		return new
-	def write(self,destination,molecule): 
+	def write(self,destination,molecule):
 		name,i = molecule.title.strip().rsplit(maxsplit=1)
 		stem = f'{name}_{i}'
 		folder = Path(f'{destination}/{stem}')
 		assert folder.parent.exists()
 		folder.mkdir(exist_ok=True,parents=False)
-		xyz_file = str(folder/f'{stem}.xyz')  
+		xyz_file = str(folder/f'{stem}.xyz')
 		molecule.write('xyz',xyz_file)
 		coord_file = str(folder/f'coord')
 		molecule.write('tmol',coord_file)
@@ -751,17 +751,17 @@ class TurbomoleTemplate(object):
 		t_input.generate()
 		return folder
 
-# Aux Functions for QM input generation	
+# Aux Functions for QM input generation
 def get_molecule_list(filepath,lowest_only=False,
 						lowest_n=False, energy_threshold=0.0):
 	out_molecules = []
-	
+
 	molecules = [mol for mol in pybel.readfile('sdf',filepath)]
 	energies = [mol.energy for mol in molecules]
 	min_energy = energies[0]
 	for mol,energy in zip(molecules,energies):
 		is_in_threshold = energy - min_energy < energy_threshold
-		title,i = mol.title.strip().rsplit(maxsplit=1) 
+		title,i = mol.title.strip().rsplit(maxsplit=1)
 		mol.title = f"{title} {int(i):03d}"
 		if lowest_n and is_in_threshold:
 			out_molecules.append(mol)
@@ -775,16 +775,16 @@ def get_molecule_list(filepath,lowest_only=False,
 
 	return out_molecules
 
-def get_basisset_list(args,option='opt'): 
+def get_basisset_list(args,option='opt'):
 	if option=='opt':
-		if args.basis_sets: 
+		if args.basis_sets:
 			return [BasisSet({'all':bs}) for bs in args.basis_sets]
-		elif args.basisfiles: 
+		elif args.basisfiles:
 			return [BasisSet.from_file(file) for file in args.basisfiles]
-	elif option=='sp': 
-		if args.basis_sets_sp: 
+	elif option=='sp':
+		if args.basis_sets_sp:
 			return [BasisSet({'all':bs}) for bs in args.basis_sets_sp]
-		elif args.basisfiles_sp: 
+		elif args.basisfiles_sp:
 			return [BasisSet.from_file(file) for file in args.basisfiles_sp]
 	return []
 
@@ -801,17 +801,17 @@ def write_qm_input_files(destination, template, molecules, charge_data, mult='au
 			charge = mol.data['Real charge']
 		else:
 			charge = found_charges[0]
-		
+
 		if charge == 'Invalid':
 			continue
-		
+
 		mol.OBMol.SetTotalCharge(int(charge))
 		# Set multiplicity
 		if mult != 'auto':
 			mol.OBMol.SetTotalSpinMultiplicity(int(mult))
 
 		newfile = template.write(destination,mol)
-		
+
 		qm_files.append(newfile)
 
 def load_charge_data(filepath,backup_files):
@@ -825,7 +825,7 @@ def load_charge_data(filepath,backup_files):
 			if not(Path(sdf_file).exists()):
 				invalid_files.append(sdf_file)
 				maxsplit = 1
-				if 'filter' in sdf_file: 
+				if 'filter' in sdf_file:
 					maxsplit += 1
 				name = sdf_file.rsplit('_',maxsplit[0])
 				charge = 'Invalid'
@@ -843,7 +843,7 @@ def qprep_main(w_dir_initial,args,log):
 	if len(args.exp_rules) >= 1:
 		conf_files =  glob.glob('*_rules.sdf')
 	# define the SDF files to convert to COM Gaussian files
-	elif args.CMIN == 'xtb': 
+	elif args.CMIN == 'xtb':
 		conf_files =  glob.glob('*_xtb.sdf')
 	elif args.CMIN=='ani':
 		conf_files =  glob.glob('*_ani.sdf')
@@ -864,9 +864,9 @@ def qprep_main(w_dir_initial,args,log):
 			mol.write('sdf',f'{stem}.sdf')
 		conf_files =  glob.glob('*.sdf')
 
-	if not conf_files: 
+	if not conf_files:
 		log.write('\nx  No SDF files detected to convert to gaussian COM files')
-		return 
+		return
 
 	# names for directories created
 	if args.QPREP == 'gaussian':
@@ -886,8 +886,8 @@ def qprep_main(w_dir_initial,args,log):
 	# remove the invalid files and non-existing files
 	accept_file = lambda x: x not in invalid_files and Path(x).exists()
 	conf_files = [file for file in conf_files if accept_file(file) ]
-	
-	# Prepare the list of molecules that are to be written 
+
+	# Prepare the list of molecules that are to be written
 	molecules = []
 	for file in conf_files:
 		filepath = f'{w_dir_initial}/{file}'
@@ -895,11 +895,11 @@ def qprep_main(w_dir_initial,args,log):
 							lowest_only=args.lowest_only,lowest_n=args.lowest_n,
 							energy_threshold=args.energy_threshold_for_gaussian)
 		molecules.extend(new_mols)
-	
+
 	basisset_list = get_basisset_list(args,'opt')
 
 	# Update each basis set to include the elements of all the molecules
-	for bs in basisset_list: 
+	for bs in basisset_list:
 		bs.update_atomtypes(molecules)
 
 	# Ensure a matching length of theory and basis set
@@ -907,11 +907,11 @@ def qprep_main(w_dir_initial,args,log):
 		items = [(args.level_of_theory[0],bs) for bs in basisset_list]
 	elif len(basisset_list) == 1:
 		items = [(func,basisset_list[0]) for func in args.level_of_theory]
-	elif len(basisset_list) == len(args.level_of_theory): 
+	elif len(basisset_list) == len(args.level_of_theory):
 		items = [(func,bs) for func,bs in zip(args.level_of_theory,basisset_list)]
 	else:
 		raise ValueError('Inconsistent size of basis sets and theory level')
-	
+
 	for functional,basisset in items:
 		folder = qm_folder/f'{functional}-{basisset.name}'
 		log.write(f"\no  Preparing QM input files in {folder}")
@@ -926,10 +926,10 @@ def qprep_main(w_dir_initial,args,log):
 		# check conf_file exists, parse energies and then write DFT input
 		qm_files = write_qm_input_files(folder, template, molecules,
 										charge_data, mult=args.mult)
-		
+
 		# submitting the input file on a HPC
 		if args.qsub:
-			for qm_file in qm_files: 
+			for qm_file in qm_files:
 				cmd_qsub = [args.submission_command, qm_file]
 				subprocess.call(cmd_qsub)
 
@@ -1025,7 +1025,7 @@ def write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, keywords_li
 			os.chdir(w_dir_initial+path_write_input_files)
 			convert_sdf_to_com(w_dir_initial,file,com,com_low,energies,header,args,log)
 
-		
+
 		com_files = glob.glob('{0}_*.com'.format(name))
 
 		for file in com_files:

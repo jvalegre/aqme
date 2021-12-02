@@ -11,13 +11,13 @@ except ImportError:
 INPUT_SUFFIXES = ['.com','.gjf']
 OUTPUT_SUFFIXES = ['.log','.LOG','.out','.OUT','.json']
 
-class GaussianOutputFile(object): 
-	def __init__(self,file): 
-		with open(file,'r') as F: 
+class GaussianOutputFile(object):
+	def __init__(self,file):
+		with open(file,'r') as F:
 			lines = F.readlines()
 		self.lines = lines
-		
-		# Start Parsing 
+
+		# Start Parsing
 		name,charge,multiplicity = self._get_charge_and_multiplicity()
 		self.name = name
 		self.charge = charge
@@ -56,7 +56,7 @@ class GaussianOutputFile(object):
 				multiplicity = int(line.split()[5].rstrip("\n"))
 				stop_name += 1
 		return name, charge, multiplicity
-	def _get_qcorr_params(self): 
+	def _get_qcorr_params(self):
 		# use reversed loops to find type of termination (faster than forward loops)
 		lines = reversed(self.lines[-16:])
 		termination = 'unfinished'
@@ -71,13 +71,13 @@ class GaussianOutputFile(object):
 				errortype = "atomicbasiserror"
 			elif 'basis sets are only available' in line:
 				errortype = "atomicbasiserror"
-			elif ' '.join(['SCF Error',]*8) in line: 
+			elif ' '.join(['SCF Error',]*8) in line:
 				errortype = "SCFerror"
 		return termination,errortype
 	def _get_last_geometry(self,before_line=-1):
-		if self.termination != 'normal': 
+		if self.termination != 'normal':
 			return [],[]
-		
+
 		# Find the starting and ending lines of the last orientation
 		stop = -1
 		for i,line in reversed(enumerate(self.lines[:before_line+1])):
@@ -97,12 +97,12 @@ class GaussianOutputFile(object):
 			atoms.append(periodic_table.index(int(atnum)))
 			cartesians.append(list(map(float,[x,y,z])))
 		return atoms,cartesians
-	def _get_frequencies(self): 
-		for i,line in reversed(enumerate(self.lines)): 
-			if 'Harmonic frequencies' in line: 
+	def _get_frequencies(self):
+		for i,line in reversed(enumerate(self.lines)):
+			if 'Harmonic frequencies' in line:
 				start = i + 4
 				break
-			if '- Thermochemistry -' in line: 
+			if '- Thermochemistry -' in line:
 				stop = i - 3
 		else:
 			return [], [], [], []
@@ -125,9 +125,9 @@ class GaussianOutputFile(object):
 		try:
 			# Find the frequencies line
 			line = next(iterable)
-		except StopIteration: 
+		except StopIteration:
 			return [], [], [], []
-		
+
 		while 'Frequencies --' not in line:
 			line = next(line)
 		frequencies = [float(i) for i in line.strip().split()[2:]]
@@ -152,7 +152,7 @@ class GaussianOutputFile(object):
 
 		return frequencies,reducedmass,forceconst,modes
 	def _get_rms(self):
-		if self.termination == 'normal': 
+		if self.termination == 'normal':
 			return self._get_rms_error_termination()
 		else:
 			return self._get_rms_normal_termination()
@@ -162,7 +162,7 @@ class GaussianOutputFile(object):
 				last_line = i
 				try:
 					rms = float(line.strip().split()[5])
-				except ValueError: 
+				except ValueError:
 					rms = 10000
 				break
 		else:
@@ -175,17 +175,17 @@ class GaussianOutputFile(object):
 				last_line = i
 				try:
 					rms = float(line.strip().split()[5])
-				except ValueError: 
+				except ValueError:
 					rms = 10000
 				break
 		else:
 			return 10000, -1
 		return rms,last_line
 
-	def fix_imaginary_frequencies(self,amplitude=0.2): 
+	def fix_imaginary_frequencies(self,amplitude=0.2):
 		xyz = numpy.array(self.cartesians)
 		assert xyz.shape[1] == 3
-		for im_freq in self.im_freqs: 
+		for im_freq in self.im_freqs:
 			mode = numpy.array(self.normalmode[im_freq])
 			assert mode.shape[1] == 3
 			xyz = xyz + amplitude*mode
@@ -194,11 +194,11 @@ class GaussianOutputFile(object):
 
 	# ADAPT THIS FUNCTION TO THE OTHER XYZ GENERATOR!
 	def to_xyz(self,cartesians=None):
-		if cartesians is None: 
+		if cartesians is None:
 			cartesians = self.cartesians
 		n_atoms = len(cartesians)
 		xyz = []
-		for sym,(x,y,z) in zip(self.atomtypes,cartesians): 
+		for sym,(x,y,z) in zip(self.atomtypes,cartesians):
 			xyz.append(f'{sym}    {x: 0.6f}    {y: 0.6f}    {z: 0.6f}')
 		xyz_print = str(n_atoms)+'\n'+str(self.name)+'\n'+'\n'.join(xyz)+'\n'
 		return xyz_print
@@ -252,9 +252,9 @@ def check_for_gen_or_genecp(ATOMTYPES,args,type_of_check,program_gen):
 				ecp_genecp_atoms = True
 			if atomtype in gen_atoms_include:
 				ecp_gen_atoms = True
-		
-		if program_gen == 'turbomole': 
-			# Do stuff? 
+
+		if program_gen == 'turbomole':
+			# Do stuff?
 			pass
 
 	if ecp_gen_atoms:
@@ -313,25 +313,25 @@ def orca_file_gen(mol,rename_file_name,bs,lot,
 					orca_aux_section,memory,nprocs,
 					extra_input,solvation,solvent_orca,
 					cpcm_input_orca,scf_iters_orca,orca_mdci,print_mini):
-		
+
 	title = mol.title
 	lines = [f'# {title}',
 			f'# Memory per core']
 
 	# calculate memory for ORCA input
 	mem_orca = int(memory[:-2])
-	is_GB = 'gb' in memory.lower() 
+	is_GB = 'gb' in memory.lower()
 	if is_GB:
 		mem_orca *= 1000
 	else:
 		# assume MB
 		pass
 	lines.append(f'%maxcore {mem_orca}')
-	
+
 	lines.append('# Number of processors')
 	lines.append(f'%pal nprocs {nprocs} end')
 
-	commandline = f'! {bs} {lot}' 
+	commandline = f'! {bs} {lot}'
 	if extra_input != 'None':
 		commandline += f' {extra_input}'
 	lines.append(commandline)
@@ -354,7 +354,7 @@ def orca_file_gen(mol,rename_file_name,bs,lot,
 
 	if solvation != 'gas_phase':
 		if solvation.lower() == 'smd':
-			lines.append('%cpcm') 
+			lines.append('%cpcm')
 			lines.append('smd true')
 			lines.append(f'SMDsolvent "{solvent_orca}"')
 		elif solvation.lower() == 'cpcm':
@@ -364,14 +364,14 @@ def orca_file_gen(mol,rename_file_name,bs,lot,
 				for cpcm_line in cpcm_input_orca:
 					lines.append(cpcm_line)
 		lines.append('end')
-	
+
 	lines.append(f'%scf maxiter {scf_iters_orca}')
 	lines.append(f'end')
 
 	if orca_mdci != 'None':
 		mdci_lines = ['% mdci',] + orca_mdci + ['end',]
 		lines.extend(mdci_lines)
-	
+
 	if print_mini:
 		mini_lines = [  '% output',
 						'printlevel mini',
@@ -389,16 +389,16 @@ def orca_file_gen(mol,rename_file_name,bs,lot,
 	xyz_lines = mol.write('orcainp').split('\n')[3:]
 	lines.extend(xyz_lines)
 
-	# Write to file 
-	with open(rename_file_name,'w') as F: 
+	# Write to file
+	with open(rename_file_name,'w') as F:
 		F.write('\n'.join(lines))
 
-### End of qprep functions 
+### End of qprep functions
 ### Functions copied from mainf
 #creation of csv for QCORR
 def creation_of_ana_csv(args):
 
-	columns_list = ['Total files', 'Normal termination', 'Imaginary frequencies', 
+	columns_list = ['Total files', 'Normal termination', 'Imaginary frequencies',
 					'SCF error', 'Basis set error', 'Other errors', 'Unfinished']
 	if args.dup:
 		columns_list.append('Duplicates')
@@ -427,29 +427,29 @@ def get_com_or_log_out_files(type,name):
 	return files
 ### End of mainf functions
 
-## pybel utilities 
+## pybel utilities
 def get_btab(OBMol):
 	"""
 	Gets the bond table of the specified molecule. Each entry in the bond table
-	contains the indices of the atoms that participate in the bond and the bond 
-	order. 
+	contains the indices of the atoms that participate in the bond and the bond
+	order.
 
 	Parameters
 	----------
 	OBMol : pybel.ob.OBMol
-		An openbabel molecule object. 
+		An openbabel molecule object.
 
 	Returns
 	-------
 	list
-		list of tuples with atom indices and bond orders. 
+		list of tuples with atom indices and bond orders.
 	"""
 
 	n_bonds = OBMol.NumBonds()
-	btab = [] 
+	btab = []
 
 	for i in range(n_bonds):
-		bond = OBMol.GetBond(i) 
+		bond = OBMol.GetBond(i)
 		at1 = bond.GetBeginAtomIdx()
 		at2 = bond.GetEndAtomIdx()
 		order = bond.GetBondOrder()
@@ -467,13 +467,13 @@ def passes_geometry_check(probe,target,factor=1.0):
 		probe_at2 = probe.atoms[j].OBAtom
 		probe_bond = probe.GetBond(probe_at1,probe_at2)
 		probe_length = probe_bond.GetLength()
-		
+
 		target_at1 = target.atoms[i].OBAtom
 		target_at2 = target.atoms[j].OBAtom
 		target_bond = target.GetBond(target_at1,target_at2)
 		target_length = target_bond.GetLength()
-		
-		if target_length > target_bond: 
+
+		if target_length > target_bond:
 			large_change = target_length > factor*probe_length
 		else:
 			large_change = probe_length > factor*target_length
@@ -484,8 +484,8 @@ def passes_geometry_check(probe,target,factor=1.0):
 # File utilities
 def read_com_as_xyz(file):
 	"""
-	Reads a gaussian input file and returns a string in the xyz format that 
-	could be written to a valid xyz file. 
+	Reads a gaussian input file and returns a string in the xyz format that
+	could be written to a valid xyz file.
 
 	Parameters
 	----------
@@ -497,7 +497,7 @@ def read_com_as_xyz(file):
 	str
 		string with the geometry of the molecule in xyz format
 	"""
-	with open(file) as F: 
+	with open(file) as F:
 		_iter = F.__iter__()
 		# Find the first empty line after the command line
 		line = next(_iter).strip()
@@ -507,7 +507,7 @@ def read_com_as_xyz(file):
 		title = [next(_iter).strip(),]
 		# Find next empty line
 		line = next(_iter).strip()
-		while line: 
+		while line:
 			title.append(line)
 			line = next(_iter).strip()
 		# ignore charge and spin
@@ -518,10 +518,10 @@ def read_com_as_xyz(file):
 		while line:
 			xyz.append(line)
 			line = next(_iter).strip()
-	
+
 	xyz_print = str(len(xyz))+'\n'+str(title)+'\n'+'\n'.join(xyz)+'\n'
 	return xyz_print
-	
+
 
 # Aux functions
 def check_for_final_folder(w_dir):
@@ -530,7 +530,7 @@ def check_for_final_folder(w_dir):
 	if not inputs_folder.exists():
 		return w_dir, 1
 	folders = [item for item in inputs_folder.iterdir() if item.isdir() and 'run_' in item.stem]
-	get_number = lambda x: int(x.stem.rsplit('_',1)[1]) 
+	get_number = lambda x: int(x.stem.rsplit('_',1)[1])
 	last_folder = sorted(folders,key=get_number)[-1]
 	last_number = get_number(last_folder)
 	return str(last_folder), last_number
@@ -552,30 +552,30 @@ def output_analyzer(duplicates,log_files,com_files, w_dir, w_dir_main,lot, bs, b
 		filepath = Path(f'{w_dir}/{file}')
 		GOF = GaussianOutputFile(filepath)
 
-		# Options: 
+		# Options:
 		# If it has imaginary frequencies -- do stuff
 		# If it finished with an error -- do stuff
-		# If terminated normally + no img freqs 
+		# If terminated normally + no img freqs
 		# Move files to their appropiate places
 		# If SP or NCIS requested, create them
 
-		if GOF.im_freqs: 
+		if GOF.im_freqs:
 			cartesians = GOF.fix_imaginary_frequencies()
 		else:
 			cartesians = GOF.cartesians
-		
+
 		xyz_str = GOF.to_xyz(cartesians)
 		out_mol = pybel.readstring('xyz',xyz_str)
 
 		passes_rules = True
 		if args.exp_rules:
 			passes_rules = passes_custom_rules(out_mol,args,log)
-		
+
 		if args.check_geom and passes_rules:
 			xyz_str = read_com_as_xyz()
 			in_mol = pybel.readstring('xyz',xyz_str)
 			passes_geom = passes_geometry_check(out_mol,in_mol,factor=args.length_criteria)
-		
+
 
 		# this part filters off conformers based on user-defined exp_rules
 		passing_rules = True
@@ -647,7 +647,7 @@ def output_analyzer(duplicates,log_files,com_files, w_dir, w_dir_main,lot, bs, b
 				elif args.sp == 'orca':
 					# creating new folder with new input gaussian files
 					single_point_input_files = w_dir_fin+'/../ORCA-SP_input_files'
-				
+
 				elif args.sp == 'turbomole':
 					# creating new folder with new input gaussian files
 					single_point_input_files = w_dir_fin+'/../TURBOMOLE-SP_input_files'
@@ -752,15 +752,15 @@ def analyze_single_output(file,log,w_dir,args):
 	log.write(file)
 	filepath = Path(f'{w_dir}/{file}')
 	GOF = GaussianOutputFile(filepath)
-	
-	if GOF.im_freqs: 
+
+	if GOF.im_freqs:
 		cartesians = GOF.fix_imaginary_frequencies()
 	else:
 		cartesians = GOF.cartesians
 
 	############################################################################
 	######### Handle the logic of each output file and what to do with them
-	
+
 	# this part filters off conformers based on user-defined exp_rules
 	passing_rules = True
 	valid_mol_gen = True
@@ -833,7 +833,7 @@ def analyze_single_output(file,log,w_dir,args):
 			elif args.sp == 'orca':
 				# creating new folder with new input gaussian files
 				single_point_input_files = w_dir_fin+'/../ORCA-SP_input_files'
-				
+
 			elif args.sp == 'turbomole':
 				# creating new folder with new input gaussian files
 				single_point_input_files = w_dir_fin+'/../TURBOMOLE-SP_input_files'
@@ -922,17 +922,17 @@ def classify_files(inputs,outputs,output_objects):
 	for ifile, ofile, ofile_o in zip(inputs,outputs,output_objects):
 		has_im_freq = bool(ofile_o.im_freq)
 		normal_term = ofile_o.termination == 'normal'
-		rule_pass = passes_custom_rules() 
+		rule_pass = passes_custom_rules()
 		geom_pass = passes_geometry_check()
 		good_end = normal_term and (not has_im_freq) and rule_pass and geom_pass
-		if good_end: 
+		if good_end:
 			finished.append((ifile, ofile, ofile_o))
-		elif has_im_freq: 
+		elif has_im_freq:
 			im_freq.append((ifile, ofile, ofile_o))
 		elif not normal_term:
-			if ofile_o.termination == 'unfinished': 
+			if ofile_o.termination == 'unfinished':
 				unfinished.append((ifile, ofile, ofile_o))
-			elif ofile_o.errortype == 'atomicbasiserror': 
+			elif ofile_o.errortype == 'atomicbasiserror':
 				atombasis_error.append((ifile, ofile, ofile_o))
 			elif ofile_o.errortype == 'SCFerror':
 				scf_error.append((ifile, ofile, ofile_o))
@@ -977,15 +977,15 @@ def qcorr_gaussian_main(duplicates,w_dir_initial,args,log):
 			if len(log_files) == 0:
 				log.write('x  There are no output files in this folder.')
 			com_files = get_com_or_log_out_files('input',None)
-			output_analyzer(duplicates,log_files, com_files, w_dir, w_dir_main, 
-							lot, bs, bs_gcp, args, w_dir_fin, w_dir_initial, 
+			output_analyzer(duplicates,log_files, com_files, w_dir, w_dir_main,
+							lot, bs, bs_gcp, args, w_dir_fin, w_dir_initial,
 							log, ana_data, n_run)
 			os.chdir(w_dir_main)
 	# when you specify multiple levels of theory
 	else:
 		folders = [item for item in (qmcalc_folder/'G16').iterdir() if item.isdir()]
 		dat_folders = []
-		for folder in folders: 
+		for folder in folders:
 			dat_folder = folder/'dat_files'
 			dat_folder.mkdir(exist_ok=True)
 			last_run, n_run = check_for_final_folder(str(folder))
@@ -1000,11 +1000,11 @@ def qcorr_gaussian_main(duplicates,w_dir_initial,args,log):
 			inputs = [file for file in folder.iterdir() if is_input(file)]
 			output_objects = [GaussianOutputFile(file) for file in outputs]
 			classification = classify_files(inputs,outputs,output_objects)
-			
+
 			# Move files to their proper places
 			# create folders
 			inputs_folder = folder/f'input_files/run_{n_run}'
-			imag_freq_folder = folder/f'failed/run_{n_run}/imag_freq' 
+			imag_freq_folder = folder/f'failed/run_{n_run}/imag_freq'
 			errors_folder = folder/f'failed/run_{n_run}/error'
 			scf_error_folder = errors_folder/f'scf_error'
 			basisset_error_folder = errors_folder/f'basis_set_error'
@@ -1013,21 +1013,21 @@ def qcorr_gaussian_main(duplicates,w_dir_initial,args,log):
 			rules_folder = folder/f'failed/run_{n_run}/exp_rules_filter'
 			geomcheck_folder = folder/f'failed/run_{n_run}/geometry_changed'
 
-			# Prepare next run for imag_freqs files 
-			for ifile, ofile, ofile_o in classification['imag_freq']: 
+			# Prepare next run for imag_freqs files
+			for ifile, ofile, ofile_o in classification['imag_freq']:
 				# move the inputs
 				# move the outputs
 				ofile_o.cartesians = ofile_o.fix_imaginary_frequencies()
 				# write the new inputs
 
-			### Repeat for unknown_error  
+			### Repeat for unknown_error
 			#classification['unknown_error']
-			### Repeat for scf_error  
+			### Repeat for scf_error
 			#classification['scf_error']
-			### Repeat for unfinished  
+			### Repeat for unfinished
 			#classification['unfinished']
 
-			# Good endings 
+			# Good endings
 			for ifile,ofile,ofile_o in classification['finished']:
 				# move the inputs
 				# move the outputs

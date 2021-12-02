@@ -29,7 +29,7 @@ import time
 from pathlib import Path
 from pyconfort.argument_parser import parser_args
 
-from pyconfort.mainf import (csearch_main, exp_rules_main, qprep_main, 
+from pyconfort.mainf import (csearch_main, exp_rules_main, qprep_main,
                              move_sdf_main, qcorr_gaussian_main,dup_main,
                              graph_main,geom_par_main,nmr_main,energy_main,
                              load_from_yaml,creation_of_ana_csv,dbstep_par_main,
@@ -50,7 +50,7 @@ def main():
     name = args.input.split('.')[0]
 
     # IS THIS NECESSARY?!
-    #setting variable if needed
+    # setting variable if needed
     for _ in args.basis_set:
         if len(args.basis_set) != len(args.basis_set_genecp_atoms):
             args.basis_set_genecp_atoms.append('')
@@ -59,11 +59,11 @@ def main():
             args.basis_set_genecp_atoms_sp.append('')
 
     #CSEARCH AND CMIN
-    if args.CSEARCH in ['rdkit', 'summ', 'fullmonte']: # RAUL: Is there any other posibilities or just None?
+    if args.CSEARCH in ['rdkit', 'summ', 'fullmonte','crest']: # RAUL: Is there any other posibilities or just None?
         start_time_overall = time.time()
         csearch_dup_data = csearch_main(w_dir_initial,args,log_overall)
         if args.time:
-            elapsed_time = round(time.time() - start_time_overall,2) 
+            elapsed_time = round(time.time() - start_time_overall,2)
             log_overall.write(f"\n All molecules execution time CSEARCH: {elapsed_time} seconds")
         os.chdir(w_dir_initial)
         if args.CMIN is None:
@@ -76,7 +76,7 @@ def main():
     if args.CSEARCH != None and args.CMIN in ['xtb','ani']:
         cmin_dup_data = cmin_main(w_dir_initial,args,log_overall,csearch_dup_data)
         if args.time:
-            elapsed_time = round(time.time() - start_time_overall,2) 
+            elapsed_time = round(time.time() - start_time_overall,2)
             log_overall.write(f"\n All molecules execution time CMIN: {elapsed_time} seconds")
         os.chdir(w_dir_initial)
         cmin_csv_folder = base_path.joinpath('CMIN/csv_files')
@@ -98,7 +98,7 @@ def main():
         qprep_main(w_dir_initial,args,log_overall)
         os.chdir(w_dir_initial)
 
-    if args.CSEARCH in ['rdkit', 'summ', 'fullmonte'] or args.QPREP is not None:
+    if args.CSEARCH in ['rdkit', 'summ', 'fullmonte','crest'] or args.QPREP is not None:
         # moving files after compute and/or write_gauss
         move_sdf_main(args)
         os.chdir(w_dir_initial)
@@ -114,7 +114,7 @@ def main():
                 log_overall.write("\nx  GoodVibes is not installed as a module (pip or conda), the duplicate option will be disabled in QCORR\n")
             else:
                 # If the AttributeError can happen here do not accept the change
-                duplicates = dup_main(args, log_overall, w_dir_initial) 
+                duplicates = dup_main(args, log_overall, w_dir_initial)
                 os.chdir(w_dir_initial)
         else:
             duplicates = False

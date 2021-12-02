@@ -14,13 +14,13 @@ from pathlib import Path
 import pandas as pd
 from progress.bar import IncrementalBar
 from rdkit.Chem import AllChem as Chem
-from pyconfort.csearch import (check_for_pieces, check_charge_smi, clean_args, 
-                               compute_confs, 
+from pyconfort.csearch import (check_for_pieces, check_charge_smi, clean_args,
+                               compute_confs,
                                mol_from_sdf_or_mol_or_mol2, creation_of_dup_csv)
 from pyconfort.filter import exp_rules_output
 
 from pyconfort.qprep_gaussian import (read_energies, GaussianTemplate, get_name_and_charge, write_gaussian_input_file)
-from pyconfort.qcorr_gaussian import output_analyzer, check_for_final_folder, dup_calculation
+# from pyconfort.qcorr_gaussian import output_analyzer, check_for_final_folder, dup_calculation
 
 from pyconfort.grapher import graph
 from pyconfort.descp import calculate_parameters
@@ -65,7 +65,7 @@ def load_from_yaml(args,log):
                         setattr(args, param, param_list[param])
                     else:
                         log.write("o  DEFAULT " + param + " : " + str(getattr(args, param)))
-    except UnboundLocalError: # RAUL: Is it just me or this only happens when the file exists, and ens in .yaml and is empty or does not end in .yaml? 
+    except UnboundLocalError: # RAUL: Is it just me or this only happens when the file exists, and ens in .yaml and is empty or does not end in .yaml?
         log.write("\no  The specified yaml file containing parameters was not found! Make sure that the valid params file is in the folder where you are running the code.\n")
 
 
@@ -135,7 +135,7 @@ def csearch_main(w_dir_initial,args,log_overall):
                         job = executor.submit(compute_confs,w_dir_initial,mol,name,args,i)
                         jobs.append(job)
                         count_mol +=1
-                        
+
                         # compute_confs(w_dir_initial,mol,name,args,log_overall,dup_data,counter_for_template,i,start_time)
                     except AttributeError:
                         log_overall.write("\nx  Wrong SMILES string ("+smi+") found (not compatible with RDKit or ANI/xTB if selected)! This compound will be omitted\n")
@@ -262,7 +262,7 @@ def cmin_main(w_dir_initial,args,log_overall,dup_data):
                 min_suffix = 'ani'
             elif args.CMIN=='xtb':
                 min_suffix = 'xtb'
-            if args.CSEARCH in ['rdkit','summ','fullmonte']: 
+            if args.CSEARCH in ['rdkit','summ','fullmonte']:
                 fullname = f'{name}_{args.CSEARCH}'
                 # try:
                 mult_min(fullname, args, min_suffix, log, dup_data, dup_data_idx)
@@ -273,7 +273,7 @@ def cmin_main(w_dir_initial,args,log_overall,dup_data):
     bar.finish()
 
     # removing temporary files
-    temp_files = ['gfn2.out', 'xTB_opt.traj', 'ANI1_opt.traj', 
+    temp_files = ['gfn2.out', 'xTB_opt.traj', 'ANI1_opt.traj',
                   'wbo', 'xtbrestart','ase.opt','xtb.opt','gfnff_topo']
     for file in temp_files:
         if Path(file).exists():
@@ -281,7 +281,7 @@ def cmin_main(w_dir_initial,args,log_overall,dup_data):
 
     return dup_data
 
-  
+
 # writing gauss main
 def qprep_main(w_dir_initial,args,log):
 
@@ -439,6 +439,16 @@ def move_sdf_main(args):
             for file in exp_rules_files:
                 move_file_from_folder(destination_exp_rules,src,file)
 
+    if args.CSEARCH=='crest':
+        all_name_conf_files = glob.glob('*_crest.sdf')
+        destination_rdkit = src+ '/CSEARCH/crest'
+        for file in all_name_conf_files:
+            move_file_from_folder(destination_rdkit,src,file)
+        if len(args.exp_rules) >= 1 and args.CMIN is None:
+            destination_exp_rules = src +'/CSEARCH/crest/filter_exp_rules/'
+            for file in exp_rules_files:
+                move_file_from_folder(destination_exp_rules,src,file)
+
     if args.CSEARCH is None:
         if len(args.exp_rules) >= 1:
             destination_exp_rules = src +'/QMCALC/SDF_input/filter_exp_rules/'
@@ -449,7 +459,6 @@ def move_sdf_main(args):
         destination = src +'/QMCALC/SDF_input/'
         for file in all_conf_files:
             move_file_from_folder(destination,src,file)
-
 
     if args.com_from_xyz:
         all_xyz_conf_files = glob.glob('*.xyz')+glob.glob('*.sdf')
@@ -474,7 +483,7 @@ def get_com_or_log_out_files(type,name):
                 files.append(file)
     return files
 
-  
+
 # main part of the analysis functions
 def qcorr_gaussian_main(duplicates,w_dir_initial,args,log):
     # when you run analysis in a folder full of output files
@@ -636,8 +645,8 @@ def graph_main(args,log,w_dir_initial):
                   w_dir_sp = f"{path_turbomole}/{lot_sp}-{bs_sp.split('/')[0]}"
                   os.chdir(w_dir_sp)
                   sp_files = []
-                  for path in Path(w_dir_sp).iterdir(): 
-                    if path.is_dir() and '_SP' in path.stem: 
+                  for path in Path(w_dir_sp).iterdir():
+                    if path.is_dir() and '_SP' in path.stem:
                       sp_files.append(path)
                   os.chdir(w_dir)
                   graph(sdf_rdkit,sdf_xtb,sdf_ani,log_files,sp_files,args,log,lot,bs,lot_sp,bs_sp.split('/')[0],name,w_dir_initial,w_dir_sp,w_dir,'turbomole')

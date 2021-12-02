@@ -5,7 +5,7 @@
 import argparse
 
 def parser_args():
-  
+
   parser = argparse.ArgumentParser(description="Generate conformers depending on type of optimization (change parameters in the params yaml file).")
 
   #necessary input details
@@ -19,7 +19,7 @@ def parser_args():
 
   # EXPAND QPREP TO GAUSSIAN, ORCA; TURBOMOLE!
   #work the script has to do
-  parser.add_argument("--CSEARCH", action="store", default=None, help="Perform conformational analysis with or without dihedrals",choices=['rdkit','summ','fullmonte'])
+  parser.add_argument("--CSEARCH", action="store", default=None, help="Perform conformational analysis with or without dihedrals",choices=['rdkit','summ','fullmonte','crest'])
   parser.add_argument("--CMIN", action="store", default=None, help="Perform minimization after conformational analysis",choices=['xtb','ani'])
   parser.add_argument("--QPREP", action="store", default=None, help="Create input files for QM calculations", choices=['gaussian','orca'])
   parser.add_argument("--QCORR", action="store", default=None, help="Fix the output files from QM calculations",choices=['gaussian'])
@@ -73,6 +73,13 @@ def parser_args():
   parser.add_argument("--nrot_fullmonte", action="store",default=3, help="Number of diherals to rotate for FULLMONTE (default 3) ", type=int)
   parser.add_argument("--ang_fullmonte", action="store",default=30, help="Angle to rotate each diheral of for FULLMONTE (default 30)", type=float)
 
+  #arguments for CREST
+  parser.add_argument("--cregen", dest="cregen", action="store_true", help="Do cregen after crest", default=False)
+  parser.add_argument("--cregen_ethr", dest="cregen_ethr", action="store", default=0.2, help="Energy thershold for CREGEN after crest")
+  parser.add_argument("--cregen_rthr", dest="cregen_rthr", action="store", default=0.125, help="RMS thershold for CREGEN fter crest")
+  parser.add_argument("--cregen_bthr", dest="cregen_bthr", action="store", default=0.01, help="Rotational constant thershold for CREGEN after crest")
+  parser.add_argument("--cregen_ewin", dest="cregen_ewin", action="store", default=6, help="Energy window for CREGEN after crest")
+
   #arguments for QPREP
   parser.add_argument("--nprocs", help="Number of processors for the DFT calculations", default=24, type=int, dest="nprocs")
   parser.add_argument("--mem", help="Memory for the DFT calculations (i) Gaussian: total memory; (ii) ORCA: memory per processor", default="96GB", type=str, dest="mem")
@@ -107,7 +114,7 @@ def parser_args():
   parser.add_argument('--tmcavity',help="Turbomole solvent cavity for COSMO-RS", default='none')
   parser.add_argument('--tmricore',help="Turbomole max RIcore memory in MB",default=200,type=int)
   parser.add_argument('--tmmaxcore',help="Turbomole max per core memory in MB",default=200,type=int)
-  
+
   #other options for QPREP
   parser.add_argument("--com_from_xyz", action="store_true", default=False, help="Create input files for Gaussian from an xyz file")
 
@@ -119,7 +126,7 @@ def parser_args():
   parser.add_argument("--length_criteria", action="store",default=1.4, help="Factor used to determine whether a bond broke/formed during DFT optimization for check_geom", type=float)
   parser.add_argument("--amplitude_ifreq", action="store",default=0.2, help="Amplitude used to displace the imaginary frequencies to fix during analysis", type=float)
   parser.add_argument("--ifreq_cutoff", action="store",default=0.0, help="Cut off for imaginary frequencies during analysis", type=float)
-  parser.add_argument("--s2_threshold", action="store",default=10.0, help="Cut off for spin contamination during analysis in \%\ of the expected value (i.e. multiplicity 3 has an the expected <S**2> of 2.0, if s2_threshold = 10 the <S**2> value is allowed to be 2.0 +- 0.2). Set s2_threshold = 0 to deactivate this option.", type=float)  
+  parser.add_argument("--s2_threshold", action="store",default=10.0, help="Cut off for spin contamination during analysis in \%\ of the expected value (i.e. multiplicity 3 has an the expected <S**2> of 2.0, if s2_threshold = 10 the <S**2> value is allowed to be 2.0 +- 0.2). Set s2_threshold = 0 to deactivate this option.", type=float)
   #writing single point files
   parser.add_argument("--sp", help="Create Gaussian single point input files", default=None, dest="sp", type=str)
   parser.add_argument("--nics", action="store_true", default=False, help="Create input files for NICS")
@@ -178,5 +185,5 @@ def parser_args():
   parser.add_argument("--prefix", help="Prefix for naming files", default="None", metavar="prefix",type=str)
 
   args = parser.parse_args()
-  return args
 
+  return args

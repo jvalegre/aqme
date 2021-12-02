@@ -5,8 +5,7 @@ from pathlib import Path
 
 from rdkit.Chem.rdMolAlign import GetBestRMS
 from rdkit.Chem.rdmolops import RemoveHs
-
-import pybel
+from openbabel import pybel
 
 def periodic_table():
     items = """X
@@ -35,7 +34,7 @@ class Logger:
     def write(self, message):
         """
         Appends a newline character to the message and writes it into the file.
-   
+
         Parameters
         ----------
         message : str
@@ -46,7 +45,7 @@ class Logger:
     def fatal(self, message):
         """
         Writes the message to the file. Closes the file and raises an error exit
-   
+
         Parameters
         ----------
         message : str
@@ -60,7 +59,7 @@ class Logger:
         """ Closes the file """
         self.log.close()
 
-# OS utils 
+# OS utils
 
 def move_file(file, destination):
     """
@@ -81,7 +80,7 @@ def move_file(file, destination):
 
 def move_file_from_folder(destination,src,file):
     """
-    Moves files from the source folder to the destination folder and creates 
+    Moves files from the source folder to the destination folder and creates
     the destination folders when needed.
 
     Parameters
@@ -103,7 +102,7 @@ def move_file_from_folder(destination,src,file):
     filepath = source / file
     filepath.rename(dest / file)
 
-# openbabel utils 
+# openbabel utils
 
 #com to xyz to sdf for obabel
 def com_2_xyz_2_sdf(input,default_charge,start_point=None):
@@ -120,7 +119,7 @@ def com_2_xyz_2_sdf(input,default_charge,start_point=None):
     Returns
     -------
     int?
-        charge or None? 
+        charge or None?
     """
     extension = Path(input).suffix
 
@@ -132,12 +131,12 @@ def com_2_xyz_2_sdf(input,default_charge,start_point=None):
         file = Path(start_point)
 
     filename = Path.stem
-    
+
     # Create the 'xyz' file and/or get the total charge
     if extension != 'xyz':                                                      #  RAUL: Originally this pointed towards args.input, shouldn't it be to args.file?
         xyz,charge = get_charge_and_xyz_from_com(file)
         xyz_txt = '\n'.join(xyz)
-        with open(f'{filename}.xyz','w') as F: 
+        with open(f'{filename}.xyz','w') as F:
             F.write(f"{len(xyz)}\n{filename}\n{xyz_txt}\n")
     else:
         charge = default_charge
@@ -148,7 +147,7 @@ def com_2_xyz_2_sdf(input,default_charge,start_point=None):
 def xyz_2_sdf(file,parent_dir=None):
     """
     Creates a .sdf file from a .xyz in the specified directory. If no directory
-    is specified then the files are created in the current directory. 
+    is specified then the files are created in the current directory.
 
     Parameters
     ----------
@@ -157,7 +156,7 @@ def xyz_2_sdf(file,parent_dir=None):
     dir : str or pathlib.Path, optional
         a path to the directory where the .xyz file is located
     """
-    if parent_dir is None: 
+    if parent_dir is None:
         parent_dir = Path('')
     else:
         parent_dir = Path(parent_dir)
@@ -167,7 +166,7 @@ def xyz_2_sdf(file,parent_dir=None):
 def get_charge_and_xyz_from_com(file):
     """
      Takes a .gjf or .com file and retrieves the coordinates of the atoms and the
-    total charge. 
+    total charge.
 
     Parameters
     ----------
@@ -178,9 +177,9 @@ def get_charge_and_xyz_from_com(file):
     -------
     coordinates : list
         A list of strings (without \\n) that contain the xyz coordinates of the
-        .gjf or .com file 
+        .gjf or .com file
     charge : str
-        A str with the number corresponding to the total charge of the .com or 
+        A str with the number corresponding to the total charge of the .com or
         .gjf file
     """
 
@@ -188,34 +187,34 @@ def get_charge_and_xyz_from_com(file):
         comlines = comfile.readlines()
 
     _iter = comlines.__iter__()
-    
+
     line = ''
     # Find the command line
-    while '#' not in line: 
+    while '#' not in line:
         line = next(_iter)
 
     # pass the title lines
     _ = next(_iter)
     while line:
         line = next(_iter).strip()
-    
+
     # Read the charge from the charge | spin line
     charge,spin = next(_iter).strip().split()
 
-    # Store the coordinates until next empty line. 
+    # Store the coordinates until next empty line.
     coordinates = []
     line = next(_iter).strip()
-    while line: 
+    while line:
         coordinates.append(line.strip())
         line = next(_iter).strip()
-    
+
     return coordinates, charge
-    
-# RDKit Utils 
+
+# RDKit Utils
 
 def set_metal_atomic_number(mol,metal_idx,metal_sym):
     """
-    Changes the atomic number of the metal atoms using their indices. 
+    Changes the atomic number of the metal atoms using their indices.
 
     Parameters
     ----------
@@ -224,8 +223,8 @@ def set_metal_atomic_number(mol,metal_idx,metal_sym):
     metal_idx : list
         sorted list that contains the indices of the metal atoms in the molecule
     metal_sym : list
-        sorted list (same order as metal_idx) that contains the symbols of the 
-        metals in the molecule. 
+        sorted list (same order as metal_idx) that contains the symbols of the
+        metals in the molecule.
     """
 
     for atom in mol.GetAtoms():
@@ -237,7 +236,7 @@ def set_metal_atomic_number(mol,metal_idx,metal_sym):
 def get_conf_RMS(mol1, mol2, c1, c2, heavy, max_matches_RMSD):
     """
     Takes in two rdkit.Chem.Mol objects and calculates the RMSD between them.
-    (As side efect mol1 is left in the aligned state, if heavy is specified 
+    (As side efect mol1 is left in the aligned state, if heavy is specified
     the side efect will not happen)
 
     Parameters
@@ -264,4 +263,3 @@ def get_conf_RMS(mol1, mol2, c1, c2, heavy, max_matches_RMSD):
          mol1 = RemoveHs(mol1)
          mol2 = RemoveHs(mol2)
     return GetBestRMS(mol1,mol2,c1,c2,maxMatches=max_matches_RMSD)
-

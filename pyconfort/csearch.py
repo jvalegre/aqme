@@ -18,16 +18,17 @@ from rdkit.Chem import AllChem as Chem
 from rdkit.Chem import rdMolTransforms, PropertyMol, rdDistGeom, Lipinski
 from progress.bar import IncrementalBar  # RAUL: This is for the main
 
-from pyconfort.filter import (filters, ewin_filter, 
+from pyconfort.filter import (filters, ewin_filter,
                               pre_E_filter, RMSD_and_E_filter)
 from pyconfort.tmbuild import template_embed
 from pyconfort.cmin import rules_get_charge, substituted_mol
-from pyconfort.fullmonte import (generating_conformations_fullmonte, 
+from pyconfort.fullmonte import (generating_conformations_fullmonte,
                                  minimize_rdkit_energy, realign_mol)
 from pyconfort.utils import Logger, set_metal_atomic_number, com_2_xyz_2_sdf
+from pyconfort.crest import crest_opt
 
-SUPPORTED_INPUTS = ['.smi', '.sdf', '.cdx', 
-                    '.csv', '.com', '.gjf', 
+SUPPORTED_INPUTS = ['.smi', '.sdf', '.cdx',
+                    '.csv', '.com', '.gjf',
                     '.mol', '.mol2','.xyz',
                     '.txt','.yaml','.yml',
                     '.rtf']
@@ -59,7 +60,7 @@ def mol_from_sdf_or_mol_or_mol2(input):
 
     IDs,charges = [],[]
 
-    with open(input,"r") as F: 
+    with open(input,"r") as F:
         lines = F.readlines()
 
     molecule_count = 0
@@ -146,21 +147,22 @@ def getDihedralMatches(mol, heavy,log):
 
 def getDihedralMatches_v2(mol, heavy,log): #New version using openbabel
     # If this version is selected, bring the import to the top
-    import pybel # from openbabel import pybel for openbabel>=3.0.0
+    # import pybel #
+    from openbabel import pybel #for openbabel>=3.0.0
     AtomInTripleBond = '$(*#*)'
     TerminalAtom = 'D1'
     CF3 = '$(C(F)(F)F)'
     CCl3 = '$(C(Cl)(Cl)Cl)'
     CBr3 = '$(C(Br)(Br)Br)'
     tBut = '$(C([CH3])([CH3])[CH3])'
-    # A 3-bonded C with a double bond to (N, O or S) 
+    # A 3-bonded C with a double bond to (N, O or S)
     # singlgy bonded to not ring bonded to a non-terminal N,O or S.
-    CD3_1d = '$([CD3](=[N,O,S])-!@[#7,O,S!D1])' 
+    CD3_1d = '$([CD3](=[N,O,S])-!@[#7,O,S!D1])'
     CD3_1r = '$([#7,O,S!D1]-!@[CD3]=[N,O,S])' # Backwards version
-    # A 3-bonded C with a double bond to (N+) 
+    # A 3-bonded C with a double bond to (N+)
     # singlgy bonded to not ring bonded to Any non-terminal N
     CD3_2d = '$([CD3](=[N+])-!@[#7!D1])'
-    CD3_2r = '$([#7!D1]-!@[CD3]=[N+])' # Backwards version 
+    CD3_2r = '$([#7!D1]-!@[CD3]=[N+])' # Backwards version
     Atom1 = '*'
     Atom2 =  f'!{AtomInTripleBond}&!{TerminalAtom}'
     Atom2 += f'&!{CF3}&!{CCl3}&!{CBr3}&!{tBut}'
@@ -184,7 +186,7 @@ def getDihedralMatches_v2(mol, heavy,log): #New version using openbabel
                     seen.add((b,c))
                     uniqmatches.append((a,b,c,d))
             if not heavy:
-                # So what if a == 'H' and b == 'C'? is that valid ¿? 
+                # So what if a == 'H' and b == 'C'? is that valid ¿?
                 if c not in C_atoms or d not in H_atoms:
                     seen.add((b,c))
                     uniqmatches.append((a,b,c,d))
@@ -192,16 +194,16 @@ def getDihedralMatches_v2(mol, heavy,log): #New version using openbabel
 #creation of csv for csearch
 def creation_of_dup_csv(csearch,cmin):
     """
-    Generates a pandas.DataFrame object with the appropiate columns for the 
-    conformational search and the minimization. 
+    Generates a pandas.DataFrame object with the appropiate columns for the
+    conformational search and the minimization.
 
     Parameters
     ----------
     csearch : str
-        Conformational search method. Current valid methods are: 
+        Conformational search method. Current valid methods are:
         ['rdkit','fullmonte','summ']
     cmin : str
-        Minimization method. Current valid methods are: 
+        Minimization method. Current valid methods are:
         ['xtb','ani']
 
     Returns
@@ -211,10 +213,11 @@ def creation_of_dup_csv(csearch,cmin):
     # Boolean aliases from args
     is_rdkit = csearch=='rdkit'
     is_fullmonte = csearch=='fullmonte'
+    is_crest = csearch=='crest'
     is_summ = csearch=='summ'
     is_xtb = cmin == 'xtb'
     is_ani = cmin == 'ani'
-    
+
     # column blocks definitions
     base_columns = ['Molecule',
                     'RDKit-Initial-samples',
@@ -237,7 +240,7 @@ def creation_of_dup_csv(csearch,cmin):
     end_columns_min = ['CSEARCH time (seconds)',
                        'CMIN time (seconds)',
                        'Overall charge']
-    fullmonte_columns = ['FullMonte-Unique-conformers',] 
+    fullmonte_columns = ['FullMonte-Unique-conformers',]
                         #'FullMonte-conformers',
                         #'FullMonte-energy-window',
                         #'FullMonte-initial_energy_threshold',
@@ -247,7 +250,8 @@ def creation_of_dup_csv(csearch,cmin):
                     'summ-initial_energy_threshold',
                     'summ-RMSD-and-energy-duplicates',
                     'summ-Unique-conformers']
-    
+    crest_columns = ['Molecule','crest-conformers']
+
     # Check Conformer Search method
     if is_rdkit:
         columns = base_columns
@@ -255,19 +259,21 @@ def creation_of_dup_csv(csearch,cmin):
         columns = base_columns + fullmonte_columns
     elif is_summ:
         columns = base_columns + summ_columns
+    elif is_crest:
+        columns = crest_columns
     else:
         return None
-    
+
     # Check Minimization Method
-    if is_ani: 
+    if is_ani:
         columns += ANI_columns
     if is_xtb:  # is_ani and is_xtb will not happen, but this is what was written
         columns += xtb_columns
-    if is_ani or is_xtb: 
+    if is_ani or is_xtb:
         columns += end_columns_min
     else:
         columns += end_columns_no_min
-    
+
     return pd.DataFrame(columns=columns)
 
 def clean_args(args,ori_ff,mol,ori_charge):                                # RAUL: I hope this function does not survive the clean-ups
@@ -317,11 +323,11 @@ def compute_confs(w_dir_initial, mol, name, args,i):
     pandas.Dataframe
         total_data
     """
-    
+
     csearch_dir = Path(w_dir_initial) / 'CSEARCH'
     dat_dir = csearch_dir / 'dat_files'
     dat_dir.mkdir(parents=True, exist_ok=True)
-    
+
     log = Logger(dat_dir/name, args.output_name)
     # Converts each line to a rdkit mol object
     if args.verbose:
@@ -347,7 +353,7 @@ def compute_confs(w_dir_initial, mol, name, args,i):
                     count_metals += 1
             if count_metals == 1:
                 os.chdir(w_dir_initial)
-                template_kwargs = dict() 
+                template_kwargs = dict()
                 template_kwargs['complex_type'] = args.complex_type
                 template_kwargs['metal_idx'] = args.metal_idx
                 template_kwargs['maxsteps'] = args.opt_steps_RDKit
@@ -356,7 +362,7 @@ def compute_confs(w_dir_initial, mol, name, args,i):
                 items = template_embed(mol,name,log,**template_kwargs)
 
                 total_data = creation_of_dup_csv(args.CSEARCH,args.CMIN)
-                
+
                 for mol_obj, name_in, coord_map, alg_map, template in zip(*items):
                     data = conformer_generation(mol_obj, name_in, args, log,
                                                 coord_map, alg_map, template)
@@ -369,7 +375,7 @@ def compute_confs(w_dir_initial, mol, name, args,i):
             total_data = conformer_generation(mol,name,args,log)
     else:
         total_data = conformer_generation(mol,name,args,log)
-    
+
     return total_data
 
 def conformer_generation(mol,name,args,log,coord_Map=None,alg_Map=None,mol_template=None):
@@ -399,7 +405,7 @@ def conformer_generation(mol,name,args,log,coord_Map=None,alg_Map=None,mol_templ
         dup_data
     """
     dup_data = creation_of_dup_csv(args.CSEARCH,args.CMIN)
-    
+
     dup_data_idx = 0
     start_time = time.time()
     valid_structure = filters(mol,log,args.max_MolWt,args.verbose)
@@ -543,7 +549,7 @@ def embed_conf(mol,initial_confs,args,log,coord_Map,alg_Map, mol_template):
         cids
     """
     is_sdf_mol_or_mol2 = os.path.splitext(args.input)[1] in ['.sdf','.mol','.mol2']
-    
+
     if is_sdf_mol_or_mol2:
             Chem.AssignStereochemistryFrom3D(mol)
 
@@ -551,7 +557,7 @@ def embed_conf(mol,initial_confs,args,log,coord_Map,alg_Map, mol_template):
     embed_kwargs['ignoreSmoothingFailures'] = True
     embed_kwargs['randomSeed'] = args.seed
     embed_kwargs['numThreads'] = 0
-    
+
     if (coord_Map,alg_Map,mol_template) != (None,None,None):
         embed_kwargs['coordMap'] = coord_Map
     cids = rdDistGeom.EmbedMultipleConfs(mol, initial_confs, **embed_kwargs)
@@ -564,12 +570,12 @@ def embed_conf(mol,initial_confs,args,log,coord_Map,alg_Map, mol_template):
         embed_kwargs['boxSizeMult'] = 10.0
         embed_kwargs['numZeroFail'] = 1000
         cids = rdDistGeom.EmbedMultipleConfs(mol, initial_confs, **embed_kwargs)
-    
+
     if is_sdf_mol_or_mol2:
         #preserving AssignStereochemistryFrom3D
         for cid in cids:
             Chem.AssignAtomChiralTagsFromStructure(mol,confId=cid)
-    
+
     return cids
 
 def min_and_E_calc(mol,cids,args,log,coord_Map,alg_Map,mol_template):
@@ -596,17 +602,17 @@ def min_and_E_calc(mol,cids,args,log,coord_Map,alg_Map,mol_template):
     Returns
     -------
     outmols,cenergy
-        outmols is gonna be a list containing "initial_confs" mol objects 
-        with "initial_confs" conformers. We do this to SetProp 
+        outmols is gonna be a list containing "initial_confs" mol objects
+        with "initial_confs" conformers. We do this to SetProp
         (Name and Energy) to the different conformers
-        and log.write in the SDF file. At the end, since all the mol 
-        objects has the same conformers, but the energies are different, 
-        we can log.write conformers to SDF files with the energies of the 
-        parent mol objects. We measured the computing time and it's the 
-        same as using only 1 parent mol object with 10 conformers, but we 
+        and log.write in the SDF file. At the end, since all the mol
+        objects has the same conformers, but the energies are different,
+        we can log.write conformers to SDF files with the energies of the
+        parent mol objects. We measured the computing time and it's the
+        same as using only 1 parent mol object with 10 conformers, but we
         couldn'temp SetProp correctly.
     """
-    
+
     cenergy,outmols = [],[]
     #bar = IncrementalBar('o  Minimizing', max = len(cids))
     for _, conf in enumerate(cids):
@@ -661,10 +667,10 @@ def min_after_embed(mol,cids,name,initial_confs,rotmatches,dup_data,dup_data_idx
     int
         status
     """
-    
+
     # gets optimized mol objects and energies
     outmols,cenergy = min_and_E_calc(mol,cids,args,log,coord_Map,alg_Map,mol_template)
-    
+
     # writing charges after RDKit
     if os.path.splitext(args.input)[1] == '.cdx' or os.path.splitext(args.input)[1] == '.smi' or os.path.splitext(args.input)[1] == '.csv':
         args.charge = rules_get_charge(mol,args)
@@ -788,30 +794,38 @@ def rdkit_to_sdf(mol, name,args,log,dup_data,dup_data_idx, coord_Map, alg_Map, m
         sdwriter = Chem.SDWriter(name+'_'+'fullmonte'+args.output)
     elif args.CSEARCH =='fullmonte':
         sdwriter = Chem.SDWriter(name+'_'+'fullmonte'+args.output)
+    elif args.CSEARCH =='crest':
+        sdwriter = Chem.SDWriter(name+'_'+'crest'+args.output)
     else:
         sdwriter = Chem.SDWriter(name+'_'+'rdkit'+args.output)
 
-    dup_data.at[dup_data_idx, 'RDKit-Initial-samples'] = initial_confs
-    if args.CSEARCH=='rdkit':
-        rotmatches =[]
-    cids = embed_conf(mol,initial_confs,args,log,coord_Map,alg_Map, mol_template)
-    
-    #energy minimize all to get more realistic results
-    #identify the atoms and decide Force Field
-    for atom in mol.GetAtoms():
-        if atom.GetAtomicNum() > 36: #up to Kr for MMFF, if not the code will use UFF
-            log.write("x  "+args.ff+" is not compatible with the molecule, changing to UFF")
-            args.ff = "UFF"
-    if args.verbose:
-        log.write("o  Optimizing "+ str(len(cids))+ " initial conformers with "+ args.ff)
-        if args.CSEARCH=='summ':
-            log.write("o  Found "+ str(len(rotmatches))+ " rotatable torsions")
-        elif args.CSEARCH=='fullmonte':
-            log.write("o  Found "+ str(len(rotmatches))+ " rotatable torsions")
-        else:
-            log.write("o  Systematic torsion rotation is set to OFF")
-    
-    status = min_after_embed(mol,cids,name,initial_confs,rotmatches,dup_data,dup_data_idx,sdwriter,args,log,update_to_rdkit,coord_Map,alg_Map, mol_template)
+    if args.CSEARCH !='crest':
+        dup_data.at[dup_data_idx, 'RDKit-Initial-samples'] = initial_confs
+        if args.CSEARCH=='rdkit':
+            rotmatches =[]
+        cids = embed_conf(mol,initial_confs,args,log,coord_Map,alg_Map, mol_template)
+
+        #energy minimize all to get more realistic results
+        #identify the atoms and decide Force Field
+        for atom in mol.GetAtoms():
+            if atom.GetAtomicNum() > 36: #up to Kr for MMFF, if not the code will use UFF
+                log.write("x  "+args.ff+" is not compatible with the molecule, changing to UFF")
+                args.ff = "UFF"
+        if args.verbose:
+            log.write("o  Optimizing "+ str(len(cids))+ " initial conformers with "+ args.ff)
+            if args.CSEARCH=='summ':
+                log.write("o  Found "+ str(len(rotmatches))+ " rotatable torsions")
+            elif args.CSEARCH=='fullmonte':
+                log.write("o  Found "+ str(len(rotmatches))+ " rotatable torsions")
+            else:
+                log.write("o  Systematic torsion rotation is set to OFF")
+
+        status = min_after_embed(mol,cids,name,initial_confs,rotmatches,dup_data,dup_data_idx,sdwriter,args,log,update_to_rdkit,coord_Map,alg_Map, mol_template)
+    else:
+        args.charge = rules_get_charge(mol,args)
+        dup_data.at[dup_data_idx, 'Overall charge'] = np.sum(args.charge)
+        status = crest_opt(mol, name,dup_data,dup_data_idx, sdwriter, args,log)
+
     sdwriter.close()
 
     return status,rotmatches,update_to_rdkit
@@ -911,10 +925,10 @@ def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None, alg_
     tuple
         status, update_to_rdkit
     """
-    
+
     # writes sdf for the first RDKit conformer generation
     status,rotmatches,update_to_rdkit = rdkit_to_sdf(mol, name,args,log,dup_data,dup_data_idx, coord_Map, alg_Map, mol_template)
-    
+
     # reads the initial SDF files from RDKit and uses dihedral scan if selected
     if status != -1 or status != 0:
         # getting the energy and mols after rotations
@@ -924,10 +938,10 @@ def summ_search(mol, name,args,log,dup_data,dup_data_idx, coord_Map = None, alg_
             # removes the rdkit file
             os.remove(name+'_'+'rdkit'+args.output)
 
-    return status,update_to_rdkit
+    return status, update_to_rdkit
 
 
-# MAIN FUNCTION 
+# MAIN FUNCTION
 
 # main function to generate conformers
 def csearch_main_v2(w_dir_initial,args,log_overall):
@@ -966,11 +980,11 @@ def csearch_main_v2(w_dir_initial,args,log_overall):
         # Submit a set of asynchronous jobs
         jobs = []
         count_mol = 0
-        
+
         # Prepare the Jobs
         prepare_function = Extension2inputgen[file_format]
         job_inputs = prepare_function(args,ori_ff,ori_charge,w_dir_initial)
-        
+
         # Submit the Jobs
         if file_format in smi_derivatives:
             for job_input in job_inputs:
@@ -983,8 +997,8 @@ def csearch_main_v2(w_dir_initial,args,log_overall):
                 except AttributeError:                                          # TODO I NEED CONFIRMATION OF WHEN DOES THE ATTRIBUTE ERROR APPEAR
                     smi = Chem.MolToSmiles(mol)
                     log_overall.write(f"\nx  Wrong SMILES string ({smi}) found (not compatible with RDKit or ANI/xTB if selected)! This compound will be omitted\n")
-        else:     
-            for job_input in job_inputs: 
+        else:
+            for job_input in job_inputs:
                 compute_confs,w_dir_initial,mol,name,args,i = job_input
                 job = executor.submit(compute_confs,w_dir_initial,mol,name,args,i)
                 jobs.append(job)
@@ -1008,7 +1022,7 @@ def csearch_main_v2(w_dir_initial,args,log_overall):
 
     return final_dup_data
 
-def prepare_smiles_files(args,ori_ff,ori_charge,w_dir_initial): 
+def prepare_smiles_files(args,ori_ff,ori_charge,w_dir_initial):
     with open(args.input) as smifile:
         lines = [line for line in smifile if line.strip()]
     job_inputs = []
@@ -1023,17 +1037,17 @@ def prepare_smiles_from_line(line,i,args,ori_ff,ori_charge):
     smi = toks[0]
     smi = check_for_pieces(smi)
     mol = Chem.MolFromSmiles(smi)
-    clean_args(args,ori_ff,mol,ori_charge)                          # I assume no AttributeError 
-    if args.charge_default == 'auto':                               # I assume no AttributeError 
-        if not args.metal_complex:                                  # I assume no AttributeError 
-            args.charge_default = check_charge_smi(smi)             # I assume no AttributeError 
-    if args.prefix == 'None':                                       # I assume no AttributeError 
-        name = ''.join(toks[1:])                                    # I assume no AttributeError 
-    else:                                                           # I assume no AttributeError 
+    clean_args(args,ori_ff,mol,ori_charge)                          # I assume no AttributeError
+    if args.charge_default == 'auto':                               # I assume no AttributeError
+        if not args.metal_complex:                                  # I assume no AttributeError
+            args.charge_default = check_charge_smi(smi)             # I assume no AttributeError
+    if args.prefix == 'None':                                       # I assume no AttributeError
+        name = ''.join(toks[1:])                                    # I assume no AttributeError
+    else:                                                           # I assume no AttributeError
         name = f"{args.prefix}_{i}_{''.join(toks[1:])}"             # I assume no AttributeError
     return mol,name,args
 
-def prepare_csv_files(args,ori_ff,ori_charge,w_dir_initial): 
+def prepare_csv_files(args,ori_ff,ori_charge,w_dir_initial):
     csv_smiles = pd.read_csv(args.input)
     job_inputs = []
     for i in range(len(csv_smiles)):
@@ -1060,7 +1074,7 @@ def prepare_cdx_files(args,ori_ff,ori_charge,w_dir_initial):
     #converting to smiles from chemdraw
     molecules = generate_mol_from_cdx(args)
     job_inputs = []
-    for i,(smi,mol) in enumerate(molecules):   
+    for i,(smi,mol) in enumerate(molecules):
         clean_args(args,ori_ff,mol,ori_charge)
         name = f"{args.input.split('.')[0]}_{str(i)}"
         if args.charge_default == 'auto':
