@@ -9,9 +9,9 @@ from pathlib import Path
 
 # ensure a proper import of pybel for openbabel v2 and v3
 try:
-    import pybel
-except ImportError: 
-    from openbabel import pybel
+	import pybel
+except ImportError:
+	from openbabel import pybel # for openbabel>=3.0.0
 
 
 class TurbomoleOutput(object):

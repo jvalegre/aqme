@@ -10,17 +10,9 @@ import warnings
 
 # ensure a proper import of pybel for openbabel v2 and v3
 try:
-    import pybel
+	import pybel
 except ImportError:
-    import openbabel
-    if openbabel.__version__ == '3.0.0': 
-        warnings.warn("""
-        The geometry parameter of TurbomoleOuput depends on the pybel library 
-        and 3.0.0 has a bug when reading turbomole (tmol) files where atom 
-        symbols are not properly recognized, please ensure that openbabel 
-        is either the 2.4.1 version or a version higher or equal to the 3.1.1.
-        """)
-    from openbabel import pybel
+	from openbabel import pybel # for openbabel>=3.0.0
 
 
 class TurbomoleOutput(object):

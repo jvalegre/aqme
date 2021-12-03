@@ -17,9 +17,9 @@ from pyconfort.utils import BasisSet
 from .templates import TurbomoleTemplate,OrcaTemplate,GaussianTemplate
 
 try:
-    import pybel
+	import pybel
 except ImportError:
-    from openbabel import pybel
+	from openbabel import pybel # for openbabel>=3.0.0
 
 
 

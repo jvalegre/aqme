@@ -1,24 +1,3 @@
 
-o  Importing pyCONFORT parameters from parameters_new_subs_charged.yaml
-o  RESET CSEARCH from None to rdkit
-o  RESET QPREP from None to gaussian
-o  RESET verbose from False to True
-o  DEFAULT time : True
-o  RESET input from   to pyconfort_INPUT_substrate_scope.csv
-o  DEFAULT prefix : None
-o  RESET cpus from 12 to 1
-o  RESET sample from auto to 500
-o  RESET nprocs from 24 to 12
-o  RESET mem from 96GB to 24GB
-o  RESET charge_default from auto to 1
-o  RESET basis_set from ['6-31g*'] to ['6-31+g(d,p)']
-o  DEFAULT level_of_theory : ['wb97xd']
-o  RESET gen_atoms from [] to ['C', 'H', 'O', 'N', 'S', 'F', 'Br', 'Si', 'Na']
-o  RESET basis_set_genecp_atoms from [] to ['6-31+g(d,p)']
-o  RESET solvent_model from gas_phase to SMD
-o  RESET solvent_name from Acetonitrile to dichloromethane
+o  Writing analysis of output files in respective folders
 
- All molecules execution time CSEARCH: 1.28 seconds
-
-o  Preparing QM input files in QMCALC/G16/wb97xd-6-31+g(d,p)
-   -> Converting from Prop_rdkit.sdf

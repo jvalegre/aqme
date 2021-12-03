@@ -64,7 +64,7 @@ def calculate_cclib(log_files,w_dir_initial,lot,bs):
     for file in log_files:
         log_json(file,w_dir_initial,lot,bs)
 
-def calcualte_average_cclib_parameter(json_files,name,w_dir_initial,lot,bs):
+def get_avg_cclib_param(json_files,name,w_dir_initial,lot,bs):
     charge,dipole = [],[]
     for file in json_files:
         with open(file,'r') as molfile:

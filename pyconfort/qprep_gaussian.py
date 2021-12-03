@@ -11,6 +11,7 @@ import glob
 import shlex
 import pandas as pd
 from pyconfort.turbomole import TurbomoleInput
+from pyconfort.utils import periodic_table
 
 # Hotfixes
 def fix_obabel_isotopes(gjf_lines):
@@ -126,7 +127,7 @@ class BasisSet(object):
 			elif isinstance(molecule,pybel.Molecule):
 				atoms = [atom for atom in molecule.atoms]
 				atnums = [atom.OBAtom.GetAtomicNum() for atom in atoms]
-				syms = [periodic_table[atnum] for atnum in atnums]
+				syms = [periodic_table()[atnum] for atnum in atnums]
 			else:
 				raise ValueError(f'{molecule.__class__} is not a valid molecule object')
 			elements.update(syms)
@@ -240,168 +241,53 @@ class BasisSet(object):
 		ecp = keywords.get('ecp',None)
 		return cls(basis,auxbasis,ecp,name)
 
+
 # template classes
-class GaussianTemplate(object):
-	def __init__(self,basisset=None,functional=None,memory='24GB',nprocs=12,
-				commandline=None,solvation='gas_phase',solvent='',
-				max_opt_cycles=500,dispersion=None,enable_chk=False,
-				optimization=True,frequencies=True,calcfc=False,
-				qm_input_end=''):
-		self.basisset = basisset
-		self.functional = functional
-		#Link0
-		self.enable_chk = enable_chk
-		self.memory = memory
-		self.nprocs = nprocs
-		# opt options
-		self.optimization = optimization
-		self.calcfc = calcfc
-		self.max_opt_cycles = max_opt_cycles
-		# freq options
-		self.frequencies = frequencies
-		# scrf options
-		self.solvation = solvation
-		self.solvent = solvent
-		# dispersion
-		if dispersion is None:
-			dispersion = ''
-		self.dispersion = dispersion
-		# other commands
-		if commandline is None:
-			commandline = ''
-		self._commandline = commandline
-		# other tail
-		self.qm_input_end = qm_input_end
-
-	def to_dict(self):
-		kwargs = dict()
-		kwargs['functional'] = self.functional
-		if self.basisset is not None:
-			kwargs['basis'] = self.basisset.basis
-			kwargs['auxbasis'] = self.basisset.auxbasis
-			kwargs['ecp'] = self.basisset.ecp
-
-		kwargs['memory'] = self.memory
-		kwargs['nprocs'] = self.nprocs
-		kwargs['extra_input'] = self.extra_input
-		kwargs['enable_chk'] = self.enable_chk
-		kwargs['frequencies'] = self.frequencies
-		kwargs['dispersion'] = self.dispersion
-		kwargs['calcfc'] = self.calcfc
-		kwargs['solvation'] = self.solvation
-		kwargs['solvent'] = self.solvent
-		kwargs['qm_input_end'] = self.qm_input_end
-		kwargs['max_opt_cycles'] = self.max_opt_cycles
-		return kwargs
-
-	@property
-	def genecp(self):
-		ecp_genecp_atoms = self.basisset.ecp is not None
-		ecp_gen_atoms = bool(self.basisset.elements)
-
-		if len(args.genecp_atoms) > 0:
-			genecp = 'genecp'
-
-		if len(args.gen_atoms) > 0:
-			genecp = 'gen'
-
-		return genecp
-
-	@property
-	def basis(self):
-		if self.genecp:
-			return self.genecp
-		basis_all = self.basisset.basis.get('all','')
-		if basis_all:
-			return basis_all
-		basis_default = self.basisset.basis.get('default','')
-		if basis_default:
-			return basis_default
-		raise RuntimeError("""Could not determine basis keyword:
-		No 'all' nor 'default' basis set specified and no element specified""")
-
-	@property
-	def commandline(self):
-		if self._commandline:
-			return self._commandline
-		return self.get_commandline()
-
-	def get_commandline(self):
-		opt_k = ''
-		if self.optimization:
-			opt_sub = f'(maxcycles={self.max_opt_cycles}'
-			if self.calcfc:
-				opt_sub += ',calcfc'
-			opt_sub += ')'
-			opt_k = f'opt={opt_sub}'
-		freq_k = ''
-		if self.frequencies:
-			freq_k = 'freq=noraman'
-		disp_k = ''
-		if self.dispersion:
-			disp_k = f'empiricaldispersion={self.dispersion}'
-		scrf_k = ''
-		if self.solvation != 'gas_phase':
-			scrf_k = f'scrf=({self.solvation},solvent={self.solvent})'
-		commandline = f'{self.functional} {self.basis} {opt_k} {freq_k} {disp_k} {scrf_k}'
-		return ' '.join(commandline.split())
+class GaussianTemplate(object): 
 
 	@classmethod
-	def from_args(cls,args):
+	def from_qcorr(cls,args,qm_input_qcorr):
 		new = cls()
 
-		# Basis set creation
-		new.genecp_atoms_sp = args.genecp_atoms_sp
-		new.gen_atoms_sp = args.gen_atoms_sp
-		new.genecp_atoms = args.genecp_atoms
-		new.gen_atoms = args.gen_atoms
-
-		#Standard stuff
 		new.memory = args.mem
 		new.nprocs = args.nprocs
 		new.enable_chk = args.chk
-		new.extra_input = args.qm_input
-		new.frequencies = args.frequencies
-		if args.empirical_dispersion != None:
-			new.dispersion = args.empirical_dispersion
-		new.calcfc = args.calcfc
-		new.solvation = args.solvent_model
-		new.solvent = args.solvent_name
-		new.last_line_of_input = args.qm_input_end
-		new.max_opt_cycles = args.max_cycle_opt
+		new.keywords = qm_input_qcorr
+		new.qm_input_end = args.qm_input_end
 		return new
 
-	def get_header(self,filename='',title=''):
+	def get_header(filename,mem,nprocs,qm_keywords,chk):
 		txt = ''
 		#Link0
-		if self.enable_chk:
+		if chk: 
 			txt += f'%chk={filename}.chk\n'
-		txt += f'%nprocshared={self.nprocs}\n'
-		txt += f'%mem={self.memory}\n'
-		txt += f'# {self.commandline}'
+		txt += f'%nprocshared={nprocs}\n'
+		txt += f'%mem={mem}\n'
+		txt += f'# {qm_keywords}'
 		return txt
-	def get_tail(self):
+
+	def get_tail(qm_input_end):
 		txt = ''
-		# write basis set section THHIS PART COMES FROM RAUL, NEEDS TO UPDATE AS PART BELOW to avoid bugs when using all atoms in gen
-		basisset = self.basisset.basis
-		if self.genecp:
-			def_basis = basisset.get('all','')
-			def_basis = basisset.get('default',def_basis)
-			items = [(sym,basisset.get(sym,def_basis)) for sym in self.basisset.elements]
-			items = sorted(items,key=itemgetter(1))
-			for basis,pairs in groupby(items,key=itemgetter(1)):
-				elements = ' '.join([f'-{sym}' for sym,_ in pairs])
-				txt += f'{elements} 0\n{basis}\n****\n'
-			txt += '\n'
-		# write ecp section
-		if self.genecp == 'genecp':
-			items = sorted(list(self.basisset.ecp.items()),key=itemgetter(1))
-			for basis,pairs in groupby(items,key=itemgetter(1)):
-				elements = ' '.join([f'-{sym}' for sym,_ in pairs])
-				txt += f'{elements} 0\n{basis}\n****\n'
-			txt += '\n'
-		if self.qm_input_end:
-			txt += f'{self.qm_input_end}\n'
+	# 	# write basis set section THHIS PART COMES FROM RAUL, NEEDS TO UPDATE AS PART BELOW to avoid bugs when using all atoms in gen 
+	# 	basisset = self.basisset.basis
+	# 	if self.genecp:
+	# 		def_basis = basisset.get('all','')
+	# 		def_basis = basisset.get('default',def_basis)
+	# 		items = [(sym,basisset.get(sym,def_basis)) for sym in self.basisset.elements]
+	# 		items = sorted(items,key=itemgetter(1))
+	# 		for basis,pairs in groupby(items,key=itemgetter(1)):
+	# 			elements = ' '.join([f'-{sym}' for sym,_ in pairs])
+	# 			txt += f'{elements} 0\n{basis}\n****\n'
+	# 		txt += '\n'
+	# 	# write ecp section
+	# 	if self.genecp == 'genecp': 
+	# 		items = sorted(list(self.basisset.ecp.items()),key=itemgetter(1))
+	# 		for basis,pairs in groupby(items,key=itemgetter(1)):
+	# 			elements = ' '.join([f'-{sym}' for sym,_ in pairs])
+	# 			txt += f'{elements} 0\n{basis}\n****\n'
+	# 		txt += '\n'
+		if qm_input_end: 
+			txt += f'{qm_input_end}\n'
 		txt += '\n'
 		return txt
     # FIXED PART TO WRITE GENECP FROM NEWER COMMITS
@@ -465,21 +351,41 @@ class GaussianTemplate(object):
 
 	# 			fileout.write('0\n')
 	# 			fileout.write(bs_gcp_com+'\n\n')
+      
+	def write(args, destination, molecule, type, CHARGE, MULT, NATOMS, ATOMTYPES, CARTESIANS, qm_keywords):
 
-	def write(self,destination,molecule):
-		stem = molecule.title.lstrip().replace(' ','_')
-		comfile = f'{destination}/{stem}.com'
+		if type == 'csearch':
 
-		header = self.get_header(filename=stem)
+			stem = molecule.title.lstrip().replace(' ','_')
+			comfile = f'{destination}/{stem}.com'
+			
+			header = GaussianTemplate.get_header(stem,args.mem,args.nprocs,args.qm_keywords,args.chk)
 
-		lines = molecule.write('gjf',opt=dict(k=header)).split('\n')
-		fix_obabel_isotopes(lines)
-		tail = self.get_tail()
-		lines.append(tail)
-		with open(comfile,'w') as F:
-			F.write('\n'.join(lines))
+			lines = molecule.write('gjf',opt=dict(k=header)).split('\n')
+			fix_obabel_isotopes(lines)
+		
+			tail = GaussianTemplate.get_tail()
+			lines.append(tail)
+			with open(comfile,'w') as F:
+				F.write('\n'.join(lines))
 
-		return comfile
+		elif type in ['analysis','sp']:
+
+			comfile = f'{destination}/{molecule}.com'
+			
+			header = GaussianTemplate.get_header(molecule,args.mem,args.nprocs,qm_keywords,args.chk)
+
+			fileout = open(comfile, "w")
+			fileout.write(header)
+			fileout.write('\n\n')
+			fileout.write(molecule+"\n\n")
+			fileout.write(str(CHARGE)+' '+str(MULT)+'\n')
+			
+			for atom in range(0,NATOMS):
+				fileout.write('{0:>2} {1:12.8f} {2:12.8f} {3:12.8f}'.format(ATOMTYPES[atom], CARTESIANS[atom][0],  CARTESIANS[atom][1],  CARTESIANS[atom][2]))
+				fileout.write("\n")
+			fileout.write("\n")
+
 
 class OrcaTemplate(object):
 	"""
@@ -789,30 +695,38 @@ def get_basisset_list(args,option='opt'):
 	return []
 
 # MAIN FUNCTION TO CREATE QM jobs
-def write_qm_input_files(destination, template, molecules, charge_data, mult='auto'):
-	qm_files = []
-	for mol in molecules:
+def write_qm_input_files(args, destination, molecules, charge_data, charge_qcorr, mult, type, NATOMS, ATOMTYPES, CARTESIANS, qm_keywords):
+	
+	mem = args.mem
+	nprocs = args.nprocs
+	
+	if type == 'csearch':
+		for mol in molecules:
+			molname = mol.title.strip().rsplit(maxsplit=1)
 
-		molname = mol.title.strip().rsplit(maxsplit=1)
+			# Get its charge and set it
+			found_charges = charge_data.query(f'Molecule=="{molname}"')['Overall charge'].tolist()
+			if not found_charges: # not in the dataframe
+				charge = mol.data['Real charge']
+			else:
+				charge = found_charges[0]
+			
+			if charge == 'Invalid':
+				continue
+		
+			mol.OBMol.SetTotalCharge(int(charge))
+			# Set multiplicity
+			if mult != 'auto':
+				mol.OBMol.SetTotalSpinMultiplicity(int(mult))
+		
+			GaussianTemplate.write(args, destination, mol, type, charge, mult, NATOMS, ATOMTYPES, CARTESIANS, qm_keywords)
 
-		# Get its charge and set it
-		found_charges = charge_data.query(f'Molecule=="{molname}"')['Overall charge'].tolist()
-		if not found_charges: # not in the dataframe
-			charge = mol.data['Real charge']
-		else:
-			charge = found_charges[0]
+	elif type in ['analysis','sp']:
+		charge = charge_qcorr
+		mult = mult
 
-		if charge == 'Invalid':
-			continue
+		GaussianTemplate.write(args, destination, molecules, type, charge, mult, NATOMS, ATOMTYPES, CARTESIANS, qm_keywords)
 
-		mol.OBMol.SetTotalCharge(int(charge))
-		# Set multiplicity
-		if mult != 'auto':
-			mol.OBMol.SetTotalSpinMultiplicity(int(mult))
-
-		newfile = template.write(destination,mol)
-
-		qm_files.append(newfile)
 
 def load_charge_data(filepath,backup_files):
 	#read in dup_data to get the overall charge of MOLECULES
@@ -871,13 +785,10 @@ def qprep_main(w_dir_initial,args,log):
 	# names for directories created
 	if args.QPREP == 'gaussian':
 		qm_folder = Path(f'{w_dir_initial}/QMCALC/G16')
-		template = GaussianTemplate.from_args(args)
 	elif args.QPREP == 'orca':
 		qm_folder = Path(f'{w_dir_initial}/QMCALC/ORCA')
-		template = OrcaTemplate.from_args(args)
 	elif args.QPREP == 'turbomole':
 		qm_folder = Path(f'{w_dir_initial}/QMCALC/TURBOMOLE')
-		template = TurbomoleTemplate.from_args(args)
 
 	csv_name = args.input.split('.')[0]
 	csv_file = f"{w_dir_initial}/CSEARCH/csv_files/{csv_name}-CSEARCH-Data.csv"
@@ -896,42 +807,13 @@ def qprep_main(w_dir_initial,args,log):
 							energy_threshold=args.energy_threshold_for_gaussian)
 		molecules.extend(new_mols)
 
-	basisset_list = get_basisset_list(args,'opt')
-
-	# Update each basis set to include the elements of all the molecules
-	for bs in basisset_list:
-		bs.update_atomtypes(molecules)
-
-	# Ensure a matching length of theory and basis set
-	if len(args.level_of_theory) == 1:
-		items = [(args.level_of_theory[0],bs) for bs in basisset_list]
-	elif len(basisset_list) == 1:
-		items = [(func,basisset_list[0]) for func in args.level_of_theory]
-	elif len(basisset_list) == len(args.level_of_theory):
-		items = [(func,bs) for func,bs in zip(args.level_of_theory,basisset_list)]
-	else:
-		raise ValueError('Inconsistent size of basis sets and theory level')
-
-	for functional,basisset in items:
-		folder = qm_folder/f'{functional}-{basisset.name}'
-		log.write(f"\no  Preparing QM input files in {folder}")
-
-		template.functional = functional
-		template.basisset = basisset
-
 		# this variable keeps track of folder creation
-		folder.mkdir(parents=True,exist_ok=True)
+		qm_folder.mkdir(parents=True,exist_ok=True)
 
 		# writing the com files
 		# check conf_file exists, parse energies and then write DFT input
-		qm_files = write_qm_input_files(folder, template, molecules,
-										charge_data, mult=args.mult)
-
-		# submitting the input file on a HPC
-		if args.qsub:
-			for qm_file in qm_files:
-				cmd_qsub = [args.submission_command, qm_file]
-				subprocess.call(cmd_qsub)
+		write_qm_input_files(args, qm_folder, molecules, 
+							charge_data, None, args.mult, 'csearch', None, None, None, args.qm_keywords)
 
 # FUNCTIONS FROM THE OLD CODE JUST TO MAKE RAUL'S VERSION WORK!
 

@@ -30,7 +30,7 @@ from pathlib import Path
 from pyconfort.argument_parser import parser_args
 
 from pyconfort.mainf import (csearch_main, exp_rules_main, qprep_main,
-                             move_sdf_main, qcorr_gaussian_main,dup_main,
+                             move_sdf_main, qcorr_gaussian_main,
                              graph_main,geom_par_main,nmr_main,energy_main,
                              load_from_yaml,creation_of_ana_csv,dbstep_par_main,
                              nics_par_main,cclib_main,cmin_main)
@@ -49,14 +49,6 @@ def main():
 
     name = args.input.split('.')[0]
 
-    # IS THIS NECESSARY?!
-    # setting variable if needed
-    for _ in args.basis_set:
-        if len(args.basis_set) != len(args.basis_set_genecp_atoms):
-            args.basis_set_genecp_atoms.append('')
-    for _ in args.basis_set_sp:
-        if len(args.basis_set_sp) != len(args.basis_set_genecp_atoms_sp):
-            args.basis_set_genecp_atoms_sp.append('')
 
     #CSEARCH AND CMIN
     if args.CSEARCH in ['rdkit', 'summ', 'fullmonte','crest']: # RAUL: Is there any other posibilities or just None?
@@ -106,21 +98,9 @@ def main():
     #QCORR
     if args.QCORR=='gaussian':
         log_overall.write("\no  Writing analysis of output files in respective folders\n")
-        # main part of the duplicate function
-        if args.dup:
-            try:
-                import goodvibes
-            except (ModuleNotFoundError,AttributeError):
-                log_overall.write("\nx  GoodVibes is not installed as a module (pip or conda), the duplicate option will be disabled in QCORR\n")
-            else:
-                # If the AttributeError can happen here do not accept the change
-                duplicates = dup_main(args, log_overall, w_dir_initial)
-                os.chdir(w_dir_initial)
-        else:
-            duplicates = False
 
         # main part of the output file analyzer for errors/imag freqs
-        qcorr_gaussian_main(duplicates,w_dir_initial,args,log_overall)
+        qcorr_gaussian_main(w_dir_initial,args,log_overall)
         os.chdir(w_dir_initial)
 
     #QPRED

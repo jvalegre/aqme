@@ -3,10 +3,10 @@ pip install -r requirements.txt
 → If you have trouble while installing all the packages together through the requierement.txt file, you can get into the file and install the missing modules individually with “pip install MODULE” (i.e. pip install PyYAML==5.3.1)
 
 RDKit
-conda install -c rdkit rdkit=2020.03.2.0
+conda install -c rdkit rdkit
 
 OpenBabel
-conda install -c openbabel openbabel==2.4.1
+conda install -c conda-forge openbabel
 
 Program install
 python setup.py install

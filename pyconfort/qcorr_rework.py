@@ -1,12 +1,12 @@
 from pyconfort.exp_rules import passes_custom_rules
 from pyconfort.qcorr_gaussian import *
 from pyconfort.utils import periodic_table
-import numpy
+import numpy as np
 
 try:
 	import pybel
 except ImportError:
-	from openbabel import pybel
+	from openbabel import pybel # for openbabel>=3.0.0
 
 INPUT_SUFFIXES = ['.com','.gjf']
 OUTPUT_SUFFIXES = ['.log','.LOG','.out','.OUT','.json']
@@ -183,10 +183,10 @@ class GaussianOutputFile(object):
 		return rms,last_line
 
 	def fix_imaginary_frequencies(self,amplitude=0.2):
-		xyz = numpy.array(self.cartesians)
+		xyz = np.array(self.cartesians)
 		assert xyz.shape[1] == 3
 		for im_freq in self.im_freqs:
-			mode = numpy.array(self.normalmode[im_freq])
+			mode = np.array(self.normalmode[im_freq])
 			assert mode.shape[1] == 3
 			xyz = xyz + amplitude*mode
 		cartesians = xyz.tolist()
@@ -535,7 +535,7 @@ def check_for_final_folder(w_dir):
 	last_number = get_number(last_folder)
 	return str(last_folder), last_number
 
-def output_analyzer(duplicates,log_files,com_files, w_dir, w_dir_main,lot, bs, bs_gcp, args, w_dir_fin, w_dir_initial, log, ana_data, round_num):
+def output_analyzer(log_files,com_files, w_dir, w_dir_main,lot, bs, bs_gcp, args, w_dir_fin, w_dir_initial, log, ana_data, round_num):
 
 	input_route = input_route_line(args)
 	finished,unfinished,atom_error,scf_error,imag_freq,other_error,exp_rules_qcorr,check_geom_qcorr = 0,0,0,0,0,0,0,0
@@ -724,11 +724,7 @@ def output_analyzer(duplicates,log_files,com_files, w_dir, w_dir_main,lot, bs, b
 						os.chdir(nics_input_files+'/'+dir_name)
 						new_com_file('nics',w_dir_initial,log,nics_input_files+'/'+dir_name,file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,TERMINATION,IM_FREQS,bs_sp,lot_sp,bs_gcp_sp,orca_aux_section)
 
-	#write to csv ana_data
-	if duplicates=='None':
-		ana_data.at[0,'Total files'] = len(log_files)
-	else:
-		ana_data.at[0,'Total files'] = len(log_files)+int(duplicates) # since duplicates are moved before anything else
+	ana_data.at[0,'Total files'] = len(log_files)
 	ana_data.at[0,'Normal termination'] = finished
 	ana_data.at[0,'Imaginary frequencies'] = imag_freq
 	ana_data.at[0,'SCF error'] = scf_error
@@ -958,7 +954,7 @@ def handle_unfinished_calculations(ofile,ofile_object,destination):
 
 
 # Main function
-def qcorr_gaussian_main(duplicates,w_dir_initial,args,log):
+def qcorr_gaussian_main(w_dir_initial,args,log):
 
 	# when you run analysis in a folder full of output files
 	qmcalc_folder = Path(f'{w_dir_initial}/QMCALC')
@@ -977,7 +973,7 @@ def qcorr_gaussian_main(duplicates,w_dir_initial,args,log):
 			if len(log_files) == 0:
 				log.write('x  There are no output files in this folder.')
 			com_files = get_com_or_log_out_files('input',None)
-			output_analyzer(duplicates,log_files, com_files, w_dir, w_dir_main,
+			output_analyzer(log_files, com_files, w_dir, w_dir_main,
 							lot, bs, bs_gcp, args, w_dir_fin, w_dir_initial,
 							log, ana_data, n_run)
 			os.chdir(w_dir_main)

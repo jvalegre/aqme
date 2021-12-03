@@ -1,4 +1,7 @@
-from openbabel import pybel
+try:
+	import pybel
+except ImportError:
+	from openbabel import pybel # for openbabel>=3.0.0
 from pyconfort.utils import periodic_table
 
 def passes_custom_rules(mol,args,log):

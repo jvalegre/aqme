@@ -1,6 +1,7 @@
 """
 This module contains some classes and functions that are used from other modules
 """
+import os, shutil
 from pathlib import Path
 
 from rdkit.Chem.rdMolAlign import GetBestRMS
@@ -61,7 +62,7 @@ class Logger:
 
 # OS utils
 
-def move_file(file, destination):
+def move_file(file, source, destination):
     """
     Moves a file to a destination folder. If the file exists rewrites it.
 
@@ -72,11 +73,11 @@ def move_file(file, destination):
     destination : str
         path towards a folder
     """
-    dest = Path(destination)
-    dest.mkdir(exist_ok=True)
-    filepath = Path(file)
-    filename = filepath.name
-    file.rename(dest/filename)
+    if not os.path.isdir(destination):
+        os.makedirs(destination)
+
+    shutil.move(os.path.join(source, file), os.path.join(destination, file))
+
 
 def move_file_from_folder(destination,src,file):
     """

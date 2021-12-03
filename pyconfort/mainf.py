@@ -19,8 +19,8 @@ from pyconfort.csearch import (check_for_pieces, check_charge_smi, clean_args,
                                mol_from_sdf_or_mol_or_mol2, creation_of_dup_csv)
 from pyconfort.filter import exp_rules_output
 
-from pyconfort.qprep_gaussian import (read_energies, GaussianTemplate, get_name_and_charge, write_gaussian_input_file)
-# from pyconfort.qcorr_gaussian import output_analyzer, check_for_final_folder, dup_calculation
+from pyconfort.qprep_gaussian import (read_energies, get_name_and_charge, write_gaussian_input_file)
+from pyconfort.qcorr_gaussian import output_analyzer, check_for_final_folder
 
 from pyconfort.grapher import graph
 from pyconfort.descp import calculate_parameters
@@ -28,7 +28,7 @@ from pyconfort.nmr import calculate_boltz_and_nmr
 from pyconfort.energy import calculate_boltz_and_energy,calculate_avg_and_energy
 from pyconfort.dbstep_conf import calculate_db_parameters,calculate_boltz_and_dbstep
 from pyconfort.nics_conf import calculate_nics_parameters,calculate_boltz_for_nics,calculate_avg_nics
-from pyconfort.cclib_conf import calculate_cclib,calcualte_average_cclib_parameter,calculate_boltz_for_cclib
+from pyconfort.cclib_conf import calculate_cclib,get_avg_cclib_param,calculate_boltz_for_cclib
 from pyconfort.cmin import mult_min
 from pyconfort.utils import Logger, move_file_from_folder, com_2_xyz_2_sdf
 #need to and in energy
@@ -70,7 +70,7 @@ def load_from_yaml(args,log):
 
 
 #creation of csv for QCORR
-def creation_of_ana_csv(args,duplicates):
+def creation_of_ana_csv(args):
 
     columns_list = ['Total files', 'Normal termination', 'Imaginary frequencies', 'SCF error', 'Basis set error', 'Other errors', 'Unfinished']
     if args.dup:
@@ -485,23 +485,22 @@ def get_com_or_log_out_files(type,name):
 
 
 # main part of the analysis functions
-def qcorr_gaussian_main(duplicates,w_dir_initial,args,log):
+def qcorr_gaussian_main(w_dir_initial,args,log):
     # when you run analysis in a folder full of output files
     if not os.path.exists(w_dir_initial+'/QMCALC'):
         w_dir_main = os.getcwd()
         w_dir_fin = w_dir_main+'/success/output_files'
         if not os.path.isdir(w_dir_main+'/dat_files/'):
             os.makedirs(w_dir_main+'/dat_files/')
-        w_dir,round_num = check_for_final_folder(w_dir_main)
-        os.chdir(w_dir)
+        round_num = check_for_final_folder(w_dir_main)
         log = Logger(w_dir_main+'/dat_files/pyCONFORT-QCORR-run_'+str(round_num), args.output_name)
-        ana_data = creation_of_ana_csv(args,duplicates)
-        log.write("\no  Analyzing output files in {}\n".format(w_dir))
+        ana_data = creation_of_ana_csv(args)
+        log.write("\no  Analyzing output files in {}\n".format(w_dir_main))
         log_files = get_com_or_log_out_files('output',None)
         if len(log_files) == 0:
             log.write('x  There are no output files in this folder.')
         com_files = get_com_or_log_out_files('input',None)
-        output_analyzer(log_files, com_files, w_dir, w_dir_main, args, w_dir_fin, w_dir_initial, log, ana_data, round_num)
+        output_analyzer(log_files, com_files, w_dir_main, args, w_dir_fin, w_dir_initial, log, ana_data, round_num)
         os.chdir(w_dir_main)
     # when you specify multiple levels of theory
     else:
@@ -516,57 +515,22 @@ def qcorr_gaussian_main(duplicates,w_dir_initial,args,log):
             if not os.path.isdir(w_dir_main+'/dat_files/'):
                 os.makedirs(w_dir_main+'/dat_files/')
             #check if New_Gaussian_Input_Files folder exists
-            w_dir,round_num = check_for_final_folder(w_dir_main)
+            round_num = check_for_final_folder(w_dir_main)
             log = Logger(w_dir_main+'/dat_files/pyCONFORT-QCORR-run_'+str(round_num), args.output_name)
             #assign the path to the finished directory.
             if str(bs).find('/') > -1:
                 w_dir_fin = args.path + str(lot) + '-' + str(bs).split('/')[0] +'/success/output_files'
             else:
                 w_dir_fin = args.path + str(lot) + '-' + str(bs) +'/success/output_files'
-            os.chdir(w_dir)
-            ana_data = creation_of_ana_csv(args,duplicates)
-            log.write("\no  Analyzing output files in {}\n".format(w_dir))
+            os.chdir(w_dir_main)
+            ana_data = creation_of_ana_csv(args)
+            log.write("\no  Analyzing output files in {}\n".format(w_dir_main))
             log_files = get_com_or_log_out_files('output',None)
             com_files = get_com_or_log_out_files('input',None)
-            output_analyzer(duplicates,log_files, com_files, w_dir, w_dir_main, args, w_dir_fin, w_dir_initial, log, ana_data, round_num)
+            output_analyzer(log_files, com_files, w_dir_main, args, w_dir_fin, w_dir_initial, log, ana_data, round_num)
         os.chdir(args.path)
     os.chdir(w_dir_initial)
 
-
-#removing the duplicates
-def dup_main(args,log,w_dir_initial):
-    if not os.path.exists(w_dir_initial+'/QMCALC'):
-        w_dir_main = os.getcwd()
-        w_dir,round_num = check_for_final_folder(w_dir_main)
-        os.chdir(w_dir)
-        log_files = get_com_or_log_out_files('output',None)
-        if len(log_files) != 0:
-            duplicates = dup_calculation(log_files,w_dir,w_dir_main,args,log,round_num)
-        else:
-            log.write('x  There are no output files in this folder.')
-            duplicates = 'None'
-        os.chdir(w_dir_main)
-    else:
-        if args.QCORR=='gaussian':
-            args.path = w_dir_initial+'/QMCALC/G16/'
-        # Sets the folder and find the log files to analyze
-        for lot,bs,bs_gcp in zip(args.level_of_theory, args.basis_set,args.basis_set_genecp_atoms):
-            if str(bs).find('/') > -1:
-                w_dir_main = args.path + str(lot) + '-' + str(bs).split('/')[0]
-            else:
-                w_dir_main = args.path + str(lot) + '-' + str(bs)
-            os.chdir(w_dir_main)
-            w_dir,round_num = check_for_final_folder(w_dir_main)
-            os.chdir(w_dir)
-            log_files = get_com_or_log_out_files('output',None)
-            # change molecules to a range as files will have codes in a continous manner
-            if len(log_files) != 0:
-                duplicates = dup_calculation(log_files,w_dir,w_dir_main,args,log,round_num)
-            else:
-                log.write('x  There are no output files in this folder.')
-                duplicates = 'None'
-
-    return duplicates
 
 #getting descriptors
 def geom_par_main(args,log,w_dir_initial):
@@ -847,7 +811,7 @@ def cclib_main(args,log,w_dir_initial):
                 else:
                     os.chdir(w_dir_initial + '/QPRED/cclib-json/all_confs_cclib/'+str(lot)+'-'+str(bs))
                 json_files = get_com_or_log_out_files('output',name)
-                calcualte_average_cclib_parameter(json_files,name,w_dir_initial,lot,bs)
+                get_avg_cclib_param(json_files,name,w_dir_initial,lot,bs)
 
 
 # MAIN OPTION FOR DISCARDING MOLECULES BASED ON USER INPUT DATA (REFERRED AS EXPERIMENTAL RULES)

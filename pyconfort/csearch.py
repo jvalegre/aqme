@@ -147,8 +147,10 @@ def getDihedralMatches(mol, heavy,log):
 
 def getDihedralMatches_v2(mol, heavy,log): #New version using openbabel
     # If this version is selected, bring the import to the top
-    # import pybel #
-    from openbabel import pybel #for openbabel>=3.0.0
+    try:
+        import pybel
+    except ImportError:
+        from openbabel import pybel # for openbabel>=3.0.0
     AtomInTripleBond = '$(*#*)'
     TerminalAtom = 'D1'
     CF3 = '$(C(F)(F)F)'
