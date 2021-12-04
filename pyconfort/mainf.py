@@ -77,8 +77,8 @@ def creation_of_ana_csv(args):
         columns_list.append('Duplicates')
     if len(args.exp_rules) >= 1:
         columns_list.append('Exp_rules filter')
-    if args.check_geom:
-        columns_list.append('Geometry changed')
+    if args.isom != None:
+        columns_list.append('Isomerization')
     ana_data = pd.DataFrame(columns = columns_list)
 
     return ana_data

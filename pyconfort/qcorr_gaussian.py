@@ -2,14 +2,17 @@
 #        This file stores all the functions          #
 #          used in the LOG file analyzer             #
 ######################################################.
-import os, glob
+import os
+import glob
 import sys
 import subprocess
+import numpy as np
+import pandas as pd
 # the import for check and write genecp is probably inside the genecp function of qprep now, FIX!
 from pyconfort.utils import periodic_table
 from pyconfort.filter import exp_rules_output,check_geom_filter
 from pyconfort.nics_conf import update_coord
-from pyconfort.utils import move_file, com_2_xyz_2_sdf
+from pyconfort.utils import move_file, bondi, rcov, get_info_com
 from pyconfort.qprep_gaussian import write_qm_input_files,GaussianTemplate
 
 def write_header_and_coords(fileout,args,keywords_opt,file_name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,w_dir_initial,log,com_type=None):
@@ -82,7 +85,7 @@ def get_name_charge_multiplicity(outlines):
 
     return name, CHARGE, MULT
 
-def get_qcorr_params(outlines,preset_keywords_line,ts_opt,sp_calcs,charge_sp,mult_sp):
+def get_qcorr_params(outlines,preset_keywords_line,ts_opt,sp_calcs,charge_sp,mult_sp,isom_filt):
     TERMINATION,ERRORTYPE  = 'unfinished','unknown'
     stop_term, initial_IM_FREQS, NATOMS = 0, 0, 0
     symbol_z_line, gradgrad_line = None, None
@@ -123,7 +126,7 @@ def get_qcorr_params(outlines,preset_keywords_line,ts_opt,sp_calcs,charge_sp,mul
     keywords_line = ''
     calc_type = 'ground_state'
     # get keywords line (input) and NATOMS
-    if TERMINATION != "normal" or initial_IM_FREQS > 0  or sp_calcs != None:
+    if TERMINATION != "normal" or initial_IM_FREQS > 0  or sp_calcs != None or isom_filt:
         end_keywords = False
         
         # range optimized to skip Gaussian information (short for loop just to get charge, multiplicity and n of atoms)
@@ -206,7 +209,6 @@ def get_qcorr_params(outlines,preset_keywords_line,ts_opt,sp_calcs,charge_sp,mul
 
 
 def get_input_geom(file, outlines, keywords_line, NATOMS, MULT, TERMINATION, ERRORTYPE, initial_IM_FREQS, nimag_line, calc_type, duplicate_filter, ifreq_threshold, amplitude_ifreq, s2_threshold, file_list, E_dup, H_dup, G_dup):
-
     stand_or,IM_FREQS = 0,0
     rms,stop_rms = 10000,0
     spin_contamination,freq_only = False, False
@@ -214,9 +216,8 @@ def get_input_geom(file, outlines, keywords_line, NATOMS, MULT, TERMINATION, ERR
     # reverse loop to speed up the reading of the output files
     # (also skips final part for normal termination which was already read plus dipole/multipole information)
     if duplicate_filter:
-        file_list.append(file)
         start_dup = False
-
+    
     if TERMINATION == "normal":
         for i in reversed(range(0,nimag_line-(10*NATOMS))):
             # Sets where the final coordinates are inside the file
@@ -229,10 +230,9 @@ def get_input_geom(file, outlines, keywords_line, NATOMS, MULT, TERMINATION, ERR
                     if outlines[i].find('E (Thermal)'):
                         start_dup = True    
                 else:
-                    # print('FOUND IT')
-                    # print(outlines[i])
                     if outlines[i].find('Sum of electronic and zero-point Energies=') > -1:
                         E_dup.append(float(outlines[i].split()[-1]))
+                        file_list.append(file)
                         
                     elif outlines[i].find('Sum of electronic and thermal Enthalpies=') > -1:
                         H_dup.append(float(outlines[i].split()[-1]))
@@ -310,16 +310,16 @@ def get_input_geom(file, outlines, keywords_line, NATOMS, MULT, TERMINATION, ERR
                 new_keywords_line += ' '
             keywords_line = new_keywords_line
 
-        if stop_rms == 0:
-            last_line = len(outlines)
-        else:
-            last_line = stop_rms
-
-        for i in reversed(range(0,last_line)):
-            # Sets where the final coordinates are inside the file
-            if outlines[i].find("Standard orientation") > -1:
-                stand_or = i
-                break
+    if stop_rms == 0:
+        last_line = len(outlines)
+    else:
+        last_line = stop_rms
+    
+    for i in reversed(range(0,last_line)):
+        # Sets where the final coordinates are inside the file
+        if outlines[i].find("Standard orientation") > -1:
+            stand_or = i
+            break
     
     # get atom types from the calculation and the cartesian coordinates to use in each case
     ATOMTYPES, CARTESIANS = [],[]
@@ -332,10 +332,10 @@ def get_input_geom(file, outlines, keywords_line, NATOMS, MULT, TERMINATION, ERR
             atom_symbol = "XX"
         ATOMTYPES.append(atom_symbol)
         CARTESIANS.append([float(outlines[i].split()[3]), float(outlines[i].split()[4]), float(outlines[i].split()[5])])
-    
+
     if ERRORTYPE == 'extra_imag_freq':
         CARTESIANS = fix_imag_freqs(NATOMS, CARTESIANS, FREQS, NORMALMODE, amplitude_ifreq)
-
+    
     return file_list, E_dup, H_dup, G_dup, ERRORTYPE, keywords_line, ATOMTYPES, CARTESIANS
 
 
@@ -429,7 +429,7 @@ def organize_outputs(w_dir_main,round_num,file,TERMINATION,ERRORTYPE,w_dir_fin,f
         file_terms['exp_rules_qcorr'] += 1
 
     elif ERRORTYPE == 'isomerization':
-        destination = w_dir_main+'/failed/run_'+str(round_num)+'/geometry_changed/'
+        destination = w_dir_main+'/failed/run_'+str(round_num)+'/isomerization/'
         file_terms['check_geom_qcorr'] += 1
 
     if not os.path.isdir(destination):
@@ -467,13 +467,6 @@ def output_to_mol(file,format,log):
 # DEFINTION OF OUTPUT ANALYSER and NMR FILES CREATOR
 def output_analyzer(log_files,com_files, w_dir_main, args, w_dir_fin, w_dir_initial, log, ana_data, round_num):
 
-    if round_num == 1:
-        # moves the com files to respective folder
-        for file in com_files:
-            source = w_dir_main+'/'+file
-            destination = w_dir_main +'/input_files/run_'+str(round_num)
-            move_file(source, destination)
-
     # these lists will track duplicates if args.dup is activated
     file_list, E_dup, H_dup, G_dup = [],[],[],[]
     file_terms = {'finished': 0, 'imag_freq': 0, 'ts_no_imag_freq': 0, 
@@ -491,7 +484,7 @@ def output_analyzer(log_files,com_files, w_dir_main, args, w_dir_fin, w_dir_init
             break
 
         # get parameters from the calculations (i.e. termination and error types, n of atoms, charge, mult, etc)
-        TERMINATION, ERRORTYPE, initial_IM_FREQS, NATOMS, CHARGE, MULT, keywords_line, calc_type, nimag_line = get_qcorr_params(outlines,args.qm_input,args.ts_input,args.sp,args.charge_sp,args.mult_sp)
+        TERMINATION, ERRORTYPE, initial_IM_FREQS, NATOMS, CHARGE, MULT, keywords_line, calc_type, nimag_line = get_qcorr_params(outlines,args.qm_input,args.ts_input,args.sp,args.charge_sp,args.mult_sp,args.isom)
         
         # get new coordinates as input files to fix error (unless the errors cannot be fixed automatically
         # such as in atomic basis errors or errors happening too early on the calculation)
@@ -499,30 +492,44 @@ def output_analyzer(log_files,com_files, w_dir_main, args, w_dir_fin, w_dir_init
             
             # whats trhe difference between this function and the 2 functions below?!
             # get geometry parameters and frequency information
-            if TERMINATION != "normal" or initial_IM_FREQS != 0 or args.s2_threshold > 0.0 or args.sp != None or args.dup:
+            if TERMINATION != "normal" or initial_IM_FREQS != 0 or args.s2_threshold > 0.0 or args.sp != None or args.dup or args.isom != None:
                 file_list, E_dup, H_dup, G_dup, ERRORTYPE, keywords_line, ATOMTYPES, CARTESIANS = get_input_geom(file, outlines, keywords_line, NATOMS, MULT, TERMINATION, ERRORTYPE, initial_IM_FREQS, nimag_line, calc_type, args.dup, args.ifreq_cutoff, args.amplitude_ifreq, args.s2_threshold, file_list, E_dup, H_dup, G_dup)
+            
+            if args.isom != None:
+                isomerized = False
+                init_csv = None
+                log.write("  ----- Geometrical check will be applied to the output file -----\n")
+                try:
+                    atoms_com, coords_com = [],[]
+                    if round_num != 0:
+                        # os.chdir(w_dir_main +'/input_files/run_'+str(round_num))
+                        os.chdir(w_dir_main +'/input_files/run_2')
+                    else:
+                        pass
+                    if args.isom == 'com':
+                        atoms_and_coords,_ = get_info_com(file.split('.')[0]+'.com')
+                    elif args.isom == 'gjf':
+                        atoms_and_coords,_ = get_info_com(file.split('.')[0]+'.gjf')
+                    elif args.isom.split('.')[1] == 'csv':
+                        init_csv = pd.read_csv(args.isom)
+
+                    for line in atoms_and_coords:
+                        atoms_com.append(line.split()[0])
+                        coords_com.append([float(line.split()[1]), float(line.split()[2]), float(line.split()[3])])
+                    
+                    isomerized = check_isomerization(coords_com, CARTESIANS, atoms_com, ATOMTYPES, args.vdwfrac, args.covfrac, init_csv, file)
                 
-        # is it necessary to close the file?!
-        # close the file
-        outfile.close()
+                except FileNotFoundError:
+                    log.write("x  No com file were found for "+file+", the check_geom test will be disabled for this calculation")
+                
+                if isomerized:
+                    ERRORTYPE = 'isomerization'
 
-        # this part filters off conformers based on user-defined exp_rules
-        passing_rules = True
-        valid_mol_gen = True
-        passing_geom = True
-        format_file = file.split('.')[1]
-        if TERMINATION == "normal" and ERRORTYPE == None:
-
-            # detects if this calculation is a duplicate
-            if args.dup:
-                for i,energy_value in enumerate(E_dup):
-                    if i != len(E_dup)-1:
-                        if abs(energy_value - E_dup[file_list.index(file)]) < abs(args.dup_threshold):
-                            if abs(H_dup[i] - H_dup[file_list.index(file)]) < abs(args.dup_threshold):
-                                if abs(G_dup[i] - G_dup[file_list.index(file)]) < abs(args.dup_threshold):                        
-                                    ERRORTYPE = 'duplicate_calc'
-
+                os.chdir(w_dir_main)
+        
             if len(args.exp_rules) >= 1:
+                passing_rules = True
+                valid_mol_gen = True
                 log.write("  ----- Exp_rules filter(s) will be applied to the output file -----\n")
                 try:
                     mol,ob_compat,rdkit_compat = output_to_mol(file,format_file,log)
@@ -537,35 +544,22 @@ def output_analyzer(log_files,com_files, w_dir_main, args, w_dir_fin, w_dir_init
                     os.remove(file.split('.')[0]+'.mol')
                     log.write("The file could not be converted into a mol object, exp_rules filter(s) will be disabled\n")
 
-            if args.check_geom and ERRORTYPE == None:
-                log.write("  ----- Geometrical check will be applied to the output file -----\n")
-                try:
-                    # this creates a mol object from the optimized log file
-                    mol,ob_compat,rdkit_compat = output_to_mol(file,format_file,log)
-                except AttributeError:
-                    valid_mol_gen = False
-                # this creates a mol object from the input file
-                try:
-                    os.chdir(w_dir_main +'/input_files/run_'+str(round_num))
-                    com_2_xyz_2_sdf(args.input,args.default_charge,os.path.splitext(file)[0]+'.com')
-                    mol2,ob_compat,rdkit_compat = output_to_mol(file,'xyz',log)
-                    passing_geom = check_geom_filter(mol,mol2,args.length_criteria)
-                    if not passing_geom:
-                        ERRORTYPE = 'isomerization'
-                    # remove created files
-                    os.remove(file.split('.')[0]+'.xyz')
-                    os.remove(file.split('.')[0]+'.sdf')
-                    os.remove(file.split('.')[0]+'.mol')
+        # is it necessary to close the file?!
+        # close the file
+        outfile.close()
 
-                except FileNotFoundError:
-                    log.write("x  No com file were found for "+file+", the check_geom test will be disabled for this calculation")
-
-                os.chdir(w_dir_main)
-                os.remove(file.split('.')[0]+'.mol')
-
-            if args.check_geom and not valid_mol_gen:
-                log.write("The file could not be converted into a mol object, check_geom test will be disabled\n")
-
+        format_file = file.split('.')[1]
+        
+        if TERMINATION == "normal" and ERRORTYPE == None:
+            # detects if this calculation is a duplicate
+            if args.dup:
+                for i,energy_value in enumerate(E_dup):
+                    if i != len(E_dup)-1:
+                        if abs(energy_value - E_dup[file_list.index(file)]) < abs(args.dup_threshold):
+                            if abs(H_dup[i] - H_dup[file_list.index(file)]) < abs(args.dup_threshold):
+                                if abs(G_dup[i] - G_dup[file_list.index(file)]) < abs(args.dup_threshold):                        
+                                    ERRORTYPE = 'duplicate_calc'
+        
         # This part places the calculations in different folders depending on the type of termination
         organize_outputs(w_dir_main,round_num,file,TERMINATION,ERRORTYPE,w_dir_fin,file_terms)
 
@@ -576,7 +570,7 @@ def output_analyzer(log_files,com_files, w_dir_main, args, w_dir_fin, w_dir_init
             ecp_list = check_for_gen_or_genecp(ATOMTYPES,args,'analysis','gaussian')
         
         # create folders and set level of theory in COM files to fix imaginary freqs or not normal terminations
-        if TERMINATION != "normal" or ERRORTYPE != None:
+        if TERMINATION != "normal" or ERRORTYPE not in [None,'isomerization']:
             create_folder_and_com(w_dir_main,round_num,log,NATOMS,ATOMTYPES,CARTESIANS,args,file,keywords_line,CHARGE, MULT)
 
         # this part creates input files for single-point energy calcs after reading from normally finished log files
@@ -661,6 +655,15 @@ def output_analyzer(log_files,com_files, w_dir_main, args, w_dir_fin, w_dir_init
                         os.chdir(nics_input_files+'/'+dir_name)
                         new_com_file('nics',nics_input_files+'/'+dir_name,file,args,keywords_opt,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS)
 
+    os.chdir(w_dir_main)
+
+    # moves the input files to respective folder
+    destination = w_dir_main +'/input_files/run_'+str(round_num)
+    for comfile in glob.glob('*.com'):
+        move_file(comfile, w_dir_main, destination)
+    for gjffile in glob.glob('*.gjf'):
+        move_file(gjffile, w_dir_main, destination)
+        
     #write to csv ana_data
     ana_data.at[0,'Total files'] = len(log_files)
     ana_data.at[0,'Normal termination'] = file_terms['finished']
@@ -677,8 +680,8 @@ def output_analyzer(log_files,com_files, w_dir_main, args, w_dir_fin, w_dir_init
         ana_data.at[0,'Duplicates'] = file_terms['duplicate_calc']
     if len(args.exp_rules) >= 1:
         ana_data.at[0,'Exp_rules filter'] = file_terms['exp_rules_qcorr']
-    if args.check_geom:
-        ana_data.at[0,'Geometry changed'] = file_terms['check_geom_qcorr']
+    if args.isom != None:
+        ana_data.at[0,'Isomerization'] = file_terms['check_geom_qcorr']
 
     if not os.path.isdir(w_dir_main+'/csv_files/'):
         os.makedirs(w_dir_main+'/csv_files/')
@@ -742,3 +745,57 @@ def check_for_final_folder(w_dir):
         w_dir = w_dir+'/input_files/run_'+str(num_com_folder)
         return folder_count
     
+
+def gen_connectivity(ATOMTYPES_conn, COORDINATES_conn, vdwfrac, covfrac):
+    # Use VDW radii to infer a connectivity matrix
+
+    conn_mat = np.zeros((len(ATOMTYPES_conn), len(ATOMTYPES_conn)))
+    for i, elem_i in enumerate(ATOMTYPES_conn):
+        for j, elem_j in enumerate(ATOMTYPES_conn):
+            if j > i:
+                vdw_ij = bondi()[elem_i] + bondi()[elem_j]
+                rcov_ij = rcov()[elem_i] + rcov()[elem_j]
+                dist_ij = np.linalg.norm(np.array(COORDINATES_conn[i])-np.array(COORDINATES_conn[j]))
+                if dist_ij / vdw_ij < vdwfrac or dist_ij / rcov_ij < covfrac:
+                    #print((i+1), (j+1), dist_ij, vdw_ij, rcov_ij)
+                    conn_mat[i][j] = 1
+                else: pass
+
+    return conn_mat
+
+
+def check_isomerization(COORDINATES_com, COORDINATES_log, ATOMTYPES_com, ATOMTYPES_log, vdwfrac, covfrac, init_csv, file):
+    isomerized, diff = None, None
+
+    # load connectivity matrix from the starting points
+    if init_csv != None:
+        filename = file.replace('_'+file.split('_')[-1],'')
+        init_connectivity = init_csv['initial_connectiv'][init_csv['code_name'].index(filename)]
+        ATOMTYPES_com = init_connectivity[0]
+
+    # in case the systems are not the same
+    if len(ATOMTYPES_log) != len(ATOMTYPES_com):
+        isomerized = True
+
+    else:
+        if init_connectivity == None:
+            init_connectivity = gen_connectivity(ATOMTYPES_com, COORDINATES_com, vdwfrac, covfrac)
+
+        final_connectivity = gen_connectivity(ATOMTYPES_log, COORDINATES_log, vdwfrac, covfrac)
+        
+        # remove bonds involved in TSs from connectivity matrixes
+        if init_csv != None:
+            ts_atoms = init_csv['TS_atom_idx'][init_csv['code_name'].index(filename)]
+            for i,ts_idx in enumerate(ts_atoms):
+                for j,ts_idx_2 in enumerate(ts_atoms):
+                    if j>i:
+                        init_connectivity[ts_idx][ts_idx_2] = 0
+                        init_connectivity[ts_idx_2][ts_idx] = 0
+                        final_connectivity[ts_idx][ts_idx_2] = 0
+                        final_connectivity[ts_idx_2][ts_idx] = 0
+
+        # check connectivity differences from initial structure
+        diff = final_connectivity - init_connectivity
+        isomerized = np.any(diff)
+
+    return isomerized

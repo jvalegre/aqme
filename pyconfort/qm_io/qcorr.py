@@ -218,7 +218,7 @@ def creation_of_ana_csv(args):
 		columns_list.append('Duplicates')
 	if len(args.exp_rules) >= 1:
 		columns_list.append('Exp_rules filter')
-	if args.check_geom:
+	if args.isom:
 		columns_list.append('Geometry changed')
 	ana_data = pd.DataFrame(columns = columns_list)
 
@@ -382,7 +382,7 @@ def output_analyzer(log_files,com_files, w_dir, w_dir_main,lot, bs, bs_gcp, args
 		if args.exp_rules:
 			passes_rules = passes_custom_rules(out_mol,args,log)
 		
-		if args.check_geom and passes_rules:
+		if args.isom and passes_rules:
 			xyz_str = read_com_as_xyz()
 			in_mol = pybel.readstring('xyz',xyz_str)
 			passes_geom = passes_geometry_check(out_mol,in_mol,factor=args.length_criteria)
@@ -407,7 +407,7 @@ def output_analyzer(log_files,com_files, w_dir, w_dir_main,lot, bs, bs_gcp, args
 					log.write("The file could not be converted into a mol object, exp_rules filter(s) will be disabled\n")
 
 		passing_geom = True
-		if args.check_geom and passing_rules and valid_mol_gen:
+		if args.isom and passing_rules and valid_mol_gen:
 			if TERMINATION == "normal" and IM_FREQS == 0:
 				log.write("  ----- Geometrical check will be applied to the output file -----\n")
 				# this creates a mol object from the optimized log file
@@ -429,7 +429,7 @@ def output_analyzer(log_files,com_files, w_dir, w_dir_main,lot, bs, bs_gcp, args
 				os.chdir(w_dir)
 				os.remove(file.split('.')[0]+'.mol')
 
-		elif args.check_geom and not valid_mol_gen:
+		elif args.isom and not valid_mol_gen:
 			log.write("The file could not be converted into a mol object, check_geom test will be disabled\n")
 
 		# This part places the calculations in different folders depending on the type of termination
@@ -550,7 +550,7 @@ def output_analyzer(log_files,com_files, w_dir, w_dir_main,lot, bs, bs_gcp, args
 		ana_data.at[0,'Duplicates'] = duplicates
 	if len(args.exp_rules) >= 1:
 		ana_data.at[0,'Exp_rules filter'] = exp_rules_qcorr
-	if args.check_geom:
+	if args.isom:
 		ana_data.at[0,'Geometry changed'] = check_geom_qcorr
 
 	if not os.path.isdir(w_dir_main+'/csv_files/'):
@@ -593,7 +593,7 @@ def analyze_single_output(file,log,w_dir,args):
 				log.write("The file could not be converted into a mol object, exp_rules filter(s) will be disabled\n")
 
 	passing_geom = True
-	if args.check_geom and passing_rules and valid_mol_gen:
+	if args.isom and passing_rules and valid_mol_gen:
 		if TERMINATION == "normal" and IM_FREQS == 0:
 			log.write("  ----- Geometrical check will be applied to the output file -----\n")
 			# this creates a mol object from the optimized log file
@@ -615,7 +615,7 @@ def analyze_single_output(file,log,w_dir,args):
 			os.chdir(w_dir)
 			os.remove(file.split('.')[0]+'.mol')
 
-	elif args.check_geom and not valid_mol_gen:
+	elif args.isom and not valid_mol_gen:
 		log.write("The file could not be converted into a mol object, check_geom test will be disabled\n")
 
 	# This part places the calculations in different folders depending on the type of termination
