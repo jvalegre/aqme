@@ -292,60 +292,6 @@ def exp_rules_output(mol,args,log,file,print_error_exp_rules):
                 break
     return passing
 
-def check_geom_filter(mol,mol2,length_factor):
-    """
-    Inputs two molecules with the atoms in the same order and checks if any bond
-    is too different bewteen them. 
-    
-    A bond is considered too diferent when either the second molecule does not 
-    have it or the ratio between the smallest distance and largest distance is 
-    larger than 'length_factor'. 
-
-    Parameters
-    ----------
-    mol : rdkit.Chem.Mol
-        Molecule 1 (Theoretically, non-optimized)
-    mol2 : rdkit.Chem.Mol
-        Molecule 2 (Theoretically, optimized)
-    length_factor : float
-        Largest acceptable ratio (>1) between the smallest version of the bond 
-        and the largest version of the bond. 
-
-    Returns
-    -------
-    bool
-        True there is not a clearly distorted bond within the geometries.
-    """
-    passing_geom = True
-    mol_bonds = []
-    for atom in mol.GetAtoms():
-        for x in atom.GetNeighbors():
-            indiv_bond = [atom.GetIdx(),x.GetIdx()]
-            mol_bonds.append(indiv_bond)
-
-    # I need to get the only 3D conformer generated in that mol object for rdMolTransforms
-    mol_conf = mol.GetConformer(0)
-    mol_conf2 = mol2.GetConformer(0)
-    for bond in mol_bonds:
-        bond_length = rdMolTransforms.GetBondLength(mol_conf,bond[0],bond[1])
-        try:
-            bond_length2 = rdMolTransforms.GetBondLength(mol_conf2,bond[0],bond[1])
-        except RuntimeError:
-            passing_geom = False
-            break
-
-        if bond_length < bond_length2:
-            smaller_bond = bond_length
-            bigger_bond = bond_length2
-        else:
-            smaller_bond = bond_length2
-            bigger_bond = bond_length
-
-        if bigger_bond > length_factor*smaller_bond:
-            passing_geom = False
-
-    return passing_geom
-
 def filters(mol,log,molwt_cutoff,verbose):
     """
     Applies some basic filters (molwt, salts[currently off], weird atom symbols)

@@ -8,9 +8,10 @@ import sys
 import subprocess
 import numpy as np
 import pandas as pd
+import json
 # the import for check and write genecp is probably inside the genecp function of qprep now, FIX!
 from pyconfort.utils import periodic_table
-from pyconfort.filter import exp_rules_output,check_geom_filter
+from pyconfort.filter import exp_rules_output
 from pyconfort.nics_conf import update_coord
 from pyconfort.utils import move_file, bondi, rcov, get_info_com
 from pyconfort.qprep_gaussian import write_qm_input_files,GaussianTemplate
@@ -85,7 +86,7 @@ def get_name_charge_multiplicity(outlines):
 
     return name, CHARGE, MULT
 
-def get_qcorr_params(outlines,preset_keywords_line,ts_opt,sp_calcs,charge_sp,mult_sp,isom_filt):
+def get_qcorr_params(outlines,preset_keywords_line,ts_opt,sp_calcs,charge_sp,mult_sp,isom_filt,no_check):
     TERMINATION,ERRORTYPE  = 'unfinished','unknown'
     stop_term, initial_IM_FREQS, NATOMS = 0, 0, 0
     symbol_z_line, gradgrad_line = None, None
@@ -126,7 +127,7 @@ def get_qcorr_params(outlines,preset_keywords_line,ts_opt,sp_calcs,charge_sp,mul
     keywords_line = ''
     calc_type = 'ground_state'
     # get keywords line (input) and NATOMS
-    if TERMINATION != "normal" or initial_IM_FREQS > 0  or sp_calcs != None or isom_filt:
+    if TERMINATION != "normal" or initial_IM_FREQS > 0  or sp_calcs != None or isom_filt or no_check:
         end_keywords = False
         
         # range optimized to skip Gaussian information (short for loop just to get charge, multiplicity and n of atoms)
@@ -208,135 +209,138 @@ def get_qcorr_params(outlines,preset_keywords_line,ts_opt,sp_calcs,charge_sp,mul
     return TERMINATION,ERRORTYPE,initial_IM_FREQS,NATOMS,CHARGE,MULT,keywords_line,calc_type,nimag_line
 
 
-def get_input_geom(file, outlines, keywords_line, NATOMS, MULT, TERMINATION, ERRORTYPE, initial_IM_FREQS, nimag_line, calc_type, duplicate_filter, ifreq_threshold, amplitude_ifreq, s2_threshold, file_list, E_dup, H_dup, G_dup):
+def get_input_geom(file, outlines, keywords_line, NATOMS, MULT, TERMINATION, ERRORTYPE, initial_IM_FREQS, nimag_line, calc_type, duplicate_filter, ifreq_threshold, amplitude_ifreq, s2_threshold, file_list, E_dup, H_dup, G_dup,no_check):
     stand_or,IM_FREQS = 0,0
     rms,stop_rms = 10000,0
     spin_contamination,freq_only = False, False
+    start_dup = False
+        
+    if ERRORTYPE == 'before_E_calculation':
+        pass
 
     # reverse loop to speed up the reading of the output files
     # (also skips final part for normal termination which was already read plus dipole/multipole information)
-    if duplicate_filter:
-        start_dup = False
-    
-    if TERMINATION == "normal":
-        for i in reversed(range(0,nimag_line-(10*NATOMS))):
-            # Sets where the final coordinates are inside the file
-            if (outlines[i].find("Standard orientation:") > -1 or outlines[i].find("Input orientation:") > -1):
-                stand_or = i
-                break
-
-            if duplicate_filter:
-                if not start_dup:
-                    if outlines[i].find('E (Thermal)'):
-                        start_dup = True    
-                else:
-                    if outlines[i].find('Sum of electronic and zero-point Energies=') > -1:
-                        E_dup.append(float(outlines[i].split()[-1]))
-                        file_list.append(file)
-                        
-                    elif outlines[i].find('Sum of electronic and thermal Enthalpies=') > -1:
-                        H_dup.append(float(outlines[i].split()[-1]))
-                    elif outlines[i].find('Sum of electronic and thermal Free Energies=') > -1:
-                        G_dup.append(float(outlines[i].split()[-1]))
-
-            if initial_IM_FREQS != 0:
-                # Get the negative frequencies and their modes (up to three negative frequencies)
-                if outlines[i].find(" Frequencies -- ") > -1:
-                    FREQS, NORMALMODE  = [],[]
-                    nfreqs = len(outlines[i].split())
-                    for j in range(2, nfreqs):
-                        if float(outlines[i].split()[j]) < 0 and abs(float(outlines[i].split()[j])) > abs(ifreq_threshold):
-                            IM_FREQS += 1
-                            FREQS.append(float(outlines[i].split()[j]))
-                            NORMALMODE.append([])
-                            for k in range(0,NATOMS):
-                                NORMALMODE[(j-2)].append([float(outlines[i+5+k].split()[3*(j-2)+2]), float(outlines[i+5+k].split()[3*(j-2)+3]), float(outlines[i+5+k].split()[3*(j-2)+4])])
-
-            # analyze spin contamination. If the <S**2> operator deviates more than (s2_threshold) %
-            # compared to the expected value, the calculation contains spin contamination
-            elif s2_threshold > 0.0:
-                if outlines[i].find('S**2 before annihilation') > -1:
-                    s2_value = outlines[i].split()[-1].rstrip("\n")
-                    unpaired_e = MULT-1
-                    spin = unpaired_e*0.5
-                    s2_expected_value = spin*(spin+1)
-                    spin_diff = abs(s2_value-s2_expected_value)
-                    if spin_diff > abs(s2_threshold/100)*s2_expected_value:
-                        spin_contamination = True
-        
-        # exclude TS imag frequency
-        if calc_type == 'transition_state':
-            IM_FREQS -= 1
-            FREQS.pop(0)
-            NORMALMODE.pop(0)
-
-        if IM_FREQS > 0:
-            ERRORTYPE = 'extra_imag_freq'
-
-        if IM_FREQS < 0:
-            ERRORTYPE = 'ts_no_imag_freq'
-
-        if spin_contamination:
-            ERRORTYPE = 'spin_contaminated'
-
     else:
-        normal_term_found, opt_found = False, False
-        for i in reversed(range(60,len(outlines))):
-            if outlines[i].find('Cartesian Forces:  Max') > -1:
-                try:
-                    if float(outlines[i].split()[5]) < rms:
-                        rms = float(outlines[i].split()[5])
-                        stop_rms = i
-                    if normal_term_found and opt_found:
-                        freq_only = True
-                        break
-                # sometimes Gaussian does not print valid numbers in this section
-                except ValueError:
-                    pass
+        if TERMINATION == "normal":
+            for i in reversed(range(0,nimag_line-(10*NATOMS))):
+                # Sets where the final coordinates are inside the file
+                if (outlines[i].find("Standard orientation:") > -1 or outlines[i].find("Input orientation:") > -1):
+                    stand_or = i
+                    break
 
-            if not normal_term_found and not opt_found:
-                if outlines[i].find("Normal termination") > -1:
-                    normal_term_found = True
-                elif outlines[i].strip().find('\\FOpt\\') > -1 or outlines[i].strip().find('\\FTS\\') > -1:
-                    opt_found = True
+                if not no_check:
+                    if duplicate_filter:
+                        if not start_dup:
+                            if outlines[i].find('E (Thermal)'):
+                                start_dup = True    
+                        else:
+                            if outlines[i].find('Sum of electronic and zero-point Energies=') > -1:
+                                E_dup.append(float(outlines[i].split()[-1]))
+                                file_list.append(file)
+                                
+                            elif outlines[i].find('Sum of electronic and thermal Enthalpies=') > -1:
+                                H_dup.append(float(outlines[i].split()[-1]))
+                            elif outlines[i].find('Sum of electronic and thermal Free Energies=') > -1:
+                                G_dup.append(float(outlines[i].split()[-1]))
 
-        # only include Freq calculations to molecules that are already optimized (no OPT)
-        if freq_only:
-            new_keywords_line = '# '
-            for keyword in keywords_line.split():
-                if keyword.lower().startswith('opt') > -1:
-                    keyword = ''
-                new_keywords_line += keyword
-                new_keywords_line += ' '
-            keywords_line = new_keywords_line
+                    if initial_IM_FREQS != 0:
+                        # Get the negative frequencies and their modes (up to three negative frequencies)
+                        if outlines[i].find(" Frequencies -- ") > -1:
+                            FREQS, NORMALMODE  = [],[]
+                            nfreqs = len(outlines[i].split())
+                            for j in range(2, nfreqs):
+                                if float(outlines[i].split()[j]) < 0 and abs(float(outlines[i].split()[j])) > abs(ifreq_threshold):
+                                    IM_FREQS += 1
+                                    FREQS.append(float(outlines[i].split()[j]))
+                                    NORMALMODE.append([])
+                                    for k in range(0,NATOMS):
+                                        NORMALMODE[(j-2)].append([float(outlines[i+5+k].split()[3*(j-2)+2]), float(outlines[i+5+k].split()[3*(j-2)+3]), float(outlines[i+5+k].split()[3*(j-2)+4])])
 
-    if stop_rms == 0:
-        last_line = len(outlines)
-    else:
-        last_line = stop_rms
-    
-    for i in reversed(range(0,last_line)):
-        # Sets where the final coordinates are inside the file
-        if outlines[i].find("Standard orientation") > -1:
-            stand_or = i
-            break
-    
-    # get atom types from the calculation and the cartesian coordinates to use in each case
-    ATOMTYPES, CARTESIANS = [],[]
-    per_tab = periodic_table()
-    for i in range(stand_or+5,stand_or+5+NATOMS):
-        massno = int(outlines[i].split()[1])
-        if massno < len(per_tab):
-            atom_symbol = per_tab[massno]
+                    # analyze spin contamination. If the <S**2> operator deviates more than (s2_threshold) %
+                    # compared to the expected value, the calculation contains spin contamination
+                    elif s2_threshold > 0.0:
+                        if outlines[i].find('S**2 before annihilation') > -1:
+                            s2_value = outlines[i].split()[-1].rstrip("\n")
+                            unpaired_e = MULT-1
+                            spin = unpaired_e*0.5
+                            s2_expected_value = spin*(spin+1)
+                            spin_diff = abs(s2_value-s2_expected_value)
+                            if spin_diff > abs(s2_threshold/100)*s2_expected_value:
+                                spin_contamination = True
+            if not no_check:   
+                # exclude TS imag frequency
+                if calc_type == 'transition_state':
+                    IM_FREQS -= 1
+                    FREQS.pop(0)
+                    NORMALMODE.pop(0)
+
+                if IM_FREQS > 0:
+                    ERRORTYPE = 'extra_imag_freq'
+
+                elif IM_FREQS < 0:
+                    ERRORTYPE = 'ts_no_imag_freq'
+
+                if spin_contamination:
+                    ERRORTYPE = 'spin_contaminated'
+
         else:
-            atom_symbol = "XX"
-        ATOMTYPES.append(atom_symbol)
-        CARTESIANS.append([float(outlines[i].split()[3]), float(outlines[i].split()[4]), float(outlines[i].split()[5])])
+            normal_term_found, opt_found = False, False
+            for i in reversed(range(60,len(outlines))):
+                if outlines[i].find('Cartesian Forces:  Max') > -1:
+                    try:
+                        if float(outlines[i].split()[5]) < rms:
+                            rms = float(outlines[i].split()[5])
+                            stop_rms = i
+                        if normal_term_found and opt_found:
+                            freq_only = True
+                            break
+                    # sometimes Gaussian does not print valid numbers in this section
+                    except ValueError:
+                        pass
 
-    if ERRORTYPE == 'extra_imag_freq':
-        CARTESIANS = fix_imag_freqs(NATOMS, CARTESIANS, FREQS, NORMALMODE, amplitude_ifreq)
-    
-    return file_list, E_dup, H_dup, G_dup, ERRORTYPE, keywords_line, ATOMTYPES, CARTESIANS
+                if not normal_term_found and not opt_found:
+                    if outlines[i].find("Normal termination") > -1:
+                        normal_term_found = True
+                    elif outlines[i].strip().find('\\FOpt\\') > -1 or outlines[i].strip().find('\\FTS\\') > -1:
+                        opt_found = True
+
+            # only include Freq calculations to molecules that are already optimized (no OPT)
+            if freq_only:
+                new_keywords_line = '# '
+                for keyword in keywords_line.split():
+                    if keyword.lower().startswith('opt') > -1:
+                        keyword = ''
+                    new_keywords_line += keyword
+                    new_keywords_line += ' '
+                keywords_line = new_keywords_line
+
+            if stop_rms == 0:
+                last_line = len(outlines)
+            else:
+                last_line = stop_rms
+            
+            for i in reversed(range(0,last_line)):
+                # Sets where the final coordinates are inside the file
+                if outlines[i].find("Standard orientation") > -1:
+                    stand_or = i
+                    break
+        
+        # get atom types from the calculation and the cartesian coordinates to use in each case
+        ATOMTYPES, CARTESIANS = [],[]
+        per_tab = periodic_table()
+        for i in range(stand_or+5,stand_or+5+NATOMS):
+            massno = int(outlines[i].split()[1])
+            if massno < len(per_tab):
+                atom_symbol = per_tab[massno]
+            else:
+                atom_symbol = "XX"
+            ATOMTYPES.append(atom_symbol)
+            CARTESIANS.append([float(outlines[i].split()[3]), float(outlines[i].split()[4]), float(outlines[i].split()[5])])
+
+        if ERRORTYPE == 'extra_imag_freq':
+            CARTESIANS = fix_imag_freqs(NATOMS, CARTESIANS, FREQS, NORMALMODE, amplitude_ifreq)
+        
+        return file_list, E_dup, H_dup, G_dup, ERRORTYPE, keywords_line, ATOMTYPES, CARTESIANS
 
 
 def fix_imag_freqs(NATOMS, CARTESIANS, FREQS, NORMALMODE, amplitude):
@@ -431,7 +435,7 @@ def organize_outputs(w_dir_main,round_num,file,TERMINATION,ERRORTYPE,w_dir_fin,f
     elif ERRORTYPE == 'isomerization':
         destination = w_dir_main+'/failed/run_'+str(round_num)+'/isomerization/'
         file_terms['check_geom_qcorr'] += 1
-
+    
     if not os.path.isdir(destination):
         os.makedirs(destination)
     move_file(file, w_dir_main, destination)
@@ -484,23 +488,25 @@ def output_analyzer(log_files,com_files, w_dir_main, args, w_dir_fin, w_dir_init
             break
 
         # get parameters from the calculations (i.e. termination and error types, n of atoms, charge, mult, etc)
-        TERMINATION, ERRORTYPE, initial_IM_FREQS, NATOMS, CHARGE, MULT, keywords_line, calc_type, nimag_line = get_qcorr_params(outlines,args.qm_input,args.ts_input,args.sp,args.charge_sp,args.mult_sp,args.isom)
+        TERMINATION, ERRORTYPE, initial_IM_FREQS, NATOMS, CHARGE, MULT, keywords_line, calc_type, nimag_line = get_qcorr_params(outlines,args.qm_input,args.ts_input,args.sp,args.charge_sp,args.mult_sp,args.isom,args.nocheck)
         
         # get new coordinates as input files to fix error (unless the errors cannot be fixed automatically
         # such as in atomic basis errors or errors happening too early on the calculation)
-        if ERRORTYPE not in ['before_E_calculation',"atomicbasiserror"]:
-            
+        if ERRORTYPE not in ['before_E_calculation',"atomicbasiserror"] or args.nocheck:
+
             # whats trhe difference between this function and the 2 functions below?!
             # get geometry parameters and frequency information
             if TERMINATION != "normal" or initial_IM_FREQS != 0 or args.s2_threshold > 0.0 or args.sp != None or args.dup or args.isom != None:
-                file_list, E_dup, H_dup, G_dup, ERRORTYPE, keywords_line, ATOMTYPES, CARTESIANS = get_input_geom(file, outlines, keywords_line, NATOMS, MULT, TERMINATION, ERRORTYPE, initial_IM_FREQS, nimag_line, calc_type, args.dup, args.ifreq_cutoff, args.amplitude_ifreq, args.s2_threshold, file_list, E_dup, H_dup, G_dup)
+                if args.nocheck:
+                    TERMINATION = "normal"
+                file_list, E_dup, H_dup, G_dup, ERRORTYPE, keywords_line, ATOMTYPES, CARTESIANS = get_input_geom(file, outlines, keywords_line, NATOMS, MULT, TERMINATION, ERRORTYPE, initial_IM_FREQS, nimag_line, calc_type, args.dup, args.ifreq_cutoff, args.amplitude_ifreq, args.s2_threshold, file_list, E_dup, H_dup, G_dup,args.nocheck)
             
             if args.isom != None:
                 isomerized = False
-                init_csv = None
+                init_csv = pd.DataFrame()
                 log.write("  ----- Geometrical check will be applied to the output file -----\n")
                 try:
-                    atoms_com, coords_com = [],[]
+                    atoms_com, coords_com, atoms_and_coords = [],[],[]
                     if round_num != 0:
                         # os.chdir(w_dir_main +'/input_files/run_'+str(round_num))
                         os.chdir(w_dir_main +'/input_files/run_2')
@@ -721,7 +727,7 @@ def check_for_gen_or_genecp(ATOMTYPES,args,type_of_check,program_gen):
                 orca_aux_section = True
 
     if program_gen == 'gaussian':
-    	return ecp_list
+        return ecp_list
     elif program_gen == 'orca':
         return orca_aux_section
 
@@ -744,7 +750,79 @@ def check_for_final_folder(w_dir):
         num_com_folder = sum([len(d) for r, d, folder in os.walk(w_dir+'/input_files')])
         w_dir = w_dir+'/input_files/run_'+str(num_com_folder)
         return folder_count
+
+
+def check_isomerization(COORDINATES_com, COORDINATES_log, ATOMTYPES_com, ATOMTYPES_log, vdwfrac, covfrac, init_csv, file):
+    """
+    Inputs two molecules with the atoms in the same order and checks if any bond
+    is too different between them. 
     
+    Bonds are considered when the distance between two atoms is smaller than
+    either the sum of their adjusted VDW radii or covalent radii (dist = n*R1 + n*R2, where
+    n is a user defined parameter). 
+
+    Bonds forming part of TSs are removed.
+
+    Parameters
+    ----------
+    COORDINATES_com : list of lists containing atomic coordinates
+        Molecule 1 (Theoretically, non-optimized)
+    COORDINATES_log : list of lists containing atomic coordinates
+        Molecule 2 (Theoretically, optimized)
+    ATOMTYPES_com : list of atoms
+        Molecule 1 (Theoretically, non-optimized)
+    ATOMTYPES_log : list of atoms
+        Molecule 2 (Theoretically, optimized)
+    vdwfrac : float
+        Fraction of the summed VDW radii (default is 0.5)
+    covfrac : float
+        Fraction of the summed covalent radii (default is 1.10)
+    init_csv : dataframe
+        Contains connectivity from the original non-optimized molecules (i.e. saved from CSEARCH)
+    file : string
+        Filename
+
+    Returns
+    -------
+    bool
+        True there is a clearly distorted bond within the geometries.
+    """
+    
+    isomerized, diff = None, None
+
+    # load connectivity matrix from the starting points and convert string into matrix
+    if not init_csv.empty:
+        filename = file.replace('_'+file.split('_')[-1],'')
+        init_connectivity_string = init_csv[init_csv['code_name'] == filename]['initial_connectiv'][0]
+        init_connectivity = json.loads(init_connectivity_string.replace('.',',').replace(',]','],').replace('],]',']]')) 
+        ATOMTYPES_com = init_connectivity[0]
+
+    else:
+        init_connectivity = gen_connectivity(ATOMTYPES_com, COORDINATES_com, vdwfrac, covfrac)
+
+    # in case the systems are not the same
+    if len(ATOMTYPES_log) != len(ATOMTYPES_com):
+        isomerized = True
+    
+    else:
+        final_connectivity = gen_connectivity(ATOMTYPES_log, COORDINATES_log, vdwfrac, covfrac)
+                
+        # check connectivity differences from initial structure
+        diff = final_connectivity - init_connectivity
+
+        # remove bonds involved in TSs from connectivity matrixes
+        if not init_csv.empty:
+            if 'TS_atom_idx' in init_csv.columns:
+                ts_atoms = init_csv[init_csv['code_name'] == filename]['TS_atom_idx'][0].split(',')
+                for i,ts_idx in enumerate(ts_atoms):
+                    for j,ts_idx_2 in enumerate(ts_atoms):
+                        if j>i:
+                            diff[int(ts_idx)][int(ts_idx_2)] = 0
+                            diff[int(ts_idx_2)][int(ts_idx)] = 0
+
+        isomerized = np.any(diff)
+
+    return isomerized
 
 def gen_connectivity(ATOMTYPES_conn, COORDINATES_conn, vdwfrac, covfrac):
     # Use VDW radii to infer a connectivity matrix
@@ -757,45 +835,7 @@ def gen_connectivity(ATOMTYPES_conn, COORDINATES_conn, vdwfrac, covfrac):
                 rcov_ij = rcov()[elem_i] + rcov()[elem_j]
                 dist_ij = np.linalg.norm(np.array(COORDINATES_conn[i])-np.array(COORDINATES_conn[j]))
                 if dist_ij / vdw_ij < vdwfrac or dist_ij / rcov_ij < covfrac:
-                    #print((i+1), (j+1), dist_ij, vdw_ij, rcov_ij)
                     conn_mat[i][j] = 1
                 else: pass
 
     return conn_mat
-
-
-def check_isomerization(COORDINATES_com, COORDINATES_log, ATOMTYPES_com, ATOMTYPES_log, vdwfrac, covfrac, init_csv, file):
-    isomerized, diff = None, None
-
-    # load connectivity matrix from the starting points
-    if init_csv != None:
-        filename = file.replace('_'+file.split('_')[-1],'')
-        init_connectivity = init_csv['initial_connectiv'][init_csv['code_name'].index(filename)]
-        ATOMTYPES_com = init_connectivity[0]
-
-    # in case the systems are not the same
-    if len(ATOMTYPES_log) != len(ATOMTYPES_com):
-        isomerized = True
-
-    else:
-        if init_connectivity == None:
-            init_connectivity = gen_connectivity(ATOMTYPES_com, COORDINATES_com, vdwfrac, covfrac)
-
-        final_connectivity = gen_connectivity(ATOMTYPES_log, COORDINATES_log, vdwfrac, covfrac)
-        
-        # remove bonds involved in TSs from connectivity matrixes
-        if init_csv != None:
-            ts_atoms = init_csv['TS_atom_idx'][init_csv['code_name'].index(filename)]
-            for i,ts_idx in enumerate(ts_atoms):
-                for j,ts_idx_2 in enumerate(ts_atoms):
-                    if j>i:
-                        init_connectivity[ts_idx][ts_idx_2] = 0
-                        init_connectivity[ts_idx_2][ts_idx] = 0
-                        final_connectivity[ts_idx][ts_idx_2] = 0
-                        final_connectivity[ts_idx_2][ts_idx] = 0
-
-        # check connectivity differences from initial structure
-        diff = final_connectivity - init_connectivity
-        isomerized = np.any(diff)
-
-    return isomerized

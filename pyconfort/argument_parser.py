@@ -122,13 +122,13 @@ def parser_args():
   #analysis of files
   parser.add_argument("--dup",action="store",default=True, help="Remove duplicates after DFT optimization")
   parser.add_argument("--dup_threshold",action="store",default=0.0001, help="Energy difference (in Hartree) for E+ZPE, H and G considered in the duplicate filter", type=float)
-  parser.add_argument("--isom",action="store",default=None, help="Checks that geometries mantain the same connectivity after xTB and DFT optimization")
-  parser.add_argument("--length_criteria", action="store",default=1.4, help="Factor used to determine whether a bond broke/formed during DFT optimization for check_geom", type=float)
   parser.add_argument("--amplitude_ifreq", action="store",default=0.2, help="Amplitude used to displace the imaginary frequencies to fix during analysis", type=float)
   parser.add_argument("--ifreq_cutoff", action="store",default=0.0, help="Cut off for imaginary frequencies during analysis", type=float)
   parser.add_argument("--s2_threshold", action="store",default=10.0, help="Cut off for spin contamination during analysis in \%\ of the expected value (i.e. multiplicity 3 has an the expected <S**2> of 2.0, if s2_threshold = 10 the <S**2> value is allowed to be 2.0 +- 0.2). Set s2_threshold = 0 to deactivate this option.", type=float)
+  parser.add_argument("--isom",action="store",default=None, help="Checks that geometries mantain the same connectivity after xTB and DFT optimization")
   parser.add_argument("--vdwfrac", action="store", help="What fraction of the summed VDW radii constitutes a bond between two atoms in the isomerization filter?", default=0.50, type=float)
   parser.add_argument("--covfrac", action="store", help="What fraction of the summed covalent radii constitutes a bond between two atoms in the isomerization filter?", default=1.10, type=float)
+  parser.add_argument("--nocheck",action="store_true",default=False, help="Skips analysis for QM output files (i.e. it generates inputs for all the files not only the normally terminated files")
   #writing single point files
   parser.add_argument("--sp", help="Create Gaussian single point input files", default=None, dest="sp", type=str)
   parser.add_argument("--nics", action="store_true", default=False, help="Create input files for NICS")
