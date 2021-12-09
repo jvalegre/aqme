@@ -359,6 +359,9 @@ class GaussianTemplate(object):
 			stem = molecule.title.lstrip().replace(' ','_')
 			comfile = f'{destination}/{stem}.com'
 			
+			if os.path.exists(comfile):
+				os.remove(comfile)
+
 			header = GaussianTemplate.get_header(stem,args.mem,args.nprocs,args.qm_keywords,args.chk)
 
 			lines = molecule.write('gjf',opt=dict(k=header)).split('\n')
@@ -372,6 +375,9 @@ class GaussianTemplate(object):
 		elif type in ['analysis','sp']:
 
 			comfile = f'{destination}/{molecule}.com'
+			
+			if os.path.exists(comfile):
+				os.remove(comfile)
 			
 			header = GaussianTemplate.get_header(molecule,args.mem,args.nprocs,qm_keywords,args.chk)
 
@@ -723,7 +729,6 @@ def write_qm_input_files(args, destination, molecules, charge_data, charge_qcorr
 
 	elif type in ['analysis','sp']:
 		charge = charge_qcorr
-		mult = mult
 
 		GaussianTemplate.write(args, destination, molecules, type, charge, mult, NATOMS, ATOMTYPES, CARTESIANS, qm_keywords)
 
