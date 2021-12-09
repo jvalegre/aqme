@@ -45,7 +45,7 @@ def main():
 
     log_overall = Logger("pyCONFORT", args.output_name)
     #if needed to load from a yaml file
-    load_from_yaml(args,log_overall)
+    args, log = load_from_yaml(args,log_overall)
 
     name = args.input.split('.')[0]
 

@@ -1,12 +1,16 @@
 """
 This module contains some classes and functions that are used from other modules
 """
-import os, shutil
+import shutil
 from pathlib import Path
 
 from rdkit.Chem.rdMolAlign import GetBestRMS
 from rdkit.Chem.rdmolops import RemoveHs
 from openbabel import pybel
+import os
+import yaml
+import pandas as pd
+from rdkit.Chem import AllChem as Chem
 
 def periodic_table():
     items = """X
@@ -41,6 +45,44 @@ def rcov():
     "K":1.96,"Ca":1.71,"Sc": 1.48, "Ti": 1.36, "V": 1.34, "Cr": 1.22, "Mn":1.19, "Fe":1.16, "Co":1.11, "Ni":1.10,"Zn":1.18, "Ga":1.24, "Ge":1.21, "As":1.21, "Se":1.16, "Br":1.14, "Kr":1.17,
     "Rb":2.10, "Sr":1.85,"Y":1.63, "Zr":1.54, "Nb":1.47, "Mo":1.38, "Tc":1.28, "Ru":1.25,"Rh":1.25,"Pd":1.20,"Ag":1.28,"Cd":1.36, "In":1.42, "Sn":1.40,"Sb":1.40,"Te":1.36,"I":1.33,"Xe":1.31}
     return rcov
+
+
+#load paramters from yaml file
+def load_from_yaml(args_,log):
+    """
+    Loads the parameters for the calculation from a yaml if specified. Otherwise
+    does nothing.
+
+    Parameters
+    ----------
+    args : argparse.args
+        Dataclass
+    log : Logger
+        Where to log the program progress
+    """
+    # Variables will be updated from YAML file
+    try:
+        if args_.varfile is not None:
+            if os.path.exists(args_.varfile):
+                if os.path.splitext(args_.varfile)[1] == '.yaml':
+                    log.write("\no  Importing pyCONFORT parameters from " + args_.varfile)
+                    with open(args_.varfile, 'r') as file:
+                        try:
+                            param_list = yaml.load(file, Loader=yaml.SafeLoader)
+                        except yaml.scanner.ScannerError:
+                            log.write("\nx  Error while reading " + args_.varfile+ ". Edit the yaml file and try again (i.e. use ':' instead of '=' to specify variables)")
+                            sys.exit()
+            for param in param_list:
+                if hasattr(args_, param):
+                    if getattr(args_, param) != param_list[param]:
+                        log.write("o  RESET " + param + " from " + str(getattr(args_, param)) + " to " + str(param_list[param]))
+                        setattr(args_, param, param_list[param])
+                    else:
+                        log.write("o  DEFAULT " + param + " : " + str(getattr(args_, param)))
+    except UnboundLocalError: # RAUL: Is it just me or this only happens when the file exists, and ens in .yaml and is empty or does not end in .yaml?
+        log.write("\no  The specified yaml file containing parameters was not found! Make sure that the valid params file is in the folder where you are running the code.\n")
+
+    return args_, log
 
 #class for logging
 class Logger:
@@ -80,6 +122,91 @@ class Logger:
         self.log.close()
 
 # OS utils
+def creation_of_dup_csv(csearch, cmin):
+
+    """
+    Generates a pandas.DataFrame object with the appropiate columns for the
+    conformational search and the minimization.
+
+    Parameters
+    ----------
+    csearch : str
+        Conformational search method. Current valid methods are:
+        ['rdkit','fullmonte','summ']
+    cmin : str
+        Minimization method. Current valid methods are:
+        ['xtb','ani']
+
+    Returns
+    -------
+    pandas.DataFrame
+    """
+    # Boolean aliases from args
+    is_rdkit = csearch=='rdkit'
+    is_fullmonte = csearch=='fullmonte'
+    is_crest = csearch=='crest'
+    is_summ = csearch=='summ'
+    is_xtb = cmin == 'xtb'
+    is_ani = cmin == 'ani'
+
+    # column blocks definitions
+    base_columns = ['Molecule',
+                    'RDKit-Initial-samples',
+                    'RDKit-energy-window',
+                    'RDKit-initial_energy_threshold',
+                    'RDKit-RMSD-and-energy-duplicates',
+                    'RDKit-Unique-conformers']
+    xtb_columns = ['xTB-Initial-samples',
+                   'xTB-energy-window',
+                   'xTB-initial_energy_threshold',
+                   'xTB-RMSD-and-energy-duplicates',
+                   'xTB-Unique-conformers']
+    ANI_columns = ['ANI-Initial-samples',
+                   'ANI-energy-window',
+                   'ANI-initial_energy_threshold',
+                   'ANI-RMSD-and-energy-duplicates',
+                   'ANI-Unique-conformers']
+    end_columns_no_min = ['CSEARCH time (seconds)',
+                          'Overall charge']
+    end_columns_min = ['CSEARCH time (seconds)',
+                       'CMIN time (seconds)',
+                       'Overall charge']
+    fullmonte_columns = ['FullMonte-Unique-conformers',]
+                        #'FullMonte-conformers',
+                        #'FullMonte-energy-window',
+                        #'FullMonte-initial_energy_threshold',
+                        #'FullMonte-RMSD-and-energy-duplicates']
+    summ_columns = ['summ-conformers',
+                    'summ-energy-window',
+                    'summ-initial_energy_threshold',
+                    'summ-RMSD-and-energy-duplicates',
+                    'summ-Unique-conformers']
+    crest_columns = ['Molecule','crest-conformers']
+
+    # Check Conformer Search method
+    if is_rdkit:
+
+        columns = base_columns
+    elif is_fullmonte:
+        columns = base_columns + fullmonte_columns
+    elif is_summ:
+        columns = base_columns + summ_columns
+    elif is_crest:
+        columns = crest_columns
+    else:
+        return None
+
+    # Check Minimization Method
+    if is_ani:
+        columns += ANI_columns
+    if is_xtb:  # is_ani and is_xtb will not happen, but this is what was written
+        columns += xtb_columns
+    if is_ani or is_xtb:
+        columns += end_columns_min
+    else:
+        columns += end_columns_no_min
+    return pd.DataFrame(columns=columns)
+
 
 def move_file(file, source, destination):
     """
@@ -238,6 +365,164 @@ def get_info_com(file):
     return coordinates, charge
 
 # RDKit Utils
+# DETECTS DIHEDRALS IN THE MOLECULE
+def getDihedralMatches(mol, heavy,log):
+    #this is rdkit's "strict" pattern
+    pattern = r"*~[!$(*#*)&!D1&!$(C(F)(F)F)&!$(C(Cl)(Cl)Cl)&!$(C(Br)(Br)Br)&!$(C([CH3])([CH3])[CH3])&!$([CD3](=[N,O,S])-!@[#7,O,S!D1])&!$([#7,O,S!D1]-!@[CD3]=[N,O,S])&!$([CD3](=[N+])-!@[#7!D1])&!$([#7!D1]-!@[CD3]=[N+])]-!@[!$(*#*)&!D1&!$(C(F)(F)F)&!$(C(Cl)(Cl)Cl)&!$(C(Br)(Br)Br)&!$(C([CH3])([CH3])[CH3])]~*"
+    qmol = Chem.MolFromSmarts(pattern)
+    matches = mol.GetSubstructMatches(qmol)
+
+    #these are all sets of 4 atoms, uniquify by middle two
+    uniqmatches = []
+    seen = set()
+    for (a,b,c,d) in matches:
+        if (b,c) not in seen and (c,b) not in seen:
+            if heavy:
+                if mol.GetAtomWithIdx(a).GetSymbol() != 'H' and mol.GetAtomWithIdx(d).GetSymbol() != 'H':
+                    seen.add((b,c))
+                    uniqmatches.append((a,b,c,d))
+            if not heavy:
+                if mol.GetAtomWithIdx(c).GetSymbol() == 'C' and mol.GetAtomWithIdx(d).GetSymbol() == 'H':
+                    pass
+                else:
+                    seen.add((b,c))
+                    uniqmatches.append((a,b,c,d))
+    return uniqmatches
+
+def getDihedralMatches_v2(mol, heavy,log): #New version using openbabel
+    # If this version is selected, bring the import to the top
+    # import pybel #
+    from openbabel import pybel #for openbabel>=3.0.0
+    AtomInTripleBond = '$(*#*)'
+    TerminalAtom = 'D1'
+    CF3 = '$(C(F)(F)F)'
+    CCl3 = '$(C(Cl)(Cl)Cl)'
+    CBr3 = '$(C(Br)(Br)Br)'
+    tBut = '$(C([CH3])([CH3])[CH3])'
+    # A 3-bonded C with a double bond to (N, O or S)
+    # singlgy bonded to not ring bonded to a non-terminal N,O or S.
+    CD3_1d = '$([CD3](=[N,O,S])-!@[#7,O,S!D1])'
+    CD3_1r = '$([#7,O,S!D1]-!@[CD3]=[N,O,S])' # Backwards version
+    # A 3-bonded C with a double bond to (N+)
+    # singlgy bonded to not ring bonded to Any non-terminal N
+    CD3_2d = '$([CD3](=[N+])-!@[#7!D1])'
+    CD3_2r = '$([#7!D1]-!@[CD3]=[N+])' # Backwards version
+    Atom1 = '*'
+    Atom2 =  f'!{AtomInTripleBond}&!{TerminalAtom}'
+    Atom2 += f'&!{CF3}&!{CCl3}&!{CBr3}&!{tBut}'
+    Atom2 += f'&!{CD3_1d}&!{CD3_1r}&!{CD3_2d}&!{CD3_2r}'
+    Atom3 =  f'!{AtomInTripleBond}&!{TerminalAtom}'
+    Atom3 += f'&!{CF3}&!{CCl3}&!{CBr3}&!{tBut}'
+    Atom4 = '*'
+    pattern = f'{Atom1}~[{Atom2}]-!@[{Atom3}]~{Atom4}'
+    smarts = pybel.Smarts(pattern)
+    matches = smarts.findall(mol)
+
+    #these are all sets of 4 atoms, uniquify by middle two
+    H_atoms = set(pybel.Smarts('[#1]').findall(mol))
+    C_atoms = set(pybel.Smarts('[#6]').findall(mol))
+    uniqmatches = []
+    seen = set()
+    for (a,b,c,d) in matches:
+        if (b,c) not in seen and (c,b) not in seen:
+            if heavy:
+                if a not in H_atoms and d not in H_atoms:
+                    seen.add((b,c))
+                    uniqmatches.append((a,b,c,d))
+            if not heavy:
+                # So what if a == 'H' and b == 'C'? is that valid ¿?
+                if c not in C_atoms or d not in H_atoms:
+                    seen.add((b,c))
+                    uniqmatches.append((a,b,c,d))
+
+
+
+#checks for salts
+def check_for_pieces(smi):
+    #taking largest component for salts
+    pieces = smi.split('.')
+    if len(pieces) > 1:
+        # take largest component by length
+        smi = max(pieces, key=len)
+    return smi
+
+def mol_from_sdf_or_mol_or_mol2(input):
+    """
+    mol from sdf
+
+    Parameters
+    ----------
+    input : str
+        path to a .sdf .mol or .mol2 file
+
+    Returns
+    -------
+    tuple of lists?
+        suppl, IDs, charges
+    """
+    filename = os.path.splitext(input)[0]
+    extension = os.path.splitext(input)[1]
+
+    if extension =='.sdf':
+        suppl = Chem.SDMolSupplier(input, removeHs=False)
+    elif extension =='.mol':
+        suppl = Chem.MolFromMolFile(input, removeHs=False)
+    elif extension =='.mol2':
+        suppl = Chem.MolFromMol2File(input, removeHs=False)
+
+    IDs,charges = [],[]
+
+    with open(input,"r") as F:
+        lines = F.readlines()
+
+    molecule_count = 0
+    for i, line in enumerate(lines):
+        if line.find('>  <ID>') > -1:
+            ID = lines[i+1].split()[0]
+            IDs.append(ID)
+        if line.find('M  CHG') > -1:
+            charge_line =  line.split('  ')
+            charge = 0
+            for j in range(4,len(charge_line)):
+                if (j % 2) == 0:
+                    if j == len(charge_line) - 1:
+                        charge_line[j] = charge_line[j].split('\n')[0]
+                    charge += int(charge_line[j])
+            charges.append(charge)
+        if line.find('$$$$') > -1:
+            molecule_count += 1
+            if molecule_count != len(charges):
+                charges.append(0)
+
+    if len(IDs) == 0:
+        if extension == '.sdf':
+            for i in range(len(suppl)):
+                IDs.append(f'{filename}_{i}')
+        else:
+            IDs.append(filename)
+    if len(charges) == 0:
+        if extension == '.sdf':
+            for _ in suppl:
+                charges.append(0)
+        else:
+            charges.append(0)
+    return suppl, IDs, charges
+
+#checks the charge on the smi string
+def check_charge_smi(smi):
+    charge = 0
+    for i,smi_letter in enumerate(smi):
+        if smi_letter == '+':
+            if smi[i+1] == ']':
+                charge += 1
+            else:
+                charge += int(smi[i+1])
+        elif smi_letter == '-':
+            if smi[i+1] == ']':
+                charge -= 1
+            else:
+                charge -= int(smi[i+1])
+    return charge
 
 def set_metal_atomic_number(mol,metal_idx,metal_sym):
     """

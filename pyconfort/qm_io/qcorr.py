@@ -346,7 +346,7 @@ def check_for_final_folder(w_dir):
 	last_number = get_number(last_folder)
 	return str(last_folder), last_number
 
-def output_analyzer(log_files,com_files, w_dir, w_dir_main,lot, bs, bs_gcp, args, w_dir_fin, w_dir_initial, log, ana_data, round_num):
+def output_processing(log_files,com_files, w_dir, w_dir_main,lot, bs, bs_gcp, args, w_dir_fin, w_dir_initial, log, ana_data, round_num):
 
 	input_route = input_route_line(args)
 	finished,unfinished,atom_error,scf_error,imag_freq,other_error,exp_rules_qcorr,check_geom_qcorr = 0,0,0,0,0,0,0,0
@@ -879,7 +879,7 @@ def main(duplicates,w_dir_initial,args,log):
 			if len(log_files) == 0:
 				log.write('x  There are no output files in this folder.')
 			com_files = get_com_or_log_out_files('input',None)
-			output_analyzer(log_files, com_files, w_dir, w_dir_main, 
+			output_processing(log_files, com_files, w_dir, w_dir_main, 
 							lot, bs, bs_gcp, args, w_dir_fin, w_dir_initial, 
 							log, ana_data, n_run)
 			os.chdir(w_dir_main)

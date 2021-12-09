@@ -14,13 +14,14 @@ from pathlib import Path
 import pandas as pd
 from progress.bar import IncrementalBar
 from rdkit.Chem import AllChem as Chem
-from pyconfort.csearch import (check_for_pieces, check_charge_smi, clean_args,
-                               compute_confs,
-                               mol_from_sdf_or_mol_or_mol2, creation_of_dup_csv)
+# from pyconfort.csearch import (check_charge_smi, clean_args,
+#                                compute_confs,
+#                                mol_from_sdf_or_mol_or_mol2, creation_of_dup_csv)
+from pyconfort.csearch import *
 from pyconfort.filter import exp_rules_output
 
 from pyconfort.qprep_gaussian import (read_energies, get_name_and_charge, write_gaussian_input_file)
-from pyconfort.qcorr_gaussian import output_analyzer, check_for_final_folder
+from pyconfort.qcorr_gaussian import output_processing, check_for_final_folder
 
 from pyconfort.grapher import graph
 from pyconfort.descp import calculate_parameters
@@ -30,222 +31,71 @@ from pyconfort.dbstep_conf import calculate_db_parameters,calculate_boltz_and_db
 from pyconfort.nics_conf import calculate_nics_parameters,calculate_boltz_for_nics,calculate_avg_nics
 from pyconfort.cclib_conf import calculate_cclib,get_avg_cclib_param,calculate_boltz_for_cclib
 from pyconfort.cmin import mult_min
-from pyconfort.utils import Logger, move_file_from_folder, com_2_xyz_2_sdf
+from pyconfort.utils import (Logger, move_file_from_folder, com_2_xyz_2_sdf, check_for_pieces, check_charge_smi,load_from_yaml,creation_of_dup_csv,mol_from_sdf_or_mol_or_mol2)
 #need to and in energy
 
-#load paramters from yaml file
-def load_from_yaml(args,log):
-    """
-    Loads the parameters for the calculation from a yaml if specified. Otherwise
-    does nothing.
 
-    Parameters
-    ----------
-    args : argparse.args
-        Dataclass
-    log : Logger
-        Where to log the program progress
-    """
-    # Variables will be updated from YAML file
-    try:
-        if args.varfile is not None:
-            if os.path.exists(args.varfile):
-                if os.path.splitext(args.varfile)[1] == '.yaml':
-                    log.write("\no  Importing pyCONFORT parameters from " + args.varfile)
-                    with open(args.varfile, 'r') as file:
-                        try:
-                            param_list = yaml.load(file, Loader=yaml.SafeLoader)
-                        except yaml.scanner.ScannerError:
-                            log.write("\nx  Error while reading " + args.varfile+ ". Edit the yaml file and try again (i.e. use ':' instead of '=' to specify variables)")
-                            sys.exit()
-            for param in param_list:
-                if hasattr(args, param):
-                    if getattr(args, param) != param_list[param]:
-                        log.write("o  RESET " + param + " from " + str(getattr(args, param)) + " to " + str(param_list[param]))
-                        setattr(args, param, param_list[param])
-                    else:
-                        log.write("o  DEFAULT " + param + " : " + str(getattr(args, param)))
-    except UnboundLocalError: # RAUL: Is it just me or this only happens when the file exists, and ens in .yaml and is empty or does not end in .yaml?
-        log.write("\no  The specified yaml file containing parameters was not found! Make sure that the valid params file is in the folder where you are running the code.\n")
-
-
-#creation of csv for QCORR
-def creation_of_ana_csv(args):
-
-    columns_list = ['Total files', 'Normal termination', 'Imaginary frequencies', 'SCF error', 'Basis set error', 'Other errors', 'Unfinished']
-    if args.dup:
-        columns_list.append('Duplicates')
-    if len(args.exp_rules) >= 1:
-        columns_list.append('Exp_rules filter')
-    if args.isom != None:
-        columns_list.append('Isomerization')
-    ana_data = pd.DataFrame(columns = columns_list)
-
-    return ana_data
-
-
-# main function to generate conformers
 def csearch_main(w_dir_initial,args,log_overall):
-    # input file format specified
-    file_format = os.path.splitext(args.input)[1]
 
-    if file_format not in ['.smi', '.sdf', '.cdx', '.csv','.com','.gjf','.mol','.mol2','.xyz','.txt','.yaml','.yml','.rtf']:
-        log_overall.write("\nx  INPUT FILETYPE NOT CURRENTLY SUPPORTED!")
-        sys.exit()
+	file_format = os.path.splitext(args.input)[1]
 
-    if not os.path.exists(args.input):
-        log_overall.write("\nx  INPUT FILE NOT FOUND!")
-        sys.exit()
+	# Checks
+	if file_format not in SUPPORTED_INPUTS:
+		log_overall.write("\nx  INPUT FILETYPE NOT CURRENTLY SUPPORTED!")
+		sys.exit()
+	if not os.path.exists(args.input):
+		log_overall.write("\nx  INPUT FILE NOT FOUND!")
+		sys.exit()
 
-    # sets up the chosen force field (this fixes some problems in case MMFF is replaced by UFF)
-    ori_ff = args.ff
-    ori_charge = args.charge_default
+	# if large system increase stack size
+	# if args.STACKSIZE != '1G':
+	#     os.environ['OMP_STACKSIZE'] = args.STACKSIZE
+	smi_derivatives = ['.smi', '.txt', '.yaml', '.yml', '.rtf']
+	Extension2inputgen = dict()
+	for key in smi_derivatives:
+		Extension2inputgen[key] = prepare_smiles_files
+	Extension2inputgen['.csv'] = prepare_csv_files
+	Extension2inputgen['.cdx'] = prepare_cdx_files
+	Extension2inputgen['.gjf'] = prepare_gaussian_files
+	Extension2inputgen['.com'] = prepare_gaussian_files
+	Extension2inputgen['.xyz'] = prepare_gaussian_files
+	Extension2inputgen['.sdf'] = prepare_sdf_files
+	Extension2inputgen['.mol'] = prepare_mol_files
+	Extension2inputgen['.mol2'] = prepare_mol_files
 
-    # if large system increase stack size
-    # if args.STACKSIZE != '1G':
-    #     os.environ['OMP_STACKSIZE'] = args.STACKSIZE
+	with futures.ProcessPoolExecutor(max_workers=args.cpus,mp_context=mp.get_context('fork')) as executor:
+		# Submit a set of asynchronous jobs
+		jobs = []
+		count_mol = 0
 
-    with futures.ProcessPoolExecutor(max_workers=args.cpus) as executor:
-        # Submit a set of asynchronous jobs
-        jobs = []
-        count_mol = 0
-        # SMILES input specified
-        smi_derivatives = ['.smi', '.txt', '.yaml', '.yml', '.rtf']
-        if file_format in smi_derivatives:
-            smifile = open(args.input)
-            for i, line in enumerate(smifile):
-                if line == '\n':
-                    pass
-                else:
-                    toks = line.split()
-                    #editing part
-                    smi = toks[0]
-                    smi = check_for_pieces(smi)
-                    mol = Chem.MolFromSmiles(smi)
-                    try:
-                        clean_args(args,ori_ff,mol,ori_charge)
-                        if args.charge_default == 'auto':
-                            if not args.metal_complex:
-                                args.charge_default = check_charge_smi(smi)
-                        if args.prefix == 'None':
-                            name = ''.join(toks[1:])
-                        else:
-                            name = str(args.prefix)+str(i)+'_'+''.join(toks[1:])
+		# Prepare the Jobs
+		prepare_function = Extension2inputgen[file_format]
+		job_inputs = prepare_function(args,w_dir_initial)
 
-                        job = executor.submit(compute_confs,w_dir_initial,mol,name,args,i)
-                        jobs.append(job)
-                        count_mol +=1
+		# Submit the Jobs
+		for job_input in job_inputs:
+			mol_,name_,dir_,varfile_,charge_default_ = job_input
+			job = executor.submit(process_csearch,mol_,name_,dir_,varfile_,charge_default_)
+			jobs.append(job)
+			count_mol += 1
 
-                        # compute_confs(w_dir_initial,mol,name,args,log_overall,dup_data,counter_for_template,i,start_time)
-                    except AttributeError:
-                        log_overall.write("\nx  Wrong SMILES string ("+smi+") found (not compatible with RDKit or ANI/xTB if selected)! This compound will be omitted\n")
+		final_dup_data = creation_of_dup_csv(args.CSEARCH,args.CMIN)
+		bar = IncrementalBar('o  Number of finished jobs from CSEARCH', max = count_mol)
+		# Process the job results (in submission order) and save the conformers.
+		for i,job in enumerate(jobs):
+			total_data = job.result()
+			frames = [final_dup_data, total_data]
+			final_dup_data = pd.concat(frames,ignore_index=True,sort=True)
+			bar.next()
+		bar.finish()
 
+		# removing temporary files
+		temp_files = ['gfn2.out', 'xTB_opt.traj', 'ANI1_opt.traj', 'wbo', 'xtbrestart','ase.opt','xtb.opt','gfnff_topo']
+		for file in temp_files:
+			if os.path.exists(file):
+				os.remove(file)
 
-        # CSV file with one columns SMILES and code_name
-        elif os.path.splitext(args.input)[1] == '.csv':
-            csv_smiles = pd.read_csv(args.input)
-            for i in range(len(csv_smiles)):
-                #assigning names and smi i  each loop
-                smi = csv_smiles.loc[i, 'SMILES']
-                smi = check_for_pieces(smi)
-                mol = Chem.MolFromSmiles(smi)
-                clean_args(args,ori_ff,mol,ori_charge)
-                if args.charge_default == 'auto':
-                    if not args.metal_complex:
-                        args.charge_default = check_charge_smi(smi)
-                if args.prefix == 'None':
-                    name = csv_smiles.loc[i, 'code_name']
-                else:
-                    name = 'comp_'+str(i)+'_'+csv_smiles.loc[i, 'code_name']
-                job = executor.submit(compute_confs,w_dir_initial,mol,name,args,i)
-                jobs.append(job)
-                count_mol +=1
-                # compute_confs(w_dir_initial,mol,name,args,log_overall,dup_data,counter_for_template,i,start_time)
-
-        # CDX file
-        elif os.path.splitext(args.input)[1] == '.cdx':
-            #converting to smiles from chemdraw
-            cmd_cdx = ['obabel', '-icdx', args.input, '-osmi', '-Ocdx.smi']
-            subprocess.call(cmd_cdx)
-            smifile = open('cdx.smi',"r")
-
-            for i, smi in enumerate(smifile):
-                smi = check_for_pieces(smi)
-                mol = Chem.MolFromSmiles(smi)
-                clean_args(args,ori_ff,mol,ori_charge)
-                if args.charge_default == 'auto':
-                    if not args.metal_complex:
-                        args.charge_default = check_charge_smi(smi)
-                name = args.input.split('.')[0] +'_'+ str(i)
-                job = executor.submit(compute_confs,w_dir_initial,mol,name,args,i)
-                jobs.append(job)
-                count_mol +=1
-
-            smifile.close()
-            os.remove('cdx.smi')
-
-        # COM file
-        elif os.path.splitext(args.input)[1] == '.gjf' or os.path.splitext(args.input)[1] == '.com' or  os.path.splitext(args.input)[1] == '.xyz' :
-            #converting to sdf from comfile to preserve geometry
-            charge_com = com_2_xyz_2_sdf(args.input,args.default_charge)
-            sdffile = os.path.splitext(args.input)[0]+'.sdf'
-            if os.path.splitext(args.input)[1] == '.gjf' or os.path.splitext(args.input)[1] == '.com':
-                suppl, _, _ = mol_from_sdf_or_mol_or_mol2(sdffile)
-            if  os.path.splitext(args.input)[1] == '.xyz':
-                suppl, _, charge_com_list = mol_from_sdf_or_mol_or_mol2(sdffile)
-                charge_com = charge_com_list[0]
-            name = os.path.splitext(args.input)[0]
-            counter_for_template = 0
-            i=0
-            for mol in suppl:
-                clean_args(args,ori_ff,mol,ori_charge)
-                if args.charge_default == 'auto':
-                    args.charge_default = charge_com
-                job = executor.submit(compute_confs,w_dir_initial,mol,name,args,i)
-                jobs.append(job)
-                count_mol +=1
-                i += 1
-
-        # SDF file
-        elif os.path.splitext(args.input)[1] == '.sdf' or os.path.splitext(args.input)[1] == '.mol' or os.path.splitext(args.input)[1] == '.mol2':
-            suppl, IDs, charges = mol_from_sdf_or_mol_or_mol2(args.input)
-            i=0
-            if os.path.splitext(args.input)[1] == '.sdf':
-                for mol,name,charge_sdf in zip(suppl,IDs,charges):
-                    clean_args(args,ori_ff,mol,ori_charge)
-                    if args.charge_default == 'auto':
-                        args.charge_default = charge_sdf
-                    job = executor.submit(compute_confs,w_dir_initial,mol,name,args,i)
-                    jobs.append(job)
-                    count_mol +=1
-                    i += 1
-            elif os.path.splitext(args.input)[1] == '.mol' or os.path.splitext(args.input)[1] == '.mol2':
-                if args.charge_default == 'auto':
-                    args.charge_default = charges[0]
-                name = IDs[0]
-                mol = suppl
-                job = executor.submit(compute_confs,w_dir_initial,mol,name,args,i)
-                jobs.append(job)
-                count_mol +=1
-                i += 1
-
-        final_dup_data = creation_of_dup_csv(args.CSEARCH,args.CMIN)
-        bar = IncrementalBar('o  Number of finished jobs from CSEARCH', max = count_mol)
-        # Process the job results (in submission order) and save the conformers.
-        for i,job in enumerate(jobs):
-            total_data = job.result()
-            frames = [final_dup_data, total_data]
-            final_dup_data = pd.concat(frames,ignore_index=True,sort=True)
-            bar.next()
-        bar.finish()
-
-        # removing temporary files
-        temp_files = ['gfn2.out', 'xTB_opt.traj', 'ANI1_opt.traj', 'wbo', 'xtbrestart','ase.opt','xtb.opt','gfnff_topo']
-        for file in temp_files:
-            if os.path.exists(file):
-                os.remove(file)
-
-    return final_dup_data
+	return final_dup_data
 
 
 def cmin_main(w_dir_initial,args,log_overall,dup_data):
@@ -372,7 +222,6 @@ def qprep_main(w_dir_initial,args,log):
                                 log.write("   -> Converting from {}".format(file))
                         energies = read_energies(file,log)
                         name = file.split('.')[0]
-
                         write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, keywords_line, args, log, charge_data, w_dir_initial)
     else:
         log.write('\nx  No SDF files detected to convert to gaussian COM files')
@@ -494,13 +343,12 @@ def qcorr_gaussian_main(w_dir_initial,args,log):
             os.makedirs(w_dir_main+'/dat_files/')
         round_num = check_for_final_folder(w_dir_main)
         log = Logger(w_dir_main+'/dat_files/pyCONFORT-QCORR-run_'+str(round_num), args.output_name)
-        ana_data = creation_of_ana_csv(args)
         log.write("\no  Analyzing output files in {}\n".format(w_dir_main))
         log_files = get_com_or_log_out_files('output',None)
         if len(log_files) == 0:
             log.write('x  There are no output files in this folder.')
         com_files = get_com_or_log_out_files('input',None)
-        output_analyzer(log_files, com_files, w_dir_main, args, w_dir_fin, w_dir_initial, log, ana_data, round_num)
+        output_processing(log_files, w_dir_main, args, w_dir_fin, log, round_num)
         os.chdir(w_dir_main)
     # when you specify multiple levels of theory
     else:
@@ -523,11 +371,10 @@ def qcorr_gaussian_main(w_dir_initial,args,log):
             else:
                 w_dir_fin = args.path + str(lot) + '-' + str(bs) +'/success/output_files'
             os.chdir(w_dir_main)
-            ana_data = creation_of_ana_csv(args)
             log.write("\no  Analyzing output files in {}\n".format(w_dir_main))
             log_files = get_com_or_log_out_files('output',None)
             com_files = get_com_or_log_out_files('input',None)
-            output_analyzer(log_files, com_files, w_dir_main, args, w_dir_fin, w_dir_initial, log, ana_data, round_num)
+            output_processing(log_files, w_dir_main, args, w_dir_fin, log, round_num)
         os.chdir(args.path)
     os.chdir(w_dir_initial)
 

@@ -92,7 +92,7 @@ def parser_args():
   parser.add_argument("--mdci_orca",default='None', help="mdci section in ORCA. Format: ['LINE1','LINE2',etc]", dest="mdci_orca", type=str, nargs='?')
   parser.add_argument("--print_mini_orca",action="store_true",default=True, help="Option to print 'mini' (reduced outputs) in ORCA")
   parser.add_argument("--qm_input",  help="(i) keywords used in Gaussian input files (overiding opt and freq) or (ii) additional keywords for the ORCA input line", default=None, dest="qm_input")
-  parser.add_argument("--ts_input",  help="OPT options in Gaussian in QCORR for input files of TSs", default='opt=(calcfc,noeigen,ts,maxstep=5)', dest="ts_input")
+  parser.add_argument("--ts_input",  help="OPT options in Gaussian in QCORR for input files of TSs (disable this option with None)", default='opt=(calcfc,noeigen,ts,maxstep=5)', dest="ts_input")
   parser.add_argument("--qm_input_end",  help="Last input line for Gaussian", default="None", dest="qm_input_end", type=str)
   parser.add_argument("--genecp_atoms",  help="GenECP atoms for Gaussian",default=[], dest="genecp_atoms",type=str, nargs='*')
   parser.add_argument("--gen_atoms",  help="Gen atoms for Gaussian",default=[], dest="gen_atoms",type=str, nargs='*')
@@ -130,7 +130,7 @@ def parser_args():
   parser.add_argument("--covfrac", action="store", help="What fraction of the summed covalent radii constitutes a bond between two atoms in the isomerization filter?", default=1.10, type=float)
   parser.add_argument("--nocheck",action="store_true",default=False, help="Skips analysis for QM output files (i.e. it generates inputs for all the files not only the normally terminated files")
   #writing single point files
-  parser.add_argument("--sp", help="Create Gaussian single point input files", default=None, dest="sp", type=str)
+  parser.add_argument("--sp", help="Create QM single point input files", default=None, dest="sp", type=str)
   parser.add_argument("--nics", action="store_true", default=False, help="Create input files for NICS")
   parser.add_argument("--charge_sp", help="The charge for single point calculation in Gaussian and ORCA", default=None, metavar="charge_sp")
   parser.add_argument("--mult_sp", help="The multiplicity for single point calculation in Gaussian and ORCA", default=None, metavar="mult_sp")
@@ -189,3 +189,23 @@ def parser_args():
   args = parser.parse_args()
 
   return args
+
+### part for using the options in a script or jupyter notebook
+class options_add:
+	pass
+
+def set_options(kwargs):
+	#set default options and options provided
+	options = options_add()
+	#dictionary containing default values for options
+	var_dict = {'varfile': None, 'input': ' ', 'output_name': 'output', 'path': '', 'verbose': False, 'output': '.sdf', 'CSEARCH': None, 'CMIN': None, 'QPREP': None, 'QCORR': None, 'QSTAT': None, 'QPRED': None, 'metal_complex': False, 'metal': [], 'mult': 1, 'complex_coord': [], 'complex_type': '', 'm_oxi': [], 'metal_idx': [], 'charge': [], 'charge_default': 'auto', 'metal_sym': [], 'ewin_cmin': 5.0, 'ewin_csearch': 5.0, 'opt_fmax': 0.05, 'opt_steps': 1000, 'opt_steps_RDKit': 1000, 'time': True, 'heavyonly': True, 'degree': 120.0, 'max_torsions': 20, 'sample': 'auto', 'auto_sample': 20, 'ff': 'MMFF', 'seed': 62609, 'rms_threshold': 0.25, 'max_matches_RMSD': 1000, 'energy_threshold': 0.25, 'initial_energy_threshold': 0.0001, 'max_MolWt': 10000, 'ani_method': 'ANI2x', 'STACKSIZE': '1G', 'xtb_method': 'GFN2-xTB', 'xtb_solvent': 'none', 'xtb_accuracy': 1.0, 'xtb_electronic_temperature': 300.0, 'xtb_max_iterations': 250, 'cpus': 12, 'ewin_sample_fullmonte': 2.0, 'ewin_fullmonte': 5.0, 'nsteps_fullmonte': 100, 'nrot_fullmonte': 3, 'ang_fullmonte': 30, 'cregen': False, 'cregen_ethr': 0.2, 'cregen_rthr': 0.125, 'cregen_bthr': 0.01, 'cregen_ewin': 6, 'nprocs': 24, 'mem': '96GB', 'basis_set_genecp_atoms': [], 'aux_atoms_orca': [], 'aux_basis_set_genecp_atoms': [], 'aux_fit_genecp_atoms': [], 'cpcm_input': 'None', 'orca_scf_iters': 500, 'mdci_orca': 'None', 'print_mini_orca': True, 'qm_input': None, 'ts_input': 'opt=(calcfc,noeigen,ts,maxstep=5)', 'qm_input_end': 'None', 'genecp_atoms': [], 'gen_atoms': [], 'lowest_only': False, 'lowest_n': False, 'energy_threshold_for_gaussian': 100.0, 'chk': False, 'tmfunctional': ['TPSS'], 'tmfunctionalsp': ['TPSS'], 'tmbasis': None, 'tmbasisfile': None, 'tmbasissp': None, 'tmbasisfilesp': None, 'tmgrid': 'm4', 'tmdispersion': 'off', 'tmepsilon': 'gas', 'tmcavity': 'none', 'tmricore': 200, 'tmmaxcore': 200, 'com_from_xyz': False, 'dup': True, 'dup_threshold': 0.0001, 'check_geom': False, 'length_criteria': 1.4, 'amplitude_ifreq': 0.2, 'ifreq_cutoff': 0.0, 's2_threshold': 10.0, 'sp': None, 'nics': False, 'charge_sp': None, 'mult_sp': None, 'qm_input_sp': None, 'qm_input_end_sp': 'None', 'genecp_atoms_sp': [], 'gen_atoms_sp': [], 'basis_set_genecp_atoms_sp': ['LANL2DZ'], 'suffix_sp': 'None', 'aux_atoms_orca_sp': [], 'aux_basis_set_genecp_atoms_sp': [], 'aux_fit_genecp_atoms_sp': [], 'cpcm_input_sp': 'None', 'orca_scf_iters_sp': 500, 'mdci_orca_sp': 'None', 'print_mini_orca_sp': True, 'rot_dihedral': False, 'dihedral': [], 'bond': [], 'angle': [], 'geom_par_name': 'descp', 'dbstep_cen_lig_file': 'No file passed', 'nmr_exp': 'fromsdf', 'nmr_online': False, 'nmr_aos': 'giao', 'nmr_nucleus': ['C', 'H'], 'nmr_slope': [1.0673, 1.0759], 'nmr_intercept': [-15.191, -2.2094], 'nmr_tms_ref': [191.79, 31.39], 'nics_range': 4, 'nics_number': 16, 'nics_atoms_file': 'No file passed', 'qsub': False, 'qsub_ana': False, 'submission_command': 'qsub_summit', 'exp_rules': [], 'angle_off': 30, 'nci_complex': False, 'prefix': 'None'}
+
+	for key in var_dict:
+		vars(options)[key] = var_dict[key]
+	for key in kwargs:
+		if key in var_dict:
+			vars(options)[key] = kwargs[key]
+		else:
+			print("Warning! Option: [", key,":", kwargs[key],"] provided but no option exists, try -h to see available options.")
+
+	return options
