@@ -9,14 +9,14 @@ from pyconfort.utils import move_file_from_folder
 import json
 import numpy as np
 
-def calculate_boltz_for_cclib(log_files,name,w_dir_initial,lot,bs):
+def calculate_boltz_for_cclib(qm_files,name,w_dir_initial,lot,bs):
     """
     Runs goodvibes externally to calculate the --boltz and renames the output 
     file accordingly.
 
     Parameters
     ----------
-    log_files : [type]
+    qm_files : [type]
         [description]
     name : [type]
         [description]
@@ -30,7 +30,7 @@ def calculate_boltz_for_cclib(log_files,name,w_dir_initial,lot,bs):
 
     # GoodVibes must be installed as a module (through pip or conda)
     cmd_boltz = ['python','-m', 'goodvibes', '--boltz', '--output', name ]
-    for file in log_files:
+    for file in qm_files:
         cmd_boltz.append(file)
     subprocess.call(cmd_boltz)
 
@@ -60,8 +60,8 @@ def log_json(log_file,w_dir_initial,lot,bs):
     cmd_sub = " ".join(cmd)
     os.system(cmd_sub)
 
-def calculate_cclib(log_files,w_dir_initial,lot,bs):
-    for file in log_files:
+def calculate_cclib(qm_files,w_dir_initial,lot,bs):
+    for file in qm_files:
         log_json(file,w_dir_initial,lot,bs)
 
 def get_avg_cclib_param(json_files,name,w_dir_initial,lot,bs):

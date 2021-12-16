@@ -6,6 +6,6 @@ QCORR : gaussian
 
 # --- (4) ANALYSIS OF QM OUTPUT FILES (REQUIRES QPREP): QCORR
 # OPTIONS
-exp_rules : Ir_bidentate_x3
+geom_rules : Ir_bidentate_x3
 check_geom : True
 sp : gaussian

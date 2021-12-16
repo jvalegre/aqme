@@ -12,5 +12,5 @@ QPREP : gaussian
 sample : 'auto' # number of conformers to sample to get non-torsional differences (default 100)
 basis_set : ['6-31g*','def2tzvpp','LANL2DZ'] # basis set(s). Format: ['6-31+G(d,p)','Def2TZVP',...]
 level_of_theory : ['b3lyp','wb97xd','m062x'] # functional(s). Format: ['B3LYP','wB97XD',...]
-genecp_atoms : ['C'] # list of atoms included in the gen_ecp part
-basis_set_genecp_atoms : ['LANL2DZ','LANL2TZ','def2svp'] # functional for the genecp part
+gen_atoms : ['C'] # list of atoms included in the gen_ecp part
+genecp_bs : ['LANL2DZ','LANL2TZ','def2svp'] # functional for the genecp part

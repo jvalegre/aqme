@@ -13,28 +13,47 @@ from definitions_testing import analysis,single_point
 path_analysis_dup_sp = os.getcwd()
 
 # tests for individual organic molecules and metal complexes
-@pytest.mark.parametrize("folder, file, params_file, type_of_job",
+@pytest.mark.parametrize("folder, file, command_line, type_of_job",
 [
     # tests of the analysis part (I use file as the output LOG files)
-    ('Analysis', 'CH4_Normal_termination.log', 'params_QCORR_test.yaml', 'analysis'), # test normal termination
-    ('Analysis', 'CH4_z_Duplicate.LOG', 'params_QCORR_test.yaml', 'analysis'), # test duplicates
-    ('Analysis', 'Basis_set_error1.LOG', 'params_QCORR_test.yaml', 'analysis'), # test incompatibilities with gen/genecp
-    ('Analysis', 'Basis_set_error2.LOG', 'params_QCORR_test.yaml', 'analysis'), # test incompatibilities with gen/genecp
-    ('Analysis', 'MeOH_Error_termination.LOG', 'params_QCORR_test.yaml', 'analysis'), # test error terminations
-    ('Analysis', 'Imag_freq.log', 'params_QCORR_test.yaml', 'analysis'), # test imaginary frequencies
-    ('Analysis', 'Imag_freq_low.log', 'params_QCORR_test.yaml', 'analysis'), # test cut-off for imag freqs
-    ('Analysis', 'MeOH_SCF_error.out', 'params_QCORR_test.yaml', 'analysis'), # test SCF errors
-    ('Analysis', 'MeOH_Unfinished.OUT', 'params_QCORR_test.yaml', 'analysis'), # test unfinished calculations
-    ('Analysis', 'csv', 'params_QCORR_test.yaml', 'analysis'), # test final csv file with results
-    ('Analysis', 'dat', 'params_QCORR_test.yaml', 'analysis'), # test final csv file with results
+    ('Analysis', 'CH4_Normal_termination.log', 'python -m pyconfort --qcorr gaussian', 'analysis'), # test normal termination
+    ('Analysis', 'CH4_z_Duplicate.LOG', None, 'analysis'), # test duplicates
+    ('Analysis', 'Basis_set_error1.LOG', None, 'analysis'), # test incompatibilities with gen/genecp
+    ('Analysis', 'Basis_set_error2.LOG', None, 'analysis'), # test incompatibilities with gen/genecp
+    ('Analysis', 'MeOH_Error_termination.LOG', None, 'analysis'), # test error terminations
+    ('Analysis', 'Imag_freq.log', None, 'analysis'), # test imaginary frequencies
+    ('Analysis', 'Imag_freq_low.log', None, 'analysis'), # test cut-off for imag freqs
+    ('Analysis', 'MeOH_SCF_error.out', None, 'analysis'), # test SCF errors
+    ('Analysis', 'MeOH_Unfinished.OUT', None, 'analysis'), # test unfinished calculations
+    ERRORTYPE = 'before_E_calculation'
+    ('Analysis', 'TS_CH3HCH3.log', None, 'analysis'), # test for Normally terminated TSs
+    error TS
+    imag freq TS
+    0 freqs in TS (check if the errortype is different than when you have 2 imag freqs)
+    check ts_opt
+    spin cont
+    isomerization with com/gjf
+    isomerization with csv
+    isomeriz with csv for TSs
+    bondi for isomeriz
+    rcov for isomeriz
+    tell if the imag freq from a TS is right based on displacement
+    ('Analysis', 'CH4_Fail_freq_only.log', None, 'analysis'), # test for Normal terminated OPT and unfinished freq
+    ('Analysis', 'csv', None, 'analysis'), # test final csv file with results
+    ('Analysis', 'dat', None, 'analysis'), # test final csv file with results
     ('Analysis2', 'Imag_freq.log', 'params_QCORR_test2.yaml', 'analysis'), # test amplitude for moving imag freqs
+    s**2 threshold
+    e for duplicates threshold
+    how do we check the folder create the right RUN numbers?
     # tests for single points
     ('Single_point', 'CH4_Normal_termination.log', 'params_QCORR_test.yaml', 'single_point'), # test single-point generation
+    nocheck
+    overwrites charge/mult
 ])
 
-def test_analysis_dup_sp(folder, file, params_file, type_of_job):
+def test_analysis_dup_sp(folder, file, command_line, type_of_job):
     # runs the program with the different tests
-    cmd_pyconfort = ['python', '-m', 'pyconfort', '--varfile', params_file]
+    cmd_pyconfort = [command_line]
 
     if type_of_job == 'analysis':
         if file != 'csv' and file != 'dat':

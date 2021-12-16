@@ -6,7 +6,7 @@ from pyconfort.utils import periodic_table
 
 def passes_custom_rules(mol,args,log):
 	offset = args.angle_off
-	for rule in args.exp_rules:
+	for rule in args.geom_rules:
 		passing = apply_rule(rule,mol,log,offset)
 		if not passing:
 			return False
@@ -21,14 +21,14 @@ def apply_general_rule(rule,mol,log,offset=0.0):
 		syms = rule.split(',')[0].split('-')
 		target_angle = float(rule.split(',')[1])
 	except IndexError:
-		log.write('x  The exp_rules parameter(s) was not correctly defined, this filter will be turned off')
+		log.write('x  The geom_rules parameter(s) was not correctly defined, this filter will be turned off')
 		raise ValueError(f'rule "{rule}" is not properly defined')
 	atnums = [periodic_table.index(sym) for sym in syms]
 	smarts = pybel.Smarts('[#{}]~[#{}]~[#{}]'.format(*atnums))
 	matches = smarts.findall(mol)
 	if len(matches) >= 2:
-		log.write(f'x  There are multiple options in exp_rules for {mol.title}, this filter will be turned off')
-		log.write(f'x  {mol.title} contain more than one atom that meets the exp_rules criteria, this filter will be turned off')
+		log.write(f'x  There are multiple options in geom_rules for {mol.title}, this filter will be turned off')
+		log.write(f'x  {mol.title} contain more than one atom that meets the geom_rules criteria, this filter will be turned off')
 
 	atoms = [mol.atoms[i].OBAtom for i in matches[0]]
 	angle = mol.OBMol.GetAngle(*atoms)

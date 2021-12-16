@@ -13,9 +13,9 @@ ewin_csearch : 1000 #energy window in kcal/mol to use conformers for RDKit and x
 sample : 20 # number of conformers to sample to get non-torsional differences (default 100)
 
 # (4.2) DEFINITION OF A SECOND CATEGORY OF ATOMS SEPARATED IN GENECP
-genecp_atoms : ['C'] # list of atoms included in the gen_ecp part
+gen_atoms : ['C'] # list of atoms included in the gen_ecp part
 gen_atoms : [] # list of atoms inclueded in gen part
 
 # (4.3) DEFINTION OF BASIS SET AND LEVEL OF THEORY AND SOLVENT
-basis_set_genecp_atoms : ['C_genecp.txt'] # functional for the genecp part
+genecp_bs : ['C_genecp.txt'] # functional for the genecp part
 level_of_theory : ['wb97xd'] # functional

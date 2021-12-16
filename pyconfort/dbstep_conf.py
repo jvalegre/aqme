@@ -9,7 +9,7 @@ import subprocess
 
 from pyconfort.utils import move_file_from_folder
 
-def calculate_db_parameters(log_files,args,log,w_dir_initial,name_mol,lot,bs):
+def calculate_db_parameters(qm_files,args,log,w_dir_initial,name_mol,lot,bs):
 
     try:
         from dbstep.Dbstep import dbstep
@@ -22,7 +22,7 @@ def calculate_db_parameters(log_files,args,log,w_dir_initial,name_mol,lot,bs):
     #find the ring atoms in the File
     filelines =  open(w_dir_initial+'/'+args.dbstep_cen_lig_file,'r').readlines()
 
-    for counter,log in enumerate(log_files):
+    for counter,log in enumerate(qm_files):
         for line in (filelines):
             split_line = line.strip().split(',')
             if split_line[0] == name_mol:

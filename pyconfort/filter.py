@@ -204,7 +204,7 @@ def passes_Ir_bidentate_x3_rule(mol,angle_off):
     return passing
 
 # Main API of the module
-def exp_rules_output(mol,args,log,file,print_error_exp_rules):
+def geom_rules_output(mol,args,log,file,print_error_geom_rules):
     """
     returns if a mol object passes all the discarding rules or not. 
 
@@ -218,7 +218,7 @@ def exp_rules_output(mol,args,log,file,print_error_exp_rules):
         [description]
     file : str
         Only used to write to the log
-    print_error_exp_rules : bool
+    print_error_geom_rules : bool
         Controls extra writing to the log.
 
     Returns
@@ -227,13 +227,13 @@ def exp_rules_output(mol,args,log,file,print_error_exp_rules):
         If True, it means that it is in accordance with the rules
     """
     passing = True
-    for rule in args.exp_rules:
+    for rule in args.geom_rules:
         if rule == 'Ir_bidentate_x3':
             passing = passes_Ir_bidentate_x3_rule(mol,args.angle_off)
         else:
             var = rule.split(',')
             if len(var) < 2: 
-                log.write('x  The exp_rules parameter(s) was not correctly defined, this filter will be turned off')
+                log.write('x  The geom_rules parameter(s) was not correctly defined, this filter will be turned off')
                 return True 
             atoms_filter = var[0].split('-')
             angle_rules = int(var[1])
@@ -271,17 +271,17 @@ def exp_rules_output(mol,args,log,file,print_error_exp_rules):
                             # count matches
                             matches = neigh_count_first + neigh_count_second
                             if matches > 2:
-                                if not print_error_exp_rules:
-                                    log.write(f'x  There are multiple options in exp_rules for {file}, this filter will be turned off')
+                                if not print_error_geom_rules:
+                                    log.write(f'x  There are multiple options in geom_rules for {file}, this filter will be turned off')
                                     incompatibility_found = True
                                     break
                     if neigh_count_first == 1 and neigh_count_second == 1:
                         find_angle += 1
             if find_angle == 0 and not incompatibility_found:
-                if not print_error_exp_rules:
-                    log.write(f'x  No angles matching the description from exp_rules in {file}, this filter will be turned off')
+                if not print_error_geom_rules:
+                    log.write(f'x  No angles matching the description from geom_rules in {file}, this filter will be turned off')
             elif find_angle > 1:
-                    log.write(f'x  {file} contain more than one atom that meets the exp_rules criteria, this filter will be turned off')
+                    log.write(f'x  {file} contain more than one atom that meets the geom_rules criteria, this filter will be turned off')
             elif find_angle == 1:
                 # I need to get the only 3D conformer generated in that mol object for rdMolTransforms
                 mol_conf = mol.GetConformer(0)

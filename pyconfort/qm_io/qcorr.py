@@ -9,7 +9,7 @@ try:
 except ImportError:
 	from openbabel import pybel # for openbabel>=3.0.0
 
-from pyconfort.exp_rules import passes_custom_rules
+from pyconfort.geom_rules import passes_custom_rules
 from pyconfort.argument_parser import periodic_table
 
 from .gaussian import GaussianOutputFile
@@ -24,7 +24,7 @@ def input_route_line(args):
 	#definition of input_route lines
 	if args.qm_input == 'None':
 		input_route = ''
-		if args.QPREP == 'gaussian' or args.QCORR == 'gaussian':
+		if args.QPREP == 'gaussian' or args.qcorr == 'gaussian':
 			if args.frequencies:
 				input_route += 'freq=noraman'
 			if args.empirical_dispersion != 'None':
@@ -43,14 +43,14 @@ def input_route_line(args):
 # DETECTION AND LISTING OF GEN/GENECP FROM COM FILES
 def check_for_gen_or_genecp(ATOMTYPES,args,type_of_check,program_gen):
 	# Options for genecp
-	ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp,orca_aux_section = [],False,False,None,False
+	ecp_list,ecp_gen_atoms,ecp_gen_atoms,genecp,orca_aux_section = [],False,False,None,False
 	if type_of_check == 'analysis':
-		genecp_atoms_include = args.genecp_atoms
+		gen_atoms_include = args.gen_atoms
 		gen_atoms_include = args.gen_atoms
 		aux_atoms_include = args.aux_atoms_orca
 
 	elif type_of_check == 'sp':
-		genecp_atoms_include = args.genecp_atoms_sp
+		gen_atoms_include = args.gen_atoms_sp
 		gen_atoms_include = args.gen_atoms_sp
 		aux_atoms_include = args.aux_atoms_orca_sp
 
@@ -62,8 +62,8 @@ def check_for_gen_or_genecp(ATOMTYPES,args,type_of_check,program_gen):
 		if program_gen == 'gaussian':
 			if atomtype not in ecp_list and atomtype in periodic_table:
 				ecp_list.append(atomtype)
-			if atomtype in genecp_atoms_include:
-				ecp_genecp_atoms = True
+			if atomtype in gen_atoms_include:
+				ecp_gen_atoms = True
 			if atomtype in gen_atoms_include:
 				ecp_gen_atoms = True
 		
@@ -73,20 +73,20 @@ def check_for_gen_or_genecp(ATOMTYPES,args,type_of_check,program_gen):
 
 	if ecp_gen_atoms:
 		genecp = 'gen'
-	if ecp_genecp_atoms:
+	if ecp_gen_atoms:
 		genecp = 'genecp'
 
-	return ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp,orca_aux_section
+	return ecp_list,ecp_gen_atoms,ecp_gen_atoms,genecp,orca_aux_section
 
 # write genecp/gen part
-def write_genecp(type_gen,fileout,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,bs_com,lot_com,bs_gcp_com,args,w_dir_initial,new_gaussian_input_files):
+def write_genecp(type_gen,fileout,genecp,ecp_list,ecp_gen_atoms,ecp_gen_atoms,bs_com,lot_com,bs_gcp_com,args,w_dir_initial,new_gaussian_input_files):
 
 	for _,element_ecp in enumerate(ecp_list):
 		if type_gen == 'sp':
-			if element_ecp not in (args.genecp_atoms_sp or args.gen_atoms_sp):
+			if element_ecp not in (args.gen_atoms_sp or args.gen_atoms_sp):
 				fileout.write(element_ecp+' ')
 		else:
-			if element_ecp not in (args.genecp_atoms or args.gen_atoms):
+			if element_ecp not in (args.gen_atoms or args.gen_atoms):
 				fileout.write(element_ecp+' ')
 	fileout.write('0\n')
 	fileout.write(bs_com+'\n')
@@ -104,22 +104,22 @@ def write_genecp(type_gen,fileout,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms
 	else:
 		for _,element_ecp in enumerate(ecp_list):
 			if type_gen == 'sp':
-				if element_ecp in (args.genecp_atoms_sp or args.gen_atoms_sp):
+				if element_ecp in (args.gen_atoms_sp or args.gen_atoms_sp):
 					fileout.write(element_ecp+' ')
 			else:
-				if element_ecp in (args.genecp_atoms or args.gen_atoms):
+				if element_ecp in (args.gen_atoms or args.gen_atoms):
 					fileout.write(element_ecp+' ')
 
 		fileout.write('0\n')
 		fileout.write(bs_gcp_com+'\n')
 		fileout.write('****\n\n')
-		if ecp_genecp_atoms:
+		if ecp_gen_atoms:
 			for _,element_ecp in enumerate(ecp_list):
 				if type_gen == 'sp':
-					if element_ecp in args.genecp_atoms_sp:
+					if element_ecp in args.gen_atoms_sp:
 						fileout.write(element_ecp+' ')
 				else:
-					if element_ecp in args.genecp_atoms:
+					if element_ecp in args.gen_atoms:
 						fileout.write(element_ecp+' ')
 
 def orca_file_gen(mol,rename_file_name,bs,lot,
@@ -216,15 +216,15 @@ def creation_of_ana_csv(args):
 					'SCF error', 'Basis set error', 'Other errors', 'Unfinished']
 	if args.dup:
 		columns_list.append('Duplicates')
-	if len(args.exp_rules) >= 1:
-		columns_list.append('Exp_rules filter')
+	if len(args.geom_rules) >= 1:
+		columns_list.append('geom_rules filter')
 	if args.isom:
 		columns_list.append('Geometry changed')
 	ana_data = pd.DataFrame(columns = columns_list)
 
 	return ana_data
 #finding the file type to move for analysis
-def get_com_or_log_out_files(type,name):
+def get_filenames(type,name):
 	files = []
 	if type =='output':
 		formats = ['*.log','*.LOG','*.out','*.OUT','*json']
@@ -346,10 +346,10 @@ def check_for_final_folder(w_dir):
 	last_number = get_number(last_folder)
 	return str(last_folder), last_number
 
-def output_processing(log_files,com_files, w_dir, w_dir_main,lot, bs, bs_gcp, args, w_dir_fin, w_dir_initial, log, ana_data, round_num):
+def qcorr(qm_files,com_files, w_dir, w_dir_main,lot, bs, bs_gcp, args, w_dir_fin, w_dir_initial, log, ana_data, round_num):
 
 	input_route = input_route_line(args)
-	finished,unfinished,atom_error,scf_error,imag_freq,other_error,exp_rules_qcorr,check_geom_qcorr = 0,0,0,0,0,0,0,0
+	finished,unfinished,atom_error,scf_error,imag_freq,other_error,geom_rules_qcorr,check_geom_qcorr = 0,0,0,0,0,0,0,0
 
 	if round_num == 1:
 		#moves the comfiles to respective folder
@@ -358,7 +358,7 @@ def output_processing(log_files,com_files, w_dir, w_dir_main,lot, bs, bs_gcp, ar
 			destination = w_dir_main +'/input_files/run_'+str(round_num)
 			moving_files(source, destination)
 
-	for file in log_files: # Ideally the in_file and out_file should be iterated in parallel
+	for file in qm_files: # Ideally the in_file and out_file should be iterated in parallel
 
 		filepath = Path(f'{w_dir}/{file}')
 		GOF = GaussianOutputFile(filepath)
@@ -379,7 +379,7 @@ def output_processing(log_files,com_files, w_dir, w_dir_main,lot, bs, bs_gcp, ar
 		out_mol = pybel.readstring('xyz',xyz_str)
 
 		passes_rules = True
-		if args.exp_rules:
+		if args.geom_rules:
 			passes_rules = passes_custom_rules(out_mol,args,log)
 		
 		if args.isom and passes_rules:
@@ -388,23 +388,23 @@ def output_processing(log_files,com_files, w_dir, w_dir_main,lot, bs, bs_gcp, ar
 			passes_geom = passes_geometry_check(out_mol,in_mol,factor=args.length_criteria)
 		
 
-		# this part filters off conformers based on user-defined exp_rules
+		# this part filters off conformers based on user-defined geom_rules
 		passing_rules = True
 		valid_mol_gen = True
 		format_file = file.split('.')[1]
-		if len(args.exp_rules) >= 1:
+		if len(args.geom_rules) >= 1:
 			if TERMINATION == "normal" and IM_FREQS == 0:
-				log.write("  ----- Exp_rules filter(s) will be applied to the output file -----\n")
+				log.write("  ----- geom_rules filter(s) will be applied to the output file -----\n")
 				try:
 					mol,ob_compat,rdkit_compat = output_to_mol(file,format_file,log)
-					print_error_exp_rules=False
+					print_error_geom_rules=False
 					if ob_compat and rdkit_compat:
-						passing_rules = exp_rules_output(mol,args,log,file,print_error_exp_rules,ob_compat,rdkit_compat)
+						passing_rules = geom_rules_output(mol,args,log,file,print_error_geom_rules,ob_compat,rdkit_compat)
 					os.remove(file.split('.')[0]+'.mol')
 				except AttributeError:
 					valid_mol_gen = False
 					os.remove(file.split('.')[0]+'.mol')
-					log.write("The file could not be converted into a mol object, exp_rules filter(s) will be disabled\n")
+					log.write("The file could not be converted into a mol object, geom_rules filter(s) will be disabled\n")
 
 		passing_geom = True
 		if args.isom and passing_rules and valid_mol_gen:
@@ -433,16 +433,16 @@ def output_processing(log_files,com_files, w_dir, w_dir_main,lot, bs, bs_gcp, ar
 			log.write("The file could not be converted into a mol object, check_geom test will be disabled\n")
 
 		# This part places the calculations in different folders depending on the type of termination
-		finished,unfinished,atom_error,scf_error,imag_freq,other_error,exp_rules_qcorr,check_geom_qcorr = organize_outputs(w_dir,w_dir_main,round_num,file,IM_FREQS,TERMINATION,ERRORTYPE,w_dir_fin,finished,unfinished,atom_error,scf_error,imag_freq,other_error,exp_rules_qcorr,passing_rules,passing_geom,check_geom_qcorr)
+		finished,unfinished,atom_error,scf_error,imag_freq,other_error,geom_rules_qcorr,check_geom_qcorr = organize_outputs(w_dir,w_dir_main,round_num,file,IM_FREQS,TERMINATION,ERRORTYPE,w_dir_fin,finished,unfinished,atom_error,scf_error,imag_freq,other_error,geom_rules_qcorr,passing_rules,passing_geom,check_geom_qcorr)
 
 		# check if gen or genecp are active
 		# right now, QCORR is only working with Gaussian output files
 
-		ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp,orca_aux_section = check_for_gen_or_genecp(ATOMTYPES,args,'analysis','gaussian')
+		ecp_list,ecp_gen_atoms,ecp_gen_atoms,genecp,orca_aux_section = check_for_gen_or_genecp(ATOMTYPES,args,'analysis','gaussian')
 
 		# create folders and set level of theory in COM files to fix imaginary freqs or not normal terminations
 		if IM_FREQS > 0 or TERMINATION != "normal" and not os.path.exists(w_dir_main+'/failed/run_'+str(round_num)+'/error/basis_set_error/'+file):
-			create_folder_and_com(w_dir,w_dir_main,round_num,log,NATOMS,ATOMTYPES,CARTESIANS,args,TERMINATION,IM_FREQS,w_dir_fin,file,lot,bs,bs_gcp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp,ERRORTYPE,input_route,w_dir_initial,name,CHARGE, MULT, orca_aux_section)
+			create_folder_and_com(w_dir,w_dir_main,round_num,log,NATOMS,ATOMTYPES,CARTESIANS,args,TERMINATION,IM_FREQS,w_dir_fin,file,lot,bs,bs_gcp,ecp_list,ecp_gen_atoms,ecp_gen_atoms,genecp,ERRORTYPE,input_route,w_dir_initial,name,CHARGE, MULT, orca_aux_section)
 
 		# adding in the NMR componenet only to the finished files after reading from normally finished log files
 		if TERMINATION == "normal" and IM_FREQS == 0 and passing_rules and passing_geom:
@@ -468,10 +468,10 @@ def output_processing(log_files,com_files, w_dir, w_dir_main,lot, bs, bs_gcp, ar
 
 				# Options for genecp
 				if args.sp == 'gaussian':
-					ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp,orca_aux_section = check_for_gen_or_genecp(ATOMTYPES,args,'sp','gaussian')
+					ecp_list,ecp_gen_atoms,ecp_gen_atoms,genecp,orca_aux_section = check_for_gen_or_genecp(ATOMTYPES,args,'sp','gaussian')
 
 				elif args.sp == 'orca':
-					ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp,orca_aux_section = check_for_gen_or_genecp(ATOMTYPES,args,'sp','orca')
+					ecp_list,ecp_gen_atoms,ecp_gen_atoms,genecp,orca_aux_section = check_for_gen_or_genecp(ATOMTYPES,args,'sp','orca')
 
 				elif args.sp == 'turbomole':
 					# Check for gen or genecp
@@ -481,7 +481,7 @@ def output_processing(log_files,com_files, w_dir, w_dir_main,lot, bs, bs_gcp, ar
 				if genecp == None:
 					basis_set_for_genecp = args.basis_set_sp
 				elif genecp == 'genecp' or genecp == 'gen':
-					basis_set_for_genecp = args.basis_set_genecp_atoms_sp
+					basis_set_for_genecp = args.gen_bs_sp
 
 				# Sets the folder and find the log files to analyze
 				for lot_sp,bs_sp,bs_gcp_sp in zip(args.level_of_theory_sp,args.basis_set_sp,basis_set_for_genecp):
@@ -527,19 +527,19 @@ def output_processing(log_files,com_files, w_dir, w_dir_main,lot, bs, bs_gcp, ar
 						if not os.path.isdir(single_point_input_files+'/'+dir_name):
 							os.makedirs(single_point_input_files+'/'+dir_name)
 						os.chdir(single_point_input_files+'/'+dir_name)
-						new_com_file('sp',w_dir_initial,log,single_point_input_files+'/'+dir_name,file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,TERMINATION,IM_FREQS,bs_sp,lot_sp,bs_gcp_sp,orca_aux_section)
+						new_com_file('sp',w_dir_initial,log,single_point_input_files+'/'+dir_name,file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,ecp_gen_atoms,ecp_gen_atoms,TERMINATION,IM_FREQS,bs_sp,lot_sp,bs_gcp_sp,orca_aux_section)
 
 					if args.nics:
 						if not os.path.isdir(nics_input_files+'/'+dir_name):
 							os.makedirs(nics_input_files+'/'+dir_name)
 						os.chdir(nics_input_files+'/'+dir_name)
-						new_com_file('nics',w_dir_initial,log,nics_input_files+'/'+dir_name,file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,TERMINATION,IM_FREQS,bs_sp,lot_sp,bs_gcp_sp,orca_aux_section)
+						new_com_file('nics',w_dir_initial,log,nics_input_files+'/'+dir_name,file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,ecp_gen_atoms,ecp_gen_atoms,TERMINATION,IM_FREQS,bs_sp,lot_sp,bs_gcp_sp,orca_aux_section)
 
 	#write to csv ana_data
 	if duplicates=='None':
-		ana_data.at[0,'Total files'] = len(log_files)
+		ana_data.at[0,'Total files'] = len(qm_files)
 	else:
-		ana_data.at[0,'Total files'] = len(log_files)+int(duplicates) # since duplicates are moved before anything else
+		ana_data.at[0,'Total files'] = len(qm_files)+int(duplicates) # since duplicates are moved before anything else
 	ana_data.at[0,'Normal termination'] = finished
 	ana_data.at[0,'Imaginary frequencies'] = imag_freq
 	ana_data.at[0,'SCF error'] = scf_error
@@ -548,8 +548,8 @@ def output_processing(log_files,com_files, w_dir, w_dir_main,lot, bs, bs_gcp, ar
 	ana_data.at[0,'Unfinished'] = unfinished
 	if args.dup:
 		ana_data.at[0,'Duplicates'] = duplicates
-	if len(args.exp_rules) >= 1:
-		ana_data.at[0,'Exp_rules filter'] = exp_rules_qcorr
+	if len(args.geom_rules) >= 1:
+		ana_data.at[0,'geom_rules filter'] = geom_rules_qcorr
 	if args.isom:
 		ana_data.at[0,'Geometry changed'] = check_geom_qcorr
 
@@ -572,25 +572,25 @@ def analyze_single_output(file,log,w_dir,args):
 	############################################################################
 	######### Handle the logic of each output file and what to do with them
 	
-	# this part filters off conformers based on user-defined exp_rules
+	# this part filters off conformers based on user-defined geom_rules
 	passing_rules = True
 	valid_mol_gen = True
 	xyz_str = GOF.to_xyz(cartesians)
 	mol = pybel.readstring('xyz',xyz_str)
 	format_file = file.split('.')[1]
-	if len(args.exp_rules) >= 1:
+	if len(args.geom_rules) >= 1:
 		if TERMINATION == "normal" and IM_FREQS == 0:
-			log.write("  ----- Exp_rules filter(s) will be applied to the output file -----\n")
+			log.write("  ----- geom_rules filter(s) will be applied to the output file -----\n")
 			try:
 				mol,ob_compat,rdkit_compat = output_to_mol(file,format_file,log)
-				print_error_exp_rules=False
+				print_error_geom_rules=False
 				if ob_compat and rdkit_compat:
-					passing_rules = exp_rules_output(mol,args,log,file,print_error_exp_rules,ob_compat,rdkit_compat)
+					passing_rules = geom_rules_output(mol,args,log,file,print_error_geom_rules,ob_compat,rdkit_compat)
 				os.remove(file.split('.')[0]+'.mol')
 			except AttributeError:
 				valid_mol_gen = False
 				os.remove(file.split('.')[0]+'.mol')
-				log.write("The file could not be converted into a mol object, exp_rules filter(s) will be disabled\n")
+				log.write("The file could not be converted into a mol object, geom_rules filter(s) will be disabled\n")
 
 	passing_geom = True
 	if args.isom and passing_rules and valid_mol_gen:
@@ -619,16 +619,16 @@ def analyze_single_output(file,log,w_dir,args):
 		log.write("The file could not be converted into a mol object, check_geom test will be disabled\n")
 
 	# This part places the calculations in different folders depending on the type of termination
-	finished,unfinished,atom_error,scf_error,imag_freq,other_error,exp_rules_qcorr,check_geom_qcorr = organize_outputs(w_dir,w_dir_main,round_num,file,IM_FREQS,TERMINATION,ERRORTYPE,w_dir_fin,finished,unfinished,atom_error,scf_error,imag_freq,other_error,exp_rules_qcorr,passing_rules,passing_geom,check_geom_qcorr)
+	finished,unfinished,atom_error,scf_error,imag_freq,other_error,geom_rules_qcorr,check_geom_qcorr = organize_outputs(w_dir,w_dir_main,round_num,file,IM_FREQS,TERMINATION,ERRORTYPE,w_dir_fin,finished,unfinished,atom_error,scf_error,imag_freq,other_error,geom_rules_qcorr,passing_rules,passing_geom,check_geom_qcorr)
 
 	# check if gen or genecp are active
 	# right now, QCORR is only working with Gaussian output files
 
-	ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp,orca_aux_section = check_for_gen_or_genecp(ATOMTYPES,args,'analysis','gaussian')
+	ecp_list,ecp_gen_atoms,ecp_gen_atoms,genecp,orca_aux_section = check_for_gen_or_genecp(ATOMTYPES,args,'analysis','gaussian')
 
 	# create folders and set level of theory in COM files to fix imaginary freqs or not normal terminations
 	if IM_FREQS > 0 or TERMINATION != "normal" and not os.path.exists(w_dir_main+'/failed/run_'+str(round_num)+'/error/basis_set_error/'+file):
-		create_folder_and_com(w_dir,w_dir_main,round_num,log,NATOMS,ATOMTYPES,CARTESIANS,args,TERMINATION,IM_FREQS,w_dir_fin,file,lot,bs,bs_gcp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp,ERRORTYPE,input_route,w_dir_initial,name,CHARGE, MULT, orca_aux_section)
+		create_folder_and_com(w_dir,w_dir_main,round_num,log,NATOMS,ATOMTYPES,CARTESIANS,args,TERMINATION,IM_FREQS,w_dir_fin,file,lot,bs,bs_gcp,ecp_list,ecp_gen_atoms,ecp_gen_atoms,genecp,ERRORTYPE,input_route,w_dir_initial,name,CHARGE, MULT, orca_aux_section)
 
 	# adding in the NMR componenet only to the finished files after reading from normally finished log files
 	if TERMINATION == "normal" and IM_FREQS == 0 and passing_rules and passing_geom:
@@ -654,10 +654,10 @@ def analyze_single_output(file,log,w_dir,args):
 
 			# Options for genecp
 			if args.sp == 'gaussian':
-				ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp,orca_aux_section = check_for_gen_or_genecp(ATOMTYPES,args,'sp','gaussian')
+				ecp_list,ecp_gen_atoms,ecp_gen_atoms,genecp,orca_aux_section = check_for_gen_or_genecp(ATOMTYPES,args,'sp','gaussian')
 
 			elif args.sp == 'orca':
-				ecp_list,ecp_genecp_atoms,ecp_gen_atoms,genecp,orca_aux_section = check_for_gen_or_genecp(ATOMTYPES,args,'sp','orca')
+				ecp_list,ecp_gen_atoms,ecp_gen_atoms,genecp,orca_aux_section = check_for_gen_or_genecp(ATOMTYPES,args,'sp','orca')
 
 			elif args.sp == 'turbomole':
 				# Check for gen or genecp
@@ -667,7 +667,7 @@ def analyze_single_output(file,log,w_dir,args):
 			if genecp == None:
 				basis_set_for_genecp = args.basis_set_sp
 			elif genecp == 'genecp' or genecp == 'gen':
-				basis_set_for_genecp = args.basis_set_genecp_atoms_sp
+				basis_set_for_genecp = args.gen_bs_sp
 
 			# Sets the folder and find the log files to analyze
 			for lot_sp,bs_sp,bs_gcp_sp in zip(args.level_of_theory_sp,args.basis_set_sp,basis_set_for_genecp):
@@ -713,13 +713,13 @@ def analyze_single_output(file,log,w_dir,args):
 					if not os.path.isdir(single_point_input_files+'/'+dir_name):
 						os.makedirs(single_point_input_files+'/'+dir_name)
 					os.chdir(single_point_input_files+'/'+dir_name)
-					new_com_file('sp',w_dir_initial,log,single_point_input_files+'/'+dir_name,file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,TERMINATION,IM_FREQS,bs_sp,lot_sp,bs_gcp_sp,orca_aux_section)
+					new_com_file('sp',w_dir_initial,log,single_point_input_files+'/'+dir_name,file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,ecp_gen_atoms,ecp_gen_atoms,TERMINATION,IM_FREQS,bs_sp,lot_sp,bs_gcp_sp,orca_aux_section)
 
 				if args.nics:
 					if not os.path.isdir(nics_input_files+'/'+dir_name):
 						os.makedirs(nics_input_files+'/'+dir_name)
 					os.chdir(nics_input_files+'/'+dir_name)
-					new_com_file('nics',w_dir_initial,log,nics_input_files+'/'+dir_name,file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,ecp_genecp_atoms,ecp_gen_atoms,TERMINATION,IM_FREQS,bs_sp,lot_sp,bs_gcp_sp,orca_aux_section)
+					new_com_file('nics',w_dir_initial,log,nics_input_files+'/'+dir_name,file,args,keywords_opt,name,CHARGE,MULT,NATOMS,ATOMTYPES,CARTESIANS,genecp,ecp_list,ecp_gen_atoms,ecp_gen_atoms,TERMINATION,IM_FREQS,bs_sp,lot_sp,bs_gcp_sp,orca_aux_section)
 
 def classify_files(inputs,outputs,output_objects):
 	finished = []
@@ -849,7 +849,7 @@ def main(duplicates,w_dir_initial,args,log):
 	# names for directories created
 	temp_kwargs = dict()
 
-	if args.QCORR == 'gaussian': 
+	if args.qcorr == 'gaussian': 
 		template = create_gaussian_template(args)
 
 	if args.sp == 'gaussian':
@@ -867,7 +867,7 @@ def main(duplicates,w_dir_initial,args,log):
 	if not qmcalc_folder.exists():
 		w_dir_main = os.getcwd()
 		w_dir_fin = w_dir_main+'/success/output_files'
-		for lot,bs,bs_gcp in zip(args.level_of_theory, args.basis_set,args.basis_set_genecp_atoms):
+		for lot,bs,bs_gcp in zip(args.level_of_theory, args.basis_set,args.genecp_bs):
 			if not os.path.isdir(w_dir_main+'/dat_files/'):
 				os.makedirs(w_dir_main+'/dat_files/')
 			w_dir,n_run = check_for_final_folder(w_dir_main)
@@ -875,11 +875,11 @@ def main(duplicates,w_dir_initial,args,log):
 			log = Logger(f'{w_dir_main}/dat_files/pyCONFORT-QCORR-run_{n_run}', args.output_name)
 			ana_data = creation_of_ana_csv(args)
 			log.write("\no  Analyzing output files in {}\n".format(w_dir))
-			log_files = get_com_or_log_out_files('output',None)
-			if len(log_files) == 0:
+			qm_files = get_filenames('output',None)
+			if len(qm_files) == 0:
 				log.write('x  There are no output files in this folder.')
-			com_files = get_com_or_log_out_files('input',None)
-			output_processing(log_files, com_files, w_dir, w_dir_main, 
+			com_files = get_filenames('input',None)
+			qcorr(qm_files, com_files, w_dir, w_dir_main, 
 							lot, bs, bs_gcp, args, w_dir_fin, w_dir_initial, 
 							log, ana_data, n_run)
 			os.chdir(w_dir_main)
@@ -912,7 +912,7 @@ def main(duplicates,w_dir_initial,args,log):
 			basisset_error_folder = errors_folder/f'basis_set_error'
 			unknown_error_folder = errors_folder/f'unknown_error'
 			unfinished_folder = folder/f'failed/run_{n_run}/unfinished'
-			rules_folder = folder/f'failed/run_{n_run}/exp_rules_filter'
+			rules_folder = folder/f'failed/run_{n_run}/geom_rules_filter'
 			geomcheck_folder = folder/f'failed/run_{n_run}/geometry_changed'
 
 			# Prepare next run for imag_freqs files 

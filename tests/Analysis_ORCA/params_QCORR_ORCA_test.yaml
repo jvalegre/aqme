@@ -8,4 +8,4 @@ QCORR : gaussian
 # OPTIONS
 # if sp = True, the program will generate new COM files (from normally terminated LOG files) with the options selected from the user
 sp : orca # write single-point COM files after analysis (options in QPREP)
-suffix_sp : SPC # adds a suffix at the end of the single-point COM filename (i.e. FILENAME_suffix.com). If suffix_sp = None, no suffixes are added
+suffix : SPC # adds a suffix at the end of the single-point COM filename (i.e. FILENAME_suffix.com). If suffix = None, no suffixes are added

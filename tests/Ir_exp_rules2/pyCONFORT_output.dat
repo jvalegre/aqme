@@ -1,16 +1,16 @@
 
-o  Importing pyCONFORT parameters from params_Ir_exp_rules_test_cdx.yaml
+o  Importing pyCONFORT parameters from params_Ir_geom_rules_test_cdx.yaml
 o  RESET input from   to Ir_4.cdx
 o  RESET verbose from False to True
 o  RESET CSEARCH from None to rdkit
 o  RESET QPREP from None to gaussian
 o  RESET ewin_csearch from 5.0 to 1000
 o  RESET sample from auto to 10
-o  RESET genecp_atoms from [] to ['Ir']
+o  RESET gen_atoms from [] to ['Ir']
 o  DEFAULT gen_atoms : []
-o  RESET basis_set_genecp_atoms from [''] to ['LANL2DZ']
+o  RESET genecp_bs from [''] to ['LANL2DZ']
 o  DEFAULT level_of_theory : ['wb97xd']
-o  RESET exp_rules from False to Ir_bidentate_x3
+o  RESET geom_rules from False to Ir_bidentate_x3
 o  DEFAULT angle_off : 30
 o  RESET metal_complex from False to True
 o  RESET metal from [] to ['Ir']
@@ -36,4 +36,4 @@ o  4 unique conformers remain
    ----- Applying experimental rules to write the new confs file -----
 
 o  Preparing QM input files in QMCALC/G16/wb97xd-6-31g(d)
-   -> Converting from comp0__rdkit_filter_exp_rules.sdf
+   -> Converting from comp0__rdkit_filter_geom_rules.sdf

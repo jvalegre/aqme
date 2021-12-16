@@ -26,15 +26,18 @@
 
 import os
 import time
+import json
+import pandas as pd
 from pathlib import Path
 from pyconfort.argument_parser import parser_args
 
-from pyconfort.mainf import (csearch_main, exp_rules_main, qprep_main,
-                             move_sdf_main, qcorr_gaussian_main,
-                             graph_main,geom_par_main,nmr_main,energy_main,
-                             load_from_yaml,creation_of_ana_csv,dbstep_par_main,
+from pyconfort.mainf import (csearch_main, geom_rules_main, qprep_main,
+                             move_sdf_main, graph_main,geom_par_main,nmr_main,energy_main,
+                             load_from_yaml,dbstep_par_main,
                              nics_par_main,cclib_main,cmin_main)
-from pyconfort.utils import Logger
+from pyconfort.utils import Logger,get_filenames
+from pyconfort.qcorr_gaussian import qcorr, check_for_final_folder
+from pyconfort.qprep_gaussian import GaussianTemplate
 
 def main():
     # working directory and arguments
@@ -78,11 +81,11 @@ def main():
 
 
     #applying rules to discard certain conformers based on rules that the user define
-    if len(args.exp_rules) >= 1:
-        exp_rules_active = True
-        if args.QCORR=='gaussian':
-            exp_rules_active = False
-        exp_rules_main(args,log_overall,exp_rules_active)
+    if len(args.geom_rules) >= 1:
+        geom_rules_active = True
+        if args.qcorr=='gaussian':
+            geom_rules_active = False
+        geom_rules_main(args,log_overall,geom_rules_active)
         os.chdir(w_dir_initial)
 
     #QPREP
@@ -90,18 +93,61 @@ def main():
         qprep_main(w_dir_initial,args,log_overall)
         os.chdir(w_dir_initial)
 
-    if args.CSEARCH in ['rdkit', 'summ', 'fullmonte','crest'] or args.QPREP is not None:
-        # moving files after compute and/or write_gauss
-        move_sdf_main(args)
-        os.chdir(w_dir_initial)
+    # if args.CSEARCH in ['rdkit', 'summ', 'fullmonte','crest'] or args.QPREP is not None:
+    #     # moving files after compute and/or write_gauss
+    #     move_sdf_main(args)
+    #     os.chdir(w_dir_initial)
 
     #QCORR
-    if args.QCORR=='gaussian':
+    if args.qcorr=='gaussian':
         log_overall.write("\no  Writing analysis of output files in respective folders\n")
+        qm_files = get_filenames('output',None)
+        df_qcorr_success,df_qcorr_error = pd.DataFrame(),pd.DataFrame()
+        # detects round of optimizations
+        round_num = check_for_final_folder(w_dir_initial) 
 
-        # main part of the output file analyzer for errors/imag freqs
-        qcorr_gaussian_main(w_dir_initial,args,log_overall)
-        os.chdir(w_dir_initial)
+        # runs the qcorr module, which organizes the files and returns all the necessary information 
+        # as a json file
+        if args.qcorr_json == '':
+            df_qcorr_success,df_qcorr_error = qcorr(qm_files=qm_files, round_num=round_num) 
+        else:
+            with open(f'{args.qcorr_json}_success') as f:
+                df_qcorr_success = json.load(f)
+
+        if not df_qcorr_error.empty():
+            for i,file_name in enumerate(df_qcorr_error['file_name']):
+                # creates input files to fix imaginary freqs and not normal terminations
+                if df_qcorr_error['TERMINATION'][i] != "normal" or df_qcorr_error['ERRORTYPE'][i] not in [None,'isomerization']:
+                    dir_for_analysis = w_dir_initial+'/fixed_QM_input_files/run_'+str(round_num+1)
+                    if not os.path.isdir(dir_for_analysis):
+                        os.makedirs(dir_for_analysis)
+                    log.write(f'-> Creating new gaussian input file for {file_name} in {dir_for_analysis}')
+                    if not args.nocom:
+                        GaussianTemplate(destination=dir_for_analysis, molecule=file_name,CHARGE=df_qcorr_error['CHARGE'][i],
+                                        MULT=df_qcorr_error['MULT'][i], ATOMTYPES=df_qcorr_error['ATOMTYPES'][i],
+                                        gen_atoms=args.gen_atoms, bs_gen=args.genecp_bs, bs=args.bs,
+                                        program=args.program, CARTESIANS=df_qcorr_error['CARTESIANS'][i],
+                                        qm_keywords=df_qcorr_error['keywords_line'][i], qm_end=args.qm_input_end_sp)
+
+        if not df_qcorr_success.empty() and args.sp != None:
+            # creates input files for single-point energy calcs
+            for i,file_name in enumerate(df_qcorr_success['file_name']):
+                if df_qcorr_success['TERMINATION'][i] == "normal" and df_qcorr_success['ERRORTYPE'][i] == None:
+                    dir_for_sp = w_dir_initial+'/single_point_input_files'
+                    if not os.path.isdir(dir_for_sp):
+                        os.makedirs(dir_for_sp)
+                    if args.charge_sp != 'None':
+                        CHARGE = args.charge_sp
+                    if args.mult_sp != 'None':
+                        MULT = args.mult_sp
+                    if args.suffix != 'None':
+                        file_name = file_name+'_'+args.suffix
+                    log.write(f'-> Creating new gaussian input file for {file_name} in {dir_for_sp}')
+                    GaussianTemplate(destination=dir_for_analysis, molecule=file_name, CHARGE=df_qcorr_success['CHARGE'][i], 
+                                    MULT=df_qcorr_success['MULT'][i], ATOMTYPES=df_qcorr_success['ATOMTYPES'][i],
+                                    gen_atoms=args.gen_atoms, bs_gen=args.gen_bs_sp, bs=args.bs_sp,
+                                    program=args.program_sp, CARTESIANS=df_qcorr_success['CARTESIANS'][i],
+                                    qm_keywords=args.qm_input_sp, qm_end=args.qm_input_end_sp)
 
     #QPRED
     if args.QPRED=='nmr':

@@ -31,7 +31,7 @@ charge_default : 1
 basis_set : ['6-31+g(d,p)'] # basis set(s). Format: ['6-31+G(d,p)','Def2TZVP',...]
 level_of_theory : ['wb97xd'] # functional(s). Format: ['B3LYP','wB97XD',...]
 gen_atoms : ['C','H','O','N','S','F','Br','Si','Na']
-basis_set_genecp_atoms : ['6-31+g(d,p)']
+genecp_bs : ['6-31+g(d,p)']
 ## solvation model
 solvent_model : 'SMD' # type of solvation model. Options: gas_phase or any solvation model (i.e. SMD, IEFPCM, CPCM)
 solvent_name : 'dichloromethane' # solvent used (i.e. chloroform, toluene, etc)

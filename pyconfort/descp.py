@@ -63,7 +63,7 @@ def get_data(rdkit_mols,min_mols,dft_mols,lot,bs,name_mol,args,type_csearch,type
     return geom_data
 
 
-def calculate_parameters(sdf_rdkit,sdf_ani,sdf_xtb,log_files,args,log,w_dir_initial,name_mol,lot,bs):
+def calculate_parameters(sdf_rdkit,sdf_ani,sdf_xtb,qm_files,args,log,w_dir_initial,name_mol,lot,bs):
     #creating folder for all molecules to write geom parameter
     folder = w_dir_initial + '/QSTAT/geom_parameters'
     try:
@@ -94,7 +94,7 @@ def calculate_parameters(sdf_rdkit,sdf_ani,sdf_xtb,log_files,args,log,w_dir_init
         obConversion = ob.OBConversion()
         obConversion.SetInAndOutFormats("log", "mol")
         ob_mol = ob.OBMol()
-        for file in log_files:
+        for file in qm_files:
             if str(bs).find('/') > -1:
                 obConversion.ReadFile(ob_mol, args.path + str(lot) + '-' + str(bs).split('/')[0] +'/success/output_files/'+file)
                 obConversion.WriteFile(ob_mol, args.path + str(lot) + '-' + str(bs).split('/')[0] +'/success/output_files/'+file.split('.')[0]+'.mol')

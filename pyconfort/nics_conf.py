@@ -135,14 +135,14 @@ def getSHIELDING(outlines,args,log):
   return NMR, CARTESIANS,NATOMS,ATOMTYPES
 
 
-def calculate_nics_parameters(log_files,args,log,w_dir_initial,name_mol,lot,bs):
+def calculate_nics_parameters(qm_files,args,log,w_dir_initial,name_mol,lot,bs):
 
     directory = Path(w_dir_initial)
 
     total_data = pd.DataFrame()
     dist_data = pd.DataFrame()
 
-    for counter,log in enumerate(log_files):
+    for counter,log in enumerate(qm_files):
         name = log.split('.log')[0]
 
         with open(log,'r') as F: 

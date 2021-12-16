@@ -219,7 +219,7 @@ def plot_graph(energy_rdkit,energy_min,energy_min_dft,lot,bs,energy_min_dft_sp,l
     plt.close()
     os.chdir(w_dir_initial)
 
-def graph(sdf_rdkit,sdf_xtb,sdf_ani,log_files,sp_files,args,log,lot,bs,lot_sp,bs_sp,name_mol,w_dir_initial,w_dir_sp,w_dir,type):
+def graph(sdf_rdkit,sdf_xtb,sdf_ani,qm_files,sp_files,args,log,lot,bs,lot_sp,bs_sp,name_mol,w_dir_initial,w_dir_sp,w_dir,type):
 
     try:
         import cclib
@@ -247,8 +247,8 @@ def graph(sdf_rdkit,sdf_xtb,sdf_ani,log_files,sp_files,args,log,lot,bs,lot_sp,bs
     energy_rdkit_dft,energy_xtb_dft,energy_ani_dft = [],[],[]
     sp_rdkit_dft,sp_xtb_dft,sp_ani_dft = [],[],[]
     #get energy from log FILES
-    if log_files is not None:
-        for file in log_files:
+    if qm_files is not None:
+        for file in qm_files:
             data = cclib.io.ccread(file)
             if len(file.split('_ani.log')) == 2 or len(file.split('_xtb.log')) == 2:
                 if len(file.split('_ani.log')) == 2:
@@ -266,12 +266,12 @@ def graph(sdf_rdkit,sdf_xtb,sdf_ani,log_files,sp_files,args,log,lot,bs,lot_sp,bs
         if type=='g16':
             for file in sp_files:
                 data_sp = cclib.io.ccread(file)
-                if len(file.split('_ani_'+args.suffix_sp+'.log')) == 2 or len(file.split('_xtb_'+args.suffix_sp+'.log')) == 2:
-                    if len(file.split('_ani_'+args.suffix_sp+'.log')) == 2:
-                        name = file.split('_ani_'+args.suffix_sp+'.log')[0]
+                if len(file.split('_ani_'+args.suffix+'.log')) == 2 or len(file.split('_xtb_'+args.suffix+'.log')) == 2:
+                    if len(file.split('_ani_'+args.suffix+'.log')) == 2:
+                        name = file.split('_ani_'+args.suffix+'.log')[0]
                         sp_ani_dft.append([name,data_sp.scfenergies[0]*ev_2_kcal_mol])
-                    if len(file.split('_xtb_'+args.suffix_sp+'.log')) == 2:
-                        name = file.split('_xtb_'+args.suffix_sp+'.log')[0]
+                    if len(file.split('_xtb_'+args.suffix+'.log')) == 2:
+                        name = file.split('_xtb_'+args.suffix+'.log')[0]
                         sp_xtb_dft.append([name,data_sp.scfenergies[0]*ev_2_kcal_mol])
                 else:
                     name = file.split('.log')[0]
@@ -281,12 +281,12 @@ def graph(sdf_rdkit,sdf_xtb,sdf_ani,log_files,sp_files,args,log,lot,bs,lot_sp,bs
                 sp_lines = open(file,"r").readlines()
                 for i,line in enumerate(sp_lines):
                     if sp_lines[i].find('FINAL SINGLE POINT ENERGY') > -1:
-                        if len(file.split('_ani_'+args.suffix_sp+'.out')) == 2 or len(file.split('_xtb_'+args.suffix_sp+'.out')) == 2:
-                            if len(file.split('_ani_'+args.suffix_sp+'.out')) == 2:
-                                name = file.split('_ani_'+args.suffix_sp+'.out')[0]
+                        if len(file.split('_ani_'+args.suffix+'.out')) == 2 or len(file.split('_xtb_'+args.suffix+'.out')) == 2:
+                            if len(file.split('_ani_'+args.suffix+'.out')) == 2:
+                                name = file.split('_ani_'+args.suffix+'.out')[0]
                                 sp_ani_dft.append([name,float(sp_lines[i].split()[-1])*hartree_to_kcal])
-                            if len(file.split('_xtb_'+args.suffix_sp+'.out')) == 2:
-                                name = file.split('_xtb_'+args.suffix_sp+'.out')[0]
+                            if len(file.split('_xtb_'+args.suffix+'.out')) == 2:
+                                name = file.split('_xtb_'+args.suffix+'.out')[0]
                                 sp_xtb_dft.append([name,float(sp_lines[i].split()[-1])*hartree_to_kcal])
                         else:
                             name = file.split('.out')[0]
@@ -295,11 +295,11 @@ def graph(sdf_rdkit,sdf_xtb,sdf_ani,log_files,sp_files,args,log,lot,bs,lot_sp,bs
 
 
     energy_ani_dft_sc, energy_xtb_dft_sc, energy_rdkit_dft_sc = [],[],[]
-    if os.path.exists(w_dir_initial+'/CSEARCH/ani/'+name_mol+'_ani.sdf') and log_files is not None:
+    if os.path.exists(w_dir_initial+'/CSEARCH/ani/'+name_mol+'_ani.sdf') and qm_files is not None:
         energy_ani_dft_sc = scaling_with_lowest(energy_ani_dft)
-    if os.path.exists(w_dir_initial+'/CSEARCH/xtb/'+name_mol+'_xtb.sdf') and log_files is not None:
+    if os.path.exists(w_dir_initial+'/CSEARCH/xtb/'+name_mol+'_xtb.sdf') and qm_files is not None:
         energy_xtb_dft_sc = scaling_with_lowest(energy_xtb_dft)
-    if not os.path.exists(w_dir_initial+'/CSEARCH/xtb/'+name_mol+'_xtb.sdf') and not os.path.exists(w_dir_initial+'/CSEARCH/ani/'+name_mol+'_ani.sdf') and log_files is not None:
+    if not os.path.exists(w_dir_initial+'/CSEARCH/xtb/'+name_mol+'_xtb.sdf') and not os.path.exists(w_dir_initial+'/CSEARCH/ani/'+name_mol+'_ani.sdf') and qm_files is not None:
         energy_rdkit_dft_sc = scaling_with_lowest(energy_rdkit_dft)
 
 

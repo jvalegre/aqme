@@ -1,0 +1,36 @@
+
+o  Importing pyCONFORT parameters from params_QCORR_test.yaml
+o  RESET verbose from False to True
+o  RESET QCORR from None to gaussian
+o  RESET dup from False to True
+o  DEFAULT amplitude_ifreq : 0.2
+o  RESET sp from None to gaussian
+o  RESET suffix from None to SPC
+o  RESET ifreq_cutoff from 0.0 to 25
+o  RESET max_cycle_opt from 100 to 500
+o  RESET basis_set from ['6-31g*'] to ['def2svp']
+o  DEFAULT level_of_theory : ['wb97xd']
+o  RESET gen_atoms from [] to ['C']
+o  DEFAULT gen_atoms : []
+o  RESET genecp_bs from [] to ['LANL2DZ']
+o  RESET empirical_dispersion from None to GD3BJ
+o  RESET solvent_model from gas_phase to SMD
+o  RESET solvent_name from Acetonitrile to Chloroform
+o  DEFAULT frequencies : True
+o  RESET calcfc from False to True
+o  RESET charge_sp from None to 5
+o  RESET mult_sp from None to 3
+o  RESET basis_set_sp from ['6-31g*'] to ['def2svp', '321g']
+o  RESET level_of_theory_sp from ['wb97xd'] to ['wb97xd', 'b3lyp']
+o  RESET gen_atoms_sp from [] to ['H']
+o  DEFAULT gen_atoms_sp : []
+o  RESET gen_bs_sp from ['LANL2DZ'] to ['LANL2DZ', 'LANL2TZ']
+o  DEFAULT empirical_dispersion_sp : None
+o  DEFAULT solvent_model_sp : gas_phase
+o  RESET solvent_name_sp from Acetonitrile to 
+
+o  Writing analysis of output files in respective folders
+
+
+x  GoodVibes is not installed as a module (pip or conda), the duplicate option will be disabled in QCORR
+

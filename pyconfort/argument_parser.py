@@ -22,7 +22,7 @@ def parser_args():
   parser.add_argument("--CSEARCH", action="store", default=None, help="Perform conformational analysis with or without dihedrals",choices=['rdkit','summ','fullmonte','crest'])
   parser.add_argument("--CMIN", action="store", default=None, help="Perform minimization after conformational analysis",choices=['xtb','ani'])
   parser.add_argument("--QPREP", action="store", default=None, help="Create input files for QM calculations", choices=['gaussian','orca'])
-  parser.add_argument("--QCORR", action="store", default=None, help="Fix the output files from QM calculations",choices=['gaussian'])
+  parser.add_argument("--qcorr", action="store", default=None, help="Fix the output files from QM calculations",choices=['gaussian'])
   parser.add_argument("--QSTAT", action="store", default=None, help="Generate parameters for different conformers",choices=['graph','descp'])
   parser.add_argument("--QPRED", action="store", default=None, help="Perform predictions for different conformers", choices=['nmr','energy','dbstep','nics','cclib-json'])
 
@@ -81,21 +81,23 @@ def parser_args():
   parser.add_argument("--cregen_ewin", dest="cregen_ewin", action="store", default=6, help="Energy window for CREGEN after crest")
 
   #arguments for QPREP
+  parser.add_argument("--program", help="Target program for the creation of input files in QPREP", default='gaussian', type=str, dest="program")
+  parser.add_argument("--program_sp", help="Target program for the creation of input files in QPREP for single-points in QCORR", default='gaussian', type=str, dest="program_sp")
   parser.add_argument("--nprocs", help="Number of processors for the DFT calculations", default=24, type=int, dest="nprocs")
   parser.add_argument("--mem", help="Memory for the DFT calculations (i) Gaussian: total memory; (ii) ORCA: memory per processor", default="96GB", type=str, dest="mem")
-  parser.add_argument("--basis_set_genecp_atoms",default=[], help="Basis Set genecp/gen: Can specify only one as basis_set", dest="basis_set_genecp_atoms", type=str, nargs='?')
   parser.add_argument("--aux_atoms_orca",default=[], help="List of atoms included in the aux part when using multiple basis sets in ORCA", dest="aux_atoms_orca", type=str, nargs='?')
-  parser.add_argument("--aux_basis_set_genecp_atoms",default=[], help="Auxiliary basis set for genecp/gen in ORCA", dest="aux_basis_set_genecp_atoms", type=str, nargs='?')
-  parser.add_argument("--aux_fit_genecp_atoms",default=[], help="Fitting for the auxiliary basis set in ORCA (i.e. ['def2-TZVPP/C'])", dest="aux_fit_genecp_atoms", type=str, nargs='?')
+  parser.add_argument("--aux_genecp_bs",default=[], help="Auxiliary basis set for genecp/gen in ORCA", dest="aux_genecp_bs", type=str, nargs='?')
+  parser.add_argument("--aux_fit_gen_atoms",default=[], help="Fitting for the auxiliary basis set in ORCA (i.e. ['def2-TZVPP/C'])", dest="aux_fit_gen_atoms", type=str, nargs='?')
   parser.add_argument("--cpcm_input",default='None', help="Additional lines for ORCA input files in the cpcm section. Format: ['LINE1','LINE2',etc]", dest="cpcm_input", type=str, nargs='?')
   parser.add_argument("--orca_scf_iters",default=500, help="Number of SCF iterations in ORCA", dest="orca_scf_iters", type=str, nargs='?')
   parser.add_argument("--mdci_orca",default='None', help="mdci section in ORCA. Format: ['LINE1','LINE2',etc]", dest="mdci_orca", type=str, nargs='?')
   parser.add_argument("--print_mini_orca",action="store_true",default=True, help="Option to print 'mini' (reduced outputs) in ORCA")
-  parser.add_argument("--qm_input",  help="(i) keywords used in Gaussian input files (overiding opt and freq) or (ii) additional keywords for the ORCA input line", default=None, dest="qm_input")
-  parser.add_argument("--ts_input",  help="OPT options in Gaussian in QCORR for input files of TSs (disable this option with None)", default='opt=(calcfc,noeigen,ts,maxstep=5)', dest="ts_input")
-  parser.add_argument("--qm_input_end",  help="Last input line for Gaussian", default="None", dest="qm_input_end", type=str)
-  parser.add_argument("--genecp_atoms",  help="GenECP atoms for Gaussian",default=[], dest="genecp_atoms",type=str, nargs='*')
-  parser.add_argument("--gen_atoms",  help="Gen atoms for Gaussian",default=[], dest="gen_atoms",type=str, nargs='*')
+  parser.add_argument("--qm_input", help="(i) keywords used in Gaussian input files (overiding opt and freq) or (ii) additional keywords for the ORCA input line", default='', dest="qm_input")
+  parser.add_argument("--ts_input", help="OPT options in Gaussian in QCORR for input files of TSs (disable this option with None)", default='opt=(calcfc,noeigen,ts,maxstep=5)', dest="ts_input")
+  parser.add_argument("--qm_input_end", help="Last input line for Gaussian", default='', dest="qm_input_end")
+  parser.add_argument("--gen_atoms", help="Gen(ECP) atoms for Gaussian",default=None, dest="gen_atoms")
+  parser.add_argument("--bs",default=None, help="Basis set for regular atoms during Gen(ECP) calculations", dest="bs", type=str)
+  parser.add_argument("--genecp_bs",default=None, help="Basis set for Gen(ECP) atoms", dest="genecp_bs", type=str)
   parser.add_argument("--lowest_only", action="store_true", default=False, help="Lowest conformer to write in Gaussian")
   parser.add_argument("--lowest_n", action="store_true", default=False, help="Lowest Number of conformers to write in Gaussian")
   parser.add_argument("--energy_threshold_for_gaussian", help="Cut-off for considering sampled conformers in Gaussian inputs", default="100.0", type=float, dest="energy_threshold_for_gaussian")
@@ -125,24 +127,26 @@ def parser_args():
   parser.add_argument("--amplitude_ifreq", action="store",default=0.2, help="Amplitude used to displace the imaginary frequencies to fix during analysis", type=float)
   parser.add_argument("--ifreq_cutoff", action="store",default=0.0, help="Cut off for imaginary frequencies during analysis", type=float)
   parser.add_argument("--s2_threshold", action="store",default=10.0, help="Cut off for spin contamination during analysis in \%\ of the expected value (i.e. multiplicity 3 has an the expected <S**2> of 2.0, if s2_threshold = 10 the <S**2> value is allowed to be 2.0 +- 0.2). Set s2_threshold = 0 to deactivate this option.", type=float)
-  parser.add_argument("--isom",action="store",default=None, help="Checks that geometries mantain the same connectivity after xTB and DFT optimization")
+  parser.add_argument("--isom",action="store",default=None, help="Checks that geometries mantain the same connectivity after xTB and DFT optimization", type=str)
   parser.add_argument("--vdwfrac", action="store", help="What fraction of the summed VDW radii constitutes a bond between two atoms in the isomerization filter?", default=0.50, type=float)
   parser.add_argument("--covfrac", action="store", help="What fraction of the summed covalent radii constitutes a bond between two atoms in the isomerization filter?", default=1.10, type=float)
   parser.add_argument("--nocheck",action="store_true",default=False, help="Skips analysis for QM output files (i.e. it generates inputs for all the files not only the normally terminated files")
+  parser.add_argument("--nocom",action="store_true",default=False, help="Skips generation of QM input files to fix errors")
+  parser.add_argument("--qcorr_json",action="store",default='', help="Starts QCORR from a previously generated json file (skips analysis)", type=str)
+
   #writing single point files
   parser.add_argument("--sp", help="Create QM single point input files", default=None, dest="sp", type=str)
   parser.add_argument("--nics", action="store_true", default=False, help="Create input files for NICS")
   parser.add_argument("--charge_sp", help="The charge for single point calculation in Gaussian and ORCA", default=None, metavar="charge_sp")
   parser.add_argument("--mult_sp", help="The multiplicity for single point calculation in Gaussian and ORCA", default=None, metavar="mult_sp")
-  parser.add_argument("--qm_input_sp", help="Extra keywords for single-point calculations in Gaussian and ORCA", default=None, dest="qm_input_sp")
-  parser.add_argument("--qm_input_end_sp",  help="Last input line for single point calculations in Gaussian", default="None", dest="qm_input_end_sp", type=str)
-  parser.add_argument("--genecp_atoms_sp",  help="GenECP atoms for single-point calculations in Gaussian",default=[], dest="genecp_atoms_sp",type=str, nargs='*')
-  parser.add_argument("--gen_atoms_sp",  help="Gen atoms for single-point calculations in Gaussian",default=[], dest="gen_atoms_sp",type=str, nargs='*')
-  parser.add_argument("--basis_set_genecp_atoms_sp",default=['LANL2DZ'], help="Genecp/gen basis set(s) for single point calculations in Gaussian", dest="basis_set_genecp_atoms_sp", type=str, nargs='*')
-  parser.add_argument("--suffix_sp", help="The suffix for single point calculation in Gaussian and ORCA", default="None", type=str, metavar="suffix_sp")
+  parser.add_argument("--qm_input_sp", help="Extra keywords for single-point calculations in Gaussian and ORCA", default='', dest="qm_input_sp")
+  parser.add_argument("--qm_input_end_sp", help="Last input line for single point calculations in Gaussian", default='', dest="qm_input_end_sp")
+  parser.add_argument("--bs_sp",default=None, help="Regular basis set(s) for single point calculations in Gaussian when Gen(ECP) is used", dest="bs_sp")
+  parser.add_argument("--gen_bs_sp",default=None, help="Gen(ECP) basis set(s) for single point calculations in Gaussian", dest="gen_bs_sp")
+  parser.add_argument("--suffix", help="The suffix for single point calculation in Gaussian and ORCA", default="None", type=str, metavar="suffix")
   parser.add_argument("--aux_atoms_orca_sp",default=[], help="List of atoms included in the aux part when using multiple basis sets in ORCA single-point calculations", dest="aux_atoms_orca_sp", type=str,nargs='*')
-  parser.add_argument("--aux_basis_set_genecp_atoms_sp",default=[], help="Auxiliary basis set for genecp/gen in ORCA single-point calculations", dest="aux_basis_set_genecp_atoms_sp", type=str, nargs='*')
-  parser.add_argument("--aux_fit_genecp_atoms_sp",default=[], help="Fitting for the auxiliary basis set in ORCA single-point calculations (i.e. ['def2-TZVPP/C'])", dest="aux_fit_genecp_atoms_sp", type=str, nargs='*')
+  parser.add_argument("--aux_gen_bs_sp",default=[], help="Auxiliary basis set for genecp/gen in ORCA single-point calculations", dest="aux_gen_bs_sp", type=str, nargs='*')
+  parser.add_argument("--aux_fit_gen_atoms_sp",default=[], help="Fitting for the auxiliary basis set in ORCA single-point calculations (i.e. ['def2-TZVPP/C'])", dest="aux_fit_gen_atoms_sp", type=str, nargs='*')
   parser.add_argument("--cpcm_input_sp",default='None', help="Additional lines for ORCA single-point calculations in the cpcm section", dest="cpcm_input_sp", type=str, nargs='*')
   parser.add_argument("--orca_scf_iters_sp",default=500, help="Number of SCF iterations in ORCA single-point calculations", dest="orca_scf_iters_sp", type=str, nargs='*')
   parser.add_argument("--mdci_orca_sp",default='None', help="mdci section in ORCA single-point calculations", dest="mdci_orca_sp", type=str, nargs='*')
@@ -178,8 +182,8 @@ def parser_args():
   parser.add_argument("--submission_command",  help="Queueing system that the submission is done on", default="qsub_summit", metavar="submission_command", type=str)
 
   #apply exp rules
-  parser.add_argument("--exp_rules", dest="exp_rules", default=[], help="Discarding rules applied to filter-off conformers (based on experimental observation for example). Format: i) Automatic rules: ['Ir_bidentate_x3'], ii) manual rules: ['ATOM1-ATOM2-ATOM3, ANGLE'] (i.e. ['C-Pd-C, 180'])")
-  parser.add_argument("--angle_off", type=float, help="Deviation to discard in exp_rules (i.e. 180 +- 30 degrees)",default=30)
+  parser.add_argument("--geom_rules", dest="geom_rules", default=[], help="Discarding rules applied to filter-off conformers (based on experimental observation for example). Format: i) Automatic rules: ['Ir_bidentate_x3'], ii) manual rules: ['ATOM1-ATOM2-ATOM3, ANGLE'] (i.e. ['C-Pd-C, 180'])")
+  parser.add_argument("--angle_off", type=float, help="Deviation to discard in geom_rules (i.e. 180 +- 30 degrees)",default=30)
 
   ##### further additions #####
   #NCI complex
@@ -198,7 +202,7 @@ def set_options(kwargs):
 	#set default options and options provided
 	options = options_add()
 	#dictionary containing default values for options
-	var_dict = {'varfile': None, 'input': ' ', 'output_name': 'output', 'path': '', 'verbose': False, 'output': '.sdf', 'CSEARCH': None, 'CMIN': None, 'QPREP': None, 'QCORR': None, 'QSTAT': None, 'QPRED': None, 'metal_complex': False, 'metal': [], 'mult': 1, 'complex_coord': [], 'complex_type': '', 'm_oxi': [], 'metal_idx': [], 'charge': [], 'charge_default': 'auto', 'metal_sym': [], 'ewin_cmin': 5.0, 'ewin_csearch': 5.0, 'opt_fmax': 0.05, 'opt_steps': 1000, 'opt_steps_RDKit': 1000, 'time': True, 'heavyonly': True, 'degree': 120.0, 'max_torsions': 20, 'sample': 'auto', 'auto_sample': 20, 'ff': 'MMFF', 'seed': 62609, 'rms_threshold': 0.25, 'max_matches_RMSD': 1000, 'energy_threshold': 0.25, 'initial_energy_threshold': 0.0001, 'max_MolWt': 10000, 'ani_method': 'ANI2x', 'STACKSIZE': '1G', 'xtb_method': 'GFN2-xTB', 'xtb_solvent': 'none', 'xtb_accuracy': 1.0, 'xtb_electronic_temperature': 300.0, 'xtb_max_iterations': 250, 'cpus': 12, 'ewin_sample_fullmonte': 2.0, 'ewin_fullmonte': 5.0, 'nsteps_fullmonte': 100, 'nrot_fullmonte': 3, 'ang_fullmonte': 30, 'cregen': False, 'cregen_ethr': 0.2, 'cregen_rthr': 0.125, 'cregen_bthr': 0.01, 'cregen_ewin': 6, 'nprocs': 24, 'mem': '96GB', 'basis_set_genecp_atoms': [], 'aux_atoms_orca': [], 'aux_basis_set_genecp_atoms': [], 'aux_fit_genecp_atoms': [], 'cpcm_input': 'None', 'orca_scf_iters': 500, 'mdci_orca': 'None', 'print_mini_orca': True, 'qm_input': None, 'ts_input': 'opt=(calcfc,noeigen,ts,maxstep=5)', 'qm_input_end': 'None', 'genecp_atoms': [], 'gen_atoms': [], 'lowest_only': False, 'lowest_n': False, 'energy_threshold_for_gaussian': 100.0, 'chk': False, 'tmfunctional': ['TPSS'], 'tmfunctionalsp': ['TPSS'], 'tmbasis': None, 'tmbasisfile': None, 'tmbasissp': None, 'tmbasisfilesp': None, 'tmgrid': 'm4', 'tmdispersion': 'off', 'tmepsilon': 'gas', 'tmcavity': 'none', 'tmricore': 200, 'tmmaxcore': 200, 'com_from_xyz': False, 'dup': True, 'dup_threshold': 0.0001, 'check_geom': False, 'length_criteria': 1.4, 'amplitude_ifreq': 0.2, 'ifreq_cutoff': 0.0, 's2_threshold': 10.0, 'sp': None, 'nics': False, 'charge_sp': None, 'mult_sp': None, 'qm_input_sp': None, 'qm_input_end_sp': 'None', 'genecp_atoms_sp': [], 'gen_atoms_sp': [], 'basis_set_genecp_atoms_sp': ['LANL2DZ'], 'suffix_sp': 'None', 'aux_atoms_orca_sp': [], 'aux_basis_set_genecp_atoms_sp': [], 'aux_fit_genecp_atoms_sp': [], 'cpcm_input_sp': 'None', 'orca_scf_iters_sp': 500, 'mdci_orca_sp': 'None', 'print_mini_orca_sp': True, 'rot_dihedral': False, 'dihedral': [], 'bond': [], 'angle': [], 'geom_par_name': 'descp', 'dbstep_cen_lig_file': 'No file passed', 'nmr_exp': 'fromsdf', 'nmr_online': False, 'nmr_aos': 'giao', 'nmr_nucleus': ['C', 'H'], 'nmr_slope': [1.0673, 1.0759], 'nmr_intercept': [-15.191, -2.2094], 'nmr_tms_ref': [191.79, 31.39], 'nics_range': 4, 'nics_number': 16, 'nics_atoms_file': 'No file passed', 'qsub': False, 'qsub_ana': False, 'submission_command': 'qsub_summit', 'exp_rules': [], 'angle_off': 30, 'nci_complex': False, 'prefix': 'None'}
+	var_dict = {'varfile': None, 'input': ' ', 'output_name': 'output', 'path': '', 'verbose': False, 'output': '.sdf', 'CSEARCH': None, 'CMIN': None, 'QPREP': None, 'QCORR': None, 'QSTAT': None, 'QPRED': None, 'metal_complex': False, 'metal': [], 'mult': 1, 'complex_coord': [], 'complex_type': '', 'm_oxi': [], 'metal_idx': [], 'charge': [], 'charge_default': 'auto', 'metal_sym': [], 'ewin_cmin': 5.0, 'ewin_csearch': 5.0, 'opt_fmax': 0.05, 'opt_steps': 1000, 'opt_steps_RDKit': 1000, 'time': True, 'heavyonly': True, 'degree': 120.0, 'max_torsions': 20, 'sample': 'auto', 'auto_sample': 20, 'ff': 'MMFF', 'seed': 62609, 'rms_threshold': 0.25, 'max_matches_RMSD': 1000, 'energy_threshold': 0.25, 'initial_energy_threshold': 0.0001, 'max_MolWt': 10000, 'ani_method': 'ANI2x', 'STACKSIZE': '1G', 'xtb_method': 'GFN2-xTB', 'xtb_solvent': 'none', 'xtb_accuracy': 1.0, 'xtb_electronic_temperature': 300.0, 'xtb_max_iterations': 250, 'cpus': 12, 'ewin_sample_fullmonte': 2.0, 'ewin_fullmonte': 5.0, 'nsteps_fullmonte': 100, 'nrot_fullmonte': 3, 'ang_fullmonte': 30, 'cregen': False, 'cregen_ethr': 0.2, 'cregen_rthr': 0.125, 'cregen_bthr': 0.01, 'cregen_ewin': 6, 'nprocs': 24, 'mem': '96GB', 'genecp_bs': None, 'bs' : None, 'aux_atoms_orca': [], 'aux_genecp_bs': [], 'aux_fit_gen_atoms': [], 'cpcm_input': 'None', 'orca_scf_iters': 500, 'mdci_orca': 'None', 'print_mini_orca': True, 'qm_input': '', 'ts_input': 'opt=(calcfc,noeigen,ts,maxstep=5)', 'qm_input_end': '', 'gen_atoms': None, 'lowest_only': False, 'lowest_n': False, 'energy_threshold_for_gaussian': 100.0, 'chk': False, 'tmfunctional': ['TPSS'], 'tmfunctionalsp': ['TPSS'], 'tmbasis': None, 'tmbasisfile': None, 'tmbasissp': None, 'tmbasisfilesp': None, 'tmgrid': 'm4', 'tmdispersion': 'off', 'tmepsilon': 'gas', 'tmcavity': 'none', 'tmricore': 200, 'tmmaxcore': 200, 'com_from_xyz': False, 'dup': True, 'dup_threshold': 0.0001, 'check_geom': False, 'length_criteria': 1.4, 'amplitude_ifreq': 0.2, 'ifreq_cutoff': 0.0, 's2_threshold': 10.0, 'sp': None, 'nics': False, 'charge_sp': None, 'mult_sp': None, 'qm_input_sp': '', 'qm_input_end_sp': '', 'gen_bs_sp': None, 'bs_sp': None, 'suffix': 'None', 'aux_atoms_orca_sp': [], 'aux_gen_bs_sp': [], 'aux_fit_gen_atoms_sp': [], 'cpcm_input_sp': 'None', 'orca_scf_iters_sp': 500, 'mdci_orca_sp': 'None', 'print_mini_orca_sp': True, 'rot_dihedral': False, 'dihedral': [], 'bond': [], 'angle': [], 'geom_par_name': 'descp', 'dbstep_cen_lig_file': 'No file passed', 'nmr_exp': 'fromsdf', 'nmr_online': False, 'nmr_aos': 'giao', 'nmr_nucleus': ['C', 'H'], 'nmr_slope': [1.0673, 1.0759], 'nmr_intercept': [-15.191, -2.2094], 'nmr_tms_ref': [191.79, 31.39], 'nics_range': 4, 'nics_number': 16, 'nics_atoms_file': 'No file passed', 'qsub': False, 'qsub_ana': False, 'submission_command': 'qsub_summit', 'geom_rules': [], 'angle_off': 30, 'nci_complex': False, 'prefix': 'None', 'isom': None, 'nocheck': False, 'nocom': False, 'program': 'gaussian', 'program_sp': 'gaussian', 'qcorr_json': ''}
 
 	for key in var_dict:
 		vars(options)[key] = var_dict[key]

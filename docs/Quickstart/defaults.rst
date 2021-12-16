@@ -92,12 +92,12 @@ Common Parameters to Edit
   # lowest_n must be True to apply this energy threshold
 
   # (5.2) DEFINITION OF A SECOND CATEGORY OF ATOMS SEPARATED IN GENECP
-  genecp_atoms : [] # list of atoms included in the gen_ecp part
+  gen_atoms : [] # list of atoms included in the gen_ecp part
   gen_atoms : [] # list of atoms inclueded in gen part
 
   # (5.3) DEFINTION OF BASIS SET AND LEVEL OF THEORY AND SOLVENT
   basis_set : ['def2svp'] # basis set
-  basis_set_genecp_atoms : ['LANL2DZ'] # functional for the genecp part
+  genecp_bs : ['LANL2DZ'] # functional for the genecp part
   level_of_theory : ['wb97xd'] # functional
 
   # (5.4) DISPERSION CORRECTION FOR COM FILES
@@ -109,12 +109,12 @@ Common Parameters to Edit
   solvent_name : 'Chloroform' # solvent
 
   # (5.6) DEFINITION OF A SECOND CATEGORY OF ATOMS SEPARATED IN GENECP FOR SINGLE POINT
-  genecp_atoms_sp : [] # list of atoms included in the gen_ecp part
+  gen_atoms_sp : [] # list of atoms included in the gen_ecp part
   gen_atoms_sp : [] # list of atoms inclueded in gen part
 
   # (5.7) DEFINTION OF BASIS SET AND LEVEL OF THEORY AND SOLVENT FOR SINGLE POINT
   basis_set_sp : ['def2svp'] # basis set
-  basis_set_genecp_atoms_sp : ['LANL2DZ'] # functional for the genecp part
+  gen_bs_sp : ['LANL2DZ'] # functional for the genecp part
   level_of_theory_sp : ['wb97xd'] # functional
 
   # (5.8) DISPERSION CORRECTION FOR COM FILES FOR SINGLE POINT
@@ -147,7 +147,7 @@ Common Parameters to Edit
   complex_spin : 1 # final spin of the molecule (the code does not calculate spin, it must be defined by the user)
 
   # (8) EXP RULES
-  exp_rules : False # apply some experimental rules to discard some outputs
+  geom_rules : False # apply some experimental rules to discard some outputs
   angle_off : 30 # margin of error to determine angles (i.e. if angle_off is 30, and the angle is 180, angles from
   # 150 to 210 degrees will be discarded)
 

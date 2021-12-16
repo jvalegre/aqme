@@ -2,7 +2,7 @@
 
 ######################################################.
 # 	        Testing QCORR with pytest                #
-#           using the exp_rules filter	             #
+#           using the geom_rules filter	             #
 ######################################################.
 
 import os
@@ -17,10 +17,10 @@ path_analysis_qcorr = os.getcwd()
 @pytest.mark.parametrize("folder, params_file",
 [
     # tests of the QCORR part
-    ('QCORR_Geom_check_exp_rules', 'params_QCORR_test.yaml') # test exp_rules and check_geom options
+    ('QCORR_Geom_check_geom_rules', 'params_QCORR_test.yaml') # test geom_rules and check_geom options
 ])
 
-def test_analysis_qcorr_exp_rules(folder, params_file):
+def test_analysis_qcorr_geom_rules(folder, params_file):
     # runs the program with the different tests
     cmd_pyconfort = ['python', '-m', 'pyconfort', '--varfile', params_file]
 
@@ -34,7 +34,7 @@ def test_analysis_qcorr_exp_rules(folder, params_file):
     assert df_QCORR['Basis set error'][0] == 0
     assert df_QCORR['Other errors'][0] == 0
     assert df_QCORR['Unfinished'][0] == 0
-    assert df_QCORR['Exp_rules filter'][0] == 1
+    assert df_QCORR['geom_rules filter'][0] == 1
     assert df_QCORR['Geometry changed'][0] == 2
 
     # all the files are moved from the original directory
@@ -47,7 +47,7 @@ def test_analysis_qcorr_exp_rules(folder, params_file):
     # look for the LOG files
     os.chdir(path_analysis_qcorr+'/'+folder+'/success/output_files')
     assert len(glob.glob('*.log')) == 1
-    os.chdir(path_analysis_qcorr+'/'+folder+'/failed/run_1/exp_rules_filter')
+    os.chdir(path_analysis_qcorr+'/'+folder+'/failed/run_1/geom_rules_filter')
     assert len(glob.glob('*.log')) == 1
     os.chdir(path_analysis_qcorr+'/'+folder+'/failed/run_1/geometry_changed')
     assert len(glob.glob('*.log')) == 2

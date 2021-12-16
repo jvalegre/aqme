@@ -112,7 +112,7 @@ def load_charge_data(filepath,backup_files):
 # MAIN QPREP FUNCTION
 def main(w_dir_initial,args,log):
 
-	if len(args.exp_rules) >= 1:
+	if len(args.geom_rules) >= 1:
 		conf_files =  glob.glob('*_rules.sdf')
 	# define the SDF files to convert to COM Gaussian files
 	elif args.CMIN == 'xtb': 

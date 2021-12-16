@@ -55,7 +55,7 @@ def remove_data(path, folder, smiles):
         os.chdir(path+'/'+folder+'/'+smiles.split('.')[0])
     all_data = glob.glob('*')
     discard_ext = ['sdf','csv','dat']
-    exceptions = ['charged.csv','charged.sdf','pentane_n_lowest.sdf','Ir_4.sdf','Ir_4.csv','Ir_1_charge_0_passes_exp_rules.sdf','Ir_2_charge_1_passes_exp_rules.sdf','Ir_3_charge_1_fails_exp_rules.sdf']
+    exceptions = ['charged.csv','charged.sdf','pentane_n_lowest.sdf','Ir_4.sdf','Ir_4.csv','Ir_1_charge_0_passes_geom_rules.sdf','Ir_2_charge_1_passes_geom_rules.sdf','Ir_3_charge_1_fails_geom_rules.sdf']
     for _,file in enumerate(all_data):
         if len(file.split('.')) == 1:
             shutil.rmtree(file, ignore_errors=True)
@@ -234,20 +234,20 @@ def single_point(path_analysis_dup_sp, folder, file):
 
     return outlines
 
-def Ir_exp_rules(path, folder, precision, cmd_exp_rules, smiles, E_confs_no_rules, E_confs_rules):
+def Ir_geom_rules(path, folder, precision, cmd_geom_rules, smiles, E_confs_no_rules, E_confs_rules):
     # open right folder and run the code
     os.chdir(path+'/'+folder)
-    if folder == 'Ir_exp_rules' and smiles == 'Ir_1':
-        subprocess.call(cmd_exp_rules)
-    elif folder == 'Ir_exp_rules2':
-        subprocess.call(cmd_exp_rules)
+    if folder == 'Ir_geom_rules' and smiles == 'Ir_1':
+        subprocess.call(cmd_geom_rules)
+    elif folder == 'Ir_geom_rules2':
+        subprocess.call(cmd_geom_rules)
 
-    # read the energies of the conformers with and without the exp_rules filter
+    # read the energies of the conformers with and without the geom_rules filter
     os.chdir(path+'/'+folder+'/CSEARCH/rdkit')
     test_E_confs_no_rules = calc_energy(smiles+'_rdkit.sdf')
 
-    os.chdir(path+'/'+folder+'/CSEARCH/rdkit/filter_exp_rules')
-    test_E_confs_rules = calc_energy(smiles+'_rdkit_filter_exp_rules.sdf')
+    os.chdir(path+'/'+folder+'/CSEARCH/rdkit/filter_geom_rules')
+    test_E_confs_rules = calc_energy(smiles+'_rdkit_filter_geom_rules.sdf')
 
     # test the energies and number of conformers with and without filtering
     test_round_E_confs_no_rules = [round(num, precision) for num in test_E_confs_no_rules]
@@ -258,11 +258,11 @@ def Ir_exp_rules(path, folder, precision, cmd_exp_rules, smiles, E_confs_no_rule
 
     # tests charge and genecp
     os.chdir(path+'/'+folder+'/QMCALC/G16/wb97xd-6-31g(d)')
-    file_exp_rules = glob.glob(smiles+'*')[0]
+    file_geom_rules = glob.glob(smiles+'*')[0]
     test_com_files = len(glob.glob(smiles+'*'))
-    _,_,_,_,test_charge,_ = calc_genecp(file_exp_rules, ['Ir'])
+    _,_,_,_,test_charge,_ = calc_genecp(file_geom_rules, ['Ir'])
 
-    if smiles == 'Ir_7' or folder == 'Ir_exp_rules2':
+    if smiles == 'Ir_7' or folder == 'Ir_geom_rules2':
         remove_data(path, folder, smiles=False)
 
     return round_E_confs_no_rules,round_E_confs_rules,test_round_E_confs_no_rules,test_round_E_confs_rules,test_charge,test_com_files
@@ -274,20 +274,20 @@ def get_not_empty_files(folder_for_files,variable,format):
             variable += 1
     return variable
 
-def Pd_exp_rules(path, folder, precision_exp_rules, cmd_exp_rules, smiles):
+def Pd_geom_rules(path, folder, precision_geom_rules, cmd_geom_rules, smiles):
 
     test_sdf_created,test_sdf_final,test_com_files = 0,0,0
 
     # run the code
     os.chdir(path+'/'+folder)
-    subprocess.call(cmd_exp_rules)
+    subprocess.call(cmd_geom_rules)
 
-    # check the amount of rdkit sdf files before and after exp_rules with size > 0
+    # check the amount of rdkit sdf files before and after geom_rules with size > 0
     rdkit_sdf_folder = path+'/'+folder+'/CSEARCH/rdkit'
     test_sdf_created = get_not_empty_files(rdkit_sdf_folder,test_sdf_created,'sdf')
 
-    exp_rules_sdf_folder = path+'/'+folder+'/CSEARCH/rdkit/filter_exp_rules'
-    test_sdf_final = get_not_empty_files(exp_rules_sdf_folder,test_sdf_final,'sdf')
+    geom_rules_sdf_folder = path+'/'+folder+'/CSEARCH/rdkit/filter_geom_rules'
+    test_sdf_final = get_not_empty_files(geom_rules_sdf_folder,test_sdf_final,'sdf')
 
     # check the amount of com files created
     com_files_folder = path+'/'+folder+'/QMCALC/G16/wb97xd-6-31g(d)'

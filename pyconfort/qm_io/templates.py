@@ -60,9 +60,9 @@ class GaussianTemplate(object):
 
 	@property
 	def genecp(self):
-		ecp_genecp_atoms = self.basisset.ecp is not None
+		ecp_gen_atoms = self.basisset.ecp is not None
 		ecp_gen_atoms = bool(self.basisset.elements)
-		if ecp_genecp_atoms:
+		if ecp_gen_atoms:
 			return 'genecp'
 		elif ecp_gen_atoms:
 			return 'gen'
@@ -112,9 +112,9 @@ class GaussianTemplate(object):
 		new = cls()
 
 		# Basis set creation
-		new.genecp_atoms_sp = args.genecp_atoms_sp
 		new.gen_atoms_sp = args.gen_atoms_sp
-		new.genecp_atoms = args.genecp_atoms
+		new.gen_atoms_sp = args.gen_atoms_sp
+		new.gen_atoms = args.gen_atoms
 		new.gen_atoms = args.gen_atoms
 		
 		#Standard stuff
@@ -256,8 +256,8 @@ class OrcaTemplate(object):
 			kwargs['ecp'] = self.basisset.ecp
 	
 		kwargs['ecp_list'] = self.aux_atoms_orca
-		kwargs['bs_gcp'] = self.aux_basis_set_genecp_atoms
-		kwargs['bs_gcp_fit'] = self.aux_fit_genecp_atoms
+		kwargs['bs_gcp'] = self.aux_genecp_bs
+		kwargs['bs_gcp_fit'] = self.aux_fit_gen_atoms
 		kwargs['orca_aux_section'] = self.enable_aux_section
 		kwargs['memory'] = self.memory
 		kwargs['nprocs'] = self.nprocs

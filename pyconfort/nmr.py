@@ -99,7 +99,7 @@ def get_exp_data(args,name,w_dir_initial,final_shieldings,conf_idx,conf_sym):
 
         return atom_num,atom_sheilding
 
-def calculate_nmr(nmr_log_files,args,log,name,w_dir_fin,w_dir_initial,lot_sp,bs_sp,lot,bs):
+def calculate_nmr(nmr_qm_files,args,log,name,w_dir_fin,w_dir_initial,lot_sp,bs_sp,lot,bs):
 
     #define the lot etc.,
     [opt_method, opt_basis, opt_solv] = [lot,bs,[args.solvent_model,args.solvent_name]]
@@ -142,7 +142,7 @@ def calculate_nmr(nmr_log_files,args,log,name,w_dir_fin,w_dir_initial,lot_sp,bs_
 
     final_shieldings = []
 
-    for num_file,file in enumerate(nmr_log_files):
+    for num_file,file in enumerate(nmr_qm_files):
         # list of H and C shieldings for each individual conformer
         conf_shieldings, conf_idx,conf_sym = [],[],[]
 
@@ -268,10 +268,10 @@ def calculate_boltz_and_nmr(val,args,log,name,w_dir_fin,w_dir_initial,lot,bs):
 
     for lot_sp in args.level_of_theory_sp:
         for bs_sp in args.basis_set_sp:
-            for bs_gcp_sp in args.basis_set_genecp_atoms_sp:
+            for bs_gcp_sp in args.gen_bs_sp:
                 #performing the nmr calculations
                 dir_sp_nmr =  w_dir_fin+'/../G16-SP_input_files/'+str(lot_sp)+'-'+str(bs_sp)
                 os.chdir(dir_sp_nmr)
                 #grabbing the respective NMR files for a given molecules
-                nmr_log_files = glob.glob(name+'*NMR.log')
-                calculate_nmr(nmr_log_files,args,log,name,w_dir_fin,w_dir_initial,lot_sp,bs_sp,lot,bs)
+                nmr_qm_files = glob.glob(name+'*NMR.log')
+                calculate_nmr(nmr_qm_files,args,log,name,w_dir_fin,w_dir_initial,lot_sp,bs_sp,lot,bs)

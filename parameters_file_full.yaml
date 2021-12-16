@@ -30,8 +30,8 @@ metal_complex : True # True to activate this option
 metal : ['Pd'] # specify the metal(s) or atom(s) with uncommon hybridization, in the format ['Pd','Ir','P',...]
 m_oxi : [2] # oxidation number of the atom (it is used to calculate the charge of the molecule), in the format [1,1,0,...]
 complex_type : 'squareplanar' # predefined complex geometries. Options: linear, trigonalplanar, squareplanar or squarepyramidal
-exp_rules : [] # Discarding rules applied to filter-off conformers (based on experimental observation for example). Format: i) manual: ['ATOM1-ATOM2-ATOM3, ANGLE'] (i.e. ['C-Pd-C, 180']), ii) pre-set: 'Ir_bidentate_x3'
-angle_off : 30 # Deviation to discard in exp_rules (i.e. 180 +- 30 degrees)
+geom_rules : [] # Discarding rules applied to filter-off conformers (based on experimental observation for example). Format: i) manual: ['ATOM1-ATOM2-ATOM3, ANGLE'] (i.e. ['C-Pd-C, 180']), ii) pre-set: 'Ir_bidentate_x3'
+angle_off : 30 # Deviation to discard in geom_rules (i.e. 180 +- 30 degrees)
 
 
 # --- (3) QM INPUT FILE GENERATION: QPREP
@@ -71,13 +71,13 @@ qm_input : 'NormalPNO TightSCF printbasis' # (i) keywords used in Gaussian input
 ## dispersion correction
 empirical_dispersion : None # type of dispersion correction. Format: 'GD3', 'GD3BJ', etc
 ## atoms included in gen/genecp and their level of theory (it admits .txt or .yaml files with the basis set information)
-genecp_atoms : [] # list of atoms included in the genecp part (do not use genecp_atoms and gen_atoms at the same time!). Format: ['Pd','Ir','Pt',...]
-gen_atoms : [] # list of atoms included in the gen part (do not use genecp_atoms and gen_atoms at the same time!). Format: ['Pd','Ir','Pt',...]
-basis_set_genecp_atoms : [] # basis set for the gen/genecp part
+gen_atoms : [] # list of atoms included in the genecp part (do not use gen_atoms and gen_atoms at the same time!). Format: ['Pd','Ir','Pt',...]
+gen_atoms : [] # list of atoms included in the gen part (do not use gen_atoms and gen_atoms at the same time!). Format: ['Pd','Ir','Pt',...]
+genecp_bs : [] # basis set for the gen/genecp part
 
 # Specific options of level of theory for Orca
-aux_basis_set_genecp_atoms : [] # Auxiliary basis set for multiple basis sets in ORCA
-aux_fit_genecp_atoms : [] # fitting for the auxiliary basis set in ORCA (i.e. ['def2-TZVPP/C'])
+aux_genecp_bs : [] # Auxiliary basis set for multiple basis sets in ORCA
+aux_fit_gen_atoms : [] # fitting for the auxiliary basis set in ORCA (i.e. ['def2-TZVPP/C'])
 cpcm_input : [] # Additional lines for ORCA input files in the %cpcm section. Format: ['LINE1','LINE2',etc]
 orca_scf_iters : 500 # Number of SCF iterations in ORCA
 mdci_orca : ['Density None'] # %mdci section in ORCA. Format: ['LINE1','LINE2',etc]
@@ -122,15 +122,15 @@ solvent_name_sp : '' # solvent used (i.e. chloroform, toluene, etc)
 input_for_sp : 'nmr' # specify the input keywords (except functional, basis set, solvent and dispersion)
 qm_input_end_sp : None # last line to add for single point
 ## atoms included in gen/genecp and their level of theory (it admits .txt or .yaml files with the basis set information)
-genecp_atoms_sp : [] # list of atoms included in the genecp part (do not use genecp_atoms and gen_atoms at the same time!). Format: ['Pd','Ir','Pt',...]
-gen_atoms_sp : [] # list of atoms included in the gen part (do not use genecp_atoms and gen_atoms at the same time!). Format: ['Pd','Ir','Pt',...]
-basis_set_genecp_atoms_sp : [] # basis set for the genecp part of the single-points. Format: ['6-311+G(2d,p)']
+gen_atoms_sp : [] # list of atoms included in the genecp part (do not use gen_atoms and gen_atoms at the same time!). Format: ['Pd','Ir','Pt',...]
+gen_atoms_sp : [] # list of atoms included in the gen part (do not use gen_atoms and gen_atoms at the same time!). Format: ['Pd','Ir','Pt',...]
+gen_bs_sp : [] # basis set for the genecp part of the single-points. Format: ['6-311+G(2d,p)']
 ## dispersion correction
 empirical_dispersion : None # type of dispersion correction
 
 # Specific options of level of theory for single-points for Orca
-aux_basis_set_genecp_atoms_sp : [] # Auxiliary basis set for multiple basis sets in ORCA
-aux_fit_genecp_atoms_sp : [] # fitting for the auxiliary basis set (i.e. ['def2-TZVPP/C'])
+aux_gen_bs_sp : [] # Auxiliary basis set for multiple basis sets in ORCA
+aux_fit_gen_atoms_sp : [] # fitting for the auxiliary basis set (i.e. ['def2-TZVPP/C'])
 cpcm_input_sp : [] # Additional lines for ORCA input files in the %cpcm section. Format: ['LINE1','LINE2',etc]
 orca_scf_iters_sp : 500 # Number of SCF iterations in ORCA
 mdci_orca_sp : ['Density None'] # %mdci section in ORCA. Format: ['LINE1','LINE2',etc]
@@ -147,7 +147,7 @@ amplitude_ifreq : 0.2 # amplitude use to displace the imaginary frequencies to f
 ifreq_cutoff : 0 # Cut off for imaginary frequencies during analysis (i.e. if ifreq_cutoff = 20, all the negative freqs from 0 to -20 will be considered positive and the output files won't be discarded)
 # if sp : gaussian, the program will generate new COM files (from normally terminated LOG files) with the options selected from the user
 sp : None # write single-point COM files after analysis (options in QPREP)
-suffix_sp : None # adds a suffix at the end of the single-point COM filename (i.e. FILENAME_suffix.com). If suffix_sp : None, no suffixes are added
+suffix : None # adds a suffix at the end of the single-point COM filename (i.e. FILENAME_suffix.com). If suffix : None, no suffixes are added
 check_geom : True # Checks that geometries mantain the same connectivity after DFT optimization
 length_criteria : 1.4 # Factor used to determine whether a bond broke/formed during DFT optimization for check_geom
 

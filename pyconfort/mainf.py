@@ -6,9 +6,8 @@ import glob
 import sys
 import os
 import time
-import subprocess
-import yaml
 import concurrent.futures as futures
+import multiprocessing as mp
 from pathlib import Path
 
 import pandas as pd
@@ -18,20 +17,20 @@ from rdkit.Chem import AllChem as Chem
 #                                compute_confs,
 #                                mol_from_sdf_or_mol_or_mol2, creation_of_dup_csv)
 from pyconfort.csearch import *
-from pyconfort.filter import exp_rules_output
+from pyconfort.filter import geom_rules_output
 
-from pyconfort.qprep_gaussian import (read_energies, get_name_and_charge, write_gaussian_input_file)
-from pyconfort.qcorr_gaussian import output_processing, check_for_final_folder
+from pyconfort.qprep_gaussian import GaussianTemplate
 
-from pyconfort.grapher import graph
-from pyconfort.descp import calculate_parameters
-from pyconfort.nmr import calculate_boltz_and_nmr
-from pyconfort.energy import calculate_boltz_and_energy,calculate_avg_and_energy
-from pyconfort.dbstep_conf import calculate_db_parameters,calculate_boltz_and_dbstep
-from pyconfort.nics_conf import calculate_nics_parameters,calculate_boltz_for_nics,calculate_avg_nics
-from pyconfort.cclib_conf import calculate_cclib,get_avg_cclib_param,calculate_boltz_for_cclib
+# from pyconfort.grapher import graph
+# from pyconfort.descp import calculate_parameters
+# from pyconfort.nmr import calculate_boltz_and_nmr
+# from pyconfort.energy import calculate_boltz_and_energy,calculate_avg_and_energy
+# from pyconfort.dbstep_conf import calculate_db_parameters,calculate_boltz_and_dbstep
+# from pyconfort.nics_conf import calculate_nics_parameters,calculate_boltz_for_nics,calculate_avg_nics
+# from pyconfort.cclib_conf import calculate_cclib,get_avg_cclib_param,calculate_boltz_for_cclib
 from pyconfort.cmin import mult_min
-from pyconfort.utils import (Logger, move_file_from_folder, com_2_xyz_2_sdf, check_for_pieces, check_charge_smi,load_from_yaml,creation_of_dup_csv,mol_from_sdf_or_mol_or_mol2)
+from pyconfort.utils import (Logger, move_file_from_folder, get_filenames, creation_of_dup_csv,
+                            read_energies, get_name_and_charge)
 #need to and in energy
 
 
@@ -79,7 +78,7 @@ def csearch_main(w_dir_initial,args,log_overall):
 			jobs.append(job)
 			count_mol += 1
 
-		final_dup_data = creation_of_dup_csv(args.CSEARCH,args.CMIN)
+		final_dup_data = creation_of_dup_csv_csearch(args.CSEARCH)
 		bar = IncrementalBar('o  Number of finished jobs from CSEARCH', max = count_mol)
 		# Process the job results (in submission order) and save the conformers.
 		for i,job in enumerate(jobs):
@@ -99,139 +98,144 @@ def csearch_main(w_dir_initial,args,log_overall):
 
 
 def cmin_main(w_dir_initial,args,log_overall,dup_data):
-    dat_folder = Path(w_dir_initial+'/CMIN/dat_files')
-    dat_folder.mkdir(exist_ok=True,parents=True)
-    bar = IncrementalBar('o  Number of finished jobs from CMIN', max = len(dup_data))
-    for dup_data_idx in range(len(dup_data)):
-        start_time = time.time()
-        #update_to_rdkit = dup_data.at[dup_data_idx,'update_to_rdkit']
-        name = dup_data.at[dup_data_idx,'Molecule']
-        log = Logger(dat_folder/name, args.output_name)
-        if dup_data.at[dup_data_idx,'status'] != -1:
-            if args.CMIN=='ani':
-                min_suffix = 'ani'
-            elif args.CMIN=='xtb':
-                min_suffix = 'xtb'
-            if args.CSEARCH in ['rdkit','summ','fullmonte']:
-                fullname = f'{name}_{args.CSEARCH}'
-                # try:
-                mult_min(fullname, args, min_suffix, log, dup_data, dup_data_idx)
-                # except:
-                #     pass
-                dup_data.at[dup_data_idx, 'CMIN time (seconds)'] = round(time.time() - start_time,2)
-        bar.next()
-    bar.finish()
+	bar = IncrementalBar('o  Number of finished jobs from CMIN', max = len(dup_data))
+	final_dup_data = creation_of_dup_csv_cmin(args.CMIN)
+	for dup_data_idx in range(len(dup_data)):
+		#update_to_rdkit = dup_data.at[dup_data_idx,'update_to_rdkit']
+		name = dup_data.at[dup_data_idx,'Molecule']
+		charge = dup_data.at[dup_data_idx,'Overall charge']
+		if dup_data.at[dup_data_idx,'status'] != -1:
+			if args.CMIN=='ani':
+				min_suffix = 'ani'
+			elif args.CMIN=='xtb':
+				min_suffix = 'xtb'
+			if args.CSEARCH in ['rdkit','summ','fullmonte']:
 
-    # removing temporary files
-    temp_files = ['gfn2.out', 'xTB_opt.traj', 'ANI1_opt.traj',
-                  'wbo', 'xtbrestart','ase.opt','xtb.opt','gfnff_topo']
-    for file in temp_files:
-        if Path(file).exists():
-            os.remove(file)
+				csearch_folder = Path(w_dir_initial).joinpath(f'CSEARCH/{args.CSEARCH}')
+				fullname = str(csearch_folder.joinpath(name+'_'+args.CSEARCH))
 
-    return dup_data
+				# fullname = f'{name}_{args.CSEARCH}'
+				# try:
+				total_data = mult_min(fullname, args, min_suffix,charge,log_overall,w_dir_initial)
+				# except:
+				#     pass
+				frames = [final_dup_data, total_data]
+				final_dup_data = pd.concat(frames,ignore_index=True,sort=True)
+		bar.next()
+	bar.finish()
+
+	# removing temporary files
+	temp_files = ['gfn2.out', 'xTB_opt.traj', 'ANI1_opt.traj',
+				  'wbo', 'xtbrestart','ase.opt','xtb.opt','gfnff_topo']
+	for file in temp_files:
+		if Path(file).exists():
+			os.remove(file)
+
+	return final_dup_data
 
 
 # writing gauss main
 def qprep_main(w_dir_initial,args,log):
 
-    if len(args.exp_rules) >= 1:
-        conf_files =  glob.glob('*_rules.sdf')
-    # define the SDF files to convert to COM Gaussian files
-    elif not args.CMIN=='xtb' and not args.CMIN=='ani' and args.CSEARCH=='rdkit':
-        conf_files =  glob.glob('*_rdkit.sdf')
-    elif not args.CMIN=='xtb' and not args.CMIN=='ani' and args.CSEARCH=='summ':
-        conf_files =  glob.glob('*_summ.sdf')
-    elif not args.CMIN=='xtb' and not args.CMIN=='ani' and args.CSEARCH=='fullmonte':
-        conf_files =  glob.glob('*_fullmonte.sdf')
-    elif args.CMIN=='xtb' and not args.CMIN=='ani':
-        conf_files =  glob.glob('*_xtb.sdf')
-    elif args.CMIN=='ani' and not args.CMIN=='xtb':
-        conf_files =  glob.glob('*_ani.sdf')
-    elif args.CMIN=='ani' and args.CMIN=='xtb':
-        conf_files =  glob.glob('*_ani.sdf') + glob.glob('*_xtb.sdf')
-    else:
-        conf_files =  glob.glob('*.sdf')
+	if len(args.exp_rules) >= 1:
+		conf_files =  glob.glob('*_rules.sdf')
+	# define the SDF files to convert to COM Gaussian files
+	elif not args.CMIN=='xtb' and not args.CMIN=='ani' and args.CSEARCH=='rdkit':
+		conf_files =  glob.glob(w_dir_initial+'/CSEARCH/'+args.CSEARCH+'/*_rdkit.sdf')
+	elif not args.CMIN=='xtb' and not args.CMIN=='ani' and args.CSEARCH=='summ':
+		conf_files =  glob.glob(w_dir_initial+'/CSEARCH/'+args.CSEARCH+'/*_summ.sdf')
+	elif not args.CMIN=='xtb' and not args.CMIN=='ani' and args.CSEARCH=='fullmonte':
+		conf_files =  glob.glob(w_dir_initial+'/CSEARCH/'+args.CSEARCH+'/*_fullmonte.sdf')
+	elif not args.CMIN=='xtb' and not args.CMIN=='ani' and args.CSEARCH=='crest':
+		conf_files =  glob.glob(w_dir_initial+'/CSEARCH/'+args.CSEARCH+'/*_crest.sdf')
 
-    # # NEED TO UPDATE THIS PART TO START FROM JSON!
-    # if args.com_from_xyz:
-    #     xyz_files =  glob.glob('*.xyz')
-    #     convert_xyz_to_sdf(xyz_files,args,log)
-    #     conf_files =  glob.glob('*.sdf')
+	elif args.CMIN=='xtb' and not args.CMIN=='ani':
+		conf_files =  glob.glob(w_dir_initial+'/CMIN/'+args.CMIN+'/*_xtb.sdf')
+	elif args.CMIN=='ani' and not args.CMIN=='xtb':
+		conf_files =  glob.glob(w_dir_initial+'/CMIN/'+args.CMIN+'/*_ani.sdf')
+	else:
+		conf_files =  glob.glob('*.sdf')
 
-    # names for directories created
-    if args.QPREP == 'gaussian':
-        g_dir = 'QMCALC/G16'
-    elif args.QPREP == 'orca':
-        g_dir = 'QMCALC/ORCA'
+	# # NEED TO UPDATE THIS PART TO START FROM JSON!
+	# if args.com_from_xyz:
+	#     xyz_files =  glob.glob('*.xyz')
+	#     convert_xyz_to_sdf(xyz_files,args,log)
+	#     conf_files =  glob.glob('*.sdf')
 
-    if len(conf_files) != 0:
-        #read in dup_data to get the overall charge of MOLECULES
-        invalid_files = []
-        try:
-            charge_data = pd.read_csv(w_dir_initial+'/CSEARCH/csv_files/'+args.input.split('.')[0]+'-CSEARCH-Data.csv', usecols=['Molecule','Overall charge'])
-        except:
-            charge_data = pd.DataFrame()
-            for i,conf_file in enumerate(conf_files):
-                try:
-                    suppl = Chem.SDMolSupplier(conf_file, removeHs=False)
-                except OSError:
-                    suppl = False
-                if suppl:
-                    mol = suppl[0]
-                    charge = mol.GetProp('Real charge')
-                    charge_data.at[i,'Overall charge'] = charge
-                else:
-                    invalid_files.append(conf_file)
-                    charge_data.at[i,'Overall charge'] = 'Invalid'
+	# names for directories created
+	if args.QPREP == 'gaussian':
+		g_dir = 'QMCALC/G16'
+	elif args.QPREP == 'orca':
+		g_dir = 'QMCALC/ORCA'
 
-                name = get_name_and_charge(conf_file.split('.')[0],None)
-                charge_data.at[i,'Molecule'] = name
+	if len(conf_files) != 0:
+		#read in dup_data to get the overall charge of MOLECULES
+		invalid_files = []
+		try:
+			charge_data = pd.read_csv(w_dir_initial+'/CSEARCH/csv_files/'+args.input.split('.')[0]+'-CSEARCH-Data.csv', usecols=['Molecule','Overall charge'])
+		except:
+			charge_data = pd.DataFrame()
+			for i,conf_file in enumerate(conf_files):
+				try:
+					suppl = Chem.SDMolSupplier(conf_file, removeHs=False)
+				except OSError:
+					suppl = False
+				if suppl:
+					mol = suppl[0]
+					charge = mol.GetProp('Real charge')
+					charge_data.at[i,'Overall charge'] = charge
+				else:
+					invalid_files.append(conf_file)
+					charge_data.at[i,'Overall charge'] = 'Invalid'
 
-        for lot,bs,bs_gcp in zip(args.level_of_theory, args.basis_set,args.basis_set_genecp_atoms):
-            # only create this directory if single point calculation is requested
-            if bs.find('**') > -1:
-                bs = bs.replace('**','(d,p)')
-            elif bs.find('*') > -1:
-                bs = bs.replace('*','(d)')
+				name = get_name_and_charge(conf_file.split('.')[0],None)
+				charge_data.at[i,'Molecule'] = name
 
-            if str(bs).find('/') > -1:
-                folder = g_dir + '/' + str(lot) + '-' + str(bs).split('/')[0]
-            else:
-                folder = g_dir + '/' + str(lot) + '-' + str(bs)
-            log.write("\no  Preparing QM input files in {}".format(folder))
+		for lot,bs,bs_gcp in zip(args.level_of_theory, args.basis_set,args.basis_set_genecp_atoms):
+			# only create this directory if single point calculation is requested
+			if bs.find('**') > -1:
+				bs = bs.replace('**','(d,p)')
+			elif bs.find('*') > -1:
+				bs = bs.replace('*','(d)')
 
-            # this variable keeps trakc of folder creation
-            folder_error = False
-            try:
-                os.makedirs(folder)
-            except OSError:
-                if os.path.isdir(folder):
-                    pass
-                else:
-                    log.write('\nx  The QMCALC folder from QPREP could not be created, probably due to incompatible characters')
-                    folder_error = True
+			if str(bs).find('/') > -1:
+				folder = g_dir + '/' + str(lot) + '-' + str(bs).split('/')[0]
+			else:
+				folder = g_dir + '/' + str(lot) + '-' + str(bs)
+			log.write("\no  Preparing QM input files in {}".format(folder))
 
-            # writing the com files
-            # check conf_file exists, parse energies and then write DFT input
-            for file in conf_files:
-                if file not in invalid_files:
-                    if os.path.exists(file):
-                        if args.verbose:
-                            if not folder_error:
-                                log.write("   -> Converting from {}".format(file))
-                        energies = read_energies(file,log)
-                        name = file.split('.')[0]
-                        write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, keywords_line, args, log, charge_data, w_dir_initial)
-    else:
-        log.write('\nx  No SDF files detected to convert to gaussian COM files')
+			# this variable keeps trakc of folder creation
+			folder_error = False
+			try:
+				os.makedirs(folder)
+			except OSError:
+				if os.path.isdir(folder):
+					pass
+				else:
+					log.write('\nx  The QMCALC folder from QPREP could not be created, probably due to incompatible characters')
+					folder_error = True
+
+			# writing the com files
+			# check conf_file exists, parse energies and then write DFT input
+			for file in conf_files:
+				if file not in invalid_files:
+					if os.path.exists(file):
+						if args.verbose:
+							if not folder_error:
+								log.write("   -> Converting from {}".format(file))
+						energies = read_energies(file,log)
+						name = file.split('.')[0]
+
+						write_gaussian_input_file(file, name, lot, bs, bs_gcp, energies, keywords_line, args, log, charge_data, w_dir_initial)
+	else:
+		log.write('\nx  No SDF files detected to convert to gaussian COM files')
 
 
 # moving files after compute and/or write_gauss
 def move_sdf_main(args):
     src = os.getcwd()
-    if len(args.exp_rules) >= 1:
-        exp_rules_files = glob.glob('*_filter_exp_rules.sdf')
+    if len(args.geom_rules) >= 1:
+        geom_rules_files = glob.glob('*_filter_geom_rules.sdf')
     if args.CMIN=='xtb':
         all_xtb_conf_files = glob.glob('*_xtb.sdf')
         destination_xtb = src +'/CMIN/xtb'
@@ -241,10 +245,10 @@ def move_sdf_main(args):
         destination_xtb_all = src +'/CMIN/xtb_all_confs'
         for file in all_xtb_conf_files_all:
             move_file_from_folder(destination_xtb_all,src,file)
-        if len(args.exp_rules) >= 1:
-            destination_exp_rules = src +'/CMIN/xtb/filter_exp_rules/'
-            for file in exp_rules_files:
-                move_file_from_folder(destination_exp_rules,src,file)
+        if len(args.geom_rules) >= 1:
+            destination_geom_rules = src +'/CMIN/xtb/filter_geom_rules/'
+            for file in geom_rules_files:
+                move_file_from_folder(destination_geom_rules,src,file)
     if args.CMIN=='ani':
         all_ani_conf_files = glob.glob('*_ani.sdf')
         destination_ani = src +'/CMIN/ani'
@@ -254,55 +258,55 @@ def move_sdf_main(args):
         destination_ani_all = src +'/CMIN/ani_all_confs'
         for file in all_ani_conf_files_all:
             move_file_from_folder(destination_ani_all,src,file)
-        if len(args.exp_rules) >= 1:
-            destination_exp_rules = src +'/CMIN/ani/filter_exp_rules/'
-            for file in exp_rules_files:
-                move_file_from_folder(destination_exp_rules,src,file)
+        if len(args.geom_rules) >= 1:
+            destination_geom_rules = src +'/CMIN/ani/filter_geom_rules/'
+            for file in geom_rules_files:
+                move_file_from_folder(destination_geom_rules,src,file)
     if args.CSEARCH=='rdkit':
         all_name_conf_files = glob.glob('*_rdkit.sdf')
         destination_rdkit = src+ '/CSEARCH/rdkit'
         for file in all_name_conf_files:
             move_file_from_folder(destination_rdkit,src,file)
-        if len(args.exp_rules) >= 1:
-            destination_exp_rules = src +'/CSEARCH/rdkit/filter_exp_rules/'
-            for file in exp_rules_files:
-                move_file_from_folder(destination_exp_rules,src,file)
+        if len(args.geom_rules) >= 1:
+            destination_geom_rules = src +'/CSEARCH/rdkit/filter_geom_rules/'
+            for file in geom_rules_files:
+                move_file_from_folder(destination_geom_rules,src,file)
 
     if args.CSEARCH=='summ':
         all_name_conf_files = glob.glob('*_summ.sdf')
         destination_rdkit = src+ '/CSEARCH/summ'
         for file in all_name_conf_files:
             move_file_from_folder(destination_rdkit,src,file)
-        if len(args.exp_rules) >= 1 and args.CMIN is None:
-            destination_exp_rules = src +'/CSEARCH/summ/filter_exp_rules/'
-            for file in exp_rules_files:
-                move_file_from_folder(destination_exp_rules,src,file)
+        if len(args.geom_rules) >= 1 and args.CMIN is None:
+            destination_geom_rules = src +'/CSEARCH/summ/filter_geom_rules/'
+            for file in geom_rules_files:
+                move_file_from_folder(destination_geom_rules,src,file)
 
     if args.CSEARCH=='fullmonte':
         all_name_conf_files = glob.glob('*_fullmonte.sdf')
         destination_rdkit = src+ '/CSEARCH/fullmonte'
         for file in all_name_conf_files:
             move_file_from_folder(destination_rdkit,src,file)
-        if len(args.exp_rules) >= 1 and args.CMIN is None:
-            destination_exp_rules = src +'/CSEARCH/fullmonte/filter_exp_rules/'
-            for file in exp_rules_files:
-                move_file_from_folder(destination_exp_rules,src,file)
+        if len(args.geom_rules) >= 1 and args.CMIN is None:
+            destination_geom_rules = src +'/CSEARCH/fullmonte/filter_geom_rules/'
+            for file in geom_rules_files:
+                move_file_from_folder(destination_geom_rules,src,file)
 
     if args.CSEARCH=='crest':
         all_name_conf_files = glob.glob('*_crest.sdf')
         destination_rdkit = src+ '/CSEARCH/crest'
         for file in all_name_conf_files:
             move_file_from_folder(destination_rdkit,src,file)
-        if len(args.exp_rules) >= 1 and args.CMIN is None:
-            destination_exp_rules = src +'/CSEARCH/crest/filter_exp_rules/'
-            for file in exp_rules_files:
-                move_file_from_folder(destination_exp_rules,src,file)
+        if len(args.geom_rules) >= 1 and args.CMIN is None:
+            destination_geom_rules = src +'/CSEARCH/crest/filter_geom_rules/'
+            for file in geom_rules_files:
+                move_file_from_folder(destination_geom_rules,src,file)
 
     if args.CSEARCH is None:
-        if len(args.exp_rules) >= 1:
-            destination_exp_rules = src +'/QMCALC/SDF_input/filter_exp_rules/'
-            for file in exp_rules_files:
-                move_file_from_folder(destination_exp_rules,src,file)
+        if len(args.geom_rules) >= 1:
+            destination_geom_rules = src +'/QMCALC/SDF_input/filter_geom_rules/'
+            for file in geom_rules_files:
+                move_file_from_folder(destination_geom_rules,src,file)
 
         all_conf_files = glob.glob('*.sdf')
         destination = src +'/QMCALC/SDF_input/'
@@ -314,69 +318,6 @@ def move_sdf_main(args):
         destination_xyz = 'QMCALC/xyz_and_sdf'
         for file in all_xyz_conf_files:
             move_file_from_folder(destination_xyz,src,file)
-
-#finding the file type to move for analysis
-def get_com_or_log_out_files(type,name):
-    files = []
-    if type =='output':
-        formats = ['*.log','*.LOG','*.out','*.OUT','*json']
-    elif type =='input':
-        formats =['*.com','*.gjf']
-    for _,format in enumerate(formats):
-        if name is None:
-            all_files = enumerate(glob.glob(format))
-        else:
-            all_files = enumerate(glob.glob(name+format))
-        for _,file in all_files:
-            if file not in files:
-                files.append(file)
-    return files
-
-
-# main part of the analysis functions
-def qcorr_gaussian_main(w_dir_initial,args,log):
-    # when you run analysis in a folder full of output files
-    if not os.path.exists(w_dir_initial+'/QMCALC'):
-        w_dir_main = os.getcwd()
-        w_dir_fin = w_dir_main+'/success/output_files'
-        if not os.path.isdir(w_dir_main+'/dat_files/'):
-            os.makedirs(w_dir_main+'/dat_files/')
-        round_num = check_for_final_folder(w_dir_main)
-        log = Logger(w_dir_main+'/dat_files/pyCONFORT-QCORR-run_'+str(round_num), args.output_name)
-        log.write("\no  Analyzing output files in {}\n".format(w_dir_main))
-        log_files = get_com_or_log_out_files('output',None)
-        if len(log_files) == 0:
-            log.write('x  There are no output files in this folder.')
-        com_files = get_com_or_log_out_files('input',None)
-        output_processing(log_files, w_dir_main, args, w_dir_fin, log, round_num)
-        os.chdir(w_dir_main)
-    # when you specify multiple levels of theory
-    else:
-        args.path = w_dir_initial+'/QMCALC/G16/'
-        # Sets the folder and find the log files to analyze
-        for lot,bs,bs_gcp in zip(args.level_of_theory, args.basis_set,args.basis_set_genecp_atoms):
-            #for main folder
-            if str(bs).find('/') > -1:
-                w_dir_main = args.path + str(lot) + '-' + str(bs).split('/')[0]
-            else:
-                w_dir_main = args.path + str(lot) + '-' + str(bs)
-            if not os.path.isdir(w_dir_main+'/dat_files/'):
-                os.makedirs(w_dir_main+'/dat_files/')
-            #check if New_Gaussian_Input_Files folder exists
-            round_num = check_for_final_folder(w_dir_main)
-            log = Logger(w_dir_main+'/dat_files/pyCONFORT-QCORR-run_'+str(round_num), args.output_name)
-            #assign the path to the finished directory.
-            if str(bs).find('/') > -1:
-                w_dir_fin = args.path + str(lot) + '-' + str(bs).split('/')[0] +'/success/output_files'
-            else:
-                w_dir_fin = args.path + str(lot) + '-' + str(bs) +'/success/output_files'
-            os.chdir(w_dir_main)
-            log.write("\no  Analyzing output files in {}\n".format(w_dir_main))
-            log_files = get_com_or_log_out_files('output',None)
-            com_files = get_com_or_log_out_files('input',None)
-            output_processing(log_files, w_dir_main, args, w_dir_fin, log, round_num)
-        os.chdir(args.path)
-    os.chdir(w_dir_initial)
 
 
 #getting descriptors
@@ -403,15 +344,15 @@ def geom_par_main(args,log,w_dir_initial):
         if os.path.exists(w_dir_initial+'/QMCALC/G16'):
             args.path = w_dir_initial+'/QMCALC/G16/'
             # Sets the folder and find the log files to analyze
-            for lot,bs,bs_gcp in zip(args.level_of_theory, args.basis_set,args.basis_set_genecp_atoms):
+            for lot,bs,bs_gcp in zip(args.level_of_theory, args.basis_set,args.genecp_bs):
                 #assign the path to the finished directory.
                 if str(bs).find('/') > -1:
                     w_dir = args.path + str(lot) + '-' + str(bs).split('/')[0] +'/success/output_files'
                 else:
                     w_dir = args.path + str(lot) + '-' + str(bs) +'/success/output_files'
                 os.chdir(w_dir)
-                log_files = get_com_or_log_out_files('output',name)
-                calculate_parameters(sdf_rdkit,sdf_ani,sdf_xtb,log_files,args,log,w_dir_initial,name,lot,bs)
+                qm_files = get_filenames('output',name)
+                calculate_parameters(sdf_rdkit,sdf_ani,sdf_xtb,qm_files,args,log,w_dir_initial,name,lot,bs)
         else:
             calculate_parameters(sdf_rdkit,sdf_ani,sdf_xtb,None,args,log,w_dir_initial,name,None,None)
 
@@ -441,18 +382,18 @@ def graph_main(args,log,w_dir_initial):
       if os.path.exists(w_dir_initial+'/QMCALC/G16'):
           args.path = w_dir_initial+'/QMCALC/G16/'
           # Sets the folder and find the log files to analyze
-          for lot,bs,bs_gcp in zip(args.level_of_theory, args.basis_set,args.basis_set_genecp_atoms):
+          for lot,bs,bs_gcp in zip(args.level_of_theory, args.basis_set,args.genecp_bs):
               #assign the path to the finished directory.
               w_dir = args.path + str(lot) + '-' + str(bs) +'/success/output_files'
               os.chdir(w_dir)
-              log_files = get_com_or_log_out_files('output',name)
+              qm_files = get_filenames('output',name)
               if os.path.exists(args.path + str(lot) + '-' + str(bs) +'/success/G16-SP_input_files'):
-                  for lot_sp,bs_sp,bs_gcp_sp in zip(args.level_of_theory_sp,args.basis_set_sp,args.basis_set_genecp_atoms_sp):
+                  for lot_sp,bs_sp,bs_gcp_sp in zip(args.level_of_theory_sp,args.basis_set_sp,args.gen_bs_sp):
                       w_dir_sp = args.path + str(lot) + '-' + str(bs) +'/success/G16-SP_input_files'+'/'+str(lot_sp)+'-'+str(bs_sp)
-                      sp_files = get_com_or_log_out_files('output',name)
-                      graph(sdf_rdkit,sdf_xtb,sdf_ani,log_files,sp_files,args,log,lot,bs,lot_sp,bs_sp,name,w_dir_initial,w_dir_sp,w_dir,'g16')
+                      sp_files = get_filenames('output',name)
+                      graph(sdf_rdkit,sdf_xtb,sdf_ani,qm_files,sp_files,args,log,lot,bs,lot_sp,bs_sp,name,w_dir_initial,w_dir_sp,w_dir,'g16')
               if os.path.exists(f'{args.path}{lot}-{bs}/success/TURBOMOLE-SP_input_files'):
-                for lot_sp,bs_sp,bs_gcp_sp in zip(args.level_of_theory_sp,args.basis_set_sp,args.basis_set_genecp_atoms_sp):
+                for lot_sp,bs_sp,bs_gcp_sp in zip(args.level_of_theory_sp,args.basis_set_sp,args.gen_bs_sp):
                   w_dir_sp = f"{path_turbomole}/{lot_sp}-{bs_sp.split('/')[0]}"
                   os.chdir(w_dir_sp)
                   sp_files = []
@@ -460,17 +401,17 @@ def graph_main(args,log,w_dir_initial):
                     if path.is_dir() and '_SP' in path.stem:
                       sp_files.append(path)
                   os.chdir(w_dir)
-                  graph(sdf_rdkit,sdf_xtb,sdf_ani,log_files,sp_files,args,log,lot,bs,lot_sp,bs_sp.split('/')[0],name,w_dir_initial,w_dir_sp,w_dir,'turbomole')
+                  graph(sdf_rdkit,sdf_xtb,sdf_ani,qm_files,sp_files,args,log,lot,bs,lot_sp,bs_sp.split('/')[0],name,w_dir_initial,w_dir_sp,w_dir,'turbomole')
 
               if os.path.exists(args.path + str(lot) + '-' + str(bs) +'/success/ORCA-SP_input_files'):
-                  for lot_sp,bs_sp,bs_gcp_sp in zip(args.level_of_theory_sp,args.basis_set_sp,args.basis_set_genecp_atoms_sp):
+                  for lot_sp,bs_sp,bs_gcp_sp in zip(args.level_of_theory_sp,args.basis_set_sp,args.gen_bs_sp):
                       w_dir_sp = args.path + str(lot) + '-' + str(bs) +'/success/ORCA-SP_input_files'+'/'+str(lot_sp)+'-'+str(bs_sp.split('/')[0])
                       os.chdir(w_dir_sp)
-                      sp_files = get_com_or_log_out_files('output',name)
+                      sp_files = get_filenames('output',name)
                       os.chdir(w_dir)
-                      graph(sdf_rdkit,sdf_xtb,sdf_ani,log_files,sp_files,args,log,lot,bs,lot_sp,bs_sp.split('/')[0],name,w_dir_initial,w_dir_sp,w_dir,'orca')
+                      graph(sdf_rdkit,sdf_xtb,sdf_ani,qm_files,sp_files,args,log,lot,bs,lot_sp,bs_sp.split('/')[0],name,w_dir_initial,w_dir_sp,w_dir,'orca')
               else:
-                  graph(sdf_rdkit,sdf_xtb,sdf_ani,log_files,None,args,log,lot,bs,None,None,name,w_dir_initial,None,w_dir,None)
+                  graph(sdf_rdkit,sdf_xtb,sdf_ani,qm_files,None,args,log,lot,bs,None,None,name,w_dir_initial,None,w_dir,None)
 
       else:
           graph(sdf_rdkit,sdf_xtb,sdf_ani,None,None,args,log,None,None,None,None,name,w_dir_initial,None,None,None)
@@ -522,7 +463,7 @@ def nmr_main(args,log,w_dir_initial):
         log.write("\no NMR analysis for molecule : {0} ".format(name))
 
         # Sets the folder and find the log files to analyze
-        for lot,bs,bs_gcp in zip(args.level_of_theory, args.basis_set,args.basis_set_genecp_atoms):
+        for lot,bs,bs_gcp in zip(args.level_of_theory, args.basis_set,args.genecp_bs):
             #assign the path to the finished directory.
             if str(bs).find('/') > -1:
                 w_dir_fin = args.path + str(lot) + '-' + str(bs).split('/')[0] +'/success/output_files'
@@ -530,9 +471,9 @@ def nmr_main(args,log,w_dir_initial):
                 w_dir_fin = args.path + str(lot) + '-' + str(bs) +'/success/output_files'
             os.chdir(w_dir_fin)
 
-            log_files = get_com_or_log_out_files('output',name)
-            if len(log_files) != 0:
-                calculate_boltz_and_nmr(log_files,args,log,name,w_dir_fin,w_dir_initial,lot,bs)
+            qm_files = get_filenames('output',name)
+            if len(qm_files) != 0:
+                calculate_boltz_and_nmr(qm_files,args,log,name,w_dir_fin,w_dir_initial,lot,bs)
     os.chdir(w_dir_initial)
 
 def energy_main(args,log,w_dir_initial):
@@ -546,21 +487,21 @@ def energy_main(args,log,w_dir_initial):
         if os.path.exists(w_dir_initial+'/QMCALC/G16'):
             args.path = w_dir_initial+'/QMCALC/G16/'
         # Sets the folder and find the log files to analyze
-        for lot,bs,bs_gcp in zip(args.level_of_theory, args.basis_set,args.basis_set_genecp_atoms):
+        for lot,bs,bs_gcp in zip(args.level_of_theory, args.basis_set,args.genecp_bs):
             #assign the path to the finished directory.
             if str(bs).find('/') > -1:
                 w_dir_fin = args.path + str(lot) + '-' + str(bs).split('/')[0] +'/success/output_files/'
             else:
                 w_dir_fin = args.path + str(lot) + '-' + str(bs) +'/success/output_files/'
             os.chdir(w_dir_fin)
-            log_files = get_com_or_log_out_files('output',name)
-            if len(log_files) != 0:
-                calculate_boltz_and_energy(log_files,args,log,name,w_dir_fin,w_dir_initial,lot,bs)
+            qm_files = get_filenames('output',name)
+            if len(qm_files) != 0:
+                calculate_boltz_and_energy(qm_files,args,log,name,w_dir_fin,w_dir_initial,lot,bs)
 
     #combining the combining all files in different folders
     w_dir_boltz = w_dir_initial+'/QPRED/energy/boltz/'
 
-    for lot,bs,bs_gcp in zip(args.level_of_theory, args.basis_set,args.basis_set_genecp_atoms):
+    for lot,bs,bs_gcp in zip(args.level_of_theory, args.basis_set,args.genecp_bs):
         #assign the path to the finished directory.
         if str(bs).find('/') > -1:
             w_dir_fin = w_dir_boltz + str(lot) + '-' + str(bs).split('/')[0]
@@ -586,16 +527,16 @@ def dbstep_par_main(args,log,w_dir_initial):
         if os.path.exists(w_dir_initial+'/QMCALC/G16'):
             args.path = w_dir_initial+'/QMCALC/G16/'
             # Sets the folder and find the log files to analyze
-            for lot,bs,bs_gcp in zip(args.level_of_theory, args.basis_set,args.basis_set_genecp_atoms):
+            for lot,bs,bs_gcp in zip(args.level_of_theory, args.basis_set,args.genecp_bs):
                 #assign the path to the finished directory.
                 if str(bs).find('/') > -1:
                     w_dir = args.path + str(lot) + '-' + str(bs).split('/')[0] +'/success/output_files'
                 else:
                     w_dir = args.path + str(lot) + '-' + str(bs) +'/success/output_files'
                 os.chdir(w_dir)
-                log_files = get_com_or_log_out_files('output',name)
-                calculate_db_parameters(log_files,args,log,w_dir_initial,name,lot,bs)
-                calculate_boltz_and_dbstep(log_files,args,log,name,w_dir,w_dir_initial,lot,bs)
+                qm_files = get_filenames('output',name)
+                calculate_db_parameters(qm_files,args,log,w_dir_initial,name,lot,bs)
+                calculate_boltz_and_dbstep(qm_files,args,log,name,w_dir,w_dir_initial,lot,bs)
         os.chdir(w_dir_initial)
 
 def nics_par_main(args,log,w_dir_initial):
@@ -610,25 +551,25 @@ def nics_par_main(args,log,w_dir_initial):
         if os.path.exists(w_dir_initial+'/QMCALC/G16'):
             args.path = w_dir_initial+'/QMCALC/G16/'
             # Sets the folder and find the log files to analyze
-            for lot,bs,bs_gcp in zip(args.level_of_theory, args.basis_set,args.basis_set_genecp_atoms):
+            for lot,bs,bs_gcp in zip(args.level_of_theory, args.basis_set,args.genecp_bs):
                 #assign the path to the finished directory.
                 if str(bs).find('/') > -1:
                     w_dir = args.path + str(lot) + '-' + str(bs).split('/')[0] +'/success/output_files'
                 else:
                     w_dir = args.path + str(lot) + '-' + str(bs) +'/success/output_files'
                 os.chdir(w_dir)
-                log_files = get_com_or_log_out_files('output',name)
+                qm_files = get_filenames('output',name)
                 #do boltz firsst
-                calculate_boltz_for_nics(log_files,args,log,name,w_dir,w_dir_initial,lot,bs)
-                for lot_sp,bs_sp,bs_gcp_sp in zip(args.level_of_theory_sp, args.basis_set_sp,args.basis_set_genecp_atoms_sp):
+                calculate_boltz_for_nics(qm_files,args,log,name,w_dir,w_dir_initial,lot,bs)
+                for lot_sp,bs_sp,bs_gcp_sp in zip(args.level_of_theory_sp, args.basis_set_sp,args.gen_bs_sp):
                     if str(bs).find('/') > -1:
                         w_dir_sp = args.path + str(lot) + '-' + str(bs).split('/')[0] +'/success/G16-NICS_input_files/'+str(lot_sp)+'-'+str(bs_sp)
                     else:
                         w_dir_sp = args.path + str(lot) + '-' + str(bs) +'/success/G16-NICS_input_files/'+str(lot_sp)+'-'+str(bs_sp)
                     os.chdir(w_dir_sp)
-                    log_files_sp = get_com_or_log_out_files('output',name)
-                    calculate_nics_parameters(log_files_sp,args,log,w_dir_initial,name,lot_sp,bs_sp)
-                    calculate_avg_nics(log_files_sp,args,log,name,w_dir_sp,w_dir_initial,lot_sp,bs_sp)
+                    qm_files_sp = get_filenames('output',name)
+                    calculate_nics_parameters(qm_files_sp,args,log,w_dir_initial,name,lot_sp,bs_sp)
+                    calculate_avg_nics(qm_files_sp,args,log,name,w_dir_sp,w_dir_initial,lot_sp,bs_sp)
         os.chdir(w_dir_initial)
 
 def cclib_main(args,log,w_dir_initial):
@@ -642,28 +583,28 @@ def cclib_main(args,log,w_dir_initial):
         if os.path.exists(w_dir_initial+'/QMCALC/G16'):
             args.path = w_dir_initial+'/QMCALC/G16/'
             # Sets the folder and find the log files to analyze
-            for lot,bs,bs_gcp in zip(args.level_of_theory, args.basis_set,args.basis_set_genecp_atoms):
+            for lot,bs,bs_gcp in zip(args.level_of_theory, args.basis_set,args.genecp_bs):
                 #assign the path to the finished directory.
                 if str(bs).find('/') > -1:
                     w_dir = args.path + str(lot) + '-' + str(bs).split('/')[0] +'/success/output_files'
                 else:
                     w_dir = args.path + str(lot) + '-' + str(bs) +'/success/output_files'
                 os.chdir(w_dir)
-                log_files = get_com_or_log_out_files('output',name)
+                qm_files = get_filenames('output',name)
                 #do boltz firsst
-                calculate_cclib(log_files,w_dir_initial,lot,bs)
-                calculate_boltz_for_cclib(log_files,name,w_dir_initial,lot,bs)
+                calculate_cclib(qm_files,w_dir_initial,lot,bs)
+                calculate_boltz_for_cclib(qm_files,name,w_dir_initial,lot,bs)
                 if str(bs).find('/') > -1:
                     os.chdir(w_dir_initial + '/QPRED/cclib-json/all_confs_cclib/'+str(lot)+'-'+str(bs).split('/')[0])
                 else:
                     os.chdir(w_dir_initial + '/QPRED/cclib-json/all_confs_cclib/'+str(lot)+'-'+str(bs))
-                json_files = get_com_or_log_out_files('output',name)
+                json_files = get_filenames('output',name)
                 get_avg_cclib_param(json_files,name,w_dir_initial,lot,bs)
 
 
 # MAIN OPTION FOR DISCARDING MOLECULES BASED ON USER INPUT DATA (REFERRED AS EXPERIMENTAL RULES)
-def exp_rules_main(args,log,exp_rules_active):
-    if exp_rules_active:
+def geom_rules_main(args,log,geom_rules_active):
+    if geom_rules_active:
         if args.verbose:
             log.write("\n   ----- Applying experimental rules to write the new confs file -----")
         # do 2 cases, for RDKit only and RDKIt+xTB
@@ -687,14 +628,14 @@ def exp_rules_main(args,log,exp_rules_active):
             except OSError:
                 pass
             if allmols:
-                sdwriter = Chem.SDWriter(file.split('.')[0]+'_filter_exp_rules.sdf')
-                print_error_exp_rules = False
+                sdwriter = Chem.SDWriter(file.split('.')[0]+'_filter_geom_rules.sdf')
+                print_error_geom_rules = False
                 for mol in allmols:
                     check_mol = True
                     ob_compat = True
                     rdkit_compat = True
-                    check_mol = exp_rules_output(mol,args,log,file,print_error_exp_rules)
-                    print_error_exp_rules += 1
+                    check_mol = geom_rules_output(mol,args,log,file,print_error_geom_rules)
+                    print_error_geom_rules += 1
                     if check_mol:
                         sdwriter.write(mol)
 
