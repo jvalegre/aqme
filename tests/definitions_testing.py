@@ -63,7 +63,7 @@ def remove_data(path, folder, smiles):
             if file.split('.')[1] in discard_ext or file == 'cdx.smi':
                 os.remove(file)
 
-def rdkit_tests(df_output,dihedral,xTB_ANI,cmd_pyconfort):
+def rdkit_tests(df_output,dihedral,xTB_ANI,cmd_aqme):
     if not dihedral:
         if not xTB_ANI:
             test_init_rdkit_confs = df_output['RDKit-Initial-samples']
@@ -81,7 +81,7 @@ def rdkit_tests(df_output,dihedral,xTB_ANI,cmd_pyconfort):
             test_filter_rdkit_confs = df_output['ANI-RMSD-and-energy-duplicates']
             test_unique_confs = 'nan'
     else:
-        if cmd_pyconfort[4] == 'params_Cu_test2.yaml':
+        if cmd_aqme[4] == 'params_Cu_test2.yaml':
             test_unique_confs = df_output['summ-conformers']
             test_init_rdkit_confs = df_output['RDKit-Initial-samples']
         else:
@@ -93,10 +93,10 @@ def rdkit_tests(df_output,dihedral,xTB_ANI,cmd_pyconfort):
 
     return test_init_rdkit_confs, test_prefilter_rdkit_confs, test_filter_rdkit_confs, test_unique_confs
 
-def conf_gen(path, precision, cmd_pyconfort, folder, smiles, E_confs, dihedral, xTB_ANI, metal, template):
+def conf_gen(path, precision, cmd_aqme, folder, smiles, E_confs, dihedral, xTB_ANI, metal, template):
     # open right folder and run the code
     os.chdir(path+'/'+folder+'/'+smiles.split('.')[0])
-    subprocess.call(cmd_pyconfort)
+    subprocess.call(cmd_aqme)
 
     # Retrieving the generated CSV file
     os.chdir(path+'/'+folder+'/'+smiles.split('.')[0]+'/CSEARCH/csv_files')
@@ -105,7 +105,7 @@ def conf_gen(path, precision, cmd_pyconfort, folder, smiles, E_confs, dihedral, 
 
 
     # tests for RDKit
-    test_init_rdkit_confs, test_prefilter_rdkit_confs, test_filter_rdkit_confs, test_unique_confs = rdkit_tests(df_output,dihedral,xTB_ANI,cmd_pyconfort)
+    test_init_rdkit_confs, test_prefilter_rdkit_confs, test_filter_rdkit_confs, test_unique_confs = rdkit_tests(df_output,dihedral,xTB_ANI,cmd_aqme)
 
     # file_smi is a variable used for finding SDF and COM files
     if folder == 'Multiple':
@@ -201,14 +201,14 @@ def com_lines(file):
 
     return outlines
 
-def analysis(path, cmd_pyconfort, folder, file):
+def analysis(path, cmd_aqme, folder, file):
     os.chdir(path+'/'+folder)
     df_QCORR,dat_files = [],[]
 
     # the code will move the files the first time, this 'if' statement avoids errors
     files = glob.glob('*.log')
     if len(files) > 0:
-        subprocess.call(cmd_pyconfort)
+        subprocess.call(cmd_aqme)
 
     if file != 'csv' and file != 'dat':
         # copy the lines from the generated COM files

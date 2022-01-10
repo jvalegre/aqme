@@ -57,7 +57,7 @@ precision_others = 2
 
 def test_confgen_others(folder, smiles, params_file, n_confs_others, prefilter_confs_rdkit_others, filter_confs_rdkit, E_confs, charge, multiplicity_others, dihedral, xTB_ANI1, metal, template):
     # runs the program with the different tests
-    cmd_others = ['python', '-m', 'pyconfort', '--varfile', params_file]
+    cmd_others = ['python', '-m', 'aqme', '--varfile', params_file]
 
 
     test_init_rdkit_confs,test_prefilter_rdkit_confs,test_filter_rdkit_confs,round_confs_others,test_round_confs_others,test_charge,test_unique_confs,count,charge_com_others,multiplicity_com_others = conf_gen(path_others, precision_others, cmd_others, folder, smiles, E_confs, dihedral, xTB_ANI1, metal, template)

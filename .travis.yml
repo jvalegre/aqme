@@ -94,5 +94,5 @@ before_script:
 
 script:
   - cd tests
-  - pytest -v --cov=pyconfort
+  - pytest -v --cov=aqme
   - codecov

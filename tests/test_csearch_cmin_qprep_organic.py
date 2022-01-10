@@ -53,7 +53,7 @@ precision_organic = 2
 
 def test_confgen_organic(folder, smiles, params_file, n_confs_organic, prefilter_confs_rdkit_organic_organic, filter_confs_rdkit_organic, E_confs, charge_organic, multiplicity_organic, dihedral, xTB_ANI):
     # runs the program with the different tests
-    cmd_organic = ['python', '-m', 'pyconfort', '--varfile', params_file]
+    cmd_organic = ['python', '-m', 'aqme', '--varfile', params_file]
 
     test_init_rdkit_confs_organic,test_prefilter_rdkit_confs_organic,test_filter_rdkit_confs_organic,round_confs_organic,test_round_confs_organic,test_charge_organic,test_unique_confs_organic,_,charge_organic_com,multiplicity_com_organic = conf_gen(path_organic, precision_organic, cmd_organic, folder, smiles, E_confs, dihedral, xTB_ANI, metal=False, template=False)
 

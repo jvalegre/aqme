@@ -11,7 +11,7 @@ QPREP : gaussian
 
 # COMMON PARAMETERS TO EDIT
 
-# (1) CHARGE FOR XTB OPTIMIZATION AND COM FILES
+# (1) charge FOR XTB OPTIMIZATION AND COM FILES
 ewin_cmin : 1 # energy window in kcal/mol to use conformers for ANI1ccx and xTB (conformers with E higher than ewin will be discarded)
 sample : 20 # number of conformers to sample to get non-torsional differences (default 100)
 ani_method : ANI1ccx

@@ -39,7 +39,7 @@ precision_geom_rules = 2
 
 def test_confgen_geom_rules(folder, smiles, params_file, E_confs_no_rules, E_confs_rules, com_files, charge, format):
     # runs the program with the different tests
-    cmd_geom_rules = ['python', '-m', 'pyconfort', '--varfile', params_file]
+    cmd_geom_rules = ['python', '-m', 'aqme', '--varfile', params_file]
 
     Ir_rules = ['Ir_geom_rules','Ir_geom_rules2']
     Pd_rules = ['Pd_geom_rules','Pd_geom_rules2','Pd_geom_rules3']

@@ -47,7 +47,7 @@ path_misc = os.getcwd()
 
 def test_confgen_misc(smiles, params_file, goal, goal_2, job_type):
     # runs the program with the different tests
-    cmd_misc = ['python', '-m', 'pyconfort', '--varfile', params_file]
+    cmd_misc = ['python', '-m', 'aqme', '--varfile', params_file]
     os.chdir(path_misc+'/'+'Misc')
     subprocess.call(cmd_misc)
 

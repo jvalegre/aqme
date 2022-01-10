@@ -36,14 +36,14 @@ path_analysis_syst = path_analysis_syst_initial+'/QMCALC/G16'
 
 def test_analysis_dup_sp(file, type_of_job):
     # runs the program with the different tests
-    cmd_pyconfort = ['python', '-m', 'pyconfort', '--varfile', 'params_QCORR_syst_test.yaml']
+    cmd_aqme = ['python', '-m', 'aqme', '--varfile', 'params_QCORR_syst_test.yaml']
     LoTs = ['b3lyp-6-31G(d)','wb97xd-def2svp']
 
     if type_of_job == 'analysis':
         if file == 'CH4_Normal_termination_syst.log':
-            # first run of pyconfort
+            # first run of aqme
             os.chdir(path_analysis_syst_initial)
-            subprocess.call(cmd_pyconfort)
+            subprocess.call(cmd_aqme)
 
             # moving files from the first run to simulate that the COM files from input files were performed
             for LoT in LoTs:
@@ -63,9 +63,9 @@ def test_analysis_dup_sp(file, type_of_job):
                 os.chdir(path_analysis_syst+'/'+LoT+'/duplicates/run_1')
                 shutil.copy('CH4_z_Duplicate_syst.LOG', path_analysis_syst+'/'+LoT+'/input_files/run_2')
 
-            # second run of pyconfort
+            # second run of aqme
             os.chdir(path_analysis_syst_initial)
-            subprocess.call(cmd_pyconfort)
+            subprocess.call(cmd_aqme)
 
         for LoT in LoTs:
             files_com = ['MeOH_Error_termination_syst.com','Imag_freq_syst.com','MeOH_SCF_error_syst.com','MeOH_Unfinished_syst.com']

@@ -24,4 +24,4 @@ The ``pyCONFORT`` program can also be installed *via* pip using
 
 .. code:: bash
 
-  $ pip install pyconfort
+  $ pip install aqme

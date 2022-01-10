@@ -22,7 +22,7 @@ path_qcorr = os.getcwd()
 
 def test_analysis_dup_sp(folder, params_file):
     # runs the program with the different tests
-    cmd_qcorr_misc = ['python', '-m', 'pyconfort', '--varfile', params_file]
+    cmd_qcorr_misc = ['python', '-m', 'aqme', '--varfile', params_file]
 
     os.chdir(path_qcorr+'/'+folder)
     subprocess.call(cmd_qcorr_misc)

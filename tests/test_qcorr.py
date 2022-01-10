@@ -16,7 +16,7 @@ path_analysis_dup_sp = os.getcwd()
 @pytest.mark.parametrize("folder, file, command_line, type_of_job",
 [
     # tests of the analysis part (I use file as the output LOG files)
-    ('Analysis', 'CH4_Normal_termination.log', 'python -m pyconfort --qcorr gaussian', 'analysis'), # test normal termination
+    ('Analysis', 'CH4_Normal_termination.log', 'python -m aqme --qcorr gaussian', 'analysis'), # test normal termination
     ('Analysis', 'CH4_z_Duplicate.LOG', None, 'analysis'), # test duplicates
     ('Analysis', 'Basis_set_error1.LOG', None, 'analysis'), # test incompatibilities with gen/genecp
     ('Analysis', 'Basis_set_error2.LOG', None, 'analysis'), # test incompatibilities with gen/genecp
@@ -25,7 +25,7 @@ path_analysis_dup_sp = os.getcwd()
     ('Analysis', 'Imag_freq_low.log', None, 'analysis'), # test cut-off for imag freqs
     ('Analysis', 'MeOH_SCF_error.out', None, 'analysis'), # test SCF errors
     ('Analysis', 'MeOH_Unfinished.OUT', None, 'analysis'), # test unfinished calculations
-    ERRORTYPE = 'before_E_calculation'
+    errortype = 'before_E_calculation'
     ('Analysis', 'TS_CH3HCH3.log', None, 'analysis'), # test for Normally terminated TSs
     error TS
     imag freq TS
@@ -53,11 +53,11 @@ path_analysis_dup_sp = os.getcwd()
 
 def test_analysis_dup_sp(folder, file, command_line, type_of_job):
     # runs the program with the different tests
-    cmd_pyconfort = [command_line]
+    cmd_aqme = [command_line]
 
     if type_of_job == 'analysis':
         if file != 'csv' and file != 'dat':
-            outlines = analysis(path_analysis_dup_sp, cmd_pyconfort, folder, file)
+            outlines = analysis(path_analysis_dup_sp, cmd_aqme, folder, file)
 
             if file == 'Basis_set_error1.LOG' or file == 'Basis_set_error2.LOG':
                 os.chdir(path_analysis_dup_sp+'/'+folder+'/input_files/run_2')
@@ -118,7 +118,7 @@ def test_analysis_dup_sp(folder, file, command_line, type_of_job):
                 assert outlines[line_number].find(line) > -1
 
         else:
-            df_QCORR,dat_files = analysis(path_analysis_dup_sp, cmd_pyconfort, folder, file)
+            df_QCORR,dat_files = analysis(path_analysis_dup_sp, cmd_aqme, folder, file)
 
         if file == 'csv':
             assert df_QCORR['Total files'][0] == 9

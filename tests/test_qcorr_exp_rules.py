@@ -22,9 +22,9 @@ path_analysis_qcorr = os.getcwd()
 
 def test_analysis_qcorr_geom_rules(folder, params_file):
     # runs the program with the different tests
-    cmd_pyconfort = ['python', '-m', 'pyconfort', '--varfile', params_file]
+    cmd_aqme = ['python', '-m', 'aqme', '--varfile', params_file]
 
-    df_QCORR, _ = analysis(path_analysis_qcorr, cmd_pyconfort, folder, 'csv')
+    df_QCORR, _ = analysis(path_analysis_qcorr, cmd_aqme, folder, 'csv')
 
     # ensure that the CSV includes all the results
     assert df_QCORR['Total files'][0] == 4

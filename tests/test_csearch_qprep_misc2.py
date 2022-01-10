@@ -44,7 +44,7 @@ precision_misc2 = 2
 
 def test_confgen_misc2(folder, smiles, params_file, final_confs_misc2, E_confs, folders_in_CSEARCH, job_type):
     # runs the program with the different tests
-    cmd_misc2 = ['python', '-m', 'pyconfort', '--varfile', params_file]
+    cmd_misc2 = ['python', '-m', 'aqme', '--varfile', params_file]
 
     os.chdir(path_misc2+'/'+folder+'/'+smiles.split('.')[0])
     subprocess.call(cmd_misc2)

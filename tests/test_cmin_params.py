@@ -37,7 +37,7 @@ precision_cmin = 2
 
 def test_confgen_organic(params_file, coordinates, E_cmin, cmin_type):
     # runs the program with the different tests
-    cmd_cmin = ['python', '-m', 'pyconfort', '--varfile', params_file]
+    cmd_cmin = ['python', '-m', 'aqme', '--varfile', params_file]
 
     os.chdir(path_cmin+'/Organic_molecules/MeOH/')
     subprocess.call(cmd_cmin)

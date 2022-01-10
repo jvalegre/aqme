@@ -46,7 +46,7 @@ precision_metals = 2
 
 def test_confgen_metals(folder, smiles, params_file, n_confs, prefilter_confs_rdkit, filter_confs_rdkit, E_confs, charge, multiplicity, dihedral, xTB_ANI1, genecp, metal, template):
     # runs the program with the different tests
-    cmd_metals = ['python', '-m', 'pyconfort', '--varfile', params_file]
+    cmd_metals = ['python', '-m', 'aqme', '--varfile', params_file]
 
     test_init_rdkit_confs,test_prefilter_rdkit_confs,test_filter_rdkit_confs,round_confs,test_round_confs,test_charge,test_unique_confs,count,charge_com,multiplicity_com = conf_gen(path_metals, precision_metals, cmd_metals, folder, smiles, E_confs, dihedral, xTB_ANI1, metal, template)
 

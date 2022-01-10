@@ -16,7 +16,7 @@ an input file is provided and the compute option in invoked.
 
 .. code:: bash
 
-  $ python -m pyconfort --input [file] --compute
+  $ python -m aqme --input [file] --compute
 
 
 YAML file
@@ -37,7 +37,7 @@ To run ``pyCONFORT`` program with the yaml file, the following command is used
 
 .. code:: bash
 
-  $ python -m pyconfort --varfile params.yaml
+  $ python -m aqme --varfile params.yaml
 
 
 Additional parameters which are needed to be changed can be added in the yaml file. A complete YAML file is

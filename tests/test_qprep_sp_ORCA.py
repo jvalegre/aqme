@@ -34,7 +34,7 @@ path_orca = os.getcwd()
 
 def test_confgen_organic(folder, smiles, params_file, job_type):
     # runs the program with the different tests
-    cmd_orca = ['python', '-m', 'pyconfort', '--varfile', params_file]
+    cmd_orca = ['python', '-m', 'aqme', '--varfile', params_file]
 
     if folder != 'Analysis_ORCA':
 

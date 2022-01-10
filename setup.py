@@ -8,19 +8,19 @@ with io.open(path.join(this_directory, 'README.md'), encoding='utf-8') as f:
     long_description = f.read()
 
 setup(
-  name='pyconfort',
-  packages=['pyconfort'],
-  package_data={'pyconfort': ['templates/*']},
-  version='1.1.0',
+  name='aqme',
+  packages=['aqme'],
+  package_data={'aqme': ['templates/*']},
+  version='1.0',
   license='MIT',
-  description='Python-based conformer generation and post-processing of DFT output files',
-  long_description=long_description,
+  description='Automated Quantum Mechanical Environments',
+  long_description='Automated Quantum Mechanical Environments',
   long_description_content_type='text/markdown',
-  author='Shree Sowndarya S. V., Juan V. Alegre Requena, Robert S. Paton',
+  author='Shree Sowndarya S. V., Juan V. Alegre Requena',
   author_email='svss@colostate.edu, juanvi89@hotmail.com',
-  keywords=['conformers', 'cheminformatics', 'computational chemistry', 'metal complexes', 'DFT'],
-  url = 'https://github.com/jvalegre/RotaConfort',
-  download_url = 'https://github.com/jvalegre/RotaConfort/archive/v_1.0.tar.gz',
+  keywords=['workflows','computational chemistry','conformational sampling','cheminformatics','quantum mechanics','DFT','automated'],
+  url = 'https://github.com/jvalegre/aqme',
+  download_url = 'https://github.com/jvalegre/aqme/archive/refs/tags/v_1.0.tar.gz',
   classifiers=[
     'Development Status :: 3 - Alpha',      # Chose either "3 - Alpha", "4 - Beta" or "5 - Production/Stable" as the current state of your package
     'Intended Audience :: Developers',      # Define that your audience are developers

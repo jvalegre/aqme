@@ -60,7 +60,7 @@ Common Parameters to Edit
 
   # COMMON PARAMETERS TO EDIT
 
-  # (1) CHARGE FOR XTB OPTIMIZATION AND COM FILES
+  # (1) charge FOR XTB OPTIMIZATION AND COM FILES
   charge : [] # final charge of the molecule (used in xTB optimization automatically updated for each metal atom if not charge_default is written)
   # If metal_complex : True, the script will recalculate the charge
   charge_default : 0 #used to write the default if cannot be calculated for metal atom

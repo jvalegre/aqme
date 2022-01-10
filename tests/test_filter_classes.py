@@ -1,7 +1,7 @@
 import unittest
 import random
 from datetime import datetime
-from pyconfort.filter import Filter, CompoundFilter
+from aqme.filter import Filter, CompoundFilter
 
 random.seed(datetime.now())
 

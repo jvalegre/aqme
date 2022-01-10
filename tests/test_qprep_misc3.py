@@ -22,7 +22,7 @@ path_misc3 = os.getcwd()
 
 def test_confgen_misc3(folder, params_file, com_files):
     # runs the program with the different tests
-    cmd_misc3 = ['python', '-m', 'pyconfort', '--varfile', params_file]
+    cmd_misc3 = ['python', '-m', 'aqme', '--varfile', params_file]
 
     os.chdir(path_misc3+'/'+folder)
     subprocess.call(cmd_misc3)

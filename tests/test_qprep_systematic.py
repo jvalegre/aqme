@@ -24,12 +24,12 @@ path_QPREP_syst = os.getcwd()
 
 def test_analysis_dup_sp(folder, smiles, params_file, LoT):
 
-    cmd_pyconfort = ['python', '-m', 'pyconfort', '--varfile', params_file]
+    cmd_aqme = ['python', '-m', 'aqme', '--varfile', params_file]
 
     if LoT == 'b3lyp-6-31g(d)':
-        # run pyconfort
+        # run aqme
         os.chdir(path_QPREP_syst+'/'+folder+'/'+smiles.split('.')[0])
-        subprocess.call(cmd_pyconfort)
+        subprocess.call(cmd_aqme)
 
     os.chdir(path_QPREP_syst+'/'+folder+'/'+smiles.split('.')[0]+'/QMCALC/G16/'+LoT)
     file_com = glob.glob('*.com')[0]
