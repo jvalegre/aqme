@@ -1,0 +1,229 @@
+{
+    "chemical json": 0, 
+    "name": "H2", 
+    "smiles": "[H][H]\tH2.log\r\n", 
+    "inchi": "InChI=1S/H2/h1H\n", 
+    "inchikey": "UFHFLCQGNIYNRP-UHFFFAOYSA-N\n", 
+    "formula": "H2", 
+    "properties": {
+        "partial charges": {
+            "mulliken": [
+                -0.0, 
+                -0.0
+            ]
+        }, 
+        "charge": 0, 
+        "enthalpy": -1.154958, 
+        "entropy": 4.959248700318621e-05, 
+        "energy": {
+            "free energy": -1.169744, 
+            "alpha": {
+                "homo": -13.503649831062502, 
+                "gap": 16.4359486840505
+            }, 
+            "beta": {
+                "homo": -13.503649831062502, 
+                "gap": 16.4359486840505
+            }, 
+            "total": -31.795410494896338
+        }, 
+        "orbitals": {
+            "homos": [
+                0
+            ], 
+            "energies": [
+                [
+                    -13.503649831062502, 
+                    2.932298852988, 
+                    6.5974003053725, 
+                    15.433209144958001, 
+                    36.7182266449185, 
+                    36.7182266449185, 
+                    45.184504875525, 
+                    53.8728280081395, 
+                    53.8728280081395, 
+                    57.919977306626, 
+                    68.94058825187601, 
+                    107.95899327507101
+                ]
+            ], 
+            "molecular orbital symmetry": [
+                [
+                    "sigma.g", 
+                    "sigma.u", 
+                    "sigma.g", 
+                    "sigma.u", 
+                    "pi.u", 
+                    "pi.u", 
+                    "sigma.g", 
+                    "pi.g", 
+                    "pi.g", 
+                    "sigma.u", 
+                    "sigma.g", 
+                    "sigma.u"
+                ]
+            ], 
+            "basis number": 12, 
+            "MO number": 12
+        }, 
+        "total dipole moment": 0.0, 
+        "multiplicity": 1, 
+        "number of atoms": 2, 
+        "pressure": 1.0, 
+        "temperature": 298.15, 
+        "energies": {
+            "zero-point correction": 0.010197
+        }, 
+        "molecular mass": 2.01588
+    }, 
+    "atoms": {
+        "coords": {
+            "3d": [
+                0.0, 
+                0.0, 
+                0.370112, 
+                0.0, 
+                0.0, 
+                -0.370112
+            ]
+        }, 
+        "elements": {
+            "number": [
+                1, 
+                1
+            ], 
+            "atom count": 2, 
+            "heavy atom count": 0
+        }, 
+        "core electrons": [
+            0, 
+            0
+        ]
+    }, 
+    "optimization": {
+        "geometric targets": [
+            0.00045, 
+            0.0003, 
+            0.0018, 
+            0.0012
+        ], 
+        "geometric values": [
+            [
+                0.001882, 
+                0.001882, 
+                0.002427, 
+                0.003433
+            ], 
+            [
+                4.4e-05, 
+                4.4e-05, 
+                5.8e-05, 
+                8.1e-05
+            ], 
+            [
+                4.4e-05, 
+                4.4e-05, 
+                5.7e-05, 
+                8.1e-05
+            ]
+        ], 
+        "done": true, 
+        "status": [
+            1, 
+            4, 
+            5
+        ], 
+        "scf": {
+            "scf energies": [
+                -31.795282947243308, 
+                -31.795410494896338, 
+                -31.795410494896338
+            ], 
+            "targets": [
+                [
+                    1e-08, 
+                    1e-06, 
+                    1e-06
+                ], 
+                [
+                    1e-08, 
+                    1e-06, 
+                    1e-06
+                ], 
+                [
+                    1e-08, 
+                    1e-06, 
+                    1e-06
+                ]
+            ]
+        }
+    }, 
+    "vibrations": {
+        "displacement": [
+            [
+                [
+                    -0.0, 
+                    0.0, 
+                    0.71
+                ], 
+                [
+                    0.0, 
+                    0.0, 
+                    -0.71
+                ]
+            ]
+        ], 
+        "frequencies": [
+            4475.9646
+        ], 
+        "force constants": [
+            11.8962
+        ], 
+        "intensities": {
+            "IR": [
+                0.0
+            ]
+        }, 
+        "reduced masses": [
+            1.0078
+        ], 
+        "vibration symmetry": [
+            "SGG"
+        ]
+    }, 
+    "bonds": {
+        "connections": {
+            "index": [
+                1, 
+                0
+            ]
+        }, 
+        "order": [
+            1
+        ]
+    }, 
+    "diagram": "<?xml version=\"1.0\"?>\n<svg version=\"1.1\" id=\"topsvg\"\nxmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\"\nxmlns:cml=\"http://www.xml-cml.org/schema\" x=\"0\" y=\"0\" width=\"200px\" height=\"200px\" viewBox=\"0 0 100 100\">\n<title>H2.log - Open Babel Depiction</title>\n<rect x=\"0\" y=\"0\" width=\"100\" height=\"100\" fill=\"white\"/>\n<g transform=\"translate(0,0)\">\n<svg width=\"100\" height=\"100\" x=\"0\" y=\"0\" viewBox=\"0 0 120 80\"\nfont-family=\"sans-serif\" stroke=\"rgb(0,0,0)\" stroke-width=\"2\"  stroke-linecap=\"round\">\n<line x1=\"67.0\" y1=\"40.0\" x2=\"53.0\" y2=\"40.0\" opacity=\"1.0\" stroke=\"rgb(0,0,0)\"  stroke-width=\"2.0\"/>\n<text x=\"34.000000\" y=\"48.000000\" fill=\"rgb(191,191,191)\" stroke-width=\"0\" font-weight=\"bold\" font-size=\"16\" >H</text>\n<text x=\"74.000000\" y=\"48.000000\" fill=\"rgb(191,191,191)\" stroke-width=\"0\" font-weight=\"bold\" font-size=\"16\" >H</text>\n</svg>\n</g>\n<text font-size=\"18.000000\" fill =\"black\" font-family=\"sans-serif\"\nx=\"10.000000\" y=\"20.000000\" >H2.log</text>\n</svg>\n", 
+    "AQME data": {
+        "keywords line": "M062X/Def2TZVP freq=noraman opt=(maxcycles=100)", 
+        "calculation type": "ground_state", 
+        "memory": "24GB", 
+        "number of procs": "12", 
+        "QM program": "Gaussian 16, Revision C.01,", 
+        "author": "", 
+        "solvation": "gas_phase", 
+        "dispersion": "no_dispersion", 
+        "grid": "ultrafine", 
+        "<S**2>": 0, 
+        "level of theory": "M062X/def2TZVP", 
+        "symmetry number": 2, 
+        "point group": "D*H", 
+        "rotational constant": [
+            0.0, 
+            1830.3523645, 
+            1830.3523645
+        ], 
+        "rotational temperature": [
+            87.84306
+        ]
+    }
+}

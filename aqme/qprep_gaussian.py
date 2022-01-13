@@ -39,7 +39,9 @@ class qprep:
 	mem : str
 																																																																																																																																	Memory used in the input file. Formats: GB, MB or MW (i.e. 4GB, 800MB or 16MW).
 	nprocs : int
-																																																																																																																																	Number of processors used in the input file
+		Number of processors used in the input file
+	suffix : str
+		Suffix for the new input files
 	atom_types : list of strings
 																																																																																																																																	(If no mol is used) List containing the atoms of the system
 	cartesians : list of lists
@@ -90,6 +92,7 @@ class qprep:
 		self.chk = chk
 		self.mem = mem
 		self.nprocs = nprocs
+		self.suffix = suffix
 		self.charge = charge
 		self.mult = mult
 		self.qm_input = qm_input
@@ -158,34 +161,34 @@ class qprep:
 		self.write()
 
 	def get_header(self):
-		"""
+		'''
 		Gets the part of the input file above the molecular coordinates.
-		"""
+		'''
 
-		txt = ""
+		txt = ''
 
-		if self.program.lower() == "gaussian":
-			if self.chk:
-				txt += f"%chk={self.molecule}.chk\n"
-			txt += f"%nprocshared={self.nprocs}\n"
-			txt += f"%mem={self.mem}\n"
-			txt += f"# {self.qm_input}"
-			txt += f"\n\n"
-			txt += f"{self.molecule}\n\n"
-			txt += f"{self.charge} {self.mult}\n"
+		if self.program.lower() == 'gaussian':
+			if self.chk: 
+				txt += f'%chk={self.molecule}.chk\n'
+			txt += f'%nprocshared={self.nprocs}\n'
+			txt += f'%mem={self.mem}\n'
+			txt += f'# {self.qm_input}'
+			txt += f'\n\n'
+			txt += f'{self.molecule}\n\n'
+			txt += f'{self.charge} {self.mult}\n'
 
-		elif self.program.lower() == "orca":
-			txt += f"# {self.molecule}\n"
-			if self.mem.find("GB"):
-				mem_orca = int(self.mem.split("GB")[0]) * 1000
-			elif self.mem.find("MB"):
-				mem_orca = self.mem.split("MB")[0]
-			elif self.args.mem.find("MW"):
-				mem_orca = self.mem.split("MW")[0]
-			txt += f"%maxcore {mem_orca}\n"
-			txt += f"%pal nprocs {self.nprocs} end\n"
-			txt += f"{self.qm_input}\n"
-			txt += f"* xyz {self.charge} {self.mult}\n"
+		elif self.program.lower() == 'orca':
+			txt += f'# {self.molecule}\n'
+			if self.mem.find('GB'):
+				mem_orca = int(self.mem.split('GB')[0])*1000
+			elif self.mem.find('MB'):
+				mem_orca = self.mem.split('MB')[0]
+			elif self.args.mem.find('MW'):
+				mem_orca = self.mem.split('MW')[0]
+			txt += f'%maxcore {mem_orca}\n'
+			txt += f'%pal nprocs {self.nprocs} end\n'
+			txt += f'! {self.qm_input}\n'
+			txt += f'* xyz {self.charge} {self.mult}\n'
 
 		return txt
 
@@ -232,13 +235,16 @@ class qprep:
 		return txt
 
 	def write(self):
-
-		if self.program.lower() == "gaussian":
-			comfile = f"{self.destination}/QCALC/{self.molecule}.com"
-
-		elif self.program.lower() == "orca":
-			comfile = f"{self.destination}/QCALC/{self.molecule}.inp"
-
+		
+		if self.program.lower() == 'gaussian':
+			extension = 'com'
+		elif self.program.lower() == 'orca':
+			extension = 'inp'
+		if self.suffix != '':
+			comfile = f'{self.destination}/{self.molecule}_{self.suffix}.{extension}'
+		else:
+			comfile = f'{self.destination}/{self.molecule}.{extension}'
+		
 		if os.path.exists(comfile):
 			os.remove(comfile)
 

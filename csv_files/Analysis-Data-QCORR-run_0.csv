@@ -1,2 +1,2 @@
-Total files,Normal termination,Imaginary frequencies,TS with no imag. freq.,SCF error,Error before SCF,Basis set error,Other errors,Unfinished,Spin contamination,Duplicates
-4.0,2.0,1.0,0.0,0.0,0.0,0.0,1.0,0.0,0.0,0.0
+Total files,Normal termination,Extra imag. freq.,TS with no imag. freq.,SCF error,Error before SCF,Basis set error,Other errors,Spin contamination,Duplicates
+32.0,25.0,2.0,0.0,0.0,0.0,0.0,3.0,2.0,0.0
