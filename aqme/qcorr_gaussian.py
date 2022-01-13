@@ -13,8 +13,17 @@ import subprocess
 
 from aqme.utils import periodic_table
 from aqme.filter import geom_rules_output
-from aqme.utils import (move_file, get_info_com, Logger, load_from_yaml, 
-							check_isomerization, read_file, output_to_mol, cclib_atoms_coords)
+
+from aqme.utils import (
+    move_file,
+    get_info_com,
+    Logger,
+    load_from_yaml,
+    check_isomerization,
+    read_file,
+    output_to_mol,
+    cclib_atoms_coords,
+)
 from aqme.qprep_gaussian import qprep
 from aqme.argument_parser import set_options
 
@@ -938,4 +947,4 @@ def json2input(json_files=[], source=os.getcwd(), destination=os.getcwd(), suffi
 					bs_gen=bs_gen, bs=bs, gen_atoms=gen_atoms, suffix=suffix)
 
 	os.chdir(w_dir_main)
-					
+	

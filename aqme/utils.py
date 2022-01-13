@@ -16,6 +16,7 @@ import yaml
 import pandas as pd
 from rdkit.Chem import AllChem as Chem
 
+
 def periodic_table():
     items = """X
             H                                                                                                  He
@@ -26,33 +27,135 @@ def periodic_table():
             Cs Ba La Ce Pr Nd Pm Sm Eu Gd Tb Dy Ho Er Tm Yb Lu Hf Ta  W Re Os Ir Pt Au  Hg  Tl  Pb  Bi  Po  At  Rn
             Fr Ra Ac Th Pa  U Np Pu Am Cm Bk Cf Es Fm Md No Lr Rf Db Sg Bh Hs Mt Ds Rg Uub Uut Uuq Uup Uuh Uus Uuo
             """
-    periodic_table = items.replace('\n',' ').strip().split()
-    periodic_table[0] = ''
+    periodic_table = items.replace("\n", " ").strip().split()
+    periodic_table[0] = ""
     return periodic_table
+
 
 ## Bondi VDW radii in Angstrom
 def bondi():
-    bondi = {"Bq": 0.00, "H": 1.09,"He": 1.40,
-        "Li":1.81,"Be":1.53,"B":1.92,"C":1.70,"N":1.55,"O":1.52,"F":1.47,"Ne":1.54,
-        "Na":2.27,"Mg":1.73,"Al":1.84,"Si":2.10,"P":1.80,"S":1.80,"Cl":1.75,"Ar":1.88,
-        "K":2.75,"Ca":2.31,"Ni": 1.63,"Cu":1.40,"Zn":1.39,"Ga":1.87,"Ge":2.11,"As":1.85,"Se":1.90,"Br":1.83,"Kr":2.02,
-        "Rb":3.03,"Sr":2.49,"Pd": 1.63,"Ag":1.72,"Cd":1.58,"In":1.93,"Sn":2.17,"Sb":2.06,"Te":2.06,"I":1.98,"Xe":2.16,
-        "Cs":3.43,"Ba":2.68,"Pt":1.72,"Au":1.66,"Hg":1.55,"Tl":1.96,"Pb":2.02,"Bi":2.07,"Po":1.97,"At":2.02,"Rn":2.20,
-        "Fr":3.48,"Ra":2.83, "U":1.86 }
+    bondi = {
+        "Bq": 0.00,
+        "H": 1.09,
+        "He": 1.40,
+        "Li": 1.81,
+        "Be": 1.53,
+        "B": 1.92,
+        "C": 1.70,
+        "N": 1.55,
+        "O": 1.52,
+        "F": 1.47,
+        "Ne": 1.54,
+        "Na": 2.27,
+        "Mg": 1.73,
+        "Al": 1.84,
+        "Si": 2.10,
+        "P": 1.80,
+        "S": 1.80,
+        "Cl": 1.75,
+        "Ar": 1.88,
+        "K": 2.75,
+        "Ca": 2.31,
+        "Ni": 1.63,
+        "Cu": 1.40,
+        "Zn": 1.39,
+        "Ga": 1.87,
+        "Ge": 2.11,
+        "As": 1.85,
+        "Se": 1.90,
+        "Br": 1.83,
+        "Kr": 2.02,
+        "Rb": 3.03,
+        "Sr": 2.49,
+        "Pd": 1.63,
+        "Ag": 1.72,
+        "Cd": 1.58,
+        "In": 1.93,
+        "Sn": 2.17,
+        "Sb": 2.06,
+        "Te": 2.06,
+        "I": 1.98,
+        "Xe": 2.16,
+        "Cs": 3.43,
+        "Ba": 2.68,
+        "Pt": 1.72,
+        "Au": 1.66,
+        "Hg": 1.55,
+        "Tl": 1.96,
+        "Pb": 2.02,
+        "Bi": 2.07,
+        "Po": 1.97,
+        "At": 2.02,
+        "Rn": 2.20,
+        "Fr": 3.48,
+        "Ra": 2.83,
+        "U": 1.86,
+    }
     return bondi
+
 
 ## covalent radii in Angstrom (taken from Pyykko and Atsumi, Chem. Eur. J. 15, 2009, 188-197)
 def rcov():
-    rcov = {"H": 0.32,"He": 0.46,
-    "Li":1.33,"Be":1.02,"B":0.85,"C":0.75,"N":0.71,"O":0.63,"F":0.64,"Ne":0.67,
-    "Na":1.55,"Mg":1.39,"Al":1.26, "Si":1.16,"P":1.11,"S":1.03,"Cl":0.99, "Ar":0.96,
-    "K":1.96,"Ca":1.71,"Sc": 1.48, "Ti": 1.36, "V": 1.34, "Cr": 1.22, "Mn":1.19, "Fe":1.16, "Co":1.11, "Ni":1.10,"Zn":1.18, "Ga":1.24, "Ge":1.21, "As":1.21, "Se":1.16, "Br":1.14, "Kr":1.17,
-    "Rb":2.10, "Sr":1.85,"Y":1.63, "Zr":1.54, "Nb":1.47, "Mo":1.38, "Tc":1.28, "Ru":1.25,"Rh":1.25,"Pd":1.20,"Ag":1.28,"Cd":1.36, "In":1.42, "Sn":1.40,"Sb":1.40,"Te":1.36,"I":1.33,"Xe":1.31}
+    rcov = {
+        "H": 0.32,
+        "He": 0.46,
+        "Li": 1.33,
+        "Be": 1.02,
+        "B": 0.85,
+        "C": 0.75,
+        "N": 0.71,
+        "O": 0.63,
+        "F": 0.64,
+        "Ne": 0.67,
+        "Na": 1.55,
+        "Mg": 1.39,
+        "Al": 1.26,
+        "Si": 1.16,
+        "P": 1.11,
+        "S": 1.03,
+        "Cl": 0.99,
+        "Ar": 0.96,
+        "K": 1.96,
+        "Ca": 1.71,
+        "Sc": 1.48,
+        "Ti": 1.36,
+        "V": 1.34,
+        "Cr": 1.22,
+        "Mn": 1.19,
+        "Fe": 1.16,
+        "Co": 1.11,
+        "Ni": 1.10,
+        "Zn": 1.18,
+        "Ga": 1.24,
+        "Ge": 1.21,
+        "As": 1.21,
+        "Se": 1.16,
+        "Br": 1.14,
+        "Kr": 1.17,
+        "Rb": 2.10,
+        "Sr": 1.85,
+        "Y": 1.63,
+        "Zr": 1.54,
+        "Nb": 1.47,
+        "Mo": 1.38,
+        "Tc": 1.28,
+        "Ru": 1.25,
+        "Rh": 1.25,
+        "Pd": 1.20,
+        "Ag": 1.28,
+        "Cd": 1.36,
+        "In": 1.42,
+        "Sn": 1.40,
+        "Sb": 1.40,
+        "Te": 1.36,
+        "I": 1.33,
+        "Xe": 1.31,
+    }
     return rcov
 
 
-#load paramters from yaml file
-def load_from_yaml(args_,log):
+# load paramters from yaml file
+def load_from_yaml(args_, log):
     """
     Loads the parameters for the calculation from a yaml if specified. Otherwise
     does nothing.
@@ -68,34 +171,55 @@ def load_from_yaml(args_,log):
     try:
         if args_.varfile is not None:
             if os.path.exists(args_.varfile):
-                if os.path.splitext(args_.varfile)[1] == '.yaml':
-                    log.write("\no  Importing pyCONFORT parameters from " + args_.varfile)
-                    with open(args_.varfile, 'r') as file:
+                if os.path.splitext(args_.varfile)[1] == ".yaml":
+                    log.write("\no  Importing AQME parameters from " + args_.varfile)
+                    with open(args_.varfile, "r") as file:
                         try:
                             param_list = yaml.load(file, Loader=yaml.SafeLoader)
                         except yaml.scanner.ScannerError:
-                            log.write("\nx  Error while reading " + args_.varfile+ ". Edit the yaml file and try again (i.e. use ':' instead of '=' to specify variables)")
-                            sys.exit("\nx  Error while reading " + args_.varfile+ ". Edit the yaml file and try again (i.e. use ':' instead of '=' to specify variables)")
+                            log.write(
+                                "\nx  Error while reading "
+                                + args_.varfile
+                                + ". Edit the yaml file and try again (i.e. use ':' instead of '=' to specify variables)"
+                            )
+                            sys.exit(
+                                "\nx  Error while reading "
+                                + args_.varfile
+                                + ". Edit the yaml file and try again (i.e. use ':' instead of '=' to specify variables)"
+                            )
             for param in param_list:
                 if hasattr(args_, param):
                     if getattr(args_, param) != param_list[param]:
-                        log.write("o  RESET " + param + " from " + str(getattr(args_, param)) + " to " + str(param_list[param]))
+                        log.write(
+                            "o  RESET "
+                            + param
+                            + " from "
+                            + str(getattr(args_, param))
+                            + " to "
+                            + str(param_list[param])
+                        )
                         setattr(args_, param, param_list[param])
                     else:
-                        log.write("o  DEFAULT " + param + " : " + str(getattr(args_, param)))
-    except UnboundLocalError: # RAUL: Is it just me or this only happens when the file exists, and ens in .yaml and is empty or does not end in .yaml?
-        log.write("\no  The specified yaml file containing parameters was not found! Make sure that the valid params file is in the folder where you are running the code.\n")
+                        log.write(
+                            "o  DEFAULT " + param + " : " + str(getattr(args_, param))
+                        )
+    except UnboundLocalError:  # RAUL: Is it just me or this only happens when the file exists, and ens in .yaml and is empty or does not end in .yaml?
+        log.write(
+            "\no  The specified yaml file containing parameters was not found! Make sure that the valid params file is in the folder where you are running the code.\n"
+        )
 
     return args_, log
 
-#class for logging
+
+# class for logging
 class Logger:
     """
     Class that wraps a file object to abstract the logging.
     """
+
     # Class Logger to writargs.input.split('.')[0] output to a file
-    def __init__(self, filein, append, suffix='dat'):
-        self.log = open(f'{filein}_{append}.{suffix}', 'w')
+    def __init__(self, filein, append, suffix="dat"):
+        self.log = open(f"{filein}_{append}.{suffix}", "w")
 
     def write(self, message):
         """
@@ -106,7 +230,7 @@ class Logger:
         message : str
            text to be written in the log file.
         """
-        self.log.write(f'{message}\n')
+        self.log.write(f"{message}\n")
 
     def fatal(self, message):
         """
@@ -122,8 +246,9 @@ class Logger:
         raise SystemExit(1)
 
     def finalize(self):
-        """ Closes the file """
+        """Closes the file"""
         self.log.close()
+
 
 # OS utils
 def creation_of_dup_csv_csearch(csearch):
@@ -143,31 +268,36 @@ def creation_of_dup_csv_csearch(csearch):
     pandas.DataFrame
     """
     # Boolean aliases from args
-    is_rdkit = csearch=='rdkit'
-    is_fullmonte = csearch=='fullmonte'
-    is_crest = csearch=='crest'
-    is_summ = csearch=='summ'
+    is_rdkit = csearch == "rdkit"
+    is_fullmonte = csearch == "fullmonte"
+    is_crest = csearch == "crest"
+    is_summ = csearch == "summ"
 
     # column blocks definitions
-    base_columns = ['Molecule',
-                    'RDKit-Initial-samples',
-                    'RDKit-energy-window',
-                    'RDKit-initial_energy_threshold',
-                    'RDKit-RMSD-and-energy-duplicates',
-                    'RDKit-Unique-conformers']
-    end_columns_no_min = ['CSEARCH time (seconds)',
-                          'Overall charge']
-    fullmonte_columns = ['FullMonte-Unique-conformers',]
-                        #'FullMonte-conformers',
-                        #'FullMonte-energy-window',
-                        #'FullMonte-initial_energy_threshold',
-                        #'FullMonte-RMSD-and-energy-duplicates']
-    summ_columns = ['summ-conformers',
-                    'summ-energy-window',
-                    'summ-initial_energy_threshold',
-                    'summ-RMSD-and-energy-duplicates',
-                    'summ-Unique-conformers']
-    crest_columns = ['Molecule','crest-conformers']
+    base_columns = [
+        "Molecule",
+        "RDKit-Initial-samples",
+        "RDKit-energy-window",
+        "RDKit-initial_energy_threshold",
+        "RDKit-RMSD-and-energy-duplicates",
+        "RDKit-Unique-conformers",
+    ]
+    end_columns_no_min = ["CSEARCH time (seconds)", "Overall charge"]
+    fullmonte_columns = [
+        "FullMonte-Unique-conformers",
+    ]
+    #'FullMonte-conformers',
+    #'FullMonte-energy-window',
+    #'FullMonte-initial_energy_threshold',
+    #'FullMonte-RMSD-and-energy-duplicates']
+    summ_columns = [
+        "summ-conformers",
+        "summ-energy-window",
+        "summ-initial_energy_threshold",
+        "summ-RMSD-and-energy-duplicates",
+        "summ-Unique-conformers",
+    ]
+    crest_columns = ["Molecule", "crest-conformers"]
 
     # Check Conformer Search method
     if is_rdkit:
@@ -201,23 +331,26 @@ def creation_of_dup_csv_cmin(cmin):
     pandas.DataFrame
     """
     # Boolean aliases from args
-    is_xtb = cmin == 'xtb'
-    is_ani = cmin == 'ani'
+    is_xtb = cmin == "xtb"
+    is_ani = cmin == "ani"
 
     # column blocks definitions
 
-    xtb_columns = ['xTB-Initial-samples',
-                   'xTB-energy-window',
-                   'xTB-initial_energy_threshold',
-                   'xTB-RMSD-and-energy-duplicates',
-                   'xTB-Unique-conformers']
-    ANI_columns = ['ANI-Initial-samples',
-                   'ANI-energy-window',
-                   'ANI-initial_energy_threshold',
-                   'ANI-RMSD-and-energy-duplicates',
-                   'ANI-Unique-conformers']
-    end_columns = ['CMIN time (seconds)',
-                       'Overall charge']
+    xtb_columns = [
+        "xTB-Initial-samples",
+        "xTB-energy-window",
+        "xTB-initial_energy_threshold",
+        "xTB-RMSD-and-energy-duplicates",
+        "xTB-Unique-conformers",
+    ]
+    ANI_columns = [
+        "ANI-Initial-samples",
+        "ANI-energy-window",
+        "ANI-initial_energy_threshold",
+        "ANI-RMSD-and-energy-duplicates",
+        "ANI-Unique-conformers",
+    ]
+    end_columns = ["CMIN time (seconds)", "Overall charge"]
 
     # Check Minimization Method
     if is_ani:
@@ -246,7 +379,7 @@ def move_file(file, source, destination):
     shutil.move(os.path.join(source, file), os.path.join(destination, file))
 
 
-def move_file_from_folder(destination,src,file):
+def move_file_from_folder(destination, src, file):
     """
     Moves files from the source folder to the destination folder and creates
     the destination folders when needed.
@@ -266,14 +399,15 @@ def move_file_from_folder(destination,src,file):
     # FIX IT!
     dest = Path(destination)
     source = Path(src)
-    dest.mkdir(exist_ok=True,parents=True)
+    dest.mkdir(exist_ok=True, parents=True)
     filepath = source / file
     filepath.rename(dest / file)
 
+
 # openbabel utils
 
-#com to xyz to sdf for obabel
-def com_2_xyz_2_sdf(input,default_charge,start_point=None):
+# com to xyz to sdf for obabel
+def com_2_xyz_2_sdf(input, default_charge, start_point=None):
     """
     com to xyz to sdf for obabel
 
@@ -292,7 +426,7 @@ def com_2_xyz_2_sdf(input,default_charge,start_point=None):
     extension = Path(input).suffix
 
     if start_point is None:
-        if extension in ['com','gjf','xyz']:
+        if extension in ["com", "gjf", "xyz"]:
             file = Path(input)
 
     else:
@@ -301,19 +435,22 @@ def com_2_xyz_2_sdf(input,default_charge,start_point=None):
     filename = Path.stem
 
     # Create the 'xyz' file and/or get the total charge
-    if extension != 'xyz':                                                      #  RAUL: Originally this pointed towards args.input, shouldn't it be to args.file?
-        xyz,charge = get_info_com(file)
-        xyz_txt = '\n'.join(xyz)
-        with open(f'{filename}.xyz','w') as F:
+    if (
+        extension != "xyz"
+    ):  #  RAUL: Originally this pointed towards args.input, shouldn't it be to args.file?
+        xyz, charge = get_info_com(file)
+        xyz_txt = "\n".join(xyz)
+        with open(f"{filename}.xyz", "w") as F:
             F.write(f"{len(xyz)}\n{filename}\n{xyz_txt}\n")
     else:
         charge = default_charge
 
-    xyz_2_sdf(f'{filename}.xyz')
+    xyz_2_sdf(f"{filename}.xyz")
 
     return charge
 
-def xyz_2_sdf(file,parent_dir=None):
+
+def xyz_2_sdf(file, parent_dir=None):
     """
     Creates a .sdf file from a .xyz in the specified directory. If no directory
     is specified then the files are created in the current directory.
@@ -326,12 +463,13 @@ def xyz_2_sdf(file,parent_dir=None):
         a path to the directory where the .xyz file is located
     """
     if parent_dir is None:
-        parent_dir = Path('')
+        parent_dir = Path("")
     else:
         parent_dir = Path(parent_dir)
-    mol = next(pybel.readfile('xyz',parent_dir/file))
-    ofile = Path(file).stem + '.sdf'
-    mol.write('sdf', parent_dir/ofile)
+    mol = next(pybel.readfile("xyz", parent_dir / file))
+    ofile = Path(file).stem + ".sdf"
+    mol.write("sdf", parent_dir / ofile)
+
 
 def get_info_com(file):
     """
@@ -353,14 +491,14 @@ def get_info_com(file):
         .gjf file
     """
 
-    with open(file,"r") as comfile:
+    with open(file, "r") as comfile:
         comlines = comfile.readlines()
 
     _iter = comlines.__iter__()
 
-    line = ''
+    line = ""
     # Find the command line
-    while '#' not in line:
+    while "#" not in line:
         line = next(_iter)
 
     # in case the keywords are distributed in multiple lines
@@ -373,7 +511,7 @@ def get_info_com(file):
         line = next(_iter).strip()
 
     # Read the charge from the charge | spin line
-    charge,spin = next(_iter).strip().split()
+    charge, spin = next(_iter).strip().split()
 
     # Store the coordinates until next empty line.
     coordinates = []
@@ -384,9 +522,11 @@ def get_info_com(file):
 
     return coordinates, charge
 
+
 # RDKit Utils
 
-def rules_get_charge(mol,args):
+
+def rules_get_charge(mol, args):
     """
     AUTOMATICALLY SETS THE charge FOR METAL COMPLEXES
 
@@ -403,12 +543,12 @@ def rules_get_charge(mol,args):
         [description]
     """
 
-    C_group = ['C', 'Se', 'Ge']
-    N_group = ['N', 'P', 'As']
-    O_group = ['O', 'S', 'Se']
-    F_group = ['Cl', 'Br', 'I']
+    C_group = ["C", "Se", "Ge"]
+    N_group = ["N", "P", "As"]
+    O_group = ["O", "S", "Se"]
+    F_group = ["Cl", "Br", "I"]
 
-    M_ligands, N_carbenes, bridge_atoms, neighbours = [],[],[],[]
+    M_ligands, N_carbenes, bridge_atoms, neighbours = [], [], [], []
     charge_rules = np.zeros(len(args.metal_idx), dtype=int)
     neighbours = []
     for atom in mol.GetAtoms():
@@ -419,7 +559,7 @@ def rules_get_charge(mol,args):
             charge_rules[charge_idx] = args.m_oxi[charge_idx]
             for neighbour in neighbours:
                 M_ligands.append(neighbour.GetIdx())
-                if neighbour.GetTotalValence()== 4:
+                if neighbour.GetTotalValence() == 4:
                     if neighbour.GetSymbol() in C_group:
                         carbene_like = False
                         bridge_ligand = False
@@ -429,15 +569,17 @@ def rules_get_charge(mol,args):
                                     for N_neighbour in inside_neighbour.GetNeighbors():
                                         # this option detects bridge ligands that connect two metals such as M--CN--M
                                         # we use I since the M is still represented as I at this point
-                                        if N_neighbour.GetSymbol() == 'I':
+                                        if N_neighbour.GetSymbol() == "I":
                                             bridge_ligand = True
-                                            bridge_atoms.append(inside_neighbour.GetIdx())
+                                            bridge_atoms.append(
+                                                inside_neighbour.GetIdx()
+                                            )
                                     if not bridge_ligand:
                                         carbene_like = True
                                         N_carbenes.append(inside_neighbour.GetIdx())
                         if not carbene_like:
                             charge_rules[charge_idx] = charge_rules[charge_idx] - 1
-                elif neighbour.GetTotalValence()== 3:
+                elif neighbour.GetTotalValence() == 3:
                     if neighbour.GetSymbol() in N_group:
                         charge_rules[charge_idx] = charge_rules[charge_idx] - 1
                 elif neighbour.GetTotalValence() == 2:
@@ -468,9 +610,12 @@ def rules_get_charge(mol,args):
         return charge_rules
     else:
         # no update in charge as it is an organic molecule
-        return [args.charge_default,]
+        return [
+            args.charge_default,
+        ]
 
-def substituted_mol(mol,args):
+
+def substituted_mol(mol, args):
     """
     Returns a molecule object in which all metal atoms specified in args.metal
     are replaced by Iodine and the charge is set depending on the number of
@@ -489,7 +634,7 @@ def substituted_mol(mol,args):
         mol,args.metal_idx, args.complex_coord, args.metal_sym
     """
     Neighbors2FormalCharge = dict()
-    for i,j in zip(range(2,9),range(-3,4)):
+    for i, j in zip(range(2, 9), range(-3, 4)):
         Neighbors2FormalCharge[i] = j
 
     for atom in mol.GetAtoms():
@@ -504,88 +649,97 @@ def substituted_mol(mol,args):
                 formal_charge = Neighbors2FormalCharge[n_neighbors]
                 atom.SetFormalCharge(formal_charge)
 
-    return mol,args.metal_idx,args.complex_coord,args.metal_sym
+    return mol, args.metal_idx, args.complex_coord, args.metal_sym
 
 
 # DETECTS DIHEDRALS IN THE MOLECULE
-def getDihedralMatches(mol, heavy,log):
-    #this is rdkit's "strict" pattern
+def getDihedralMatches(mol, heavy, log):
+    # this is rdkit's "strict" pattern
     pattern = r"*~[!$(*#*)&!D1&!$(C(F)(F)F)&!$(C(Cl)(Cl)Cl)&!$(C(Br)(Br)Br)&!$(C([CH3])([CH3])[CH3])&!$([CD3](=[N,O,S])-!@[#7,O,S!D1])&!$([#7,O,S!D1]-!@[CD3]=[N,O,S])&!$([CD3](=[N+])-!@[#7!D1])&!$([#7!D1]-!@[CD3]=[N+])]-!@[!$(*#*)&!D1&!$(C(F)(F)F)&!$(C(Cl)(Cl)Cl)&!$(C(Br)(Br)Br)&!$(C([CH3])([CH3])[CH3])]~*"
     qmol = Chem.MolFromSmarts(pattern)
     matches = mol.GetSubstructMatches(qmol)
 
-    #these are all sets of 4 atoms, uniquify by middle two
+    # these are all sets of 4 atoms, uniquify by middle two
     uniqmatches = []
     seen = set()
-    for (a,b,c,d) in matches:
-        if (b,c) not in seen and (c,b) not in seen:
+    for (a, b, c, d) in matches:
+        if (b, c) not in seen and (c, b) not in seen:
             if heavy:
-                if mol.GetAtomWithIdx(a).GetSymbol() != 'H' and mol.GetAtomWithIdx(d).GetSymbol() != 'H':
-                    seen.add((b,c))
-                    uniqmatches.append((a,b,c,d))
+                if (
+                    mol.GetAtomWithIdx(a).GetSymbol() != "H"
+                    and mol.GetAtomWithIdx(d).GetSymbol() != "H"
+                ):
+                    seen.add((b, c))
+                    uniqmatches.append((a, b, c, d))
             if not heavy:
-                if mol.GetAtomWithIdx(c).GetSymbol() == 'C' and mol.GetAtomWithIdx(d).GetSymbol() == 'H':
+                if (
+                    mol.GetAtomWithIdx(c).GetSymbol() == "C"
+                    and mol.GetAtomWithIdx(d).GetSymbol() == "H"
+                ):
                     pass
                 else:
-                    seen.add((b,c))
-                    uniqmatches.append((a,b,c,d))
+                    seen.add((b, c))
+                    uniqmatches.append((a, b, c, d))
     return uniqmatches
 
-def getDihedralMatches_v2(mol, heavy,log): #New version using openbabel
+
+def getDihedralMatches_v2(mol, heavy, log):  # New version using openbabel
     # If this version is selected, bring the import to the top
     # import pybel #
-    from openbabel import pybel #for openbabel>=3.0.0
-    AtomInTripleBond = '$(*#*)'
-    TerminalAtom = 'D1'
-    CF3 = '$(C(F)(F)F)'
-    CCl3 = '$(C(Cl)(Cl)Cl)'
-    CBr3 = '$(C(Br)(Br)Br)'
-    tBut = '$(C([CH3])([CH3])[CH3])'
+    from openbabel import pybel  # for openbabel>=3.0.0
+
+    AtomInTripleBond = "$(*#*)"
+    TerminalAtom = "D1"
+    CF3 = "$(C(F)(F)F)"
+    CCl3 = "$(C(Cl)(Cl)Cl)"
+    CBr3 = "$(C(Br)(Br)Br)"
+    tBut = "$(C([CH3])([CH3])[CH3])"
     # A 3-bonded C with a double bond to (N, O or S)
     # singlgy bonded to not ring bonded to a non-terminal N,O or S.
-    CD3_1d = '$([CD3](=[N,O,S])-!@[#7,O,S!D1])'
-    CD3_1r = '$([#7,O,S!D1]-!@[CD3]=[N,O,S])' # Backwards version
+    CD3_1d = "$([CD3](=[N,O,S])-!@[#7,O,S!D1])"
+    CD3_1r = "$([#7,O,S!D1]-!@[CD3]=[N,O,S])"  # Backwards version
     # A 3-bonded C with a double bond to (N+)
     # singlgy bonded to not ring bonded to Any non-terminal N
-    CD3_2d = '$([CD3](=[N+])-!@[#7!D1])'
-    CD3_2r = '$([#7!D1]-!@[CD3]=[N+])' # Backwards version
-    Atom1 = '*'
-    Atom2 =  f'!{AtomInTripleBond}&!{TerminalAtom}'
-    Atom2 += f'&!{CF3}&!{CCl3}&!{CBr3}&!{tBut}'
-    Atom2 += f'&!{CD3_1d}&!{CD3_1r}&!{CD3_2d}&!{CD3_2r}'
-    Atom3 =  f'!{AtomInTripleBond}&!{TerminalAtom}'
-    Atom3 += f'&!{CF3}&!{CCl3}&!{CBr3}&!{tBut}'
-    Atom4 = '*'
-    pattern = f'{Atom1}~[{Atom2}]-!@[{Atom3}]~{Atom4}'
+    CD3_2d = "$([CD3](=[N+])-!@[#7!D1])"
+    CD3_2r = "$([#7!D1]-!@[CD3]=[N+])"  # Backwards version
+    Atom1 = "*"
+    Atom2 = f"!{AtomInTripleBond}&!{TerminalAtom}"
+    Atom2 += f"&!{CF3}&!{CCl3}&!{CBr3}&!{tBut}"
+    Atom2 += f"&!{CD3_1d}&!{CD3_1r}&!{CD3_2d}&!{CD3_2r}"
+    Atom3 = f"!{AtomInTripleBond}&!{TerminalAtom}"
+    Atom3 += f"&!{CF3}&!{CCl3}&!{CBr3}&!{tBut}"
+    Atom4 = "*"
+    pattern = f"{Atom1}~[{Atom2}]-!@[{Atom3}]~{Atom4}"
     smarts = pybel.Smarts(pattern)
     matches = smarts.findall(mol)
 
-    #these are all sets of 4 atoms, uniquify by middle two
-    H_atoms = set(pybel.Smarts('[#1]').findall(mol))
-    C_atoms = set(pybel.Smarts('[#6]').findall(mol))
+    # these are all sets of 4 atoms, uniquify by middle two
+    H_atoms = set(pybel.Smarts("[#1]").findall(mol))
+    C_atoms = set(pybel.Smarts("[#6]").findall(mol))
     uniqmatches = []
     seen = set()
-    for (a,b,c,d) in matches:
-        if (b,c) not in seen and (c,b) not in seen:
+    for (a, b, c, d) in matches:
+        if (b, c) not in seen and (c, b) not in seen:
             if heavy:
                 if a not in H_atoms and d not in H_atoms:
-                    seen.add((b,c))
-                    uniqmatches.append((a,b,c,d))
+                    seen.add((b, c))
+                    uniqmatches.append((a, b, c, d))
             if not heavy:
                 # So what if a == 'H' and b == 'C'? is that valid ¿?
                 if c not in C_atoms or d not in H_atoms:
-                    seen.add((b,c))
-                    uniqmatches.append((a,b,c,d))
+                    seen.add((b, c))
+                    uniqmatches.append((a, b, c, d))
 
 
-#checks for salts
+# checks for salts
 def check_for_pieces(smi):
-    #taking largest component for salts
-    pieces = smi.split('.')
-    if len(pieces) > 1:
-        # take largest component by length
-        smi = max(pieces, key=len)
-    return smi
+    # taking largest component for salts
+    pieces = smi.split(".")
+    # if len(pieces) > 1:
+    #     # take largest component by length
+    #     smi = max(pieces, key=len)
+    return pieces
+
 
 def mol_from_sdf_or_mol_or_mol2(input):
     """
@@ -604,69 +758,70 @@ def mol_from_sdf_or_mol_or_mol2(input):
     filename = os.path.splitext(input)[0]
     extension = os.path.splitext(input)[1]
 
-    if extension =='.sdf':
+    if extension == ".sdf":
         suppl = Chem.SDMolSupplier(input, removeHs=False)
-    elif extension =='.mol':
+    elif extension == ".mol":
         suppl = Chem.MolFromMolFile(input, removeHs=False)
-    elif extension =='.mol2':
+    elif extension == ".mol2":
         suppl = Chem.MolFromMol2File(input, removeHs=False)
 
-    IDs,charges = [],[]
+    IDs, charges = [], []
 
-    with open(input,"r") as F:
+    with open(input, "r") as F:
         lines = F.readlines()
 
     molecule_count = 0
     for i, line in enumerate(lines):
-        if line.find('>  <ID>') > -1:
-            ID = lines[i+1].split()[0]
+        if line.find(">  <ID>") > -1:
+            ID = lines[i + 1].split()[0]
             IDs.append(ID)
-        if line.find('M  CHG') > -1:
-            charge_line =  line.split('  ')
+        if line.find("M  CHG") > -1:
+            charge_line = line.split("  ")
             charge = 0
-            for j in range(4,len(charge_line)):
+            for j in range(4, len(charge_line)):
                 if (j % 2) == 0:
                     if j == len(charge_line) - 1:
-                        charge_line[j] = charge_line[j].split('\n')[0]
+                        charge_line[j] = charge_line[j].split("\n")[0]
                     charge += int(charge_line[j])
             charges.append(charge)
-        if line.find('$$$$') > -1:
+        if line.find("$$$$") > -1:
             molecule_count += 1
             if molecule_count != len(charges):
                 charges.append(0)
 
     if len(IDs) == 0:
-        if extension == '.sdf':
+        if extension == ".sdf":
             for i in range(len(suppl)):
-                IDs.append(f'{filename}_{i}')
+                IDs.append(f"{filename}_{i}")
         else:
             IDs.append(filename)
     if len(charges) == 0:
-        if extension == '.sdf':
+        if extension == ".sdf":
             for _ in suppl:
                 charges.append(0)
         else:
             charges.append(0)
     return suppl, IDs, charges
 
-#checks the charge on the smi string
+
+# checks the charge on the smi string
 def check_charge_smi(smi):
     charge = 0
-    for i,smi_letter in enumerate(smi):
-        if smi_letter == '+':
-            if smi[i+1] == ']':
+    for i, smi_letter in enumerate(smi):
+        if smi_letter == "+":
+            if smi[i + 1] == "]":
                 charge += 1
             else:
-                charge += int(smi[i+1])
-        elif smi_letter == '-':
-            if smi[i+1] == ']':
+                charge += int(smi[i + 1])
+        elif smi_letter == "-":
+            if smi[i + 1] == "]":
                 charge -= 1
             else:
-                charge -= int(smi[i+1])
+                charge -= int(smi[i + 1])
     return charge
 
 
-def set_metal_atomic_number(mol,metal_idx,metal_sym):
+def set_metal_atomic_number(mol, metal_idx, metal_sym):
     """
     Changes the atomic number of the metal atoms using their indices.
 
@@ -684,8 +839,9 @@ def set_metal_atomic_number(mol,metal_idx,metal_sym):
     for atom in mol.GetAtoms():
         if atom.GetIdx() in metal_idx:
             re_symbol = metal_sym[metal_idx.index(atom.GetIdx())]
-            atomic_number = periodic_table.index(re_symbol)
+            atomic_number = periodic_table().index(re_symbol)
             atom.SetAtomicNum(atomic_number)
+
 
 def get_conf_RMS(mol1, mol2, c1, c2, heavy, max_matches_RMSD):
     """
@@ -714,37 +870,48 @@ def get_conf_RMS(mol1, mol2, c1, c2, heavy, max_matches_RMSD):
         Returns the best RMSD found.
     """
     if heavy:
-         mol1 = RemoveHs(mol1)
-         mol2 = RemoveHs(mol2)
-    return GetBestRMS(mol1,mol2,c1,c2,maxMatches=max_matches_RMSD)
+        mol1 = RemoveHs(mol1)
+        mol2 = RemoveHs(mol2)
+    return GetBestRMS(mol1, mol2, c1, c2, maxMatches=max_matches_RMSD)
 
-def get_filenames(type,name):
+
+def get_filenames(type, name):
     """
     Finding the file type to move for analysis
     """
     files = []
-    if type =='output':
-        formats = ['*.log','*.LOG','*.out','*.OUT','*json']
-    elif type =='input':
-        formats = ['*.com','*.gjf']
-    for _,format in enumerate(formats):
+    if type == "output":
+        formats = ["*.log", "*.LOG", "*.out", "*.OUT", "*json"]
+    elif type == "input":
+        formats = ["*.com", "*.gjf"]
+    for _, format in enumerate(formats):
         if name is None:
             all_files = enumerate(glob.glob(format))
         else:
-            all_files = enumerate(glob.glob(name+format))
-        for _,file in all_files:
+            all_files = enumerate(glob.glob(name + format))
+        for _, file in all_files:
             if file not in files:
                 files.append(file)
     return files
 
-def check_isomerization(COORDINATES_com, COORDINATES_log, atom_types_com, atom_types_log, vdwfrac, covfrac, init_csv, file):
+
+def check_isomerization(
+    COORDINATES_com,
+    COORDINATES_log,
+    atom_types_com,
+    atom_types_log,
+    vdwfrac,
+    covfrac,
+    init_csv,
+    file,
+):
     """
     Inputs two molecules with the atoms in the same order and checks if any bond
-    is too different between them. 
-    
+    is too different between them.
+
     Bonds are considered when the distance between two atoms is smaller than
     either the sum of their adjusted VDW radii or covalent radii (dist = n*R1 + n*R2, where
-    n is a user defined parameter). 
+    n is a user defined parameter).
 
     Bonds forming part of TSs are removed.
 
@@ -772,42 +939,55 @@ def check_isomerization(COORDINATES_com, COORDINATES_log, atom_types_com, atom_t
     bool
         True there is a clearly distorted bond within the geometries.
     """
-    
+
     isomerized, diff = None, None
 
     # load connectivity matrix from the starting points and convert string into matrix
     if not init_csv.empty:
-        filename = file.replace('_'+file.split('_')[-1],'')
-        init_connectivity_string = init_csv[init_csv['code_name'] == filename]['initial_connectiv'][0]
-        init_connectivity = json.loads(init_connectivity_string.replace('.',',').replace(',]','],').replace('],]',']]')) 
+        filename = file.replace("_" + file.split("_")[-1], "")
+        init_connectivity_string = init_csv[init_csv["code_name"] == filename][
+            "initial_connectiv"
+        ][0]
+        init_connectivity = json.loads(
+            init_connectivity_string.replace(".", ",")
+            .replace(",]", "],")
+            .replace("],]", "]]")
+        )
         atom_types_com = init_connectivity[0]
 
     else:
-        init_connectivity = gen_connectivity(atom_types_com, COORDINATES_com, vdwfrac, covfrac)
+        init_connectivity = gen_connectivity(
+            atom_types_com, COORDINATES_com, vdwfrac, covfrac
+        )
 
     # in case the systems are not the same
     if len(atom_types_log) != len(atom_types_com):
         isomerized = True
-    
+
     else:
-        final_connectivity = gen_connectivity(atom_types_log, COORDINATES_log, vdwfrac, covfrac)
-                
+        final_connectivity = gen_connectivity(
+            atom_types_log, COORDINATES_log, vdwfrac, covfrac
+        )
+
         # check connectivity differences from initial structure
         diff = final_connectivity - init_connectivity
 
         # remove bonds involved in TSs from connectivity matrixes
         if not init_csv.empty:
-            if 'TS_atom_idx' in init_csv.columns:
-                ts_atoms = init_csv[init_csv['code_name'] == filename]['TS_atom_idx'][0].split(',')
-                for i,ts_idx in enumerate(ts_atoms):
-                    for j,ts_idx_2 in enumerate(ts_atoms):
-                        if j>i:
+            if "TS_atom_idx" in init_csv.columns:
+                ts_atoms = init_csv[init_csv["code_name"] == filename]["TS_atom_idx"][
+                    0
+                ].split(",")
+                for i, ts_idx in enumerate(ts_atoms):
+                    for j, ts_idx_2 in enumerate(ts_atoms):
+                        if j > i:
                             diff[int(ts_idx)][int(ts_idx_2)] = 0
                             diff[int(ts_idx_2)][int(ts_idx)] = 0
 
         isomerized = np.any(diff)
 
     return isomerized
+
 
 def gen_connectivity(atom_types_conn, COORDINATES_conn, vdwfrac, covfrac):
     """
@@ -820,25 +1000,30 @@ def gen_connectivity(atom_types_conn, COORDINATES_conn, vdwfrac, covfrac):
             if j > i:
                 vdw_ij = bondi()[elem_i] + bondi()[elem_j]
                 rcov_ij = rcov()[elem_i] + rcov()[elem_j]
-                dist_ij = np.linalg.norm(np.array(COORDINATES_conn[i])-np.array(COORDINATES_conn[j]))
+                dist_ij = np.linalg.norm(
+                    np.array(COORDINATES_conn[i]) - np.array(COORDINATES_conn[j])
+                )
                 if dist_ij / vdw_ij < vdwfrac or dist_ij / rcov_ij < covfrac:
                     conn_mat[i][j] = 1
-                else: pass
+                else:
+                    pass
 
     return conn_mat
 
-def read_file(w_dir,file):
+
+def read_file(w_dir, file):
     """
     Reads through a file and retrieves a list with all the lines.
     """
 
     os.chdir(w_dir)
-    outfile = open(file,"r")
+    outfile = open(file, "r")
     outlines = outfile.readlines()
 
     return outlines, outfile
 
-def output_to_mol(file,format,log):
+
+def output_to_mol(file, format, log):
     """
     Input an XYZ, LOG or OUT file from QM calculations and converts it into
     a mol object.
@@ -866,83 +1051,102 @@ def output_to_mol(file,format,log):
     rdkit_compat = True
     try:
         import openbabel as ob
-    except (ModuleNotFoundError,AttributeError):
-        log.write('\nx  Open Babel is not installed correctly, the geom_rules filter will be disabled')
+    except (ModuleNotFoundError, AttributeError):
+        log.write(
+            "\nx  Open Babel is not installed correctly, the geom_rules filter will be disabled"
+        )
         ob_compat = False
     try:
         from rdkit.Chem import AllChem as Chem
-    except (ModuleNotFoundError,AttributeError):
-        log.write('\nx  RDKit is not installed correctly, the geom_rules and check_geom filters will be disabled')
+    except (ModuleNotFoundError, AttributeError):
+        log.write(
+            "\nx  RDKit is not installed correctly, the geom_rules and check_geom filters will be disabled"
+        )
         rdkit_compat = False
 
     # transforms output file into mol object
     # for input (from com to xyz to mol)
-    if format == 'xyz':
-        cmd_obabel = ['obabel', '-ixyz', os.path.splitext(file)[0]+'.xyz', '-omol', '-O', os.path.splitext(file)[0]+'.mol']
+    if format == "xyz":
+        cmd_obabel = [
+            "obabel",
+            "-ixyz",
+            os.path.splitext(file)[0] + ".xyz",
+            "-omol",
+            "-O",
+            os.path.splitext(file)[0] + ".mol",
+        ]
     # for output (from log to mol)
-    if format in ['log','out']:
-        cmd_obabel = ['obabel', '-ilog', os.path.splitext(file)[0]+'.'+format, '-omol', '-O', os.path.splitext(file)[0]+'.mol']
+    if format in ["log", "out"]:
+        cmd_obabel = [
+            "obabel",
+            "-ilog",
+            os.path.splitext(file)[0] + "." + format,
+            "-omol",
+            "-O",
+            os.path.splitext(file)[0] + ".mol",
+        ]
     subprocess.run(cmd_obabel)
-    mol = Chem.MolFromMolFile(file.split('.')[0]+'.mol')
+    mol = Chem.MolFromMolFile(file.split(".")[0] + ".mol")
 
-    return mol,ob_compat,rdkit_compat
+    return mol, ob_compat, rdkit_compat
 
 
-def read_energies(file): 
-    '''
+def read_energies(file):
+    """
     Parses the energies from sdf files .
-    '''
+    """
     energies = []
-    f = open(file,"r")
+    f = open(file, "r")
     readlines = f.readlines()
-    for i,_ in enumerate(readlines):
-        if readlines[i].find('>  <Energy>') > -1:
-            energies.append(float(readlines[i+1].split()[0]))
+    for i, _ in enumerate(readlines):
+        if readlines[i].find(">  <Energy>") > -1:
+            energies.append(float(readlines[i + 1].split()[0]))
     f.close()
     return energies
 
-def get_name_and_charge(name,charge_data):
-    '''
-    Function to get name of charge from an SDF file.
-    '''
-    
-    name_list = name.split('_')
 
-    if 'xtb' in name_list or 'ani' in name_list:
-        if 'filter' in name_list:
+def get_name_and_charge(name, charge_data):
+    """
+    Function to get name of charge from an SDF file.
+    """
+
+    name_list = name.split("_")
+
+    if "xtb" in name_list or "ani" in name_list:
+        if "filter" in name_list:
             name_molecule = name[:-21]
         else:
             name_molecule = name[:-4]
-    elif 'summ' in name_list:
-        if 'filter' in name_list:
+    elif "summ" in name_list:
+        if "filter" in name_list:
             name_molecule = name[:-22]
         else:
             name_molecule = name[:-5]
-    elif 'rdkit' in name_list:
-        if 'filter' in name_list:
+    elif "rdkit" in name_list:
+        if "filter" in name_list:
             name_molecule = name[:-23]
         else:
             name_molecule = name[:-6]
-    elif 'fullmonte' in name_list:
-        if 'filter' in name_list:
+    elif "fullmonte" in name_list:
+        if "filter" in name_list:
             name_molecule = name[:-27]
         else:
             name_molecule = name[:-10]
 
     if charge_data is not None:
         for i in range(len(charge_data)):
-            if charge_data.loc[i,'Molecule'] == name_molecule:
-                charge_com = charge_data.loc[i,'Overall charge']
+            if charge_data.loc[i, "Molecule"] == name_molecule:
+                charge_com = charge_data.loc[i, "Overall charge"]
             else:
                 try:
-                    suppl = Chem.SDMolSupplier(name+'.sdf', removeHs=False)
+                    suppl = Chem.SDMolSupplier(name + ".sdf", removeHs=False)
                 except OSError:
                     suppl = False
                 if suppl:
                     mol = suppl[0]
-                    charge_com = mol.GetProp('Real charge')
+                    charge_com = mol.GetProp("Real charge")
                 else:
-                    charge_com = 'Invalid'
+                    charge_com = "Invalid"
 
         return charge_com
 
@@ -969,3 +1173,4 @@ def cclib_atoms_coords(cclib_data):
     cartesians = [cartesians_array[i:i + 3] for i in range(0, len(cartesians_array), 3)]
 
     return atom_types,cartesians
+
