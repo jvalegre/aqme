@@ -20,7 +20,7 @@ from rdkit.Chem import AllChem as Chem
 from aqme.csearch import *
 from aqme.filter import geom_rules_output
 
-from aqme.qprep_gaussian import qprep, get_molecule_list, load_charge_data
+from aqme.qprep import qprep, get_molecule_list, load_charge_data
 
 # from aqme.grapher import graph
 # from aqme.descp import calculate_parameters

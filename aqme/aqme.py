@@ -47,8 +47,8 @@ from aqme.mainf import (
     cmin_main,
 )
 from aqme.utils import Logger, get_filenames
-from aqme.qcorr_gaussian import qcorr, check_for_final_folder
-from aqme.qprep_gaussian import qprep
+from aqme.qcorr import qcorr, check_for_final_folder
+from aqme.qprep import qprep
 
 
 def main():

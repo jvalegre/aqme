@@ -24,7 +24,7 @@ from aqme.utils import (
     output_to_mol,
     cclib_atoms_coords,
 )
-from aqme.qprep_gaussian import qprep
+from aqme.qprep import qprep
 from aqme.argument_parser import set_options
 
 

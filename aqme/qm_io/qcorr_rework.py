@@ -1,5 +1,5 @@
 from aqme.geom_rules import passes_custom_rules
-from aqme.qcorr_gaussian import *
+from aqme.qcorr import *
 from aqme.utils import periodic_table
 import numpy as np
 
@@ -954,7 +954,7 @@ def handle_unfinished_calculations(ofile,ofile_object,destination):
 
 
 # Main function
-def qcorr_gaussian_main(w_dir_initial,args,log):
+def qcorr_main(w_dir_initial,args,log):
 
 	# when you run analysis in a folder full of output files
 	qmcalc_folder = Path(f'{w_dir_initial}/QMCALC')
