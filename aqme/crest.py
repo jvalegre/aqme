@@ -88,23 +88,24 @@ def crest_opt(mol, name, dup_data, dup_data_idx, sdwriter, args, log):
 		xyzall_2_xyz(xyzoutall,name)
 
 	xyz_files = glob.glob(name+'_conf_*.xyz')
-	for file in xyz_files:
-		name=file.split('.xyz')[0]
-		command_xyz = ['obabel', '-ixyz', file, '-osdf', '-O'+name+'.sdf']
+	for i, file in enumerate(xyz_files):
+		name1=file.split('.xyz')[0]
+		command_xyz = ['obabel', '-ixyz', file, '-osdf', '-O'+name1+'.sdf']
 		subprocess.call(command_xyz)
+		os.remove(file)
 
 	sdf_files = glob.glob(name+'*.sdf')
 	for file in sdf_files:
-		mol = rdkit.Chem.SDMolSupplier(file)
-		sdwriter.write(mol[0])
+		mol = rdkit.Chem.SDMolSupplier(file,removeHs=False)
+		mol_rd = rdkit.Chem.RWMol(mol[0])
+		energy = str(open(file,'r').readlines()[0])
+		mol_rd.SetProp('Energy', energy)
+		sdwriter.write(mol_rd)
+		os.remove(file)
 
 	dup_data.at[dup_data_idx,'crest-conformers'] = len(xyz_files)
 
-	for f in glob.glob(name+'*_conf_*.xyz'):
-		os.remove(f)
-	for f in glob.glob(name+'*_conf_*.sdf'):
-		os.remove(f)
-	for f in glob.glob(name+'*.xyz'):
+	for f in glob.glob(os.getcwd()+"/"+name+'*.xyz'):
 		os.remove(f)
 
 	return 1
