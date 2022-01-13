@@ -3,7 +3,7 @@
 #########################################################################################.
 #########################################################################################
 ###                                                                                   ###
-###  pyCONFORT is a tool that allows to carry out automated:                          ###
+###  AQME is a tool that allows to carry out automated:                               ###
 ###  (1) Conformational searches and creation of COM files using RDKit, xTB and ANI   ###
 ###  (2) LOG file processing (detects imaginary freqs and error terminations          ###
 ###      and creates new COM files)                                                   ###
@@ -99,7 +99,7 @@ def main():
     #     os.chdir(w_dir_initial)
 
     #QCORR
-    if args.qcorr=='gaussian':
+    if args.qcorr:
         log_overall.write("\no  Writing analysis of output files in respective folders\n")
         qm_files = get_filenames('output',None)
         df_qcorr_success,df_qcorr_error = pd.DataFrame(),pd.DataFrame()

@@ -948,3 +948,24 @@ def get_name_and_charge(name,charge_data):
 
     else:
         return name_molecule
+
+
+def cclib_atoms_coords(cclib_data):
+    '''
+    Function to convert atomic numbers and coordinate arrays from cclib into
+    a format compatible with QPREP.
+    '''
+    atom_numbers = cclib_data['atoms']['elements']['number']
+    atom_types = []
+    per_tab = periodic_table()
+    for atom_n in atom_numbers:
+        if atom_n < len(per_tab):
+            atom_symbol = per_tab[atom_n]
+        else:
+            atom_symbol = "XX"
+        atom_types.append(atom_symbol)
+
+    cartesians_array = cclib_data['atoms']['coords']['3d']
+    cartesians = [cartesians_array[i:i + 3] for i in range(0, len(cartesians_array), 3)]
+
+    return atom_types,cartesians

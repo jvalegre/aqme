@@ -37,6 +37,8 @@ class qprep():
 		Memory used in the input file. Formats: GB, MB or MW (i.e. 4GB, 800MB or 16MW).
 	nprocs : int
 		Number of processors used in the input file
+	suffix : str
+		Suffix for the new input files
 	atom_types : list of strings
 		(If no mol is used) List containing the atoms of the system
 	cartesians : list of lists
@@ -60,7 +62,7 @@ class qprep():
 	"""
 	
 	def __init__(self, mol=None, destination=os.getcwd(), molecule='', charge=0, mult=1, chk=False,
-				mem='8GB', nprocs=4, atom_types=[], cartesians=[], bs_gen='', bs='', gen_atoms=None,
+				mem='8GB', nprocs=4, suffix='', atom_types=[], cartesians=[], bs_gen='', bs='', gen_atoms=[],
 				program='gaussian',	qm_input='', qm_end='', yaml_file=None, **kwargs):
 				
 		if mol != None:
@@ -74,6 +76,7 @@ class qprep():
 		self.chk = chk
 		self.mem = mem
 		self.nprocs = nprocs
+		self.suffix = suffix
 		self.charge = charge
 		self.mult = mult
 		self.n_atoms = len(atom_types)
@@ -82,8 +85,7 @@ class qprep():
 		self.qm_input = qm_input
 		self.bs_gen = bs_gen
 		self.bs = bs
-		gen_atoms_list = gen_atoms.split(',')
-		self.gen_atoms = gen_atoms_list
+		self.gen_atoms = gen_atoms
 		self.qm_end = qm_end
 		self.program = program
 
@@ -110,7 +112,7 @@ class qprep():
 		if molecule == '':
 			self.log.write('x  No name was specified! (molecule=NAME).')
 			sys.exit('x  No name was specified! (molecule=NAME).')
-
+		
 		self.write()
 		
 	def get_header(self):
@@ -140,7 +142,7 @@ class qprep():
 				mem_orca = self.mem.split('MW')[0]
 			txt += f'%maxcore {mem_orca}\n'
 			txt += f'%pal nprocs {self.nprocs} end\n'
-			txt += f'{self.qm_input}\n'
+			txt += f'! {self.qm_input}\n'
 			txt += f'* xyz {self.charge} {self.mult}\n'
 
 		return txt
@@ -186,12 +188,15 @@ class qprep():
 
 
 	def write(self):
-
-		if self.program.lower() == 'gaussian':
-			comfile = f'{self.destination}/{self.molecule}.com'
 		
+		if self.program.lower() == 'gaussian':
+			extension = 'com'
 		elif self.program.lower() == 'orca':
-			comfile = f'{self.destination}/{self.molecule}.inp'
+			extension = 'inp'
+		if self.suffix != '':
+			comfile = f'{self.destination}/{self.molecule}_{self.suffix}.{extension}'
+		else:
+			comfile = f'{self.destination}/{self.molecule}.{extension}'
 		
 		if os.path.exists(comfile):
 			os.remove(comfile)
