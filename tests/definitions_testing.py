@@ -162,7 +162,7 @@ def conf_gen(path, precision, cmd_aqme, folder, smiles, E_confs, dihedral, xTB_A
         # tests charge
         test_charge = df_output['Overall charge']
 
-        os.chdir(path+'/'+folder+'/'+smiles.split('.')[0]+'/QMCALC/G16/wb97xd-6-31g(d)')
+        os.chdir(path+'/'+folder+'/'+smiles.split('.')[0]+'/QCALC/G16/wb97xd-6-31g(d)')
 
         file_gen = glob.glob(file_smi+'*.com')[0]
         if metal != False:
@@ -257,7 +257,7 @@ def Ir_geom_rules(path, folder, precision, cmd_geom_rules, smiles, E_confs_no_ru
     round_E_confs_rules = [round(num, precision) for num in E_confs_rules]
 
     # tests charge and genecp
-    os.chdir(path+'/'+folder+'/QMCALC/G16/wb97xd-6-31g(d)')
+    os.chdir(path+'/'+folder+'/QCALC/G16/wb97xd-6-31g(d)')
     file_geom_rules = glob.glob(smiles+'*')[0]
     test_com_files = len(glob.glob(smiles+'*'))
     _,_,_,_,test_charge,_ = calc_genecp(file_geom_rules, ['Ir'])
@@ -290,7 +290,7 @@ def Pd_geom_rules(path, folder, precision_geom_rules, cmd_geom_rules, smiles):
     test_sdf_final = get_not_empty_files(geom_rules_sdf_folder,test_sdf_final,'sdf')
 
     # check the amount of com files created
-    com_files_folder = path+'/'+folder+'/QMCALC/G16/wb97xd-6-31g(d)'
+    com_files_folder = path+'/'+folder+'/QCALC/G16/wb97xd-6-31g(d)'
     test_com_files = get_not_empty_files(com_files_folder,test_com_files,'com')
 
     remove_data(path, folder, smiles=False)
@@ -319,7 +319,7 @@ def misc_sdf_test(path_misc, smiles):
 
 def misc_com_test(path_misc, smiles):
     # get the amount of COM files created
-    os.chdir(path_misc+'/'+'Misc/QMCALC/G16/wb97xd-6-31g(d)')
+    os.chdir(path_misc+'/'+'Misc/QCALC/G16/wb97xd-6-31g(d)')
     test_goal = len(glob.glob(smiles.split('.')[0]+'*.com'))
 
     remove_data(path_misc, 'Misc', smiles=False)
@@ -327,7 +327,7 @@ def misc_com_test(path_misc, smiles):
     return test_goal
 
 def misc_genecp_test(path_misc, smiles):
-    os.chdir(path_misc+'/'+'Misc/QMCALC/G16/wb97xd-6-31g(d)')
+    os.chdir(path_misc+'/'+'Misc/QCALC/G16/wb97xd-6-31g(d)')
     com_gen_files = glob.glob(smiles.split('.')[0]+'*.com')
     # I take just the first COM file (the others should be the same)
     file_gen = com_gen_files[0]
@@ -343,7 +343,7 @@ def misc_genecp_test(path_misc, smiles):
     return gen_found,ecp_found
 
 def misc_freq_test(path_misc, smiles):
-    os.chdir(path_misc+'/'+'Misc/QMCALC/G16/wb97xd-6-31g(d)')
+    os.chdir(path_misc+'/'+'Misc/QCALC/G16/wb97xd-6-31g(d)')
     com_freq_files = glob.glob(smiles.split('.')[0]+'*.com')
     # I take just the first COM file (the others should be the same)
     file_freq = com_freq_files[0]
@@ -373,7 +373,7 @@ def misc_lot_test(path_misc, smiles):
     genecp_lots = ['LANL2DZ','midix','LANL2TZ']
     for i,lot in enumerate(lots):
         try:
-            os.chdir(path_misc+'/'+'Misc/QMCALC/G16/'+lot)
+            os.chdir(path_misc+'/'+'Misc/QCALC/G16/'+lot)
             com_lot_files = glob.glob(smiles.split('.')[0]+'*.com')
             if len(com_lot_files) > 0:
                 # I take just the first COM file (the others should be the same)
@@ -403,7 +403,7 @@ def misc_lot_test(path_misc, smiles):
 def misc_nocom_test(path_misc, smiles):
     # finds the folder where COM files are generated normally
     try:
-        os.chdir(path_misc+'/'+'Misc/QMCALC/G16/wb97xd-6-31g(d)')
+        os.chdir(path_misc+'/'+'Misc/QCALC/G16/wb97xd-6-31g(d)')
         test_goal = 1
     except:
         test_goal = 0

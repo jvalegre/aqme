@@ -11,7 +11,7 @@ import pandas as pd
 
 from aqme.cheshire_lookup import cheshire
 
-from aqme.utils import move_file_from_folder
+from aqme.utils import move_file
 
 
 def nmr_stats(y_exp, y_pred):
@@ -354,13 +354,11 @@ def calculate_boltz_and_nmr(val, args, log, name, w_dir_fin, w_dir_initial, lot,
 
     # writing to correct places
     if str(bs).find("/") > -1:
-        destination = (
-            w_dir_initial + "/QPRED/nmr/boltz/" + str(lot) + "-" + str(bs).split("/")[0]
-        )
+        destination = Path(w_dir_initial + "/QPRED/nmr/boltz/" + str(lot) + "-" + str(bs).split("/")[0])
     else:
-        destination = w_dir_initial + "/QPRED/nmr/boltz/" + str(lot) + "-" + str(bs)
+        destination = Path(w_dir_initial + "/QPRED/nmr/boltz/" + str(lot) + "-" + str(bs))
 
-    move_file_from_folder(destination, os.getcwd(), "Goodvibes_" + name + ".dat")
+    move_file(destination, os.getcwd(), "Goodvibes_" + name + ".dat")
 
     for lot_sp in args.level_of_theory_sp:
         for bs_sp in args.basis_set_sp:

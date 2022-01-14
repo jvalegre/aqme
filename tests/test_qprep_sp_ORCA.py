@@ -41,7 +41,7 @@ def test_confgen_organic(folder, smiles, params_file, job_type):
         os.chdir(path_orca+'/'+folder+'/'+smiles.split('.')[0])
         subprocess.call(cmd_orca)
 
-        os.chdir(path_orca+'/'+folder+'/'+smiles.split('.')[0]+'/QMCALC/ORCA/DLPNO-CCSD(T)-cc-pVTZ')
+        os.chdir(path_orca+'/'+folder+'/'+smiles.split('.')[0]+'/QCALC/ORCA/DLPNO-CCSD(T)-cc-pVTZ')
         inp_file = glob.glob('*.inp')[0]
 
         # check that the INP files contain the right parameters

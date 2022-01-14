@@ -1,11 +1,11 @@
 =====================================
-Welcome to pyCONFORT's documentation!
+Welcome to aqme's documentation!
 =====================================
 
-This user guide focuses on the applications of pyCONFORT for creation of
+This user guide focuses on the applications of aqme for creation of
 conformers and provides wrapper for  analysis of Gaussian output files.
 
-We provide a bunch examples depicting the uses of pyCONFORT in
+We provide a bunch examples depicting the uses of aqme in
 organic molecules, metal complexes extended upto crystals.
 
 All guides follow the a structure which allows the use of command
@@ -17,7 +17,7 @@ Inputs structures for different sections are provided with examples and the resp
 Please report any bugs or missing details at the mailing list or open an issue at `github`_.
 
 
-.. _github: https://github.com/jvalegre/pyCONFORT
+.. _github: https://github.com/jvalegre/aqme
 
 .. toctree::
 	 :maxdepth: 3

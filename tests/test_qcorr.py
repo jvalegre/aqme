@@ -131,7 +131,7 @@ def test_analysis_dup_sp(folder, file, command_line, type_of_job):
             assert df_QCORR['Duplicates'][0] == 1
 
         elif file == 'dat':
-            assert 'pyCONFORT-QCORR-run_1_output.dat' in dat_files
+            assert 'aqme-QCORR-run_1_output.dat' in dat_files
 
         # check that the files are in their corresponding folders (just once)
         if file == 'CH4_Normal_termination.log':

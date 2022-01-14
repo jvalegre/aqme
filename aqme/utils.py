@@ -362,24 +362,7 @@ def creation_of_dup_csv_cmin(cmin):
     return pd.DataFrame(columns=columns)
 
 
-def move_file(file, source, destination):
-    """
-    Moves a file to a destination folder. If the file exists rewrites it.
-
-    Parameters
-    ----------
-    file : str
-        path towards a file
-    destination : str
-        path towards a folder
-    """
-    if not os.path.isdir(destination):
-        os.makedirs(destination)
-
-    shutil.move(os.path.join(source, file), os.path.join(destination, file))
-
-
-def move_file_from_folder(destination, src, file):
+def move_file(destination, source, file):
     """
     Moves files from the source folder to the destination folder and creates
     the destination folders when needed.
@@ -394,14 +377,12 @@ def move_file_from_folder(destination, src, file):
         full name of the file (file + extension)
     """
 
-    # IF YOU RUN THE PROGRAM 2 TIMES WITH CMIN, YOU GET THIS ERROR:
-    # FileExistsError: [WinError 183] Cannot create a file when that file already exists
-    # FIX IT!
-    dest = Path(destination)
-    source = Path(src)
-    dest.mkdir(exist_ok=True, parents=True)
+    destination.mkdir(exist_ok=True, parents=True)
     filepath = source / file
-    filepath.rename(dest / file)
+    try:
+        filepath.rename(destination / file)
+    except FileExistsError:
+        filepath.replace(destination / file)
 
 
 # openbabel utils

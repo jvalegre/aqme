@@ -28,7 +28,7 @@ def test_confgen_misc3(folder, params_file, com_files):
     subprocess.call(cmd_misc3)
 
     # check number of com files
-    com_files_folder = path_misc3+'/'+folder+'/QMCALC/G16/wb97xd-6-31g(d)'
+    com_files_folder = path_misc3+'/'+folder+'/QCALC/G16/wb97xd-6-31g(d)'
     test_com_files = 0
     test_com_files = get_not_empty_files(com_files_folder,test_com_files,'com')
 

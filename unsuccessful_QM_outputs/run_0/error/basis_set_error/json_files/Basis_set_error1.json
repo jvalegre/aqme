@@ -1,0 +1,87 @@
+{
+    "chemical json": 0, 
+    "name": "Basis_set_error1", 
+    "smiles": "C[Hg]\tBasis_set_error1.LOG\r\n", 
+    "inchi": "InChI=1S/CH3.Hg/h1H3;\n", 
+    "inchikey": "JJWSNOOGIUMOEE-UHFFFAOYSA-N\n", 
+    "formula": "CH3Hg", 
+    "atoms": {
+        "coords": {
+            "3d": [
+                0.0, 
+                0.0, 
+                -1.97423, 
+                0.0, 
+                1.030959, 
+                -2.338729, 
+                -0.892837, 
+                -0.51548, 
+                -2.338729, 
+                0.892837, 
+                -0.51548, 
+                -2.338729, 
+                0.0, 
+                0.0, 
+                0.23577
+            ]
+        }, 
+        "elements": {
+            "number": [
+                6, 
+                1, 
+                1, 
+                1, 
+                80
+            ], 
+            "atom count": 5, 
+            "heavy atom count": 2
+        }, 
+        "core electrons": [
+            0, 
+            0, 
+            0, 
+            0, 
+            0
+        ]
+    }, 
+    "properties": {
+        "charge": 0, 
+        "multiplicity": 2, 
+        "number of atoms": 5, 
+        "molecular mass": 215.62452
+    }, 
+    "bonds": {
+        "connections": {
+            "index": [
+                1, 
+                0, 
+                2, 
+                0, 
+                3, 
+                0, 
+                0, 
+                4
+            ]
+        }, 
+        "order": [
+            1, 
+            1, 
+            1, 
+            1
+        ]
+    }, 
+    "diagram": "<?xml version=\"1.0\"?>\n<svg version=\"1.1\" id=\"topsvg\"\nxmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\"\nxmlns:cml=\"http://www.xml-cml.org/schema\" x=\"0\" y=\"0\" width=\"200px\" height=\"200px\" viewBox=\"0 0 100 100\">\n<title>Basis_set_error1.LOG - Open Babel Depiction</title>\n<rect x=\"0\" y=\"0\" width=\"100\" height=\"100\" fill=\"white\"/>\n<g transform=\"translate(0,0)\">\n<svg width=\"100\" height=\"100\" x=\"0\" y=\"0\" viewBox=\"0 0 154.641 154.641\"\nfont-family=\"sans-serif\" stroke=\"rgb(0,0,0)\" stroke-width=\"2\"  stroke-linecap=\"round\">\n<line x1=\"103.4\" y1=\"93.5\" x2=\"80.0\" y2=\"80.0\" opacity=\"1.0\" stroke=\"rgb(0,0,0)\"  stroke-width=\"2.0\"/>\n<line x1=\"53.0\" y1=\"80.0\" x2=\"80.0\" y2=\"80.0\" opacity=\"1.0\" stroke=\"rgb(0,0,0)\"  stroke-width=\"2.0\"/>\n<line x1=\"66.5\" y1=\"103.4\" x2=\"80.0\" y2=\"80.0\" opacity=\"1.0\" stroke=\"rgb(0,0,0)\"  stroke-width=\"2.0\"/>\n<line x1=\"80.0\" y1=\"80.0\" x2=\"80.0\" y2=\"53.0\" opacity=\"1.0\" stroke=\"rgb(0,0,0)\"  stroke-width=\"2.0\"/>\n<text x=\"108.641016\" y=\"108.000000\" fill=\"rgb(191,191,191)\" stroke-width=\"0\" font-weight=\"bold\" font-size=\"16\" >H</text>\n<text x=\"34.000000\" y=\"88.000000\" fill=\"rgb(191,191,191)\" stroke-width=\"0\" font-weight=\"bold\" font-size=\"16\" >H</text>\n<text x=\"54.000000\" y=\"122.641016\" fill=\"rgb(191,191,191)\" stroke-width=\"0\" font-weight=\"bold\" font-size=\"16\" >H</text>\n<text x=\"74.000000\" y=\"48.000000\" fill=\"rgb(181,181,193)\" stroke-width=\"0\" font-weight=\"bold\" font-size=\"16\" >Hg</text>\n</svg>\n</g>\n<text font-size=\"18.000000\" fill =\"black\" font-family=\"sans-serif\"\nx=\"10.000000\" y=\"20.000000\" >Basis_set_error1.LOG</text>\n</svg>\n", 
+    "AQME data": {
+        "keywords line": "opt freq=noraman b3lyp/3-21g", 
+        "calculation type": "ground_state", 
+        "memory": "8GB", 
+        "number of procs": 4, 
+        "QM program": "Gaussian 09, Revision A.02,", 
+        "author": "", 
+        "solvation": "gas_phase", 
+        "dispersion": "none", 
+        "grid": "", 
+        "<S**2>": 0, 
+        "level of theory": ""
+    }
+}

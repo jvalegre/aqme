@@ -4,23 +4,23 @@
  Setup and Installation
 ------------------------
 
-This documents provides steps for general setup and local installation of the ``pyCONFORT``
+This documents provides steps for general setup and local installation of the ``aqme``
 program.
 
 .. contents::
 
-Getting ``pyCONFORT``
+Getting ``aqme``
 =====================
 
 GitHub
 ------
 
-The `pyCONFORT <https://github.com/jvalegre/pyCONFORT>`_ program is available free of charge on GitHub.
+The `aqme <https://github.com/jvalegre/aqme>`_ program is available free of charge on GitHub.
 
 pip
 ---
 
-The ``pyCONFORT`` program can also be installed *via* pip using
+The ``aqme`` program can also be installed *via* pip using
 
 .. code:: bash
 

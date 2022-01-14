@@ -14,7 +14,7 @@ from definitions_testing import analysis,single_point
 
 # saves the working directory
 path_analysis_syst_initial = os.getcwd()+'/Analysis_syst'
-path_analysis_syst = path_analysis_syst_initial+'/QMCALC/G16'
+path_analysis_syst = path_analysis_syst_initial+'/QCALC/G16'
 
 # tests for individual organic molecules and metal complexes
 @pytest.mark.parametrize("file, type_of_job",
@@ -211,7 +211,7 @@ def test_analysis_dup_sp(file, type_of_job):
                 os.chdir(path_analysis_syst+'/'+LoT+'/dat_files')
                 run_cycles = ['run_1','run_2']
                 for run_cycle in run_cycles:
-                    assert 'pyCONFORT-QCORR-'+run_cycle+'_output.dat' in glob.glob('*.*')
+                    assert 'aqme-QCORR-'+run_cycle+'_output.dat' in glob.glob('*.*')
 
     elif type_of_job == 'single_point':
         for LoT in LoTs:

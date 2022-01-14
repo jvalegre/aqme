@@ -1,53 +1,83 @@
-![](Logos/DBGEN%20logo.tif)
-[![Build Status](https://img.shields.io/travis/com/jvalegre/aqme?label=Linux%20CI&logo=Travis)](https://travis-ci.com/github/jvalegre/pyCONFORT)
-[![Tests](https://img.shields.io/static/v1?label=Tests&message=104&color=green&logo=Travis)](https://travis-ci.com/github/jvalegre/pyCONFORT)
-[![Codecov](https://img.shields.io/codecov/c/github/jvalegre/aqme?label=Codecov&logo=codecov)](https://codecov.io/gh/jvalegre/pyCONFORT)
+![](Logos/AQME_logo.tif)
+[![Build Status](https://img.shields.io/travis/com/jvalegre/aqme?label=Linux%20CI&logo=Travis)](https://travis-ci.com/github/jvalegre/aqme)
+[![Tests](https://img.shields.io/static/v1?label=Tests&message=104&color=green&logo=Travis)](https://travis-ci.com/github/jvalegre/aqme)
+[![Codecov](https://img.shields.io/codecov/c/github/jvalegre/aqme?label=Codecov&logo=codecov)](https://codecov.io/gh/jvalegre/aqme)
 [![CodeFactor](https://img.shields.io/codefactor/grade/github/jvalegre/aqme?label=Codefactor%20grade&logo=codefactor)](https://www.codefactor.io/repository/github/jvalegre/aqme/overview/master)
-[![Codacy](https://img.shields.io/codacy/grade/047e9c6001a84713a82e180669e14c98?label=Codacy%20grade&logo=codacy)](https://www.codacy.com/manual/jvalegre/pyCONFORT?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=jvalegre/pyCONFORT&amp;utm_campaign=Badge_Grade)
-[![lgtm](https://img.shields.io/lgtm/grade/python/github/jvalegre/pyCONFORT?label=LGTM%20grade&logo=lgtm)](https://lgtm.com/projects/g/jvalegre/pyCONFORT/context:python)
+[![Codacy](https://img.shields.io/codacy/grade/047e9c6001a84713a82e180669e14c98?label=Codacy%20grade&logo=codacy)](https://www.codacy.com/manual/jvalegre/aqme?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=jvalegre/aqme&amp;utm_campaign=Badge_Grade)
+[![lgtm](https://img.shields.io/lgtm/grade/python/github/jvalegre/aqme?label=LGTM%20grade&logo=lgtm)](https://lgtm.com/projects/g/jvalegre/aqme/context:python)
 
 ![Size](https://img.shields.io/github/repo-size/jvalegre/aqme?label=Size)
 ![PyPI](https://img.shields.io/pypi/v/aqme?label=PyPI&logo=pypi)
 ![PyPI Downloads](https://img.shields.io/pypi/dm/aqme?label=PyPI%20downloads&logo=pypi&style=social)
 
-# pyCONFORT
+# Automated Quantum Mechanical Environments (AQME)
 
-Conformer generator followed by generation of com files for Gaussian starting from 1D (SMILES), 2D (CDX) and 3D (sdf,xyz,etc) inputs.
+The code is an ensemble of automated QM workflows that can be run through jupyter notebooks, command lines and yaml files. Some of the most popular workflows include:
+* RDKit- and CREST-based conformer generator leading to ready-to-submit QM input files starting from individual files or SMILES databases
+* post-processing of QM output files to fix convergence errors, extra imaginary frequencies, unfinished jobs, duplicates and error terminations, as well as to detect spin contamination, isomerization issues, and more optimization problems
+* analysis of homogeneity of QM calculations (same level of theory, grid size, program and version, solvation models, etc)
+* generation of xTB, DFT and RDKit descriptors in json and csv files that are ready to use in machine-learning models or used to predict NMR spectra
+* more other useful workflows!
 
-XXX COPY DESCRIPTION FROM INTRO OF PAPER XXX
+## Installation
+1) Installing RDKit and openbabel through conda:
+`conda install -c rdkit rdkit`
+`conda install -c conda-forge openbabel`
 
-
-## Features
-XXX MODIFY BASED ON WHAT WE SAY IN THE PAPER XXX
-Allows for creation of different input files by varying the following:
-1. Level of Theory
-2. Basis Set (accounts for transition metals by invoking genecp)
-2. Basis Set genecp atoms (only one type can be specified as of now)
-3. Solvation
-4. Full optimization vs Single Point Calculations
-5. Automatic submission of QM input files once they are created if run on summit.
-6. Creation of files based on the number of conformers we want to consider (lowest vs energy gap vs all)
-
-Analysis the .log file features (all files are either in the folders /gaussian or /sp):
-1. organizes the log files in each level of theory/ basis set combination into folders namely Finished, Imaginary_frequencies, Failed_Error, Failed_Unfinished
-2. If not Normal termination, the creates a new folder with all .com to re-run.
-3. If all .log files are moved to Finished, the can create new NMR input files.
-
-Analysis for Boltzmann averaging and combining files
-1. Respective files for each molecule are grabbed and outputs for each molecule are written to a .csv files
-2. All the .csv for each molecule are grabbed and all thermodynamic data are written to three different .csv (all data, average data, comparison of lowest vs avg G)
+2) Install AQME and its dependencies
+`pip install aqme`
+or
+`python setup.py install`
 
 ## Requirements
-* Python 3.6, or 3.7 (true?)
+* Python 3
 
-## Conda and PyPI (`pip`)
-- Basic Instructions go here
+## Features and modules
+### CSEARCH
+Module on charge of conformational sampling starting from multiple input types (SMILES, csv, sdf, xyz, etc). Options:
+#### RDKit-based conformational sampling
+Faster sampling, suitable especially for unimolecular systems.
+* RDKit standard sampling
+* Systematic Unbounded Multiple Minimum search (SUMM)
+* FullMonte sampling
+#### CREST-based conformational sampling
+Slower sampling, suitable for all types of systems (including noncovalent complexes and constrained systems such as transition states)
+
+### CMIN
+Module used to refine conformers generated in CSEARCH through new geometry optimizations. Options:
+* xTB (GFN0-xTB, GFN1-xTB, GFN2-xTB, GFN-FF)
+* ANI (ANI-1x, ANI-1ccx, ANI-2x)
+
+### QPREP
+Generator of input files for QM calculations. Options:
+* Gaussian
+* ORCA
+* pySCF (loading parameters in jupyter notebook)
+
+### QCORR
+cclib-based analyzer of output files from multiple QM programs. This module:
+* Separates Normal terminated files with no errors, extra imaginary frequencies, duplicates, isomerization to other systems and spin contamination
+* Automatically generates new com files to "fix" the different issues of the calculations with strategies that are optimal for each type of issue (Gaussian and ORCA)
+* Checks that all the calculations are homogeneous (i.e. using the same level of theory, same grid size, same program and version, solvation model, etc)
+
+### QDESC
+Descriptor generator from multiple input types such as SMILES, log files, xyz, etc. Descriptors generated with:
+* RDKit
+* xTB
+* QM programs (cclib-compatible)
+
+## Quickstart
+There are multiple ready-to-use workflows presented as jupyter notebooks in the 'Example_workflows' folder. Some examples are:
+* QCORR_workflows.ipynb:
+1) Analyze optimized QM ground and transition states and create json files of normally terminated files with no errors, extra imaginary frequencies, duplicates, etc. 
+2) Use json files to generate single-point energy corrections with multiple levels of theory, charge and multiplicity through for loops:
+2a) For Gaussian files, genECP and NBO files containing final extra lines are provided. 
+2b) For ORCA input files, a DLPNO-CCSD(T) example with multiple % sections is provided. 
+2c) For pySCF, a calculation is set with DeepMind 21 (DM21).
 
 ## Extended documentation (installation, use, examples, etc)
+** In process **
 XXX LINK READTHEDOCS WEBPAGE XXX
 
-## Acknowledgements
-go here
-
 ## Reference
-XXX DOI FOR PAPER XXX
+AQME v1.0, Alegre-Requena, J. V.; Sowndarya, S.; Pérez-Soto, R.; Alturaifi, T. M.; Paton, R. S., 2021. https://github.com/jvalegre/aqme

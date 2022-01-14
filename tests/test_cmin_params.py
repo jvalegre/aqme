@@ -57,7 +57,7 @@ def test_confgen_organic(params_file, coordinates, E_cmin, cmin_type):
     assert E_cmin == test_E_cmin
 
     # This returns a 1 if the coordinates are found inside the COM file
-    os.chdir(path_cmin+'/Organic_molecules/MeOH/QMCALC/G16/wb97xd-6-31g(d)')
+    os.chdir(path_cmin+'/Organic_molecules/MeOH/QCALC/G16/wb97xd-6-31g(d)')
     file_cmin = glob.glob('MeOH_*.com')[0]
     coordinates_found = find_coordinates(file_cmin,coordinates)
     assert 1 == coordinates_found

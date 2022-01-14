@@ -17,7 +17,7 @@
 
 # -- Project information -----------------------------------------------------
 
-project = 'pyCONFORT'
+project = 'aqme'
 copyright = '2020, Shree Sowndarya S. V., Juan V. Alegre Requena, Robert S. Paton'
 author = 'Shree Sowndarya S. V., Juan V. Alegre Requena, Robert S. Paton'
 

@@ -6,8 +6,9 @@ import sys
 import os
 import pandas as pd
 import subprocess
+from pathlib import Path
 
-from aqme.utils import move_file_from_folder
+from aqme.utils import move_file
 
 def calculate_db_parameters(qm_files,args,log,w_dir_initial,name_mol,lot,bs):
 
@@ -61,11 +62,11 @@ def calculate_boltz_and_dbstep(val,args,log,name,w_dir,w_dir_initial,lot,bs):
 
     #writing to coorect places
     if str(bs).find('/') > -1:
-        destination = w_dir_initial+'/QPRED/dbstep_parameters/boltz/'+str(lot)+'-'+str(bs).split('/')[0]
+        destination = Path(w_dir_initial+'/QPRED/dbstep_parameters/boltz/'+str(lot)+'-'+str(bs).split('/')[0])
     else:
-        destination = w_dir_initial+'/QPRED/dbstep_parameters/boltz/'+str(lot)+'-'+str(bs)
+        destination = Path(w_dir_initial+'/QPRED/dbstep_parameters/boltz/'+str(lot)+'-'+str(bs))
 
-    move_file_from_folder(destination, os.getcwd(),'Goodvibes_'+name+'.dat')
+    move_file(destination, os.getcwd(),'Goodvibes_'+name+'.dat')
 
     if str(bs).find('/') > -1:
         dbstep_parm_file = w_dir_initial + '/QPRED/dbstep_parameters/all_confs_sterics/'+str(lot)+'-'+str(bs).split('/')[0]+'/'+name+'-all-steric-data.csv'

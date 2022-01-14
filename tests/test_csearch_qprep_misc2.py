@@ -72,7 +72,7 @@ def test_confgen_misc2(folder, smiles, params_file, final_confs_misc2, E_confs, 
         assert str(test_E_round_confs) == str(E_round_confs)
 
         # check number of com files
-        com_files_folder = path_misc2+'/'+folder+'/'+smiles.split('.')[0]+'/QMCALC/G16/wb97xd-6-31g(d)'
+        com_files_folder = path_misc2+'/'+folder+'/'+smiles.split('.')[0]+'/QCALC/G16/wb97xd-6-31g(d)'
         test_com_files = 0
         test_com_files = get_not_empty_files(com_files_folder,test_com_files,'com')
         if smiles == 'Pd_squareplanar_fullm.smi':
@@ -104,7 +104,7 @@ def test_confgen_misc2(folder, smiles, params_file, final_confs_misc2, E_confs, 
 
         if job_type == 'SUMM':
             # extra check to ensure that all the CSEARCH methods start from number 1
-            os.chdir(path_misc2+'/'+folder+'/'+smiles.split('.')[0]+'/QMCALC/G16/wb97xd-6-31g(d)')
+            os.chdir(path_misc2+'/'+folder+'/'+smiles.split('.')[0]+'/QCALC/G16/wb97xd-6-31g(d)')
             starts_in_0 = False
             for file in glob.glob('*.com'):
                 if file.split('.')[0].split('_')[1] == '0' or file.split('.')[0].split('_')[2] == '0':
@@ -135,7 +135,7 @@ def test_confgen_misc2(folder, smiles, params_file, final_confs_misc2, E_confs, 
         outfile.close()
 
         # ensures that the metal is back after QPREP
-        os.chdir(path_misc2+'/'+folder+'/'+smiles.split('.')[0]+'/QMCALC/G16/wb97xd-6-31g(d)')
+        os.chdir(path_misc2+'/'+folder+'/'+smiles.split('.')[0]+'/QCALC/G16/wb97xd-6-31g(d)')
 
         com_name = glob.glob('*.com')[0]
         outlines2 = com_lines(com_name)

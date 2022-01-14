@@ -31,7 +31,7 @@ def test_analysis_dup_sp(folder, smiles, params_file, LoT):
         os.chdir(path_QPREP_syst+'/'+folder+'/'+smiles.split('.')[0])
         subprocess.call(cmd_aqme)
 
-    os.chdir(path_QPREP_syst+'/'+folder+'/'+smiles.split('.')[0]+'/QMCALC/G16/'+LoT)
+    os.chdir(path_QPREP_syst+'/'+folder+'/'+smiles.split('.')[0]+'/QCALC/G16/'+LoT)
     file_com = glob.glob('*.com')[0]
 
     outfile = open(file_com,"r")

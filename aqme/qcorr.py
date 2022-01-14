@@ -5,34 +5,34 @@
 import os
 import sys
 import glob
-from numpy import disp
 import pandas as pd
 import json
 import cclib
 import subprocess
+from pathlib import Path
 
 from aqme.utils import periodic_table
 from aqme.filter import geom_rules_output
 
 from aqme.utils import (
-    move_file,
-    get_info_com,
+	move_file,
     Logger,
     load_from_yaml,
     check_isomerization,
     read_file,
-    output_to_mol,
     cclib_atoms_coords,
 )
+
 from aqme.qprep import qprep
 from aqme.argument_parser import set_options
 
 
-def check_for_final_folder(w_dir):
+def check_run(w_dir):
 	"""
 	# Determines the folder where input files are gonna be generated in QCORR.
 	"""
-	input_folder = w_dir+'/fixed_QM_input_files'
+
+	input_folder = w_dir+'/unsuccessful_QM_outputs/fixed_QM_inputs'
 	folder_count = 0
 	
 	if os.path.exists(input_folder):
@@ -41,12 +41,7 @@ def check_for_final_folder(w_dir):
 			if folder.find('run_') > -1:
 				folder_count += 1
 
-	if folder_count == 0:
-		return 0
-	else:
-		num_com_folder = sum([len(d) for r, d, folder in os.walk(w_dir+'/fixed_QM_input_files')])
-		w_dir = w_dir+'/fixed_QM_input_files/run_'+str(num_com_folder)
-		return folder_count
+	return folder_count
 
 
 class qcorr():
@@ -61,6 +56,8 @@ class qcorr():
 		Round of analysis from QCORR
 	w_dir_main : str
 		Working directory
+	dup_threshold : float
+		Energy (in hartree) used as the energy difference in E, H and G to detect duplicates
 	mem : str
 		Memory used in the calculations
 	nprocs : int
@@ -98,7 +95,7 @@ class qcorr():
 		Specify any arguments from the QCORR module
 	"""
 	
-	def __init__(self, qm_files=[], round_num=0, w_dir_main=os.getcwd(), 
+	def __init__(self, qm_files=[], round_num=0, w_dir_main=Path(os.getcwd()), dup_threshold=0.0001,
 				mem='', nprocs=0, chk=False, yaml_file=None, qm_input='', s2_threshold=10.0,
 				bs_gen='', bs='', gen_atoms=[], qm_end='', amplitude_ifreq=0.2,
 				ifreq_cutoff=0.0, fullcheck=False, author='', program='gaussian', **kwargs):
@@ -110,7 +107,8 @@ class qcorr():
 					self.qm_files.append(new_file)
 		else:
 			self.qm_files = qm_files
-		self.w_dir_main = w_dir_main
+		self.w_dir_main = Path(w_dir_main)
+		self.dup_threshold = dup_threshold
 		self.mem = mem
 		self.nprocs = nprocs
 		self.chk = chk
@@ -121,11 +119,7 @@ class qcorr():
 		self.fullcheck = fullcheck
 		self.bs_gen = bs_gen
 		self.bs = bs
-		if gen_atoms != []:
-			gen_atoms_list = gen_atoms.split(',')
-			self.gen_atoms = gen_atoms_list
-		else:
-			self.gen_atoms = gen_atoms
+		self.gen_atoms = gen_atoms
 		self.qm_end = qm_end
 		self.author = author
 		self.program = program
@@ -144,16 +138,18 @@ class qcorr():
 		self.round_num = round_num 
 
 		# start a log file to track the QCORR module
-		if not os.path.isdir(self.w_dir_main+'/dat_files/'):
-			os.makedirs(self.w_dir_main+'/dat_files/')
-		self.log = Logger(self.w_dir_main+'/dat_files/pyCONFORT',f'QCORR-run_{str(self.round_num)}')
-		self.log.write("\no  Analyzing output files in {}\n".format(self.w_dir_main))
+		self.log = Logger(self.w_dir_main / 'QCORR-run',f'{str(self.round_num)}')
+		self.log.write(f"\no  Analyzing output files in {self.w_dir_main}\n")
 		
 		if len(qm_files) == 0:
 			self.log.write('x  There are no output files in this folder.')
 			sys.exit('x  There are no output files in this folder.')
+
 		self.qcorr_processing()
 
+		self.log.finalize()
+		move_file(self.w_dir_main.joinpath('dat_files/'), self.w_dir_main,f'QCORR-run_{str(self.round_num)}.dat')
+		
 
 	def qcorr_processing(self):
 		"""
@@ -169,7 +165,9 @@ class qcorr():
 		file_terms = {'finished': 0, 'extra_imag_freq': 0, 'ts_no_imag_freq': 0, 
 			'spin_contaminated': 0, 'duplicate_calc': 0, 'atom_error': 0,
 			'scf_error': 0, 'before_E_error': 0, 'not_specified': 0,
-			'geom_rules_qcorr': 0, 'check_geom_qcorr': 0}   
+			'geom_rules_qcorr': 0, 'isomerized': 0}   
+		
+		E_dup_list, H_dup_list, G_dup_list = [],[],[]
 
 		for file in self.qm_files:
 
@@ -194,7 +192,7 @@ class qcorr():
 			
 			keywords_line,calc_type,mem,nprocs,qm_program,author,qm_solv,qm_emp = self.get_init_info(outlines)
 
-			grid_size,s2_operator,level_of_theory = self.grid_s2_info(outlines,qm_program)
+			grid_size,s2_operator,s2_preannhi,level_of_theory = self.grid_s2_info(outlines,qm_program)
 
 			# determine error/unfinished vs normal terminations
 			try:
@@ -210,11 +208,16 @@ class qcorr():
 				
 				# spin contamination analysis using user-defined thresholds
 				unpaired_e = mult-1
-				spin = unpaired_e*0.5
-				s2_expected_value = spin*(spin+1)
-				spin_diff = abs(float(s2_operator)-s2_expected_value)
-				if spin_diff > abs(self.s2_threshold/100)*s2_expected_value:
-					errortype = 'spin_contaminated'
+				# this first part accounts for singlet diradicals (threshold is 10% of the spin before annihilation)
+				if unpaired_e != 0 and s2_operator != 0:
+					if s2_operator > abs(self.s2_threshold/100)*s2_preannhi:
+						errortype = 'spin_contaminated'
+				else:
+					spin = unpaired_e*0.5
+					s2_expected_value = spin*(spin+1)
+					spin_diff = abs(float(s2_operator)-s2_expected_value)
+					if spin_diff > abs(self.s2_threshold/100)*s2_expected_value:
+						errortype = 'spin_contaminated'
 
 			except (AttributeError,KeyError):
 				try:
@@ -234,41 +237,66 @@ class qcorr():
 
 			# use very short reversed loop to find basis set incompatibilities
 			if termination == 'other' and errortype == 'not_specified':
+				error_calc = False
 				for i in reversed(range(len(outlines)-15,len(outlines))):
-					if outlines[i].find("Error termination") > -1:
-						if outlines[i-1].find("Atomic number out of range") > -1 or outlines[i-1].find("basis sets are only available") > -1:
-							errortype = "atomicbasiserror"	
+					if outlines[i].find('Error termination') > -1:
+						error_calc = True
+					if error_calc:
+						if outlines[i-1].find('Atomic number out of range') > -1 or outlines[i-1].find('basis sets are only available') > -1:
+							errortype = 'atomicbasiserror'
+							break	
+						if outlines[i].find('SCF Error') > -1:
+							errortype = 'SCFerror'
 							break
 
 			# check for undesired imaginary freqs and data used by GoodVibes
 			if termination == 'normal':
-				symmno,point_group,roconst,rotemp = self.symm_rot_data(outlines,qm_program)
-				
-				if errortype != 'spin_contaminated':
-					initial_ifreqs = 0
-					for freq in freqs:
-						if float(freq) < 0 and abs(float(freq)) > abs(self.ifreq_cutoff):
-							initial_ifreqs += 1
+				# in eV, converted to hartree using the conversion factor from cclib
+				E_dup = cclib_data['properties']['energy']['total']
+				E_dup = E_dup/27.21138505
+				# in hartree
+				H_dup = cclib_data['properties']['enthalpy']
+				G_dup = cclib_data['properties']['energy']['free energy']
 
-					# exclude TS imag frequency
-					if calc_type == 'transition_state':
-						initial_ifreqs -= 1
+				# detects if this calculation is a duplicate
+				for i,_ in enumerate(E_dup_list):
+					if abs(E_dup - E_dup_list[i]) < abs(self.dup_threshold):
+						if abs(H_dup - H_dup_list[i]) < abs(self.dup_threshold):
+							if abs(G_dup - G_dup_list[i]) < abs(self.dup_threshold):                        
+								errortype = 'duplicate_calc'
 
-					# gives new coordinates by displacing the normal mode(s) of the negative freq(s)
-					if initial_ifreqs > 0:
-						errortype = 'extra_imag_freq'
-						atom_types,cartesians = cclib_atoms_coords(cclib_data)
-						cartesians = self.fix_imag_freqs(n_atoms, cartesians, freqs, freq_displacements, calc_type)
+				if errortype != 'duplicate_calc': 
+					E_dup_list.append(E_dup)
+					H_dup_list.append(H_dup)
+					G_dup_list.append(G_dup)
 
-						qcorr_calcs = qprep(destination=f'{os.getcwd()}/qm_input/run_{self.round_num}',
-											molecule=file_name, charge=charge, mult=mult,
-											program=self.program, atom_types=atom_types,
-											cartesians=cartesians, qm_input=keywords_line,
-											mem=mem, nprocs=nprocs, chk=self.chk, qm_end=self.qm_end,
-											bs_gen=self.bs_gen, bs=self.bs, gen_atoms=self.gen_atoms)
+					symmno,point_group,roconst,rotemp = self.symm_rot_data(outlines,qm_program)
+					
+					if errortype != 'spin_contaminated':
+						initial_ifreqs = 0
+						for freq in freqs:
+							if float(freq) < 0 and abs(float(freq)) > abs(self.ifreq_cutoff):
+								initial_ifreqs += 1
 
-					elif initial_ifreqs < 0:
-						errortype = 'ts_no_imag_freq'
+						# exclude TS imag frequency
+						if calc_type == 'transition_state':
+							initial_ifreqs -= 1
+
+						# gives new coordinates by displacing the normal mode(s) of the negative freq(s)
+						if initial_ifreqs > 0:
+							errortype = 'extra_imag_freq'
+							atom_types,cartesians = cclib_atoms_coords(cclib_data)
+							cartesians = self.fix_imag_freqs(n_atoms, cartesians, freqs, freq_displacements, calc_type)
+
+							qcorr_calcs = qprep(destination=Path(f'{os.getcwd()}/unsuccessful_QM_outputs/run_{self.round_num}/fixed_QM_inputs'), w_dir_main=self.w_dir_main,
+												molecule=file_name, charge=charge, mult=mult,
+												program=self.program, atom_types=atom_types,
+												cartesians=cartesians, qm_input=keywords_line,
+												mem=mem, nprocs=nprocs, chk=self.chk, qm_end=self.qm_end,
+												bs_gen=self.bs_gen, bs=self.bs, gen_atoms=self.gen_atoms)
+
+						elif initial_ifreqs < 0:
+							errortype = 'ts_no_imag_freq'
 
 			# for calcs with finished OPT but no freqs
 			elif termination != 'normal' and errortype not in ['ts_no_imag_freq','atomicbasiserror','before_E_error']:
@@ -288,10 +316,19 @@ class qcorr():
 				else:
 					# helps to fix SCF convergence errors
 					if errortype == 'SCFerror':
-						if keywords_line.find(' scf=qc') > -1:
-							pass
+						print('COSSA')
+						if keywords_line.find(' scf=xqc') > -1 or keywords_line.find(' scf=qc') > -1:
+							new_keywords_line = ''
+							for keyword in keywords_line.split():
+								print(keyword)
+								if keyword == 'scf=xqc':
+									keyword = 'scf=qc'
+								new_keywords_line += keyword
+								new_keywords_line += ' '
+							keywords_line = new_keywords_line
+								
 						else:
-							keywords_line += ' scf=qc'
+							keywords_line += ' scf=xqc'
 					
 					if errortype in ['not_specified','SCFerror']:
 						RMS_forces = [row[1] for row in cclib_data['optimization']['geometric values']]
@@ -313,8 +350,8 @@ class qcorr():
 									atom_types.append(atom_symbol)
 									cartesians.append([float(outlines[j].split()[3]), float(outlines[j].split()[4]), float(outlines[j].split()[5])])
 								break
-					
-				qcorr_calcs = qprep(destination=f'{os.getcwd()}/qm_input/run_{self.round_num}',
+				
+				qcorr_calcs = qprep(destination=Path(f'{os.getcwd()}/unsuccessful_QM_outputs/run_{self.round_num}/fixed_QM_inputs'), w_dir_main=self.w_dir_main,
 							molecule=file_name, charge=charge, mult=mult,
 							program=self.program, atom_types=atom_types,
 							cartesians=cartesians, qm_input=keywords_line,
@@ -350,8 +387,8 @@ class qcorr():
 			if termination == 'normal':
 				aqme_data['AQME data']['symmetry number'] = symmno
 				aqme_data['AQME data']['point group'] = point_group
-				aqme_data['AQME data']['rotational constant'] = roconst
-				aqme_data['AQME data']['rotational temperature'] = rotemp
+				aqme_data['AQME data']['rotational constants'] = roconst
+				aqme_data['AQME data']['rotational temperatures'] = rotemp
 			
 			# update and move the json files to their corresponding destination
 			with open(file_name+'.json', "r+") as json_file:
@@ -361,18 +398,14 @@ class qcorr():
 				json.dump(data, json_file, indent=4, separators=(", ", ": "))
 
 			
-			destination_json = destination+'json_files/'
-			if not os.path.isdir(destination_json):
-				os.makedirs(destination_json)
-			move_file(file_name+'.json', self.w_dir_main, destination_json)
+			destination_json = destination.joinpath('json_files/')
+			move_file(destination_json, self.w_dir_main, file_name+'.json')
 
 			
 	# make a function for self.fullcheck que te chequee todo:
 	# *funcion check dentro de qcorr aparte*
 	# 	mismo grid size
 	# 	no spin contamination
-	# 	no isomeriz
-	# 	no dups
 	# 	same solvent
 	# 	same disp
 	# 	same leveloftheory
@@ -387,7 +420,7 @@ class qcorr():
 	# 				try:
 	# 					atoms_com, coords_com, atoms_and_coords = [],[],[]
 	# 					if self.round_num != 0:
-	# 						folder_dir_isom = self.w_dir_main +'/fixed_QM_input_files/run_'+str(self.round_num)
+	# 						folder_dir_isom = self.w_dir_main +'/fixed_QM_inputs_files/run_'+str(self.round_num)
 	# 					else:
 	# 						pass
 	# 					if self.args.isom == 'com':
@@ -461,7 +494,7 @@ class qcorr():
 
 		end_keywords,keywords_line,author = False,'',''
 		mem,nprocs,qm_program,skip_lines = '',0,'',0
-		qm_solv,qm_emp = 'gas_phase','no_dispersion'
+		qm_solv,qm_emp = 'gas_phase','none'
 		orca_solv_1, orca_solv_2, orca_solv_3 = 'gas phase','',''
 		
 		for i in range(0,len(outlines)):
@@ -622,7 +655,6 @@ class qcorr():
 
 				elif outlines[i].strip().startswith('Full point group'):
 					point_group = outlines[i].strip().split()[3]
-					break
 
 				elif outlines[i].strip().startswith('Rotational constants (GHZ):'):
 					try:
@@ -643,7 +675,9 @@ class qcorr():
 					except ValueError:
 						if outlines[i].strip().find('********'):
 							rotemp = [float(outlines[i].strip().split()[4]), float(outlines[i].strip().split()[5])]
-	
+				if point_group != '' and symmno != '' and roconst != [] and rotemp != []:
+					break
+
 		return symmno,point_group,roconst,rotemp
 
 
@@ -669,7 +703,7 @@ class qcorr():
 			Functional and basis set used in the QM calculations
 		"""  
 
-		grid_size,s2_operator,level_of_theory = '',0,''
+		grid_size,s2_operator,s2_preannhi,s2_found,level_of_theory = '',0,0,False,''
 		grid_lookup = {1: 'sg1', 2: 'coarse', 4: 'fine', 5: 'ultrafine', 7: 'superfine'}
 		found_theory,level,bs = False,'',''
 		line_options = ['\\Freq\\','\\SP\\']
@@ -680,8 +714,10 @@ class qcorr():
 				if outlines[i].strip().startswith('ExpMin='):
 					IRadAn = int(outlines[i].strip().split()[-3])
 					grid_size = grid_lookup[IRadAn]
-				elif outlines[i].find('S**2 before annihilation') > -1:
+				elif outlines[i].find('S**2 before annihilation') > -1 and not s2_found:
 					s2_operator = float(outlines[i].strip().split()[-1])
+					s2_preannhi = float(outlines[i].strip().split()[-3][:-1])
+					s2_found = True
 
 				# get functional and basis set
 				if not found_theory:
@@ -716,7 +752,11 @@ class qcorr():
 			if grid_size != '':
 				break
 
-		return grid_size,s2_operator,level_of_theory
+		# designed to detect G4 calcs
+		if level_of_theory == 'HF/GFHFB2':
+			level_of_theory = 'G4'
+
+		return grid_size,s2_operator,s2_preannhi,level_of_theory
 
 
 	def fix_imag_freqs(self, n_atoms, cartesians, freqs, freq_displacements, calc_type):
@@ -793,50 +833,48 @@ class qcorr():
 		"""
 		
 		if errortype == 'none' and termination == "normal":
-			destination = self.w_dir_main+'/successful_QM_outputs/'
+			destination = self.w_dir_main.joinpath('successful_QM_outputs/')
 			file_terms['finished'] += 1
 
 		elif errortype == 'extra_imag_freq':
-			destination = self.w_dir_main+'/failed/run_'+str(self.round_num)+'/extra_imag_freq/'
+			destination = self.w_dir_main.joinpath(f'unsuccessful_QM_outputs/run_{self.round_num}/extra_imag_freq/')
 			file_terms['extra_imag_freq'] += 1
 
 		elif errortype == 'ts_no_imag_freq':
-			destination = self.w_dir_main+'/failed/run_'+str(self.round_num)+'/ts_no_imag_freq/'
+			destination = self.w_dir_main.joinpath(f'unsuccessful_QM_outputs/run_{self.round_num}/ts_no_imag_freq/')
 			file_terms['ts_no_imag_freq'] += 1
 
 		elif errortype == 'spin_contaminated':
-			destination = self.w_dir_main+'/failed/run_'+str(self.round_num)+'/spin_contaminated/'
+			destination = self.w_dir_main.joinpath(f'unsuccessful_QM_outputs/run_{self.round_num}/spin_contaminated/')
 			file_terms['spin_contaminated'] += 1
 
 		elif errortype == 'duplicate_calc':
-			destination = self.w_dir_main+'/duplicates/run_'+str(self.round_num)+'/'
+			destination = self.w_dir_main.joinpath(f'unsuccessful_QM_outputs/run_{self.round_num}/duplicates/')
 			file_terms['duplicate_calc'] += 1
 
 		elif errortype == "atomicbasiserror":
-			destination = self.w_dir_main +'/failed/run_'+str(self.round_num)+'/error/basis_set_error/'
+			destination = self.w_dir_main.joinpath(f'unsuccessful_QM_outputs/run_{self.round_num}/error/basis_set_error/')
 			file_terms['atom_error'] += 1
 		elif errortype == "SCFerror":
-			destination = self.w_dir_main+'/failed/run_'+str(self.round_num)+'/error/scf_error/'
+			destination = self.w_dir_main.joinpath(f'unsuccessful_QM_outputs/run_{self.round_num}/error/scf_error/')
 			file_terms['scf_error'] += 1
 		elif errortype == "before_E_calculation":
-			destination = self.w_dir_main+'/failed/run_'+str(self.round_num)+'/error/before_E_calculation/'
+			destination = self.w_dir_main.joinpath(f'unsuccessful_QM_outputs/run_{self.round_num}/error/before_E_calculation/')
 			file_terms['before_E_error'] += 1
 
 		elif errortype == 'fail_geom_rules':
-			destination = self.w_dir_main+'/failed/run_'+str(self.round_num)+'/geom_rules_filter/'
+			destination = self.w_dir_main.joinpath(f'unsuccessful_QM_outputs/run_{self.round_num}/geom_rules_filter/')
 			file_terms['geom_rules_qcorr'] += 1
 
 		elif errortype == 'isomerization':
-			destination = self.w_dir_main+'/failed/run_'+str(self.round_num)+'/isomerization/'
-			file_terms['check_geom_qcorr'] += 1
+			destination = self.w_dir_main.joinpath(f'unsuccessful_QM_outputs/run_{self.round_num}/isomerization/')
+			file_terms['isomerized'] += 1
 
 		else:
-			destination = self.w_dir_main+'/failed/run_'+str(self.round_num)+'/error/not_specified_error/'
+			destination = self.w_dir_main.joinpath(f'unsuccessful_QM_outputs/run_{self.round_num}/error/not_specified_error/')
 			file_terms['not_specified'] += 1
 		
-		if not os.path.isdir(destination):
-			os.makedirs(destination)
-		move_file(file, self.w_dir_main, destination)
+		# move_file(destination, self.w_dir_main, file)
 
 		return file_terms,destination
 
@@ -845,6 +883,7 @@ class qcorr():
 		"""
 		Write information about the QCORR analysis in a csv
 		"""
+
 		ana_data = pd.DataFrame()
 		ana_data.at[0,'Total files'] = len(self.qm_files)
 		ana_data.at[0,'Normal termination'] = file_terms['finished']
@@ -861,14 +900,13 @@ class qcorr():
 		if len(self.args.geom_rules) >= 1:
 			ana_data.at[0,'geom_rules filter'] = file_terms['geom_rules_qcorr']
 		if self.args.isom != None:
-			ana_data.at[0,'Isomerization'] = file_terms['check_geom_qcorr']
+			ana_data.at[0,'Isomerization'] = file_terms['isomerized']
+		path_as_str = self.w_dir_main.as_posix()
+		ana_data.to_csv(path_as_str+f'/QCORR-run_{self.round_num}-stats.csv',index=False)
 
-		if not os.path.isdir(self.w_dir_main+'/csv_files/'):
-			os.makedirs(self.w_dir_main+'/csv_files/')
-		ana_data.to_csv(self.w_dir_main+'/csv_files/Analysis-Data-QCORR-run_'+str(self.round_num)+'.csv',index=False)
+		move_file(self.w_dir_main.joinpath('dat_files/'), self.w_dir_main,f'QCORR-run_{self.round_num}-stats.csv')
 
-
-def json2input(json_files=[], source=os.getcwd(), destination=os.getcwd(), suffix='', charge=None, mult=None,
+def json2input(json_files=[], source=Path(os.getcwd()), destination=os.getcwd(), suffix='', charge=None, mult=None,
 				mem='8GB', nprocs=4, chk=False, yaml_file=None, qm_input='', bs_gen='', 
 				bs='', gen_atoms=[], qm_end='', program='gaussian'):
 	'''
@@ -912,7 +950,7 @@ def json2input(json_files=[], source=os.getcwd(), destination=os.getcwd(), suffi
 		Specify any arguments from the QCORR module
 	'''
 	
-	w_dir_main=os.getcwd()
+	w_dir_main=Path(os.getcwd())
 
 	os.chdir(source)
 
@@ -939,7 +977,7 @@ def json2input(json_files=[], source=os.getcwd(), destination=os.getcwd(), suffi
 		elif mult == None:
 			print('x  No multiplicity was specified in the json file or function input (i.e. json2input(mult=1) )')
 		
-		json_calcs = qprep(destination=destination,
+		json_calcs = qprep(destination=destination, w_dir_main=source,
 					molecule=file_name, charge=charge, mult=mult,
 					program=program, atom_types=atom_types,
 					cartesians=cartesians, qm_input=qm_input,

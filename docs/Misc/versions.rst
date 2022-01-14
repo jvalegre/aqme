@@ -5,4 +5,4 @@ Versions
 ========
 
 Version 1.0.0
-   - First release of pyCONFORT!
+   - First release of aqme!

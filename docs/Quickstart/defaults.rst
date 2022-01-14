@@ -4,7 +4,7 @@
 Default and Required Parameters
 ===============================
 
-This documents details the default parameters used in the ``pyCONFORT`` program.
+This documents details the default parameters used in the ``aqme`` program.
 
 .. contents::
 
@@ -25,7 +25,7 @@ Output Parameters
   prefix : False # if prefix : True, set a generic name for the different molecules (i.e. comp_1, comp_2, etc)
 
   # OUTPUT FILE NAMES
-  output_name : 'output' #Change output filename to pyCONFORT_\"output\".dat
+  output_name : 'output' #Change output filename to aqme_\"output\".dat
 
 
 Options

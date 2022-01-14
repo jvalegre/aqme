@@ -4,7 +4,7 @@
 Requirements
 ============
 
-The following packages would be required for successfully running ``pyCONFORT``!
+The following packages would be required for successfully running ``aqme``!
 
 python
 ------

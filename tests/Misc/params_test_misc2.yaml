@@ -1,6 +1,6 @@
 # INPUT FILE
 input : 'pentane.smi' # input files
-# TYPE OF pyCONFORT JOBS
+# TYPE OF aqme JOBS
 verbose : True
 
 # (1) CONFORMERS AND COM FILES GENERATION

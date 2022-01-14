@@ -1,0 +1,280 @@
+{
+    "chemical json": 0, 
+    "name": "MeOH_SCF_error", 
+    "smiles": "CO\tMeOH_SCF_error.log\r\n", 
+    "inchi": "InChI=1S/CH4O/c1-2/h2H,1H3\n", 
+    "inchikey": "OKKJLVBELUTLKV-UHFFFAOYSA-N\n", 
+    "formula": "CH4O", 
+    "properties": {
+        "partial charges": {
+            "mulliken": [
+                -0.325548, 
+                0.196294, 
+                0.203889, 
+                0.16057, 
+                -0.57563, 
+                0.340425
+            ]
+        }, 
+        "charge": 0, 
+        "orbitals": {
+            "homos": [
+                8
+            ], 
+            "energies": [
+                [
+                    -517.13060376721, 
+                    -276.14548930900804, 
+                    -27.2682568447545, 
+                    -18.6738129905625, 
+                    -13.3937158354605, 
+                    -12.1332844799445, 
+                    -11.3817060248635, 
+                    -8.0733458304845, 
+                    -6.5201199718305, 
+                    2.7320230590200003, 
+                    4.4838920285390005, 
+                    5.1372373835895, 
+                    5.894530229531, 
+                    6.489915334425, 
+                    18.8996674864775, 
+                    19.536686010498002, 
+                    20.062409969664003, 
+                    26.5444340024245, 
+                    27.647855666202002, 
+                    28.522701695559498, 
+                    30.186133663666002, 
+                    41.693012059759496, 
+                    43.4775346913385, 
+                    45.4443736027525, 
+                    48.373679203385, 
+                    81.0363210204515
+                ]
+            ], 
+            "molecular orbital symmetry": [
+                [
+                    "A", 
+                    "A", 
+                    "A", 
+                    "A", 
+                    "A", 
+                    "A", 
+                    "A", 
+                    "A", 
+                    "A", 
+                    "A", 
+                    "A", 
+                    "A", 
+                    "A", 
+                    "A", 
+                    "A", 
+                    "A", 
+                    "A", 
+                    "A", 
+                    "A", 
+                    "A", 
+                    "A", 
+                    "A", 
+                    "A", 
+                    "A", 
+                    "A", 
+                    "A"
+                ]
+            ], 
+            "basis number": 26, 
+            "MO number": 26
+        }, 
+        "total dipole moment": 1.9206120300570855, 
+        "multiplicity": 1, 
+        "number of atoms": 6, 
+        "energy": {
+            "alpha": {
+                "homo": -6.5201199718305, 
+                "gap": 9.252143030850501
+            }, 
+            "beta": {
+                "homo": -6.5201199718305, 
+                "gap": 9.252143030850501
+            }, 
+            "total": -3131.3117723718547
+        }, 
+        "molecular mass": 32.04186
+    }, 
+    "atoms": {
+        "coords": {
+            "3d": [
+                -0.682128, 
+                -0.019857, 
+                0.000471, 
+                -1.080382, 
+                0.997059, 
+                -0.00806, 
+                -1.068519, 
+                -0.544208, 
+                -0.889188, 
+                -1.069294, 
+                -0.53149, 
+                0.894744, 
+                0.769518, 
+                0.124021, 
+                -7e-05, 
+                1.154821, 
+                -0.794383, 
+                0.000244
+            ]
+        }, 
+        "elements": {
+            "number": [
+                6, 
+                1, 
+                1, 
+                1, 
+                8, 
+                1
+            ], 
+            "atom count": 6, 
+            "heavy atom count": 2
+        }, 
+        "core electrons": [
+            0, 
+            0, 
+            0, 
+            0, 
+            0, 
+            0
+        ]
+    }, 
+    "optimization": {
+        "geometric targets": [
+            0.00045, 
+            0.0003, 
+            0.0018, 
+            0.0012
+        ], 
+        "geometric values": [
+            [
+                0.081862, 
+                0.024098, 
+                0.149323, 
+                0.070025
+            ], 
+            [
+                0.006252, 
+                0.002688, 
+                0.070911, 
+                0.038781
+            ], 
+            [
+                0.001355, 
+                0.000736, 
+                0.124362, 
+                0.065848
+            ], 
+            [
+                0.005637, 
+                0.001833, 
+                0.04513, 
+                0.024733
+            ], 
+            [
+                0.004222, 
+                0.001345, 
+                0.025279, 
+                0.014375
+            ], 
+            [
+                0.001024, 
+                0.000312, 
+                0.003318, 
+                0.00189
+            ]
+        ], 
+        "status": [
+            1, 
+            0, 
+            0, 
+            0, 
+            0, 
+            0
+        ], 
+        "scf": {
+            "scf energies": [
+                -3131.0111872219654, 
+                -3131.276200152691, 
+                -3131.2935361179357, 
+                -3131.307169593285, 
+                -3131.3103457605707, 
+                -3131.3117723718547
+            ], 
+            "targets": [
+                [
+                    1e-08, 
+                    1e-06, 
+                    1e-06
+                ], 
+                [
+                    1e-08, 
+                    1e-06, 
+                    1e-06
+                ], 
+                [
+                    1e-08, 
+                    1e-06, 
+                    1e-06
+                ], 
+                [
+                    1e-08, 
+                    1e-06, 
+                    1e-06
+                ], 
+                [
+                    1e-08, 
+                    1e-06, 
+                    1e-06
+                ], 
+                [
+                    1e-08, 
+                    1e-06, 
+                    1e-06
+                ]
+            ]
+        }
+    }, 
+    "bonds": {
+        "connections": {
+            "index": [
+                2, 
+                0, 
+                1, 
+                0, 
+                4, 
+                5, 
+                4, 
+                0, 
+                0, 
+                3
+            ]
+        }, 
+        "order": [
+            1, 
+            1, 
+            1, 
+            1, 
+            1
+        ]
+    }, 
+    "diagram": "<?xml version=\"1.0\"?>\n<svg version=\"1.1\" id=\"topsvg\"\nxmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\"\nxmlns:cml=\"http://www.xml-cml.org/schema\" x=\"0\" y=\"0\" width=\"200px\" height=\"200px\" viewBox=\"0 0 100 100\">\n<title>MeOH_SCF_error.log - Open Babel Depiction</title>\n<rect x=\"0\" y=\"0\" width=\"100\" height=\"100\" fill=\"white\"/>\n<g transform=\"translate(0,0)\">\n<svg width=\"100\" height=\"100\" x=\"0\" y=\"0\" viewBox=\"0 0 180 154.641\"\nfont-family=\"sans-serif\" stroke=\"rgb(0,0,0)\" stroke-width=\"2\"  stroke-linecap=\"round\">\n<line x1=\"76.6\" y1=\"88.1\" x2=\"100.0\" y2=\"74.6\" opacity=\"1.0\" stroke=\"rgb(0,0,0)\"  stroke-width=\"2.0\"/>\n<line x1=\"127.0\" y1=\"74.6\" x2=\"100.0\" y2=\"74.6\" opacity=\"1.0\" stroke=\"rgb(0,0,0)\"  stroke-width=\"2.0\"/>\n<line x1=\"67.0\" y1=\"40.0\" x2=\"53.0\" y2=\"40.0\" opacity=\"1.0\" stroke=\"rgb(0,0,0)\"  stroke-width=\"2.0\"/>\n<line x1=\"86.5\" y1=\"51.3\" x2=\"100.0\" y2=\"74.6\" opacity=\"1.0\" stroke=\"rgb(0,0,0)\"  stroke-width=\"2.0\"/>\n<line x1=\"100.0\" y1=\"74.6\" x2=\"100.0\" y2=\"101.6\" opacity=\"1.0\" stroke=\"rgb(0,0,0)\"  stroke-width=\"2.0\"/>\n<text x=\"134.000000\" y=\"82.641016\" fill=\"rgb(191,191,191)\" stroke-width=\"0\" font-weight=\"bold\" font-size=\"16\" >H</text>\n<text x=\"59.358984\" y=\"102.641016\" fill=\"rgb(191,191,191)\" stroke-width=\"0\" font-weight=\"bold\" font-size=\"16\" >H</text>\n<text x=\"94.000000\" y=\"122.641016\" fill=\"rgb(191,191,191)\" stroke-width=\"0\" font-weight=\"bold\" font-size=\"16\" >H</text>\n<text x=\"74.000000\" y=\"48.000000\" fill=\"rgb(255,12,12)\" stroke-width=\"0\" font-weight=\"bold\" font-size=\"16\" >O</text>\n<text x=\"34.000000\" y=\"48.000000\" fill=\"rgb(191,191,191)\" stroke-width=\"0\" font-weight=\"bold\" font-size=\"16\" >H</text>\n</svg>\n</g>\n<text font-size=\"18.000000\" fill =\"black\" font-family=\"sans-serif\"\nx=\"10.000000\" y=\"20.000000\" >MeOH_SCF_error.log</text>\n</svg>\n", 
+    "AQME data": {
+        "keywords line": "opt freq=noraman b3lyp/3-21g scf=qc ", 
+        "calculation type": "ground_state", 
+        "memory": "8GB", 
+        "number of procs": 4, 
+        "QM program": "Gaussian 09, Revision A.02,", 
+        "author": "", 
+        "solvation": "gas_phase", 
+        "dispersion": "none", 
+        "grid": "sg1", 
+        "<S**2>": 0, 
+        "level of theory": ""
+    }
+}

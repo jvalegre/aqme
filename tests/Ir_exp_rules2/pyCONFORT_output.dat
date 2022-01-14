@@ -1,5 +1,5 @@
 
-o  Importing pyCONFORT parameters from params_Ir_geom_rules_test_cdx.yaml
+o  Importing aqme parameters from params_Ir_geom_rules_test_cdx.yaml
 o  RESET input from   to Ir_4.cdx
 o  RESET verbose from False to True
 o  RESET CSEARCH from None to rdkit
@@ -35,5 +35,5 @@ o  4 unique conformers remain
 
    ----- Applying experimental rules to write the new confs file -----
 
-o  Preparing QM input files in QMCALC/G16/wb97xd-6-31g(d)
+o  Preparing QM input files in QCALC/G16/wb97xd-6-31g(d)
    -> Converting from comp0__rdkit_filter_geom_rules.sdf

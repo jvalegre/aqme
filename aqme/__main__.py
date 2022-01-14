@@ -13,7 +13,7 @@ from aqme import aqme
 # This allows the usage python pip-*.whl/pip install pip-*.whl
 
 if __package__ != 'aqme':
-    print('pyCONFORT is not installed! Use: pip install aqme (anywhere, using a terminal) or python setup.py install (from the downloaded /pyCONFORT/aqme folder).')
+    print('aqme is not installed! Use: pip install aqme (anywhere, using a terminal) or python setup.py install (from the downloaded /aqme/aqme folder).')
 
 if __name__ == '__main__':
     aqme.main()

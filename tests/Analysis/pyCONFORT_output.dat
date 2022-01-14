@@ -1,5 +1,5 @@
 
-o  Importing pyCONFORT parameters from params_QCORR_test.yaml
+o  Importing aqme parameters from params_QCORR_test.yaml
 o  RESET verbose from False to True
 o  RESET QCORR from None to gaussian
 o  RESET dup from False to True

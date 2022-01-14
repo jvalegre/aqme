@@ -10,7 +10,7 @@ import sys
 import glob
 import pandas as pd
 from rdkit import Chem
-from aqme.utils import load_from_yaml, Logger
+from aqme.utils import load_from_yaml, Logger, move_file
 from aqme.argument_parser import set_options
 from openbabel import pybel
 from pathlib import Path
@@ -25,55 +25,59 @@ class qprep:
 	Parameters
 	----------
 	mol : mol object with 3D coordinates
-																																																																																																																																	Optionally, starts from a mol object to prepare the input QM file
+		Optionally, starts from a mol object to prepare the input QM file
+	w_dir_main : str
+		Working directory
 	destination : str
-																																																																																																																																	Directory to create the input file
+		Directory to create the input file
 	molecule : str
-																																																																																																																																	Name of the input file (without the extension i.e. NAME for NAME.com)
+		Name of the input file (without the extension i.e. NAME for NAME.com)
 	charge : int
-																																																																																																																																	Charge of the calculations used in the following input files
+		Charge of the calculations used in the following input files
 	mult : int
-																																																																																																																																	Multiplicity of the calculations used in the following input files
+		Multiplicity of the calculations used in the following input files
 	chk : bool
-																																																																																																																																	True to include the initial %chk line in Gaussian
+		True to include the initial %chk line in Gaussian
 	mem : str
-																																																																																																																																	Memory used in the input file. Formats: GB, MB or MW (i.e. 4GB, 800MB or 16MW).
+		Memory used in the input file. Formats: GB, MB or MW (i.e. 4GB, 800MB or 16MW).
 	nprocs : int
 		Number of processors used in the input file
 	suffix : str
 		Suffix for the new input files
 	atom_types : list of strings
-																																																																																																																																	(If no mol is used) List containing the atoms of the system
+		(If no mol is used) List containing the atoms of the system
 	cartesians : list of lists
-																																																																																																																																	(If no mol is used) Cartesian coordinates used for further processing
+		(If no mol is used) Cartesian coordinates used for further processing
 	bs_gen : str
-																																																																																																																																	Basis set for the Gen(ECP) section
+		Basis set for the Gen(ECP) section
 	bs : str
-																																																																																																																																	Basis set for regular atoms when Gen(ECP) is used
+		Basis set for regular atoms when Gen(ECP) is used
 	gen_atoms : str
-																																																																																																																																	Atoms considered for Gen(ECP). Format: ATOM1,ATOM2,ATOM3... (i.e. C,H,O)
+		Atoms considered for Gen(ECP). Format: ATOM1,ATOM2,ATOM3... (i.e. C,H,O)
 	program : str
-																																																																																																																																	Target program to generate input files. Options: 'gaussian' and 'orca'
+		Target program to generate input files. Options: 'gaussian' and 'orca'
 	qm_input : string
-																																																																																																																																	Keyword line of the input file
+		Keyword line of the input file
 	qm_end : str
-																																																																																																																																	Final line(s) of the input file
+		Final line(s) of the input file
 	yaml_file : str
-																																																																																																																																	Option to parse the variables using a yaml file (specify the filename)
+		Option to parse the variables using a yaml file (specify the filename)
 	kwargs : argument class
-																																																																																																																																	Specify any arguments from the QCORR module
+		Specify any arguments from the QCORR module
 	"""
 
 	def __init__(
 		self,
 		mol=None,
-		destination=Path(os.getcwd()),
+		w_dir_main=Path(os.getcwd()),
+		destination=None,
 		molecule="",
 		charge=0,
 		mult=1,
 		chk=False,
 		mem="8GB",
 		nprocs=4,
+		suffix='',
 		atom_types=[],
 		cartesians=[],
 		bs_gen="",
@@ -87,7 +91,7 @@ class qprep:
 	):
 
 		self.mol = mol
-		self.destination = destination
+		self.w_dir_main = w_dir_main
 		self.molecule = molecule
 		self.chk = chk
 		self.mem = mem
@@ -102,14 +106,13 @@ class qprep:
 		self.qm_end = qm_end
 		self.program = program
 
-		qcalc_folder = self.destination.joinpath("QCALC/")
-		qcalc_folder.mkdir(exist_ok=True)
+		if destination is None:
+			self.destination = Path(os.getcwd()+"QCALC/")
+			dat_folder = self.destination.joinpath("dat_files/")
 
-		dat_folder = self.destination.joinpath("QCALC/dat_files/")
-		dat_folder.mkdir(exist_ok=True)
-
-		self.log = Logger(dat_folder/ str("AQME"), "QPREP")
-		self.log.write("\no  Creating input files in {}\n".format(self.destination))
+		else:
+			self.destination = Path(destination)
+			dat_folder = self.destination.joinpath("dat_files/")
 
 		if "options" in kwargs:
 			self.args = kwargs["options"]
@@ -123,22 +126,11 @@ class qprep:
 			self.mem = self.args.mem
 			self.nprocs = self.args.nprocs
 			self.qm_input = self.args.qm_input
-			# self.bs_gen = self.args.bs_ge
 			self.gen_atoms = self.args.gen_atoms
-			# self.bs_gen = self.args.bs_gen
-			# self.bs = self.args.bs
-
-			# self.bs = self.args.bs
-			# if self.args.gen_atoms is not None:
-			# 	gen_atoms_list = self.args.gen_atoms.split(",")
-			# 	self.gen_atoms = gen_atoms_list
-			# self.qm_end = self.args.qm_end
+			self.bs_gen = self.args.bs_gen
+			self.bs = self.args.bs
+			self.qm_end = self.args.qm_end
 			self.program = self.args.QPREP
-
-		# start a log file to track the QCORR module
-		# this variable keeps track of folder creation
-		if not os.path.isdir(self.destination):
-			self.destination.mkdir(parents=True, exist_ok=True)
 
 		self.atom_types = atom_types
 		self.cartesians = cartesians
@@ -147,6 +139,9 @@ class qprep:
 			self.atom_types = [ atom.GetSymbol() for _, atom in enumerate(self.mol.GetAtoms())]
 			self.cartesians = self.mol.GetConformers()[0].GetPositions()
 		self.n_atoms = len(self.atom_types)
+
+		self.log = Logger(self.w_dir_main / 'QPREP', 'data')
+		self.log.write(f"o  Creating input files of {molecule} in {self.destination}\n")
 
 		if self.qm_input == "":
 			self.log.write(
@@ -158,7 +153,12 @@ class qprep:
 			self.log.write("x  No name was specified! (molecule=NAME).")
 			sys.exit("x  No name was specified! (molecule=NAME).")
 
-		self.write()
+		comfile = self.write()
+		move_file(self.destination, Path(os.getcwd()),comfile)
+
+		self.log.finalize()
+		move_file(dat_folder, Path(os.getcwd()),'QPREP_data.dat')
+
 
 	def get_header(self):
 		'''
@@ -241,9 +241,9 @@ class qprep:
 		elif self.program.lower() == 'orca':
 			extension = 'inp'
 		if self.suffix != '':
-			comfile = f'{self.destination}/{self.molecule}_{self.suffix}.{extension}'
+			comfile = f'{self.molecule}_{self.suffix}.{extension}'
 		else:
-			comfile = f'{self.destination}/{self.molecule}.{extension}'
+			comfile = f'{self.molecule}.{extension}'
 		
 		if os.path.exists(comfile):
 			os.remove(comfile)
@@ -273,6 +273,8 @@ class qprep:
 
 		fileout.write(tail)
 		fileout.close()
+
+		return comfile
 
 
 # Aux Functions for QM input generation

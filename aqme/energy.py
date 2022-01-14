@@ -3,7 +3,8 @@
 #        used for genrating details for energy      #
 #####################################################.
 
-from aqme.utils import move_file_from_folder
+from aqme.utils import move_file
+from pathlib import Path
 
 import pandas as pd
 import os
@@ -18,10 +19,10 @@ def calculate_boltz_and_energy(val,args,log,name,w_dir_fin,w_dir_initial,lot,bs)
 
     #writing to coorect places
     if str(bs).find('/') > -1:
-        destination = w_dir_initial+'/QPRED/energy/boltz/'+str(lot)+'-'+str(bs).split('/')[0]
+        destination = Path(w_dir_initial+'/QPRED/energy/boltz/'+str(lot)+'-'+str(bs).split('/')[0])
     else:
-        destination = w_dir_initial+'/QPRED/energy/boltz/'+str(lot)+'-'+str(bs)
-    move_file_from_folder('Goodvibes_'+name+'.dat', destination)
+        destination = Path(w_dir_initial+'/QPRED/energy/boltz/'+str(lot)+'-'+str(bs))
+    move_file('Goodvibes_'+name+'.dat', destination)
 
 def calculate_avg_and_energy(val,args,log,name,w_dir_fin,w_dir_initial,w_dir_boltz,lot,bs):
 

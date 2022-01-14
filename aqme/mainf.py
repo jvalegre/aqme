@@ -32,7 +32,7 @@ from aqme.qprep import qprep, get_molecule_list, load_charge_data
 from aqme.cmin import mult_min
 from aqme.utils import (
 	Logger,
-	move_file_from_folder,
+	move_file,
 	get_filenames,
 	creation_of_dup_csv_csearch,
 	creation_of_dup_csv_cmin,
@@ -239,91 +239,91 @@ def qprep_main(w_dir_initial, args, log):
 
 # moving files after compute and/or write_gauss
 def move_sdf_main(args):
-	src = os.getcwd()
+	src = Path(os.getcwd())
 	if len(args.geom_rules) >= 1:
 		geom_rules_files = glob.glob("*_filter_geom_rules.sdf")
 	if args.CMIN == "xtb":
 		all_xtb_conf_files = glob.glob("*_xtb.sdf")
-		destination_xtb = src + "/CMIN/xtb"
+		destination_xtb = src.joinpath("CMIN/xtb/")
 		for file in all_xtb_conf_files:
-			move_file_from_folder(destination_xtb, src, file)
+			move_file(destination_xtb, src, file)
 		all_xtb_conf_files_all = glob.glob("*_xtb_all_confs.sdf")
-		destination_xtb_all = src + "/CMIN/xtb_all_confs"
+		destination_xtb_all = src.joinpath("CMIN/xtb_all_confs/")
 		for file in all_xtb_conf_files_all:
-			move_file_from_folder(destination_xtb_all, src, file)
+			move_file(destination_xtb_all, src, file)
 		if len(args.geom_rules) >= 1:
-			destination_geom_rules = src + "/CMIN/xtb/filter_geom_rules/"
+			destination_geom_rules = src.joinpath("CMIN/xtb/filter_geom_rules/")
 			for file in geom_rules_files:
-				move_file_from_folder(destination_geom_rules, src, file)
+				move_file(destination_geom_rules, src, file)
 	if args.CMIN == "ani":
 		all_ani_conf_files = glob.glob("*_ani.sdf")
-		destination_ani = src + "/CMIN/ani"
+		destination_ani = src.joinpath("CMIN/ani/")
 		for file in all_ani_conf_files:
-			move_file_from_folder(destination_ani, src, file)
+			move_file(destination_ani, src, file)
 		all_ani_conf_files_all = glob.glob("*_ani_all_confs.sdf")
-		destination_ani_all = src + "/CMIN/ani_all_confs"
+		destination_ani_all = src.joinpath("CMIN/ani_all_confs/")
 		for file in all_ani_conf_files_all:
-			move_file_from_folder(destination_ani_all, src, file)
+			move_file(destination_ani_all, src, file)
 		if len(args.geom_rules) >= 1:
-			destination_geom_rules = src + "/CMIN/ani/filter_geom_rules/"
+			destination_geom_rules = src.joinpath("CMIN/ani/filter_geom_rules/")
 			for file in geom_rules_files:
-				move_file_from_folder(destination_geom_rules, src, file)
+				move_file(destination_geom_rules, src, file)
 	if args.CSEARCH == "rdkit":
 		all_name_conf_files = glob.glob("*_rdkit.sdf")
-		destination_rdkit = src + "/CSEARCH/rdkit"
+		destination_rdkit = src.joinpath("CSEARCH/rdkit/")
 		for file in all_name_conf_files:
-			move_file_from_folder(destination_rdkit, src, file)
+			move_file(destination_rdkit, src, file)
 		if len(args.geom_rules) >= 1:
-			destination_geom_rules = src + "/CSEARCH/rdkit/filter_geom_rules/"
+			destination_geom_rules = src.joinpath("CSEARCH/rdkit/filter_geom_rules/")
 			for file in geom_rules_files:
-				move_file_from_folder(destination_geom_rules, src, file)
+				move_file(destination_geom_rules, src, file)
 
 	if args.CSEARCH == "summ":
 		all_name_conf_files = glob.glob("*_summ.sdf")
-		destination_rdkit = src + "/CSEARCH/summ"
+		destination_rdkit = src.joinpath("CSEARCH/summ/")
 		for file in all_name_conf_files:
-			move_file_from_folder(destination_rdkit, src, file)
+			move_file(destination_rdkit, src, file)
 		if len(args.geom_rules) >= 1 and args.CMIN is None:
-			destination_geom_rules = src + "/CSEARCH/summ/filter_geom_rules/"
+			destination_geom_rules = src.joinpath("CSEARCH/summ/filter_geom_rules/")
 			for file in geom_rules_files:
-				move_file_from_folder(destination_geom_rules, src, file)
+				move_file(destination_geom_rules, src, file)
 
 	if args.CSEARCH == "fullmonte":
 		all_name_conf_files = glob.glob("*_fullmonte.sdf")
-		destination_rdkit = src + "/CSEARCH/fullmonte"
+		destination_rdkit = src.joinpath("CSEARCH/fullmonte/")
 		for file in all_name_conf_files:
-			move_file_from_folder(destination_rdkit, src, file)
+			move_file(destination_rdkit, src, file)
 		if len(args.geom_rules) >= 1 and args.CMIN is None:
-			destination_geom_rules = src + "/CSEARCH/fullmonte/filter_geom_rules/"
+			destination_geom_rules = src.joinpath("CSEARCH/fullmonte/filter_geom_rules/")
 			for file in geom_rules_files:
-				move_file_from_folder(destination_geom_rules, src, file)
+				move_file(destination_geom_rules, src, file)
 
 	if args.CSEARCH == "crest":
 		all_name_conf_files = glob.glob("*_crest.sdf")
-		destination_rdkit = src + "/CSEARCH/crest"
+		destination_rdkit = src.joinpath("CSEARCH/crest/")
 		for file in all_name_conf_files:
-			move_file_from_folder(destination_rdkit, src, file)
+			move_file(destination_rdkit, src, file)
 		if len(args.geom_rules) >= 1 and args.CMIN is None:
-			destination_geom_rules = src + "/CSEARCH/crest/filter_geom_rules/"
+			destination_geom_rules = src.joinpath("CSEARCH/crest/filter_geom_rules/")
 			for file in geom_rules_files:
-				move_file_from_folder(destination_geom_rules, src, file)
+				move_file(destination_geom_rules, src, file)
 
 	if args.CSEARCH is None:
 		if len(args.geom_rules) >= 1:
-			destination_geom_rules = src + "/QMCALC/SDF_input/filter_geom_rules/"
+			destination_geom_rules = src.joinpath("QCALC/SDF_input/filter_geom_rules/")
 			for file in geom_rules_files:
-				move_file_from_folder(destination_geom_rules, src, file)
+				move_file(destination_geom_rules, src, file)
 
 		all_conf_files = glob.glob("*.sdf")
-		destination = src + "/QMCALC/SDF_input/"
+		destination = src.joinpath("QCALC/SDF_input/")
 		for file in all_conf_files:
-			move_file_from_folder(destination, src, file)
+			move_file(destination, src, file)
 
 	if args.com_from_xyz:
 		all_xyz_conf_files = glob.glob("*.xyz") + glob.glob("*.sdf")
-		destination_xyz = "QMCALC/xyz_and_sdf"
+		destination_xyz = src.joinpath("QCALC/xyz_and_sdf/")
 		for file in all_xyz_conf_files:
-			move_file_from_folder(destination_xyz, src, file)
+			move_file(destination_xyz, src, file)
 
 
 # getting descriptors
@@ -354,8 +354,8 @@ def geom_par_main(args, log, w_dir_initial):
 			sdf_xtb = w_dir_initial + "/CMIN/xtb/" + name + "_xtb.sdf"
 		if os.path.exists(w_dir_initial + "/CMIN/ani/" + name + "_ani.sdf"):
 			sdf_ani = w_dir_initial + "/CMIN/ani/" + name + "_ani.sdf"
-		if os.path.exists(w_dir_initial + "/QMCALC/G16"):
-			args.path = w_dir_initial + "/QMCALC/G16/"
+		if os.path.exists(w_dir_initial + "/QCALC/G16"):
+			args.path = w_dir_initial + "/QCALC/G16/"
 			# Sets the folder and find the log files to analyze
 			for lot, bs, bs_gcp in zip(
 				args.level_of_theory, args.basis_set, args.genecp_bs
@@ -440,8 +440,8 @@ def graph_main(args, log, w_dir_initial):
 			sdf_ani = (
 				w_dir_initial + "/CMIN/ani_all_confs/" + name + "_ani_all_confs.sdf"
 			)
-		if os.path.exists(w_dir_initial + "/QMCALC/G16"):
-			args.path = w_dir_initial + "/QMCALC/G16/"
+		if os.path.exists(w_dir_initial + "/QCALC/G16"):
+			args.path = w_dir_initial + "/QCALC/G16/"
 			# Sets the folder and find the log files to analyze
 			for lot, bs, bs_gcp in zip(
 				args.level_of_theory, args.basis_set, args.genecp_bs
@@ -606,8 +606,8 @@ def graph_main(args, log, w_dir_initial):
 # function for comparison of nmr
 def nmr_main(args, log, w_dir_initial):
 
-	if os.path.exists(w_dir_initial + "/QMCALC/G16"):
-		args.path = w_dir_initial + "/QMCALC/G16/"
+	if os.path.exists(w_dir_initial + "/QCALC/G16"):
+		args.path = w_dir_initial + "/QCALC/G16/"
 	else:
 		log.write(
 			"\nx  The path for NMR analysis was not set up properly! (check the tutorials for more information)"
@@ -707,8 +707,8 @@ def energy_main(args, log, w_dir_initial):
 		log.write(
 			"\no Boltzmann average energy analysis for molecule : {0} ".format(name)
 		)
-		if os.path.exists(w_dir_initial + "/QMCALC/G16"):
-			args.path = w_dir_initial + "/QMCALC/G16/"
+		if os.path.exists(w_dir_initial + "/QCALC/G16"):
+			args.path = w_dir_initial + "/QCALC/G16/"
 		# Sets the folder and find the log files to analyze
 		for lot, bs, bs_gcp in zip(
 			args.level_of_theory, args.basis_set, args.genecp_bs
@@ -774,8 +774,8 @@ def dbstep_par_main(args, log, w_dir_initial):
 
 		log.write("\no  Calculating paramters for molecule : {0} ".format(name))
 
-		if os.path.exists(w_dir_initial + "/QMCALC/G16"):
-			args.path = w_dir_initial + "/QMCALC/G16/"
+		if os.path.exists(w_dir_initial + "/QCALC/G16"):
+			args.path = w_dir_initial + "/QCALC/G16/"
 			# Sets the folder and find the log files to analyze
 			for lot, bs, bs_gcp in zip(
 				args.level_of_theory, args.basis_set, args.genecp_bs
@@ -818,8 +818,8 @@ def nics_par_main(args, log, w_dir_initial):
 
 		log.write("\no  Calculating nics for molecule : {0} ".format(name))
 
-		if os.path.exists(w_dir_initial + "/QMCALC/G16"):
-			args.path = w_dir_initial + "/QMCALC/G16/"
+		if os.path.exists(w_dir_initial + "/QCALC/G16"):
+			args.path = w_dir_initial + "/QCALC/G16/"
 			# Sets the folder and find the log files to analyze
 			for lot, bs, bs_gcp in zip(
 				args.level_of_theory, args.basis_set, args.genecp_bs
@@ -899,8 +899,8 @@ def cclib_main(args, log, w_dir_initial):
 		name = pd_name.loc[i, "Molecule"]
 
 		log.write("\no  Calculating cclib paramters for molecule : {0} ".format(name))
-		if os.path.exists(w_dir_initial + "/QMCALC/G16"):
-			args.path = w_dir_initial + "/QMCALC/G16/"
+		if os.path.exists(w_dir_initial + "/QCALC/G16"):
+			args.path = w_dir_initial + "/QCALC/G16/"
 			# Sets the folder and find the log files to analyze
 			for lot, bs, bs_gcp in zip(
 				args.level_of_theory, args.basis_set, args.genecp_bs

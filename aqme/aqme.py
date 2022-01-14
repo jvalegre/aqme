@@ -47,7 +47,7 @@ from aqme.mainf import (
     cmin_main,
 )
 from aqme.utils import Logger, get_filenames
-from aqme.qcorr import qcorr, check_for_final_folder
+from aqme.qcorr import qcorr, check_run
 from aqme.qprep import qprep
 
 
@@ -125,7 +125,7 @@ def main():
         df_qcorr_success,df_qcorr_error = pd.DataFrame(),pd.DataFrame()
 
         # detects round of optimizations
-        round_num = check_for_final_folder(w_dir_initial)
+        round_num = check_run(w_dir_initial)
 
         # runs the qcorr module, which organizes the files and returns all the necessary information
         # as a json file
@@ -145,7 +145,7 @@ def main():
                 ][i] not in [None, "isomerization"]:
                     dir_for_analysis = (
                         w_dir_initial
-                        + "/fixed_QM_input_files/run_"
+                        + "/fixed_QM_inputs_files/run_"
                         + str(round_num + 1)
                     )
                     if not os.path.isdir(dir_for_analysis):
