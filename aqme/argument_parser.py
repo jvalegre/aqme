@@ -3,23 +3,24 @@
 #####################################################.
 
 import argparse
-
+import os
 
 def parser_args():
 
     parser = argparse.ArgumentParser(
-        description="Generate conformers depending on type of optimization (change parameters in the params yaml file)."
+        description="Arguments for the different modules of AQME. The arguments can be changed using keywords in the command line or a yaml file."
     )
 
     # necessary input details
     parser.add_argument(
-        "--varfile", dest="varfile", default=None, help="Parameters in YAML format"
+        "--varfile", 
+        default=None, 
+        help="Parameters in YAML format"
     )
     parser.add_argument(
         "-i",
         "--input",
         help="File containing molecular structure(s)",
-        dest="input",
         default=" ",
     )
     parser.add_argument(
@@ -33,7 +34,6 @@ def parser_args():
     parser.add_argument(
         "--path",
         help="Path for analysis/boltzmann factor/combining files where the gaussian folder created is present",
-        dest="path",
         default="",
     )
     parser.add_argument(
@@ -41,9 +41,7 @@ def parser_args():
     )
     parser.add_argument(
         "--output",
-        dest="output",
         default=".sdf",
-        metavar="output",
         help="The extension of the SDF files written",
     )
 
@@ -72,10 +70,9 @@ def parser_args():
     )
     parser.add_argument(
         "--qcorr",
-        action="store",
-        default=None,
-        help="Fix the output files from QM calculations",
-        choices=["gaussian"],
+        action="store_true",
+        default=False,
+        help="Post-processing of output files from QM calculations",
     )
     parser.add_argument(
         "--QSTAT",
@@ -100,57 +97,56 @@ def parser_args():
         help="Request metal complex with coord. no. 4, 5 or 6",
     )
     parser.add_argument(
-        "--metal", help="Specify metallic element", default=[], dest="metal", type=str
+        "--metal",
+        help="Specify metallic element",
+        default=[],
+        type=str
     )
     parser.add_argument(
         "--mult",
         help="Multiplicity of metal complex or organic complexes",
-        default="1",
-        dest="mult",
+        default=None,
         type=int,
     )
     parser.add_argument(
         "--complex_coord",
         help="Coord. no. of metal complex (automatically updates)",
         default=[],
-        dest="complex_coord",
         type=int,
     )
     parser.add_argument(
         "--complex_type",
         help="Force geometry of the metal complex (options: linear, trigonalplanar, squareplanar, squarepyramidal)",
         default="",
-        dest="complex_type",
         type=str,
     )
     parser.add_argument(
-        "--m_oxi", help="Metal oxidation state", default=[], dest="m_oxi", type=int
+        "--m_oxi", 
+        help="Metal oxidation state",
+        default=[],
+        type=int
     )
     parser.add_argument(
         "--metal_idx",
         help="Metal index (automatically updates)",
         default=[],
-        dest="metal_idx",
         type=int,
     )
     parser.add_argument(
         "--charge",
         help="Charge of metal complex (automatically updates)",
-        default=[],
-        dest="charge",
+        default=None,
         type=int,
     )
     parser.add_argument(
         "--charge_default",
         help="Charge default to be considered",
         default="auto",
-        dest="charge_default",
     )
     parser.add_argument(
         "--metal_sym",
         help="Symbols of metals to be considered from list (automatically updates)",
         default=[],
-        dest="metal_sym",
         type=str,
     )
 
@@ -201,7 +197,6 @@ def parser_args():
         "--heavyonly",
         help="only consider torsion angles involving heavy (non H) elements (default=True)",
         default=True,
-        metavar="heavyonly",
     )
     parser.add_argument(
         "-d",
@@ -220,49 +215,44 @@ def parser_args():
         "--sample",
         help="number of conformers to sample to get non-torsional differences (default 100)",
         default="auto",
-        metavar="sample",
     )
     parser.add_argument(
         "--auto_sample",
         help="final factor to multiply in the auto mode for the sample option (default 20)",
         default=20,
         type=int,
-        metavar="auto_sample",
     )
     parser.add_argument(
-        "--ff", help="force field (MMFF or UFF)", default="MMFF", metavar="ff"
+        "--ff",
+        help="force field (MMFF or UFF)",
+        default="MMFF",
     )
     parser.add_argument(
         "--seed",
         help="random seed (default 062609)",
         default="062609",
         type=int,
-        metavar="s",
     )
     parser.add_argument(
         "--rms_threshold",
         help="cutoff for considering sampled conformers the same (default 0.25)",
         default=0.25,
         type=float,
-        metavar="R",
     )
     parser.add_argument(
         "--max_matches_RMSD",
         help="iteration cutoff for considering  matches in sampled conformers the same (default 1000)",
         default=1000,
         type=int,
-        metavar="max_matches_RMSD",
     )
     parser.add_argument(
         "--energy_threshold",
-        dest="energy_threshold",
         action="store",
         default=0.25,
         help="energy difference between unique conformers (default 0.25)",
     )
     parser.add_argument(
         "--initial_energy_threshold",
-        dest="initial_energy_threshold",
         action="store",
         default=0.0001,
         help="energy difference between unique conformers for the first filter of only E (default 0.0001)",
@@ -272,13 +262,11 @@ def parser_args():
         help="Max. molecular weight of molecule",
         default=10000,
         type=int,
-        metavar="max_MolWt",
     )
     parser.add_argument(
         "--ani_method",
         help="Specify ANI method used (i.e. ANI1x, ANI1ccx, ANI2x)",
         default="ANI2x",
-        dest="ani_method",
         type=str,
     )
     parser.add_argument(
@@ -288,14 +276,12 @@ def parser_args():
         "--xtb_method",
         help="Specify xTB method used",
         default="GFN2-xTB",
-        dest="xtb_method",
         type=str,
     )
     parser.add_argument(
         "--xtb_solvent",
         help="Specify GBSA solvent used",
         default="none",
-        dest="xtb_solvent",
         type=str,
     )
     parser.add_argument(
@@ -303,21 +289,18 @@ def parser_args():
         help="Numerical accuracy of the xTB calculation",
         action="store",
         default=1.0,
-        dest="xtb_accuracy",
     )
     parser.add_argument(
         "--xtb_electronic_temperature",
         help="Electronic temperature for TB methods",
         action="store",
         default=300.0,
-        dest="xtb_electronic_temperature",
     )
     parser.add_argument(
         "--xtb_max_iterations",
         help="Numerical accuracy of the xTB calculation",
         action="store",
         default=250,
-        dest="xtb_max_iterations",
     )
     parser.add_argument(
         "--cpus",
@@ -367,35 +350,30 @@ def parser_args():
     # arguments for CREST
     parser.add_argument(
         "--cregen",
-        dest="cregen",
         action="store_true",
         help="Do cregen after crest",
         default=False,
     )
     parser.add_argument(
         "--cregen_ethr",
-        dest="cregen_ethr",
         action="store",
         default=0.2,
         help="Energy thershold for CREGEN after crest",
     )
     parser.add_argument(
         "--cregen_rthr",
-        dest="cregen_rthr",
         action="store",
         default=0.125,
         help="RMS thershold for CREGEN fter crest",
     )
     parser.add_argument(
         "--cregen_bthr",
-        dest="cregen_bthr",
         action="store",
         default=0.01,
         help="Rotational constant thershold for CREGEN after crest",
     )
     parser.add_argument(
         "--cregen_ewin",
-        dest="cregen_ewin",
         action="store",
         default=6,
         help="Energy window for CREGEN after crest",
@@ -404,122 +382,62 @@ def parser_args():
     # arguments for QPREP
     parser.add_argument(
         "--program",
-        help="Target program for the creation of input files in QPREP",
+        help="Program required to create the new input files",
         default="gaussian",
         type=str,
-        dest="program",
-    )
-    parser.add_argument(
-        "--program_sp",
-        help="Target program for the creation of input files in QPREP for single-points in QCORR",
-        default="gaussian",
-        type=str,
-        dest="program_sp",
     )
     parser.add_argument(
         "--nprocs",
-        help="Number of processors for the DFT calculations",
-        default=24,
+        help="Number of processors used in the QM calculations",
+        default=2,
         type=int,
-        dest="nprocs",
     )
     parser.add_argument(
         "--mem",
-        help="Memory for the DFT calculations (i) Gaussian: total memory; (ii) ORCA: memory per processor",
-        default="96GB",
+        help="Memory for the QM calculations (i) Gaussian: total memory; (ii) ORCA: memory per processor",
+        default="4GB",
         type=str,
-        dest="mem",
     )
     parser.add_argument(
-        "--aux_atoms_orca",
-        default=[],
-        help="List of atoms included in the aux part when using multiple basis sets in ORCA",
-        dest="aux_atoms_orca",
-        type=str,
-        nargs="?",
+        "--mol",
+        help="Mol object to prepare the input QM file",
+        default=None,
     )
     parser.add_argument(
-        "--aux_genecp_bs",
-        default=[],
-        help="Auxiliary basis set for genecp/gen in ORCA",
-        dest="aux_genecp_bs",
-        type=str,
-        nargs="?",
-    )
-    parser.add_argument(
-        "--aux_fit_gen_atoms",
-        default=[],
-        help="Fitting for the auxiliary basis set in ORCA (i.e. ['def2-TZVPP/C'])",
-        dest="aux_fit_gen_atoms",
-        type=str,
-        nargs="?",
-    )
-    parser.add_argument(
-        "--cpcm_input",
-        default="None",
-        help="Additional lines for ORCA input files in the cpcm section. Format: ['LINE1','LINE2',etc]",
-        dest="cpcm_input",
-        type=str,
-        nargs="?",
-    )
-    parser.add_argument(
-        "--orca_scf_iters",
-        default=500,
-        help="Number of SCF iterations in ORCA",
-        dest="orca_scf_iters",
-        type=str,
-        nargs="?",
-    )
-    parser.add_argument(
-        "--mdci_orca",
-        default="None",
-        help="mdci section in ORCA. Format: ['LINE1','LINE2',etc]",
-        dest="mdci_orca",
-        type=str,
-        nargs="?",
-    )
-    parser.add_argument(
-        "--print_mini_orca",
-        action="store_true",
-        default=True,
-        help="Option to print 'mini' (reduced outputs) in ORCA",
+        "--destination",
+        help="Destination to create the new input files",
+        default=None,
     )
     parser.add_argument(
         "--qm_input",
-        help="(i) keywords used in Gaussian input files (overiding opt and freq) or (ii) additional keywords for the ORCA input line",
+        help="Keywords line for new input files",
         default="",
-        dest="qm_input",
     )
     parser.add_argument(
         "--ts_input",
         help="OPT options in Gaussian in QCORR for input files of TSs (disable this option with None)",
         default="opt=(calcfc,noeigen,ts,maxstep=5)",
-        dest="ts_input",
     )
     parser.add_argument(
-        "--qm_input_end",
-        help="Last input line for Gaussian",
+        "--qm_end",
+        help="Final line in the new input files",
         default="",
-        dest="qm_input_end",
     )
     parser.add_argument(
         "--gen_atoms",
-        help="Gen(ECP) atoms for Gaussian",
-        default=None,
-        dest="gen_atoms",
+        help="Atoms included in the gen(ECP) basis set",
+        default=[],
     )
     parser.add_argument(
         "--bs",
-        default=None,
-        help="Basis set for regular atoms during Gen(ECP) calculations",
-        dest="bs",
+        default='',
+        help="Basis set used for non gen(ECP) atoms in gen(ECP) calculations",
         type=str,
     )
     parser.add_argument(
         "--bs_gen",
-        default=None,
-        help="Basis set for Gen(ECP) atoms",
-        dest="bs_gen",
+        default='',
+        help="Basis set used for gen(ECP) atoms",
         type=str,
     )
     parser.add_argument(
@@ -539,13 +457,12 @@ def parser_args():
         help="Cut-off for considering sampled conformers in Gaussian inputs",
         default="100.0",
         type=float,
-        dest="energy_threshold_for_gaussian",
     )
     parser.add_argument(
         "--chk",
         action="store_true",
         default=False,
-        help="Create .chk files for Gaussian",
+        help="Include the chk input line in new input files for Gaussian calculations",
     )
 
     # QPREP with Turbomole
@@ -615,6 +532,19 @@ def parser_args():
     # arguments for QCORR (besides related functions from QPREP)
     # analysis of files
     parser.add_argument(
+        "--w_dir_main",
+        action="store",
+        default=os.getcwd(),
+        help="Working directory",
+    )   
+
+    parser.add_argument(
+        "--qm_files",
+        action="store",
+        default=[],
+        help="Filenames of QM output files to analyze",
+    )   
+    parser.add_argument(
         "--dup",
         action="store",
         default=True,
@@ -624,178 +554,93 @@ def parser_args():
         "--dup_threshold",
         action="store",
         default=0.0001,
-        help="Energy difference (in Hartree) for E+ZPE, H and G considered in the duplicate filter",
+        help="Energy (in hartree) used as the energy difference in E, H and G to detect duplicates",
         type=float,
     )
     parser.add_argument(
         "--amplitude_ifreq",
         action="store",
         default=0.2,
-        help="Amplitude used to displace the imaginary frequencies to fix during analysis",
+        help="Amplitude used to displace the imaginary frequencies to fix",
         type=float,
     )
     parser.add_argument(
         "--ifreq_cutoff",
         action="store",
         default=0.0,
-        help="Cut off for imaginary frequencies during analysis",
+        help="Cut off for to consider whether a frequency is imaginary (absolute of the specified value is used)",
         type=float,
+    )
+    parser.add_argument(
+        "--freq_conv",
+        action="store",
+        default='opt=(calcfc,maxstep=5)',
+        help="If a string is defined, it will remove calculations that converged during optimization but did not convergence in the subsequent frequency calculation. Options: opt sections as strings i.e. (opt=(calcfc,maxstep=5)). If readfc is specified in the string, the chk option must be included as well. Turn this option off by using freq_conv=False.",
     )
     parser.add_argument(
         "--s2_threshold",
         action="store",
         default=10.0,
-        help="Cut off for spin contamination during analysis in \%\ of the expected value (i.e. multiplicity 3 has an the expected <S**2> of 2.0, if s2_threshold = 10 the <S**2> value is allowed to be 2.0 +- 0.2). Set s2_threshold = 0 to deactivate this option.",
+        help="Cut off for spin contamination during analysis in per cent of the expected value (i.e. multiplicity 3 has an the expected <S**2> of 2.0, if s2_threshold = 10 the <S**2> value is allowed to be 2.0 +- 0.2). Set s2_threshold = 0 to deactivate this option.",
         type=float,
     )
     parser.add_argument(
         "--isom",
         action="store",
-        default=None,
-        help="Checks that geometries mantain the same connectivity after xTB and DFT optimization",
+        default=False,
+        help="Check for isomerization from the initial input file to the resulting QM output files in QCORR. It requires the extension of the initial input files (i.e. isom='com') and the folder of the input files must be added in the isom_inputs option",
+    )
+    parser.add_argument(
+        "--isom_inputs",
+        action="store",
+        default=os.getcwd(),
+        help="Folder containing the initial input files to check for isomerization",
         type=str,
     )
     parser.add_argument(
         "--vdwfrac",
         action="store",
-        help="What fraction of the summed VDW radii constitutes a bond between two atoms in the isomerization filter?",
+        help="Fraction of the summed VDW radii that constitutes a bond between two atoms in the isomerization filter",
         default=0.50,
         type=float,
     )
     parser.add_argument(
         "--covfrac",
         action="store",
-        help="What fraction of the summed covalent radii constitutes a bond between two atoms in the isomerization filter?",
+        help="Fraction of the summed covalent radii that constitutes a bond between two atoms in the isomerization filter",
         default=1.10,
         type=float,
     )
     parser.add_argument(
-        "--nocheck",
-        action="store_true",
-        default=False,
-        help="Skips analysis for QM output files (i.e. it generates inputs for all the files not only the normally terminated files",
+        "--fullcheck",
+        action="store",
+        default=True,
+        help="Perform an analysis to detect whether the calculations were done homogeneously (i.e. same level of theory, solvent, grid size, etc)",
     )
     parser.add_argument(
-        "--nocom",
-        action="store_true",
-        default=False,
-        help="Skips generation of QM input files to fix errors",
-    )
-    parser.add_argument(
-        "--qcorr_json",
+        "--author",
         action="store",
         default="",
-        help="Starts QCORR from a previously generated json file (skips analysis)",
+        help="Author of the calculations",
         type=str,
     )
 
-    # writing single point files
+    # writing input files from json format
     parser.add_argument(
-        "--sp",
-        help="Create QM single point input files",
-        default=None,
-        dest="sp",
-        type=str,
+        "--json2input",
+        action="store_true",
+        help="Create QM single point input files from json files",
+        default=False,
     )
     parser.add_argument(
-        "--nics", action="store_true", default=False, help="Create input files for NICS"
-    )
-    parser.add_argument(
-        "--charge_sp",
-        help="The charge for single point calculation in Gaussian and ORCA",
-        default=None,
-        metavar="charge_sp",
-    )
-    parser.add_argument(
-        "--mult_sp",
-        help="The multiplicity for single point calculation in Gaussian and ORCA",
-        default=None,
-        metavar="mult_sp",
-    )
-    parser.add_argument(
-        "--qm_input_sp",
-        help="Extra keywords for single-point calculations in Gaussian and ORCA",
-        default="",
-        dest="qm_input_sp",
-    )
-    parser.add_argument(
-        "--qm_input_end_sp",
-        help="Last input line for single point calculations in Gaussian",
-        default="",
-        dest="qm_input_end_sp",
-    )
-    parser.add_argument(
-        "--bs_sp",
-        default=None,
-        help="Regular basis set(s) for single point calculations in Gaussian when Gen(ECP) is used",
-        dest="bs_sp",
-    )
-    parser.add_argument(
-        "--gen_bs_sp",
-        default=None,
-        help="Gen(ECP) basis set(s) for single point calculations in Gaussian",
-        dest="gen_bs_sp",
+        "--json_files",
+        help="Filenames of json files to analyze",
+        default=[],
     )
     parser.add_argument(
         "--suffix",
-        help="The suffix for single point calculation in Gaussian and ORCA",
-        default="None",
-        type=str,
-        metavar="suffix",
-    )
-    parser.add_argument(
-        "--aux_atoms_orca_sp",
-        default=[],
-        help="List of atoms included in the aux part when using multiple basis sets in ORCA single-point calculations",
-        dest="aux_atoms_orca_sp",
-        type=str,
-        nargs="*",
-    )
-    parser.add_argument(
-        "--aux_gen_bs_sp",
-        default=[],
-        help="Auxiliary basis set for genecp/gen in ORCA single-point calculations",
-        dest="aux_gen_bs_sp",
-        type=str,
-        nargs="*",
-    )
-    parser.add_argument(
-        "--aux_fit_gen_atoms_sp",
-        default=[],
-        help="Fitting for the auxiliary basis set in ORCA single-point calculations (i.e. ['def2-TZVPP/C'])",
-        dest="aux_fit_gen_atoms_sp",
-        type=str,
-        nargs="*",
-    )
-    parser.add_argument(
-        "--cpcm_input_sp",
-        default="None",
-        help="Additional lines for ORCA single-point calculations in the cpcm section",
-        dest="cpcm_input_sp",
-        type=str,
-        nargs="*",
-    )
-    parser.add_argument(
-        "--orca_scf_iters_sp",
-        default=500,
-        help="Number of SCF iterations in ORCA single-point calculations",
-        dest="orca_scf_iters_sp",
-        type=str,
-        nargs="*",
-    )
-    parser.add_argument(
-        "--mdci_orca_sp",
-        default="None",
-        help="mdci section in ORCA single-point calculations",
-        dest="mdci_orca_sp",
-        type=str,
-        nargs="*",
-    )
-    parser.add_argument(
-        "--print_mini_orca_sp",
-        action="store_true",
-        default=True,
-        help="Option to print 'mini' (reduced outputs) in ORCA single-point calculations",
+        help="Suffix for the new input files",
+        default='',
     )
 
     # argumets for QSTAT
@@ -809,7 +654,6 @@ def parser_args():
         "--dihedral",
         help="Specify the atom indexes to track dihedrals for different conformes only for specific dihedrals (For all rotatable dihedrals turn rot_dihedral to True)",
         default=[],
-        dest="dihedral",
         type=str,
         nargs=4,
         action="append",
@@ -818,7 +662,6 @@ def parser_args():
         "--bond",
         help="Specify the atom indexes to track bond lengths for different conformers",
         default=[],
-        dest="bond",
         type=str,
         nargs=2,
         action="append",
@@ -827,7 +670,6 @@ def parser_args():
         "--angle",
         help="Specify the atom indexes to track angles for different conformers",
         default=[],
-        dest="angle",
         type=str,
         nargs=3,
         action="append",
@@ -835,7 +677,6 @@ def parser_args():
     parser.add_argument(
         "--geom_par_name",
         action="store",
-        dest="geom_par_name",
         default="descp",
         help="Change the prefix for the descriptors obtained",
     )
@@ -844,7 +685,6 @@ def parser_args():
         help="Center for DBSTEP steric paramters in a txt ( FORMAT : name, center, ligand)",
         action="store",
         default="No file passed",
-        dest="dbstep_cen_lig_file",
     )
 
     # arguments for nmr
@@ -869,7 +709,6 @@ def parser_args():
         "--nmr_nucleus",
         help="Specify the nucleus for nmr analysis default (['C','H'])",
         default=["C", "H"],
-        dest="nmr_nucleus",
         type=str,
         nargs="*",
     )
@@ -877,7 +716,6 @@ def parser_args():
         "--nmr_slope",
         help="Specify the slope for each nucleus for nmr analysis default([1.0673,1.0759])",
         default=[1.0673, 1.0759],
-        dest="nmr_slope",
         type=float,
         nargs="*",
     )
@@ -885,7 +723,6 @@ def parser_args():
         "--nmr_intercept",
         help="Specify the intercept for each nucleus for nmr analysis default([-15.191,-2.2094])",
         default=[-15.191, -2.2094],
-        dest="nmr_intercept",
         type=float,
         nargs="*",
     )
@@ -893,7 +730,6 @@ def parser_args():
         "--nmr_tms_ref",
         help="Specify the reference for TMS for each nucleus for nmr analysis default([191.79,31.39])",
         default=[191.79, 31.39],
-        dest="nmr_tms_ref",
         type=float,
         nargs="*",
     )
@@ -903,20 +739,17 @@ def parser_args():
         "--nics_range",
         help="Range to calculate NICS along a given axis",
         default=4,
-        dest="nics_range",
     )
     parser.add_argument(
         "--nics_number",
         help="Step size to calculate NICS along a given axis",
         default=16,
-        dest="nics_number",
     )
     parser.add_argument(
         "--nics_atoms_file",
         help="NICS atoms in a txt ( FORMAT : name, atom1, atom2, atom3..)",
         action="store",
         default="No file passed",
-        dest="nics_atoms_file",
     )
 
     # arguments for cclib
@@ -938,14 +771,12 @@ def parser_args():
         "--submission_command",
         help="Queueing system that the submission is done on",
         default="qsub_summit",
-        metavar="submission_command",
         type=str,
     )
 
     # apply exp rules
     parser.add_argument(
         "--geom_rules",
-        dest="geom_rules",
         default=[],
         help="Discarding rules applied to filter-off conformers (based on experimental observation for example). Format: i) Automatic rules: ['Ir_bidentate_x3'], ii) manual rules: ['ATOM1-ATOM2-ATOM3, ANGLE'] (i.e. ['C-Pd-C, 180'])",
     )
@@ -968,7 +799,6 @@ def parser_args():
         "--prefix",
         help="Prefix for naming files",
         default="None",
-        metavar="prefix",
         type=str,
     )
 
@@ -1058,7 +888,7 @@ def set_options(kwargs):
         "print_mini_orca": True,
         "qm_input": "",
         "ts_input": "opt=(calcfc,noeigen,ts,maxstep=5)",
-        "qm_input_end": "",
+        "qm_end": "",
         "gen_atoms": None,
         "lowest_only": False,
         "lowest_n": False,
@@ -1089,7 +919,7 @@ def set_options(kwargs):
         "charge_sp": None,
         "mult_sp": None,
         "qm_input_sp": "",
-        "qm_input_end_sp": "",
+        "qm_end_sp": "",
         "gen_bs_sp": None,
         "bs_sp": None,
         "suffix": "None",

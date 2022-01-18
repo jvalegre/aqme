@@ -234,7 +234,7 @@ def qprep_main(w_dir_initial, args, log):
 
 		# writing the com files
 		for i, mol in enumerate(mols):
-			qprep(mol=mol, molecule=name+'_conf_'+str(i+1), destination=Path(w_dir_initial), charge=charge, atom_types = [], yaml_file=args.varfile)
+			qprep(mol=mol, molecule=name+'_conf_'+str(i+1), destination=Path(w_dir_initial), charge=charge, atom_types = [], varfile=args.varfile)
 
 
 # moving files after compute and/or write_gauss

@@ -39,9 +39,9 @@ calcfc : True # include calcfc in the optimization
 # charge and multiplicity
 charge_sp : 5 # charge of the single-point calculations. If charge_sp = None, the program takes the charge from the original LOG file
 mult_sp : 3 # multiplicity of the single-point calculations. If mult_sp = None, the program takes the multiplicity from the original LOG file
-# specify input line and final line (if qm_input_end_sp = None, no final line is added)
+# specify input line and final line (if qm_end_sp = None, no final line is added)
 qm_input_sp : 'nmr = giao' # specify the input keywords (except functional, basis set, solvent and dispersion)
-qm_input_end_sp : '-1' # last line to add for single point
+qm_end_sp : '-1' # last line to add for single point
 # level of theory
 ## basis set and functional
 basis_set_sp : ['def2svp','321g'] # basis set for single-points. Format: ['6-311+G(2d,p)']

@@ -34,19 +34,17 @@ class qcorr():
 	Parameters
 	----------
 	qm_files : list 
-		Contains the filenames of QM output files to analyze
+		Filenames of QM output files to analyze
 	w_dir_main : str
 		Working directory
 	dup_threshold : float
 		Energy (in hartree) used as the energy difference in E, H and G to detect duplicates
 	mem : str
-		Memory used in the calculations
+		Memory for the QM calculations (i) Gaussian: total memory; (ii) ORCA: memory per processor
 	nprocs : int
-		Number of processors used in the calculations
+		Number of processors used in the QM calculations
 	chk : bool
-		Include the chk input line in new input files
-	yaml_file : str
-		Option to parse the variables using a yaml file (specify the filename)
+		Include the chk input line in new input files for Gaussian calculations
 	qm_input : str
 		Keywords line for new input files
 	s2_threshold :  float
@@ -76,7 +74,7 @@ class qcorr():
 	freq_conv : str
 		If a string is defined, it will remove calculations that converged during optimization but did not
 		convergence in the subsequent frequency calculation. Options: opt sections as strings i.e. 
-		(opt=(calcfc,maxstep=5)). If readfc is specified in the string, the chk option will be included as well.
+		(opt=(calcfc,maxstep=5)). If readfc is specified in the string, the chk option must be included as well.
 		Turn this option off by using freq_conv=False.
 	ifreq_cutoff : float
 		Cut off for to consider whether a frequency is imaginary (absolute of the specified value is used)
@@ -87,25 +85,20 @@ class qcorr():
 		Author of the calculations
 	program : str
 		Program required to create the new input files
+	varfile : str
+		Option to parse the variables using a yaml file (specify the filename)
 	kwargs : argument class
 		Specify any arguments from the QCORR module
 	"""
 	
-	def __init__(self, qm_files=[], w_dir_main=Path(os.getcwd()), dup_threshold=0.0001,
-				mem='', nprocs=0, chk=False, yaml_file=None, qm_input='', s2_threshold=10.0, 
-				isom=False, isom_inputs=Path(os.getcwd()), vdwfrac=0.50, covfrac=1.10, 
+	def __init__(self, qm_files=[], w_dir_main=os.getcwd(), dup_threshold=0.0001,
+				mem='4GB', nprocs=2, chk=False, qm_input='', s2_threshold=10.0, 
+				isom=False, isom_inputs=os.getcwd(), vdwfrac=0.50, covfrac=1.10, 
 				bs_gen='', bs='', gen_atoms=[], qm_end='', amplitude_ifreq=0.2, freq_conv='opt=(calcfc,maxstep=5)',
-				ifreq_cutoff=0.0, fullcheck=True, author='', program='gaussian', **kwargs):
+				ifreq_cutoff=0.0, fullcheck=True, author='', program='gaussian', varfile=None, **kwargs):
 		
 		self.initial_dir = Path(os.getcwd())
 		self.w_dir_main = Path(w_dir_main)
-		os.chdir(self.w_dir_main)
-
-		if isinstance(qm_files, list): 
-			self.qm_files = qm_files
-		else:
-			self.qm_files = glob.glob(qm_files)
-
 		self.dup_threshold = dup_threshold
 		self.mem = mem
 		self.nprocs = nprocs
@@ -127,16 +120,45 @@ class qcorr():
 		self.vdwfrac = vdwfrac
 		self.covfrac = covfrac
 		
-		if 'options' in kwargs:
-			self.args = kwargs['options']
+		if "options" in kwargs:
+			self.args = kwargs["options"]
 		else:
 			self.args = set_options(kwargs)
-		
-		self.args.varfile = yaml_file
-		
-		if yaml_file is not None:
+
+		self.args.varfile = varfile
+
+		if varfile is not None:
 			self.args, self.log = load_from_yaml(self.args, self.log)
-		
+			self.w_dir_main = Path(self.args.w_dir_main)
+			self.qm_files = self.args.qm_files
+			self.dup_threshold = self.args.dup_threshold
+			self.mem = self.args.mem
+			self.nprocs = self.args.nprocs
+			self.chk = self.args.chk
+			self.amplitude_ifreq = self.args.amplitude_ifreq
+			self.freq_conv = self.args.freq_conv
+			self.ifreq_cutoff = self.args.ifreq_cutoff
+			self.qm_input = self.args.qm_input
+			self.s2_threshold = self.args.s2_threshold
+			self.fullcheck = self.args.fullcheck
+			self.gen_atoms = self.args.gen_atoms
+			self.bs_gen = self.args.bs_gen
+			self.bs = self.args.bs
+			self.qm_end = self.args.qm_end
+			self.program = self.args.program
+			self.author = self.args.author
+			self.isom = self.args.isom
+			self.isom_inputs = Path(self.args.isom_inputs)
+			self.vdwfrac = self.args.vdwfrac
+			self.covfrac = self.args.covfrac
+
+		# go to working folder and detect QM output files
+		os.chdir(self.w_dir_main)
+		if isinstance(qm_files, list): 
+			self.qm_files = qm_files
+		else:
+			self.qm_files = glob.glob(qm_files)
+
 		# detects cycle of analysis (0 represents the starting point)
 		self.round_num = check_run(w_dir_main)
 
@@ -147,11 +169,12 @@ class qcorr():
 		except FileNotFoundError:
 			print('x  The PATH specified as input in the w_dir_main option might be invalid!')
 			error_setup = True
-		
-		if len(qm_files) == 0 and not error_setup:
+
+		if len(self.qm_files) == 0 and not error_setup:
 			print(f'x  There are no output files in {self.w_dir_main}.')
 			self.log.write(f'x  There are no output files in {self.w_dir_main}.')
 			self.log.finalize()
+			move_file(self.w_dir_main.joinpath('dat_files/'), self.w_dir_main,f'QCORR-run_{str(self.round_num)}.dat')
 			error_setup = True
 
 		if error_setup:
@@ -205,6 +228,8 @@ class qcorr():
 				print(f'x  Potential cclib compatibility problem with file {file}')
 				self.log.write(f'x  Potential cclib compatibility problem with file {file}')
 				self.log.finalize()
+				move_file(self.w_dir_main.joinpath('dat_files/'), self.w_dir_main,f'QCORR-run_{str(self.round_num)}.dat')
+
 				# this is added to avoid path problems in jupyter notebooks
 				os.chdir(self.initial_dir)
 				sys.exit()
@@ -423,7 +448,7 @@ class qcorr():
 					errortype = 'isomerization'
 				os.chdir(self.w_dir_main)
 
-			if errortype not in ['ts_no_imag_freq','atomicbasiserror','before_E_error','isomerization','none', 'sp_calc']:
+			if errortype not in ['ts_no_imag_freq','atomicbasiserror','before_E_error','isomerization','duplicate_calc','spin_contaminated','none','sp_calc']:
 				qcorr_calcs = qprep(destination=Path(f'{os.getcwd()}/unsuccessful_QM_outputs/run_{self.round_num}/fixed_QM_inputs'), w_dir_main=self.w_dir_main,
 							molecule=file_name, charge=charge, mult=mult,
 							program=self.program, atom_types=atom_types,
@@ -1041,17 +1066,17 @@ def full_check(w_dir_main=os.getcwd(),destination_fullcheck='',json_files=glob.g
 	os.chdir(initial_dir)
 
 
-def json2input(json_files=[], source=Path(os.getcwd()), destination=os.getcwd(), suffix='', charge=None, mult=None,
-				mem='8GB', nprocs=4, chk=False, yaml_file=None, qm_input='', bs_gen='', 
+def json2input(json_files=[], w_dir_main=os.getcwd(), destination=None, suffix='', 
+				charge=None, mult=None,	mem='8GB', nprocs=4, chk=False, qm_input='', bs_gen='', 
 				bs='', gen_atoms=[], qm_end='', program='gaussian'):
 	'''
 	Reads a json file and use QPREP to generate input files.
 
 	Parameters
 	----------
-	qm_files : list 
-		Contains the filenames of QM output files to analyze
-	source : str
+	json_files : list 
+		Filenames of json files to analyze
+	w_dir_main : str
 		Folder with the json files to process
 	destination : str
 		Destination to create the new input files
@@ -1067,8 +1092,6 @@ def json2input(json_files=[], source=Path(os.getcwd()), destination=os.getcwd(),
 		Number of processors used in the calculations
 	chk : bool
 		Include the chk input line in new input files
-	yaml_file : str
-		Option to parse the variables using a yaml file (specify the filename)
 	qm_input : str
 		Keywords line for new input files
 	bs_gen : str
@@ -1081,12 +1104,18 @@ def json2input(json_files=[], source=Path(os.getcwd()), destination=os.getcwd(),
 		Final line in the new input files
 	program : str
 		Program required to create the new input files
-	kwargs : argument class
-		Specify any arguments from the QCORR module
 	'''
 	
-	w_dir_main=Path(os.getcwd())
-	os.chdir(source)
+	w_dir_initial=os.getcwd()
+	os.chdir(w_dir_main)
+
+	charge_initial = charge
+	mult_initial = mult
+
+	if destination is None:
+		destination = Path(w_dir_main).joinpath("QCALC")
+	else:
+		destination = Path(destination)
 
 	if not isinstance(json_files, list): 
 		json_files = glob.glob(json_files)
@@ -1104,24 +1133,25 @@ def json2input(json_files=[], source=Path(os.getcwd()), destination=os.getcwd(),
 			print('x  The json files do not contain coordinates and/or atom type information')
 		
 		# if no charge and multiplicity are specified, they are read from the json file
-		if charge == None:
+		if charge_initial == None:
 			charge = cclib_data['properties']['charge']
-		if mult == None:
+		if mult_initial == None:
 			mult = cclib_data['properties']['multiplicity']
-		
 		if charge == None:
 			print('x  No charge was specified in the json file or function input (i.e. json2input(charge=0) )')
 		elif mult == None:
 			print('x  No multiplicity was specified in the json file or function input (i.e. json2input(mult=1) )')
-		
-		json_calcs = qprep(destination=destination, w_dir_main=source,
+
+		json_calcs = qprep(destination=destination, w_dir_main=w_dir_main,
 					molecule=file_name, charge=charge, mult=mult,
 					program=program, atom_types=atom_types,
 					cartesians=cartesians, qm_input=qm_input,
 					mem=mem, nprocs=nprocs, chk=chk, qm_end=qm_end,
 					bs_gen=bs_gen, bs=bs, gen_atoms=gen_atoms, suffix=suffix)
+	
+	print(f'o  Final input files were generated in {destination}')
 
-	os.chdir(w_dir_main)
+	os.chdir(w_dir_initial)
 	
 
 def check_run(w_dir):

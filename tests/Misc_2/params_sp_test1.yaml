@@ -29,7 +29,7 @@ genecp_bs : ['LANL2DZ'] # functional for the genecp part
 charge_sp : 3
 mult_sp : 5
 input_for_sp : 'NBO' # add the input line with keywords. For adjusting number of processors and memory, go belo (to gauss_write options)
-qm_input_end_sp : '$NBO $END' # last line to add for single point
+qm_end_sp : '$NBO $END' # last line to add for single point
 basis_set_sp : ['def2svp'] # basis set
 level_of_theory_sp : ['wb97xd'] # functional
 suffix : 'spc'

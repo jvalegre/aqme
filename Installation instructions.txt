@@ -1,12 +1,9 @@
-Common python pip installs
-pip install -r requirements.txt 
-→ If you have trouble while installing all the packages together through the requierement.txt file, you can get into the file and install the missing modules individually with “pip install MODULE” (i.e. pip install PyYAML==5.3.1)
-
-RDKit
+Install RDKit
 conda install -c rdkit rdkit
+conda install -c conda-forge rdkit (compatible with Python >=3.8)
 
-OpenBabel
+Install OpenBabel
 conda install -c conda-forge openbabel
 
-Program install
+Install AQME and its dependencies
 python setup.py install

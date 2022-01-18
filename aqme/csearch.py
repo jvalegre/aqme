@@ -81,7 +81,7 @@ class csearch:
 		mol=None,
 		name=None,
 		w_dir_initial=os.getcwd(),
-		yaml_file=None,
+		varfile=None,
 		charge_defualt=0,
 		constraints=[],
 		**kwargs,
@@ -99,7 +99,7 @@ class csearch:
 			self.args = kwargs["options"]
 		else:
 			self.args = set_options(kwargs)
-		self.args.varfile = yaml_file
+		self.args.varfile = varfile
 
 		csearch_dir = Path(self.w_dir_initial) / "CSEARCH"
 		dat_dir = csearch_dir / "dat_files"
@@ -107,7 +107,7 @@ class csearch:
 
 		self.log = Logger(dat_dir / self.name, self.args.output_name)
 
-		if yaml_file is not None:
+		if varfile is not None:
 			self.args, self.log = load_from_yaml(self.args, self.log)
 
 		self.args.charge_default = self.charge_default
