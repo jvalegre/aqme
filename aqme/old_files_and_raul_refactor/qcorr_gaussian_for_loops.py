@@ -11,7 +11,7 @@ import json
 # the import for check and write genecp is probably inside the genecp function of qprep now, FIX!
 from aqme.utils import periodic_table
 from aqme.filter import geom_rules_output
-from aqme.utils import (move_file, get_info_com, Logger, load_from_yaml, 
+from aqme.utils import (move_file, get_info_input, Logger, load_from_yaml, 
 							check_isomerization, read_file, output_to_mol)
 from aqme.argument_parser import set_options
 
@@ -141,9 +141,9 @@ class qcorr():
 						else:
 							pass
 						if self.args.isom == 'com':
-							atoms_and_coords,_ = get_info_com(folder_dir_isom+file.split('.')[0]+'.com')
+							atoms_and_coords,_ = get_info_input(folder_dir_isom+file.split('.')[0]+'.com')
 						elif self.args.isom == 'gjf':
-							atoms_and_coords,_ = get_info_com(folder_dir_isom+file.split('.')[0]+'.gjf')
+							atoms_and_coords,_ = get_info_input(folder_dir_isom+file.split('.')[0]+'.gjf')
 						elif self.args.isom.split('.')[1] == 'csv':
 							init_csv = pd.read_csv(self.args.isom)
 

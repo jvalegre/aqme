@@ -140,24 +140,14 @@ class qprep:
 			self.cartesians = self.mol.GetConformers()[0].GetPositions()
 		self.n_atoms = len(self.atom_types)
 
-		self.log = Logger(self.w_dir_main / 'QPREP', 'data')
-		self.log.write(f"o  Creating input files of {molecule} in {self.destination}\n")
-
 		if self.qm_input == "":
-			self.log.write(
-				"x  No keywords line was specified! (qm_input=KEYWORDS_LINE)."
-			)
 			sys.exit("x  No keywords line was specified! (qm_input=KEYWORDS_LINE).")
 
 		if molecule == "":
-			self.log.write("x  No name was specified! (molecule=NAME).")
 			sys.exit("x  No name was specified! (molecule=NAME).")
 
 		comfile = self.write()
 		move_file(self.destination, Path(os.getcwd()),comfile)
-
-		self.log.finalize()
-		move_file(dat_folder, Path(os.getcwd()),'QPREP_data.dat')
 
 
 	def get_header(self):

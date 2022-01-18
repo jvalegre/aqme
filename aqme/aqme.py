@@ -124,14 +124,11 @@ def main():
         qm_files = get_filenames('output',None)
         df_qcorr_success,df_qcorr_error = pd.DataFrame(),pd.DataFrame()
 
-        # detects round of optimizations
-        round_num = check_run(w_dir_initial)
-
         # runs the qcorr module, which organizes the files and returns all the necessary information
         # as a json file
         if args.qcorr_json == "":
-            df_qcorr_success, df_qcorr_error = qcorr(
-                qm_files=qm_files, round_num=round_num
+            qcorr_calcs = qcorr(
+                qm_files=qm_files
             )
         else:
             with open(f"{args.qcorr_json}_success") as f:
