@@ -118,9 +118,9 @@ solvent_model_sp : 'gas_phase' # type of solvation model. Options: gas_phase or 
 solvent_name_sp : '' # solvent used (i.e. chloroform, toluene, etc)
 
 # Specific options of level of theory for single-points for Gaussian
-# specify input line and final line (if qm_input_end_sp = None, no final line is added)
+# specify input line and final line (if qm_end_sp = None, no final line is added)
 input_for_sp : 'nmr' # specify the input keywords (except functional, basis set, solvent and dispersion)
-qm_input_end_sp : None # last line to add for single point
+qm_end_sp : None # last line to add for single point
 ## atoms included in gen/genecp and their level of theory (it admits .txt or .yaml files with the basis set information)
 gen_atoms_sp : [] # list of atoms included in the genecp part (do not use gen_atoms and gen_atoms at the same time!). Format: ['Pd','Ir','Pt',...]
 gen_atoms_sp : [] # list of atoms included in the gen part (do not use gen_atoms and gen_atoms at the same time!). Format: ['Pd','Ir','Pt',...]

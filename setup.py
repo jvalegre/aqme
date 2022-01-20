@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 import io
 
 # read the contents of your README file
@@ -9,7 +9,7 @@ with io.open(path.join(this_directory, 'README.md'), encoding='utf-8') as f:
 
 setup(
   name='aqme',
-  packages=['aqme'],
+  packages=find_packages(exclude=['tests']),
   package_data={'aqme': ['templates/*']},
   version='1.0',
   license='MIT',
@@ -39,15 +39,13 @@ setup(
     'pandas>=1.0.3',
     'progress>=1.5',
     'ase>=3.19.1',
-    'torchani>=2.2',
-    'goodvibes>=3.0.1',
     'numpy>=1.18.4',
     'cclib>=1.6.3',
     'matplotlib>=3.2.2',
     'seaborn>=0.10.1',
-    'torch>=1.5.0+cpu -f https://download.pytorch.org/whl/torch_stable.html',
-    'torchvision>=0.6.0+cpu -f https://download.pytorch.org/whl/torch_stable.html',
-    'openbabel>=3.1.1.1'],
+    'torch>=1.5.0+cpu',
+    'torchvision>=0.6.0+cpu',
+    'torchani>=2.2'],
   python_requires='>=3.0',
   include_package_data=True,
 )

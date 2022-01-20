@@ -60,7 +60,7 @@ class qprep:
 		Keyword line of the input file
 	qm_end : str
 		Final line(s) of the input file
-	yaml_file : str
+	varfile : str
 		Option to parse the variables using a yaml file (specify the filename)
 	kwargs : argument class
 		Specify any arguments from the QCORR module
@@ -69,7 +69,7 @@ class qprep:
 	def __init__(
 		self,
 		mol=None,
-		w_dir_main=Path(os.getcwd()),
+		w_dir_main=os.getcwd(),
 		destination=None,
 		molecule="",
 		charge=0,
@@ -86,12 +86,12 @@ class qprep:
 		program="gaussian",
 		qm_input="",
 		qm_end="",
-		yaml_file=None,
+		varfile=None,
 		**kwargs,
 	):
 
 		self.mol = mol
-		self.w_dir_main = w_dir_main
+		self.w_dir_main = Path(w_dir_main)
 		self.molecule = molecule
 		self.chk = chk
 		self.mem = mem
@@ -107,26 +107,35 @@ class qprep:
 		self.program = program
 
 		if destination is None:
-			print(os.getcwd())
 			self.destination = Path(os.getcwd()+"/QCALC/")
-			dat_folder = self.destination.joinpath("dat_files/")
-
+      
 		else:
 			self.destination = Path(destination)
-			dat_folder = self.destination.joinpath("dat_files/")
+     
+    dat_folder = self.destination.joinpath("dat_files/")
 
 		if "options" in kwargs:
 			self.args = kwargs["options"]
 		else:
 			self.args = set_options(kwargs)
 
-		self.args.varfile = yaml_file
+		self.args.varfile = varfile
 
-		self.log = Logger(self.w_dir_main / 'QPREP', 'data')
-		self.log.write(f"o  Creating input files of {molecule} in {self.destination}\n")
-
-		if yaml_file is not None:
+		if varfile is not None:
 			self.args, self.log = load_from_yaml(self.args, self.log)
+			self.w_dir_main = Path(self.args.w_dir_main)
+			self.destination = self.args.destination
+			if destination is None:
+				self.destination = self.w_dir_main.joinpath("QCALC")
+			else:
+				self.destination = Path(self.args.destination)
+			self.charge = self.args.charge
+			self.mult = self.args.mult
+			if self.charge == None:
+				self.charge = 0
+			if self.mult == None:
+				self.mult = 1
+			self.chk = self.args.chk
 			self.mem = self.args.mem
 			self.nprocs = self.args.nprocs
 			self.qm_input = self.args.qm_input
@@ -134,7 +143,8 @@ class qprep:
 			self.bs_gen = self.args.bs_gen
 			self.bs = self.args.bs
 			self.qm_end = self.args.qm_end
-			self.program = self.args.QPREP
+			self.program = self.args.program
+			self.suffix = self.args.suffix
 
 		self.atom_types = atom_types
 		self.cartesians = cartesians
@@ -145,20 +155,13 @@ class qprep:
 		self.n_atoms = len(self.atom_types)
 
 		if self.qm_input == "":
-			self.log.write(
-				"x  No keywords line was specified! (qm_input=KEYWORDS_LINE)."
-			)
 			sys.exit("x  No keywords line was specified! (qm_input=KEYWORDS_LINE).")
 
 		if molecule == "":
-			self.log.write("x  No name was specified! (molecule=NAME).")
 			sys.exit("x  No name was specified! (molecule=NAME).")
-
+		
 		comfile = self.write()
-		move_file(self.destination, Path(os.getcwd()),comfile)
-
-		self.log.finalize()
-		move_file(dat_folder, Path(os.getcwd()),'QPREP_data.dat')
+		move_file(self.destination, self.w_dir_main, comfile)
 
 
 	def get_header(self):

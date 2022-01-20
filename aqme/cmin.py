@@ -43,7 +43,7 @@ class cmin:
         mols=None,
         name=None,
         w_dir_initial=os.getcwd(),
-        yaml_file=None,
+        varfile=None,
         charge_defualt=0,
         **kwargs,
     ):
@@ -56,13 +56,13 @@ class cmin:
             self.args = kwargs["options"]
         else:
             self.args = set_options(kwargs)
-        self.args.varfile = yaml_file
+        self.args.varfile = varfile
 
         dat_dir = Path(self.w_dir_initial + "/CMIN/dat_files")
         dat_dir.mkdir(exist_ok=True, parents=True)
         self.log = Logger(dat_dir / self.name, self.args.output_name)
 
-        if yaml_file is not None:
+        if varfile is not None:
             self.args, self.log = load_from_yaml(self.args, self.log)
 
         self.args.charge_default = self.charge_default

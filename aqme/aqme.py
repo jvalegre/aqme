@@ -47,7 +47,7 @@ from aqme.mainf import (
     cmin_main,
 )
 from aqme.utils import Logger, get_filenames
-from aqme.qcorr import qcorr, check_run
+from aqme.qcorr import qcorr, json2input
 from aqme.qprep import qprep
 
 
@@ -120,88 +120,19 @@ def main():
 
     #QCORR
     if args.qcorr:
-        log_overall.write("\no  Writing analysis of output files in respective folders\n")
-        qm_files = get_filenames('output',None)
-        df_qcorr_success,df_qcorr_error = pd.DataFrame(),pd.DataFrame()
+        qcorr(qm_files=args.qm_files, w_dir_main=args.w_dir_main, dup_threshold=args.dup_threshold,
+				mem=args.mem, nprocs=args.nprocs, chk=args.chk, qm_input=args.qm_input, 
+                s2_threshold=args.s2_threshold, isom=args.isom,	isom_inputs=args.isom_inputs, 
+                vdwfrac=args.vdwfrac, covfrac=args.covfrac, bs_gen=args.bs_gen, bs=args.bs, 
+                gen_atoms=args.gen_atoms, qm_end=args.qm_end, amplitude_ifreq=args.amplitude_ifreq, 
+                freq_conv=args.freq_conv, ifreq_cutoff=args.ifreq_cutoff, fullcheck=args.fullcheck,
+                author=args.author, program=args.program, varfile=None)
 
-        # detects round of optimizations
-        round_num = check_run(w_dir_initial)
-
-        # runs the qcorr module, which organizes the files and returns all the necessary information
-        # as a json file
-        if args.qcorr_json == "":
-            df_qcorr_success, df_qcorr_error = qcorr(
-                qm_files=qm_files, round_num=round_num
-            )
-        else:
-            with open(f"{args.qcorr_json}_success") as f:
-                df_qcorr_success = json.load(f)
-
-        if not df_qcorr_error.empty():
-            for i, file_name in enumerate(df_qcorr_error["file_name"]):
-                # creates input files to fix imaginary freqs and not normal terminations
-                if df_qcorr_error["termination"][i] != "normal" or df_qcorr_error[
-                    "errortype"
-                ][i] not in [None, "isomerization"]:
-                    dir_for_analysis = (
-                        w_dir_initial
-                        + "/fixed_QM_inputs_files/run_"
-                        + str(round_num + 1)
-                    )
-                    if not os.path.isdir(dir_for_analysis):
-                        os.makedirs(dir_for_analysis)
-                    log.write(
-                        f"-> Creating new gaussian input file for {file_name} in {dir_for_analysis}"
-                    )
-                    if not args.nocom:
-                        qprep(
-                            destination=dir_for_analysis,
-                            molecule=file_name,
-                            charge=df_qcorr_error["charge"][i],
-                            mult=df_qcorr_error["mult"][i],
-                            atom_types=df_qcorr_error["atom_types"][i],
-                            gen_atoms=args.gen_atoms,
-                            bs_gen=args.genecp_bs,
-                            bs=args.bs,
-                            program=args.program,
-                            cartesians=df_qcorr_error["cartesians"][i],
-                            qm_keywords=df_qcorr_error["keywords_line"][i],
-                            qm_end=args.qm_input_end_sp,
-                        )
-
-        if not df_qcorr_success.empty() and args.sp != None:
-            # creates input files for single-point energy calcs
-            for i, file_name in enumerate(df_qcorr_success["file_name"]):
-                if (
-                    df_qcorr_success["termination"][i] == "normal"
-                    and df_qcorr_success["errortype"][i] == None
-                ):
-                    dir_for_sp = w_dir_initial + "/single_point_input_files"
-                    if not os.path.isdir(dir_for_sp):
-                        os.makedirs(dir_for_sp)
-                    if args.charge_sp != "None":
-                        charge = args.charge_sp
-                    if args.mult_sp != "None":
-                        mult = args.mult_sp
-                    if args.suffix != "None":
-                        file_name = file_name + "_" + args.suffix
-                    log.write(
-                        f"-> Creating new gaussian input file for {file_name} in {dir_for_sp}"
-                    )
-                    qprep(
-                        destination=dir_for_analysis,
-                        molecule=file_name,
-                        charge=df_qcorr_success["charge"][i],
-                        mult=df_qcorr_success["mult"][i],
-                        atom_types=df_qcorr_success["atom_types"][i],
-                        gen_atoms=args.gen_atoms,
-                        bs_gen=args.gen_bs_sp,
-                        bs=args.bs_sp,
-                        program=args.program_sp,
-                        cartesians=df_qcorr_success["cartesians"][i],
-                        qm_keywords=args.qm_input_sp,
-                        qm_end=args.qm_input_end_sp,
-                    )
+    if args.json2input:
+        json2input(json_files=args.json_files, w_dir_main=args.w_dir_main, destination=args.destination,
+                suffix=args.suffix, charge=args.charge, mult=args.mult,	mem=args.mem, nprocs=args.nprocs,
+                chk=args.chk, qm_input=args.qm_input, bs_gen=args.bs_gen, bs=args.bs, gen_atoms=args.gen_atoms,
+                qm_end=args.qm_end, program=args.program)
 
     # QPRED
     if args.QPRED == "nmr":

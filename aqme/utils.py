@@ -423,7 +423,7 @@ def com_2_xyz_2_sdf(input, default_charge, start_point=None):
     if (
         extension != "xyz"
     ):  #  RAUL: Originally this pointed towards args.input, shouldn't it be to args.file?
-        xyz, charge = get_info_com(file)
+        xyz, charge = get_info_input(file)
         xyz_txt = "\n".join(xyz)
         with open(f"{filename}.xyz", "w") as F:
             F.write(f"{len(xyz)}\n{filename}\n{xyz_txt}\n")
@@ -456,9 +456,9 @@ def xyz_2_sdf(file, parent_dir=None):
     mol.write("sdf", parent_dir / ofile)
 
 
-def get_info_com(file):
+def get_info_input(file):
     """
-     Takes a .gjf or .com file and retrieves the coordinates of the atoms and the
+    Takes an input file and retrieves the coordinates of the atoms and the
     total charge.
 
     Parameters
@@ -476,40 +476,60 @@ def get_info_com(file):
         .gjf file
     """
 
-    with open(file, "r") as comfile:
-        comlines = comfile.readlines()
+    with open(file, "r") as input_file:
+        input_lines = input_file.readlines()
 
-    _iter = comlines.__iter__()
+    _iter = input_lines.__iter__()
 
-    line = ""
-    # Find the command line
-    while "#" not in line:
-        line = next(_iter)
+    line = ''
+    # input for Gaussian calculations
+    if file.split('.')[1] in ['com','gjf']:
 
-    # in case the keywords are distributed in multiple lines
-    while len(line.split()) > 0:
-        line = next(_iter)
+        # Find the command line
+        while "#" not in line:
+            line = next(_iter)
 
-    # pass the title lines
-    _ = next(_iter)
-    while line:
+        # in case the keywords are distributed in multiple lines
+        while len(line.split()) > 0:
+            line = next(_iter)
+
+        # pass the title lines
+        _ = next(_iter)
+        while line:
+            line = next(_iter).strip()
+
+        # Read charge and multiplicity
+        charge, mult = next(_iter).strip().split()
+
+        # Store the atom types and coordinates until next empty line.
+        atoms_and_coords = []
         line = next(_iter).strip()
+        while line:
+            atoms_and_coords.append(line.strip())
+            line = next(_iter).strip()
+    
+    # input for ORCA calculations
+    if file.split('.')[1] == '.inp':
+        
+        # Find the line with charge and multiplicity
+        while "* xyz" not in line or "* int" not in line:
+            line = next(_iter)
+        
+        # Read charge and multiplicity
+        charge = line.strip().split()[-2]
+        mult = line.strip().split()[-1]
 
-    # Read the charge from the charge | spin line
-    charge, spin = next(_iter).strip().split()
-
-    # Store the coordinates until next empty line.
-    coordinates = []
-    line = next(_iter).strip()
-    while line:
-        coordinates.append(line.strip())
+        # Store the coordinates until next *
+        atoms_and_coords = []
         line = next(_iter).strip()
+        while len(line.split()) > 1:
+            atoms_and_coords.append(line.strip())
+            line = next(_iter).strip()
 
-    return coordinates, charge
+    return atoms_and_coords, charge
 
 
 # RDKit Utils
-
 def nci_ts_mol(smi, args, constraints_dist, constraints_angle, constraints_dihedral, name):
     if constraints_dist is not None:
         constraints_dist = [[float(y) for y in x] for x in constraints_dist]
@@ -637,7 +657,7 @@ def nci_ts_mol(smi, args, constraints_dist, constraints_angle, constraints_dihed
 
 def rules_get_charge(mol, args):
     """
-    AUTOMATICALLY SETS THE charge FOR METAL COMPLEXES
+    Automatically sets the charge for metal complexes
 
     Parameters
     ----------
@@ -648,8 +668,8 @@ def rules_get_charge(mol, args):
 
     Returns
     -------
-    [type]
-        [description]
+    charge : int
+        Charge of the system
     """
 
     C_group = ["C", "Se", "Ge"]

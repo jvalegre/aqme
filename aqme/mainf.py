@@ -236,7 +236,7 @@ def qprep_main(w_dir_initial, args, log):
 		for i, mol in enumerate(mols):
 			qprep(mol=mol, molecule=name+'_conf_'+str(i+1), charge=charge, atom_types = [], yaml_file=args.varfile)
 
-
+      
 # moving files after compute and/or write_gauss
 def move_sdf_main(args):
 	src = Path(os.getcwd())
