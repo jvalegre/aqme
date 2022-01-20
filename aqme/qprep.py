@@ -111,8 +111,6 @@ class qprep:
       
 		else:
 			self.destination = Path(destination)
-     
-    dat_folder = self.destination.joinpath("dat_files/")
 
 		if "options" in kwargs:
 			self.args = kwargs["options"]

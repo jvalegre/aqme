@@ -11,7 +11,7 @@ setup(
   name='aqme',
   packages=find_packages(exclude=['tests']),
   package_data={'aqme': ['templates/*']},
-  version='1.0',
+  version='1.0.0',
   license='MIT',
   description='Automated Quantum Mechanical Environments',
   long_description='Automated Quantum Mechanical Environments',
@@ -20,7 +20,7 @@ setup(
   author_email='svss@colostate.edu, juanvi89@hotmail.com',
   keywords=['workflows','computational chemistry','conformational sampling','cheminformatics','quantum mechanics','DFT','automated'],
   url = 'https://github.com/jvalegre/aqme',
-  download_url = 'https://github.com/jvalegre/aqme/archive/refs/tags/v_1.0.tar.gz',
+  download_url = 'https://github.com/jvalegre/aqme/archive/refs/tags/1.0.0.tar.gz',
   classifiers=[
     'Development Status :: 3 - Alpha',      # Chose either "3 - Alpha", "4 - Beta" or "5 - Production/Stable" as the current state of your package
     'Intended Audience :: Developers',      # Define that your audience are developers
