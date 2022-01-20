@@ -1,0 +1,14 @@
+# INPUT FILE
+input : 'pentane.smi' # input files
+
+# TYPE OF aqme JOBS
+verbose : True
+
+# (1) CONFORMERS AND COM FILES GENERATION
+CSEARCH : rdkit
+CMIN : xtb
+QPREP : gaussian
+# COMMON PARAMETERS TO EDIT
+sample : 20 # number of conformers to sample to get non-torsional differences (default 100)
+initial_energy_threshold : 0.1 # energy difference for the first RDKit filter based on E only
+opt_steps_RDKit : 40

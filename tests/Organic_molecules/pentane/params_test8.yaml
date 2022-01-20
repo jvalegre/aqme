@@ -1,0 +1,13 @@
+# INPUT FILE
+input : 'pentane.smi' # input files
+
+# TYPE OF aqme JOBS
+verbose : True
+
+# (1) CONFORMERS AND COM FILES GENERATION
+CSEARCH : rdkit
+QPREP : gaussian
+
+# COMMON PARAMETERS TO EDIT
+sample : 20 # number of conformers to sample to get non-torsional differences (default 100)
+max_torsions : 1 # Skip any molecules with more than this many torsions (default 5)

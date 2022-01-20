@@ -1,0 +1,14 @@
+input : 'QN-exp-add-connectivity.sdf' #name of input
+output_name : 'NMR' #name for output
+verbose : True
+
+QPRED : 'nmr'
+nmr_online : True
+
+level_of_theory : ['B3LYP'] # level of theory
+basis_set : ['6-31+G**'] # basis set
+
+level_of_theory_sp : ['B3LYP'] # level of theory
+basis_set_sp : ['6-311+G(2d,p)'] # basis set
+solvent_model_sp : IEFPCM
+solvent_name_sp : chloroform

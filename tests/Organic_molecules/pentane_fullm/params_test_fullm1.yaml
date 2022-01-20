@@ -1,0 +1,12 @@
+# INPUT FILE
+input : 'pentane_fullm.smi' # input files
+
+# TYPE OF aqme JOBS
+verbose : True
+
+# (1) CONFORMERS AND COM FILES GENERATION
+CSEARCH : fullmonte
+QPREP : gaussian
+
+# COMMON PARAMETERS TO EDIT
+sample : 1 # number of conformers to sample to get non-torsional differences (default 100)

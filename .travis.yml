@@ -1,0 +1,98 @@
+# adapted from https://github.com/rdkit/rdkit-tutorials/blob/master/.travis.yml
+
+language: python
+python:
+  - "3.7"
+
+sudo: required
+
+# xTB needs gcc-8 and gfortran-8 to be compiled
+matrix:
+  include:
+    - os: linux
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - gcc-8
+            - gfortran-8
+            - liblapack-dev
+            - libblas-dev
+      env: CC='gcc-8' FC='gfortran-8'
+
+before_install:
+  # download and install miniconda
+  - wget http://repo.continuum.io/miniconda/Miniconda3-4.1.11-Linux-x86_64.sh -O miniconda.sh;
+  - bash miniconda.sh -b -p $HOME/conda
+  - export PATH="$HOME/conda/bin:$PATH"
+  - hash -r
+  - conda config --set always_yes yes --set changeps1 no
+  - conda update -q conda
+  # Useful for debugging any issues with conda
+  - conda info -a
+  # create and activate the build/test environment
+  - conda create -q -n tenv python=$TRAVIS_PYTHON_VERSION pip cmake
+  - source activate tenv
+  - sudo apt-get update
+
+install:
+  - conda install -c openbabel openbabel==2.4.1 # for some reason, openbabel v3.0.0 is not compatible with RDKit
+  - conda install -c rdkit rdkit=2020.03.2.0 # different versions of RDKit lead to different amount of conformers and E, which messes up the test results
+  - pip install PyYAML
+  - pip install pandas
+  - pip install pytest
+  - python setup.py install
+  - pip install progress
+  - pip install pytest-cov
+  - pip install codecov
+  - pip install ase
+  - pip install torch==1.5.0+cpu torchvision==0.6.0+cpu -f https://download.pytorch.org/whl/torch_stable.html
+  - pip install torchani==2.2
+  - pip install goodvibes
+  - pip install cclib
+  - pip install matplotlib
+  - pip install seaborn
+  # for xTB
+  # - pip install Cython
+  - pip install importlib
+  - pip install numpy
+  - pip install cffi
+  - pip install qcelemental
+  - pip install meson
+  - pip install ninja
+  - sudo apt-get install libblas-dev liblapack-dev
+  - sudo apt-get install libopenblas-base libopenblas-dev
+
+before_script:
+  # For xTB
+  - wget https://github.com/grimme-lab/xtb/archive/v6.3.0.zip
+  - unzip v6.3.0.zip
+  - cd xtb-6.3.0
+  - meson setup build_gcc --buildtype release -Dla_backend=openblas --warnlevel 0
+  - XTBHOME=$PWD
+  - XTBPATH=${XTBHOME}/share/xtb:${XTBHOME}:${HOME}
+  - MANPATH=${MANPATH}:${XTBHOME}/share/man
+  - PATH=${PATH}:${XTBHOME}/bin
+  - LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${XTBHOME}/lib
+  - PYTHONPATH=${PYTHONPATH}:${XTBHOME}/python
+  - export PATH XTBPATH MANPATH LD_LIBRARY_PATH PYTHONPATH
+  - git clone --branch=master https://github.com/jvalegre/xtb-python
+  # - git clone --branch=master https://github.com/grimme-lab/xtb-python
+  - cd xtb-python
+  # change the previous git clone part into this wget + unzip zip when there is a release (that way the version used will always be the same)
+  # - wget https://github.com/grimme-lab/xtb-python/archive/v20.1.zip
+  # - unzip v20.1.zip
+  # - cd xtb-python-20.1
+  # compile xtb-python
+  - git submodule update --init
+  - meson setup build --prefix=$PWD --libdir=xtb -Dla_backend=netlib
+  - ninja -C build install
+  - pip install -e .
+  - cd ..
+  - cd ..
+
+script:
+  - cd tests
+  - pytest -v --cov=aqme
+  - codecov

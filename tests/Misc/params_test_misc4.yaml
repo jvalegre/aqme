@@ -1,0 +1,19 @@
+# INPUT FILE
+input : 'pentane.smi' # input files
+
+# TYPE OF aqme JOBS
+verbose : True
+
+# (1) CONFORMERS AND COM FILES GENERATION
+CSEARCH : summ
+QPREP : gaussian
+
+# COMMON PARAMETERS TO EDIT
+ewin_csearch : 1000 #energy window in kcal/mol to use conformers for RDKit and xTB (conformers with E higher than ewin will be discarded)
+sample : 20 # number of conformers to sample to get non-torsional differences (default 100)
+
+# (4.1) ONLY LOWEST ENERGY CONFORMERS REQUIRED"
+lowest_only : False
+lowest_n : True # for a given threshold of energy_threshold_for_gaussian
+energy_threshold_for_gaussian : 1  # in kcal/mol, from all the conformers generated after xTB optimization
+# lowest_n must be True to apply this energy threshold
