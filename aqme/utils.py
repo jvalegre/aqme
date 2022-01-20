@@ -11,7 +11,11 @@ import json
 from rdkit.Chem.rdMolAlign import GetBestRMS
 from rdkit.Chem.rdmolops import RemoveHs
 from openbabel import pybel
+from rdkit.Chem import AllChem
 import os
+from rdkit import Geometry
+from rdkit.Chem import Draw
+from rdkit.Chem import rdmolfiles
 import yaml
 import pandas as pd
 from rdkit.Chem import AllChem as Chem
@@ -506,6 +510,130 @@ def get_info_com(file):
 
 # RDKit Utils
 
+def nci_ts_mol(smi, args, constraints_dist, constraints_angle, constraints_dihedral, name):
+    if constraints_dist is not None:
+        constraints_dist = [[float(y) for y in x] for x in constraints_dist]
+        constraints_dist = np.array(constraints_dist)
+    if constraints_angle is not None:
+        constraints_angle = [[float(y) for y in x] for x in constraints_angle]
+        constraints_angle = np.array(constraints_angle)
+    if constraints_dihedral is not None:
+        constraints_dihedral = [[float(y) for y in x] for x in constraints_dihedral]
+        constraints_dihedral = np.array(constraints_dihedral)
+
+    molsH = []
+    mols = []
+    for m in smi:
+        mols.append(Chem.MolFromSmiles(m))
+        molsH.append(Chem.AddHs(Chem.MolFromSmiles(m)))
+
+    for m in molsH:
+        AllChem.EmbedMultipleConfs(m,numConfs=1)
+    for m in mols:
+        AllChem.EmbedMultipleConfs(m,numConfs=1)
+
+    coord = [0.0,0.0,5.0]
+    molH = molsH[0]
+    for fragment in molsH[1:]:
+        offset_3d = Geometry.Point3D(coord[0],coord[1],coord[2])
+        molH = Chem.CombineMols(molH, fragment, offset_3d)
+        coord[1] += 5
+        Chem.SanitizeMol(molH)
+
+    coord = [0.0,0.0,5.0]
+    mol = mols[0]
+    for fragment in mols[1:]:
+        offset_3d = Geometry.Point3D(coord[0],coord[1],coord[2])
+        mol = Chem.CombineMols(mol, fragment, offset_3d)
+        coord[1] += 5
+    mol = Chem.AddHs(mol)
+    Chem.SanitizeMol(mol)
+
+    atom_map = []
+    for atom in mol.GetAtoms():
+        atom_map.append(atom.GetAtomMapNum())
+
+    max_map = max(atom_map)
+    for a in mol.GetAtoms():
+        if a.GetSymbol() =='H':
+            max_map +=1
+            a.SetAtomMapNum(int(max_map))
+
+    AllChem.ConstrainedEmbed(mol,molH)
+    rdmolfiles.MolToXYZFile(mol, name+'.xyz')
+
+    # print(constraints_dist, constraints_angle, constraints_dihedral)
+
+    # for atom in mol.GetAtoms():
+        # print(atom.GetAtomMapNum(),atom.GetIdx(),atom.GetSymbol())
+
+    if constraints_dist is not None:
+        nconstraints_dist = []
+        for i,r in enumerate(constraints_dist):
+            # print('r:',r[:2])
+            nr = []
+            for j,ele in enumerate(r[:2]):
+                # print('ele:',  ele)
+                for atom in mol.GetAtoms():
+                    if ele == atom.GetAtomMapNum():
+                        nr.append(float(atom.GetIdx())+1)
+                        # print('nr:',  nr)
+            nr.append(r[-1])
+            # print('nr-final:',  nr)
+            nconstraints_dist.append(nr)
+        nconstraints_dist  = np.array(nconstraints_dist)
+        # print(nconstraints_dist)
+        # print('----')
+
+    if constraints_angle is not None:
+        nconstraints_angle = []
+        for i,r in enumerate(constraints_angle):
+            # print('r:',r[:2])
+            nr = []
+            for j,ele in enumerate(r[:3]):
+                # print('ele:',  ele)
+                for atom in mol.GetAtoms():
+                    if ele == atom.GetAtomMapNum():
+                        nr.append(float(atom.GetIdx())+1)
+                        # print('nr:',  nr)
+            nr.append(r[-1])
+            # print('nr-final:',  nr)
+            nconstraints_angle.append(nr)
+        nconstraints_angle  = np.array(nconstraints_angle)
+        # print(nconstraints_angle)
+        # print('----')
+
+    if constraints_dihedral is not None:
+        nconstraints_dihedral = []
+        for i,r in enumerate(constraints_dihedral):
+            # print('r:',r[:2])
+            nr = []
+            for j,ele in enumerate(r[:4]):
+                # print('ele:',  ele)
+                for atom in mol.GetAtoms():
+                    if ele == atom.GetAtomMapNum():
+                        nr.append(float(atom.GetIdx())+1)
+                        # print('nr:',  nr)
+            nr.append(r[-1])
+            # print('nr-final:',  nr)
+            nconstraints_dihedral.append(nr)
+        nconstraints_dihedral  = np.array(nconstraints_dihedral)
+        # print(nconstraints_dihedral)
+        # print('----')
+
+    # print(constraints_dist[:2])
+    # for atom in mol.GetAtoms():
+    #     print(atom.GetAtomMapNum(),atom.GetIdx(),atom.GetSymbol())
+    #     if constraints_dist is not None:
+    #         constraints_dist = np.where(constraints_dist==float(atom.GetAtomMapNum()),float(atom.GetIdx())+1,constraints_dist)
+    #     if constraints_angle is not None:
+    #         constraints_angle = np.where(constraints_angle==float(atom.GetAtomMapNum()),float(atom.GetIdx())+1,constraints_angle)
+    #     if constraints_dihedral is not None:
+    #         constraints_dihedral = np.where(constraints_dihedral==float(atom.GetAtomMapNum()),float(atom.GetIdx())+1,constraints_dihedral)
+    # rdmolfiles.MolToXYZFile(mol, name+'.xyz')
+    # print(nconstraints_dist, nconstraints_angle, nconstraints_dihedral)
+    return mol, nconstraints_dist, nconstraints_angle, nconstraints_dihedral
+
 
 def rules_get_charge(mol, args):
     """
@@ -786,19 +914,33 @@ def mol_from_sdf_or_mol_or_mol2(input):
 
 
 # checks the charge on the smi string
-def check_charge_smi(smi):
-    charge = 0
-    for i, smi_letter in enumerate(smi):
-        if smi_letter == "+":
-            if smi[i + 1] == "]":
-                charge += 1
-            else:
-                charge += int(smi[i + 1])
-        elif smi_letter == "-":
-            if smi[i + 1] == "]":
-                charge -= 1
-            else:
-                charge -= int(smi[i + 1])
+def check_charge_smi(smiles,ts):
+    for smi in smiles:
+        charge = 0
+        for i, smi_letter in enumerate(smi):
+            if smi_letter == "+":
+                if ts:
+                    if smi[i + 3] == "]":
+                        charge += 1
+                    else:
+                        charge += int(smi[i + 1])
+                else:
+                    if smi[i + 1] == "]":
+                        charge += 1
+                    else:
+                        charge += int(smi[i + 1])
+
+            elif smi_letter == "-":
+                if ts:
+                    if smi[i + 3] == "]":
+                        charge -= 1
+                    else:
+                        charge -= int(smi[i + 1])
+                else:
+                    if smi[i + 1] == "]":
+                        charge -= 1
+                    else:
+                        charge -= int(smi[i + 1])
     return charge
 
 
@@ -1154,4 +1296,3 @@ def cclib_atoms_coords(cclib_data):
     cartesians = [cartesians_array[i:i + 3] for i in range(0, len(cartesians_array), 3)]
 
     return atom_types,cartesians
-

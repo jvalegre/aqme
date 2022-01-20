@@ -84,9 +84,9 @@ def csearch_main(w_dir_initial, args, log_overall):
 
 		# Submit the Jobs
 		for job_input in job_inputs:
-			mol_, name_, dir_, varfile_, charge_default_, constraints_ = job_input
+			smi_, name_, dir_, varfile_, charge_default_, constraints_dist_, constraints_angle_, constraints_dihedral_ = job_input
 			job = executor.submit(
-				process_csearch, mol_, name_, dir_, varfile_, charge_default_, constraints_
+				process_csearch, smi_, name_, dir_, varfile_, charge_default_, constraints_dist_, constraints_angle_, constraints_dihedral_
 			)
 			jobs.append(job)
 			count_mol += 1
@@ -234,7 +234,7 @@ def qprep_main(w_dir_initial, args, log):
 
 		# writing the com files
 		for i, mol in enumerate(mols):
-			qprep(mol=mol, molecule=name+'_conf_'+str(i+1), destination=Path(w_dir_initial), charge=charge, atom_types = [], yaml_file=args.varfile)
+			qprep(mol=mol, molecule=name+'_conf_'+str(i+1), charge=charge, atom_types = [], yaml_file=args.varfile)
 
 
 # moving files after compute and/or write_gauss

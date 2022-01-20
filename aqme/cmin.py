@@ -70,6 +70,16 @@ class cmin:
 
         self.program = self.args.CMIN
 
+        self.cmin_folder = Path(self.w_dir_initial).joinpath(f"CMIN/{self.args.CMIN}")
+        self.cmin_folder.mkdir(exist_ok=True)
+        self.cmin_all_file = self.cmin_folder.joinpath(
+            f"{self.name}_{self.program}_all_confs{self.args.output}"
+        )
+        self.sdwriterall = Chem.SDWriter(str(self.cmin_all_file))
+
+        self.cmin_file = self.cmin_folder.joinpath(self.name + "_" + self.program + self.args.output)
+        self.sdwriter = Chem.SDWriter(str(self.cmin_file))
+
     def compute_cmin(self):
 
         dup_data = creation_of_dup_csv_cmin(self.args.CMIN)
@@ -116,21 +126,20 @@ class cmin:
             )
             outmols[cid].SetProp("Energy", cenergy[cid])
 
-        cmin_folder = Path(self.w_dir_initial).joinpath(f"CMIN/{self.args.CMIN}")
-        cmin_folder.mkdir(exist_ok=True)
-        cmin_file = cmin_folder.joinpath(
-            f"{name_mol}_{self.program}_all_confs{self.args.output}"
-        )
-        sdwriter = Chem.SDWriter(str(cmin_file))
-
+        # cmin_folder = Path(self.w_dir_initial).joinpath(f"CMIN/{self.args.CMIN}")
+        # cmin_folder.mkdir(exist_ok=True)
+        # cmin_file = cmin_folder.joinpath(
+        #     f"{name_mol}_{self.program}_all_confs{self.args.output}"
+        # )
+        # sdwriter = Chem.SDWriter(str(cmin_file))
         # writing all conformers to files after minimization
         # sdwriter = Chem.SDWriter(f'{name_mol}_{program}_all_confs{args.output}')
 
         write_all_confs = 0
         for cid in sorted_all_cids:
-            sdwriter.write(outmols[cid])
+            self.sdwriterall.write(outmols[cid])
             write_all_confs += 1
-        sdwriter.close()
+        self.sdwriterall.close()
 
         if self.args.verbose:
             self.log.write(
@@ -213,7 +222,7 @@ class cmin:
             self.args,
             self.program,
             self.log,
-            cmin_folder,
+            self.cmin_folder,
         )
         dup_data.at[dup_data_idx, "CMIN time (seconds)"] = round(
             time.time() - start_time, 2
@@ -504,13 +513,13 @@ class cmin:
     ):
         if len(conformers) > 0:
             # name = name.split('_'+args.CSEARCH)[0]# a bit hacky
-            cmin_file2 = cmin_folder.joinpath(name + "_" + program + args.output)
-            sdwriter = Chem.SDWriter(str(cmin_file2))
+            # cmin_file2 = cmin_folder.joinpath(name + "_" + program + args.output)
+            # sdwriter = Chem.SDWriter(str(cmin_file2))
             # sdwriter = Chem.SDWriter(name+'_'+program+args.output)
 
             write_confs = 0
             for cid in selectedcids:
-                sdwriter.write(conformers[cid])
+                self.sdwriter.write(conformers[cid])
                 write_confs += 1
 
             if args.verbose:
@@ -523,7 +532,7 @@ class cmin:
                     + program
                     + args.output
                 )
-            sdwriter.close()
+            self.sdwriter.close()
         else:
             log.write("x  No conformers found!")
 

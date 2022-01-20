@@ -107,7 +107,8 @@ class qprep:
 		self.program = program
 
 		if destination is None:
-			self.destination = Path(os.getcwd()+"QCALC/")
+			print(os.getcwd())
+			self.destination = Path(os.getcwd()+"/QCALC/")
 			dat_folder = self.destination.joinpath("dat_files/")
 
 		else:
@@ -120,6 +121,9 @@ class qprep:
 			self.args = set_options(kwargs)
 
 		self.args.varfile = yaml_file
+
+		self.log = Logger(self.w_dir_main / 'QPREP', 'data')
+		self.log.write(f"o  Creating input files of {molecule} in {self.destination}\n")
 
 		if yaml_file is not None:
 			self.args, self.log = load_from_yaml(self.args, self.log)
@@ -139,9 +143,6 @@ class qprep:
 			self.atom_types = [ atom.GetSymbol() for _, atom in enumerate(self.mol.GetAtoms())]
 			self.cartesians = self.mol.GetConformers()[0].GetPositions()
 		self.n_atoms = len(self.atom_types)
-
-		self.log = Logger(self.w_dir_main / 'QPREP', 'data')
-		self.log.write(f"o  Creating input files of {molecule} in {self.destination}\n")
 
 		if self.qm_input == "":
 			self.log.write(
@@ -168,7 +169,7 @@ class qprep:
 		txt = ''
 
 		if self.program.lower() == 'gaussian':
-			if self.chk: 
+			if self.chk:
 				txt += f'%chk={self.molecule}.chk\n'
 			txt += f'%nprocshared={self.nprocs}\n'
 			txt += f'%mem={self.mem}\n'
@@ -235,7 +236,7 @@ class qprep:
 		return txt
 
 	def write(self):
-		
+
 		if self.program.lower() == 'gaussian':
 			extension = 'com'
 		elif self.program.lower() == 'orca':
@@ -244,7 +245,7 @@ class qprep:
 			comfile = f'{self.molecule}_{self.suffix}.{extension}'
 		else:
 			comfile = f'{self.molecule}.{extension}'
-		
+
 		if os.path.exists(comfile):
 			os.remove(comfile)
 

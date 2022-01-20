@@ -35,6 +35,7 @@ from aqme.utils import (
 	creation_of_dup_csv_csearch,
 	check_charge_smi,
 	check_for_pieces,
+	nci_ts_mol,
 )
 from aqme.crest import crest_opt
 
@@ -60,8 +61,8 @@ SUPPORTED_INPUTS = [
 accepted_complex_types = ["squareplanar", "squarepyramidal", "linear", "trigonalplanar"]
 
 
-def process_csearch(mol_, name_, dir_, varfile_, charge_default_, constraints_):
-	obj = csearch(mol_, name_, dir_, varfile_, charge_default_, constraints_)
+def process_csearch(smi_, name_, dir_, varfile_, charge_default_, constraints_dist_, constraints_angle_, constraints_dihedral_):
+	obj = csearch(smi_, name_, dir_, varfile_, charge_default_, constraints_dist_, constraints_angle_, constraints_dihedral_)
 	total_data = obj.compute_confs()
 	return total_data
 
@@ -78,22 +79,20 @@ class csearch:
 
 	def __init__(
 		self,
-		mol=None,
+		smi=None,
 		name=None,
 		w_dir_initial=os.getcwd(),
 		yaml_file=None,
 		charge_defualt=0,
-		constraints=[],
+		constraints_dist=[],
+		constraints_angle=[],
+		constraints_dihedral=[],
 		**kwargs,
 	):
-		self.mol = mol
-		assert (
-			self.mol
-		), "x  Wrong SMILES string ({smi}) found (not compatible with RDKit or ANI/xTB if selected)! This compound will be omitted"
+		self.smi = smi
 		self.name = name
 		self.w_dir_initial = w_dir_initial
 		self.charge_default = charge_defualt
-		self.constraints = constraints
 
 		if "options" in kwargs:
 			self.args = kwargs["options"]
@@ -110,8 +109,15 @@ class csearch:
 		if yaml_file is not None:
 			self.args, self.log = load_from_yaml(self.args, self.log)
 
+		self.mol , self.args.constraints_dist, self.args.constraints_angle, self.args.constraints_dihedral  = smi_to_mol(self.smi, self.args, self.name, constraints_dist, constraints_angle, constraints_dihedral)
+
 		self.args.charge_default = self.charge_default
 		self.args.charge = rules_get_charge(self.mol, self.args)
+
+		self.csearch_folder = Path(self.w_dir_initial).joinpath(f"CSEARCH/{self.args.CSEARCH}")
+		self.csearch_folder.mkdir(exist_ok=True)
+		self.csearch_file = self.csearch_folder.joinpath(self.name + "_" + self.args.CSEARCH + self.args.output)
+		self.sdwriter = Chem.SDWriter(str(self.csearch_file))
 
 	def compute_confs(self):
 
@@ -294,9 +300,11 @@ class csearch:
 			log,
 			dup_data,
 			dup_data_idx,
+			self.sdwriter,
 			coord_Map,
 			alg_Map,
-			mol_template,
+			mol_template
+
 		)
 		# reads the initial SDF files from RDKit and uses dihedral scan if selected
 		if status != -1 or status != 0:
@@ -824,9 +832,10 @@ class csearch:
 		log,
 		dup_data,
 		dup_data_idx,
+		sdwriter,
 		coord_Map,
 		alg_Map,
-		mol_template,
+		mol_template
 	):
 
 		"""
@@ -848,7 +857,6 @@ class csearch:
 		-------
 		tuple    status,rotmatches,update_to_rdkit
 		"""
-
 		Chem.SanitizeMol(mol)
 
 		mol = Chem.AddHs(mol)
@@ -883,10 +891,10 @@ class csearch:
 				"\nx  No rotatable dihedral found. Updating to CSEARCH to RDKit, writing to FULLMONTE SDF"
 			)
 
-		csearch_folder = Path(self.w_dir_initial).joinpath(f"CSEARCH/{args.CSEARCH}")
-		csearch_folder.mkdir(exist_ok=True)
-		csearch_file = csearch_folder.joinpath(name + "_" + args.CSEARCH + args.output)
-		sdwriter = Chem.SDWriter(str(csearch_file))
+		# csearch_folder = Path(self.w_dir_initial).joinpath(f"CSEARCH/{args.CSEARCH}")
+		# csearch_folder.mkdir(exist_ok=True)
+		# csearch_file = csearch_folder.joinpath(name + "_" + args.CSEARCH + args.output)
+		# sdwriter = Chem.SDWriter(str(csearch_file))
 
 		# if update_to_rdkit and args.CSEARCH == "summ":
 		#     sdwriter = Chem.SDWriter(name + "_" + "summ" + args.output)
@@ -962,6 +970,13 @@ class csearch:
 
 		return status, rotmatches, update_to_rdkit
 
+def smi_to_mol(smi,args,name, constraints_dist, constraints_angle, constraints_dihedral):
+	smi = check_for_pieces(smi)
+	if len(smi)>1:
+		mol, constraints_dist, constraints_angle, constraints_dihedral = nci_ts_mol(smi, args, constraints_dist, constraints_angle, constraints_dihedral, name)
+	else:
+		mol = Chem.MolFromSmiles(smi[0])
+	return mol, constraints_dist, constraints_angle, constraints_dihedral
 
 # MAIN FUNCTION
 
@@ -972,8 +987,8 @@ def prepare_smiles_files(args, w_dir_initial):
 		lines = [line for line in smifile if line.strip()]
 	job_inputs = []
 	for i, line in enumerate(lines):
-		mol, name, args, constraints = prepare_smiles_from_line(line, i, args)
-		obj = mol, name, w_dir_initial, args.varfile, args.charge_default, constraints
+		smi, name, args, constraints_dist, constraints_angle, constraints_dihedral = prepare_smiles_from_line(line, i, args)
+		obj = smi, name, w_dir_initial, args.varfile, args.charge_default, constraints_dist, constraints_angle, constraints_dihedral
 		job_inputs.append(obj)
 	return job_inputs
 
@@ -981,43 +996,33 @@ def prepare_smiles_files(args, w_dir_initial):
 def prepare_smiles_from_line(line, i, args):
 	toks = line.split()
 	# editing part
-	smi = toks[0]
-	smi = check_for_pieces(smi)
-	if len(smi)>1:
-		molsH = []
-		mols = []
-		for m in smi:
-			mols.append(Chem.MolFromSmiles(m))
-			molsH.append(Chem.AddHs(Chem.MolFromSmiles(m)))
-		for m in molsH:
-			AllChem.EmbedMultipleConfs(m,numConfs=1)
-		molH = molsH[0]
-		offset_3d = Geometry.Point3D(0.0,0.0,5.0)
-		for fragment in molsH[1:]:
-			molH = Chem.CombineMols(mol, fragment, offset_3d)
-		Chem.SanitizeMol(molH)
-
-		mol = mols[0]
-		for fragment in mols[1:]:
-			mol = Chem.CombineMols(mol, fragment, offset_3d)
-		mol = Chem.AddHs(mol)
-		Chem.SanitizeMol(mol)
-		AllChem.ConstrainedEmbed(mol, molH)
-
-	else:
-		mol = Chem.MolFromSmiles(smi)
-
-	if args.charge_default == "auto":  # I assume no AttributeError
-		if not args.metal_complex:  # I assume no AttributeError
-			args.charge_default = check_charge_smi(smi)  # I assume no AttributeError
+	smiles = toks[0]
+	smi = check_for_pieces(smiles)
 	if args.prefix == "None":  # I assume no AttributeError
 		name = "".join(toks[1])  # I assume no AttributeError
 	else:  # I assume no AttributeError
 		name = f"{args.prefix}_{i}_{''.join(toks[1])}"  # I assume no AttributeError
-	constraints = []
-	if len(toks) > 2:
-		constraints = toks[2]
-	return mol, name, args, constraints
+	if len(smi)>1:
+		constraints_angle, constraints_dist, constraints_dihedral = None, None, None
+		if len(toks) > 2:
+			constraints_dist = toks[2]
+			constraints_dist = constraints_dist.split('/')
+			for i,c in enumerate(constraints_dist):
+				constraints_dist[i] = c.split(',')
+			if len(toks) > 3:
+				constraints_angle = toks[3]
+				constraints_angle = constraints_angle.split('/')
+				for i,c in enumerate(constraints_angle):
+					constraints_angle[i] = c.split(',')
+				if len(toks) > 4:
+					constraints_dihedral = toks[4]
+					constraints_dihedral = constraints_dihedral.split('/')
+					for i,c in enumerate(constraints_dihedral):
+						constraints_dihedral[i] = c.split(',')
+	if args.charge_default == "auto":  # I assume no AttributeError
+		if not args.metal_complex:  # I assume no AttributeError
+			args.charge_default = check_charge_smi(smi, args.ts_complex)  # I assume no AttributeError
+	return smiles, name, args, constraints_dist, constraints_angle, constraints_dihedral
 
 def prepare_csv_files(args, w_dir_initial):
 	csv_smiles = pd.read_csv(args.input)

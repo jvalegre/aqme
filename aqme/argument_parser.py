@@ -719,10 +719,10 @@ def parser_args():
         dest="qm_input_sp",
     )
     parser.add_argument(
-        "--qm_input_end_sp",
+        "--qm_end",
         help="Last input line for single point calculations in Gaussian",
         default="",
-        dest="qm_input_end_sp",
+        dest="qm_end",
     )
     parser.add_argument(
         "--bs_sp",
@@ -962,7 +962,20 @@ def parser_args():
         "--nci_complex",
         action="store_true",
         default=False,
-        help="Request NCI complexes",
+        help="Request NCI complexes conformational search",
+    )
+    # TS complex
+    parser.add_argument(
+        "--ts_complex",
+        action="store_true",
+        default=False,
+        help="Request TS complexes conformational search",
+    )
+    parser.add_argument(
+        "--cbonds",
+        action="store",
+        default=0.5,
+        help="cbonds fro NCI complexes",
     )
     parser.add_argument(
         "--prefix",
@@ -1058,7 +1071,7 @@ def set_options(kwargs):
         "print_mini_orca": True,
         "qm_input": "",
         "ts_input": "opt=(calcfc,noeigen,ts,maxstep=5)",
-        "qm_input_end": "",
+        "qm_end": "",
         "gen_atoms": None,
         "lowest_only": False,
         "lowest_n": False,
@@ -1122,13 +1135,19 @@ def set_options(kwargs):
         "geom_rules": [],
         "angle_off": 30,
         "nci_complex": False,
+        "ts_complex": False,
+        "cbonds": 0.5,
         "prefix": "None",
+        "constraints_dist": None,
+        "constraints_angle": None,
+        "constraints_dihedral": None,
         "isom": None,
         "nocheck": False,
         "nocom": False,
         "program": "gaussian",
         "program_sp": "gaussian",
         "qcorr_json": "",
+        "bs_gen" : None
     }
 
     for key in var_dict:
