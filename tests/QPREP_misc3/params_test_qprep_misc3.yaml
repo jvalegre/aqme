@@ -1,0 +1,21 @@
+# INPUT FILE
+input : 'Ir_geom_rules.smi' # input files
+
+# TYPE OF aqme JOBS
+verbose : True
+
+# (1) CONFORMERS AND COM FILES GENERATION
+QPREP : gaussian
+
+# (4.2) DEFINITION OF A SECOND CATEGORY OF ATOMS SEPARATED IN GENECP
+gen_atoms : ['Ir'] # list of atoms included in the gen_ecp part
+gen_atoms : [] # list of atoms inclueded in gen part
+
+# (4.3) DEFINTION OF BASIS SET AND LEVEL OF THEORY AND SOLVENT
+genecp_bs : ['LANL2DZ'] # functional for the genecp part
+level_of_theory : ['wb97xd'] # functional
+
+# (6) EXP RULES
+geom_rules : 'Ir_bidentate_x3' # apply some experimental rules to discard some outputs
+angle_off : 30 # margin of error to determine angles (i.e. if angle_off is 30, and the angle is 180, angles from
+# 150 to 210 degrees will be discarded)

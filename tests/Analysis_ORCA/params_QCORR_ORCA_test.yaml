@@ -1,0 +1,11 @@
+# TYPE OF aqme JOBS
+verbose : True
+
+# (1) CONFORMERS AND COM FILES GENERATION
+QCORR : gaussian
+
+# --- (4) ANALYSIS OF QM OUTPUT FILES (REQUIRES QPREP): QCORR
+# OPTIONS
+# if sp = True, the program will generate new COM files (from normally terminated LOG files) with the options selected from the user
+sp : orca # write single-point COM files after analysis (options in QPREP)
+suffix : SPC # adds a suffix at the end of the single-point COM filename (i.e. FILENAME_suffix.com). If suffix = None, no suffixes are added

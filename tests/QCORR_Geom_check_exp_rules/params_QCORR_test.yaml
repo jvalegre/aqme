@@ -1,0 +1,11 @@
+# TYPE OF aqme JOBS
+verbose : True
+
+# (1) CONFORMERS AND COM FILES GENERATION
+QCORR : gaussian
+
+# --- (4) ANALYSIS OF QM OUTPUT FILES (REQUIRES QPREP): QCORR
+# OPTIONS
+geom_rules : Ir_bidentate_x3
+check_geom : True
+sp : gaussian

@@ -1,0 +1,15 @@
+# INPUT FILE
+input : 'pentane.smi' # input files
+
+# TYPE OF aqme JOBS
+verbose : True
+
+# (1) CONFORMERS AND COM FILES GENERATION
+CSEARCH : rdkit
+QPREP : orca
+
+# COMMON PARAMETERS TO EDIT
+sample : 'auto' # number of conformers to sample to get non-torsional differences (default 100)
+basis_set : ['cc-pVTZ/C'] # basis set(s). Format: ['6-31+G(d,p)','Def2TZVP',...]
+level_of_theory : ['DLPNO-CCSD(T)'] # functional(s). Format: ['B3LYP','wB97XD',...]
+mdci_orca: ['Density None']

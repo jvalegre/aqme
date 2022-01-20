@@ -1,0 +1,11 @@
+Install RDKit
+conda install -c rdkit rdkit
+conda install -c conda-forge rdkit (compatible with Python >=3.8)
+
+Install OpenBabel
+conda install -c conda-forge openbabel
+
+Install AQME and its dependencies
+pip install AQME
+or
+python setup.py install

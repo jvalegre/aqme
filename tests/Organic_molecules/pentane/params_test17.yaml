@@ -1,0 +1,15 @@
+# INPUT FILE
+input : 'pentane.smi' # input files
+
+# TYPE OF aqme JOBS
+verbose : True
+
+# (1) CONFORMERS AND COM FILES GENERATION
+CSEARCH : rdkit
+CMIN : ['xtb', 'ani']
+QPREP : gaussian
+
+# COMMON PARAMETERS TO EDIT
+ewin_csearch : 1000 #energy window in kcal/mol to use conformers for RDKit and xTB (conformers with E higher than ewin will be discarded)
+sample : 20 # number of conformers to sample to get non-torsional differences (default 100)
+ani_method : ANI1ccx

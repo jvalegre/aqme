@@ -1,0 +1,21 @@
+# INPUT FILE
+input : 'pentane.smi' # input files
+
+# TYPE OF aqme JOBS
+verbose : True
+
+# (1) CONFORMERS AND COM FILES GENERATION
+CSEARCH : rdkit
+QPREP : gaussian
+
+# COMMON PARAMETERS TO EDIT
+ewin_csearch : 1000 #energy window in kcal/mol to use conformers for RDKit and xTB (conformers with E higher than ewin will be discarded)
+sample : 20 # number of conformers to sample to get non-torsional differences (default 100)
+
+# (4.2) DEFINITION OF A SECOND CATEGORY OF ATOMS SEPARATED IN GENECP
+gen_atoms : ['C'] # list of atoms included in the gen_ecp part
+gen_atoms : [] # list of atoms inclueded in gen part
+
+# (4.3) DEFINTION OF BASIS SET AND LEVEL OF THEORY AND SOLVENT
+genecp_bs : ['C_genecp.txt'] # functional for the genecp part
+level_of_theory : ['wb97xd'] # functional

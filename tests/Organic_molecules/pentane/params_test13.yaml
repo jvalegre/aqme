@@ -1,0 +1,14 @@
+# INPUT FILE
+input : 'pentane.smi' # input files
+
+# TYPE OF aqme JOBS
+verbose : True
+
+# (1) CONFORMERS AND COM FILES GENERATION
+CSEARCH : rdkit
+CMIN : ani
+QPREP : gaussian
+
+# COMMON PARAMETERS TO EDIT
+sample : 20 # number of conformers to sample to get non-torsional differences (default 100)
+ani_method : ANI1ccx
