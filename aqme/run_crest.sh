@@ -28,6 +28,7 @@ ethr=${ethr:-0.2}
 rthr=${rthr:-0.125}
 bthr=${bthr:-0.01}
 bthr=${bthr:-0.02}
+cbonds=${cbonds:-0.5}
 
 # input geometry (xyz)
 input=$1

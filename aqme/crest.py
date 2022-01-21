@@ -77,6 +77,7 @@ def run_xtb(xyzin, xyzoutxtb, constraints_dist, constraints_angle, constraints_d
 		# pass
 	else:
 		command = [os.path.abspath(os.path.dirname(__file__))+'/run_xtb.sh', xyzin, '--xyzout', str(xyzoutxtb), '--charge', str(charge)]
+
 		if constraints_dist is not None:
 			for i, bond in enumerate(constraints_dist):
 				command.append('--dist')
@@ -167,7 +168,9 @@ def crest_opt(mol, name, dup_data, dup_data_idx, sdwriter, args, log):
 			toadd = ','.join([str(elem) for elem in unique_atoms])
 			command.append(toadd)
 		if cbonds is not None:
-			command.append('--cbonds '+ str(cbonds))
+			command.append('--cbonds')
+			command.append(str(cbonds))
+
 		crest_result = subprocess.run(command)
 
 	if cregen:
