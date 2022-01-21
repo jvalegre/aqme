@@ -1,6 +1,5 @@
 Example_workflows/
 tests/
-*.log
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -79,6 +78,8 @@ target/
 
 # Jupyter Notebook
 .ipynb_checkpoints
+*.ipynb
+*.yaml
 
 # IPython
 profile_default/

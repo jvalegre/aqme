@@ -73,8 +73,28 @@ class csearch:
 
 	Parameters
 	----------
-	mol : RDKit Mol object, neededSMILES string necessary for setting up csearch object
-	name : Name of smiles, neededstring representing the code name for the object.
+	mol : RDKit mol object
+        Mol object used in CSEARCH
+    name : str
+        Name of the mol object
+    w_dir_initial : str
+        Working directory
+	charge_default : int
+        Charge of the system
+	varfile : str
+        Parameter file containing the additional options for CMIN
+	constraints_dist : list of lists
+		If the conformational sampling is for a transition state, this option add distance constrains
+		between sets of 2 atoms in the format [[A1,A2,DIST1],[A3,A4,DIST2]]. For example, constrain
+		C atom 1 and O atom 2 to a distance of 2.0 A --> [[1,2,2.0]]
+	constraints_angle : list of lists
+		Same as constraints_dist but contraining angles. For example, constrain C atom 1, O atom 2,
+		and C atom 3 to an angle of 120 degrees --> [[1,2,3,120]]
+	constraints_dihedral : list of lists
+		Same as constraints_dist but contraining dihedral angles. For example, constrain C atom 1, O atom 2,
+		C atom 3, and O atom 4 to a dihedral angle of 120 degrees --> [[1,2,3,4,120]]
+	kwargs : argument class
+		Specify any arguments from the QCORR module
 	"""
 
 	def __init__(
@@ -83,7 +103,7 @@ class csearch:
 		name=None,
 		w_dir_initial=os.getcwd(),
 		varfile=None,
-		charge_defualt=0,
+		charge_default=0,
 		constraints_dist=[],
 		constraints_angle=[],
 		constraints_dihedral=[],
@@ -92,7 +112,7 @@ class csearch:
 		self.smi = smi
 		self.name = name
 		self.w_dir_initial = w_dir_initial
-		self.charge_default = charge_defualt
+		self.charge_default = charge_default
 
 		if "options" in kwargs:
 			self.args = kwargs["options"]
@@ -116,8 +136,7 @@ class csearch:
 
 		self.csearch_folder = Path(self.w_dir_initial).joinpath(f"CSEARCH/{self.args.CSEARCH}")
 		self.csearch_folder.mkdir(exist_ok=True)
-		self.csearch_file = self.csearch_folder.joinpath(self.name + "_" + self.args.CSEARCH + self.args.output)
-		self.sdwriter = Chem.SDWriter(str(self.csearch_file))
+		self.csearch_file = []
 
 	def compute_confs(self):
 
@@ -226,6 +245,10 @@ class csearch:
 		pd.Dataframe    dup_data
 		"""
 		dup_data = creation_of_dup_csv_csearch(args.CSEARCH)
+
+		file = self.csearch_folder.joinpath(name + "_" + self.args.CSEARCH + self.args.output)
+		self.csearch_file  = self.csearch_file + [file]
+		self.sdwriter = Chem.SDWriter(str(file))
 
 		dup_data_idx = 0
 		start_time = time.time()
@@ -530,7 +553,10 @@ class csearch:
 					)
 				mol.SetProp("Energy", str(energy))
 				set_metal_atomic_number(mol, args.metal_idx, args.metal_sym)
-			sdwriter.write(mol, conf)
+			try:
+				sdwriter.write(mol,conf)
+			except:
+				pass
 			return 1
 		else:
 			total = 0
@@ -975,7 +1001,9 @@ def smi_to_mol(smi,args,name, constraints_dist, constraints_angle, constraints_d
 	if len(smi)>1:
 		mol, constraints_dist, constraints_angle, constraints_dihedral = nci_ts_mol(smi, args, constraints_dist, constraints_angle, constraints_dihedral, name)
 	else:
-		mol = Chem.MolFromSmiles(smi[0])
+		params = Chem.SmilesParserParams()
+		params.removeHs = False
+		mol = Chem.MolFromSmiles(smi[0],params)
 	return mol, constraints_dist, constraints_angle, constraints_dihedral
 
 # MAIN FUNCTION
@@ -1008,17 +1036,17 @@ def prepare_smiles_from_line(line, i, args):
 			constraints_dist = toks[2]
 			constraints_dist = constraints_dist.split('/')
 			for i,c in enumerate(constraints_dist):
-				constraints_dist[i] = c.split(',')
+				constraints_dist[i] = c.split('-')
 			if len(toks) > 3:
 				constraints_angle = toks[3]
 				constraints_angle = constraints_angle.split('/')
 				for i,c in enumerate(constraints_angle):
-					constraints_angle[i] = c.split(',')
+					constraints_angle[i] = c.split('-')
 				if len(toks) > 4:
 					constraints_dihedral = toks[4]
 					constraints_dihedral = constraints_dihedral.split('/')
 					for i,c in enumerate(constraints_dihedral):
-						constraints_dihedral[i] = c.split(',')
+						constraints_dihedral[i] = c.split('-')
 	if args.charge_default == "auto":  # I assume no AttributeError
 		if not args.metal_complex:  # I assume no AttributeError
 			args.charge_default = check_charge_smi(smi, args.ts_complex)  # I assume no AttributeError
@@ -1035,20 +1063,35 @@ def prepare_csv_files(args, w_dir_initial):
 
 def generate_mol_from_csv(args, w_dir_initial, csv_smiles, index):
 	# assigning names and smi i  each loop
-	smi = csv_smiles.loc[index, "SMILES"]
-	pruned_smi = check_for_pieces(smi)
-	mol = Chem.MolFromSmiles(pruned_smi)
-	if args.charge_default == "auto":
-		if not args.metal_complex:
-			args.charge_default = check_charge_smi(pruned_smi)
+	smiles = csv_smiles.loc[index, "SMILES"]
+	# pruned_smi = check_for_pieces(smi)
+	# mol = Chem.MolFromSmiles(pruned_smi)
+
+	smi = check_for_pieces(smiles)
 	if args.prefix == "None":
 		name = csv_smiles.loc[index, "code_name"]
 	else:
 		name = "comp_" + str(index) + "_" + csv_smiles.loc[index, "code_name"]
-	constraints = []
-	if 'constraints' in csv_smiles.columns:
-		constraints = csv_smiles.loc[index, "constraints"]
-	obj = mol, name, w_dir_initial, args.varfile, args.charge_default, constraints
+	constraints_angle, constraints_dist, constraints_dihedral = None, None, None
+	if 'constraints_dist' in csv_smiles.columns:
+		constraints_dist = csv_smiles.loc[index, "constraints_dist"]
+		constraints_dist = constraints_dist.split('/')
+		for i,c in enumerate(constraints_dist):
+			constraints_dist[i] = c.split('-')
+	if 'constraints_angle' in csv_smiles.columns:
+		constraints_angle = csv_smiles.loc[index, "constraints_angle"]
+		constraints_angle = constraints_angle.split('/')
+		for i,c in enumerate(constraints_angle):
+			constraints_angle[i] = c.split('-')
+	if 'constraints_dihedral' in csv_smiles.columns:
+		constraints_dihedral = csv_smiles.loc[index, "constraints_dihedral"]
+		constraints_dihedral = constraints_dihedral.split('/')
+		for i,c in enumerate(constraints_dihedral):
+			constraints_dihedral[i] = c.split('-')
+	if args.charge_default == "auto":
+		if not args.metal_complex:
+			args.charge_default = check_charge_smi(smi,args.ts_complex)
+	obj = smiles, name, w_dir_initial, args.varfile, args.charge_default, constraints_dist, constraints_angle, constraints_dihedral
 	return obj
 
 
@@ -1060,7 +1103,7 @@ def prepare_cdx_files(args, w_dir_initial):
 		name = f"{args.input.split('.')[0]}_{str(i)}"
 		if args.charge_default == "auto":
 			if not args.metal_complex:
-				args.charge_default = check_charge_smi(smi)
+				args.charge_default = check_charge_smi(smi,args.ts_complex)
 		constraints = []
 		obj = mol, name, w_dir_initial, args.varfile, args.charge_default, constraints
 		job_inputs.append(obj)

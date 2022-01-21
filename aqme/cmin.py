@@ -32,10 +32,18 @@ class cmin:
 
     Parameters
     ----------
-    mol : RDKit Mol object, needed
-            SMILES string necessary for setting up csearch object
-    name : Name of smiles, needed
-            string representing the code name for the object.
+    mols : RDKit mol objects
+        Mol objects used in CMIN
+    name : str
+        Name of the mol object
+    w_dir_initial : str
+        Working directory
+    varfile : str
+        Parameter file containing the additional options for CMIN
+	charge_default : int
+        Charge of the system
+	kwargs : argument class
+		Specify any arguments from the QCORR module
     """
 
     def __init__(
@@ -44,13 +52,13 @@ class cmin:
         name=None,
         w_dir_initial=os.getcwd(),
         varfile=None,
-        charge_defualt=0,
+        charge_default=0,
         **kwargs,
     ):
         self.mols = mols
         self.name = name
         self.w_dir_initial = w_dir_initial
-        self.charge_default = charge_defualt
+        self.charge_default = charge_default
 
         if "options" in kwargs:
             self.args = kwargs["options"]
@@ -93,7 +101,7 @@ class cmin:
                 # optimize this structure and record the energy
                 if self.args.metal_complex:
                     # fill the lists with None for every metal in the option
-                    for _ in args.metal:
+                    for _ in self.args.metal:
                         self.args.metal_idx.append(None)
                         self.args.complex_coord.append(None)
                         self.args.metal_sym.append(None)
@@ -173,6 +181,7 @@ class cmin:
 
         # selectedcids, cenergy, outmols = zip(*total_filter.accepted)
 
+        # PLACEHOLDER for imports! Need to rearrange
         from aqme.filter import ewin_filter, pre_E_filter, RMSD_and_E_filter
 
         sortedcids = ewin_filter(
