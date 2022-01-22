@@ -112,6 +112,10 @@ class qprep:
 		else:
 			self.destination = Path(destination)
 
+		dat_folder = self.destination.joinpath("dat_files/")
+		self.log = Logger(self.w_dir_main / 'QPREP', 'data')
+		self.log.write(f"o  Creating input files of {molecule} in {self.destination}\n")
+
 		if "options" in kwargs:
 			self.args = kwargs["options"]
 		else:
@@ -160,6 +164,8 @@ class qprep:
 		
 		comfile = self.write()
 		move_file(self.destination, self.w_dir_main, comfile)
+		self.log.finalize()
+		os.remove('QPREP_data.dat')
 
 
 	def get_header(self):
