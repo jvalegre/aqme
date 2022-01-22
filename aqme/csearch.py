@@ -137,6 +137,7 @@ class csearch:
 		self.csearch_folder = Path(self.w_dir_initial).joinpath(f"CSEARCH/{self.args.CSEARCH}")
 		self.csearch_folder.mkdir(exist_ok=True)
 		self.csearch_file = []
+		
 
 	def compute_confs(self):
 
@@ -209,7 +210,7 @@ class csearch:
 						frames = [total_data, data]
 						total_data = pd.concat(frames, sort=True)
 				else:
-					log.write(
+					self.log.write(
 						"x  Cannot use templates for complexes involving more than 1 metal or for organic molecueles."
 					)
 					total_data = None
@@ -247,7 +248,8 @@ class csearch:
 		dup_data = creation_of_dup_csv_csearch(args.CSEARCH)
 
 		file = self.csearch_folder.joinpath(name + "_" + self.args.CSEARCH + self.args.output)
-		self.csearch_file  = self.csearch_file + [file]
+		self.csearch_file = self.csearch_file + [file.as_posix()]
+
 		self.sdwriter = Chem.SDWriter(str(file))
 
 		dup_data_idx = 0

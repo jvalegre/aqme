@@ -112,6 +112,8 @@ class qprep:
 		else:
 			self.destination = Path(destination)
 
+		self.log = Logger(self.w_dir_main / 'QPREP', 'data')
+
 		if "options" in kwargs:
 			self.args = kwargs["options"]
 		else:
@@ -160,6 +162,8 @@ class qprep:
 		
 		comfile = self.write()
 		move_file(self.destination, self.w_dir_main, comfile)
+		self.log.finalize()
+		os.remove('QPREP_data.dat')
 
 
 	def get_header(self):
