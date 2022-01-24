@@ -3,7 +3,6 @@
 #             used for filtering                    #
 #####################################################.
 from functools import partial
-from itertools import chain
 
 from rdkit.Chem import AllChem as Chem
 from rdkit.Chem import rdMolTransforms, Descriptors
@@ -644,589 +643,588 @@ def RMSD_and_E_filter(
     return selectedcids
 
 
-# Base classes for the filters
-
-
-class Filter(object):
-    """
-    Base class for the definition of different types of filters. Defines the
-    basic API that any Filter object should have.
-
-    Parameters
-    ----------
-    function : Function
-            A single parameter function that returns true when the item should pass
-            the filter and False otherwise.
-
-    Attributes
-    ----------
-    dataset : list or None
-            A list containing a reference to all the elements that where filtered.
-    outcomes : list or None
-            A list of booleans with the same order as the dataset elements.
-    discarded : list or None
-            A list of discarded items from the dataset.
-    accepted : list or None
-            A list of accepted items from the dataset.
-    """
-
-    def __init__(self, function=None):
-        if function is not None:
-            self.function = function
-        elif getattr(self, "function", None) is None:
-            self.function = lambda x: True
-        self.dataset = None
-        self.outcomes = None
-        self._discarded = None
-        self._accepted = None
-
-    def add_dummy_parameter(self, function):
-        """
-        Adds a dummy parameter as the first positional parameter to a given
-        function and returns the wrapped function.
-        """
-
-        def f(dummy, parameter):
-            return function(parameter)
-
-        return f
-
-    def apply(self, dataset, key=None, force=False):
-        """
-        Applies the filter to an iterable. Setting the 'dataset' and 'outcomes'
-        attributes of the Filter in the process.
-
-        Parameters
-        ----------
-        dataset : iterable
-                Iterable that contains the items to run the filtering
-        key : [type], optional
-                [description], by default None
-        force : bool, optional
-                A True value will apply the filter to the dataset forcefully,
-                overwriting any previous usage of the filter to other dataset.
-
-        Raises
-        ------
-        ValueError
-                If the dataset has been already applied to a dataset and the force
-                keyword is set to 'false'
-        """
-        if self.dataset is not None and not force:
-            msg = "Attempting to apply a previously applied filter with force='false'"
-            raise ValueError(msg)
-        elif self.dataset is not None:
-            self.clean()
-
-        if key is None:
-            key = lambda x: x
-        self.dataset = list(dataset)
-        outcomes = self.calc_outcomes(dataset, key)
-        self.outcomes = tuple(outcomes)
-
-    def calc_outcomes(self, dataset, key):
-        """
-        Runs the filter on a dataset and returns the outcomes without storing
-        the values.
-
-        Parameters
-        ----------
-        dataset : iterable
-                Iterable that contains the items to run the filtering
-        key : function
-                [description]
-        """
-        return tuple(self.function(key(data)) for data in dataset)
-
-    def extend(self, dataset, key=None):
-        """
-        Extends the current dataset with the new dataset and includes the
-        outcomes of applying the filter to the new dataset.
-
-        Parameters
-        ----------
-        dataset : iterable
-                Iterable that contains the items to run the filtering
-        key : [type], optional
-                [description], by default None
-        """
-        if key is None:
-            key = lambda x: x
-        new = list(dataset)
-        outcomes = self.calc_outcomes(new, key)
-
-        self.dataset = self.dataset + new
-        self.outcomes = tuple(i for i in chain(self.outcomes, outcomes))
-        # And resets the cache of discarded and accepted
-        self._accepted = None
-        self._discarded = None
-
-    def clean(self):
-        """
-        Resets the state of the Filter removing all the information stored
-        about the last application of the of the filter to a set of data.
-        """
-        self.dataset = None
-        self.outcomes = None
-        self._discarded = None
-        self._accepted = None
-
-    @property
-    def discarded(self):
-        if self._discarded is None and self.dataset is not None:
-            self._discarded = [
-                d for out, d in zip(self.outcomes, self.dataset) if not out
-            ]
-        return self._discarded
-
-    @property
-    def accepted(self):
-        if self._accepted is None and self.dataset is not None:
-            self._accepted = [d for out, d in zip(self.outcomes, self.dataset) if out]
-        return self._accepted
-
-
-class CompoundFilter(Filter):
-    """
-    Class used to apply several filters to a same dataset in a certain order and
-    store the information about which ones were discarded in which filter.
-
-    Parameters
-    ----------
-    *filters : Filter
-            An undefined number of Filter objects
-
-    Attributes
-    ----------
-    filters : list
-            List of Filter objects in application order.
-    dataset : list or None
-            A list containing a reference to all the elements that where filtered.
-    outcomes : list or None
-            A list of booleans with the same order as the dataset elements.
-    discarded : list or None
-            A list of discarded items from the dataset.
-    accepted : list or None
-            A list of accepted items from the dataset.
-    """
-
-    def __init__(self, *filters):
-        self.filters = filters
-        super().__init__()
-
-    def insert(self, index, item):
-        """
-        Inserts a filter before the index position.
-
-        Parameters
-        ----------
-        item : Filter
-                The filter object to include.
-        """
-        self.filters.insert(index, item)
-
-    def pop(self, index=-1):
-        """
-        Remove and return a filter at index (default last).
-        """
-        return self.filters.pop(index)
-
-    def apply(self, dataset, key=None, keys=None, force=False):
-        """
-        Applies the filter to an iterable. Setting the 'dataset' and 'outcomes'
-        attributes of each Filter in the process.
-
-        Parameters
-        ----------
-        dataset : iterable
-                Iterable that contains the items to run the filtering
-        key : function, optional
-                If no function is provided it is assumed that the filter can process
-                each item in the dataset without any change, by default None.
-        keys : iterable, optional
-                Iterable of functions with the same length as the number of filters
-                to provide different, by default None. Overrides the key argument.
-        force : bool, optional
-                A True value will apply the filter to the dataset forcefully,
-                overwriting any previous usage of the filter to other dataset.
-
-        Raises
-        ------
-        ValueError
-                If the dataset has been already applied to a dataset and the force
-                keyword is set to 'false'
-        """
-        if self.dataset is not None and not force:
-            msg = "Attempting to apply a previously applied filter with force='false'"
-            raise ValueError(msg)
-        elif any([f.dataset is not None for f in self.filters]) and not force:
-            msg = (
-                "At least one of the filters has already been applied and force='false'"
-            )
-            raise ValueError(msg)
-        elif force:
-            self.clean()
-
-        # Assign the keys iterable
-        if keys is None and key is None:
-            key = lambda x: x
-            keys = [key for _ in self.filters]
-        elif key is not None:
-            keys = [key for _ in self.filters]
-
-        self.dataset = dataset
-        outcomes = self.calc_outcomes(dataset, keys)
-
-        # Set the attributes for all the Filters
-        self.filters[0].dataset = dataset
-        self.filters[0].outcomes = outcomes[0]
-        out_old = outcomes[0]
-        for f, out in zip(self.filters[1:], outcomes[1:]):
-            dataset_n = [d for i, d in zip(out_old, self.dataset) if i]
-            f.dataset = dataset_n
-            f.outcomes = out
-            out_old = out
-
-        # Set the attributes for the current object
-        outcomes = self.homogenize_outcomes(outcomes)
-
-        self.outcomes = outcomes
-
-    def calc_outcomes(self, dataset, keys):
-        """
-        Runs the filter on a dataset and returns the outcomes without storing
-        the values.
-
-        Parameters
-        ----------
-        dataset : iterable
-                Iterable that contains the items to run the filtering
-        keys : iterable
-                Iterable of functions that ensure proper input per each filter.
-        """
-        outcomes = []
-        dataset_old = dataset
-        # outcomes_old = (True,)*len(dataset)
-        for f, key in zip(self.filters, keys):
-            # Use the filter and get the dataset for the next filter
-            out = f.calc_outcomes(dataset_old, key=key)
-            dataset_old = [d for i, d in zip(out, dataset_old) if i]
-            outcomes.append(tuple(out))
-        return outcomes
-
-    def homogenize_outcomes(self, outcomes):
-        """
-        Returns a list of tuples where all tuples are the same size.
-
-        Parameters
-        ----------
-        outcomes : list
-                List of tuples with the outcomes of each of the filters.
-        n : int
-                size of the dataset
-
-        Returns
-        -------
-        list
-                list of the homogenized tuples.
-        """
-        homogenized = []
-        outcomes_old = (True,) * len(outcomes[0])
-        for _, out in zip(self.filters, outcomes):
-            _iter = out.__iter__()
-            outcomes_new = [False if not i else next(_iter) for i in outcomes_old]
-            homogenized.append(tuple(outcomes_new))
-            outcomes_old = outcomes_new
-        return homogenized
-
-    def extend(self, dataset, key=None, keys=None):
-        """
-        Extends the current dataset with the new dataset and includes the
-        outcomes of applying the filter to the new dataset.
-
-        Parameters
-        ----------
-        dataset : iterable
-                Iterable that contains the items to run the filtering
-        key : function, optional
-                If no function is provided it is assumed that the filter can process
-                each item in the dataset without any change, by default None.
-        keys : iterable, optional
-                Iterable of functions with the same length as the number of filters
-                to provide different, by default None. Overrides the key argument.
-        """
-        # Assign the keys iterable
-        if keys is None and key is None:
-            key = lambda x: x
-            keys = [key for _ in self.filters]
-        elif key is not None:
-            keys = [key for _ in self.filters]
-
-        new = list(dataset)
-
-        _outcomes = self.outcomes
-        outcomes = self.calc_outcomes(new, keys)
-
-        # Set the attributes for the current object
-        self.dataset = self.dataset + new
-
-        # reset the cache of the properties
-        self._accepted = None
-        self._discarded = None
-
-        # Set the attributes for all the Filters
-        self.filters[0].dataset = self.dataset
-        self.filters[0].outcomes = self.filters[0].outcomes + outcomes[0]
-        out_old = outcomes[0]
-        for f, out in zip(self.filters[1:], outcomes[1:]):
-            dataset_n = [d for i, d in zip(out_old, self.dataset) if i]
-            f.dataset = f.dataset + dataset_n
-            f.outcomes = f.outcomes + out
-            # reset the cache of the properties
-            f._accepted = None
-            f._discarded = None
-        outcomes = self.homogenize_outcomes(outcomes)
-        self.outcomes = [
-            out_old + out_new for out_old, out_new in zip(_outcomes, outcomes)
-        ]
-
-    def clean(self):
-        """
-        Resets the state of the CompoundFilter removing all the information
-        stored about the last application of the of the filter to a set of data.
-        It cleans all the component filters.
-        """
-        super().clean()
-        for f in self.filters:
-            f.clean()
-
-    def accepted_from(self, index):
-        """
-        returns the list of accepted items at the specified filter.
-        """
-        return [d for out, d in zip(self.outcomes[index], self.dataset) if out]
-
-    def discarded_from(self, index):
-        """
-        returns the total list of discarded items after the specified filter.
-        """
-        return [d for out, d in zip(self.outcomes[index], self.dataset) if not out]
-
-    @Filter.discarded.getter
-    def discarded(self):
-        if self._discarded is None and self.dataset is not None:
-            self._discarded = self.discarded_from(-1)
-        return self._discarded
-
-    @Filter.accepted.getter
-    def accepted(self):
-        if self._accepted is None and self.dataset is not None:
-            self._accepted = self.accepted_from(-1)
-        return self._accepted
-
-
-class RMSDFilter(Filter):
-    """
-    This filter inputs tuples of (molecule,cid). Each time a conformer that
-    passes the filter is found it is added to the pool of conformers.
-
-    Note: The RMSD calculation done by rdkit has the side effect of leaving the
-    target conformer aligned to the probe conformer.
-
-    Parameters
-    ----------
-    threshold : float
-            Minimum RMSD to accept a conformer.
-    maxmatches : int
-            maximum number of atoms should match in the alignment previous to the
-            RMSD calculation.
-    heavyonly : [type], optional
-            [description], by default True.
-    reverse : bool, optional
-            Reverses the threshold. If True, only conformers with an RMSD < threshold
-            will be accepted. by default False.
-    is_rdkit : bool
-            If the conformers to compare have been generated with rdkit and the
-            cid to use to access the conformer is the one provided instead of -1.
-            by default False.
-
-    """
-
-    def __init__(
-        self, threshold, maxmatches, heavyonly=True, reverse=False, is_rdkit=False
-    ):
-        self.threshold = threshold
-        self.maxmatches = maxmatches
-        self.heavyonly = heavyonly
-        self.pool = []
-        self.is_rdkit = is_rdkit
-        super().__init__(function=self.function)
-
-    def set_initial_pool(self, pool, key=None):
-        """
-        Sets the initial pool of seen conformers.
-
-        Parameters
-        ----------
-        pool : list
-                A list of conformers ( or things convertible to conformers through
-                the key function)
-        key : function, optional
-                A function to convert each item in the pool to a conformer that
-                can be subjected to the filter, by default None.
-                i.e
-                >>> myconformers[cid<-int] = conformer
-                >>> pool = [cid1,cid2,...,cidn]
-                >>> key = lambda x: myconformers[x]
-        """
-        if key is not None:
-            pool = list(map(key, pool))
-        self.pool = pool
-
-    def clean(self, also_pool=True):
-        """
-        Resets the state of the Filter removing all the information stored
-        about the last application of the of the filter to a set of data.
-
-        Parameters
-        ----------
-
-        also_pool : bool
-                If true it will also clear the initial pool of conformers.
-        """
-        if also_pool:
-            self.pool = []
-        super().__init__()
-
-    def function(self, item):
-        """
-        main function of the filter. inputs a tuple (molecule,cid) aligns it to
-        all the previously stored molecules and if it passes the filter, stores
-        it and returns True, otherwise returns False.
-        """
-        probe, cid_p = item
-        if item in self.pool:
-            return True
-        for target, cid_t in self.pool:
-            c1 = c2 = -1
-            if self.is_rdkit:
-                probe, target = target, probe
-                c1, c2 = cid_t, cid_p
-            rms = get_conf_RMS(probe, target, c1, c2, self.heavyonly, self.maxmatches)
-            if self.reverse:
-                reject = rms < self.threshold
-            else:
-                reject = rms > self.threshold
-            if reject:
-                return False
-        else:
-            self.pool.append(item)
-            return True
-
-
-class EnergyFilter(Filter):
-    """
-    This filter inputs energy values. Each time a conformer that
-    passes the filter is found it is added to the pool of conformers.
-
-    Note: The RMSD calculation done by rdkit has the side effect of leaving the
-    target conformer aligned to the probe conformer.
-
-    Parameters
-    ----------
-    threshold : float
-            Energy threshold in kcal/mol.
-    mode : str, ['difference','window']
-            'difference' accepts all the conformers whose energy difference
-            with respect to all the previous conformers found is larger than
-            the threshold.
-            'window' accepts all the conformers whose energy difference with respect
-            to the lowest in energy is smaller than the threshold.
-
-    Attributes
-    ----------
-    pool : list
-            In window mode, it is the list of minima used to calculate the energy
-            window. If the lowest conformer was either set as initial pool or
-            provided as the first item of the dataset the pool will remain of len=1.
-            In difference mode, it corresponds to all the conformers accepted.
-    """
-
-    def __init__(self, threshold, mode):
-        self.mode = mode  # difference or window
-        self.threshold = threshold
-        self.pool = []
-        super().__init__()
-
-    def set_initial_pool(self, pool, key=None):
-        """
-        Sets the initial pool of seen conformers.
-
-        Parameters
-        ----------
-        pool : list
-                A list of conformers ( or things convertible to conformers through
-                the key function)
-        key : function, optional
-                A function to convert each item in the pool to a conformer that
-                can be subjected to the filter, by default None.
-                i.e
-                >>> myconformers[cid<-int] = conformer
-                >>> pool = [cid1,cid2,...,cidn]
-                >>> key = lambda x: myconformers[x]
-        """
-        if key is not None:
-            pool = list(map(key, pool))
-        self.pool = pool
-
-    def clean(self, also_pool=True):
-        """
-        Resets the state of the Filter removing all the information stored
-        about the last application of the of the filter to a set of data.
-
-        Parameters
-        ----------
-
-        also_pool : bool
-                If true it will also clear the initial pool of conformers.
-        """
-        if also_pool:
-            self.pool = []
-        super().__init__()
-
-    def function(self, item):
-        """
-        main function of the filter. Inputs a tuple (cid,energy) and accepts or
-        rejects the item depending on the energy threshold and filter mode.
-        """
-        assert self.mode in ["window", "difference"]
-        if self.mode == "window":
-            out = self._window(item)
-        else:
-            out = self._difference(item)
-        return out
-
-    def _difference(self, item):
-        cid_p, energy_p = item
-        if item in self.pool:
-            return True
-        for cid_t, energy_t in self.pool:
-            if abs(energy_p - energy_t) < self.threshold:
-                return False
-        else:
-            self.pool.append(item)
-            return True
-
-    def _window(self, item):
-        if not self.pool:  # Ensure the pool has len = 1
-            self.pool.append(item)
-            return True
-        cid_p, energy_p = item
-        cid_t, energy_t = self.pool[-1]
-        reject = abs(energy_p - energy_t) < self.threshold
-        is_lowest = energy_p < energy_t
-        if reject:
-            return False
-        if is_lowest:
-            self.pool.append(item)
-        return True
+# Base classes for the filters (Raul's refactoring part, work in progress)
+
+# class Filter(object):
+#     """
+#     Base class for the definition of different types of filters. Defines the
+#     basic API that any Filter object should have.
+
+#     Parameters
+#     ----------
+#     function : Function
+#             A single parameter function that returns true when the item should pass
+#             the filter and False otherwise.
+
+#     Attributes
+#     ----------
+#     dataset : list or None
+#             A list containing a reference to all the elements that where filtered.
+#     outcomes : list or None
+#             A list of booleans with the same order as the dataset elements.
+#     discarded : list or None
+#             A list of discarded items from the dataset.
+#     accepted : list or None
+#             A list of accepted items from the dataset.
+#     """
+
+#     def __init__(self, function=None):
+#         if function is not None:
+#             self.function = function
+#         elif getattr(self, "function", None) is None:
+#             self.function = lambda x: True
+#         self.dataset = None
+#         self.outcomes = None
+#         self._discarded = None
+#         self._accepted = None
+
+#     def add_dummy_parameter(self, function):
+#         """
+#         Adds a dummy parameter as the first positional parameter to a given
+#         function and returns the wrapped function.
+#         """
+
+#         def f(dummy, parameter):
+#             return function(parameter)
+
+#         return f
+
+#     def apply(self, dataset, key=None, force=False):
+#         """
+#         Applies the filter to an iterable. Setting the 'dataset' and 'outcomes'
+#         attributes of the Filter in the process.
+
+#         Parameters
+#         ----------
+#         dataset : iterable
+#                 Iterable that contains the items to run the filtering
+#         key : [type], optional
+#                 [description], by default None
+#         force : bool, optional
+#                 A True value will apply the filter to the dataset forcefully,
+#                 overwriting any previous usage of the filter to other dataset.
+
+#         Raises
+#         ------
+#         ValueError
+#                 If the dataset has been already applied to a dataset and the force
+#                 keyword is set to 'false'
+#         """
+#         if self.dataset is not None and not force:
+#             msg = "Attempting to apply a previously applied filter with force='false'"
+#             raise ValueError(msg)
+#         elif self.dataset is not None:
+#             self.clean()
+
+#         if key is None:
+#             key = lambda x: x
+#         self.dataset = list(dataset)
+#         outcomes = self.calc_outcomes(dataset, key)
+#         self.outcomes = tuple(outcomes)
+
+#     def calc_outcomes(self, dataset, key):
+#         """
+#         Runs the filter on a dataset and returns the outcomes without storing
+#         the values.
+
+#         Parameters
+#         ----------
+#         dataset : iterable
+#                 Iterable that contains the items to run the filtering
+#         key : function
+#                 [description]
+#         """
+#         return tuple(self.function(key(data)) for data in dataset)
+
+#     def extend(self, dataset, key=None):
+#         """
+#         Extends the current dataset with the new dataset and includes the
+#         outcomes of applying the filter to the new dataset.
+
+#         Parameters
+#         ----------
+#         dataset : iterable
+#                 Iterable that contains the items to run the filtering
+#         key : [type], optional
+#                 [description], by default None
+#         """
+#         if key is None:
+#             key = lambda x: x
+#         new = list(dataset)
+#         outcomes = self.calc_outcomes(new, key)
+
+#         self.dataset = self.dataset + new
+#         self.outcomes = tuple(i for i in chain(self.outcomes, outcomes))
+#         # And resets the cache of discarded and accepted
+#         self._accepted = None
+#         self._discarded = None
+
+#     def clean(self):
+#         """
+#         Resets the state of the Filter removing all the information stored
+#         about the last application of the of the filter to a set of data.
+#         """
+#         self.dataset = None
+#         self.outcomes = None
+#         self._discarded = None
+#         self._accepted = None
+
+#     @property
+#     def discarded(self):
+#         if self._discarded is None and self.dataset is not None:
+#             self._discarded = [
+#                 d for out, d in zip(self.outcomes, self.dataset) if not out
+#             ]
+#         return self._discarded
+
+#     @property
+#     def accepted(self):
+#         if self._accepted is None and self.dataset is not None:
+#             self._accepted = [d for out, d in zip(self.outcomes, self.dataset) if out]
+#         return self._accepted
+
+
+# class CompoundFilter(Filter):
+#     """
+#     Class used to apply several filters to a same dataset in a certain order and
+#     store the information about which ones were discarded in which filter.
+
+#     Parameters
+#     ----------
+#     *filters : Filter
+#             An undefined number of Filter objects
+
+#     Attributes
+#     ----------
+#     filters : list
+#             List of Filter objects in application order.
+#     dataset : list or None
+#             A list containing a reference to all the elements that where filtered.
+#     outcomes : list or None
+#             A list of booleans with the same order as the dataset elements.
+#     discarded : list or None
+#             A list of discarded items from the dataset.
+#     accepted : list or None
+#             A list of accepted items from the dataset.
+#     """
+
+#     def __init__(self, *filters):
+#         self.filters = filters
+#         super().__init__()
+
+#     def insert(self, index, item):
+#         """
+#         Inserts a filter before the index position.
+
+#         Parameters
+#         ----------
+#         item : Filter
+#                 The filter object to include.
+#         """
+#         self.filters.insert(index, item)
+
+#     def pop(self, index=-1):
+#         """
+#         Remove and return a filter at index (default last).
+#         """
+#         return self.filters.pop(index)
+
+#     def apply(self, dataset, key=None, keys=None, force=False):
+#         """
+#         Applies the filter to an iterable. Setting the 'dataset' and 'outcomes'
+#         attributes of each Filter in the process.
+
+#         Parameters
+#         ----------
+#         dataset : iterable
+#                 Iterable that contains the items to run the filtering
+#         key : function, optional
+#                 If no function is provided it is assumed that the filter can process
+#                 each item in the dataset without any change, by default None.
+#         keys : iterable, optional
+#                 Iterable of functions with the same length as the number of filters
+#                 to provide different, by default None. Overrides the key argument.
+#         force : bool, optional
+#                 A True value will apply the filter to the dataset forcefully,
+#                 overwriting any previous usage of the filter to other dataset.
+
+#         Raises
+#         ------
+#         ValueError
+#                 If the dataset has been already applied to a dataset and the force
+#                 keyword is set to 'false'
+#         """
+#         if self.dataset is not None and not force:
+#             msg = "Attempting to apply a previously applied filter with force='false'"
+#             raise ValueError(msg)
+#         elif any([f.dataset is not None for f in self.filters]) and not force:
+#             msg = (
+#                 "At least one of the filters has already been applied and force='false'"
+#             )
+#             raise ValueError(msg)
+#         elif force:
+#             self.clean()
+
+#         # Assign the keys iterable
+#         if keys is None and key is None:
+#             key = lambda x: x
+#             keys = [key for _ in self.filters]
+#         elif key is not None:
+#             keys = [key for _ in self.filters]
+
+#         self.dataset = dataset
+#         outcomes = self.calc_outcomes(dataset, keys)
+
+#         # Set the attributes for all the Filters
+#         self.filters[0].dataset = dataset
+#         self.filters[0].outcomes = outcomes[0]
+#         out_old = outcomes[0]
+#         for f, out in zip(self.filters[1:], outcomes[1:]):
+#             dataset_n = [d for i, d in zip(out_old, self.dataset) if i]
+#             f.dataset = dataset_n
+#             f.outcomes = out
+#             out_old = out
+
+#         # Set the attributes for the current object
+#         outcomes = self.homogenize_outcomes(outcomes)
+
+#         self.outcomes = outcomes
+
+#     def calc_outcomes(self, dataset, keys):
+#         """
+#         Runs the filter on a dataset and returns the outcomes without storing
+#         the values.
+
+#         Parameters
+#         ----------
+#         dataset : iterable
+#                 Iterable that contains the items to run the filtering
+#         keys : iterable
+#                 Iterable of functions that ensure proper input per each filter.
+#         """
+#         outcomes = []
+#         dataset_old = dataset
+#         # outcomes_old = (True,)*len(dataset)
+#         for f, key in zip(self.filters, keys):
+#             # Use the filter and get the dataset for the next filter
+#             out = f.calc_outcomes(dataset_old, key=key)
+#             dataset_old = [d for i, d in zip(out, dataset_old) if i]
+#             outcomes.append(tuple(out))
+#         return outcomes
+
+#     def homogenize_outcomes(self, outcomes):
+#         """
+#         Returns a list of tuples where all tuples are the same size.
+
+#         Parameters
+#         ----------
+#         outcomes : list
+#                 List of tuples with the outcomes of each of the filters.
+#         n : int
+#                 size of the dataset
+
+#         Returns
+#         -------
+#         list
+#                 list of the homogenized tuples.
+#         """
+#         homogenized = []
+#         outcomes_old = (True,) * len(outcomes[0])
+#         for _, out in zip(self.filters, outcomes):
+#             _iter = out.__iter__()
+#             outcomes_new = [False if not i else next(_iter) for i in outcomes_old]
+#             homogenized.append(tuple(outcomes_new))
+#             outcomes_old = outcomes_new
+#         return homogenized
+
+#     def extend(self, dataset, key=None, keys=None):
+#         """
+#         Extends the current dataset with the new dataset and includes the
+#         outcomes of applying the filter to the new dataset.
+
+#         Parameters
+#         ----------
+#         dataset : iterable
+#                 Iterable that contains the items to run the filtering
+#         key : function, optional
+#                 If no function is provided it is assumed that the filter can process
+#                 each item in the dataset without any change, by default None.
+#         keys : iterable, optional
+#                 Iterable of functions with the same length as the number of filters
+#                 to provide different, by default None. Overrides the key argument.
+#         """
+#         # Assign the keys iterable
+#         if keys is None and key is None:
+#             key = lambda x: x
+#             keys = [key for _ in self.filters]
+#         elif key is not None:
+#             keys = [key for _ in self.filters]
+
+#         new = list(dataset)
+
+#         _outcomes = self.outcomes
+#         outcomes = self.calc_outcomes(new, keys)
+
+#         # Set the attributes for the current object
+#         self.dataset = self.dataset + new
+
+#         # reset the cache of the properties
+#         self._accepted = None
+#         self._discarded = None
+
+#         # Set the attributes for all the Filters
+#         self.filters[0].dataset = self.dataset
+#         self.filters[0].outcomes = self.filters[0].outcomes + outcomes[0]
+#         out_old = outcomes[0]
+#         for f, out in zip(self.filters[1:], outcomes[1:]):
+#             dataset_n = [d for i, d in zip(out_old, self.dataset) if i]
+#             f.dataset = f.dataset + dataset_n
+#             f.outcomes = f.outcomes + out
+#             # reset the cache of the properties
+#             f._accepted = None
+#             f._discarded = None
+#         outcomes = self.homogenize_outcomes(outcomes)
+#         self.outcomes = [
+#             out_old + out_new for out_old, out_new in zip(_outcomes, outcomes)
+#         ]
+
+#     def clean(self):
+#         """
+#         Resets the state of the CompoundFilter removing all the information
+#         stored about the last application of the of the filter to a set of data.
+#         It cleans all the component filters.
+#         """
+#         super().clean()
+#         for f in self.filters:
+#             f.clean()
+
+#     def accepted_from(self, index):
+#         """
+#         returns the list of accepted items at the specified filter.
+#         """
+#         return [d for out, d in zip(self.outcomes[index], self.dataset) if out]
+
+#     def discarded_from(self, index):
+#         """
+#         returns the total list of discarded items after the specified filter.
+#         """
+#         return [d for out, d in zip(self.outcomes[index], self.dataset) if not out]
+
+#     @Filter.discarded.getter
+#     def discarded(self):
+#         if self._discarded is None and self.dataset is not None:
+#             self._discarded = self.discarded_from(-1)
+#         return self._discarded
+
+#     @Filter.accepted.getter
+#     def accepted(self):
+#         if self._accepted is None and self.dataset is not None:
+#             self._accepted = self.accepted_from(-1)
+#         return self._accepted
+
+
+# class RMSDFilter(Filter):
+#     """
+#     This filter inputs tuples of (molecule,cid). Each time a conformer that
+#     passes the filter is found it is added to the pool of conformers.
+
+#     Note: The RMSD calculation done by rdkit has the side effect of leaving the
+#     target conformer aligned to the probe conformer.
+
+#     Parameters
+#     ----------
+#     threshold : float
+#             Minimum RMSD to accept a conformer.
+#     maxmatches : int
+#             maximum number of atoms should match in the alignment previous to the
+#             RMSD calculation.
+#     heavyonly : [type], optional
+#             [description], by default True.
+#     reverse : bool, optional
+#             Reverses the threshold. If True, only conformers with an RMSD < threshold
+#             will be accepted. by default False.
+#     is_rdkit : bool
+#             If the conformers to compare have been generated with rdkit and the
+#             cid to use to access the conformer is the one provided instead of -1.
+#             by default False.
+
+#     """
+
+#     def __init__(
+#         self, threshold, maxmatches, heavyonly=True, reverse=False, is_rdkit=False
+#     ):
+#         self.threshold = threshold
+#         self.maxmatches = maxmatches
+#         self.heavyonly = heavyonly
+#         self.pool = []
+#         self.is_rdkit = is_rdkit
+#         super().__init__(function=self.function)
+
+#     def set_initial_pool(self, pool, key=None):
+#         """
+#         Sets the initial pool of seen conformers.
+
+#         Parameters
+#         ----------
+#         pool : list
+#                 A list of conformers ( or things convertible to conformers through
+#                 the key function)
+#         key : function, optional
+#                 A function to convert each item in the pool to a conformer that
+#                 can be subjected to the filter, by default None.
+#                 i.e
+#                 >>> myconformers[cid<-int] = conformer
+#                 >>> pool = [cid1,cid2,...,cidn]
+#                 >>> key = lambda x: myconformers[x]
+#         """
+#         if key is not None:
+#             pool = list(map(key, pool))
+#         self.pool = pool
+
+#     def clean(self, also_pool=True):
+#         """
+#         Resets the state of the Filter removing all the information stored
+#         about the last application of the of the filter to a set of data.
+
+#         Parameters
+#         ----------
+
+#         also_pool : bool
+#                 If true it will also clear the initial pool of conformers.
+#         """
+#         if also_pool:
+#             self.pool = []
+#         super().__init__()
+
+#     def function(self, item):
+#         """
+#         main function of the filter. inputs a tuple (molecule,cid) aligns it to
+#         all the previously stored molecules and if it passes the filter, stores
+#         it and returns True, otherwise returns False.
+#         """
+#         probe, cid_p = item
+#         if item in self.pool:
+#             return True
+#         for target, cid_t in self.pool:
+#             c1 = c2 = -1
+#             if self.is_rdkit:
+#                 probe, target = target, probe
+#                 c1, c2 = cid_t, cid_p
+#             rms = get_conf_RMS(probe, target, c1, c2, self.heavyonly, self.maxmatches)
+#             if self.reverse:
+#                 reject = rms < self.threshold
+#             else:
+#                 reject = rms > self.threshold
+#             if reject:
+#                 return False
+#         else:
+#             self.pool.append(item)
+#             return True
+
+
+# class EnergyFilter(Filter):
+#     """
+#     This filter inputs energy values. Each time a conformer that
+#     passes the filter is found it is added to the pool of conformers.
+
+#     Note: The RMSD calculation done by rdkit has the side effect of leaving the
+#     target conformer aligned to the probe conformer.
+
+#     Parameters
+#     ----------
+#     threshold : float
+#             Energy threshold in kcal/mol.
+#     mode : str, ['difference','window']
+#             'difference' accepts all the conformers whose energy difference
+#             with respect to all the previous conformers found is larger than
+#             the threshold.
+#             'window' accepts all the conformers whose energy difference with respect
+#             to the lowest in energy is smaller than the threshold.
+
+#     Attributes
+#     ----------
+#     pool : list
+#             In window mode, it is the list of minima used to calculate the energy
+#             window. If the lowest conformer was either set as initial pool or
+#             provided as the first item of the dataset the pool will remain of len=1.
+#             In difference mode, it corresponds to all the conformers accepted.
+#     """
+
+#     def __init__(self, threshold, mode):
+#         self.mode = mode  # difference or window
+#         self.threshold = threshold
+#         self.pool = []
+#         super().__init__()
+
+#     def set_initial_pool(self, pool, key=None):
+#         """
+#         Sets the initial pool of seen conformers.
+
+#         Parameters
+#         ----------
+#         pool : list
+#                 A list of conformers ( or things convertible to conformers through
+#                 the key function)
+#         key : function, optional
+#                 A function to convert each item in the pool to a conformer that
+#                 can be subjected to the filter, by default None.
+#                 i.e
+#                 >>> myconformers[cid<-int] = conformer
+#                 >>> pool = [cid1,cid2,...,cidn]
+#                 >>> key = lambda x: myconformers[x]
+#         """
+#         if key is not None:
+#             pool = list(map(key, pool))
+#         self.pool = pool
+
+#     def clean(self, also_pool=True):
+#         """
+#         Resets the state of the Filter removing all the information stored
+#         about the last application of the of the filter to a set of data.
+
+#         Parameters
+#         ----------
+
+#         also_pool : bool
+#                 If true it will also clear the initial pool of conformers.
+#         """
+#         if also_pool:
+#             self.pool = []
+#         super().__init__()
+
+#     def function(self, item):
+#         """
+#         main function of the filter. Inputs a tuple (cid,energy) and accepts or
+#         rejects the item depending on the energy threshold and filter mode.
+#         """
+#         assert self.mode in ["window", "difference"]
+#         if self.mode == "window":
+#             out = self._window(item)
+#         else:
+#             out = self._difference(item)
+#         return out
+
+#     def _difference(self, item):
+#         cid_p, energy_p = item
+#         if item in self.pool:
+#             return True
+#         for cid_t, energy_t in self.pool:
+#             if abs(energy_p - energy_t) < self.threshold:
+#                 return False
+#         else:
+#             self.pool.append(item)
+#             return True
+
+#     def _window(self, item):
+#         if not self.pool:  # Ensure the pool has len = 1
+#             self.pool.append(item)
+#             return True
+#         cid_p, energy_p = item
+#         cid_t, energy_t = self.pool[-1]
+#         reject = abs(energy_p - energy_t) < self.threshold
+#         is_lowest = energy_p < energy_t
+#         if reject:
+#             return False
+#         if is_lowest:
+#             self.pool.append(item)
+#         return True

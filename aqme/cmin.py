@@ -3,7 +3,6 @@
 #    in conformer minimization with xTB and ANI      #
 #####################################################.
 
-from operator import itemgetter
 import os
 import sys
 import numpy as np
@@ -13,7 +12,6 @@ from rdkit.Chem.PropertyMol import PropertyMol
 from rdkit.Geometry import Point3D
 import time
 from aqme.argument_parser import set_options
-from aqme.filter import CompoundFilter, EnergyFilter, RMSDFilter
 from aqme.utils import (
     set_metal_atomic_number,
     Logger,
@@ -53,12 +51,15 @@ class cmin:
         w_dir_initial=os.getcwd(),
         varfile=None,
         charge_default=0,
+        program=None,
         **kwargs,
     ):
+
         self.mols = mols
         self.name = name
         self.w_dir_initial = w_dir_initial
         self.charge_default = charge_default
+        self.program = program
 
         if "options" in kwargs:
             self.args = kwargs["options"]
@@ -640,7 +641,8 @@ def mult_min(name, args, program, charge, log, w_dir_initial):
     name_mol = os.path.basename(name).split("_" + args.CSEARCH)[0]
 
     # bar.next()
-    obj = cmin(inmols, name_mol, w_dir_initial, args.varfile, charge, program)
+    obj = cmin(mols=inmols, name=name_mol, w_dir_initial=w_dir_initial, varfile=args.varfile,
+            charge_default=charge, program=program)
     total_data = obj.compute_cmin()
 
     return total_data

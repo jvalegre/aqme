@@ -2,13 +2,13 @@
 [![Build Status](https://img.shields.io/travis/com/jvalegre/aqme?label=Linux%20CI&logo=Travis)](https://travis-ci.com/github/jvalegre/aqme)
 [![Tests](https://img.shields.io/static/v1?label=Tests&message=104&color=green&logo=Travis)](https://travis-ci.com/github/jvalegre/aqme)
 [![Codecov](https://img.shields.io/codecov/c/github/jvalegre/aqme?label=Codecov&logo=codecov)](https://codecov.io/gh/jvalegre/aqme)
+
 [![CodeFactor](https://img.shields.io/codefactor/grade/github/jvalegre/aqme?label=Codefactor%20grade&logo=codefactor)](https://www.codefactor.io/repository/github/jvalegre/aqme/overview/master)
-[![Codacy](https://img.shields.io/codacy/grade/047e9c6001a84713a82e180669e14c98?label=Codacy%20grade&logo=codacy)](https://www.codacy.com/manual/jvalegre/aqme?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=jvalegre/aqme&amp;utm_campaign=Badge_Grade)
+[![Codacy](https://img.shields.io/codacy/grade/047e9c6001a84713a82e180669e14c98?label=Codacy%20grade&logo=codacy)](https://www.codacy.com/gh/jvalegre/aqme/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=jvalegre/aqme&amp;utm_campaign=Badge_Grade)
 [![lgtm](https://img.shields.io/lgtm/grade/python/github/jvalegre/aqme?label=LGTM%20grade&logo=lgtm)](https://lgtm.com/projects/g/jvalegre/aqme/context:python)
 
-![Size](https://img.shields.io/github/repo-size/jvalegre/aqme?label=Size)
-![PyPI](https://img.shields.io/pypi/v/aqme?label=PyPI&logo=pypi)
-![PyPI Downloads](https://img.shields.io/pypi/dm/aqme?label=PyPI%20downloads&logo=pypi&style=social)
+![Size](https://img.shields.io/github/languages/code-size/jvalegre/aqme)
+[![PyPI](https://img.shields.io/pypi/v/aqme?color=blue&label=PyPI&logo=pypi)](https://pypi.org/project/aqme)
 
 # Automated Quantum Mechanical Environments (AQME)
 
@@ -68,7 +68,7 @@ Descriptor generator from multiple input types such as SMILES, log files, xyz, e
 
 ## Quickstart
 ### Using AQME in Jupyter Notebooks
-There are multiple ready-to-use workflows presented as jupyter notebooks in the 'Example_workflows' folder. Some examples are:
+There are multiple ready-to-use workflows presented as jupyter notebooks in the 'Example_workflows.zip' file. Some examples are:
 * QCORR_workflows.ipynb (QCORR analysis of Gaussian output files):
 1) Analyze optimized QM ground and transition states and create json files of normally terminated files with no errors, extra imaginary frequencies, duplicates, etc. 
 2) Use json files to generate single-point energy corrections with multiple levels of theory, charge and multiplicity through for loops:
@@ -88,6 +88,17 @@ AQME can also be run through command lines. Some examples are:
 ## Extended documentation (installation, use, examples, etc)
 ** In process **
 XXX LINK READTHEDOCS WEBPAGE XXX
+
+## Developers and help desk
+* [Shree Sowndarya S. V.](https://orcid.org/0000-0002-4568-5854), main developer of the CSEARCH and CMIN modules. Contact: [svss@colostate.edu](mailto:svss@colostate.edu)
+* [Juan V. Alegre-Requena](https://orcid.org/0000-0002-0769-7168), main developer of the QCORR and QPREP modules. Contact: [juanvi89@hotmail.com](mailto:juanvi89@hotmail.com)
+* [Raúl Pérez-Soto](https://orcid.org/0000-0002-6237-2155), worked in refactoring the code. Contact: [rperez@iciq.es](rperez@iciq.es)
+* [Robert S. Paton](https://orcid.org/0000-0002-0104-4166), research group supervisor and code advisor. Contact: [robert.paton@colostate.edu](mailto:robert.paton@colostate.edu)
+
+For suggestions and improvements of the code (greatly appreciated!), please reach out through the issues and pull requests options of Github.
+
+## License 
+AQME is freely available under an [MIT](https://opensource.org/licenses/MIT) License
 
 ## Reference
 AQME v1.0, Alegre-Requena, J. V.; Sowndarya, S.; Pérez-Soto, R.; Alturaifi, T. M.; Paton, R. S., 2021. https://github.com/jvalegre/aqme
