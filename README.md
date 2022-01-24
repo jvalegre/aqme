@@ -92,7 +92,7 @@ XXX LINK READTHEDOCS WEBPAGE XXX
 ## Developers and help desk
 * [Shree Sowndarya S. V.](https://orcid.org/0000-0002-4568-5854), main developer of the CSEARCH and CMIN modules. Contact: [svss@colostate.edu](mailto:svss@colostate.edu)
 * [Juan V. Alegre-Requena](https://orcid.org/0000-0002-0769-7168), main developer of the QCORR and QPREP modules. Contact: [juanvi89@hotmail.com](mailto:juanvi89@hotmail.com)
-* [Raúl Pérez-Soto](https://orcid.org/0000-0002-6237-2155), worked in refactoring the code. Contact: [rperez@iciq.es](rperez@iciq.es)
+* [Raúl Pérez-Soto](https://orcid.org/0000-0002-6237-2155), worked in refactoring the code. Contact: [rperez@iciq.es](mailto:rperez@iciq.es)
 * [Robert S. Paton](https://orcid.org/0000-0002-0104-4166), research group supervisor and code advisor. Contact: [robert.paton@colostate.edu](mailto:robert.paton@colostate.edu)
 
 For suggestions and improvements of the code (greatly appreciated!), please reach out through the issues and pull requests options of Github.
