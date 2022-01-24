@@ -1,7 +1,6 @@
 """
 This module contains some classes and functions that are used from other modules
 """
-import shutil
 import sys
 import subprocess
 import numpy as np
@@ -517,7 +516,6 @@ def get_info_input(file):
 
 		# Read charge and multiplicity
 		charge = line.strip().split()[-2]
-		mult = line.strip().split()[-1]
 
 		# Store the coordinates until next *
 		atoms_and_coords = []
@@ -1080,8 +1078,6 @@ def check_isomerization(
 	bool
 		True there is a clearly distorted bond within the geometries.
 	"""
-
-	isomerized, diff = None, None
 
 	# load connectivity matrix from the starting points and convert string into matrix
 	if not init_csv.empty:

@@ -7,7 +7,6 @@
 
 import os
 import sys
-import glob
 import pandas as pd
 from rdkit import Chem
 from aqme.utils import load_from_yaml, Logger, move_file

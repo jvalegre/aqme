@@ -26,8 +26,6 @@
 
 import os
 import time
-import json
-import pandas as pd
 from pathlib import Path
 from aqme.argument_parser import parser_args
 
@@ -35,7 +33,6 @@ from aqme.mainf import (
     csearch_main,
     geom_rules_main,
     qprep_main,
-    move_sdf_main,
     graph_main,
     geom_par_main,
     nmr_main,
@@ -46,9 +43,8 @@ from aqme.mainf import (
     cclib_main,
     cmin_main,
 )
-from aqme.utils import Logger, get_filenames
+from aqme.utils import Logger
 from aqme.qcorr import qcorr, json2input
-from aqme.qprep import qprep
 
 
 def main():

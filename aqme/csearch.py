@@ -9,14 +9,12 @@ import sys
 import subprocess
 import time
 from pathlib import Path
-import concurrent.futures as futures  # RAUL: This is for the main
 
 import numpy as np
 import pandas as pd
 from rdkit.Chem import AllChem as Chem
 
 from rdkit.Chem import rdMolTransforms, PropertyMol, rdDistGeom, Lipinski
-from progress.bar import IncrementalBar  # RAUL: This is for the main
 
 from aqme.filter import filters, ewin_filter, pre_E_filter, RMSD_and_E_filter
 from aqme.tmbuild import template_embed

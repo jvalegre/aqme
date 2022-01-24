@@ -7,12 +7,10 @@ import sys
 import glob
 import pandas as pd
 import json
-import cclib
 import subprocess
 from pathlib import Path
 
 from aqme.utils import periodic_table,get_info_input
-from aqme.filter import geom_rules_output
 
 from aqme.utils import (
 	move_file,
@@ -449,12 +447,12 @@ class qcorr():
 				os.chdir(self.w_dir_main)
 
 			if errortype not in ['ts_no_imag_freq','atomicbasiserror','before_E_error','isomerization','duplicate_calc','spin_contaminated','none','sp_calc']:
-				qcorr_calcs = qprep(destination=Path(f'{os.getcwd()}/unsuccessful_QM_outputs/run_{self.round_num}/fixed_QM_inputs'), w_dir_main=self.w_dir_main,
-							molecule=file_name, charge=charge, mult=mult,
-							program=self.program, atom_types=atom_types,
-							cartesians=cartesians, qm_input=keywords_line,
-							mem=mem, nprocs=nprocs, chk=self.chk, qm_end=self.qm_end,
-							bs_gen=self.bs_gen, bs=self.bs, gen_atoms=self.gen_atoms)
+				qprep(destination=Path(f'{os.getcwd()}/unsuccessful_QM_outputs/run_{self.round_num}/fixed_QM_inputs'), w_dir_main=self.w_dir_main,
+					molecule=file_name, charge=charge, mult=mult,
+					program=self.program, atom_types=atom_types,
+					cartesians=cartesians, qm_input=keywords_line,
+					mem=mem, nprocs=nprocs, chk=self.chk, qm_end=self.qm_end,
+					bs_gen=self.bs_gen, bs=self.bs, gen_atoms=self.gen_atoms)
 
 			print(f'{file}: Termination = {termination}, Error type = {errortype}')
 			self.log.write(f'{file}: Termination = {termination}, Error type = {errortype}')
@@ -1141,21 +1139,21 @@ def json2input(json_files=[], w_dir_main=os.getcwd(), destination=None, suffix='
 			print('x  The json files do not contain coordinates and/or atom type information')
 		
 		# if no charge and multiplicity are specified, they are read from the json file
-		if charge_initial == None:
+		if charge_initial is None:
 			charge = cclib_data['properties']['charge']
-		if mult_initial == None:
+		if mult_initial is None:
 			mult = cclib_data['properties']['multiplicity']
-		if charge == None:
+		if charge is None:
 			print('x  No charge was specified in the json file or function input (i.e. json2input(charge=0) )')
-		elif mult == None:
+		elif mult is None:
 			print('x  No multiplicity was specified in the json file or function input (i.e. json2input(mult=1) )')
 
-		json_calcs = qprep(destination=destination, w_dir_main=w_dir_main,
-					molecule=file_name, charge=charge, mult=mult,
-					program=program, atom_types=atom_types,
-					cartesians=cartesians, qm_input=qm_input,
-					mem=mem, nprocs=nprocs, chk=chk, qm_end=qm_end,
-					bs_gen=bs_gen, bs=bs, gen_atoms=gen_atoms, suffix=suffix)
+		qprep(destination=destination, w_dir_main=w_dir_main,
+			molecule=file_name, charge=charge, mult=mult,
+			program=program, atom_types=atom_types,
+			cartesians=cartesians, qm_input=qm_input,
+			mem=mem, nprocs=nprocs, chk=chk, qm_end=qm_end,
+			bs_gen=bs_gen, bs=bs, gen_atoms=gen_atoms, suffix=suffix)
 	
 	print(f'o  Final input files were generated in {destination}')
 
