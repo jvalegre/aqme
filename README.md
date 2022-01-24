@@ -69,7 +69,13 @@ Descriptor generator from multiple input types such as SMILES, log files, xyz, e
 ## Quickstart
 ### Using AQME in Jupyter Notebooks
 There are multiple ready-to-use workflows presented as jupyter notebooks in the 'Example_workflows.zip' file. Some examples are:
-* QCORR_workflows.ipynb (QCORR analysis of Gaussian output files):
+* CSEARCH_CMIN_workflows.ipynb (CSEARCH/CMIN conformational sampling from SMILES and creation of QM input files):
+1) RDKit-based automated generation of quinine conformers, followed by geometry reoptimization with xTB and creation of Gaussian input files for QM optimization
+2) RDKit-based conformer generation of a Pd complex, followed by creation of Gaussian input files containing a genECP section to account for Pd atoms
+3) CREST-based conformer sampling of a noncovalent isopentane--water complex, followed by creation of Gaussian input files
+4) CREST-based conformer generation using a transition state (TS) with 3 separated molecules, followed by generation of ORCA input files of TS
+
+* QCORR_workflows.ipynb (QCORR analysis of Gaussian output files and creation of QM input files):
 1) Analyze optimized QM ground and transition states and create json files of normally terminated files with no errors, extra imaginary frequencies, duplicates, etc. 
 2) Use json files to generate single-point energy corrections with multiple levels of theory, charge and multiplicity through for loops:
 2a) For Gaussian files, genECP and NBO files containing final extra lines are provided. 
