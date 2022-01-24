@@ -292,7 +292,7 @@ def crest_opt(mol, name, dup_data, dup_data_idx, sdwriter, args, log):
 
     dup_data.at[dup_data_idx, "crest-conformers"] = len(xyz_files)
 
-    for f in glob.glob(os.getcwd() + "/" + name + "*.xyz"):
-        os.remove(f)
+#     for f in glob.glob(os.getcwd() + "/" + name + "*.xyz"):
+#         os.remove(f)
 
     return 1
