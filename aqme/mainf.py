@@ -219,11 +219,11 @@ def qprep_main(w_dir_initial, args, log):
 		mols.extend(new_mols)
 
 		name = os.path.basename(filepath).split(".")[0].split('_')[0]
-		charge = charge_data[charge_data.Molecule == name]['Overall charge'][0]
+		charge = charge_data[charge_data.Molecule == name]['Overall charge'].values[0]
 
 		# writing the com files
 		for i, mol in enumerate(mols):
-			qprep(mol=mol, molecule=name+'_conf_'+str(i+1), charge=charge, atom_types = [], yaml_file=args.varfile)
+			qprep(mol=mol, molecule=name+'_conf_'+str(i+1), charge=charge, atom_types = [], varfile=args.varfile)
 
       
 # moving files after compute and/or write_gauss
