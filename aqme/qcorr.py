@@ -749,7 +749,7 @@ class qcorr():
 				if point_group != '' and symmno != '' and roconst != [] and rotemp != []:
 					break
 
-				elif self.freq_conv and outlines[i].find('Converged?') > -1:
+				elif self.freq_conv not in [False, 'False'] and outlines[i].find('Converged?') > -1:
 					for j in range(i+1,i+5):
 						if outlines[j].strip().split()[-1] == 'NO':
 							errortype = 'freq_no_conv'
