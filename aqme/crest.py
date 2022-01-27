@@ -6,11 +6,9 @@ from __future__ import print_function, absolute_import
 #######################################################################
 
 # Python Libraries
-import sys, os
+import os
 from rdkit.Chem import rdMolTransforms
-import numpy as np
 import glob
-from optparse import OptionParser
 import subprocess
 import rdkit
 from rdkit.Chem import AllChem
@@ -125,7 +123,7 @@ def run_xtb(
                     + ","
                     + str(dihedral[4])
                 )
-        xtb_result = subprocess.run(command)
+        subprocess.run(command)
 
 
 def crest_opt(mol, name, dup_data, dup_data_idx, sdwriter, args, log):
@@ -223,7 +221,7 @@ def crest_opt(mol, name, dup_data, dup_data_idx, sdwriter, args, log):
             command.append("--cbonds")
             command.append(str(cbonds))
 
-        crest_result = subprocess.run(command)
+        subprocess.run(command)
 
     if cregen:
         xyzcregenensemble = xyzoutall.split(".xyz")[0] + "_cregen.xyz"
@@ -255,7 +253,7 @@ def crest_opt(mol, name, dup_data, dup_data_idx, sdwriter, args, log):
                 "--ewin",
                 str(cregen_ewin),
             ]
-            cregen_result = subprocess.run(command)
+            subprocess.run(command)
 
             # converting multiple xyz to single
             command_run_1 = [

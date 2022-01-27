@@ -5,7 +5,6 @@
 import glob
 import sys
 import os
-import time
 import concurrent.futures as futures
 import multiprocessing as mp
 from pathlib import Path
@@ -22,22 +21,12 @@ from aqme.filter import geom_rules_output
 
 from aqme.qprep import qprep, get_molecule_list, load_charge_data
 
-# from aqme.grapher import graph
-# from aqme.descp import calculate_parameters
-# from aqme.nmr import calculate_boltz_and_nmr
-# from aqme.energy import calculate_boltz_and_energy,calculate_avg_and_energy
-# from aqme.dbstep_conf import calculate_db_parameters,calculate_boltz_and_dbstep
-# from aqme.nics_conf import calculate_nics_parameters,calculate_boltz_for_nics,calculate_avg_nics
-# from aqme.cclib_conf import calculate_cclib,get_avg_cclib_param,calculate_boltz_for_cclib
 from aqme.cmin import mult_min
 from aqme.utils import (
-	Logger,
 	move_file,
 	get_filenames,
 	creation_of_dup_csv_csearch,
 	creation_of_dup_csv_cmin,
-	read_energies,
-	get_name_and_charge,
 )
 
 # need to and in energy
@@ -230,11 +219,11 @@ def qprep_main(w_dir_initial, args, log):
 		mols.extend(new_mols)
 
 		name = os.path.basename(filepath).split(".")[0].split('_')[0]
-		charge = charge_data[charge_data.Molecule == name]['Overall charge'][0]
+		charge = charge_data[charge_data.Molecule == name]['Overall charge'].values[0]
 
 		# writing the com files
 		for i, mol in enumerate(mols):
-			qprep(mol=mol, molecule=name+'_conf_'+str(i+1), charge=charge, atom_types = [], yaml_file=args.varfile)
+			qprep(mol=mol, molecule=name+'_conf_'+str(i+1), charge=charge, atom_types = [], varfile=args.varfile)
 
       
 # moving files after compute and/or write_gauss

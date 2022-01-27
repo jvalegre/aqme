@@ -7,7 +7,6 @@
 
 import os
 import sys
-import glob
 import pandas as pd
 from rdkit import Chem
 from aqme.utils import load_from_yaml, Logger, move_file
@@ -112,9 +111,7 @@ class qprep:
 		else:
 			self.destination = Path(destination)
 
-		dat_folder = self.destination.joinpath("dat_files/")
 		self.log = Logger(self.w_dir_main / 'QPREP', 'data')
-		self.log.write(f"o  Creating input files of {molecule} in {self.destination}\n")
 
 		if "options" in kwargs:
 			self.args = kwargs["options"]

@@ -8,7 +8,6 @@ from rdkit.Chem import AllChem as Chem
 import numpy as np
 from sklearn.metrics import mean_absolute_error
 import statistics as stats
-from aqme.turbomole import TurbomoleOutput
 
 ev_2_kcal_mol = 23.061 #ev to kcal/mol
 hartree_to_kcal = 627.509
