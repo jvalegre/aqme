@@ -34,6 +34,7 @@ from aqme.utils import (
 	check_charge_smi,
 	check_for_pieces,
 	nci_ts_mol,
+	get_mult,
 )
 from aqme.crest import crest_opt
 
@@ -135,7 +136,7 @@ class csearch:
 		self.csearch_folder = Path(self.w_dir_initial).joinpath(f"CSEARCH/{self.args.CSEARCH}")
 		self.csearch_folder.mkdir(exist_ok=True)
 		self.csearch_file = []
-		
+
 
 	def compute_confs(self):
 
@@ -726,6 +727,9 @@ class csearch:
 			mol, cids, args, log, coord_Map, alg_Map, mol_template
 		)
 
+		mult = get_mult(mol)
+		dup_data.at[dup_data_idx, "Mult"] = mult
+
 		# writing charges after RDKit
 		if (
 			os.path.splitext(args.input)[1] == ".cdx"
@@ -736,11 +740,15 @@ class csearch:
 		else:
 			dup_data.at[dup_data_idx, "Overall charge"] = args.charge_default
 
+
 		for i, cid in enumerate(cids):
 			outmols[cid].SetProp("_Name", name + " " + str(i + 1))
 			outmols[cid].SetProp("Energy", str(cenergy[cid]))
 			outmols[cid].SetProp(
 				"Real charge", str(dup_data.at[dup_data_idx, "Overall charge"])
+			)
+			outmols[cid].SetProp(
+				"Mult", str(dup_data.at[dup_data_idx, "Mult"])
 			)
 
 		# sorts the energies

@@ -201,12 +201,14 @@ def qprep_main(w_dir_initial, args, log):
 	csv_file = f"{w_dir_initial}/CSEARCH/csv_files/{csv_name}-CSEARCH-Data.csv"
 	charge_data, invalid_files = load_charge_data(csv_file, conf_files)
 
+
 	# remove the invalid files and non-existing files
 	accept_file = lambda x: x not in invalid_files and Path(x).exists()
 	conf_files = [file for file in conf_files if accept_file(file)]
 
 	# Prepare the list of molecules that are to be written
 	mols = []
+
 
 	for file in conf_files:
 		filepath = f"{file}"
@@ -220,12 +222,13 @@ def qprep_main(w_dir_initial, args, log):
 
 		name = os.path.basename(filepath).split(".")[0].split('_')[0]
 		charge = charge_data[charge_data.Molecule == name]['Overall charge'].values[0]
+		mult = int(charge_data[charge_data.Molecule == name]['Mult'].values[0])
 
 		# writing the com files
 		for i, mol in enumerate(mols):
-			qprep(mol=mol, molecule=name+'_conf_'+str(i+1), charge=charge, atom_types = [], varfile=args.varfile)
+			qprep(mol=mol, molecule=name+'_conf_'+str(i+1), charge=charge,mult=mult, atom_types = [], varfile=args.varfile)
 
-      
+
 # moving files after compute and/or write_gauss
 def move_sdf_main(args):
 	src = Path(os.getcwd())
