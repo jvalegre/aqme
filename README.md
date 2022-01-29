@@ -23,13 +23,14 @@ The code is an ensemble of automated QM workflows that can be run through jupyte
 
 ## Installation
 1) Installing RDKit and openbabel through conda:
+
 `conda install -c rdkit rdkit` or `conda install -c conda-forge rdkit` (compatible with Python >=3.8)
+
 `conda install -c conda-forge openbabel`
 
-2) Install AQME and its dependencies
-`pip install aqme`
-or
-`python setup.py install`
+2) Install AQME and its dependencies:
+
+`pip install aqme` or `python setup.py install`
 
 ## Requirements
 * Python 3
