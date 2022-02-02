@@ -107,7 +107,7 @@ class qprep:
 
 		if destination is None:
 			self.destination = Path(os.getcwd()+"/QCALC/")
-      
+
 		else:
 			self.destination = Path(destination)
 
@@ -128,8 +128,6 @@ class qprep:
 				self.destination = self.w_dir_main.joinpath("QCALC")
 			else:
 				self.destination = Path(self.args.destination)
-			self.charge = self.args.charge
-			self.mult = self.args.mult
 			if self.charge == None:
 				self.charge = 0
 			if self.mult == None:
@@ -158,7 +156,7 @@ class qprep:
 
 		if molecule == "":
 			sys.exit("x  No name was specified! (molecule=NAME).")
-		
+
 		comfile = self.write()
 		move_file(self.destination, self.w_dir_main, comfile)
 		self.log.finalize()
@@ -309,7 +307,7 @@ def load_charge_data(filepath, backup_files):
 	# read in dup_data to get the overall charge of MOLECULES
 	invalid_files = []
 	try:
-		charge_data = pd.read_csv(filepath, usecols=["Molecule", "Overall charge"])
+		charge_data = pd.read_csv(filepath, usecols=["Molecule", "Overall charge","Mult"])
 	except:
 		charge_data = pd.DataFrame()
 		for i, sdf_file in enumerate(backup_files):
@@ -324,6 +322,8 @@ def load_charge_data(filepath, backup_files):
 				mol = next(pybel.readfile(sdf_file))
 				name = mol.title.split(maxsplit=1)[0]
 				charge = mol.data["Real charge"]
+				mult = mol.data["Mult"]
 			charge_data.at[i, "Molecule"] = name
 			charge_data.at[i, "Overall charge"] = charge
+			charge_data.at[i, "Mult"] = mult
 	return charge_data, invalid_files

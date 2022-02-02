@@ -74,7 +74,7 @@ class cmin:
         if varfile is not None:
             self.args, self.log = load_from_yaml(self.args, self.log)
 
-        self.args.charge_default = self.charge_default
+        self.args.charge_default = charge_default
         self.args.charge = rules_get_charge(self.mols[0], self.args)
 
         self.program = self.args.CMIN
@@ -642,7 +642,7 @@ def mult_min(name, args, program, charge, log, w_dir_initial):
 
     # bar.next()
     obj = cmin(mols=inmols, name=name_mol, w_dir_initial=w_dir_initial, varfile=args.varfile,
-            charge_default=charge, program=program)
+            charge_default=charge, program=program, options=args)
     total_data = obj.compute_cmin()
 
     return total_data

@@ -5,6 +5,7 @@
 import argparse
 import os
 
+
 def parser_args():
 
     parser = argparse.ArgumentParser(
@@ -12,16 +13,24 @@ def parser_args():
     )
 
     # necessary input details
-    parser.add_argument(
-        "--varfile", 
-        default=None, 
-        help="Parameters in YAML format"
-    )
+    parser.add_argument("--varfile", default=None, help="Parameters in YAML format")
     parser.add_argument(
         "-i",
         "--input",
         help="File containing molecular structure(s)",
         default=" ",
+    )
+    parser.add_argument(
+        "--smi",
+        help="SMILES of a molecular structure(s)",
+        default=None,
+        nargs="*",
+    )
+    parser.add_argument(
+        "--name",
+        help="Name of a molecular structure(s)",
+        default=None,
+        nargs="*",
     )
     parser.add_argument(
         "--output_name",
@@ -97,10 +106,7 @@ def parser_args():
         help="Request metal complex with coord. no. 4, 5 or 6",
     )
     parser.add_argument(
-        "--metal",
-        help="Specify metallic element",
-        default=[],
-        type=str
+        "--metal", help="Specify metallic element", default=[], type=str
     )
     parser.add_argument(
         "--mult",
@@ -120,12 +126,7 @@ def parser_args():
         default="",
         type=str,
     )
-    parser.add_argument(
-        "--m_oxi", 
-        help="Metal oxidation state",
-        default=[],
-        type=int
-    )
+    parser.add_argument("--m_oxi", help="Metal oxidation state", default=[], type=int)
     parser.add_argument(
         "--metal_idx",
         help="Metal index (automatically updates)",
@@ -430,13 +431,13 @@ def parser_args():
     )
     parser.add_argument(
         "--bs",
-        default='',
+        default="",
         help="Basis set used for non gen(ECP) atoms in gen(ECP) calculations",
         type=str,
     )
     parser.add_argument(
         "--bs_gen",
-        default='',
+        default="",
         help="Basis set used for gen(ECP) atoms",
         type=str,
     )
@@ -536,14 +537,14 @@ def parser_args():
         action="store",
         default=os.getcwd(),
         help="Working directory",
-    )   
+    )
 
     parser.add_argument(
         "--qm_files",
         action="store",
         default=[],
         help="Filenames of QM output files to analyze",
-    )   
+    )
     parser.add_argument(
         "--dup",
         action="store",
@@ -574,7 +575,7 @@ def parser_args():
     parser.add_argument(
         "--freq_conv",
         action="store",
-        default='opt=(calcfc,maxstep=5)',
+        default="opt=(calcfc,maxstep=5)",
         help="If a string is defined, it will remove calculations that converged during optimization but did not convergence in the subsequent frequency calculation. Options: opt sections as strings i.e. (opt=(calcfc,maxstep=5)). If readfc is specified in the string, the chk option must be included as well. Turn this option off by using freq_conv=False.",
     )
     parser.add_argument(
@@ -640,7 +641,7 @@ def parser_args():
     parser.add_argument(
         "--suffix",
         help="Suffix for the new input files",
-        default='',
+        default="",
     )
 
     # argumets for QSTAT
@@ -959,7 +960,7 @@ def set_options(kwargs):
         "cbonds": 0.5,
         "prefix": "None",
     }
-
+    print(kwargs)
     for key in var_dict:
         vars(options)[key] = var_dict[key]
     for key in kwargs:

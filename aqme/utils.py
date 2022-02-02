@@ -252,6 +252,13 @@ class Logger:
 		"""Closes the file"""
 		self.log.close()
 
+def get_mult(mol):
+	radical_index = 0
+	for i, atom in enumerate(mol.GetAtoms()):
+	    if atom.GetNumRadicalElectrons() != 0:
+	        radical_index +=1
+	mult = 2*(radical_index/2) + 1
+	return mult
 
 # OS utils
 def creation_of_dup_csv_csearch(csearch):
