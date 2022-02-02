@@ -252,7 +252,6 @@ def qprep_main(w_dir_initial, args, log):
 				varfile=args.varfile,
 			)
 
-
 # moving files after compute and/or write_gauss
 def move_sdf_main(args):
 	src = Path(os.getcwd())
