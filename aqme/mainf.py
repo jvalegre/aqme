@@ -34,31 +34,37 @@ from aqme.utils import (
 
 def csearch_main(w_dir_initial, args, log_overall):
 
-	file_format = os.path.splitext(args.input)[1]
+	if args.smi is None:
+		file_format = os.path.splitext(args.input)[1]
+		# Checks
+		if file_format not in SUPPORTED_INPUTS:
+			log_overall.write("\nx  INPUT FILETYPE NOT CURRENTLY SUPPORTED!")
+			sys.exit()
+		if not os.path.exists(args.input):
+			log_overall.write("\nx  INPUT FILE NOT FOUND!")
+			sys.exit()
+		# if large system increase stack size
+		# if args.STACKSIZE != '1G':
+		#     os.environ['OMP_STACKSIZE'] = args.STACKSIZE
+		smi_derivatives = [".smi", ".txt", ".yaml", ".yml", ".rtf"]
+		Extension2inputgen = dict()
+		for key in smi_derivatives:
+			Extension2inputgen[key] = prepare_smiles_files
+		Extension2inputgen[".csv"] = prepare_csv_files
+		Extension2inputgen[".cdx"] = prepare_cdx_files
+		Extension2inputgen[".gjf"] = prepare_gaussian_files
+		Extension2inputgen[".com"] = prepare_gaussian_files
+		Extension2inputgen[".xyz"] = prepare_gaussian_files
+		Extension2inputgen[".sdf"] = prepare_sdf_files
+		Extension2inputgen[".mol"] = prepare_mol_files
+		Extension2inputgen[".mol2"] = prepare_mol_files
 
-	# Checks
-	if file_format not in SUPPORTED_INPUTS:
-		log_overall.write("\nx  INPUT FILETYPE NOT CURRENTLY SUPPORTED!")
-		sys.exit()
-	if not os.path.exists(args.input):
-		log_overall.write("\nx  INPUT FILE NOT FOUND!")
-		sys.exit()
+		# Prepare the Jobs
+		prepare_function = Extension2inputgen[file_format]
+		job_inputs = prepare_function(args, w_dir_initial)
 
-	# if large system increase stack size
-	# if args.STACKSIZE != '1G':
-	#     os.environ['OMP_STACKSIZE'] = args.STACKSIZE
-	smi_derivatives = [".smi", ".txt", ".yaml", ".yml", ".rtf"]
-	Extension2inputgen = dict()
-	for key in smi_derivatives:
-		Extension2inputgen[key] = prepare_smiles_files
-	Extension2inputgen[".csv"] = prepare_csv_files
-	Extension2inputgen[".cdx"] = prepare_cdx_files
-	Extension2inputgen[".gjf"] = prepare_gaussian_files
-	Extension2inputgen[".com"] = prepare_gaussian_files
-	Extension2inputgen[".xyz"] = prepare_gaussian_files
-	Extension2inputgen[".sdf"] = prepare_sdf_files
-	Extension2inputgen[".mol"] = prepare_mol_files
-	Extension2inputgen[".mol2"] = prepare_mol_files
+	else:
+		job_inputs = prepare_direct_smi(args, w_dir_initial)
 
 	with futures.ProcessPoolExecutor(
 		max_workers=args.cpus, mp_context=mp.get_context("fork")
@@ -66,16 +72,29 @@ def csearch_main(w_dir_initial, args, log_overall):
 		# Submit a set of asynchronous jobs
 		jobs = []
 		count_mol = 0
-
-		# Prepare the Jobs
-		prepare_function = Extension2inputgen[file_format]
-		job_inputs = prepare_function(args, w_dir_initial)
-
 		# Submit the Jobs
 		for job_input in job_inputs:
-			smi_, name_, dir_, varfile_, charge_default_, constraints_dist_, constraints_angle_, constraints_dihedral_ = job_input
+			(
+				smi_,
+				name_,
+				dir_,
+				varfile_,
+				charge_default_,
+				constraints_dist_,
+				constraints_angle_,
+				constraints_dihedral_,
+			) = job_input
 			job = executor.submit(
-				process_csearch, smi_, name_, dir_, varfile_, charge_default_, constraints_dist_, constraints_angle_, constraints_dihedral_
+				process_csearch,
+				smi_,
+				name_,
+				dir_,
+				varfile_,
+				charge_default_,
+				constraints_dist_,
+				constraints_angle_,
+				constraints_dihedral_,
+				args
 			)
 			jobs.append(job)
 			count_mol += 1
@@ -201,14 +220,12 @@ def qprep_main(w_dir_initial, args, log):
 	csv_file = f"{w_dir_initial}/CSEARCH/csv_files/{csv_name}-CSEARCH-Data.csv"
 	charge_data, invalid_files = load_charge_data(csv_file, conf_files)
 
-
 	# remove the invalid files and non-existing files
 	accept_file = lambda x: x not in invalid_files and Path(x).exists()
 	conf_files = [file for file in conf_files if accept_file(file)]
 
 	# Prepare the list of molecules that are to be written
 	mols = []
-
 
 	for file in conf_files:
 		filepath = f"{file}"
@@ -220,13 +237,20 @@ def qprep_main(w_dir_initial, args, log):
 		)
 		mols.extend(new_mols)
 
-		name = os.path.basename(filepath).split(".")[0].split('_')[0]
-		charge = charge_data[charge_data.Molecule == name]['Overall charge'].values[0]
-		mult = int(charge_data[charge_data.Molecule == name]['Mult'].values[0])
+		name = os.path.basename(filepath).split(".")[0].split("_")[0]
+		charge = charge_data[charge_data.Molecule == name]["Overall charge"].values[0]
+		mult = int(charge_data[charge_data.Molecule == name]["Mult"].values[0])
 
 		# writing the com files
 		for i, mol in enumerate(mols):
-			qprep(mol=mol, molecule=name+'_conf_'+str(i+1), charge=charge,mult=mult, atom_types = [], varfile=args.varfile)
+			qprep(
+				mol=mol,
+				molecule=name + "_conf_" + str(i + 1),
+				charge=charge,
+				mult=mult,
+				atom_types=[],
+				varfile=args.varfile,
+			)
 
 
 # moving files after compute and/or write_gauss
@@ -286,7 +310,9 @@ def move_sdf_main(args):
 		for file in all_name_conf_files:
 			move_file(destination_rdkit, src, file)
 		if len(args.geom_rules) >= 1 and args.CMIN is None:
-			destination_geom_rules = src.joinpath("CSEARCH/fullmonte/filter_geom_rules/")
+			destination_geom_rules = src.joinpath(
+				"CSEARCH/fullmonte/filter_geom_rules/"
+			)
 			for file in geom_rules_files:
 				move_file(destination_geom_rules, src, file)
 
