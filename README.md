@@ -76,14 +76,32 @@ There are multiple ready-to-use workflows presented as jupyter notebooks in the 
 4) CREST-based conformer generation using a transition state (TS) with 3 separated molecules, followed by generation of ORCA input files of TS
 
 * QCORR_workflows.ipynb (QCORR analysis of Gaussian output files and creation of QM input files):
-1) Analyze optimized QM ground and transition states and create json files of normally terminated files with no errors, extra imaginary frequencies, duplicates, etc. 
+1) Analyze optimized QM ground and transition states and create json files of normally terminated files with no errors, extra imaginary frequencies, duplicates, etc.
 2) Use json files to generate single-point energy corrections with multiple levels of theory, charge and multiplicity through for loops:
-2a) For Gaussian files, genECP and NBO files containing final extra lines are provided. 
-2b) For ORCA input files, a DLPNO-CCSD(T) example with multiple % sections is provided. 
+2a) For Gaussian files, genECP and NBO files containing final extra lines are provided.
+2b) For ORCA input files, a DLPNO-CCSD(T) example with multiple % sections is provided.
 2c) For pySCF, a calculation is set with DeepMind 21 (DM21).
 
 ### Using AQME through command lines in terminals
 AQME can also be run through command lines. Some examples are:
+* CSEARCH/CMIN for conformer generation with direct SMILES and Name:
+1) cd into the required folder where you need the outputs of conformer generation
+2) Run: `python -m aqme --smi CCCC --name butane --CSEARCH rdkit --CMIN xtb`
+* CSEARCH/CMIN for conformer generation with direct YAML file containing the constrains:
+1) cd into the required folder where you need the outputs of conformer generation. This should have the yaml file (e.g.: varfile.yaml), the respective input files (.smi, .csv etc.,)
+2) An example YAML file contains the follwoing:
+`input : 'smi.smi' #name of input
+output_name : 'csearch' #name for output
+verbose : True
+
+CSEARCH : 'rdkit'
+QPREP : 'gaussian'
+
+nprocs : 8
+mem : '24GB'
+qm_input : 'B3LYP/6-31G**'
+suffix : 'rdkit'`
+3) Run: `python -m aqme --varfile varfile.yaml`
 * QCORR analysis of Gaussian output files and json file generation:
 1) cd into a folder with output files (in this case, LOG files but other formats such as OUT are compatible as well)
 2) Run: `python -m aqme --qcorr --qm_files=*.log`
@@ -103,7 +121,7 @@ XXX LINK READTHEDOCS WEBPAGE XXX
 
 For suggestions and improvements of the code (greatly appreciated!), please reach out through the issues and pull requests options of Github.
 
-## License 
+## License
 AQME is freely available under an [MIT](https://opensource.org/licenses/MIT) License
 
 ## Reference
