@@ -84,18 +84,11 @@ def parser_args():
         help="Post-processing of output files from QM calculations",
     )
     parser.add_argument(
-        "--QSTAT",
+        "--qdescp",
         action="store",
         default=None,
         help="Generate parameters for different conformers",
-        choices=["graph", "descp"],
-    )
-    parser.add_argument(
-        "--QPRED",
-        action="store",
-        default=None,
-        help="Perform predictions for different conformers",
-        choices=["nmr", "energy", "dbstep", "nics", "cclib-json"],
+        choices=["geometricdescp", "nmr", "dbstep", "nbo"],
     )
 
     # arguments for TMBUILD
