@@ -611,21 +611,23 @@ class qcorr():
 								mem = outlines[j].split()[-1]+'MB'
 
 							# multiple ways to describe %pal
-							elif outlines[j].lower().find('%pal') > -1 and outlines[j].lower().find('nprocs') > -1 and outlines[j].lower().find('end') > -1:
-								nprocs = int(outlines[j].split()[-2])
-							elif outlines[j].lower().find('%pal') > -1 and outlines[j].lower().find('nprocs') > -1 and outlines[j+1].lower().find('end') > -1:
-								nprocs = int(outlines[j].split()[-1])
-								skip_lines = 1
-							elif outlines[j].lower().find('%pal') > -1 and outlines[j+1].lower().find('nprocs') > -1 and outlines[j+1].lower().find('end') > -1:
-								nprocs = int(outlines[j+1].split()[-2])
-								skip_lines = 1
-							elif outlines[j].lower().find('%pal') > -1 and outlines[j+1].lower().find('nprocs') > -1 and outlines[j+2].lower().find('end') > -1:
-								nprocs = int(outlines[j+1].split()[-1])
-								skip_lines = 2
+							if outlines[j].lower().find('%pal') > -1:
+								if outlines[j].lower().find('nprocs') > -1 and outlines[j].lower().find('end') > -1:
+									nprocs = int(outlines[j].split()[-2])
+								elif outlines[j].lower().find('nprocs') > -1 and outlines[j+1].lower().find('end') > -1:
+									nprocs = int(outlines[j].split()[-1])
+									skip_lines = 1
+								elif outlines[j+1].lower().find('nprocs') > -1 and outlines[j+1].lower().find('end') > -1:
+									nprocs = int(outlines[j+1].split()[-2])
+									skip_lines = 1
+								elif outlines[j+1].lower().find('nprocs') > -1 and outlines[j+2].lower().find('end') > -1:
+									nprocs = int(outlines[j+1].split()[-1])
+									skip_lines = 2
+
 							elif skip_lines != 0:
 								skip_lines -= 1
 
-							else:
+							elif skip_lines == 0:
 								keywords_line += outlines[j][6:]
 
 				# ORCA parsing for solvation model
@@ -749,7 +751,7 @@ class qcorr():
 				if point_group != '' and symmno != '' and roconst != [] and rotemp != []:
 					break
 
-				elif self.freq_conv and outlines[i].find('Converged?') > -1:
+				elif self.freq_conv not in [False, 'False'] and outlines[i].find('Converged?') > -1:
 					for j in range(i+1,i+5):
 						if outlines[j].strip().split()[-1] == 'NO':
 							errortype = 'freq_no_conv'

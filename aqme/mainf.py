@@ -177,173 +177,171 @@ def cmin_main(w_dir_initial, args, log_overall, dup_data):
 # MAIN QPREP FUNCTION
 def qprep_main(w_dir_initial, args, log):
 
-    if len(args.geom_rules) >= 1:
-        conf_files = glob.glob("*_rules.sdf")
-    # define the SDF files to convert to COM Gaussian files
-    elif args.CMIN == "xtb":
-        conf_files = glob.glob(w_dir_initial + "/CMIN/" + args.CMIN + "/*_xtb.sdf")
-    elif args.CMIN == "ani":
-        conf_files = glob.glob(w_dir_initial + "/CMIN/" + args.CMIN + "/*_ani.sdf")
-    elif args.CSEARCH == "rdkit":
-        conf_files = glob.glob(
-            w_dir_initial + "/CSEARCH/" + args.CSEARCH + "/*_rdkit.sdf"
-        )
-    elif args.CSEARCH == "summ":
-        conf_files = glob.glob(
-            w_dir_initial + "/CSEARCH/" + args.CSEARCH + "/*_summ.sdf"
-        )
-    elif args.CSEARCH == "fullmonte":
-        conf_files = glob.glob(
-            w_dir_initial + "/CSEARCH/" + args.CSEARCH + "/*_fullmonte.sdf"
-        )
-    elif args.CSEARCH == "crest":
-        conf_files = glob.glob(
-            w_dir_initial + "/CSEARCH/" + args.CSEARCH + "/*_crest.sdf"
-        )
-    else:
-        conf_files = glob.glob("*.sdf")
+	if len(args.geom_rules) >= 1:
+		conf_files = glob.glob("*_rules.sdf")
+	# define the SDF files to convert to COM Gaussian files
+	elif args.CMIN == "xtb":
+		conf_files = glob.glob(w_dir_initial + "/CMIN/" + args.CMIN + "/*_xtb.sdf")
+	elif args.CMIN == "ani":
+		conf_files = glob.glob(w_dir_initial + "/CMIN/" + args.CMIN + "/*_ani.sdf")
+	elif args.CSEARCH == "rdkit":
+		conf_files = glob.glob(
+			w_dir_initial + "/CSEARCH/" + args.CSEARCH + "/*_rdkit.sdf"
+		)
+	elif args.CSEARCH == "summ":
+		conf_files = glob.glob(
+			w_dir_initial + "/CSEARCH/" + args.CSEARCH + "/*_summ.sdf"
+		)
+	elif args.CSEARCH == "fullmonte":
+		conf_files = glob.glob(
+			w_dir_initial + "/CSEARCH/" + args.CSEARCH + "/*_fullmonte.sdf"
+		)
+	elif args.CSEARCH == "crest":
+		conf_files = glob.glob(
+			w_dir_initial + "/CSEARCH/" + args.CSEARCH + "/*_crest.sdf"
+		)
+	else:
+		conf_files = glob.glob("*.sdf")
 
-    # # NEED TO UPDATE THIS PART TO START FROM JSON!
-    # if args.com_from_xyz:
-    #     xyz_files = glob.glob("*.xyz")
-    #     for file in xyz_files:
-    #         mol = next(pybel.readfile("xyz", file))
-    #         stem = Path(file).stem
-    #         mol.write("sdf", f"{stem}.sdf")
-    #     conf_files = glob.glob("*.sdf")
+	# # NEED TO UPDATE THIS PART TO START FROM JSON!
+	# if args.com_from_xyz:
+	#     xyz_files = glob.glob("*.xyz")
+	#     for file in xyz_files:
+	#         mol = next(pybel.readfile("xyz", file))
+	#         stem = Path(file).stem
+	#         mol.write("sdf", f"{stem}.sdf")
+	#     conf_files = glob.glob("*.sdf")
 
-    if not conf_files:
-        log.write("\nx  No SDF files detected to convert to gaussian COM files")
-        return
+	if not conf_files:
+		log.write("\nx  No SDF files detected to convert to gaussian COM files")
+		return
 
-    csv_name = args.input.split(".")[0]
-    csv_file = f"{w_dir_initial}/CSEARCH/csv_files/{csv_name}-CSEARCH-Data.csv"
-    charge_data, invalid_files = load_charge_data(csv_file, conf_files)
+	csv_name = args.input.split(".")[0]
+	csv_file = f"{w_dir_initial}/CSEARCH/csv_files/{csv_name}-CSEARCH-Data.csv"
+	charge_data, invalid_files = load_charge_data(csv_file, conf_files)
 
-    # remove the invalid files and non-existing files
-    accept_file = lambda x: x not in invalid_files and Path(x).exists()
-    conf_files = [file for file in conf_files if accept_file(file)]
+	# remove the invalid files and non-existing files
+	accept_file = lambda x: x not in invalid_files and Path(x).exists()
+	conf_files = [file for file in conf_files if accept_file(file)]
 
-    # Prepare the list of molecules that are to be written
-    mols = []
+	# Prepare the list of molecules that are to be written
+	mols = []
 
-    for file in conf_files:
-        filepath = f"{file}"
-        new_mols = get_molecule_list(
-            filepath,
-            lowest_only=args.lowest_only,
-            lowest_n=args.lowest_n,
-            energy_threshold=args.energy_threshold_for_gaussian,
-        )
-        mols.extend(new_mols)
+	for file in conf_files:
+		filepath = f"{file}"
+		new_mols = get_molecule_list(
+			filepath,
+			lowest_only=args.lowest_only,
+			lowest_n=args.lowest_n,
+			energy_threshold=args.energy_threshold_for_gaussian,
+		)
+		mols.extend(new_mols)
 
-        name = os.path.basename(filepath).split(".")[0].split("_")[0]
-        charge = charge_data[charge_data.Molecule == name]["Overall charge"].values[0]
-        mult = int(charge_data[charge_data.Molecule == name]["Mult"].values[0])
+		name = os.path.basename(filepath).split(".")[0].split("_")[0]
+		charge = charge_data[charge_data.Molecule == name]["Overall charge"].values[0]
+		mult = int(charge_data[charge_data.Molecule == name]["Mult"].values[0])
 
-        # writing the com files
-        for i, mol in enumerate(mols):
-            qprep(
-                mol=mol,
-                molecule=name + "_conf_" + str(i + 1),
-                charge=charge,
-                mult=mult,
-                atom_types=[],
-                varfile=args.varfile,
-            )
+		# writing the com files
+		for i, mol in enumerate(mols):
+			qprep(
+				mol=mol,
+				molecule=name + "_conf_" + str(i + 1),
+				charge=charge,
+				mult=mult,
+				atom_types=[],
+				varfile=args.varfile,
+			)
 
+# moving files after compute and/or write_gauss
+def move_sdf_main(args):
+	src = Path(os.getcwd())
+	if len(args.geom_rules) >= 1:
+		geom_rules_files = glob.glob("*_filter_geom_rules.sdf")
+	if args.CMIN == "xtb":
+		all_xtb_conf_files = glob.glob("*_xtb.sdf")
+		destination_xtb = src.joinpath("CMIN/xtb/")
+		for file in all_xtb_conf_files:
+			move_file(destination_xtb, src, file)
+		all_xtb_conf_files_all = glob.glob("*_xtb_all_confs.sdf")
+		destination_xtb_all = src.joinpath("CMIN/xtb_all_confs/")
+		for file in all_xtb_conf_files_all:
+			move_file(destination_xtb_all, src, file)
+		if len(args.geom_rules) >= 1:
+			destination_geom_rules = src.joinpath("CMIN/xtb/filter_geom_rules/")
+			for file in geom_rules_files:
+				move_file(destination_geom_rules, src, file)
+	if args.CMIN == "ani":
+		all_ani_conf_files = glob.glob("*_ani.sdf")
+		destination_ani = src.joinpath("CMIN/ani/")
+		for file in all_ani_conf_files:
+			move_file(destination_ani, src, file)
+		all_ani_conf_files_all = glob.glob("*_ani_all_confs.sdf")
+		destination_ani_all = src.joinpath("CMIN/ani_all_confs/")
+		for file in all_ani_conf_files_all:
+			move_file(destination_ani_all, src, file)
+		if len(args.geom_rules) >= 1:
+			destination_geom_rules = src.joinpath("CMIN/ani/filter_geom_rules/")
+			for file in geom_rules_files:
+				move_file(destination_geom_rules, src, file)
+	if args.CSEARCH == "rdkit":
+		all_name_conf_files = glob.glob("*_rdkit.sdf")
+		destination_rdkit = src.joinpath("CSEARCH/rdkit/")
+		for file in all_name_conf_files:
+			move_file(destination_rdkit, src, file)
+		if len(args.geom_rules) >= 1:
+			destination_geom_rules = src.joinpath("CSEARCH/rdkit/filter_geom_rules/")
+			for file in geom_rules_files:
+				move_file(destination_geom_rules, src, file)
 
-# # moving files after compute and/or write_gauss
-# def move_sdf_main(args):
-#     src = Path(os.getcwd())
-#     if len(args.geom_rules) >= 1:
-#         geom_rules_files = glob.glob("*_filter_geom_rules.sdf")
-#     if args.CMIN == "xtb":
-#         all_xtb_conf_files = glob.glob("*_xtb.sdf")
-#         destination_xtb = src.joinpath("CMIN/xtb/")
-#         for file in all_xtb_conf_files:
-#             move_file(destination_xtb, src, file)
-#         all_xtb_conf_files_all = glob.glob("*_xtb_all_confs.sdf")
-#         destination_xtb_all = src.joinpath("CMIN/xtb_all_confs/")
-#         for file in all_xtb_conf_files_all:
-#             move_file(destination_xtb_all, src, file)
-#         if len(args.geom_rules) >= 1:
-#             destination_geom_rules = src.joinpath("CMIN/xtb/filter_geom_rules/")
-#             for file in geom_rules_files:
-#                 move_file(destination_geom_rules, src, file)
-#     if args.CMIN == "ani":
-#         all_ani_conf_files = glob.glob("*_ani.sdf")
-#         destination_ani = src.joinpath("CMIN/ani/")
-#         for file in all_ani_conf_files:
-#             move_file(destination_ani, src, file)
-#         all_ani_conf_files_all = glob.glob("*_ani_all_confs.sdf")
-#         destination_ani_all = src.joinpath("CMIN/ani_all_confs/")
-#         for file in all_ani_conf_files_all:
-#             move_file(destination_ani_all, src, file)
-#         if len(args.geom_rules) >= 1:
-#             destination_geom_rules = src.joinpath("CMIN/ani/filter_geom_rules/")
-#             for file in geom_rules_files:
-#                 move_file(destination_geom_rules, src, file)
-#     if args.CSEARCH == "rdkit":
-#         all_name_conf_files = glob.glob("*_rdkit.sdf")
-#         destination_rdkit = src.joinpath("CSEARCH/rdkit/")
-#         for file in all_name_conf_files:
-#             move_file(destination_rdkit, src, file)
-#         if len(args.geom_rules) >= 1:
-#             destination_geom_rules = src.joinpath("CSEARCH/rdkit/filter_geom_rules/")
-#             for file in geom_rules_files:
-#                 move_file(destination_geom_rules, src, file)
-#
-#     if args.CSEARCH == "summ":
-#         all_name_conf_files = glob.glob("*_summ.sdf")
-#         destination_rdkit = src.joinpath("CSEARCH/summ/")
-#         for file in all_name_conf_files:
-#             move_file(destination_rdkit, src, file)
-#         if len(args.geom_rules) >= 1 and args.CMIN is None:
-#             destination_geom_rules = src.joinpath("CSEARCH/summ/filter_geom_rules/")
-#             for file in geom_rules_files:
-#                 move_file(destination_geom_rules, src, file)
-#
-#     if args.CSEARCH == "fullmonte":
-#         all_name_conf_files = glob.glob("*_fullmonte.sdf")
-#         destination_rdkit = src.joinpath("CSEARCH/fullmonte/")
-#         for file in all_name_conf_files:
-#             move_file(destination_rdkit, src, file)
-#         if len(args.geom_rules) >= 1 and args.CMIN is None:
-#             destination_geom_rules = src.joinpath(
-#                 "CSEARCH/fullmonte/filter_geom_rules/"
-#             )
-#             for file in geom_rules_files:
-#                 move_file(destination_geom_rules, src, file)
-#
-#     if args.CSEARCH == "crest":
-#         all_name_conf_files = glob.glob("*_crest.sdf")
-#         destination_rdkit = src.joinpath("CSEARCH/crest/")
-#         for file in all_name_conf_files:
-#             move_file(destination_rdkit, src, file)
-#         if len(args.geom_rules) >= 1 and args.CMIN is None:
-#             destination_geom_rules = src.joinpath("CSEARCH/crest/filter_geom_rules/")
-#             for file in geom_rules_files:
-#                 move_file(destination_geom_rules, src, file)
-#
-#     if args.CSEARCH is None:
-#         if len(args.geom_rules) >= 1:
-#             destination_geom_rules = src.joinpath("QCALC/SDF_input/filter_geom_rules/")
-#             for file in geom_rules_files:
-#                 move_file(destination_geom_rules, src, file)
-#
-#         all_conf_files = glob.glob("*.sdf")
-#         destination = src.joinpath("QCALC/SDF_input/")
-#         for file in all_conf_files:
-#             move_file(destination, src, file)
-#
-#     if args.com_from_xyz:
-#         all_xyz_conf_files = glob.glob("*.xyz") + glob.glob("*.sdf")
-#         destination_xyz = src.joinpath("QCALC/xyz_and_sdf/")
-#         for file in all_xyz_conf_files:
-#             move_file(destination_xyz, src, file)
-#
-#
+	if args.CSEARCH == "summ":
+		all_name_conf_files = glob.glob("*_summ.sdf")
+		destination_rdkit = src.joinpath("CSEARCH/summ/")
+		for file in all_name_conf_files:
+			move_file(destination_rdkit, src, file)
+		if len(args.geom_rules) >= 1 and args.CMIN is None:
+			destination_geom_rules = src.joinpath("CSEARCH/summ/filter_geom_rules/")
+			for file in geom_rules_files:
+				move_file(destination_geom_rules, src, file)
+
+	if args.CSEARCH == "fullmonte":
+		all_name_conf_files = glob.glob("*_fullmonte.sdf")
+		destination_rdkit = src.joinpath("CSEARCH/fullmonte/")
+		for file in all_name_conf_files:
+			move_file(destination_rdkit, src, file)
+		if len(args.geom_rules) >= 1 and args.CMIN is None:
+			destination_geom_rules = src.joinpath(
+				"CSEARCH/fullmonte/filter_geom_rules/"
+			)
+			for file in geom_rules_files:
+				move_file(destination_geom_rules, src, file)
+
+	if args.CSEARCH == "crest":
+		all_name_conf_files = glob.glob("*_crest.sdf")
+		destination_rdkit = src.joinpath("CSEARCH/crest/")
+		for file in all_name_conf_files:
+			move_file(destination_rdkit, src, file)
+		if len(args.geom_rules) >= 1 and args.CMIN is None:
+			destination_geom_rules = src.joinpath("CSEARCH/crest/filter_geom_rules/")
+			for file in geom_rules_files:
+				move_file(destination_geom_rules, src, file)
+
+	if args.CSEARCH is None:
+		if len(args.geom_rules) >= 1:
+			destination_geom_rules = src.joinpath("QCALC/SDF_input/filter_geom_rules/")
+			for file in geom_rules_files:
+				move_file(destination_geom_rules, src, file)
+
+		all_conf_files = glob.glob("*.sdf")
+		destination = src.joinpath("QCALC/SDF_input/")
+		for file in all_conf_files:
+			move_file(destination, src, file)
+
+	if args.com_from_xyz:
+		all_xyz_conf_files = glob.glob("*.xyz") + glob.glob("*.sdf")
+		destination_xyz = src.joinpath("QCALC/xyz_and_sdf/")
+		for file in all_xyz_conf_files:
+			move_file(destination_xyz, src, file)
+
 # getting descriptors
 # def geometricdescp_main(args, log, w_dir_initial):
 # 	# get sdf FILES from csv

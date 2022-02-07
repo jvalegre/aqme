@@ -6,6 +6,8 @@
 [![CodeFactor](https://img.shields.io/codefactor/grade/github/jvalegre/aqme?label=Codefactor%20grade&logo=codefactor)](https://www.codefactor.io/repository/github/jvalegre/aqme/overview/master)
 [![Codacy](https://img.shields.io/codacy/grade/047e9c6001a84713a82e180669e14c98?label=Codacy%20grade&logo=codacy)](https://www.codacy.com/gh/jvalegre/aqme/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=jvalegre/aqme&amp;utm_campaign=Badge_Grade)
 [![lgtm](https://img.shields.io/lgtm/grade/python/github/jvalegre/aqme?label=LGTM%20grade&logo=lgtm)](https://lgtm.com/projects/g/jvalegre/aqme/context:python)
+[![CodeClimate](https://img.shields.io/codeclimate/maintainability-percentage/jvalegre/aqme?label=Code%20climate%20maintainability&logo=code%20climate)](https://codeclimate.com/github/jvalegre/aqme)
+[![Scrutinizer](https://img.shields.io/scrutinizer/quality/g/jvalegre/aqme?label=Scrutinizer%20grade&logo=Scrutinizer)](https://scrutinizer-ci.com/g/jvalegre/aqme/)
 
 ![Size](https://img.shields.io/github/languages/code-size/jvalegre/aqme)
 [![PyPI](https://img.shields.io/pypi/v/aqme?color=blue&label=PyPI&logo=pypi)](https://pypi.org/project/aqme)
@@ -21,13 +23,14 @@ The code is an ensemble of automated QM workflows that can be run through jupyte
 
 ## Installation
 1) Installing RDKit and openbabel through conda:
+
 `conda install -c rdkit rdkit` or `conda install -c conda-forge rdkit` (compatible with Python >=3.8)
+
 `conda install -c conda-forge openbabel`
 
-2) Install AQME and its dependencies
-`pip install aqme`
-or
-`python setup.py install`
+2) Install AQME and its dependencies:
+
+`pip install aqme` or `python setup.py install`
 
 ## Requirements
 * Python 3
@@ -74,6 +77,7 @@ There are multiple ready-to-use workflows presented as jupyter notebooks in the 
 2) RDKit-based conformer generation of a Pd complex, followed by creation of Gaussian input files containing a genECP section to account for Pd atoms
 3) CREST-based conformer sampling of a noncovalent isopentane--water complex, followed by creation of Gaussian input files
 4) CREST-based conformer generation using a transition state (TS) with 3 separated molecules, followed by generation of ORCA input files of TS
+
 
 * QCORR_workflows.ipynb (QCORR analysis of Gaussian output files and creation of QM input files):
 1) Analyze optimized QM ground and transition states and create json files of normally terminated files with no errors, extra imaginary frequencies, duplicates, etc.
