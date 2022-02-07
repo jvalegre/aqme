@@ -94,7 +94,8 @@ AQME can also be run through command lines. Some examples are:
 * CSEARCH/CMIN for conformer generation with direct YAML file containing the constrains:
 1) cd into the required folder where you need the outputs of conformer generation. This should have the yaml file (e.g.: varfile.yaml), the respective input files (.smi, .csv etc.,)
 2) An example YAML file contains the follwoing:
-`input : 'smi.smi' #name of input
+```
+input : 'smi.smi' #name of input
 output_name : 'csearch' #name for output
 verbose : True
 
@@ -104,7 +105,8 @@ QPREP : 'gaussian'
 nprocs : 8
 mem : '24GB'
 qm_input : 'B3LYP/6-31G**'
-suffix : 'rdkit'`
+suffix : 'rdkit'
+```
 3) Run: `python -m aqme --varfile varfile.yaml`
 * QCORR analysis of Gaussian output files and json file generation:
 1) cd into a folder with output files (in this case, LOG files but other formats such as OUT are compatible as well)

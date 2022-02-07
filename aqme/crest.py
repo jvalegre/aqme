@@ -12,6 +12,7 @@ import glob
 import subprocess
 import rdkit
 from rdkit.Chem import AllChem
+from pathlib import Path
 
 
 def atompairs(mol, atom1, atom2, constraints):
@@ -69,6 +70,7 @@ def get_constraint(mol, constraints):
 
 
 def xyzall_2_xyz(xyzin, name):
+    print("fef", os.getcwd())
     # converting multiple xyz to single
     command_run_1 = ["obabel", xyzin, "-oxyz", "-O" + name + "_conf_.xyz", "-m"]
     subprocess.run(command_run_1)
@@ -126,7 +128,7 @@ def run_xtb(
         subprocess.run(command)
 
 
-def crest_opt(mol, name, dup_data, dup_data_idx, sdwriter, args, log):
+def crest_opt(mol, name, dup_data, dup_data_idx, sdwriter, args, log, w_dir_initial):
 
     """run xtb using shell script and args
     Parameters
@@ -145,21 +147,24 @@ def crest_opt(mol, name, dup_data, dup_data_idx, sdwriter, args, log):
             arguments for crest
     log : Logger
             Logging
+    w_dir_initial : working directory
+            working directory
     Returns
     -------
     performs crest/cregen conformer search
     """
 
-    xyzin = name + ".xyz"
+    csearch_dir = Path(w_dir_initial)
+    dat_dir = csearch_dir / "CSEARCH" / "crest_xyz" / name
+    dat_dir.mkdir(parents=True, exist_ok=True)
+    os.chdir(dat_dir)
+
+    xyzin = str(dat_dir) + "/" + name + ".xyz"
 
     if not args.ts_complex:
         AllChem.EmbedMolecule(mol)
         rdkit.Chem.rdmolfiles.MolToXYZFile(mol, xyzin)
 
-    xyzoutxtb1 = name + "_xtb1.xyz"
-    xyzoutxtb2 = name + "_xtb2.xyz"
-    xyzoutall = name + "_conformers.xyz"
-    xyzoutbest = name + "_best.xyz"
     charge = args.charge[0]
     mult = args.mult
     cbonds = args.cbonds
@@ -172,16 +177,26 @@ def crest_opt(mol, name, dup_data, dup_data_idx, sdwriter, args, log):
     cregen_bthr = args.cregen_bthr
     cregen_ewin = args.cregen_ewin
 
-    all_fix = get_constraint(mol, constraints_dist)
-    run_xtb(xyzin, xyzoutxtb1, all_fix, constraints_angle, constraints_dihedral, charge)
-    run_xtb(
-        xyzoutxtb1,
-        xyzoutxtb2,
-        constraints_dist,
-        constraints_angle,
-        constraints_dihedral,
-        charge,
-    )
+    xyzoutall = str(dat_dir) + "/" + name + "_conformers.xyz"
+    xyzoutbest = str(dat_dir) + "/" + name + "_best.xyz"
+
+    if args.ts_complex:
+        xyzoutxtb1 = str(dat_dir) + "/" + name + "_xtb1.xyz"
+        xyzoutxtb2 = str(dat_dir) + "/" + name + "_xtb2.xyz"
+        all_fix = get_constraint(mol, constraints_dist)
+        run_xtb(
+            xyzin, xyzoutxtb1, all_fix, constraints_angle, constraints_dihedral, charge
+        )
+        run_xtb(
+            xyzoutxtb1,
+            xyzoutxtb2,
+            constraints_dist,
+            constraints_angle,
+            constraints_dihedral,
+            charge,
+        )
+    else:
+        xyzoutxtb2 = xyzin
 
     if os.path.exists(xyzoutall):
         print("   {0} already exists: skipping crest search".format(xyzoutall))
@@ -276,7 +291,7 @@ def crest_opt(mol, name, dup_data, dup_data_idx, sdwriter, args, log):
         name1 = file.split(".xyz")[0]
         command_xyz = ["obabel", "-ixyz", file, "-osdf", "-O" + name1 + ".sdf"]
         subprocess.call(command_xyz)
-        os.remove(file)
+        # os.remove(file)
 
     sdf_files = glob.glob(name + "*.sdf")
     for file in sdf_files:
@@ -286,11 +301,10 @@ def crest_opt(mol, name, dup_data, dup_data_idx, sdwriter, args, log):
         mol_rd.SetProp("Energy", energy)
         mol_rd.SetProp("Real charge", str(charge))
         sdwriter.write(mol_rd)
-        os.remove(file)
+        # os.remove(file)
 
     dup_data.at[dup_data_idx, "crest-conformers"] = len(xyz_files)
 
-#     for f in glob.glob(os.getcwd() + "/" + name + "*.xyz"):
-#         os.remove(f)
+    os.chdir(w_dir_initial)
 
     return 1
