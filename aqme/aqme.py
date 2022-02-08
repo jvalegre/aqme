@@ -33,18 +33,12 @@ from aqme.mainf import (
     csearch_main,
     geom_rules_main,
     qprep_main,
-    graph_main,
-    geom_par_main,
-    nmr_main,
-    energy_main,
     load_from_yaml,
-    dbstep_par_main,
-    nics_par_main,
-    cclib_main,
     cmin_main,
 )
 from aqme.utils import Logger
 from aqme.qcorr import qcorr, json2input
+from aqme.qdescp import qdescp
 
 
 def main():
@@ -113,43 +107,83 @@ def main():
     #     move_sdf_main(args)
     #     os.chdir(w_dir_initial)
 
-
-    #QCORR
+    # QCORR
     if args.qcorr:
-        qcorr(qm_files=args.qm_files, w_dir_main=args.w_dir_main, dup_threshold=args.dup_threshold,
-				mem=args.mem, nprocs=args.nprocs, chk=args.chk, qm_input=args.qm_input, 
-                s2_threshold=args.s2_threshold, isom=args.isom,	isom_inputs=args.isom_inputs, 
-                vdwfrac=args.vdwfrac, covfrac=args.covfrac, bs_gen=args.bs_gen, bs=args.bs, 
-                gen_atoms=args.gen_atoms, qm_end=args.qm_end, amplitude_ifreq=args.amplitude_ifreq, 
-                freq_conv=args.freq_conv, ifreq_cutoff=args.ifreq_cutoff, fullcheck=args.fullcheck,
-                author=args.author, program=args.program, varfile=None)
+        qcorr(
+            qm_files=args.qm_files,
+            w_dir_main=args.w_dir_main,
+            dup_threshold=args.dup_threshold,
+            mem=args.mem,
+            nprocs=args.nprocs,
+            chk=args.chk,
+            qm_input=args.qm_input,
+            s2_threshold=args.s2_threshold,
+            isom=args.isom,
+            isom_inputs=args.isom_inputs,
+            vdwfrac=args.vdwfrac,
+            covfrac=args.covfrac,
+            bs_gen=args.bs_gen,
+            bs=args.bs,
+            gen_atoms=args.gen_atoms,
+            qm_end=args.qm_end,
+            amplitude_ifreq=args.amplitude_ifreq,
+            freq_conv=args.freq_conv,
+            ifreq_cutoff=args.ifreq_cutoff,
+            fullcheck=args.fullcheck,
+            author=args.author,
+            program=args.program,
+            varfile=None,
+        )
 
     if args.json2input:
-        json2input(json_files=args.json_files, w_dir_main=args.w_dir_main, destination=args.destination,
-                suffix=args.suffix, charge=args.charge, mult=args.mult,	mem=args.mem, nprocs=args.nprocs,
-                chk=args.chk, qm_input=args.qm_input, bs_gen=args.bs_gen, bs=args.bs, gen_atoms=args.gen_atoms,
-                qm_end=args.qm_end, program=args.program)
+        json2input(
+            json_files=args.json_files,
+            w_dir_main=args.w_dir_main,
+            destination=args.destination,
+            suffix=args.suffix,
+            charge=args.charge,
+            mult=args.mult,
+            mem=args.mem,
+            nprocs=args.nprocs,
+            chk=args.chk,
+            qm_input=args.qm_input,
+            bs_gen=args.bs_gen,
+            bs=args.bs,
+            gen_atoms=args.gen_atoms,
+            qm_end=args.qm_end,
+            program=args.program,
+        )
 
-    # QPRED
-    if args.QPRED == "nmr":
-        nmr_main(args, log_overall, w_dir_initial)
-    if args.QPRED == "energy":
-        energy_main(args, log_overall, w_dir_initial)
-    if args.QPRED == "dbstep":
-        dbstep_par_main(args, log_overall, w_dir_initial)
-    if args.QPRED == "nics":
-        nics_par_main(args, log_overall, w_dir_initial)
-    if args.QPRED == "cclib-json":
-        cclib_main(args, log_overall, w_dir_initial)
-    os.chdir(w_dir_initial)
+    # qdescp
+    if args.qdescp in ["geometricdescp", "nmr", "dbstep", "nbo"]:
+        qdescp(
+            w_dir_main=args.w_dir_main,
+            destination=args.destination,
+            qm_files=args.qm_files,
+            json_files=args.json_files,
+            task=args.qdescp,
+            varfile=None,
+        )
 
-    # QSTAT
-    if args.QSTAT == "descp":
-        geom_par_main(args, log_overall, w_dir_initial)
-    if args.QSTAT == "graph":
-        graph_main(args, log_overall, w_dir_initial)
-    os.chdir(w_dir_initial)
-
+    # if args.QPRED == "nmr":
+    #     nmr_main(args, log_overall, w_dir_initial)
+    # if args.QPRED == "energy":
+    #     energy_main(args, log_overall, w_dir_initial)
+    # if args.QPRED == "dbstep":
+    #     dbstep_par_main(args, log_overall, w_dir_initial)
+    # if args.QPRED == "nics":
+    #     nics_par_main(args, log_overall, w_dir_initial)
+    # if args.QPRED == "cclib-json":
+    #     cclib_main(args, log_overall, w_dir_initial)
+    # os.chdir(w_dir_initial)
+    #
+    # # QSTAT
+    # if args.QSTAT == "descp":
+    #     geom_par_main(args, log_overall, w_dir_initial)
+    # if args.QSTAT == "graph":
+    #     graph_main(args, log_overall, w_dir_initial)
+    # os.chdir(w_dir_initial)
+    #
     log_overall.finalize()
 
     out_data_file = Path(f"aqme_output.dat")
