@@ -7,6 +7,7 @@ import numpy as np
 import glob
 from pathlib import Path
 import json
+from pyrsistent import v
 from rdkit.Chem.rdMolAlign import GetBestRMS
 from rdkit.Chem.rdmolops import RemoveHs
 from openbabel import pybel
@@ -255,8 +256,8 @@ class Logger:
 def get_mult(mol):
 	radical_index = 0
 	for i, atom in enumerate(mol.GetAtoms()):
-	    if atom.GetNumRadicalElectrons() != 0:
-	        radical_index +=1
+		if atom.GetNumRadicalElectrons() != 0:
+			radical_index +=1
 	mult = 2*(radical_index/2) + 1
 	return mult
 
@@ -1163,8 +1164,9 @@ def read_file(w_dir, file):
 	os.chdir(w_dir)
 	outfile = open(file, "r")
 	outlines = outfile.readlines()
+	outfile.close()
 
-	return outlines, outfile
+	return outlines
 
 
 def output_to_mol(file, format, log):
@@ -1317,3 +1319,84 @@ def cclib_atoms_coords(cclib_data):
 	cartesians = [cartesians_array[i:i + 3] for i in range(0, len(cartesians_array), 3)]
 
 	return atom_types,cartesians
+
+
+def get_metadata(cclib_data):
+	"""
+	Retrieves metadata from the cclib parsing 
+
+	Parameters
+	----------
+	cclib_data : cclib object
+		cclib object containing all the data parsed
+
+	Returns
+	-------
+	keywords_line : string
+		Original keyword line (input) from the output QM file
+	calc_type : str
+		Type of the QM calculation (ground_state or transition_state)
+	mem : str
+		Memory used in the calculations
+	nprocs : int
+		Number of processors used in the calculations
+	"""    
+
+	try:
+		keywords_line = cclib_data['metadata']['keywords line']
+		calc_type = cclib_data['metadata']['ground or transition state']
+	except (AttributeError,KeyError):
+		keywords_line,calc_type = '',''
+	try:
+		mem = cclib_data['metadata']['memory']
+		nprocs = cclib_data['metadata']['processors']
+	except (AttributeError,KeyError):
+			mem,nprocs = '',0
+
+	return keywords_line,calc_type,mem,nprocs
+
+
+def get_s2(cclib_data):
+	"""
+	Retrieves information related to <S**2> from the cclib parsing
+
+
+	Parameters
+	----------
+	cclib_data : cclib object
+		cclib object containing all the data parsed
+
+	Returns
+	-------
+	s2_after_anni : float
+		<S**2> value from open-shell QM calculations after spin annihilation
+	s2_before_anni : float
+		<S**2> value from open-shell QM calculations before spin annihilation
+	"""  
+	
+	try:
+		s2_after_anni = cclib_data['properties']['S2 after annihilation']
+		s2_before_anni = cclib_data['properties']['S2 before annihilation']	
+	except (AttributeError,KeyError):
+		s2_after_anni,s2_before_anni = 0,0
+
+	return s2_after_anni,s2_before_anni
+
+
+def detect_linear(errortype,atom_types,freqs):
+	linear_options_3 = [['I', 'I', 'I'],['N', 'N', 'N'],['N', 'C', 'H'],['O', 'C', 'O'],['O', 'C', 'S'],['S', 'C', 'S'],['F','Be','F'],['F','Xe','F'],['O','C','N'],['S','C','N']]
+	linear_options_4 = [['C', 'C', 'H', 'H']]
+
+	if len(atom_types) == 3:
+		for linear_3 in linear_options_3:
+			if sorted(atom_types) == sorted(linear_3) and len(freqs) != 4:
+				errortype = 'linear_mol_wrong'
+				break
+	elif len(atom_types) == 4:
+		for linear_4 in linear_options_4:
+			if sorted(atom_types) == sorted(linear_4) and len(freqs) != 7:
+				errortype = 'linear_mol_wrong'
+				break	
+	
+	return errortype
+	

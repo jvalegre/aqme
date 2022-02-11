@@ -38,7 +38,6 @@ from aqme.mainf import (
 )
 from aqme.utils import Logger
 from aqme.qcorr import qcorr, json2input
-from aqme.qdescp import qdescp
 
 
 def main():
@@ -130,7 +129,6 @@ def main():
             freq_conv=args.freq_conv,
             ifreq_cutoff=args.ifreq_cutoff,
             fullcheck=args.fullcheck,
-            author=args.author,
             program=args.program,
             varfile=None,
         )
