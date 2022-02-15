@@ -23,7 +23,7 @@
 ### <p align="center">[Developers and help desk](https://github.com/jvalegre/aqme#developers-and-help-desk)</p>
 ### <p align="center">[License](https://github.com/jvalegre/aqme#license)</p>
 ### <p align="center">[Reference](https://github.com/jvalegre/aqme#reference)</p>
-###
+###  
 ## What is AQME?
 The code is an ensemble of automated QM workflows that can be run through jupyter notebooks, command lines and yaml files. Some of the most popular workflows include:
   - [ ] RDKit- and CREST-based conformer generator leading to ready-to-submit QM input files starting from individual files or SMILES databases
