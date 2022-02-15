@@ -14,10 +14,24 @@
 
 # <p align="center">Automated Quantum Mechanical Environments (AQME)</p>
 ## <p align="center">-- Table of contents --</p>
-### <p align="center">- [What is AQME?](##What-is-AQME?)</p>
-### <p align="center">- [Installation](##Installation)</p>
-### <p align="center">- [Requirements](##Requirements)</p>
-
+### <p align="center">[What is AQME?](https://github.com/jvalegre/aqme#what-is-aqme)</p>
+### <p align="center">[Installation](https://github.com/jvalegre/aqme#installation)</p>
+### <p align="center">[Requirements](https://github.com/jvalegre/aqme#requirements)</p>
+### <p align="center">[Features and modules](https://github.com/jvalegre/aqme#features-and-modules)</p>
+#### <p align="center">[CSEARCH](https://github.com/jvalegre/aqme#csearch)</p>
+##### <p align="center">[RDKit-based conformational sampling](https://github.com/jvalegre/aqme#rdkit-based-conformational-sampling)</p>
+##### <p align="center">[CREST-based conformational sampling](https://github.com/jvalegre/aqme#crest-based-conformational-sampling)</p>
+#### <p align="center">[CMIN](https://github.com/jvalegre/aqme#cmin)</p>
+#### <p align="center">[QPREP](https://github.com/jvalegre/aqme#qprep)</p>
+#### <p align="center">[QCORR](https://github.com/jvalegre/aqme#qcorr)</p>
+#### <p align="center">[QDESC](https://github.com/jvalegre/aqme#qdesc)</p>
+### <p align="center">[Quickstart](https://github.com/jvalegre/aqme#quickstart)</p>
+#### <p align="center">[Using AQME in Jupyter Notebooks](https://github.com/jvalegre/aqme#using-aqme-in-jupyter-notebooks)</p>
+#### <p align="center">[Using AQME through command lines in terminals](https://github.com/jvalegre/aqme#using-aqme-through-command-lines-in-terminals)</p>
+### <p align="center">[Extended documentation (installation, use, examples, etc)](https://github.com/jvalegre/aqme#extended-documentation-installation-use-examples-etc)</p>
+### <p align="center">[Developers and help desk](https://github.com/jvalegre/aqme#developers-and-help-desk)</p>
+### <p align="center">[License](https://github.com/jvalegre/aqme#license)</p>
+### <p align="center">[Reference](https://github.com/jvalegre/aqme#reference)</p>
 
 ## What is AQME?
 The code is an ensemble of automated QM workflows that can be run through jupyter notebooks, command lines and yaml files. Some of the most popular workflows include:
