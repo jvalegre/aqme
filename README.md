@@ -12,11 +12,11 @@
 ![Size](https://img.shields.io/github/languages/code-size/jvalegre/aqme)
 [![PyPI](https://img.shields.io/pypi/v/aqme?color=blue&label=PyPI&logo=pypi)](https://pypi.org/project/aqme)
 
-# <p align="center">Automated Quantum Mechanical Environments (AQME)</p>
+# <p align="center">Automated Quantum Mechanical Environments (AQME)
 ## -- Table of contents --
-### [What is AQME?](##heading)
-### [Installation](##heading)
-### [Requirements](##heading)
+### [What is AQME?](#heading)
+### [Installation](#heading)
+### [Requirements](#heading)
 </p>
 
 ## What is AQME?
