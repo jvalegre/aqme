@@ -12,7 +12,14 @@
 ![Size](https://img.shields.io/github/languages/code-size/jvalegre/aqme)
 [![PyPI](https://img.shields.io/pypi/v/aqme?color=blue&label=PyPI&logo=pypi)](https://pypi.org/project/aqme)
 
-# Automated Quantum Mechanical Environments (AQME)
+# <p align="center">Automated Quantum Mechanical Environments (AQME)</p>
+## -- Table of contents --
+### [What is AQME?](##heading)
+### [Installation](##heading)
+### [Requirements](##heading)
+</p>
+
+## What is AQME?
 The code is an ensemble of automated QM workflows that can be run through jupyter notebooks, command lines and yaml files. Some of the most popular workflows include:
   - [ ] RDKit- and CREST-based conformer generator leading to ready-to-submit QM input files starting from individual files or SMILES databases
   - [ ] Post-processing of QM output files to fix convergence errors, extra imaginary frequencies, unfinished jobs, duplicates and error terminations, as well as to detect spin contamination, isomerization issues, and more optimization problems
@@ -23,10 +30,10 @@ The code is an ensemble of automated QM workflows that can be run through jupyte
 ## Installation
 AQME and its dependencies are installed as follows:
   1. Installing RDKit and Open Babel through conda. For shortcuts:
-  * `conda install -c rdkit rdkit` or `conda install -c conda-forge rdkit` (compatible with Python >=3.8)
-  * `conda install -c conda-forge openbabel`
+    * `conda install -c rdkit rdkit` or `conda install -c conda-forge rdkit` (compatible with Python >=3.8)
+    * `conda install -c conda-forge openbabel`
   2. Install AQME and its dependencies:
-  * `pip install aqme` or `python setup.py install`
+    * `pip install aqme` or `python setup.py install`
 
 ## Requirements
 * Python 3
