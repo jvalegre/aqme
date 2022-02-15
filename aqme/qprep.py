@@ -17,9 +17,8 @@ from pathlib import Path
 
 # template classes
 class qprep:
-
 	"""
-	Class containing all the functions from the QPREP module related to Gaussian input files.
+	Class containing all the functions from the QPREP module related to Gaussian input files
 
 	Parameters
 	----------
@@ -176,7 +175,7 @@ class qprep:
 			txt += f'%nprocshared={self.nprocs}\n'
 			txt += f'%mem={self.mem}\n'
 			txt += f'# {self.qm_input}'
-			txt += f'\n\n'
+			txt += '\n\n'
 			txt += f'{self.molecule}\n\n'
 			txt += f'{self.charge} {self.mult}\n'
 

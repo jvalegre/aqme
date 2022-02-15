@@ -7,14 +7,12 @@ import numpy as np
 import glob
 from pathlib import Path
 import json
-from pyrsistent import v
 from rdkit.Chem.rdMolAlign import GetBestRMS
 from rdkit.Chem.rdmolops import RemoveHs
 from openbabel import pybel
 from rdkit.Chem import AllChem
 import os
 from rdkit import Geometry
-from rdkit.Chem import Draw
 from rdkit.Chem import rdmolfiles
 import yaml
 import pandas as pd
@@ -250,12 +248,14 @@ class Logger:
 		raise SystemExit(1)
 
 	def finalize(self):
-		"""Closes the file"""
+		"""
+		Closes the file
+		"""
 		self.log.close()
 
 def get_mult(mol):
 	radical_index = 0
-	for i, atom in enumerate(mol.GetAtoms()):
+	for _,atom in enumerate(mol.GetAtoms()):
 		if atom.GetNumRadicalElectrons() != 0:
 			radical_index +=1
 	mult = 2*(radical_index/2) + 1
@@ -594,10 +594,10 @@ def nci_ts_mol(smi, args, constraints_dist, constraints_angle, constraints_dihed
 	nconstraints_dist = []
 	if constraints_dist is not None:
 
-		for i,r in enumerate(constraints_dist):
+		for _,r in enumerate(constraints_dist):
 			# print('r:',r[:2])
 			nr = []
-			for j,ele in enumerate(r[:2]):
+			for _,ele in enumerate(r[:2]):
 				# print('ele:',  ele)
 				for atom in mol.GetAtoms():
 					if ele == atom.GetAtomMapNum():
@@ -1323,7 +1323,7 @@ def cclib_atoms_coords(cclib_data):
 
 def get_metadata(cclib_data):
 	"""
-	Retrieves metadata from the cclib parsing 
+	Retrieves metadata from the cclib parsing
 
 	Parameters
 	----------
@@ -1372,11 +1372,11 @@ def get_s2(cclib_data):
 		<S**2> value from open-shell QM calculations after spin annihilation
 	s2_before_anni : float
 		<S**2> value from open-shell QM calculations before spin annihilation
-	"""  
+	"""
 	
 	try:
 		s2_after_anni = cclib_data['properties']['S2 after annihilation']
-		s2_before_anni = cclib_data['properties']['S2 before annihilation']	
+		s2_before_anni = cclib_data['properties']['S2 before annihilation']
 	except (AttributeError,KeyError):
 		s2_after_anni,s2_before_anni = 0,0
 
@@ -1396,7 +1396,7 @@ def detect_linear(errortype,atom_types,freqs):
 		for linear_4 in linear_options_4:
 			if sorted(atom_types) == sorted(linear_4) and len(freqs) != 7:
 				errortype = 'linear_mol_wrong'
-				break	
-	
+				break
+
 	return errortype
 	

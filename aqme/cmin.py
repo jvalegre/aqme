@@ -96,8 +96,7 @@ class cmin:
         dup_data.at[dup_data_idx, "Molecule"] = self.name
         cenergy, outmols = [], []
         start_time = time.time()
-        for i, mol in enumerate(self.mols):
-
+        for _,mol in enumerate(self.mols):
             if mol is not None:
                 # optimize this structure and record the energy
                 if self.args.metal_complex:

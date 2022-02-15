@@ -20,7 +20,7 @@ def stats_calc(y_dft,y):
 
 def get_energy(inmols_min):
     energy_min = []
-    for i,mol in enumerate(inmols_min):
+    for _,mol in enumerate(inmols_min):
         energy_min.append(["_".join(mol.GetProp('_Name').split(' ')),mol.GetProp('Energy')])
     return energy_min
 
@@ -47,8 +47,10 @@ def plot_graph(energy_rdkit,energy_min,energy_min_dft,lot,bs,energy_min_dft_sp,l
         log.write('The Matplotlib module is not installed correctly - the graphing functions are not available')
 
     def get_cmap(n, name='viridis'):
-        '''Returns a function that maps each index in 0, 1, ..., n-1 to a distinct
-        RGB color; the keyword argument name must be a standard mpl colormap name.'''
+        '''
+        Returns a function that maps each index in 0, 1, ..., n-1 to a distinct
+        RGB color; the keyword argument name must be a standard mpl colormap name
+        .'''
         return plt.cm.get_cmap(name, n)
 
     if len(energy_min_dft_sp)  != 0:
@@ -278,7 +280,7 @@ def graph(sdf_rdkit,sdf_xtb,sdf_ani,qm_files,sp_files,args,log,lot,bs,lot_sp,bs_
         if type=='orca':
             for file in sp_files:
                 sp_lines = open(file,"r").readlines()
-                for i,line in enumerate(sp_lines):
+                for i,_ in enumerate(sp_lines):
                     if sp_lines[i].find('FINAL SINGLE POINT ENERGY') > -1:
                         if len(file.split('_ani_'+args.suffix+'.out')) == 2 or len(file.split('_xtb_'+args.suffix+'.out')) == 2:
                             if len(file.split('_ani_'+args.suffix+'.out')) == 2:

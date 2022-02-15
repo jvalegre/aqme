@@ -102,7 +102,7 @@ def csearch_main(w_dir_initial, args, log_overall):
         final_dup_data = creation_of_dup_csv_csearch(args.CSEARCH)
         bar = IncrementalBar("o  Number of finished jobs from CSEARCH", max=count_mol)
         # Process the job results (in submission order) and save the conformers.
-        for i, job in enumerate(jobs):
+        for _,job in enumerate(jobs):
             total_data = job.result()
             frames = [final_dup_data, total_data]
             final_dup_data = pd.concat(frames, ignore_index=True, sort=True)
@@ -995,8 +995,6 @@ def geom_rules_main(args, log, geom_rules_active):
                 print_error_geom_rules = False
                 for mol in allmols:
                     check_mol = True
-                    ob_compat = True
-                    rdkit_compat = True
                     check_mol = geom_rules_output(
                         mol, args, log, file, print_error_geom_rules
                     )

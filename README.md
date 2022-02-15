@@ -4,7 +4,7 @@
 [![Codecov](https://img.shields.io/codecov/c/github/jvalegre/aqme?label=Codecov&logo=codecov)](https://codecov.io/gh/jvalegre/aqme)
 
 [![CodeFactor](https://img.shields.io/codefactor/grade/github/jvalegre/aqme?label=Codefactor%20grade&logo=codefactor)](https://www.codefactor.io/repository/github/jvalegre/aqme/overview/master)
-[![Codacy](https://img.shields.io/codacy/grade/047e9c6001a84713a82e180669e14c98?label=Codacy%20grade&logo=codacy)](https://www.codacy.com/gh/jvalegre/aqme/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=jvalegre/aqme&amp;utm_campaign=Badge_Grade)
+[![Codacy](https://img.shields.io/codacy/grade/3a4cc7c7705e46129c7ea0fca58af846?label=Codacy%20grade&logo=Codacy)](https://www.codacy.com/gh/jvalegre/aqme/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=jvalegre/aqme&amp;utm_campaign=Badge_Grade)
 [![lgtm](https://img.shields.io/lgtm/grade/python/github/jvalegre/aqme?label=LGTM%20grade&logo=lgtm)](https://lgtm.com/projects/g/jvalegre/aqme/context:python)
 [![CodeClimate](https://img.shields.io/codeclimate/maintainability-percentage/jvalegre/aqme?label=Code%20climate%20maintainability&logo=code%20climate)](https://codeclimate.com/github/jvalegre/aqme)
 [![Scrutinizer](https://img.shields.io/scrutinizer/quality/g/jvalegre/aqme?label=Scrutinizer%20grade&logo=Scrutinizer)](https://scrutinizer-ci.com/g/jvalegre/aqme/)
@@ -15,11 +15,11 @@
 # Automated Quantum Mechanical Environments (AQME)
 
 The code is an ensemble of automated QM workflows that can be run through jupyter notebooks, command lines and yaml files. Some of the most popular workflows include:
-* RDKit- and CREST-based conformer generator leading to ready-to-submit QM input files starting from individual files or SMILES databases
-* post-processing of QM output files to fix convergence errors, extra imaginary frequencies, unfinished jobs, duplicates and error terminations, as well as to detect spin contamination, isomerization issues, and more optimization problems
-* analysis of homogeneity of QM calculations (same level of theory, grid size, program and version, solvation models, etc)
-* generation of xTB, DFT and RDKit descriptors in json and csv files that are ready to use in machine-learning models or used to predict NMR spectra
-* more other useful workflows!
+  * RDKit- and CREST-based conformer generator leading to ready-to-submit QM input files starting from individual files or SMILES databases
+  * post-processing of QM output files to fix convergence errors, extra imaginary frequencies, unfinished jobs, duplicates and error terminations, as well as to detect spin contamination, isomerization issues, and more optimization problems
+  * analysis of homogeneity of QM calculations (same level of theory, grid size, program and version, solvation models, etc)
+  * generation of xTB, DFT and RDKit descriptors in json and csv files that are ready to use in machine-learning models or used to predict NMR spectra
+  * more other useful workflows!
 
 ## Installation
 1) Installing RDKit and openbabel through conda:
@@ -39,91 +39,94 @@ The code is an ensemble of automated QM workflows that can be run through jupyte
 ### CSEARCH
 Module on charge of conformational sampling starting from multiple input types (SMILES, csv, sdf, xyz, etc). Options:
 #### RDKit-based conformational sampling
-Faster sampling, suitable especially for unimolecular systems.
-* RDKit standard sampling
-* Systematic Unbounded Multiple Minimum search (SUMM)
-* FullMonte sampling
+Faster sampling, suitable especially for unimolecular systems. Options:
+  * RDKit standard sampling
+  * Systematic Unbounded Multiple Minimum search (SUMM)
+  * FullMonte sampling
 #### CREST-based conformational sampling
 Slower sampling, suitable for all types of systems (including noncovalent complexes and constrained systems such as transition states)
 
 ### CMIN
 Module used to refine conformers generated in CSEARCH through new geometry optimizations. Options:
-* xTB (GFN0-xTB, GFN1-xTB, GFN2-xTB, GFN-FF)
-* ANI (ANI-1x, ANI-1ccx, ANI-2x)
+  * xTB (GFN0-xTB, GFN1-xTB, GFN2-xTB, GFN-FF)
+  * ANI (ANI-1x, ANI-1ccx, ANI-2x)
 
 ### QPREP
 Generator of input files for QM calculations. Options:
-* Gaussian
-* ORCA
-* pySCF (loading parameters in jupyter notebook)
+  * Gaussian
+  * ORCA
+  * pySCF (loading parameters in jupyter notebook)
 
 ### QCORR
 cclib-based analyzer of output files from multiple QM programs. This module:
-* Separates Normal terminated files with no errors, extra imaginary frequencies, duplicates, isomerization to other systems and spin contamination
-* Automatically generates new com files to "fix" the different issues of the calculations with strategies that are optimal for each type of issue (Gaussian and ORCA)
-* Checks that all the calculations are homogeneous (i.e. using the same level of theory, same grid size, same program and version, solvation model, etc)
+  * Separates Normal terminated files with no errors, extra imaginary frequencies, duplicates, isomerization to other systems and spin contamination
+  * Automatically generates new com files to "fix" the different issues of the calculations with strategies that are optimal for each type of issue (Gaussian and ORCA)
+  * Checks that all the calculations are homogeneous (i.e. using the same level of theory, same grid size, same program and version, solvation model, etc)
 
 ### QDESC
 Descriptor generator from multiple input types such as SMILES, log files, xyz, etc. Descriptors generated with:
-* RDKit
-* xTB
-* QM programs (cclib-compatible)
+  * RDKit
+  * xTB
+  * QM programs (cclib-compatible)
 
 ## Quickstart
 ### Using AQME in Jupyter Notebooks
 There are multiple ready-to-use workflows presented as jupyter notebooks in the 'Example_workflows.zip' file. Some examples are:
-* CSEARCH_CMIN_workflows.ipynb (CSEARCH/CMIN conformational sampling from SMILES and creation of QM input files):
-1) RDKit-based automated generation of quinine conformers, followed by geometry reoptimization with xTB and creation of Gaussian input files for QM optimization
-2) RDKit-based conformer generation of a Pd complex, followed by creation of Gaussian input files containing a genECP section to account for Pd atoms
-3) CREST-based conformer sampling of a noncovalent isopentane--water complex, followed by creation of Gaussian input files
-4) CREST-based conformer generation using a transition state (TS) with 3 separated molecules, followed by generation of ORCA input files of TS
+  * CSEARCH_CMIN_workflows.ipynb (CSEARCH/CMIN conformational sampling from SMILES and creation of QM input files):
+    1) RDKit-based automated generation of quinine conformers, followed by geometry reoptimization with xTB and creation of Gaussian input files for QM optimization
+    2) RDKit-based conformer generation of a Pd complex, followed by creation of Gaussian input files containing a genECP section to account for Pd atoms
+    3) CREST-based conformer sampling of a noncovalent isopentane--water complex, followed by creation of Gaussian input files
+    4) CREST-based conformer generation using a transition state (TS) with 3 separated molecules, followed by generation of ORCA input files of TS
 
-
-* QCORR_workflows.ipynb (QCORR analysis of Gaussian output files and creation of QM input files):
-1) Analyze optimized QM ground and transition states and create json files of normally terminated files with no errors, extra imaginary frequencies, duplicates, etc.
-2) Use json files to generate single-point energy corrections with multiple levels of theory, charge and multiplicity through for loops:
-2a) For Gaussian files, genECP and NBO files containing final extra lines are provided.
-2b) For ORCA input files, a DLPNO-CCSD(T) example with multiple % sections is provided.
-2c) For pySCF, a calculation is set with DeepMind 21 (DM21).
+  * QCORR_workflows.ipynb (QCORR analysis of Gaussian output files and creation of QM input files):
+    1) Analyze optimized QM ground and transition states and create json files of normally terminated files with no errors, extra imaginary frequencies, duplicates, etc.
+    2) Use json files to generate single-point energy corrections with multiple levels of theory, charge and multiplicity through for loops:
+      2a) For Gaussian files, genECP and NBO files containing final extra lines are provided.
+      2b) For ORCA input files, a DLPNO-CCSD(T) example with multiple % sections is provided.
+      2c) For pySCF, a calculation is set with DeepMind 21 (DM21).
 
 ### Using AQME through command lines in terminals
 AQME can also be run through command lines. Some examples are:
-* CSEARCH/CMIN for conformer generation with direct SMILES and Name:
-1) cd into the required folder where you need the outputs of conformer generation
-2) Run: `python -m aqme --smi CCCC --name butane --CSEARCH rdkit --CMIN xtb`
-* CSEARCH/CMIN for conformer generation with direct YAML file containing the constrains:
-1) cd into the required folder where you need the outputs of conformer generation. This should have the yaml file (e.g.: varfile.yaml), the respective input files (.smi, .csv etc.,)
-2) An example YAML file contains the follwoing:
-```
-input : 'smi.smi' #name of input
-output_name : 'csearch' #name for output
-verbose : True
+  * CSEARCH/CMIN for conformer generation with direct SMILES and Name:
+    1) cd into the required folder where you want the outputs of conformer generation
+    2a) Run: `python -m aqme --smi CCCC --name butane --CSEARCH rdkit`
+    2b) For multiple SMILES strings in a csv file `python -m aqme --input smi.csv --CSEARCH rdkit`. The csv file should contain the list of SMILES in a column called "SMILES" and the corresponding names in a column called "code_names" (see Example_workflows for more information)
+    ** Include `--CMIN xtb` or `--CMIN ani` to use the CMIN geometry refiner
+  * CSEARCH/CMIN for conformer generation using a YAML file containing constrains:
+    1) cd into the required folder where you need the outputs of conformer generation. This should have the yaml file (e.g.: varfile.yaml), the respective input files (.smi, .csv, etc.)
+    2) An example YAML file contains the following:
+      ```
+      input : 'smi.csv' #name of input
+      output_name : 'csearch' #name for output
+      verbose : True
 
-CSEARCH : 'rdkit'
-QPREP : 'gaussian'
+      CSEARCH : 'rdkit'
+      QPREP : 'gaussian'
 
-nprocs : 8
-mem : '24GB'
-qm_input : 'B3LYP/6-31G**'
-suffix : 'rdkit'
-```
-3) Run: `python -m aqme --varfile varfile.yaml`
-* QCORR analysis of Gaussian output files and json file generation:
-1) cd into a folder with output files (in this case, LOG files but other formats such as OUT are compatible as well)
-2) Run: `python -m aqme --qcorr --qm_files=*.log`
-* Input file generation from json files:
-1) cd into a folder with json files
-2) Run: `python -m aqme --json2input --qm_input "M062x def2tzvp opt freq" --json_files *.json --suffix m062x`
+      nprocs : 8
+      mem : '24GB'
+      qm_input : 'B3LYP/6-31G**'
+      suffix : 'rdkit'
+      ```
+    3) Run: `python -m aqme --varfile varfile.yaml`
+  * QCORR analysis of Gaussian output files and json file generation:
+    1) cd into a folder with output files (in this case, LOG files but other formats such as OUT are compatible as well)
+    2) Run: `python -m aqme --qcorr --qm_files=*.log`
+  * Input file generation from json files:
+    1) cd into a folder with json files
+    2) Run: `python -m aqme --json2input --qm_input "M062x def2tzvp opt freq" --json_files *.json --suffix m062x`
 
 ## Extended documentation (installation, use, examples, etc)
 ** In process **
 XXX LINK READTHEDOCS WEBPAGE XXX
 
 ## Developers and help desk
-* [Shree Sowndarya S. V.](https://orcid.org/0000-0002-4568-5854), main developer of the CSEARCH and CMIN modules. Contact: [svss@colostate.edu](mailto:svss@colostate.edu)
-* [Juan V. Alegre-Requena](https://orcid.org/0000-0002-0769-7168), main developer of the QCORR and QPREP modules. Contact: [juanvi89@hotmail.com](mailto:juanvi89@hotmail.com)
-* [Raúl Pérez-Soto](https://orcid.org/0000-0002-6237-2155), worked in refactoring the code. Contact: [rperez@iciq.es](mailto:rperez@iciq.es)
-* [Robert S. Paton](https://orcid.org/0000-0002-0104-4166), research group supervisor and code advisor. Contact: [robert.paton@colostate.edu](mailto:robert.paton@colostate.edu)
+List of main developers and contact emails:
+  * [Shree Sowndarya S. V.](https://orcid.org/0000-0002-4568-5854), main developer of the CSEARCH and CMIN modules. Contact: [svss@colostate.edu](mailto:svss@colostate.edu)
+  * [Juan V. Alegre-Requena](https://orcid.org/0000-0002-0769-7168), main developer of the QCORR and QPREP modules. Contact: [juanvi89@hotmail.com](mailto:juanvi89@hotmail.com)
+  * [Turki Alturaifi](https://www.chem.pitt.edu/person/turki-alturaifi), worked in benchmarking the parameters for RDKit-based conformer generation. Contact: [turki0@rams.colostate.edu](mailto:turki0@rams.colostate.edu)
+  * [Raúl Pérez-Soto](https://orcid.org/0000-0002-6237-2155), worked in refactoring the code. Contact: [rperez@iciq.es](mailto:rperez@iciq.es)
+  * [Robert S. Paton](https://orcid.org/0000-0002-0104-4166), research group supervisor and code advisor. Contact: [robert.paton@colostate.edu](mailto:robert.paton@colostate.edu)
 
 For suggestions and improvements of the code (greatly appreciated!), please reach out through the issues and pull requests options of Github.
 

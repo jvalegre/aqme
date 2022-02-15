@@ -49,7 +49,7 @@ def main():
 
     log_overall = Logger("aqme", args.output_name)
     # if needed to load from a yaml file
-    args, log = load_from_yaml(args, log_overall)
+    args,_ = load_from_yaml(args, log_overall)
 
     name = args.input.split(".")[0]
 
@@ -184,7 +184,7 @@ def main():
     #
     log_overall.finalize()
 
-    out_data_file = Path(f"aqme_output.dat")
+    out_data_file = Path("aqme_output.dat")
     if out_data_file.exists():
         out_data_file.replace(f"aqme_{args.output_name}.dat")
 

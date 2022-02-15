@@ -35,6 +35,7 @@ from aqme.utils import (
     check_for_pieces,
     nci_ts_mol,
     get_mult,
+    mol_from_sdf_or_mol_or_mol2
 )
 from aqme.crest import crest_opt
 
@@ -88,32 +89,32 @@ def process_csearch(
 
 class csearch:
     """
-                    Representation of the neccesary information related with csearch.
+    Representation of the neccesary information related with csearch.
 
-                    Parameters
-                    ----------
-                    mol : RDKit mol object
-                    Mol object used in CSEARCH
+    Parameters
+    ----------
+    mol : RDKit mol object
+        Mol object used in CSEARCH
     name : str
-                    Name of the mol object
+        Name of the mol object
     w_dir_initial : str
-                    Working directory
-                    charge_default : int
-                    Charge of the system
-                    varfile : str
-                    Parameter file containing the additional options for CMIN
-                    constraints_dist : list of lists
-                                                    If the conformational sampling is for a transition state, this option add distance constrains
-                                                    between sets of 2 atoms in the format [[A1,A2,DIST1],[A3,A4,DIST2]]. For example, constrain
-                                                    C atom 1 and O atom 2 to a distance of 2.0 A --> [[1,2,2.0]]
-                    constraints_angle : list of lists
-                                                    Same as constraints_dist but contraining angles. For example, constrain C atom 1, O atom 2,
-                                                    and C atom 3 to an angle of 120 degrees --> [[1,2,3,120]]
-                    constraints_dihedral : list of lists
-                                                    Same as constraints_dist but contraining dihedral angles. For example, constrain C atom 1, O atom 2,
-                                                    C atom 3, and O atom 4 to a dihedral angle of 120 degrees --> [[1,2,3,4,120]]
-                    kwargs : argument class
-                                                    Specify any arguments from the QCORR module
+        Working directory
+    charge_default : int
+        Charge of the system
+    varfile : str
+        Parameter file containing the additional options for CMIN
+    constraints_dist : list of lists
+        If the conformational sampling is for a transition state, this option add distance constrains
+        between sets of 2 atoms in the format [[A1,A2,DIST1],[A3,A4,DIST2]]. For example, constrain
+        C atom 1 and O atom 2 to a distance of 2.0 A --> [[1,2,2.0]]
+    constraints_angle : list of lists
+        Same as constraints_dist but contraining angles. For example, constrain C atom 1, O atom 2,
+        and C atom 3 to an angle of 120 degrees --> [[1,2,3,120]]
+    constraints_dihedral : list of lists
+        Same as constraints_dist but contraining dihedral angles. For example, constrain C atom 1, O atom 2,
+        C atom 3, and O atom 4 to a dihedral angle of 120 degrees --> [[1,2,3,4,120]]
+    kwargs : argument class
+        Specify any arguments from the QCORR module
     """
 
     def __init__(
@@ -1240,7 +1241,7 @@ def prepare_gaussian_files(args, w_dir_initial):
     sdffile = f"{name}.sdf"
     suppl, _, _ = mol_from_sdf_or_mol_or_mol2(sdffile)
 
-    for i, mol in enumerate(suppl):
+    for _,mol in enumerate(suppl):
         if args.charge_default == "auto":
             args.charge_default = charge_com
         constraints = []

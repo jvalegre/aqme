@@ -38,7 +38,6 @@ echo -e "-  RUNNING $file WITH crest \c"
 
 # output
 outfile="${xyzoutall%.*}".out
-cregenoutfile="${xyzoutall%.*}".cregen.out
 contoutfile="${xyzoutall%.*}".constraint.out
 echo -e "-  outfile $outfile \c"
 

@@ -534,34 +534,32 @@ def RMSD_and_E_filter(
     Parameters
     ----------
     outmols : list
-            list of rdkit.Chem.Mol objects that can be accesed sorted by CIDs
+        list of rdkit.Chem.Mol objects that can be accesed sorted by CIDs
     selectedcids_initial : list
-            list of Compound Ids to filter.
+        list of Compound Ids to filter.
     cenergy : list
-            list of energies of the molecules sorted by CIDs
+        list of energies of the molecules sorted by CIDs
     args : argparse.args
-            [description]
+        [description]
     dup_data : pd.Dataframe
-            [description]
+        [description]
     dup_data_idx : [type]
-            [description]
+        [description]
     log : Logger
-            [description]
+        [description]
     calc_type : str
-            A string that points towards the column of the dataframe that should
-            be filled with the number of duplicates. The current choices are:
-            ['rdkit','summ','ani','xtb']
+        A string that points towards the column of the dataframe that should
+        be filled with the number of duplicates. The current choices are:
+        ['rdkit','summ','ani','xtb']
 
     Returns
     -------
     list
-            list of accepted compound Ids
+        list of accepted compound Ids
     """
     rms_threshold = args.rms_threshold
     energy_threshold = args.energy_threshold
     verbose = args.verbose
-    heavyonly = args.heavyonly
-    max_matches_RMSD = args.max_matches_RMSD
 
     if calc_type not in ["rdkit", "summ", "xtb", "ani"]:
         # RAUL: If this is true "ALL conformers are going to be written"
@@ -579,7 +577,7 @@ def RMSD_and_E_filter(
     eng_rms_dup = 0
     selectedcids.append(selectedcids_initial[0])
 
-    for i, conf in enumerate(selectedcids_initial[1:]):
+    for _,conf in enumerate(selectedcids_initial[1:]):
         # This keeps track of whether or not your conformer is unique
         excluded_conf = False
 

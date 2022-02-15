@@ -34,7 +34,7 @@ class qcorr():
 
 	Parameters
 	----------
-	qm_files : list 
+	qm_files : list
 		Filenames of QM output files to analyze
 	w_dir_main : str
 		Working directory
@@ -81,13 +81,13 @@ class qcorr():
 	kwargs : argument class
 		Specify any arguments from the QCORR module
 	"""
-	
+
 	def __init__(self, qm_files='', w_dir_main=os.getcwd(), dup_threshold=0.0001,
-				mem='4GB', nprocs=2, chk=False, qm_input='', s2_threshold=10.0, 
-				isom=False, isom_inputs=os.getcwd(), vdwfrac=0.50, covfrac=1.10, 
+				mem='4GB', nprocs=2, chk=False, qm_input='', s2_threshold=10.0,
+				isom=False, isom_inputs=os.getcwd(), vdwfrac=0.50, covfrac=1.10,
 				bs_gen='', bs='', gen_atoms=[], qm_end='', amplitude_ifreq=0.2, freq_conv='opt=(calcfc,maxstep=5)',
 				ifreq_cutoff=0.0, fullcheck=True, program='gaussian', varfile=None, **kwargs):
-		
+
 		self.initial_dir = Path(os.getcwd())
 		self.w_dir_main = Path(w_dir_main)
 		self.dup_threshold = dup_threshold
@@ -144,7 +144,7 @@ class qcorr():
 		# go to working folder and detect QM output files
 		os.chdir(self.w_dir_main)
 
-		if isinstance(qm_files, list): 
+		if isinstance(qm_files, list):
 			self.qm_files = qm_files
 		else:
 			self.qm_files = glob.glob(qm_files)
@@ -190,10 +190,10 @@ class qcorr():
 		3. Generates input files with new keywords_lines from the normally terminated files from point 1 (i.e. single-point energy corrections). Optionally, the analysis from points 1 and 2  might be disabled with the nocheck=True or --nocheck option.
 		"""
 
-		file_terms = {'finished': 0, 'sp_calcs' : 0, 'extra_imag_freq': 0, 'ts_no_imag_freq': 0, 
+		file_terms = {'finished': 0, 'sp_calcs' : 0, 'extra_imag_freq': 0, 'ts_no_imag_freq': 0,
 			'freq_no_conv': 0, 'spin_contaminated': 0, 'duplicate_calc': 0, 'atom_error': 0,
 			'scf_error': 0, 'no_data': 0, 'linear_mol_wrong': 0, 'not_specified': 0,
-			'geom_rules_qcorr': 0, 'isomerized': 0}   
+			'geom_rules_qcorr': 0, 'isomerized': 0}
 		
 		E_dup_list, H_dup_list, G_dup_list = [],[],[]
 
@@ -223,7 +223,7 @@ class qcorr():
 				termination = 'other'
 				errortype = 'no_data'
 				
-			# retrieves information from the cclib parser	
+			# retrieves information from the cclib parser
 			else:
 				# get number of atoms, multiplicity and number of imaginary freqs
 				n_atoms = cclib_data['properties']['number of atoms']
@@ -296,7 +296,7 @@ class qcorr():
 				for i in reversed(range(len(outlines)-15,len(outlines))):
 					if outlines[i-1].find('Atomic number out of range') > -1 or outlines[i-1].find('basis sets are only available') > -1:
 						errortype = 'atomicbasiserror'
-						break	
+						break
 					if outlines[i].find('SCF Error') > -1:
 						errortype = 'SCFerror'
 						break
@@ -327,10 +327,10 @@ class qcorr():
 						E_diff = abs(E_dup - E_dup_list[i])
 						H_diff = abs(H_dup - H_dup_list[i])
 						G_diff = abs(G_dup - G_dup_list[i])
-						if max([E_diff,H_diff,G_diff]) < abs(self.dup_threshold):                     
+						if max([E_diff,H_diff,G_diff]) < abs(self.dup_threshold):
 							errortype = 'duplicate_calc'
 
-				if errortype == 'none': 
+				if errortype == 'none':
 					E_dup_list.append(E_dup)
 					H_dup_list.append(H_dup)
 					G_dup_list.append(G_dup)
@@ -497,14 +497,14 @@ class qcorr():
 			self.write_qcorr_csv(file_terms)
 
 		if self.fullcheck:
-			try: 
+			try:
 				destination_fullcheck = self.w_dir_main.joinpath('successful_QM_outputs/json_files/')
 				json_files = glob.glob(f'{destination_fullcheck}/*.json')
 				full_check(w_dir_main=destination_fullcheck,destination_fullcheck=destination_fullcheck,json_files=json_files)
 			
 			except FileNotFoundError:
 				print('x  No normal terminations with no errors to run the full check analysis')
-				self.log.write('x  No normal terminations with no errors to run the full check analysis')	
+				self.log.write('x  No normal terminations with no errors to run the full check analysis')
 		
 			
 	# include geom filters (ongoing work)
@@ -530,12 +530,7 @@ class qcorr():
 
 	def fix_imag_freqs(self, n_atoms, cartesians, freqs, freq_displacements, calc_type):
 		"""
-		Fixes undersired (extra) imaginary frequencies from QM calculations.
-		This function multiplies the imaginary normal mode vectors by the selected amplitude 
-		(0.2 is the default amplitude in the pyQRC script from GitHub, user: bobbypaton).
-		By default, all the extra imaginary modes are used (i.e. in calculations with three
-		extra imaginary frequencies, all the three modes will be used to displace the atoms).
-		This can be tuned with the --ifreq_cutoff option (i.e. only use freqs lower than -50 cm-1).
+		Fixes undersired (extra) imaginary frequencies from QM calculations. This function multiplies the imaginary normal mode vectors by the selected amplitude (0.2 is the default amplitude in the pyQRC script from GitHub, user: bobbypaton).	By default, all the extra imaginary modes are used (i.e. in calculations with three	extra imaginary frequencies, all the three modes will be used to displace the atoms). This can be tuned with the --ifreq_cutoff option (i.e. only use freqs lower than -50 cm-1).
 
 		Parameters
 		----------
@@ -580,9 +575,8 @@ class qcorr():
 
 	def organize_outputs(self,file,termination,errortype,file_terms):
 		"""
-		1. Moves the QM output files to their corresponding folders after the analysis. 
-		2. Keeps track of the number of calculations with the different types 
-		of terminations and error types
+		1. Moves the QM output files to their corresponding folders after the analysis.
+		2. Keeps track of the number of calculations with the different types of terminations and error types
 
 		Parameters
 		----------
@@ -705,7 +699,7 @@ def full_check(w_dir_main=os.getcwd(),destination_fullcheck='',json_files='*.jso
 		Destination to create the file with the full check
 	json_files : list of str
 		json files to compare (glob.glob('*.json') and '*.json are both valid inputs to
-		include all the json files from a folder)	
+		include all the json files from a folder)
 	"""
 
 	initial_dir = os.getcwd()
@@ -735,7 +729,7 @@ def full_check(w_dir_main=os.getcwd(),destination_fullcheck='',json_files='*.jso
 		# designed to detect G4 calcs
 		if level_of_theory == 'HF/GFHFB2':
 			level_of_theory = 'G4'
-		df_fullcheck.loc[len(df_fullcheck.index)] = [file_name, program, grid_type, level_of_theory, dispersion, solvation] 
+		df_fullcheck.loc[len(df_fullcheck.index)] = [file_name, program, grid_type, level_of_theory, dispersion, solvation]
 	
 	fullcheck_file = '--QCORR_Fullcheck_Analysis--.dat'
 	fullcheck_txt = '-- Full check analysis --'
@@ -756,7 +750,7 @@ def full_check(w_dir_main=os.getcwd(),destination_fullcheck='',json_files='*.jso
 			
 	fullcheck_analysis = open(fullcheck_file, 'w')
 	print(fullcheck_txt)
-	fullcheck_analysis.write(fullcheck_txt)	
+	fullcheck_analysis.write(fullcheck_txt)
 	fullcheck_analysis.close()
 
 	if destination_fullcheck == '':
@@ -768,8 +762,8 @@ def full_check(w_dir_main=os.getcwd(),destination_fullcheck='',json_files='*.jso
 	os.chdir(initial_dir)
 
 
-def json2input(json_files='', w_dir_main=os.getcwd(), destination=None, suffix='', 
-				charge=None, mult=None,	mem='8GB', nprocs=4, chk=False, qm_input='', bs_gen='', 
+def json2input(json_files='', w_dir_main=os.getcwd(), destination=None, suffix='',
+				charge=None, mult=None,	mem='8GB', nprocs=4, chk=False, qm_input='', bs_gen='',
 				bs='', gen_atoms=[], qm_end='', program='gaussian'):
 	'''
 	Reads a json file and use QPREP to generate input files.
@@ -797,7 +791,7 @@ def json2input(json_files='', w_dir_main=os.getcwd(), destination=None, suffix='
 	qm_input : str
 		keywords_line for new input files
 	bs_gen : str
-		Basis set used for gen(ECP) atoms	
+		Basis set used for gen(ECP) atoms
 	bs : str
 		Basis set used for non gen(ECP) atoms in gen(ECP) calculations
 	gen_atoms : list of str
@@ -819,7 +813,7 @@ def json2input(json_files='', w_dir_main=os.getcwd(), destination=None, suffix='
 	else:
 		destination = Path(destination)
 
-	if not isinstance(json_files, list): 
+	if not isinstance(json_files, list):
 		json_files = glob.glob(json_files)
 
 	if json_files == '*.json':

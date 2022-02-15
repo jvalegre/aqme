@@ -12,18 +12,16 @@ from rdkit.Chem import rdMolTransforms, rdMolAlign
 
 from aqme.utils import set_metal_atomic_number, get_conf_RMS
 
-def realign_mol(mol,conf,coord_Map, alg_Map, mol_template, maxsteps):  # RAUL: This function requires a clear separation between minimization and alignment.
+def realign_mol(mol,conf,coord_Map,alg_Map,mol_template,maxsteps):  # RAUL: This function requires a clear separation between minimization and alignment.
     """
-    Minimizes and aligns the molecule provided freezing the atoms that match 
-    the mol_template.
+    Minimizes and aligns the molecule provided freezing the atoms that match the mol_template
 
     Parameters
     ----------
-    mol : rdkit.Chem.Mol
-        Molecule to be minimized and aligned. 
-    conf : int?
-        Number that indicates which conformation of the molecule will be 
-        minimized and aligned. 
+    mol : RDKit mol object
+        Molecule to be minimized and aligned
+    conf : int
+        Number that indicates which conformation of the molecule will be minimized and aligned
     coord_Map : [type]
         [description]
     alg_Map : [type]
@@ -31,7 +29,7 @@ def realign_mol(mol,conf,coord_Map, alg_Map, mol_template, maxsteps):  # RAUL: T
     mol_template : [type]
         [description]
     maxsteps : int
-        Maximum number of iterations in FF minimization.
+        Maximum number of iterations in FF minimization
 
     Returns
     -------
@@ -47,13 +45,8 @@ def realign_mol(mol,conf,coord_Map, alg_Map, mol_template, maxsteps):  # RAUL: T
     forcefield.Initialize()
     forcefield.Minimize(maxIts=maxsteps)
     # rotate the embedded conformation onto the core_mol:
-    rdMolAlign.AlignMol(mol, 
-                        mol_template, 
-                        prbCid=conf,
-                        refCid=-1,
-                        atomMap=alg_Map,
-                        reflect=True,
-                        maxIters=100)
+    rdMolAlign.AlignMol(mol,mol_template,prbCid=conf,refCid=-1,
+                        atomMap=alg_Map,reflect=True,maxIters=100)
     energy = float(forcefield.CalcEnergy())
     return mol,energy
 
@@ -105,15 +98,14 @@ def minimize_rdkit_energy(mol,conf,log,FF,maxsteps):
 
 def rotate_dihedrals(conformer,dihedrals,seed,stepsize):
     """
-    Applies a random rotation to all the dihedrals  
+    Applies a random rotation to all the dihedrals
 
     Parameters
     ----------
     conformer : rdkit.Chem.rdchem.Conformer
-        The conformer whose angles are going to be rotated. 
-        (conformer = mol.GetConformer(cid)) 
+        The conformer whose angles are going to be rotated (conformer = mol.GetConformer(cid))
     dihedrals : list
-        A list of tuples of all the dihedrals that are going to be rotated. 
+        A list of tuples of all the dihedrals that are going to be rotated.
     seed : int
         seed for the random module
     stepsize : float
@@ -121,7 +113,7 @@ def rotate_dihedrals(conformer,dihedrals,seed,stepsize):
     """
     rad_range = np.arange(0.0, 360.0,stepsize)
     for dihedral in dihedrals:
-        random.seed(seed)                                                       # RAUL: Any good reason to keep reseting the seed ? 
+        random.seed(seed) # RAUL: Any good reason to keep reseting the seed ? 
         rad_ang = random.choice(rad_range)
         rad = math.pi*rad_ang/180.0
         rdMolTransforms.SetDihedralRad(conformer,*dihedral,value=rad)
@@ -162,7 +154,6 @@ def generating_conformations_fullmonte(name,args,rotmatches,log,selectedcids_rdk
 
     # bar = IncrementalBar('o  Generating conformations for Full Monte', max = args.nsteps_fullmonte)
     while nsteps < args.nsteps_fullmonte+1:
-        
         seed = nsteps
 
         #STEP 2: Choose mol object form unique_mol:
@@ -177,10 +168,10 @@ def generating_conformations_fullmonte(name,args,rotmatches,log,selectedcids_rdk
         random.seed(seed)                                                       # RAUL: Any good reason to keep reseting the seed ? 
         k = min(len(rotmatches),args.nrot_fullmonte)
         mutable_dihedrals = random.choices(rotmatches, k=k)
-        
+
         #STEP 4: for the given conformation, then apply a random rotation to each torsion in the subset
         conformer = rot_mol.GetConformer(conf)
-        rot_mol = rotate_dihedrals(conformer,mutable_dihedrals,seed,args.ang_fullmonte)
+        rotate_dihedrals(conformer,mutable_dihedrals,seed,args.ang_fullmonte)
 
         #STEP 5: Optimize geometry rot_mol
         if (coord_Map, alg_Map, mol_template) == (None, None, None):

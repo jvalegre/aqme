@@ -65,13 +65,13 @@ path_qcorr = os.getcwd()+'/Example_workflows/QCORR_processing_QM_outputs'
     # e for duplicates threshold
     # json2input tests
     # ('single_point', 'QCORR_1', 'CH4.log', None), # test single-point generation
-    # overwrites charge/mult  
+    # overwrites charge/mult
 ])
 
 def test_analysis_dup_sp(test_type, init_folder, file, command_line, target_folder):
     # copy the test folders
     if not path.exists(f'{path_main}/Example_workflows_original'):
-        shutil.copytree(f'{path_main}/Example_workflows', f'{path_main}/Example_workflows_original') 
+        shutil.copytree(f'{path_main}/Example_workflows', f'{path_main}/Example_workflows_original')
 
     # runs the program with the different tests
     w_dir_main=f'{path_qcorr}/{init_folder}'
@@ -90,7 +90,7 @@ def test_analysis_dup_sp(test_type, init_folder, file, command_line, target_fold
 
         if file.split('.')[-1].lower() == 'log':
             assert path.exists(f'{w_dir_main}/{target_folder}/{file}')
-        
+
         elif file == 'json':
             os.chdir(f'{w_dir_main}/{target_folder}')
             json_files = glob.glob('*.json')

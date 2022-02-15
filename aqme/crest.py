@@ -16,19 +16,22 @@ from pathlib import Path
 
 
 def atompairs(mol, atom1, atom2, constraints):
-    """returns addtional constraints
+    """
+    Returns addtional constraints
+    
     Parameters
     ----------
     mol : RDKit mol object
-            Mol object
+        Mol object
     atom1 : str
-            type of atom 1
+        type of atom 1
     atom2 : str
-            type of atom 2
+        type of atom 2
+
     Returns
     -------
     [int,int] [int,int]
-            atom pairs, constraint value
+        atom pairs, constraint value
     """
     active = []
     for x in constraints:
@@ -94,13 +97,13 @@ def run_xtb(
         ]
 
         if constraints_dist is not None:
-            for i, bond in enumerate(constraints_dist):
+            for _,bond in enumerate(constraints_dist):
                 command.append("--dist")
                 command.append(
                     str(int(bond[0])) + "," + str(int(bond[1])) + "," + str(bond[2])
                 )
         if constraints_angle is not None:
-            for i, angle in enumerate(constraints_angle):
+            for _,angle in enumerate(constraints_angle):
                 command.append("--angle")
                 command.append(
                     str(int(angle[0]))
@@ -112,7 +115,7 @@ def run_xtb(
                     + str(angle[3])
                 )
         if constraints_dihedral is not None:
-            for i, dihedral in enumerate(constraints_dihedral):
+            for _,dihedral in enumerate(constraints_dihedral):
                 command.append("--dihedral")
                 command.append(
                     str(int(dihedral[0]))
@@ -128,30 +131,27 @@ def run_xtb(
         subprocess.run(command)
 
 
-def crest_opt(mol, name, dup_data, dup_data_idx, sdwriter, args, log, w_dir_initial):
+def crest_opt(mol, name, dup_data, dup_data_idx, sdwriter, args, w_dir_initial):
 
-    """run xtb using shell script and args
+    """
+    Run xtb using shell script and args to perform crest/cregen conformer search
+    
     Parameters
     ----------
     mol : RDKit Mol
-            RDkit mol object
+        RDkit mol object
     name : str
-            Name of molecule
+        Name of molecule
     dup_data : pandas df
-            csv
+        csv
     dup_data_idx : int
-            index of pandas df
+        index of pandas df
     sdwriter : Rdkit writer
-            sdwriter to write sdf file
+        sdwriter to write sdf file
     args : pyconfot args
-            arguments for crest
-    log : Logger
-            Logging
+        arguments for crest
     w_dir_initial : working directory
-            working directory
-    Returns
-    -------
-    performs crest/cregen conformer search
+        working directory
     """
 
     csearch_dir = Path(w_dir_initial)
@@ -166,7 +166,6 @@ def crest_opt(mol, name, dup_data, dup_data_idx, sdwriter, args, log, w_dir_init
         rdkit.Chem.rdmolfiles.MolToXYZFile(mol, xyzin)
 
     charge = args.charge[0]
-    mult = args.mult
     cbonds = args.cbonds
     constraints_dist = args.constraints_dist
     constraints_angle = args.constraints_angle
