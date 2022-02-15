@@ -94,7 +94,7 @@ AQME can also be run through command lines. Some examples are:
     python -m aqme --input smi.csv --CSEARCH rdkit
     ```
     ** The csv file must contain the list of SMILES in a column called "SMILES" and the corresponding names in a column called "code_names" (see Example_workflows for more information)\
-    ** Include `--CMIN xtb` or `--CMIN ani` to use the CMIN geometry refiner
+    ** Include `--CMIN xtb` or `--CMIN ani` to use the CMIN geometry refiner\
   * CSEARCH/CMIN for conformer generation using a YAML file containing constrains:
     ```
     python -m aqme --varfile varfile.yaml
