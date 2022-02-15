@@ -12,12 +12,12 @@
 ![Size](https://img.shields.io/github/languages/code-size/jvalegre/aqme)
 [![PyPI](https://img.shields.io/pypi/v/aqme?color=blue&label=PyPI&logo=pypi)](https://pypi.org/project/aqme)
 
-# <p align="center">Automated Quantum Mechanical Environments (AQME)
-## -- Table of contents --
-### [What is AQME?](#heading)
-### [Installation](#heading)
-### [Requirements](#heading)
-</p>
+# <p align="center">Automated Quantum Mechanical Environments (AQME)</p>
+## <p align="center">-- Table of contents --</p>
+### <p align="center">[What is AQME?](#What%20is%20AQME?)</p>
+### <p align="center">[Installation](#Installation)</p>
+### <p align="center">[Requirements](#Requirementss)</p>
+
 
 ## What is AQME?
 The code is an ensemble of automated QM workflows that can be run through jupyter notebooks, command lines and yaml files. Some of the most popular workflows include:
