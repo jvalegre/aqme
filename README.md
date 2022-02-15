@@ -23,10 +23,10 @@ The code is an ensemble of automated QM workflows that can be run through jupyte
 ## Installation
 AQME and its dependencies are installed as follows:
   1. Installing RDKit and Open Babel through conda. For shortcuts:
-    * `conda install -c rdkit rdkit` or `conda install -c conda-forge rdkit` (compatible with Python >=3.8)
-    * `conda install -c conda-forge openbabel`
+  * `conda install -c rdkit rdkit` or `conda install -c conda-forge rdkit` (compatible with Python >=3.8)
+  * `conda install -c conda-forge openbabel`
   2. Install AQME and its dependencies:
-    * `pip install aqme` or `python setup.py install`
+  * `pip install aqme` or `python setup.py install`
 
 ## Requirements
 * Python 3
@@ -57,7 +57,7 @@ Generator of input files for QM calculations. Options:
 
 ### QCORR
 cclib-based analyzer of output files from multiple QM programs. This module:
-  - [ ] Separates Normal terminated files with no errors, extra imaginary frequencies, duplicates, isomerization to other systems and spin contamination
+  - [ ] Separates normally terminated files with no errors, extra imaginary frequencies, duplicates, isomerization to other systems and spin contamination
   - [ ] Automatically generates new com files to "fix" the different issues of the calculations with strategies that are optimal for each type of issue (Gaussian and ORCA)
   - [ ] Checks that all the calculations are homogeneous (i.e. using the same level of theory, same grid size, same program and version, solvation model, etc)
 
@@ -93,7 +93,7 @@ AQME can also be run through command lines. Some examples are:
     ```
     python -m aqme --input smi.csv --CSEARCH rdkit
     ```
-    ** The csv file must contain the list of SMILES in a column called "SMILES" and the corresponding names in a column called "code_names" (see Example_workflows for more information)
+    ** The csv file must contain the list of SMILES in a column called "SMILES" and the corresponding names in a column called "code_names" (see Example_workflows for more information)\
     ** Include `--CMIN xtb` or `--CMIN ani` to use the CMIN geometry refiner
   * CSEARCH/CMIN for conformer generation using a YAML file containing constrains:
     ```
