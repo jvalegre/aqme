@@ -18,7 +18,7 @@ from pathlib import Path
 def atompairs(mol, atom1, atom2, constraints):
     """
     Returns addtional constraints
-    
+
     Parameters
     ----------
     mol : RDKit mol object
