@@ -14,11 +14,11 @@
 
 # Automated Quantum Mechanical Environments (AQME)
 The code is an ensemble of automated QM workflows that can be run through jupyter notebooks, command lines and yaml files. Some of the most popular workflows include:
-  - [ ] RDKit- and CREST-based conformer generator leading to ready-to-submit QM input files starting from individual files or SMILES databases
-  - [ ] Post-processing of QM output files to fix convergence errors, extra imaginary frequencies, unfinished jobs, duplicates and error terminations, as well as to detect spin contamination, isomerization issues, and more optimization problems
-  - [ ] Analysis of homogeneity of QM calculations (same level of theory, grid size, program and version, solvation models, etc)
-  - [ ] Generation of xTB, DFT and RDKit descriptors in json and csv files that are ready to use in machine-learning models or used to predict NMR spectra
-  - [ ] More other useful workflows!
+    - [ ] RDKit- and CREST-based conformer generator leading to ready-to-submit QM input files starting from individual files or SMILES databases
+    - [ ] Post-processing of QM output files to fix convergence errors, extra imaginary frequencies, unfinished jobs, duplicates and error terminations, as well as to detect spin contamination, isomerization issues, and more optimization problems
+    - [ ] Analysis of homogeneity of QM calculations (same level of theory, grid size, program and version, solvation models, etc)
+    - [ ] Generation of xTB, DFT and RDKit descriptors in json and csv files that are ready to use in machine-learning models or used to predict NMR spectra
+    - [ ] More other useful workflows!
 
 ## Installation
 AQME and its dependencies are installed as follows:
