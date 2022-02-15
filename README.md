@@ -14,9 +14,9 @@
 
 # <p align="center">Automated Quantum Mechanical Environments (AQME)</p>
 ## <p align="center">-- Table of contents --</p>
-### <p align="center">[What is AQME?](#What%20is%20AQME?)</p>
-### <p align="center">[Installation](#Installation)</p>
-### <p align="center">[Requirements](#Requirements)</p>
+### <p align="center">- [What is AQME?](##What-is-AQME?)</p>
+### <p align="center">- [Installation](##Installation)</p>
+### <p align="center">- [Requirements](##Requirements)</p>
 
 
 ## What is AQME?
