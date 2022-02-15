@@ -612,10 +612,10 @@ def nci_ts_mol(smi, args, constraints_dist, constraints_angle, constraints_dihed
 	nconstraints_angle = []
 	if constraints_angle is not None:
 
-		for i,r in enumerate(constraints_angle):
+		for _,r in enumerate(constraints_angle):
 			# print('r:',r[:2])
 			nr = []
-			for j,ele in enumerate(r[:3]):
+			for _,ele in enumerate(r[:3]):
 				# print('ele:',  ele)
 				for atom in mol.GetAtoms():
 					if ele == atom.GetAtomMapNum():
