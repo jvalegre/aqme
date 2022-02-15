@@ -15,15 +15,15 @@
 ___
 # <p align="center">Automated Quantum Mechanical Environments (AQME)</p>
 ## <p align="center">-- Table of contents --</p>
-### <p align="center">[What is AQME?](https://github.com/jvalegre/aqme#what-is-aqme)</p>
-### <p align="center">[Installation](https://github.com/jvalegre/aqme#installation)</p>
-### <p align="center">[Requirements](https://github.com/jvalegre/aqme#requirements)</p>
-### <p align="center">[Features and modules](https://github.com/jvalegre/aqme#features-and-modules)</p>
-### <p align="center">[Quickstart](https://github.com/jvalegre/aqme#quickstart)</p>
+### <p align="center">[What is AQME?](https://github.com/jvalegre/aqme#what-is-aqme-1)</p>
+### <p align="center">[Installation](https://github.com/jvalegre/aqme#installation-1)</p>
+### <p align="center">[Requirements](https://github.com/jvalegre/aqme#requirements-1)</p>
+### <p align="center">[Features and modules](https://github.com/jvalegre/aqme#features-and-modules-1)</p>
+### <p align="center">[Quickstart](https://github.com/jvalegre/aqme#quickstart-1)</p>
 ### <p align="center">[Extended documentation](https://github.com/jvalegre/aqme#extended-documentation-installation-use-examples-etc)</p>
-### <p align="center">[Developers and help desk](https://github.com/jvalegre/aqme#developers-and-help-desk)</p>
-### <p align="center">[License](https://github.com/jvalegre/aqme#license)</p>
-### <p align="center">[Reference](https://github.com/jvalegre/aqme#reference)</p>
+### <p align="center">[Developers and help desk](https://github.com/jvalegre/aqme#developers-and-help-desk-1)</p>
+### <p align="center">[License](https://github.com/jvalegre/aqme#license-1)</p>
+### <p align="center">[Reference](https://github.com/jvalegre/aqme#reference-1)</p>
 ___
 ## What is AQME?
 The code is an ensemble of automated QM workflows that can be run through jupyter notebooks, command lines and yaml files. Some of the most popular workflows include:
@@ -35,11 +35,11 @@ The code is an ensemble of automated QM workflows that can be run through jupyte
 
 ## Installation
 AQME and its dependencies are installed as follows:
-  1. Installing RDKit and Open Babel through conda. For shortcuts:
-    * `conda install -c rdkit rdkit` or `conda install -c conda-forge rdkit` (compatible with Python >=3.8)
-    * `conda install -c conda-forge openbabel`
-  2. Install AQME and its dependencies:
-    * `pip install aqme` or `python setup.py install`
+1. Installing RDKit and Open Babel through conda. For shortcuts:
+  * `conda install -c rdkit rdkit` or `conda install -c conda-forge rdkit` (compatible with Python >=3.8)
+  * `conda install -c conda-forge openbabel`
+2. Install AQME and its dependencies:
+  * `pip install aqme` or `python setup.py install`
 
 ## Requirements
 * Python 3
