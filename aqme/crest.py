@@ -99,35 +99,16 @@ def run_xtb(
         if constraints_dist is not None:
             for _,bond in enumerate(constraints_dist):
                 command.append("--dist")
-                command.append(
-                    str(int(bond[0])) + "," + str(int(bond[1])) + "," + str(bond[2])
-                )
+                command.append(",".join([str(int(elem)) for elem in bond]))
         if constraints_angle is not None:
             for _,angle in enumerate(constraints_angle):
                 command.append("--angle")
-                command.append(
-                    str(int(angle[0]))
-                    + ","
-                    + str(int(angle[1]))
-                    + ","
-                    + str(int(angle[2]))
-                    + ","
-                    + str(angle[3])
-                )
+                command.append(",".join([str(int(elem)) for elem in angle]))
         if constraints_dihedral is not None:
             for _,dihedral in enumerate(constraints_dihedral):
                 command.append("--dihedral")
-                command.append(
-                    str(int(dihedral[0]))
-                    + ","
-                    + str(int(dihedral[1]))
-                    + ","
-                    + str(int(dihedral[2]))
-                    + ","
-                    + str(int(dihedral[3]))
-                    + ","
-                    + str(dihedral[4])
-                )
+                command.append(",".join([str(int(elem)) for elem in dihedral]))
+        
         subprocess.run(command)
 
 
@@ -202,21 +183,15 @@ def crest_opt(mol, name, dup_data, dup_data_idx, sdwriter, args, w_dir_initial):
         # pass
     else:
         unique_atoms = []
-        if constraints_dist is not None:
-            for x in constraints_dist:
-                for i in x[:2]:
-                    if i not in unique_atoms:
-                        unique_atoms.append(int(i))
-        if constraints_angle is not None:
-            for x in constraints_angle:
-                for i in x[:3]:
-                    if i not in unique_atoms:
-                        unique_atoms.append(int(i))
-        if constraints_dihedral is not None:
-            for x in constraints_dihedral:
-                for i in x[:4]:
-                    if i not in unique_atoms:
-                        unique_atoms.append(int(i))
+        # list of list with types of contraints and number of elements (as indexes) that define the constrain
+        # i.e. for a distance constrain, 3 elements are needed atom1, atom2 and distance
+        contraint_types = [[constraints_dist,2], [constraints_angle,3], [constraints_dihedral,4]]
+        for contraint_type in contraint_types:
+            if contraint_type[0] is not None:
+                for x in contraint_type[0]:
+                    for i in x[:contraint_type[1]]:
+                        if i not in unique_atoms:
+                            unique_atoms.append(int(i))
         command = [
             os.path.abspath(os.path.dirname(__file__)) + "/run_crest.sh",
             xyzoutxtb2,

@@ -24,12 +24,9 @@ from aqme.qprep import qprep, get_molecule_list, load_charge_data
 from aqme.cmin import mult_min
 from aqme.utils import (
     move_file,
-    get_filenames,
     creation_of_dup_csv_csearch,
     creation_of_dup_csv_cmin,
 )
-
-# need to and in energy
 
 
 def csearch_main(w_dir_initial, args, log_overall):

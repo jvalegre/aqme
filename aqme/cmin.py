@@ -11,6 +11,13 @@ from rdkit.Chem import AllChem as Chem
 from rdkit.Chem.PropertyMol import PropertyMol
 from rdkit.Geometry import Point3D
 import time
+import ase
+import ase.optimize
+from ase.units import Hartree
+import torch
+import torchani
+os.environ["KMP_DUPLICATE_LIB_OK"] = "True"
+DEVICE = torch.device("cpu")
 from aqme.argument_parser import set_options
 from aqme.utils import (
     set_metal_atomic_number,
@@ -20,9 +27,9 @@ from aqme.utils import (
     creation_of_dup_csv_cmin,
     load_from_yaml,
 )
+from aqme.filter import ewin_filter, pre_E_filter, RMSD_and_E_filter
 
 hartree_to_kcal = 627.509
-
 
 class cmin:
     """
@@ -182,7 +189,6 @@ class cmin:
         # selectedcids, cenergy, outmols = zip(*total_filter.accepted)
 
         # PLACEHOLDER for imports! Need to rearrange
-        from aqme.filter import ewin_filter, pre_E_filter, RMSD_and_E_filter
 
         sortedcids = ewin_filter(
             sorted_all_cids,
@@ -225,13 +231,11 @@ class cmin:
         # write the filtered, ordered conformers to external file
         self.write_confs(
             outmols,
-            cenergy,
             selectedcids,
             name_mol,
             self.args,
             self.program,
-            self.log,
-            self.cmin_folder,
+            self.log
         )
         dup_data.at[dup_data_idx, "CMIN time (seconds)"] = round(
             time.time() - start_time, 2
@@ -264,14 +268,6 @@ class cmin:
                 sqm_energy, coordinates
         """
 
-        import ase
-        import ase.optimize
-        from ase.units import Hartree
-        import torch
-
-        os.environ["KMP_DUPLICATE_LIB_OK"] = "True"
-        DEVICE = torch.device("cpu")
-
         from xtb.ase.calculator import XTB
 
         xtb_calculator = XTB(
@@ -298,10 +294,10 @@ class cmin:
                         ]
                         # will update only for cdx, smi, and csv formats.
                         atom.charge = ase_charge
-                else:
-                    atom.charge = args.charge_default
-                    if args.verbose:
-                        log.write("o  The Overall charge is read from the .com file ")
+            else:
+                atom.charge = args.charge_default
+                if args.verbose:
+                    log.write("o  The Overall charge is read from the input file ")
 
         optimizer = ase.optimize.BFGS(
             ase_molecule, trajectory="xTB_opt.traj", logfile="xtb.opt"
@@ -348,16 +344,6 @@ class cmin:
                 sqm_energy, coordinates
         """
 
-        # REPEATED IMPORTS JUST AS PLACEHOLDERS!
-        import ase
-        import ase.optimize
-        from ase.units import Hartree
-        import torchani
-        import torch
-
-        os.environ["KMP_DUPLICATE_LIB_OK"] = "True"
-        DEVICE = torch.device("cpu")
-
         # Select the model
         ANI_method = args.ani_method
         if ANI_method == "ANI1x":
@@ -401,47 +387,14 @@ class cmin:
     # xTB AND ANI MAIN OPTIMIZATION PROCESS
     def optimize(self, mol, args, program, log, dup_data, dup_data_idx):
 
-        # imports for xTB and ANI
-        try:
-            import ase
-            import ase.optimize
-            from ase.units import Hartree
-
-        except (ModuleNotFoundError, AttributeError):
-            err_msg = "ASE is not installed correctly - xTB and ANI are not available"
-            log.write(
-                "\nx  ASE is not installed correctly - xTB and ANI are not available"
-            )
-            raise ModuleNotFoundError(err_msg)
-
-        try:
-            import torch
-
-            os.environ["KMP_DUPLICATE_LIB_OK"] = "True"
-            DEVICE = torch.device("cpu")
-
-        except (ModuleNotFoundError, AttributeError):
-            err_msg = "TORCH is not installed correctly - xTB and ANI are not available"
-            log.write(
-                "\nx  TORCH is not installed correctly - xTB and ANI are not available"
-            )
-            raise ModuleNotFoundError(err_msg)
-
         # Attempt an XTB import, if it fails log it and mock xtb_calc to delay the
         # system exit until it is used.
         try:
             from xtb.ase.calculator import XTB
         except (ModuleNotFoundError, AttributeError):
             log.write("\nx  xTB is not installed correctly - xTB is not available")
-            xtb_calc = lambda *x, **y: sys.exit()
-        # Attempt a torchani import, if it fails log it and mock ani_calc function
-        # to raise a sys.exit() if called
-        try:
-            import torchani
-
-        except (ModuleNotFoundError, AttributeError):
-            log.write("\nx  Torchani is not installed correctly - ANI is not available")
-            ani_calc = lambda *x, **y: sys.exit()
+            print("\nx  xTB is not installed correctly - xTB is not available")
+            sys.exit()
 
         # if large system increase stack size
         if args.STACKSIZE != "1G":
@@ -515,10 +468,9 @@ class cmin:
 
         return mol, energy, ani_incompatible
 
-    # FUNCTIONS TO FIX RAUL'S COMMIT, REORGANIZE THEM!
     # WRITE SDF FILES FOR xTB AND ANI1
     def write_confs(
-        self, conformers, energies, selectedcids, name, args, program, log, cmin_folder
+        self, conformers, selectedcids, name, args, program, log
     ):
         if len(conformers) > 0:
             # name = name.split('_'+args.CSEARCH)[0]# a bit hacky
@@ -545,34 +497,34 @@ class cmin:
         else:
             log.write("x  No conformers found!")
 
-    def filter_to_pandas(compfilter, dataframe, row, program):
-        """
-        Writes the results of a filter in a dataframe at the specified row.
+    # def filter_to_pandas(self, compfilter, dataframe, row, program):
+    #     """
+    #     Writes the results of a filter in a dataframe at the specified row.
 
-        Parameters
-        ----------
-        compfilter : CompoundFilter
-                A filter with a dataset != None.
-        dataframe : pd.Dataframe
-                The dataframe where the results are to be added.
-        row : int
-                row of the dataframe where the results are to be stored.
-        program : str
-                program for the conformer search. ['rdkit','summ','ani','xtb']
-        """
-        columns = [
-            "energy-window",
-            "initial_energy_threshold",
-            "RMSD-and-energy-duplicates",
-        ]
+    #     Parameters
+    #     ----------
+    #     compfilter : CompoundFilter
+    #             A filter with a dataset != None.
+    #     dataframe : pd.Dataframe
+    #             The dataframe where the results are to be added.
+    #     row : int
+    #             row of the dataframe where the results are to be stored.
+    #     program : str
+    #             program for the conformer search. ['rdkit','summ','ani','xtb']
+    #     """
+    #     columns = [
+    #         "energy-window",
+    #         "initial_energy_threshold",
+    #         "RMSD-and-energy-duplicates",
+    #     ]
 
-        program2name = {"rdkit": "RDKit", "summ": "summ", "ani": "ANI", "xtb": "xTB"}
+    #     program2name = {"rdkit": "RDKit", "summ": "summ", "ani": "ANI", "xtb": "xTB"}
 
-        prog = program2name[program]
-        for i, col in enumerate(columns):
-            duplicates = compfilter.discarded_from(i)
-            dataframe.at[row, f"{prog}-{col}"] = len(duplicates)
-        dataframe.at[row, f"{prog}-Unique-conformers"] = len(compfilter.accepted)
+    #     prog = program2name[program]
+    #     for i, col in enumerate(columns):
+    #         duplicates = compfilter.discarded_from(i)
+    #         dataframe.at[row, f"{prog}-{col}"] = len(duplicates)
+    #     dataframe.at[row, f"{prog}-Unique-conformers"] = len(compfilter.accepted)
 
 
 def rdkit_sdf_read(name, args, log):

@@ -283,7 +283,7 @@ def geom_rules_output(mol, args, log, file, print_error_geom_rules):
                             elif sym == sym_0:
                                 neigh_count_first += 1
                                 atom_idx[0] = x.GetIdx()
-                            elif sym == sym_0:
+                            elif sym == sym_2:
                                 neigh_count_second += 1
                                 atom_idx[2] = x.GetIdx()
                             # count matches
