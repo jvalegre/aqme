@@ -15,15 +15,9 @@
 ___
 # <p align="center">Automated Quantum Mechanical Environments (AQME)</p>
 ## <p align="center">-- Table of contents --</p>
-### <p align="center">[What is AQME?](https://github.com/jvalegre/aqme#what-is-aqme-1)</p>
-### <p align="center">[Installation](https://github.com/jvalegre/aqme#installation-1)</p>
-### <p align="center">[Requirements](https://github.com/jvalegre/aqme#requirements-1)</p>
-### <p align="center">[Features and modules](https://github.com/jvalegre/aqme#features-and-modules-1)</p>
-### <p align="center">[Quickstart](https://github.com/jvalegre/aqme#quickstart-1)</p>
-### <p align="center">[Extended documentation](https://github.com/jvalegre/aqme#extended-documentation-installation-use-examples-etc)</p>
-### <p align="center">[Developers and help desk](https://github.com/jvalegre/aqme#developers-and-help-desk-1)</p>
-### <p align="center">[License](https://github.com/jvalegre/aqme#license-1)</p>
-### <p align="center">[Reference](https://github.com/jvalegre/aqme#reference-1)</p>
+### <p align="center">[What is AQME?](https://github.com/jvalegre/aqme#what-is-aqme-1)             [Installation](https://github.com/jvalegre/aqme#installation-1)             [Requirements](https://github.com/jvalegre/aqme#requirements-1)</p>
+### <p align="center">[Features and modules](https://github.com/jvalegre/aqme#features-and-modules-1)         [Quickstart](https://github.com/jvalegre/aqme#quickstart-1)         [Extended documentation](https://github.com/jvalegre/aqme#extended-documentation-installation-use-examples-etc)</p>
+### <p align="center">[Developers and help desk](https://github.com/jvalegre/aqme#developers-and-help-desk-1)         [License](https://github.com/jvalegre/aqme#license-1)         [Reference](https://github.com/jvalegre/aqme#reference-1)</p>
 ___
 ## What is AQME?
 The code is an ensemble of automated QM workflows that can be run through jupyter notebooks, command lines and yaml files. Some of the most popular workflows include:

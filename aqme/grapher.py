@@ -50,29 +50,37 @@ def plot_graph(energy_rdkit,energy_min,energy_min_dft,lot,bs,energy_min_dft_sp,l
         '''
         Returns a function that maps each index in 0, 1, ..., n-1 to a distinct
         RGB color; the keyword argument name must be a standard mpl colormap name
-        .'''
+        '''
         return plt.cm.get_cmap(name, n)
 
-    if len(energy_min_dft_sp)  != 0:
+    if len(energy_min_dft_sp) != 0 or len(energy_min_dft) != 0:
         energy_dft_sp_mae_sd,energy_dft_mae_sd,energy_min_mae_sd,energy_rdkit_mae_sd = [],[],[],[]
+        if len(energy_min_dft_sp) == 0:
+            energy_min_dft_sp = [None]
         for l,_ in enumerate(energy_min_dft_sp):
-            name = energy_min_dft_sp[l][0]
-            energy_dft_sp_mae_sd.append(float(energy_min_dft_sp[l][1]))
+            if energy_min_dft_sp[l] is not None:
+                name = energy_min_dft_sp[l][0]
+                energy_dft_sp_mae_sd.append(float(energy_min_dft_sp[l][1]))
+            else:
+                name = None
             for i,_ in enumerate(energy_min_dft):
-                if energy_min_dft[i][0] == name:
+                if name is not None:
+                    if energy_min_dft[i][0] == name:
+                        energy_dft_mae_sd.append(float(energy_min_dft[i][1]))
+                else:
+                    name = energy_min_dft[i][0]
                     energy_dft_mae_sd.append(float(energy_min_dft[i][1]))
-            if energy_min is not None:
-                for j,_ in enumerate(energy_min):
-                    if energy_min[j][0] == name:
-                        energy_min_mae_sd.append(float(energy_min[j][1]))
-            if energy_rdkit is not None:
-                for k,_ in enumerate(energy_rdkit):
-                    if energy_rdkit[k][0] == name:
-                        energy_rdkit_mae_sd.append(float(energy_rdkit[k][1]))
-
-        mae_rdkit,sd_rdkit = stats_calc(energy_dft_sp_mae_sd,energy_rdkit_mae_sd)
-        mae_min,sd_min = stats_calc(energy_dft_sp_mae_sd,energy_min_mae_sd)
-        mae_dft,sd_dft = stats_calc(energy_dft_sp_mae_sd,energy_dft_mae_sd)
+                    energy_min_mae_sd,energy_rdkit_mae_sd = get_energy_graph(energy_min,energy_rdkit,name,energy_min_mae_sd,energy_rdkit_mae_sd)
+            if energy_min_dft_sp[l] is not None:
+                energy_min_mae_sd,energy_rdkit_mae_sd = get_energy_graph(energy_min,energy_rdkit,name,energy_min_mae_sd,energy_rdkit_mae_sd)
+        
+        if len(energy_min_dft_sp) != 0:
+            mae_rdkit,sd_rdkit = stats_calc(energy_dft_sp_mae_sd,energy_rdkit_mae_sd)
+            mae_min,sd_min = stats_calc(energy_dft_sp_mae_sd,energy_min_mae_sd)
+            mae_dft,sd_dft = stats_calc(energy_dft_sp_mae_sd,energy_dft_mae_sd)
+        else:
+            mae_rdkit,sd_rdkit = stats_calc(energy_dft_mae_sd,energy_rdkit_mae_sd)
+            mae_min,sd_min = stats_calc(energy_dft_mae_sd,energy_min_mae_sd)
 
     elif len(energy_min_dft) != 0:
         energy_dft_mae_sd,energy_min_mae_sd,energy_rdkit_mae_sd = [],[],[]
@@ -86,34 +94,27 @@ def plot_graph(energy_rdkit,energy_min,energy_min_dft,lot,bs,energy_min_dft_sp,l
             if energy_rdkit is not None:
                 for k,_ in enumerate(energy_rdkit):
                     if energy_rdkit[k][0] == name:
-                        energy_rdkit_mae_sd.append(float(energy_rdkit[k][1]))
-
-        mae_rdkit,sd_rdkit = stats_calc(energy_dft_mae_sd,energy_rdkit_mae_sd)
-        mae_min,sd_min = stats_calc(energy_dft_mae_sd,energy_min_mae_sd)
-
+                        energy_rdkit_mae_sd.append(float(energy_rdkit[k][1]))  
 
     x_axis_names = []
     x_axis_names.append(type_csearch)
-    if type_min is not None:
-        x_axis_names.append(type_min)
-    if lot is not None:
-        x_axis_names.append(lot+'\n'+bs)
-    if lot_sp is not None:
-        x_axis_names.append(lot_sp+'\n'+bs_sp)
-
     x_axis_names_mae = []
     x_axis_names_mae.append(type_csearch)
+
     if type_min is not None:
+        x_axis_names.append(type_min)
         x_axis_names_mae.append(type_min)
     if lot is not None:
+        x_axis_names.append(lot+'\n'+bs)
         x_axis_names_mae.append(lot+'-'+bs)
     if lot_sp is not None:
+        x_axis_names.append(lot_sp+'\n'+bs_sp)
         x_axis_names_mae.append(lot_sp+'-'+bs_sp)
 
     x_axis = [0,1,2,3]
-    x_axis_1 = [0,1,2]
+    x_axis_3 = [0,1,2]
     x_axis_2 = [0,1]
-    x_axis_3 = [0]
+    x_axis_1 = [0]
 
 
     list_all = []
@@ -143,33 +144,31 @@ def plot_graph(energy_rdkit,energy_min,energy_min_dft,lot,bs,energy_min_dft_sp,l
     cmap = get_cmap(len(list_all))
     Path = mpath.Path
     for i, list in enumerate(list_all):
-        if len(list) == 2 or len(list) == 3 or len(list) == 4:
+        if len(list) in [2,3,4]:
             path_patch_1 = mpatches.PathPatch(
                     Path([(x_axis[0], list[0]), (x_axis[0]+0.5, list[1]), (x_axis[1] ,list[1])],
                          [Path.MOVETO, Path.CURVE3, Path.CURVE3]),
                     fc="none", transform=ax1.transData, color=cmap(i))
             ax1.add_patch(path_patch_1)
-        if len(list) == 3 or len(list) == 4:
-            path_patch_2 = mpatches.PathPatch(
-                    Path([(x_axis[1], list[1]), (x_axis[1]+0.5, list[2]), (x_axis[2] ,list[2])],
-                         [Path.MOVETO, Path.CURVE3, Path.CURVE3]),
-                    fc="none", transform=ax1.transData, color=cmap(i))
-            ax1.add_patch(path_patch_2)
-        if len(list) == 4:
-            path_patch_3 = mpatches.PathPatch(
-                    Path([(x_axis[2], list[2]), (x_axis[2]+0.5, list[3]), (x_axis[3] ,list[3])],
-                         [Path.MOVETO, Path.CURVE3, Path.CURVE3]),
-                    fc="none", transform=ax1.transData, color=cmap(i))
-            ax1.add_patch(path_patch_3)
-        if len(list) == 4:
-            ax1.scatter(x_axis,list,color=cmap(i), marker='o',zorder=2,edgecolors= "black",linewidth=0.5)
-        elif len(list) == 3:
-            ax1.scatter(x_axis_1,list,color=cmap(i), marker='o',zorder=2,edgecolors= "black",linewidth=0.5)
-        elif len(list) == 2:
-            ax1.scatter(x_axis_2,list,color=cmap(i), marker='o',zorder=2,edgecolors= "black",linewidth=0.5)
+            if len(list) > 2:
+                path_patch_2 = mpatches.PathPatch(
+                        Path([(x_axis[1], list[1]), (x_axis[1]+0.5, list[2]), (x_axis[2] ,list[2])],
+                            [Path.MOVETO, Path.CURVE3, Path.CURVE3]),
+                        fc="none", transform=ax1.transData, color=cmap(i))
+                ax1.add_patch(path_patch_2)
+                if len(list) == 4:
+                    path_patch_3 = mpatches.PathPatch(
+                            Path([(x_axis[2], list[2]), (x_axis[2]+0.5, list[3]), (x_axis[3] ,list[3])],
+                                [Path.MOVETO, Path.CURVE3, Path.CURVE3]),
+                            fc="none", transform=ax1.transData, color=cmap(i))
+                    ax1.add_patch(path_patch_3)
+                    ax1.scatter(x_axis,list,color=cmap(i), marker='o',zorder=2,edgecolors= "black",linewidth=0.5)
+                else:
+                    ax1.scatter(x_axis_3,list,color=cmap(i), marker='o',zorder=2,edgecolors= "black",linewidth=0.5)
+            else:
+                ax1.scatter(x_axis_2,list,color=cmap(i), marker='o',zorder=2,edgecolors= "black",linewidth=0.5)
         elif len(list) == 1:
-            ax1.scatter(x_axis_3,list,color=cmap(i), marker='o',zorder=2,edgecolors= "black",linewidth=0.5)
-
+            ax1.scatter(x_axis_1,list,color=cmap(i), marker='o',zorder=2,edgecolors= "black",linewidth=0.5)
 
     plt.xticks(range(0,1), x_axis_names)
     if type_min is not None:
@@ -179,15 +178,15 @@ def plot_graph(energy_rdkit,energy_min,energy_min_dft,lot,bs,energy_min_dft_sp,l
     if lot_sp is not None:
         plt.xticks(range(0,4), x_axis_names)
 
-    if len(energy_min_dft_sp) != 0:
+    y_margin = -0.05
+    if len(energy_min_dft) != 0:
         textstr = r'{0} = {1} $\pm$ {2} (kcal/mol)'.format(x_axis_names_mae[0], round(mae_rdkit, 2),round(sd_rdkit, 2))+'\n'
         textstr += r'{0} = {1} $\pm$ {2} (kcal/mol)'.format(x_axis_names_mae[1],round(mae_min,2),round(sd_min,2)) +'\n'
         textstr += r'{0} = {1} $\pm$ {2} (kcal/mol)'.format(x_axis_names_mae[2],round(mae_dft,2),round(sd_dft,2))
-        plt.figtext(0.5, -0.05, textstr ,  ha="center", fontsize=12,bbox=dict(facecolor='grey', alpha=0.25))
-    elif len(energy_min_dft) != 0:
-        textstr = r'{0} = {1} $\pm$ {2} (kcal/mol)'.format(x_axis_names_mae[0], round(mae_rdkit, 2),round(sd_rdkit, 2))+'\n'
-        textstr += r'{0} = {1} $\pm$ {2} (kcal/mol)'.format(x_axis_names_mae[1],round(mae_min,2),round(sd_min,2))
-        plt.figtext(0.5, -0.03, textstr ,  ha="center", fontsize=12,bbox=dict(facecolor='grey', alpha=0.25))
+        if len(energy_min_dft_sp) != 0:
+            y_margin = -0.03
+        plt.figtext(0.5, y_margin, textstr, ha="center", fontsize=12,bbox=dict(facecolor='grey', alpha=0.25))
+
     #ax1.legend(lines,labels,loc='upper center', prop={'size':4}, bbox_to_anchor=(0.5, -0.13), fancybox=True, shadow=True, ncol=5)
     ax1.set_xlabel('Type of Calculation',fontsize=10)
     ax1.set_ylabel('Relative Energy (kcal/mol)',fontsize=10)
@@ -220,6 +219,23 @@ def plot_graph(energy_rdkit,energy_min,energy_min_dft,lot,bs,energy_min_dft_sp,l
     plt.close()
     os.chdir(w_dir_initial)
 
+
+def get_energy_graph(energy_min,energy_rdkit,name,energy_min_mae_sd,energy_rdkit_mae_sd):
+    '''
+    Get the corresponding energies from CMIN and CSEARCH methods for energy graphs
+    '''
+    if energy_min is not None:
+        for j,_ in enumerate(energy_min):
+            if energy_min[j][0] == name:
+                energy_min_mae_sd.append(float(energy_min[j][1]))
+    if energy_rdkit is not None:
+        for k,_ in enumerate(energy_rdkit):
+            if energy_rdkit[k][0] == name:
+                energy_rdkit_mae_sd.append(float(energy_rdkit[k][1]))
+    
+    return energy_min_mae_sd,energy_rdkit_mae_sd
+
+
 def graph(sdf_rdkit,sdf_xtb,sdf_ani,qm_files,sp_files,args,log,lot,bs,lot_sp,bs_sp,name_mol,w_dir_initial,w_dir_sp,w_dir,type):
 
     try:
@@ -232,18 +248,17 @@ def graph(sdf_rdkit,sdf_xtb,sdf_ani,qm_files,sp_files,args,log,lot,bs,lot_sp,bs_
     energy_rdkit = get_energy(inmols_rdkit)
     energy_rdkit_sc = scaling_with_lowest(energy_rdkit)
 
+    #get energy list for all conformers from SDFs of CMIN
     if os.path.exists(w_dir_initial+'/CSEARCH/xtb/'+name_mol+'_xtb.sdf'):
-        #get energy list for all conformers from sdfs of rdkit and minimize
-        inmols_xtb =  Chem.SDMolSupplier(sdf_xtb, removeHs=False)
-        energy_xtb = get_energy(inmols_xtb)
-        energy_xtb = rename_name(energy_xtb,'xtb')
-        energy_xtb_sc = scaling_with_lowest(energy_xtb)
+        sdf_mols = sdf_xtb
+        sdf_source = 'xtb'
     if os.path.exists(w_dir_initial+'/CSEARCH/ani/'+name_mol+'_ani.sdf'):
-        #get energy list for all conformers from sdfs of rdkit and minimize
-        inmols_ani = Chem.SDMolSupplier(sdf_ani, removeHs=False)
-        energy_ani = get_energy(inmols_ani)
-        energy_ani = rename_name(energy_ani,'ani')
-        energy_ani_sc = scaling_with_lowest(energy_ani)
+        sdf_mols = sdf_ani
+        sdf_source = 'ani'
+    inmols_cmin =  Chem.SDMolSupplier(sdf_mols, removeHs=False)
+    energy_cmin = get_energy(inmols_cmin)
+    energy_cmin = rename_name(energy_cmin,sdf_source)
+    energy_cmin_sc = scaling_with_lowest(energy_cmin)
 
     energy_rdkit_dft,energy_xtb_dft,energy_ani_dft = [],[],[]
     sp_rdkit_dft,sp_xtb_dft,sp_ani_dft = [],[],[]
@@ -253,11 +268,10 @@ def graph(sdf_rdkit,sdf_xtb,sdf_ani,qm_files,sp_files,args,log,lot,bs,lot_sp,bs_
             data = cclib.io.ccread(file)
             if len(file.split('_ani.log')) == 2 or len(file.split('_xtb.log')) == 2:
                 if len(file.split('_ani.log')) == 2:
-                    name = file.split('_ani.log')[0]
                     energy_ani_dft.append([name,data.scfenergies[0]*ev_2_kcal_mol])
                 if len(file.split('_xtb.log')) == 2:
-                    name = file.split('_xtb.log')[0]
                     energy_xtb_dft.append([name,data.scfenergies[0]*ev_2_kcal_mol])
+                name = file.replace('_ani_','_xtb_').split('_xtb.log')[0]
             else:
                 name = file.split('.log')[0]
                 energy_rdkit_dft.append([name,data.scfenergies[0]*ev_2_kcal_mol])
@@ -269,31 +283,29 @@ def graph(sdf_rdkit,sdf_xtb,sdf_ani,qm_files,sp_files,args,log,lot,bs,lot_sp,bs_
                 data_sp = cclib.io.ccread(file)
                 if len(file.split('_ani_'+args.suffix+'.log')) == 2 or len(file.split('_xtb_'+args.suffix+'.log')) == 2:
                     if len(file.split('_ani_'+args.suffix+'.log')) == 2:
-                        name = file.split('_ani_'+args.suffix+'.log')[0]
                         sp_ani_dft.append([name,data_sp.scfenergies[0]*ev_2_kcal_mol])
                     if len(file.split('_xtb_'+args.suffix+'.log')) == 2:
-                        name = file.split('_xtb_'+args.suffix+'.log')[0]
                         sp_xtb_dft.append([name,data_sp.scfenergies[0]*ev_2_kcal_mol])
+                    name = file.replace('_ani_','_xtb_').split('_xtb_'+args.suffix+'.log')[0]
                 else:
                     name = file.split('.log')[0]
                     sp_rdkit_dft.append([name,data_sp.scfenergies[0]*ev_2_kcal_mol])
-        if type=='orca':
+        elif type=='orca':
             for file in sp_files:
                 sp_lines = open(file,"r").readlines()
-                for i,_ in enumerate(sp_lines):
+                for i,_ in reversed(range(sp_lines)):
                     if sp_lines[i].find('FINAL SINGLE POINT ENERGY') > -1:
                         if len(file.split('_ani_'+args.suffix+'.out')) == 2 or len(file.split('_xtb_'+args.suffix+'.out')) == 2:
                             if len(file.split('_ani_'+args.suffix+'.out')) == 2:
-                                name = file.split('_ani_'+args.suffix+'.out')[0]
                                 sp_ani_dft.append([name,float(sp_lines[i].split()[-1])*hartree_to_kcal])
                             if len(file.split('_xtb_'+args.suffix+'.out')) == 2:
-                                name = file.split('_xtb_'+args.suffix+'.out')[0]
                                 sp_xtb_dft.append([name,float(sp_lines[i].split()[-1])*hartree_to_kcal])
+                            name = file.replace('_ani_','_xtb_').split('_xtb_'+args.suffix+'.out')[0]
                         else:
                             name = file.split('.out')[0]
                             sp_rdkit_dft.append([name,float(sp_lines[i].split()[-1])*hartree_to_kcal])
+                        break
     os.chdir(w_dir)
-
 
     energy_ani_dft_sc, energy_xtb_dft_sc, energy_rdkit_dft_sc = [],[],[]
     if os.path.exists(w_dir_initial+'/CSEARCH/ani/'+name_mol+'_ani.sdf') and qm_files is not None:
@@ -312,25 +324,23 @@ def graph(sdf_rdkit,sdf_xtb,sdf_ani,qm_files,sp_files,args,log,lot,bs,lot_sp,bs_
     if not os.path.exists(w_dir_initial+'/CSEARCH/xtb/'+name_mol+'_xtb.sdf') and not os.path.exists(w_dir_initial+'/CSEARCH/ani/'+name_mol+'_ani.sdf') and sp_files is not None:
         sp_rdkit_dft_sc = scaling_with_lowest(sp_rdkit_dft)
 
+    csearch_option,cmin_option = None,None
+    if os.path.exists(w_dir_initial+'/CSEARCH/summ/'+name_mol+'_summ.sdf'):
+        csearch_option = 'SUMM'
+    elif os.path.exists(w_dir_initial+'/CSEARCH/fullmonte/'+name_mol+'_fullmonte.sdf'):
+        csearch_option = 'Fullmonte'
+    elif os.path.exists(w_dir_initial+'/CSEARCH/rdkit/'+name_mol+'_rdkit.sdf'):
+        csearch_option = 'RDKit'
 
-    if  os.path.exists(w_dir_initial+'/CSEARCH/xtb/'+name_mol+'_xtb.sdf') and os.path.exists(w_dir_initial+'/CSEARCH/rdkit/'+name_mol+'_rdkit.sdf'):
-        plot_graph(energy_rdkit_sc,energy_xtb_sc,energy_xtb_dft_sc,lot,bs,sp_xtb_dft_sc,lot_sp,bs_sp,name_mol,args,log,'RDKit','xTB',w_dir_initial)
-    if os.path.exists(w_dir_initial+'/CSEARCH/ani/'+name_mol+'_ani.sdf') and os.path.exists(w_dir_initial+'/CSEARCH/rdkit/'+name_mol+'_rdkit.sdf'):
-        plot_graph(energy_rdkit_sc,energy_ani_sc,energy_ani_dft_sc,lot,bs,sp_ani_dft_sc,lot_sp,bs_sp,name_mol,args,log,'RDKit','ANI',w_dir_initial)
+    if os.path.exists(w_dir_initial+'/CSEARCH/xtb/'+name_mol+'_xtb.sdf'):
+        energy_cmin = energy_cmin_sc
+        energy_dft = energy_xtb_dft_sc
+        sp_cmin = sp_xtb_dft_sc
+        cmin_option = 'xTB'
+    elif os.path.exists(w_dir_initial+'/CSEARCH/ani/'+name_mol+'_ani.sdf'):
+        energy_cmin = energy_cmin_sc
+        energy_dft = energy_ani_dft_sc
+        sp_cmin = sp_ani_dft_sc
+        cmin_option = 'ANI'
 
-    if  os.path.exists(w_dir_initial+'/CSEARCH/xtb/'+name_mol+'_xtb.sdf') and os.path.exists(w_dir_initial+'/CSEARCH/summ/'+name_mol+'_summ.sdf'):
-        plot_graph(energy_rdkit_sc,energy_xtb_sc,energy_xtb_dft_sc,lot,bs,sp_xtb_dft_sc,lot_sp,bs_sp,name_mol,args,log,'SUMM','xTB',w_dir_initial)
-    if os.path.exists(w_dir_initial+'/CSEARCH/ani/'+name_mol+'_ani.sdf') and os.path.exists(w_dir_initial+'/CSEARCH/summ/'+name_mol+'_summ.sdf'):
-        plot_graph(energy_rdkit_sc,energy_ani_sc,energy_ani_dft_sc,lot,bs,sp_ani_dft_sc,lot_sp,bs_sp,name_mol,args,log,'SUMM','ANI',w_dir_initial)
-
-    if  os.path.exists(w_dir_initial+'/CSEARCH/xtb/'+name_mol+'_xtb.sdf') and os.path.exists(w_dir_initial+'/CSEARCH/fullmonte/'+name_mol+'_fullmonte.sdf'):
-        plot_graph(energy_rdkit_sc,energy_xtb_sc,energy_xtb_dft_sc,lot,bs,sp_xtb_dft_sc,lot_sp,bs_sp,name_mol,args,log,'Fullmonte','xTB',w_dir_initial)
-    if os.path.exists(w_dir_initial+'/CSEARCH/ani/'+name_mol+'_ani.sdf') and os.path.exists(w_dir_initial+'/CSEARCH/fullmonte/'+name_mol+'_fullmonte.sdf'):
-        plot_graph(energy_rdkit_sc,energy_ani_sc,energy_ani_dft_sc,lot,bs,sp_ani_dft_sc,lot_sp,bs_sp,name_mol,args,log,'Fullmonte','ANI',w_dir_initial)
-
-    if os.path.exists(w_dir_initial+'/CSEARCH/summ/'+name_mol+'_summ.sdf') and not os.path.exists(w_dir_initial+'/CSEARCH/xtb/'+name_mol+'_xtb.sdf') and not os.path.exists(w_dir_initial+'/CSEARCH/ani/'+name_mol+'_ani.sdf'):
-        plot_graph(energy_rdkit_sc,None,energy_rdkit_dft_sc,lot,bs,sp_ani_dft_sc,lot_sp,bs_sp,name_mol,args,log,'SUMM',None,w_dir_initial)
-    if os.path.exists(w_dir_initial+'/CSEARCH/rdkit/'+name_mol+'_rdkit.sdf') and not os.path.exists(w_dir_initial+'/CSEARCH/xtb/'+name_mol+'_xtb.sdf') and not os.path.exists(w_dir_initial+'/CSEARCH/ani/'+name_mol+'_ani.sdf') :
-        plot_graph(energy_rdkit_sc,None,energy_rdkit_dft_sc,lot,bs,sp_ani_dft_sc,lot_sp,bs_sp,name_mol,args,log,'RDKit',None,w_dir_initial)
-    if os.path.exists(w_dir_initial+'/CSEARCH/fullmonte/'+name_mol+'_fullmonte.sdf') and not os.path.exists(w_dir_initial+'/CSEARCH/xtb/'+name_mol+'_xtb.sdf') and not os.path.exists(w_dir_initial+'/CSEARCH/ani/'+name_mol+'_ani.sdf') :
-        plot_graph(energy_rdkit_sc,None,energy_rdkit_dft_sc,lot,bs,sp_ani_dft_sc,lot_sp,bs_sp,name_mol,args,log,'Fullmonte',None,w_dir_initial)
+    plot_graph(energy_rdkit_sc,energy_cmin,energy_dft,lot,bs,sp_cmin,lot_sp,bs_sp,name_mol,args,log,csearch_option,cmin_option,w_dir_initial)
