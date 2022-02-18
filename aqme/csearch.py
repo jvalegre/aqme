@@ -948,7 +948,6 @@ class csearch:
                 "x  Too many torsions (%d). Skipping %s"
                 % (len(rotmatches), (name + args.output))
             )
-            status = -1
         elif args.CSEARCH == "summ" and len(rotmatches) == 0:
             update_to_rdkit = True
             log.write(
@@ -1040,7 +1039,6 @@ class csearch:
                 dup_data_idx,
                 sdwriter,
                 args,
-                log,
                 self.w_dir_initial,
             )
 

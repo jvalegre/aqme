@@ -127,9 +127,9 @@ class qprep:
 				self.destination = self.w_dir_main.joinpath("QCALC")
 			else:
 				self.destination = Path(self.args.destination)
-			if self.charge == None:
+			if self.charge is None:
 				self.charge = 0
-			if self.mult == None:
+			if self.mult is None:
 				self.mult = 1
 			self.chk = self.args.chk
 			self.mem = self.args.mem
