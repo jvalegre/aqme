@@ -59,8 +59,7 @@ def minimize_rdkit_energy(mol,conf,log,FF,maxsteps):
     mol : rdkit.Chem.Mol
         [description]
     conf : int?
-        Number that indicates which conformation of the molecule will be 
-        minimized and aligned.
+        Number that indicates which conformation of the molecule will be minimized and aligned.
     args : [type]
         [description]
     log : [type]

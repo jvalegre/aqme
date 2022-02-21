@@ -1,0 +1,10 @@
+output_name : 'csearch' #name for output
+verbose : True
+
+CSEARCH : 'crest'
+QPREP : 'gaussian'
+
+nprocs : 8
+mem : '24GB'
+qm_input : 'B3LYP/6-31G** opt freq'
+

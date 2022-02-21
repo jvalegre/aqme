@@ -1,0 +1,20 @@
+output_name : 'csearch' #name for output
+verbose : True
+
+CSEARCH : 'rdkit'
+QPREP : 'gaussian'
+
+metal_complex : True 
+metal : ['Pd'] 
+m_oxi : [2] 
+complex_type : 'squareplanar' 
+
+gen_atoms : ['Pd']
+nprocs : 8
+mem : '24GB'
+qm_input : 'B3LYP/genecp opt freq'
+bs_gen : LANL2DZ
+bs : 6-316**
+
+
+
