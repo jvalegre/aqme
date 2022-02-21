@@ -96,7 +96,6 @@ def run_xtb(
             str(charge),
         ]
 
-        constraints_all['Constraint_types'] = ["--dist","--angle","--dihedral"]
         for i,_ in constraints_all['Constraint_values']:
             if constraints_all['Constraint_values'][i] is not None:
                 for _,constraint in enumerate(constraints_all['Constraint_values'][i]):
@@ -158,7 +157,8 @@ def crest_opt(mol, name, dup_data, dup_data_idx, sdwriter, args, w_dir_initial):
         xyzoutxtb1 = str(dat_dir) + "/" + name + "_xtb1.xyz"
         xyzoutxtb2 = str(dat_dir) + "/" + name + "_xtb2.xyz"
         constraints_dist = get_constraint(mol, constraints_dist)
-        constraints_all = {'Constraint_values': [constraints_dist, constraints_angle, constraints_dihedral]}
+        constraints_all = {'Constraint_values': [constraints_dist, constraints_angle, constraints_dihedral],
+                        'Constraint_types': ["--dist","--angle","--dihedral"]}
         run_xtb(
             xyzin, xyzoutxtb1, constraints_all, charge
         )
