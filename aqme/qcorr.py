@@ -515,7 +515,7 @@ class qcorr():
 	# 				self.log.write("  ----- geom_rules filter(s) will be applied to the output file -----\n")
 	# 				try:
 	# 					format_file = file.split('.')[1]
-	# 					mol,ob_compat,rdkit_compat = output_to_mol(file,format_file,self.log)
+	# 					mol = output_to_mol(file,format_file)
 	# 					print_error_geom_rules=False
 	# 					if ob_compat and rdkit_compat:
 	# 						passing_rules = geom_rules_output(mol,self.args,self.log,file,print_error_geom_rules)

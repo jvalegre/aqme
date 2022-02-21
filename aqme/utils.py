@@ -632,7 +632,7 @@ def nci_ts_mol(smi, args, constraints_dist, constraints_angle, constraints_dihed
 		for i,r in enumerate(constraints_dihedral):
 			# print('r:',r[:2])
 			nr = []
-			for j,ele in enumerate(r[:4]):
+			for _,ele in enumerate(r[:4]):
 				# print('ele:',  ele)
 				for atom in mol.GetAtoms():
 					if ele == atom.GetAtomMapNum():
@@ -1169,7 +1169,7 @@ def read_file(w_dir, file):
 	return outlines
 
 
-def output_to_mol(file, format, log):
+def output_to_mol(file, format):
 	"""
 	Input an XYZ, LOG or OUT file from QM calculations and converts it into
 	a mol object.
@@ -1187,28 +1187,7 @@ def output_to_mol(file, format, log):
 	-------
 	mol
 		Mol object
-	ob_compat
-		True if openbabel is installed correctly
-	rdkit_compat
-		True if RDKit is installed correctly
 	"""
-
-	ob_compat = True
-	rdkit_compat = True
-	try:
-		import openbabel as ob
-	except (ModuleNotFoundError, AttributeError):
-		log.write(
-			"\nx  Open Babel is not installed correctly, the geom_rules filter will be disabled"
-		)
-		ob_compat = False
-	try:
-		from rdkit.Chem import AllChem as Chem
-	except (ModuleNotFoundError, AttributeError):
-		log.write(
-			"\nx  RDKit is not installed correctly, the geom_rules and check_geom filters will be disabled"
-		)
-		rdkit_compat = False
 
 	# transforms output file into mol object
 	# for input (from com to xyz to mol)
@@ -1234,7 +1213,7 @@ def output_to_mol(file, format, log):
 	subprocess.run(cmd_obabel)
 	mol = Chem.MolFromMolFile(file.split(".")[0] + ".mol")
 
-	return mol, ob_compat, rdkit_compat
+	return mol
 
 
 def read_energies(file):

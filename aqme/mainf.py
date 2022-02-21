@@ -16,7 +16,7 @@ from rdkit.Chem import AllChem as Chem
 # from aqme.csearch import (check_charge_smi, clean_args,
 #                                compute_confs,
 #                                mol_from_sdf_or_mol_or_mol2, creation_of_dup_csv)
-from aqme.csearch import *
+from aqme.csearch import prepare_direct_smi,prepare_smiles_files,prepare_csv_files,prepare_cdx_files,prepare_gaussian_files,prepare_sdf_files,prepare_mol_files,process_csearch
 from aqme.filter import geom_rules_output
 
 from aqme.qprep import qprep, get_molecule_list, load_charge_data
@@ -28,6 +28,21 @@ from aqme.utils import (
     creation_of_dup_csv_cmin,
 )
 
+SUPPORTED_INPUTS = [
+    ".smi",
+    ".sdf",
+    ".cdx",
+    ".csv",
+    ".com",
+    ".gjf",
+    ".mol",
+    ".mol2",
+    ".xyz",
+    ".txt",
+    ".yaml",
+    ".yml",
+    ".rtf",
+]
 
 def csearch_main(w_dir_initial, args, log_overall):
 

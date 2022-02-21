@@ -41,25 +41,8 @@ from aqme.crest import crest_opt
 
 from aqme.argument_parser import set_options
 
-SUPPORTED_INPUTS = [
-    ".smi",
-    ".sdf",
-    ".cdx",
-    ".csv",
-    ".com",
-    ".gjf",
-    ".mol",
-    ".mol2",
-    ".xyz",
-    ".txt",
-    ".yaml",
-    ".yml",
-    ".rtf",
-]
-
 # get pre-determined geometries for metal complexes
 accepted_complex_types = ["squareplanar", "squarepyramidal", "linear", "trigonalplanar"]
-
 
 def process_csearch(
     smi_,
@@ -1255,7 +1238,7 @@ def prepare_xyz_files(args, w_dir_initial):
     suppl, _, charge_com_list = mol_from_sdf_or_mol_or_mol2(sdffile)
     charge_com = charge_com_list[0]
 
-    for i, mol in enumerate(suppl):
+    for _,mol in enumerate(suppl):
         if args.charge_default == "auto":
             args.charge_default = charge_com
         constraints = []

@@ -80,7 +80,7 @@ def xyzall_2_xyz(xyzin, name):
 
 
 def run_xtb(
-    xyzin, xyzoutxtb, constraints_dist, constraints_angle, constraints_dihedral, charge
+    xyzin, xyzoutxtb, constraints_all, charge
 ):
     # check whether job has already been run
     if os.path.exists(xyzoutxtb):
@@ -96,18 +96,11 @@ def run_xtb(
             str(charge),
         ]
 
-        if constraints_dist is not None:
-            for _,bond in enumerate(constraints_dist):
-                command.append("--dist")
-                command.append(",".join([str(int(elem)) for elem in bond]))
-        if constraints_angle is not None:
-            for _,angle in enumerate(constraints_angle):
-                command.append("--angle")
-                command.append(",".join([str(int(elem)) for elem in angle]))
-        if constraints_dihedral is not None:
-            for _,dihedral in enumerate(constraints_dihedral):
-                command.append("--dihedral")
-                command.append(",".join([str(int(elem)) for elem in dihedral]))
+        for i,_ in constraints_all['Constraint_values']:
+            if constraints_all['Constraint_values'][i] is not None:
+                for _,constraint in enumerate(constraints_all['Constraint_values'][i]):
+                    command.append(constraints_all['Constraint_types'][i])
+                    command.append(",".join([str(int(elem)) for elem in constraint]))
         
         subprocess.run(command)
 
@@ -163,17 +156,17 @@ def crest_opt(mol, name, dup_data, dup_data_idx, sdwriter, args, w_dir_initial):
     if args.ts_complex:
         xyzoutxtb1 = str(dat_dir) + "/" + name + "_xtb1.xyz"
         xyzoutxtb2 = str(dat_dir) + "/" + name + "_xtb2.xyz"
-        all_fix = get_constraint(mol, constraints_dist)
+        constraints_dist = get_constraint(mol, constraints_dist)
+        constraints_all = {'Constraint_values': [constraints_dist, constraints_angle, constraints_dihedral],
+                        'Constraint_types': ["--dist","--angle","--dihedral"]}
         run_xtb(
-            xyzin, xyzoutxtb1, all_fix, constraints_angle, constraints_dihedral, charge
+            xyzin, xyzoutxtb1, constraints_all, charge
         )
         run_xtb(
             xyzoutxtb1,
             xyzoutxtb2,
-            constraints_dist,
-            constraints_angle,
-            constraints_dihedral,
-            charge,
+            constraints_all,
+            charge
         )
     else:
         xyzoutxtb2 = xyzin

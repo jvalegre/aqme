@@ -41,97 +41,15 @@ def scaling_with_lowest(energy):
         energy[i][1] = energy_sc[i]
     return energy
 
-def plot_graph(energy_rdkit,energy_min,energy_min_dft,lot,bs,energy_min_dft_sp,lot_sp,bs_sp,name_mol,args,log,type_csearch,cmin_option,w_dir_initial):
-    def get_cmap(n, name='viridis'):
-        '''
-        Returns a function that maps each index in 0, 1, ..., n-1 to a distinct
-        RGB color; the keyword argument name must be a standard mpl colormap name
-        '''
-        return plt.cm.get_cmap(name, n)
+def plot_graph(energy_rdkit,energy_min,energy_min_dft,lot,bs,energy_min_dft_sp,lot_sp,bs_sp,name_mol,type_csearch,cmin_option,w_dir_initial):
 
-    if len(energy_min_dft_sp) != 0 or len(energy_min_dft) != 0:
-        energy_dft_sp_mae_sd,energy_dft_mae_sd,energy_min_mae_sd,energy_rdkit_mae_sd = [],[],[],[]
-        if len(energy_min_dft_sp) == 0:
-            energy_min_dft_sp = [None]
-        for l,_ in enumerate(energy_min_dft_sp):
-            if energy_min_dft_sp[l] is not None:
-                name = energy_min_dft_sp[l][0]
-                energy_dft_sp_mae_sd.append(float(energy_min_dft_sp[l][1]))
-            else:
-                name = None
-            for i,_ in enumerate(energy_min_dft):
-                if name is not None:
-                    if energy_min_dft[i][0] == name:
-                        energy_dft_mae_sd.append(float(energy_min_dft[i][1]))
-                else:
-                    name = energy_min_dft[i][0]
-                    energy_dft_mae_sd.append(float(energy_min_dft[i][1]))
-                    energy_min_mae_sd,energy_rdkit_mae_sd = get_energy_graph(energy_min,energy_rdkit,name,energy_min_mae_sd,energy_rdkit_mae_sd)
-            if energy_min_dft_sp[l] is not None:
-                energy_min_mae_sd,energy_rdkit_mae_sd = get_energy_graph(energy_min,energy_rdkit,name,energy_min_mae_sd,energy_rdkit_mae_sd)
-        
-        if len(energy_min_dft_sp) != 0:
-            mae_rdkit,sd_rdkit = stats_calc(energy_dft_sp_mae_sd,energy_rdkit_mae_sd)
-            mae_min,sd_min = stats_calc(energy_dft_sp_mae_sd,energy_min_mae_sd)
-            mae_dft,sd_dft = stats_calc(energy_dft_sp_mae_sd,energy_dft_mae_sd)
-        else:
-            mae_rdkit,sd_rdkit = stats_calc(energy_dft_mae_sd,energy_rdkit_mae_sd)
-            mae_min,sd_min = stats_calc(energy_dft_mae_sd,energy_min_mae_sd)
+    list_all,mae_rdkit,sd_rdkit,mae_min,sd_min,mae_min,sd_min,mae_dft,sd_dft,x_axis_names,name_to_write = params_graph(energy_min_dft_sp,energy_min_dft,energy_min,energy_rdkit,lot,bs,lot_sp,bs_sp,type_csearch,cmin_option)
 
-    elif len(energy_min_dft) != 0:
-        energy_dft_mae_sd,energy_min_mae_sd,energy_rdkit_mae_sd = [],[],[]
-        for i,_ in enumerate(energy_min_dft):
-            name = energy_min_dft[i][0]
-            energy_dft_mae_sd.append(float(energy_min_dft[i][1]))
-            if energy_min is not None:
-                for j,_ in enumerate(energy_min):
-                    if energy_min[j][0] == name:
-                        energy_min_mae_sd.append(float(energy_min[j][1]))
-            if energy_rdkit is not None:
-                for k,_ in enumerate(energy_rdkit):
-                    if energy_rdkit[k][0] == name:
-                        energy_rdkit_mae_sd.append(float(energy_rdkit[k][1]))
-
-    x_axis_names = []
-    x_axis_names.append(type_csearch)
-    x_axis_names_mae = []
-    x_axis_names_mae.append(type_csearch)
-
-    if cmin_option is not None:
-        x_axis_names.append(cmin_option)
-        x_axis_names_mae.append(cmin_option)
-    if lot is not None:
-        x_axis_names.append(lot+'\n'+bs)
-        x_axis_names_mae.append(lot+'-'+bs)
-    if lot_sp is not None:
-        x_axis_names.append(lot_sp+'\n'+bs_sp)
-        x_axis_names_mae.append(lot_sp+'-'+bs_sp)
-
-    list_all = []
-    name_all = []
-    for i,_ in enumerate(energy_rdkit):
-        list = []
-        name = energy_rdkit[i][0]
-        name_all.append(name)
-        list.append(energy_rdkit[i][1])
-        if energy_min is not None:
-            for j,_ in enumerate(energy_min):
-                if energy_min[j][0] == name:
-                    list.append(energy_min[j][1])
-        if energy_min_dft is not None:
-            for k,_ in enumerate(energy_min_dft):
-                if energy_min_dft[k][0] == name:
-                    list.append(energy_min_dft[k][1])
-        if energy_min_dft_sp is not None:
-            for l,_ in enumerate(energy_min_dft_sp):
-                if energy_min_dft_sp[l][0] == name:
-                    list.append(energy_min_dft_sp[l][1])
-        list_all.append(list)
-
+    plt.xticks(range(0,len(x_axis_names)), x_axis_names)
     fig=plt.figure() #Creates a new figure
     ax1=fig.add_subplot(111) #Plot with: 1 row, 1 column, first subplot.
 
-    cmap = get_cmap(len(list_all))
+    cmap = plt.cm.get_cmap('viridis', len(list_all))
     Path = mpath.Path
     x_axis = [0,1,2,3]
     for i,list in enumerate(list_all):
@@ -142,19 +60,13 @@ def plot_graph(energy_rdkit,energy_min,energy_min_dft,lot,bs,energy_min_dft_sp,l
                 ax1.scatter(x_axis[:j+1],list,color=cmap(i), marker='o',zorder=2,edgecolors= "black",linewidth=0.5)
                 break
 
-    plt.xticks(range(0,1), x_axis_names)
-    if cmin_option is not None:
-        plt.xticks(range(0,2), x_axis_names)
-    if lot is not None:
-        plt.xticks(range(0,3), x_axis_names)
-    if lot_sp is not None:
-        plt.xticks(range(0,4), x_axis_names)
+    plt.xticks(range(0,len(x_axis_names)), x_axis_names)
 
     y_margin = -0.05
     if len(energy_min_dft) != 0:
-        textstr = r'{0} = {1} $\pm$ {2} (kcal/mol)'.format(x_axis_names_mae[0], round(mae_rdkit, 2),round(sd_rdkit, 2))+'\n'
-        textstr += r'{0} = {1} $\pm$ {2} (kcal/mol)'.format(x_axis_names_mae[1],round(mae_min,2),round(sd_min,2)) +'\n'
-        textstr += r'{0} = {1} $\pm$ {2} (kcal/mol)'.format(x_axis_names_mae[2],round(mae_dft,2),round(sd_dft,2))
+        textstr = r'{0} = {1} $\pm$ {2} (kcal/mol)'.format(x_axis_names[0], round(mae_rdkit, 2),round(sd_rdkit, 2))+'\n'
+        textstr += r'{0} = {1} $\pm$ {2} (kcal/mol)'.format(x_axis_names[1],round(mae_min,2),round(sd_min,2)) +'\n'
+        textstr += r'{0} = {1} $\pm$ {2} (kcal/mol)'.format(x_axis_names[2],round(mae_dft,2),round(sd_dft,2))
         if len(energy_min_dft_sp) != 0:
             y_margin = -0.03
         plt.figtext(0.5, y_margin, textstr, ha="center", fontsize=12,bbox=dict(facecolor='grey', alpha=0.25))
@@ -169,26 +81,14 @@ def plot_graph(energy_rdkit,energy_min,energy_min_dft,lot,bs,energy_min_dft_sp,l
     ax1.set_title(title_string, fontsize=12)
     fig.tight_layout()
     fig.subplots_adjust(top=0.92,bottom=0.2)
-    #creating folder for all molecules to write geom parameter
-    folder = w_dir_initial + '/QSTAT/graph'
-    try:
-        os.makedirs(folder)
-        os.chdir(folder)
-    except OSError:
-        if os.path.isdir(folder):
-            os.chdir(folder)
-        else:
-            raise
 
-    name_to_write = type_csearch
-    if cmin_option is not None:
-        name_to_write += '-'+cmin_option
-    if lot is not None:
-        name_to_write += '-'+lot+'-'+bs
-    if lot_sp is not None:
-        name_to_write += '-'+lot_sp+'-'+bs_sp
+    graph_dir = Path(w_dir_initial + '/QSTAT/graph')
+    graph_dir.mkdir(exist_ok=True, parents=True)
+    os.chdir(graph_dir)
+
     plt.savefig(name_mol+'-'+name_to_write+'.png',bbox_inches='tight', format='png', dpi=400)
     plt.close()
+
     os.chdir(w_dir_initial)
 
 
@@ -206,7 +106,7 @@ def add_patch_plot(x_axis,list,ax1,cmap,Path,index_axis,i):
     return index_axis
 
 
-def get_energy_graph(energy_min,energy_rdkit,name,energy_min_mae_sd,energy_rdkit_mae_sd):
+def get_energy_graph(energy_min,energy_rdkit,name,energy_min_mae_sd,energy_rdkit_mae_sd,list_energies):
     '''
     Get the corresponding energies from CMIN and CSEARCH methods for energy graphs
     '''
@@ -214,12 +114,14 @@ def get_energy_graph(energy_min,energy_rdkit,name,energy_min_mae_sd,energy_rdkit
         for j,_ in enumerate(energy_min):
             if energy_min[j][0] == name:
                 energy_min_mae_sd.append(float(energy_min[j][1]))
+                list_energies.append(energy_min[j][1])
     if energy_rdkit is not None:
         for k,_ in enumerate(energy_rdkit):
             if energy_rdkit[k][0] == name:
                 energy_rdkit_mae_sd.append(float(energy_rdkit[k][1]))
-    
-    return energy_min_mae_sd,energy_rdkit_mae_sd
+                list_energies.append(energy_min[k][1])
+
+    return energy_min_mae_sd,energy_rdkit_mae_sd,list_energies
 
 
 def graph(sdf_rdkit,sdf_xtb,sdf_ani,qm_files,sp_files,args,log,lot,bs,lot_sp,bs_sp,name_mol,w_dir_initial,w_dir_sp,w_dir,type):
@@ -251,14 +153,66 @@ def graph(sdf_rdkit,sdf_xtb,sdf_ani,qm_files,sp_files,args,log,lot,bs,lot_sp,bs_
         sp_dft,csearch_option,cmin_option = get_qm_energy_plot(type,sp_files,sp_dft)
         os.chdir(w_dir)
 
-    energy_dft_sc,sp_dft_sc = [],[]    
+    energy_dft_sc,sp_dft_sc = [],[]
     if qm_files is not None:
         energy_dft_sc = scaling_with_lowest(energy_dft)
 
     if sp_files is not None:
         sp_dft_sc = scaling_with_lowest(sp_dft)
 
-    plot_graph(energy_rdkit_sc,energy_cmin_sc,energy_dft_sc,lot,bs,sp_dft_sc,lot_sp,bs_sp,name_mol,args,log,csearch_option,cmin_option,w_dir_initial)
+    plot_graph(energy_rdkit_sc,energy_cmin_sc,energy_dft_sc,lot,bs,sp_dft_sc,lot_sp,bs_sp,name_mol,csearch_option,cmin_option,w_dir_initial)
+
+
+def params_graph(energy_min_dft_sp,energy_min_dft,energy_min,energy_rdkit,lot,bs,lot_sp,bs_sp,type_csearch,cmin_option):
+    if len(energy_min_dft_sp) != 0 or len(energy_min_dft) != 0:
+        energy_dft_sp_mae_sd,energy_dft_mae_sd,energy_min_mae_sd,energy_rdkit_mae_sd = [],[],[],[]
+        list_all = []
+        if len(energy_min_dft_sp) == 0:
+            energy_min_dft_sp = [None]
+        for l,_ in enumerate(energy_min_dft_sp):
+            if energy_min_dft_sp[l] is not None:
+                list_energies = []
+                name = energy_min_dft_sp[l][0]
+                energy_dft_sp_mae_sd.append(float(energy_min_dft_sp[l][1]))
+                list_energies.append(float(energy_min_dft_sp[l][1]))
+            else:
+                name = None
+            for i,_ in enumerate(energy_min_dft):
+                if name is not None:
+                    if energy_min_dft[i][0] == name:
+                        energy_dft_mae_sd.append(float(energy_min_dft[i][1]))
+                        list_energies.append(float(energy_min_dft[i][1]))
+                else:
+                    name = energy_min_dft[i][0]
+                    energy_dft_mae_sd.append(float(energy_min_dft[i][1]))
+                    energy_min_mae_sd,energy_rdkit_mae_sd,list_energies = get_energy_graph(energy_min,energy_rdkit,name,energy_min_mae_sd,energy_rdkit_mae_sd,list_energies)
+                    list_all.append(list_energies)
+            if energy_min_dft_sp[l] is not None:
+                energy_min_mae_sd,energy_rdkit_mae_sd,list_energies = get_energy_graph(energy_min,energy_rdkit,name,energy_min_mae_sd,energy_rdkit_mae_sd,list_energies)
+                list_all.append(list_energies)
+
+        if len(energy_min_dft_sp) != 0:
+            mae_rdkit,sd_rdkit = stats_calc(energy_dft_sp_mae_sd,energy_rdkit_mae_sd)
+            mae_min,sd_min = stats_calc(energy_dft_sp_mae_sd,energy_min_mae_sd)
+            mae_dft,sd_dft = stats_calc(energy_dft_sp_mae_sd,energy_dft_mae_sd)
+        else:
+            mae_rdkit,sd_rdkit = stats_calc(energy_dft_mae_sd,energy_rdkit_mae_sd)
+            mae_min,sd_min = stats_calc(energy_dft_mae_sd,energy_min_mae_sd)
+            mae_dft,sd_dft = 0,0
+        
+        # setting some graphing options
+        x_axis_names = [type_csearch]
+
+        if cmin_option is not None:
+            x_axis_names.append(cmin_option)
+        if lot is not None:
+            x_axis_names.append(lot+'_'+bs)
+        if lot_sp is not None:
+            x_axis_names.append(lot_sp+'_'+bs_sp)
+
+        name_to_write = '-'.join([str(int(elem)) for elem in x_axis_names])
+
+        return list_all,mae_rdkit,sd_rdkit,mae_min,sd_min,mae_min,sd_min,mae_dft,sd_dft,x_axis_names,name_to_write
 
 
 def get_qm_energy_plot(type,plot_files,energy_dft):
@@ -278,7 +232,7 @@ def get_qm_energy_plot(type,plot_files,energy_dft):
             if len(file.split('_ani.sdf')) == 2:
                 cmin_option = 'ANI'
             elif len(file.split('_xtb.sdf')) == 2:
-                cmin_option = 'xTB' 
+                cmin_option = 'xTB'
         else:
             if len(file.split('_summ.sdf')) == 2:
                 csearch_option = 'SUMM'

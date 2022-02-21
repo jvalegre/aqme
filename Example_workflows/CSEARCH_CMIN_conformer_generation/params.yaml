@@ -1,0 +1,12 @@
+output_name : 'csearch' #name for output
+verbose : True
+
+
+CSEARCH : 'rdkit'
+CMIN : 'xtb'
+QPREP : 'gaussian'
+
+nprocs : 8
+mem : '24GB'
+qm_input : 'B3LYP/6-31G** opt freq'
+suffix : 'xtb'
