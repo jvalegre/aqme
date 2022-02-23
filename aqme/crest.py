@@ -105,7 +105,7 @@ def run_xtb(
         subprocess.run(command)
 
 
-def crest_opt(mol, name, dup_data, dup_data_idx, sdwriter, args, w_dir_initial):
+def crest_opt(mol, name, dup_data, dup_data_idx, sdwriter, args, w_dir_main):
 
     """
     Run xtb using shell script and args to perform crest/cregen conformer search
@@ -124,11 +124,11 @@ def crest_opt(mol, name, dup_data, dup_data_idx, sdwriter, args, w_dir_initial):
         sdwriter to write sdf file
     args : pyconfot args
         arguments for crest
-    w_dir_initial : working directory
+    w_dir_main : working directory
         working directory
     """
 
-    csearch_dir = Path(w_dir_initial)
+    csearch_dir = Path(w_dir_main)
     dat_dir = csearch_dir / "CSEARCH" / "crest_xyz" / name
     dat_dir.mkdir(parents=True, exist_ok=True)
     os.chdir(dat_dir)
@@ -272,6 +272,6 @@ def crest_opt(mol, name, dup_data, dup_data_idx, sdwriter, args, w_dir_initial):
 
     dup_data.at[dup_data_idx, "crest-conformers"] = len(xyz_files)
 
-    os.chdir(w_dir_initial)
+    os.chdir(w_dir_main)
 
     return 1

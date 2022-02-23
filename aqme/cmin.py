@@ -41,7 +41,7 @@ class cmin:
         Mol objects used in CMIN
     name : str
         Name of the mol object
-    w_dir_initial : str
+    w_dir_main : str
         Working directory
     varfile : str
         Parameter file containing the additional options for CMIN
@@ -55,7 +55,7 @@ class cmin:
         self,
         mols=None,
         name=None,
-        w_dir_initial=os.getcwd(),
+        w_dir_main=os.getcwd(),
         varfile=None,
         charge_default=0,
         program=None,
@@ -64,7 +64,7 @@ class cmin:
 
         self.mols = mols
         self.name = name
-        self.w_dir_initial = w_dir_initial
+        self.w_dir_main = w_dir_main
         self.charge_default = charge_default
         self.program = program
 
@@ -74,7 +74,7 @@ class cmin:
             self.args = set_options(kwargs)
         self.args.varfile = varfile
 
-        dat_dir = Path(self.w_dir_initial + "/CMIN/dat_files")
+        dat_dir = Path(self.w_dir_main + "/CMIN/dat_files")
         dat_dir.mkdir(exist_ok=True, parents=True)
         self.log = Logger(dat_dir / self.name, self.args.output_name)
 
@@ -86,7 +86,7 @@ class cmin:
 
         self.program = self.args.CMIN
 
-        self.cmin_folder = Path(self.w_dir_initial).joinpath(f"CMIN/{self.args.CMIN}")
+        self.cmin_folder = Path(self.w_dir_main).joinpath(f"CMIN/{self.args.CMIN}")
         self.cmin_folder.mkdir(exist_ok=True)
         self.cmin_all_file = self.cmin_folder.joinpath(
             f"{self.name}_{self.program}_all_confs{self.args.output}"
@@ -141,7 +141,7 @@ class cmin:
             )
             outmols[cid].SetProp("Energy", cenergy[cid])
 
-        # cmin_folder = Path(self.w_dir_initial).joinpath(f"CMIN/{self.args.CMIN}")
+        # cmin_folder = Path(self.w_dir_main).joinpath(f"CMIN/{self.args.CMIN}")
         # cmin_folder.mkdir(exist_ok=True)
         # cmin_file = cmin_folder.joinpath(
         #     f"{name_mol}_{self.program}_all_confs{self.args.output}"
@@ -552,7 +552,7 @@ def rdkit_sdf_read(name, args, log):
     return inmols
 
 
-def mult_min(name, args, program, charge, log, w_dir_initial):
+def mult_min(name, args, program, charge, log, w_dir_main):
     """
     READ FILES FOR xTB AND ANI OPTIMIZATION, FILTER AND WRITING SDF FILES
 
@@ -592,7 +592,7 @@ def mult_min(name, args, program, charge, log, w_dir_initial):
     name_mol = os.path.basename(name).split("_" + args.CSEARCH)[0]
 
     # bar.next()
-    obj = cmin(mols=inmols, name=name_mol, w_dir_initial=w_dir_initial, varfile=args.varfile,
+    obj = cmin(mols=inmols, name=name_mol, w_dir_main=w_dir_main, varfile=args.varfile,
             charge_default=charge, program=program, options=args)
     total_data = obj.compute_cmin()
 

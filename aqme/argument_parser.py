@@ -568,8 +568,8 @@ def parser_args():
     parser.add_argument(
         "--freq_conv",
         action="store",
-        default="opt=(calcfc,maxstep=5)",
-        help="If a string is defined, it will remove calculations that converged during optimization but did not convergence in the subsequent frequency calculation. Options: opt sections as strings i.e. (opt=(calcfc,maxstep=5)). If readfc is specified in the string, the chk option must be included as well. Turn this option off by using freq_conv=False.",
+        default=None,
+        help="If a string is defined, it will remove calculations that converged during optimization but did not convergence in the subsequent frequency calculation. Options: opt sections as strings i.e. (opt=(calcfc,maxstep=5)). If readfc is specified in the string, the chk option must be included as well.",
     )
     parser.add_argument(
         "--s2_threshold",
@@ -581,7 +581,7 @@ def parser_args():
     parser.add_argument(
         "--isom",
         action="store",
-        default=False,
+        default=None,
         help="Check for isomerization from the initial input file to the resulting QM output files in QCORR. It requires the extension of the initial input files (i.e. isom='com') and the folder of the input files must be added in the isom_inputs option",
     )
     parser.add_argument(
@@ -916,9 +916,9 @@ def set_options(kwargs):
         "dup_threshold": 0.0001,
         "amplitude_ifreq": 0.2,
         "ifreq_cutoff": 0.0,
-        "freq_conv": "opt=(calcfc,maxstep=5)",
+        "freq_conv": None,
         "s2_threshold": 10.0,
-        "isom": False,
+        "isom": None,
         "isom_inputs": "/Users/shreesowndarya/Desktop/Projects/Project-DBcg-Molecules/argument parset",
         "vdwfrac": 0.5,
         "covfrac": 1.1,

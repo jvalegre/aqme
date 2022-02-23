@@ -28,22 +28,20 @@ import os
 import time
 from pathlib import Path
 from aqme.argument_parser import parser_args
-
 from aqme.mainf import (
     csearch_main,
     geom_rules_main,
     qprep_main,
-    load_from_yaml,
     cmin_main,
 )
-from aqme.utils import Logger
+from aqme.utils import Logger, load_from_yaml
 from aqme.qcorr import qcorr, json2input
 
 
 def main():
     # working directory and arguments
-    w_dir_initial = os.getcwd()
-    base_path = Path(w_dir_initial)
+    w_dir_main = args.w_dir_main
+    base_path = Path(w_dir_main)
 
     args = parser_args()
 
@@ -59,15 +57,15 @@ def main():
         "summ",
         "fullmonte",
         "crest",
-    ]:  # RAUL: Is there any other posibilities or just None?
+    ]:
         start_time_overall = time.time()
-        csearch_dup_data = csearch_main(w_dir_initial, args, log_overall)
+        csearch_dup_data = csearch_main(w_dir_main, args, log_overall)
         if args.time:
             elapsed_time = round(time.time() - start_time_overall, 2)
             log_overall.write(
                 f"\n All molecules execution time CSEARCH: {elapsed_time} seconds"
             )
-        os.chdir(w_dir_initial)
+        os.chdir(w_dir_main)
         if args.CMIN is None:
             csearch_csv_folder = base_path.joinpath("CSEARCH/csv_files")
             csearch_csv_folder.mkdir(exist_ok=True)
@@ -76,13 +74,13 @@ def main():
 
     # Separating CMIN
     if args.CSEARCH != None and args.CMIN in ["xtb", "ani"]:
-        cmin_dup_data = cmin_main(w_dir_initial, args, log_overall, csearch_dup_data)
+        cmin_dup_data = cmin_main(w_dir_main, args, log_overall, csearch_dup_data)
         if args.time:
             elapsed_time = round(time.time() - start_time_overall, 2)
             log_overall.write(
                 f"\n All molecules execution time CMIN: {elapsed_time} seconds"
             )
-        os.chdir(w_dir_initial)
+        os.chdir(w_dir_main)
         cmin_csv_folder = base_path.joinpath("CMIN/csv_files")
         cmin_csv_folder.mkdir(exist_ok=True)
         cmin_csv_file = cmin_csv_folder.joinpath(f"{name}-CMIN-Data.csv")
@@ -94,17 +92,17 @@ def main():
         if args.qcorr == "gaussian":
             geom_rules_active = False
         geom_rules_main(args, log_overall, geom_rules_active)
-        os.chdir(w_dir_initial)
+        os.chdir(w_dir_main)
 
     # QPREP
     if args.QPREP == "gaussian" or args.QPREP == "orca" or args.QPREP == "turbomole":
-        qprep_main(w_dir_initial, args, log_overall)
-        os.chdir(w_dir_initial)
+        qprep_main(w_dir_main, args, log_overall)
+        os.chdir(w_dir_main)
 
     # if args.CSEARCH in ['rdkit', 'summ', 'fullmonte','crest'] or args.QPREP is not None:
     #     # moving files after compute and/or write_gauss
     #     move_sdf_main(args)
-    #     os.chdir(w_dir_initial)
+    #     os.chdir(w_dir_main)
 
     # QCORR
     if args.qcorr:
@@ -164,23 +162,23 @@ def main():
         )
 
     # if args.QPRED == "nmr":
-    #     nmr_main(args, log_overall, w_dir_initial)
+    #     nmr_main(args, log_overall, w_dir_main)
     # if args.QPRED == "energy":
-    #     energy_main(args, log_overall, w_dir_initial)
+    #     energy_main(args, log_overall, w_dir_main)
     # if args.QPRED == "dbstep":
-    #     dbstep_par_main(args, log_overall, w_dir_initial)
+    #     dbstep_par_main(args, log_overall, w_dir_main)
     # if args.QPRED == "nics":
-    #     nics_par_main(args, log_overall, w_dir_initial)
+    #     nics_par_main(args, log_overall, w_dir_main)
     # if args.QPRED == "cclib-json":
-    #     cclib_main(args, log_overall, w_dir_initial)
-    # os.chdir(w_dir_initial)
+    #     cclib_main(args, log_overall, w_dir_main)
+    # os.chdir(w_dir_main)
     #
     # # QSTAT
     # if args.QSTAT == "descp":
-    #     geom_par_main(args, log_overall, w_dir_initial)
+    #     geom_par_main(args, log_overall, w_dir_main)
     # if args.QSTAT == "graph":
-    #     graph_main(args, log_overall, w_dir_initial)
-    # os.chdir(w_dir_initial)
+    #     graph_main(args, log_overall, w_dir_main)
+    # os.chdir(w_dir_main)
     #
     log_overall.finalize()
 

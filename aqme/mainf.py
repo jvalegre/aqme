@@ -44,7 +44,7 @@ SUPPORTED_INPUTS = [
     ".rtf",
 ]
 
-def csearch_main(w_dir_initial, args, log_overall):
+def csearch_main(w_dir_main, args, log_overall):
 
     if args.smi is None:
         file_format = os.path.splitext(args.input)[1]
@@ -73,10 +73,10 @@ def csearch_main(w_dir_initial, args, log_overall):
 
         # Prepare the Jobs
         prepare_function = Extension2inputgen[file_format]
-        job_inputs = prepare_function(args, w_dir_initial)
+        job_inputs = prepare_function(args, w_dir_main)
 
     else:
-        job_inputs = prepare_direct_smi(args, w_dir_initial)
+        job_inputs = prepare_direct_smi(args, w_dir_main)
 
     with futures.ProcessPoolExecutor(
         max_workers=args.cpus, mp_context=mp.get_context("fork")
@@ -139,7 +139,7 @@ def csearch_main(w_dir_initial, args, log_overall):
     return final_dup_data
 
 
-def cmin_main(w_dir_initial, args, log_overall, dup_data):
+def cmin_main(w_dir_main, args, log_overall, dup_data):
     bar = IncrementalBar("o  Number of finished jobs from CMIN", max=len(dup_data))
     final_dup_data = creation_of_dup_csv_cmin(args.CMIN)
     for dup_data_idx in range(len(dup_data)):
@@ -153,13 +153,13 @@ def cmin_main(w_dir_initial, args, log_overall, dup_data):
                 min_suffix = "xtb"
             if args.CSEARCH in ["rdkit", "summ", "fullmonte"]:
 
-                csearch_folder = Path(w_dir_initial).joinpath(f"CSEARCH/{args.CSEARCH}")
+                csearch_folder = Path(w_dir_main).joinpath(f"CSEARCH/{args.CSEARCH}")
                 fullname = str(csearch_folder.joinpath(name + "_" + args.CSEARCH))
 
                 # fullname = f'{name}_{args.CSEARCH}'
                 # try:
                 total_data = mult_min(
-                    fullname, args, min_suffix, charge, log_overall, w_dir_initial
+                    fullname, args, min_suffix, charge, log_overall, w_dir_main
                 )
                 # except:
                 #     pass
@@ -187,30 +187,30 @@ def cmin_main(w_dir_initial, args, log_overall, dup_data):
 
 
 # MAIN QPREP FUNCTION
-def qprep_main(w_dir_initial, args, log):
+def qprep_main(w_dir_main, args, log):
 
 	if len(args.geom_rules) >= 1:
 		conf_files = glob.glob("*_rules.sdf")
 	# define the SDF files to convert to COM Gaussian files
 	elif args.CMIN == "xtb":
-		conf_files = glob.glob(w_dir_initial + "/CMIN/" + args.CMIN + "/*_xtb.sdf")
+		conf_files = glob.glob(w_dir_main + "/CMIN/" + args.CMIN + "/*_xtb.sdf")
 	elif args.CMIN == "ani":
-		conf_files = glob.glob(w_dir_initial + "/CMIN/" + args.CMIN + "/*_ani.sdf")
+		conf_files = glob.glob(w_dir_main + "/CMIN/" + args.CMIN + "/*_ani.sdf")
 	elif args.CSEARCH == "rdkit":
 		conf_files = glob.glob(
-			w_dir_initial + "/CSEARCH/" + args.CSEARCH + "/*_rdkit.sdf"
+			w_dir_main + "/CSEARCH/" + args.CSEARCH + "/*_rdkit.sdf"
 		)
 	elif args.CSEARCH == "summ":
 		conf_files = glob.glob(
-			w_dir_initial + "/CSEARCH/" + args.CSEARCH + "/*_summ.sdf"
+			w_dir_main + "/CSEARCH/" + args.CSEARCH + "/*_summ.sdf"
 		)
 	elif args.CSEARCH == "fullmonte":
 		conf_files = glob.glob(
-			w_dir_initial + "/CSEARCH/" + args.CSEARCH + "/*_fullmonte.sdf"
+			w_dir_main + "/CSEARCH/" + args.CSEARCH + "/*_fullmonte.sdf"
 		)
 	elif args.CSEARCH == "crest":
 		conf_files = glob.glob(
-			w_dir_initial + "/CSEARCH/" + args.CSEARCH + "/*_crest.sdf"
+			w_dir_main + "/CSEARCH/" + args.CSEARCH + "/*_crest.sdf"
 		)
 	else:
 		conf_files = glob.glob("*.sdf")
@@ -229,7 +229,7 @@ def qprep_main(w_dir_initial, args, log):
 		return
 
 	csv_name = args.input.split(".")[0]
-	csv_file = f"{w_dir_initial}/CSEARCH/csv_files/{csv_name}-CSEARCH-Data.csv"
+	csv_file = f"{w_dir_main}/CSEARCH/csv_files/{csv_name}-CSEARCH-Data.csv"
 	charge_data, invalid_files = load_charge_data(csv_file, conf_files)
 
 	# remove the invalid files and non-existing files
@@ -355,10 +355,10 @@ def move_sdf_main(args):
 			move_file(destination_xyz, src, file)
 
 # getting descriptors
-# def geometricdescp_main(args, log, w_dir_initial):
+# def geometricdescp_main(args, log, w_dir_main):
 # 	# get sdf FILES from csv
 # 	pd_name = pd.read_csv(
-# 		w_dir_initial
+# 		w_dir_main
 # 		+ "/CSEARCH/csv_files/"
 # 		+ args.input.split(".")[0]
 # 		+ "-CSEARCH-Data.csv"
@@ -370,20 +370,20 @@ def move_sdf_main(args):
 # 		log.write("\no  Calculating paramters for molecule : {0} ".format(name))
 #
 # 		sdf_ani, sdf_xtb = None, None
-# 		if os.path.exists(w_dir_initial + "/CSEARCH/rdkit/" + name + "_rdkit.sdf"):
-# 			sdf_rdkit = w_dir_initial + "/CSEARCH/rdkit/" + name + "_rdkit.sdf"
-# 		elif os.path.exists(w_dir_initial + "/CSEARCH/summ/" + name + "_summ.sdf"):
-# 			sdf_rdkit = w_dir_initial + "/CSEARCH/summ/" + name + "_summ.sdf"
+# 		if os.path.exists(w_dir_main + "/CSEARCH/rdkit/" + name + "_rdkit.sdf"):
+# 			sdf_rdkit = w_dir_main + "/CSEARCH/rdkit/" + name + "_rdkit.sdf"
+# 		elif os.path.exists(w_dir_main + "/CSEARCH/summ/" + name + "_summ.sdf"):
+# 			sdf_rdkit = w_dir_main + "/CSEARCH/summ/" + name + "_summ.sdf"
 # 		elif os.path.exists(
-# 			w_dir_initial + "/CSEARCH/fullmonte/" + name + "_fullmonte.sdf"
+# 			w_dir_main + "/CSEARCH/fullmonte/" + name + "_fullmonte.sdf"
 # 		):
-# 			sdf_rdkit = w_dir_initial + "/CSEARCH/fullmonte/" + name + "_fullmonte.sdf"
-# 		if os.path.exists(w_dir_initial + "/CMIN/xtb/" + name + "_xtb.sdf"):
-# 			sdf_xtb = w_dir_initial + "/CMIN/xtb/" + name + "_xtb.sdf"
-# 		if os.path.exists(w_dir_initial + "/CMIN/ani/" + name + "_ani.sdf"):
-# 			sdf_ani = w_dir_initial + "/CMIN/ani/" + name + "_ani.sdf"
-# 		if os.path.exists(w_dir_initial + "/QCALC/G16"):
-# 			args.path = w_dir_initial + "/QCALC/G16/"
+# 			sdf_rdkit = w_dir_main + "/CSEARCH/fullmonte/" + name + "_fullmonte.sdf"
+# 		if os.path.exists(w_dir_main + "/CMIN/xtb/" + name + "_xtb.sdf"):
+# 			sdf_xtb = w_dir_main + "/CMIN/xtb/" + name + "_xtb.sdf"
+# 		if os.path.exists(w_dir_main + "/CMIN/ani/" + name + "_ani.sdf"):
+# 			sdf_ani = w_dir_main + "/CMIN/ani/" + name + "_ani.sdf"
+# 		if os.path.exists(w_dir_main + "/QCALC/G16"):
+# 			args.path = w_dir_main + "/QCALC/G16/"
 # 			# Sets the folder and find the log files to analyze
 # 			for lot, bs, bs_gcp in zip(
 # 				args.level_of_theory, args.basis_set, args.genecp_bs
@@ -410,7 +410,7 @@ def move_sdf_main(args):
 # 					qm_files,
 # 					args,
 # 					log,
-# 					w_dir_initial,
+# 					w_dir_main,
 # 					name,
 # 					lot,
 # 					bs,
@@ -423,20 +423,20 @@ def move_sdf_main(args):
 # 				None,
 # 				args,
 # 				log,
-# 				w_dir_initial,
+# 				w_dir_main,
 # 				name,
 # 				None,
 # 				None,
 # 			)
 #
-# 		os.chdir(w_dir_initial)
+# 		os.chdir(w_dir_main)
 #
 #
 # # function to plot graphs
-# def graph_main(args, log, w_dir_initial):
+# def graph_main(args, log, w_dir_main):
 # 	# get sdf FILES from csv
 # 	pd_name = pd.read_csv(
-# 		w_dir_initial
+# 		w_dir_main
 # 		+ "/CSEARCH/csv_files/"
 # 		+ args.input.split(".")[0]
 # 		+ "-CSEARCH-Data.csv"
@@ -448,28 +448,28 @@ def move_sdf_main(args):
 # 		log.write("\no  Plotting graphs for molecule : {0} ".format(name))
 #
 # 		sdf_ani, sdf_xtb = None, None
-# 		if os.path.exists(w_dir_initial + "/CSEARCH/rdkit/" + name + "_rdkit.sdf"):
-# 			sdf_rdkit = w_dir_initial + "/CSEARCH/rdkit/" + name + "_rdkit.sdf"
-# 		elif os.path.exists(w_dir_initial + "/CSEARCH/summ/" + name + "_summ.sdf"):
-# 			sdf_rdkit = w_dir_initial + "/CSEARCH/summ/" + name + "_summ.sdf"
+# 		if os.path.exists(w_dir_main + "/CSEARCH/rdkit/" + name + "_rdkit.sdf"):
+# 			sdf_rdkit = w_dir_main + "/CSEARCH/rdkit/" + name + "_rdkit.sdf"
+# 		elif os.path.exists(w_dir_main + "/CSEARCH/summ/" + name + "_summ.sdf"):
+# 			sdf_rdkit = w_dir_main + "/CSEARCH/summ/" + name + "_summ.sdf"
 # 		elif os.path.exists(
-# 			w_dir_initial + "/CSEARCH/fullmonte/" + name + "_fullmonte.sdf"
+# 			w_dir_main + "/CSEARCH/fullmonte/" + name + "_fullmonte.sdf"
 # 		):
-# 			sdf_rdkit = w_dir_initial + "/CSEARCH/fullmonte/" + name + "_fullmonte.sdf"
+# 			sdf_rdkit = w_dir_main + "/CSEARCH/fullmonte/" + name + "_fullmonte.sdf"
 # 		if os.path.exists(
-# 			w_dir_initial + "/CMIN/xtb_all_confs/" + name + "_xtb_all_confs.sdf"
+# 			w_dir_main + "/CMIN/xtb_all_confs/" + name + "_xtb_all_confs.sdf"
 # 		):
 # 			sdf_xtb = (
-# 				w_dir_initial + "/CMIN/xtb_all_confs/" + name + "_xtb_all_confs.sdf"
+# 				w_dir_main + "/CMIN/xtb_all_confs/" + name + "_xtb_all_confs.sdf"
 # 			)
 # 		if os.path.exists(
-# 			w_dir_initial + "/CMIN/ani_all_confs/" + name + "_ani_all_confs.sdf"
+# 			w_dir_main + "/CMIN/ani_all_confs/" + name + "_ani_all_confs.sdf"
 # 		):
 # 			sdf_ani = (
-# 				w_dir_initial + "/CMIN/ani_all_confs/" + name + "_ani_all_confs.sdf"
+# 				w_dir_main + "/CMIN/ani_all_confs/" + name + "_ani_all_confs.sdf"
 # 			)
-# 		if os.path.exists(w_dir_initial + "/QCALC/G16"):
-# 			args.path = w_dir_initial + "/QCALC/G16/"
+# 		if os.path.exists(w_dir_main + "/QCALC/G16"):
+# 			args.path = w_dir_main + "/QCALC/G16/"
 # 			# Sets the folder and find the log files to analyze
 # 			for lot, bs, bs_gcp in zip(
 # 				args.level_of_theory, args.basis_set, args.genecp_bs
@@ -478,6 +478,13 @@ def move_sdf_main(args):
 # 				w_dir = args.path + str(lot) + "-" + str(bs) + "/success/output_files"
 # 				os.chdir(w_dir)
 # 				qm_files = get_filenames("output", name)
+#               qm_data = {'Functional': lot, 'Basis set': bs, 'QM program': type,
+#                          'QM files': qm_files, 'QM files SP': sp_files,
+#                          'Functional SP': lot_sp, 'Basis set SP': bs_sp}
+#               file_data = {'Name mol': name_mol, 'Initial dir': w_dir_main,
+#                            'Dir SP': w_dir_sp, 'Working dir': w_dir}
+#               csearch_cmin_data = {'SDFs CSEARCH': sdf_rdkit, 'SDFs xTB': sdf_xtb,
+#                                     'SDFs ANI': sdf_ani}
 # 				if os.path.exists(
 # 					args.path + str(lot) + "-" + str(bs) + "/success/G16-SP_input_files"
 # 				):
@@ -502,14 +509,12 @@ def move_sdf_main(args):
 # 							sdf_ani,
 # 							qm_files,
 # 							sp_files,
-# 							args,
-# 							log,
 # 							lot,
 # 							bs,
 # 							lot_sp,
 # 							bs_sp,
 # 							name,
-# 							w_dir_initial,
+# 							w_dir_main,
 # 							w_dir_sp,
 # 							w_dir,
 # 							"g16",
@@ -533,14 +538,12 @@ def move_sdf_main(args):
 # 							sdf_ani,
 # 							qm_files,
 # 							sp_files,
-# 							args,
-# 							log,
 # 							lot,
 # 							bs,
 # 							lot_sp,
 # 							bs_sp.split("/")[0],
 # 							name,
-# 							w_dir_initial,
+# 							w_dir_main,
 # 							w_dir_sp,
 # 							w_dir,
 # 							"turbomole",
@@ -576,14 +579,12 @@ def move_sdf_main(args):
 # 							sdf_ani,
 # 							qm_files,
 # 							sp_files,
-# 							args,
-# 							log,
 # 							lot,
 # 							bs,
 # 							lot_sp,
 # 							bs_sp.split("/")[0],
 # 							name,
-# 							w_dir_initial,
+# 							w_dir_main,
 # 							w_dir_sp,
 # 							w_dir,
 # 							"orca",
@@ -595,14 +596,12 @@ def move_sdf_main(args):
 # 						sdf_ani,
 # 						qm_files,
 # 						None,
-# 						args,
-# 						log,
 # 						lot,
 # 						bs,
 # 						None,
 # 						None,
 # 						name,
-# 						w_dir_initial,
+# 						w_dir_main,
 # 						None,
 # 						w_dir,
 # 						None,
@@ -615,27 +614,23 @@ def move_sdf_main(args):
 # 				sdf_ani,
 # 				None,
 # 				None,
-# 				args,
-# 				log,
-# 				None,
-# 				None,
 # 				None,
 # 				None,
 # 				name,
-# 				w_dir_initial,
+# 				w_dir_main,
 # 				None,
 # 				None,
 # 				None,
 # 			)
 #
-# 	os.chdir(w_dir_initial)
+# 	os.chdir(w_dir_main)
 #
 #
 # # function for comparison of nmr
-# def nmr_main(args, log, w_dir_initial):
+# def nmr_main(args, log, w_dir_main):
 #
-# 	if os.path.exists(w_dir_initial + "/QCALC/G16"):
-# 		args.path = w_dir_initial + "/QCALC/G16/"
+# 	if os.path.exists(w_dir_main + "/QCALC/G16"):
+# 		args.path = w_dir_main + "/QCALC/G16/"
 # 	else:
 # 		log.write(
 # 			"\nx  The path for NMR analysis was not set up properly! (check the tutorials for more information)"
@@ -644,7 +639,7 @@ def move_sdf_main(args):
 # 	# get sdf FILES from csv
 # 	try:
 # 		pd_name = pd.read_csv(
-# 			w_dir_initial
+# 			w_dir_main
 # 			+ "/CSEARCH/csv_files/"
 # 			+ args.input.split(".")[0]
 # 			+ "-CSEARCH-Data.csv"
@@ -715,19 +710,19 @@ def move_sdf_main(args):
 # 			qm_files = get_filenames("output", name)
 # 			if len(qm_files) != 0:
 # 				calculate_boltz_and_nmr(
-# 					qm_files, args, log, name, w_dir_fin, w_dir_initial, lot, bs
+# 					qm_files, args, log, name, w_dir_fin, w_dir_main, lot, bs
 # 				)
-# 	os.chdir(w_dir_initial)
+# 	os.chdir(w_dir_main)
 #
 #
 # # function for comparison of nmr
-# def nbo_main(args, log, w_dir_initial):
+# def nbo_main(args, log, w_dir_main):
 # 	return 0
 #
-# def energy_main(args, log, w_dir_initial):
+# def energy_main(args, log, w_dir_main):
 # 	# get sdf FILES from csv
 # 	pd_name = pd.read_csv(
-# 		w_dir_initial
+# 		w_dir_main
 # 		+ "/CSEARCH/csv_files/"
 # 		+ args.input.split(".")[0]
 # 		+ "-CSEARCH-Data.csv"
@@ -739,8 +734,8 @@ def move_sdf_main(args):
 # 		log.write(
 # 			"\no Boltzmann average energy analysis for molecule : {0} ".format(name)
 # 		)
-# 		if os.path.exists(w_dir_initial + "/QCALC/G16"):
-# 			args.path = w_dir_initial + "/QCALC/G16/"
+# 		if os.path.exists(w_dir_main + "/QCALC/G16"):
+# 			args.path = w_dir_main + "/QCALC/G16/"
 # 		# Sets the folder and find the log files to analyze
 # 		for lot, bs, bs_gcp in zip(
 # 			args.level_of_theory, args.basis_set, args.genecp_bs
@@ -762,11 +757,11 @@ def move_sdf_main(args):
 # 			qm_files = get_filenames("output", name)
 # 			if len(qm_files) != 0:
 # 				calculate_boltz_and_energy(
-# 					qm_files, args, log, name, w_dir_fin, w_dir_initial, lot, bs
+# 					qm_files, args, log, name, w_dir_fin, w_dir_main, lot, bs
 # 				)
 #
 # 	# combining the combining all files in different folders
-# 	w_dir_boltz = w_dir_initial + "/QPRED/energy/boltz/"
+# 	w_dir_boltz = w_dir_main + "/QPRED/energy/boltz/"
 #
 # 	for lot, bs, bs_gcp in zip(args.level_of_theory, args.basis_set, args.genecp_bs):
 # 		# assign the path to the finished directory.
@@ -783,19 +778,19 @@ def move_sdf_main(args):
 # 				log,
 # 				name,
 # 				w_dir_fin,
-# 				w_dir_initial,
+# 				w_dir_main,
 # 				w_dir_boltz,
 # 				lot,
 # 				bs,
 # 			)
 #
-# 	os.chdir(w_dir_initial)
+# 	os.chdir(w_dir_main)
 #
 #
-# def dbstep_main(args, log, w_dir_initial):
+# def dbstep_main(args, log, w_dir_main):
 # 	# get sdf FILES from csv
 # 	pd_name = pd.read_csv(
-# 		w_dir_initial
+# 		w_dir_main
 # 		+ "/CSEARCH/csv_files/"
 # 		+ args.input.split(".")[0]
 # 		+ "-CSEARCH-Data.csv"
@@ -806,8 +801,8 @@ def move_sdf_main(args):
 #
 # 		log.write("\no  Calculating paramters for molecule : {0} ".format(name))
 #
-# 		if os.path.exists(w_dir_initial + "/QCALC/G16"):
-# 			args.path = w_dir_initial + "/QCALC/G16/"
+# 		if os.path.exists(w_dir_main + "/QCALC/G16"):
+# 			args.path = w_dir_main + "/QCALC/G16/"
 # 			# Sets the folder and find the log files to analyze
 # 			for lot, bs, bs_gcp in zip(
 # 				args.level_of_theory, args.basis_set, args.genecp_bs
@@ -828,18 +823,18 @@ def move_sdf_main(args):
 # 				os.chdir(w_dir)
 # 				qm_files = get_filenames("output", name)
 # 				calculate_db_parameters(
-# 					qm_files, args, log, w_dir_initial, name, lot, bs
+# 					qm_files, args, log, w_dir_main, name, lot, bs
 # 				)
 # 				calculate_boltz_and_dbstep(
-# 					qm_files, args, log, name, w_dir, w_dir_initial, lot, bs
+# 					qm_files, args, log, name, w_dir, w_dir_main, lot, bs
 # 				)
-# 		os.chdir(w_dir_initial)
+# 		os.chdir(w_dir_main)
 #
 #
-# def nics_par_main(args, log, w_dir_initial):
+# def nics_par_main(args, log, w_dir_main):
 # 	# get sdf FILES from csv
 # 	pd_name = pd.read_csv(
-# 		w_dir_initial
+# 		w_dir_main
 # 		+ "/CSEARCH/csv_files/"
 # 		+ args.input.split(".")[0]
 # 		+ "-CSEARCH-Data.csv"
@@ -850,8 +845,8 @@ def move_sdf_main(args):
 #
 # 		log.write("\no  Calculating nics for molecule : {0} ".format(name))
 #
-# 		if os.path.exists(w_dir_initial + "/QCALC/G16"):
-# 			args.path = w_dir_initial + "/QCALC/G16/"
+# 		if os.path.exists(w_dir_main + "/QCALC/G16"):
+# 			args.path = w_dir_main + "/QCALC/G16/"
 # 			# Sets the folder and find the log files to analyze
 # 			for lot, bs, bs_gcp in zip(
 # 				args.level_of_theory, args.basis_set, args.genecp_bs
@@ -873,7 +868,7 @@ def move_sdf_main(args):
 # 				qm_files = get_filenames("output", name)
 # 				# do boltz firsst
 # 				calculate_boltz_for_nics(
-# 					qm_files, args, log, name, w_dir, w_dir_initial, lot, bs
+# 					qm_files, args, log, name, w_dir, w_dir_main, lot, bs
 # 				)
 # 				for lot_sp, bs_sp, bs_gcp_sp in zip(
 # 					args.level_of_theory_sp, args.basis_set_sp, args.gen_bs_sp
@@ -903,7 +898,7 @@ def move_sdf_main(args):
 # 					os.chdir(w_dir_sp)
 # 					qm_files_sp = get_filenames("output", name)
 # 					calculate_nics_parameters(
-# 						qm_files_sp, args, log, w_dir_initial, name, lot_sp, bs_sp
+# 						qm_files_sp, args, log, w_dir_main, name, lot_sp, bs_sp
 # 					)
 # 					calculate_avg_nics(
 # 						qm_files_sp,
@@ -911,17 +906,17 @@ def move_sdf_main(args):
 # 						log,
 # 						name,
 # 						w_dir_sp,
-# 						w_dir_initial,
+# 						w_dir_main,
 # 						lot_sp,
 # 						bs_sp,
 # 					)
-# 		os.chdir(w_dir_initial)
+# 		os.chdir(w_dir_main)
 #
 #
-# def cclib_main(args, log, w_dir_initial):
+# def cclib_main(args, log, w_dir_main):
 # 	# get sdf FILES from csv
 # 	pd_name = pd.read_csv(
-# 		w_dir_initial
+# 		w_dir_main
 # 		+ "/CSEARCH/csv_files/"
 # 		+ args.input.split(".")[0]
 # 		+ "-CSEARCH-Data.csv"
@@ -931,8 +926,8 @@ def move_sdf_main(args):
 # 		name = pd_name.loc[i, "Molecule"]
 #
 # 		log.write("\no  Calculating cclib paramters for molecule : {0} ".format(name))
-# 		if os.path.exists(w_dir_initial + "/QCALC/G16"):
-# 			args.path = w_dir_initial + "/QCALC/G16/"
+# 		if os.path.exists(w_dir_main + "/QCALC/G16"):
+# 			args.path = w_dir_main + "/QCALC/G16/"
 # 			# Sets the folder and find the log files to analyze
 # 			for lot, bs, bs_gcp in zip(
 # 				args.level_of_theory, args.basis_set, args.genecp_bs
@@ -953,11 +948,11 @@ def move_sdf_main(args):
 # 				os.chdir(w_dir)
 # 				qm_files = get_filenames("output", name)
 # 				# do boltz firsst
-# 				calculate_cclib(qm_files, w_dir_initial, lot, bs)
-# 				calculate_boltz_for_cclib(qm_files, name, w_dir_initial, lot, bs)
+# 				calculate_cclib(qm_files, w_dir_main, lot, bs)
+# 				calculate_boltz_for_cclib(qm_files, name, w_dir_main, lot, bs)
 # 				if str(bs).find("/") > -1:
 # 					os.chdir(
-# 						w_dir_initial
+# 						w_dir_main
 # 						+ "/QPRED/cclib-json/all_confs_cclib/"
 # 						+ str(lot)
 # 						+ "-"
@@ -965,14 +960,14 @@ def move_sdf_main(args):
 # 					)
 # 				else:
 # 					os.chdir(
-# 						w_dir_initial
+# 						w_dir_main
 # 						+ "/QPRED/cclib-json/all_confs_cclib/"
 # 						+ str(lot)
 # 						+ "-"
 # 						+ str(bs)
 # 					)
 # 				json_files = get_filenames("output", name)
-# 				get_avg_cclib_param(json_files, name, w_dir_initial, lot, bs)
+# 				get_avg_cclib_param(json_files, name, w_dir_main, lot, bs)
 #
 #
 # MAIN OPTION FOR DISCARDING MOLECULES BASED ON USER INPUT DATA (REFERRED AS EXPERIMENTAL RULES)

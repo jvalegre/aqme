@@ -80,7 +80,7 @@ class csearch:
         Mol object used in CSEARCH
     name : str
         Name of the mol object
-    w_dir_initial : str
+    w_dir_main : str
         Working directory
     charge_default : int
         Charge of the system
@@ -104,7 +104,7 @@ class csearch:
         self,
         smi=None,
         name=None,
-        w_dir_initial=os.getcwd(),
+        w_dir_main=os.getcwd(),
         varfile=None,
         charge_default=0,
         constraints_dist=[],
@@ -114,7 +114,9 @@ class csearch:
     ):
         self.smi = smi
         self.name = name
-        self.w_dir_initial = w_dir_initial
+        self.w_dir_main = w_dir_main
+        # w_dir_initial is created to avoid folder problems in jupyter notebooks
+        self.w_dir_initial = os.getcwd()
 
         if "options" in kwargs:
             self.args = kwargs["options"]
@@ -124,7 +126,7 @@ class csearch:
 
         self.charge_default = charge_default
 
-        csearch_dir = Path(self.w_dir_initial) / "CSEARCH"
+        csearch_dir = Path(self.w_dir_main) / "CSEARCH"
         dat_dir = csearch_dir / "dat_files"
         dat_dir.mkdir(parents=True, exist_ok=True)
 
@@ -150,7 +152,7 @@ class csearch:
         self.args.charge_default = self.charge_default
         self.args.charge = rules_get_charge(self.mol, self.args)
 
-        self.csearch_folder = Path(self.w_dir_initial).joinpath(
+        self.csearch_folder = Path(self.w_dir_main).joinpath(
             f"CSEARCH/{self.args.CSEARCH}"
         )
         self.csearch_folder.mkdir(exist_ok=True)
@@ -163,7 +165,7 @@ class csearch:
 
         Parameters
         ----------
-        w_dir_initial : [type]    [description]
+        w_dir_main : [type]    [description]
         mol : rdkit.Chem.Mol    [description]
         name : [type]    [description]
         i : [type]    [description]
@@ -172,6 +174,8 @@ class csearch:
         -------
         pandas.Dataframe    total_data
         """
+
+        os.chdir(self.w_dir_main)
 
         # Converts each line to a rdkit mol object
         if self.args.verbose:
@@ -203,7 +207,6 @@ class csearch:
                     if metal_idx_ind is not None:
                         count_metals += 1
                 if count_metals == 1:
-                    os.chdir(self.w_dir_initial)
                     template_kwargs = dict()
                     template_kwargs["complex_type"] = self.args.complex_type
                     template_kwargs["metal_idx"] = self.args.metal_idx
@@ -241,6 +244,9 @@ class csearch:
             total_data = self.conformer_generation(
                 self.mol, self.name, self.args, self.log
             )
+
+        os.chdir(self.w_dir_initial)
+
         return total_data
 
     def conformer_generation(
@@ -296,13 +302,18 @@ class csearch:
                 dup_data.at[dup_data_idx, "update_to_rdkit"] = update_to_rdkit
             except (KeyboardInterrupt, SystemExit):  # RAUL: This try-except is useless.
                 raise
-        else:
-            log.write("\nx  ERROR: The structure is not valid")
+        if status == -1 or not valid_structure:
+            error_message = "\nx  ERROR: The structure is not valid or no conformers were obtained from this SMILES string"
+            print(error_message)
+            log.write(error_message)
+            if file.exists():
+                os.remove(str(file))
 
         if args.time:
             n_seconds = round(time.time() - start_time, 2)
             log.write(f"\n Execution time CSEARCH: {n_seconds} seconds")
             dup_data.at[dup_data_idx, "CSEARCH time (seconds)"] = n_seconds
+
         return dup_data
 
     def summ_search(
@@ -352,7 +363,7 @@ class csearch:
             mol_template,
         )
         # reads the initial SDF files from RDKit and uses dihedral scan if selected
-        if status != -1 or status != 0:
+        if status not in [-1,0]:
             # getting the energy and mols after rotations
             if args.CSEARCH == "summ" and len(rotmatches) != 0:
                 status = self.dihedral_filter_and_sdf(
@@ -942,7 +953,7 @@ class csearch:
                 "\nx  No rotatable dihedral found. Updating to CSEARCH to RDKit, writing to FULLMONTE SDF"
             )
 
-        # csearch_folder = Path(self.w_dir_initial).joinpath(f"CSEARCH/{args.CSEARCH}")
+        # csearch_folder = Path(self.w_dir_main).joinpath(f"CSEARCH/{args.CSEARCH}")
         # csearch_folder.mkdir(exist_ok=True)
         # csearch_file = csearch_folder.joinpath(name + "_" + args.CSEARCH + args.output)
         # sdwriter = Chem.SDWriter(str(csearch_file))
@@ -996,22 +1007,25 @@ class csearch:
                 else:
                     log.write("o  Systematic torsion rotation is set to OFF")
 
-            status = self.min_after_embed(
-                mol,
-                cids,
-                name,
-                initial_confs,
-                rotmatches,
-                dup_data,
-                dup_data_idx,
-                sdwriter,
-                args,
-                log,
-                update_to_rdkit,
-                coord_Map,
-                alg_Map,
-                mol_template,
-            )
+            try:
+                status = self.min_after_embed(
+                    mol,
+                    cids,
+                    name,
+                    initial_confs,
+                    rotmatches,
+                    dup_data,
+                    dup_data_idx,
+                    sdwriter,
+                    args,
+                    log,
+                    update_to_rdkit,
+                    coord_Map,
+                    alg_Map,
+                    mol_template,
+                )
+            except IndexError:
+                status = -1
         else:
             args.charge = rules_get_charge(mol, args)
             dup_data.at[dup_data_idx, "Overall charge"] = np.sum(args.charge)
@@ -1022,7 +1036,7 @@ class csearch:
                 dup_data_idx,
                 sdwriter,
                 args,
-                self.w_dir_initial,
+                self.w_dir_main,
             )
 
         sdwriter.close()
@@ -1050,7 +1064,7 @@ def smi_to_mol(
 # main function to generate conformers
 
 
-def prepare_direct_smi(args, w_dir_initial):
+def prepare_direct_smi(args, w_dir_main):
     job_inputs = []
     constraints_angle, constraints_dist, constraints_dihedral = None, None, None
     for smi, name in zip(args.smi, args.name):
@@ -1062,7 +1076,7 @@ def prepare_direct_smi(args, w_dir_initial):
         obj = (
             smi,
             name,
-            w_dir_initial,
+            w_dir_main,
             args.varfile,
             args.charge_default,
             constraints_dist,
@@ -1073,7 +1087,7 @@ def prepare_direct_smi(args, w_dir_initial):
     return job_inputs
 
 
-def prepare_smiles_files(args, w_dir_initial):
+def prepare_smiles_files(args, w_dir_main):
     with open(args.input) as smifile:
         lines = [line for line in smifile if line.strip()]
     job_inputs = []
@@ -1089,7 +1103,7 @@ def prepare_smiles_files(args, w_dir_initial):
         obj = (
             smi,
             name,
-            w_dir_initial,
+            w_dir_main,
             args.varfile,
             args.charge_default,
             constraints_dist,
@@ -1134,16 +1148,16 @@ def prepare_smiles_from_line(line, i, args):
     return smiles, name, args, constraints_dist, constraints_angle, constraints_dihedral
 
 
-def prepare_csv_files(args, w_dir_initial):
+def prepare_csv_files(args, w_dir_main):
     csv_smiles = pd.read_csv(args.input)
     job_inputs = []
     for i in range(len(csv_smiles)):
-        obj = generate_mol_from_csv(args, w_dir_initial, csv_smiles, i)
+        obj = generate_mol_from_csv(args, w_dir_main, csv_smiles, i)
         job_inputs.append(obj)
     return job_inputs
 
 
-def generate_mol_from_csv(args, w_dir_initial, csv_smiles, index):
+def generate_mol_from_csv(args, w_dir_main, csv_smiles, index):
     # assigning names and smi i  each loop
     smiles = csv_smiles.loc[index, "SMILES"]
     # pruned_smi = check_for_pieces(smi)
@@ -1176,7 +1190,7 @@ def generate_mol_from_csv(args, w_dir_initial, csv_smiles, index):
     obj = (
         smiles,
         name,
-        w_dir_initial,
+        w_dir_main,
         args.varfile,
         args.charge_default,
         constraints_dist,
@@ -1186,7 +1200,7 @@ def generate_mol_from_csv(args, w_dir_initial, csv_smiles, index):
     return obj
 
 
-def prepare_cdx_files(args, w_dir_initial):
+def prepare_cdx_files(args, w_dir_main):
     # converting to smiles from chemdraw
     molecules = generate_mol_from_cdx(args)
     job_inputs = []
@@ -1196,7 +1210,7 @@ def prepare_cdx_files(args, w_dir_initial):
             if not args.metal_complex:
                 args.charge_default = check_charge_smi(smi, args.ts_complex)
         constraints = []
-        obj = mol, name, w_dir_initial, args.varfile, args.charge_default, constraints
+        obj = mol, name, w_dir_main, args.varfile, args.charge_default, constraints
         job_inputs.append(obj)
     return job_inputs
 
@@ -1215,7 +1229,7 @@ def generate_mol_from_cdx(args):
     return molecules
 
 
-def prepare_gaussian_files(args, w_dir_initial):
+def prepare_gaussian_files(args, w_dir_main):
     job_inputs = []
     charge_com = com_2_xyz_2_sdf(args.input, args.default_charge)
     name = os.path.splitext(args.input)[0]
@@ -1226,12 +1240,12 @@ def prepare_gaussian_files(args, w_dir_initial):
         if args.charge_default == "auto":
             args.charge_default = charge_com
         constraints = []
-        obj = mol, name, w_dir_initial, args.varfile, args.charge_default, constraints
+        obj = mol, name, w_dir_main, args.varfile, args.charge_default, constraints
         job_inputs.append(obj)
     return job_inputs
 
 
-def prepare_xyz_files(args, w_dir_initial):
+def prepare_xyz_files(args, w_dir_main):
     job_inputs = []
     name = os.path.splitext(args.input)[0]
     sdffile = f"{name}.sdf"
@@ -1242,42 +1256,42 @@ def prepare_xyz_files(args, w_dir_initial):
         if args.charge_default == "auto":
             args.charge_default = charge_com
         constraints = []
-        obj = mol, name, w_dir_initial, args.varfile, args.charge_default, constraints
+        obj = mol, name, w_dir_main, args.varfile, args.charge_default, constraints
         job_inputs.append(obj)
     return job_inputs
 
 
-def prepare_sdf_file(charge_sdf, w_dir_initial, mol, name, args, i):
+def prepare_sdf_file(charge_sdf, w_dir_main, mol, name, args, i):
     if args.charge_default == "auto":
         args.charge_default = charge_sdf
     constraints = []
-    obj = mol, name, w_dir_initial, args.varfile, args.charge_default, constraints
+    obj = mol, name, w_dir_main, args.varfile, args.charge_default, constraints
     return obj
 
 
-def prepare_sdf_files(args, w_dir_initial):
+def prepare_sdf_files(args, w_dir_main):
     suppl, IDs, charges = mol_from_sdf_or_mol_or_mol2(args.input)
     job_inputs = []
     for i, (mol, name, charge_sdf) in enumerate(zip(suppl, IDs, charges)):
-        obj = prepare_sdf_file(charge_sdf, w_dir_initial, mol, name, args, i)
+        obj = prepare_sdf_file(charge_sdf, w_dir_main, mol, name, args, i)
         job_inputs.append(obj)
     return job_inputs
 
 
-def prepare_mol_file(suppl, name, charge, args, w_dir_initial):
+def prepare_mol_file(suppl, name, charge, args, w_dir_main):
     if args.charge_default == "auto":
         args.charge_default = charge
     mol = suppl
     constraints = []
-    obj = mol, name, w_dir_initial, args.varfile, args.charge_default, constraints
+    obj = mol, name, w_dir_main, args.varfile, args.charge_default, constraints
     return obj
 
 
 def prepare_mol_files(
-    args, w_dir_initial
+    args, w_dir_main
 ):  # The extra variables are for API Consistency.
     suppl, IDs, charges = mol_from_sdf_or_mol_or_mol2(args.input)
     job_inputs = []
-    obj = prepare_mol_file(suppl, IDs[0], charges[0], args, w_dir_initial)
+    obj = prepare_mol_file(suppl, IDs[0], charges[0], args, w_dir_main)
     job_inputs.append(obj)
     return job_inputs

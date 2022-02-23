@@ -7,7 +7,6 @@
 [![Codacy](https://img.shields.io/codacy/grade/3a4cc7c7705e46129c7ea0fca58af846?label=Codacy%20grade&logo=Codacy)](https://www.codacy.com/gh/jvalegre/aqme/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=jvalegre/aqme&amp;utm_campaign=Badge_Grade)
 [![lgtm](https://img.shields.io/lgtm/grade/python/github/jvalegre/aqme?label=LGTM%20grade&logo=lgtm)](https://lgtm.com/projects/g/jvalegre/aqme/context:python)
 [![CodeClimate](https://img.shields.io/codeclimate/maintainability-percentage/jvalegre/aqme?label=Code%20climate%20maintainability&logo=code%20climate)](https://codeclimate.com/github/jvalegre/aqme)
-[![Scrutinizer](https://img.shields.io/scrutinizer/quality/g/jvalegre/aqme?label=Scrutinizer%20grade&logo=Scrutinizer)](https://scrutinizer-ci.com/g/jvalegre/aqme/)
 
 ![Size](https://img.shields.io/github/languages/code-size/jvalegre/aqme)
 [![PyPI](https://img.shields.io/pypi/v/aqme?color=blue&label=PyPI&logo=pypi)](https://pypi.org/project/aqme)
@@ -15,9 +14,9 @@
 ___
 # <p align="center">Automated Quantum Mechanical Environments (AQME)</p>
 ## <p align="center">-- Table of contents --</p>
-### <p align="center">[What is AQME?](https://github.com/jvalegre/aqme#what-is-aqme-1) &nbsp; &nbsp; [Installation](https://github.com/jvalegre/aqme#installation-1) &nbsp; &nbsp; [Requirements](https://github.com/jvalegre/aqme#requirements-1)</p>
-### <p align="center">[Features and modules](https://github.com/jvalegre/aqme#features-and-modules-1) &nbsp; &nbsp; [Quickstart](https://github.com/jvalegre/aqme#quickstart-1) &nbsp; &nbsp; [Extended documentation](https://github.com/jvalegre/aqme#extended-documentation-installation-use-examples-etc)</p>
-### <p align="center">[Developers and help desk](https://github.com/jvalegre/aqme#developers-and-help-desk-1) &nbsp; &nbsp; [License](https://github.com/jvalegre/aqme#license-1) &nbsp; &nbsp; [Reference](https://github.com/jvalegre/aqme#reference-1)</p>
+### <p align="center">[What is AQME?](https://github.com/jvalegre/aqme#what-is-aqme) &nbsp; &nbsp; [Installation](https://github.com/jvalegre/aqme#installation) &nbsp; &nbsp; [Requirements](https://github.com/jvalegre/aqme#requirements)</p>
+### <p align="center">[Features and modules](https://github.com/jvalegre/aqme#features-and-modules) &nbsp; &nbsp; [Quickstart](https://github.com/jvalegre/aqme#quickstart) &nbsp; &nbsp; [Extended documentation](https://github.com/jvalegre/aqme#extended-documentation-installation-use-examples-etc)</p>
+### <p align="center">[Developers and help desk](https://github.com/jvalegre/aqme#developers-and-help-desk) &nbsp; &nbsp; [License](https://github.com/jvalegre/aqme#license) &nbsp; &nbsp; [Reference](https://github.com/jvalegre/aqme#reference)</p>
 ___
 ## What is AQME?
 The code is an ensemble of automated QM workflows that can be run through jupyter notebooks, command lines and yaml files. Some of the most popular workflows include:
@@ -131,8 +130,54 @@ AQME can also be run through command lines. Some examples are:
     ```
 
 ## Extended documentation (installation, use, examples, etc)
-** In process **
-XXX LINK READTHEDOCS WEBPAGE XXX
+** ReadTheDocs page in process **  
+- [ ] QCORR arguments:  
+  **qm_files : list of str, default=''**  
+    Filenames of QM output files to analyze. If \*.log (or other strings that are not lists such as \*.out) are specified, the program will look for all the log files in the working directory through glob.glob(\*.log)  
+  **w_dir_main : str, default=os.getcwd()**  
+    Working directory  
+  **fullcheck : bool, default=True**  
+    Perform an analysis to detect whether the calculations were done homogeneously (i.e. same level of theory, solvent, grid size, etc)  
+  **varfile : str, default=None**  
+    Option to parse the variables using a yaml file (specify the filename)  
+  **ifreq_cutoff : float, default=0.0**  
+    Cut off for to consider whether a frequency is imaginary (absolute of the specified value is used)  
+  **amplitude_ifreq : float, default=0.2**  
+    Amplitude used to displace the imaginary frequencies to fix  
+  **freq_conv : str, default=None**  
+    If a string is defined, it will remove calculations that converged during optimization but did not convergence in the subsequent frequency calculation. Options: opt keyword as string (i.e. 'opt=(calcfc,maxstep=5)'). If readfc is specified in the string, the chk option must be included as well.  
+  **s2_threshold : float, default=10.0**  
+  	Cut off for spin contamination during analysis in % of the expected value (i.e. multiplicity 3 has an the expected <S\*\*2> of 2.0, if s2_threshold = 10, the <S\*\*2> value is allowed to be 2.0 +- 0.2). Set s2_threshold = 0 to deactivate this option.  
+  **dup_threshold : float, default=0.0001**  
+    Energy (in hartree) used as the energy difference in E, H and G to detect duplicates  
+  **isom : str, default=None**  
+    Check for isomerization from the initial input file to the resulting output files. It requires the extension of the initial input files (i.e. isom='com') and the folder of the input files must be added in the isom_inputs option  
+  **isom_inputs : str, default=os.getcwd()**  
+    Folder containing the initial input files to check for isomerization  
+  **vdwfrac : float, default=0.50**  
+    Fraction of the summed VDW radii that constitutes a bond between two atoms in the isomerization filter  
+  **covfrac : float, default=1.10**  
+    Fraction of the summed covalent radii that constitutes a bond between two atoms in the isomerization filter  
+  
+  **--- Options related to file generation to fix issues found by QCORR ---**  
+  **program : str, default='gaussian'**  
+    Program required to create the new input files. Current options: 'gaussian', 'orca'  
+  **qm_input : str, default=''**  
+    Keywords line for new input files (i.e. 'B3LYP/6-31G opt freq')  
+  **qm_end : str, default=''**  
+    Final line(s) in the new input files  
+  **chk : bool, default=False**  
+    Include the chk input line in new input files for Gaussian calculations  
+  **mem : str, default='4GB'**  
+    Memory for the QM calculations (i) Gaussian: total memory; (ii) ORCA: memory per processor  
+  **nprocs : int, default=2**  
+    Number of processors used in the QM calculations  
+  **gen_atoms : list of str, default=[]**  
+    Atoms included in the gen(ECP) basis set (i.e. ['I','Pd'])  
+  **bs_gen : str, default=''**  
+    Basis set used for gen(ECP) atoms	(i.e. 'def2svp')  
+  **bs : str, default=''**  
+    Basis set used for non gen(ECP) atoms in gen(ECP) calculations (i.e. '6-31G\*')  
 
 ## Developers and help desk
 List of main developers and contact emails:

@@ -90,6 +90,8 @@ class qprep:
 
 		self.mol = mol
 		self.w_dir_main = Path(w_dir_main)
+		# w_dir_initial is included to avoid problems in jupyter notebooks
+		self.w_dir_initial = Path(os.getcwd())
 		self.molecule = molecule
 		self.chk = chk
 		self.mem = mem
@@ -105,7 +107,7 @@ class qprep:
 		self.program = program
 
 		if destination is None:
-			self.destination = Path(os.getcwd()+"/QCALC/")
+			self.destination = self.w_dir_main.joinpath("QCALC")
 
 		else:
 			self.destination = Path(destination)
@@ -156,10 +158,12 @@ class qprep:
 		if molecule == "":
 			sys.exit("x  No name was specified! (molecule=NAME).")
 
+		os.chdir(self.w_dir_main)
 		comfile = self.write()
 		move_file(self.destination, self.w_dir_main, comfile)
 		self.log.finalize()
 		os.remove('QPREP_data.dat')
+		os.chdir(self.w_dir_initial)
 
 
 	def get_header(self):
