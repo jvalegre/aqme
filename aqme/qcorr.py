@@ -3,183 +3,51 @@
 #          used in the LOG file analyzer             #
 ######################################################.
 import os
-import sys
 import glob
 import pandas as pd
 import json
 import subprocess
 from pathlib import Path
-
 from aqme.utils import (
 	move_file,
-    Logger,
-    load_from_yaml,
-    check_isomerization,
-    read_file,
-    cclib_atoms_coords,
+	check_isomerization,
+	read_file,
+	cclib_atoms_coords,
 	periodic_table,
 	get_info_input,
 	get_metadata,
 	get_s2,
-	detect_linear
+	detect_linear,
+	load_variables
 )
-
 from aqme.qprep import qprep
-from aqme.argument_parser import set_options
 
 
 class qcorr():
-	"""
+	'''
 	Class containing all the functions from the QCORR module.
 
 	Parameters
 	----------
-	qm_files : list
-		Filenames of QM output files to analyze
-	w_dir_main : str
-		Working directory
-	dup_threshold : float
-		Energy (in hartree) used as the energy difference in E, H and G to detect duplicates
-	mem : str
-		Memory for the QM calculations (i) Gaussian: total memory; (ii) ORCA: memory per processor
-	nprocs : int
-		Number of processors used in the QM calculations
-	chk : bool
-		Include the chk input line in new input files for Gaussian calculations
-	qm_input : str
-		keywords_line for new input files
-	s2_threshold :  float
-		Cut off for spin contamination during analysis in \%\ of the expected value (i.e. multiplicity 3 has an the expected <S**2> of 2.0, if s2_threshold = 10, the <S**2> value is allowed to be 2.0 +- 0.2). Set s2_threshold = 0 to deactivate this option.
-	isom : str
-		Check for isomerization from the initial input file to the resulting output files. It requires the extension of the initial input files (i.e. isom='com') and the folder of the input files must be added in the isom_inputs option
-	isom_inputs : str
-		Folder containing the initial input files to check for isomerization
-	vdwfrac : float
-		Fraction of the summed VDW radii that constitutes a bond between two atoms in the isomerization filter
-	covfrac : float
-		Fraction of the summed covalent radii that constitutes a bond between two atoms in the isomerization filter
-	bs_gen : str
-		Basis set used for gen(ECP) atoms	
-	bs : str
-		Basis set used for non gen(ECP) atoms in gen(ECP) calculations
-	gen_atoms : list of str
-		Atoms included in the gen(ECP) basis set
-	qm_end : str
-		Final line in the new input files
-	amplitude_ifreq : float
-		Amplitude used to displace the imaginary frequencies to fix
-	freq_conv : str
-		If a string is defined, it will remove calculations that converged during optimization but did not convergence in the subsequent frequency calculation. Options: opt sections as strings i.e. (opt=(calcfc,maxstep=5)). If readfc is specified in the string, the chk option must be included as well.
-	ifreq_cutoff : float
-		Cut off for to consider whether a frequency is imaginary (absolute of the specified value is used)
-	fullcheck : bool
-		Perform an analysis to detect whether the calculations were done homogeneously (i.e. same level of theory, solvent, grid size, etc)
-	program : str
-		Program required to create the new input files
-	varfile : str
-		Option to parse the variables using a yaml file (specify the filename)
 	kwargs : argument class
-		Specify any arguments from the QCORR module
-	"""
+		Specify any arguments from the QCORR module (for a complete list of variables, visit the AQME documentation)
+	'''
 
-	def __init__(self, qm_files='', w_dir_main=os.getcwd(), dup_threshold=0.0001,
-				mem='4GB', nprocs=2, chk=False, qm_input='', s2_threshold=10.0,
-				isom=None, isom_inputs=os.getcwd(), vdwfrac=0.50, covfrac=1.10,
-				bs_gen='', bs='', gen_atoms=[], qm_end='', amplitude_ifreq=0.2, freq_conv=None,
-				ifreq_cutoff=0.0, fullcheck=True, program='gaussian', varfile=None, **kwargs):
+	def __init__(self, **kwargs):
 
-		self.initial_dir = Path(os.getcwd())
-		self.w_dir_main = Path(w_dir_main)
-		self.dup_threshold = dup_threshold
-		self.mem = mem
-		self.nprocs = nprocs
-		self.chk = chk
-		self.amplitude_ifreq = amplitude_ifreq
-		self.freq_conv = freq_conv
-		self.ifreq_cutoff = ifreq_cutoff
-		self.qm_input = qm_input
-		self.s2_threshold = s2_threshold
-		self.fullcheck = fullcheck
-		self.bs_gen = bs_gen
-		self.bs = bs
-		self.gen_atoms = gen_atoms
-		self.qm_end = qm_end
-		self.program = program
-		self.isom = isom
-		self.isom_inputs = Path(isom_inputs)
-		self.vdwfrac = vdwfrac
-		self.covfrac = covfrac
-		
-		if "options" in kwargs:
-			self.args = kwargs["options"]
-		else:
-			self.args = set_options(kwargs)
+		# load default and user-specified variables
+		self.args = load_variables(kwargs,'qcorr')
 
-		self.args.varfile = varfile
-
-		if varfile is not None:
-			self.args, self.log = load_from_yaml(self.args, self.log)
-			self.w_dir_main = Path(self.args.w_dir_main)
-			self.qm_files = self.args.qm_files
-			self.dup_threshold = self.args.dup_threshold
-			self.mem = self.args.mem
-			self.nprocs = self.args.nprocs
-			self.chk = self.args.chk
-			self.amplitude_ifreq = self.args.amplitude_ifreq
-			self.freq_conv = self.args.freq_conv
-			self.ifreq_cutoff = self.args.ifreq_cutoff
-			self.qm_input = self.args.qm_input
-			self.s2_threshold = self.args.s2_threshold
-			self.fullcheck = self.args.fullcheck
-			self.gen_atoms = self.args.gen_atoms
-			self.bs_gen = self.args.bs_gen
-			self.bs = self.args.bs
-			self.qm_end = self.args.qm_end
-			self.program = self.args.program
-			self.isom = self.args.isom
-			self.isom_inputs = Path(self.args.isom_inputs)
-			self.vdwfrac = self.args.vdwfrac
-			self.covfrac = self.args.covfrac
-
-		# go to working folder and detect QM output files
-		os.chdir(self.w_dir_main)
-
-		if isinstance(qm_files, list):
-			self.qm_files = qm_files
-		else:
-			self.qm_files = glob.glob(qm_files)
-
-		# detects cycle of analysis (0 represents the starting point)
-		self.round_num = check_run(w_dir_main)
-
-		# start a log file to track the QCORR module
-		error_setup = False
-		try:
-			self.log = Logger(self.w_dir_main / 'QCORR-run',f'{str(self.round_num)}')
-		except FileNotFoundError:
-			print('x  The PATH specified as input in the w_dir_main option might be invalid!')
-			error_setup = True
-
-		if len(self.qm_files) == 0 and not error_setup:
-			print(f'x  There are no output files in {self.w_dir_main}.')
-			self.log.write(f'x  There are no output files in {self.w_dir_main}.')
-			self.log.finalize()
-			move_file(self.w_dir_main.joinpath('dat_files/'), self.w_dir_main,f'QCORR-run_{str(self.round_num)}.dat')
-			error_setup = True
-
-		if error_setup:
-			# this is added to avoid path problems in jupyter notebooks
-			os.chdir(self.initial_dir)
-			sys.exit()
-
-		self.log.write(f"o  Analyzing output files in {self.w_dir_main}\n")
+		# QCORR analysis
+		print(f"o  Analyzing output files in {self.args.w_dir_main}\n")
+		self.args.log.write(f"o  Analyzing output files in {self.args.w_dir_main}\n")
 		self.qcorr_processing()
+		self.args.log.finalize()
+		move_file(self.args.w_dir_main.joinpath('dat_files/'), self.args.w_dir_main,f'QCORR-run_{str(self.args.round_num)}.dat')
 
-		self.log.finalize()
-		move_file(self.w_dir_main.joinpath('dat_files/'), self.w_dir_main,f'QCORR-run_{str(self.round_num)}.dat')
-		
 		# this is added to avoid path problems in jupyter notebooks
-		os.chdir(self.initial_dir)
+		os.chdir(self.args.initial_dir)
+
 
 	def qcorr_processing(self):
 		"""
@@ -197,7 +65,7 @@ class qcorr():
 		
 		E_dup_list, H_dup_list, G_dup_list = [],[],[]
 
-		for file in self.qm_files:
+		for file in self.args.qm_files:
 			# get initial cclib data and termination/error types
 			file_name = file.split('.')[0]
 			termination,errortype,cclib_data,n_atoms,freqs,freq_displacements,charge,mult,keywords_line,calc_type,mem,nprocs = self.cclib_init(file,file_name)
@@ -208,7 +76,7 @@ class qcorr():
 
 			# use very short reversed loop to find basis set incompatibilities and SCF errors
 			if errortype in ['not_specified','sp_calc']:
-				outlines = read_file(self.w_dir_main,file)
+				outlines = read_file(self.args.w_dir_main,file)
 				for i in reversed(range(len(outlines)-15,len(outlines))):
 					if outlines[i-1].find('Atomic number out of range') > -1 or outlines[i-1].find('basis sets are only available') > -1:
 						errortype = 'atomicbasiserror'
@@ -243,7 +111,7 @@ class qcorr():
 					E_diff = abs(E_dup - E_dup_list[i])
 					H_diff = abs(H_dup - H_dup_list[i])
 					G_diff = abs(G_dup - G_dup_list[i])
-					if max([E_diff,H_diff,G_diff]) < abs(self.dup_threshold):
+					if max([E_diff,H_diff,G_diff]) < abs(self.args.dup_threshold):
 						errortype = 'duplicate_calc'
 
 			if errortype == 'none':
@@ -253,7 +121,7 @@ class qcorr():
 
 				initial_ifreqs = 0
 				for freq in freqs:
-					if float(freq) < 0 and abs(float(freq)) > abs(self.ifreq_cutoff):
+					if float(freq) < 0 and abs(float(freq)) > abs(self.args.ifreq_cutoff):
 						initial_ifreqs += 1
 
 				# exclude TS imag frequency
@@ -290,7 +158,7 @@ class qcorr():
 					new_keywords_line = ''
 					for keyword in keywords_line.split():
 						if keyword.lower().startswith('opt'):
-							keyword = self.freq_conv
+							keyword = self.args.freq_conv
 						new_keywords_line += keyword
 						new_keywords_line += ' '
 					keywords_line = new_keywords_line
@@ -330,13 +198,13 @@ class qcorr():
 						atom_types,cartesians = [],[]
 						per_tab = periodic_table()
 						count_RMS = -1
-						for _,line in enumerate(outlines):
+						for i,line in enumerate(outlines):
 							if line.find('Standard orientation:') > -1:
 								count_RMS += 1
 							if count_RMS == min_RMS:
-								range_lines = i+5,i+5+n_atoms
+								range_lines = [i+5,i+5+n_atoms]
 								break
-						for i in range(range_lines):
+						for i in range(range_lines[0],range_lines[1]):
 							massno = int(outlines[i].split()[1])
 							if massno < len(per_tab):
 								atom_symbol = per_tab[massno]
@@ -346,79 +214,79 @@ class qcorr():
 							cartesians.append([float(outlines[i].split()[3]), float(outlines[i].split()[4]), float(outlines[i].split()[5])])
 
 			# check for isomerization
-			if self.isom is not None and errortype not in ['ts_no_imag_freq','atomicbasiserror','no_data']:
+			if self.args.isom is not None and errortype not in ['ts_no_imag_freq','atomicbasiserror','no_data']:
 				isomerized = False
 				init_csv = pd.DataFrame()
-				os.chdir(self.isom_inputs)
+				os.chdir(self.args.isom_inputs)
 				try:
 					atoms_com, coords_com, atoms_and_coords = [],[],[]
-					if len(self.isom.split('.')) == 1:
-						atoms_and_coords,_ = get_info_input(f'{file_name}.{self.isom}')
+					if len(self.args.isom.split('.')) == 1:
+						atoms_and_coords,_ = get_info_input(f'{file_name}.{self.args.isom}')
 
-					elif self.isom.split('.')[1] != 'csv':
+					elif self.args.isom.split('.')[1] != 'csv':
 						init_csv = pd.read_csv(self.args.isom)
 
 					for line in atoms_and_coords:
 						atoms_com.append(line.split()[0])
 						coords_com.append([float(line.split()[1]), float(line.split()[2]), float(line.split()[3])])
 
-					isomerized = check_isomerization(coords_com, cartesians, atoms_com, atom_types, self.vdwfrac, self.covfrac, init_csv, file)
+					isomerized = check_isomerization(coords_com, cartesians, atoms_com, atom_types, self.args.vdwfrac, self.args.covfrac, init_csv, file)
 				
 				except FileNotFoundError:
 					print(f'x  No com file were found for {file}, the check_geom test will be disabled for this calculation')
-					self.log.write(f'x  No com file were found for {file}, the check_geom test will be disabled for this calculation')
+					self.args.log.write(f'x  No com file were found for {file}, the check_geom test will be disabled for this calculation')
 				
 				if isomerized:
 					errortype = 'isomerization'
-				os.chdir(self.w_dir_main)
+				os.chdir(self.args.w_dir_main)
 
 			# move initial QM input files (if the files are placed in the same folder as the output files)
-			if os.path.exists(f'{self.w_dir_main}/{file_name}.com'):
-				move_file(self.w_dir_main.joinpath('initial_QM_inputs/'), self.w_dir_main,f'{file_name}.com')
+			if os.path.exists(f'{self.args.w_dir_main}/{file_name}.com'):
+				move_file(self.args.w_dir_main.joinpath('initial_QM_inputs/'), self.args.w_dir_main,f'{file_name}.com')
 
 			if errortype not in ['ts_no_imag_freq','atomicbasiserror','no_data','isomerization','duplicate_calc','spin_contaminated','none','sp_calc']:
 				# user-defined keywords_line, mem and nprics overwrites previously used parameters
-				if self.qm_input != '':
-					keywords_line = self.qm_input
+				if self.args.qm_input != '':
+					keywords_line = self.args.qm_input
 
-				if self.mem != '':
-					mem = self.mem
+				if self.args.mem != '':
+					mem = self.args.mem
 				elif mem == '':
 					mem = '8GB'
 
-				if self.nprocs != 0:
-					nprocs = self.nprocs
+				if self.args.nprocs != 0:
+					nprocs = self.args.nprocs
 				elif nprocs == 0:
 					nprocs = 4
 
-				qprep(destination=Path(f'{self.w_dir_main}/unsuccessful_QM_outputs/run_{self.round_num}/fixed_QM_inputs'), w_dir_main=self.w_dir_main,
+				qprep(destination=Path(f'{self.args.w_dir_main}/unsuccessful_QM_outputs/run_{self.args.round_num}/fixed_QM_inputs'), w_dir_main=self.args.w_dir_main,
 					molecule=file_name, charge=charge, mult=mult,
-					program=self.program, atom_types=atom_types,
+					program=self.args.program, atom_types=atom_types,
 					cartesians=cartesians, qm_input=keywords_line,
-					mem=mem, nprocs=nprocs, chk=self.chk, qm_end=self.qm_end,
-					bs_gen=self.bs_gen, bs=self.bs, gen_atoms=self.gen_atoms)
+					mem=mem, nprocs=nprocs, chk=self.args.chk, qm_end=self.args.qm_end,
+					bs_gen=self.args.bs_gen, bs=self.args.bs, gen_atoms=self.args.gen_atoms)
 
 			print(f'{file}: Termination = {termination}, Error type = {errortype}')
-			self.log.write(f'{file}: Termination = {termination}, Error type = {errortype}')
+			self.args.log.write(f'{file}: Termination = {termination}, Error type = {errortype}')
 
 			# This part places the calculations in different folders depending on the type of termination
 			file_terms,destination = self.organize_outputs(file,termination,errortype,file_terms)
 			
 			destination_json = destination.joinpath('json_files/')
-			move_file(destination_json, self.w_dir_main, file_name+'.json')
+			move_file(destination_json, self.args.w_dir_main, file_name+'.json')
 
 			# write information about the QCORR analysis in a csv
 			self.write_qcorr_csv(file_terms)
 
-		if self.fullcheck:
+		if self.args.fullcheck:
 			try:
-				destination_fullcheck = self.w_dir_main.joinpath('successful_QM_outputs/json_files/')
+				destination_fullcheck = self.args.w_dir_main.joinpath('successful_QM_outputs/json_files/')
 				json_files = glob.glob(f'{destination_fullcheck}/*.json')
 				full_check(w_dir_main=destination_fullcheck,destination_fullcheck=destination_fullcheck,json_files=json_files)
 			
 			except FileNotFoundError:
 				print('x  No normal terminations with no errors to run the full check analysis')
-				self.log.write('x  No normal terminations with no errors to run the full check analysis')
+				self.args.log.write('x  No normal terminations with no errors to run the full check analysis')
 		
 			
 	# include geom filters (ongoing work)
@@ -426,20 +294,20 @@ class qcorr():
 	# 			if len(self.args.geom_rules) >= 1:
 	# 				passing_rules = True
 	# 				valid_mol_gen = True
-	# 				self.log.write("  ----- geom_rules filter(s) will be applied to the output file -----\n")
+	# 				self.args.log.write("  ----- geom_rules filter(s) will be applied to the output file -----\n")
 	# 				try:
 	# 					format_file = file.split('.')[1]
 	# 					mol = output_to_mol(file,format_file)
 	# 					print_error_geom_rules=False
 	# 					if ob_compat and rdkit_compat:
-	# 						passing_rules = geom_rules_output(mol,self.args,self.log,file,print_error_geom_rules)
+	# 						passing_rules = geom_rules_output(mol,self.args,self.args.log,file,print_error_geom_rules)
 	# 						if not passing_rules:
 	# 							errortype = 'fail_geom_rules'
 	# 					os.remove(file.split('.')[0]+'.mol')
 	# 				except AttributeError:
 	# 					valid_mol_gen = False
 	# 					os.remove(file.split('.')[0]+'.mol')
-	# 					self.log.write("The file could not be converted into a mol object, geom_rules filter(s) will be disabled\n")
+	# 					self.args.log.write("The file could not be converted into a mol object, geom_rules filter(s) will be disabled\n")
 
 
 	def cclib_init(self,file,file_name):
@@ -447,6 +315,9 @@ class qcorr():
 		Determine termination and error types (initial determination), create json files
 		with cclib and load the data in the cclib json files
 		'''
+		
+		termination,errortype = 'normal','none'
+		
 		# create a json file with cclib and load a dictionary. This protocol is
 		# favored over the traditional ccread since more data will be added to
 		# the json file at the end
@@ -457,11 +328,14 @@ class qcorr():
 			with open(file_name+'.json') as json_file:
 				cclib_data = json.load(json_file)
 		except FileNotFoundError:
-			print(f'x  Potential cclib compatibility problem with file {file}')
-			self.log.write(f'x  Potential cclib compatibility problem with file {file}')
+			print(f'x  Potential cclib compatibility problem or no data found for file {file}')
+			self.args.log.write(f'x  Potential cclib compatibility problem or no data found for file {file}')
 			termination = 'other'
 			errortype = 'no_data'
-			
+
+		if errortype == 'no_data':
+			return termination,errortype,None,None,None,None,None,None,None,None,None,None
+
 		# retrieves information from the cclib parser
 		n_atoms = cclib_data['properties']['number of atoms']
 		charge = cclib_data['properties']['charge']
@@ -470,30 +344,26 @@ class qcorr():
 		s2_after_anni,s2_before_anni = get_s2(cclib_data)
 
 		# determine error/unfinished vs normal terminations and freqs for normal terminations
+		freqs,freq_displacements = [],[]
 		try:
-			if n_atoms == 1:
-				freqs = []
-				freq_displacements = []
-			else:
+			if n_atoms > 1:
 				freqs = cclib_data['vibrations']['frequencies']
 				freq_displacements = cclib_data['vibrations']['displacement']
-			termination = 'normal'
-			errortype = 'none'
 			
 			# spin contamination analysis using user-defined thresholds
 			unpaired_e = mult-1
 			# this first part accounts for singlet diradicals (threshold is 10% of the spin before annihilation)
 			if unpaired_e == 0 and s2_after_anni != 0:
-				if s2_after_anni > abs(self.s2_threshold/100)*s2_before_anni:
+				if s2_after_anni > abs(self.args.s2_threshold/100)*s2_before_anni:
 					errortype = 'spin_contaminated'
 			else:
 				spin = unpaired_e*0.5
 				s2_expected_value = spin*(spin+1)
 				spin_diff = abs(float(s2_after_anni)-s2_expected_value)
-				if spin_diff > abs(self.s2_threshold/100)*s2_expected_value:
+				if spin_diff > abs(self.args.s2_threshold/100)*s2_expected_value:
 					errortype = 'spin_contaminated'
 			
-			if errortype == 'none' and self.freq_conv is not None:
+			if errortype == 'none' and self.args.freq_conv is not None:
 				freq_conv = cclib_data['optimization']['geometric values'][-1]
 				freq_conv_targets = cclib_data['optimization']['geometric targets']
 				for i,conv in enumerate(freq_conv):
@@ -555,7 +425,7 @@ class qcorr():
 				shift.append(0.0)
 			else:
 				if freqs[mode] < 0.0:
-					shift.append(self.amplitude_ifreq)
+					shift.append(self.args.amplitude_ifreq)
 				else:
 					shift.append(0.0)
 
@@ -590,62 +460,62 @@ class qcorr():
 		"""
 		
 		if errortype == 'none' and termination == "normal":
-			destination = self.w_dir_main.joinpath('successful_QM_outputs/')
+			destination = self.args.w_dir_main.joinpath('successful_QM_outputs/')
 			file_terms['finished'] += 1
 
 		elif errortype == 'sp_calc' and termination == "normal":
-			destination = self.w_dir_main.joinpath('successful_QM_outputs/SP_calcs/')
+			destination = self.args.w_dir_main.joinpath('successful_QM_outputs/SP_calcs/')
 			file_terms['sp_calcs'] += 1
 
 		elif errortype == 'extra_imag_freq':
-			destination = self.w_dir_main.joinpath(f'unsuccessful_QM_outputs/run_{self.round_num}/extra_imag_freq/')
+			destination = self.args.w_dir_main.joinpath(f'unsuccessful_QM_outputs/run_{self.args.round_num}/extra_imag_freq/')
 			file_terms['extra_imag_freq'] += 1
 
 		elif errortype == 'ts_no_imag_freq':
-			destination = self.w_dir_main.joinpath(f'unsuccessful_QM_outputs/run_{self.round_num}/ts_no_imag_freq/')
+			destination = self.args.w_dir_main.joinpath(f'unsuccessful_QM_outputs/run_{self.args.round_num}/ts_no_imag_freq/')
 			file_terms['ts_no_imag_freq'] += 1
 
 		elif errortype == 'spin_contaminated':
-			destination = self.w_dir_main.joinpath(f'unsuccessful_QM_outputs/run_{self.round_num}/spin_contaminated/')
+			destination = self.args.w_dir_main.joinpath(f'unsuccessful_QM_outputs/run_{self.args.round_num}/spin_contaminated/')
 			file_terms['spin_contaminated'] += 1
 
 		elif errortype == 'duplicate_calc':
-			destination = self.w_dir_main.joinpath(f'unsuccessful_QM_outputs/run_{self.round_num}/duplicates/')
+			destination = self.args.w_dir_main.joinpath(f'unsuccessful_QM_outputs/run_{self.args.round_num}/duplicates/')
 			file_terms['duplicate_calc'] += 1
 
 		elif errortype == "atomicbasiserror":
-			destination = self.w_dir_main.joinpath(f'unsuccessful_QM_outputs/run_{self.round_num}/error/basis_set_error/')
+			destination = self.args.w_dir_main.joinpath(f'unsuccessful_QM_outputs/run_{self.args.round_num}/error/basis_set_error/')
 			file_terms['atom_error'] += 1
 
 		elif errortype == "SCFerror":
-			destination = self.w_dir_main.joinpath(f'unsuccessful_QM_outputs/run_{self.round_num}/error/scf_error/')
+			destination = self.args.w_dir_main.joinpath(f'unsuccessful_QM_outputs/run_{self.args.round_num}/error/scf_error/')
 			file_terms['scf_error'] += 1
 
 		elif errortype == "no_data":
-			destination = self.w_dir_main.joinpath(f'unsuccessful_QM_outputs/run_{self.round_num}/error/no_data/')
+			destination = self.args.w_dir_main.joinpath(f'unsuccessful_QM_outputs/run_{self.args.round_num}/error/no_data/')
 			file_terms['no_data'] += 1
 
 		elif errortype == 'fail_geom_rules':
-			destination = self.w_dir_main.joinpath(f'unsuccessful_QM_outputs/run_{self.round_num}/geom_rules_filter/')
+			destination = self.args.w_dir_main.joinpath(f'unsuccessful_QM_outputs/run_{self.args.round_num}/geom_rules_filter/')
 			file_terms['geom_rules_qcorr'] += 1
 
 		elif errortype == 'isomerization':
-			destination = self.w_dir_main.joinpath(f'unsuccessful_QM_outputs/run_{self.round_num}/isomerization/')
+			destination = self.args.w_dir_main.joinpath(f'unsuccessful_QM_outputs/run_{self.args.round_num}/isomerization/')
 			file_terms['isomerized'] += 1
 
 		elif errortype == 'freq_no_conv':
-			destination = self.w_dir_main.joinpath(f'unsuccessful_QM_outputs/run_{self.round_num}/freq_no_conv/')
+			destination = self.args.w_dir_main.joinpath(f'unsuccessful_QM_outputs/run_{self.args.round_num}/freq_no_conv/')
 			file_terms['freq_no_conv'] += 1
 
 		elif errortype == 'linear_mol_wrong':
-			destination = self.w_dir_main.joinpath(f'unsuccessful_QM_outputs/run_{self.round_num}/linear_mol_wrong/')
+			destination = self.args.w_dir_main.joinpath(f'unsuccessful_QM_outputs/run_{self.args.round_num}/linear_mol_wrong/')
 			file_terms['linear_mol_wrong'] += 1
 
 		else:
-			destination = self.w_dir_main.joinpath(f'unsuccessful_QM_outputs/run_{self.round_num}/error/not_specified_error/')
+			destination = self.args.w_dir_main.joinpath(f'unsuccessful_QM_outputs/run_{self.args.round_num}/error/not_specified_error/')
 			file_terms['not_specified'] += 1
 		
-		move_file(destination, self.w_dir_main, file)
+		move_file(destination, self.args.w_dir_main, file)
 
 		return file_terms,destination
 
@@ -656,7 +526,7 @@ class qcorr():
 		"""
 
 		ana_data = pd.DataFrame()
-		ana_data.at[0,'Total files'] = len(self.qm_files)
+		ana_data.at[0,'Total files'] = len(self.args.qm_files)
 		ana_data.at[0,'Normal termination'] = file_terms['finished']
 		ana_data.at[0,'Single-point calcs'] = file_terms['sp_calcs']
 		ana_data.at[0,'Extra imag. freq.'] = file_terms['extra_imag_freq']
@@ -672,12 +542,12 @@ class qcorr():
 		ana_data.at[0,'Duplicates'] = file_terms['duplicate_calc']
 		if len(self.args.geom_rules) >= 1:
 			ana_data.at[0,'geom_rules filter'] = file_terms['geom_rules_qcorr']
-		if self.isom is not None:
+		if self.args.isom is not None:
 			ana_data.at[0,'Isomerization'] = file_terms['isomerized']
-		path_as_str = self.w_dir_main.as_posix()
-		ana_data.to_csv(path_as_str+f'/QCORR-run_{self.round_num}-stats.csv',index=False)
+		path_as_str = self.args.w_dir_main.as_posix()
+		ana_data.to_csv(path_as_str+f'/QCORR-run_{self.args.round_num}-stats.csv',index=False)
 
-		move_file(self.w_dir_main.joinpath('dat_files/'), self.w_dir_main,f'QCORR-run_{self.round_num}-stats.csv')
+		move_file(self.args.w_dir_main.joinpath('dat_files/'), self.args.w_dir_main,f'QCORR-run_{self.args.round_num}-stats.csv')
 
 
 def full_check(w_dir_main=os.getcwd(),destination_fullcheck='',json_files='*.json'):
@@ -841,22 +711,4 @@ def json2input(json_files='', w_dir_main=os.getcwd(), destination=None, suffix='
 	
 	print(f'o  Final input files were generated in {destination}')
 
-	os.chdir(w_dir_initial)
-	
-
-def check_run(w_dir):
-	"""
-	# Determines the folder where input files are gonna be generated in QCORR.
-	"""
-
-	input_folder = w_dir+'/unsuccessful_QM_outputs/'
-	folder_count = 1
-
-	if os.path.exists(input_folder):
-		dir_list = os.listdir(input_folder)
-		for folder in dir_list:
-			if folder.find('run_') > -1:
-				folder_count += 1
-
-	return folder_count
-	
+	os.chdir(w_dir_initial)	

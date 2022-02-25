@@ -17,6 +17,7 @@ from rdkit.Chem import rdmolfiles
 import yaml
 import pandas as pd
 from rdkit.Chem import AllChem as Chem
+from aqme.argument_parser import set_options
 
 
 def periodic_table():
@@ -1378,4 +1379,70 @@ def detect_linear(errortype,atom_types,freqs):
 				break
 
 	return errortype
-	
+
+
+def load_variables(kwargs,aqme_module):
+	# load variables and create the self object
+	# first, load default values and options manually added to the function
+	self = set_options(kwargs)
+
+	self.initial_dir = Path(os.getcwd())
+	self.w_dir_main = Path(self.w_dir_main)
+	if self.isom is not None:
+		self.isom_inputs = Path(self.args.isom_inputs)	
+
+	# go to working folder and detect QM output files
+	os.chdir(self.w_dir_main)
+	if not isinstance(self.qm_files, list):
+		self.qm_files = glob.glob(self.qm_files)
+
+	# start a log file to track the QCORR module
+	error_setup = False
+	if aqme_module == 'qcorr':
+		# detects cycle of analysis (0 represents the starting point)
+		self.round_num = check_run(self.w_dir_main)
+		logger_1 = 'QCORR-run'
+		logger_2 = f'{str(self.round_num)}'
+	try:
+		self.log = Logger(self.w_dir_main / logger_1,logger_2)
+	except FileNotFoundError:
+		print('x  The PATH specified as input in the w_dir_main option might be invalid!')
+		error_setup = True
+
+	if aqme_module == 'qcorr':
+		if len(self.qm_files) == 0 and not error_setup:
+			print(f'x  There are no output files in {self.w_dir_main}.')
+			self.log.write(f'x  There are no output files in {self.w_dir_main}.')
+			self.log.finalize()
+			move_file(self.w_dir_main.joinpath('dat_files/'), self.w_dir_main,f'QCORR-run_{str(self.round_num)}.dat')
+			error_setup = True
+
+	if error_setup:
+		# this is added to avoid path problems in jupyter notebooks
+		os.chdir(self.initial_dir)
+		sys.exit()
+
+	# this part loads variables from yaml files (if varfile is used)
+	elif self.varfile is not None:
+		self.yaml, self.log = load_from_yaml(self.args, self.log)
+		for key,value in self.yaml.iteritems():
+			setattr(self, key, value)
+
+	return self
+
+
+def check_run(w_dir):
+	'''
+	Determines the folder where input files are gonna be generated in QCORR.
+	'''
+
+	input_folder = w_dir.joinpath('unsuccessful_QM_outputs/')
+	folder_count = 1
+
+	if os.path.exists(input_folder):
+		dir_list = os.listdir(input_folder)
+		for folder in dir_list:
+			if folder.find('run_') > -1:
+				folder_count += 1
+
+	return folder_count

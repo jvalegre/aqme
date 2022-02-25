@@ -953,7 +953,7 @@ def set_options(kwargs):
         "cbonds": 0.5,
         "prefix": "None",
     }
-    print(kwargs)
+    
     for key in var_dict:
         vars(options)[key] = var_dict[key]
     for key in kwargs:
