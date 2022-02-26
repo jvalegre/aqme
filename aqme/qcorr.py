@@ -15,8 +15,6 @@ from aqme.utils import (
 	cclib_atoms_coords,
 	periodic_table,
 	get_info_input,
-	get_metadata,
-	get_s2,
 	detect_linear,
 	load_variables
 )
@@ -43,7 +41,6 @@ class qcorr():
 		self.args.log.write(f"o  Analyzing output files in {self.args.w_dir_main}\n")
 		self.qcorr_processing()
 		self.args.log.finalize()
-		move_file(self.args.w_dir_main.joinpath('dat_files/'), self.args.w_dir_main,f'QCORR-run_{str(self.args.round_num)}.dat')
 
 		# this is added to avoid path problems in jupyter notebooks
 		os.chdir(self.args.initial_dir)
@@ -55,229 +52,60 @@ class qcorr():
 
 		1. Analyzes the QM output files and moves output files with normal termination and no extra imaginary frequencies to the same folder
 		2. Generates input files to fix errors and extra imaginary frequencies
-		3. Generates input files with new keywords_lines from the normally terminated files from point 1 (i.e. single-point energy corrections). Optionally, the analysis from points 1 and 2  might be disabled with the nocheck=True or --nocheck option.
+		3. Generates input files with new keywords line(s) from the normally terminated files from point 1 (i.e. single-point energy corrections)
 		"""
 
-		file_terms = {'finished': 0, 'sp_calcs' : 0, 'extra_imag_freq': 0, 'ts_no_imag_freq': 0,
-			'freq_no_conv': 0, 'spin_contaminated': 0, 'duplicate_calc': 0, 'atom_error': 0,
-			'scf_error': 0, 'no_data': 0, 'linear_mol_wrong': 0, 'not_specified': 0,
-			'geom_rules_qcorr': 0, 'isomerized': 0}
-		
-		E_dup_list, H_dup_list, G_dup_list = [],[],[]
+		file_terms = {'finished': 0, 'sp_calcs' : 0, 'extra_imag_freq': 0, 'ts_no_imag_freq': 0, 'freq_no_conv': 0,
+			'spin_contaminated': 0, 'duplicate_calc': 0, 'atom_error': 0, 'scf_error': 0, 'no_data': 0,
+			'linear_mol_wrong': 0, 'not_specified': 0, 'geom_rules_qcorr': 0, 'isomerized': 0}
+
+		duplicate_data = {'Energies' : [], 'Enthalpies' : [], 'Gibbs': []}
 
 		for file in self.args.qm_files:
-			# get initial cclib data and termination/error types
+			# get initial cclib data and termination/error types and discard calcs with no data
 			file_name = file.split('.')[0]
-			termination,errortype,cclib_data,n_atoms,freqs,freq_displacements,charge,mult,keywords_line,calc_type,mem,nprocs = self.cclib_init(file,file_name)
-
-			if errortype == 'no_data':
+			termination,errortype,cclib_data,outlines = self.cclib_init(file,file_name)
+			if errortype in ['no_data','atomicbasiserror']:
 				file_terms,_ = self.organize_outputs(file,termination,errortype,file_terms)
+				if errortype == 'atomicbasiserror':
+					os.remove(file_name+'.json')
 				continue
 
-			# use very short reversed loop to find basis set incompatibilities and SCF errors
-			if errortype in ['not_specified','sp_calc']:
-				outlines = read_file(self.args.w_dir_main,file)
-				for i in reversed(range(len(outlines)-15,len(outlines))):
-					if outlines[i-1].find('Atomic number out of range') > -1 or outlines[i-1].find('basis sets are only available') > -1:
-						errortype = 'atomicbasiserror'
-						break
-					if outlines[i].find('SCF Error') > -1:
-						errortype = 'SCFerror'
-						break
-					if outlines[i].find('Normal termination') > -1:
-						break
+			# check for duplicates and fix wrong number of freqs in normally terminated calculations and
+			elif termination == 'normal':
+				atom_types,cartesians,duplicate_data,errortype,cclib_data = self.analyze_normal(duplicate_data,errortype,cclib_data)
 
-			# check for duplicates and wrong number of freqs
-			if termination == 'normal':
-				atom_types,cartesians = cclib_atoms_coords(cclib_data)
-
-			if errortype == 'none':
-				# in eV, converted to hartree using the conversion factor from cclib
-				E_dup = cclib_data['properties']['energy']['total']
-				E_dup = E_dup/27.21138505
-				# in hartree
-				try:
-					H_dup = cclib_data['properties']['enthalpy']
-					G_dup = cclib_data['properties']['energy']['free energy']
-				except (AttributeError,KeyError):
-					if n_atoms == 1:
-						if keywords_line.find('freq') == -1:
-							errortype = 'sp_calc'
-							calc_type = 'SP calculation'
-						H_dup = E_dup
-						G_dup = E_dup
-				# detects if this calculation is a duplicate
-				for i,_ in enumerate(E_dup_list):
-					E_diff = abs(E_dup - E_dup_list[i])
-					H_diff = abs(H_dup - H_dup_list[i])
-					G_diff = abs(G_dup - G_dup_list[i])
-					if max([E_diff,H_diff,G_diff]) < abs(self.args.dup_threshold):
-						errortype = 'duplicate_calc'
-
-			if errortype == 'none':
-				E_dup_list.append(E_dup)
-				H_dup_list.append(H_dup)
-				G_dup_list.append(G_dup)
-
-				initial_ifreqs = 0
-				for freq in freqs:
-					if float(freq) < 0 and abs(float(freq)) > abs(self.args.ifreq_cutoff):
-						initial_ifreqs += 1
-
-				# exclude TS imag frequency
-				if calc_type == 'transition_state':
-					initial_ifreqs -= 1
-
-				# gives new coordinates by displacing the normal mode(s) of the negative freq(s)
-				if initial_ifreqs > 0:
-					errortype = 'extra_imag_freq'
-				
-				elif initial_ifreqs < 0:
-					errortype = 'ts_no_imag_freq'
-				
-				if len(atom_types) in [3,4]:
-					errortype = detect_linear(errortype,atom_types,freqs)
-
-			if errortype in ['extra_imag_freq','freq_no_conv','linear_mol_wrong']:
-				if errortype == 'extra_imag_freq':
-					cartesians = self.fix_imag_freqs(n_atoms, cartesians, freqs, freq_displacements, calc_type)
-
-				# in case no previous OPT was done (only works if it's not a TS)
-				opt_found = False
-				for keyword in keywords_line.split():
-					if keyword.lower().startswith('opt'):
-						opt_found = True
-				if not opt_found:
-					keywords_line += ' opt'
-
-				if errortype == 'linear_mol_wrong':
-					keywords_line += ' symmetry=(PG=Cinfv)'
-
-				elif errortype == 'freq_no_conv':
-					# adjust the keywords so only FREQ is calculated
-					new_keywords_line = ''
-					for keyword in keywords_line.split():
-						if keyword.lower().startswith('opt'):
-							keyword = self.args.freq_conv
-						new_keywords_line += keyword
-						new_keywords_line += ' '
-					keywords_line = new_keywords_line
-
-			# for calcs with finished OPT but no freqs
-			elif termination != 'normal' and errortype not in ['ts_no_imag_freq','atomicbasiserror','no_data']:
-				if errortype == 'no_freq':
-					# adjust the keywords so only FREQ is calculated
-					new_keywords_line = ''
-					for keyword in keywords_line.split():
-						if keyword.lower().startswith('opt'):
-							keyword = ''
-						else:
-							new_keywords_line += keyword
-							new_keywords_line += ' '
-					keywords_line = new_keywords_line
-					atom_types,cartesians = cclib_atoms_coords(cclib_data)
-				else:
-					# helps to fix SCF convergence errors
-					if errortype == 'SCFerror':
-						if keywords_line.find(' scf=xqc') > -1 or keywords_line.find(' scf=qc') > -1:
-							new_keywords_line = ''
-							for keyword in keywords_line.split():
-								if keyword == 'scf=xqc':
-									keyword = 'scf=qc'
-								new_keywords_line += keyword
-								new_keywords_line += ' '
-							keywords_line = new_keywords_line
-								
-						else:
-							keywords_line += ' scf=xqc'
-					
-					if errortype in ['not_specified','SCFerror']:
-						RMS_forces = [row[1] for row in cclib_data['optimization']['geometric values']]
-						min_RMS = RMS_forces.index(min(RMS_forces))
-						
-						atom_types,cartesians = [],[]
-						per_tab = periodic_table()
-						count_RMS = -1
-						for i,line in enumerate(outlines):
-							if line.find('Standard orientation:') > -1:
-								count_RMS += 1
-							if count_RMS == min_RMS:
-								range_lines = [i+5,i+5+n_atoms]
-								break
-						for i in range(range_lines[0],range_lines[1]):
-							massno = int(outlines[i].split()[1])
-							if massno < len(per_tab):
-								atom_symbol = per_tab[massno]
-							else:
-								atom_symbol = "XX"
-							atom_types.append(atom_symbol)
-							cartesians.append([float(outlines[i].split()[3]), float(outlines[i].split()[4]), float(outlines[i].split()[5])])
+			# fix calcs that did not terminated normally
+			elif termination != 'normal':
+				atom_types,cartesians,cclib_data = self.analyze_abnormal(errortype,cclib_data,outlines)
 
 			# check for isomerization
-			if self.args.isom is not None and errortype not in ['ts_no_imag_freq','atomicbasiserror','no_data']:
-				isomerized = False
-				init_csv = pd.DataFrame()
-				os.chdir(self.args.isom_inputs)
-				try:
-					atoms_com, coords_com, atoms_and_coords = [],[],[]
-					if len(self.args.isom.split('.')) == 1:
-						atoms_and_coords,_ = get_info_input(f'{file_name}.{self.args.isom}')
-
-					elif self.args.isom.split('.')[1] != 'csv':
-						init_csv = pd.read_csv(self.args.isom)
-
-					for line in atoms_and_coords:
-						atoms_com.append(line.split()[0])
-						coords_com.append([float(line.split()[1]), float(line.split()[2]), float(line.split()[3])])
-
-					isomerized = check_isomerization(coords_com, cartesians, atoms_com, atom_types, self.args.vdwfrac, self.args.covfrac, init_csv, file)
-				
-				except FileNotFoundError:
-					print(f'x  No com file were found for {file}, the check_geom test will be disabled for this calculation')
-					self.args.log.write(f'x  No com file were found for {file}, the check_geom test will be disabled for this calculation')
-				
-				if isomerized:
-					errortype = 'isomerization'
-				os.chdir(self.args.w_dir_main)
+			if self.args.isom is not None:
+				errortype = self.analyze_isom(file,cartesians,atom_types)
 
 			# move initial QM input files (if the files are placed in the same folder as the output files)
 			if os.path.exists(f'{self.args.w_dir_main}/{file_name}.com'):
 				move_file(self.args.w_dir_main.joinpath('initial_QM_inputs/'), self.args.w_dir_main,f'{file_name}.com')
 
-			if errortype not in ['ts_no_imag_freq','atomicbasiserror','no_data','isomerization','duplicate_calc','spin_contaminated','none','sp_calc']:
-				# user-defined keywords_line, mem and nprics overwrites previously used parameters
-				if self.args.qm_input != '':
-					keywords_line = self.args.qm_input
+			# create input files through QPREP to fix the errors (some errors require user intervention)
+			if errortype not in ['ts_no_imag_freq','isomerization','duplicate_calc','spin_contaminated','none','sp_calc']:
+				self.qcorr_fixing(cclib_data,file_name,atom_types,cartesians)
 
-				if self.args.mem != '':
-					mem = self.args.mem
-				elif mem == '':
-					mem = '8GB'
-
-				if self.args.nprocs != 0:
-					nprocs = self.args.nprocs
-				elif nprocs == 0:
-					nprocs = 4
-
-				qprep(destination=Path(f'{self.args.w_dir_main}/unsuccessful_QM_outputs/run_{self.args.round_num}/fixed_QM_inputs'), w_dir_main=self.args.w_dir_main,
-					molecule=file_name, charge=charge, mult=mult,
-					program=self.args.program, atom_types=atom_types,
-					cartesians=cartesians, qm_input=keywords_line,
-					mem=mem, nprocs=nprocs, chk=self.args.chk, qm_end=self.args.qm_end,
-					bs_gen=self.args.bs_gen, bs=self.args.bs, gen_atoms=self.args.gen_atoms)
-
+			# This part places the calculations and json files in different folders depending on the type of termination
 			print(f'{file}: Termination = {termination}, Error type = {errortype}')
 			self.args.log.write(f'{file}: Termination = {termination}, Error type = {errortype}')
 
-			# This part places the calculations in different folders depending on the type of termination
 			file_terms,destination = self.organize_outputs(file,termination,errortype,file_terms)
-			
-			destination_json = destination.joinpath('json_files/')
-			move_file(destination_json, self.args.w_dir_main, file_name+'.json')
+			if errortype in ['none','sp_calc']:
+				destination_json = destination.joinpath('json_files/')
+				move_file(destination_json, self.args.w_dir_main, file_name+'.json')
+			else:
+				os.remove(file_name+'.json')
 
 			# write information about the QCORR analysis in a csv
 			self.write_qcorr_csv(file_terms)
 
+		# performs a full analysis to ensure that the calcs were run with the same parameters
 		if self.args.fullcheck:
 			try:
 				destination_fullcheck = self.args.w_dir_main.joinpath('successful_QM_outputs/json_files/')
@@ -285,10 +113,10 @@ class qcorr():
 				full_check(w_dir_main=destination_fullcheck,destination_fullcheck=destination_fullcheck,json_files=json_files)
 			
 			except FileNotFoundError:
-				print('x  No normal terminations with no errors to run the full check analysis')
-				self.args.log.write('x  No normal terminations with no errors to run the full check analysis')
-		
-			
+				print('\nx  No normal terminations with no errors to run the full check analysis')
+				self.args.log.write('\nx  No normal terminations with no errors to run the full check analysis')
+
+
 	# include geom filters (ongoing work)
 
 	# 			if len(self.args.geom_rules) >= 1:
@@ -316,11 +144,284 @@ class qcorr():
 		with cclib and load the data in the cclib json files
 		'''
 		
+		# cclib generation of json files with ccwrite
+		termination,errortype,cclib_data = self.json_gen(file,file_name)
+		outlines = []
+
+		if errortype == 'no_data':
+			return termination,errortype,None,None
+
+		# calculations with 1 atom
+		if cclib_data['properties']['number of atoms'] == 1:
+			cclib_data['vibrations'] = {'frequencies': [], 'displacement': []}
+			if not 'energy' in cclib_data['properties']:
+				termination = 'other'
+				errortype = 'not_specified'
+			elif not 'free energy' in cclib_data['properties']['energy']:
+				errortype = 'sp_calc'
+
+		# normal terminations
+		elif 'vibrations' in cclib_data:
+			# spin contamination analysis using user-defined thresholds
+			if 'S2 after annihilation' in cclib_data['properties']:
+				unpaired_e = cclib_data['properties']['multiplicity']-1
+				# this first part accounts for singlet diradicals (threshold is 10% of the spin before annihilation)
+				if unpaired_e == 0:
+					if cclib_data['properties']['S2 after annihilation'] > abs(self.args.s2_threshold/100)*cclib_data['properties']['S2 before annihilation']:
+						errortype = 'spin_contaminated'
+				else:
+					spin = unpaired_e*0.5
+					s2_expected_value = spin*(spin+1)
+					spin_diff = abs(float(cclib_data['properties']['S2 after annihilation'])-s2_expected_value)
+					if spin_diff > abs(self.args.s2_threshold/100)*s2_expected_value:
+						errortype = 'spin_contaminated'
+			
+			if errortype == 'none' and self.args.freq_conv is not None:
+				freq_conv = cclib_data['optimization']['geometric values'][-1]
+				freq_conv_targets = cclib_data['optimization']['geometric targets']
+				for i,conv in enumerate(freq_conv):
+					if conv > freq_conv_targets[i]:
+						errortype = 'freq_no_conv'
+
+		# general errors
+		else:
+			termination = 'other'
+			errortype = 'not_specified'
+			if 'optimization' in cclib_data:
+				# if the optimization finished, only a freq job is required
+				if 'done' in cclib_data['optimization'] and cclib_data['optimization']['done']:
+					errortype = 'no_freq'
+					
+			# use very short reversed loop to find basis set incompatibilities and SCF errors
+			outlines = read_file(self.args.w_dir_main,file)
+			for i in reversed(range(len(outlines)-15,len(outlines))):
+				if outlines[i].find('Normal termination') > -1 and errortype != 'no_freq':
+					termination = 'normal'
+					errortype = 'sp_calc'
+					cclib_data['metadata']['ground or transition state'] = 'SP calculation'
+					break
+				elif outlines[i-1].find('Atomic number out of range') > -1 or outlines[i-1].find('basis sets are only available') > -1:
+					errortype = 'atomicbasiserror'
+					break
+				elif outlines[i].find('SCF Error') > -1:
+					errortype = 'SCFerror'
+					break
+
+		return termination,errortype,cclib_data,outlines
+
+
+	def analyze_normal(self,duplicate_data,errortype,cclib_data):
+		'''
+		Analyze errors from normally terminated calculations
+		'''
+
+		atom_types,cartesians = cclib_atoms_coords(cclib_data)
+
+		if errortype == 'none':
+			# in eV, converted to hartree using the conversion factor from cclib
+			E_dup = cclib_data['properties']['energy']['total']
+			E_dup = E_dup/27.21138505
+			# in hartree
+			try:
+				H_dup = cclib_data['properties']['enthalpy']
+				G_dup = cclib_data['properties']['energy']['free energy']
+			except (AttributeError,KeyError):
+				if cclib_data['properties']['number of atoms'] == 1:
+					if cclib_data['metadata']['keywords line'].find('freq') == -1:
+						errortype = 'sp_calc'
+						cclib_data['metadata']['ground or transition state'] = 'SP calculation'
+					H_dup = E_dup
+					G_dup = E_dup
+			# detects if this calculation is a duplicate
+			for i,_ in enumerate(duplicate_data['Energies']):
+				E_diff = abs(E_dup - duplicate_data['Energies'][i])
+				H_diff = abs(H_dup - duplicate_data['Enthalpies'][i])
+				G_diff = abs(G_dup - duplicate_data['Gibbs'][i])
+				if max([E_diff,H_diff,G_diff]) < abs(self.args.dup_threshold):
+					errortype = 'duplicate_calc'
+
+		if errortype == 'none':
+			duplicate_data['Energies'].append(E_dup)
+			duplicate_data['Enthalpies'].append(H_dup)
+			duplicate_data['Gibbs'].append(G_dup)
+
+			initial_ifreqs = 0
+			for freq in cclib_data['vibrations']['frequencies']:
+				if float(freq) < 0 and abs(float(freq)) > abs(self.args.ifreq_cutoff):
+					initial_ifreqs += 1
+
+			# exclude TS imag frequency
+			if cclib_data['metadata']['ground or transition state'] == 'transition_state':
+				initial_ifreqs -= 1
+
+			# gives new coordinates by displacing the normal mode(s) of the negative freq(s)
+			if initial_ifreqs > 0:
+				errortype = 'extra_imag_freq'
+			
+			elif initial_ifreqs < 0:
+				errortype = 'ts_no_imag_freq'
+			
+			if len(atom_types) in [3,4]:
+				errortype = detect_linear(errortype,atom_types,cclib_data)
+
+		if errortype in ['extra_imag_freq','freq_no_conv','linear_mol_wrong']:
+			if errortype == 'extra_imag_freq':
+				cartesians = self.fix_imag_freqs(cclib_data, cartesians)
+
+			# in case no previous OPT was done (only works if it's not a TS)
+			opt_found = False
+			for keyword in cclib_data['metadata']['keywords line'].split():
+				if keyword.lower().startswith('opt'):
+					opt_found = True
+			if not opt_found:
+				cclib_data['metadata']['keywords line'] += ' opt'
+
+			if errortype == 'linear_mol_wrong':
+				cclib_data['metadata']['keywords line'] += ' symmetry=(PG=Cinfv)'
+
+			elif errortype == 'freq_no_conv':
+				# adjust the keywords so only FREQ is calculated
+				new_keywords_line = ''
+				for keyword in cclib_data['metadata']['keywords line'].split():
+					if keyword.lower().startswith('opt'):
+						keyword = self.args.freq_conv
+					new_keywords_line += keyword
+					new_keywords_line += ' '
+				cclib_data['metadata']['keywords line'] = new_keywords_line
+
+		return atom_types,cartesians,duplicate_data,errortype,cclib_data
+
+
+	def analyze_abnormal(self,errortype,cclib_data,outlines):
+		'''
+		Analyze errors from calculations that did not finish normally
+		'''
+		# for calcs with finished OPT but no freqs, adjust the keywords so only FREQ is calculated
+		if errortype == 'no_freq':
+			new_keywords_line = ''
+			for keyword in cclib_data['metadata']['keywords line'].split():
+				if keyword.lower().startswith('opt'):
+					keyword = ''
+				else:
+					new_keywords_line += keyword
+					new_keywords_line += ' '
+			cclib_data['metadata']['keywords line'] = new_keywords_line
+			atom_types,cartesians = cclib_atoms_coords(cclib_data)
+		else:
+			# help to fix SCF convergence errors
+			if errortype == 'SCFerror':
+				if cclib_data['metadata']['keywords line'].find(' scf=xqc') > -1 or cclib_data['metadata']['keywords line'].find(' scf=qc') > -1:
+					new_keywords_line = ''
+					for keyword in cclib_data['metadata']['keywords line'].split():
+						if keyword == 'scf=xqc':
+							keyword = 'scf=qc'
+						new_keywords_line += keyword
+						new_keywords_line += ' '
+					cclib_data['metadata']['keywords line'] = new_keywords_line
+						
+				else:
+					cclib_data['metadata']['keywords line'] += ' scf=xqc'
+			
+			if errortype in ['not_specified','SCFerror']:
+				if 'geometric values' in cclib_data['optimization']:
+					RMS_forces = [row[1] for row in cclib_data['optimization']['geometric values']]
+					min_RMS = RMS_forces.index(min(RMS_forces))
+				else:
+					# for optimizations that fail in the first step
+					min_RMS = 0
+				atom_types,cartesians = [],[]
+				per_tab = periodic_table()
+				count_RMS = -1
+				for i,line in enumerate(outlines):
+					if line.find('Standard orientation:') > -1:
+						count_RMS += 1
+					if count_RMS == min_RMS:
+						range_lines = [i+5,i+5+cclib_data['properties']['number of atoms']]
+						break
+				for i in range(range_lines[0],range_lines[1]):
+					massno = int(outlines[i].split()[1])
+					if massno < len(per_tab):
+						atom_symbol = per_tab[massno]
+					else:
+						atom_symbol = "XX"
+					atom_types.append(atom_symbol)
+					cartesians.append([float(outlines[i].split()[3]), float(outlines[i].split()[4]), float(outlines[i].split()[5])])
+
+		return atom_types,cartesians,cclib_data
+
+
+	def analyze_isom(self,file,cartesians,atom_types):
+		'''
+		Check if the initial structure isomerized during QM geometry optimization
+		'''
+		isomerized = False
+		init_csv = pd.DataFrame()
+		os.chdir(self.args.isom_inputs)
+
+		try:
+			atoms_com, coords_com, atoms_and_coords = [],[],[]
+			if len(self.args.isom.split('.')) == 1:
+				atoms_and_coords,_ = get_info_input(f'{file.split(".")[0]}.{self.args.isom}')
+
+			elif self.args.isom.split('.')[1] != 'csv':
+				init_csv = pd.read_csv(self.args.isom)
+
+			for line in atoms_and_coords:
+				atoms_com.append(line.split()[0])
+				coords_com.append([float(line.split()[1]), float(line.split()[2]), float(line.split()[3])])
+
+			isom_data = {'Coords input': coords_com, 'Coords output': cartesians,
+						'Atoms input': atoms_com, 'Atoms output': atom_types,
+						'VdW radii fraction': self.args.vdwfrac, 
+						'Covalent radii fraction': self.args.covfrac, 'Initial csv': init_csv}
+
+			isomerized = check_isomerization(isom_data, file)
+
+		except FileNotFoundError:
+			print(f'x  No com file were found for {file}, the check_geom test will be disabled for this calculation')
+			self.args.log.write(f'x  No com file were found for {file}, the check_geom test will be disabled for this calculation')
+
+		if isomerized:
+			errortype = 'isomerization'
+
+		os.chdir(self.args.w_dir_main)
+
+		return errortype
+
+
+	def qcorr_fixing(self,cclib_data,file_name,atom_types,cartesians):
+		'''
+		Create com files for resubmission with the suggested protocols to correct the errors
+		'''
+		# user-defined keywords line, mem and nprocs overwrites previously used parameters
+		if self.args.qm_input != '':
+			cclib_data['metadata']['keywords line'] = self.args.qm_input
+
+		if self.args.mem != '':
+			cclib_data['metadata']['memory'] = self.args.mem
+		elif cclib_data['metadata']['memory'] == '':
+			cclib_data['metadata']['memory'] = '8GB'
+
+		if self.args.nprocs != 0:
+			cclib_data['metadata']['processors'] = self.args.nprocs
+		elif cclib_data['metadata']['processors'] == 0:
+			cclib_data['metadata']['processors'] = 4
+
+		qprep(destination=Path(f'{self.args.w_dir_main}/unsuccessful_QM_outputs/run_{self.args.round_num}/fixed_QM_inputs'), w_dir_main=self.args.w_dir_main,
+			molecule=file_name, charge=cclib_data['properties']['charge'], mult=cclib_data['properties']['multiplicity'],
+			program=self.args.program, atom_types=atom_types,
+			cartesians=cartesians, qm_input=cclib_data['metadata']['keywords line'],
+			mem=cclib_data['metadata']['memory'], nprocs=cclib_data['metadata']['processors'], chk=self.args.chk, qm_end=self.args.qm_end,
+			bs_gen=self.args.bs_gen, bs=self.args.bs, gen_atoms=self.args.gen_atoms)
+
+
+	def json_gen(self,file,file_name):
+		'''
+		Create a json file with cclib and load a dictionary
+		'''
+
 		termination,errortype = 'normal','none'
 		
-		# create a json file with cclib and load a dictionary. This protocol is
-		# favored over the traditional ccread since more data will be added to
-		# the json file at the end
 		command_run_1 = ['ccwrite', 'json', file]
 		subprocess.run(command_run_1)
 		
@@ -332,82 +433,21 @@ class qcorr():
 			self.args.log.write(f'x  Potential cclib compatibility problem or no data found for file {file}')
 			termination = 'other'
 			errortype = 'no_data'
-
-		if errortype == 'no_data':
-			return termination,errortype,None,None,None,None,None,None,None,None,None,None
-
-		# retrieves information from the cclib parser
-		n_atoms = cclib_data['properties']['number of atoms']
-		charge = cclib_data['properties']['charge']
-		mult = cclib_data['properties']['multiplicity']
-		keywords_line,calc_type,mem,nprocs = get_metadata(cclib_data)
-		s2_after_anni,s2_before_anni = get_s2(cclib_data)
-
-		# determine error/unfinished vs normal terminations and freqs for normal terminations
-		freqs,freq_displacements = [],[]
-		try:
-			if n_atoms > 1:
-				freqs = cclib_data['vibrations']['frequencies']
-				freq_displacements = cclib_data['vibrations']['displacement']
+			cclib_data = {}
 			
-			# spin contamination analysis using user-defined thresholds
-			unpaired_e = mult-1
-			# this first part accounts for singlet diradicals (threshold is 10% of the spin before annihilation)
-			if unpaired_e == 0 and s2_after_anni != 0:
-				if s2_after_anni > abs(self.args.s2_threshold/100)*s2_before_anni:
-					errortype = 'spin_contaminated'
-			else:
-				spin = unpaired_e*0.5
-				s2_expected_value = spin*(spin+1)
-				spin_diff = abs(float(s2_after_anni)-s2_expected_value)
-				if spin_diff > abs(self.args.s2_threshold/100)*s2_expected_value:
-					errortype = 'spin_contaminated'
-			
-			if errortype == 'none' and self.args.freq_conv is not None:
-				freq_conv = cclib_data['optimization']['geometric values'][-1]
-				freq_conv_targets = cclib_data['optimization']['geometric targets']
-				for i,conv in enumerate(freq_conv):
-					if conv > freq_conv_targets[i]:
-						errortype = 'freq_no_conv'
-
-		except (AttributeError,KeyError):
-			# if the optimization finished, only a freq job is required
-			try:
-				if cclib_data['optimization']['done']:
-					termination = 'other'
-					errortype = 'no_freq'
-			except (AttributeError,KeyError):
-				# single-point calcs (normal terminations with no opt)
-				try:
-					cclib_data['optimization']['geometric values']
-					termination = 'other'
-					errortype = 'not_specified'
-				except (AttributeError,KeyError):
-					# general errors
-					cclib_data['atoms']['elements']['number']
-					termination = 'normal'
-					errortype = 'sp_calc'
-					calc_type = 'SP calculation'
-
-		return termination,errortype,cclib_data,n_atoms,freqs,freq_displacements,charge,mult,keywords_line,calc_type,mem,nprocs
+		return termination,errortype,cclib_data
 
 
-	def fix_imag_freqs(self, n_atoms, cartesians, freqs, freq_displacements, calc_type):
+	def fix_imag_freqs(self,cclib_data,cartesians):
 		"""
 		Fixes undersired (extra) imaginary frequencies from QM calculations. This function multiplies the imaginary normal mode vectors by the selected amplitude (0.2 is the default amplitude in the pyQRC script from GitHub, user: bobbypaton).	By default, all the extra imaginary modes are used (i.e. in calculations with three	extra imaginary frequencies, all the three modes will be used to displace the atoms). This can be tuned with the --ifreq_cutoff option (i.e. only use freqs lower than -50 cm-1).
 
 		Parameters
 		----------
-		n_atoms : int
-			Number of atoms in the calculation
+		cclib_data : cclib object
+			Variables parsed with cclib
 		cartesians : list of lists
 			List of lists containing the molecular coordinates as floats
-		freqs : list of float
-			List containing the frequencies as floats
-		freq_displacements : list of matrixes
-			Contains the normal modes for each frequencies (including all atoms)
-		calc_type : str
-			Type of the QM calculation (ground_state or transition_state)
 
 		Returns
 		-------
@@ -419,20 +459,20 @@ class qcorr():
 		shift = []
 
 		# could get rid of atomic units here, if zpe_rat definition is changed
-		for mode,_ in enumerate(freqs):
+		for mode,_ in enumerate(cclib_data['vibrations']['frequencies']):
 			# moves along all imaginary freqs (ignoring the TS imag freq, assumed to be the most negative freq)
-			if mode == 0 and calc_type == 'transition_state':
+			if mode == 0 and cclib_data['metadata']['ground or transition state'] == 'transition_state':
 				shift.append(0.0)
 			else:
-				if freqs[mode] < 0.0:
+				if cclib_data['vibrations']['frequencies'][mode] < 0.0:
 					shift.append(self.args.amplitude_ifreq)
 				else:
 					shift.append(0.0)
 
 			# The starting geometry is displaced along each normal mode according to the random shift
-			for atom in range(0,n_atoms):
+			for atom in range(0,cclib_data['properties']['number of atoms']):
 				for coord in range(0,3):
-					cartesians[atom][coord] = cartesians[atom][coord] + freq_displacements[mode][atom][coord] * shift[mode]
+					cartesians[atom][coord] = cartesians[atom][coord] + cclib_data['vibrations']['displacement'][mode][atom][coord] * shift[mode]
 
 		return cartesians
 
@@ -534,7 +574,7 @@ class qcorr():
 		ana_data.at[0,'Freq not converged'] = file_terms['freq_no_conv']
 		ana_data.at[0,'Linear mol with wrong n of freqs'] = file_terms['linear_mol_wrong']
 		ana_data.at[0,'SCF error'] = file_terms['scf_error']
-		ana_data.at[0,'Error before SCF'] = file_terms['no_data']
+		ana_data.at[0,'No data'] = file_terms['no_data']
 		ana_data.at[0,'Basis set error'] =  file_terms['atom_error']
 		ana_data.at[0,'Other errors'] = file_terms['not_specified']
 		if self.args.s2_threshold > 0.0:
@@ -546,8 +586,6 @@ class qcorr():
 			ana_data.at[0,'Isomerization'] = file_terms['isomerized']
 		path_as_str = self.args.w_dir_main.as_posix()
 		ana_data.to_csv(path_as_str+f'/QCORR-run_{self.args.round_num}-stats.csv',index=False)
-
-		move_file(self.args.w_dir_main.joinpath('dat_files/'), self.args.w_dir_main,f'QCORR-run_{self.args.round_num}-stats.csv')
 
 
 def full_check(w_dir_main=os.getcwd(),destination_fullcheck='',json_files='*.json'):

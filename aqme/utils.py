@@ -1044,14 +1044,8 @@ def get_filenames(type, name):
 
 
 def check_isomerization(
-	COORDINATES_com,
-	COORDINATES_log,
-	atom_types_com,
-	atom_types_log,
-	vdwfrac,
-	covfrac,
-	init_csv,
-	file,
+	isom_data,
+	file
 ):
 	"""
 	Inputs two molecules with the atoms in the same order and checks if any bond
@@ -1065,33 +1059,21 @@ def check_isomerization(
 
 	Parameters
 	----------
-	COORDINATES_com : list of lists containing atomic coordinates
-		Molecule 1 (Theoretically, non-optimized)
-	COORDINATES_log : list of lists containing atomic coordinates
-		Molecule 2 (Theoretically, optimized)
-	atom_types_com : list of atoms
-		Molecule 1 (Theoretically, non-optimized)
-	atom_types_log : list of atoms
-		Molecule 2 (Theoretically, optimized)
-	vdwfrac : float
-		Fraction of the summed VDW radii (default is 0.5)
-	covfrac : float
-		Fraction of the summed covalent radii (default is 1.10)
-	init_csv : dataframe
-		Contains connectivity from the original non-optimized molecules (i.e. saved from CSEARCH)
+	isom_data : dict
+		Contains data related to coordinates, atoms and connectivity for input and output files
 	file : string
-		Filename
+		Filename (with extension)
 
 	Returns
 	-------
-	bool
-		True there is a clearly distorted bond within the geometries.
+	isomerized : bool
+		True if there is a clearly distorted bond within the geometries
 	"""
 
 	# load connectivity matrix from the starting points and convert string into matrix
-	if not init_csv.empty:
+	if not isom_data['Initial csv'].empty:
 		filename = file.replace("_" + file.split("_")[-1], "")
-		init_connectivity_string = init_csv[init_csv["code_name"] == filename][
+		init_connectivity_string = isom_data['Initial csv'][isom_data['Initial csv']["code_name"] == filename][
 			"initial_connectiv"
 		][0]
 		init_connectivity = json.loads(
@@ -1099,29 +1081,29 @@ def check_isomerization(
 			.replace(",]", "],")
 			.replace("],]", "]]")
 		)
-		atom_types_com = init_connectivity[0]
+		isom_data['Atoms input'] = init_connectivity[0]
 
 	else:
 		init_connectivity = gen_connectivity(
-			atom_types_com, COORDINATES_com, vdwfrac, covfrac
+			isom_data,isom_data['Atoms input'],isom_data['Coords input']
 		)
 
 	# in case the systems are not the same
-	if len(atom_types_log) != len(atom_types_com):
+	if len(isom_data['Atoms output']) != len(isom_data['Atoms input']):
 		isomerized = True
 
 	else:
 		final_connectivity = gen_connectivity(
-			atom_types_log, COORDINATES_log, vdwfrac, covfrac
+			isom_data,isom_data['Atoms output'],isom_data['Coords output']
 		)
 
 		# check connectivity differences from initial structure
 		diff = final_connectivity - init_connectivity
 
 		# remove bonds involved in TSs from connectivity matrixes
-		if not init_csv.empty:
-			if "TS_atom_idx" in init_csv.columns:
-				ts_atoms = init_csv[init_csv["code_name"] == filename]["TS_atom_idx"][
+		if not isom_data['Initial csv'].empty:
+			if "TS_atom_idx" in isom_data['Initial csv'].columns:
+				ts_atoms = isom_data['Initial csv'][isom_data['Initial csv']["code_name"] == filename]["TS_atom_idx"][
 					0
 				].split(",")
 				for i, ts_idx in enumerate(ts_atoms):
@@ -1135,7 +1117,7 @@ def check_isomerization(
 	return isomerized
 
 
-def gen_connectivity(atom_types_conn, COORDINATES_conn, vdwfrac, covfrac):
+def gen_connectivity(isom_data,atom_types_conn,COORDINATES_conn):
 	"""
 	Use VDW radii to infer a connectivity matrix
 	"""
@@ -1149,7 +1131,7 @@ def gen_connectivity(atom_types_conn, COORDINATES_conn, vdwfrac, covfrac):
 				dist_ij = np.linalg.norm(
 					np.array(COORDINATES_conn[i]) - np.array(COORDINATES_conn[j])
 				)
-				if dist_ij / vdw_ij < vdwfrac or dist_ij / rcov_ij < covfrac:
+				if dist_ij / vdw_ij < isom_data['VdW radii fraction'] or dist_ij / rcov_ij < isom_data['Covalent radii fraction']:
 					conn_mat[i][j] = 1
 				else:
 					pass
@@ -1301,80 +1283,18 @@ def cclib_atoms_coords(cclib_data):
 	return atom_types,cartesians
 
 
-def get_metadata(cclib_data):
-	"""
-	Retrieves metadata from the cclib parsing
-
-	Parameters
-	----------
-	cclib_data : cclib object
-		cclib object containing all the data parsed
-
-	Returns
-	-------
-	keywords_line : string
-		Original keyword line (input) from the output QM file
-	calc_type : str
-		Type of the QM calculation (ground_state or transition_state)
-	mem : str
-		Memory used in the calculations
-	nprocs : int
-		Number of processors used in the calculations
-	"""    
-
-	try:
-		keywords_line = cclib_data['metadata']['keywords line']
-		calc_type = cclib_data['metadata']['ground or transition state']
-	except (AttributeError,KeyError):
-		keywords_line,calc_type = '',''
-	try:
-		mem = cclib_data['metadata']['memory']
-		nprocs = cclib_data['metadata']['processors']
-	except (AttributeError,KeyError):
-			mem,nprocs = '',0
-
-	return keywords_line,calc_type,mem,nprocs
-
-
-def get_s2(cclib_data):
-	"""
-	Retrieves information related to <S**2> from the cclib parsing
-
-
-	Parameters
-	----------
-	cclib_data : cclib object
-		cclib object containing all the data parsed
-
-	Returns
-	-------
-	s2_after_anni : float
-		<S**2> value from open-shell QM calculations after spin annihilation
-	s2_before_anni : float
-		<S**2> value from open-shell QM calculations before spin annihilation
-	"""
-	
-	try:
-		s2_after_anni = cclib_data['properties']['S2 after annihilation']
-		s2_before_anni = cclib_data['properties']['S2 before annihilation']
-	except (AttributeError,KeyError):
-		s2_after_anni,s2_before_anni = 0,0
-
-	return s2_after_anni,s2_before_anni
-
-
-def detect_linear(errortype,atom_types,freqs):
+def detect_linear(errortype,atom_types,cclib_data):
 	linear_options_3 = [['I', 'I', 'I'],['N', 'N', 'N'],['N', 'C', 'H'],['O', 'C', 'O'],['O', 'C', 'S'],['S', 'C', 'S'],['F','Be','F'],['F','Xe','F'],['O','C','N'],['S','C','N']]
 	linear_options_4 = [['C', 'C', 'H', 'H']]
 
 	if len(atom_types) == 3:
 		for linear_3 in linear_options_3:
-			if sorted(atom_types) == sorted(linear_3) and len(freqs) != 4:
+			if sorted(atom_types) == sorted(linear_3) and len(cclib_data['vibrations']['frequencies']) != 4:
 				errortype = 'linear_mol_wrong'
 				break
 	elif len(atom_types) == 4:
 		for linear_4 in linear_options_4:
-			if sorted(atom_types) == sorted(linear_4) and len(freqs) != 7:
+			if sorted(atom_types) == sorted(linear_4) and len(cclib_data['vibrations']['frequencies']) != 7:
 				errortype = 'linear_mol_wrong'
 				break
 

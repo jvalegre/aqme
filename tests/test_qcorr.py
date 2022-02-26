@@ -50,6 +50,7 @@ path_qcorr = os.getcwd()+'/Example_workflows/QCORR_processing_QM_outputs'
     # isomerization with com/gjf
     # isomerization with csv (ongoing)
     # isomeriz with csv for TSs (ongoing)
+    # check that the initial_QM_inputs folder doesnt get created unless there are COM files (and check that it DOES get created when there are com files)
     # move 1 error and 1 normal file to the main folder, and run qcorr, make sure the file is placed in succes and run_2/error
     (None, None, 'restore_original', None, None), # test single-point generation
     # SAME FOR COMMAND LINE, only general (i.e. mount of files in each folder in 1 test)
