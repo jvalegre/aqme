@@ -2,7 +2,7 @@ output_name : 'csearch' #name for output
 verbose : True
 
 CSEARCH : 'crest'
-QPREP : 'gaussian'
+qprep : 'gaussian'
 
 nprocs : 8
 mem : '24GB'

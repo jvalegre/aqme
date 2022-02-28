@@ -18,7 +18,7 @@ def parser_args():
         "-i",
         "--input",
         help="File containing molecular structure(s)",
-        default=" ",
+        default="",
     )
     parser.add_argument(
         "--smi",
@@ -54,7 +54,6 @@ def parser_args():
         help="The extension of the SDF files written",
     )
 
-    # EXPAND QPREP TO GAUSSIAN, ORCA; TURBOMOLE!
     # work the script has to do
     parser.add_argument(
         "--CSEARCH",
@@ -71,11 +70,10 @@ def parser_args():
         choices=["xtb", "ani"],
     )
     parser.add_argument(
-        "--QPREP",
-        action="store",
-        default=None,
+        "--qprep",
+        action="store_true",
+        default=False,
         help="Create input files for QM calculations",
-        choices=["gaussian", "orca"],
     )
     parser.add_argument(
         "--qcorr",
@@ -458,6 +456,21 @@ def parser_args():
         default=False,
         help="Include the chk input line in new input files for Gaussian calculations",
     )
+    parser.add_argument(
+        "--atom_types",
+        help="List containing the atoms of the system",
+        default=[],
+    )
+    parser.add_argument(
+        "--cartesians",
+        help="Cartesian coordinates used for further processing",
+        default=[],
+    )
+    parser.add_argument(
+        "--suffix",
+        help="Suffix for the new input files",
+        default="",
+    )
 
     # QPREP with Turbomole
     parser.add_argument(
@@ -533,7 +546,7 @@ def parser_args():
     )
 
     parser.add_argument(
-        "--qm_files",
+        "--files",
         action="store",
         default=[],
         help="Filenames of QM output files to analyze",
@@ -610,31 +623,6 @@ def parser_args():
         action="store",
         default=True,
         help="Perform an analysis to detect whether the calculations were done homogeneously (i.e. same level of theory, solvent, grid size, etc)",
-    )
-    parser.add_argument(
-        "--author",
-        action="store",
-        default="",
-        help="Author of the calculations",
-        type=str,
-    )
-
-    # writing input files from json format
-    parser.add_argument(
-        "--json2input",
-        action="store_true",
-        help="Create QM single point input files from json files",
-        default=False,
-    )
-    parser.add_argument(
-        "--json_files",
-        help="Filenames of json files to analyze",
-        default=[],
-    )
-    parser.add_argument(
-        "--suffix",
-        help="Suffix for the new input files",
-        default="",
     )
 
     # argumets for QSTAT
@@ -825,14 +813,14 @@ def set_options(kwargs):
     # dictionary containing default values for options
     var_dict = {
         "varfile": None,
-        "input": " ",
+        "input": "",
         "output_name": "output",
         "path": "",
         "verbose": False,
         "output": ".sdf",
         "CSEARCH": None,
         "CMIN": None,
-        "QPREP": None,
+        "qprep": False,
         "qcorr": False,
         "QSTAT": None,
         "QPRED": None,
@@ -911,7 +899,9 @@ def set_options(kwargs):
         "tmmaxcore": 200,
         "com_from_xyz": False,
         "w_dir_main": os.getcwd(),
-        "qm_files": [],
+        "files": [],
+        "atom_types": [],
+        "cartesians": [],
         "dup": True,
         "dup_threshold": 0.0001,
         "amplitude_ifreq": 0.2,
@@ -923,9 +913,6 @@ def set_options(kwargs):
         "vdwfrac": 0.5,
         "covfrac": 1.1,
         "fullcheck": True,
-        "author": "",
-        "json2input": False,
-        "json_files": [],
         "suffix": "",
         "rot_dihedral": False,
         "dihedral": [],
@@ -960,12 +947,6 @@ def set_options(kwargs):
         if key in var_dict:
             vars(options)[key] = kwargs[key]
         else:
-            print(
-                "Warning! Option: [",
-                key,
-                ":",
-                kwargs[key],
-                "] provided but no option exists, try -h to see available options.",
-            )
+            print("Warning! Option: [",key,":",kwargs[key],"] provided but no option exists, try -h to see available options.")
 
     return options

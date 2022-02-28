@@ -1,7 +1,7 @@
 ######################################################.
-#        This file stores all the functions          #
-#          used in the LOG file analyzer             #
+#        This file stores the QCORR class            #
 ######################################################.
+
 import os
 import glob
 import pandas as pd
@@ -10,14 +10,15 @@ import subprocess
 from pathlib import Path
 from aqme.utils import (
 	move_file,
-	check_isomerization,
-	read_file,
-	cclib_atoms_coords,
-	periodic_table,
+	QM_coords,
 	get_info_input,
+	load_variables,
+	read_file,
+	cclib_atoms_coords)
+from aqme.qcorr_utils import (
 	detect_linear,
-	load_variables
-)
+	check_isomerization,
+	full_check)
 from aqme.qprep import qprep
 
 
@@ -61,7 +62,7 @@ class qcorr():
 
 		duplicate_data = {'Energies' : [], 'Enthalpies' : [], 'Gibbs': []}
 
-		for file in self.args.qm_files:
+		for file in self.args.files:
 			# get initial cclib data and termination/error types and discard calcs with no data
 			file_name = file.split('.')[0]
 			termination,errortype,cclib_data,outlines = self.cclib_init(file,file_name)
@@ -89,7 +90,7 @@ class qcorr():
 
 			# create input files through QPREP to fix the errors (some errors require user intervention)
 			if errortype not in ['ts_no_imag_freq','isomerization','duplicate_calc','spin_contaminated','none','sp_calc']:
-				self.qcorr_fixing(cclib_data,file_name,atom_types,cartesians)
+				self.qcorr_fixing(cclib_data,file,atom_types,cartesians)
 
 			# This part places the calculations and json files in different folders depending on the type of termination
 			print(f'{file}: Termination = {termination}, Error type = {errortype}')
@@ -329,23 +330,8 @@ class qcorr():
 				else:
 					# for optimizations that fail in the first step
 					min_RMS = 0
-				atom_types,cartesians = [],[]
-				per_tab = periodic_table()
-				count_RMS = -1
-				for i,line in enumerate(outlines):
-					if line.find('Standard orientation:') > -1:
-						count_RMS += 1
-					if count_RMS == min_RMS:
-						range_lines = [i+5,i+5+cclib_data['properties']['number of atoms']]
-						break
-				for i in range(range_lines[0],range_lines[1]):
-					massno = int(outlines[i].split()[1])
-					if massno < len(per_tab):
-						atom_symbol = per_tab[massno]
-					else:
-						atom_symbol = "XX"
-					atom_types.append(atom_symbol)
-					cartesians.append([float(outlines[i].split()[3]), float(outlines[i].split()[4]), float(outlines[i].split()[5])])
+				
+				atom_types,cartesians = QM_coords(outlines,min_RMS,cclib_data['properties']['number of atoms'],'gaussian')
 
 		return atom_types,cartesians,cclib_data
 
@@ -389,7 +375,7 @@ class qcorr():
 		return errortype
 
 
-	def qcorr_fixing(self,cclib_data,file_name,atom_types,cartesians):
+	def qcorr_fixing(self,cclib_data,file,atom_types,cartesians):
 		'''
 		Create com files for resubmission with the suggested protocols to correct the errors
 		'''
@@ -408,9 +394,8 @@ class qcorr():
 			cclib_data['metadata']['processors'] = 4
 
 		qprep(destination=Path(f'{self.args.w_dir_main}/unsuccessful_QM_outputs/run_{self.args.round_num}/fixed_QM_inputs'), w_dir_main=self.args.w_dir_main,
-			molecule=file_name, charge=cclib_data['properties']['charge'], mult=cclib_data['properties']['multiplicity'],
-			program=self.args.program, atom_types=atom_types,
-			cartesians=cartesians, qm_input=cclib_data['metadata']['keywords line'],
+			files=file, charge=cclib_data['properties']['charge'], mult=cclib_data['properties']['multiplicity'],
+			program=self.args.program, atom_types=atom_types, cartesians=cartesians, qm_input=cclib_data['metadata']['keywords line'],
 			mem=cclib_data['metadata']['memory'], nprocs=cclib_data['metadata']['processors'], chk=self.args.chk, qm_end=self.args.qm_end,
 			bs_gen=self.args.bs_gen, bs=self.args.bs, gen_atoms=self.args.gen_atoms)
 
@@ -566,7 +551,7 @@ class qcorr():
 		"""
 
 		ana_data = pd.DataFrame()
-		ana_data.at[0,'Total files'] = len(self.args.qm_files)
+		ana_data.at[0,'Total files'] = len(self.args.files)
 		ana_data.at[0,'Normal termination'] = file_terms['finished']
 		ana_data.at[0,'Single-point calcs'] = file_terms['sp_calcs']
 		ana_data.at[0,'Extra imag. freq.'] = file_terms['extra_imag_freq']
@@ -586,167 +571,3 @@ class qcorr():
 			ana_data.at[0,'Isomerization'] = file_terms['isomerized']
 		path_as_str = self.args.w_dir_main.as_posix()
 		ana_data.to_csv(path_as_str+f'/QCORR-run_{self.args.round_num}-stats.csv',index=False)
-
-
-def full_check(w_dir_main=os.getcwd(),destination_fullcheck='',json_files='*.json'):
-	"""
-	Checks that multiple calculations were done following the same protocols, including
-	program and version, grid size, level of theory, dispersion and solvation model.
-
-	Parameters
-	----------
-	w_dir_main : str
-		Working directory
-	destination_fullcheck : str
-		Destination to create the file with the full check
-	json_files : list of str
-		json files to compare (glob.glob('*.json') and '*.json are both valid inputs to
-		include all the json files from a folder)
-	"""
-
-	initial_dir = os.getcwd()
-	w_dir_main = Path(w_dir_main)
-	os.chdir(w_dir_main)
-
-	if json_files == '*.json' or json_files == '*json':
-		json_files=glob.glob('*.json')
-
-	df_fullcheck = pd.DataFrame(columns=['file', 'program', 'grid_type', 'level_of_theory', 'dispersion', 'solvation'])
-
-	for file in json_files:
-		file_name = file.split('.')[0]
-		with open(file) as json_file:
-			cclib_data = json.load(json_file)
-
-		program = cclib_data['metadata']['QM program']
-		solvation = cclib_data['metadata']['solvation']
-		dispersion = cclib_data['metadata']['dispersion model']			
-		grid_type = cclib_data['metadata']['grid type']
-		functional = cclib_data['metadata']['functional']
-		bs = cclib_data['metadata']['basis set']
-		if functional != '' or bs != '':
-			level_of_theory = '/'.join([functional, bs])
-		else:
-			level_of_theory = ''
-		# designed to detect G4 calcs
-		if level_of_theory == 'HF/GFHFB2':
-			level_of_theory = 'G4'
-		df_fullcheck.loc[len(df_fullcheck.index)] = [file_name, program, grid_type, level_of_theory, dispersion, solvation]
-	
-	fullcheck_file = '--QCORR_Fullcheck_Analysis--.dat'
-	fullcheck_txt = '-- Full check analysis --'
-
-	for prop in df_fullcheck.columns:
-		if prop != 'file':
-			unique_props = df_fullcheck[prop].unique()
-			if len(unique_props) > 1:
-				fullcheck_txt += f'\nx  Different {prop} used in the calculations:'
-				for unique_prop in unique_props:
-					file_names = df_fullcheck["file"].loc[df_fullcheck[prop] == unique_prop]
-					fullcheck_txt += f'\n     * {unique_prop} in:'
-					for file_name in file_names:
-						adapted_name = file_name.replace('/','\\').split("\\")[-1]
-						fullcheck_txt += f'\n       - {adapted_name}'
-			else:
-				fullcheck_txt += f'\no  Same {prop} ({unique_props[0]}) used in all the calculations'
-			
-	fullcheck_analysis = open(fullcheck_file, 'w')
-	print(fullcheck_txt)
-	fullcheck_analysis.write(fullcheck_txt)
-	fullcheck_analysis.close()
-
-	if destination_fullcheck == '':
-		destination_fullcheck = w_dir_main.joinpath('successful_QM_outputs/json_files/')
-	else:
-		destination_fullcheck = Path(destination_fullcheck)
-	move_file(destination_fullcheck, w_dir_main, fullcheck_file)
-	
-	os.chdir(initial_dir)
-
-
-def json2input(json_files='', w_dir_main=os.getcwd(), destination=None, suffix='',
-				charge=None, mult=None,	mem='8GB', nprocs=4, chk=False, qm_input='', bs_gen='',
-				bs='', gen_atoms=[], qm_end='', program='gaussian'):
-	'''
-	Reads a json file and use QPREP to generate input files.
-
-	Parameters
-	----------
-	json_files : list of str
-		Filenames of json files to analyze
-	w_dir_main : str
-		Folder with the json files to process
-	destination : str
-		Destination to create the new input files
-	suffix : str
-		Suffix for the new input files
-	charge : int
-		Charge of the calculations used in the following input files
-	mult : int
-		Multiplicity of the calculations used in the following input files
-	mem : str
-		Memory used in the calculations
-	nprocs : int
-		Number of processors used in the calculations
-	chk : bool
-		Include the chk input line in new input files
-	qm_input : str
-		keywords_line for new input files
-	bs_gen : str
-		Basis set used for gen(ECP) atoms
-	bs : str
-		Basis set used for non gen(ECP) atoms in gen(ECP) calculations
-	gen_atoms : list of str
-		Atoms included in the gen(ECP) basis set
-	qm_end : str
-		Final line in the new input files
-	program : str
-		Program required to create the new input files
-	'''
-	
-	w_dir_initial=os.getcwd()
-	os.chdir(w_dir_main)
-
-	charge_initial = charge
-	mult_initial = mult
-
-	if destination is None:
-		destination = Path(w_dir_main).joinpath("QCALC")
-	else:
-		destination = Path(destination)
-
-	if not isinstance(json_files, list):
-		json_files = glob.glob(json_files)
-
-	if json_files == '*.json':
-		json_files = glob.glob('*.json')
-	
-	for file in json_files:
-		file_name = file.split('.')[0]
-		with open(file) as json_file:
-			cclib_data = json.load(json_file)
-		try:
-			atom_types,cartesians = cclib_atoms_coords(cclib_data)
-		except (AttributeError,KeyError):
-			print('x  The json files do not contain coordinates and/or atom type information')
-		
-		# if no charge and multiplicity are specified, they are read from the json file
-		if charge_initial is None:
-			charge = cclib_data['properties']['charge']
-		if mult_initial is None:
-			mult = cclib_data['properties']['multiplicity']
-		if charge is None:
-			print('x  No charge was specified in the json file or function input (i.e. json2input(charge=0) )')
-		elif mult is None:
-			print('x  No multiplicity was specified in the json file or function input (i.e. json2input(mult=1) )')
-
-		qprep(destination=destination, w_dir_main=w_dir_main,
-			molecule=file_name, charge=charge, mult=mult,
-			program=program, atom_types=atom_types,
-			cartesians=cartesians, qm_input=qm_input,
-			mem=mem, nprocs=nprocs, chk=chk, qm_end=qm_end,
-			bs_gen=bs_gen, bs=bs, gen_atoms=gen_atoms, suffix=suffix)
-	
-	print(f'o  Final input files were generated in {destination}')
-
-	os.chdir(w_dir_initial)	

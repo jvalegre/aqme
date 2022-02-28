@@ -4,7 +4,7 @@ verbose : True
 
 CSEARCH : 'rdkit'
 CMIN : 'xtb'
-QPREP : 'gaussian'
+qprep : 'gaussian'
 
 nprocs : 8
 mem : '24GB'

@@ -402,12 +402,12 @@ def move_sdf_main(args):
 # 						args.path + str(lot) + "-" + str(bs) + "/success/output_files"
 # 					)
 # 				os.chdir(w_dir)
-# 				qm_files = get_filenames("output", name)
+# 				files = get_filenames("output", name)
 # 				calculate_parameters(
 # 					sdf_rdkit,
 # 					sdf_ani,
 # 					sdf_xtb,
-# 					qm_files,
+# 					files,
 # 					args,
 # 					log,
 # 					w_dir_main,
@@ -477,9 +477,9 @@ def move_sdf_main(args):
 # 				# assign the path to the finished directory.
 # 				w_dir = args.path + str(lot) + "-" + str(bs) + "/success/output_files"
 # 				os.chdir(w_dir)
-# 				qm_files = get_filenames("output", name)
+# 				files = get_filenames("output", name)
 #               qm_data = {'Functional': lot, 'Basis set': bs, 'QM program': type,
-#                          'QM files': qm_files, 'QM files SP': sp_files,
+#                          'QM files': files, 'QM files SP': sp_files,
 #                          'Functional SP': lot_sp, 'Basis set SP': bs_sp}
 #               file_data = {'Name mol': name_mol, 'Initial dir': w_dir_main,
 #                            'Dir SP': w_dir_sp, 'Working dir': w_dir}
@@ -507,7 +507,7 @@ def move_sdf_main(args):
 # 							sdf_rdkit,
 # 							sdf_xtb,
 # 							sdf_ani,
-# 							qm_files,
+# 							files,
 # 							sp_files,
 # 							lot,
 # 							bs,
@@ -536,7 +536,7 @@ def move_sdf_main(args):
 # 							sdf_rdkit,
 # 							sdf_xtb,
 # 							sdf_ani,
-# 							qm_files,
+# 							files,
 # 							sp_files,
 # 							lot,
 # 							bs,
@@ -577,7 +577,7 @@ def move_sdf_main(args):
 # 							sdf_rdkit,
 # 							sdf_xtb,
 # 							sdf_ani,
-# 							qm_files,
+# 							files,
 # 							sp_files,
 # 							lot,
 # 							bs,
@@ -594,7 +594,7 @@ def move_sdf_main(args):
 # 						sdf_rdkit,
 # 						sdf_xtb,
 # 						sdf_ani,
-# 						qm_files,
+# 						files,
 # 						None,
 # 						lot,
 # 						bs,
@@ -707,10 +707,10 @@ def move_sdf_main(args):
 # 				)
 # 			os.chdir(w_dir_fin)
 #
-# 			qm_files = get_filenames("output", name)
-# 			if len(qm_files) != 0:
+# 			files = get_filenames("output", name)
+# 			if len(files) != 0:
 # 				calculate_boltz_and_nmr(
-# 					qm_files, args, log, name, w_dir_fin, w_dir_main, lot, bs
+# 					files, args, log, name, w_dir_fin, w_dir_main, lot, bs
 # 				)
 # 	os.chdir(w_dir_main)
 #
@@ -754,10 +754,10 @@ def move_sdf_main(args):
 # 					args.path + str(lot) + "-" + str(bs) + "/success/output_files/"
 # 				)
 # 			os.chdir(w_dir_fin)
-# 			qm_files = get_filenames("output", name)
-# 			if len(qm_files) != 0:
+# 			files = get_filenames("output", name)
+# 			if len(files) != 0:
 # 				calculate_boltz_and_energy(
-# 					qm_files, args, log, name, w_dir_fin, w_dir_main, lot, bs
+# 					files, args, log, name, w_dir_fin, w_dir_main, lot, bs
 # 				)
 #
 # 	# combining the combining all files in different folders
@@ -821,12 +821,12 @@ def move_sdf_main(args):
 # 						args.path + str(lot) + "-" + str(bs) + "/success/output_files"
 # 					)
 # 				os.chdir(w_dir)
-# 				qm_files = get_filenames("output", name)
+# 				files = get_filenames("output", name)
 # 				calculate_db_parameters(
-# 					qm_files, args, log, w_dir_main, name, lot, bs
+# 					files, args, log, w_dir_main, name, lot, bs
 # 				)
 # 				calculate_boltz_and_dbstep(
-# 					qm_files, args, log, name, w_dir, w_dir_main, lot, bs
+# 					files, args, log, name, w_dir, w_dir_main, lot, bs
 # 				)
 # 		os.chdir(w_dir_main)
 #
@@ -865,10 +865,10 @@ def move_sdf_main(args):
 # 						args.path + str(lot) + "-" + str(bs) + "/success/output_files"
 # 					)
 # 				os.chdir(w_dir)
-# 				qm_files = get_filenames("output", name)
+# 				files = get_filenames("output", name)
 # 				# do boltz firsst
 # 				calculate_boltz_for_nics(
-# 					qm_files, args, log, name, w_dir, w_dir_main, lot, bs
+# 					files, args, log, name, w_dir, w_dir_main, lot, bs
 # 				)
 # 				for lot_sp, bs_sp, bs_gcp_sp in zip(
 # 					args.level_of_theory_sp, args.basis_set_sp, args.gen_bs_sp
@@ -896,12 +896,12 @@ def move_sdf_main(args):
 # 							+ str(bs_sp)
 # 						)
 # 					os.chdir(w_dir_sp)
-# 					qm_files_sp = get_filenames("output", name)
+# 					files_sp = get_filenames("output", name)
 # 					calculate_nics_parameters(
-# 						qm_files_sp, args, log, w_dir_main, name, lot_sp, bs_sp
+# 						files_sp, args, log, w_dir_main, name, lot_sp, bs_sp
 # 					)
 # 					calculate_avg_nics(
-# 						qm_files_sp,
+# 						files_sp,
 # 						args,
 # 						log,
 # 						name,
@@ -946,10 +946,10 @@ def move_sdf_main(args):
 # 						args.path + str(lot) + "-" + str(bs) + "/success/output_files"
 # 					)
 # 				os.chdir(w_dir)
-# 				qm_files = get_filenames("output", name)
+# 				files = get_filenames("output", name)
 # 				# do boltz firsst
-# 				calculate_cclib(qm_files, w_dir_main, lot, bs)
-# 				calculate_boltz_for_cclib(qm_files, name, w_dir_main, lot, bs)
+# 				calculate_cclib(files, w_dir_main, lot, bs)
+# 				calculate_boltz_for_cclib(files, name, w_dir_main, lot, bs)
 # 				if str(bs).find("/") > -1:
 # 					os.chdir(
 # 						w_dir_main

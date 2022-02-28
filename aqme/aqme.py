@@ -1,28 +1,30 @@
 #!/usr/bin/env python
 
-#########################################################################################.
-#########################################################################################
-###                                                                                   ###
-###  AQME is a tool that allows to carry out automated:                               ###
-###  (1) Conformational searches and creation of COM files using RDKit, xTB and ANI   ###
-###  (2) LOG file processing (detects imaginary freqs and error terminations          ###
-###      and creates new COM files)                                                   ###
-###  (3) Use LOG files to create new COM files with new keywords (i.e. single-point   ###
-###      corrections after geometry optimization)                                     ###
-###                                                                                   ###
-#########################################################################################
-###                                                                                   ###
-###  Version: v1.0.1, Release date: 22-May-2020                                       ###
-###                                                                                   ###
-#########################################################################################
-###                                                                                   ###
-###  Authors: Shree Sowndarya S. V., Juan V. Alegre Requena, Robert S. Paton          ###
-###                                                                                   ###
-###  Please, report any bugs or suggestions to:                                       ###
-###  svss@colostate.edu or juanvi89@hotmail.com                                       ###
-###                                                                                   ###
-#########################################################################################
-#########################################################################################.
+###########################################################################################.
+###########################################################################################
+###                                                                                     ###
+###  AQME is a tool that allows to carry out automated:                                 ###
+###  (CSEARCH) Conformational searches and creation of COM files using RDKit and CREST  ###
+###  (CMIN) Geometry refinement of initial conformers with xTB and ANI                  ###
+###  (QCORR) Out put file processing from QM calculations and automated issue fixing,   ###
+###  including imaginary freqs, spin contamination, isomerization issues and            ###
+###  error terminations, among others                                                   ###
+###  (QPREP) Use QM output (.log or .out) and json files to create new COM files with   ###
+###  new keywords (i.e. for single-point corrections after geometry optimization)       ###                               ###
+###                                                                                     ###
+###########################################################################################
+###                                                                                     ###
+###  Version: v0.2, Release date: 28-Feb-2022                                           ###
+###                                                                                     ###
+###########################################################################################
+###                                                                                     ###
+###  Authors: Shree Sowndarya S. V., Juan V. Alegre Requena                             ###
+###                                                                                     ###
+###  Please, report any bugs or suggestions to:                                         ###
+###  svss@colostate.edu or juanvi89@hotmail.com                                         ###
+###                                                                                     ###
+###########################################################################################
+###########################################################################################.
 
 import os
 import time
@@ -32,20 +34,21 @@ from aqme.mainf import (
     csearch_main,
     geom_rules_main,
     qprep_main,
-    cmin_main,
-)
-from aqme.utils import Logger, load_from_yaml
-from aqme.qcorr import qcorr, json2input
+    cmin_main)
+from aqme.utils import (Logger, 
+    load_from_yaml)
+from aqme.qcorr import qcorr
 
 
 def main():
-    # working directory and arguments
-    w_dir_main = args.w_dir_main
-    base_path = Path(w_dir_main)
 
-    args = parser_args()
+    args = parser_args()   
+
+    # working directory and arguments
+    w_dir_main = Path(args.w_dir_main)
 
     log_overall = Logger("aqme", args.output_name)
+
     # if needed to load from a yaml file
     args,_ = load_from_yaml(args, log_overall)
 
@@ -67,7 +70,7 @@ def main():
             )
         os.chdir(w_dir_main)
         if args.CMIN is None:
-            csearch_csv_folder = base_path.joinpath("CSEARCH/csv_files")
+            csearch_csv_folder = w_dir_main.joinpath("CSEARCH/csv_files")
             csearch_csv_folder.mkdir(exist_ok=True)
             csearch_csv_file = csearch_csv_folder.joinpath(f"{name}-CSEARCH-Data.csv")
             csearch_dup_data.to_csv(csearch_csv_file, index=False)
@@ -81,7 +84,7 @@ def main():
                 f"\n All molecules execution time CMIN: {elapsed_time} seconds"
             )
         os.chdir(w_dir_main)
-        cmin_csv_folder = base_path.joinpath("CMIN/csv_files")
+        cmin_csv_folder = w_dir_main.joinpath("CMIN/csv_files")
         cmin_csv_folder.mkdir(exist_ok=True)
         cmin_csv_file = cmin_csv_folder.joinpath(f"{name}-CMIN-Data.csv")
         cmin_dup_data.to_csv(cmin_csv_file, index=False)
@@ -89,25 +92,19 @@ def main():
     # applying rules to discard certain conformers based on rules that the user define
     if len(args.geom_rules) >= 1:
         geom_rules_active = True
-        if args.qcorr == "gaussian":
+        if args.qcorr:
             geom_rules_active = False
         geom_rules_main(args, log_overall, geom_rules_active)
         os.chdir(w_dir_main)
 
     # QPREP
-    if args.QPREP == "gaussian" or args.QPREP == "orca" or args.QPREP == "turbomole":
+    if args.qprep:
         qprep_main(w_dir_main, args, log_overall)
-        os.chdir(w_dir_main)
-
-    # if args.CSEARCH in ['rdkit', 'summ', 'fullmonte','crest'] or args.QPREP is not None:
-    #     # moving files after compute and/or write_gauss
-    #     move_sdf_main(args)
-    #     os.chdir(w_dir_main)
 
     # QCORR
     if args.qcorr:
         qcorr(
-            qm_files=args.qm_files,
+            files=args.files,
             w_dir_main=args.w_dir_main,
             dup_threshold=args.dup_threshold,
             mem=args.mem,
@@ -128,38 +125,19 @@ def main():
             ifreq_cutoff=args.ifreq_cutoff,
             fullcheck=args.fullcheck,
             program=args.program,
-            varfile=None,
+            varfile=None
         )
 
-    if args.json2input:
-        json2input(
-            json_files=args.json_files,
-            w_dir_main=args.w_dir_main,
-            destination=args.destination,
-            suffix=args.suffix,
-            charge=args.charge,
-            mult=args.mult,
-            mem=args.mem,
-            nprocs=args.nprocs,
-            chk=args.chk,
-            qm_input=args.qm_input,
-            bs_gen=args.bs_gen,
-            bs=args.bs,
-            gen_atoms=args.gen_atoms,
-            qm_end=args.qm_end,
-            program=args.program,
-        )
-
-    # qdescp
-    if args.qdescp in ["geometricdescp", "nmr", "dbstep", "nbo"]:
-        qdescp(
-            w_dir_main=args.w_dir_main,
-            destination=args.destination,
-            qm_files=args.qm_files,
-            json_files=args.json_files,
-            task=args.qdescp,
-            varfile=None,
-        )
+    # # qdescp
+    # if args.qdescp in ["geometricdescp", "nmr", "dbstep", "nbo"]:
+    #     qdescp(
+    #         w_dir_main=args.w_dir_main,
+    #         destination=args.destination,
+    #         files=args.files,
+    #         json_files=args.json_files,
+    #         task=args.qdescp,
+    #         varfile=None,
+    #     )
 
     # if args.QPRED == "nmr":
     #     nmr_main(args, log_overall, w_dir_main)

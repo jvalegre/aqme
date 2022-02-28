@@ -113,7 +113,7 @@ AQME can also be run through command lines. Some examples are:
       verbose : True
 
       CSEARCH : 'rdkit' #csearch option
-      QPREP : 'gaussian' #program for QM input file generation
+      qprep : 'gaussian' #program for QM input file generation
 
       nprocs : 8 #number of processors
       mem : '24GB' #memory
@@ -122,17 +122,61 @@ AQME can also be run through command lines. Some examples are:
       ```
   * QCORR analysis of Gaussian output files and json file generation:
     ```
-    python -m aqme --qcorr --qm_files=*.log
+    python -m aqme --qcorr --files=*.log
+    ```
+  * Input file generation from last geometry of output files (log or out files):
+    ```
+    python -m aqme --qprep --qm_input "M062x def2tzvp opt freq" --files *.log --suffix m062x
     ```
   * Input file generation from json files:
     ```
-    python -m aqme --json2input --qm_input "M062x def2tzvp opt freq" --json_files *.json --suffix m062x
+    python -m aqme --qprep --qm_input "M062x def2tzvp opt freq" --files *.json --suffix m062x
     ```
 
 ## Extended documentation (installation, use, examples, etc)
 ** ReadTheDocs page in process **  
+- [ ] QPREP arguments:  
+  **files : mol object, str or list of str, default=None**  
+		Optionally, starts from: 1) a mol object(s), 2) Gaussian or ORCA output file(s) or 3) json file(s) to prepare the input QM file(s). Options: mol object, FILENAME.log, FILENAME.out or FILENAME.json. Also, lists can be parsed (i.e. [FILE1.log, FILE2.log] or *.FORMAT for glob.glob('*.FORMAT') such as *.json).  
+  **atom_types : list of str, default=[]**  
+    (If input_file is None) List containing the atoms of the system  
+  **cartesians : list of str, default=[]**  
+		(If input_file is None) Cartesian coordinates used for further processing  
+  **w_dir_main : str, default=os.getcwd()**  
+    Working directory  
+  **destination : str, default=None,**  
+    Directory to create the input file(s)  
+  **molecule : str, default="",**  
+    Name of the input file without the extension (i.e. NAME for NAME.com)  
+  **varfile : str, default=None**  
+    Option to parse the variables using a yaml file (specify the filename)  
+  **program : str, default='gaussian'**  
+    Program required to create the new input files. Current options: 'gaussian', 'orca'  
+  **qm_input : str, default=''**  
+    Keywords line for new input files (i.e. 'B3LYP/6-31G opt freq')  
+  **qm_end : str, default=''**  
+    Final line(s) in the new input files  
+  **charge : int, default=0**  
+		Charge of the calculations used in the following input files  
+  **mult : int, default=1**  
+		Multiplicity of the calculations used in the following input files  
+	**suffix : str, default=''**  
+    Suffix for the new input files (i.e. FILENAME_SUFFIX.com for FILENAME.log)  
+  **chk : bool, default=False**  
+    Include the chk input line in new input files for Gaussian calculations  
+  **mem : str, default='4GB'**  
+    Memory for the QM calculations (i) Gaussian: total memory; (ii) ORCA: memory per processor  
+  **nprocs : int, default=2**  
+    Number of processors used in the QM calculations  
+  **gen_atoms : list of str, default=[]**  
+    Atoms included in the gen(ECP) basis set (i.e. ['I','Pd'])  
+  **bs_gen : str, default=''**  
+    Basis set used for gen(ECP) atoms	(i.e. 'def2svp')  
+  **bs : str, default=''**  
+    Basis set used for non gen(ECP) atoms in gen(ECP) calculations (i.e. '6-31G\*')  
+
 - [ ] QCORR arguments:  
-  **qm_files : list of str, default=''**  
+  **files : list of str, default=''**  
     Filenames of QM output files to analyze. If \*.log (or other strings that are not lists such as \*.out) are specified, the program will look for all the log files in the working directory through glob.glob(\*.log)  
   **w_dir_main : str, default=os.getcwd()**  
     Working directory  
@@ -160,24 +204,7 @@ AQME can also be run through command lines. Some examples are:
     Fraction of the summed covalent radii that constitutes a bond between two atoms in the isomerization filter  
   
   **--- Options related to file generation to fix issues found by QCORR ---**  
-  **program : str, default='gaussian'**  
-    Program required to create the new input files. Current options: 'gaussian', 'orca'  
-  **qm_input : str, default=''**  
-    Keywords line for new input files (i.e. 'B3LYP/6-31G opt freq')  
-  **qm_end : str, default=''**  
-    Final line(s) in the new input files  
-  **chk : bool, default=False**  
-    Include the chk input line in new input files for Gaussian calculations  
-  **mem : str, default='4GB'**  
-    Memory for the QM calculations (i) Gaussian: total memory; (ii) ORCA: memory per processor  
-  **nprocs : int, default=2**  
-    Number of processors used in the QM calculations  
-  **gen_atoms : list of str, default=[]**  
-    Atoms included in the gen(ECP) basis set (i.e. ['I','Pd'])  
-  **bs_gen : str, default=''**  
-    Basis set used for gen(ECP) atoms	(i.e. 'def2svp')  
-  **bs : str, default=''**  
-    Basis set used for non gen(ECP) atoms in gen(ECP) calculations (i.e. '6-31G\*')  
+  New input files are generated through the QPREP module and, therefore, all QPREP arguments can be used when calling QCORR and will overwrite default options. For example, if the user specifies qm_input='wb97xd/def2svp', all the new input files generated to fix issues will contain this keywords line. See examples in the 'Example_workflows' folder for more information.
 
 ## Developers and help desk
 List of main developers and contact emails:
