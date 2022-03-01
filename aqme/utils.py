@@ -1112,7 +1112,7 @@ def load_variables(kwargs,aqme_module):
 	error_setup = False
 	if aqme_module == 'qcorr':
 		# detects cycle of analysis (0 represents the starting point)
-		self.round_num = check_run(self.w_dir_main)
+		self.round_num,self.resume_qcorr = check_run(self.w_dir_main)
 		logger_1 = 'QCORR-run'
 		logger_2 = f'{str(self.round_num)}'
 		try:
@@ -1208,13 +1208,20 @@ def check_run(w_dir):
 	Determines the folder where input files are gonna be generated in QCORR.
 	'''
 
-	input_folder = w_dir.joinpath('unsuccessful_QM_outputs/')
-	folder_count = 1
+	if 'unsuccessful_QM_outputs' in w_dir.as_posix():
+		resume_qcorr = True
+		for folder in w_dir.as_posix().replace('\\','/').split('/'):
+			if 'run_' in folder:
+				folder_count = int(folder.split('_')[1])+1	
+	else:
+		input_folder = w_dir.joinpath('unsuccessful_QM_outputs/')
+		resume_qcorr = False
+		folder_count = 1
 
-	if os.path.exists(input_folder):
-		dir_list = os.listdir(input_folder)
-		for folder in dir_list:
-			if folder.find('run_') > -1:
-				folder_count += 1
+		if os.path.exists(input_folder):
+			dir_list = os.listdir(input_folder)
+			for folder in dir_list:
+				if folder.find('run_') > -1:
+					folder_count += 1
 
-	return folder_count
+	return folder_count,resume_qcorr

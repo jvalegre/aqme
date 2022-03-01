@@ -67,6 +67,7 @@ path_qcorr = os.getcwd()+'/Example_workflows/QCORR_processing_QM_outputs'
     # json2input tests
     # ('single_point', 'QCORR_1', 'CH4.log', None), # test single-point generation
     # overwrites charge/mult
+    # uses only 1 parent folder after multiple runs, and gather succesful calcs
 ])
 
 def test_analysis_dup_sp(test_type, init_folder, file, command_line, target_folder):
@@ -79,11 +80,9 @@ def test_analysis_dup_sp(test_type, init_folder, file, command_line, target_fold
 
     if test_type == 'analysis':
         if command_line is not None:
-            cmd_aqme = ['python', '-m', 'aqme', '--qcorr', '--w_dir_main', w_dir_main, '--qm_files', '*.log']
-            if init_folder == 'QCORR_1':
-                cmd_aqme = cmd_aqme + ['--author', 'Juan V. Alegre-Requena']
+            cmd_aqme = ['python', '-m', 'aqme', '--qcorr', '--w_dir_main', w_dir_main, '--qm_files', '*.log', '--freq_conv', 'opt=(calcfc,maxstep=5)']
 
-            elif init_folder == 'QCORR_2':
+            if init_folder == 'QCORR_2':
                 input_folder=f'{w_dir_main}/unsuccessful_QM_outputs/run_1/fixed_QM_inputs'
                 cmd_aqme = cmd_aqme + ['--isom', 'com', '--isom_inputs', input_folder]
             os.chdir(w_dir_main)

@@ -8,9 +8,7 @@ import glob
 import pandas as pd
 import json
 from pathlib import Path
-from aqme.utils import (
-	move_file,
-)
+from aqme.utils import move_file
 import numpy as np
 
 # Bondi VDW radii in Angstrom
@@ -74,11 +72,11 @@ def full_check(w_dir_main=os.getcwd(),destination_fullcheck='',json_files='*.jso
 
 	if json_files == '*.json' or json_files == '*json':
 		json_files=glob.glob('*.json')
-
+	
 	df_fullcheck = pd.DataFrame(columns=['file', 'program', 'grid_type', 'level_of_theory', 'dispersion', 'solvation'])
-
+	
 	for file in json_files:
-		file_name = file.split('.')[0]
+		file_name = file.replace('/','\\').split("\\")[-1].split('.')[0]
 		with open(file) as json_file:
 			cclib_data = json.load(json_file)
 
@@ -99,7 +97,6 @@ def full_check(w_dir_main=os.getcwd(),destination_fullcheck='',json_files='*.jso
 	
 	fullcheck_file = '--QCORR_Fullcheck_Analysis--.dat'
 	fullcheck_txt = '-- Full check analysis --'
-
 	for prop in df_fullcheck.columns:
 		if prop != 'file':
 			unique_props = df_fullcheck[prop].unique()

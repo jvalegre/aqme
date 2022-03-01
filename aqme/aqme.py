@@ -50,6 +50,7 @@ def main():
     w_dir_main = Path(args.w_dir_main)
 
     log_overall = Logger("aqme", args.output_name)
+    start_time_overall = time.time()
 
     name = args.input.split(".")[0]
 
@@ -60,14 +61,10 @@ def main():
         "fullmonte",
         "crest",
     ]:
-        start_time_overall = time.time()
         csearch_dup_data = csearch_main(w_dir_main, args, log_overall)
-        if args.time:
-            elapsed_time = round(time.time() - start_time_overall, 2)
-            log_overall.write(
-                f"\n All molecules execution time CSEARCH: {elapsed_time} seconds"
-            )
         os.chdir(w_dir_main)
+        elapsed_time = round(time.time() - start_time_overall, 2)
+        log_overall.write(f"\n Time CSEARCH: {elapsed_time} seconds")
         if args.cmin is None:
             csearch_csv_folder = w_dir_main.joinpath("CSEARCH/csv_files")
             csearch_csv_folder.mkdir(exist_ok=True)
@@ -77,16 +74,13 @@ def main():
     # Separating CMIN
     if args.csearch != None and args.cmin in ["xtb", "ani"]:
         cmin_dup_data = cmin_main(w_dir_main, args, log_overall, csearch_dup_data)
-        if args.time:
-            elapsed_time = round(time.time() - start_time_overall, 2)
-            log_overall.write(
-                f"\n All molecules execution time CMIN: {elapsed_time} seconds"
-            )
         os.chdir(w_dir_main)
         cmin_csv_folder = w_dir_main.joinpath("CMIN/csv_files")
         cmin_csv_folder.mkdir(exist_ok=True)
         cmin_csv_file = cmin_csv_folder.joinpath(f"{name}-CMIN-Data.csv")
         cmin_dup_data.to_csv(cmin_csv_file, index=False)
+        elapsed_time = round(time.time() - start_time_overall, 2)
+        log_overall.write(f"\n Time CMIN: {elapsed_time} seconds")
 
     # QPREP
     if args.qprep:
@@ -108,6 +102,8 @@ def main():
             gen_atoms=args.gen_atoms,
             bs_gen=args.bs_gen,
             bs=args.bs)
+        elapsed_time = round(time.time() - start_time_overall, 2)
+        log_overall.write(f"\n Time QPREP: {elapsed_time} seconds")
 
     # QCORR
     if args.qcorr:
@@ -133,6 +129,8 @@ def main():
             gen_atoms=args.gen_atoms,
             bs_gen=args.bs_gen,
             bs=args.bs)
+        elapsed_time = round(time.time() - start_time_overall, 2)
+        log_overall.write(f"\n Time QCORR: {elapsed_time} seconds")
 
     # # qdescp
     # if args.qdescp in ["geometricdescp", "nmr", "dbstep", "nbo"]:

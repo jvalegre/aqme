@@ -46,6 +46,8 @@ class qprep:
 			else:
 				self.atom_types = self.args.atom_types
 				self.cartesians = self.args.cartesians
+				self.charge = self.args.charge
+				self.mult = self.args.mult
 			if not found_coords:
 				continue
 			self.args.n_atoms = len(self.atom_types)
