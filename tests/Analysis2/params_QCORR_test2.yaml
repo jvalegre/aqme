@@ -1,9 +1,0 @@
-# TYPE OF aqme JOBS
-verbose : True
-
-# (1) CONFORMERS AND COM FILES GENERATION
-QCORR : gaussian
-
-# --- (4) ANALYSIS OF QM OUTPUT FILES (REQUIRES QPREP): QCORR
-# OPTIONS
-amplitude_ifreq : 0.8 # amplitude use to displace the imaginary frequencies to fix during analysis

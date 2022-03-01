@@ -29,33 +29,32 @@
 import os
 import time
 from pathlib import Path
-from aqme.argument_parser import parser_args
 from aqme.mainf import (
     csearch_main,
-    geom_rules_main,
-    qprep_main,
+    qprep,
     cmin_main)
-from aqme.utils import (Logger, 
-    load_from_yaml)
+from aqme.utils import (Logger,
+    command_line_args)
 from aqme.qcorr import qcorr
 
 
 def main():
+    '''
+    Main function of AQME, acts as the starting point when the program is run through a terminal
+    '''
 
-    args = parser_args()   
-
+    # load user-defined arguments from command line
+    args = command_line_args()
+    
     # working directory and arguments
     w_dir_main = Path(args.w_dir_main)
 
     log_overall = Logger("aqme", args.output_name)
 
-    # if needed to load from a yaml file
-    args,_ = load_from_yaml(args, log_overall)
-
     name = args.input.split(".")[0]
 
     # CSEARCH AND CMIN
-    if args.CSEARCH in [
+    if args.csearch in [
         "rdkit",
         "summ",
         "fullmonte",
@@ -69,14 +68,14 @@ def main():
                 f"\n All molecules execution time CSEARCH: {elapsed_time} seconds"
             )
         os.chdir(w_dir_main)
-        if args.CMIN is None:
+        if args.cmin is None:
             csearch_csv_folder = w_dir_main.joinpath("CSEARCH/csv_files")
             csearch_csv_folder.mkdir(exist_ok=True)
             csearch_csv_file = csearch_csv_folder.joinpath(f"{name}-CSEARCH-Data.csv")
             csearch_dup_data.to_csv(csearch_csv_file, index=False)
 
     # Separating CMIN
-    if args.CSEARCH != None and args.CMIN in ["xtb", "ani"]:
+    if args.csearch != None and args.cmin in ["xtb", "ani"]:
         cmin_dup_data = cmin_main(w_dir_main, args, log_overall, csearch_dup_data)
         if args.time:
             elapsed_time = round(time.time() - start_time_overall, 2)
@@ -89,44 +88,51 @@ def main():
         cmin_csv_file = cmin_csv_folder.joinpath(f"{name}-CMIN-Data.csv")
         cmin_dup_data.to_csv(cmin_csv_file, index=False)
 
-    # applying rules to discard certain conformers based on rules that the user define
-    if len(args.geom_rules) >= 1:
-        geom_rules_active = True
-        if args.qcorr:
-            geom_rules_active = False
-        geom_rules_main(args, log_overall, geom_rules_active)
-        os.chdir(w_dir_main)
-
     # QPREP
     if args.qprep:
-        qprep_main(w_dir_main, args, log_overall)
+        qprep(files=args.files,
+            atom_types=args.atom_types,
+            cartesians=args.cartesians,
+            w_dir_main=args.w_dir_main,
+            destination=args.destination,
+            varfile=args.varfile,
+            program=args.program,
+            qm_input=args.qm_input,
+            qm_end=args.qm_end,
+            charge=args.charge,
+            mult=args.mult,
+            suffix=args.suffix,
+            chk=args.chk,
+            mem=args.mem,
+            nprocs=args.nprocs,
+            gen_atoms=args.gen_atoms,
+            bs_gen=args.bs_gen,
+            bs=args.bs)
 
     # QCORR
     if args.qcorr:
-        qcorr(
-            files=args.files,
+        qcorr(files=args.files,
             w_dir_main=args.w_dir_main,
-            dup_threshold=args.dup_threshold,
-            mem=args.mem,
-            nprocs=args.nprocs,
-            chk=args.chk,
-            qm_input=args.qm_input,
+            fullcheck=args.fullcheck,
+            varfile=args.varfile,
+            ifreq_cutoff=args.ifreq_cutoff,
+            amplitude_ifreq=args.amplitude_ifreq,
+            freq_conv=args.freq_conv,
             s2_threshold=args.s2_threshold,
+            dup_threshold=args.dup_threshold,
             isom=args.isom,
             isom_inputs=args.isom_inputs,
             vdwfrac=args.vdwfrac,
             covfrac=args.covfrac,
-            bs_gen=args.bs_gen,
-            bs=args.bs,
-            gen_atoms=args.gen_atoms,
-            qm_end=args.qm_end,
-            amplitude_ifreq=args.amplitude_ifreq,
-            freq_conv=args.freq_conv,
-            ifreq_cutoff=args.ifreq_cutoff,
-            fullcheck=args.fullcheck,
             program=args.program,
-            varfile=None
-        )
+            mem=args.mem,
+            nprocs=args.nprocs,
+            qm_input=args.qm_input,
+            qm_end=args.qm_end,
+            chk=args.chk,
+            gen_atoms=args.gen_atoms,
+            bs_gen=args.bs_gen,
+            bs=args.bs)
 
     # # qdescp
     # if args.qdescp in ["geometricdescp", "nmr", "dbstep", "nbo"]:
@@ -139,22 +145,22 @@ def main():
     #         varfile=None,
     #     )
 
-    # if args.QPRED == "nmr":
+    # if args.qpred == "nmr":
     #     nmr_main(args, log_overall, w_dir_main)
-    # if args.QPRED == "energy":
+    # if args.qpred == "energy":
     #     energy_main(args, log_overall, w_dir_main)
-    # if args.QPRED == "dbstep":
+    # if args.qpred == "dbstep":
     #     dbstep_par_main(args, log_overall, w_dir_main)
-    # if args.QPRED == "nics":
+    # if args.qpred == "nics":
     #     nics_par_main(args, log_overall, w_dir_main)
-    # if args.QPRED == "cclib-json":
+    # if args.qpred == "cclib-json":
     #     cclib_main(args, log_overall, w_dir_main)
     # os.chdir(w_dir_main)
     #
-    # # QSTAT
-    # if args.QSTAT == "descp":
+    # # qstat
+    # if args.qstat == "descp":
     #     geom_par_main(args, log_overall, w_dir_main)
-    # if args.QSTAT == "graph":
+    # if args.qstat == "graph":
     #     graph_main(args, log_overall, w_dir_main)
     # os.chdir(w_dir_main)
     #

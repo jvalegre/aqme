@@ -4,6 +4,7 @@
 ######################################################.
 
 import sys
+import getopt
 import subprocess
 import numpy as np
 import glob
@@ -11,14 +12,13 @@ from pathlib import Path
 from rdkit.Chem.rdMolAlign import GetBestRMS
 from rdkit.Chem.rdmolops import RemoveHs
 from openbabel import pybel
-from rdkit.Chem import AllChem
 import os
 from rdkit import Geometry
 from rdkit.Chem import rdmolfiles
 import yaml
 import pandas as pd
 from rdkit.Chem import AllChem as Chem
-from aqme.argument_parser import set_options
+from aqme.argument_parser import set_options,var_dict
 
 
 def periodic_table():
@@ -33,7 +33,7 @@ def periodic_table():
 			"""
 	periodic_table = items.replace("\n", " ").strip().split()
 	periodic_table[0] = ""
-	
+
 	return periodic_table
 
 
@@ -278,15 +278,14 @@ def move_file(destination, source, file):
 
 
 # openbabel utils
-
 # com to xyz to sdf for obabel
-def com_2_xyz_2_sdf(input, default_charge, start_point=None):
+def com_2_xyz_2_sdf(input_file, default_charge, start_point=None):
 	"""
 	com to xyz to sdf for obabel
 
 	Parameters
 	----------
-	input : str
+	input_file : str
 		path to the file to convert
 	start_point : str, optional
 		file(path/name?) to the starting point, by default None
@@ -296,11 +295,11 @@ def com_2_xyz_2_sdf(input, default_charge, start_point=None):
 	int?
 		charge or None?
 	"""
-	extension = Path(input).suffix
+	extension = Path(input_file).suffix
 
 	if start_point is None:
 		if extension in ["com", "gjf", "xyz"]:
-			file = Path(input)
+			file = Path(input_file)
 
 	else:
 		file = Path(start_point)
@@ -310,7 +309,7 @@ def com_2_xyz_2_sdf(input, default_charge, start_point=None):
 	# Create the 'xyz' file and/or get the total charge
 	if (
 		extension != "xyz"
-	):  #  RAUL: Originally this pointed towards args.input, shouldn't it be to args.file?
+	):  #  RAUL: Originally this pointed towards args.input_file, shouldn't it be to args.file?
 		xyz, charge = get_info_input(file)
 		xyz_txt = "\n".join(xyz)
 		with open(f"{filename}.xyz", "w") as F:
@@ -436,9 +435,9 @@ def nci_ts_mol(smi, args, constraints_dist, constraints_angle, constraints_dihed
 		molsH.append(Chem.AddHs(Chem.MolFromSmiles(m)))
 
 	for m in molsH:
-		AllChem.EmbedMultipleConfs(m,numConfs=1)
+		Chem.EmbedMultipleConfs(m,numConfs=1)
 	for m in mols:
-		AllChem.EmbedMultipleConfs(m,numConfs=1)
+		Chem.EmbedMultipleConfs(m,numConfs=1)
 
 	coord = [0.0,0.0,5.0]
 	molH = molsH[0]
@@ -467,7 +466,7 @@ def nci_ts_mol(smi, args, constraints_dist, constraints_angle, constraints_dihed
 			max_map +=1
 			a.SetAtomMapNum(int(max_map))
 
-	AllChem.ConstrainedEmbed(mol,molH)
+	Chem.ConstrainedEmbed(mol,molH)
 	rdmolfiles.MolToXYZFile(mol, name+'.xyz')
 
 	# for atom in mol.GetAtoms():
@@ -510,7 +509,7 @@ def nci_ts_mol(smi, args, constraints_dist, constraints_angle, constraints_dihed
 		# print('----')
 	nconstraints_dihedral = []
 	if constraints_dihedral is not None:
-		for i,r in enumerate(constraints_dihedral):
+		for _,r in enumerate(constraints_dihedral):
 			# print('r:',r[:2])
 			nr = []
 			for _,ele in enumerate(r[:4]):
@@ -622,11 +621,9 @@ def rules_get_charge(mol, args):
 					if atom.GetTotalValence() == 1:
 						charge_rules[0] = charge_rules[0] - 1
 		return charge_rules
-	else:
-		# no update in charge as it is an organic molecule
-		return [
-			args.charge_default,
-		]
+		
+	# no update in charge as it is an organic molecule
+	return [args.charge_default]
 
 
 def substituted_mol(mol, args):
@@ -698,9 +695,6 @@ def getDihedralMatches(mol, heavy, log):
 
 
 def getDihedralMatches_v2(mol, heavy, log):  # New version using openbabel
-	# If this version is selected, bring the import to the top
-	# import pybel #
-	from openbabel import pybel  # for openbabel>=3.0.0
 
 	AtomInTripleBond = "$(*#*)"
 	TerminalAtom = "D1"
@@ -755,13 +749,13 @@ def check_for_pieces(smi):
 	return pieces
 
 
-def mol_from_sdf_or_mol_or_mol2(input):
+def mol_from_sdf_or_mol_or_mol2(input_file):
 	"""
 	mol from sdf
 
 	Parameters
 	----------
-	input : str
+	input_file : str
 		path to a .sdf .mol or .mol2 file
 
 	Returns
@@ -769,19 +763,19 @@ def mol_from_sdf_or_mol_or_mol2(input):
 	tuple of lists?
 		suppl, IDs, charges
 	"""
-	filename = os.path.splitext(input)[0]
-	extension = os.path.splitext(input)[1]
+	filename = os.path.splitext(input_file)[0]
+	extension = os.path.splitext(input_file)[1]
 
 	if extension == ".sdf":
-		suppl = Chem.SDMolSupplier(input, removeHs=False)
+		suppl = Chem.SDMolSupplier(input_file, removeHs=False)
 	elif extension == ".mol":
-		suppl = Chem.MolFromMolFile(input, removeHs=False)
+		suppl = Chem.MolFromMolFile(input_file, removeHs=False)
 	elif extension == ".mol2":
-		suppl = Chem.MolFromMol2File(input, removeHs=False)
+		suppl = Chem.MolFromMol2File(input_file, removeHs=False)
 
 	IDs, charges = [], []
 
-	with open(input, "r") as F:
+	with open(input_file, "r") as F:
 		lines = F.readlines()
 
 	molecule_count = 0
@@ -903,28 +897,28 @@ def get_conf_RMS(mol1, mol2, c1, c2, heavy, max_matches_RMSD):
 	return GetBestRMS(mol1, mol2, c1, c2, maxMatches=max_matches_RMSD)
 
 
-def get_filenames(type, name):
+def get_filenames(file_type, name):
 	"""
 	Finding the file type to move for analysis
 	"""
 	
 	files = []
-	if type == "output":
+	if file_type == "output":
 		formats = ["*.log", "*.LOG", "*.out", "*.OUT", "*json"]
-	elif type == "input":
+	elif file_type == "input":
 		formats = ["*.com", "*.gjf"]
-	for _, format in enumerate(formats):
+	for _, file_format in enumerate(formats):
 		if name is None:
-			all_files = enumerate(glob.glob(format))
+			all_files = enumerate(glob.glob(file_format))
 		else:
-			all_files = enumerate(glob.glob(name + format))
+			all_files = enumerate(glob.glob(name + file_format))
 		for _, file in all_files:
 			if file not in files:
 				files.append(file)
 	return files
 
 
-def output_to_mol(file, format):
+def output_to_mol(file, file_format):
 	"""
 	Input an XYZ, LOG or OUT file from QM calculations and converts it into
 	a mol object.
@@ -933,8 +927,8 @@ def output_to_mol(file, format):
 	----------
 	file : string
 		Filename
-	format : string
-		File format
+	file_format : string
+		File file_format
 	log : Logger object
 		Writes data regarding the results from QCORR
 
@@ -946,7 +940,7 @@ def output_to_mol(file, format):
 
 	# transforms output file into mol object
 	# for input (from com to xyz to mol)
-	if format == "xyz":
+	if file_format == "xyz":
 		cmd_obabel = [
 			"obabel",
 			"-ixyz",
@@ -956,11 +950,11 @@ def output_to_mol(file, format):
 			os.path.splitext(file)[0] + ".mol",
 		]
 	# for output (from log to mol)
-	if format in ["log", "out"]:
+	if file_format in ["log", "out"]:
 		cmd_obabel = [
 			"obabel",
 			"-ilog",
-			os.path.splitext(file)[0] + "." + format,
+			os.path.splitext(file)[0] + "." + file_format,
 			"-omol",
 			"-O",
 			os.path.splitext(file)[0] + ".mol",
@@ -1030,8 +1024,70 @@ def get_name_and_charge(name, charge_data):
 
 		return charge_com
 
-	else:
-		return name_molecule
+	return name_molecule
+
+
+def command_line_args():
+	'''
+	Load default and user-defined arguments specified through command lines. Arrguments are loaded as a dictionary
+	'''
+	
+	# First, create dictionary with user-defined arguments
+	kwargs = {}
+	available_args = ['help']
+	bool_args = [
+		"verbose",
+		"csearch",
+		"cmin",
+		"qprep",
+		"qcorr",
+		"qstat",
+		"qpred",
+		"metal_complex",
+		"time",
+		"heavyonly",
+		"cregen",
+		"lowest_only",
+		"lowest_n",
+		"chk",
+		"com_from_xyz",
+		"dup",
+		"fullcheck",
+		"rot_dihedral",
+		"nmr_online",
+		"qsub",
+		"qsub_ana",
+		"nci_complex",
+		"ts_complex"]
+
+	for arg in var_dict:
+		if arg in bool_args:
+			available_args.append(f'{arg}')
+		else:
+			available_args.append(f'{arg} =')
+
+	try:
+		opts,_ = getopt.getopt(sys.argv[1:], 'h', available_args)
+	except getopt.GetoptError as err:
+		print(err)
+		sys.exit()
+	
+	for arg,value in opts:
+		arg_name = arg.split('--')[1].strip()
+		if arg_name in bool_args:
+			value = True
+		if value == 'None':
+			value = None
+		if arg_name in ("h", "help"):
+			print('AQME is installed correctly! For more information about the available options, see the documentation in https://github.com/jvalegre/aqme')
+			sys.exit()
+		else:
+			kwargs[arg_name] = value
+	
+	# Second, load all the default variables as an "add_option" object
+	args = load_variables(kwargs,_)
+
+	return args
 
 
 def load_variables(kwargs,aqme_module):
@@ -1045,9 +1101,9 @@ def load_variables(kwargs,aqme_module):
 	self.initial_dir = Path(os.getcwd())
 	self.w_dir_main = Path(self.w_dir_main)
 	if self.isom is not None:
-		self.isom_inputs = Path(self.args.isom_inputs)	
+		self.isom_inputs = Path(self.args.isom_inputs)
 
-	# go to working folder and detect QM output files
+	# go to working folder and detect files
 	os.chdir(self.w_dir_main)
 	if not isinstance(self.files, list):
 		self.files = glob.glob(self.files)
@@ -1065,7 +1121,6 @@ def load_variables(kwargs,aqme_module):
 			print('x  The PATH specified as input in the w_dir_main option might be invalid!')
 			error_setup = True
 
-	if aqme_module == 'qcorr':
 		if len(self.files) == 0 and not error_setup:
 			print(f'x  There are no output files in {self.w_dir_main}.')
 			self.log.write(f'x  There are no output files in {self.w_dir_main}.')
@@ -1082,7 +1137,7 @@ def load_variables(kwargs,aqme_module):
 		self.yaml, self.log = load_from_yaml(self.args, self.log)
 		for key,value in self.yaml.iteritems():
 			setattr(self, key, value)
-
+	
 	return self
 
 

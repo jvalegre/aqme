@@ -28,9 +28,9 @@ def get_energy(inmols_min):
         energy_min.append(["_".join(mol.GetProp('_Name').split(' ')),mol.GetProp('Energy')])
     return energy_min
 
-def rename_name(energy,type):
+def rename_name(energy,module_type):
     for i,_ in enumerate(energy):
-        energy[i][0] = energy[i][0].split('_'+type)[0]
+        energy[i][0] = energy[i][0].split('_'+module_type)[0]
     return energy
 
 def scaling_with_lowest(energy):
@@ -52,16 +52,16 @@ def plot_graph(qm_data,file_data,csearch_cmin_data):
     cmap = plt.cm.get_cmap('viridis', len(list_all))
     Path = mpath.Path
     x_axis = [0,1,2,3]
-    for i,list in enumerate(list_all):
+    for i,list_level in enumerate(list_all):
         index_axis = 0
-        for j,_ in enumerate(range(len(list))):
+        for j,_ in enumerate(range(len(list_level))):
             path_patch = mpatches.PathPatch(
-            Path([(x_axis[index_axis], list[index_axis]), (x_axis[index_axis]+0.5, list[index_axis+1]), (x_axis[index_axis+1] ,list[index_axis+1])],
+            Path([(x_axis[index_axis], list_level[index_axis]), (x_axis[index_axis]+0.5, list_level[index_axis+1]), (x_axis[index_axis+1] ,list_level[index_axis+1])],
                 [Path.MOVETO, Path.CURVE3, Path.CURVE3]), fc="none", transform=ax1.transData, color=cmap(i))
             index_axis += 1
             ax1.add_patch(path_patch)
-            if j == len(list)-1:
-                ax1.scatter(x_axis[:j+1],list,color=cmap(i), marker='o',zorder=2,edgecolors= "black",linewidth=0.5)
+            if j == len(list_level)-1:
+                ax1.scatter(x_axis[:j+1],list_level,color=cmap(i), marker='o',zorder=2,edgecolors= "black",linewidth=0.5)
                 break
 
     plt.xticks(range(0,len(x_axis_names)), x_axis_names)
@@ -86,7 +86,7 @@ def plot_graph(qm_data,file_data,csearch_cmin_data):
     fig.tight_layout()
     fig.subplots_adjust(top=0.92,bottom=0.2)
 
-    graph_dir = Path(file_data['Initial dir'] + '/QSTAT/graph')
+    graph_dir = Path(file_data['Initial dir'] + '/qstat/graph')
     graph_dir.mkdir(exist_ok=True, parents=True)
     os.chdir(graph_dir)
 
@@ -147,11 +147,11 @@ def graph(qm_data,file_data,csearch_cmin_data):
         energy_dft_sp,type_csearch,type_cmin = get_qm_energy_plot(type,qm_data['QM files SP'],energy_dft_sp)
         energy_dft_sp_sc = scaling_with_lowest(energy_dft_sp)
         os.chdir(file_data['Working dir'])
-                         
+
     qm_data['Energy dft'] = energy_dft_sc
     qm_data['Energy dft SP'] = energy_dft_sp_sc
     csearch_cmin_data['Energy and name CSEARCH scaled'] = energy_rdkit_sc
-    csearch_cmin_data['Energy and name CMIN scaled'] = energy_cmin_sc,
+    csearch_cmin_data['Energy and name CMIN scaled'] = energy_cmin_sc
     csearch_cmin_data['CSEARCH type'] = type_csearch
     csearch_cmin_data['CMIN type'] = type_cmin
 
@@ -159,17 +159,17 @@ def graph(qm_data,file_data,csearch_cmin_data):
 
 
 def params_graph(qm_data,csearch_cmin_data):
-    if len(energy_dft_sp_sc) != 0 or len(qm_data['Energy dft']) != 0:
+    if len(qm_data['Energy dft SP']) != 0 or len(qm_data['Energy dft']) != 0:
         energy_dft_sp_mae_sd,energy_dft_mae_sd = [],[]
         list_all = []
-        if len(energy_dft_sp_sc) == 0:
-            energy_dft_sp_sc = [None]
-        for l,_ in enumerate(energy_dft_sp_sc):
-            if energy_dft_sp_sc[l] is not None:
+        if len(qm_data['Energy dft SP']) == 0:
+            qm_data['Energy dft SP'] = [None]
+        for l,_ in enumerate(qm_data['Energy dft SP']):
+            if qm_data['Energy dft SP'][l] is not None:
                 list_energies = []
-                name = energy_dft_sp_sc[l][0]
-                energy_dft_sp_mae_sd.append(float(energy_dft_sp_sc[l][1]))
-                list_energies.append(float(energy_dft_sp_sc[l][1]))
+                name = qm_data['Energy dft SP'][l][0]
+                energy_dft_sp_mae_sd.append(float(qm_data['Energy dft SP'][l][1]))
+                list_energies.append(float(qm_data['Energy dft SP'][l][1]))
             else:
                 name = None
             for i,_ in enumerate(qm_data['Energy dft']):
@@ -182,11 +182,11 @@ def params_graph(qm_data,csearch_cmin_data):
                     energy_dft_mae_sd.append(float(qm_data['Energy dft'][i][1]))
                     energy_min_mae_sd,energy_rdkit_mae_sd,list_energies = get_energy_graph(csearch_cmin_data,name,list_energies)
                     list_all.append(list_energies)
-            if energy_dft_sp_sc[l] is not None:
+            if qm_data['Energy dft SP'][l] is not None:
                 energy_min_mae_sd,energy_rdkit_mae_sd,list_energies = get_energy_graph(csearch_cmin_data,name,list_energies)
                 list_all.append(list_energies)
 
-        if len(energy_dft_sp_sc) != 0:
+        if len(qm_data['Energy dft SP']) != 0:
             mae_rdkit,sd_rdkit = stats_calc(energy_dft_sp_mae_sd,energy_rdkit_mae_sd)
             mae_min,sd_min = stats_calc(energy_dft_sp_mae_sd,energy_min_mae_sd)
             mae_dft,sd_dft = stats_calc(energy_dft_sp_mae_sd,energy_dft_mae_sd)
@@ -210,13 +210,13 @@ def params_graph(qm_data,csearch_cmin_data):
         return list_all,mae_rdkit,sd_rdkit,mae_min,sd_min,mae_min,sd_min,mae_dft,sd_dft,x_axis_names,name_to_write
 
 
-def get_qm_energy_plot(type,plot_files,energy_dft):
+def get_qm_energy_plot(program,plot_files,energy_dft):
     type_csearch,type_cmin = None,None
     for file in plot_files:
-        if type == 'g16':
+        if program == 'g16':
             data_sp = cclib.io.ccread(file)
             energy_qm = data_sp.scfenergies[0]*ev_2_kcal_mol
-        elif type == 'orca':
+        elif program == 'orca':
             sp_lines = open(file,"r").readlines()
             for i,_ in reversed(range(sp_lines)):
                 if sp_lines[i].find('FINAL SINGLE POINT ENERGY') > -1:

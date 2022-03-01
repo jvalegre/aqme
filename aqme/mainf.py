@@ -111,7 +111,7 @@ def csearch_main(w_dir_main, args, log_overall):
             jobs.append(job)
             count_mol += 1
 
-        final_dup_data = creation_of_dup_csv_csearch(args.CSEARCH)
+        final_dup_data = creation_of_dup_csv_csearch(args.csearch)
         bar = IncrementalBar("o  Number of finished jobs from CSEARCH", max=count_mol)
         # Process the job results (in submission order) and save the conformers.
         for _,job in enumerate(jobs):
@@ -141,22 +141,22 @@ def csearch_main(w_dir_main, args, log_overall):
 
 def cmin_main(w_dir_main, args, log_overall, dup_data):
     bar = IncrementalBar("o  Number of finished jobs from CMIN", max=len(dup_data))
-    final_dup_data = creation_of_dup_csv_cmin(args.CMIN)
+    final_dup_data = creation_of_dup_csv_cmin(args.cmin)
     for dup_data_idx in range(len(dup_data)):
         # update_to_rdkit = dup_data.at[dup_data_idx,'update_to_rdkit']
         name = dup_data.at[dup_data_idx, "Molecule"]
         charge = dup_data.at[dup_data_idx, "Overall charge"]
         if dup_data.at[dup_data_idx, "status"] != -1:
-            if args.CMIN == "ani":
+            if args.cmin == "ani":
                 min_suffix = "ani"
-            elif args.CMIN == "xtb":
+            elif args.cmin == "xtb":
                 min_suffix = "xtb"
-            if args.CSEARCH in ["rdkit", "summ", "fullmonte"]:
+            if args.csearch in ["rdkit", "summ", "fullmonte"]:
 
-                csearch_folder = Path(w_dir_main).joinpath(f"CSEARCH/{args.CSEARCH}")
-                fullname = str(csearch_folder.joinpath(name + "_" + args.CSEARCH))
+                csearch_folder = Path(w_dir_main).joinpath(f"CSEARCH/{args.csearch}")
+                fullname = str(csearch_folder.joinpath(name + "_" + args.csearch))
 
-                # fullname = f'{name}_{args.CSEARCH}'
+                # fullname = f'{name}_{args.csearch}'
                 # try:
                 total_data = mult_min(
                     fullname, args, min_suffix, charge, log_overall, w_dir_main
@@ -192,25 +192,25 @@ def qprep_main(w_dir_main, args, log):
 	if len(args.geom_rules) >= 1:
 		conf_files = glob.glob("*_rules.sdf")
 	# define the SDF files to convert to COM Gaussian files
-	elif args.CMIN == "xtb":
-		conf_files = glob.glob(w_dir_main + "/CMIN/" + args.CMIN + "/*_xtb.sdf")
-	elif args.CMIN == "ani":
-		conf_files = glob.glob(w_dir_main + "/CMIN/" + args.CMIN + "/*_ani.sdf")
-	elif args.CSEARCH == "rdkit":
+	elif args.cmin == "xtb":
+		conf_files = glob.glob(w_dir_main + "/CMIN/" + args.cmin + "/*_xtb.sdf")
+	elif args.cmin == "ani":
+		conf_files = glob.glob(w_dir_main + "/CMIN/" + args.cmin + "/*_ani.sdf")
+	elif args.csearch == "rdkit":
 		conf_files = glob.glob(
-			w_dir_main + "/CSEARCH/" + args.CSEARCH + "/*_rdkit.sdf"
+			w_dir_main + "/CSEARCH/" + args.csearch + "/*_rdkit.sdf"
 		)
-	elif args.CSEARCH == "summ":
+	elif args.csearch == "summ":
 		conf_files = glob.glob(
-			w_dir_main + "/CSEARCH/" + args.CSEARCH + "/*_summ.sdf"
+			w_dir_main + "/CSEARCH/" + args.csearch + "/*_summ.sdf"
 		)
-	elif args.CSEARCH == "fullmonte":
+	elif args.csearch == "fullmonte":
 		conf_files = glob.glob(
-			w_dir_main + "/CSEARCH/" + args.CSEARCH + "/*_fullmonte.sdf"
+			w_dir_main + "/CSEARCH/" + args.csearch + "/*_fullmonte.sdf"
 		)
-	elif args.CSEARCH == "crest":
+	elif args.csearch == "crest":
 		conf_files = glob.glob(
-			w_dir_main + "/CSEARCH/" + args.CSEARCH + "/*_crest.sdf"
+			w_dir_main + "/CSEARCH/" + args.csearch + "/*_crest.sdf"
 		)
 	else:
 		conf_files = glob.glob("*.sdf")
@@ -269,7 +269,7 @@ def move_sdf_main(args):
 	src = Path(os.getcwd())
 	if len(args.geom_rules) >= 1:
 		geom_rules_files = glob.glob("*_filter_geom_rules.sdf")
-	if args.CMIN == "xtb":
+	if args.cmin == "xtb":
 		all_xtb_conf_files = glob.glob("*_xtb.sdf")
 		destination_xtb = src.joinpath("CMIN/xtb/")
 		for file in all_xtb_conf_files:
@@ -282,7 +282,7 @@ def move_sdf_main(args):
 			destination_geom_rules = src.joinpath("CMIN/xtb/filter_geom_rules/")
 			for file in geom_rules_files:
 				move_file(destination_geom_rules, src, file)
-	if args.CMIN == "ani":
+	if args.cmin == "ani":
 		all_ani_conf_files = glob.glob("*_ani.sdf")
 		destination_ani = src.joinpath("CMIN/ani/")
 		for file in all_ani_conf_files:
@@ -295,7 +295,7 @@ def move_sdf_main(args):
 			destination_geom_rules = src.joinpath("CMIN/ani/filter_geom_rules/")
 			for file in geom_rules_files:
 				move_file(destination_geom_rules, src, file)
-	if args.CSEARCH == "rdkit":
+	if args.csearch == "rdkit":
 		all_name_conf_files = glob.glob("*_rdkit.sdf")
 		destination_rdkit = src.joinpath("CSEARCH/rdkit/")
 		for file in all_name_conf_files:
@@ -305,39 +305,39 @@ def move_sdf_main(args):
 			for file in geom_rules_files:
 				move_file(destination_geom_rules, src, file)
 
-	if args.CSEARCH == "summ":
+	if args.csearch == "summ":
 		all_name_conf_files = glob.glob("*_summ.sdf")
 		destination_rdkit = src.joinpath("CSEARCH/summ/")
 		for file in all_name_conf_files:
 			move_file(destination_rdkit, src, file)
-		if len(args.geom_rules) >= 1 and args.CMIN is None:
+		if len(args.geom_rules) >= 1 and args.cmin is None:
 			destination_geom_rules = src.joinpath("CSEARCH/summ/filter_geom_rules/")
 			for file in geom_rules_files:
 				move_file(destination_geom_rules, src, file)
 
-	if args.CSEARCH == "fullmonte":
+	if args.csearch == "fullmonte":
 		all_name_conf_files = glob.glob("*_fullmonte.sdf")
 		destination_rdkit = src.joinpath("CSEARCH/fullmonte/")
 		for file in all_name_conf_files:
 			move_file(destination_rdkit, src, file)
-		if len(args.geom_rules) >= 1 and args.CMIN is None:
+		if len(args.geom_rules) >= 1 and args.cmin is None:
 			destination_geom_rules = src.joinpath(
 				"CSEARCH/fullmonte/filter_geom_rules/"
 			)
 			for file in geom_rules_files:
 				move_file(destination_geom_rules, src, file)
 
-	if args.CSEARCH == "crest":
+	if args.csearch == "crest":
 		all_name_conf_files = glob.glob("*_crest.sdf")
 		destination_rdkit = src.joinpath("CSEARCH/crest/")
 		for file in all_name_conf_files:
 			move_file(destination_rdkit, src, file)
-		if len(args.geom_rules) >= 1 and args.CMIN is None:
+		if len(args.geom_rules) >= 1 and args.cmin is None:
 			destination_geom_rules = src.joinpath("CSEARCH/crest/filter_geom_rules/")
 			for file in geom_rules_files:
 				move_file(destination_geom_rules, src, file)
 
-	if args.CSEARCH is None:
+	if args.csearch is None:
 		if len(args.geom_rules) >= 1:
 			destination_geom_rules = src.joinpath("QCALC/SDF_input/filter_geom_rules/")
 			for file in geom_rules_files:
@@ -761,7 +761,7 @@ def move_sdf_main(args):
 # 				)
 #
 # 	# combining the combining all files in different folders
-# 	w_dir_boltz = w_dir_main + "/QPRED/energy/boltz/"
+# 	w_dir_boltz = w_dir_main + "/qpred/energy/boltz/"
 #
 # 	for lot, bs, bs_gcp in zip(args.level_of_theory, args.basis_set, args.genecp_bs):
 # 		# assign the path to the finished directory.
@@ -953,7 +953,7 @@ def move_sdf_main(args):
 # 				if str(bs).find("/") > -1:
 # 					os.chdir(
 # 						w_dir_main
-# 						+ "/QPRED/cclib-json/all_confs_cclib/"
+# 						+ "/qpred/cclib-json/all_confs_cclib/"
 # 						+ str(lot)
 # 						+ "-"
 # 						+ str(bs).split("/")[0]
@@ -961,7 +961,7 @@ def move_sdf_main(args):
 # 				else:
 # 					os.chdir(
 # 						w_dir_main
-# 						+ "/QPRED/cclib-json/all_confs_cclib/"
+# 						+ "/qpred/cclib-json/all_confs_cclib/"
 # 						+ str(lot)
 # 						+ "-"
 # 						+ str(bs)
@@ -978,16 +978,16 @@ def geom_rules_main(args, log, geom_rules_active):
                 "\n   ----- Applying experimental rules to write the new confs file -----"
             )
         # do 2 cases, for RDKit only and RDKIt+xTB
-        if args.CMIN == "xtb":
+        if args.cmin == "xtb":
             conf_files = glob.glob("*_xtb.sdf")
-        if args.CMIN == "ani":
+        if args.cmin == "ani":
             conf_files = glob.glob("*_ani.sdf")
-        if args.CMIN is None:
-            if args.CSEARCH == "rdkit":
+        if args.cmin is None:
+            if args.csearch == "rdkit":
                 conf_files = glob.glob("*_rdkit.sdf")
-            elif args.CSEARCH == "summ":
+            elif args.csearch == "summ":
                 conf_files = glob.glob("*_summ.sdf")
-            elif args.CSEARCH == "fullmonte":
+            elif args.csearch == "fullmonte":
                 conf_files = glob.glob("*_fullmonte.sdf")
             else:
                 conf_files = glob.glob("*.sdf")

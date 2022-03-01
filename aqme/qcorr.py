@@ -112,7 +112,7 @@ class qcorr():
 				destination_fullcheck = self.args.w_dir_main.joinpath('successful_QM_outputs/json_files/')
 				json_files = glob.glob(f'{destination_fullcheck}/*.json')
 				full_check(w_dir_main=destination_fullcheck,destination_fullcheck=destination_fullcheck,json_files=json_files)
-			
+
 			except FileNotFoundError:
 				print('\nx  No normal terminations with no errors to run the full check analysis')
 				self.args.log.write('\nx  No normal terminations with no errors to run the full check analysis')
@@ -358,7 +358,7 @@ class qcorr():
 
 			isom_data = {'Coords input': coords_com, 'Coords output': cartesians,
 						'Atoms input': atoms_com, 'Atoms output': atom_types,
-						'VdW radii fraction': self.args.vdwfrac, 
+						'VdW radii fraction': self.args.vdwfrac,
 						'Covalent radii fraction': self.args.covfrac, 'Initial csv': init_csv}
 
 			isomerized = check_isomerization(isom_data, file)

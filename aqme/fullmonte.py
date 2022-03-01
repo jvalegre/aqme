@@ -112,7 +112,7 @@ def rotate_dihedrals(conformer,dihedrals,seed,stepsize):
     """
     rad_range = np.arange(0.0, 360.0,stepsize)
     for dihedral in dihedrals:
-        random.seed(seed) # RAUL: Any good reason to keep reseting the seed ? 
+        random.seed(seed) # RAUL: Any good reason to keep reseting the seed?
         rad_ang = random.choice(rad_range)
         rad = math.pi*rad_ang/180.0
         rdMolTransforms.SetDihedralRad(conformer,*dihedral,value=rad)

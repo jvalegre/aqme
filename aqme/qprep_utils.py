@@ -25,17 +25,17 @@ def qprep_coords(w_dir_main,file,found_coords,qprep_self):
 		n_atoms = 0
 		resume_line = 0
 
-		for i in range(0,len(outlines)):
-			if outlines[i].find('Gaussian, Inc.'):
+		for i,line in enumerate(outlines):
+			if line.find('Gaussian, Inc.'):
 				program = 'gaussian'
 				resume_line = i
 				break
-			elif outlines[i].find('O   R   C   A'):
+			elif line[i].find('O   R   C   A'):
 				program = 'orca'
 				resume_line = i
 				break
 
-		for i in range(resume_line,len(outlines)):	
+		for i in range(resume_line,len(outlines)):
 			if program == 'gaussian':
 				# get charge and mult
 				if outlines[i].find("Charge = ") > -1:
@@ -61,7 +61,7 @@ def qprep_coords(w_dir_main,file,found_coords,qprep_self):
 		except (AttributeError,KeyError):
 			print(f'x  {file} does not contain coordinates and/or atom type information')
 			atom_types,cartesians = [],[]
-			
+
 	# overwrite user-defined charge and multiplicity (if any)
 	if qprep_self.args.charge == None:
 		qprep_self.charge = charge

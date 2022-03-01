@@ -153,7 +153,7 @@ class csearch:
         self.args.charge = rules_get_charge(self.mol, self.args)
 
         self.csearch_folder = Path(self.w_dir_main).joinpath(
-            f"CSEARCH/{self.args.CSEARCH}"
+            f"CSEARCH/{self.args.csearch}"
         )
         self.csearch_folder.mkdir(exist_ok=True)
         self.csearch_file = []
@@ -217,7 +217,7 @@ class csearch:
                         self.mol, self.name, self.log, **template_kwargs
                     )
 
-                    total_data = creation_of_dup_csv_csearch(self.args.CSEARCH)
+                    total_data = creation_of_dup_csv_csearch(self.args.csearch)
 
                     for mol_obj, name_in, coord_map, alg_map, template in zip(*items):
                         data = self.conformer_generation(
@@ -270,10 +270,10 @@ class csearch:
         -------
         pd.Dataframe    dup_data
         """
-        dup_data = creation_of_dup_csv_csearch(args.CSEARCH)
+        dup_data = creation_of_dup_csv_csearch(args.csearch)
 
         file = self.csearch_folder.joinpath(
-            name + "_" + self.args.CSEARCH + self.args.output
+            name + "_" + self.args.csearch + self.args.output
         )
         self.csearch_file = self.csearch_file + [file.as_posix()]
 
@@ -365,7 +365,7 @@ class csearch:
         # reads the initial SDF files from RDKit and uses dihedral scan if selected
         if status not in [-1,0]:
             # getting the energy and mols after rotations
-            if args.CSEARCH == "summ" and len(rotmatches) != 0:
+            if args.csearch == "summ" and len(rotmatches) != 0:
                 status = self.dihedral_filter_and_sdf(
                     name,
                     args,
@@ -570,7 +570,7 @@ class csearch:
         """
         if i >= len(matches):  # base case, torsions should be set in conf
             # setting the metal back instead of I
-            if args.metal_complex and (args.CSEARCH == "rdkit" or update_to_rdkit):
+            if args.metal_complex and (args.csearch == "rdkit" or update_to_rdkit):
                 if coord_Map is None and alg_Map is None and mol_template is None:
                     energy = minimize_rdkit_energy(
                         mol, conf, log, args.ff, args.opt_steps_RDKit
@@ -591,32 +591,32 @@ class csearch:
             except:
                 pass
             return 1
-        else:
-            total = 0
-            deg = 0
-            while deg < 360.0:
-                rad = math.pi * deg / 180.0
-                rdMolTransforms.SetDihedralRad(
-                    mol.GetConformer(conf), *matches[i], value=rad
-                )
-                mol.SetProp("_Name", name)
-                total += self.genConformer_r(
-                    mol,
-                    conf,
-                    i + 1,
-                    matches,
-                    degree,
-                    sdwriter,
-                    args,
-                    name,
-                    log,
-                    update_to_rdkit,
-                    coord_Map,
-                    alg_Map,
-                    mol_template,
-                )
-                deg += degree
-            return total
+
+        total = 0
+        deg = 0
+        while deg < 360.0:
+            rad = math.pi * deg / 180.0
+            rdMolTransforms.SetDihedralRad(
+                mol.GetConformer(conf), *matches[i], value=rad
+            )
+            mol.SetProp("_Name", name)
+            total += self.genConformer_r(
+                mol,
+                conf,
+                i + 1,
+                matches,
+                degree,
+                sdwriter,
+                args,
+                name,
+                log,
+                update_to_rdkit,
+                coord_Map,
+                alg_Map,
+                mol_template,
+            )
+            deg += degree
+        return total
 
     def embed_conf(
         self, mol, initial_confs, args, log, coord_Map, alg_Map, mol_template
@@ -822,7 +822,7 @@ class csearch:
             "rdkit",
         )
 
-        if args.CSEARCH == "summ" or args.CSEARCH == "rdkit":
+        if args.csearch == "summ" or args.csearch == "rdkit":
             # now exhaustively drive torsions of selected conformers
             n_confs = int(
                 len(selectedcids_rdkit) * (360 / args.degree) ** len(rotmatches)
@@ -837,7 +837,7 @@ class csearch:
 
             total = 0
             for conf in selectedcids_rdkit:
-                if args.CSEARCH == "summ" and not update_to_rdkit:
+                if args.csearch == "summ" and not update_to_rdkit:
                     sdwriter.write(outmols[conf], conf)
                     for m in rotmatches:
                         rdMolTransforms.SetDihedralDeg(
@@ -864,10 +864,10 @@ class csearch:
                 log.write("o  %d total conformations generated" % total)
             status = 1
 
-        if args.CSEARCH == "summ":
+        if args.csearch == "summ":
             dup_data.at[dup_data_idx, "summ-conformers"] = total
 
-        if args.CSEARCH == "fullmonte":
+        if args.csearch == "fullmonte":
             status = generating_conformations_fullmonte(
                 name,
                 args,
@@ -942,36 +942,36 @@ class csearch:
                 "x  Too many torsions (%d). Skipping %s"
                 % (len(rotmatches), (name + args.output))
             )
-        elif args.CSEARCH == "summ" and len(rotmatches) == 0:
+        elif args.csearch == "summ" and len(rotmatches) == 0:
             update_to_rdkit = True
             log.write(
                 "\nx  No rotatable dihedral found. Updating to CSEARCH to RDKit, writing to SUMM SDF"
             )
-        elif args.CSEARCH == "fullmonte" and len(rotmatches) == 0:
+        elif args.csearch == "fullmonte" and len(rotmatches) == 0:
             update_to_rdkit = True
             log.write(
                 "\nx  No rotatable dihedral found. Updating to CSEARCH to RDKit, writing to FULLMONTE SDF"
             )
 
-        # csearch_folder = Path(self.w_dir_main).joinpath(f"CSEARCH/{args.CSEARCH}")
+        # csearch_folder = Path(self.w_dir_main).joinpath(f"CSEARCH/{args.csearch}")
         # csearch_folder.mkdir(exist_ok=True)
-        # csearch_file = csearch_folder.joinpath(name + "_" + args.CSEARCH + args.output)
+        # csearch_file = csearch_folder.joinpath(name + "_" + args.csearch + args.output)
         # sdwriter = Chem.SDWriter(str(csearch_file))
 
-        # if update_to_rdkit and args.CSEARCH == "summ":
+        # if update_to_rdkit and args.csearch == "summ":
         #     sdwriter = Chem.SDWriter(name + "_" + "summ" + args.output)
-        # elif update_to_rdkit and args.CSEARCH == "fullmonte":
+        # elif update_to_rdkit and args.csearch == "fullmonte":
         #     sdwriter = Chem.SDWriter(name + "_" + "fullmonte" + args.output)
-        # elif args.CSEARCH == "fullmonte":
+        # elif args.csearch == "fullmonte":
         #     sdwriter = Chem.SDWriter(name + "_" + "fullmonte" + args.output)
-        # elif args.CSEARCH == "crest":
+        # elif args.csearch == "crest":
         #     sdwriter = Chem.SDWriter(name + "_" + "crest" + args.output)
         # else:
         #     sdwriter = Chem.SDWriter(name + "_" + "rdkit" + args.output)
 
-        if args.CSEARCH != "crest":
+        if args.csearch != "crest":
             dup_data.at[dup_data_idx, "RDKit-Initial-samples"] = initial_confs
-            if args.CSEARCH == "rdkit":
+            if args.csearch == "rdkit":
                 rotmatches = []
             cids = self.embed_conf(
                 mol, initial_confs, args, log, coord_Map, alg_Map, mol_template
@@ -996,11 +996,11 @@ class csearch:
                     + " initial conformers with "
                     + args.ff
                 )
-                if args.CSEARCH == "summ":
+                if args.csearch == "summ":
                     log.write(
                         "o  Found " + str(len(rotmatches)) + " rotatable torsions"
                     )
-                elif args.CSEARCH == "fullmonte":
+                elif args.csearch == "fullmonte":
                     log.write(
                         "o  Found " + str(len(rotmatches)) + " rotatable torsions"
                     )
@@ -1119,10 +1119,10 @@ def prepare_smiles_from_line(line, i, args):
     # editing part
     smiles = toks[0]
     smi = check_for_pieces(smiles)
-    if args.prefix == "None":  # I assume no AttributeError
-        name = "".join(toks[1])  # I assume no AttributeError
-    else:  # I assume no AttributeError
-        name = f"{args.prefix}_{i}_{''.join(toks[1])}"  # I assume no AttributeError
+    if args.prefix == None:
+        name = "".join(toks[1])
+    else:
+        name = f"{args.prefix}_{i}_{''.join(toks[1])}"
     if len(smi) > 1:
         constraints_angle, constraints_dist, constraints_dihedral = None, None, None
         if len(toks) > 2:
@@ -1164,7 +1164,7 @@ def generate_mol_from_csv(args, w_dir_main, csv_smiles, index):
     # mol = Chem.MolFromSmiles(pruned_smi)
 
     smi = check_for_pieces(smiles)
-    if args.prefix == "None":
+    if args.prefix == None:
         name = csv_smiles.loc[index, "code_name"]
     else:
         name = "comp_" + str(index) + "_" + csv_smiles.loc[index, "code_name"]

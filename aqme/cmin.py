@@ -84,9 +84,9 @@ class cmin:
         self.args.charge_default = charge_default
         self.args.charge = rules_get_charge(self.mols[0], self.args)
 
-        self.program = self.args.CMIN
+        self.program = self.args.cmin
 
-        self.cmin_folder = Path(self.w_dir_main).joinpath(f"CMIN/{self.args.CMIN}")
+        self.cmin_folder = Path(self.w_dir_main).joinpath(f"CMIN/{self.args.cmin}")
         self.cmin_folder.mkdir(exist_ok=True)
         self.cmin_all_file = self.cmin_folder.joinpath(
             f"{self.name}_{self.program}_all_confs{self.args.output}"
@@ -98,7 +98,7 @@ class cmin:
 
     def compute_cmin(self):
 
-        dup_data = creation_of_dup_csv_cmin(self.args.CMIN)
+        dup_data = creation_of_dup_csv_cmin(self.args.cmin)
         dup_data_idx = 0
         dup_data.at[dup_data_idx, "Molecule"] = self.name
         cenergy, outmols = [], []
@@ -141,7 +141,7 @@ class cmin:
             )
             outmols[cid].SetProp("Energy", cenergy[cid])
 
-        # cmin_folder = Path(self.w_dir_main).joinpath(f"CMIN/{self.args.CMIN}")
+        # cmin_folder = Path(self.w_dir_main).joinpath(f"CMIN/{self.args.cmin}")
         # cmin_folder.mkdir(exist_ok=True)
         # cmin_file = cmin_folder.joinpath(
         #     f"{name_mol}_{self.program}_all_confs{self.args.output}"
@@ -406,7 +406,7 @@ class cmin:
                 if atom.GetSymbol() == "I":
                     atom.SetAtomicNum(1)
 
-        if args.metal_complex and not args.CSEARCH == "summ":
+        if args.metal_complex and not args.csearch == "summ":
             set_metal_atomic_number(mol, args.metal_idx, args.metal_sym)
 
         elements = ""
@@ -473,7 +473,7 @@ class cmin:
         self, conformers, selectedcids, name, args, program, log
     ):
         if len(conformers) > 0:
-            # name = name.split('_'+args.CSEARCH)[0]# a bit hacky
+            # name = name.split('_'+args.csearch)[0]# a bit hacky
             # cmin_file2 = cmin_folder.joinpath(name + "_" + program + args.output)
             # sdwriter = Chem.SDWriter(str(cmin_file2))
             # sdwriter = Chem.SDWriter(name+'_'+program+args.output)
@@ -573,14 +573,14 @@ def mult_min(name, args, program, charge, log, w_dir_main):
     """
 
     if args.verbose:
-        if args.CMIN == "xtb":
+        if args.cmin == "xtb":
             if args.xtb_solvent == "none":
                 method = f"xTB ({args.xtb_method}"
             else:
                 method = f"xTB ({args.xtb_method} in {args.xtb_solvent})"
-        if args.CMIN == "ani":
+        if args.cmin == "ani":
             method = f"ANI ({args.ani_method})"
-        if args.CMIN in ["xtb", "ani"]:
+        if args.cmin in ["xtb", "ani"]:
             filename = name + args.output
             log.write(f"\n\no  Multiple minimization of {filename} with {method}")
 
@@ -589,7 +589,7 @@ def mult_min(name, args, program, charge, log, w_dir_main):
     # read SDF files from RDKit optimization
     inmols = rdkit_sdf_read(name, args, log)
 
-    name_mol = os.path.basename(name).split("_" + args.CSEARCH)[0]
+    name_mol = os.path.basename(name).split("_" + args.csearch)[0]
 
     # bar.next()
     obj = cmin(mols=inmols, name=name_mol, w_dir_main=w_dir_main, varfile=args.varfile,

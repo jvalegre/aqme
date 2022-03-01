@@ -20,7 +20,7 @@ bondi = {"H": 1.09,"He": 1.40,"Li": 1.81,"Be": 1.53,"B": 1.92,"C": 1.70,"N": 1.5
 "Rb": 3.03,"Sr": 2.49,"Pd": 1.63,"Ag": 1.72,"Cd": 1.58,"In": 1.93,"Sn": 2.17,"Sb": 2.06,"Te": 2.06,"I": 1.98,
 "Xe": 2.16,"Cs": 3.43,"Ba": 2.68,"Pt": 1.72,"Au": 1.66,"Hg": 1.55,"Tl": 1.96,"Pb": 2.02,"Bi": 2.07,"Po": 1.97,
 "At": 2.02,"Rn": 2.20,"Fr": 3.48,"Ra": 2.83,"U": 1.86}
-	
+
 # covalent radii in Angstrom (taken from Pyykko and Atsumi, Chem. Eur. J. 15, 2009, 188-197)
 rcov = {"H": 0.32,"He": 0.46,"Li": 1.33,"Be": 1.02,"B": 0.85,"C": 0.75,"N": 0.71,"O": 0.63,"F": 0.64,
 "Ne": 0.67,"Na": 1.55,"Mg": 1.39,"Al": 1.26,"Si": 1.16,"P": 1.11,"S": 1.03,"Cl": 0.99,"Ar": 0.96,"K": 1.96,
@@ -84,7 +84,7 @@ def full_check(w_dir_main=os.getcwd(),destination_fullcheck='',json_files='*.jso
 
 		program = cclib_data['metadata']['QM program']
 		solvation = cclib_data['metadata']['solvation']
-		dispersion = cclib_data['metadata']['dispersion model']			
+		dispersion = cclib_data['metadata']['dispersion model']
 		grid_type = cclib_data['metadata']['grid type']
 		functional = cclib_data['metadata']['functional']
 		bs = cclib_data['metadata']['basis set']

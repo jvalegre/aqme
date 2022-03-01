@@ -101,7 +101,7 @@ def run_xtb(
                 for _,constraint in enumerate(constraints_all['Constraint_values'][i]):
                     command.append(constraints_all['Constraint_types'][i])
                     command.append(",".join([str(int(elem)) for elem in constraint]))
-        
+
         subprocess.run(command)
 
 

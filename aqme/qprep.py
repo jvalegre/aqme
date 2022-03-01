@@ -4,7 +4,6 @@
 
 import os
 import sys
-import glob
 import pandas as pd
 from rdkit import Chem
 from aqme.utils import (
@@ -37,7 +36,7 @@ class qprep:
 		# w_dir_initial is included to avoid problems in jupyter notebooks
 		w_dir_initial = Path(os.getcwd())
 
-		# write input files	
+		# write input files
 		os.chdir(self.args.w_dir_main)
 		for file in self.args.files:
 			found_coords = True
