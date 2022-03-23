@@ -1,15 +1,22 @@
 #####################################################.
 #        This file stores all the functions         #
-#    used in template based conformer generation    #
+#                 used in CSEARCH                   #
 #####################################################.
+import os
 import sys
+import subprocess
 from pathlib import Path
 from pkg_resources import resource_filename
-
+import pandas as pd
+try:
+	import pybel
+except ImportError:
+	from openbabel import pybel # for openbabel>=3.0.0
 from rdkit.Chem import AllChem as Chem
 from rdkit.Chem import rdDistGeom, rdMolAlign
-
-from aqme.utils import get_conf_RMS
+from aqme.utils import (
+	get_info_input,
+	get_conf_RMS)
 
 TEMPLATES_PATH = Path(resource_filename("aqme", "templates"))
 
@@ -70,16 +77,7 @@ def calc_neighbours(molecule, metals_idx):
 	bonds2AtNum[4] = 14
 	bonds2AtNum[3] = 53
 	bonds2AtNum[2] = 53
-	# RAUL: Are we interested in the first Metal found in the molecule or do we
-	#       know beforehand the idx of the Metal atom?. If we know beforehand:
-	# idx = metals_idx[0]
-	# atom = molecule.GetAtomWithIdx(idx)
-	# n_bonds = len(atom.GetBonds())
-	# atom.SetAtomicNum(bonds2AtNum[n_bonds])
-	# if n_bonds == 5:
-	#    atom.SetFormalCharge(1)
-	# neighbours = atom.GetNeighbors()
-	# return idx, neighbours
+
 	for atom in molecule.GetAtoms():
 		idx = atom.GetIdx()
 		if idx in metals_idx:
@@ -114,7 +112,6 @@ def get_distance_constrains(coordMap):
 	return constrains
 
 
-# Auxiliar functions for minimization and filtering
 def template_embed_optimize(target, template, maxsteps, log):
 	"""
 	Embeds a new conformation into a molecule, optimizes it using UFF and
@@ -419,45 +416,13 @@ def five_embed(molecule, mol_template, neighbours, name, maxsteps, log):
 	return mol_objects, name_return, coord_maps, alg_maps, mol_templates
 
 
-# Main API of the module
 def template_embed(
-	molecule, name_input, log, complex_type, metal_idx, maxsteps, heavyonly, maxmatches
+	self, mol, complex_type, metal_idx, maxsteps, heavyonly, maxmatches
 ):
 	"""
 	Wrapper function to select automatically the appropiate embedding function
 	depending on the number of neighbours of the metal center.
 
-	Parameters
-	----------
-	molecule : [type]
-		[description]
-	name_input : [type]
-		[description]
-	log : [type]
-		[description]
-	complex_type : [type]
-		[description]
-	metal_idx : [type]
-		[description]
-	maxsteps : [type]
-		[description]
-	heavyonly : [type]
-		[description]
-	maxmatches : [type]
-		[description]
-
-	Returns
-	-------
-	mol_objects : list
-		[description]
-	name_return : list
-		[description]
-	coord_maps : list
-		[description]
-	alg_maps : list
-		[description]
-	mol_templates : list
-		[description]
 	"""
 	embed_functions = dict()
 	embed_functions[2] = two_embed
@@ -465,12 +430,12 @@ def template_embed(
 	embed_functions[4] = four_embed
 	embed_functions[5] = five_embed
 
-	template = load_template(complex_type, log)
+	template = load_template(complex_type, self.args.log)
 
 	# Generate the embeddings
-	neighbours = calc_neighbours(molecule, metal_idx)
+	neighbours = calc_neighbours(mol, metal_idx)
 	embed = embed_functions[len(neighbours)]
-	items = embed(molecule, template, neighbours, name_input, maxsteps, log)
+	items = embed(mol, template, neighbours, self.args.name, maxsteps, self.args.log)
 
 	# Filter the results
 	molecules = items[0]
@@ -482,3 +447,431 @@ def template_embed(
 				ignored.append(i)
 		items = [item for i, item in enumerate(items) if i not in ignored]
 	return items
+
+
+def creation_of_dup_csv_csearch(program):
+
+	"""
+	Generates a pandas.DataFrame object with the appropiate columns for the
+	conformational search and the minimization.
+
+	Parameters
+	----------
+	csearch : str
+		Conformational search method. Current valid methods are:
+		['rdkit','fullmonte','summ']
+
+	Returns
+	-------
+	pandas.DataFrame
+	"""
+	# Boolean aliases from args
+	is_rdkit = program == "rdkit"
+	is_fullmonte = program == "fullmonte"
+	is_crest = program == "crest"
+	is_summ = program == "summ"
+
+	# column blocks definitions
+	base_columns = [
+		"Molecule",
+		"RDKit-Initial-samples",
+		"RDKit-energy-window",
+		"RDKit-initial_energy_threshold",
+		"RDKit-RMSD-and-energy-duplicates",
+		"RDKit-Unique-conformers",
+	]
+	end_columns_no_min = ["CSEARCH time (seconds)", "Overall charge"]
+	fullmonte_columns = [
+		"FullMonte-Unique-conformers",
+	]
+	#'FullMonte-conformers',
+	#'FullMonte-energy-window',
+	#'FullMonte-initial_energy_threshold',
+	#'FullMonte-RMSD-and-energy-duplicates']
+	summ_columns = [
+		"summ-conformers",
+		"summ-energy-window",
+		"summ-initial_energy_threshold",
+		"summ-RMSD-and-energy-duplicates",
+		"summ-Unique-conformers",
+	]
+	crest_columns = ["Molecule", "crest-conformers"]
+
+	# Check Conformer Search method
+	if is_rdkit:
+		columns = base_columns
+	elif is_fullmonte:
+		columns = base_columns + fullmonte_columns
+	elif is_summ:
+		columns = base_columns + summ_columns
+	elif is_crest:
+		columns = crest_columns
+	else:
+		return None
+	columns += end_columns_no_min
+	return pd.DataFrame(columns=columns)
+
+
+def prepare_direct_smi(args):
+	job_inputs = []
+	constraints_dist = args.constraints_dist
+	constraints_angle = args.constraints_angle
+	constraints_dihedral = args.constraints_dihedral
+	obj = (
+		args.smi,
+		args.name,
+		constraints_dist,
+		constraints_angle,
+		constraints_dihedral,
+	)
+	job_inputs.append(obj)
+
+	return job_inputs
+
+
+def prepare_smiles_files(args):
+	with open(args.input) as smifile:
+		lines = [line for line in smifile if line.strip()]
+	job_inputs = []
+	for i, line in enumerate(lines):
+		(
+			smi,
+			name,
+			constraints_dist,
+			constraints_angle,
+			constraints_dihedral,
+		) = prepare_smiles_from_line(line, i, args)
+		obj = (
+			smi,
+			name,
+			constraints_dist,
+			constraints_angle,
+			constraints_dihedral,
+		)
+		job_inputs.append(obj)
+
+	return job_inputs
+
+
+def prepare_smiles_from_line(line, i, args):
+	toks = line.split()
+	# editing part
+	smiles = toks[0]
+	smi = smi.split(".")
+	if args.prefix == '':
+		name = "".join(toks[1])
+	else:
+		name = f"{args.prefix}_{i}_{''.join(toks[1])}"
+	constraints_dist = args.constraints_dist
+	constraints_angle = args.constraints_angle
+	constraints_dihedral = args.constraints_dihedral
+	if len(toks) > 2:
+		constraints_dist = toks[2]
+		constraints_dist = constraints_dist.split("/")
+		for j, c in enumerate(constraints_dist):
+			constraints_dist[j] = c.split("-")
+		if len(toks) > 3:
+			constraints_angle = toks[3]
+			constraints_angle = constraints_angle.split("/")
+			for k, c in enumerate(constraints_angle):
+				constraints_angle[k] = c.split("-")
+			if len(toks) > 4:
+				constraints_dihedral = toks[4]
+				constraints_dihedral = constraints_dihedral.split("/")
+				for l, c in enumerate(constraints_dihedral):
+					constraints_dihedral[l] = c.split("-")
+
+	return smiles, name, constraints_dist, constraints_angle, constraints_dihedral
+
+
+def prepare_csv_files(args):
+	csv_smiles = pd.read_csv(args.input)
+	job_inputs = []
+	for i in range(len(csv_smiles)):
+		obj = generate_mol_from_csv(args, csv_smiles, i)
+		job_inputs.append(obj)
+	return job_inputs
+
+
+def generate_mol_from_csv(args, csv_smiles, index):
+	# assigning names and smi i  each loop
+	try:
+		smiles = csv_smiles.loc[index, "SMILES"]
+	except KeyError:
+		try:
+			smiles = csv_smiles.loc[index, "smiles"]
+		except KeyError:	
+			print("\nx  Make sure the CSV file contains a column called 'SMILES' or 'smiles' with the SMILES of the molecules!")
+			args.log.write("\nx  Make sure the CSV file contains a column called 'SMILES' or 'smiles' with the SMILES of the molecules!")
+			sys.exit()
+
+	# pruned_smi = smi.split(".")
+	# mol = Chem.MolFromSmiles(pruned_smi)
+
+	try:
+		if args.prefix == '':
+			name = csv_smiles.loc[index, "code_name"]
+		else:
+			name = f'{args.prefix}_{csv_smiles.loc[index, "code_name"]}'
+	except KeyError:
+		print("\nx  Make sure the CSV file contains a column called 'code_name' with the names of the molecules!")
+		args.log.write("\nx  Make sure the CSV file contains a column called 'code_name' with the names of the molecules!")
+		sys.exit()
+
+	constraints_dist = args.constraints_dist
+	constraints_angle = args.constraints_angle
+	constraints_dihedral = args.constraints_dihedral
+	if "constraints_dist" in csv_smiles.columns:
+		constraints_dist = csv_smiles.loc[index, "constraints_dist"]
+		constraints_dist = constraints_dist.split("/")
+		for i, c in enumerate(constraints_dist):
+			constraints_dist[i] = c.split("-")
+	if "constraints_angle" in csv_smiles.columns:
+		constraints_angle = csv_smiles.loc[index, "constraints_angle"]
+		constraints_angle = constraints_angle.split("/")
+		for i, c in enumerate(constraints_angle):
+			constraints_angle[i] = c.split("-")
+	if "constraints_dihedral" in csv_smiles.columns:
+		constraints_dihedral = csv_smiles.loc[index, "constraints_dihedral"]
+		constraints_dihedral = constraints_dihedral.split("/")
+		for i, c in enumerate(constraints_dihedral):
+			constraints_dihedral[i] = c.split("-")
+
+	obj = (
+		smiles,
+		name,
+		constraints_dist,
+		constraints_angle,
+		constraints_dihedral
+	)
+
+	return obj
+
+
+def prepare_cdx_files(args):
+	# converting to smiles from chemdraw
+	molecules = generate_mol_from_cdx(args)
+	job_inputs = []
+	for i, (smiles, _) in enumerate(molecules):
+		name = f"{args.input.split('.')[0]}_{str(i)}"
+		constraints_dist = args.constraints_dist
+		constraints_angle = args.constraints_angle
+		constraints_dihedral = args.constraints_dihedral
+		obj = (
+			smiles,
+			name,
+			constraints_dist,
+			constraints_angle,
+			constraints_dihedral
+		)
+		job_inputs.append(obj)
+	return job_inputs
+
+
+def generate_mol_from_cdx(args):
+	cmd_cdx = ["obabel", "-icdx", args.input, "-osmi", "-Ocdx.smi"]
+	subprocess.call(cmd_cdx)
+	with open("cdx.smi", "r") as smifile:
+		smi_lines = [line for line in smifile]
+	os.remove("cdx.smi")
+	molecules = []
+	for smi in smi_lines:
+		pruned_smi = smi.split(".")
+		molecule = Chem.MolFromSmiles(pruned_smi)
+		molecules.append((pruned_smi, molecule))
+	return molecules
+
+
+def prepare_xyz_files(args):
+	job_inputs = []
+	# charge_com = com_2_xyz_2_sdf(args.input, args.default_charge)
+	name = os.path.splitext(args.input)[0]
+	sdffile = f"{name}.sdf"
+	suppl, _, _ = mol_from_sdf_or_mol_or_mol2(sdffile)
+
+	for _,mol in enumerate(suppl):
+		# if args.charge is None:
+		# 	args.charge = charge_com
+		constraints_dist = args.constraints_dist
+		constraints_angle = args.constraints_angle
+		constraints_dihedral = args.constraints_dihedral
+		obj = (
+			mol,
+			name,
+			constraints_dist,
+			constraints_angle,
+			constraints_dihedral
+		)
+		job_inputs.append(obj)
+	return job_inputs
+
+
+def prepare_sdf_files(args):
+	suppl, IDs, charges = mol_from_sdf_or_mol_or_mol2(args.input)
+	job_inputs = []
+	for _, (mol, name, _) in enumerate(zip(suppl, IDs, charges)):
+		# if args.charge == None:
+		# 	args.charge = charge_sdf
+		constraints_dist = args.constraints_dist
+		constraints_angle = args.constraints_angle
+		constraints_dihedral = args.constraints_dihedral
+		obj = (
+			mol,
+			name,
+			constraints_dist,
+			constraints_angle,
+			constraints_dihedral
+		)
+		job_inputs.append(obj)
+	return job_inputs
+
+
+def xyz_2_sdf(file, parent_dir=None):
+	"""
+	Creates a .sdf file from a .xyz in the specified directory. If no directory
+	is specified then the files are created in the current directory.
+
+	Parameters
+	----------
+	file : str
+		filename and extension of an existing .xyz file
+	dir : str or pathlib.Path, optional
+		a path to the directory where the .xyz file is located
+	"""
+	if parent_dir is None:
+		parent_dir = Path("")
+	else:
+		parent_dir = Path(parent_dir)
+	mol = next(pybel.readfile("xyz", parent_dir / file))
+	ofile = Path(file).stem + ".sdf"
+	mol.write("sdf", parent_dir / ofile)
+
+
+def com_2_xyz_2_sdf(input_file, default_charge, start_point=None):
+	"""
+	com to xyz to sdf for obabel
+
+	Parameters
+	----------
+	input_file : str
+		path to the file to convert
+	start_point : str, optional
+		file(path/name?) to the starting point, by default None
+
+	Returns
+	-------
+	int?
+		charge or None?
+	"""
+	extension = Path(input_file).suffix
+
+	if start_point is None:
+		if extension in ["com", "gjf", "xyz"]:
+			file = Path(input_file)
+
+	else:
+		file = Path(start_point)
+
+	filename = Path.stem
+
+	# Create the 'xyz' file and/or get the total charge
+	if (
+		extension != "xyz"
+	):
+		xyz, charge, mult = get_info_input(file)
+		xyz_txt = "\n".join(xyz)
+		with open(f"{filename}.xyz", "w") as F:
+			F.write(f"{len(xyz)}\n{filename}\n{xyz_txt}\n")
+	else:
+		charge = default_charge
+
+	xyz_2_sdf(f"{filename}.xyz")
+
+	return charge
+
+
+def mol_from_sdf_or_mol_or_mol2(input_file):
+	"""
+	mol from sdf
+
+	Parameters
+	----------
+	input_file : str
+		path to a .sdf .mol or .mol2 file
+
+	Returns
+	-------
+	tuple of lists?
+		suppl, IDs, charges
+	"""
+	filename = os.path.splitext(input_file)[0]
+	extension = os.path.splitext(input_file)[1]
+
+	if extension == ".sdf":
+		suppl = Chem.SDMolSupplier(input_file, removeHs=False)
+	elif extension == ".mol":
+		suppl = Chem.MolFromMolFile(input_file, removeHs=False)
+	elif extension == ".mol2":
+		suppl = Chem.MolFromMol2File(input_file, removeHs=False)
+
+	IDs, charges = [], []
+
+	with open(input_file, "r") as F:
+		lines = F.readlines()
+
+	molecule_count = 0
+	for i, line in enumerate(lines):
+		if line.find(">  <ID>") > -1:
+			ID = lines[i + 1].split()[0]
+			IDs.append(ID)
+		if line.find("M  CHG") > -1:
+			charge_line = line.split("  ")
+			charge = 0
+			for j in range(4, len(charge_line)):
+				if (j % 2) == 0:
+					if j == len(charge_line) - 1:
+						charge_line[j] = charge_line[j].split("\n")[0]
+					charge += int(charge_line[j])
+			charges.append(charge)
+		if line.find("$$$$") > -1:
+			molecule_count += 1
+			if molecule_count != len(charges):
+				charges.append(0)
+
+	if len(IDs) == 0:
+		if extension == ".sdf":
+			for i in range(len(suppl)):
+				IDs.append(f"{filename}_{i}")
+		else:
+			IDs.append(filename)
+	if len(charges) == 0:
+		if extension == ".sdf":
+			for _ in suppl:
+				charges.append(0)
+		else:
+			charges.append(0)
+	return suppl, IDs, charges
+
+
+def minimize_rdkit_energy(mol,conf,log,FF,maxsteps):
+    """
+    Minimizes a conformer of a molecule and returns the final energy.
+    """
+
+    if FF == "MMFF":
+        properties = Chem.MMFFGetMoleculeProperties(mol)
+        forcefield = Chem.MMFFGetMoleculeForceField(mol,properties,confId=conf)
+
+    if FF == "UFF" or forcefield is None:
+        # if forcefield is None means that MMFF will not work. Attempt UFF.
+        forcefield = Chem.UFFGetMoleculeForceField(mol,confId=conf)
+
+    if FF not in ["MMFF","UFF"] or forcefield is None:
+        log.write(f' Force field {FF} not supported!')
+        sys.exit()
+
+    forcefield.Initialize()
+    forcefield.Minimize(maxIts=maxsteps)
+    energy = float(forcefield.CalcEnergy())
+
+    return energy

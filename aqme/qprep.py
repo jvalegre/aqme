@@ -4,13 +4,16 @@
 
 import os
 import sys
-import pandas as pd
-from rdkit import Chem
+import time
+from rdkit import Chem 
+import json
+from aqme.utils import (
+	cclib_atoms_coords,
+	QM_coords,
+	read_file)
 from aqme.utils import (
 	move_file,
 	load_variables)
-from aqme.qprep_utils import qprep_coords
-from openbabel import pybel
 from pathlib import Path
 
 
@@ -21,6 +24,7 @@ class qprep:
 
 	def __init__(self,**kwargs):
 
+		start_time_overall = time.time()
 		# load default and user-specified variables
 		self.args = load_variables(kwargs,'qprep')
 
@@ -31,33 +35,63 @@ class qprep:
 
 		if self.args.qm_input == "":
 			print("x  No keywords line was specified! (i.e. qm_input=KEYWORDS_LINE).")
+			self.args.log.write("x  No keywords line was specified! (i.e. qm_input=KEYWORDS_LINE).")
 			sys.exit()
-
-		# w_dir_initial is included to avoid problems in jupyter notebooks
-		w_dir_initial = Path(os.getcwd())
 
 		# write input files
 		os.chdir(self.args.w_dir_main)
 		for file in self.args.files:
-			found_coords = True
-			if self.args.atom_types == [] or self.args.cartesians == []:
-				found_coords = False
-				self.atom_types,self.cartesians,found_coords,self = qprep_coords(self.args.w_dir_main,file,found_coords,self)
+			found_coords = False
+			name = file.replace('/','\\').split("\\")[-1].split('.')[0]
+			if file.split('.')[1].lower() == 'sdf':
+				try: 
+					# get atom types, atomic coordinates, charge and multiplicity of all the mols in the SDF file
+					mols = Chem.SDMolSupplier(str(file),removeHs=False)
+					for i, mol in enumerate(mols):
+						atom_types,cartesians,charge,mult,_ = self.qprep_coords(file,found_coords,mol)
+						if charge == None:
+							charge = 0
+						if mult == None:
+							mult = 1
+						name_conf = f'{name}_conf_{i+1}'
+						qprep_data = {'atom_types': atom_types, 'cartesians': cartesians,
+								'charge': charge, 'mult': mult, 'name': name_conf}
+						comfile = self.write(qprep_data)
+						move_file(self.args.destination, self.args.w_dir_main, comfile)
+						
+				except OSError:
+					print(f'x  {name} couldn\'t be processed!')
+					self.args.log.write(f'x  {name} couldn\'t be processed!')
+					continue
+
+				print(f'o  {name} successfully processed')
+				self.args.log.write(f'o  {name} successfully processed')
+			
 			else:
-				self.atom_types = self.args.atom_types
-				self.cartesians = self.args.cartesians
-				self.charge = self.args.charge
-				self.mult = self.args.mult
-			if not found_coords:
-				continue
-			self.args.n_atoms = len(self.atom_types)
-			self.args.molecule = file.split('.')[0]
-			comfile = self.write()
-			move_file(self.args.destination, self.args.w_dir_main, comfile)
-		os.chdir(w_dir_initial)
+				found_coords = False
+				atom_types,cartesians,charge,mult,found_coords = self.qprep_coords(file,found_coords,None)
+
+				if not found_coords:
+					continue
+
+				qprep_data = {'atom_types': atom_types, 'cartesians': cartesians,
+							'charge': charge, 'mult': mult, 'name': name}
+				comfile = self.write(qprep_data)
+				move_file(self.args.destination, self.args.w_dir_main, comfile)
+				
+				print(f'o  {name} successfully processed')
+				self.args.log.write(f'o  {name} successfully processed')
+
+		# this is added to avoid path problems in jupyter notebooks
+		os.chdir(self.args.initial_dir)
+
+		elapsed_time = round(time.time() - start_time_overall, 2)
+		print(f"\nTime QPREP: {elapsed_time} seconds\n")
+		self.args.log.write(f"\nTime QPREP: {elapsed_time} seconds\n")
+		self.args.log.finalize()
 
 
-	def get_header(self):
+	def get_header(self,qprep_data):
 		'''
 		Gets the part of the input file above the molecular coordinates.
 		'''
@@ -66,16 +100,16 @@ class qprep:
 
 		if self.args.program.lower() == 'gaussian':
 			if self.args.chk:
-				txt += f'%chk={self.args.molecule}.chk\n'
+				txt += f'%chk={qprep_data["name"]}.chk\n'
 			txt += f'%nprocshared={self.args.nprocs}\n'
 			txt += f'%mem={self.args.mem}\n'
 			txt += f'# {self.args.qm_input}'
 			txt += '\n\n'
-			txt += f'{self.args.molecule}\n\n'
-			txt += f'{self.charge} {self.mult}\n'
+			txt += f'{qprep_data["name"]}\n\n'
+			txt += f'{qprep_data["charge"]} {qprep_data["mult"]}\n'
 
 		elif self.args.program.lower() == 'orca':
-			txt += f'# {self.args.molecule}\n'
+			txt += f'# {qprep_data["name"]}\n'
 			if self.args.mem.find('GB'):
 				mem_orca = int(self.args.mem.split('GB')[0])*1000
 			elif self.args.mem.find('MB'):
@@ -85,11 +119,11 @@ class qprep:
 			txt += f'%maxcore {mem_orca}\n'
 			txt += f'%pal nprocs {self.args.nprocs} end\n'
 			txt += f'! {self.args.qm_input}\n'
-			txt += f'* xyz {self.charge} {self.mult}\n'
+			txt += f'* xyz {qprep_data["charge"]} {qprep_data["mult"]}\n'
 
 		return txt
 
-	def get_tail(self):
+	def get_tail(self,qprep_data):
 		"""
 		Gets the part of the input file below the molecular coordinates.
 		"""
@@ -103,7 +137,7 @@ class qprep:
 				if self.args.qm_input.lower().find("genecp") > -1:
 					gen_type = "genecp"
 
-				for _, element_ecp in enumerate(self.atom_types):
+				for _, element_ecp in enumerate(qprep_data['atom_types']):
 					if element_ecp in self.args.gen_atoms and element_ecp not in ecp_used:
 						ecp_used.append(element_ecp)
 					elif (
@@ -131,36 +165,36 @@ class qprep:
 
 		return txt
 
-	def write(self):
+	def write(self,qprep_data):
 
 		if self.args.program.lower() == 'gaussian':
 			extension = 'com'
 		elif self.args.program.lower() == 'orca':
 			extension = 'inp'
 		if self.args.suffix != '':
-			comfile = f'{self.args.molecule}_{self.args.suffix}.{extension}'
+			comfile = f'{qprep_data["name"]}_{self.args.suffix}.{extension}'
 		else:
-			comfile = f'{self.args.molecule}.{extension}'
+			comfile = f'{qprep_data["name"]}.{extension}'
 
 		if os.path.exists(comfile):
 			os.remove(comfile)
 
-		header = self.get_header()
-		tail = self.get_tail()
+		header = self.get_header(qprep_data)
+		tail = self.get_tail(qprep_data)
 
 		fileout = open(comfile, "w")
 		fileout.write(header)
 
-		for atom in range(0, self.args.n_atoms):
+		for atom_idx in range(0,len(qprep_data['atom_types'])):
 			fileout.write(
 				"{0:>2} {1:12.8f} {2:12.8f} {3:12.8f}".format(
-					self.atom_types[atom],
-					self.cartesians[atom][0],
-					self.cartesians[atom][1],
-					self.cartesians[atom][2],
+					qprep_data['atom_types'][atom_idx],
+					qprep_data['cartesians'][atom_idx][0],
+					qprep_data['cartesians'][atom_idx][1],
+					qprep_data['cartesians'][atom_idx][2],
 				)
 			)
-			if atom != self.args.n_atoms - 1:
+			if atom_idx != len(qprep_data['atom_types']) - 1:
 				fileout.write("\n")
 
 		if self.args.program.lower() == "gaussian":
@@ -173,49 +207,84 @@ class qprep:
 
 		return comfile
 
+	def qprep_coords(self,file,found_coords,mol):
+		'''
+		Retrieve atom types and coordinates from multiple formats (LOG, OUT, JSON, MOL)
+		'''
 
-# Aux Functions for QM input generation
-def get_molecule_list(filepath, lowest_only=False, lowest_n=False, energy_threshold=0.0):
-	out_molecules = []
+		charge,mult = None,None
+		if self.args.atom_types == [] or self.args.cartesians == []:
+			if mol is not None:
+				atom_types = [atom.GetSymbol() for _, atom in enumerate(mol.GetAtoms())]
+				cartesians = mol.GetConformers()[0].GetPositions()
+				try:
+					charge = int(mol.GetProp('Real charge'))
+				except KeyError:
+					pass
+				try:
+					mult = int(mol.GetProp('Mult'))
+				except KeyError:
+					pass
 
-	molecules = [mol for mol in Chem.SDMolSupplier(filepath, removeHs=False)]
-	energies = [float(mol.GetProp("Energy")) for mol in molecules]
-	min_energy = energies[0]
-	for mol, energy in zip(molecules, energies):
-		is_in_threshold = energy - min_energy < energy_threshold
-		if lowest_n and is_in_threshold:
-			out_molecules.append(mol)
-		elif lowest_n:
-			break
-		elif lowest_only:
-			out_molecules.append(mol)
-			break
+			elif file.split('.')[1] in ['log','out']:
+				# detect QM program and number of atoms
+				outlines = read_file(self.args.w_dir_main,file)
+				n_atoms = 0
+				resume_line = 0
+
+				for i,line in enumerate(outlines):
+					if line.find('Gaussian, Inc.'):
+						program = 'gaussian'
+						resume_line = i
+						break
+					elif line[i].find('O   R   C   A'):
+						program = 'orca'
+						resume_line = i
+						break
+
+				for i in range(resume_line,len(outlines)):
+					if program == 'gaussian':
+						# get charge and mult
+						if outlines[i].find("Charge = ") > -1:
+							charge = int(outlines[i].split()[2])
+							mult = int(outlines[i].split()[5].rstrip('\n'))
+						# get number of atoms
+						elif outlines[i].find('Symbolic Z-matrix:') > -1:
+							symbol_z_line = i
+						elif outlines[i].find('GradGrad') > -1:
+							gradgrad_line = i
+							n_atoms = gradgrad_line-symbol_z_line-4
+							break
+
+				atom_types,cartesians = QM_coords(outlines,0,n_atoms,program)
+
+			elif file.split('.')[1] == 'json':
+				with open(file) as json_file:
+					cclib_data = json.load(json_file)
+				try:
+					atom_types,cartesians = cclib_atoms_coords(cclib_data)
+					charge = cclib_data['properties']['charge']
+					mult = cclib_data['properties']['multiplicity']
+				except (AttributeError,KeyError):
+					print(f'x  {file} does not contain coordinates and/or atom type information')
+					atom_types,cartesians = [],[]
+
 		else:
-			out_molecules.append(mol)
-	return out_molecules
+			atom_types = self.args.atom_types
+			cartesians = self.args.cartesians
 
+		# overwrite with user-defined charge and multiplicity (if any) 
+		# or sets to default charge 0 and mult 1 if the parameters weren't found
+		if self.args.charge is not None:
+			charge = self.args.charge
+		elif charge is None:
+			charge = 0
+		if self.args.mult is not None:
+			mult = self.args.mult
+		elif mult is None:
+			mult = 1
 
-def load_charge_data(filepath, backup_files):
-	# read in dup_data to get the overall charge of molecules
-	invalid_files = []
-	try:
-		charge_data = pd.read_csv(filepath, usecols=["Molecule", "Overall charge","Mult"])
-	except:
-		charge_data = pd.DataFrame()
-		for i, sdf_file in enumerate(backup_files):
-			if not (Path(sdf_file).exists()):
-				invalid_files.append(sdf_file)
-				maxsplit = 1
-				if "filter" in sdf_file:
-					maxsplit += 1
-				name = sdf_file.rsplit("_", maxsplit[0])
-				charge = "Invalid"
-			else:
-				mol = next(pybel.readfile(sdf_file))
-				name = mol.title.split(maxsplit=1)[0]
-				charge = mol.data["Real charge"]
-				mult = mol.data["Mult"]
-			charge_data.at[i, "Molecule"] = name
-			charge_data.at[i, "Overall charge"] = charge
-			charge_data.at[i, "Mult"] = mult
-	return charge_data, invalid_files
+		if atom_types != [] and cartesians != []:
+			found_coords = True
+
+		return atom_types,cartesians,charge,mult,found_coords

@@ -80,7 +80,7 @@ def xyzall_2_xyz(xyzin, name):
 
 
 def run_xtb(
-    xyzin, xyzoutxtb, constraints_all, charge
+    xyzin, xyzoutxtb, constraints_all, charge, mult
 ):
     # check whether job has already been run
     if os.path.exists(xyzoutxtb):
@@ -94,6 +94,8 @@ def run_xtb(
             str(xyzoutxtb),
             "--charge",
             str(charge),
+            "--uhf",
+            str(mult-1)
         ]
 
         for i,_ in constraints_all['Constraint_values']:
@@ -105,7 +107,7 @@ def run_xtb(
         subprocess.run(command)
 
 
-def crest_opt(mol, name, dup_data, dup_data_idx, sdwriter, args, w_dir_main):
+def crest_opt(mol, name, dup_data, dup_data_idx, sdwriter, args, charge, mult):
 
     """
     Run xtb using shell script and args to perform crest/cregen conformer search
@@ -128,9 +130,9 @@ def crest_opt(mol, name, dup_data, dup_data_idx, sdwriter, args, w_dir_main):
         working directory
     """
 
-    csearch_dir = Path(w_dir_main)
+    csearch_dir = Path(args.w_dir_main)
     dat_dir = csearch_dir / "CSEARCH" / "crest_xyz" / name
-    dat_dir.mkdir(parents=True, exist_ok=True)
+    dat_dir.mkdir(exist_ok=True, parents=True)
     os.chdir(dat_dir)
 
     xyzin = str(dat_dir) + "/" + name + ".xyz"
@@ -139,7 +141,6 @@ def crest_opt(mol, name, dup_data, dup_data_idx, sdwriter, args, w_dir_main):
         AllChem.EmbedMolecule(mol)
         rdkit.Chem.rdmolfiles.MolToXYZFile(mol, xyzin)
 
-    charge = args.charge[0]
     cbonds = args.cbonds
     constraints_dist = args.constraints_dist
     constraints_angle = args.constraints_angle
@@ -160,13 +161,18 @@ def crest_opt(mol, name, dup_data, dup_data_idx, sdwriter, args, w_dir_main):
         constraints_all = {'Constraint_values': [constraints_dist, constraints_angle, constraints_dihedral],
                         'Constraint_types': ["--dist","--angle","--dihedral"]}
         run_xtb(
-            xyzin, xyzoutxtb1, constraints_all, charge
+            xyzin,
+            xyzoutxtb1,
+            constraints_all,
+            charge,
+            mult
         )
         run_xtb(
             xyzoutxtb1,
             xyzoutxtb2,
             constraints_all,
-            charge
+            charge,
+            mult
         )
     else:
         xyzoutxtb2 = xyzin
@@ -194,6 +200,8 @@ def crest_opt(mol, name, dup_data, dup_data_idx, sdwriter, args, w_dir_main):
             str(xyzoutbest),
             "--charge",
             str(charge),
+            "--uhf",
+            str(mult-1)
         ]
         if len(unique_atoms) != 0:
             command.append("--constraint")
@@ -224,8 +232,6 @@ def crest_opt(mol, name, dup_data, dup_data_idx, sdwriter, args, w_dir_main):
                 xyzoutbest,
                 "--xyzout",
                 str(xyzcregenensemble),
-                "--charge",
-                str(charge),
                 "--ethr",
                 str(cregen_ethr),
                 "--rthr",
@@ -272,6 +278,6 @@ def crest_opt(mol, name, dup_data, dup_data_idx, sdwriter, args, w_dir_main):
 
     dup_data.at[dup_data_idx, "crest-conformers"] = len(xyz_files)
 
-    os.chdir(w_dir_main)
+    os.chdir(args.w_dir_main)
 
     return 1

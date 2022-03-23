@@ -1,6 +1,6 @@
 #####################################################.
-#      This file stores all the functions used       #
-#    in conformer minimization with xTB and ANI      #
+#          This file storesthe CSEARCH class        #
+#             used in conformer refinement          #
 #####################################################.
 
 import os
@@ -33,22 +33,12 @@ hartree_to_kcal = 627.509
 
 class cmin:
     """
-    Representation of the neccesary information related with cmin.
+	Class containing all the functions from the CMIN module.
 
-    Parameters
-    ----------
-    mols : RDKit mol objects
-        Mol objects used in CMIN
-    name : str
-        Name of the mol object
-    w_dir_main : str
-        Working directory
-    varfile : str
-        Parameter file containing the additional options for CMIN
-	charge_default : int
-        Charge of the system
+	Parameters
+	----------
 	kwargs : argument class
-		Specify any arguments from the QCORR module
+		Specify any arguments from the CMIN module (for a complete list of variables, visit the AQME documentation)
     """
 
     def __init__(
@@ -81,19 +71,19 @@ class cmin:
         if varfile is not None:
             self.args, self.log = load_from_yaml(self.args, self.log)
 
-        self.args.charge_default = charge_default
+        self.args.charge = charge_default
         self.args.charge = rules_get_charge(self.mols[0], self.args)
 
         self.program = self.args.cmin
 
-        self.cmin_folder = Path(self.w_dir_main).joinpath(f"CMIN/{self.args.cmin}")
-        self.cmin_folder.mkdir(exist_ok=True)
-        self.cmin_all_file = self.cmin_folder.joinpath(
+        cmin_folder = Path(self.w_dir_main).joinpath(f"CMIN/{self.args.cmin}")
+        cmin_folder.mkdir(exist_ok=True, parents=True)
+        self.cmin_all_file = cmin_folder.joinpath(
             f"{self.name}_{self.program}_all_confs{self.args.output}"
         )
         self.sdwriterall = Chem.SDWriter(str(self.cmin_all_file))
 
-        self.cmin_file = self.cmin_folder.joinpath(self.name + "_" + self.program + self.args.output)
+        self.cmin_file = cmin_folder.joinpath(self.name + "_" + self.program + self.args.output)
         self.sdwriter = Chem.SDWriter(str(self.cmin_file))
 
     def compute_cmin(self):
@@ -114,11 +104,10 @@ class cmin:
                         self.args.metal_sym.append(None)
 
                     (
-                        self.args.mol,
                         self.args.metal_idx,
                         self.args.complex_coord,
                         self.args.metal_sym,
-                    ) = substituted_mol(mol, self.args)
+                    ) = substituted_mol(self,mol)
 
                 self.mol, energy, ani_incompatible = self.optimize(
                     mol, self.args, self.program, self.log, dup_data, dup_data_idx
@@ -141,15 +130,6 @@ class cmin:
             )
             outmols[cid].SetProp("Energy", cenergy[cid])
 
-        # cmin_folder = Path(self.w_dir_main).joinpath(f"CMIN/{self.args.cmin}")
-        # cmin_folder.mkdir(exist_ok=True)
-        # cmin_file = cmin_folder.joinpath(
-        #     f"{name_mol}_{self.program}_all_confs{self.args.output}"
-        # )
-        # sdwriter = Chem.SDWriter(str(cmin_file))
-        # writing all conformers to files after minimization
-        # sdwriter = Chem.SDWriter(f'{name_mol}_{program}_all_confs{args.output}')
-
         write_all_confs = 0
         for cid in sorted_all_cids:
             self.sdwriterall.write(outmols[cid])
@@ -162,34 +142,10 @@ class cmin:
             )
 
         self.log.write(
-            f"\n\no  Applying filters to intial conformers after {self.program} minimization"
+            f"\no  Applying filters to intial conformers after {self.program} minimization"
         )
 
-        # THIS IS THE VERSION FROM RAUL, NEED TO ADAPT THIS!
-        # # filter based on energy window ewin_csearch
-        # Ewindow_filter = EnergyFilter(args.ewin_csearch,'window')
-        # Ediff_filter1 = EnergyFilter(args.initial_energy_threshold,'difference')
-        # Ediff_filter2 = EnergyFilter(args.energy_threshold,'difference')
-        # RMSD_filter = RMSDFilter(threshold=args.rms_threshold,
-        #                          maxmatches=args.max_matches_RMSD,
-        #                          heavyonly=args.heavyonly,
-        #                          is_rdkit=program=='rdkit')
-        # Ediff_RMSD = CompoundFilter(Ediff_filter2,RMSD_filter)
-
-        # items = [(cid,energy,mol) for cid,energy,mol in zip(sorted_all_cids,cenergy,outmols)]
-        # keys = [itemgetter(1),
-        #         itemgetter(1),
-        #         [itemgetter(1),itemgetter(0,2)]]
-        # total_filter = CompoundFilter(Ewindow_filter,Ediff_filter1,Ediff_RMSD)
-
-        # total_filter.apply(items,keys=keys)
-
-        # filter_to_pandas(total_filter,dup_data,dup_data_idx,program)
-
-        # selectedcids, cenergy, outmols = zip(*total_filter.accepted)
-
-        # PLACEHOLDER for imports! Need to rearrange
-
+        # filter based on energy window ewin_cmin
         sortedcids = ewin_filter(
             sorted_all_cids,
             cenergy,
@@ -198,7 +154,7 @@ class cmin:
             dup_data_idx,
             self.log,
             self.program,
-            self.args.ewin_csearch,
+            self.args.ewin_cmin,
         )
         # pre-filter based on energy only
         selectedcids_initial = pre_E_filter(
@@ -295,7 +251,7 @@ class cmin:
                         # will update only for cdx, smi, and csv formats.
                         atom.charge = ase_charge
             else:
-                atom.charge = args.charge_default
+                atom.charge = args.charge
                 if args.verbose:
                     log.write("o  The Overall charge is read from the input file ")
 
@@ -397,16 +353,10 @@ class cmin:
             sys.exit()
 
         # if large system increase stack size
-        if args.STACKSIZE != "1G":
-            os.environ["OMP_STACKSIZE"] = args.STACKSIZE
+        if args.stacksize != "1G":
+            os.environ["OMP_STACKSIZE"] = args.stacksize
 
-        # removing the Ba atom if NCI complexes
-        if args.nci_complex:
-            for atom in mol.GetAtoms():
-                if atom.GetSymbol() == "I":
-                    atom.SetAtomicNum(1)
-
-        if args.metal_complex and not args.csearch == "summ":
+        if args.metal_complex and not args.program == "summ":
             set_metal_atomic_number(mol, args.metal_idx, args.metal_sym)
 
         elements = ""
@@ -436,8 +386,6 @@ class cmin:
         ani_incompatible = False
         if program == "ani":
             try:
-                # VERY DIRTY HACK! WE NEED TO FIX THE IMPORTS THROUGH CMIN!
-                # from aqme.cmin_bug import ani_calc
                 energy, coordinates = self.ani_calc(elements, coordinates, args)
 
             except KeyError:
@@ -449,8 +397,6 @@ class cmin:
                 coordinates = np.zeros((1, 3))
 
         elif program == "xtb":
-            # VERY DIRTY HACK! WE NEED TO FIX THE IMPORTS THROUGH CMIN!
-            # from aqme.cmin_bug import xtb_calc
             energy, coordinates = self.xtb_calc(
                 elements, coordinates, args, log, ase_metal, ase_metal_idx
             )
@@ -473,11 +419,6 @@ class cmin:
         self, conformers, selectedcids, name, args, program, log
     ):
         if len(conformers) > 0:
-            # name = name.split('_'+args.csearch)[0]# a bit hacky
-            # cmin_file2 = cmin_folder.joinpath(name + "_" + program + args.output)
-            # sdwriter = Chem.SDWriter(str(cmin_file2))
-            # sdwriter = Chem.SDWriter(name+'_'+program+args.output)
-
             write_confs = 0
             for cid in selectedcids:
                 self.sdwriter.write(conformers[cid])
@@ -496,35 +437,6 @@ class cmin:
             self.sdwriter.close()
         else:
             log.write("x  No conformers found!")
-
-    # def filter_to_pandas(self, compfilter, dataframe, row, program):
-    #     """
-    #     Writes the results of a filter in a dataframe at the specified row.
-
-    #     Parameters
-    #     ----------
-    #     compfilter : CompoundFilter
-    #             A filter with a dataset != None.
-    #     dataframe : pd.Dataframe
-    #             The dataframe where the results are to be added.
-    #     row : int
-    #             row of the dataframe where the results are to be stored.
-    #     program : str
-    #             program for the conformer search. ['rdkit','summ','ani','xtb']
-    #     """
-    #     columns = [
-    #         "energy-window",
-    #         "initial_energy_threshold",
-    #         "RMSD-and-energy-duplicates",
-    #     ]
-
-    #     program2name = {"rdkit": "RDKit", "summ": "summ", "ani": "ANI", "xtb": "xTB"}
-
-    #     prog = program2name[program]
-    #     for i, col in enumerate(columns):
-    #         duplicates = compfilter.discarded_from(i)
-    #         dataframe.at[row, f"{prog}-{col}"] = len(duplicates)
-    #     dataframe.at[row, f"{prog}-Unique-conformers"] = len(compfilter.accepted)
 
 
 def rdkit_sdf_read(name, args, log):
@@ -582,14 +494,14 @@ def mult_min(name, args, program, charge, log, w_dir_main):
             method = f"ANI ({args.ani_method})"
         if args.cmin in ["xtb", "ani"]:
             filename = name + args.output
-            log.write(f"\n\no  Multiple minimization of {filename} with {method}")
+            log.write(f"\no  Multiple minimization of {filename} with {method}")
 
     # bar = IncrementalBar('o  Minimizing', max = len(inmols))
 
     # read SDF files from RDKit optimization
     inmols = rdkit_sdf_read(name, args, log)
 
-    name_mol = os.path.basename(name).split("_" + args.csearch)[0]
+    name_mol = os.path.basename(name).split("_" + args.program)[0]
 
     # bar.next()
     obj = cmin(mols=inmols, name=name_mol, w_dir_main=w_dir_main, varfile=args.varfile,

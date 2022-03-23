@@ -482,7 +482,6 @@ def pre_E_filter(
     """
     selectedcids_initial = []
     eng_dup = 0
-    # bar = IncrementalBar('o  Filtering based on energy (pre-filter)', max = len(sortedcids))
 
     # Add the first one
     selectedcids_initial.append(sortedcids[0])
@@ -498,8 +497,6 @@ def pre_E_filter(
         if is_unique:
             if conf not in selectedcids_initial:
                 selectedcids_initial.append(conf)
-        # bar.next()
-    # bar.finish()
 
     if verbose:
         log.write(
@@ -530,32 +527,6 @@ def RMSD_and_E_filter(
     This filter selects the first compound that it finds with energy an energy
     difference lower than the threshold with a higher than the threshold rms
     with respect to the nearest (in energy) accepted compound.
-
-    Parameters
-    ----------
-    outmols : list
-        list of rdkit.Chem.Mol objects that can be accesed sorted by CIDs
-    selectedcids_initial : list
-        list of Compound Ids to filter.
-    cenergy : list
-        list of energies of the molecules sorted by CIDs
-    args : argparse.args
-        [description]
-    dup_data : pd.Dataframe
-        [description]
-    dup_data_idx : [type]
-        [description]
-    log : Logger
-        [description]
-    calc_type : str
-        A string that points towards the column of the dataframe that should
-        be filled with the number of duplicates. The current choices are:
-        ['rdkit','summ','ani','xtb']
-
-    Returns
-    -------
-    list
-        list of accepted compound Ids
     """
     rms_threshold = args.rms_threshold
     energy_threshold = args.energy_threshold
@@ -592,7 +563,7 @@ def RMSD_and_E_filter(
                         seenconf,
                         conf,
                         args.heavyonly,
-                        args.max_matches_RMSD,
+                        args.max_matches_rmsd,
                     )
                 # elif calc_type == 'summ' or calc_type == 'fullmonte' or calc_type =='xtb' or calc_type =='ani':
                 elif calc_type == "summ" or calc_type == "xtb" or calc_type == "ani":
@@ -602,7 +573,7 @@ def RMSD_and_E_filter(
                         -1,
                         -1,
                         args.heavyonly,
-                        args.max_matches_RMSD,
+                        args.max_matches_rmsd,
                     )
                 if rms < args.rms_threshold:
                     excluded_conf = True

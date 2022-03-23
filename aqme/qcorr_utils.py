@@ -50,7 +50,7 @@ def detect_linear(errortype,atom_types,cclib_data):
 	return errortype
 
 
-def full_check(w_dir_main=os.getcwd(),destination_fullcheck='',json_files='*.json'):
+def full_check(w_dir_main=os.getcwd(),destination_fullcheck='',files='*.json'):
 	"""
 	Checks that multiple calculations were done following the same protocols, including
 	program and version, grid size, level of theory, dispersion and solvation model.
@@ -61,7 +61,7 @@ def full_check(w_dir_main=os.getcwd(),destination_fullcheck='',json_files='*.jso
 		Working directory
 	destination_fullcheck : str
 		Destination to create the file with the full check
-	json_files : list of str
+	files : list of str
 		json files to compare (glob.glob('*.json') and '*.json are both valid inputs to
 		include all the json files from a folder)
 	"""
@@ -70,12 +70,12 @@ def full_check(w_dir_main=os.getcwd(),destination_fullcheck='',json_files='*.jso
 	w_dir_main = Path(w_dir_main)
 	os.chdir(w_dir_main)
 
-	if json_files == '*.json' or json_files == '*json':
-		json_files=glob.glob('*.json')
+	if not isinstance(files, list):
+		files = glob.glob(files)
 	
 	df_fullcheck = pd.DataFrame(columns=['file', 'program', 'grid_type', 'level_of_theory', 'dispersion', 'solvation'])
 	
-	for file in json_files:
+	for file in files:
 		file_name = file.replace('/','\\').split("\\")[-1].split('.')[0]
 		with open(file) as json_file:
 			cclib_data = json.load(json_file)

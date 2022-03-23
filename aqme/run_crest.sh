@@ -16,6 +16,7 @@ export OMP_MAX_ACTIVE_LEVELS=1
 export MKL_NUM_THREADS=12
 
 charge=${charge:-0}
+uhf=${uhf:-1}
 nproc=${nproc:-24}
 force_const=${force_const:-1.0}
 max_cycle=${max_cycle:-100}
@@ -38,7 +39,7 @@ echo -e "-  RUNNING $file WITH crest \c"
 
 # output
 outfile="${xyzoutall%.*}".out
-contoutfile="${xyzoutall%.*}".constraint.out
+scontoutfile="${xyzoutall%.*}".constraint.out
 echo -e "-  outfile $outfile \c"
 
 # user-defined variables
@@ -58,7 +59,7 @@ then
 	 echo "NO INPUT!"
 else
 	 crest $file.xyz --constrain $constraint > $contoutfile
-	 crest $file.xyz --cinp .xcontrol.sample -c $charge -ewin $ewin --noreftopo --nci --cbonds $cbonds > $outfile && mv crest_conformers.xyz $xyzoutall && mv crest_best.xyz $xyzoutbest
+	 crest $file.xyz --cinp .xcontrol.sample -c $charge --uhf $uhf -ewin $ewin --noreftopo --nci --cbonds $cbonds > $outfile && mv crest_conformers.xyz $xyzoutall && mv crest_best.xyz $xyzoutbest
 fi
 
 rm -f coord* coord.original cregen_0.tmp cregen_1.tmp *.sorted cre_members crest.energies crest_* struc.xyz wbo gfnff_topo .xcontrol.sample $contoutfile scoord*

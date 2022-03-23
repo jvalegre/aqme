@@ -18,6 +18,7 @@ export MKL_NUM_THREADS=12
 
 
 charge=${charge:-0}
+uhf=${uhf:-1}
 nproc=${nproc:-24}
 force_const=${force_const:-1.0}
 max_cycle=${max_cycle:-100}
@@ -66,7 +67,7 @@ if [ -z "$file" ]
 then
    echo "NO INPUT!"
 else
-   xtb $file.xyz --opt --input constrain.inp -c $charge > $outfile && mv xtbopt.xyz $xyzout
+   xtb $file.xyz --opt --input constrain.inp -c $charge --uhf $uhf > $outfile && mv xtbopt.xyz $xyzout
 fi
 
 rm -f constrain.inp xtbtopo* xtbrestart xtbopt* charges *fukui *omega *gfn1 wbo xtblast.xyz NOT_CONVERGED

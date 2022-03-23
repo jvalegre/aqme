@@ -3,7 +3,6 @@
 # default variables - machine dependent, uncomment as appropriate!
 runcrest=/usr/local/xtb/crest
 
-charge=${charge:-0}
 xyzout=${xyzout:-crest_conformers.xyz}
 ethr=${ethr:-0.2}
 rthr=${rthr:-0.125}

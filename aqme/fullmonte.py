@@ -11,6 +11,7 @@ from rdkit.Chem import AllChem as Chem
 from rdkit.Chem import rdMolTransforms, rdMolAlign
 
 from aqme.utils import set_metal_atomic_number, get_conf_RMS
+from aqme.csearch_utils import minimize_rdkit_energy
 
 def realign_mol(mol,conf,coord_Map,alg_Map,mol_template,maxsteps):  # RAUL: This function requires a clear separation between minimization and alignment.
     """
@@ -36,6 +37,7 @@ def realign_mol(mol,conf,coord_Map,alg_Map,mol_template,maxsteps):  # RAUL: This
     mol,energy
         The updated mol object and the final forcefield energy.
     """
+    
     num_atom_match = mol.GetSubstructMatch(mol_template)
     forcefield = Chem.UFFGetMoleculeForceField(mol,confId=conf)
     for i, idxI in enumerate(num_atom_match):
@@ -49,51 +51,6 @@ def realign_mol(mol,conf,coord_Map,alg_Map,mol_template,maxsteps):  # RAUL: This
                         atomMap=alg_Map,reflect=True,maxIters=100)
     energy = float(forcefield.CalcEnergy())
     return mol,energy
-
-def minimize_rdkit_energy(mol,conf,log,FF,maxsteps):
-    """
-    Minimizes a conformer of a molecule and returns the final energy.
-
-    Parameters
-    ----------
-    mol : rdkit.Chem.Mol
-        [description]
-    conf : int?
-        Number that indicates which conformation of the molecule will be minimized and aligned.
-    args : [type]
-        [description]
-    log : [type]
-        [description]
-    FF : str
-        A valid forcefield name. Currently only 'UFF' and 'MMFF' supported.
-    maxsteps : int
-        Maximum number of iterations in FF minimization.
-
-    Returns
-    -------
-    float
-        Final energy of the minimization
-    """
-
-    if FF == "MMFF":
-        properties = Chem.MMFFGetMoleculeProperties(mol)
-        forcefield = Chem.MMFFGetMoleculeForceField(mol,properties,confId=conf)
-
-    if FF == "UFF" or forcefield is None:
-        # if forcefield is None means that MMFF will not work. Attempt UFF.
-        forcefield = Chem.UFFGetMoleculeForceField(mol,confId=conf)
-
-    if FF not in ["MMFF","UFF"] or forcefield is None:
-        log.write(f' Force field {FF} not supported!')
-        sys.exit()
-
-    # RAUL: If UFF fails to be set up -> 'forcefield is None'
-    #       Should we log it and exit?
-    forcefield.Initialize()
-    forcefield.Minimize(maxIts=maxsteps)
-    energy = float(forcefield.CalcEnergy())
-
-    return energy
 
 def rotate_dihedrals(conformer,dihedrals,seed,stepsize):
     """
@@ -110,18 +67,19 @@ def rotate_dihedrals(conformer,dihedrals,seed,stepsize):
     stepsize : float
         Angle in Degrees to do the steps between 0.0 and 360.0
     """
-    rad_range = np.arange(0.0, 360.0,stepsize)
+    
+    rad_range = np.arange(stepsize, 360.0, stepsize)
     for dihedral in dihedrals:
         random.seed(seed) # RAUL: Any good reason to keep reseting the seed?
         rad_ang = random.choice(rad_range)
         rad = math.pi*rad_ang/180.0
         rdMolTransforms.SetDihedralRad(conformer,*dihedral,value=rad)
 
-def generating_conformations_fullmonte(name,args,rotmatches,log,selectedcids_rdkit,outmols,sdwriter,dup_data,dup_data_idx,coord_Map,alg_Map, mol_template):
+def generating_conformations_fullmonte(name,args,rotmatches,selectedcids_rdkit,outmols,sdwriter,dup_data,dup_data_idx,coord_Map,alg_Map,mol_template,ff):
 
     ##working with fullmonte
     n_unique_conformers = len(selectedcids_rdkit)
-    log.write(f"\n\no  Generation of confomers using FULLMONTE using "  \
+    args.log.write(f"\no  Generation of confomers using FULLMONTE using "  \
               f"{n_unique_conformers} unique conformer(s) as starting point(s)")
 
     #Writing the conformers as mol objects to sdf
@@ -132,7 +90,7 @@ def generating_conformations_fullmonte(name,args,rotmatches,log,selectedcids_rdk
 
     fmmols = Chem.SDMolSupplier(name+'_'+'rdkit'+args.output, removeHs=False)
     if fmmols is None:
-        log.write("Could not open "+ name+args.output)
+        args.log.write("Could not open "+ name+args.output)
         sys.exit(-1)
 
 
@@ -151,7 +109,6 @@ def generating_conformations_fullmonte(name,args,rotmatches,log,selectedcids_rdk
         if abs(globmin-ene) < args.ewin_sample_fullmonte:
             unique_mol_sample.append(unique_mol[c_energy.index(ene)])
 
-    # bar = IncrementalBar('o  Generating conformations for Full Monte', max = args.nsteps_fullmonte)
     while nsteps < args.nsteps_fullmonte+1:
         seed = nsteps
 
@@ -174,9 +131,9 @@ def generating_conformations_fullmonte(name,args,rotmatches,log,selectedcids_rdk
 
         #STEP 5: Optimize geometry rot_mol
         if (coord_Map, alg_Map, mol_template) == (None, None, None):
-            energy = minimize_rdkit_energy(rot_mol,-1,log,args.ff,args.opt_steps_RDKit)
+            energy = minimize_rdkit_energy(rot_mol,-1,args.log,ff,args.opt_steps_rdkit)
         else:
-            mol,energy = realign_mol(rot_mol,-1,coord_Map, alg_Map, mol_template,args.opt_steps_RDKit)
+            mol,energy = realign_mol(rot_mol,-1,coord_Map, alg_Map, mol_template,args.opt_steps_rdkit)
 
         #STEP 6 : Check for DUPLICATES - energy and rms filter (reuse)
                  #  if the conformer is unique then save it the list
@@ -187,7 +144,7 @@ def generating_conformations_fullmonte(name,args,rotmatches,log,selectedcids_rdk
                 exclude_conf = True
                 break
             if  abs(energy - c_energy[j]) < args.energy_threshold:
-                rms = get_conf_RMS(rot_mol,seenmol,-1,-1, args.heavyonly, args.max_matches_RMSD)
+                rms = get_conf_RMS(rot_mol,seenmol,-1,-1, args.heavyonly, args.max_matches_rmsd)
                 if rms < args.rms_threshold:
                     exclude_conf = True
                     break
@@ -205,18 +162,14 @@ def generating_conformations_fullmonte(name,args,rotmatches,log,selectedcids_rdk
                 unique_mol.pop(indx)
                 c_energy.pop(indx)
             if abs(globmin-ene) < args.ewin_sample_fullmonte:
-
                 unique_mol_sample.append(unique_mol[indx])
 
         nsteps += 1
-    #     bar.next()
-    #
-    # bar.finish()
 
     dup_data.at[dup_data_idx, 'FullMonte-Unique-conformers'] = len(unique_mol)
 
     if args.verbose:
-        log.write("o  "+ str(len(unique_mol))+" unique conformers remain")
+        args.log.write("o  "+ str(len(unique_mol))+" unique conformers remain")
 
     cids = list(range(len(unique_mol)))
     sorted_all_cids = sorted(cids,key = lambda cid: c_energy[cid])
@@ -229,7 +182,7 @@ def generating_conformations_fullmonte(name,args,rotmatches,log,selectedcids_rdk
                 set_metal_atomic_number(unique_mol[cid],args.metal_idx,args.metal_sym)
             sdwriter.write(unique_mol[cid])
         else:
-            mol_realigned,_ = realign_mol(unique_mol[cid],-1,coord_Map, alg_Map, mol_template,args.opt_steps_RDKit)
+            mol_realigned,_ = realign_mol(unique_mol[cid],-1,coord_Map, alg_Map, mol_template,args.opt_steps_rdkit)
             if args.metal_complex:
                 set_metal_atomic_number(mol_realigned,args.metal_idx,args.metal_sym)
             sdwriter.write(mol_realigned)

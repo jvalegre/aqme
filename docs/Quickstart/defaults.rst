@@ -143,7 +143,7 @@ Common Parameters to Edit
   # IF A METAL OR AN ATOM WITH UNCOMMON HYBRIDIZATION (i.e. pentacoordinated phosphorus) IS USED
   metal_complex : False # specify True to activate this option
   metal : [] # specify the metal(s) or atom(s) with uncommon hybridization, in the format 'A','B','C'...
-  m_oxi : [] # oxidation number of the atom (it is used to calculate the charge of the molecule)
+  metal_oxi : [] # oxidation number of the atom (it is used to calculate the charge of the molecule)
   complex_spin : 1 # final spin of the molecule (the code does not calculate spin, it must be defined by the user)
 
   # (8) EXP RULES
@@ -165,7 +165,7 @@ Pre-Optimised Parameters
   rms_threshold : 0.25 #cutoff for considering sampled conformers the same (default 0.25) for RDKit and xTB duplicate filters
   energy_threshold : 0.25 # energy difference in kcal/mol between unique conformers for RDKit and xTB duplicate filters
   initial_energy_threshold : 0.0001 # energy difference for the first RDKit filter based on E only
-  max_matches_RMSD : 1000 # max iterations to find optimal RMSD in RDKit duplicate filter
+  max_matches_rmsd : 1000 # max iterations to find optimal RMSD in RDKit duplicate filter
                               # The higher the number the longer the duplicate filter takes but
                               # the more duplicates are filtered off
   heavyonly : True # If True, H from OH, NH, etc. will not be used to generate conformers (recommended: False with molecules that contain OH groups)
@@ -174,13 +174,13 @@ Pre-Optimised Parameters
   # (2) FILTERS FOR RDKIT OPTIMIZATION
   max_torsions : 20 # Skip any molecules with more than this many torsions (default 5)
   num_rot_bonds : 20 # Skip any molecules with more than this many rotatable bonds (default 5)
-  max_MolWt : 10000 # Skip any molecules with molecular weights higher than this number
+  max_mol_wt : 10000 # Skip any molecules with molecular weights higher than this number
 
   # (3) PARAMETERS FOR RDKIT OPTIMIZATION
   ff : "MMFF" # force field used in the RDKit optimization. Options: MMFF or UFF
   etkdg : False # use new ETKDG knowledge-based method instead of distance geometry also needs to be present in RDKIT ENV
   seed : 62609 # random seed (default 62609) for ETKDG
-  opt_steps_RDKit : 1000
+  opt_steps_rdkit : 1000
 
   # (4) DEFAULT PARAMETERS FOR ANI and xTB OPTIMIZATION
   opt_steps : 1000 # max number of cycles during optimization
@@ -191,7 +191,7 @@ Pre-Optimised Parameters
 
   # (6) DEFAULT PARAMETERS ONLY FOR xTB OPTIMIZATION
   large_sys : True
-  STACKSIZE : '1G' # set for large system
+  stacksize : '1G' # set for large system
 
 
   # (7) METAL VARIABLES CALCULATED IN THE PROGRAM

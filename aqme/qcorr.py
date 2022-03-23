@@ -3,7 +3,9 @@
 ######################################################.
 
 import os
+import sys
 import glob
+import time
 import pandas as pd
 import json
 import subprocess
@@ -36,7 +38,7 @@ class qcorr():
 
 		# load default and user-specified variables
 		self.args = load_variables(kwargs,'qcorr')
-
+		
 		# QCORR analysis
 		self.qcorr_processing()
 
@@ -52,6 +54,8 @@ class qcorr():
 		2. Generates input files to fix errors and extra imaginary frequencies
 		3. Generates input files with new keywords line(s) from the normally terminated files from point 1 (i.e. single-point energy corrections)
 		"""
+
+		start_time_overall = time.time()
 
 		# generate some data
 		file_terms = {'finished': 0, 'sp_calcs' : 0, 'extra_imag_freq': 0, 'ts_no_imag_freq': 0, 'freq_no_conv': 0,
@@ -72,6 +76,8 @@ class qcorr():
 				file_terms,_ = self.organize_outputs(file,termination,errortype,file_terms)
 				if errortype == 'atomicbasiserror':
 					os.remove(file_name+'.json')
+					print(f'{file}: Termination = {termination}, Error type = {errortype}')
+					self.args.log.write(f'{file}: Termination = {termination}, Error type = {errortype}')
 				continue
 
 			# check for duplicates and fix wrong number of freqs in normally terminated calculations and
@@ -84,7 +90,7 @@ class qcorr():
 
 			# check for isomerization
 			if self.args.isom is not None:
-				errortype = self.analyze_isom(file,cartesians,atom_types)
+				errortype = self.analyze_isom(file,cartesians,atom_types,errortype)
 
 			# move initial QM input files (if the files are placed in the same folder as the output files)
 			if os.path.exists(f'{self.args.w_dir_main}/{file_name}.com') and self.args.round_num == 1:
@@ -106,18 +112,21 @@ class qcorr():
 				os.remove(file_name+'.json')
 
 			# write information about the QCORR analysis in a csv
-			self.write_qcorr_csv(file_terms)
+			csv_qcorr = self.write_qcorr_csv(file_terms)
 
 		# performs a full analysis to ensure that the calcs were run with the same parameters
 		if self.args.fullcheck:
-			try:
+			df_qcorr = pd.read_csv(csv_qcorr)
+			if df_qcorr['Normal termination'][0] > 0:
 				json_files = glob.glob(f'{destination_json}/*.json')
-				full_check(w_dir_main=destination_json,destination_fullcheck=destination_json,json_files=json_files)
-
-			except FileNotFoundError:
+				full_check(w_dir_main=destination_json,destination_fullcheck=destination_json,files=json_files)
+			else:
 				print('\nx  No normal terminations with no errors to run the full check analysis')
 				self.args.log.write('\nx  No normal terminations with no errors to run the full check analysis')
-		
+
+		elapsed_time = round(time.time() - start_time_overall, 2)
+		self.args.log.write(f"\n Time QCORR: {elapsed_time} seconds\n")
+		print(f"\n Time QCORR: {elapsed_time} seconds\n")
 		self.args.log.finalize()
 
 		# move dat and csv file containing the QCORR information if this is a sequential QCORR analysis
@@ -344,18 +353,29 @@ class qcorr():
 		return atom_types,cartesians,cclib_data
 
 
-	def analyze_isom(self,file,cartesians,atom_types):
+	def analyze_isom(self,file,cartesians,atom_types,errortype):
 		'''
 		Check if the initial structure isomerized during QM geometry optimization
 		'''
+
 		isomerized = False
+		isom_valid = True
 		init_csv = pd.DataFrame()
-		os.chdir(self.args.isom_inputs)
+		try:
+			os.chdir(self.args.isom_inputs)
+		except FileNotFoundError:
+			print(f'x  The PATH specified in isom_inputs doesn\'t exist!')
+			self.args.log.write(f'x  The PATH specified in isom_inputs doesn\'t exist!')
+			isom_valid = False
+
+		if not isom_valid:
+			os.chdir(self.args.initial_dir)
+			sys.exit()
 
 		try:
 			atoms_com, coords_com, atoms_and_coords = [],[],[]
 			if len(self.args.isom.split('.')) == 1:
-				atoms_and_coords,_ = get_info_input(f'{file.split(".")[0]}.{self.args.isom}')
+				atoms_and_coords,_,_ = get_info_input(f'{file.split(".")[0]}.{self.args.isom}')
 
 			elif self.args.isom.split('.')[1] != 'csv':
 				init_csv = pd.read_csv(self.args.isom)
@@ -405,11 +425,20 @@ class qcorr():
 			destination_fix = Path(f'{self.args.w_dir_main}/../../run_{self.args.round_num}/fixed_QM_inputs')
 		else:
 			destination_fix = Path(f'{self.args.w_dir_main}/unsuccessful_QM_outputs/run_{self.args.round_num}/fixed_QM_inputs')
-
-		qprep(destination=destination_fix, w_dir_main=self.args.w_dir_main, files=file, charge=cclib_data['properties']['charge'],
-			mult=cclib_data['properties']['multiplicity'], program=self.args.program, atom_types=atom_types, cartesians=cartesians,
-			qm_input=cclib_data['metadata']['keywords line'], mem=cclib_data['metadata']['memory'], nprocs=cclib_data['metadata']['processors'],
-			chk=self.args.chk, qm_end=self.args.qm_end, bs_gen=self.args.bs_gen, bs=self.args.bs, gen_atoms=self.args.gen_atoms)
+		
+		if cclib_data['metadata']['QM program'].lower().find('gaussian') > -1:
+			program = 'gaussian'
+		elif cclib_data['metadata']['QM program'].lower().find('orca') > -1:
+			program = 'orca'
+		
+		if program in ['gaussian','orca']:
+			qprep(destination=destination_fix, w_dir_main=self.args.w_dir_main, files=file, charge=cclib_data['properties']['charge'],
+				mult=cclib_data['properties']['multiplicity'], program=program, atom_types=atom_types, cartesians=cartesians,
+				qm_input=cclib_data['metadata']['keywords line'], mem=cclib_data['metadata']['memory'], nprocs=cclib_data['metadata']['processors'],
+				chk=self.args.chk, qm_end=self.args.qm_end, bs_gen=self.args.bs_gen, bs=self.args.bs, gen_atoms=self.args.gen_atoms)
+		else:
+			print(f"x  Couldn't create an input file to fix {file} (compatible progras: Gaussian and ORCA)\n")
+			self.args.log.write(f"x  Couldn't create an input file to fix {file} (compatible progras: Gaussian and ORCA)\n")
 
 
 	def json_gen(self,file,file_name):
@@ -426,10 +455,10 @@ class qcorr():
 			with open(file_name+'.json') as json_file:
 				cclib_data = json.load(json_file)
 		except FileNotFoundError:
-			print(f'x  Potential cclib compatibility problem or no data found for file {file}')
-			self.args.log.write(f'x  Potential cclib compatibility problem or no data found for file {file}')
 			termination = 'other'
 			errortype = 'no_data'
+			print(f'x  Potential cclib compatibility problem or no data found for file {file} (Termination = {termination}, Error type = {errortype})')
+			self.args.log.write(f'x  Potential cclib compatibility problem or no data found for file {file} (Termination = {termination}, Error type = {errortype})')
 			cclib_data = {}
 			
 		return termination,errortype,cclib_data
@@ -589,4 +618,7 @@ class qcorr():
 		if self.args.isom is not None:
 			ana_data.at[0,'Isomerization'] = file_terms['isomerized']
 		path_as_str = self.args.w_dir_main.as_posix()
-		ana_data.to_csv(path_as_str+f'/QCORR-run_{self.args.round_num}-stats.csv',index=False)
+		csv_qcorr = path_as_str+f'/QCORR-run_{self.args.round_num}-stats.csv'
+		ana_data.to_csv(csv_qcorr,index=False)
+		
+		return csv_qcorr

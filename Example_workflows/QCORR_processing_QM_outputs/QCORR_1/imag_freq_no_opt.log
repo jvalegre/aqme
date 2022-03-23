@@ -1065,10 +1065,10 @@ SLURM Job Name: a-Ar_def2TZVP
    D29       -3.14044   0.00000   0.00000   0.00075   0.00075  -3.13969
    D30       -0.00032   0.00000   0.00000  -0.00008  -0.00008  -0.00040
          Item               Value     Threshold  Converged?
- Maximum Force            0.000076     0.000450     NO
+ Maximum Force            0.000076     0.000450     YES
  RMS     Force            0.000012     0.000300     YES
- Maximum Displacement     0.202641     0.001800     YES 
- RMS     Displacement     0.046255     0.001200     YES 
+ Maximum Displacement     0.000261     0.001800     YES 
+ RMS     Displacement     0.000455     0.001200     YES 
  Predicted change in Energy=-1.186170D-06
                            ----------------------------
                            ! Non-Optimized Parameters !

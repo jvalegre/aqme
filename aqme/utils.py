@@ -3,21 +3,21 @@
 #                in multiple modules                 #
 ######################################################.
 
+import os
 import sys
 import getopt
 import subprocess
 import numpy as np
 import glob
+import yaml
+import pandas as pd
 from pathlib import Path
 from rdkit.Chem.rdMolAlign import GetBestRMS
 from rdkit.Chem.rdmolops import RemoveHs
-from openbabel import pybel
-import os
 from rdkit import Geometry
-from rdkit.Chem import rdmolfiles
-import yaml
-import pandas as pd
+from rdkit.Chem import rdmolfiles,Mol
 from rdkit.Chem import AllChem as Chem
+from openbabel import pybel
 from aqme.argument_parser import set_options,var_dict
 
 
@@ -142,69 +142,6 @@ def get_mult(mol):
 	mult = 2*(radical_index/2) + 1
 	return mult
 
-# OS utils
-def creation_of_dup_csv_csearch(csearch):
-
-	"""
-	Generates a pandas.DataFrame object with the appropiate columns for the
-	conformational search and the minimization.
-
-	Parameters
-	----------
-	csearch : str
-		Conformational search method. Current valid methods are:
-		['rdkit','fullmonte','summ']
-
-	Returns
-	-------
-	pandas.DataFrame
-	"""
-	# Boolean aliases from args
-	is_rdkit = csearch == "rdkit"
-	is_fullmonte = csearch == "fullmonte"
-	is_crest = csearch == "crest"
-	is_summ = csearch == "summ"
-
-	# column blocks definitions
-	base_columns = [
-		"Molecule",
-		"RDKit-Initial-samples",
-		"RDKit-energy-window",
-		"RDKit-initial_energy_threshold",
-		"RDKit-RMSD-and-energy-duplicates",
-		"RDKit-Unique-conformers",
-	]
-	end_columns_no_min = ["CSEARCH time (seconds)", "Overall charge"]
-	fullmonte_columns = [
-		"FullMonte-Unique-conformers",
-	]
-	#'FullMonte-conformers',
-	#'FullMonte-energy-window',
-	#'FullMonte-initial_energy_threshold',
-	#'FullMonte-RMSD-and-energy-duplicates']
-	summ_columns = [
-		"summ-conformers",
-		"summ-energy-window",
-		"summ-initial_energy_threshold",
-		"summ-RMSD-and-energy-duplicates",
-		"summ-Unique-conformers",
-	]
-	crest_columns = ["Molecule", "crest-conformers"]
-
-	# Check Conformer Search method
-	if is_rdkit:
-		columns = base_columns
-	elif is_fullmonte:
-		columns = base_columns + fullmonte_columns
-	elif is_summ:
-		columns = base_columns + summ_columns
-	elif is_crest:
-		columns = crest_columns
-	else:
-		return None
-	columns += end_columns_no_min
-	return pd.DataFrame(columns=columns)
-
 
 def creation_of_dup_csv_cmin(cmin):
 
@@ -277,72 +214,6 @@ def move_file(destination, source, file):
 		filepath.replace(destination / file)
 
 
-# openbabel utils
-# com to xyz to sdf for obabel
-def com_2_xyz_2_sdf(input_file, default_charge, start_point=None):
-	"""
-	com to xyz to sdf for obabel
-
-	Parameters
-	----------
-	input_file : str
-		path to the file to convert
-	start_point : str, optional
-		file(path/name?) to the starting point, by default None
-
-	Returns
-	-------
-	int?
-		charge or None?
-	"""
-	extension = Path(input_file).suffix
-
-	if start_point is None:
-		if extension in ["com", "gjf", "xyz"]:
-			file = Path(input_file)
-
-	else:
-		file = Path(start_point)
-
-	filename = Path.stem
-
-	# Create the 'xyz' file and/or get the total charge
-	if (
-		extension != "xyz"
-	):  #  RAUL: Originally this pointed towards args.input_file, shouldn't it be to args.file?
-		xyz, charge = get_info_input(file)
-		xyz_txt = "\n".join(xyz)
-		with open(f"{filename}.xyz", "w") as F:
-			F.write(f"{len(xyz)}\n{filename}\n{xyz_txt}\n")
-	else:
-		charge = default_charge
-
-	xyz_2_sdf(f"{filename}.xyz")
-
-	return charge
-
-
-def xyz_2_sdf(file, parent_dir=None):
-	"""
-	Creates a .sdf file from a .xyz in the specified directory. If no directory
-	is specified then the files are created in the current directory.
-
-	Parameters
-	----------
-	file : str
-		filename and extension of an existing .xyz file
-	dir : str or pathlib.Path, optional
-		a path to the directory where the .xyz file is located
-	"""
-	if parent_dir is None:
-		parent_dir = Path("")
-	else:
-		parent_dir = Path(parent_dir)
-	mol = next(pybel.readfile("xyz", parent_dir / file))
-	ofile = Path(file).stem + ".sdf"
-	mol.write("sdf", parent_dir / ofile)
-
-
 def get_info_input(file):
 	"""
 	Takes an input file and retrieves the coordinates of the atoms and the
@@ -412,11 +283,27 @@ def get_info_input(file):
 			atoms_and_coords.append(line.strip())
 			line = next(_iter).strip()
 
-	return atoms_and_coords, charge
+	return atoms_and_coords, charge, mult
 
 
 # RDKit Utils
-def nci_ts_mol(smi, args, constraints_dist, constraints_angle, constraints_dihedral, name):
+def smi_to_mol(
+	smi, name, constraints_dist, constraints_angle, constraints_dihedral
+):
+	smi = smi.split(".")
+	if len(smi) > 1:
+		mol, constraints_dist, constraints_angle, constraints_dihedral = nci_ts_mol(
+			smi, name, constraints_dist, constraints_angle, constraints_dihedral
+		)
+	else:
+		params = Chem.SmilesParserParams()
+		params.removeHs = False
+		mol = Chem.MolFromSmiles(smi[0], params)
+		
+	return mol, constraints_dist, constraints_angle, constraints_dihedral
+
+
+def nci_ts_mol(smi, name, constraints_dist, constraints_angle, constraints_dihedral):
 
 	if constraints_dist is not None:
 		constraints_dist = [[float(y) for y in x] for x in constraints_dist]
@@ -469,73 +356,42 @@ def nci_ts_mol(smi, args, constraints_dist, constraints_angle, constraints_dihed
 	Chem.ConstrainedEmbed(mol,molH)
 	rdmolfiles.MolToXYZFile(mol, name+'.xyz')
 
-	# for atom in mol.GetAtoms():
-		# print(atom.GetAtomMapNum(),atom.GetIdx(),atom.GetSymbol())
 	nconstraints_dist = []
 	if constraints_dist is not None:
 
 		for _,r in enumerate(constraints_dist):
-			# print('r:',r[:2])
 			nr = []
 			for _,ele in enumerate(r[:2]):
-				# print('ele:',  ele)
 				for atom in mol.GetAtoms():
 					if ele == atom.GetAtomMapNum():
 						nr.append(float(atom.GetIdx())+1)
-						# print('nr:',  nr)
 			nr.append(r[-1])
-			# print('nr-final:',  nr)
 			nconstraints_dist.append(nr)
 		nconstraints_dist  = np.array(nconstraints_dist)
-		# print(nconstraints_dist)
-		# print('----')
 	nconstraints_angle = []
 	if constraints_angle is not None:
 
 		for _,r in enumerate(constraints_angle):
-			# print('r:',r[:2])
 			nr = []
 			for _,ele in enumerate(r[:3]):
-				# print('ele:',  ele)
 				for atom in mol.GetAtoms():
 					if ele == atom.GetAtomMapNum():
 						nr.append(float(atom.GetIdx())+1)
-						# print('nr:',  nr)
 			nr.append(r[-1])
-			# print('nr-final:',  nr)
 			nconstraints_angle.append(nr)
 		nconstraints_angle  = np.array(nconstraints_angle)
-		# print(nconstraints_angle)
-		# print('----')
 	nconstraints_dihedral = []
 	if constraints_dihedral is not None:
 		for _,r in enumerate(constraints_dihedral):
-			# print('r:',r[:2])
 			nr = []
 			for _,ele in enumerate(r[:4]):
-				# print('ele:',  ele)
 				for atom in mol.GetAtoms():
 					if ele == atom.GetAtomMapNum():
 						nr.append(float(atom.GetIdx())+1)
-						# print('nr:',  nr)
 			nr.append(r[-1])
-			# print('nr-final:',  nr)
 			nconstraints_dihedral.append(nr)
 		nconstraints_dihedral  = np.array(nconstraints_dihedral)
-		# print(nconstraints_dihedral)
-		# print('----')
 
-	# print(constraints_dist[:2])
-	# for atom in mol.GetAtoms():
-	#     print(atom.GetAtomMapNum(),atom.GetIdx(),atom.GetSymbol())
-	#     if constraints_dist is not None:
-	#         constraints_dist = np.where(constraints_dist==float(atom.GetAtomMapNum()),float(atom.GetIdx())+1,constraints_dist)
-	#     if constraints_angle is not None:
-	#         constraints_angle = np.where(constraints_angle==float(atom.GetAtomMapNum()),float(atom.GetIdx())+1,constraints_angle)
-	#     if constraints_dihedral is not None:
-	#         constraints_dihedral = np.where(constraints_dihedral==float(atom.GetAtomMapNum()),float(atom.GetIdx())+1,constraints_dihedral)
-	# rdmolfiles.MolToXYZFile(mol, name+'.xyz')
-	# print(nconstraints_dist, nconstraints_angle, nconstraints_dihedral)
 	return mol, nconstraints_dist, nconstraints_angle, nconstraints_dihedral
 
 
@@ -569,7 +425,7 @@ def rules_get_charge(mol, args):
 		if atom.GetIdx() in args.metal_idx:
 			charge_idx = args.metal_idx.index(atom.GetIdx())
 			neighbours = atom.GetNeighbors()
-			charge_rules[charge_idx] = args.m_oxi[charge_idx]
+			charge_rules[charge_idx] = args.metal_oxi[charge_idx]
 			for neighbour in neighbours:
 				M_ligands.append(neighbour.GetIdx())
 				if neighbour.GetTotalValence() == 4:
@@ -620,47 +476,35 @@ def rules_get_charge(mol, args):
 				if atom.GetSymbol() in O_group:
 					if atom.GetTotalValence() == 1:
 						charge_rules[0] = charge_rules[0] - 1
-		return charge_rules
-		
-	# no update in charge as it is an organic molecule
-	return [args.charge_default]
+						
+		return np.sum(charge_rules)
 
 
-def substituted_mol(mol, args):
+def substituted_mol(self,mol):
 	"""
 	Returns a molecule object in which all metal atoms specified in args.metal
 	are replaced by Iodine and the charge is set depending on the number of
 	neighbors.
 
-	Parameters
-	----------
-	mol : rdkit.Chem.rdchem.Mol
-		A molecule object whose metal is to be substituted
-	args : argparse.args
-		[description]
-
-	Returns
-	-------
-	tuple
-		mol,args.metal_idx, args.complex_coord, args.metal_sym
 	"""
+
 	Neighbors2FormalCharge = dict()
 	for i, j in zip(range(2, 9), range(-3, 4)):
 		Neighbors2FormalCharge[i] = j
 
 	for atom in mol.GetAtoms():
 		symbol = atom.GetSymbol()
-		if symbol in args.metal:
-			args.metal_sym[args.metal.index(symbol)] = symbol
-			args.metal_idx[args.metal.index(symbol)] = atom.GetIdx()
-			args.complex_coord[args.metal.index(symbol)] = len(atom.GetNeighbors())
+		if symbol in self.args.metal:
+			self.args.metal_sym[self.args.metal.index(symbol)] = symbol
+			self.args.metal_idx[self.args.metal.index(symbol)] = atom.GetIdx()
+			self.args.complex_coord[self.args.metal.index(symbol)] = len(atom.GetNeighbors())
 			atom.SetAtomicNum(53)
 			n_neighbors = len(atom.GetNeighbors())
 			if n_neighbors > 1:
 				formal_charge = Neighbors2FormalCharge[n_neighbors]
 				atom.SetFormalCharge(formal_charge)
 
-	return mol, args.metal_idx, args.complex_coord, args.metal_sym
+	return self.args.metal_idx, self.args.complex_coord, self.args.metal_sym
 
 
 # DETECTS DIHEDRALS IN THE MOLECULE
@@ -739,110 +583,6 @@ def getDihedralMatches_v2(mol, heavy, log):  # New version using openbabel
 					uniqmatches.append((a, b, c, d))
 
 
-# checks for salts
-def check_for_pieces(smi):
-	# taking largest component for salts
-	pieces = smi.split(".")
-	# if len(pieces) > 1:
-	#     # take largest component by length
-	#     smi = max(pieces, key=len)
-	return pieces
-
-
-def mol_from_sdf_or_mol_or_mol2(input_file):
-	"""
-	mol from sdf
-
-	Parameters
-	----------
-	input_file : str
-		path to a .sdf .mol or .mol2 file
-
-	Returns
-	-------
-	tuple of lists?
-		suppl, IDs, charges
-	"""
-	filename = os.path.splitext(input_file)[0]
-	extension = os.path.splitext(input_file)[1]
-
-	if extension == ".sdf":
-		suppl = Chem.SDMolSupplier(input_file, removeHs=False)
-	elif extension == ".mol":
-		suppl = Chem.MolFromMolFile(input_file, removeHs=False)
-	elif extension == ".mol2":
-		suppl = Chem.MolFromMol2File(input_file, removeHs=False)
-
-	IDs, charges = [], []
-
-	with open(input_file, "r") as F:
-		lines = F.readlines()
-
-	molecule_count = 0
-	for i, line in enumerate(lines):
-		if line.find(">  <ID>") > -1:
-			ID = lines[i + 1].split()[0]
-			IDs.append(ID)
-		if line.find("M  CHG") > -1:
-			charge_line = line.split("  ")
-			charge = 0
-			for j in range(4, len(charge_line)):
-				if (j % 2) == 0:
-					if j == len(charge_line) - 1:
-						charge_line[j] = charge_line[j].split("\n")[0]
-					charge += int(charge_line[j])
-			charges.append(charge)
-		if line.find("$$$$") > -1:
-			molecule_count += 1
-			if molecule_count != len(charges):
-				charges.append(0)
-
-	if len(IDs) == 0:
-		if extension == ".sdf":
-			for i in range(len(suppl)):
-				IDs.append(f"{filename}_{i}")
-		else:
-			IDs.append(filename)
-	if len(charges) == 0:
-		if extension == ".sdf":
-			for _ in suppl:
-				charges.append(0)
-		else:
-			charges.append(0)
-	return suppl, IDs, charges
-
-
-# checks the charge on the smi string
-def check_charge_smi(smiles,ts):
-	for smi in smiles:
-		charge = 0
-		for i, smi_letter in enumerate(smi):
-			if smi_letter == "+":
-				if ts:
-					if smi[i + 3] == "]":
-						charge += 1
-					else:
-						charge += int(smi[i + 1])
-				else:
-					if smi[i + 1] == "]":
-						charge += 1
-					else:
-						charge += int(smi[i + 1])
-
-			elif smi_letter == "-":
-				if ts:
-					if smi[i + 3] == "]":
-						charge -= 1
-					else:
-						charge -= int(smi[i + 1])
-				else:
-					if smi[i + 1] == "]":
-						charge -= 1
-					else:
-						charge -= int(smi[i + 1])
-	return charge
-
-
 def set_metal_atomic_number(mol, metal_idx, metal_sym):
 	"""
 	Changes the atomic number of the metal atoms using their indices.
@@ -865,7 +605,7 @@ def set_metal_atomic_number(mol, metal_idx, metal_sym):
 			atom.SetAtomicNum(atomic_number)
 
 
-def get_conf_RMS(mol1, mol2, c1, c2, heavy, max_matches_RMSD):
+def get_conf_RMS(mol1, mol2, c1, c2, heavy, max_matches_rmsd):
 	"""
 	Takes in two rdkit.Chem.Mol objects and calculates the RMSD between them.
 	(As side efect mol1 is left in the aligned state, if heavy is specified
@@ -883,7 +623,7 @@ def get_conf_RMS(mol1, mol2, c1, c2, heavy, max_matches_RMSD):
 		conformation of mol2 to use for the RMSD
 	heavy : bool
 		If True it will ignore the H atoms when computing the RMSD.
-	max_matches_RMSD : int
+	max_matches_rmsd : int
 		the max number of matches found in a SubstructMatch()
 
 	Returns
@@ -894,7 +634,7 @@ def get_conf_RMS(mol1, mol2, c1, c2, heavy, max_matches_RMSD):
 	if heavy:
 		mol1 = RemoveHs(mol1)
 		mol2 = RemoveHs(mol2)
-	return GetBestRMS(mol1, mol2, c1, c2, maxMatches=max_matches_RMSD)
+	return GetBestRMS(mol1, mol2, c1, c2, maxMatches=max_matches_rmsd)
 
 
 def get_filenames(file_type, name):
@@ -1057,7 +797,6 @@ def command_line_args():
 		"nmr_online",
 		"qsub",
 		"qsub_ana",
-		"nci_complex",
 		"ts_complex"]
 
 	for arg in var_dict:
@@ -1101,34 +840,50 @@ def load_variables(kwargs,aqme_module):
 	self.initial_dir = Path(os.getcwd())
 	self.w_dir_main = Path(self.w_dir_main)
 	if self.isom is not None:
-		self.isom_inputs = Path(self.args.isom_inputs)
+		self.isom_inputs = Path(self.isom_inputs)
 
 	# go to working folder and detect files
 	os.chdir(self.w_dir_main)
 	if not isinstance(self.files, list):
-		self.files = glob.glob(self.files)
+		if not isinstance(self.files, Mol):
+			self.files = glob.glob(self.files)
+		else:
+			self.files = [self.files]
 
 	# start a log file to track the QCORR module
 	error_setup = False
+	logger_2 = 'data'
 	if aqme_module == 'qcorr':
 		# detects cycle of analysis (0 represents the starting point)
 		self.round_num,self.resume_qcorr = check_run(self.w_dir_main)
 		logger_1 = 'QCORR-run'
 		logger_2 = f'{str(self.round_num)}'
+
+	if aqme_module == 'csearch':
+		logger_1 = 'CSEARCH'
+
+	if aqme_module == 'qprep':
+		logger_1 = 'QPREP'
+
+	if aqme_module in ['csearch','qprep','qcorr']:
 		try:
 			self.log = Logger(self.w_dir_main / logger_1,logger_2)
 		except FileNotFoundError:
 			print('x  The PATH specified as input in the w_dir_main option might be invalid!')
 			error_setup = True
 
-		if len(self.files) == 0 and not error_setup:
+	if self.command_line:
+		self.log.write(f"Command line used in AQME: aqme {' '.join([str(elem) for elem in sys.argv[1:]])}")
+
+	if aqme_module == 'qcorr':
+		if len(self.files) == 0:
 			print(f'x  There are no output files in {self.w_dir_main}.')
 			self.log.write(f'x  There are no output files in {self.w_dir_main}.')
-			self.log.finalize()
 			error_setup = True
 
 	if error_setup:
 		# this is added to avoid path problems in jupyter notebooks
+		self.log.finalize()
 		os.chdir(self.initial_dir)
 		sys.exit()
 
