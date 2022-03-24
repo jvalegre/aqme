@@ -751,9 +751,9 @@ class csearch:
 			if not self.args.metal_complex:
 				charge = Chem.GetFormalCharge(mol)
 			else:
-				charge = rules_get_charge(mol, self.args)
+				charge,metal_found = rules_get_charge(mol, self.args)
 		if self.args.mult is None:
-			if not self.args.metal_complex:
+			if not self.args.metal_complex or not metal_found:
 				NumRadicalElectrons = 0
 				for Atom in mol.GetAtoms():
 					NumRadicalElectrons += Atom.GetNumRadicalElectrons()

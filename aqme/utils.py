@@ -419,10 +419,11 @@ def rules_get_charge(mol, args):
 
 	M_ligands, N_carbenes, bridge_atoms, neighbours = [], [], [], []
 	charge_rules = np.zeros(len(args.metal_idx), dtype=int)
-	neighbours = []
+	neighbours,metal_found = [],False
 	for atom in mol.GetAtoms():
 		# get the neighbours of metal atom and calculate the charge of metal center + ligands
 		if atom.GetIdx() in args.metal_idx:
+			metal_found = True
 			charge_idx = args.metal_idx.index(atom.GetIdx())
 			neighbours = atom.GetNeighbors()
 			charge_rules[charge_idx] = args.metal_oxi[charge_idx]
@@ -476,8 +477,14 @@ def rules_get_charge(mol, args):
 				if atom.GetSymbol() in O_group:
 					if atom.GetTotalValence() == 1:
 						charge_rules[0] = charge_rules[0] - 1
-						
-		return np.sum(charge_rules)
+
+	if metal_found:				
+		return np.sum(charge_rules),metal_found
+	
+	# for organic molecules when using a list containing organic and organometallics molecules mixed
+	else:
+		charge = Chem.GetFormalCharge(mol)
+		return charge,metal_found
 
 
 def substituted_mol(self,mol):
