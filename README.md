@@ -93,7 +93,7 @@ AQME can also be run through command lines. Some examples are:
     python -m aqme --csearch --program rdkit --input FILENAME.csv
     ```  
     ** The csv file must contain the list of SMILES in a column called "SMILES" and the corresponding names in a column called "code_name" (see Example_workflows for more information)  
-        
+
   * CSEARCH for conformer generation using a YAML file containing constrains:  
     ```
     python -m aqme --varfile FILENAME.yaml
@@ -105,7 +105,8 @@ AQME can also be run through command lines. Some examples are:
 
     csearch : True #activate CSEARCH
     program : 'rdkit' #program used in CSEARCH
-    ```  
+    ```
+
   * QCORR analysis of Gaussian output files and json file generation:  
     ```
     python -m aqme --qcorr --program gaussian --freq_conv opt=(calcfc,maxstep=5) --files=*.log
@@ -295,7 +296,7 @@ AQME can also be run through command lines. Some examples are:
         Fraction of the summed VDW radii that constitutes a bond between two atoms in the isomerization filter  
     **covfrac : float, default=1.10**  
         Fraction of the summed covalent radii that constitutes a bond between two atoms in the isomerization filter  
-    
+
     *-- Options related to file generation to fix issues found by QCORR --*  
     New input files are generated through the QPREP module and, therefore, all QPREP arguments can be used when calling QCORR and will overwrite default options. For example, if the user specifies qm_input='wb97xd/def2svp', all the new input files generated to fix issues will contain this keywords line. See examples in the 'Example_workflows' folder for more information.  
 

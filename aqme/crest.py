@@ -79,9 +79,7 @@ def xyzall_2_xyz(xyzin, name):
     subprocess.run(command_run_1)
 
 
-def run_xtb(
-    xyzin, xyzoutxtb, constraints_all, charge, mult
-):
+def run_xtb(xyzin, xyzoutxtb, constraints_all, charge, mult):
     # check whether job has already been run
     if os.path.exists(xyzoutxtb):
         print("   {0} already exists: skipping xTB optimization".format(xyzoutxtb))
@@ -95,13 +93,13 @@ def run_xtb(
             "--charge",
             str(charge),
             "--uhf",
-            str(mult-1)
+            str(mult - 1),
         ]
 
-        for i,_ in constraints_all['Constraint_values']:
-            if constraints_all['Constraint_values'][i] is not None:
-                for _,constraint in enumerate(constraints_all['Constraint_values'][i]):
-                    command.append(constraints_all['Constraint_types'][i])
+        for i, _ in enumerate(constraints_all["Constraint_values"]):
+            if constraints_all["Constraint_values"][i] is not None:
+                for _, constraint in enumerate(constraints_all["Constraint_values"][i]):
+                    command.append(constraints_all["Constraint_types"][i])
                     command.append(",".join([str(int(elem)) for elem in constraint]))
 
         subprocess.run(command)
@@ -111,7 +109,7 @@ def crest_opt(mol, name, dup_data, dup_data_idx, sdwriter, args, charge, mult):
 
     """
     Run xtb using shell script and args to perform crest/cregen conformer search
-    
+
     Parameters
     ----------
     mol : RDKit Mol
@@ -126,8 +124,10 @@ def crest_opt(mol, name, dup_data, dup_data_idx, sdwriter, args, charge, mult):
         sdwriter to write sdf file
     args : pyconfot args
         arguments for crest
-    w_dir_main : working directory
-        working directory
+    charge : charge
+        charge
+    mult : mult
+        mult
     """
 
     csearch_dir = Path(args.w_dir_main)
@@ -137,7 +137,7 @@ def crest_opt(mol, name, dup_data, dup_data_idx, sdwriter, args, charge, mult):
 
     xyzin = str(dat_dir) + "/" + name + ".xyz"
 
-    if not args.ts_complex:
+    if not args.complex:
         AllChem.EmbedMolecule(mol)
         rdkit.Chem.rdmolfiles.MolToXYZFile(mol, xyzin)
 
@@ -154,26 +154,20 @@ def crest_opt(mol, name, dup_data, dup_data_idx, sdwriter, args, charge, mult):
     xyzoutall = str(dat_dir) + "/" + name + "_conformers.xyz"
     xyzoutbest = str(dat_dir) + "/" + name + "_best.xyz"
 
-    if args.ts_complex:
+    if args.complex:
         xyzoutxtb1 = str(dat_dir) + "/" + name + "_xtb1.xyz"
         xyzoutxtb2 = str(dat_dir) + "/" + name + "_xtb2.xyz"
         constraints_dist = get_constraint(mol, constraints_dist)
-        constraints_all = {'Constraint_values': [constraints_dist, constraints_angle, constraints_dihedral],
-                        'Constraint_types': ["--dist","--angle","--dihedral"]}
-        run_xtb(
-            xyzin,
-            xyzoutxtb1,
-            constraints_all,
-            charge,
-            mult
-        )
-        run_xtb(
-            xyzoutxtb1,
-            xyzoutxtb2,
-            constraints_all,
-            charge,
-            mult
-        )
+        constraints_all = {
+            "Constraint_values": [
+                constraints_dist,
+                constraints_angle,
+                constraints_dihedral,
+            ],
+            "Constraint_types": ["--dist", "--angle", "--dihedral"],
+        }
+        run_xtb(xyzin, xyzoutxtb1, constraints_all, charge, mult)
+        run_xtb(xyzoutxtb1, xyzoutxtb2, constraints_all, charge, mult)
     else:
         xyzoutxtb2 = xyzin
 
@@ -184,11 +178,15 @@ def crest_opt(mol, name, dup_data, dup_data_idx, sdwriter, args, charge, mult):
         unique_atoms = []
         # list of list with types of contraints and number of elements (as indexes) that define the constrain
         # i.e. for a distance constrain, 3 elements are needed atom1, atom2 and distance
-        contraint_types = [[constraints_dist,2], [constraints_angle,3], [constraints_dihedral,4]]
+        contraint_types = [
+            [constraints_dist, 2],
+            [constraints_angle, 3],
+            [constraints_dihedral, 4],
+        ]
         for contraint_type in contraint_types:
             if contraint_type[0] is not None:
                 for x in contraint_type[0]:
-                    for i in x[:contraint_type[1]]:
+                    for i in x[: contraint_type[1]]:
                         if i not in unique_atoms:
                             unique_atoms.append(int(i))
         command = [
@@ -201,7 +199,7 @@ def crest_opt(mol, name, dup_data, dup_data_idx, sdwriter, args, charge, mult):
             "--charge",
             str(charge),
             "--uhf",
-            str(mult-1)
+            str(mult - 1),
         ]
         if len(unique_atoms) != 0:
             command.append("--constraint")
@@ -273,6 +271,7 @@ def crest_opt(mol, name, dup_data, dup_data_idx, sdwriter, args, charge, mult):
         energy = str(open(file, "r").readlines()[0])
         mol_rd.SetProp("Energy", energy)
         mol_rd.SetProp("Real charge", str(charge))
+        mol_rd.SetProp("Mult", str(mult))
         sdwriter.write(mol_rd)
         # os.remove(file)
 
