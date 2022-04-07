@@ -233,7 +233,7 @@ class csearch:
                 self.args.metal_idx,
                 self.args.complex_coord,
                 self.args.metal_sym,
-            ) = substituted_mol(self, mol)
+            ) = substituted_mol(self, mol, "I")
 
             # get pre-determined geometries for metal complexes
             accepted_complex_types = [
@@ -774,9 +774,9 @@ class csearch:
             if not self.args.metal_complex:
                 charge = Chem.GetFormalCharge(mol)
             else:
-                charge, metal_found = rules_get_charge(mol, self.args)
+                charge = rules_get_charge(mol, self.args, "csearch")
         if self.args.mult is None:
-            if not self.args.metal_complex or not metal_found:
+            if not self.args.metal_complex:
                 NumRadicalElectrons = 0
                 for Atom in mol.GetAtoms():
                     NumRadicalElectrons += Atom.GetNumRadicalElectrons()
