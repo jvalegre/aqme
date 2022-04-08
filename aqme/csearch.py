@@ -292,10 +292,10 @@ class csearch:
         """
 
         dup_data = creation_of_dup_csv_csearch(self.args.program)
-        file = self.csearch_folder.joinpath(
+        self.csearch_file = self.csearch_folder.joinpath(
             name + "_" + self.args.program + self.args.output
         )
-        self.sdwriter = Chem.SDWriter(str(file))
+        self.sdwriter = Chem.SDWriter(str(self.csearch_file))
 
         dup_data_idx = 0
         start_time = time.time()
@@ -365,9 +365,6 @@ class csearch:
                     name, dup_data, dup_data_idx, coord_Map, alg_Map, mol_template, ff
                 )
 
-                # removes the rdkit file
-                os.remove(name + "_" + "rdkit" + self.args.output)
-
         return status, update_to_rdkit
 
     def dihedral_filter_and_sdf(
@@ -379,9 +376,7 @@ class csearch:
 
         rotated_energy = []
 
-        rdmols = Chem.SDMolSupplier(
-            name + "_" + "rdkit" + self.args.output, removeHs=False
-        )
+        rdmols = Chem.SDMolSupplier(str(self.csearch_file), removeHs=False)
 
         if rdmols is None:
             self.args.log.write("\nCould not open " + name + self.args.output)
@@ -440,7 +435,8 @@ class csearch:
             "summ",
         )
 
-        sdwriter_rd = Chem.SDWriter(name + "_" + "summ" + self.args.output)
+        os.remove(self.csearch_file)
+        sdwriter_rd = Chem.SDWriter(str(self.csearch_file))
         for i, cid in enumerate(selectedcids_rotated):
             mol_rd = Chem.RWMol(rdmols[cid])
             mol_rd.SetProp("_Name", rdmols[cid].GetProp("_Name") + " " + str(i))
@@ -501,7 +497,11 @@ class csearch:
             ):
                 if coord_Map is None and alg_Map is None and mol_template is None:
                     energy = minimize_rdkit_energy(
-                        mol, conf, self.args.log, ff, self.args.opt_steps_rdkit
+                        mol,
+                        conf,
+                        self.args.log,
+                        self.args.ff,
+                        self.args.opt_steps_rdkit,
                     )
                 else:
                     mol, energy = realign_mol(

@@ -113,6 +113,7 @@ def main():
             mult=args.mult,
             metal_complex=args.metal_complex,
             metal=args.metal,
+            metal_oxi=args.metal_oxi,
             complex_type=args.complex_type,
             ewin_cmin=args.ewin_cmin,
             initial_energy_threshold=args.initial_energy_threshold,

@@ -835,7 +835,6 @@ def command_line_args():
         "lowest_only",
         "lowest_n",
         "chk",
-        "com_from_xyz",
         "dup",
         "fullcheck",
         "rot_dihedral",
@@ -854,7 +853,6 @@ def command_line_args():
     try:
         opts, _ = getopt.getopt(sys.argv[1:], "h", available_args)
     except getopt.GetoptError as err:
-        print(err)
         sys.exit()
 
     for arg, value in opts:

@@ -73,7 +73,6 @@ def get_constraint(mol, constraints):
 
 
 def xyzall_2_xyz(xyzin, name):
-    print("fef", os.getcwd())
     # converting multiple xyz to single
     command_run_1 = ["obabel", xyzin, "-oxyz", "-O" + name + "_conf_.xyz", "-m"]
     subprocess.run(command_run_1)

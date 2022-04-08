@@ -82,7 +82,6 @@ var_dict = {
     "lowest_n": False,
     "energy_threshold_for_gaussian": 100.0,
     "chk": False,
-    "com_from_xyz": False,
     "w_dir_main": os.getcwd(),
     "files": [],
     "atom_types": [],

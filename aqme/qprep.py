@@ -10,6 +10,14 @@ import json
 from aqme.utils import cclib_atoms_coords, QM_coords, read_file
 from aqme.utils import move_file, load_variables
 from pathlib import Path
+from aqme.crest import xyzall_2_xyz
+import glob
+import subprocess
+
+try:
+    import pybel
+except ImportError:
+    from openbabel import pybel  # for openbabel>=3.0.0
 
 
 class qprep:
@@ -78,7 +86,48 @@ class qprep:
                 print(f"o  {name} successfully processed")
                 self.args.log.write(f"o  {name} successfully processed")
 
+            elif file.split(".")[1].lower() == "xyz":
+                xyzall_2_xyz(file, name)
+                xyz_files = glob.glob(name + "_conf_*.xyz")
+                for i, file1 in enumerate(xyz_files):
+                    name1 = file1.split(".xyz")[0]
+                    command_xyz = [
+                        "obabel",
+                        "-ixyz",
+                        file1,
+                        "-osdf",
+                        "-O" + name1 + ".sdf",
+                    ]
+                    subprocess.call(command_xyz)
+                    os.remove(file1)
+
+                sdf_files = glob.glob(name + "*.sdf")
+                for i, file2 in enumerate(sdf_files):
+                    mol = Chem.SDMolSupplier(file2, removeHs=False)[0]
+                    atom_types, cartesians, charge, mult, _ = self.qprep_coords(
+                        file, found_coords, mol
+                    )
+                    if charge == None:
+                        charge = 0
+                    if mult == None:
+                        mult = 1
+                    name_conf = f"{name}_conf_{i+1}"
+                    qprep_data = {
+                        "atom_types": atom_types,
+                        "cartesians": cartesians,
+                        "charge": charge,
+                        "mult": mult,
+                        "name": name_conf,
+                    }
+                    comfile = self.write(qprep_data)
+                    move_file(self.args.destination, self.args.w_dir_main, comfile)
+                    os.remove(file2)
+
+                print(f"o  {name} successfully processed")
+                self.args.log.write(f"o  {name} successfully processed")
+
             else:
+
                 found_coords = False
                 atom_types, cartesians, charge, mult, found_coords = self.qprep_coords(
                     file, found_coords, None
