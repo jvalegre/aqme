@@ -5,15 +5,10 @@
 import os
 import sys
 import time
-from rdkit import Chem 
+from rdkit import Chem
 import json
-from aqme.utils import (
-	cclib_atoms_coords,
-	QM_coords,
-	read_file)
-from aqme.utils import (
-	move_file,
-	load_variables)
+from aqme.utils import cclib_atoms_coords, QM_coords, read_file
+from aqme.utils import move_file, load_variables
 from pathlib import Path
 
 

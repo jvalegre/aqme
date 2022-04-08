@@ -122,23 +122,31 @@ var_dict = {
 		"prefix": '',
 	}
 
+
 # part for using the options in a script or jupyter notebook
 class options_add:
-	pass
+    pass
+
 
 def set_options(kwargs):
-	# set default options and options provided
-	options = options_add()
-	# dictionary containing default values for options
+    # set default options and options provided
+    options = options_add()
+    # dictionary containing default values for options
 
-	for key in var_dict:
-		vars(options)[key] = var_dict[key]
-	for key in kwargs:
-		if key in var_dict:
-			vars(options)[key] = kwargs[key]
-		elif key.lower() in var_dict:
-			vars(options)[key.lower()] = kwargs[key.lower()]
-		else:
-			print("Warning! Option: [",key,":",kwargs[key],"] provided but no option exists, try the online documentation to see available options for each module.")
+    for key in var_dict:
+        vars(options)[key] = var_dict[key]
+    for key in kwargs:
+        if key in var_dict:
+            vars(options)[key] = kwargs[key]
+        elif key.lower() in var_dict:
+            vars(options)[key.lower()] = kwargs[key.lower()]
+        else:
+            print(
+                "Warning! Option: [",
+                key,
+                ":",
+                kwargs[key],
+                "] provided but no option exists, try the online documentation to see available options for each module.",
+            )
 
-	return options
+    return options
