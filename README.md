@@ -287,8 +287,8 @@ AQME can also be run through command lines. Some examples are:
         Cut off for spin contamination during analysis in % of the expected value (i.e. multiplicity 3 has an the expected <S\*\*2> of 2.0, if s2_threshold = 10, the <S\*\*2> value is allowed to be 2.0 +- 0.2). Set s2_threshold = 0 to deactivate this option.  
     **dup_threshold : float, default=0.0001**  
         Energy (in hartree) used as the energy difference in E, H and G to detect duplicates  
-    **isom : str, default=None**  
-        Check for isomerization from the initial input file to the resulting output files. It requires the extension of the initial input files (i.e. isom='com') and the folder of the input files must be added in the isom_inputs option  
+    **isom_type : str, default=None**  
+        Check for isomerization from the initial input file to the resulting output files. It requires the extension of the initial input files (i.e. isom_type='com' or 'gjf') and the folder of the input files must be added in the isom_inputs option  
     **isom_inputs : str, default=os.getcwd()**  
         Folder containing the initial input files to check for isomerization  
     **vdwfrac : float, default=0.50**  

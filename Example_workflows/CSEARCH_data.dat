@@ -1,0 +1,8 @@
+Command line used in AQME: aqme --csearch --program rdkit --smi CCC --name test
+
+   ----- test -----
+
+o  Applying filters to intial conformers
+
+Time CSEARCH: 0.25 seconds
+

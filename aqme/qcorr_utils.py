@@ -8,7 +8,9 @@ import glob
 import pandas as pd
 import json
 from pathlib import Path
-from aqme.utils import move_file
+from aqme.utils import (
+	move_file,
+	read_file)
 import numpy as np
 
 # Bondi VDW radii in Angstrom
@@ -195,9 +197,150 @@ def gen_connectivity(isom_data,atom_types_conn,COORDINATES_conn):
 				vdw_ij = bondi[elem_i] + bondi[elem_j]
 				rcov_ij = rcov[elem_i] + rcov[elem_j]
 				dist_ij = np.linalg.norm(np.array(COORDINATES_conn[i]) - np.array(COORDINATES_conn[j]))
-				if dist_ij / vdw_ij < isom_data['VdW radii fraction'] or dist_ij / rcov_ij < isom_data['Covalent radii fraction']:
+				if dist_ij / vdw_ij < float(isom_data['VdW radii fraction']) or dist_ij / rcov_ij < float(isom_data['Covalent radii fraction']):
 					conn_mat[i][j] = 1
 				else:
 					pass
 
 	return conn_mat
+
+
+def get_json_data(self,file,cclib_data):
+	'''
+	Get metadata and GoodVibes data for the json file (for older versions of cclib)
+	'''
+	
+	outlines = read_file(self.args.w_dir_main,file)
+
+	# initial loop just to detect the QM program
+	for i,line in enumerate(outlines):
+		# get program
+		if line.strip() == "Cite this work as:":
+			qm_program = outlines[i+1]
+			cclib_data['QM program'] = qm_program[1:-2]
+			for j in range(i,i+60):
+				if '**********' in line:
+					run_date = outlines[j+2].strip()
+					cclib_data['run date'] = run_date
+					break
+			break
+
+		elif '* O   R   C   A *' in line:
+			for j in range(i,i+100):
+				if 'Program Version' in line.strip():
+					version_program = "ORCA version " + line.split()[2]
+					cclib_data['QM program'] = version_program
+					break
+
+	if cclib_data['metadata']['QM program'].lower().find('gaussian') > -1:
+		for i,line in enumerate(outlines):
+			# Extract memory
+			if '%mem' in line:
+				mem = line.strip().split('=')[-1]
+				cclib_data['memory'] = mem
+
+			# Extract number of processors
+			elif '%nprocs' in line:
+				nprocs = int(line.strip().split('=')[-1])
+				cclib_data['processors'] = nprocs
+
+			# Extract keywords line, solvation, dispersion and calculation type
+			elif '#' in line and not hasattr(cclib_data, 'keywords_line'):
+				keywords_line = ''
+				for j in range(i,i+10):
+					if '----------' in line:
+						break
+					else:
+						keywords_line += outlines[j].rstrip("\n")[1:]
+				cclib_data['keywords line'] = keywords_line[2:]
+				qm_solv,qm_disp = 'gas_phase','none'
+				calc_type = 'ground_state'
+				calcfc_found, ts_found = False, False
+				for keyword in keywords_line.split():
+					if keyword.lower().find('opt') > -1:
+						if keyword.lower().find('calcfc') > -1:
+							calcfc_found = True
+						if keyword.lower().find('ts') > -1:
+							ts_found = True
+					elif keyword.lower().startswith('scrf'):
+						qm_solv = keyword
+					elif keyword.lower().startswith('emp'):
+						qm_disp = keyword
+				if calcfc_found and ts_found:
+					calc_type = 'transition_state'
+				cclib_data['solvation'] = qm_solv
+				cclib_data['dispersion model'] = qm_disp
+				cclib_data['ground or transition state'] = calc_type
+
+			# Basis set name
+			elif line[1:15] == "Standard basis":
+				cclib_data['basis set'] = line.split()[2]
+			
+			# functional
+			if not cclib_data.BOMD and line[1:9] == 'SCF Done':
+				t1 = line.split()[2]
+				if t1 == 'E(RHF)':
+					cclib_data['functional'] = 'HF'
+				else:
+					cclib_data['functional'] = t1[t1.index("(") + 2:t1.rindex(")")]
+				break
+
+			# Extract grid type
+			elif line[1:8] == 'ExpMin=':
+				grid_lookup = {1: 'sg1', 2: 'coarse', 4: 'fine', 5: 'ultrafine', 7: 'superfine'}
+				IRadAn = int(line.strip().split()[-3])
+				grid = grid_lookup[IRadAn]
+				cclib_data['grid type'] = grid
+
+			# Extract <S**2> before and after spin annihilation
+			for i in reversed(range(0,len(outlines)-50)):
+				if 'S**2 before annihilation' in line:
+					cclib_data['properties']['S2 after annihilation'] = [float(line.strip().split()[-1])]
+					cclib_data['properties']['S2 before annihilation'] = [float(line.strip().split()[-3][:-1])]
+
+				# Extract symmetry point group
+				elif 'Full point group' in line:
+					point_group = line.strip().split()[3]
+					cclib_data['properties']['rotational']['symmetry point group'] = point_group
+					break
+
+				# Extract symmetry number, rotational constants and rotational temperatures
+				elif 'Rotational symmetry number' in line:
+					symmno = int(line.strip().split()[3].split(".")[0])
+					cclib_data['properties']['rotational']['symmetry number'] = symmno
+
+				elif line.find('Rotational constants (GHZ):') > -1:
+					try:
+						roconst = [float(line.strip().replace(':', ' ').split()[3]),
+										float(line.strip().replace(':', ' ').split()[4]),
+										float(line.strip().replace(':', ' ').split()[5])]
+					except ValueError:
+						if line.find('********') > -1:
+							roconst = [float(line.strip().replace(':', ' ').split()[4]),
+											float(line.strip().replace(':', ' ').split()[5])]
+					cclib_data['properties']['rotational']['rotational constants'] = roconst
+
+				elif line.find('Rotational temperature ') > -1:
+					rotemp = [float(line.strip().split()[3])]
+					cclib_data['properties']['rotational']['rotational temperatures'] = rotemp
+
+				elif line.find('Rotational temperatures') > -1:
+					try:
+						rotemp = [float(line.strip().split()[3]), float(line.strip().split()[4]),
+									float(line.strip().split()[5])]
+					except ValueError:
+						if line.find('********') > -1:
+							rotemp = [float(line.strip().split()[4]), float(line.strip().split()[5])]
+					cclib_data['properties']['rotational']['rotational temperatures'] = rotemp
+
+	elif cclib_data['metadata']['QM program'].lower().find('orca') > -1:
+		for i in reversed(range(0,outlines)):
+			if line[:25] == 'FINAL SINGLE POINT ENERGY':
+				cclib_data['properties']['energy']['final single point energy'] = float(line.split()[-1])
+				pasar de hartree a eV para que sea igual que cclib
+				break
+				
+	convert new object to json file
+	compara 2 json files, una de cclib tuyo modificado y la otra de del nuevo AQME
+	Haz algo para que no se pete con el print mini con cclib! Aunque sea solo para leer la energia single point de ORCA
+	return cclib_data

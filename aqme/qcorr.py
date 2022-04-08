@@ -20,7 +20,8 @@ from aqme.utils import (
 from aqme.qcorr_utils import (
 	detect_linear,
 	check_isomerization,
-	full_check)
+	full_check,
+	get_json_data)
 from aqme.qprep import qprep
 
 
@@ -89,7 +90,7 @@ class qcorr():
 				atom_types,cartesians,cclib_data = self.analyze_abnormal(errortype,cclib_data,outlines)
 
 			# check for isomerization
-			if self.args.isom is not None:
+			if self.args.isom_type is not None:
 				errortype = self.analyze_isom(file,cartesians,atom_types,errortype)
 
 			# move initial QM input files (if the files are placed in the same folder as the output files)
@@ -115,6 +116,10 @@ class qcorr():
 			csv_qcorr = self.write_qcorr_csv(file_terms)
 
 		# performs a full analysis to ensure that the calcs were run with the same parameters
+		if self.args.fullcheck == 'False':
+			self.args.fullcheck = False
+		elif self.args.fullcheck == 'True':
+			self.args.fullcheck = True
 		if self.args.fullcheck:
 			df_qcorr = pd.read_csv(csv_qcorr)
 			if df_qcorr['Normal termination'][0] > 0:
@@ -185,13 +190,13 @@ class qcorr():
 				unpaired_e = cclib_data['properties']['multiplicity']-1
 				# this first part accounts for singlet diradicals (threshold is 10% of the spin before annihilation)
 				if unpaired_e == 0:
-					if cclib_data['properties']['S2 after annihilation'] > abs(self.args.s2_threshold/100)*cclib_data['properties']['S2 before annihilation']:
+					if cclib_data['properties']['S2 after annihilation'] > abs(float(self.args.s2_threshold)/100)*cclib_data['properties']['S2 before annihilation']:
 						errortype = 'spin_contaminated'
 				else:
 					spin = unpaired_e*0.5
 					s2_expected_value = spin*(spin+1)
 					spin_diff = abs(float(cclib_data['properties']['S2 after annihilation'])-s2_expected_value)
-					if spin_diff > abs(self.args.s2_threshold/100)*s2_expected_value:
+					if spin_diff > abs(float(self.args.s2_threshold)/100)*s2_expected_value:
 						errortype = 'spin_contaminated'
 			
 			if errortype == 'none' and self.args.freq_conv is not None:
@@ -255,7 +260,7 @@ class qcorr():
 				E_diff = abs(E_dup - duplicate_data['Energies'][i])
 				H_diff = abs(H_dup - duplicate_data['Enthalpies'][i])
 				G_diff = abs(G_dup - duplicate_data['Gibbs'][i])
-				if max([E_diff,H_diff,G_diff]) < abs(self.args.dup_threshold):
+				if max([E_diff,H_diff,G_diff]) < abs(float(self.args.dup_threshold)):
 					errortype = 'duplicate_calc'
 
 		if errortype == 'none':
@@ -265,7 +270,7 @@ class qcorr():
 
 			initial_ifreqs = 0
 			for freq in cclib_data['vibrations']['frequencies']:
-				if float(freq) < 0 and abs(float(freq)) > abs(self.args.ifreq_cutoff):
+				if float(freq) < 0 and abs(float(freq)) > abs(float(self.args.ifreq_cutoff)):
 					initial_ifreqs += 1
 
 			# exclude TS imag frequency
@@ -303,6 +308,8 @@ class qcorr():
 				for keyword in cclib_data['metadata']['keywords line'].split():
 					if keyword.lower().startswith('opt'):
 						keyword = self.args.freq_conv
+						if cclib_data['metadata']['ground or transition state'] == 'transition_state':
+							keyword= keyword.replace('=(','=(ts,noeigen,')
 					new_keywords_line += keyword
 					new_keywords_line += ' '
 				cclib_data['metadata']['keywords line'] = new_keywords_line
@@ -343,6 +350,8 @@ class qcorr():
 			if errortype in ['not_specified','SCFerror']:
 				if 'geometric values' in cclib_data['optimization']:
 					RMS_forces = [row[1] for row in cclib_data['optimization']['geometric values']]
+					# cclib uses None when the values are corrupted in the output files, replace None for a large number
+					RMS_forces = [10000 if val is None else val for val in RMS_forces]
 					min_RMS = RMS_forces.index(min(RMS_forces))
 				else:
 					# for optimizations that fail in the first step
@@ -374,11 +383,11 @@ class qcorr():
 
 		try:
 			atoms_com, coords_com, atoms_and_coords = [],[],[]
-			if len(self.args.isom.split('.')) == 1:
-				atoms_and_coords,_,_ = get_info_input(f'{file.split(".")[0]}.{self.args.isom}')
+			if len(self.args.isom_type.split('.')) == 1:
+				atoms_and_coords,_,_ = get_info_input(f'{file.split(".")[0]}.{self.args.isom_type}')
 
-			elif self.args.isom.split('.')[1] != 'csv':
-				init_csv = pd.read_csv(self.args.isom)
+			elif self.args.isom_type.split('.')[1] != 'csv':
+				init_csv = pd.read_csv(self.args.isom_type)
 
 			for line in atoms_and_coords:
 				atoms_com.append(line.split()[0])
@@ -433,7 +442,7 @@ class qcorr():
 		
 		if program in ['gaussian','orca']:
 			qprep(destination=destination_fix, w_dir_main=self.args.w_dir_main, files=file, charge=cclib_data['properties']['charge'],
-				mult=cclib_data['properties']['multiplicity'], program=program, atom_types=atom_types, cartesians=cartesians,
+				mult=cclib_data['properties']['multiplicity'], program=program, atom_types=atom_types, cartesians=cartesians, verbose=False,
 				qm_input=cclib_data['metadata']['keywords line'], mem=cclib_data['metadata']['memory'], nprocs=cclib_data['metadata']['processors'],
 				chk=self.args.chk, qm_end=self.args.qm_end, bs_gen=self.args.bs_gen, bs=self.args.bs, gen_atoms=self.args.gen_atoms)
 		else:
@@ -460,7 +469,11 @@ class qcorr():
 			print(f'x  Potential cclib compatibility problem or no data found for file {file} (Termination = {termination}, Error type = {errortype})')
 			self.args.log.write(f'x  Potential cclib compatibility problem or no data found for file {file} (Termination = {termination}, Error type = {errortype})')
 			cclib_data = {}
-			
+		
+		# add parameters that might be missing from cclib (depends on the version)
+		if not hasattr(cclib_data, 'metadata'):
+			cclib_data = get_json_data(file,cclib_data)
+
 		return termination,errortype,cclib_data
 
 
@@ -491,7 +504,7 @@ class qcorr():
 				shift.append(0.0)
 			else:
 				if cclib_data['vibrations']['frequencies'][mode] < 0.0:
-					shift.append(self.args.amplitude_ifreq)
+					shift.append(float(self.args.amplitude_ifreq))
 				else:
 					shift.append(0.0)
 
@@ -610,12 +623,12 @@ class qcorr():
 		ana_data.at[0,'No data'] = file_terms['no_data']
 		ana_data.at[0,'Basis set error'] =  file_terms['atom_error']
 		ana_data.at[0,'Other errors'] = file_terms['not_specified']
-		if self.args.s2_threshold > 0.0:
+		if float(self.args.s2_threshold) > 0.0:
 			ana_data.at[0,'Spin contamination'] = file_terms['spin_contaminated']
 		ana_data.at[0,'Duplicates'] = file_terms['duplicate_calc']
 		if len(self.args.geom_rules) >= 1:
 			ana_data.at[0,'geom_rules filter'] = file_terms['geom_rules_qcorr']
-		if self.args.isom is not None:
+		if self.args.isom_type is not None:
 			ana_data.at[0,'Isomerization'] = file_terms['isomerized']
 		path_as_str = self.args.w_dir_main.as_posix()
 		csv_qcorr = path_as_str+f'/QCORR-run_{self.args.round_num}-stats.csv'

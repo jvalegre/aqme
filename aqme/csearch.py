@@ -53,7 +53,7 @@ class csearch:
 		start_time_overall = time.time()
 		# load default and user-specified variables
 		self.args = load_variables(kwargs,'csearch')
-		if self.args.program not in ["rdkit","summ","fullmonte","crest"]:
+		if self.args.program.lower() not in ["rdkit","summ","fullmonte","crest"]:
 			print("\nx  Program not supported for conformer generation! Specify: program='rdkit' (or summ, fullmonte, crest)")
 			self.args.log.write("\nx  Program not supported for conformer generation! Specify: program='rdkit' (or summ, fullmonte, crest)")
 			sys.exit()
@@ -280,7 +280,7 @@ class csearch:
 		"""
 
 		dup_data = creation_of_dup_csv_csearch(self.args.program)
-		file = self.csearch_folder.joinpath(name + "_" + self.args.program + self.args.output)
+		file = self.csearch_folder.joinpath(name + "_" + self.args.program.lower() + self.args.output)
 		self.sdwriter = Chem.SDWriter(str(file))
 
 		dup_data_idx = 0
@@ -344,7 +344,7 @@ class csearch:
 		# reads the initial SDF files from RDKit and uses dihedral scan if selected
 		if status not in [-1,0]:
 			# getting the energy and mols after rotations
-			if self.args.program == "summ" and len(rotmatches) != 0:
+			if self.args.program.lower() == "summ" and len(rotmatches) != 0:
 				status = self.dihedral_filter_and_sdf(
 					name,
 					dup_data,
@@ -478,7 +478,7 @@ class csearch:
 
 		if i >= len(matches):  # base case, torsions should be set in conf
 			# setting the metal back instead of I
-			if self.args.metal_complex and (self.args.program == "rdkit" or update_to_rdkit):
+			if self.args.metal_complex and (self.args.program.lower() == "rdkit" or update_to_rdkit):
 				if coord_Map is None and alg_Map is None and mol_template is None:
 					energy = minimize_rdkit_energy(
 						mol, conf, self.args.log, ff, self.args.opt_steps_rdkit
@@ -667,7 +667,7 @@ class csearch:
 			"rdkit",
 		)
 
-		if self.args.program == "summ" or self.args.program == "rdkit":
+		if self.args.program.lower() in ["summ","rdkit"]:
 			# now exhaustively drive torsions of selected conformers
 			n_confs = int(
 				len(selectedcids_rdkit) * (360 / self.args.degree) ** len(rotmatches)
@@ -679,7 +679,7 @@ class csearch:
 
 			total = 0
 			for conf in selectedcids_rdkit:
-				if self.args.program == "summ" and not update_to_rdkit:
+				if self.args.program.lower() == "summ" and not update_to_rdkit:
 					sdwriter.write(outmols[conf], conf)
 					for m in rotmatches:
 						rdMolTransforms.SetDihedralDeg(
@@ -702,10 +702,10 @@ class csearch:
 				self.args.log.write("\no  %d total conformations generated" % total)
 			status = 1
 
-		if self.args.program == "summ":
+		if self.args.program.lower() == "summ":
 			dup_data.at[dup_data_idx, "summ-conformers"] = total
 
-		if self.args.program == "fullmonte":
+		if self.args.program.lower() == "fullmonte":
 			status = generating_conformations_fullmonte(
 				name,
 				self.args,
@@ -778,21 +778,21 @@ class csearch:
 				"\nx  Too many torsions (%d). Skipping %s"
 				% (len(rotmatches), (name + self.args.output))
 			)
-		elif self.args.program == "summ" and len(rotmatches) == 0:
+		elif self.args.program.lower() == "summ" and len(rotmatches) == 0:
 			update_to_rdkit = True
 			self.args.log.write(
 				"\nx  No rotatable dihedral found. Updating to CSEARCH to RDKit, writing to SUMM SDF"
 			)
-		elif self.args.program == "fullmonte" and len(rotmatches) == 0:
+		elif self.args.program.lower() == "fullmonte" and len(rotmatches) == 0:
 			update_to_rdkit = True
 			self.args.log.write(
 				"\nx  No rotatable dihedral found. Updating to CSEARCH to RDKit, writing to FULLMONTE SDF"
 			)
 
 		ff = self.args.ff
-		if self.args.program != "crest":
+		if self.args.program.lower() != "crest":
 			dup_data.at[dup_data_idx, "RDKit-Initial-samples"] = initial_confs
-			if self.args.program == "rdkit":
+			if self.args.program.lower() == "rdkit":
 				rotmatches = []
 			cids = self.embed_conf(
 				mol, initial_confs, coord_Map, alg_Map, mol_template
@@ -811,11 +811,11 @@ class csearch:
 					+ " initial conformers with "
 					+ ff
 				)
-				if self.args.program == "summ":
+				if self.args.program.lower() == "summ":
 					self.args.log.write(
 						"\no  Found " + str(len(rotmatches)) + " rotatable torsions"
 					)
-				elif self.args.program == "fullmonte":
+				elif self.args.program.lower() == "fullmonte":
 					self.args.log.write(
 						"\no  Found " + str(len(rotmatches)) + " rotatable torsions"
 					)

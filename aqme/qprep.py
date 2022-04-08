@@ -60,12 +60,14 @@ class qprep:
 						move_file(self.args.destination, self.args.w_dir_main, comfile)
 						
 				except OSError:
-					print(f'x  {name} couldn\'t be processed!')
-					self.args.log.write(f'x  {name} couldn\'t be processed!')
+					if self.args.verbose:
+						print(f'x  {name} couldn\'t be processed!')
+						self.args.log.write(f'x  {name} couldn\'t be processed!')
 					continue
 
-				print(f'o  {name} successfully processed')
-				self.args.log.write(f'o  {name} successfully processed')
+				if self.args.verbose:
+					print(f'o  {name} successfully processed')
+					self.args.log.write(f'o  {name} successfully processed')
 			
 			else:
 				found_coords = False
@@ -79,16 +81,21 @@ class qprep:
 				comfile = self.write(qprep_data)
 				move_file(self.args.destination, self.args.w_dir_main, comfile)
 				
-				print(f'o  {name} successfully processed')
-				self.args.log.write(f'o  {name} successfully processed')
+				if self.args.verbose:
+					print(f'o  {name} successfully processed')
+					self.args.log.write(f'o  {name} successfully processed')
 
 		# this is added to avoid path problems in jupyter notebooks
 		os.chdir(self.args.initial_dir)
 
-		elapsed_time = round(time.time() - start_time_overall, 2)
-		print(f"\nTime QPREP: {elapsed_time} seconds\n")
-		self.args.log.write(f"\nTime QPREP: {elapsed_time} seconds\n")
+		if self.args.verbose:
+			elapsed_time = round(time.time() - start_time_overall, 2)
+			print(f"\nTime QPREP: {elapsed_time} seconds\n")
+			self.args.log.write(f"\nTime QPREP: {elapsed_time} seconds\n")
 		self.args.log.finalize()
+
+		if not self.args.verbose:
+			os.remove('QPREP_data.dat')
 
 
 	def get_header(self,qprep_data):
@@ -256,7 +263,7 @@ class qprep:
 							n_atoms = gradgrad_line-symbol_z_line-4
 							break
 
-				atom_types,cartesians = QM_coords(outlines,0,n_atoms,program)
+				atom_types,cartesians = QM_coords(outlines,-1,n_atoms,program)
 
 			elif file.split('.')[1] == 'json':
 				with open(file) as json_file:

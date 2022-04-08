@@ -93,7 +93,7 @@ var_dict = {
 		"ifreq_cutoff": 0.0,
 		"freq_conv": None,
 		"s2_threshold": 10.0,
-		"isom": None,
+		"isom_type": None,
 		"isom_inputs": os.getcwd(),
 		"vdwfrac": 0.5,
 		"covfrac": 1.1,

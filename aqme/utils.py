@@ -38,60 +38,36 @@ def periodic_table():
 
 
 # load paramters from yaml file
-def load_from_yaml(args_, log):
+def load_from_yaml(self):
 	"""
 	Loads the parameters for the calculation from a yaml if specified. Otherwise
 	does nothing.
-
-	Parameters
-	----------
-	args : argparse.args
-		Dataclass
-	log : Logger
-		Where to log the program progress
 	"""
+
+	txt_yaml = f'\no  Importing AQME parameters from {self.varfile}'
+	error_yaml = False
 	# Variables will be updated from YAML file
 	try:
-		if args_.varfile is not None:
-			if os.path.exists(args_.varfile):
-				if os.path.splitext(args_.varfile)[1] == ".yaml":
-					log.write("\no  Importing AQME parameters from " + args_.varfile)
-					with open(args_.varfile, "r") as file:
-						try:
-							param_list = yaml.load(file, Loader=yaml.SafeLoader)
-						except yaml.scanner.ScannerError:
-							log.write(
-								"\nx  Error while reading "
-								+ args_.varfile
-								+ ". Edit the yaml file and try again (i.e. use ':' instead of '=' to specify variables)"
-							)
-							sys.exit(
-								"\nx  Error while reading "
-								+ args_.varfile
-								+ ". Edit the yaml file and try again (i.e. use ':' instead of '=' to specify variables)"
-							)
+		if os.path.exists(self.varfile):
+			if os.path.splitext(self.varfile)[1] in [".yaml",".yml",".txt"]:
+				with open(self.varfile, "r") as file:
+					try:
+						param_list = yaml.load(file, Loader=yaml.SafeLoader)
+					except yaml.scanner.ScannerError:
+						txt_yaml = f'\nx  Error while reading {self.varfile}. Edit the yaml file and try again (i.e. use ":" instead of "=" to specify variables)'
+						print(f'\nx  Error while reading {self.varfile}. Edit the yaml file and try again (i.e. use ":" instead of "=" to specify variables)')
+						error_yaml = True
+		if not error_yaml:
 			for param in param_list:
-				if hasattr(args_, param):
-					if getattr(args_, param) != param_list[param]:
-						log.write(
-							"o  RESET "
-							+ param
-							+ " from "
-							+ str(getattr(args_, param))
-							+ " to "
-							+ str(param_list[param])
-						)
-						setattr(args_, param, param_list[param])
-					else:
-						log.write(
-							"o  DEFAULT " + param + " : " + str(getattr(args_, param))
-						)
-	except UnboundLocalError:  # RAUL: Is it just me or this only happens when the file exists, and ens in .yaml and is empty or does not end in .yaml?
-		log.write(
-			"\no  The specified yaml file containing parameters was not found! Make sure that the valid params file is in the folder where you are running the code.\n"
-		)
+				if hasattr(self, param):
+					if getattr(self, param) != param_list[param]:
+						setattr(self, param, param_list[param])
 
-	return args_, log
+	except UnboundLocalError:  # RAUL: Is it just me or this only happens when the file exists, and ens in .yaml and is empty or does not end in .yaml?
+		txt_yaml = "\no  The specified yaml file containing parameters was not found! Make sure that the valid params file is in the folder where you are running the code.\n"
+		print("\no  The specified yaml file containing parameters was not found! Make sure that the valid params file is in the folder where you are running the code.\n")
+
+	return self,txt_yaml
 
 
 # class for logging
@@ -843,10 +819,15 @@ def load_variables(kwargs,aqme_module):
 
 	# first, load default values and options manually added to the function
 	self = set_options(kwargs)
-	
+
+	# this part loads variables from yaml files (if varfile is used)
+	txt_yaml = ''
+	if self.varfile is not None:
+		self,txt_yaml = load_from_yaml(self)
+
 	self.initial_dir = Path(os.getcwd())
 	self.w_dir_main = Path(self.w_dir_main)
-	if self.isom is not None:
+	if self.isom_type is not None:
 		self.isom_inputs = Path(self.isom_inputs)
 
 	# go to working folder and detect files
@@ -879,6 +860,11 @@ def load_variables(kwargs,aqme_module):
 			print('x  The PATH specified as input in the w_dir_main option might be invalid!')
 			error_setup = True
 
+	if txt_yaml != '' and txt_yaml != f'\no  Importing AQME parameters from {self.varfile}':
+		self.log.write(txt_yaml)
+		self.log.finalize()
+		sys.exit()
+
 	if self.command_line:
 		self.log.write(f"Command line used in AQME: aqme {' '.join([str(elem) for elem in sys.argv[1:]])}")
 
@@ -893,12 +879,6 @@ def load_variables(kwargs,aqme_module):
 		self.log.finalize()
 		os.chdir(self.initial_dir)
 		sys.exit()
-
-	# this part loads variables from yaml files (if varfile is used)
-	elif self.varfile is not None:
-		self.yaml, self.log = load_from_yaml(self.args, self.log)
-		for key,value in self.yaml.iteritems():
-			setattr(self, key, value)
 	
 	return self
 
@@ -926,12 +906,18 @@ def QM_coords(outlines,min_RMS,n_atoms,program):
 	count_RMS = -1
 
 	if program == 'gaussian':
-		for i,line in enumerate(outlines):
-			if line.find('Standard orientation:') > -1:
-				count_RMS += 1
-			if count_RMS == min_RMS:
-				range_lines = [i+5,i+5+n_atoms]
-				break
+		if min_RMS > -1:
+			for i,line in enumerate(outlines):
+				if line.find('Standard orientation:') > -1:
+					count_RMS += 1
+				if count_RMS == min_RMS:
+					range_lines = [i+5,i+5+n_atoms]
+					break
+		else:
+			for i in reversed(range(len(outlines))):
+				if outlines[i].find('Standard orientation:') > -1:
+					range_lines = [i+5,i+5+n_atoms]
+					break
 		for i in range(range_lines[0],range_lines[1]):
 			massno = int(outlines[i].split()[1])
 			if massno < len(per_tab):
