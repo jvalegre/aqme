@@ -301,8 +301,8 @@ def get_json_data(self,file,cclib_data):
 			# Extract <S**2> before and after spin annihilation
 			for i in reversed(range(0,len(outlines)-50)):
 				if 'S**2 before annihilation' in outlines[i]:
-					cclib_data['properties']['S2 after annihilation'] = [float(outlines[i].strip().split()[-1])]
-					cclib_data['properties']['S2 before annihilation'] = [float(outlines[i].strip().split()[-3][:-1])]
+					cclib_data['properties']['S2 after annihilation'] = float(outlines[i].strip().split()[-1])
+					cclib_data['properties']['S2 before annihilation'] = float(outlines[i].strip().split()[-3][:-1])
 
 				# Extract symmetry point group
 				elif 'Full point group' in outlines[i]:

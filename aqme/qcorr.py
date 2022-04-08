@@ -469,7 +469,7 @@ class qcorr():
 			errortype = 'no_data'
 		
 		# add parameters that might be missing from cclib (depends on the version)
-		if not hasattr(cclib_data, 'metadata'):
+		if not hasattr(cclib_data, 'metadata') and errortype != 'no_data':
 			cclib_data = get_json_data(self,file,cclib_data)
 
 		# this is just a "dirty hack" until cclib is updated to be compatible for print mini in ORCA
