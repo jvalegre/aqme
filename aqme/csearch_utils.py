@@ -554,7 +554,6 @@ def prepare_smiles_from_line(line, i, args):
     toks = line.split()
     # editing part
     smiles = toks[0]
-    smi = smi.split(".")
     if args.prefix == "":
         name = "".join(toks[1])
     else:

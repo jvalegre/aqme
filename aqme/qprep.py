@@ -44,9 +44,9 @@ class qprep:
 					mols = Chem.SDMolSupplier(str(file),removeHs=False)
 					for i, mol in enumerate(mols):
 						atom_types,cartesians,charge,mult,_ = self.qprep_coords(file,found_coords,mol)
-						if charge == None:
+						if charge is None:
 							charge = 0
-						if mult == None:
+						if mult is None:
 							mult = 1
 						name_conf = f'{name}_conf_{i+1}'
 						qprep_data = {'atom_types': atom_types, 'cartesians': cartesians,

@@ -6,6 +6,6 @@ Install OpenBabel
 conda install -c conda-forge openbabel
 
 Install AQME and its dependencies
-pip install AQME
+pip install aqme
 or
 python setup.py install

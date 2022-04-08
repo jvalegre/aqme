@@ -190,7 +190,7 @@ class qcorr():
 				unpaired_e = cclib_data['properties']['multiplicity']-1
 				# this first part accounts for singlet diradicals (threshold is 10% of the spin before annihilation)
 				if unpaired_e == 0:
-					if cclib_data['properties']['S2 after annihilation'] > abs(float(self.args.s2_threshold)/100)*cclib_data['properties']['S2 before annihilation']:
+					if float(cclib_data['properties']['S2 after annihilation']) > abs(float(self.args.s2_threshold)/100)*cclib_data['properties']['S2 before annihilation']:
 						errortype = 'spin_contaminated'
 				else:
 					spin = unpaired_e*0.5
@@ -459,20 +459,28 @@ class qcorr():
 		
 		command_run_1 = ['ccwrite', 'json', file]
 		subprocess.run(command_run_1)
-		
+
+		cclib_data = {}
 		try:
 			with open(file_name+'.json') as json_file:
 				cclib_data = json.load(json_file)
 		except FileNotFoundError:
 			termination = 'other'
 			errortype = 'no_data'
-			print(f'x  Potential cclib compatibility problem or no data found for file {file} (Termination = {termination}, Error type = {errortype})')
-			self.args.log.write(f'x  Potential cclib compatibility problem or no data found for file {file} (Termination = {termination}, Error type = {errortype})')
-			cclib_data = {}
 		
 		# add parameters that might be missing from cclib (depends on the version)
 		if not hasattr(cclib_data, 'metadata'):
-			cclib_data = get_json_data(file,cclib_data)
+			cclib_data = get_json_data(self,file,cclib_data)
+
+		# this is just a "dirty hack" until cclib is updated to be compatible for print mini in ORCA
+		if hasattr(cclib_data, 'metadata'):
+			if cclib_data['metadata']['QM program'].lower().find('orca') > -1:
+				if hasattr(cclib_data['properties']['energy'], 'final single point energy'):
+					termination,errortype = 'normal','none'
+		
+		if errortype == 'no_data':
+			print(f'x  Potential cclib compatibility problem or no data found for file {file} (Termination = {termination}, Error type = {errortype})')
+			self.args.log.write(f'x  Potential cclib compatibility problem or no data found for file {file} (Termination = {termination}, Error type = {errortype})')
 
 		return termination,errortype,cclib_data
 
