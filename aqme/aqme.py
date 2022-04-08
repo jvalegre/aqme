@@ -150,7 +150,7 @@ def main():
             gen_atoms=args.gen_atoms,
             bs_gen=args.bs_gen,
             bs=args.bs,
-        )
+			      verbose=args.verbose)
 
     # QCORR
     if args.qcorr:
@@ -165,7 +165,7 @@ def main():
             freq_conv=args.freq_conv,
             s2_threshold=args.s2_threshold,
             dup_threshold=args.dup_threshold,
-            isom=args.isom,
+            isom_type=args.isom_type,
             isom_inputs=args.isom_inputs,
             vdwfrac=args.vdwfrac,
             covfrac=args.covfrac,

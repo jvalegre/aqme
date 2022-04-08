@@ -42,60 +42,36 @@ def periodic_table():
 
 
 # load paramters from yaml file
-def load_from_yaml(args_, log):
-    """
-    Loads the parameters for the calculation from a yaml if specified. Otherwise
-    does nothing.
+def load_from_yaml(self):
+	"""
+	Loads the parameters for the calculation from a yaml if specified. Otherwise
+	does nothing.
+	"""
 
-    Parameters
-    ----------
-    args : argparse.args
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    Dataclass
-    log : Logger
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    Where to log the program progress
-    """
-    # Variables will be updated from YAML file
-    try:
-        if args_.varfile is not None:
-            if os.path.exists(args_.varfile):
-                if os.path.splitext(args_.varfile)[1] == ".yaml":
-                    log.write("\no  Importing AQME parameters from " + args_.varfile)
-                    with open(args_.varfile, "r") as file:
-                        try:
-                            param_list = yaml.load(file, Loader=yaml.SafeLoader)
-                        except yaml.scanner.ScannerError:
-                            log.write(
-                                "\nx  Error while reading "
-                                + args_.varfile
-                                + ". Edit the yaml file and try again (i.e. use ':' instead of '=' to specify variables)"
-                            )
-                            sys.exit(
-                                "\nx  Error while reading "
-                                + args_.varfile
-                                + ". Edit the yaml file and try again (i.e. use ':' instead of '=' to specify variables)"
-                            )
-            for param in param_list:
-                if hasattr(args_, param):
-                    if getattr(args_, param) != param_list[param]:
-                        log.write(
-                            "o  RESET "
-                            + param
-                            + " from "
-                            + str(getattr(args_, param))
-                            + " to "
-                            + str(param_list[param])
-                        )
-                        setattr(args_, param, param_list[param])
-                    else:
-                        log.write(
-                            "o  DEFAULT " + param + " : " + str(getattr(args_, param))
-                        )
-    except UnboundLocalError:  # RAUL: Is it just me or this only happens when the file exists, and ens in .yaml and is empty or does not end in .yaml?
-        log.write(
-            "\no  The specified yaml file containing parameters was not found! Make sure that the valid params file is in the folder where you are running the code.\n"
-        )
+	txt_yaml = f'\no  Importing AQME parameters from {self.varfile}'
+	error_yaml = False
+	# Variables will be updated from YAML file
+	try:
+		if os.path.exists(self.varfile):
+			if os.path.splitext(self.varfile)[1] in [".yaml",".yml",".txt"]:
+				with open(self.varfile, "r") as file:
+					try:
+						param_list = yaml.load(file, Loader=yaml.SafeLoader)
+					except yaml.scanner.ScannerError:
+						txt_yaml = f'\nx  Error while reading {self.varfile}. Edit the yaml file and try again (i.e. use ":" instead of "=" to specify variables)'
+						print(f'\nx  Error while reading {self.varfile}. Edit the yaml file and try again (i.e. use ":" instead of "=" to specify variables)')
+						error_yaml = True
+		if not error_yaml:
+			for param in param_list:
+				if hasattr(self, param):
+					if getattr(self, param) != param_list[param]:
+						setattr(self, param, param_list[param])
 
-    return args_, log
+	except UnboundLocalError:  # RAUL: Is it just me or this only happens when the file exists, and ens in .yaml and is empty or does not end in .yaml?
+		txt_yaml = "\no  The specified yaml file containing parameters was not found! Make sure that the valid params file is in the folder where you are running the code.\n"
+		print("\no  The specified yaml file containing parameters was not found! Make sure that the valid params file is in the folder where you are running the code.\n")
+
+	return self,txt_yaml
 
 
 # class for logging
@@ -813,189 +789,183 @@ def get_name_and_charge(name, charge_data):
 
 
 def command_line_args():
-    """
-    Load default and user-defined arguments specified through command lines. Arrguments are loaded as a dictionary
-    """
+	'''
+	Load default and user-defined arguments specified through command lines. Arrguments are loaded as a dictionary
+	'''
+	
+	# First, create dictionary with user-defined arguments
+	kwargs = {}
+	available_args = ['help']
+	bool_args = [
+		"verbose",
+		"csearch",
+		"cmin",
+		"qprep",
+		"qcorr",
+		"qstat",
+		"qpred",
+		"metal_complex",
+		"time",
+		"heavyonly",
+		"cregen",
+		"lowest_only",
+		"lowest_n",
+		"chk",
+		"com_from_xyz",
+		"dup",
+		"fullcheck",
+		"rot_dihedral",
+		"nmr_online",
+		"qsub",
+		"qsub_ana",
+		"ts_complex"]
 
-    # First, create dictionary with user-defined arguments
-    kwargs = {}
-    available_args = ["help"]
-    bool_args = [
-        "verbose",
-        "csearch",
-        "cmin",
-        "qprep",
-        "qcorr",
-        "qstat",
-        "qpred",
-        "metal_complex",
-        "time",
-        "heavyonly",
-        "cregen",
-        "lowest_only",
-        "lowest_n",
-        "chk",
-        "com_from_xyz",
-        "dup",
-        "fullcheck",
-        "rot_dihedral",
-        "nmr_online",
-        "qsub",
-        "qsub_ana",
-        "complex",
-    ]
+	for arg in var_dict:
+		if arg in bool_args:
+			available_args.append(f'{arg}')
+		else:
+			available_args.append(f'{arg} =')
 
-    for arg in var_dict:
-        if arg in bool_args:
-            available_args.append(f"{arg}")
-        else:
-            available_args.append(f"{arg} =")
+	try:
+		opts,_ = getopt.getopt(sys.argv[1:], 'h', available_args)
+	except getopt.GetoptError as err:
+		print(err)
+		sys.exit()
+	
+	for arg,value in opts:
+		arg_name = arg.split('--')[1].strip()
+		if arg_name in bool_args:
+			value = True
+		if value == 'None':
+			value = None
+		if arg_name in ("h", "help"):
+			print('AQME is installed correctly! For more information about the available options, see the documentation in https://github.com/jvalegre/aqme')
+			sys.exit()
+		else:
+			kwargs[arg_name] = value
+	
+	# Second, load all the default variables as an "add_option" object
+	args = load_variables(kwargs,_)
 
-    try:
-        opts, _ = getopt.getopt(sys.argv[1:], "h", available_args)
-    except getopt.GetoptError as err:
-        print(err)
-        sys.exit()
-
-    for arg, value in opts:
-        arg_name = arg.split("--")[1].strip()
-        if arg_name in bool_args:
-            value = True
-        if value == "None":
-            value = None
-        if arg_name in ("h", "help"):
-            print(
-                "AQME is installed correctly! For more information about the available options, see the documentation in https://github.com/jvalegre/aqme"
-            )
-            sys.exit()
-        else:
-            kwargs[arg_name] = value
-
-    # Second, load all the default variables as an "add_option" object
-    args = load_variables(kwargs, _)
-
-    return args
+	return args
 
 
-def load_variables(kwargs, aqme_module):
-    """
-    Load default and user-defined variables
-    """
+def load_variables(kwargs,aqme_module):
+	'''
+	Load default and user-defined variables
+	'''
 
-    # first, load default values and options manually added to the function
-    self = set_options(kwargs)
+	# first, load default values and options manually added to the function
+	self = set_options(kwargs)
 
-    self.initial_dir = Path(os.getcwd())
-    self.w_dir_main = Path(self.w_dir_main)
-    if self.isom is not None:
-        self.isom_inputs = Path(self.isom_inputs)
+	# this part loads variables from yaml files (if varfile is used)
+	txt_yaml = ''
+	if self.varfile is not None:
+		self,txt_yaml = load_from_yaml(self)
 
-    # go to working folder and detect files
-    os.chdir(self.w_dir_main)
-    if not isinstance(self.files, list):
-        if not isinstance(self.files, Mol):
-            self.files = glob.glob(self.files)
-        else:
-            self.files = [self.files]
+	self.initial_dir = Path(os.getcwd())
+	self.w_dir_main = Path(self.w_dir_main)
+	if self.isom_type is not None:
+		self.isom_inputs = Path(self.isom_inputs)
 
-    # start a log file to track the QCORR module
-    error_setup = False
-    logger_2 = "data"
-    if aqme_module == "qcorr":
-        # detects cycle of analysis (0 represents the starting point)
-        self.round_num, self.resume_qcorr = check_run(self.w_dir_main)
-        logger_1 = "QCORR-run"
-        logger_2 = f"{str(self.round_num)}"
+	# go to working folder and detect files
+	os.chdir(self.w_dir_main)
+	if not isinstance(self.files, list):
+		if not isinstance(self.files, Mol):
+			self.files = glob.glob(self.files)
+		else:
+			self.files = [self.files]
 
-    if aqme_module == "csearch":
-        logger_1 = "CSEARCH"
+	# start a log file to track the QCORR module
+	error_setup = False
+	logger_2 = 'data'
+	if aqme_module == 'qcorr':
+		# detects cycle of analysis (0 represents the starting point)
+		self.round_num,self.resume_qcorr = check_run(self.w_dir_main)
+		logger_1 = 'QCORR-run'
+		logger_2 = f'{str(self.round_num)}'
 
-    if aqme_module == "qprep":
-        logger_1 = "QPREP"
+	if aqme_module == 'csearch':
+		logger_1 = 'CSEARCH'
 
-    if aqme_module == "cmin":
-        logger_1 = "CMIN"
+	if aqme_module == 'qprep':
+		logger_1 = 'QPREP'
 
-    if aqme_module in ["csearch", "cmin", "qprep", "qcorr"]:
-        try:
-            self.log = Logger(self.w_dir_main / logger_1, logger_2)
-        except FileNotFoundError:
-            print(
-                "x  The PATH specified as input in the w_dir_main option might be invalid!"
-            )
-            error_setup = True
+	if aqme_module in ['csearch','qprep','qcorr']:
+		try:
+			self.log = Logger(self.w_dir_main / logger_1,logger_2)
+		except FileNotFoundError:
+			print('x  The PATH specified as input in the w_dir_main option might be invalid!')
+			error_setup = True
 
-    if self.command_line:
-        self.log.write(
-            f"Command line used in AQME: aqme {' '.join([str(elem) for elem in sys.argv[1:]])}"
-        )
+	if txt_yaml != '' and txt_yaml != f'\no  Importing AQME parameters from {self.varfile}':
+		self.log.write(txt_yaml)
+		self.log.finalize()
+		sys.exit()
 
-    if aqme_module == "qcorr" or aqme_module == "cmin":
-        if len(self.files) == 0:
-            print(f"x  There are no output files in {self.w_dir_main}.")
-            self.log.write(f"x  There are no output files in {self.w_dir_main}.")
-            error_setup = True
+	if self.command_line:
+		self.log.write(f"Command line used in AQME: aqme {' '.join([str(elem) for elem in sys.argv[1:]])}")
 
-    if error_setup:
-        # this is added to avoid path problems in jupyter notebooks
-        self.log.finalize()
-        os.chdir(self.initial_dir)
-        sys.exit()
+	if aqme_module == 'qcorr':
+		if len(self.files) == 0:
+			print(f'x  There are no output files in {self.w_dir_main}.')
+			self.log.write(f'x  There are no output files in {self.w_dir_main}.')
+			error_setup = True
 
-    # this part loads variables from yaml files (if varfile is used)
-    elif self.varfile is not None:
-        self.yaml, self.log = load_from_yaml(self.args, self.log)
-        for key, value in self.yaml.iteritems():
-            setattr(self, key, value)
-
-    return self
+	if error_setup:
+		# this is added to avoid path problems in jupyter notebooks
+		self.log.finalize()
+		os.chdir(self.initial_dir)
+		sys.exit()
+	
+	return self
 
 
 def read_file(w_dir, file):
-    """
-    Reads through a file and retrieves a list with all the lines.
-    """
+	"""
+	Reads through a file and retrieves a list with all the lines.
+	"""
 
-    os.chdir(w_dir)
-    outfile = open(file, "r")
-    outlines = outfile.readlines()
-    outfile.close()
+	os.chdir(w_dir)
+	outfile = open(file, "r")
+	outlines = outfile.readlines()
+	outfile.close()
 
-    return outlines
+	return outlines
 
 
-def QM_coords(outlines, min_RMS, n_atoms, program):
-    """
-    Retrieves atom types and coordinates from QM output files
-    """
+def QM_coords(outlines,min_RMS,n_atoms,program):
+	'''
+	Retrieves atom types and coordinates from QM output files
+	'''
 
-    atom_types, cartesians = [], []
-    per_tab = periodic_table()
-    count_RMS = -1
+	atom_types,cartesians = [],[]
+	per_tab = periodic_table()
+	count_RMS = -1
 
-    if program == "gaussian":
-        for i, line in enumerate(outlines):
-            if line.find("Standard orientation:") > -1:
-                count_RMS += 1
-            if count_RMS == min_RMS:
-                range_lines = [i + 5, i + 5 + n_atoms]
-                break
-        for i in range(range_lines[0], range_lines[1]):
-            massno = int(outlines[i].split()[1])
-            if massno < len(per_tab):
-                atom_symbol = per_tab[massno]
-            else:
-                atom_symbol = "XX"
-            atom_types.append(atom_symbol)
-            cartesians.append(
-                [
-                    float(outlines[i].split()[3]),
-                    float(outlines[i].split()[4]),
-                    float(outlines[i].split()[5]),
-                ]
-            )
+	if program == 'gaussian':
+		if min_RMS > -1:
+			for i,line in enumerate(outlines):
+				if line.find('Standard orientation:') > -1:
+					count_RMS += 1
+				if count_RMS == min_RMS:
+					range_lines = [i+5,i+5+n_atoms]
+					break
+		else:
+			for i in reversed(range(len(outlines))):
+				if outlines[i].find('Standard orientation:') > -1:
+					range_lines = [i+5,i+5+n_atoms]
+					break
+		for i in range(range_lines[0],range_lines[1]):
+			massno = int(outlines[i].split()[1])
+			if massno < len(per_tab):
+				atom_symbol = per_tab[massno]
+			else:
+				atom_symbol = "XX"
+			atom_types.append(atom_symbol)
+			cartesians.append([float(outlines[i].split()[3]), float(outlines[i].split()[4]), float(outlines[i].split()[5])])
 
-    return atom_types, cartesians
+	return atom_types,cartesians
 
 
 def cclib_atoms_coords(cclib_data):

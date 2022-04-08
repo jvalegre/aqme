@@ -1,0 +1,2 @@
+CSEARCH time (seconds),Molecule,Mult,Overall charge,RDKit-Initial-samples,RDKit-RMSD-and-energy-duplicates,RDKit-Unique-conformers,RDKit-energy-window,RDKit-initial_energy_threshold,status,update_to_rdkit
+0.16,test,1.0,0,120,0,1,0,119,1.0,False
