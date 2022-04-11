@@ -22,6 +22,13 @@ csearch_crest_dir = w_dir_main + "/tests/csearch_crest"
 csearch_others_dir = w_dir_main + "/tests/csearch_others"
 csearch_input_dir = w_dir_main + "/tests/csearch_input"
 
+os.mkdir(csearch_methods_dir)
+os.mkdir(csearch_rdkit_summ_dir)
+os.mkdir(csearch_fullmonte_dir)
+os.mkdir(csearch_crest_dir)
+os.mkdir(csearch_others_dir)
+os.mkdir(csearch_input_dir)
+
 # tests for input types
 @pytest.mark.parametrize(
 	"program, input, output_nummols",
