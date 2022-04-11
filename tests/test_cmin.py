@@ -16,9 +16,11 @@ import rdkit
 # saves the working directory
 w_dir_main = os.getcwd()
 cmin_methods_dir = w_dir_main + "/tests/cmin_methods"
-os.mkdir(cmin_methods_dir)
+if not os.path.exists(cmin_methods_dir):
+	os.mkdir(cmin_methods_dir)
 cmin_xtb_dir = w_dir_main + "/tests/cmin_xtb"
-os.mkdir(cmin_xtb_dir)
+if not os.path.exists(cmin_xtb_dir):
+	os.mkdir(cmin_xtb_dir)
 
 # tests for parameters of csearch random initialzation
 @pytest.mark.parametrize(
