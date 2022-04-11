@@ -246,7 +246,7 @@ def get_info_input(file):
 
     line = ""
     # input for Gaussian calculations
-    if file.split(".")[1] in ["com", "gjf"]:
+    if str(file).split(".")[1] in ["com", "gjf"]:
 
         # Find the command line
         while "#" not in line:
@@ -272,7 +272,7 @@ def get_info_input(file):
             line = next(_iter).strip()
 
     # input for ORCA calculations
-    if file.split(".")[1] == ".inp":
+    if str(file).split(".")[1] == ".inp":
 
         # Find the line with charge and multiplicity
         while "* xyz" not in line or "* int" not in line:
@@ -287,7 +287,6 @@ def get_info_input(file):
         while len(line.split()) > 1:
             atoms_and_coords.append(line.strip())
             line = next(_iter).strip()
-
     return atoms_and_coords, charge, mult
 
 
@@ -321,10 +320,10 @@ def smi_to_mol(
                 "\nx  Please specify that its is a complex! Specify: complex=True for complexes"
             )
             sys.exit()
+
         mol, constraints_dist, constraints_angle, constraints_dihedral = nci_ts_mol(
             smi, name, constraints_dist, constraints_angle, constraints_dihedral
         )
-
     else:
         params = Chem.SmilesParserParams()
         params.removeHs = False

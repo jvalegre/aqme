@@ -81,7 +81,6 @@ def main():
             constraints_angle=args.constraints_angle,
             constraints_dihedral=args.constraints_dihedral,
             prefix=args.prefix,
-            suffix=args.suffix,
             stacksize=args.stacksize,
             ewin_fullmonte=args.ewin_fullmonte,
             ewin_sample_fullmonte=args.ewin_sample_fullmonte,
@@ -126,7 +125,6 @@ def main():
             opt_fmax=args.opt_fmax,
             ani_method=args.ani_method,
             stacksize=args.stacksize,
-            complex=args.complex,
         )
 
     # QPREP

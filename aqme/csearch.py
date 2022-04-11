@@ -199,17 +199,32 @@ class csearch:
         """
         Function to start conformer generation
         """
+        if self.args.smi is not None:
+            (mol, self.args.constraints_dist, self.args.constraints_angle, self.args.constraints_dihedral) = smi_to_mol(
+                smi,
+                name,
+                self.args.program,
+                self.args.log,
+                self.args.complex,
+                constraints_dist,
+                constraints_angle,
+                constraints_dihedral,
+            )
 
-        (mol, constraints_dist, constraints_angle, constraints_dihedral) = smi_to_mol(
-            smi,
-            name,
-            self.args.program,
-            self.args.log,
-            self.args.complex,
-            constraints_dist,
-            constraints_angle,
-            constraints_dihedral,
-        )
+        else:
+            if self.args.input.split('.')[1] in ["smi","csv","cdx","txt","yaml","yml","rtf"]:
+                (mol, self.args.constraints_dist, self.args.constraints_angle, self.args.constraints_dihedral) = smi_to_mol(
+                    smi,
+                    name,
+                    self.args.program,
+                    self.args.log,
+                    self.args.complex,
+                    constraints_dist,
+                    constraints_angle,
+                    constraints_dihedral,
+                )
+            else:
+                (mol, self.args.constraints_dist, self.args.constraints_angle, self.args.constraints_dihedral) = (smi, constraints_dist, constraints_angle, constraints_dihedral)
 
         if self.args.destination is None:
             self.csearch_folder = Path(self.args.w_dir_main).joinpath(
@@ -299,6 +314,7 @@ class csearch:
 
         dup_data_idx = 0
         start_time = time.time()
+        status = None
         valid_structure = filters(
             mol, self.args.log, self.args.max_mol_wt, self.args.verbose
         )
@@ -321,10 +337,9 @@ class csearch:
                 raise
         if status == -1 or not valid_structure:
             error_message = "\nx  ERROR: The structure is not valid or no conformers were obtained from this SMILES string"
-            print(error_message)
+            print(error_message,status,valid_structure)
             self.args.log.write(error_message)
-            if file.exists():
-                os.remove(str(file))
+            sys.exit(-1)
 
         n_seconds = round(time.time() - start_time, 2)
         dup_data.at[dup_data_idx, "CSEARCH time (seconds)"] = n_seconds
@@ -775,6 +790,8 @@ class csearch:
                 charge = Chem.GetFormalCharge(mol)
             else:
                 charge = rules_get_charge(mol, self.args, "csearch")
+        else:
+            charge = self.args.charge
         if self.args.mult is None:
             if not self.args.metal_complex:
                 NumRadicalElectrons = 0
@@ -784,6 +801,8 @@ class csearch:
                 mult = int((2 * TotalElectronicSpin) + 1)
             else:
                 mult = 1
+        else:
+            mult =  self.args.mult
 
         # detects and applies auto-detection of initial number of conformers
         if self.args.sample == "auto":

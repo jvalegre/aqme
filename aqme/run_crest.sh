@@ -59,7 +59,7 @@ then
 	 echo "NO INPUT!"
 else
 	 crest $file.xyz --constrain $constraint > $contoutfile
-	 crest $file.xyz --cinp .xcontrol.sample -c $charge --uhf $uhf -ewin $ewin --noreftopo --nci --cbonds $cbonds > $outfile && mv crest_conformers.xyz $xyzoutall && mv crest_best.xyz $xyzoutbest
+	 crest $file.xyz --cinp .xcontrol.sample -c $charge --uhf $uhf -ewin $ewin --noreftopo --cbonds $cbonds > $outfile && mv crest_conformers.xyz $xyzoutall && mv crest_best.xyz $xyzoutbest
 fi
 
-rm -f coord* coord.original cregen_0.tmp cregen_1.tmp *.sorted cre_members crest.energies crest_* struc.xyz wbo gfnff_topo .xcontrol.sample $contoutfile scoord*
+rm -f coord* coord.original cregen_0.tmp cregen_1.tmp *.sorted cre_members crest.energies struc.xyz wbo gfnff_topo .xcontrol.sample $contoutfile scoord*

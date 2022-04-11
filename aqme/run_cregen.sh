@@ -1,7 +1,20 @@
 #!/bin/bash
 
 # default variables - machine dependent, uncomment as appropriate!
-runcrest=/usr/local/xtb/crest
+# runcrest=/usr/local/xtb/crest
+XTBHOME=/usr/local/xtb
+export XTBPATH=${XTBHOME}/share/xtb:${XTBHOME}:${HOME}
+export PATH=${PATH}:${XTBHOME}/bin
+export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${XTBHOME}/lib
+export PYTHONPATH=${PYTHONPATH}:${XTBHOME}/python
+export PATH=/usr/local/xtb:$PATH
+
+ulimit -s unlimited
+export OMP_STACKSIZE=1G
+export OMP_NUM_THREADS=12,1
+export OMP_MAX_ACTIVE_LEVELS=1
+export MKL_NUM_THREADS=12
+
 
 xyzout=${xyzout:-crest_conformers.xyz}
 ethr=${ethr:-0.2}
@@ -36,7 +49,7 @@ if [ -z "$fileall" ] && [ -z "$filebest" ]
 then
 	 echo "NO INPUT!"
 else
-   $runcrest $filebest.xyz -cregen $fileall.xyz -ethr $ethr -rthr $rthr -bthr $bthr -ewin $ewin > $outfile  && mv crest_ensemble.xyz $xyzout
+   crest $filebest.xyz -cregen $fileall.xyz -ethr $ethr -rthr $rthr -bthr $bthr -ewin $ewin > $outfile  && mv crest_ensemble.xyz $xyzout
 fi
 
-rm -f scoord* coord* coord.original cregen_0.tmp cregen_1.tmp cre_members *.sorted *.energies crest_* struc.xyz wbo gfnff_topo .xcontrol.sample $contoutfile
+rm -f scoord* coord* coord.original cregen_0.tmp cregen_1.tmp cre_members *.sorted *.energies struc.xyz wbo gfnff_topo .xcontrol.sample $contoutfile
