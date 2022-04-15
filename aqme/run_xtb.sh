@@ -16,58 +16,115 @@ export OMP_NUM_THREADS=12,1
 export OMP_MAX_ACTIVE_LEVELS=1
 export MKL_NUM_THREADS=12
 
-
-charge=${charge:-0}
-uhf=${uhf:-1}
-nproc=${nproc:-24}
-force_const=${force_const:-1.0}
-max_cycle=${max_cycle:-100}
-json=${json:-true}
 xyzout=${xyzout:-xtbopt.xyz}
+force_const=${force_const:-1.5}
+max_cycle=${max_cycle:-300}
 
-# input geometry (xyz)
-input=$1
-file="${input%.*}"
-echo -e "-  RUNNING $file WITH xTB \c"
-
-# user-defined variables
 echo -e "\$constrain" >> constrain.inp
-while [ $# -gt 0 ]; do
-   if [[ $1 == *"--"* ]]; then
-        param="${1/--/}"
-        declare $param="$2"
-        echo -e $1 $2 "\c"
-        if [[ "$param" == *dist* ]]
-           then
-              echo -e "distance: $2" >> constrain.inp
-        fi
-        if [[ "$param" == *angle* ]]
-           then
-              echo -e "angle: $2" >> constrain.inp
-        fi
-        if [[ "$param" == *dihedral* ]]
-           then
-              echo -e "dihedral: $2" >> constrain.inp
-        fi
-   fi
-  shift
-done
 
-# output
-outfile="${xyzout%.*}".out
-echo -e "-  outfile $outfile \c"
-echo -e "-  outxyz $xyzout \c"
+calc=xtb
+flags="$calc"
+
+### Loop over arguments
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    -i|--input)
+      file="$2"
+	  flags="$flags $file"
+      shift # past argument
+      shift # past value
+      ;;
+	-j|--job)
+      job="$2"
+	  flags="$flags --$job"
+      shift # past argument
+      shift # past value
+      ;;
+	-c|--charge)
+	  charge="$2"
+	  flags="$flags -c $charge"
+	  shift
+	  shift
+	  ;;
+	-u|--uhf)
+	  mult="$2"
+	  flags="$flags -u $mult"
+	  shift
+	  shift
+	  ;;
+	-s|--solvent)
+	  solvent="$2"
+	  flags="$flags --alpb $solvent"
+	  shift
+	  shift
+	  ;;
+	-p|--nproc)
+	  proc="$2"
+	  flags="$flags -P $proc"
+	  shift
+	  shift
+	  ;;
+  --dist)
+    dist="$2"
+    echo -e "distance: $dist" >> constrain.inp
+    shift
+	  shift
+	  ;;
+  --angle)
+    angle="$2"
+    echo -e "angle: $angle" >> constrain.inp
+    shift
+	  shift
+	  ;;
+  --dihedral)
+    dihedral="$2"
+    echo -e "dihedral: $dihedral" >> constrain.inp
+    shift
+	  shift
+	  ;;
+
+  -xyzout|--xyzout)
+    xyzout="$2"
+    outfile="${xyzout%.*}".out
+    shift
+    shift
+    ;;
+
+	-t|--time)
+	  taim="$2"
+	  shift
+	  shift
+	  ;;
+	-a|--add)
+	  add="$2"
+	  flags="$flags $add"
+	  shift
+	  shift
+	  ;;
+    -*|--*)
+      echo "Unknown option $1"
+      exit 1
+      ;;
+  esac
+done
 
 # write constraints to file
 echo -e "force constant=$force_const" >> constrain.inp
 echo -e "\$opt\nmaxcycle=$max_cycle\n\$end" >> constrain.inp
 
-# run xTB if xyz file supplied
+flags="$flags -I constrain.inp"
+
+# output
+exline="$flags"
+
+echo " "
+echo "-excuting $exline"
+
 if [ -z "$file" ]
 then
-   echo "NO INPUT!"
+	 echo "NO INPUT!"
 else
-   xtb $file.xyz --opt --input constrain.inp -c $charge --uhf $uhf > $outfile && mv xtbopt.xyz $xyzout
+   $exline > $outfile && mv xtbopt.xyz $xyzout
 fi
 
 rm -f constrain.inp xtbtopo* xtbrestart xtbopt* charges *fukui *omega *gfn1 wbo xtblast.xyz NOT_CONVERGED

@@ -119,6 +119,10 @@ var_dict = {
     "complex": False,
     "cbonds": 0.5,
     "prefix": "",
+    "cregen_cluster": None,
+    "crest_solvent": None,
+    "crest_nci": False,
+    "crest_noreftopo": False,
 }
 
 # part for using the options in a script or jupyter notebook

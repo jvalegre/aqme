@@ -841,6 +841,8 @@ def command_line_args():
         "qsub",
         "qsub_ana",
         "complex",
+        "crest_nci",
+        "crest_noreftopo",
     ]
 
     for arg in var_dict:

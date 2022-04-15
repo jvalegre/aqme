@@ -88,6 +88,11 @@ def main():
             nrot_fullmonte=args.nrot_fullmonte,
             ang_fullmonte=args.ang_fullmonte,
             complex=args.complex,
+            angle_off=args.angle_off,
+            nprocs=args.nprocs,
+            crest_solvent=args.crest_solvent,
+            crest_nci=args.crest_nci,
+            crest_noreftopo=args.crest_noreftopo,
             cbonds=args.cbonds,
             cregen=args.cregen,
             cregen_ethr=args.cregen_ethr,
@@ -95,7 +100,7 @@ def main():
             cregen_bthr=args.cregen_bthr,
             cregen_ewin=args.cregen_ewin,
             geom_rules=args.geom_rules,
-            angle_off=args.angle_off,
+            cregen_cluster=args.cregen_cluster,
         )
 
     # CMIN
