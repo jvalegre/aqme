@@ -1,0 +1,18 @@
+%chk=C:\Users\juanv\OneDrive - Colostate\Software Programas\aqme\Example_workflows\QCORR_processing_QM_outputs\QCORR_1\amplitude_ifreq.chk
+# hf/3-21g geom=connectivity
+
+Title Card Required
+
+0 1
+ C                 -0.03237100    0.02801500   -0.02793400
+ H                  0.60103600   -0.59192100   -0.73251000
+ H                  0.40479500   -0.53238500    0.82890600
+ H                  0.46752000    1.00584200    0.19478900
+ H                 -1.10712500   -0.20962900    0.05241800
+
+ 1 2 1.0 3 1.0 4 1.0 5 1.0
+ 2
+ 3
+ 4
+ 5
+

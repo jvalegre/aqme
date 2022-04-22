@@ -410,10 +410,10 @@
     D5       -1.09912  -0.00063   0.00000  -0.00030  -0.00127  -1.10039
     D6        3.08800  -0.00533   0.00000  -0.04836  -0.04893   3.03906
          Item               Value     Threshold  Converged?
- Maximum Force            0.029647     0.000450     NO 
- RMS     Force            0.011061     0.000300     NO 
- Maximum Displacement     0.118102     0.001800     NO 
- RMS     Displacement     0.052875     0.001200     NO 
+ Maximum Force            0.000007     0.000450     NO 
+ RMS     Force            0.000001     0.000300     NO 
+ Maximum Displacement     0.018102     0.001800     NO 
+ RMS     Displacement     0.000005     0.001200     NO 
  Predicted change in Energy=-3.644058D-03
  GradGradGradGradGradGradGradGradGradGradGradGradGradGradGradGradGradGrad
 

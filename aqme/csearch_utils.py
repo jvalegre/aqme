@@ -555,33 +555,34 @@ def prepare_smiles_files(args):
 
 
 def prepare_smiles_from_line(line, i, args):
-	toks = line.split()
-	# editing part
-	smiles = toks[0]
-	if args.prefix == "":
-		name = "".join(toks[1])
-	else:
-		name = f"{args.prefix}_{i}_{''.join(toks[1])}"
-	constraints_dist = args.constraints_dist
-	constraints_angle = args.constraints_angle
-	constraints_dihedral = args.constraints_dihedral
-	if len(toks) > 2:
-		constraints_dist = toks[2]
-		constraints_dist = constraints_dist.split("/")
-		for j, c in enumerate(constraints_dist):
-			constraints_dist[j] = c.split("-")
-		if len(toks) > 3:
-			constraints_angle = toks[3]
-			constraints_angle = constraints_angle.split("/")
-			for k, c in enumerate(constraints_angle):
-				constraints_angle[k] = c.split("-")
-			if len(toks) > 4:
-				constraints_dihedral = toks[4]
-				constraints_dihedral = constraints_dihedral.split("/")
-				for l, c in enumerate(constraints_dihedral):
-					constraints_dihedral[l] = c.split("-")
 
-	return smiles, name, constraints_dist, constraints_angle, constraints_dihedral
+  toks = line.split()
+    # editing part
+    smiles = toks[0]
+    if args.prefix == "":
+        name = "".join(toks[1])
+    else:
+        name = f"{args.prefix}_{i}_{''.join(toks[1])}"
+    constraints_dist = args.constraints_dist
+    constraints_angle = args.constraints_angle
+    constraints_dihedral = args.constraints_dihedral
+    if len(toks) > 2:
+        constraints_dist = toks[2]
+        constraints_dist = constraints_dist.split("/")
+        for j, c in enumerate(constraints_dist):
+            constraints_dist[j] = c.split("-")
+        if len(toks) > 3:
+            constraints_angle = toks[3]
+            constraints_angle = constraints_angle.split("/")
+            for k, c in enumerate(constraints_angle):
+                constraints_angle[k] = c.split("-")
+            if len(toks) > 4:
+                constraints_dihedral = toks[4]
+                constraints_dihedral = constraints_dihedral.split("/")
+                for l, c in enumerate(constraints_dihedral):
+                    constraints_dihedral[l] = c.split("-")
+
+    return smiles, name, constraints_dist, constraints_angle, constraints_dihedral
 
 
 def prepare_csv_files(args):
