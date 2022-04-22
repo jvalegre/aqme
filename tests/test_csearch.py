@@ -7,10 +7,7 @@
 
 import os
 import pytest
-import subprocess
 from aqme.csearch import csearch
-import glob
-from pathlib import Path
 import rdkit
 
 # saves the working directory

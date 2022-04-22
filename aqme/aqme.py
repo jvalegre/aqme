@@ -90,16 +90,13 @@ def main():
             complex=args.complex,
             angle_off=args.angle_off,
             nprocs=args.nprocs,
-            crest_solvent=args.crest_solvent,
-            crest_nci=args.crest_nci,
-            crest_noreftopo=args.crest_noreftopo,
             cbonds=args.cbonds,
             cregen=args.cregen,
             cregen_ethr=args.cregen_ethr,
             cregen_rthr=args.cregen_rthr,
             cregen_bthr=args.cregen_bthr,
             cregen_ewin=args.cregen_ewin,
-            geom_rules=args.geom_rules,
+            geom_rules=args.geom_rules
         )
 
     # CMIN

@@ -7,10 +7,7 @@
 
 import os
 import pytest
-import subprocess
 from aqme.cmin import cmin
-import glob
-from pathlib import Path
 import rdkit
 
 # saves the working directory
