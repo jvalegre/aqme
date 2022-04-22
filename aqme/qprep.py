@@ -10,6 +10,14 @@ import json
 from aqme.utils import cclib_atoms_coords, QM_coords, read_file
 from aqme.utils import move_file, load_variables
 from pathlib import Path
+from aqme.crest import xyzall_2_xyz
+import glob
+import subprocess
+
+try:
+    import pybel
+except ImportError:
+    from openbabel import pybel  # for openbabel>=3.0.0
 
 
 class qprep:

@@ -81,7 +81,6 @@ def main():
             constraints_angle=args.constraints_angle,
             constraints_dihedral=args.constraints_dihedral,
             prefix=args.prefix,
-            suffix=args.suffix,
             stacksize=args.stacksize,
             ewin_fullmonte=args.ewin_fullmonte,
             ewin_sample_fullmonte=args.ewin_sample_fullmonte,
@@ -89,6 +88,11 @@ def main():
             nrot_fullmonte=args.nrot_fullmonte,
             ang_fullmonte=args.ang_fullmonte,
             complex=args.complex,
+            angle_off=args.angle_off,
+            nprocs=args.nprocs,
+            crest_solvent=args.crest_solvent,
+            crest_nci=args.crest_nci,
+            crest_noreftopo=args.crest_noreftopo,
             cbonds=args.cbonds,
             cregen=args.cregen,
             cregen_ethr=args.cregen_ethr,
@@ -96,7 +100,7 @@ def main():
             cregen_bthr=args.cregen_bthr,
             cregen_ewin=args.cregen_ewin,
             geom_rules=args.geom_rules,
-            angle_off=args.angle_off,
+            cregen_cluster=args.cregen_cluster,
         )
 
     # CMIN
@@ -113,6 +117,7 @@ def main():
             mult=args.mult,
             metal_complex=args.metal_complex,
             metal=args.metal,
+            metal_oxi=args.metal_oxi,
             complex_type=args.complex_type,
             ewin_cmin=args.ewin_cmin,
             initial_energy_threshold=args.initial_energy_threshold,
@@ -125,7 +130,6 @@ def main():
             opt_fmax=args.opt_fmax,
             ani_method=args.ani_method,
             stacksize=args.stacksize,
-            complex=args.complex,
         )
 
     # QPREP
