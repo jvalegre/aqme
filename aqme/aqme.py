@@ -96,7 +96,7 @@ def main():
             cregen_bthr=args.cregen_bthr,
             cregen_ewin=args.cregen_ewin,
             geom_rules=args.geom_rules,
-            angle_off=args.angle_off,
+            angle_off=args.angle_off
         )
 
     # CMIN

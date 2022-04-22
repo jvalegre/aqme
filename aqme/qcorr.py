@@ -9,6 +9,7 @@ import time
 import pandas as pd
 import json
 import subprocess
+import cclib
 from pathlib import Path
 from aqme.utils import (
 	move_file,
@@ -243,7 +244,7 @@ class qcorr():
 		if errortype == 'none':
 			# in eV, converted to hartree using the conversion factor from cclib
 			E_dup = cclib_data['properties']['energy']['total']
-			E_dup = E_dup/27.21138505
+			E_dup = cclib.utils.convertor(E_dup, "eV", "hartree")
 			# in hartree
 			try:
 				H_dup = cclib_data['properties']['enthalpy']
@@ -475,7 +476,7 @@ class qcorr():
 		# this is just a "dirty hack" until cclib is updated to be compatible for print mini in ORCA
 		if hasattr(cclib_data, 'metadata'):
 			if cclib_data['metadata']['QM program'].lower().find('orca') > -1:
-				if hasattr(cclib_data['properties']['energy'], 'final single point energy'):
+				if 'final single point energy' in cclib_data['properties']['energy']:
 					termination,errortype = 'normal','none'
 		
 		if errortype == 'no_data':

@@ -117,7 +117,7 @@ var_dict = {
 		"submission_command": "qsub_summit",
 		"geom_rules": [],
 		"angle_off": 30,
-		"ts_complex": False,
+		"complex": False,
 		"cbonds": 0.5,
 		"prefix": '',
 	}

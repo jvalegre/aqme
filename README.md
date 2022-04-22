@@ -210,7 +210,7 @@ AQME can also be run through command lines. Some examples are:
         Available angle interval to use in the Fullmonte sampling. For example, if the angle is 120.0, the program chooses randomly between 120 and 240 degrees (picked at random) during each step of the sampling  
 
     *-- Options for CREST --*  
-    **ts_complex : bool, default=False**  
+    **complex : bool, default=False**  
         If True, performs a constrained CREST optimization including predefined distance, angle and dihedral constraints (the three options below)  
     **constraints_dist : list of lists, default=[]**  
         Specify distance constraints as [AT1,AT2,DIST]. An example of multiple constraints (atoms 1 and 2 with distance 1.8 Å, and atoms 4 and 5 with distance 2.0 Å): [[1,2,1.8],[4,5,2.0]]  
