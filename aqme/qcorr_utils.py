@@ -7,6 +7,7 @@ import os
 import glob
 import pandas as pd
 import json
+import cclib
 from pathlib import Path
 from aqme.utils import (
 	move_file,
@@ -298,52 +299,71 @@ def get_json_data(self,file,cclib_data):
 				grid = grid_lookup[IRadAn]
 				cclib_data['metadata']['grid type'] = grid
 
-			# Extract <S**2> before and after spin annihilation
-			for i in reversed(range(0,len(outlines)-50)):
-				if 'S**2 before annihilation' in outlines[i]:
-					cclib_data['properties']['S2 after annihilation'] = float(outlines[i].strip().split()[-1])
-					cclib_data['properties']['S2 before annihilation'] = float(outlines[i].strip().split()[-3][:-1])
+		# Extract <S**2> before and after spin annihilation
+		for i in reversed(range(0,len(outlines)-50)):
+			# For time dependent (TD) calculations
+			if 'E(TD-HF/TD-DFT)' in outlines[i]:
+				td_e = float(line.strip().split()[-1])
+				cclib_data['properties']['energy']['TD energy'] = cclib.utils.convertor(td_e, "hartree", "eV")
 
-				# Extract symmetry point group
-				elif 'Full point group' in outlines[i]:
-					point_group = outlines[i].strip().split()[3]
-					cclib_data['properties']['rotational']['symmetry point group'] = point_group
-					break
+			# For G4 calculations look for G4 energies (Gaussian16a bug prints G4(0 K) as DE(HF)) --Brian modified to work for G16c-where bug is fixed.
+			elif line.strip().startswith('E(ZPE)='): #Overwrite DFT ZPE with G4 ZPE
+				zero_point_corr = float(line.strip().split()[1])
+			elif line.strip().startswith('G4(0 K)'):
+				G4_energy = float(line.strip().split()[2])
+				G4_energy -= zero_point_corr #Remove G4 ZPE
+				cclib_data['properties']['energy']['G4 energy'] = cclib.utils.convertor(G4_energy, "hartree", "eV")
 
-				# Extract symmetry number, rotational constants and rotational temperatures
-				elif 'Rotational symmetry number' in outlines[i]:
-					symmno = int(outlines[i].strip().split()[3].split(".")[0])
-					cclib_data['properties']['rotational']['symmetry number'] = symmno
+			# For ONIOM calculations use the extrapolated value rather than SCF value
+			elif "ONIOM: extrapolated energy" in line.strip():
+				oniom_e = float(line.strip().split()[4])
+				cclib_data['properties']['energy']['ONIOM energy'] = cclib.utils.convertor(oniom_e, "hartree", "eV")
 
-				elif outlines[i].find('Rotational constants (GHZ):') > -1:
-					try:
-						roconst = [float(outlines[i].strip().replace(':', ' ').split()[3]),
-										float(outlines[i].strip().replace(':', ' ').split()[4]),
+			elif 'S**2 before annihilation' in outlines[i]:
+				cclib_data['properties']['S2 after annihilation'] = float(outlines[i].strip().split()[-1])
+				cclib_data['properties']['S2 before annihilation'] = float(outlines[i].strip().split()[-3][:-1])
+
+			# Extract symmetry point group
+			elif 'Full point group' in outlines[i]:
+				point_group = outlines[i].strip().split()[3]
+				cclib_data['properties']['rotational']['symmetry point group'] = point_group
+				break
+
+			# Extract symmetry number, rotational constants and rotational temperatures
+			elif 'Rotational symmetry number' in outlines[i]:
+				symmno = int(outlines[i].strip().split()[3].split(".")[0])
+				cclib_data['properties']['rotational']['symmetry number'] = symmno
+
+			elif outlines[i].find('Rotational constants (GHZ):') > -1:
+				try:
+					roconst = [float(outlines[i].strip().replace(':', ' ').split()[3]),
+									float(outlines[i].strip().replace(':', ' ').split()[4]),
+									float(outlines[i].strip().replace(':', ' ').split()[5])]
+				except ValueError:
+					if outlines[i].find('********') > -1:
+						roconst = [float(outlines[i].strip().replace(':', ' ').split()[4]),
 										float(outlines[i].strip().replace(':', ' ').split()[5])]
-					except ValueError:
-						if outlines[i].find('********') > -1:
-							roconst = [float(outlines[i].strip().replace(':', ' ').split()[4]),
-											float(outlines[i].strip().replace(':', ' ').split()[5])]
-					cclib_data['properties']['rotational']['rotational constants'] = roconst
+				cclib_data['properties']['rotational']['rotational constants'] = roconst
 
-				elif outlines[i].find('Rotational temperature ') > -1:
-					rotemp = [float(outlines[i].strip().split()[3])]
-					cclib_data['properties']['rotational']['rotational temperatures'] = rotemp
+			elif outlines[i].find('Rotational temperature ') > -1:
+				rotemp = [float(outlines[i].strip().split()[3])]
+				cclib_data['properties']['rotational']['rotational temperatures'] = rotemp
 
-				elif outlines[i].find('Rotational temperatures') > -1:
-					try:
-						rotemp = [float(outlines[i].strip().split()[3]), float(outlines[i].strip().split()[4]),
-									float(outlines[i].strip().split()[5])]
-					except ValueError:
-						if outlines[i].find('********') > -1:
-							rotemp = [float(outlines[i].strip().split()[4]), float(outlines[i].strip().split()[5])]
-					cclib_data['properties']['rotational']['rotational temperatures'] = rotemp
+			elif outlines[i].find('Rotational temperatures') > -1:
+				try:
+					rotemp = [float(outlines[i].strip().split()[3]), float(outlines[i].strip().split()[4]),
+								float(outlines[i].strip().split()[5])]
+				except ValueError:
+					if outlines[i].find('********') > -1:
+						rotemp = [float(outlines[i].strip().split()[4]), float(outlines[i].strip().split()[5])]
+				cclib_data['properties']['rotational']['rotational temperatures'] = rotemp
 
 	elif cclib_data['metadata']['QM program'].lower().find('orca') > -1:
 		for i in reversed(range(0,outlines)):
 			if outlines[i][:25] == 'FINAL SINGLE POINT ENERGY':
 				# in eV to match the format from cclib
-				cclib_data['properties']['energy']['final single point energy'] = float(outlines[i].split()[-1])*27.21138505
+				orca_e = float(outlines[i].split()[-1])
+				cclib_data['properties']['energy']['final single point energy'] = cclib.utils.convertor(orca_e, "hartree", "eV")
 				break
 	
 	if cclib_data != {}:

@@ -3,12 +3,18 @@
 ######################################################.
 
 import os
+import subprocess
 import sys
 import time
 from rdkit import Chem
 import json
-from aqme.utils import cclib_atoms_coords, QM_coords, read_file
-from aqme.utils import move_file, load_variables
+from aqme.utils import (
+	cclib_atoms_coords,
+	QM_coords,
+	read_file,
+	move_file,
+	load_variables)
+from aqme.crest import xyzall_2_xyz
 from pathlib import Path
 from aqme.crest import xyzall_2_xyz
 import glob
@@ -46,12 +52,17 @@ class qprep:
 		for file in self.args.files:
 			found_coords = False
 			name = file.replace('/','\\').split("\\")[-1].split('.')[0]
-			if file.split('.')[1].lower() == 'sdf':
+			if file.split('.')[1].lower() in ['sdf','xyz']:
+				if file.split('.')[1].lower() == 'xyz':
+					xyzall_2_xyz(file, name)
+					command_xyz = ['obabel', '-ixyz', file, '-osdf', '-O' + name + '.sdf']
+					subprocess.call(command_xyz)
+
 				try: 
 					# get atom types, atomic coordinates, charge and multiplicity of all the mols in the SDF file
-					mols = Chem.SDMolSupplier(str(file),removeHs=False)
+					mols = Chem.SDMolSupplier(str(f'{name}.sdf'),removeHs=False)
 					for i, mol in enumerate(mols):
-						atom_types,cartesians,charge,mult,_ = self.qprep_coords(file,found_coords,mol)
+						atom_types,cartesians,charge,mult,_ = self.qprep_coords(f'{name}.sdf',found_coords,mol)
 						if charge is None:
 							charge = 0
 						if mult is None:
@@ -67,6 +78,10 @@ class qprep:
 						print(f'x  {name} couldn\'t be processed!')
 						self.args.log.write(f'x  {name} couldn\'t be processed!')
 					continue
+				
+				if file.split('.')[1].lower() == 'xyz':
+					if os.path.exists(f'{name}.sdf'):
+						os.remove(f'{name}.sdf')
 
 				if self.args.verbose:
 					print(f'o  {name} successfully processed')

@@ -817,7 +817,7 @@ def command_line_args():
 		"nmr_online",
 		"qsub",
 		"qsub_ana",
-		"ts_complex"]
+		"complex"]
 
 	for arg in var_dict:
 		if arg in bool_args:
