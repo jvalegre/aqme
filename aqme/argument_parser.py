@@ -30,8 +30,8 @@ var_dict = {
 		"metal_idx": [],
 		"metal_sym": [],
 		'constraints_dist': [],
-        'constraints_angle': [],
-        'constraints_dihedral': [],
+    'constraints_angle': [],
+    'constraints_dihedral': [],
 		"ewin_cmin": 5.0,
 		"ewin_csearch": 5.0,
 		"opt_fmax": 0.05,
@@ -122,7 +122,7 @@ var_dict = {
 		"prefix": '',
 	}
 
-
+  
 # part for using the options in a script or jupyter notebook
 class options_add:
     pass

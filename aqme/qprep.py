@@ -16,6 +16,14 @@ from aqme.utils import (
 	load_variables)
 from aqme.crest import xyzall_2_xyz
 from pathlib import Path
+from aqme.crest import xyzall_2_xyz
+import glob
+import subprocess
+
+try:
+    import pybel
+except ImportError:
+    from openbabel import pybel  # for openbabel>=3.0.0
 
 
 class qprep:
