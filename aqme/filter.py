@@ -339,7 +339,6 @@ def filters(mol, log, molwt_cutoff, verbose):
             Controls extra printing in the log. If True writing to the log will be
             enabled otherwise no logging will be produced from this function.
 
-
     Returns
     -------
     bool

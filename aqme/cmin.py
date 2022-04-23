@@ -52,9 +52,6 @@ class cmin:
         # load default and user-specified variables
         self.args = load_variables(kwargs, "cmin")
         if self.args.program not in ["xtb", "ani"]:
-            print(
-                "\nx  Program not supported for conformer generation! Specify: program='xtb' (or ani)"
-            )
             self.args.log.write(
                 "\nx  Program not supported for conformer generation! Specify: program='xtb' (or ani)"
             )
@@ -99,7 +96,6 @@ class cmin:
         self.final_dup_data.to_csv(cmin_csv_file, index=False)
 
         elapsed_time = round(time.time() - start_time_overall, 2)
-        print(f"\nTime CMIN: {elapsed_time} seconds\n")
         self.args.log.write(f"\nTime CMIN: {elapsed_time} seconds\n")
         self.args.log.finalize()
 
@@ -398,7 +394,6 @@ class cmin:
             from xtb.ase.calculator import XTB
         except (ModuleNotFoundError, AttributeError):
             log.write("\nx  xTB is not installed correctly - xTB is not available")
-            print("\nx  xTB is not installed correctly - xTB is not available")
             sys.exit()
 
         # if large system increase stack size

@@ -356,7 +356,7 @@ def crest_opt(mol, name, dup_data, dup_data_idx, sdwriter, args, charge, mult):
 
     sdf_files = glob.glob(name + "*.sdf")
     for file in sdf_files:
-        mol = rdkit.Chem.SDMolSupplier(file, removeHs=False)
+        mol = rdkit.Chem.SDMolSupplier(file, removeHs=False, sanitize=False)
         mol_rd = rdkit.Chem.RWMol(mol[0])
         energy = str(open(file, "r").readlines()[0])
         mol_rd.SetProp("Energy", energy)

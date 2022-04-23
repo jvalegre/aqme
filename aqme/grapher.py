@@ -118,7 +118,7 @@ def get_energy_graph(csearch_cmin_data,name,list_energies):
 
 def graph(qm_data,file_data,csearch_cmin_data):
 
-    inmols_rdkit = Chem.SDMolSupplier(csearch_cmin_data['SDFs CSEARCH'], removeHs=False)
+    inmols_rdkit = Chem.SDMolSupplier(csearch_cmin_data['SDFs CSEARCH'], removeHs=False, sanitize=False)
     #get the energy from sdf
     energy_rdkit = get_energy(inmols_rdkit)
     energy_rdkit_sc = scaling_with_lowest(energy_rdkit)
@@ -130,7 +130,7 @@ def graph(qm_data,file_data,csearch_cmin_data):
     if os.path.exists(file_data['Initial dir']+'/CSEARCH/ani/'+file_data['Name mol']+'_ani.sdf'):
         sdf_mols = csearch_cmin_data['SDFs ANI']
         sdf_source = 'ani'
-    inmols_cmin =  Chem.SDMolSupplier(sdf_mols, removeHs=False)
+    inmols_cmin =  Chem.SDMolSupplier(sdf_mols, removeHs=False, sanitize=False)
     energy_cmin = get_energy(inmols_cmin)
     energy_cmin = rename_name(energy_cmin,sdf_source)
     energy_cmin_sc = scaling_with_lowest(energy_cmin)

@@ -54,9 +54,6 @@ class csearch:
         # load default and user-specified variables
         self.args = load_variables(kwargs, "csearch")
         if self.args.program not in ["rdkit", "summ", "fullmonte", "crest"]:
-            print(
-                "\nx  Program not supported for conformer generation! Specify: program='rdkit' (or summ, fullmonte, crest)"
-            )
             self.args.log.write(
                 "\nx  Program not supported for conformer generation! Specify: program='rdkit' (or summ, fullmonte, crest)"
             )
@@ -75,7 +72,6 @@ class csearch:
         self.final_dup_data.to_csv(self.csearch_csv_file, index=False)
 
         elapsed_time = round(time.time() - start_time_overall, 2)
-        print(f"\nTime CSEARCH: {elapsed_time} seconds\n")
         self.args.log.write(f"\nTime CSEARCH: {elapsed_time} seconds\n")
         self.args.log.finalize()
 
@@ -107,11 +103,9 @@ class csearch:
             file_format = os.path.splitext(self.args.input)[1]
             # Checks
             if file_format not in SUPPORTED_INPUTS:
-                print("\nx  Input filetype not currently supported!")
                 self.args.log.write("\nx  Input filetype not currently supported!")
                 sys.exit()
             if not os.path.exists(self.args.input):
-                print("\nx  Input file not found!")
                 self.args.log.write("\nx  Input file not found!")
                 sys.exit()
 
@@ -337,7 +331,6 @@ class csearch:
                 raise
         if status == -1 or not valid_structure:
             error_message = "\nx  ERROR: The structure is not valid or no conformers were obtained from this SMILES string"
-            print(error_message,status,valid_structure)
             self.args.log.write(error_message)
             sys.exit(-1)
 
@@ -813,7 +806,7 @@ class csearch:
         dup_data.at[dup_data_idx, "Molecule"] = name
         update_to_rdkit = False
 
-        rotmatches = getDihedralMatches(mol, self.args.heavyonly, self.args.log)
+        rotmatches = getDihedralMatches(mol, self.args.heavyonly)
 
         if len(rotmatches) > self.args.max_torsions:
             self.args.log.write(

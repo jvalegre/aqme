@@ -5,26 +5,20 @@
 import os
 import subprocess
 import sys
+import glob
 import time
-from rdkit import Chem
 import json
 from aqme.utils import (
 	cclib_atoms_coords,
 	QM_coords,
 	read_file,
 	move_file,
-	load_variables)
+	load_variables,
+	read_xyz_charge_mult,
+	mol_from_sdf_or_mol_or_mol2)
 from aqme.crest import xyzall_2_xyz
 from pathlib import Path
-from aqme.crest import xyzall_2_xyz
-import glob
 import subprocess
-
-try:
-    import pybel
-except ImportError:
-    from openbabel import pybel  # for openbabel>=3.0.0
-
 
 class qprep:
 	"""
@@ -43,53 +37,60 @@ class qprep:
 			self.args.destination = Path(self.args.destination)
 
 		if self.args.qm_input == "":
-			print("x  No keywords line was specified! (i.e. qm_input=KEYWORDS_LINE).")
 			self.args.log.write("x  No keywords line was specified! (i.e. qm_input=KEYWORDS_LINE).")
 			sys.exit()
 
 		# write input files
 		os.chdir(self.args.w_dir_main)
 		for file in self.args.files:
-			found_coords = False
 			name = file.replace('/','\\').split("\\")[-1].split('.')[0]
 			if file.split('.')[1].lower() in ['sdf','xyz']:
+				sdf_files = []
 				if file.split('.')[1].lower() == 'xyz':
+					# separate the parent XYZ file into individual XYZ files
 					xyzall_2_xyz(file, name)
-					command_xyz = ['obabel', '-ixyz', file, '-osdf', '-O' + name + '.sdf']
-					subprocess.call(command_xyz)
+					for conf_file in glob.glob(f'{name}_conf_*.xyz'):
+						charge_xyz,mult_xyz = read_xyz_charge_mult(conf_file)
+						# generate SDF files from XYZ with Openbabel
+						conf_name = conf_file.replace('/','\\').split("\\")[-1].split('.')[0]
+						command_xyz = ['obabel', '-ixyz', conf_file, '-osdf', f'-O{conf_name}.sdf', '--property', f'Real charge={str(charge_xyz)}', ';', f'Mult={str(mult_xyz)}']
+						subprocess.call(command_xyz)
+						sdf_files.append(f'{conf_name}.sdf')
+						# delete individual XYZ files
+						os.remove(conf_file)
+				else:
+					sdf_files.append(file)
 
-				try: 
-					# get atom types, atomic coordinates, charge and multiplicity of all the mols in the SDF file
-					mols = Chem.SDMolSupplier(str(f'{name}.sdf'),removeHs=False)
-					for i, mol in enumerate(mols):
-						atom_types,cartesians,charge,mult,_ = self.qprep_coords(f'{name}.sdf',found_coords,mol)
-						if charge is None:
-							charge = 0
-						if mult is None:
-							mult = 1
-						name_conf = f'{name}_conf_{i+1}'
-						qprep_data = {'atom_types': atom_types, 'cartesians': cartesians,
-								'charge': charge, 'mult': mult, 'name': name_conf}
-						comfile = self.write(qprep_data)
-						move_file(self.args.destination, self.args.w_dir_main, comfile)
-						
-				except OSError:
+				for sdf_file in sdf_files:
+					try:		
+						# get atom types, atomic coordinates, charge and multiplicity of all the mols in the SDF file
+						with mol_from_sdf_or_mol_or_mol2(sdf_file,'qprep') as mols:
+							for i, mol in enumerate(mols):
+								atom_types,cartesians,charge,mult,_ = self.qprep_coords(sdf_file,mol)
+								sdf_name = sdf_file.replace('/','\\').split("\\")[-1].split('.')[0]
+								if sdf_name.find(f'{name}_conf_') > -1:
+									name_conf = sdf_name
+								else:
+									name_conf = f'{sdf_name}_conf_{i+1}'
+								qprep_data = {'atom_types': atom_types, 'cartesians': cartesians,
+										'charge': charge, 'mult': mult, 'name': name_conf}
+								comfile = self.write(qprep_data)
+								move_file(self.args.destination, self.args.w_dir_main, comfile)
+
+						if file.split('.')[1].lower() == 'xyz':
+							# delete SDF files when the input was an XYZ file
+							os.remove(sdf_file)
+							
+					except OSError:
+						if self.args.verbose:
+							self.args.log.write(f'x  {name} couldn\'t be processed!')
+						continue
+
 					if self.args.verbose:
-						print(f'x  {name} couldn\'t be processed!')
-						self.args.log.write(f'x  {name} couldn\'t be processed!')
-					continue
-				
-				if file.split('.')[1].lower() == 'xyz':
-					if os.path.exists(f'{name}.sdf'):
-						os.remove(f'{name}.sdf')
-
-				if self.args.verbose:
-					print(f'o  {name} successfully processed')
-					self.args.log.write(f'o  {name} successfully processed')
+						self.args.log.write(f'o  {name} successfully processed')
 			
 			else:
-				found_coords = False
-				atom_types,cartesians,charge,mult,found_coords = self.qprep_coords(file,found_coords,None)
+				atom_types,cartesians,charge,mult,found_coords = self.qprep_coords(file,None)
 
 				if not found_coords:
 					continue
@@ -100,7 +101,6 @@ class qprep:
 				move_file(self.args.destination, self.args.w_dir_main, comfile)
 				
 				if self.args.verbose:
-					print(f'o  {name} successfully processed')
 					self.args.log.write(f'o  {name} successfully processed')
 
 		# this is added to avoid path problems in jupyter notebooks
@@ -108,7 +108,6 @@ class qprep:
 
 		if self.args.verbose:
 			elapsed_time = round(time.time() - start_time_overall, 2)
-			print(f"\nTime QPREP: {elapsed_time} seconds\n")
 			self.args.log.write(f"\nTime QPREP: {elapsed_time} seconds\n")
 		self.args.log.finalize()
 
@@ -232,11 +231,12 @@ class qprep:
 
 		return comfile
 
-	def qprep_coords(self,file,found_coords,mol):
+	def qprep_coords(self,file,mol):
 		'''
 		Retrieve atom types and coordinates from multiple formats (LOG, OUT, JSON, MOL)
 		'''
 
+		found_coords = False
 		charge,mult = None,None
 		if self.args.atom_types == [] or self.args.cartesians == []:
 			if mol is not None:
@@ -291,7 +291,7 @@ class qprep:
 					charge = cclib_data['properties']['charge']
 					mult = cclib_data['properties']['multiplicity']
 				except (AttributeError,KeyError):
-					print(f'x  {file} does not contain coordinates and/or atom type information')
+					self.args.log.write(f'x  {file} does not contain coordinates and/or atom type information')
 					atom_types,cartesians = [],[]
 
 		else:

@@ -66,7 +66,6 @@ class qcorr():
 
 		duplicate_data = {'Energies' : [], 'Enthalpies' : [], 'Gibbs': []}
 
-		print(f"o  Analyzing output files in {self.args.w_dir_main}\n")
 		self.args.log.write(f"o  Analyzing output files in {self.args.w_dir_main}\n")
 
 		# analyze files
@@ -78,7 +77,6 @@ class qcorr():
 				file_terms,_ = self.organize_outputs(file,termination,errortype,file_terms)
 				if errortype == 'atomicbasiserror':
 					os.remove(file_name+'.json')
-					print(f'{file}: Termination = {termination}, Error type = {errortype}')
 					self.args.log.write(f'{file}: Termination = {termination}, Error type = {errortype}')
 				continue
 
@@ -103,7 +101,6 @@ class qcorr():
 				self.qcorr_fixing(cclib_data,file,atom_types,cartesians)
 
 			# This part places the calculations and json files in different folders depending on the type of termination
-			print(f'{file}: Termination = {termination}, Error type = {errortype}')
 			self.args.log.write(f'{file}: Termination = {termination}, Error type = {errortype}')
 
 			file_terms,destination = self.organize_outputs(file,termination,errortype,file_terms)
@@ -127,12 +124,10 @@ class qcorr():
 				json_files = glob.glob(f'{destination_json}/*.json')
 				full_check(w_dir_main=destination_json,destination_fullcheck=destination_json,files=json_files)
 			else:
-				print('\nx  No normal terminations with no errors to run the full check analysis')
 				self.args.log.write('\nx  No normal terminations with no errors to run the full check analysis')
 
 		elapsed_time = round(time.time() - start_time_overall, 2)
 		self.args.log.write(f"\n Time QCORR: {elapsed_time} seconds\n")
-		print(f"\n Time QCORR: {elapsed_time} seconds\n")
 		self.args.log.finalize()
 
 		# move dat and csv file containing the QCORR information if this is a sequential QCORR analysis
@@ -244,7 +239,7 @@ class qcorr():
 		if errortype == 'none':
 			# in eV, converted to hartree using the conversion factor from cclib
 			E_dup = cclib_data['properties']['energy']['total']
-			E_dup = cclib.utils.convertor(E_dup, "eV", "hartree")
+			E_dup = cclib.parser.utils.convertor(E_dup, "eV", "hartree")
 			# in hartree
 			try:
 				H_dup = cclib_data['properties']['enthalpy']
@@ -374,7 +369,6 @@ class qcorr():
 		try:
 			os.chdir(self.args.isom_inputs)
 		except FileNotFoundError:
-			print(f'x  The PATH specified in isom_inputs doesn\'t exist!')
 			self.args.log.write(f'x  The PATH specified in isom_inputs doesn\'t exist!')
 			isom_valid = False
 
@@ -402,7 +396,6 @@ class qcorr():
 			isomerized = check_isomerization(isom_data, file)
 
 		except FileNotFoundError:
-			print(f'x  No com file were found for {file}, the check_geom test will be disabled for this calculation')
 			self.args.log.write(f'x  No com file were found for {file}, the check_geom test will be disabled for this calculation')
 
 		if isomerized:
@@ -447,7 +440,6 @@ class qcorr():
 				qm_input=cclib_data['metadata']['keywords line'], mem=cclib_data['metadata']['memory'], nprocs=cclib_data['metadata']['processors'],
 				chk=self.args.chk, qm_end=self.args.qm_end, bs_gen=self.args.bs_gen, bs=self.args.bs, gen_atoms=self.args.gen_atoms)
 		else:
-			print(f"x  Couldn't create an input file to fix {file} (compatible progras: Gaussian and ORCA)\n")
 			self.args.log.write(f"x  Couldn't create an input file to fix {file} (compatible progras: Gaussian and ORCA)\n")
 
 
@@ -480,7 +472,6 @@ class qcorr():
 					termination,errortype = 'normal','none'
 		
 		if errortype == 'no_data':
-			print(f'x  Potential cclib compatibility problem or no data found for file {file} (Termination = {termination}, Error type = {errortype})')
 			self.args.log.write(f'x  Potential cclib compatibility problem or no data found for file {file} (Termination = {termination}, Error type = {errortype})')
 
 		return termination,errortype,cclib_data

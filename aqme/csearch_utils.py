@@ -8,14 +8,12 @@ import subprocess
 from pathlib import Path
 from pkg_resources import resource_filename
 import pandas as pd
-
-try:
-	import pybel
-except ImportError:
-	from openbabel import pybel  # for openbabel>=3.0.0
 from rdkit.Chem import AllChem as Chem
 from rdkit.Chem import rdDistGeom, rdMolAlign
-from aqme.utils import get_info_input, get_conf_RMS
+from aqme.utils import (
+	get_info_input,
+	get_conf_RMS,
+	mol_from_sdf_or_mol_or_mol2)
 
 TEMPLATES_PATH = Path(resource_filename("aqme", "templates"))
 
@@ -602,9 +600,6 @@ def generate_mol_from_csv(args, csv_smiles, index):
 		try:
 			smiles = csv_smiles.loc[index, "smiles"]
 		except KeyError:
-			print(
-				"\nx  Make sure the CSV file contains a column called 'SMILES' or 'smiles' with the SMILES of the molecules!"
-			)
 			args.log.write(
 				"\nx  Make sure the CSV file contains a column called 'SMILES' or 'smiles' with the SMILES of the molecules!"
 			)
@@ -619,9 +614,6 @@ def generate_mol_from_csv(args, csv_smiles, index):
 		else:
 			name = f'{args.prefix}_{csv_smiles.loc[index, "code_name"]}'
 	except KeyError:
-		print(
-			"\nx  Make sure the CSV file contains a column called 'code_name' with the names of the molecules!"
-		)
 		args.log.write(
 			"\nx  Make sure the CSV file contains a column called 'code_name' with the names of the molecules!"
 		)
@@ -683,7 +675,7 @@ def prepare_xyz_files(args):
 	charge_com, mult_com = com_2_xyz_2_sdf(args.input, args.charge, args.mult)
 	name = os.path.splitext(args.input)[0]
 	sdffile = f"{name}.sdf"
-	suppl, _, _ = mol_from_sdf_or_mol_or_mol2(sdffile)
+	suppl, _, _ = mol_from_sdf_or_mol_or_mol2(sdffile,'csearch')
 
 	for _, mol in enumerate(suppl):
 		# if args.charge is None:
@@ -697,7 +689,7 @@ def prepare_xyz_files(args):
 
 
 def prepare_sdf_files(args):
-	suppl, IDs, charges = mol_from_sdf_or_mol_or_mol2(args.input)
+	suppl, IDs, charges = mol_from_sdf_or_mol_or_mol2(args.input,'csearch')
 	job_inputs = []
 	for _, (mol, name, _) in enumerate(zip(suppl, IDs, charges)):
 		# if args.charge == None:
@@ -710,7 +702,7 @@ def prepare_sdf_files(args):
 	return job_inputs
 
 
-def xyz_2_sdf(file, parent_dir=None):
+def xyz_2_sdf(file):
 	"""
 	Creates a .sdf file from a .xyz in the specified directory. If no directory
 	is specified then the files are created in the current directory.
@@ -718,21 +710,11 @@ def xyz_2_sdf(file, parent_dir=None):
 	Parameters
 	----------
 	file : str
-			filename and extension of an existing .xyz file
-	dir : str or pathlib.Path, optional
-			a path to the directory where the .xyz file is located
+			Filename and extension of an existing .xyz file
 	"""
-	# if parent_dir is None:
-	# 	parent_dir = Path("")
-	# else:
-	# 	parent_dir = Path(parent_dir)
-	#
-	# mol = next(pybel.readfile("xyz", parent_dir / file))
-	# ofile = Path(file).stem + ".sdf"
-	# mol.write("sdf", parent_dir / ofile)
 
-	name1 = str(file).split(".xyz")[0]
-	command_xyz = ["obabel", "-ixyz", file, "-osdf", "-O" + name1 + ".sdf"]
+	name = str(file).split(".xyz")[0]
+	command_xyz = ["obabel", "-ixyz", file, "-osdf", "-O" + name + ".sdf"]
 	subprocess.call(command_xyz)
 
 
@@ -774,69 +756,6 @@ def com_2_xyz_2_sdf(input_file, default_charge, default_mult, start_point=None):
 		xyz_2_sdf(file)
 
 	return charge, mult
-
-
-def mol_from_sdf_or_mol_or_mol2(input_file):
-	"""
-	mol from sdf
-
-	Parameters
-	----------
-	input_file : str
-			path to a .sdf .mol or .mol2 file
-
-	Returns
-	-------
-	tuple of lists?
-			suppl, IDs, charges
-	"""
-	filename = os.path.splitext(input_file)[0]
-	extension = os.path.splitext(input_file)[1]
-
-	if extension == ".sdf":
-		suppl = Chem.SDMolSupplier(input_file, removeHs=False)
-	elif extension == ".mol":
-		suppl = [Chem.MolFromMolFile(input_file, removeHs=False)]
-	elif extension == ".mol2":
-		suppl = [Chem.MolFromMol2File(input_file, removeHs=False)]
-
-	IDs, charges = [], []
-
-	with open(input_file, "r") as F:
-		lines = F.readlines()
-
-	molecule_count = 0
-	for i, line in enumerate(lines):
-		if line.find(">  <ID>") > -1:
-			ID = lines[i + 1].split()[0]
-			IDs.append(ID)
-		if line.find("M  CHG") > -1:
-			charge_line = line.split("  ")
-			charge = 0
-			for j in range(4, len(charge_line)):
-				if (j % 2) == 0:
-					if j == len(charge_line) - 1:
-						charge_line[j] = charge_line[j].split("\n")[0]
-					charge += int(charge_line[j])
-			charges.append(charge)
-		if line.find("$$$$") > -1:
-			molecule_count += 1
-			if molecule_count != len(charges):
-				charges.append(0)
-
-	if len(IDs) == 0:
-		if extension == ".sdf":
-			for i in range(len(suppl)):
-				IDs.append(f"{filename}_{i}")
-		else:
-			IDs.append(filename)
-	if len(charges) == 0:
-		if extension == ".sdf":
-			for _ in suppl:
-				charges.append(0)
-		else:
-			charges.append(0)
-	return suppl, IDs, charges
 
 
 def minimize_rdkit_energy(mol, conf, log, FF, maxsteps):
