@@ -29,9 +29,10 @@ var_dict = {
 		"metal_oxi": [],
 		"metal_idx": [],
 		"metal_sym": [],
+		'constraints_atoms': [],
 		'constraints_dist': [],
-    'constraints_angle': [],
-    'constraints_dihedral': [],
+    	'constraints_angle': [],
+    	'constraints_dihedral': [],
 		"ewin_cmin": 5.0,
 		"ewin_csearch": 5.0,
 		"opt_fmax": 0.05,
@@ -63,10 +64,7 @@ var_dict = {
 		"nrot_fullmonte": 3,
 		"ang_fullmonte": 30,
 		"cregen": False,
-		"cregen_ethr": 0.05,
-		"cregen_rthr": 0.125,
-		"cregen_bthr": 0.01,
-		"cregen_ewin": 6.0,
+		"cregen_keywords": None,
 		"program": None,
 		"nprocs": 2,
 		"mem": "4GB",
@@ -76,13 +74,12 @@ var_dict = {
 		"ts_input": "opt=(calcfc,noeigen,ts,maxstep=5)",
 		"qm_end": "",
 		"gen_atoms": [],
-		"bs": "",
+		"bs_nogen": "",
 		"bs_gen": "",
 		"lowest_only": False,
 		"lowest_n": False,
 		"energy_threshold_for_gaussian": 100.0,
 		"chk": False,
-		"com_from_xyz": False,
 		"w_dir_main": os.getcwd(),
 		"files": [],
 		"atom_types": [],
@@ -117,12 +114,12 @@ var_dict = {
 		"submission_command": "qsub_summit",
 		"geom_rules": [],
 		"angle_off": 30,
-		"complex": False,
-		"cbonds": 0.5,
+		"crest_keywords": None,
+		"crest_force": 0.5,
 		"prefix": '',
 	}
 
-  
+
 # part for using the options in a script or jupyter notebook
 class options_add:
     pass

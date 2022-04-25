@@ -14,12 +14,10 @@ from pathlib import Path
 from rdkit.Chem.rdMolAlign import GetBestRMS
 from rdkit.Chem.rdmolops import RemoveHs
 from rdkit import Geometry
-from rdkit.Chem import rdmolfiles, Mol
+from rdkit.Chem import Mol
 from rdkit.Chem import AllChem as Chem
 from aqme.argument_parser import set_options, var_dict
-
 from rdkit import RDLogger
-
 RDLogger.DisableLog("rdApp.*")
 
 
@@ -64,8 +62,8 @@ def load_from_yaml(self):
 					if getattr(self, param) != param_list[param]:
 						setattr(self, param, param_list[param])
 
-	except UnboundLocalError:  # RAUL: Is it just me or this only happens when the file exists, and ens in .yaml and is empty or does not end in .yaml?
-		txt_yaml = "\no  The specified yaml file containing parameters was not found! Make sure that the valid params file is in the folder where you are running the code.\n"
+	except UnboundLocalError:
+		txt_yaml = "\nx  The specified yaml file containing parameters was not found! Make sure that the valid params file is in the folder where you are running the code.\n"
 
 	return self,txt_yaml
 
@@ -254,13 +252,8 @@ def get_info_input(file):
 
 def smi_to_mol(
 	smi,
-	name,
 	program,
-	log,
-	complex,
-	constraints_dist,
-	constraints_angle,
-	constraints_dihedral,
+	log
 ):
 	smi = smi.split(".")
 
@@ -270,33 +263,22 @@ def smi_to_mol(
 				"\nx  Program not supported for conformer generation of complexes! Specify: program='crest' for complexes"
 			)
 			sys.exit()
-		if not complex:
-			log.write(
-				"\nx  Please specify that its is a complex! Specify: complex=True for complexes"
-			)
-			sys.exit()
 
-		mol, constraints_dist, constraints_angle, constraints_dihedral = nci_ts_mol(
-			smi, name, constraints_dist, constraints_angle, constraints_dihedral
-		)
+		mol = nci_ts_mol(smi)
+
 	else:
 		params = Chem.SmilesParserParams()
 		params.removeHs = False
 		mol = Chem.MolFromSmiles(smi[0], params)
+		Chem.EmbedMolecule(mol)
 
-	return mol, constraints_dist, constraints_angle, constraints_dihedral
+	return mol
 
 
-def nci_ts_mol(smi, name, constraints_dist, constraints_angle, constraints_dihedral):
-	if constraints_dist is not None:
-		constraints_dist = [[float(y) for y in x] for x in constraints_dist]
-		constraints_dist = np.array(constraints_dist)
-	if constraints_angle is not None:
-		constraints_angle = [[float(y) for y in x] for x in constraints_angle]
-		constraints_angle = np.array(constraints_angle)
-	if constraints_dihedral is not None:
-		constraints_dihedral = [[float(y) for y in x] for x in constraints_dihedral]
-		constraints_dihedral = np.array(constraints_dihedral)
+def nci_ts_mol(smi):
+	'''
+	Set mol objects and their corresponding constraints
+	'''
 
 	molsH = []
 	mols = []
@@ -337,45 +319,8 @@ def nci_ts_mol(smi, name, constraints_dist, constraints_angle, constraints_dihed
 			a.SetAtomMapNum(int(max_map))
 
 	Chem.ConstrainedEmbed(mol, molH)
-	rdmolfiles.MolToXYZFile(mol, name + ".xyz")
 
-	nconstraints_dist = []
-	if constraints_dist is not None:
-
-		for _, r in enumerate(constraints_dist):
-			nr = []
-			for _, ele in enumerate(r[:2]):
-				for atom in mol.GetAtoms():
-					if ele == atom.GetAtomMapNum():
-						nr.append(float(atom.GetIdx()) + 1)
-			nr.append(r[-1])
-			nconstraints_dist.append(nr)
-		nconstraints_dist = np.array(nconstraints_dist)
-	nconstraints_angle = []
-	if constraints_angle is not None:
-
-		for _, r in enumerate(constraints_angle):
-			nr = []
-			for _, ele in enumerate(r[:3]):
-				for atom in mol.GetAtoms():
-					if ele == atom.GetAtomMapNum():
-						nr.append(float(atom.GetIdx()) + 1)
-			nr.append(r[-1])
-			nconstraints_angle.append(nr)
-		nconstraints_angle = np.array(nconstraints_angle)
-	nconstraints_dihedral = []
-	if constraints_dihedral is not None:
-		for _, r in enumerate(constraints_dihedral):
-			nr = []
-			for _, ele in enumerate(r[:4]):
-				for atom in mol.GetAtoms():
-					if ele == atom.GetAtomMapNum():
-						nr.append(float(atom.GetIdx()) + 1)
-			nr.append(r[-1])
-			nconstraints_dihedral.append(nr)
-		nconstraints_dihedral = np.array(nconstraints_dihedral)
-
-	return mol, nconstraints_dist, nconstraints_angle, nconstraints_dihedral
+	return mol
 
 
 def rules_get_charge(mol, args, type):
@@ -601,14 +546,12 @@ def command_line_args():
 		"lowest_only",
 		"lowest_n",
 		"chk",
-		"com_from_xyz",
 		"dup",
 		"fullcheck",
 		"rot_dihedral",
 		"nmr_online",
 		"qsub",
-		"qsub_ana",
-		"complex"]
+		"qsub_ana"]
 
 	for arg in var_dict:
 		if arg in bool_args:
@@ -623,13 +566,16 @@ def command_line_args():
 		sys.exit()
 	
 	for arg,value in opts:
-		arg_name = arg.split('--')[1].strip()
+		if arg.find('--') > -1:
+			arg_name = arg.split('--')[1].strip()
+		elif arg.find('-') > -1:
+			arg_name = arg.split('-')[1].strip()
 		if arg_name in bool_args:
 			value = True
 		if value == 'None':
 			value = None
 		if arg_name in ("h", "help"):
-			print('AQME is installed correctly! For more information about the available options, see the documentation in https://github.com/jvalegre/aqme')
+			print('o  AQME is installed correctly! For more information about the available options, see the documentation in https://github.com/jvalegre/aqme')
 			sys.exit()
 		else:
 			kwargs[arg_name] = value
@@ -652,7 +598,7 @@ def load_variables(kwargs,aqme_module):
 	txt_yaml = ''
 	if self.varfile is not None:
 		self,txt_yaml = load_from_yaml(self)
-
+	
 	self.initial_dir = Path(os.getcwd())
 	self.w_dir_main = Path(self.w_dir_main)
 	if self.isom_type is not None:
@@ -688,7 +634,7 @@ def load_variables(kwargs,aqme_module):
 			self.log.write('x  The PATH specified as input in the w_dir_main option might be invalid!')
 			error_setup = True
 
-	if txt_yaml != '' and txt_yaml != f'\no  Importing AQME parameters from {self.varfile}':
+	if txt_yaml not in ['', f'\no  Importing AQME parameters from {self.varfile}', "\nx  The specified yaml file containing parameters was not found! Make sure that the valid params file is in the folder where you are running the code.\n"]:
 		self.log.write(txt_yaml)
 		self.log.finalize()
 		sys.exit()
@@ -710,7 +656,7 @@ def load_variables(kwargs,aqme_module):
 	return self
 
 
-def read_file(w_dir, file):
+def read_file(initial_dir, w_dir, file):
 	"""
 	Reads through a file and retrieves a list with all the lines.
 	"""
@@ -719,6 +665,7 @@ def read_file(w_dir, file):
 	outfile = open(file, "r")
 	outlines = outfile.readlines()
 	outfile.close()
+	os.chdir(initial_dir)
 
 	return outlines
 
@@ -831,20 +778,9 @@ def read_xyz_charge_mult(file):
 	return charge_xyz,mult_xyz
 
 
-
 def mol_from_sdf_or_mol_or_mol2(input_file,module):
 	"""
-	mol from sdf
-
-	Parameters
-	----------
-	input_file : str
-			path to a .sdf .mol or .mol2 file
-
-	Returns
-	-------
-	tuple of lists?
-			suppl, IDs, charges
+	mol object from SDF, MOL or MOL2 files
 	"""
 
 	if module == 'qprep':
@@ -852,17 +788,26 @@ def mol_from_sdf_or_mol_or_mol2(input_file,module):
 		mols = Chem.SDMolSupplier(input_file, removeHs=False, sanitize=False)
 		return mols
 
-	elif module == 'csearch':
+	if module == 'csearch':
+		
 		# using sanitize=True in this case, which is recommended for RDKit calculations
 		filename = os.path.splitext(input_file)[0]
 		extension = os.path.splitext(input_file)[1]
 
-		if extension == ".sdf":
-			suppl = Chem.SDMolSupplier(input_file, removeHs=False)
-		elif extension == ".mol":
-			suppl = [Chem.MolFromMolFile(input_file, removeHs=False)]
-		elif extension == ".mol2":
-			suppl = [Chem.MolFromMol2File(input_file, removeHs=False)]
+		if extension.lower() == ".pdb":
+			input_file = f'{input_file.split(".")[0]}.sdf'
+			extension = ".sdf"
+
+		if extension.lower() == ".sdf":
+			mols = Chem.SDMolSupplier(input_file, removeHs=False)
+		elif extension.lower() == ".mol":
+			mols = [Chem.MolFromMolFile(input_file, removeHs=False)]
+		elif extension.lower() == ".mol2":
+			mols = [Chem.MolFromMol2File(input_file, removeHs=False)]
+
+		suppl = []
+		for i, mol in enumerate(mols):
+			suppl.append(mol)
 
 		IDs, charges = [], []
 
@@ -889,13 +834,14 @@ def mol_from_sdf_or_mol_or_mol2(input_file,module):
 					charges.append(0)
 
 		if len(IDs) == 0:
-			if extension == ".sdf":
+			if len(suppl) > 1:
 				for i in range(len(suppl)):
-					IDs.append(f"{filename}_{i}")
+					IDs.append(f"{filename}_{i+1}")
 			else:
 				IDs.append(filename)
+
 		if len(charges) == 0:
-			if extension == ".sdf":
+			if len(suppl) > 1:
 				for _ in suppl:
 					charges.append(0)
 			else:

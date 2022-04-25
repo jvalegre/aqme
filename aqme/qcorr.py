@@ -212,7 +212,7 @@ class qcorr():
 					errortype = 'no_freq'
 					
 			# use very short reversed loop to find basis set incompatibilities and SCF errors
-			outlines = read_file(self.args.w_dir_main,file)
+			outlines = read_file(os.getcwd(),self.args.w_dir_main,file)
 			for i in reversed(range(len(outlines)-15,len(outlines))):
 				if outlines[i].find('Normal termination') > -1 and errortype != 'no_freq':
 					termination = 'normal'
@@ -438,7 +438,7 @@ class qcorr():
 			qprep(destination=destination_fix, w_dir_main=self.args.w_dir_main, files=file, charge=cclib_data['properties']['charge'],
 				mult=cclib_data['properties']['multiplicity'], program=program, atom_types=atom_types, cartesians=cartesians, verbose=False,
 				qm_input=cclib_data['metadata']['keywords line'], mem=cclib_data['metadata']['memory'], nprocs=cclib_data['metadata']['processors'],
-				chk=self.args.chk, qm_end=self.args.qm_end, bs_gen=self.args.bs_gen, bs=self.args.bs, gen_atoms=self.args.gen_atoms)
+				chk=self.args.chk, qm_end=self.args.qm_end, bs_gen=self.args.bs_gen, bs_nogen=self.args.bs_nogen, gen_atoms=self.args.gen_atoms)
 		else:
 			self.args.log.write(f"x  Couldn't create an input file to fix {file} (compatible progras: Gaussian and ORCA)\n")
 

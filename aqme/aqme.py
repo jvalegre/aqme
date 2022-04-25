@@ -87,16 +87,11 @@ def main():
             nsteps_fullmonte=args.nsteps_fullmonte,
             nrot_fullmonte=args.nrot_fullmonte,
             ang_fullmonte=args.ang_fullmonte,
-            complex=args.complex,
+            crest_keywords=args.crest_keywords,
             angle_off=args.angle_off,
             nprocs=args.nprocs,
-            cbonds=args.cbonds,
             cregen=args.cregen,
-            cregen_ethr=args.cregen_ethr,
-            cregen_rthr=args.cregen_rthr,
-            cregen_bthr=args.cregen_bthr,
-            cregen_ewin=args.cregen_ewin,
-            geom_rules=args.geom_rules
+            cregen_keywords=args.cregen_keywords
         )
 
     # CMIN
@@ -149,8 +144,8 @@ def main():
             nprocs=args.nprocs,
             gen_atoms=args.gen_atoms,
             bs_gen=args.bs_gen,
-            bs=args.bs,
-			      verbose=args.verbose)
+            bs_nogen=args.bs_nogen,
+			verbose=args.verbose)
 
     # QCORR
     if args.qcorr:
@@ -177,7 +172,7 @@ def main():
             chk=args.chk,
             gen_atoms=args.gen_atoms,
             bs_gen=args.bs_gen,
-            bs=args.bs,
+            bs_nogen=args.bs_nogen,
         )
 
     # # qdescp

@@ -210,30 +210,26 @@ AQME can also be run through command lines. Some examples are:
         Available angle interval to use in the Fullmonte sampling. For example, if the angle is 120.0, the program chooses randomly between 120 and 240 degrees (picked at random) during each step of the sampling  
 
     *-- Options for CREST --*  
-    **complex : bool, default=False**  
-        If True, performs a constrained CREST optimization including predefined distance, angle and dihedral constraints (the three options below)  
+    **constraints_atoms : list, default=[]**  
+        Specify constrained atoms as [AT1,AT2,AT3]. An example of multiple constraints (atoms 1, 2 and 5 are frozen: [1,2,5]  
     **constraints_dist : list of lists, default=[]**  
         Specify distance constraints as [AT1,AT2,DIST]. An example of multiple constraints (atoms 1 and 2 with distance 1.8 Å, and atoms 4 and 5 with distance 2.0 Å): [[1,2,1.8],[4,5,2.0]]  
     **constraints_angle : list of lists, default=[]**  
         Specify angle constraints as [AT1,AT2,AT3,ANGLE]. An example of multiple constraints (atoms 1, 2 and 3 with an angle of 180 degrees, and atoms 4, 5 and 6 with an angle of 120): [[1,2,3,180],[4,5,6,120]]  
     **constraints_dihedral : list of lists, default=[]**  
         Specify dihedral constraints as [AT1,AT2,AT3,AT4,DIHEDRAL]. An example of multiple constraints (atoms 1, 2, 3 and 4 with a dihedral angle of 180 degrees, and atoms 4, 5, 6 and 7 with a dihedral angle of 120): [[1,2,3,4,180],[4,5,6,7,120]]  
-    **cbonds : float, default=0.5**  
-        Include the --cbonds option with the value specified in CREST jobs  
+    **crest_force : float, default=0.5**  
+        Force constant for constraints in the .xcontrol.sample file for CREST jobs  
+    **crest_keywords : str, default=None**  
+        Define additional keywords to use in CREST that are not included in --chrg, --uhf, -T and -cinp. For example: '--alpb ch2cl2 --nci --cbonds 0.5'  
     **cregen : bool, default=False**  
         If True, perform a CREGEN analysis after CREST (filtering options below)  
-    **cregen_ewin : float, default=6.0**  
-        Set the energy threshold (from the most stable conformer) in kcal/mol for CREGEN  
-    **cregen_ethr : float, default=0.05**  
-        Set energy threshold between conformer pairs in kcal/mol for CREGEN  
-    **cregen_rthr : float, default=0.125**  
-        Set RMSD threshold in Å for CREGEN  
-    **cregen_bthr : float, default=0.01**  
-        Set lower bound for the rotational constant threshold for CREGEN  
+    **cregen_keywords : str, default=None**  
+        Additional keywords for CREGEN (i.e. cregen_keywords='--ethr 0.02')  
 
 - [ ] QPREP arguments:  
     **files : mol object, str or list of str, default=None**  
-        Optionally, starts from: 1) a mol object(s), 2) Gaussian or ORCA output file(s) or 3) json file(s) to prepare the input QM file(s). Options: mol object, FILENAME.log, FILENAME.out or FILENAME.json. Also, lists can be parsed (i.e. [FILE1.log, FILE2.log] or *.FORMAT for glob.glob('*.FORMAT') such as *.json).  
+        This module prepares input QM file(s). Formats accepted: mol object(s), Gaussian or ORCA LOG/OUT output files, JSON, XYZ, SDF, PDB. Also, lists can be used (i.e. [FILE1.log, FILE2.log] or \*.FORMAT such as \*.json).  
     **atom_types : list of str, default=[]**  
         (If files is None) List containing the atoms of the system  
     **cartesians : list of str, default=[]**  
@@ -266,7 +262,7 @@ AQME can also be run through command lines. Some examples are:
         Atoms included in the gen(ECP) basis set (i.e. ['I','Pd'])  
     **bs_gen : str, default=''**  
         Basis set used for gen(ECP) atoms	(i.e. 'def2svp')  
-    **bs : str, default=''**  
+    **bs_nogen : str, default=''**  
         Basis set used for non gen(ECP) atoms in gen(ECP) calculations (i.e. '6-31G\*')  
 
 - [ ] QCORR arguments:  

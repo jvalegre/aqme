@@ -18,7 +18,7 @@ from aqme.utils import (
 	mol_from_sdf_or_mol_or_mol2)
 from aqme.crest import xyzall_2_xyz
 from pathlib import Path
-import subprocess
+
 
 class qprep:
 	"""
@@ -40,11 +40,19 @@ class qprep:
 			self.args.log.write("x  No keywords line was specified! (i.e. qm_input=KEYWORDS_LINE).")
 			sys.exit()
 
+		if self.args.gen_atoms != [] and "bs" == "":
+			self.args.log.write("x  Atoms for Gen(ECP) were specified (gen_atoms=[ATOM_LIST]) but no basis set was included for non-Gen(ECP) atoms (i.e. bs=BASIS_SET).")
+			sys.exit()
+
+		elif self.args.gen_atoms != [] and "bs_gen" == "":
+			self.args.log.write("x  Atoms for Gen(ECP) were specified (gen_atoms=[ATOM_LIST]) but no basis set was included for Gen(ECP) atoms (i.e. bs_gen=BASIS_SET).")
+			sys.exit()
+
 		# write input files
 		os.chdir(self.args.w_dir_main)
 		for file in self.args.files:
 			name = file.replace('/','\\').split("\\")[-1].split('.')[0]
-			if file.split('.')[1].lower() in ['sdf','xyz']:
+			if file.split('.')[1].lower() in ['sdf','xyz','pdb']:
 				sdf_files = []
 				if file.split('.')[1].lower() == 'xyz':
 					# separate the parent XYZ file into individual XYZ files
@@ -54,10 +62,14 @@ class qprep:
 						# generate SDF files from XYZ with Openbabel
 						conf_name = conf_file.replace('/','\\').split("\\")[-1].split('.')[0]
 						command_xyz = ['obabel', '-ixyz', conf_file, '-osdf', f'-O{conf_name}.sdf', '--property', f'Real charge={str(charge_xyz)}', ';', f'Mult={str(mult_xyz)}']
-						subprocess.call(command_xyz)
+						subprocess.run(command_xyz, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 						sdf_files.append(f'{conf_name}.sdf')
 						# delete individual XYZ files
 						os.remove(conf_file)
+				elif file.split('.')[1].lower() == 'pdb':
+					command_pdb = ['obabel', '-ipdb', file, '-osdf', f'-O{name}.sdf']
+					subprocess.run(command_pdb)
+					sdf_files.append(f'{name}.sdf')
 				else:
 					sdf_files.append(file)
 
@@ -124,16 +136,25 @@ class qprep:
 
 		if self.args.program.lower() == 'gaussian':
 			if self.args.chk:
-				txt += f'%chk={qprep_data["name"]}.chk\n'
+				if self.args.suffix != '':
+					txt += f'%chk={qprep_data["name"]}_{self.args.suffix}.chk\n'
+				else:
+					txt += f'%chk={qprep_data["name"]}.chk\n'
 			txt += f'%nprocshared={self.args.nprocs}\n'
 			txt += f'%mem={self.args.mem}\n'
 			txt += f'# {self.args.qm_input}'
 			txt += '\n\n'
-			txt += f'{qprep_data["name"]}\n\n'
+			if self.args.suffix != '':
+				txt += f'{qprep_data["name"]}_{self.args.suffix}\n\n'
+			else:
+				txt += f'{qprep_data["name"]}\n\n'
 			txt += f'{qprep_data["charge"]} {qprep_data["mult"]}\n'
 
 		elif self.args.program.lower() == 'orca':
-			txt += f'# {qprep_data["name"]}\n'
+			if self.args.suffix != '':
+				txt += f'# {qprep_data["name"]}_{self.args.suffix}\n'
+			else:
+				txt += f'# {qprep_data["name"]}\n'
 			if self.args.mem.find('GB'):
 				mem_orca = int(self.args.mem.split('GB')[0])*1000
 			elif self.args.mem.find('MB'):
@@ -155,7 +176,7 @@ class qprep:
 		txt = ""
 
 		if self.args.program.lower() == "gaussian":
-			if self.args.gen_atoms is not None and len(self.args.gen_atoms) > 0:
+			if self.args.gen_atoms != [] and len(self.args.gen_atoms) > 0:
 				# writes part for Gen/GenECP
 				ecp_used, ecp_not_used, gen_type = [], [], "gen"
 				if self.args.qm_input.lower().find("genecp") > -1:
@@ -172,7 +193,7 @@ class qprep:
 
 				if len(ecp_not_used) > 0:
 					elements_not_used = " ".join([f"{sym}" for sym in ecp_not_used])
-					txt += f"{elements_not_used} 0\n{self.args.bs}\n****\n"
+					txt += f"{elements_not_used} 0\n{self.args.bs_nogen}\n****\n"
 				if len(ecp_used) > 0:
 					elements_used = " ".join([f"{sym}" for sym in ecp_used])
 					txt += f"{elements_used} 0\n{self.args.bs_gen}\n****\n"
@@ -253,7 +274,7 @@ class qprep:
 
 			elif file.split('.')[1] in ['log','out']:
 				# detect QM program and number of atoms
-				outlines = read_file(self.args.w_dir_main,file)
+				outlines = read_file(os.getcwd(),self.args.w_dir_main,file)
 				n_atoms = 0
 				resume_line = 0
 

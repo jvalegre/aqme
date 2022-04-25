@@ -21,16 +21,11 @@ import torchani
 
 os.environ["KMP_DUPLICATE_LIB_OK"] = "True"
 DEVICE = torch.device("cpu")
-from aqme.argument_parser import set_options
 from aqme.utils import (
-    set_metal_atomic_number,
-    Logger,
     rules_get_charge,
     load_variables,
     substituted_mol,
-    creation_of_dup_csv_cmin,
-    load_from_yaml,
-)
+    creation_of_dup_csv_cmin)
 from aqme.filter import ewin_filter, pre_E_filter, RMSD_and_E_filter
 
 hartree_to_kcal = 627.509
@@ -462,21 +457,10 @@ class cmin:
 
 def rdkit_sdf_read(file, args):
     """
-    Reads sdf files and stops the execution if the file was not accesible.
-
-    Parameters
-    ----------
-    file : [type]
-                                                                                                                                                                                               [description]
-    args : argparse.args
-                                                                                                                                                                                               [description]
-
-    Returns
-    -------
-    list
-                                                                                                                                                                                               rdkit.Chem.Mol objects
+    Reads sdf files and stops the execution if the file was not accesible.                                                                                                                                                                                      rdkit.Chem.Mol objects
     """
     inmols = Chem.SDMolSupplier(file, removeHs=False)
+    
     if inmols is None:
         args.log.write(f"Could not open {name}{args.output}")
         sys.exit(-1)

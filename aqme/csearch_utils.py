@@ -436,8 +436,8 @@ def template_embed(self, mol, complex_type, metal_idx, maxsteps, heavyonly, maxm
 	molecules = items[0]
 	if len(molecules) > 1:
 		ignored = []
-		for i, mol in enumerate(molecules):
-			has_big_rmsd = filter_template_mol(mol, molecules, heavyonly, maxmatches)
+		for i, mol_filter in enumerate(molecules):
+			has_big_rmsd = filter_template_mol(mol_filter, molecules, heavyonly, maxmatches)
 			if has_big_rmsd:
 				ignored.append(i)
 		items = [item for i, item in enumerate(items) if i not in ignored]
@@ -536,6 +536,7 @@ def prepare_smiles_files(args):
 		(
 			smi,
 			name,
+			constraints_atoms,
 			constraints_dist,
 			constraints_angle,
 			constraints_dihedral,
@@ -543,6 +544,7 @@ def prepare_smiles_files(args):
 		obj = (
 			smi,
 			name,
+			constraints_atoms,
 			constraints_dist,
 			constraints_angle,
 			constraints_dihedral,
@@ -561,26 +563,12 @@ def prepare_smiles_from_line(line, i, args):
 		name = "".join(toks[1])
 	else:
 		name = f"{args.prefix}_{i}_{''.join(toks[1])}"
+	constraints_atoms = args.constraints_atoms
 	constraints_dist = args.constraints_dist
 	constraints_angle = args.constraints_angle
 	constraints_dihedral = args.constraints_dihedral
-	if len(toks) > 2:
-		constraints_dist = toks[2]
-		constraints_dist = constraints_dist.split("/")
-		for j, c in enumerate(constraints_dist):
-			constraints_dist[j] = c.split("-")
-		if len(toks) > 3:
-			constraints_angle = toks[3]
-			constraints_angle = constraints_angle.split("/")
-			for k, c in enumerate(constraints_angle):
-				constraints_angle[k] = c.split("-")
-			if len(toks) > 4:
-				constraints_dihedral = toks[4]
-				constraints_dihedral = constraints_dihedral.split("/")
-				for l, c in enumerate(constraints_dihedral):
-					constraints_dihedral[l] = c.split("-")
 
-	return smiles, name, constraints_dist, constraints_angle, constraints_dihedral
+	return smiles, name, constraints_atoms, constraints_dist, constraints_angle, constraints_dihedral
 
 
 def prepare_csv_files(args):
@@ -593,7 +581,7 @@ def prepare_csv_files(args):
 
 
 def generate_mol_from_csv(args, csv_smiles, index):
-	# assigning names and smi i  each loop
+	# assigning names and smi in each loop
 	try:
 		smiles = csv_smiles.loc[index, "SMILES"]
 	except KeyError:
@@ -604,9 +592,6 @@ def generate_mol_from_csv(args, csv_smiles, index):
 				"\nx  Make sure the CSV file contains a column called 'SMILES' or 'smiles' with the SMILES of the molecules!"
 			)
 			sys.exit()
-
-	# pruned_smi = smi.split(".")
-	# mol = Chem.MolFromSmiles(pruned_smi)
 
 	try:
 		if args.prefix == "":
@@ -619,26 +604,24 @@ def generate_mol_from_csv(args, csv_smiles, index):
 		)
 		sys.exit()
 
+	constraints_atoms = args.constraints_atoms
 	constraints_dist = args.constraints_dist
 	constraints_angle = args.constraints_angle
 	constraints_dihedral = args.constraints_dihedral
+
+	if "constraints_atoms" in csv_smiles.columns:
+		constraints_atoms = csv_smiles.loc[index, "constraints_atoms"]
+
 	if "constraints_dist" in csv_smiles.columns:
 		constraints_dist = csv_smiles.loc[index, "constraints_dist"]
-		constraints_dist = constraints_dist.split("/")
-		for i, c in enumerate(constraints_dist):
-			constraints_dist[i] = c.split("-")
+
 	if "constraints_angle" in csv_smiles.columns:
 		constraints_angle = csv_smiles.loc[index, "constraints_angle"]
-		constraints_angle = constraints_angle.split("/")
-		for i, c in enumerate(constraints_angle):
-			constraints_angle[i] = c.split("-")
+
 	if "constraints_dihedral" in csv_smiles.columns:
 		constraints_dihedral = csv_smiles.loc[index, "constraints_dihedral"]
-		constraints_dihedral = constraints_dihedral.split("/")
-		for i, c in enumerate(constraints_dihedral):
-			constraints_dihedral[i] = c.split("-")
 
-	obj = (smiles, name, constraints_dist, constraints_angle, constraints_dihedral)
+	obj = (smiles, name, constraints_atoms, constraints_dist, constraints_angle, constraints_dihedral)
 
 	return obj
 
@@ -649,17 +632,18 @@ def prepare_cdx_files(args):
 	job_inputs = []
 	for i, (smiles, _) in enumerate(molecules):
 		name = f"{args.input.split('.')[0]}_{str(i)}"
+		constraints_atoms = args.constraints_atoms
 		constraints_dist = args.constraints_dist
 		constraints_angle = args.constraints_angle
 		constraints_dihedral = args.constraints_dihedral
-		obj = (smiles, name, constraints_dist, constraints_angle, constraints_dihedral)
+		obj = (smiles, name, constraints_atoms, constraints_dist, constraints_angle, constraints_dihedral)
 		job_inputs.append(obj)
 	return job_inputs
 
 
 def generate_mol_from_cdx(args):
 	cmd_cdx = ["obabel", "-icdx", args.input, "-osmi", "-Ocdx.smi"]
-	subprocess.call(cmd_cdx)
+	subprocess.run(cmd_cdx, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 	with open("cdx.smi", "r") as smifile:
 		smi_lines = [str(line.strip()) for line in smifile]
 	os.remove("cdx.smi")
@@ -677,27 +661,36 @@ def prepare_xyz_files(args):
 	sdffile = f"{name}.sdf"
 	suppl, _, _ = mol_from_sdf_or_mol_or_mol2(sdffile,'csearch')
 
+	constraints_atoms = args.constraints_atoms
+	constraints_dist = args.constraints_dist
+	constraints_angle = args.constraints_angle
+	constraints_dihedral = args.constraints_dihedral
+
 	for _, mol in enumerate(suppl):
-		# if args.charge is None:
-		# 	args.charge = charge_com
-		constraints_dist = args.constraints_dist
-		constraints_angle = args.constraints_angle
-		constraints_dihedral = args.constraints_dihedral
-		obj = (mol, name, constraints_dist, constraints_angle, constraints_dihedral)
+		obj = (mol, name, constraints_atoms, constraints_dist, constraints_angle, constraints_dihedral)
 		job_inputs.append(obj)
+
 	return job_inputs
 
+
+def prepare_pdb_files(args):
+	command_pdb = ['obabel', '-ipdb', args.input, '-osdf', f'-O{args.input.split(".")[0]}.sdf']
+	subprocess.run(command_pdb, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+	job_inputs = prepare_sdf_files(args)
+	os.remove(f'{args.input.split(".")[0]}.sdf')
+	return job_inputs
 
 def prepare_sdf_files(args):
 	suppl, IDs, charges = mol_from_sdf_or_mol_or_mol2(args.input,'csearch')
 	job_inputs = []
+
+	constraints_atoms = args.constraints_atoms
+	constraints_dist = args.constraints_dist
+	constraints_angle = args.constraints_angle
+	constraints_dihedral = args.constraints_dihedral
+
 	for _, (mol, name, _) in enumerate(zip(suppl, IDs, charges)):
-		# if args.charge == None:
-		# 	args.charge = charge_sdf
-		constraints_dist = args.constraints_dist
-		constraints_angle = args.constraints_angle
-		constraints_dihedral = args.constraints_dihedral
-		obj = (mol, name, constraints_dist, constraints_angle, constraints_dihedral)
+		obj = (mol, name, constraints_atoms, constraints_dist, constraints_angle, constraints_dihedral)
 		job_inputs.append(obj)
 	return job_inputs
 
@@ -715,25 +708,14 @@ def xyz_2_sdf(file):
 
 	name = str(file).split(".xyz")[0]
 	command_xyz = ["obabel", "-ixyz", file, "-osdf", "-O" + name + ".sdf"]
-	subprocess.call(command_xyz)
+	subprocess.run(command_xyz, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
 def com_2_xyz_2_sdf(input_file, default_charge, default_mult, start_point=None):
 	"""
 	com to xyz to sdf for obabel
-
-	Parameters
-	----------
-	input_file : str
-			path to the file to convert
-	start_point : str, optional
-			file(path/name?) to the starting point, by default None
-
-	Returns
-	-------
-	int?
-			charge or None?
 	"""
+
 	extension = Path(input_file).suffix
 
 	if start_point is None:

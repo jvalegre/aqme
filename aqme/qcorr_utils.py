@@ -13,7 +13,6 @@ from aqme.utils import (
 	move_file,
 	read_file)
 import numpy as np
-import json
 
 # Bondi VDW radii in Angstrom
 bondi = {"H": 1.09,"He": 1.40,"Li": 1.81,"Be": 1.53,"B": 1.92,"C": 1.70,"N": 1.55,"O": 1.52,"F": 1.47,
@@ -212,7 +211,7 @@ def get_json_data(self,file,cclib_data):
 	Get metadata and GoodVibes data for the json file (for older versions of cclib)
 	'''
 	
-	outlines = read_file(self.args.w_dir_main,file)
+	outlines = read_file(os.getcwd(),self.args.w_dir_main,file)
 
 	# initial loop just to detect the QM program
 	for i,line in enumerate(outlines):
