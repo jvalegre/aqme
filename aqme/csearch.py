@@ -8,6 +8,8 @@ import os
 import sys
 import time
 import shutil
+import subprocess
+import glob
 from pathlib import Path
 import pandas as pd
 import concurrent.futures as futures
@@ -21,12 +23,13 @@ from aqme.csearch_utils import (
     prepare_smiles_files,
     prepare_csv_files,
     prepare_cdx_files,
-    prepare_xyz_files,
+    prepare_com_files,
     prepare_sdf_files,
     prepare_pdb_files,
     template_embed,
     creation_of_dup_csv_csearch,
     minimize_rdkit_energy,
+    com_2_xyz
 )
 from aqme.fullmonte import generating_conformations_fullmonte, realign_mol
 from aqme.utils import (
@@ -35,7 +38,10 @@ from aqme.utils import (
     load_variables,
     set_metal_atomic_number,
     getDihedralMatches,
-    smi_to_mol
+    smi_to_mol,
+    mol_from_sdf_or_mol_or_mol2,
+    get_info_input,
+    read_xyz_charge_mult
 )
 from aqme.crest import crest_opt
 
@@ -61,85 +67,79 @@ class csearch:
 
         os.chdir(self.args.w_dir_main)
 
-        # load jobs for conformer generation
-        job_inputs = self.load_jobs()
-        self.args.log.write(f"\nStarting CSEARCH with {len(job_inputs)} job(s) (SDF, XYZ, CSV, etc. files might contain multiple jobs/structures inside)\n")
+        # load files from AQME input
+        if self.args.smi is not None:
+            csearch_files = [self.args.name]
+        else:
+            csearch_files = glob.glob(self.args.input)
 
-        # runs the conformer sampling with multiprocessors
-        self.run_csearch(job_inputs)
+        for csearch_file in csearch_files:
+            # load jobs for conformer generation
+            if self.args.smi is not None:
+                job_inputs = prepare_direct_smi(self.args)
 
-        # store all the information into a CSV file
-        self.csearch_csv_file = self.args.w_dir_main.joinpath(f"CSEARCH-Data.csv")
-        self.final_dup_data.to_csv(self.csearch_csv_file, index=False)
+            else:
+                job_inputs = self.load_jobs(csearch_file)
+            
+            self.args.log.write(f"\nStarting CSEARCH with {len(job_inputs)} job(s) (SDF, XYZ, CSV, etc. files might contain multiple jobs/structures inside)\n")
 
-        elapsed_time = round(time.time() - start_time_overall, 2)
-        self.args.log.write(f"\nTime CSEARCH: {elapsed_time} seconds\n")
-        self.args.log.finalize()
+            # runs the conformer sampling with multiprocessors
+            self.run_csearch(job_inputs)
 
-        # this is added to avoid path problems in jupyter notebooks
-        os.chdir(self.args.initial_dir)
+            # store all the information into a CSV file
+            csearch_file_no_path = csearch_file.replace('/','\\').split("\\")[-1].split('.')[0]
+            self.csearch_csv_file = self.args.w_dir_main.joinpath(f"CSEARCH-Data-{csearch_file_no_path}.csv")
+            self.final_dup_data.to_csv(self.csearch_csv_file, index=False)
 
-    def load_jobs(self):
+            elapsed_time = round(time.time() - start_time_overall, 2)
+            self.args.log.write(f"\nTime CSEARCH: {elapsed_time} seconds\n")
+            self.args.log.finalize()
+
+            # this is added to avoid path problems in jupyter notebooks
+            os.chdir(self.args.initial_dir)
+
+    def load_jobs(self,csearch_file):
         """
         Load information of the different molecules for conformer generation
         """
 
-        SUPPORTED_INPUTS = [
-            ".smi",
-            ".sdf",
-            ".cdx",
-            ".csv",
-            ".com",
-            ".gjf",
-            ".mol",
-            ".mol2",
-            ".xyz",
-            ".txt",
-            ".yaml",
-            ".yml",
-            ".rtf",
-            ".pdb"
-        ]
+        SUPPORTED_INPUTS = [".smi",".sdf",".cdx",".csv",".com",".gjf",".mol",
+                            ".mol2",".xyz",".txt",".yaml",".yml",".rtf",".pdb"]
 
-        if self.args.smi is None:
-            file_format = os.path.splitext(self.args.input)[1]
-            # Checks
-            if file_format.lower() not in SUPPORTED_INPUTS:
-                self.args.log.write("\nx  Input filetype not currently supported!")
-                sys.exit()
-            if not os.path.exists(self.args.input):
-                self.args.log.write("\nx  Input file not found!")
-                sys.exit()
+        file_format = os.path.splitext(csearch_file)[1]
+        # Checks
+        if file_format.lower() not in SUPPORTED_INPUTS:
+            self.args.log.write("\nx  Input filetype not currently supported!")
+            sys.exit()
+        if not os.path.exists(csearch_file):
+            self.args.log.write("\nx  Input file not found!")
+            sys.exit()
 
-            # if large system increase stack size
-            if self.args.stacksize != "1G":
-                os.environ["OMP_STACKSIZE"] = self.args.stacksize
+        # if large system increase stack size
+        if self.args.stacksize != "1G":
+            os.environ["OMP_STACKSIZE"] = self.args.stacksize
 
-            smi_derivatives = [".smi", ".txt", ".yaml", ".yml", ".rtf"]
-            Extension2inputgen = dict()
-            for key in smi_derivatives:
-                Extension2inputgen[key] = prepare_smiles_files
-            Extension2inputgen[".csv"] = prepare_csv_files
-            Extension2inputgen[".cdx"] = prepare_cdx_files
-            Extension2inputgen[".gjf"] = prepare_xyz_files
-            Extension2inputgen[".com"] = prepare_xyz_files
-            Extension2inputgen[".xyz"] = prepare_xyz_files
-            Extension2inputgen[".sdf"] = prepare_sdf_files
-            Extension2inputgen[".mol"] = prepare_sdf_files
-            Extension2inputgen[".mol2"] = prepare_sdf_files
-            Extension2inputgen[".pdb"] = prepare_pdb_files
+        smi_derivatives = [".smi", ".txt", ".yaml", ".yml", ".rtf"]
+        Extension2inputgen = dict()
+        for key in smi_derivatives:
+            Extension2inputgen[key] = prepare_smiles_files
+        Extension2inputgen[".csv"] = prepare_csv_files
+        Extension2inputgen[".cdx"] = prepare_cdx_files
+        Extension2inputgen[".gjf"] = prepare_com_files
+        Extension2inputgen[".com"] = prepare_com_files
+        Extension2inputgen[".xyz"] = prepare_com_files
+        Extension2inputgen[".sdf"] = prepare_sdf_files
+        Extension2inputgen[".mol"] = prepare_sdf_files
+        Extension2inputgen[".mol2"] = prepare_sdf_files
+        Extension2inputgen[".pdb"] = prepare_pdb_files
 
-            # Prepare the jobs
-            prepare_function = Extension2inputgen[file_format]
-            job_inputs = prepare_function(self.args)
-
-        else:
-            job_inputs = prepare_direct_smi(self.args)
+        # Prepare the jobs
+        prepare_function = Extension2inputgen[file_format]
+        job_inputs = prepare_function(self.args,csearch_file) 
 
         return job_inputs
 
     def run_csearch(self, job_inputs):
-
         # create the dataframe to store the data
         self.final_dup_data = creation_of_dup_csv_csearch(self.args.program)
 
@@ -196,7 +196,7 @@ class csearch:
         """
         Function to start conformer generation
         """
-
+        
         if self.args.smi is not None:
             mol = smi_to_mol(
                 smi,
@@ -214,16 +214,25 @@ class csearch:
             else:
                 mol = smi
 
-        if self.args.program in ["crest"]:
-            rdmolfiles.MolToXYZFile(mol, name + ".xyz")
-
         if self.args.destination is None:
             self.csearch_folder = Path(self.args.w_dir_main).joinpath(f"CSEARCH/{self.args.program}")
         else:
             self.csearch_folder = Path(self.args.destination)
         self.csearch_folder.mkdir(exist_ok=True, parents=True)
 
-        # Converts each line to a rdkit mol object
+        if self.args.program in ["crest"]:
+            if self.args.input.split('.')[1] in ["pdb","mol2","mol","sdf"]:
+                command_pdb = ['obabel', f'-i{self.args.input.split(".")[1]}', f'{name}.{self.args.input.split(".")[1]}', '-oxyz', f'-O{name}_{self.args.program}.xyz']
+                subprocess.run(command_pdb, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            elif self.args.input.split('.')[1] in ["gjf","com"]:
+                xyz_file, _, _ = com_2_xyz(f'{name}.{self.args.input.split(".")[1]}')
+                os.move(xyz_file, f'{name}_{self.args.program}.xyz')
+            elif self.args.input.split('.')[1] == "xyz":
+                shutil.copy(f'{name}.xyz', f'{name}_{self.args.program}.xyz')
+            else:
+                rdmolfiles.MolToXYZFile(mol, f'{name}_{self.args.program}.xyz')
+
+        # Converts each line to an RDKit mol object
         if self.args.verbose:
             self.args.log.write(f"\n   -> Input Molecule {Chem.MolToSmiles(mol)}")
 
@@ -301,38 +310,75 @@ class csearch:
         """
 
         dup_data = creation_of_dup_csv_csearch(self.args.program)
-        self.csearch_file = self.csearch_folder.joinpath(
-            name + "_" + self.args.program + self.args.output
-        )
-        self.sdwriter = Chem.SDWriter(str(self.csearch_file))
 
         dup_data_idx = 0
         start_time = time.time()
         status = None
-        valid_structure = filters(
-            mol, self.args.log, self.args.max_mol_wt, self.args.verbose
-        )
-        if valid_structure:
-            self.args.log.write(f"\n   ----- {name} -----")
-            try:
-                # the conformational search for RDKit
-                status, update_to_rdkit = self.summ_search(
-                    mol,
-                    name,
-                    dup_data,
-                    dup_data_idx,
-                    constraints_atoms,
-                    constraints_dist,
-                    constraints_angle,
-                    constraints_dihedral,
-                    coord_Map,
-                    alg_Map,
-                    mol_template,
-                )
-                dup_data.at[dup_data_idx, "status"] = status
-                dup_data.at[dup_data_idx, "update_to_rdkit"] = update_to_rdkit
-            except (KeyboardInterrupt, SystemExit):
-                raise
+
+        self.args.log.write(f"\n   ----- {name} -----")
+
+        # inputs that go through CREST containing 3D coordinates don't require a previous RDKit conformer sampling
+        if self.args.program in ["crest"] and self.args.input.split('.')[1] in ["pdb","mol2","mol","sdf","gjf","com","xyz"]:
+            valid_structure = True
+            # read charges and mult from GJF/COM input files
+            if self.args.input.split('.')[1] in ["gjf","com"]:
+                _, charge, mult = get_info_input(f'{name}.{self.args.input.split(".")[1]}')
+            elif self.args.input.split('.')[1] == "sdf":
+                # use AQME format ("Real charges" and "Mult" section)
+                with mol_from_sdf_or_mol_or_mol2(f'{name}.{self.args.input.split(".")[1]}','qprep') as mols:
+                    for _, mol in enumerate(mols):
+                        _,_,charge,mult,_ = self.qprep_coords(f'{name}.{self.args.input.split(".")[1]}',mol)
+            elif self.args.input.split('.')[1] == "xyz":
+                # use AQME format (charge=INT mult=INT)
+                charge,mult = read_xyz_charge_mult(f'{name}.{self.args.input.split(".")[1]}')
+        
+
+            # user can overwrite charge and mult with the corresponding arguments
+            if self.args.charge is not None:
+                charge = self.args.charge
+            if self.args.mult is not None:
+                mult = self.args.charge
+
+            # if no charge and mult was found, defaults to 0 and 1
+            elif charge is None:
+                charge = 0
+            elif mult is None:
+                mult =  1
+
+            dup_data.at[dup_data_idx, "Overall charge"] = charge
+            dup_data.at[dup_data_idx, "Mult"] = mult
+            
+            status = crest_opt(
+                f'{name}_{self.args.program}', dup_data, dup_data_idx, self.args, charge, mult,
+                constraints_atoms, constraints_dist, constraints_angle, constraints_dihedral
+            )
+
+        else:
+            name = name.replace('/','\\').split("\\")[-1].split('.')[0]
+            self.csearch_file = self.csearch_folder.joinpath(name + "_" + self.args.program + self.args.output)
+            self.sdwriter = Chem.SDWriter(str(self.csearch_file))
+
+            valid_structure = filters(mol, self.args.log, self.args.max_mol_wt, self.args.verbose)
+            if valid_structure:
+                try:
+                    # the conformational search for RDKit
+                    status, update_to_rdkit = self.summ_search(
+                        mol,
+                        name,
+                        dup_data,
+                        dup_data_idx,
+                        constraints_atoms,
+                        constraints_dist,
+                        constraints_angle,
+                        constraints_dihedral,
+                        coord_Map,
+                        alg_Map,
+                        mol_template,
+                    )
+                    dup_data.at[dup_data_idx, "status"] = status
+                    dup_data.at[dup_data_idx, "update_to_rdkit"] = update_to_rdkit
+                except (KeyboardInterrupt, SystemExit):
+                    raise
 
         if status == -1 or not valid_structure:
             error_message = "\nx  ERROR: The structure is not valid or no conformers were obtained from this SMILES string"
@@ -572,11 +618,7 @@ class csearch:
         Function to embed conformers
         """
 
-        is_sdf_mol_or_mol2 = os.path.splitext(self.args.input)[1] in [
-            ".sdf",
-            ".mol",
-            ".mol2",
-        ]
+        is_sdf_mol_or_mol2 = os.path.splitext(self.args.input)[1].lower() in [".sdf",".mol",".mol2"]
 
         if is_sdf_mol_or_mol2:
             Chem.AssignStereochemistryFrom3D(mol)
@@ -826,7 +868,7 @@ class csearch:
 
         rotmatches = getDihedralMatches(mol, self.args.heavyonly)
 
-        if len(rotmatches) > self.args.max_torsions:
+        if len(rotmatches) > self.args.max_torsions and self.args.max_torsions > 0:
             self.args.log.write(
                 "\nx  Too many torsions (%d). Skipping %s"
                 % (len(rotmatches), (name + self.args.output))
@@ -904,7 +946,8 @@ class csearch:
             dup_data.at[dup_data_idx, "Overall charge"] = charge
             dup_data.at[dup_data_idx, "Mult"] = mult
             status = crest_opt(
-                mol, name, dup_data, dup_data_idx, sdwriter, self.args, charge, mult, constraints_atoms, constraints_dist, constraints_angle, constraints_dihedral
+                name, dup_data, dup_data_idx, self.args, charge, mult,
+                constraints_atoms, constraints_dist, constraints_angle, constraints_dihedral
             )
 
         sdwriter.close()

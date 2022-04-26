@@ -68,7 +68,7 @@ class qprep:
 						os.remove(conf_file)
 				elif file.split('.')[1].lower() == 'pdb':
 					command_pdb = ['obabel', '-ipdb', file, '-osdf', f'-O{name}.sdf']
-					subprocess.run(command_pdb)
+					subprocess.run(command_pdb, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 					sdf_files.append(f'{name}.sdf')
 				else:
 					sdf_files.append(file)

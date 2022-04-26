@@ -176,10 +176,10 @@ AQME can also be run through command lines. Some examples are:
         Only consider heavy atoms during RMS calculations for filtering (in the Chem.rdMolAlign.GetBestRMS() RDKit function)  
     **max_matches_rmsd : int, default=1000**  
         Max matches during RMS calculations for filtering (maxMatches option in the Chem.rdMolAlign.GetBestRMS() RDKit function)  
-    **max_mol_wt : int, default=100000000**  
-        Discard systems with molecular weights higher than this parameter (in g/mol)  
-    **max_torsions : int, default=20**  
-        Discard systems with more than this many torsions (relevant to avoid molecules with many rotatable bonds)  
+    **max_mol_wt : int, default=0**  
+        Discard systems with molecular weights higher than this parameter (in g/mol). If 0 is set, this filter is off  
+    **max_torsions : int, default=0**  
+        Discard systems with more than this many torsions (relevant to avoid molecules with many rotatable bonds). If 0 is set, this filter is off  
     **seed : int, default=62609**  
         Random seed used during RDKit embedding (in the Chem.rdDistGeom.EmbedMultipleConfs() RDKit function)  
 

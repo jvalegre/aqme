@@ -1,7 +1,6 @@
 #!/usr/bin/python
 from __future__ import print_function, absolute_import
-from enum import unique
-from functools import partial
+from rdkit.Chem import AllChem as Chem
 
 #######################################################################
 # Runs crest on an xyz file, can add in options to the code if needed #
@@ -9,42 +8,11 @@ from functools import partial
 
 # Python Libraries
 import os
-from rdkit.Chem import rdMolTransforms
 import glob
 import subprocess
 import rdkit
 from pathlib import Path
 from aqme.utils import read_file
-
-
-def atompairs(mol, atom1, atom2, constraints):
-    """
-    Returns constraints
-    """
-    active = []
-    for x in constraints:
-        active.append(x[:2])
-
-    for i, x in enumerate(active):
-        active[i] = [int(j) for j in x]
-
-    pairs = []
-    bonds = [(x.GetBeginAtomIdx(), x.GetEndAtomIdx()) for x in mol.GetBonds()]
-    for [a, b] in bonds:
-        if [a + 1, b + 1] not in active and [b + 1, a + 1] not in active:
-            dist = round(rdMolTransforms.GetBondLength(mol.GetConformer(), a, b), 3)
-            at_a, at_b = mol.GetAtoms()[a].GetSymbol(), mol.GetAtoms()[b].GetSymbol()
-            if atom1 == "X" and atom2 == "X":
-                pairs.append([float(a + 1), float(b + 1), dist])
-            elif atom1 == "X" and atom2 == "H":
-                if at_a == "H" or at_b == "H":
-                    pairs.append([float(a + 1), float(b + 1), dist])
-            else:
-                if (at_a == atom1 and at_b == atom2) or (
-                    at_a == atom2 and at_b == atom1
-                ):
-                    pairs.append([float(a + 1), float(b + 1), dist])
-    return pairs
 
 
 def xyzall_2_xyz(xyzin, name):
@@ -53,23 +21,24 @@ def xyzall_2_xyz(xyzin, name):
     subprocess.run(command_run_1, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
-def crest_opt(mol, name, dup_data, dup_data_idx, sdwriter, args, charge, mult, constraints_atoms, constraints_dist, constraints_angle, constraints_dihedral):
+def crest_opt(name, dup_data, dup_data_idx, args, charge, mult, constraints_atoms, constraints_dist, constraints_angle, constraints_dihedral):
 
     """
     Run xTB using subprocess to perform CREST/CREGEN conformer sampling
-
     """
 
+    name_no_path = name.replace('/','\\').split("\\")[-1].split('.')[0]
     csearch_dir = Path(args.w_dir_main)
-    dat_dir = csearch_dir / "CSEARCH" / "crest_xyz" / name
+    dat_dir = csearch_dir / "CSEARCH" / "crest_xyz" / name_no_path
     dat_dir.mkdir(exist_ok=True, parents=True)
 
-    xyzin = str(dat_dir) + "/" + name + ".xyz"
+    xyzin = f'{dat_dir}/{name_no_path}.xyz'
+    sdwriter = Chem.SDWriter(str(f'{dat_dir}/{name_no_path}'))
 
-    os.rename(name + ".xyz", xyzin)
+    os.rename(f'{name}.xyz', xyzin)
 
     os.chdir(dat_dir)
-    xyzoutall = str(dat_dir) + "/" + name + "_conformers.xyz"
+    xyzoutall = str(dat_dir) + "/" + name_no_path + "_conformers.xyz"
 
     constrained_sampling = create_xcontrol(args,constraints_atoms,constraints_dist,constraints_angle,constraints_dihedral,xyzin)
 
@@ -93,7 +62,7 @@ def crest_opt(mol, name, dup_data, dup_data_idx, sdwriter, args, charge, mult, c
             if keyword not in command:
                 command.append(keyword)
 
-    subprocess.run(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    subprocess.run(command)
 
     if args.cregen:
         command = [
@@ -117,15 +86,15 @@ def crest_opt(mol, name, dup_data, dup_data_idx, sdwriter, args, charge, mult, c
     except FileNotFoundError:
         args.log.write('x   CREST conformer sampling failed! Please, try other options (i.e. include constrains, change the crest_keywords option, etc.)')
 
-    xyzall_2_xyz(xyzoutall, name)
+    xyzall_2_xyz(xyzoutall, name_no_path)
 
-    xyz_files = glob.glob(name + "_conf_*.xyz")
+    xyz_files = glob.glob(name_no_path + "_conf_*.xyz")
     for _, file in enumerate(xyz_files):
-        name1 = file.split(".xyz")[0]
-        command_xyz = ["obabel", "-ixyz", file, "-osdf", "-O" + name1 + ".sdf"]
+        name_conf = file.split(".xyz")[0]
+        command_xyz = ["obabel", "-ixyz", file, "-osdf", "-O" + name_conf + ".sdf"]
         subprocess.run(command_xyz, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-    sdf_files = glob.glob(name + "*.sdf")
+    sdf_files = glob.glob(name_no_path + "*.sdf")
     for file in sdf_files:
         mol = rdkit.Chem.SDMolSupplier(file, removeHs=False, sanitize=False)
         mol_rd = rdkit.Chem.RWMol(mol[0])

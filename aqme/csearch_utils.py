@@ -509,6 +509,7 @@ def creation_of_dup_csv_csearch(program):
 
 def prepare_direct_smi(args):
 	job_inputs = []
+	constraints_atoms = args.constraints_atoms
 	constraints_dist = args.constraints_dist
 	constraints_angle = args.constraints_angle
 	constraints_dihedral = args.constraints_dihedral
@@ -519,6 +520,7 @@ def prepare_direct_smi(args):
 	obj = (
 		args.smi,
 		name,
+		constraints_atoms,
 		constraints_dist,
 		constraints_angle,
 		constraints_dihedral,
@@ -528,8 +530,8 @@ def prepare_direct_smi(args):
 	return job_inputs
 
 
-def prepare_smiles_files(args):
-	with open(args.input) as smifile:
+def prepare_smiles_files(args,csearch_file):
+	with open(csearch_file) as smifile:
 		lines = [line for line in smifile if line.strip()]
 	job_inputs = []
 	for i, line in enumerate(lines):
@@ -571,8 +573,8 @@ def prepare_smiles_from_line(line, i, args):
 	return smiles, name, constraints_atoms, constraints_dist, constraints_angle, constraints_dihedral
 
 
-def prepare_csv_files(args):
-	csv_smiles = pd.read_csv(args.input)
+def prepare_csv_files(args,csearch_file):
+	csv_smiles = pd.read_csv(csearch_file)
 	job_inputs = []
 	for i in range(len(csv_smiles)):
 		obj = generate_mol_from_csv(args, csv_smiles, i)
@@ -626,23 +628,24 @@ def generate_mol_from_csv(args, csv_smiles, index):
 	return obj
 
 
-def prepare_cdx_files(args):
+def prepare_cdx_files(args,csearch_file):
 	# converting to smiles from chemdraw
 	molecules = generate_mol_from_cdx(args)
+	constraints_atoms = args.constraints_atoms
+	constraints_dist = args.constraints_dist
+	constraints_angle = args.constraints_angle
+	constraints_dihedral = args.constraints_dihedral
+
 	job_inputs = []
 	for i, (smiles, _) in enumerate(molecules):
-		name = f"{args.input.split('.')[0]}_{str(i)}"
-		constraints_atoms = args.constraints_atoms
-		constraints_dist = args.constraints_dist
-		constraints_angle = args.constraints_angle
-		constraints_dihedral = args.constraints_dihedral
+		name = f"{csearch_file.split('.')[0]}_{str(i)}"
 		obj = (smiles, name, constraints_atoms, constraints_dist, constraints_angle, constraints_dihedral)
 		job_inputs.append(obj)
 	return job_inputs
 
 
-def generate_mol_from_cdx(args):
-	cmd_cdx = ["obabel", "-icdx", args.input, "-osmi", "-Ocdx.smi"]
+def generate_mol_from_cdx(args,csearch_file):
+	cmd_cdx = ["obabel", "-icdx", csearch_file, "-osmi", "-Ocdx.smi"]
 	subprocess.run(cmd_cdx, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 	with open("cdx.smi", "r") as smifile:
 		smi_lines = [str(line.strip()) for line in smifile]
@@ -654,10 +657,15 @@ def generate_mol_from_cdx(args):
 	return molecules
 
 
-def prepare_xyz_files(args):
+def prepare_com_files(args,csearch_file):
 	job_inputs = []
-	charge_com, mult_com = com_2_xyz_2_sdf(args.input, args.charge, args.mult)
-	name = os.path.splitext(args.input)[0]
+
+	if csearch_file.split('.')[1] in ["gjf","com"]:
+		xyz_file, _, _ = com_2_xyz(csearch_file, args.charge, args.mult)
+	else:
+		xyz_file = csearch_file
+	xyz_2_sdf(xyz_file)
+	name = os.path.splitext(csearch_file)[0]
 	sdffile = f"{name}.sdf"
 	suppl, _, _ = mol_from_sdf_or_mol_or_mol2(sdffile,'csearch')
 
@@ -673,15 +681,15 @@ def prepare_xyz_files(args):
 	return job_inputs
 
 
-def prepare_pdb_files(args):
-	command_pdb = ['obabel', '-ipdb', args.input, '-osdf', f'-O{args.input.split(".")[0]}.sdf']
+def prepare_pdb_files(args,csearch_file):
+	command_pdb = ['obabel', '-ipdb', csearch_file, '-osdf', f'-O{csearch_file.split(".")[0]}.sdf']
 	subprocess.run(command_pdb, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 	job_inputs = prepare_sdf_files(args)
-	os.remove(f'{args.input.split(".")[0]}.sdf')
+	os.remove(f'{csearch_file.split(".")[0]}.sdf')
 	return job_inputs
 
-def prepare_sdf_files(args):
-	suppl, IDs, charges = mol_from_sdf_or_mol_or_mol2(args.input,'csearch')
+def prepare_sdf_files(args,csearch_file):
+	suppl, IDs, charges = mol_from_sdf_or_mol_or_mol2(csearch_file,'csearch')
 	job_inputs = []
 
 	constraints_atoms = args.constraints_atoms
@@ -711,33 +719,24 @@ def xyz_2_sdf(file):
 	subprocess.run(command_xyz, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
-def com_2_xyz_2_sdf(input_file, default_charge, default_mult, start_point=None):
+def com_2_xyz(input_file):
 	"""
-	com to xyz to sdf for obabel
+	COM to XYZ to SDF for obabel
 	"""
 
-	extension = Path(input_file).suffix
+	filename = input_file.split('.')[0]
+	extension = input_file.split('.')[1]
 
-	if start_point is None:
-		if extension in [".com", ".gjf", ".xyz"]:
-			file = Path(input_file)
-	else:
-		file = Path(start_point)
+	if extension in [".com", ".gjf", ".xyz"]:
+		file = Path(input_file)
 
-	filename = str(input_file).split('.')[0]
 	# Create the 'xyz' file and/or get the total charge
-	if extension != ".xyz":
-		xyz, charge, mult = get_info_input(file)
-		xyz_txt = "\n".join(xyz)
-		with open(f"{filename}.xyz", "w") as F:
-			F.write(f"{len(xyz)}\n{filename}\n{xyz_txt}\n")
-		xyz_2_sdf(f"{filename}.xyz")
-	else:
-		charge = default_charge
-		mult = default_mult
-		xyz_2_sdf(file)
+	xyz, charge, mult = get_info_input(file)
+	xyz_txt = "\n".join(xyz)
+	with open(f"{filename}.xyz", "w") as F:
+		F.write(f"{len(xyz)}\n{filename}\n{xyz_txt}\n")
 
-	return charge, mult
+	return f"{filename}.xyz", charge, mult
 
 
 def minimize_rdkit_energy(mol, conf, log, FF, maxsteps):

@@ -324,31 +324,12 @@ def filters(mol, log, molwt_cutoff, verbose):
     Applies some basic filters (molwt, salts[currently off], weird atom symbols)
     that only require SMILES data from a compound and returns if the molecule
     passes the filters or not.
-
-    Parameters
-    ----------
-    mol : rdkit.Chem.Mol
-            [description]
-    args : argparse.args
-            [description]
-    log : Logger
-            [description]
-    molwt_cutoff : float
-            Maximum Acceptable Molecular weight.
-    verbose : bool
-            Controls extra printing in the log. If True writing to the log will be
-            enabled otherwise no logging will be produced from this function.
-
-    Returns
-    -------
-    bool
-            True if it passes the filters, False if it should be discarded.
     """
 
     # Filter 1
-    if Descriptors.MolWt(mol) >= molwt_cutoff:
+    if Descriptors.MolWt(mol) >= molwt_cutoff and molwt_cutoff > 0:
         if verbose:
-            log.write(f" Exiting as total molar mass > {molwt_cutoff}")
+            log.write(f"x   Exiting as total molar mass > {molwt_cutoff}")
         return False
 
     # Filter 2
