@@ -630,7 +630,7 @@ def generate_mol_from_csv(args, csv_smiles, index):
 
 def prepare_cdx_files(args,csearch_file):
 	# converting to smiles from chemdraw
-	molecules = generate_mol_from_cdx(args)
+	molecules = generate_mol_from_cdx(csearch_file)
 	constraints_atoms = args.constraints_atoms
 	constraints_dist = args.constraints_dist
 	constraints_angle = args.constraints_angle
@@ -644,7 +644,7 @@ def prepare_cdx_files(args,csearch_file):
 	return job_inputs
 
 
-def generate_mol_from_cdx(args,csearch_file):
+def generate_mol_from_cdx(csearch_file):
 	cmd_cdx = ["obabel", "-icdx", csearch_file, "-osmi", "-Ocdx.smi"]
 	subprocess.run(cmd_cdx, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 	with open("cdx.smi", "r") as smifile:
@@ -684,7 +684,7 @@ def prepare_com_files(args,csearch_file):
 def prepare_pdb_files(args,csearch_file):
 	command_pdb = ['obabel', '-ipdb', csearch_file, '-osdf', f'-O{csearch_file.split(".")[0]}.sdf']
 	subprocess.run(command_pdb, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-	job_inputs = prepare_sdf_files(args)
+	job_inputs = prepare_sdf_files(args,csearch_file)
 	os.remove(f'{csearch_file.split(".")[0]}.sdf')
 	return job_inputs
 
