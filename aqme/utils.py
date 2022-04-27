@@ -411,7 +411,7 @@ def rules_get_charge(mol, args, type):
 
 def substituted_mol(self, mol, checkI):
 	"""
-	Returns a molecule object in which all metal atoms specified in args.metal
+	Returns a molecule object in which all metal atoms specified in args.metal_atoms
 	are replaced by Iodine and the charge is set depending on the number of
 	neighbors.
 
@@ -423,10 +423,10 @@ def substituted_mol(self, mol, checkI):
 
 	for atom in mol.GetAtoms():
 		symbol = atom.GetSymbol()
-		if symbol in self.args.metal:
-			self.args.metal_sym[self.args.metal.index(symbol)] = symbol
-			self.args.metal_idx[self.args.metal.index(symbol)] = atom.GetIdx()
-			self.args.complex_coord[self.args.metal.index(symbol)] = len(
+		if symbol in self.args.metal_atoms:
+			self.args.metal_sym[self.args.metal_atoms.index(symbol)] = symbol
+			self.args.metal_idx[self.args.metal_atoms.index(symbol)] = atom.GetIdx()
+			self.args.complex_coord[self.args.metal_atoms.index(symbol)] = len(
 				atom.GetNeighbors()
 			)
 			if checkI == "I":

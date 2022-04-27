@@ -142,7 +142,7 @@ class cmin:
                 # optimize this structure and record the energy
                 if self.args.metal_complex:
                     # fill the lists with None for every metal in the option
-                    for _ in self.args.metal:
+                    for _ in self.args.metal_atoms:
                         self.args.metal_idx.append(None)
                         self.args.complex_coord.append(None)
                         self.args.metal_sym.append(None)

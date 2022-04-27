@@ -21,7 +21,7 @@ var_dict = {
 		"qpred": False,
 		"smi": None,
 		"metal_complex": False,
-		"metal": [],
+		"metal_atoms": [],
 		"charge": None,
 		"mult": None,
 		"complex_coord": [],

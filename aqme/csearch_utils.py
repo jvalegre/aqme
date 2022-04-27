@@ -509,10 +509,6 @@ def creation_of_dup_csv_csearch(program):
 
 def prepare_direct_smi(args):
 	job_inputs = []
-	constraints_atoms = args.constraints_atoms
-	constraints_dist = args.constraints_dist
-	constraints_angle = args.constraints_angle
-	constraints_dihedral = args.constraints_dihedral
 	if args.prefix == "":
 		name = "".join(args.name)
 	else:
@@ -520,10 +516,10 @@ def prepare_direct_smi(args):
 	obj = (
 		args.smi,
 		name,
-		constraints_atoms,
-		constraints_dist,
-		constraints_angle,
-		constraints_dihedral,
+		args.constraints_atoms,
+		args.constraints_dist,
+		args.constraints_angle,
+		args.constraints_dihedral,
 	)
 	job_inputs.append(obj)
 
@@ -538,18 +534,14 @@ def prepare_smiles_files(args,csearch_file):
 		(
 			smi,
 			name,
-			constraints_atoms,
-			constraints_dist,
-			constraints_angle,
-			constraints_dihedral,
 		) = prepare_smiles_from_line(line, i, args)
 		obj = (
 			smi,
 			name,
-			constraints_atoms,
-			constraints_dist,
-			constraints_angle,
-			constraints_dihedral,
+			args.constraints_atoms,
+			args.constraints_dist,
+			args.constraints_angle,
+			args.constraints_dihedral,
 		)
 		job_inputs.append(obj)
 
@@ -565,12 +557,8 @@ def prepare_smiles_from_line(line, i, args):
 		name = "".join(toks[1])
 	else:
 		name = f"{args.prefix}_{i}_{''.join(toks[1])}"
-	constraints_atoms = args.constraints_atoms
-	constraints_dist = args.constraints_dist
-	constraints_angle = args.constraints_angle
-	constraints_dihedral = args.constraints_dihedral
 
-	return smiles, name, constraints_atoms, constraints_dist, constraints_angle, constraints_dihedral
+	return smiles, name
 
 
 def prepare_csv_files(args,csearch_file):
@@ -631,15 +619,11 @@ def generate_mol_from_csv(args, csv_smiles, index):
 def prepare_cdx_files(args,csearch_file):
 	# converting to smiles from chemdraw
 	molecules = generate_mol_from_cdx(csearch_file)
-	constraints_atoms = args.constraints_atoms
-	constraints_dist = args.constraints_dist
-	constraints_angle = args.constraints_angle
-	constraints_dihedral = args.constraints_dihedral
 
 	job_inputs = []
 	for i, (smiles, _) in enumerate(molecules):
 		name = f"{csearch_file.split('.')[0]}_{str(i)}"
-		obj = (smiles, name, constraints_atoms, constraints_dist, constraints_angle, constraints_dihedral)
+		obj = (smiles, name, args.constraints_atoms, args.constraints_dist, args.constraints_angle, args.constraints_dihedral)
 		job_inputs.append(obj)
 	return job_inputs
 
@@ -669,13 +653,8 @@ def prepare_com_files(args,csearch_file):
 	sdffile = f"{name}.sdf"
 	suppl, _, _ = mol_from_sdf_or_mol_or_mol2(sdffile,'csearch')
 
-	constraints_atoms = args.constraints_atoms
-	constraints_dist = args.constraints_dist
-	constraints_angle = args.constraints_angle
-	constraints_dihedral = args.constraints_dihedral
-
 	for _, mol in enumerate(suppl):
-		obj = (mol, name, constraints_atoms, constraints_dist, constraints_angle, constraints_dihedral)
+		obj = (mol, name, args.constraints_atoms, args.constraints_dist, args.constraints_angle, args.constraints_dihedral)
 		job_inputs.append(obj)
 
 	return job_inputs
@@ -692,13 +671,8 @@ def prepare_sdf_files(args,csearch_file):
 	suppl, IDs, charges = mol_from_sdf_or_mol_or_mol2(csearch_file,'csearch')
 	job_inputs = []
 
-	constraints_atoms = args.constraints_atoms
-	constraints_dist = args.constraints_dist
-	constraints_angle = args.constraints_angle
-	constraints_dihedral = args.constraints_dihedral
-
 	for _, (mol, name, _) in enumerate(zip(suppl, IDs, charges)):
-		obj = (mol, name, constraints_atoms, constraints_dist, constraints_angle, constraints_dihedral)
+		obj = (mol, name, args.constraints_atoms, args.constraints_dist, args.constraints_angle, args.constraints_dihedral)
 		job_inputs.append(obj)
 	return job_inputs
 

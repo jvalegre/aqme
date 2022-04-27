@@ -41,7 +41,7 @@ def main():
     # load user-defined arguments from command line
     args = command_line_args()
     args.command_line = True
-
+    
     # CSEARCH
     if args.csearch:
         csearch(
@@ -55,7 +55,7 @@ def main():
             sample=args.sample,
             max_workers=args.max_workers,
             metal_complex=args.metal_complex,
-            metal=args.metal,
+            metal=args.metal_atoms,
             metal_idx=args.metal_idx,
             complex_coord=args.complex_coord,
             metal_sym=args.metal_sym,
@@ -107,7 +107,7 @@ def main():
             charge=args.charge,
             mult=args.mult,
             metal_complex=args.metal_complex,
-            metal=args.metal,
+            metal=args.metal_atoms,
             metal_oxi=args.metal_oxi,
             complex_type=args.complex_type,
             ewin_cmin=args.ewin_cmin,
