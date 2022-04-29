@@ -8,6 +8,7 @@ import sys
 import glob
 import time
 import json
+import shutil
 from aqme.utils import (
 	cclib_atoms_coords,
 	QM_coords,
@@ -30,26 +31,37 @@ class qprep:
 		start_time_overall = time.time()
 		# load default and user-specified variables
 		self.args = load_variables(kwargs,'qprep')
+		if self.args.program.lower() not in ["gaussian", "orca"]:
+			self.args.log.write("\nx  Program not supported for QPREP input file creation! Specify: program='gaussian' (or orca)")
+			self.args.log.finalize()
+			sys.exit()
 
 		if self.args.destination is None:
-			self.args.destination = self.args.w_dir_main.joinpath("QCALC")
+			destination = self.args.w_dir_main.joinpath("QCALC")
 		else:
-			self.args.destination = Path(self.args.destination)
+			destination = Path(self.args.destination)
 
 		if self.args.qm_input == "":
 			self.args.log.write("x  No keywords line was specified! (i.e. qm_input=KEYWORDS_LINE).")
+			self.args.log.finalize()
 			sys.exit()
 
-		if self.args.gen_atoms != [] and "bs" == "":
-			self.args.log.write("x  Atoms for Gen(ECP) were specified (gen_atoms=[ATOM_LIST]) but no basis set was included for non-Gen(ECP) atoms (i.e. bs=BASIS_SET).")
+		if self.args.gen_atoms != [] and self.args.bs_nogen == "":
+			self.args.log.write("x  Atoms for Gen(ECP) were specified (gen_atoms=[ATOM_LIST]) but no basis set was included for non-Gen(ECP) atoms (i.e. bs_nogen=BASIS_SET).")
+			self.args.log.finalize()
 			sys.exit()
 
-		elif self.args.gen_atoms != [] and "bs_gen" == "":
+		elif self.args.gen_atoms != [] and self.args.bs_gen == "":
 			self.args.log.write("x  Atoms for Gen(ECP) were specified (gen_atoms=[ATOM_LIST]) but no basis set was included for Gen(ECP) atoms (i.e. bs_gen=BASIS_SET).")
+			self.args.log.finalize()
 			sys.exit()
+
+		# move to the folder to read the inputs and write the outpus. If command lines are used,
+		# the program is already in the working directory (from the initial command_line_args() function)
+		if not self.args.command_line:
+			os.chdir(self.args.w_dir_main)
 
 		# write input files
-		os.chdir(self.args.w_dir_main)
 		for file in self.args.files:
 			name = file.replace('/','\\').split("\\")[-1].split('.')[0]
 			if file.split('.')[1].lower() in ['sdf','xyz','pdb']:
@@ -83,16 +95,28 @@ class qprep:
 								if sdf_name.find(f'{name}_conf_') > -1:
 									name_conf = sdf_name
 								else:
-									name_conf = f'{sdf_name}_conf_{i+1}'
+									if len(mols) > 1:
+										name_conf = f'{sdf_name}_conf_{i+1}'
+									else:
+										name_conf = f'{sdf_name}'
 								qprep_data = {'atom_types': atom_types, 'cartesians': cartesians,
 										'charge': charge, 'mult': mult, 'name': name_conf}
 								comfile = self.write(qprep_data)
-								move_file(self.args.destination, self.args.w_dir_main, comfile)
+								try:
+									move_file(destination, self.args.w_dir_main, comfile)
+								except FileNotFoundError:
+									# this avoids problems when partial PATHs are provided from command lines
+									if Path(f'{destination}').exists():
+										shutil.rmtree(f'{self.args.w_dir_main}')
+									if self.args.destination is None:
+										move_file(Path(f'{os.getcwd()}/QCALC'), Path(os.getcwd()), comfile)
+									else:
+										move_file(Path(f'{os.getcwd()}/{self.args.destination}'), Path(os.getcwd()), comfile)
 
-						if file.split('.')[1].lower() == 'xyz':
-							# delete SDF files when the input was an XYZ file
+						if file.split('.')[1].lower() in ['xyz','pdb']:
+							# delete SDF files when the input was an XYZ/PDB file
 							os.remove(sdf_file)
-							
+
 					except OSError:
 						if self.args.verbose:
 							self.args.log.write(f'x  {name} couldn\'t be processed!')
@@ -101,6 +125,7 @@ class qprep:
 					if self.args.verbose:
 						self.args.log.write(f'o  {name} successfully processed')
 			
+			# for Gaussian output files (LOG/OUT), JSON files and MOL objects
 			else:
 				atom_types,cartesians,charge,mult,found_coords = self.qprep_coords(file,None)
 
@@ -110,8 +135,18 @@ class qprep:
 				qprep_data = {'atom_types': atom_types, 'cartesians': cartesians,
 							'charge': charge, 'mult': mult, 'name': name}
 				comfile = self.write(qprep_data)
-				move_file(self.args.destination, self.args.w_dir_main, comfile)
-				
+
+				try:
+					move_file(destination, self.args.w_dir_main, comfile)
+				except FileNotFoundError:
+					# this avoids problems when partial PATHs are provided from command lines
+					if Path(f'{destination}').exists():
+						shutil.rmtree(f'{self.args.w_dir_main}')
+					if self.args.destination is None:
+						move_file(Path(f'{os.getcwd()}/QCALC'), Path(os.getcwd()), comfile)
+					else:
+						move_file(Path(f'{os.getcwd()}/{self.args.destination}'), Path(os.getcwd()), comfile)
+
 				if self.args.verbose:
 					self.args.log.write(f'o  {name} successfully processed')
 
@@ -124,7 +159,7 @@ class qprep:
 		self.args.log.finalize()
 
 		if not self.args.verbose:
-			os.remove('QPREP_data.dat')
+			os.remove(self.args.w_dir_main / 'QPREP_data.dat')
 
 
 	def get_header(self,qprep_data):
@@ -274,7 +309,11 @@ class qprep:
 
 			elif file.split('.')[1] in ['log','out']:
 				# detect QM program and number of atoms
-				outlines = read_file(os.getcwd(),self.args.w_dir_main,file)
+				if not self.args.command_line:
+					outlines = read_file(os.getcwd(),self.args.w_dir_main,file)
+				else:
+					# if command lines are used, the program is already in that folder
+					outlines = read_file(os.getcwd(),os.getcwd(),file)
 				n_atoms = 0
 				resume_line = 0
 
@@ -319,7 +358,7 @@ class qprep:
 			atom_types = self.args.atom_types
 			cartesians = self.args.cartesians
 
-		# overwrite with user-defined charge and multiplicity (if any) 
+		# overwrite with user-defined charge and multiplicity (if any)
 		# or sets to default charge 0 and mult 1 if the parameters weren't found
 		if self.args.charge is not None:
 			charge = self.args.charge

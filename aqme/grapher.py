@@ -194,7 +194,7 @@ def params_graph(qm_data,csearch_cmin_data):
             mae_rdkit,sd_rdkit = stats_calc(energy_dft_mae_sd,energy_rdkit_mae_sd)
             mae_min,sd_min = stats_calc(energy_dft_mae_sd,energy_min_mae_sd)
             mae_dft,sd_dft = 0,0
-        
+
         # setting some graphing options
         x_axis_names = [csearch_cmin_data['CSEARCH type']]
 

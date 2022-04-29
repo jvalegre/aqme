@@ -40,7 +40,7 @@ class qcorr():
 
 		# load default and user-specified variables
 		self.args = load_variables(kwargs,'qcorr')
-		
+
 		# QCORR analysis
 		self.qcorr_processing()
 
@@ -374,6 +374,7 @@ class qcorr():
 
 		if not isom_valid:
 			os.chdir(self.args.initial_dir)
+			self.args.log.finalize()
 			sys.exit()
 
 		try:

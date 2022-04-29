@@ -8,9 +8,6 @@
 [![lgtm](https://img.shields.io/lgtm/grade/python/github/jvalegre/aqme?label=LGTM%20grade&logo=lgtm)](https://lgtm.com/projects/g/jvalegre/aqme/context:python)
 [![CodeClimate](https://img.shields.io/codeclimate/maintainability-percentage/jvalegre/aqme?label=Code%20climate%20maintainability&logo=code%20climate)](https://codeclimate.com/github/jvalegre/aqme)
 
-![Size](https://img.shields.io/github/languages/code-size/jvalegre/aqme)
-[![PyPI](https://img.shields.io/pypi/v/aqme?color=blue&label=PyPI&logo=pypi)](https://pypi.org/project/aqme)
-
 ___
 # <p align="center">Automated Quantum Mechanical Environments (AQME)</p>
 ## <p align="center">-- Table of contents --</p>

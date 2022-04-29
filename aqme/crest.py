@@ -164,12 +164,12 @@ def create_xcontrol(args,constraints_atoms,constraints_dist,constraints_angle,co
 
         for constraint_type in [constraints_dist,constraints_angle,constraints_dihedral]:
             if constraint_type != []:
-                for const in constraint_type: 
+                for const in constraint_type:
                     if constraint_type == constraints_dist:
                         edited_xcontrol += 'distance: '
                     elif constraint_type == constraints_angle:
                         edited_xcontrol += 'angle: '
-                    elif constraint_type == constraints_dihedral:  
+                    elif constraint_type == constraints_dihedral:
                         edited_xcontrol += 'dihedral: '
                     edited_xcontrol += ','.join(val for val in const)
                     edited_xcontrol += '\n'
@@ -194,5 +194,5 @@ def create_xcontrol(args,constraints_atoms,constraints_dist,constraints_angle,co
         xcontrol_file = open('.xcontrol.sample', 'w')
         xcontrol_file.write(edited_xcontrol)
         xcontrol_file.close()
-    
+
     return constrained_sampling

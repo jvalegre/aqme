@@ -47,9 +47,8 @@ class cmin:
         # load default and user-specified variables
         self.args = load_variables(kwargs, "cmin")
         if self.args.program not in ["xtb", "ani"]:
-            self.args.log.write(
-                "\nx  Program not supported for conformer generation! Specify: program='xtb' (or ani)"
-            )
+            self.args.log.write("\nx  Program not supported for conformer generation! Specify: program='xtb' (or ani)")
+            self.args.log.finalize()
             sys.exit()
 
         os.chdir(self.args.w_dir_main)
@@ -389,6 +388,7 @@ class cmin:
             from xtb.ase.calculator import XTB
         except (ModuleNotFoundError, AttributeError):
             log.write("\nx  xTB is not installed correctly - xTB is not available")
+            log.finalize()
             sys.exit()
 
         # if large system increase stack size
@@ -463,5 +463,6 @@ def rdkit_sdf_read(file, args):
     
     if inmols is None:
         args.log.write(f"Could not open {name}{args.output}")
-        sys.exit(-1)
+        args.log.finalize()
+        sys.exit()
     return inmols

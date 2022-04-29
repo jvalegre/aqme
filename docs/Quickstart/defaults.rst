@@ -174,7 +174,7 @@ Pre-Optimised Parameters
   # (2) FILTERS FOR RDKIT OPTIMIZATION
   max_torsions : 20 # Skip any molecules with more than this many torsions (default 5)
   num_rot_bonds : 20 # Skip any molecules with more than this many rotatable bonds (default 5)
-  max_mol_wt : 10000 # Skip any molecules with molecular weights higher than this number
+  max_mol_wt : 0 # Skip any molecules with molecular weights higher than this number
 
   # (3) PARAMETERS FOR RDKIT OPTIMIZATION
   ff : "MMFF" # force field used in the RDKit optimization. Options: MMFF or UFF

@@ -61,8 +61,9 @@ class csearch:
         start_time_overall = time.time()
         # load default and user-specified variables
         self.args = load_variables(kwargs, "csearch")
-        if self.args.program not in ["rdkit", "summ", "fullmonte", "crest"]:
-            self.args.log.write("\nx  Program not supported for conformer generation! Specify: program='rdkit' (or summ, fullmonte, crest)")
+        if self.args.program.lower() not in ["rdkit", "summ", "fullmonte", "crest"]:
+            self.args.log.write("\nx  Program not supported for CSEARCH conformer generation! Specify: program='rdkit' (or summ, fullmonte, crest)")
+            self.args.log.finalize()
             sys.exit()
 
         os.chdir(self.args.w_dir_main)
@@ -110,9 +111,11 @@ class csearch:
         # Checks
         if file_format.lower() not in SUPPORTED_INPUTS:
             self.args.log.write("\nx  Input filetype not currently supported!")
+            self.args.log.finalize()
             sys.exit()
         if not os.path.exists(csearch_file):
             self.args.log.write("\nx  Input file not found!")
+            self.args.log.finalize()
             sys.exit()
 
         # if large system increase stack size
@@ -383,9 +386,8 @@ class csearch:
         if status == -1 or not valid_structure:
             error_message = "\nx  ERROR: The structure is not valid or no conformers were obtained from this SMILES string"
             self.args.log.write(error_message)
-            sys.exit(-1)
 
-        if self.args.program == "crest":
+        if self.args.program == "crest" and valid_structure:
             shutil.rmtree(f'{self.csearch_folder}/../crest_xyz')
 
         n_seconds = round(time.time() - start_time, 2)
@@ -450,7 +452,8 @@ class csearch:
 
         if rdmols is None:
             self.args.log.write("\nCould not open " + name + self.args.output)
-            sys.exit(-1)
+            self.args.log.finalize()
+            sys.exit()
 
         for i, rd_mol_i in enumerate(rdmols):
             if coord_Map is None and alg_Map is None and mol_template is None:
@@ -588,6 +591,7 @@ class csearch:
                 sdwriter.write(mol, conf)
             except:
                 pass
+
             return 1
 
         total = 0

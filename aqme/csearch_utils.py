@@ -36,9 +36,8 @@ def load_template(complex_type, log):
 	folder = TEMPLATES_PATH
 
 	if not folder.exists():
-		log.write(
-			"x The templates folder was not found, probably due to a problem while installing AQME"
-		)
+		log.write("x The templates folder was not found, probably due to a problem while installing AQME")
+		log.finalize()
 		sys.exit()
 
 	file_template = folder / Path(type2template[complex_type])
@@ -578,9 +577,8 @@ def generate_mol_from_csv(args, csv_smiles, index):
 		try:
 			smiles = csv_smiles.loc[index, "smiles"]
 		except KeyError:
-			args.log.write(
-				"\nx  Make sure the CSV file contains a column called 'SMILES' or 'smiles' with the SMILES of the molecules!"
-			)
+			args.log.write("\nx  Make sure the CSV file contains a column called 'SMILES' or 'smiles' with the SMILES of the molecules!")
+			args.log.finalize()
 			sys.exit()
 
 	try:
@@ -589,9 +587,8 @@ def generate_mol_from_csv(args, csv_smiles, index):
 		else:
 			name = f'{args.prefix}_{csv_smiles.loc[index, "code_name"]}'
 	except KeyError:
-		args.log.write(
-			"\nx  Make sure the CSV file contains a column called 'code_name' with the names of the molecules!"
-		)
+		args.log.write("\nx  Make sure the CSV file contains a column called 'code_name' with the names of the molecules!")
+		args.log.finalize()
 		sys.exit()
 
 	constraints_atoms = args.constraints_atoms
@@ -645,7 +642,7 @@ def prepare_com_files(args,csearch_file):
 	job_inputs = []
 
 	if csearch_file.split('.')[1] in ["gjf","com"]:
-		xyz_file, _, _ = com_2_xyz(csearch_file, args.charge, args.mult)
+		xyz_file, _, _ = com_2_xyz(csearch_file)
 	else:
 		xyz_file = csearch_file
 	xyz_2_sdf(xyz_file)
@@ -728,6 +725,7 @@ def minimize_rdkit_energy(mol, conf, log, FF, maxsteps):
 
 	if FF not in ["MMFF", "UFF"] or forcefield is None:
 		log.write(f" Force field {FF} not supported!")
+		log.finalize()
 		sys.exit()
 
 	forcefield.Initialize()

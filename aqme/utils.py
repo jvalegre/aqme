@@ -63,7 +63,7 @@ def load_from_yaml(self):
 						setattr(self, param, param_list[param])
 
 	except UnboundLocalError:
-		txt_yaml = "\nx  The specified yaml file containing parameters was not found! Make sure that the valid params file is in the folder where you are running the code.\n"
+		txt_yaml = "\nx  The specified yaml file containing parameters was not found! Make sure that the valid params file is in the folder where you are running the code."
 
 	return self,txt_yaml
 
@@ -259,9 +259,8 @@ def smi_to_mol(
 
 	if len(smi) > 1:
 		if program not in ["crest"]:
-			log.write(
-				"\nx  Program not supported for conformer generation of complexes! Specify: program='crest' for complexes"
-			)
+			log.write("\nx  Program not supported for conformer generation of complexes! Specify: program='crest' for complexes")
+			log.finalize()
 			sys.exit()
 
 		mol = nci_ts_mol(smi)
@@ -384,29 +383,30 @@ def rules_get_charge(mol, args, type):
 			charge_rules[i] = atom.GetFormalCharge()
 	# recognizes charged N and O atoms in metal ligands (added to the first metal of the list as default)
 	# this group contains atoms that do not count as separate charge groups (i.e. N from Py ligands)
-	# if len(neighbours) > 0:
-	#     invalid_charged_atoms = M_ligands + N_carbenes + bridge_atoms
-	#     for atom in mol.GetAtoms():
-	#         if atom.GetIdx() not in invalid_charged_atoms:
-	#             if atom.GetSymbol() in N_group:
-	#                 if atom.GetTotalValence() == 4:
-	#                     charge_rules[0] = charge_rules[0] + 1
-	#             if atom.GetSymbol() in O_group:
-	#                 if atom.GetTotalValence() == 1:
-	#                     charge_rules[0] = charge_rules[0] - 1
+	if len(neighbours) > 0:
+		invalid_charged_atoms = M_ligands + N_carbenes + bridge_atoms
+		for atom in mol.GetAtoms():
+			if atom.GetIdx() not in invalid_charged_atoms:
+				if atom.GetSymbol() in N_group:
+					if atom.GetTotalValence() == 4:
+						charge_rules[0] = charge_rules[0] + 1
+				if atom.GetSymbol() in O_group:
+					if atom.GetTotalValence() == 1:
+						charge_rules[0] = charge_rules[0] - 1
 
-	# if metal_found:
-	if type == "csearch":
-		return np.sum(charge_rules)  # , metal_found
-	elif type == "cmin":
-		return charge_rules  # , metal_found
+	if metal_found:
+		if type == "csearch":
+			return np.sum(charge_rules)
+		if type == "cmin":
+			return charge_rules
+
 	# for organic molecules when using a list containing organic and organometallics molecules mixed
-	# else:
-	#     charge = Chem.GetFormalCharge(mol)
-	#     if type == "csearch":
-	#         return charge, metal_found
-	#     elif type == "cmin":
-	#         return [charge], metal_found
+	else:
+		charge = Chem.GetFormalCharge(mol)
+		if type == "csearch":
+			return charge, metal_found
+		if type == "cmin":
+			return [charge], metal_found
 
 
 def substituted_mol(self, mol, checkI):
@@ -581,7 +581,7 @@ def command_line_args():
 			kwargs[arg_name] = value
 	
 	# Second, load all the default variables as an "add_option" object
-	args = load_variables(kwargs,_)
+	args = load_variables(kwargs,'command')
 
 	return args
 
@@ -599,59 +599,69 @@ def load_variables(kwargs,aqme_module):
 	if self.varfile is not None:
 		self,txt_yaml = load_from_yaml(self)
 	
-	self.initial_dir = Path(os.getcwd())
-	self.w_dir_main = Path(self.w_dir_main)
-	if self.isom_type is not None:
-		self.isom_inputs = Path(self.isom_inputs)
+	if aqme_module != 'command':
+		self.initial_dir = Path(os.getcwd())
+		self.w_dir_main = Path(self.w_dir_main)
+		if self.isom_type is not None:
+			self.isom_inputs = Path(self.isom_inputs)
 
-	# go to working folder and detect files
-	os.chdir(self.w_dir_main)
-	if not isinstance(self.files, list):
-		if not isinstance(self.files, Mol):
-			self.files = glob.glob(self.files)
-		else:
-			self.files = [self.files]
-
-	# start a log file to track the QCORR module
-	error_setup = False
-	logger_2 = 'data'
-	if aqme_module == 'qcorr':
-		# detects cycle of analysis (0 represents the starting point)
-		self.round_num,self.resume_qcorr = check_run(self.w_dir_main)
-		logger_1 = 'QCORR-run'
-		logger_2 = f'{str(self.round_num)}'
-
-	if aqme_module == 'csearch':
-		logger_1 = 'CSEARCH'
-
-	if aqme_module == 'qprep':
-		logger_1 = 'QPREP'
-
-	if aqme_module in ['csearch','qprep','qcorr']:
+		# go to working folder and detect files
+		error_setup = False
 		try:
-			self.log = Logger(self.w_dir_main / logger_1,logger_2)
+			os.chdir(self.w_dir_main)
 		except FileNotFoundError:
-			self.log.write('x  The PATH specified as input in the w_dir_main option might be invalid!')
+			txt_yaml += '\nx  The PATH specified as input in the w_dir_main option might be invalid!'
+			error_setup = True
+		
+		if error_setup:
+			self.w_dir_main = Path(os.getcwd())
+
+		if not isinstance(self.files, list):
+			if not isinstance(self.files, Mol):
+				self.files = glob.glob(self.files)
+			else:
+				self.files = [self.files]
+
+		# start a log file to track the QCORR module
+		logger_1, logger_2 = 'AQME', 'data'
+		if aqme_module == 'qcorr':
+			# detects cycle of analysis (0 represents the starting point)
+			self.round_num,self.resume_qcorr = check_run(self.w_dir_main)
+			logger_1 = 'QCORR-run'
+			logger_2 = f'{str(self.round_num)}'
+
+		elif aqme_module == 'csearch':
+			logger_1 = 'CSEARCH'
+
+		elif aqme_module == 'qprep':
+			logger_1 = 'QPREP'
+		
+		if txt_yaml not in ['', f'\no  Importing AQME parameters from {self.varfile}', "\nx  The specified yaml file containing parameters was not found! Make sure that the valid params file is in the folder where you are running the code.\n"]:
+			self.log = Logger(self.w_dir_main / logger_1,logger_2)
+			self.log.write(txt_yaml)
 			error_setup = True
 
-	if txt_yaml not in ['', f'\no  Importing AQME parameters from {self.varfile}', "\nx  The specified yaml file containing parameters was not found! Make sure that the valid params file is in the folder where you are running the code.\n"]:
-		self.log.write(txt_yaml)
-		self.log.finalize()
-		sys.exit()
+		if not error_setup:
+			if not self.command_line:
+				self.log = Logger(self.w_dir_main / logger_1,logger_2)
+			else:
+				# prevents errors when using command lines and running to remote directories
+				path_command = Path(f'{os.getcwd()}')
+				self.log = Logger(path_command / logger_1,logger_2)
 
-	if self.command_line:
-		self.log.write(f"Command line used in AQME: aqme {' '.join([str(elem) for elem in sys.argv[1:]])}")
+			if self.command_line:
+				self.log.write(f"\nCommand line used in AQME: aqme {' '.join([str(elem) for elem in sys.argv[1:]])}")
 
-	if aqme_module in ['qcorr','qprep']:
-		if len(self.files) == 0:
-			self.log.write(f'x  There are no output files in {self.w_dir_main}.')
-			error_setup = True
+			if aqme_module in ['qcorr','qprep']:
+				if len(self.files) == 0:
+					self.log.write(f'x  There are no output files in {self.w_dir_main}.')
+					error_setup = True
 
-	if error_setup:
-		# this is added to avoid path problems in jupyter notebooks
-		self.log.finalize()
-		os.chdir(self.initial_dir)
-		sys.exit()
+		if error_setup:
+			# this is added to avoid path problems in jupyter notebooks
+			self.log.finalize()
+			os.chdir(self.initial_dir)
+			sys.exit()
 	
 	return self
 

@@ -75,7 +75,7 @@ def full_check(w_dir_main=os.getcwd(),destination_fullcheck='',files='*.json'):
 
 	if not isinstance(files, list):
 		files = glob.glob(files)
-	
+
 	df_fullcheck = pd.DataFrame(columns=['file', 'program', 'grid_type', 'level_of_theory', 'dispersion', 'solvation'])
 	
 	for file in files:

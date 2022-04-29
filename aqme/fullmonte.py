@@ -118,7 +118,8 @@ def generating_conformations_fullmonte(
     fmmols = Chem.SDMolSupplier(name + "_" + "rdkit" + args.output, removeHs=False)
     if fmmols is None:
         args.log.write("Could not open " + name + args.output)
-        sys.exit(-1)
+        args.log.finalize()
+        sys.exit()
 
     # array for each each unique from rdkit
     unique_mol, c_energy, unique_mol_sample = [], [], []
