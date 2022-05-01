@@ -7,5 +7,5 @@ conda install -c conda-forge openbabel
 
 Install AQME and its dependencies
 pip install aqme
-or
-python setup.py install
+python setup.py install (from the folder containing setup.py)
+pip install .  (from the folder containing setup.py)
