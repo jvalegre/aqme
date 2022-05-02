@@ -43,8 +43,12 @@ class qdescp:
                     for conf_file in glob.glob(f"{name}_conf_*.xyz"):
                         if self.args.charge is None:
                             charge_xyz, _ = read_xyz_charge_mult(conf_file)
+                        else:
+                            charge_xyz = self.args.charge
                         if self.args.mult is None:
                             _, mult_xyz = read_xyz_charge_mult(conf_file)
+                        else:
+                            mult_xyz = self.args.mult
                         xyz_files.append(conf_file)
                         xyz_charges.append(charge_xyz)
                         xyz_mults.append(mult_xyz)
@@ -63,13 +67,6 @@ class qdescp:
                         stdout=subprocess.DEVNULL,
                         stderr=subprocess.DEVNULL,
                     )
-                    _, charges, mults, IDs = mol_from_sdf_or_mol_or_mol2(
-                        file, "csearch"
-                    )
-                    for count, f in enumerate(glob.glob(f"{name}_conf_*.xyz")):
-                        xyz_files.append(f)
-                        xyz_charges.append(charges[count])
-                        xyz_mults.append(mults[count])
 
                 elif file.split(".")[1].lower() == "sdf":
                     command_sdf = [
@@ -85,20 +82,27 @@ class qdescp:
                         stdout=subprocess.DEVNULL,
                         stderr=subprocess.DEVNULL,
                     )
-                    _, charges, mults, IDs = mol_from_sdf_or_mol_or_mol2(
-                        file, "csearch"
-                    )
-                    for count, f in enumerate(glob.glob(f"{name}_conf_*.xyz")):
-                        xyz_files.append(f)
-                        xyz_charges.append(charges[count])
-                        xyz_mults.append(mults[count])
 
-                print(xyz_files, xyz_charges, xyz_mults)
-                for xyz_file, charge, mult in zip(xyz_files, xyz_charges, xyz_mults):
-                    name = xyz_file.split(".")[0]
-                    self.run_sp_xtb(xyz_file, charge, mult, name, destination)
-                    self.collect_xtb_properties()
-                    self.cleanup(name, destination)
+            if file.split(".")[1].lower() in ["sdf", "pdb"]:
+                if self.args.charge is None:
+                    _, charges, _, _ = mol_from_sdf_or_mol_or_mol2(file, "csearch")
+                else:
+                    charges = [self.args.charge] * len(glob.glob(f"{name}_conf_*.xyz"))
+                if self.args.mult is None:
+                    _, _, mults, _ = mol_from_sdf_or_mol_or_mol2(file, "csearch")
+                else:
+                    mults = [self.args.mult] * len(glob.glob(f"{name}_conf_*.xyz"))
+
+                for count, f in enumerate(glob.glob(f"{name}_conf_*.xyz")):
+                    xyz_files.append(f)
+                    xyz_charges.append(charges[count])
+                    xyz_mults.append(mults[count])
+
+            for xyz_file, charge, mult in zip(xyz_files, xyz_charges, xyz_mults):
+                name = xyz_file.split(".")[0]
+                self.run_sp_xtb(xyz_file, charge, mult, name, destination)
+                self.collect_xtb_properties()
+                self.cleanup(name, destination)
 
     def run_sp_xtb(self, xyz_file, charge, mult, name, destination):
         """

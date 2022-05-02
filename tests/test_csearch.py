@@ -35,6 +35,7 @@ if not os.path.exists(csearch_input_dir):
     os.mkdir(csearch_input_dir)
 if not os.path.exists(csearch_varfile_dir):
     os.mkdir(csearch_varfile_dir)
+
 # tests for varfile
 @pytest.mark.parametrize(
     "varfile, nameinvarfile, output_nummols",
@@ -635,9 +636,37 @@ def test_csearch_methods(
     os.chdir(w_dir_main)
 
 
-# shutil.rmtree(csearch_methods_dir + "/CSEARCH")
-# shutil.rmtree(csearch_rdkit_summ_dir + "/CSEARCH")
-# shutil.rmtree(csearch_fullmonte_dir + "/CSEARCH")
-# shutil.rmtree(csearch_crest_dir + "/CSEARCH")
-# shutil.rmtree(csearch_others_dir + "/CSEARCH")
-# shutil.rmtree(csearch_input_dir + "/CSEARCH")
+# tests for removing foler
+@pytest.mark.parametrize(
+    "remove, folder, file",
+    [
+        # tests for conformer generation with RDKit
+        (
+            True,
+            "tests/csearch_methods/CSEARCH",
+            "tests/csearch_methods/CSEARCH_*",
+        ),
+        (
+            True,
+            "tests/csearch_rdkit_summ/CSEARCH",
+            "tests/csearch_rdkit_summ/CSEARCH_*",
+        ),
+        (
+            True,
+            "tests/csearch_fullmonte/CSEARCH",
+            "tests/csearch_fullmonte/CSEARCH_*",
+        ),
+        (True, "tests/csearch_crest/CSEARCH", "tests/csearch_crest/CSEARCH_*"),
+        (True, "tests/csearch_others/CSEARCH", "tests/csearch_others/CSEARCH_*"),
+        (True, "tests/csearch_input/CSEARCH", "tests/csearch_input/CSEARCH_*"),
+        (
+            True,
+            "tests/csearch_varfile/CSEARCH",
+            "tests/csearch_varfile/CSEARCH_*",
+        ),
+    ],
+)
+def test_remove(remove, folder, file):
+    os.chdir(w_dir_main)
+    shutil.rmtree(folder)
+    os.remove(file)

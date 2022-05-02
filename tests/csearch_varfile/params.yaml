@@ -1,0 +1,4 @@
+smi : CCCC
+program : rdkit
+csearch : True
+name : pentane_varfile
