@@ -31,6 +31,7 @@ from aqme.cmin import cmin
 from aqme.qprep import qprep
 from aqme.utils import command_line_args
 from aqme.qcorr import qcorr
+from aqme.qdescp import qdescp
 
 
 def main():
@@ -50,6 +51,7 @@ def main():
             smi=args.smi,
             name=args.name,
             w_dir_main=args.w_dir_main,
+            destination=arg.destination,
             charge=args.charge,
             mult=args.mult,
             sample=args.sample,
@@ -185,20 +187,11 @@ def main():
             w_dir_main=args.w_dir_main,
             destination=args.destination,
             files=args.files,
+            charge=args.charge,
+            mult=args.mult,
+            qdescp_temp=args.qdescp_temp,
+            qdescp_acc=args.qdescp_acc,
         )
-
-    # if args.qpred == "nmr":
-    #     nmr_main(args, log_overall, w_dir_main)
-    # if args.qpred == "energy":
-    #     energy_main(args, log_overall, w_dir_main)
-    # if args.qpred == "dbstep":
-    #     dbstep_par_main(args, log_overall, w_dir_main)
-    # if args.qpred == "nics":
-    #     nics_par_main(args, log_overall, w_dir_main)
-    # if args.qpred == "cclib-json":
-    #     cclib_main(args, log_overall, w_dir_main)
-    # os.chdir(w_dir_main)
-    #
 
 
 if __name__ == "__main__":

@@ -118,6 +118,9 @@ var_dict = {
     "crest_force": 0.5,
     "prefix": "",
     "complex": False,
+    "qdescp": False,
+    "qdescp_temp": 300,
+    "qdescp_acc": 0.2,
 }
 
 

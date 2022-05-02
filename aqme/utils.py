@@ -592,7 +592,7 @@ def command_line_args():
         "cmin",
         "qprep",
         "qcorr",
-        "qstat",
+        "qdescp",
         "qpred",
         "metal_complex",
         "time",
@@ -696,7 +696,7 @@ def load_variables(kwargs, aqme_module):
             logger_1 = "QPREP"
 
         elif aqme_module == "qdescp":
-            logger_1 = "QPREP"
+            logger_1 = "QDESCP"
 
         if txt_yaml not in [
             "",
