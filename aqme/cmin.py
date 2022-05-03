@@ -25,8 +25,7 @@ from aqme.utils import (
     rules_get_charge,
     load_variables,
     substituted_mol,
-    creation_of_dup_csv_cmin,
-)
+    creation_of_dup_csv_cmin)
 from aqme.filter import ewin_filter, pre_E_filter, RMSD_and_E_filter
 
 hartree_to_kcal = 627.509
@@ -48,9 +47,7 @@ class cmin:
         # load default and user-specified variables
         self.args = load_variables(kwargs, "cmin")
         if self.args.program not in ["xtb", "ani"]:
-            self.args.log.write(
-                "\nx  Program not supported for conformer generation! Specify: program='xtb' (or ani)"
-            )
+            self.args.log.write("\nx  Program not supported for conformer generation! Specify: program='xtb' (or ani)")
             self.args.log.finalize()
             sys.exit()
 
@@ -127,6 +124,7 @@ class cmin:
         cenergy, outmols = [], []
         start_time = time.time()
 
+
         charge = rules_get_charge(self.mols[0], self.args, "cmin")
         mult = []
         for Atom in self.mols[0].GetAtoms():
@@ -162,7 +160,7 @@ class cmin:
                     dup_data,
                     dup_data_idx,
                     charge,
-                    mult,
+                    mult
                 )
 
                 if not ani_incompatible:
@@ -419,9 +417,7 @@ class cmin:
                 coordinates = np.zeros((1, 3))
 
         elif program == "xtb":
-            energy, coordinates = self.xtb_calc(
-                elements, coordinates, args, log, charge, mult
-            )
+            energy, coordinates = self.xtb_calc(elements, coordinates, args, log, charge, mult)
         else:
             log.write(
                 "x  Option not compatible with CMIN (check the available options)!"
@@ -464,7 +460,7 @@ def rdkit_sdf_read(file, args):
     Reads sdf files and stops the execution if the file was not accesible.                                                                                                                                                                                      rdkit.Chem.Mol objects
     """
     inmols = Chem.SDMolSupplier(file, removeHs=False)
-
+    
     if inmols is None:
         args.log.write(f"Could not open {name}{args.output}")
         args.log.finalize()

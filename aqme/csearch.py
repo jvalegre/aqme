@@ -29,7 +29,7 @@ from aqme.csearch_utils import (
     template_embed,
     creation_of_dup_csv_csearch,
     minimize_rdkit_energy,
-    com_2_xyz,
+    com_2_xyz
 )
 from aqme.fullmonte import generating_conformations_fullmonte, realign_mol
 from aqme.utils import (
@@ -50,8 +50,7 @@ class csearch:
     Parameters
     ----------
     kwargs : argument class
-
-    Specify any arguments from the CSEARCH module (for a complete list of variables, visit the AQME documentation)
+                    Specify any arguments from the CSEARCH module (for a complete list of variables, visit the AQME documentation)
     """
 
     def __init__(self, **kwargs):
@@ -59,18 +58,8 @@ class csearch:
         start_time_overall = time.time()
         # load default and user-specified variables
         self.args = load_variables(kwargs, "csearch")
-
         if self.args.program.lower() not in ["rdkit", "summ", "fullmonte", "crest"]:
-            self.args.log.write(
-                "\nx  Program not supported for CSEARCH conformer generation! Specify: program='rdkit' (or summ, fullmonte, crest)"
-            )
-            self.args.log.finalize()
-            sys.exit()
-
-        if self.args.smi is None and self.args.input == "":
-            self.args.log.write(
-                "\nx  Program requires either a SMILES or an input file to proceed! Please look up acceptable file formats. Specify: smi='CCC' (or input='filename.csv')"
-            )
+            self.args.log.write("\nx  Program not supported for CSEARCH conformer generation! Specify: program='rdkit' (or summ, fullmonte, crest)")
             self.args.log.finalize()
             sys.exit()
 
@@ -89,21 +78,15 @@ class csearch:
 
             else:
                 job_inputs = self.load_jobs(csearch_file)
-
-            self.args.log.write(
-                f"\nStarting CSEARCH with {len(job_inputs)} job(s) (SDF, XYZ, CSV, etc. files might contain multiple jobs/structures inside)\n"
-            )
+            
+            self.args.log.write(f"\nStarting CSEARCH with {len(job_inputs)} job(s) (SDF, XYZ, CSV, etc. files might contain multiple jobs/structures inside)\n")
 
             # runs the conformer sampling with multiprocessors
             self.run_csearch(job_inputs)
 
             # store all the information into a CSV file
-            csearch_file_no_path = (
-                csearch_file.replace("/", "\\").split("\\")[-1].split(".")[0]
-            )
-            self.csearch_csv_file = self.args.w_dir_main.joinpath(
-                f"CSEARCH-Data-{csearch_file_no_path}.csv"
-            )
+            csearch_file_no_path = csearch_file.replace('/','\\').split("\\")[-1].split('.')[0]
+            self.csearch_csv_file = self.args.w_dir_main.joinpath(f"CSEARCH-Data-{csearch_file_no_path}.csv")
             self.final_dup_data.to_csv(self.csearch_csv_file, index=False)
 
             elapsed_time = round(time.time() - start_time_overall, 2)
@@ -113,27 +96,13 @@ class csearch:
             # this is added to avoid path problems in jupyter notebooks
             os.chdir(self.args.initial_dir)
 
-    def load_jobs(self, csearch_file):
+    def load_jobs(self,csearch_file):
         """
         Load information of the different molecules for conformer generation
         """
 
-        SUPPORTED_INPUTS = [
-            ".smi",
-            ".sdf",
-            ".cdx",
-            ".csv",
-            ".com",
-            ".gjf",
-            ".mol",
-            ".mol2",
-            ".xyz",
-            ".txt",
-            ".yaml",
-            ".yml",
-            ".rtf",
-            ".pdb",
-        ]
+        SUPPORTED_INPUTS = [".smi",".sdf",".cdx",".csv",".com",".gjf",".mol",
+                            ".mol2",".xyz",".txt",".yaml",".yml",".rtf",".pdb"]
 
         file_format = os.path.splitext(csearch_file)[1]
         # Checks
@@ -166,7 +135,7 @@ class csearch:
 
         # Prepare the jobs
         prepare_function = Extension2inputgen[file_format]
-        job_inputs = prepare_function(self.args, csearch_file)
+        job_inputs = prepare_function(self.args,csearch_file) 
 
         return job_inputs
 
@@ -174,9 +143,7 @@ class csearch:
         # create the dataframe to store the data
         self.final_dup_data = creation_of_dup_csv_csearch(self.args.program)
 
-        bar = IncrementalBar(
-            "o  Number of finished jobs from CSEARCH", max=len(job_inputs)
-        )
+        bar = IncrementalBar("o  Number of finished jobs from CSEARCH", max=len(job_inputs))
         with futures.ProcessPoolExecutor(
             max_workers=self.args.max_workers, mp_context=mp.get_context("spawn")
         ) as executor:
@@ -187,8 +154,6 @@ class csearch:
                 (
                     smi_,
                     name_,
-                    charge_,
-                    mult_,
                     constraints_atoms_,
                     constraints_dist_,
                     constraints_angle_,
@@ -198,8 +163,6 @@ class csearch:
                     self.compute_confs(
                         smi_,
                         name_,
-                        charge_,
-                        mult_,
                         constraints_atoms_,
                         constraints_dist_,
                         constraints_angle_,
@@ -228,29 +191,15 @@ class csearch:
                 os.remove(file)
 
     def compute_confs(
-        self,
-        smi,
-        name,
-        charge,
-        mult,
-        constraints_atoms,
-        constraints_dist,
-        constraints_angle,
-        constraints_dihedral,
+        self, smi, name, constraints_atoms, constraints_dist, constraints_angle, constraints_dihedral
     ):
         """
         Function to start conformer generation
         """
-
+        
         if self.args.smi is not None:
-            (
-                mol,
-                self.args.constraints_dist,
-                self.args.constraints_angle,
-                self.args.constraints_dihedral,
-            ) = smi_to_mol(
+            mol = smi_to_mol(
                 smi,
-                name,
                 self.args.program,
                 self.args.log,
                 constraints_dist,
@@ -259,23 +208,9 @@ class csearch:
             )
 
         else:
-            if self.args.input.split(".")[1] in [
-                "smi",
-                "csv",
-                "cdx",
-                "txt",
-                "yaml",
-                "yml",
-                "rtf",
-            ]:
-                (
-                    mol,
-                    self.args.constraints_dist,
-                    self.args.constraints_angle,
-                    self.args.constraints_dihedral,
-                ) = smi_to_mol(
+            if self.args.input.split('.')[1] in ["smi","csv","cdx","txt","yaml","yml","rtf"]:
+                mol = smi_to_mol(
                     smi,
-                    name,
                     self.args.program,
                     self.args.log,
                     constraints_dist,
@@ -283,29 +218,10 @@ class csearch:
                     constraints_dihedral,
                 )
             else:
-                (
-                    mol,
-                    self.args.constraints_dist,
-                    self.args.constraints_angle,
-                    self.args.constraints_dihedral,
-                ) = (smi, constraints_dist, constraints_angle, constraints_dihedral)
-
-        if mol is None:
-            self.args.log.write(
-                f"\nx  Failed to convert the provided SMILES ({smi}) to RDkit Mol object! Please check the starting smiles."
-            )
-            self.args.log.finalize()
-            sys.exit()
-
-        if self.args.charge is None:
-            self.args.charge = charge
-        if self.args.mult is None:
-            self.args.mult = mult
+                mol = smi
 
         if self.args.destination is None:
-            self.csearch_folder = Path(self.args.w_dir_main).joinpath(
-                f"CSEARCH/{self.args.program}"
-            )
+            self.csearch_folder = Path(self.args.w_dir_main).joinpath(f"CSEARCH/{self.args.program}")
         else:
             self.csearch_folder = Path(self.args.destination)
         self.csearch_folder.mkdir(exist_ok=True, parents=True)
@@ -378,9 +294,9 @@ class csearch:
                         data = self.conformer_generation(
                             mol_obj,
                             name_in,
-                            constraints_atoms,
-                            constraints_dist,
-                            constraints_angle,
+                            constraints_atoms, 
+                            constraints_dist, 
+                            constraints_angle, 
                             constraints_dihedral,
                             coord_map,
                             alg_map,
@@ -394,39 +310,17 @@ class csearch:
                     )
                     total_data = None
             else:
-                total_data = self.conformer_generation(
-                    mol,
-                    name,
-                    constraints_atoms,
-                    constraints_dist,
-                    constraints_angle,
-                    constraints_dihedral,
-                )
+                total_data = self.conformer_generation(mol, name, constraints_atoms, constraints_dist, constraints_angle, constraints_dihedral)
         else:
-            total_data = self.conformer_generation(
-                mol,
-                name,
-                constraints_atoms,
-                constraints_dist,
-                constraints_angle,
-                constraints_dihedral,
-            )
+            total_data = self.conformer_generation(mol, name, constraints_atoms, constraints_dist, constraints_angle, constraints_dihedral)
 
         # Updates the dataframe with infromation about conformer generation
         frames = [self.final_dup_data, total_data]
         self.final_dup_data = pd.concat(frames, ignore_index=True, sort=True)
 
     def conformer_generation(
-        self,
-        mol,
-        name,
-        constraints_atoms,
-        constraints_dist,
-        constraints_angle,
-        constraints_dihedral,
-        coord_Map=None,
-        alg_Map=None,
-        mol_template=None,
+        self, mol, name, constraints_atoms, constraints_dist, constraints_angle, constraints_dihedral,
+        coord_Map=None, alg_Map=None, mol_template=None
     ):
         """
         Function to load mol objects and create 3D conformers
@@ -441,52 +335,37 @@ class csearch:
 
         self.args.log.write(f"\n   ----- {name} -----")
 
-        ### Fixing all charges here
-
-        # user can overwrite charge and mult with the corresponding arguments
-        if self.args.charge is not None:
-            charge = self.args.charge
-
-        elif self.args.charge is None:
-            if not self.args.metal_complex:
-                charge = Chem.GetFormalCharge(mol)
-            else:
-                charge = rules_get_charge(mol, self.args, "csearch")
-        else:
-            charge = 0
-
-        if self.args.mult is not None:
-            mult = self.args.mult
-        elif self.args.mult is None:
-            if not self.args.metal_complex:
-                NumRadicalElectrons = 0
-                for Atom in mol.GetAtoms():
-                    NumRadicalElectrons += Atom.GetNumRadicalElectrons()
-                TotalElectronicSpin = NumRadicalElectrons / 2
-                mult = int((2 * TotalElectronicSpin) + 1)
-        else:
-            mult = 1
-
-        dup_data.at[dup_data_idx, "Real charge"] = charge
-        dup_data.at[dup_data_idx, "Mult"] = mult
-
         # inputs that go through CREST containing 3D coordinates don't require a previous RDKit conformer sampling
-        if (
-            self.args.program in ["crest"]
-            and self.args.smi is None
-            and self.args.input.split(".")[1]
-            in [
-                "pdb",
-                "mol2",
-                "mol",
-                "sdf",
-                "gjf",
-                "com",
-                "xyz",
-            ]
-        ):
+        if self.args.program in ["crest"] and self.args.input.split('.')[1] in ["pdb","mol2","mol","sdf","gjf","com","xyz"]:
             valid_structure = True
+            # read charges and mult from GJF/COM input files
+            if self.args.input.split('.')[1] in ["gjf","com"]:
+                _, charge, mult = get_info_input(f'{name}.{self.args.input.split(".")[1]}')
+            elif self.args.input.split('.')[1] == "sdf":
+                # use AQME format ("Real charges" and "Mult" section)
+                with mol_from_sdf_or_mol_or_mol2(f'{name}.{self.args.input.split(".")[1]}','qprep') as mols:
+                    for _, mol in enumerate(mols):
+                        _,_,charge,mult,_ = self.qprep_coords(f'{name}.{self.args.input.split(".")[1]}',mol)
+            elif self.args.input.split('.')[1] == "xyz":
+                # use AQME format (charge=INT mult=INT)
+                charge,mult = read_xyz_charge_mult(f'{name}.{self.args.input.split(".")[1]}')
+        
 
+            # user can overwrite charge and mult with the corresponding arguments
+            if self.args.charge is not None:
+                charge = self.args.charge
+            if self.args.mult is not None:
+                mult = self.args.charge
+
+            # if no charge and mult was found, defaults to 0 and 1
+            elif charge is None:
+                charge = 0
+            elif mult is None:
+                mult =  1
+
+            dup_data.at[dup_data_idx, "Overall charge"] = charge
+            dup_data.at[dup_data_idx, "Mult"] = mult
+            
             status = crest_opt(
                 f"{name}_{self.args.program}",
                 dup_data,
@@ -502,15 +381,11 @@ class csearch:
             )
 
         else:
-            name = name.replace("/", "\\").split("\\")[-1].split(".")[0]
-            self.csearch_file = self.csearch_folder.joinpath(
-                name + "_" + self.args.program + self.args.output
-            )
+            name = name.replace('/','\\').split("\\")[-1].split('.')[0]
+            self.csearch_file = self.csearch_folder.joinpath(name + "_" + self.args.program + self.args.output)
             self.sdwriter = Chem.SDWriter(str(self.csearch_file))
 
-            valid_structure = filters(
-                mol, self.args.log, self.args.max_mol_wt, self.args.verbose
-            )
+            valid_structure = filters(mol, self.args.log, self.args.max_mol_wt, self.args.verbose)
             if valid_structure:
                 try:
                     # the conformational search for RDKit
@@ -519,8 +394,6 @@ class csearch:
                         name,
                         dup_data,
                         dup_data_idx,
-                        charge,
-                        mult,
                         constraints_atoms,
                         constraints_dist,
                         constraints_angle,
@@ -538,8 +411,8 @@ class csearch:
             error_message = "\nx  ERROR: The structure is not valid or no conformers were obtained from this SMILES string"
             self.args.log.write(error_message)
 
-        # if self.args.program == "crest" and valid_structure:
-        #     shutil.rmtree(f"{self.csearch_folder}/../crest_xyz")
+        if self.args.program == "crest" and valid_structure:
+            shutil.rmtree(f'{self.csearch_folder}/../crest_xyz')
 
         n_seconds = round(time.time() - start_time, 2)
         dup_data.at[dup_data_idx, "CSEARCH time (seconds)"] = n_seconds
@@ -552,8 +425,6 @@ class csearch:
         name,
         dup_data,
         dup_data_idx,
-        charge,
-        mult,
         constraints_atoms,
         constraints_dist,
         constraints_angle,
@@ -574,15 +445,13 @@ class csearch:
             dup_data,
             dup_data_idx,
             self.sdwriter,
-            charge,
-            mult,
             coord_Map,
             alg_Map,
             mol_template,
             constraints_atoms,
             constraints_dist,
             constraints_angle,
-            constraints_dihedral,
+            constraints_dihedral
         )
         # reads the initial SDF files from RDKit and uses dihedral scan if selected
         if status not in [-1, 0]:
@@ -744,8 +613,8 @@ class csearch:
                 set_metal_atomic_number(mol, self.args.metal_idx, self.args.metal_sym)
             try:
                 sdwriter.write(mol, conf)
-            except (TypeError):
-                raise
+            except:
+                pass
 
             return 1
 
@@ -777,11 +646,7 @@ class csearch:
         Function to embed conformers
         """
 
-        is_sdf_mol_or_mol2 = os.path.splitext(self.args.input)[1].lower() in [
-            ".sdf",
-            ".mol",
-            ".mol2",
-        ]
+        is_sdf_mol_or_mol2 = os.path.splitext(self.args.input)[1].lower() in [".sdf",".mol",".mol2"]
 
         if is_sdf_mol_or_mol2:
             Chem.AssignStereochemistryFrom3D(mol)
@@ -869,7 +734,7 @@ class csearch:
 
         # writing charges and multiplicity after RDKit
         dup_data.at[dup_data_idx, "Mult"] = mult
-        dup_data.at[dup_data_idx, "Real charge"] = charge
+        dup_data.at[dup_data_idx, "Overall charge"] = charge
 
         for i, cid in enumerate(cids):
             outmols[cid].SetProp("_Name", name + " " + str(i + 1))
@@ -984,15 +849,13 @@ class csearch:
         dup_data,
         dup_data_idx,
         sdwriter,
-        charge,
-        mult,
         coord_Map,
         alg_Map,
         mol_template,
         constraints_atoms,
         constraints_dist,
         constraints_angle,
-        constraints_dihedral,
+        constraints_dihedral
     ):
 
         """
@@ -1002,6 +865,25 @@ class csearch:
         Chem.SanitizeMol(mol)
         mol = Chem.AddHs(mol)
         mol.SetProp("_Name", name)
+
+        if self.args.charge is None:
+            if not self.args.metal_complex:
+                charge = Chem.GetFormalCharge(mol)
+            else:
+                charge = rules_get_charge(mol, self.args, "csearch")
+        else:
+            charge = self.args.charge
+        if self.args.mult is None:
+            if not self.args.metal_complex:
+                NumRadicalElectrons = 0
+                for Atom in mol.GetAtoms():
+                    NumRadicalElectrons += Atom.GetNumRadicalElectrons()
+                TotalElectronicSpin = NumRadicalElectrons / 2
+                mult = int((2 * TotalElectronicSpin) + 1)
+            else:
+                mult = 1
+        else:
+            mult =  self.args.mult
 
         # detects and applies auto-detection of initial number of conformers
         if self.args.sample == "auto":
@@ -1089,11 +971,8 @@ class csearch:
             except IndexError:
                 status = -1
         else:
-            dup_data.at[dup_data_idx, "Real charge"] = charge
+            dup_data.at[dup_data_idx, "Overall charge"] = charge
             dup_data.at[dup_data_idx, "Mult"] = mult
-            Chem.EmbedMolecule(mol)
-            rdmolfiles.MolToXYZFile(mol, f"{name}_{self.args.program}.xyz")
-
             status = crest_opt(
                 f"{name}_{self.args.program}",
                 dup_data,

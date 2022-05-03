@@ -1,4 +1,5 @@
 ![](Logos/AQME_logo.jpg)
+
 [![Build Status](https://img.shields.io/travis/com/jvalegre/aqme?label=Linux%20CI&logo=Travis)](https://travis-ci.com/github/jvalegre/aqme)
 [![Tests](https://img.shields.io/static/v1?label=Tests&message=104&color=green&logo=Travis)](https://travis-ci.com/github/jvalegre/aqme)
 [![Codecov](https://img.shields.io/codecov/c/github/jvalegre/aqme?label=Codecov&logo=codecov)](https://codecov.io/gh/jvalegre/aqme)
