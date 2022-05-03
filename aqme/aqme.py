@@ -55,7 +55,7 @@ def main():
             sample=args.sample,
             max_workers=args.max_workers,
             metal_complex=args.metal_complex,
-            metal=args.metal_atoms,
+            metal_atoms=args.metal_atoms,
             metal_idx=args.metal_idx,
             complex_coord=args.complex_coord,
             metal_sym=args.metal_sym,

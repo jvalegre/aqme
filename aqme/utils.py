@@ -702,6 +702,7 @@ def QM_coords(outlines,min_RMS,n_atoms,program):
 				if outlines[i].find('Standard orientation:') > -1:
 					range_lines = [i+5,i+5+n_atoms]
 					break
+
 		for i in range(range_lines[0],range_lines[1]):
 			massno = int(outlines[i].split()[1])
 			if massno < len(per_tab):

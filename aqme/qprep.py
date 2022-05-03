@@ -316,6 +316,7 @@ class qprep:
 					outlines = read_file(os.getcwd(),os.getcwd(),file)
 				n_atoms = 0
 				resume_line = 0
+				found_n_atoms = False
 
 				for i,line in enumerate(outlines):
 					if line.find('Gaussian, Inc.'):
@@ -335,10 +336,13 @@ class qprep:
 							mult = int(outlines[i].split()[5].rstrip('\n'))
 						# get number of atoms
 						elif outlines[i].find('Symbolic Z-matrix:') > -1:
-							symbol_z_line = i
-						elif outlines[i].find('GradGrad') > -1:
-							gradgrad_line = i
-							n_atoms = gradgrad_line-symbol_z_line-4
+							for j in range(i+2,len(outlines)):
+								if len(outlines[j].split()) > 0:
+									n_atoms += 1
+								else:
+									found_n_atoms = True
+									break
+						elif found_n_atoms:
 							break
 
 				atom_types,cartesians = QM_coords(outlines,-1,n_atoms,program)
