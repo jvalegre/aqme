@@ -31,6 +31,7 @@ from aqme.cmin import cmin
 from aqme.qprep import qprep
 from aqme.utils import command_line_args
 from aqme.qcorr import qcorr
+from aqme.qdescp import qdescp
 
 
 def main():
@@ -41,7 +42,7 @@ def main():
     # load user-defined arguments from command line
     args = command_line_args()
     args.command_line = True
-    
+
     # CSEARCH
     if args.csearch:
         csearch(
@@ -50,6 +51,7 @@ def main():
             smi=args.smi,
             name=args.name,
             w_dir_main=args.w_dir_main,
+            destination=args.destination,
             charge=args.charge,
             mult=args.mult,
             sample=args.sample,
@@ -77,6 +79,7 @@ def main():
             max_torsions=args.max_torsions,
             varfile=args.varfile,
             program=args.program,
+            constraints_atoms=args.constraints_atoms,
             constraints_dist=args.constraints_dist,
             constraints_angle=args.constraints_angle,
             constraints_dihedral=args.constraints_dihedral,
@@ -91,7 +94,7 @@ def main():
             angle_off=args.angle_off,
             nprocs=args.nprocs,
             cregen=args.cregen,
-            cregen_keywords=args.cregen_keywords
+            cregen_keywords=args.cregen_keywords,
         )
 
     # CMIN
@@ -107,7 +110,7 @@ def main():
             charge=args.charge,
             mult=args.mult,
             metal_complex=args.metal_complex,
-            metal=args.metal_atoms,
+            metal_atoms=args.metal_atoms,
             metal_oxi=args.metal_oxi,
             complex_type=args.complex_type,
             ewin_cmin=args.ewin_cmin,
@@ -145,7 +148,8 @@ def main():
             gen_atoms=args.gen_atoms,
             bs_gen=args.bs_gen,
             bs_nogen=args.bs_nogen,
-			verbose=args.verbose)
+            verbose=args.verbose,
+        )
 
     # QCORR
     if args.qcorr:
@@ -175,36 +179,18 @@ def main():
             bs_nogen=args.bs_nogen,
         )
 
-    # # qdescp
-    # if args.qdescp in ["geometricdescp", "nmr", "dbstep", "nbo"]:
-    #     qdescp(
-    #         w_dir_main=args.w_dir_main,
-    #         destination=args.destination,
-    #         files=args.files,
-    #         json_files=args.json_files,
-    #         task=args.qdescp,
-    #         varfile=None,
-    #     )
-
-    # if args.qpred == "nmr":
-    #     nmr_main(args, log_overall, w_dir_main)
-    # if args.qpred == "energy":
-    #     energy_main(args, log_overall, w_dir_main)
-    # if args.qpred == "dbstep":
-    #     dbstep_par_main(args, log_overall, w_dir_main)
-    # if args.qpred == "nics":
-    #     nics_par_main(args, log_overall, w_dir_main)
-    # if args.qpred == "cclib-json":
-    #     cclib_main(args, log_overall, w_dir_main)
-    # os.chdir(w_dir_main)
-    #
-    # # qstat
-    # if args.qstat == "descp":
-    #     geom_par_main(args, log_overall, w_dir_main)
-    # if args.qstat == "graph":
-    #     graph_main(args, log_overall, w_dir_main)
-    # os.chdir(w_dir_main)
-    #
+    # qdescp
+    # required to do CSEARCH or have SDF files of coformers
+    if args.qdescp:
+        qdescp(
+            w_dir_main=args.w_dir_main,
+            destination=args.destination,
+            files=args.files,
+            charge=args.charge,
+            mult=args.mult,
+            qdescp_temp=args.qdescp_temp,
+            qdescp_acc=args.qdescp_acc,
+        )
 
 
 if __name__ == "__main__":
