@@ -256,7 +256,6 @@ def smi_to_mol(
     name,
     program,
     log,
-    complex,
     constraints_dist,
     constraints_angle,
     constraints_dihedral,
@@ -269,11 +268,7 @@ def smi_to_mol(
                 "\nx  Program not supported for conformer generation of complexes! Specify: program='crest' for complexes"
             )
             sys.exit()
-        if not complex:
-            log.write(
-                "\nx  Please specify that its is a complex! Specify: complex=True for complexes"
-            )
-            sys.exit()
+
         mol, constraints_dist, constraints_angle, constraints_dihedral = nci_ts_mol(
             smi, name, constraints_dist, constraints_angle, constraints_dihedral
         )

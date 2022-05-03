@@ -70,6 +70,7 @@ def crest_opt(
     args,
     charge,
     mult,
+    nci_ts_complex,
     constraints_atoms,
     constraints_dist,
     constraints_angle,
@@ -92,13 +93,16 @@ def crest_opt(
     shutil.move(f"{name}.xyz", xyzin)
 
     os.chdir(dat_dir)
-    # complex do xtb first for embeding
-    if args.complex:
+
+    # for systems that were created from 1D and 2D inputs (i.e. SMILES), this part includes two xTB
+    # constrained optimizations to avoid geometry problems in noncovalent complexes and transition states
+    if nci_ts_complex:
+        # xTB optimization with all bonds frozen
         xyzoutxtb1 = str(dat_dir) + "/" + name_no_path + "_xtb1.xyz"
         xyzoutxtb2 = str(dat_dir) + "/" + name_no_path + "_xtb2.xyz"
         all_fix = get_constraint(mol, constraints_dist)
 
-        constrained_sampling1 = create_xcontrol(
+        _ = create_xcontrol(
             args,
             constraints_atoms,
             all_fix,
@@ -124,10 +128,11 @@ def crest_opt(
 
         command1.append(">")
         command1.append("{}.out".format(xyzoutxtb1.split(".xyz")[0]))
-        subprocess.run(command1)
+        subprocess.run(command1, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         os.rename(str(dat_dir) + "/xtbopt.xyz", xyzoutxtb1)
 
-        constrained_sampling2 = create_xcontrol(
+        # xTB optimization with the user-defined constraints
+        _ = create_xcontrol(
             args,
             constraints_atoms,
             constraints_dist,
@@ -154,7 +159,7 @@ def crest_opt(
         command2.append(">")
         command2.append("{}.out".format(xyzoutxtb2.split(".xyz")[0]))
 
-        subprocess.run(command2)
+        subprocess.run(command2, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         os.rename(str(dat_dir) + "/xtbopt.xyz", xyzoutxtb2)
 
     else:
@@ -206,7 +211,7 @@ def crest_opt(
 
         command.append(">")
         command.append("cregen.out")
-        subprocess.run(command)
+        subprocess.run(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
     try:
         if args.cregen:

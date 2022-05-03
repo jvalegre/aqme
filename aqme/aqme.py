@@ -51,13 +51,13 @@ def main():
             smi=args.smi,
             name=args.name,
             w_dir_main=args.w_dir_main,
-            destination=arg.destination,
+            destination=args.destination,
             charge=args.charge,
             mult=args.mult,
             sample=args.sample,
             max_workers=args.max_workers,
             metal_complex=args.metal_complex,
-            metal=args.metal_atoms,
+            metal_atoms=args.metal_atoms,
             metal_idx=args.metal_idx,
             complex_coord=args.complex_coord,
             metal_sym=args.metal_sym,
@@ -95,7 +95,6 @@ def main():
             nprocs=args.nprocs,
             cregen=args.cregen,
             cregen_keywords=args.cregen_keywords,
-            complex=args.complex,
         )
 
     # CMIN
@@ -111,7 +110,7 @@ def main():
             charge=args.charge,
             mult=args.mult,
             metal_complex=args.metal_complex,
-            metal=args.metal_atoms,
+            metal_atoms=args.metal_atoms,
             metal_oxi=args.metal_oxi,
             complex_type=args.complex_type,
             ewin_cmin=args.ewin_cmin,

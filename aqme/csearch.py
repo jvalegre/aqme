@@ -39,9 +39,6 @@ from aqme.utils import (
     set_metal_atomic_number,
     getDihedralMatches,
     smi_to_mol,
-    mol_from_sdf_or_mol_or_mol2,
-    get_info_input,
-    read_xyz_charge_mult,
 )
 from aqme.crest import crest_opt
 
@@ -256,7 +253,6 @@ class csearch:
                 name,
                 self.args.program,
                 self.args.log,
-                self.args.complex,
                 constraints_dist,
                 constraints_angle,
                 constraints_dihedral,
@@ -282,7 +278,6 @@ class csearch:
                     name,
                     self.args.program,
                     self.args.log,
-                    self.args.complex,
                     constraints_dist,
                     constraints_angle,
                     constraints_dihedral,
@@ -316,29 +311,28 @@ class csearch:
         self.csearch_folder.mkdir(exist_ok=True, parents=True)
 
         if self.args.program in ["crest"] and self.args.smi is None:
-            if not self.args.complex:
-                if self.args.input.split(".")[1] in ["pdb", "mol2", "mol", "sdf"]:
-                    command_pdb = [
-                        "obabel",
-                        f'-i{self.args.input.split(".")[1]}',
-                        f'{name}.{self.args.input.split(".")[1]}',
-                        "-oxyz",
-                        f"-O{name}_{self.args.program}.xyz",
-                    ]
-                    subprocess.run(
-                        command_pdb,
-                        stdout=subprocess.DEVNULL,
-                        stderr=subprocess.DEVNULL,
-                    )
-                elif self.args.input.split(".")[1] in ["gjf", "com"]:
-                    xyz_file, _, _ = com_2_xyz(
-                        f'{name}.{self.args.input.split(".")[1]}'
-                    )
-                    os.move(xyz_file, f"{name}_{self.args.program}.xyz")
-                elif self.args.input.split(".")[1] == "xyz":
-                    shutil.copy(f"{name}.xyz", f"{name}_{self.args.program}.xyz")
-                else:
-                    rdmolfiles.MolToXYZFile(mol, f"{name}_{self.args.program}.xyz")
+            if self.args.input.split(".")[1] in ["pdb", "mol2", "mol", "sdf"]:
+                command_pdb = [
+                    "obabel",
+                    f'-i{self.args.input.split(".")[1]}',
+                    f'{name}.{self.args.input.split(".")[1]}',
+                    "-oxyz",
+                    f"-O{name}_{self.args.program}.xyz",
+                ]
+                subprocess.run(
+                    command_pdb,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                )
+            elif self.args.input.split(".")[1] in ["gjf", "com"]:
+                xyz_file, _, _ = com_2_xyz(
+                    f'{name}.{self.args.input.split(".")[1]}'
+                )
+                os.move(xyz_file, f"{name}_{self.args.program}.xyz")
+            elif self.args.input.split(".")[1] == "xyz":
+                shutil.copy(f"{name}.xyz", f"{name}_{self.args.program}.xyz")
+            else:
+                rdmolfiles.MolToXYZFile(mol, f"{name}_{self.args.program}.xyz")
 
         # Converts each line to an RDKit mol object
         if self.args.verbose:
@@ -500,6 +494,7 @@ class csearch:
                 self.args,
                 charge,
                 mult,
+                False,
                 constraints_atoms,
                 constraints_dist,
                 constraints_angle,
@@ -1106,6 +1101,7 @@ class csearch:
                 self.args,
                 charge,
                 mult,
+                True,
                 constraints_atoms,
                 constraints_dist,
                 constraints_angle,
