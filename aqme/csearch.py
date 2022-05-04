@@ -245,6 +245,7 @@ class csearch:
         if self.args.smi is not None:
             (
                 mol,
+                self.args.constraints_atoms,
                 self.args.constraints_dist,
                 self.args.constraints_angle,
                 self.args.constraints_dihedral,
@@ -253,6 +254,7 @@ class csearch:
                 name,
                 self.args.program,
                 self.args.log,
+                constraints_atoms,
                 constraints_dist,
                 constraints_angle,
                 constraints_dihedral,
@@ -270,6 +272,7 @@ class csearch:
             ]:
                 (
                     mol,
+                    self.args.constraints_atoms,
                     self.args.constraints_dist,
                     self.args.constraints_angle,
                     self.args.constraints_dihedral,
@@ -278,6 +281,7 @@ class csearch:
                     name,
                     self.args.program,
                     self.args.log,
+                    constraints_atoms,
                     constraints_dist,
                     constraints_angle,
                     constraints_dihedral,
@@ -285,6 +289,7 @@ class csearch:
             else:
                 (
                     mol,
+                    self.args.constraints_atoms,
                     self.args.constraints_dist,
                     self.args.constraints_angle,
                     self.args.constraints_dihedral,
@@ -325,9 +330,7 @@ class csearch:
                     stderr=subprocess.DEVNULL,
                 )
             elif self.args.input.split(".")[1] in ["gjf", "com"]:
-                xyz_file, _, _ = com_2_xyz(
-                    f'{name}.{self.args.input.split(".")[1]}'
-                )
+                xyz_file, _, _ = com_2_xyz(f'{name}.{self.args.input.split(".")[1]}')
                 os.move(xyz_file, f"{name}_{self.args.program}.xyz")
             elif self.args.input.split(".")[1] == "xyz":
                 shutil.copy(f"{name}.xyz", f"{name}_{self.args.program}.xyz")

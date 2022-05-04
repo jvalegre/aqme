@@ -271,6 +271,7 @@ def smi_to_mol(
     name,
     program,
     log,
+    constraints_atoms,
     constraints_dist,
     constraints_angle,
     constraints_dihedral,
@@ -284,8 +285,19 @@ def smi_to_mol(
             )
             sys.exit()
 
-        mol, constraints_dist, constraints_angle, constraints_dihedral = nci_ts_mol(
-            smi, name, constraints_dist, constraints_angle, constraints_dihedral
+        (
+            mol,
+            constraints_atoms,
+            constraints_dist,
+            constraints_angle,
+            constraints_dihedral,
+        ) = nci_ts_mol(
+            smi,
+            name,
+            constraints_atoms,
+            constraints_dist,
+            constraints_angle,
+            constraints_dihedral,
         )
 
     else:
@@ -293,10 +305,25 @@ def smi_to_mol(
         params.removeHs = False
         mol = Chem.MolFromSmiles(smi[0], params)
 
-    return mol, constraints_dist, constraints_angle, constraints_dihedral
+    return (
+        mol,
+        constraints_atoms,
+        constraints_dist,
+        constraints_angle,
+        constraints_dihedral,
+    )
 
 
-def nci_ts_mol(smi, name, constraints_dist, constraints_angle, constraints_dihedral):
+def nci_ts_mol(
+    smi,
+    name,
+    constraints_atoms,
+    constraints_dist,
+    constraints_angle,
+    constraints_dihedral,
+):
+    if constraints_atoms is not None:
+        constraints_dist = [[float(y) for y in x] for x in constraints_atoms]
     if constraints_dist is not None:
         constraints_dist = [[float(y) for y in x] for x in constraints_dist]
         constraints_dist = np.array(constraints_dist)
@@ -348,6 +375,14 @@ def nci_ts_mol(smi, name, constraints_dist, constraints_angle, constraints_dihed
     Chem.ConstrainedEmbed(mol, molH)
     rdmolfiles.MolToXYZFile(mol, name + "_crest.xyz")
 
+    nconstraints_atoms = []
+    if constraints_atoms is not None:
+        for _, ele in enumerate(constraints_atoms):
+            for atom in mol.GetAtoms():
+                if ele == atom.GetAtomMapNum():
+                    nconstraints_atoms.append(float(atom.GetIdx()) + 1)
+        nconstraints_atoms = np.array(nconstraints_atoms)
+
     nconstraints_dist = []
     if constraints_dist is not None:
 
@@ -360,6 +395,7 @@ def nci_ts_mol(smi, name, constraints_dist, constraints_angle, constraints_dihed
             nr.append(r[-1])
             nconstraints_dist.append(nr)
         nconstraints_dist = np.array(nconstraints_dist)
+
     nconstraints_angle = []
     if constraints_angle is not None:
 
@@ -372,6 +408,7 @@ def nci_ts_mol(smi, name, constraints_dist, constraints_angle, constraints_dihed
             nr.append(r[-1])
             nconstraints_angle.append(nr)
         nconstraints_angle = np.array(nconstraints_angle)
+
     nconstraints_dihedral = []
     if constraints_dihedral is not None:
         for _, r in enumerate(constraints_dihedral):
@@ -384,7 +421,13 @@ def nci_ts_mol(smi, name, constraints_dist, constraints_angle, constraints_dihed
             nconstraints_dihedral.append(nr)
         nconstraints_dihedral = np.array(nconstraints_dihedral)
 
-    return mol, nconstraints_dist, nconstraints_angle, nconstraints_dihedral
+    return (
+        mol,
+        nconstraints_atoms,
+        nconstraints_dist,
+        nconstraints_angle,
+        nconstraints_dihedral,
+    )
 
 
 def rules_get_charge(mol, args, type):
