@@ -74,7 +74,11 @@ class csearch:
             self.args.log.finalize()
             sys.exit()
 
-        os.chdir(self.args.w_dir_main)
+        try:
+            os.chdir(self.args.w_dir_main)
+        except FileNotFoundError:
+            self.args.w_dir_main = Path(f"{os.getcwd()}/{self.args.w_dir_main}")
+            os.chdir(self.args.w_dir_main)
 
         # load files from AQME input
         if self.args.smi is not None:
@@ -293,7 +297,13 @@ class csearch:
                     self.args.constraints_dist,
                     self.args.constraints_angle,
                     self.args.constraints_dihedral,
-                ) = (smi, constraints_dist, constraints_angle, constraints_dihedral)
+                ) = (
+                    smi,
+                    constraints_atoms,
+                    constraints_dist,
+                    constraints_angle,
+                    constraints_dihedral,
+                )
 
         if mol is None:
             self.args.log.write(
@@ -312,7 +322,11 @@ class csearch:
                 f"CSEARCH/{self.args.program}"
             )
         else:
-            self.csearch_folder = Path(self.args.destination)
+            if Path(f"{self.args.destination}").exists():
+                self.csearch_folder = Path(self.args.destination)
+            else:
+                self.csearch_folder = Path(f"{os.getcwd()}/{self.args.destination}")
+
         self.csearch_folder.mkdir(exist_ok=True, parents=True)
 
         if self.args.program in ["crest"] and self.args.smi is None:

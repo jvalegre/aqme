@@ -200,6 +200,7 @@ def test_cmin_xtb_parameters(
     ],
 )
 def test_remove(remove, folder, file):
-    os.chdir(w_dir_main)
-    shutil.rmtree(folder)
-    os.remove(file)
+    # os.chdir(w_dir_main)
+    shutil.rmtree(w_dir_main + "/" + folder)
+    for f in glob.glob(file):
+        os.remove(f)

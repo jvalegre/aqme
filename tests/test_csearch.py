@@ -7,6 +7,7 @@
 
 import os
 import pytest
+import glob
 from aqme.csearch import csearch
 import rdkit
 import shutil
@@ -44,7 +45,7 @@ if not os.path.exists(csearch_varfile_dir):
         ("params.yaml", "pentane_varfile", 2),
     ],
 )
-def test_csearch_input_parameters(varfile, nameinvarfile, output_nummols):
+def test_csearch_varfile(varfile, nameinvarfile, output_nummols):
     os.chdir(csearch_varfile_dir)
     # runs the program with the different tests
     csearch(w_dir_main=csearch_varfile_dir, varfile=varfile)
@@ -184,7 +185,7 @@ def test_csearch_others_parameters(
             "C",
             "methane",
             True,
-            "--ethr 1 --rthr 0.5 --bthr 0.7 --ewin 4 --cbonds 0.8",
+            "--ethr 1 --rthr 0.5 --bthr 0.7 --ewin 4 --cbonds 0.8 --cluster",
             "--alpb benzene",
             [1],
             1,
@@ -214,6 +215,17 @@ def test_csearch_crest_parameters(
     )
 
     # tests here
+    file_cluster = str(
+        csearch_crest_dir
+        + "/CSEARCH/"
+        + program
+        + "_xyz/"
+        + name
+        + "_"
+        + program
+        + "/crest_clustered.xyz"
+    )
+    assert os.path.exists(file_cluster)
     file = str("CSEARCH/" + program + "/" + name + "_" + program + ".sdf")
     mols = rdkit.Chem.SDMolSupplier(file, removeHs=False)
     assert len(mols) == output_nummols
@@ -532,36 +544,36 @@ def test_csearch_rdkit_summ_parameters(
         # True
         # None
         # ),
-        (
-            "crest",
-            "C.O",
-            "nci",
-            True,
-            False,
-            None,
-            None,
-            None,
-            [],
-            [],
-            [],
-            True,
-            436,
-        ),  # CHECK THIS TEST again. working now
-        (
-            "crest",
-            "[Cl-:9].[F:4][C:5]([C:6]([H:12])([H:13])[H:14])([C:7]([H:15])([H:16])[H:17])[C:8]([H:18])([H:19])[H:20].[O:3]([H:10])[H:11]",
-            "ts",
-            True,
-            False,
-            None,
-            None,
-            None,
-            [[4, 5, 1.8], [5, 9, 1.8]],
-            [[4, 5, 9, 180]],
-            [],
-            True,
-            1,
-        ),
+        # (
+        #     "crest",
+        #     "C.O",
+        #     "nci",
+        #     True,
+        #     False,
+        #     None,
+        #     None,
+        #     None,
+        #     [],
+        #     [],
+        #     [],
+        #     True,
+        #     436,
+        # ),  # CHECK THIS TEST again. working now
+        # (
+        #     "crest",
+        #     "[Cl-:9].[F:4][C:5]([C:6]([H:12])([H:13])[H:14])([C:7]([H:15])([H:16])[H:17])[C:8]([H:18])([H:19])[H:20].[O:3]([H:10])[H:11]",
+        #     "ts",
+        #     True,
+        #     False,
+        #     None,
+        #     None,
+        #     None,
+        #     [[4, 5, 1.8], [5, 9, 1.8]],
+        #     [[4, 5, 9, 180]],
+        #     [],
+        #     True,
+        #     1,
+        # ),
     ],
 )
 def test_csearch_methods(
@@ -644,29 +656,30 @@ def test_csearch_methods(
         (
             True,
             "tests/csearch_methods/CSEARCH",
-            "tests/csearch_methods/CSEARCH_*",
+            "tests/csearch_methods/CSEARCH*",
         ),
         (
             True,
             "tests/csearch_rdkit_summ/CSEARCH",
-            "tests/csearch_rdkit_summ/CSEARCH_*",
+            "tests/csearch_rdkit_summ/CSEARCH*",
         ),
         (
             True,
             "tests/csearch_fullmonte/CSEARCH",
-            "tests/csearch_fullmonte/CSEARCH_*",
+            "tests/csearch_fullmonte/CSEARCH*",
         ),
-        (True, "tests/csearch_crest/CSEARCH", "tests/csearch_crest/CSEARCH_*"),
-        (True, "tests/csearch_others/CSEARCH", "tests/csearch_others/CSEARCH_*"),
-        (True, "tests/csearch_input/CSEARCH", "tests/csearch_input/CSEARCH_*"),
+        (True, "tests/csearch_crest/CSEARCH", "tests/csearch_crest/CSEARCH*"),
+        (True, "tests/csearch_others/CSEARCH", "tests/csearch_others/CSEARCH*"),
+        (True, "tests/csearch_input/CSEARCH", "tests/csearch_input/CSEARCH*"),
         (
             True,
             "tests/csearch_varfile/CSEARCH",
-            "tests/csearch_varfile/CSEARCH_*",
+            "tests/csearch_varfile/CSEARCH*",
         ),
     ],
 )
 def test_remove(remove, folder, file):
-    os.chdir(w_dir_main)
-    shutil.rmtree(folder)
-    os.remove(file)
+    # os.chdir(w_dir_main)
+    shutil.rmtree(w_dir_main + "/" + folder)
+    for f in glob.glob(file):
+        os.remove(f)

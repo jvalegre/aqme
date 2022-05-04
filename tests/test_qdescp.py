@@ -74,6 +74,7 @@ def test_qdescp_inputs(file, name, temp, acc, charge, mult, output_file, num):
     ],
 )
 def test_remove(remove, folder, file):
-    os.chdir(w_dir_main)
-    shutil.rmtree(folder)
-    os.remove(file)
+    # os.chdir(w_dir_main)
+    shutil.rmtree(w_dir_main + "/" + folder)
+    for f in glob.glob(file):
+        os.remove(f)

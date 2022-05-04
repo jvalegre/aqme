@@ -205,11 +205,11 @@ def crest_opt(
 
     try:
         if os.path.exists(str(dat_dir) + "/crest_clustered.xyz"):
-            os.rename(str(dat_dir) + "/crest_clustered.xyz", xyzoutall)
+            shutil.copy(str(dat_dir) + "/crest_clustered.xyz", xyzoutall)
         elif args.cregen:
-            os.rename(str(dat_dir) + "/crest_ensemble.xyz", xyzoutall)
+            shutil.copy(str(dat_dir) + "/crest_ensemble.xyz", xyzoutall)
         else:
-            os.rename(str(dat_dir) + "/crest_conformers.xyz", xyzoutall)
+            shutil.copy(str(dat_dir) + "/crest_conformers.xyz", xyzoutall)
     except FileNotFoundError:
         args.log.write(
             "x   CREST conformer sampling failed! Please, try other options (i.e. include constrains, change the crest_keywords option, etc.)"
@@ -304,7 +304,7 @@ def create_xcontrol(
 
         if constraints_atoms != []:
             edited_xcontrol += "atoms: "
-            edited_xcontrol += ",".join(atom_idx for atom_idx in constraints_atoms)
+            edited_xcontrol += ",".join(str(atom_idx) for atom_idx in constraints_atoms)
             edited_xcontrol += "\n"
 
         for constraint_type in [

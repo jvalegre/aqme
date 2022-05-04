@@ -54,7 +54,12 @@ class cmin:
             self.args.log.finalize()
             sys.exit()
 
-        os.chdir(self.args.w_dir_main)
+        try:
+            os.chdir(self.args.w_dir_main)
+        except FileNotFoundError:
+            self.args.w_dir_main = Path(f"{os.getcwd()}/{self.args.w_dir_main}")
+            os.chdir(self.args.w_dir_main)
+
         # create the dataframe to store the data
         self.final_dup_data = creation_of_dup_csv_cmin(self.args.program)
 
@@ -65,17 +70,24 @@ class cmin:
             # load jobs for cmin minimization
             self.mols, self.name = self.load_jobs(file)
 
-            cmin_folder = Path(self.args.w_dir_main).joinpath(
-                f"CMIN/{self.args.program}"
-            )
-            cmin_folder.mkdir(exist_ok=True, parents=True)
+            if self.args.destination is None:
+                self.cmin_folder = Path(self.args.w_dir_main).joinpath(
+                    f"CMIN/{self.args.program}"
+                )
+            else:
+                if Path(f"{self.args.destination}").exists():
+                    self.cmin_folder = Path(self.args.destination)
+                else:
+                    self.cmin_folder = Path(f"{os.getcwd()}/{self.args.destination}")
 
-            self.cmin_all_file = cmin_folder.joinpath(
+            self.cmin_folder.mkdir(exist_ok=True, parents=True)
+
+            self.cmin_all_file = self.cmin_folder.joinpath(
                 f"{self.name}_{self.args.program}_all_confs{self.args.output}"
             )
             self.sdwriterall = Chem.SDWriter(str(self.cmin_all_file))
 
-            self.cmin_file = cmin_folder.joinpath(
+            self.cmin_file = self.cmin_folder.joinpath(
                 self.name + "_" + self.args.program + self.args.output
             )
             self.sdwriter = Chem.SDWriter(str(self.cmin_file))
