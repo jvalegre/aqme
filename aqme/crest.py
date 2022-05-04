@@ -191,7 +191,7 @@ def crest_opt(
             if keyword not in command:
                 command.append(keyword)
 
-    run_command(command, "crest.out")
+    run_command(command, str(dat_dir) + "/crest.out")
 
     if args.cregen:
         command = ["crest", "crest_best.xyz", "--cregen", "crest_conformers.xyz"]
@@ -201,7 +201,7 @@ def crest_opt(
                 if keyword not in command:
                     command.append(keyword)
 
-        run_command(command, "cregen.out")
+        run_command(command, str(dat_dir) + "/cregen.out")
 
     try:
         if os.path.exists(str(dat_dir) + "/crest_clustered.xyz"):
