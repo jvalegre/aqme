@@ -22,7 +22,7 @@ from rdkit import RDLogger
 RDLogger.DisableLog("rdApp.*")
 
 
-def run_command(self, command, outfile):
+def run_command(command, outfile):
     with open(outfile, "w") as f:
         out_command = subprocess.Popen(
             command,
