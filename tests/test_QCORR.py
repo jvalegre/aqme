@@ -77,6 +77,7 @@ path_qcorr = os.getcwd()+'/Example_workflows/QCORR_processing_QM_outputs'
     ('QCORR_1b', 'imag_freq_no_opt.log', None, 'successful_QM_outputs', False), # test to change cut-off to consider imaginary frequencies
     ('QCORR_1b', 'Imag_freq.log', None, 'unsuccessful_QM_outputs/run_1/extra_imag_freq', False), # test to change amplitude for displacing imaginary frequencies
     (None, None, None, None, True), # reset the initial folder to start another set of tests
+    # add genECP test
     # isomerization with csv (ongoing)
     # isomeriz with csv for TSs (ongoing)
     # tell if the imag freq from a TS is right based on displacement (ongoing)
