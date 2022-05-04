@@ -75,7 +75,8 @@ class csearch:
             sys.exit()
 
         try:
-            os.chdir(self.args.w_dir_main)
+            if Path(f"{self.args.w_dir_main}").exists():
+                os.chdir(self.args.w_dir_main)
         except FileNotFoundError:
             self.args.w_dir_main = Path(f"{os.getcwd()}/{self.args.w_dir_main}")
             os.chdir(self.args.w_dir_main)
@@ -325,7 +326,7 @@ class csearch:
             if Path(f"{self.args.destination}").exists():
                 self.csearch_folder = Path(self.args.destination)
             else:
-                self.csearch_folder = Path(f"{os.getcwd()}/{self.args.destination}")
+                self.csearch_folder = Path(f"{self.w_dir_main}/{self.args.destination}")
 
         self.csearch_folder.mkdir(exist_ok=True, parents=True)
 

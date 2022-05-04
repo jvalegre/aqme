@@ -136,7 +136,7 @@ def creation_of_dup_csv_cmin(cmin):
     Parameters
     ----------
     cmin : str
-                                    Minimization method. Current valid methods are: ['xtb','ani']
+                                                                    Minimization method. Current valid methods are: ['xtb','ani']
 
     Returns
     -------
@@ -183,11 +183,11 @@ def move_file(destination, source, file):
     Parameters
     ----------
     destination : str
-                                    Path to the destination folder
+                                                                    Path to the destination folder
     src : str
-                                    Path to the source folder
+                                                                    Path to the source folder
     file : str
-                                    Full name of the file (file + extension)
+                                                                    Full name of the file (file + extension)
     """
 
     destination.mkdir(exist_ok=True, parents=True)
@@ -206,14 +206,14 @@ def get_info_input(file):
     Parameters
     ----------
     file : str or pathlib.Path
-                                    A path pointing to a valid .com or .gjf file
+                                                                    A path pointing to a valid .com or .gjf file
 
     Returns
     -------
     coordinates : list
-                                    A list of strings (without \\n) that contain the xyz coordinates of the .gjf or .com file
+                                                                    A list of strings (without \\n) that contain the xyz coordinates of the .gjf or .com file
     charge : str
-                                    A str with the number corresponding to the total charge of the .com or .gjf file
+                                                                    A str with the number corresponding to the total charge of the .com or .gjf file
     """
 
     with open(file, "r") as input_file:
@@ -585,11 +585,11 @@ def set_metal_atomic_number(mol, metal_idx, metal_sym):
     Parameters
     ----------
     mol : rdkit.Chem.Mol
-                                    RDKit molecule object
+                                                                    RDKit molecule object
     metal_idx : list
-                                    sorted list that contains the indices of the metal atoms in the molecule
+                                                                    sorted list that contains the indices of the metal atoms in the molecule
     metal_sym : list
-                                    sorted list (same order as metal_idx) that contains the symbols of the metals in the molecule
+                                                                    sorted list (same order as metal_idx) that contains the symbols of the metals in the molecule
     """
 
     for atom in mol.GetAtoms():
@@ -608,22 +608,22 @@ def get_conf_RMS(mol1, mol2, c1, c2, heavy, max_matches_rmsd):
     Parameters
     ----------
     mol1 : rdkit.Chem.Mol
-                                    Probe molecule
+                                                                    Probe molecule
     mol2 : rdkit.Chem.Mol
-                                    Target molecule. The probe is aligned to the target to compute the RMSD
+                                                                    Target molecule. The probe is aligned to the target to compute the RMSD
     c1 : int
-                                    Conformation of mol1 to use for the RMSD
+                                                                    Conformation of mol1 to use for the RMSD
     c2 : int
-                                    Conformation of mol2 to use for the RMSD
+                                                                    Conformation of mol2 to use for the RMSD
     heavy : bool
-                                    If True it will ignore the H atoms when computing the RMSD
+                                                                    If True it will ignore the H atoms when computing the RMSD
     max_matches_rmsd : int
-                                    the max number of matches found in a SubstructMatch()
+                                                                    the max number of matches found in a SubstructMatch()
 
     Returns
     -------
     float
-                                    Returns the best RMSD found
+                                                                    Returns the best RMSD found
     """
 
     if heavy:
