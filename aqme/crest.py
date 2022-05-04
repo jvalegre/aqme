@@ -13,7 +13,7 @@ import subprocess
 import rdkit
 from pathlib import Path
 import shutil
-from aqme.utils import read_file
+from aqme.utils import read_file, run_command
 from rdkit.Chem import rdMolTransforms
 
 
@@ -126,9 +126,7 @@ def crest_opt(
             str(args.nprocs),
         ]
 
-        command1.append(">")
-        command1.append("{}.out".format(xyzoutxtb1.split(".xyz")[0]))
-        subprocess.run(command1, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        run_command(command1, "{}.out".format(xyzoutxtb1.split(".xyz")[0]))
         os.rename(str(dat_dir) + "/xtbopt.xyz", xyzoutxtb1)
 
         # xTB optimization with the user-defined constraints
@@ -155,11 +153,7 @@ def crest_opt(
             "-T",
             str(args.nprocs),
         ]
-
-        command2.append(">")
-        command2.append("{}.out".format(xyzoutxtb2.split(".xyz")[0]))
-
-        subprocess.run(command2, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        run_command(command2, "{}.out".format(xyzoutxtb2.split(".xyz")[0]))
         os.rename(str(dat_dir) + "/xtbopt.xyz", xyzoutxtb2)
 
     else:
@@ -197,9 +191,7 @@ def crest_opt(
             if keyword not in command:
                 command.append(keyword)
 
-    command.append(">")
-    command.append("crest.out")
-    subprocess.run(command)
+    run_command(command, "crest.out")
 
     if args.cregen:
         command = ["crest", "crest_best.xyz", "--cregen", "crest_conformers.xyz"]
@@ -209,12 +201,12 @@ def crest_opt(
                 if keyword not in command:
                     command.append(keyword)
 
-        command.append(">")
-        command.append("cregen.out")
-        subprocess.run(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        run_command(command, "cregen.out")
 
     try:
-        if args.cregen:
+        if os.path.exists(str(dat_dir) + "/crest_clustered.xyz"):
+            os.rename(str(dat_dir) + "/crest_clustered.xyz", xyzoutall)
+        elif args.cregen:
             os.rename(str(dat_dir) + "/crest_ensemble.xyz", xyzoutall)
         else:
             os.rename(str(dat_dir) + "/crest_conformers.xyz", xyzoutall)

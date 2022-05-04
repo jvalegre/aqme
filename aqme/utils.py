@@ -22,6 +22,21 @@ from rdkit import RDLogger
 RDLogger.DisableLog("rdApp.*")
 
 
+def run_command(self, command, outfile):
+    with open(outfile, "w") as f:
+        out_command = subprocess.Popen(
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            universal_newlines=True,
+        )
+        for line in out_command.stdout:
+            sys.stdout.write(line)
+            f.write(line)
+    out_command.wait()  # wait for Popen to finish
+    f.close()
+
+
 def periodic_table():
     items = """X
 			H                                                                                                  He

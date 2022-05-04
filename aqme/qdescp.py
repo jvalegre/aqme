@@ -10,7 +10,12 @@ import time
 import json
 import shutil
 from pathlib import Path
-from aqme.utils import load_variables, read_xyz_charge_mult, mol_from_sdf_or_mol_or_mol2
+from aqme.utils import (
+    load_variables,
+    read_xyz_charge_mult,
+    mol_from_sdf_or_mol_or_mol2,
+    run_command,
+)
 from aqme.crest import xyzall_2_xyz
 from aqme.xtb_to_json import *
 from scipy.spatial.distance import cdist
@@ -146,7 +151,7 @@ class qdescp:
             "--input",
             str(self.inp),
         ]
-        self.run_xtb(command1, self.xtb_out)
+        run_command(command1, self.xtb_out)
 
         os.rename("xtbout.json", self.xtb_json)
         os.rename("wbo", self.xtb_wbo)
@@ -166,7 +171,7 @@ class qdescp:
             "--etemp",
             str(self.args.qdescp_temp),
         ]
-        self.run_xtb(command2, self.xtb_gfn1)
+        run_command(command2, self.xtb_gfn1)
 
         command3 = [
             "xtb",
@@ -183,7 +188,7 @@ class qdescp:
             "--etemp",
             str(self.args.qdescp_temp),
         ]
-        self.run_xtb(command3, self.xtb_fukui)
+        run_command(command3, self.xtb_fukui)
 
         command4 = [
             "xtb",
@@ -200,23 +205,9 @@ class qdescp:
             "--etemp",
             str(self.args.qdescp_temp),
         ]
-        self.run_xtb(command4, self.xtb_fod)
+        run_command(command4, self.xtb_fod)
 
         os.chdir(self.args.w_dir_main)
-
-    def run_xtb(self, command, outfile):
-        with open(outfile, "w") as f:
-            out_command = subprocess.Popen(
-                command,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                universal_newlines=True,
-            )
-            for line in out_command.stdout:
-                sys.stdout.write(line)
-                f.write(line)
-        out_command.wait()  # wait for Popen to finish
-        f.close()
 
     def collect_xtb_properties(self):
         """
