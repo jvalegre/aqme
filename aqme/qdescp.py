@@ -15,6 +15,7 @@ from aqme.utils import (
     read_xyz_charge_mult,
     mol_from_sdf_or_mol_or_mol2,
     run_command,
+    get_boltz_avg_properties_xtb,
 )
 from aqme.crest import xyzall_2_xyz
 from aqme.xtb_to_json import *
@@ -108,6 +109,15 @@ class qdescp:
                 self.run_sp_xtb(xyz_file, charge, mult, name, destination)
                 self.collect_xtb_properties()
                 self.cleanup(name, destination)
+
+        if self.args.boltz:
+            boltz_dir = Path(f"{destination}/boltz")
+            boltz_dir.mkdir(exist_ok=True, parents=True)
+            for file in self.args.files:
+                name = file.replace("/", "\\").split("\\")[-1].split(".")[0]
+                json_files = glob.glob(str(destination) + "/" + name + "_conf_*.json")
+                print(json_files)
+                get_boltz_avg_properties_xtb(json_files, name, boltz_dir)
 
     def run_sp_xtb(self, xyz_file, charge, mult, name, destination):
         """
