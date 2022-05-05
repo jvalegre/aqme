@@ -71,7 +71,7 @@ class qprep:
             os.chdir(self.args.w_dir_main)
 
         # write input files
-        for file in glog.glob(self.args.file):
+        for file in self.args.files:
             name = file.replace("/", "\\").split("\\")[-1].split(".")[0]
             if file.split(".")[1].lower() in ["sdf", "xyz", "pdb"]:
                 sdf_files = []

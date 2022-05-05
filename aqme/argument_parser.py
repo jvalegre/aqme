@@ -150,5 +150,6 @@ def set_options(kwargs):
                 kwargs[key],
                 "] provided but no option exists, try the online documentation to see available options for each module.",
             )
+    print("file", options.files)
 
     return options
