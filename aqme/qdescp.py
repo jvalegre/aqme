@@ -116,7 +116,6 @@ class qdescp:
             for file in self.args.files:
                 name = file.replace("/", "\\").split("\\")[-1].split(".")[0]
                 json_files = glob.glob(str(destination) + "/" + name + "_conf_*.json")
-                print(json_files)
                 get_boltz_avg_properties_xtb(json_files, name, boltz_dir)
 
     def run_sp_xtb(self, xyz_file, charge, mult, name, destination):
