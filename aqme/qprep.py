@@ -118,7 +118,9 @@ class qprep:
                     try:
                         # get atom types, atomic coordinates, charge and multiplicity of all the mols in the SDF file
                         mols = mol_from_sdf_or_mol_or_mol2(sdf_file, "qprep")
+                        print(len(mols))
                         for i, mol in enumerate(mols):
+                            print(i, mol)
                             (
                                 atom_types,
                                 cartesians,
@@ -138,6 +140,7 @@ class qprep:
                                     name_conf = f"{sdf_name}_conf_{i+1}"
                                 else:
                                     name_conf = f"{sdf_name}"
+                            print(name_conf)
                             qprep_data = {
                                 "atom_types": atom_types,
                                 "cartesians": cartesians,

@@ -326,7 +326,9 @@ class csearch:
             if Path(f"{self.args.destination}").exists():
                 self.csearch_folder = Path(self.args.destination)
             else:
-                self.csearch_folder = Path(f"{self.w_dir_main}/{self.args.destination}")
+                self.csearch_folder = Path(self.args.w_dir_main).joinpath(
+                    self.args.destination
+                )
 
         self.csearch_folder.mkdir(exist_ok=True, parents=True)
 

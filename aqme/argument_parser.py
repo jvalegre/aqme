@@ -17,8 +17,6 @@ var_dict = {
     "cmin": False,
     "qprep": False,
     "qcorr": False,
-    "qstat": False,
-    "qpred": False,
     "smi": None,
     "metal_complex": False,
     "metal_atoms": [],
@@ -122,6 +120,7 @@ var_dict = {
     "qdescp_temp": 300,
     "qdescp_acc": 0.2,
     "boltz": False,
+    "qdescp": False,
 }
 
 
