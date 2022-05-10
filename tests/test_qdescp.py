@@ -21,10 +21,10 @@ if not os.path.exists(qdescp_input_dir):
 
 # tests for parameters of csearch random initialzation
 @pytest.mark.parametrize(
-    "file, name, temp, acc, charge, mult, output_file, num",
+    "file, name, temp, acc, charge, mult, output_file, num, boltz",
     [
         # tests for conformer generation with RDKit
-        ("pentane.xyz", "pentane", "300", "0.2", 0, 1, "pentane_conf_1.json", 1),
+        ("pentane.xyz", "pentane", "300", "0.2", 0, 1, "pentane_conf_1.json", 1, False),
         (
             "pentane_rdkit.sdf",
             "pentane_rdkit",
@@ -34,10 +34,11 @@ if not os.path.exists(qdescp_input_dir):
             1,
             "pentane_rdkit_conf_1.json",
             4,
+            True,
         ),
     ],
 )
-def test_qdescp_inputs(file, name, temp, acc, charge, mult, output_file, num):
+def test_qdescp_inputs(file, name, temp, acc, charge, mult, output_file, num, boltz):
     os.chdir(qdescp_input_dir)
     # runs the program with the different tests
     qdescp(
@@ -47,11 +48,16 @@ def test_qdescp_inputs(file, name, temp, acc, charge, mult, output_file, num):
         qdescp_acc=acc,
         charge=charge,
         mult=mult,
+        boltz=boltz,
     )
 
     # tests here
     numfiles = len(glob.glob(f"QDESCP/{name}_conf_*.json"))
     assert numfiles == num
+
+    if boltz:
+        bfile = str(f"QDESCP/boltz/{name}_boltz.json")
+        assert os.path.isfile(bfile)
 
     file = str("QDESCP/" + output_file)
     json_data = read_json(file)
@@ -74,6 +80,7 @@ def test_qdescp_inputs(file, name, temp, acc, charge, mult, output_file, num):
     ],
 )
 def test_remove(remove, folder, file):
-    os.chdir(w_dir_main)
-    shutil.rmtree(folder)
-    os.remove(file)
+    # os.chdir(w_dir_main)
+    shutil.rmtree(w_dir_main + "/" + folder)
+    for f in glob.glob(file):
+        os.remove(f)

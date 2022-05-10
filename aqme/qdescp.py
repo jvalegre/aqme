@@ -10,7 +10,13 @@ import time
 import json
 import shutil
 from pathlib import Path
-from aqme.utils import load_variables, read_xyz_charge_mult, mol_from_sdf_or_mol_or_mol2
+from aqme.utils import (
+    load_variables,
+    read_xyz_charge_mult,
+    mol_from_sdf_or_mol_or_mol2,
+    run_command,
+    get_boltz_avg_properties_xtb,
+)
 from aqme.crest import xyzall_2_xyz
 from aqme.xtb_to_json import *
 from scipy.spatial.distance import cdist
@@ -32,9 +38,20 @@ class qdescp:
         else:
             destination = Path(self.args.destination)
 
-        xyz_files, xyz_charges, xyz_mults = [], [], []
+        self.gather_files_and_run(destination)
+
+        if self.args.boltz:
+            boltz_dir = Path(f"{destination}/boltz")
+            boltz_dir.mkdir(exist_ok=True, parents=True)
+            for file in self.args.files:
+                name = file.replace("/", "\\").split("\\")[-1].split(".")[0]
+                json_files = glob.glob(str(destination) + "/" + name + "_conf_*.json")
+                get_boltz_avg_properties_xtb(json_files, name, boltz_dir)
+
+    def gather_files_and_run(self, destination):
         # write input files
         for file in self.args.files:
+            xyz_files, xyz_charges, xyz_mults = [], [], []
             name = file.replace("/", "\\").split("\\")[-1].split(".")[0]
             if file.split(".")[1].lower() in ["sdf", "xyz", "pdb"]:
                 if file.split(".")[1].lower() == "xyz":
@@ -49,7 +66,7 @@ class qdescp:
                             _, mult_xyz = read_xyz_charge_mult(conf_file)
                         else:
                             mult_xyz = self.args.mult
-                        xyz_files.append(conf_file)
+                        xyz_files.append(os.path.dirname(file) + "/" + conf_file)
                         xyz_charges.append(charge_xyz)
                         xyz_mults.append(mult_xyz)
 
@@ -59,7 +76,7 @@ class qdescp:
                         "-ipdb",
                         file,
                         "-oxyz",
-                        f"-O{name}_conf_.xyz",
+                        f"-O{os.path.dirname(file)}/{name}_conf_.xyz",
                         "-m",
                     ]
                     subprocess.run(
@@ -74,7 +91,7 @@ class qdescp:
                         "-isdf",
                         file,
                         "-oxyz",
-                        f"-O{name}_conf_.xyz",
+                        f"-O{os.path.dirname(file)}/{name}_conf_.xyz",
                         "-m",
                     ]
                     subprocess.run(
@@ -87,19 +104,25 @@ class qdescp:
                 if self.args.charge is None:
                     _, charges, _, _ = mol_from_sdf_or_mol_or_mol2(file, "csearch")
                 else:
-                    charges = [self.args.charge] * len(glob.glob(f"{name}_conf_*.xyz"))
+                    charges = [self.args.charge] * len(
+                        glob.glob(f"{os.path.dirname(file)}/{name}_conf_*.xyz")
+                    )
                 if self.args.mult is None:
                     _, _, mults, _ = mol_from_sdf_or_mol_or_mol2(file, "csearch")
                 else:
-                    mults = [self.args.mult] * len(glob.glob(f"{name}_conf_*.xyz"))
+                    mults = [self.args.mult] * len(
+                        glob.glob(f"{os.path.dirname(file)}/{name}_conf_*.xyz")
+                    )
 
-                for count, f in enumerate(glob.glob(f"{name}_conf_*.xyz")):
+                for count, f in enumerate(
+                    glob.glob(f"{os.path.dirname(file)}/{name}_conf_*.xyz")
+                ):
                     xyz_files.append(f)
                     xyz_charges.append(charges[count])
                     xyz_mults.append(mults[count])
 
             for xyz_file, charge, mult in zip(xyz_files, xyz_charges, xyz_mults):
-                name = xyz_file.split(".")[0]
+                name = os.path.basename(xyz_file.split(".")[0])
                 self.run_sp_xtb(xyz_file, charge, mult, name, destination)
                 self.collect_xtb_properties()
                 self.cleanup(name, destination)
@@ -113,7 +136,7 @@ class qdescp:
         dat_dir.mkdir(exist_ok=True, parents=True)
 
         self.xtb_xyz = str(dat_dir) + "/{0}.xyz".format(name)
-        os.rename(xyz_file, self.xtb_xyz)
+        shutil.move(xyz_file, self.xtb_xyz)
 
         self.inp = str(dat_dir) + "/{0}_xtb.inp".format(name)
         with open(self.inp, "wt") as f:
@@ -146,7 +169,7 @@ class qdescp:
             "--input",
             str(self.inp),
         ]
-        self.run_xtb(command1, self.xtb_out)
+        run_command(command1, self.xtb_out)
 
         os.rename("xtbout.json", self.xtb_json)
         os.rename("wbo", self.xtb_wbo)
@@ -166,7 +189,7 @@ class qdescp:
             "--etemp",
             str(self.args.qdescp_temp),
         ]
-        self.run_xtb(command2, self.xtb_gfn1)
+        run_command(command2, self.xtb_gfn1)
 
         command3 = [
             "xtb",
@@ -183,7 +206,7 @@ class qdescp:
             "--etemp",
             str(self.args.qdescp_temp),
         ]
-        self.run_xtb(command3, self.xtb_fukui)
+        run_command(command3, self.xtb_fukui)
 
         command4 = [
             "xtb",
@@ -200,23 +223,9 @@ class qdescp:
             "--etemp",
             str(self.args.qdescp_temp),
         ]
-        self.run_xtb(command4, self.xtb_fod)
+        run_command(command4, self.xtb_fod)
 
         os.chdir(self.args.w_dir_main)
-
-    def run_xtb(self, command, outfile):
-        with open(outfile, "w") as f:
-            out_command = subprocess.Popen(
-                command,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                universal_newlines=True,
-            )
-            for line in out_command.stdout:
-                sys.stdout.write(line)
-                f.write(line)
-        out_command.wait()  # wait for Popen to finish
-        f.close()
 
     def collect_xtb_properties(self):
         """
@@ -313,5 +322,5 @@ class qdescp:
 
     def cleanup(self, name, destination):
         final_json = str(destination) + "/" + name + ".json"
-        os.rename(self.xtb_json, final_json)
+        shutil.move(self.xtb_json, final_json)
         shutil.rmtree(f"{destination}/{name}")

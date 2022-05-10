@@ -102,6 +102,8 @@ def main():
         cmin(
             files=args.files,
             command_line=args.command_line,
+            w_dir_main=args.w_dir_main,
+            destination=args.destination,
             verbose=args.verbose,
             program=args.program,
             xtb_method=args.xtb_method,
@@ -190,6 +192,7 @@ def main():
             mult=args.mult,
             qdescp_temp=args.qdescp_temp,
             qdescp_acc=args.qdescp_acc,
+            boltz=args.boltz,
         )
 
 
