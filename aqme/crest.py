@@ -180,6 +180,8 @@ def crest_opt(
         str(mult - 1),
         "-T",
         str(args.nprocs),
+        "--ewin",
+        str(args.ewin_csearch),
     ]
 
     if constrained_sampling:
@@ -188,8 +190,7 @@ def crest_opt(
 
     if args.crest_keywords is not None:
         for keyword in args.crest_keywords.split():
-            if keyword not in command:
-                command.append(keyword)
+            command.append(keyword)
 
     run_command(command, str(dat_dir) + "/crest.out")
 
@@ -198,8 +199,7 @@ def crest_opt(
 
         if args.cregen_keywords is not None:
             for keyword in args.cregen_keywords.split():
-                if keyword not in command:
-                    command.append(keyword)
+                command.append(keyword)
 
         run_command(command, str(dat_dir) + "/cregen.out")
 

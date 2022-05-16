@@ -21,10 +21,21 @@ if not os.path.exists(qdescp_input_dir):
 
 # tests for parameters of csearch random initialzation
 @pytest.mark.parametrize(
-    "file, name, temp, acc, charge, mult, output_file, num, boltz",
+    "file, name, temp, acc, charge, mult, output_file, num, boltz, qdescp_type",
     [
         # tests for conformer generation with RDKit
-        ("pentane.xyz", "pentane", "300", "0.2", 0, 1, "pentane_conf_1.json", 1, False),
+        (
+            "pentane.xyz",
+            "pentane",
+            "300",
+            "0.2",
+            0,
+            1,
+            "pentane_conf_1.json",
+            1,
+            False,
+            "xtb",
+        ),
         (
             "pentane_rdkit.sdf",
             "pentane_rdkit",
@@ -35,12 +46,16 @@ if not os.path.exists(qdescp_input_dir):
             "pentane_rdkit_conf_1.json",
             4,
             True,
+            "xtb",
         ),
     ],
 )
-def test_qdescp_inputs(file, name, temp, acc, charge, mult, output_file, num, boltz):
+def test_qdescp_inputs(
+    file, name, temp, acc, charge, mult, output_file, num, boltz, qdescp_type
+):
     os.chdir(qdescp_input_dir)
     # runs the program with the different tests
+
     qdescp(
         w_dir_main=qdescp_input_dir,
         files=file,
@@ -49,6 +64,7 @@ def test_qdescp_inputs(file, name, temp, acc, charge, mult, output_file, num, bo
         charge=charge,
         mult=mult,
         boltz=boltz,
+        qdescp_type=qdescp_type,
     )
 
     # tests here
@@ -69,6 +85,29 @@ def test_qdescp_inputs(file, name, temp, acc, charge, mult, output_file, num, bo
     assert check_acc == str(acc)
     assert check_charge == str(charge)
     assert check_mult == str(mult)
+
+
+# tests for parameters of csearch random initialzation
+@pytest.mark.parametrize(
+    "file, name, qdescp_type, boltz",
+    [
+        # tests for conformer generation with RDKit
+        ("MeOH_NMR_conf_1.json", "MeOH_NMR", "nmr", True),
+    ],
+)
+def test_qdescp_type(file, name, qdescp_type, boltz):
+    os.chdir(qdescp_input_dir)
+    # runs the program with the different tests
+    qdescp(
+        w_dir_main=qdescp_input_dir,
+        files=file,
+        qdescp_type=qdescp_type,
+        boltz=boltz,
+    )
+    # tests here
+    if boltz:
+        bfile = str(f"QDESCP/boltz/{name}_boltz.json")
+        assert os.path.isfile(bfile)
 
 
 # tests for removing foler

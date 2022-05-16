@@ -117,6 +117,7 @@ var_dict = {
     "prefix": "",
     "complex": False,
     "qdescp": False,
+    "qdescp_type": "xtb",
     "qdescp_temp": 300,
     "qdescp_acc": 0.2,
     "boltz": False,
