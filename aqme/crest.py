@@ -122,7 +122,7 @@ def crest_opt(
             str(charge),
             "--uhf",
             str(mult - 1),
-            "-T",
+            "-P",
             str(args.nprocs),
         ]
 
@@ -150,7 +150,7 @@ def crest_opt(
             str(charge),
             "--uhf",
             str(mult - 1),
-            "-T",
+            "-P",
             str(args.nprocs),
         ]
         run_command(command2, "{}.out".format(xyzoutxtb2.split(".xyz")[0]))

@@ -815,6 +815,7 @@ def command_line_args():
     # Second, load all the default variables as an "add_option" object
     args = load_variables(kwargs, "command")
 
+    print(args.csearch)
     return args
 
 
@@ -928,7 +929,7 @@ def QM_coords(outlines, min_RMS, n_atoms, program):
     Retrieves atom types and coordinates from QM output files
     """
 
-    atom_types, cartesians = [], []
+    atom_types, cartesians, range_lines = [], [], []
     per_tab = periodic_table()
     count_RMS = -1
 
@@ -945,20 +946,21 @@ def QM_coords(outlines, min_RMS, n_atoms, program):
                 if outlines[i].find("Standard orientation:") > -1:
                     range_lines = [i + 5, i + 5 + n_atoms]
                     break
-        for i in range(range_lines[0], range_lines[1]):
-            massno = int(outlines[i].split()[1])
-            if massno < len(per_tab):
-                atom_symbol = per_tab[massno]
-            else:
-                atom_symbol = "XX"
-            atom_types.append(atom_symbol)
-            cartesians.append(
-                [
-                    float(outlines[i].split()[3]),
-                    float(outlines[i].split()[4]),
-                    float(outlines[i].split()[5]),
-                ]
-            )
+        if len(range_lines) != 0:
+            for i in range(range_lines[0], range_lines[1]):
+                massno = int(outlines[i].split()[1])
+                if massno < len(per_tab):
+                    atom_symbol = per_tab[massno]
+                else:
+                    atom_symbol = "XX"
+                atom_types.append(atom_symbol)
+                cartesians.append(
+                    [
+                        float(outlines[i].split()[3]),
+                        float(outlines[i].split()[4]),
+                        float(outlines[i].split()[5]),
+                    ]
+                )
 
     return atom_types, cartesians
 
