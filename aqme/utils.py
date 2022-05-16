@@ -881,6 +881,8 @@ def load_variables(kwargs, aqme_module):
 
         elif aqme_module == "qdescp":
             logger_1 = "QDESCP"
+        elif aqme_module == "vismol":
+            logger_1 == "VISMOL"
 
         if txt_yaml not in [
             "",
@@ -904,7 +906,7 @@ def load_variables(kwargs, aqme_module):
                     f"\nCommand line used in AQME: aqme {' '.join([str(elem) for elem in sys.argv[1:]])}"
                 )
 
-            if aqme_module in ["qcorr", "qprep", "qdescp"]:
+            if aqme_module in ["qcorr", "qprep", "qdescp", "vismol"]:
                 if len(self.files) == 0:
                     self.log.write(
                         f"x  There are no output files in {self.w_dir_main}."
