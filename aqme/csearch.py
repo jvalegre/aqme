@@ -86,6 +86,10 @@ class csearch:
             csearch_files = [self.args.name]
         else:
             csearch_files = glob.glob(self.args.input)
+            if len(csearch_files) == 0:
+                self.args.log.write(f"\nx  Input file ({self.args.input}) not found!")
+                self.args.log.finalize()
+                sys.exit()
 
         for csearch_file in csearch_files:
             # load jobs for conformer generation
@@ -144,10 +148,6 @@ class csearch:
         # Checks
         if file_format.lower() not in SUPPORTED_INPUTS:
             self.args.log.write("\nx  Input filetype not currently supported!")
-            self.args.log.finalize()
-            sys.exit()
-        if not os.path.exists(csearch_file):
-            self.args.log.write("\nx  Input file not found!")
             self.args.log.finalize()
             sys.exit()
 
