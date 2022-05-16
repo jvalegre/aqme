@@ -62,20 +62,20 @@ class vismol:
                 else:
                     sdf_files.append(file)
 
-        for file in sdf_files:
-            self.confs = mol_from_sdf_or_mol_or_mol2(file, "qprep")
-            interact(
-                self.style_selector,
-                idx=ipywidgets.IntSlider(min=0, max=len(self.confs) - 1, step=1),
-                s=ipywidgets.Dropdown(
-                    options=["line", "stick", "sphere"],
-                    value="line",
-                    description="Style:",
-                ),
-            )
-            if file.split(".")[1].lower() in ["xyz", "pdb"]:
-                # delete SDF files when the input was an XYZ/PDB file
-                os.remove(sdf_file)
+            for sdf_file in sdf_files:
+                self.confs = mol_from_sdf_or_mol_or_mol2(sdf_file, "qprep")
+                interact(
+                    self.style_selector,
+                    idx=ipywidgets.IntSlider(min=0, max=len(self.confs) - 1, step=1),
+                    s=ipywidgets.Dropdown(
+                        options=["line", "stick", "sphere"],
+                        value="line",
+                        description="Style:",
+                    ),
+                )
+                if file.split(".")[1].lower() in ["xyz", "pdb"]:
+                    # delete SDF files when the input was an XYZ/PDB file
+                    os.remove(sdf_file)
 
     def style_selector(self, idx, s):
         conf = self.confs[idx]
@@ -88,15 +88,15 @@ class vismol:
 
         Args:
         ----
-            mol: rdMol, molecule to show
-            size: tuple(int, int), canvas size
-            style: str, type of drawing molecule
-                   style can be 'line', 'stick', 'sphere', 'carton'
-            surface, bool, display SAS
-            opacity, float, opacity of surface, range 0.0-1.0
+                mol: rdMol, molecule to show
+                size: tuple(int, int), canvas size
+                style: str, type of drawing molecule
+                           style can be 'line', 'stick', 'sphere', 'carton'
+                surface, bool, display SAS
+                opacity, float, opacity of surface, range 0.0-1.0
         Return:
         ----
-            viewer: py3Dmol.view, a class for constructing embedded 3Dmol.js views in ipython notebooks.
+                viewer: py3Dmol.view, a class for constructing embedded 3Dmol.js views in ipython notebooks.
         """
         assert style in ("line", "stick", "sphere", "carton")
         mblock = Chem.MolToMolBlock(mol)
