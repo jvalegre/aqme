@@ -815,7 +815,6 @@ def command_line_args():
     # Second, load all the default variables as an "add_option" object
     args = load_variables(kwargs, "command")
 
-    print(args.csearch)
     return args
 
 

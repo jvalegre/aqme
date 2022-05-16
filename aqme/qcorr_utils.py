@@ -357,6 +357,23 @@ def get_json_data(self,file,cclib_data):
 						rotemp = [float(outlines[i].strip().split()[4]), float(outlines[i].strip().split()[5])]
 				cclib_data['properties']['rotational']['rotational temperatures'] = rotemp
 
+			elif outlines[i].find('SCF GIAO Magnetic shielding tensor (ppm)') > -1:
+				nmr_iso = []
+				nmr_anis = []
+				nmr_eigen = []
+				cclib_data['properties']['NMR'] = {}
+				for j in range(i,len(outlines)):
+					if outlines[j].find('Isotropic') > -1:
+						nmr_iso.append(float(outlines[j].split()[4]))
+						nmr_anis.append(float(outlines[j].split()[7]))
+					elif outlines[j].find('Eigenvalues') > -1:
+						nmr_eigen.append([float(outlines[j].split()[1]), float(outlines[j].split()[2]), float(outlines[j].split()[3])])
+					elif outlines[j].find('*************************') > -1:
+						break
+				cclib_data['properties']['NMR']['NMR anisotopic tensors'] = nmr_anis
+				cclib_data['properties']['NMR']['NMR eigenvalues'] = nmr_eigen
+				cclib_data['properties']['NMR']['NMR isotopic tensors'] = nmr_iso
+
 	elif cclib_data['metadata']['QM program'].lower().find('orca') > -1:
 		for i in reversed(range(0,outlines)):
 			if outlines[i][:25] == 'FINAL SINGLE POINT ENERGY':
