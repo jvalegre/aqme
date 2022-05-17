@@ -21,7 +21,7 @@ if not os.path.exists(qdescp_input_dir):
 
 # tests for parameters of csearch random initialzation
 @pytest.mark.parametrize(
-    "file, name, temp, acc, charge, mult, output_file, num, boltz, qdescp_type",
+    "file, name, temp, acc, charge, mult, output_file, num, boltz, program",
     [
         # tests for conformer generation with RDKit
         (
@@ -51,7 +51,7 @@ if not os.path.exists(qdescp_input_dir):
     ],
 )
 def test_qdescp_inputs(
-    file, name, temp, acc, charge, mult, output_file, num, boltz, qdescp_type
+    file, name, temp, acc, charge, mult, output_file, num, boltz, program
 ):
     os.chdir(qdescp_input_dir)
     # runs the program with the different tests
@@ -64,7 +64,7 @@ def test_qdescp_inputs(
         charge=charge,
         mult=mult,
         boltz=boltz,
-        qdescp_type=qdescp_type,
+        program=program,
     )
 
     # tests here
@@ -89,19 +89,19 @@ def test_qdescp_inputs(
 
 # tests for parameters of csearch random initialzation
 @pytest.mark.parametrize(
-    "file, name, qdescp_type, boltz",
+    "file, name, program, boltz",
     [
         # tests for conformer generation with RDKit
         ("MeOH_NMR_conf_1.json", "MeOH_NMR", "nmr", True),
     ],
 )
-def test_qdescp_type(file, name, qdescp_type, boltz):
+def test_program(file, name, program, boltz):
     os.chdir(qdescp_input_dir)
     # runs the program with the different tests
     qdescp(
         w_dir_main=qdescp_input_dir,
         files=file,
-        qdescp_type=qdescp_type,
+        program=program,
         boltz=boltz,
     )
     # tests here
