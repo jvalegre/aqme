@@ -38,20 +38,20 @@ class qdescp:
         else:
             destination = Path(self.args.destination)
 
-        if self.args.qdescp_type == "xtb":
+        if self.args.program == "xtb":
             self.gather_files_and_run(destination)
 
         if self.args.boltz:
             boltz_dir = Path(f"{destination}/boltz")
             boltz_dir.mkdir(exist_ok=True, parents=True)
-            if self.args.qdescp_type == "xtb":
+            if self.args.program == "xtb":
                 for file in self.args.files:
                     name = file.replace("/", "\\").split("\\")[-1].split(".")[0]
                     json_files = glob.glob(
                         str(destination) + "/" + name + "_conf_*.json"
                     )
                     get_boltz_avg_properties_xtb(json_files, name, boltz_dir, "xtb")
-            if self.args.qdescp_type == "nmr":
+            if self.args.program == "nmr":
                 for file in self.args.files:
                     name = file.replace("/", "\\").split("\\")[-1].split("_conf")[0]
                     json_files = glob.glob(
