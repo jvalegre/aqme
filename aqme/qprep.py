@@ -366,7 +366,13 @@ class qprep:
         charge, mult = None, None
         if self.args.atom_types == [] or self.args.cartesians == []:
             if mol is not None:
-                atom_types = [atom.GetSymbol() for _, atom in enumerate(mol.GetAtoms())]
+                atom_types = []
+                atom_data = [(atom, atom.GetIsotope()) for atom in mol.GetAtoms()]
+                for atom, isotope in atom_data:
+                    if isotope:
+                        atom_types.append(atom.GetSymbol() + "(iso={})".format(isotope))
+                    else:
+                        atom_types.append(atom.GetSymbol())
                 cartesians = mol.GetConformers()[0].GetPositions()
                 try:
                     charge = int(mol.GetProp("Real charge"))
