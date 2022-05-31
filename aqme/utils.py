@@ -408,7 +408,6 @@ def smi_to_mol(
     constraints_dihedral,
 ):
     smi = smi.split(".")
-
     if len(smi) > 1:
         if program not in ["crest"]:
             log.write(
@@ -435,6 +434,10 @@ def smi_to_mol(
         params = Chem.SmilesParserParams()
         params.removeHs = False
         mol = Chem.MolFromSmiles(smi[0], params)
+        if program in ["crest"]:
+            molH = Chem.AddHs(mol)
+            Chem.EmbedMultipleConfs(molH, numConfs=1)
+            rdmolfiles.MolToXYZFile(molH, name + "_crest.xyz")
 
     return (
         mol,
@@ -454,7 +457,7 @@ def nci_ts_mol(
     constraints_dihedral,
 ):
     if constraints_atoms is not None:
-        constraints_dist = [[float(y) for y in x] for x in constraints_atoms]
+        constraints_atoms = [[float(y) for y in x] for x in constraints_atoms]
     if constraints_dist is not None:
         constraints_dist = [[float(y) for y in x] for x in constraints_dist]
         constraints_dist = np.array(constraints_dist)
@@ -478,7 +481,7 @@ def nci_ts_mol(
 
     coord = [0.0, 0.0, 5.0]
     molH = molsH[0]
-    for fragment in molsH[1:]:
+    for i, fragment in enumerate(molsH[1:]):
         offset_3d = Geometry.Point3D(coord[0], coord[1], coord[2])
         molH = Chem.CombineMols(molH, fragment, offset_3d)
         coord[1] += 5
@@ -486,12 +489,15 @@ def nci_ts_mol(
 
     coord = [0.0, 0.0, 5.0]
     mol = mols[0]
-    for fragment in mols[1:]:
+    for i, fragment in enumerate(mols[1:]):
         offset_3d = Geometry.Point3D(coord[0], coord[1], coord[2])
         mol = Chem.CombineMols(mol, fragment, offset_3d)
         coord[1] += 5
+        Chem.SanitizeMol(mol)
     mol = Chem.AddHs(mol)
-    Chem.SanitizeMol(mol)
+
+    mol = Chem.ConstrainedEmbed(mol, molH)
+    rdmolfiles.MolToXYZFile(mol, name + "_crest.xyz")
 
     atom_map = []
     for atom in mol.GetAtoms():
@@ -503,9 +509,6 @@ def nci_ts_mol(
             max_map += 1
             a.SetAtomMapNum(int(max_map))
 
-    Chem.ConstrainedEmbed(mol, molH)
-    rdmolfiles.MolToXYZFile(mol, name + "_crest.xyz")
-
     nconstraints_atoms = []
     if constraints_atoms is not None:
         for _, ele in enumerate(constraints_atoms):
@@ -516,7 +519,6 @@ def nci_ts_mol(
 
     nconstraints_dist = []
     if constraints_dist is not None:
-
         for _, r in enumerate(constraints_dist):
             nr = []
             for _, ele in enumerate(r[:2]):

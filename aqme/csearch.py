@@ -19,6 +19,7 @@ from rdkit.Chem import AllChem as Chem
 from rdkit.Chem import rdmolfiles, rdMolTransforms, PropertyMol, rdDistGeom, Lipinski
 from aqme.filter import filters, ewin_filter, pre_E_filter, RMSD_and_E_filter
 from aqme.csearch_utils import (
+    constraint_fix,
     prepare_direct_smi,
     prepare_smiles_files,
     prepare_csv_files,
@@ -246,14 +247,20 @@ class csearch:
         """
         Function to start conformer generation
         """
-
+        print(
+            "smi",
+            constraints_atoms,
+            constraints_dist,
+            constraints_angle,
+            constraints_dihedral,
+        )
         if self.args.smi is not None:
             (
                 mol,
-                self.args.constraints_atoms,
-                self.args.constraints_dist,
-                self.args.constraints_angle,
-                self.args.constraints_dihedral,
+                constraints_atoms,
+                constraints_dist,
+                constraints_angle,
+                constraints_dihedral,
             ) = smi_to_mol(
                 smi,
                 name,
@@ -277,10 +284,10 @@ class csearch:
             ]:
                 (
                     mol,
-                    self.args.constraints_atoms,
-                    self.args.constraints_dist,
-                    self.args.constraints_angle,
-                    self.args.constraints_dihedral,
+                    constraints_atoms,
+                    constraints_dist,
+                    constraints_angle,
+                    constraints_dihedral,
                 ) = smi_to_mol(
                     smi,
                     name,
@@ -294,10 +301,10 @@ class csearch:
             else:
                 (
                     mol,
-                    self.args.constraints_atoms,
-                    self.args.constraints_dist,
-                    self.args.constraints_angle,
-                    self.args.constraints_dihedral,
+                    constraints_atoms,
+                    constraints_dist,
+                    constraints_angle,
+                    constraints_dihedral,
                 ) = (
                     smi,
                     constraints_atoms,
@@ -351,8 +358,6 @@ class csearch:
                 os.move(xyz_file, f"{name}_{self.args.program}.xyz")
             elif self.args.input.split(".")[1] == "xyz":
                 shutil.copy(f"{name}.xyz", f"{name}_{self.args.program}.xyz")
-            else:
-                rdmolfiles.MolToXYZFile(mol, f"{name}_{self.args.program}.xyz")
 
         # Converts each line to an RDKit mol object
         if self.args.verbose:
@@ -514,7 +519,6 @@ class csearch:
                 self.args,
                 charge,
                 mult,
-                False,
                 constraints_atoms,
                 constraints_dist,
                 constraints_angle,
@@ -1111,8 +1115,6 @@ class csearch:
         else:
             dup_data.at[dup_data_idx, "Real charge"] = charge
             dup_data.at[dup_data_idx, "Mult"] = mult
-            Chem.EmbedMolecule(mol)
-            rdmolfiles.MolToXYZFile(mol, f"{name}_{self.args.program}.xyz")
 
             status = crest_opt(
                 f"{name}_{self.args.program}",
@@ -1121,7 +1123,6 @@ class csearch:
                 self.args,
                 charge,
                 mult,
-                True,
                 constraints_atoms,
                 constraints_dist,
                 constraints_angle,
