@@ -38,15 +38,29 @@ class qdescp:
         else:
             destination = Path(self.args.destination)
 
-        self.gather_files_and_run(destination)
+        if self.args.program == "xtb":
+            self.gather_files_and_run(destination)
 
         if self.args.boltz:
             boltz_dir = Path(f"{destination}/boltz")
             boltz_dir.mkdir(exist_ok=True, parents=True)
-            for file in self.args.files:
-                name = file.replace("/", "\\").split("\\")[-1].split(".")[0]
-                json_files = glob.glob(str(destination) + "/" + name + "_conf_*.json")
-                get_boltz_avg_properties_xtb(json_files, name, boltz_dir)
+            if self.args.program == "xtb":
+                for file in self.args.files:
+                    name = file.replace("/", "\\").split("\\")[-1].split(".")[0]
+                    json_files = glob.glob(
+                        str(destination) + "/" + name + "_conf_*.json"
+                    )
+                    get_boltz_avg_properties_xtb(json_files, name, boltz_dir, "xtb")
+            if self.args.program == "nmr":
+                for file in self.args.files:
+                    name = file.replace("/", "\\").split("\\")[-1].split("_conf")[0]
+                    json_files = glob.glob(
+                        str(os.path.dirname(os.path.abspath(file)))
+                        + "/"
+                        + name
+                        + "_conf_*.json"
+                    )
+                    get_boltz_avg_properties_xtb(json_files, name, boltz_dir, "nmr")
 
     def gather_files_and_run(self, destination):
         # write input files
@@ -66,7 +80,9 @@ class qdescp:
                             _, mult_xyz = read_xyz_charge_mult(conf_file)
                         else:
                             mult_xyz = self.args.mult
-                        xyz_files.append(os.path.dirname(file) + "/" + conf_file)
+                        xyz_files.append(
+                            os.path.dirname(os.path.abspath(file)) + "/" + conf_file
+                        )
                         xyz_charges.append(charge_xyz)
                         xyz_mults.append(mult_xyz)
 
@@ -76,7 +92,7 @@ class qdescp:
                         "-ipdb",
                         file,
                         "-oxyz",
-                        f"-O{os.path.dirname(file)}/{name}_conf_.xyz",
+                        f"-O{os.path.dirname(os.path.abspath(file))}/{name}_conf_.xyz",
                         "-m",
                     ]
                     subprocess.run(
@@ -91,7 +107,7 @@ class qdescp:
                         "-isdf",
                         file,
                         "-oxyz",
-                        f"-O{os.path.dirname(file)}/{name}_conf_.xyz",
+                        f"-O{os.path.dirname(os.path.abspath(file))}/{name}_conf_.xyz",
                         "-m",
                     ]
                     subprocess.run(
@@ -105,17 +121,23 @@ class qdescp:
                     _, charges, _, _ = mol_from_sdf_or_mol_or_mol2(file, "csearch")
                 else:
                     charges = [self.args.charge] * len(
-                        glob.glob(f"{os.path.dirname(file)}/{name}_conf_*.xyz")
+                        glob.glob(
+                            f"{os.path.dirname(os.path.abspath(file))}/{name}_conf_*.xyz"
+                        )
                     )
                 if self.args.mult is None:
                     _, _, mults, _ = mol_from_sdf_or_mol_or_mol2(file, "csearch")
                 else:
                     mults = [self.args.mult] * len(
-                        glob.glob(f"{os.path.dirname(file)}/{name}_conf_*.xyz")
+                        glob.glob(
+                            f"{os.path.dirname(os.path.abspath(file))}/{name}_conf_*.xyz"
+                        )
                     )
 
                 for count, f in enumerate(
-                    glob.glob(f"{os.path.dirname(file)}/{name}_conf_*.xyz")
+                    glob.glob(
+                        f"{os.path.dirname(os.path.abspath(file))}/{name}_conf_*.xyz"
+                    )
                 ):
                     xyz_files.append(f)
                     xyz_charges.append(charges[count])

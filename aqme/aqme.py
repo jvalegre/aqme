@@ -190,6 +190,7 @@ def main():
             files=args.files,
             charge=args.charge,
             mult=args.mult,
+            program=args.program,
             qdescp_temp=args.qdescp_temp,
             qdescp_acc=args.qdescp_acc,
             boltz=args.boltz,

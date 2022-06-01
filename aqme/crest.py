@@ -50,8 +50,8 @@ def get_constraint(mol, constraints):
     # xh_pairs, xh_vals = atompairs(rdmol, "X", "H", active)
     # print(active, template)
     all_fix = []
-    for x in xx_pairs:
-        all_fix.append(x)
+    for x in constraints:
+        all_fix.append(list(x))
     for x in xx_pairs:
         all_fix.append(x)
     return all_fix
@@ -70,7 +70,6 @@ def crest_opt(
     args,
     charge,
     mult,
-    nci_ts_complex,
     constraints_atoms,
     constraints_dist,
     constraints_angle,
@@ -81,6 +80,15 @@ def crest_opt(
     """
     Run xTB using subprocess to perform CREST/CREGEN conformer sampling
     """
+
+    nci_ts_complex = False
+    if (
+        (len(constraints_atoms) != 0)
+        or (len(constraints_dist) != 0)
+        or (len(constraints_angle) != 0)
+        or (len(constraints_dihedral) != 0)
+    ):
+        nci_ts_complex = True
 
     name_no_path = name.replace("/", "\\").split("\\")[-1].split(".")[0]
     csearch_dir = Path(args.w_dir_main)
@@ -93,7 +101,6 @@ def crest_opt(
     shutil.move(f"{name}.xyz", xyzin)
 
     os.chdir(dat_dir)
-
     # for systems that were created from 1D and 2D inputs (i.e. SMILES), this part includes two xTB
     # constrained optimizations to avoid geometry problems in noncovalent complexes and transition states
     if nci_ts_complex:
@@ -106,8 +113,8 @@ def crest_opt(
             args,
             constraints_atoms,
             all_fix,
-            constraints_angle,
-            constraints_dihedral,
+            [],
+            [],
             xyzin,
             "constrain1.inp",
         )
@@ -132,10 +139,10 @@ def crest_opt(
         # xTB optimization with the user-defined constraints
         _ = create_xcontrol(
             args,
-            constraints_atoms,
-            constraints_dist,
-            constraints_angle,
-            constraints_dihedral,
+            list(constraints_atoms),
+            list(constraints_dist),
+            list(constraints_angle),
+            list(constraints_dihedral),
             xyzin,
             "constrain2.inp",
         )
@@ -161,15 +168,17 @@ def crest_opt(
 
     xyzoutall = str(dat_dir) + "/" + name_no_path + "_conformers.xyz"
 
-    constrained_sampling = create_xcontrol(
-        args,
-        constraints_atoms,
-        constraints_dist,
-        constraints_angle,
-        constraints_dihedral,
-        xyzin,
-        ".xcontrol.sample",
-    )
+    constrained_sampling = False
+    if nci_ts_complex:
+        constrained_sampling = create_xcontrol(
+            args,
+            list(constraints_atoms),
+            list(constraints_dist),
+            list(constraints_angle),
+            list(constraints_dihedral),
+            xyzin,
+            ".xcontrol.sample",
+        )
 
     command = [
         "crest",
@@ -180,6 +189,8 @@ def crest_opt(
         str(mult - 1),
         "-T",
         str(args.nprocs),
+        "--ewin",
+        str(args.ewin_csearch),
     ]
 
     if constrained_sampling:
@@ -188,8 +199,7 @@ def crest_opt(
 
     if args.crest_keywords is not None:
         for keyword in args.crest_keywords.split():
-            if keyword not in command:
-                command.append(keyword)
+            command.append(keyword)
 
     run_command(command, str(dat_dir) + "/crest.out")
 
@@ -198,8 +208,7 @@ def crest_opt(
 
         if args.cregen_keywords is not None:
             for keyword in args.cregen_keywords.split():
-                if keyword not in command:
-                    command.append(keyword)
+                command.append(keyword)
 
         run_command(command, str(dat_dir) + "/cregen.out")
 
@@ -256,19 +265,6 @@ def create_xcontrol(
     """
 
     constrained_sampling = False
-
-    # this avoids problems when running AQME through command lines
-    if not isinstance(constraints_atoms, list):
-        constraints_atoms = constraints_atoms.strip("][").split(",")
-
-    if not isinstance(constraints_dist, list):
-        constraints_dist = [constraints_dist.strip("][").split(",")]
-
-    if not isinstance(constraints_angle, list):
-        constraints_angle = [constraints_angle.strip("][").split(",")]
-
-    if not isinstance(constraints_dihedral, list):
-        constraints_dihedral = [constraints_dihedral.strip("][").split(",")]
 
     unique_atoms = []
     for atom in constraints_atoms:
