@@ -128,7 +128,7 @@ def crest_opt(
             "-c",
             str(charge),
             "--uhf",
-            str(mult - 1),
+            str(int(mult) - 1),
             "-P",
             str(args.nprocs),
         ]
@@ -156,7 +156,7 @@ def crest_opt(
             "-c",
             str(charge),
             "--uhf",
-            str(mult - 1),
+            str(int(mult) - 1),
             "-P",
             str(args.nprocs),
         ]
@@ -186,7 +186,7 @@ def crest_opt(
         "--chrg",
         str(charge),
         "--uhf",
-        str(mult - 1),
+        str(int(mult) - 1),
         "-T",
         str(args.nprocs),
         "--ewin",
@@ -241,7 +241,7 @@ def crest_opt(
         energy = str(open(file, "r").readlines()[0])
         mol_rd.SetProp("Energy", energy)
         mol_rd.SetProp("Real charge", str(charge))
-        mol_rd.SetProp("Mult", str(mult))
+        mol_rd.SetProp("Mult", str(int(mult) - 1))
         sdwriter.write(mol_rd)
 
     dup_data.at[dup_data_idx, "crest-conformers"] = len(xyz_files)
