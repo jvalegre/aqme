@@ -185,7 +185,7 @@ class qdescp:
             "--chrg",
             str(charge),
             "--uhf",
-            str(mult),
+            str(int(mult) - 1),
             "--etemp",
             str(self.args.qdescp_temp),
             "--input",
@@ -207,7 +207,7 @@ class qdescp:
             "--acc",
             str(self.args.qdescp_acc),
             "--uhf",
-            str(mult),
+            str(int(mult) - 1),
             "--etemp",
             str(self.args.qdescp_temp),
         ]
@@ -224,7 +224,7 @@ class qdescp:
             "--acc",
             str(self.args.qdescp_acc),
             "--uhf",
-            str(mult),
+            str(int(mult) - 1),
             "--etemp",
             str(self.args.qdescp_temp),
         ]
@@ -241,7 +241,7 @@ class qdescp:
             "--acc",
             str(self.args.qdescp_acc),
             "--uhf",
-            str(mult),
+            str(int(mult) - 1),
             "--etemp",
             str(self.args.qdescp_temp),
         ]

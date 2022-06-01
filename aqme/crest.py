@@ -128,7 +128,7 @@ def crest_opt(
             "-c",
             str(charge),
             "--uhf",
-            str(mult - 1),
+            str(int(mult) - 1),
             "-P",
             str(args.nprocs),
         ]
@@ -156,7 +156,7 @@ def crest_opt(
             "-c",
             str(charge),
             "--uhf",
-            str(mult - 1),
+            str(int(mult) - 1),
             "-P",
             str(args.nprocs),
         ]
@@ -186,7 +186,7 @@ def crest_opt(
         "--chrg",
         str(charge),
         "--uhf",
-        str(mult - 1),
+        str(int(mult) - 1),
         "-T",
         str(args.nprocs),
         "--ewin",
