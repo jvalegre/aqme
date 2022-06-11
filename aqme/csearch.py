@@ -16,10 +16,9 @@ import concurrent.futures as futures
 import multiprocessing as mp
 from progress.bar import IncrementalBar
 from rdkit.Chem import AllChem as Chem
-from rdkit.Chem import rdmolfiles, rdMolTransforms, PropertyMol, rdDistGeom, Lipinski
+from rdkit.Chem import rdMolTransforms, PropertyMol, rdDistGeom, Lipinski
 from aqme.filter import filters, ewin_filter, pre_E_filter, RMSD_and_E_filter
 from aqme.csearch_utils import (
-    constraint_fix,
     prepare_direct_smi,
     prepare_smiles_files,
     prepare_csv_files,

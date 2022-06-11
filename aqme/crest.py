@@ -1,14 +1,13 @@
 #!/usr/bin/python
-from __future__ import print_function, absolute_import
-from rdkit.Chem import AllChem as Chem
 
 #######################################################################
 # Runs crest on an xyz file, can add in options to the code if needed #
 #######################################################################
 
-# Python Libraries
 import os
 import glob
+from __future__ import print_function, absolute_import
+from rdkit.Chem import AllChem as Chem
 import subprocess
 import rdkit
 from pathlib import Path

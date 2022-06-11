@@ -472,7 +472,7 @@ class qcorr:
         try:
             os.chdir(self.args.isom_inputs)
         except FileNotFoundError:
-            self.args.log.write(f"x  The PATH specified in isom_inputs doesn't exist!")
+            self.args.log.write("x  The PATH specified in isom_inputs doesn't exist!")
             isom_valid = False
 
         if not isom_valid:

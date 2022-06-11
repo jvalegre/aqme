@@ -101,7 +101,7 @@ class cmin:
         bar.finish()
 
         # store all the information into a CSV file
-        cmin_csv_file = self.args.w_dir_main.joinpath(f"CMIN-Data.csv")
+        cmin_csv_file = self.args.w_dir_main.joinpath("CMIN-Data.csv")
         self.final_dup_data.to_csv(cmin_csv_file, index=False)
 
         elapsed_time = round(time.time() - start_time_overall, 2)
@@ -410,7 +410,7 @@ class cmin:
             os.environ["OMP_STACKSIZE"] = args.stacksize
 
         elements = ""
-        for i, atom in enumerate(mol.GetAtoms()):
+        for _, atom in enumerate(mol.GetAtoms()):
             elements += atom.GetSymbol()
 
         cartesians = mol.GetConformers()[0].GetPositions()

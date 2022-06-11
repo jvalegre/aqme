@@ -236,7 +236,7 @@ def get_qm_energy_plot(program,plot_files,energy_dft):
             elif len(file.split('_rdkit.sdf')) == 2:
                 type_csearch = 'RDKit'
             name = file.replace('_summ.sdf','_rdkit.sdf').replace('_fullmonte.sdf','_rdkit.sdf').split('_rdkit.sdf')[0]
-        
+
         energy_dft.append([name,energy_qm])
 
     return energy_dft,type_csearch,type_cmin
