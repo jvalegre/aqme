@@ -39,12 +39,13 @@ jobs:
           conda install -y -c conda-forge openbabel
           # install xTB
           conda install -y -c conda-forge unzip
+          conda install -y -c conda-forge libblas
+          conda install -c anaconda libopenblas
+          conda install -c conda-forge gcc
           pip install cffi
           pip install qcelemental
           pip install meson
           pip install ninja
-          apt-get install libblas-dev liblapack-dev
-          apt-get install libopenblas-base libopenblas-dev
           wget https://github.com/grimme-lab/xtb/archive/v6.5.0.zip
           unzip v6.5.0.zip
           cd xtb-6.5.0
