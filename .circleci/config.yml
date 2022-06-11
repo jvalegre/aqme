@@ -39,6 +39,8 @@ jobs:
           conda install -y -c conda-forge openbabel
           # install xTB
           conda install -y -c conda-forge unzip
+          conda install -y -c conda-forge meson
+          conda install -y -c conda-forge ninja
           wget https://github.com/grimme-lab/xtb/archive/v6.5.0.zip
           unzip v6.5.0.zip
           cd xtb-6.5.0
