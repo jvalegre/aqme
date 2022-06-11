@@ -42,13 +42,13 @@ jobs:
           conda install -y -c conda-forge libblas
           conda install -c anaconda libopenblas
           conda install -c conda-forge gcc
+          conda install -c conda-forge gfortran
           pip install cffi
           pip install qcelemental
           pip install meson
           pip install ninja
-          wget https://github.com/grimme-lab/xtb/archive/v6.5.0.zip
-          unzip v6.5.0.zip
-          cd xtb-6.5.0
+          git clone --branch=master https://github.com/grimme-lab/xtb
+          cd xtb
           meson setup build_gcc --buildtype release -Dla_backend=openblas --warnlevel 0
           XTBHOME=$PWD
           XTBPATH=${XTBHOME}/share/xtb:${XTBHOME}:${HOME}
@@ -57,7 +57,7 @@ jobs:
           LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${XTBHOME}/lib
           PYTHONPATH=${PYTHONPATH}:${XTBHOME}/python
           export PATH XTBPATH MANPATH LD_LIBRARY_PATH PYTHONPATH
-          git clone --branch=master https://github.com/jvalegre/xtb-python
+          git clone --branch=master https://github.com/grimme-lab/xtb-python
           cd xtb-python
           # compile xtb-python
           git submodule update --init
