@@ -21,7 +21,7 @@
 ###  Authors: Shree Sowndarya S. V., Juan V. Alegre Requena                             ###
 ###                                                                                     ###
 ###  Please, report any bugs or suggestions to:                                         ###
-###  svss@colostate.edu or juanvi89@hotmail.com                                         ###
+###  svss@colostate.edu or jvalegre@unizar.es                                           ###
 ###                                                                                     ###
 ###########################################################################################
 ###########################################################################################.

@@ -293,7 +293,7 @@ AQME can also be run through command lines. Some examples are:
 ## Developers and help desk
 List of main developers and contact emails:  
   - [ ] [Shree Sowndarya S. V.](https://orcid.org/0000-0002-4568-5854), main developer of the CSEARCH and CMIN modules. Contact: [svss@colostate.edu](mailto:svss@colostate.edu)  
-  - [ ] [Juan V. Alegre-Requena](https://orcid.org/0000-0002-0769-7168), main developer of the QCORR and QPREP modules. Contact: [juanvi89@hotmail.com](mailto:juanvi89@hotmail.com)  
+  - [ ] [Juan V. Alegre-Requena](https://orcid.org/0000-0002-0769-7168), main developer of the QCORR and QPREP modules. Contact: [jvalegre@unizar.es](mailto:jvalegre@unizar.es)  
   - [ ] [Turki Alturaifi](https://www.chem.pitt.edu/person/turki-alturaifi), worked in benchmarking the parameters for RDKit-based conformer generation. Contact: [turki0@rams.colostate.edu](mailto:turki0@rams.colostate.edu)  
   - [ ] [Raúl Pérez-Soto](https://orcid.org/0000-0002-6237-2155), worked in refactoring the code. Contact: [rperez@iciq.es](mailto:rperez@iciq.es)  
   - [ ] [Robert S. Paton](https://orcid.org/0000-0002-0104-4166), research group supervisor and code advisor. Contact: [robert.paton@colostate.edu](mailto:robert.paton@colostate.edu)  

@@ -1,7 +1,7 @@
 # Getting Support
 Support offered for AQME and instructions to submit an issue:
   1) AQME offers the following support channels:
-    * For detailed questions (e.g., those requiring examples) send us an [email](mailto:juanvi89@hotmail.com?subject=[aqme]) or [email](mailto:svss@colostate.edu?subject=[aqme])
+    * For detailed questions (e.g., those requiring examples) send us an [email](mailto:jvalegre@unizar.es?subject=[aqme]) or [email](mailto:svss@colostate.edu?subject=[aqme])
     * To report issues, use this repository's [issue tracker](https://github.com/jvalegre/aqme/issues/new)
 
   2) When reporting an issue, please include the following details:
