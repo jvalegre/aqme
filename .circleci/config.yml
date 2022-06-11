@@ -38,6 +38,7 @@ jobs:
           conda install -c conda-forge rdkit
           conda install -c conda-forge openbabel
           # install xTB
+          conda install -c conda-forge unzip
           wget https://github.com/grimme-lab/xtb/archive/v6.5.0.zip
           unzip v6.5.0.zip
           cd xtb-6.5.0
