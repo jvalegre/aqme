@@ -34,17 +34,6 @@ jobs:
           # app-dir: ~/project/package-directory/  # If you're requirements.txt isn't in the root directory.
           # pip-dependency-file: test-requirements.txt  # if you have a different name for your requirements file, maybe one that combines your runtime and test requirements.
       - run: |
-          # install conda and create environment
-          wget http://repo.continuum.io/miniconda/Miniconda3-4.1.11-Linux-x86_64.sh -O miniconda.sh;
-          bash miniconda.sh -b -p $HOME/conda
-          export PATH="$HOME/conda/bin:$PATH"
-          hash -r
-          conda config --set always_yes yes --set changeps1 no
-          conda update -q conda
-          conda info -a
-          conda create -q -n tenv python=$TRAVIS_PYTHON_VERSION pip cmake
-          source activate tenv
-          sudo apt-get update
           # install RDKit and OpenBabel
           conda install -c conda-forge rdkit
           conda install -c conda-forge openbabel
