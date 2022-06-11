@@ -38,7 +38,7 @@ jobs:
           conda install -c conda-forge rdkit
           conda install -c conda-forge openbabel
           # install AQME
-          /home/circleci/.pyenv/versions/3.10.2/bin/python3.10 -m pip install --upgrade pip
+          python -m pip install --upgrade pip
           pip install .
           # install and run pytest
           pip install pytest
