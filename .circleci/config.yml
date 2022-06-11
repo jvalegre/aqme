@@ -43,7 +43,8 @@ jobs:
           # install and run pytest
           pip install pytest
           pip install pytest-cov
-          python -m pytest
+          python -m pytest -v --cov=aqme
+          codecov
 
 # Invoke jobs via workflows
 # See: https://circleci.com/docs/2.0/configuration-reference/#workflows
