@@ -37,6 +37,27 @@ jobs:
           # install RDKit and OpenBabel
           conda install -c conda-forge rdkit
           conda install -c conda-forge openbabel
+          # install xTB
+          wget https://github.com/grimme-lab/xtb/archive/v6.5.0.zip
+          unzip v6.5.0.zip
+          cd xtb-6.5.0
+          meson setup build_gcc --buildtype release -Dla_backend=openblas --warnlevel 0
+          XTBHOME=$PWD
+          XTBPATH=${XTBHOME}/share/xtb:${XTBHOME}:${HOME}
+          MANPATH=${MANPATH}:${XTBHOME}/share/man
+          PATH=${PATH}:${XTBHOME}/bin
+          LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${XTBHOME}/lib
+          PYTHONPATH=${PYTHONPATH}:${XTBHOME}/python
+          export PATH XTBPATH MANPATH LD_LIBRARY_PATH PYTHONPATH
+          git clone --branch=master https://github.com/jvalegre/xtb-python
+          cd xtb-python
+          # compile xtb-python
+          git submodule update --init
+          meson setup build --prefix=$PWD --libdir=xtb -Dla_backend=netlib
+          ninja -C build install
+          pip install -e .
+          cd ..
+          cd ..
           # install AQME
           python -m pip install --upgrade pip
           pip install .
