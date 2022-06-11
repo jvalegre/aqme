@@ -270,13 +270,6 @@ class qcorr:
                     ):
                         errortype = "spin_contaminated"
 
-            if errortype == "none" and self.args.freq_conv is not None:
-                freq_conv = cclib_data["optimization"]["geometric values"][-1]
-                freq_conv_targets = cclib_data["optimization"]["geometric targets"]
-                for i, conv in enumerate(freq_conv):
-                    if conv > freq_conv_targets[i]:
-                        errortype = "freq_no_conv"
-
         # general errors
         else:
             termination = "other"
@@ -338,6 +331,7 @@ class qcorr:
                         ] = "SP calculation"
                     H_dup = E_dup
                     G_dup = E_dup
+
             # detects if this calculation is a duplicate
             for i, _ in enumerate(duplicate_data["Energies"]):
                 E_diff = abs(E_dup - duplicate_data["Energies"][i])
@@ -375,6 +369,11 @@ class qcorr:
             if len(atom_types) in [3, 4]:
                 errortype = detect_linear(errortype, atom_types, cclib_data)
 
+            # detects no convergence issues during freq calcs
+            if self.args.freq_conv is not None:
+                if errortype == "none" and cclib_data["optimization"]["times converged"] == 1:
+                    errortype = 'freq_no_conv'
+
         if errortype in ["extra_imag_freq", "freq_no_conv", "linear_mol_wrong"]:
             if errortype == "extra_imag_freq":
                 cartesians = self.fix_imag_freqs(cclib_data, cartesians)
@@ -384,13 +383,11 @@ class qcorr:
             for keyword in cclib_data["metadata"]["keywords line"].split():
                 if keyword.lower().startswith("opt"):
                     opt_found = True
+
             if not opt_found:
                 cclib_data["metadata"]["keywords line"] += " opt"
 
-            if errortype == "linear_mol_wrong":
-                cclib_data["metadata"]["keywords line"] += " symmetry=(PG=Cinfv)"
-
-            elif errortype == "freq_no_conv":
+            if errortype == "freq_no_conv":
                 # adjust the keywords so only FREQ is calculated
                 new_keywords_line = ""
                 for keyword in cclib_data["metadata"]["keywords line"].split():
@@ -404,6 +401,9 @@ class qcorr:
                     new_keywords_line += keyword
                     new_keywords_line += " "
                 cclib_data["metadata"]["keywords line"] = new_keywords_line
+
+            elif errortype == "linear_mol_wrong":
+                cclib_data["metadata"]["keywords line"] += " symmetry=(PG=Cinfv)"
 
         return atom_types, cartesians, duplicate_data, errortype, cclib_data
 

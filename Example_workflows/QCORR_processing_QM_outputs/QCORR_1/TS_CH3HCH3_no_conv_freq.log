@@ -1889,10 +1889,10 @@
  Thermal correction to Energy=                    0.080668
  Thermal correction to Enthalpy=                  0.081612
  Thermal correction to Gibbs Free Energy=         0.050261
- Sum of electronic and zero-point Energies=            -79.829295
- Sum of electronic and thermal Energies=               -79.824457
- Sum of electronic and thermal Enthalpies=             -79.823513
- Sum of electronic and thermal Free Energies=          -79.854864
+ Sum of electronic and zero-point Energies=            -79.629295
+ Sum of electronic and thermal Energies=               -79.624457
+ Sum of electronic and thermal Enthalpies=             -79.623513
+ Sum of electronic and thermal Free Energies=          -79.654864
  
                      E (Thermal)             CV                S
                       KCal/Mol        Cal/Mol-Kelvin    Cal/Mol-Kelvin
@@ -2002,8 +2002,7 @@
  Maximum Displacement     0.000381     0.001800     YES
  RMS     Displacement     0.000260     0.001200     YES
  Predicted change in Energy=-9.521917D-08
- Optimization completed.
-    -- Stationary point found.
+
                            ----------------------------
                            !   Optimized Parameters   !
                            ! (Angstroms and Degrees)  !
