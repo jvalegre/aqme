@@ -35,10 +35,10 @@ jobs:
           # pip-dependency-file: test-requirements.txt  # if you have a different name for your requirements file, maybe one that combines your runtime and test requirements.
       - run: |
           # install RDKit and OpenBabel
-          conda install -c -y conda-forge rdkit
-          conda install -c -y conda-forge openbabel
+          conda install -y -c conda-forge rdkit
+          conda install -y -c conda-forge openbabel
           # install xTB
-          conda install -c -y conda-forge unzip
+          conda install -y -c conda-forge unzip
           wget https://github.com/grimme-lab/xtb/archive/v6.5.0.zip
           unzip v6.5.0.zip
           cd xtb-6.5.0
