@@ -17,7 +17,7 @@ from aqme.utils import (
     get_boltz_avg_properties_xtb,
 )
 from aqme.crest import xyzall_2_xyz
-from aqme.xtb_to_json import *
+from aqme.xtb_to_json import read_fod, read_json, read_xtb, read_wbo, read_gfn1, read_fukui
 from scipy.spatial.distance import cdist
 
 
