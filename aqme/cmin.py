@@ -478,7 +478,7 @@ def rdkit_sdf_read(file, args):
     inmols = Chem.SDMolSupplier(file, removeHs=False)
 
     if inmols is None:
-        args.log.write(f"Could not open {name}{args.output}")
+        args.log.write(f"Could not open {file}")
         args.log.finalize()
         sys.exit()
     return inmols
