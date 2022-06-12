@@ -156,6 +156,7 @@ class qcorr:
             file_terms, destination = self.organize_outputs(
                 file, termination, errortype, file_terms
             )
+            
             if errortype in ["none", "sp_calc"]:
                 destination_json = destination.joinpath("json_files/")
                 move_file(destination_json, self.args.w_dir_main, file_name + ".json")
@@ -244,34 +245,8 @@ class qcorr:
             elif not "free energy" in cclib_data["properties"]["energy"]:
                 errortype = "sp_calc"
 
-        # normal terminations
-        elif "vibrations" in cclib_data:
-            # spin contamination analysis using user-defined thresholds
-            if "S2 after annihilation" in cclib_data["properties"]:
-                unpaired_e = cclib_data["properties"]["multiplicity"] - 1
-                # this first part accounts for singlet diradicals (threshold is 10% of the spin before annihilation)
-                if unpaired_e == 0:
-                    if (
-                        float(cclib_data["properties"]["S2 after annihilation"])
-                        > abs(float(self.args.s2_threshold) / 100)
-                        * cclib_data["properties"]["S2 before annihilation"]
-                    ):
-                        errortype = "spin_contaminated"
-                else:
-                    spin = unpaired_e * 0.5
-                    s2_expected_value = spin * (spin + 1)
-                    spin_diff = abs(
-                        float(cclib_data["properties"]["S2 after annihilation"])
-                        - s2_expected_value
-                    )
-                    if (
-                        spin_diff
-                        > abs(float(self.args.s2_threshold) / 100) * s2_expected_value
-                    ):
-                        errortype = "spin_contaminated"
-
         # general errors
-        else:
+        elif "vibrations" not in cclib_data:
             termination = "other"
             errortype = "not_specified"
             if "optimization" in cclib_data:
@@ -304,6 +279,32 @@ class qcorr:
                 elif outlines[i].find("SCF Error") > -1:
                     errortype = "SCFerror"
                     break
+
+        # normal terminations
+        if "vibrations" in cclib_data or errortype == "sp_calc":
+            # spin contamination analysis using user-defined thresholds
+            if "S2 after annihilation" in cclib_data["properties"]:
+                unpaired_e = cclib_data["properties"]["multiplicity"] - 1
+                # this first part accounts for singlet diradicals (threshold is 10% of the spin before annihilation)
+                if unpaired_e == 0:
+                    if (
+                        float(cclib_data["properties"]["S2 after annihilation"])
+                        > abs(float(self.args.s2_threshold) / 100)
+                        * cclib_data["properties"]["S2 before annihilation"]
+                    ):
+                        errortype = "spin_contaminated"
+                else:
+                    spin = unpaired_e * 0.5
+                    s2_expected_value = spin * (spin + 1)
+                    spin_diff = abs(
+                        float(cclib_data["properties"]["S2 after annihilation"])
+                        - s2_expected_value
+                    )
+                    if (
+                        spin_diff
+                        > abs(float(self.args.s2_threshold) / 100) * s2_expected_value
+                    ):
+                        errortype = "spin_contaminated"
 
         return termination, errortype, cclib_data, outlines
 

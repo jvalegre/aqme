@@ -460,7 +460,7 @@ def get_json_data(self, file, cclib_data):
         if "optimization" in cclib_data:
             cclib_data["optimization"]["times converged"] = 1
 
-        # Extract <S**2> before and after spin annihilation, as well as convergence in freq calc
+        # Extract <S**2> before and after spin annihilation, energy, and convergence in freq calc
         for i in reversed(range(0, len(outlines) - 30)):
             # For time dependent (TD) calculations
             if "E(TD-HF/TD-DFT)" in outlines[i]:

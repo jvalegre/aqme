@@ -37,6 +37,7 @@ path_qcorr = os.getcwd()+'/Example_workflows/QCORR_processing_QM_outputs'
     ('QCORR_1', 'freq_ok_YYNN.log', None, 'successful_QM_outputs', False), # test calcs with freq calcs that did not converge after OPT
     ('QCORR_1', 'TS_CH3HCH3_no_conv_freq.log', None, 'unsuccessful_QM_outputs/run_1/freq_no_conv', False), # test calcs with freq calcs that did not converge after OPT in TSs
     ('QCORR_1', 'bpinene_spin_contamin.log', None, 'unsuccessful_QM_outputs/run_1/spin_contaminated', False), # test calcs with spin contamination
+    ('QCORR_1', 'CH4_T1_SP_spin_contamin.log', None, 'unsuccessful_QM_outputs/run_1/spin_contaminated', False), # test calcs with spin contamination
     ('QCORR_1', 'CH4_Fail_freq_only.log', None, 'unsuccessful_QM_outputs/run_1/error/not_specified_error', False), # test for Normal terminated OPT and unfinished freq
     ('QCORR_1', 'TS_CH3HCH3.log', None, 'successful_QM_outputs', False), # test successful termination in TSs
     ('QCORR_1', 'TS_CH3HCH3_unfinished.log', None, 'unsuccessful_QM_outputs/run_1/error/not_specified_error', False), # test unfinished TSs
@@ -105,7 +106,8 @@ def test_QCORR_analysis(init_folder, file, command_line, target_folder, restore_
             if file.split('.')[0] in ['CH4', 'MeOH_G09', 'z_CH4_duplicate', 'Basis_set_error1', 
                                       'Basis_set_error2', 'CH4_before_E', 'bpinene_spin_contamin',
                                       'TS_CH3HCH3', 'TS_CH3HCH3_no_imag_freq', 'CH4_SP', 'H_freq',
-                                      'H_SP', 'MeOH_NMR', 'CO2_linear_4freqs', 'freq_ok_YYNN']:
+                                      'H_SP', 'MeOH_NMR', 'CO2_linear_4freqs', 'freq_ok_YYNN',
+                                      'CH4_T1_SP_spin_contamin']:
                 assert not path.exists(f'{w_dir_main}/unsuccessful_QM_outputs/run_1/fixed_QM_inputs/{file.split(".")[0]}.com')
 
             else:
@@ -268,7 +270,7 @@ def test_QCORR_analysis(init_folder, file, command_line, target_folder, restore_
 
         elif file == 'csv':
             qcorr_stats = pd.read_csv(f'{w_dir_main}/QCORR-run_1-stats.csv')
-            assert qcorr_stats['Total files'][0] == 26
+            assert qcorr_stats['Total files'][0] == 27
             assert qcorr_stats['Normal termination'][0] == 6
             assert qcorr_stats['Single-point calcs'][0] == 3
             assert qcorr_stats['Extra imag. freq.'][0] == 3
@@ -279,7 +281,7 @@ def test_QCORR_analysis(init_folder, file, command_line, target_folder, restore_
             assert qcorr_stats['No data'][0] == 1
             assert qcorr_stats['Basis set error'][0] == 2
             assert qcorr_stats['Other errors'][0] == 4
-            assert qcorr_stats['Spin contamination'][0] == 1
+            assert qcorr_stats['Spin contamination'][0] == 2
             assert qcorr_stats['Duplicates'][0] == 1
         
         elif file == 'check_init':
