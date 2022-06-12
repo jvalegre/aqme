@@ -13,7 +13,7 @@ import glob
 import shutil
 
 # saves the working directory
-w_dir_main = os.getcwd()+'/..'
+w_dir_main = os.getcwd()
 qdescp_input_dir = w_dir_main + "/tests/qdescp_inputs"
 if not os.path.exists(qdescp_input_dir):
     os.mkdir(qdescp_input_dir)

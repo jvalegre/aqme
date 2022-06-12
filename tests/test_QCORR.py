@@ -14,8 +14,8 @@ from pathlib import Path
 import pandas as pd
 
 # saves the working directory
-path_main = os.getcwd()+'/..'
-path_qcorr = os.getcwd()+'/../Example_workflows/QCORR_processing_QM_outputs'
+path_main = os.getcwd()
+path_qcorr = os.getcwd()+'/Example_workflows/QCORR_processing_QM_outputs'
 
 # QCORR tests
 @pytest.mark.parametrize("init_folder, file, command_line, target_folder, restore_folder",

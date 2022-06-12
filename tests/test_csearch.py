@@ -13,7 +13,7 @@ import rdkit
 import shutil
 
 # saves the working directory
-w_dir_main = os.getcwd()+'/..'
+w_dir_main = os.getcwd()
 csearch_methods_dir = w_dir_main + "/tests/csearch_methods"
 csearch_rdkit_summ_dir = w_dir_main + "/tests/csearch_rdkit_summ"
 csearch_fullmonte_dir = w_dir_main + "/tests/csearch_fullmonte"

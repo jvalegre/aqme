@@ -13,8 +13,8 @@ import subprocess
 from pathlib import Path
 
 # saves the working directory
-path_main = os.getcwd()+'/..'
-path_qprep = os.getcwd()+'/../Example_workflows/QPREP_generating_input_files'
+path_main = os.getcwd()
+path_qprep = os.getcwd()+'/Example_workflows/QPREP_generating_input_files'
 
 # QPREP tests
 @pytest.mark.parametrize("test_type, init_folder, target_folder, restore_folder",
