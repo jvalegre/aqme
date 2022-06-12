@@ -12,19 +12,18 @@ from aqme.utils import periodic_table, get_conf_RMS
 # Aux functions for passes_Ir_bidentate_x3_rule
 def is_carbene_like(neighbours):
     """
-    Takes a list of the metal neighbour atoms and returns True if they
-    can be considered as if it were a carbene.
+    Takes a list of the metal neighbour atoms and returns True if they can be considered as if it were a carbene.
 
     Parameters
     ----------
     neighbors : list
-            list of neighbour atoms of the metal.
+        list of neighbour atoms of the metal.
 
     Returns
     -------
     bool
-
     """
+
     carbene_like = False
     N_group = ["N", "P", "As"]
     for inside_neighbour in neighbours:

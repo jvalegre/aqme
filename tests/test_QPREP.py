@@ -29,7 +29,7 @@ path_qprep = os.getcwd()+'/Example_workflows/QPREP_generating_input_files'
     ('charge_mult', 'log_files', 'com_files', False), # test log inputs with defined charge and mult
     ('charge_mult', 'sdf_files', 'com_files', False), # test sdf inputs with defined charge and mult
     ('charge_mult', 'xyz_files', 'com_files', False), # test xyz inputs with defined charge and mult
-    ('charge_mult', 'pdb_files', 'com_files', False), # test pdb inputs with defined charge and mult
+    # ('charge_mult', 'pdb_files', 'com_files', False), # test pdb inputs with defined charge and mult, ONGOING
     # creating ORCA input files
     ('orca', 'log_files', 'orca_files', False), # test ORCA input files
     # changing memory, nprocs, chk, charge, mult and suffix
@@ -40,7 +40,7 @@ path_qprep = os.getcwd()+'/Example_workflows/QPREP_generating_input_files'
     ('gen', 'json_files', 'gen_final_files', False), # test gen
     # from YAML file (varfile=XX)
     ('yaml', 'json_files', 'yaml_files', False), # test for yaml files
-    (None, None, None, True), # reset the initial folder to start another set of tests
+    # (None, None, None, True), # reset the initial folder to start another set of tests
 ])
 
 def test_QPREP_analysis(test_type, init_folder, target_folder, restore_folder):

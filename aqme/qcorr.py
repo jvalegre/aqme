@@ -156,6 +156,7 @@ class qcorr:
             file_terms, destination = self.organize_outputs(
                 file, termination, errortype, file_terms
             )
+            
             if errortype in ["none", "sp_calc"]:
                 destination_json = destination.joinpath("json_files/")
                 move_file(destination_json, self.args.w_dir_main, file_name + ".json")
@@ -244,41 +245,8 @@ class qcorr:
             elif not "free energy" in cclib_data["properties"]["energy"]:
                 errortype = "sp_calc"
 
-        # normal terminations
-        elif "vibrations" in cclib_data:
-            # spin contamination analysis using user-defined thresholds
-            if "S2 after annihilation" in cclib_data["properties"]:
-                unpaired_e = cclib_data["properties"]["multiplicity"] - 1
-                # this first part accounts for singlet diradicals (threshold is 10% of the spin before annihilation)
-                if unpaired_e == 0:
-                    if (
-                        float(cclib_data["properties"]["S2 after annihilation"])
-                        > abs(float(self.args.s2_threshold) / 100)
-                        * cclib_data["properties"]["S2 before annihilation"]
-                    ):
-                        errortype = "spin_contaminated"
-                else:
-                    spin = unpaired_e * 0.5
-                    s2_expected_value = spin * (spin + 1)
-                    spin_diff = abs(
-                        float(cclib_data["properties"]["S2 after annihilation"])
-                        - s2_expected_value
-                    )
-                    if (
-                        spin_diff
-                        > abs(float(self.args.s2_threshold) / 100) * s2_expected_value
-                    ):
-                        errortype = "spin_contaminated"
-
-            if errortype == "none" and self.args.freq_conv is not None:
-                freq_conv = cclib_data["optimization"]["geometric values"][-1]
-                freq_conv_targets = cclib_data["optimization"]["geometric targets"]
-                for i, conv in enumerate(freq_conv):
-                    if conv > freq_conv_targets[i]:
-                        errortype = "freq_no_conv"
-
         # general errors
-        else:
+        elif "vibrations" not in cclib_data:
             termination = "other"
             errortype = "not_specified"
             if "optimization" in cclib_data:
@@ -312,6 +280,32 @@ class qcorr:
                     errortype = "SCFerror"
                     break
 
+        # normal terminations
+        if "vibrations" in cclib_data or errortype == "sp_calc":
+            # spin contamination analysis using user-defined thresholds
+            if "S2 after annihilation" in cclib_data["properties"]:
+                unpaired_e = cclib_data["properties"]["multiplicity"] - 1
+                # this first part accounts for singlet diradicals (threshold is 10% of the spin before annihilation)
+                if unpaired_e == 0:
+                    if (
+                        float(cclib_data["properties"]["S2 after annihilation"])
+                        > abs(float(self.args.s2_threshold) / 100)
+                        * cclib_data["properties"]["S2 before annihilation"]
+                    ):
+                        errortype = "spin_contaminated"
+                else:
+                    spin = unpaired_e * 0.5
+                    s2_expected_value = spin * (spin + 1)
+                    spin_diff = abs(
+                        float(cclib_data["properties"]["S2 after annihilation"])
+                        - s2_expected_value
+                    )
+                    if (
+                        spin_diff
+                        > abs(float(self.args.s2_threshold) / 100) * s2_expected_value
+                    ):
+                        errortype = "spin_contaminated"
+
         return termination, errortype, cclib_data, outlines
 
     def analyze_normal(self, duplicate_data, errortype, cclib_data):
@@ -338,6 +332,7 @@ class qcorr:
                         ] = "SP calculation"
                     H_dup = E_dup
                     G_dup = E_dup
+
             # detects if this calculation is a duplicate
             for i, _ in enumerate(duplicate_data["Energies"]):
                 E_diff = abs(E_dup - duplicate_data["Energies"][i])
@@ -375,6 +370,11 @@ class qcorr:
             if len(atom_types) in [3, 4]:
                 errortype = detect_linear(errortype, atom_types, cclib_data)
 
+            # detects no convergence issues during freq calcs
+            if self.args.freq_conv is not None:
+                if errortype == "none" and cclib_data["optimization"]["times converged"] == 1:
+                    errortype = 'freq_no_conv'
+
         if errortype in ["extra_imag_freq", "freq_no_conv", "linear_mol_wrong"]:
             if errortype == "extra_imag_freq":
                 cartesians = self.fix_imag_freqs(cclib_data, cartesians)
@@ -384,13 +384,11 @@ class qcorr:
             for keyword in cclib_data["metadata"]["keywords line"].split():
                 if keyword.lower().startswith("opt"):
                     opt_found = True
+
             if not opt_found:
                 cclib_data["metadata"]["keywords line"] += " opt"
 
-            if errortype == "linear_mol_wrong":
-                cclib_data["metadata"]["keywords line"] += " symmetry=(PG=Cinfv)"
-
-            elif errortype == "freq_no_conv":
+            if errortype == "freq_no_conv":
                 # adjust the keywords so only FREQ is calculated
                 new_keywords_line = ""
                 for keyword in cclib_data["metadata"]["keywords line"].split():
@@ -404,6 +402,9 @@ class qcorr:
                     new_keywords_line += keyword
                     new_keywords_line += " "
                 cclib_data["metadata"]["keywords line"] = new_keywords_line
+
+            elif errortype == "linear_mol_wrong":
+                cclib_data["metadata"]["keywords line"] += " symmetry=(PG=Cinfv)"
 
         return atom_types, cartesians, duplicate_data, errortype, cclib_data
 
@@ -472,7 +473,7 @@ class qcorr:
         try:
             os.chdir(self.args.isom_inputs)
         except FileNotFoundError:
-            self.args.log.write(f"x  The PATH specified in isom_inputs doesn't exist!")
+            self.args.log.write("x  The PATH specified in isom_inputs doesn't exist!")
             isom_valid = False
 
         if not isom_valid:

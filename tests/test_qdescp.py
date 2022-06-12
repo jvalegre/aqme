@@ -8,7 +8,6 @@
 import os
 import pytest
 from aqme.qdescp import qdescp
-import rdkit
 from aqme.xtb_to_json import read_json
 import glob
 import shutil

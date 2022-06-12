@@ -456,8 +456,12 @@ def get_json_data(self, file, cclib_data):
                 grid = grid_lookup[IRadAn]
                 cclib_data["metadata"]["grid type"] = grid
 
-        # Extract <S**2> before and after spin annihilation
-        for i in reversed(range(0, len(outlines) - 50)):
+        # Keeps track of convergence during Freq calcs
+        if "optimization" in cclib_data:
+            cclib_data["optimization"]["times converged"] = 1
+
+        # Extract <S**2> before and after spin annihilation, energy, and convergence in freq calc
+        for i in reversed(range(0, len(outlines) - 30)):
             # For time dependent (TD) calculations
             if "E(TD-HF/TD-DFT)" in outlines[i]:
                 td_e = float(line.strip().split()[-1])
@@ -497,6 +501,9 @@ def get_json_data(self, file, cclib_data):
                     "symmetry point group"
                 ] = point_group
                 break
+
+            elif "Stationary point found" in outlines[i]:
+                cclib_data["optimization"]["times converged"] = 2
 
             # Extract symmetry number, rotational constants and rotational temperatures
             elif "Rotational symmetry number" in outlines[i]:
@@ -563,6 +570,7 @@ def get_json_data(self, file, cclib_data):
                 cclib_data["properties"]["NMR"]["NMR anisotopic tensors"] = nmr_anis
                 cclib_data["properties"]["NMR"]["NMR eigenvalues"] = nmr_eigen
                 cclib_data["properties"]["NMR"]["NMR isotopic tensors"] = nmr_iso
+
 
     elif cclib_data["metadata"]["QM program"].lower().find("orca") > -1:
         for i in reversed(range(0, outlines)):

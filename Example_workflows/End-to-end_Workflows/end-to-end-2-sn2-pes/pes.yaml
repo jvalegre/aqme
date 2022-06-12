@@ -1,0 +1,14 @@
+--- # PES
+# Double S addition
+   Reaction: [R1+R2, TS] 
+
+--- # SPECIES
+   R1     : F_crest*
+   R2     : O_anion*
+   TS     : TS_SN2*
+  
+
+--- # FORMAT
+   dec : 1
+   units: kcal/mol
+   dpi : 300

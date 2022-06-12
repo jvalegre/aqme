@@ -4,4 +4,4 @@
 Help?
 -----
 
-If you're heading trouble please contact either svss@colostate.edu or juanvi89@hotmail.com
+If you're heading trouble please contact either svss@colostate.edu or jvalegre@unizar.es
