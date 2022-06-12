@@ -47,7 +47,6 @@ jobs:
           # install and run pytest
           pip install pytest
           pip install pytest-cov
-          cd tests
           # uninstall de pip version of AQME to avoid duplication when running the program for Codecov
           pip uninstall -y aqme
           python -m pytest -v --cov=aqme
