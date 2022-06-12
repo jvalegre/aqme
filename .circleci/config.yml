@@ -47,6 +47,7 @@ jobs:
           # install and run pytest
           pip install pytest
           pip install pytest-cov
+          cd tests
           python -m pytest -v --cov=aqme
           codecov
 

@@ -12,7 +12,7 @@ import rdkit
 import shutil
 
 # saves the working directory
-w_dir_main = os.getcwd()
+w_dir_main = os.getcwd()+'/..'
 cmin_methods_dir = w_dir_main + "/tests/cmin_methods"
 if not os.path.exists(cmin_methods_dir):
     os.mkdir(cmin_methods_dir)

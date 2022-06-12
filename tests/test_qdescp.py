@@ -8,13 +8,12 @@
 import os
 import pytest
 from aqme.qdescp import qdescp
-import rdkit
 from aqme.xtb_to_json import read_json
 import glob
 import shutil
 
 # saves the working directory
-w_dir_main = os.getcwd()
+w_dir_main = os.getcwd()+'/..'
 qdescp_input_dir = w_dir_main + "/tests/qdescp_inputs"
 if not os.path.exists(qdescp_input_dir):
     os.mkdir(qdescp_input_dir)
