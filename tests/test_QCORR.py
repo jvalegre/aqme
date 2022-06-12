@@ -25,8 +25,8 @@ path_qcorr = os.getcwd()+'/Example_workflows/QCORR_processing_QM_outputs'
     ('QCORR_1', 'CH4.log', 'run_QCORR', 'successful_QM_outputs', False), # test successful termination
     ('QCORR_1', 'MeOH_G09.log', None, 'successful_QM_outputs', False), # test successful termination
     ('QCORR_1', 'z_CH4_duplicate.log', None, 'unsuccessful_QM_outputs/run_1/duplicates', False), # test duplicates
-    ('QCORR_1', 'Basis_set_error1.LOG', None, 'unsuccessful_QM_outputs/run_1/error/basis_set_error', False), # test incompatibilities with basis sets
-    ('QCORR_1', 'Basis_set_error2.LOG', None, 'unsuccessful_QM_outputs/run_1/error/basis_set_error', False), # test incompatibilities with basis sets
+    ('QCORR_1', 'Basis_set_error1.log', None, 'unsuccessful_QM_outputs/run_1/error/basis_set_error', False), # test incompatibilities with basis sets
+    ('QCORR_1', 'Basis_set_error2.log', None, 'unsuccessful_QM_outputs/run_1/error/basis_set_error', False), # test incompatibilities with basis sets
     ('QCORR_1', 'MeOH_G09_FAIL.log', None, 'unsuccessful_QM_outputs/run_1/error/not_specified_error', False), # test error terminations
     ('QCORR_1', 'CH2OH2_unfinished.log', None, 'unsuccessful_QM_outputs/run_1/error/not_specified_error', False), # test unfinished calculations
     ('QCORR_1', 'Imag_freq.log', None, 'unsuccessful_QM_outputs/run_1/extra_imag_freq', False), # test imaginary frequencies
@@ -34,8 +34,10 @@ path_qcorr = os.getcwd()+'/Example_workflows/QCORR_processing_QM_outputs'
     ('QCORR_1', 'MeOH_SCF_error.log', None, 'unsuccessful_QM_outputs/run_1/error/scf_error', False), # test SCF errors
     ('QCORR_1', 'CH4_before_E.log', None, 'unsuccessful_QM_outputs/run_1/error/no_data', False), # test calcs that finish before any coords are printed
     ('QCORR_1', 'freq_conv_YYNN.log', None, 'unsuccessful_QM_outputs/run_1/freq_no_conv', False), # test calcs with freq calcs that did not converge after OPT
+    ('QCORR_1', 'freq_ok_YYNN.log', None, 'successful_QM_outputs', False), # test calcs with freq calcs that did not converge after OPT
     ('QCORR_1', 'TS_CH3HCH3_no_conv_freq.log', None, 'unsuccessful_QM_outputs/run_1/freq_no_conv', False), # test calcs with freq calcs that did not converge after OPT in TSs
     ('QCORR_1', 'bpinene_spin_contamin.log', None, 'unsuccessful_QM_outputs/run_1/spin_contaminated', False), # test calcs with spin contamination
+    ('QCORR_1', 'CH4_T1_SP_spin_contamin.log', None, 'unsuccessful_QM_outputs/run_1/spin_contaminated', False), # test calcs with spin contamination
     ('QCORR_1', 'CH4_Fail_freq_only.log', None, 'unsuccessful_QM_outputs/run_1/error/not_specified_error', False), # test for Normal terminated OPT and unfinished freq
     ('QCORR_1', 'TS_CH3HCH3.log', None, 'successful_QM_outputs', False), # test successful termination in TSs
     ('QCORR_1', 'TS_CH3HCH3_unfinished.log', None, 'unsuccessful_QM_outputs/run_1/error/not_specified_error', False), # test unfinished TSs
@@ -104,7 +106,8 @@ def test_QCORR_analysis(init_folder, file, command_line, target_folder, restore_
             if file.split('.')[0] in ['CH4', 'MeOH_G09', 'z_CH4_duplicate', 'Basis_set_error1', 
                                       'Basis_set_error2', 'CH4_before_E', 'bpinene_spin_contamin',
                                       'TS_CH3HCH3', 'TS_CH3HCH3_no_imag_freq', 'CH4_SP', 'H_freq',
-                                      'H_SP', 'MeOH_NMR', 'CO2_linear_4freqs']:
+                                      'H_SP', 'MeOH_NMR', 'CO2_linear_4freqs', 'freq_ok_YYNN',
+                                      'CH4_T1_SP_spin_contamin']:
                 assert not path.exists(f'{w_dir_main}/unsuccessful_QM_outputs/run_1/fixed_QM_inputs/{file.split(".")[0]}.com')
 
             else:
@@ -191,8 +194,8 @@ def test_QCORR_analysis(init_folder, file, command_line, target_folder, restore_
         elif file == 'json':
             os.chdir(f'{w_dir_main}/{target_folder}')
             json_files = glob.glob('*.json')
-            target_files = ['CH4.json', 'CO2_linear_4freqs.json', 'H_freq.json', 'MeOH_G09.json', 'TS_CH3HCH3.json']
-            assert len(json_files) == 5
+            target_files = ['CH4.json', 'CO2_linear_4freqs.json', 'freq_ok_YYNN.json', 'H_freq.json', 'MeOH_G09.json', 'TS_CH3HCH3.json']
+            assert len(json_files) == 6
             assert sorted(json_files) == sorted(target_files)
 
         elif file == 'fullcheck':
@@ -203,6 +206,7 @@ def test_QCORR_analysis(init_folder, file, command_line, target_folder, restore_
             target_fullcheck.append('       - CO2_linear_4freqs\n')
             target_fullcheck.append('       - TS_CH3HCH3\n')
             target_fullcheck.append('     * Gaussian 16, Revision C.01 in:\n')
+            target_fullcheck.append('       - freq_ok_YYNN\n')
             target_fullcheck.append('       - H_freq\n')
             target_fullcheck.append('       - MeOH_G09\n')
             target_fullcheck.append('x  Different grid_type used in the calculations:\n')
@@ -211,6 +215,7 @@ def test_QCORR_analysis(init_folder, file, command_line, target_folder, restore_
             target_fullcheck.append('       - CO2_linear_4freqs\n')
             target_fullcheck.append('       - TS_CH3HCH3\n')
             target_fullcheck.append('     * ultrafine in:\n')
+            target_fullcheck.append('       - freq_ok_YYNN\n')
             target_fullcheck.append('       - H_freq\n')
             target_fullcheck.append('     * fine in:\n')
             target_fullcheck.append('       - MeOH_G09\n')
@@ -220,6 +225,7 @@ def test_QCORR_analysis(init_folder, file, command_line, target_folder, restore_
             target_fullcheck.append('     * B3LYP/6-31G in:\n')
             target_fullcheck.append('       - CO2_linear_4freqs\n')
             target_fullcheck.append('     * M062X/def2TZVP in:\n')
+            target_fullcheck.append('       - freq_ok_YYNN\n')
             target_fullcheck.append('       - H_freq\n')
             target_fullcheck.append('     * PBE1PBE/CC-pVTZ in:\n')
             target_fullcheck.append('       - MeOH_G09\n')
@@ -230,6 +236,7 @@ def test_QCORR_analysis(init_folder, file, command_line, target_folder, restore_
             target_fullcheck.append('     * gas_phase in:\n')
             target_fullcheck.append('       - CH4\n')
             target_fullcheck.append('       - CO2_linear_4freqs\n')
+            target_fullcheck.append('       - freq_ok_YYNN\n')
             target_fullcheck.append('       - H_freq\n')
             target_fullcheck.append('       - TS_CH3HCH3\n')
             target_fullcheck.append('     * scrf=(solvent=chloroform,pcm) in:\n')
@@ -241,11 +248,12 @@ def test_QCORR_analysis(init_folder, file, command_line, target_folder, restore_
             assert target_fullcheck == outlines
 
         elif file == 'dat':
-            target_dat = ['Command line used in AQME: aqme --qcorr\n']
+            target_dat = ['\n']
+            target_dat.append(['Command line used in AQME: aqme --qcorr\n'])
             target_dat.append('o  Analyzing output files in\n')
             target_dat.append('\n')
-            target_dat.append('Basis_set_error1.LOG: Termination = other, Error type = atomicbasiserror\n')
-            target_dat.append('Basis_set_error2.LOG: Termination = other, Error type = atomicbasiserror\n')
+            target_dat.append('Basis_set_error1.log: Termination = other, Error type = atomicbasiserror\n')
+            target_dat.append('Basis_set_error2.log: Termination = other, Error type = atomicbasiserror\n')
             target_dat.append('bpinene_spin_contamin.log: Termination = normal, Error type = spin_contaminated\n')
 
             outfile = open(f'{w_dir_main}/QCORR-run_1.dat', "r")
@@ -253,17 +261,17 @@ def test_QCORR_analysis(init_folder, file, command_line, target_folder, restore_
             outfile.close()
 
             for i,line in enumerate(target_dat):
-                if i == 0:
+                if i == 1:
                     assert outlines[i].find('Command line used in AQME: aqme --qcorr') > -1
-                elif i == 1:
+                elif i == 2:
                     assert outlines[i].find('o  Analyzing output files in') > -1
                 else:
                     assert line == outlines[i]
 
         elif file == 'csv':
             qcorr_stats = pd.read_csv(f'{w_dir_main}/QCORR-run_1-stats.csv')
-            assert qcorr_stats['Total files'][0] == 25
-            assert qcorr_stats['Normal termination'][0] == 5
+            assert qcorr_stats['Total files'][0] == 27
+            assert qcorr_stats['Normal termination'][0] == 6
             assert qcorr_stats['Single-point calcs'][0] == 3
             assert qcorr_stats['Extra imag. freq.'][0] == 3
             assert qcorr_stats['TS with no imag. freq.'][0] == 1
@@ -273,7 +281,7 @@ def test_QCORR_analysis(init_folder, file, command_line, target_folder, restore_
             assert qcorr_stats['No data'][0] == 1
             assert qcorr_stats['Basis set error'][0] == 2
             assert qcorr_stats['Other errors'][0] == 4
-            assert qcorr_stats['Spin contamination'][0] == 1
+            assert qcorr_stats['Spin contamination'][0] == 2
             assert qcorr_stats['Duplicates'][0] == 1
         
         elif file == 'check_init':

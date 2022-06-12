@@ -1,15 +1,14 @@
 #!/opt/anaconda/envs/DL_CPU/bin/python
 
-#### Authors: Liliana C. Gallegos and Juan V. Alegre-Requena ####
-### For any questions, contact: LilianaC.Gallegos@colostate.edu or juanvi89@hotmail.com ###
+##########################################################################################
+####            Authors: Liliana C. Gallegos and Juan V. Alegre-Requena               ####
+####                        For any questions, contact:                               ####
+####             LilianaC.Gallegos@colostate.edu or jvalegre@unizar.es                ####
+##########################################################################################
+
 from __future__ import print_function
-import os, sys, glob
-import re
-import pandas as pd
 import numpy as np
 import json
-import argparse
-import subprocess
 
 try:
     from openbabel import openbabel

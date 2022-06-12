@@ -18,7 +18,7 @@ setup(
     long_description="Automated Quantum Mechanical Environments",
     long_description_content_type="text/markdown",
     author="Shree Sowndarya S. V., Juan V. Alegre Requena",
-    author_email="svss@colostate.edu, juanvi89@hotmail.com",
+    author_email="svss@colostate.edu, jvalegre@unizar.es",
     keywords=[
         "workflows",
         "computational chemistry",

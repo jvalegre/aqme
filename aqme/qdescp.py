@@ -4,7 +4,6 @@
 
 import os
 import subprocess
-import sys
 import glob
 import time
 import json
@@ -292,7 +291,7 @@ class qdescp:
             wbo_matrix[(bond[1] - 1)][(bond[0] - 1)] = wbos[i]
 
         """
-		Now add disparate XTB outputs to existing json files.
+		Now add xTB descriptors to existing json files.
 		"""
         json_data = read_json(self.xtb_json)
         json_data["Dipole module/D"] = dipole_module

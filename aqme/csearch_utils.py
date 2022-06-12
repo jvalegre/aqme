@@ -9,7 +9,6 @@ from pathlib import Path
 from pkg_resources import resource_filename
 import pandas as pd
 import ast
-import numpy as np
 from rdkit.Chem import AllChem as Chem
 from rdkit.Chem import rdDistGeom, rdMolAlign
 from aqme.utils import (
@@ -50,7 +49,7 @@ def load_template(complex_type, log):
     templates = Chem.SDMolSupplier(str(file_template))
     template = templates[
         -1
-    ]  # RAUL: I'm assuming that there is only one molecule per template and in case there are several, it's the last one
+    ]
 
     return template
 
@@ -855,10 +854,6 @@ def com_2_xyz(input_file):
     """
 
     filename = input_file.split(".")[0]
-    extension = input_file.split(".")[1]
-
-    if extension in [".com", ".gjf", ".xyz"]:
-        file = Path(input_file)
 
     # Create the 'xyz' file and/or get the total charge
     xyz, charge, mult = get_info_input(input_file)
