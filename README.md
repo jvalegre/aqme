@@ -1,5 +1,5 @@
 ![](Logos/AQME_logo.jpg)
-[![Build Status](https://img.shields.io/travis/com/jvalegre/aqme?label=Linux%20CI&logo=Travis)](https://travis-ci.com/github/jvalegre/aqme)
+[![CircleCI](https://img.shields.io/circleci/build/github/jvalegre/aqme?label=Circle%20CI&logo=circleci)](https://app.circleci.com/pipelines/github/jvalegre/aqme)
 [![Codecov](https://img.shields.io/codecov/c/github/jvalegre/aqme?label=Codecov&logo=codecov)](https://codecov.io/gh/jvalegre/aqme)
 [![CodeFactor](https://img.shields.io/codefactor/grade/github/jvalegre/aqme/master?label=Codefactor%20grade&logo=Codefactor)](https://www.codefactor.io/repository/github/jvalegre/aqme/overview/master)
 [![Codacy](https://img.shields.io/codacy/grade/3a4cc7c7705e46129c7ea0fca58af846?label=Codacy%20grade&logo=Codacy)](https://www.codacy.com/gh/jvalegre/aqme/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=jvalegre/aqme&amp;utm_campaign=Badge_Grade)
