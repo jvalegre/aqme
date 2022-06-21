@@ -69,7 +69,7 @@ def test_cmin_methods(
 
 # tests for parameters of cmin paramters
 @pytest.mark.parametrize(
-    "program, sdf, metal_complex,metal,metal_oxi,complex_type, charge, mult, xtb_solvent, ewin_cmin, initial_energy_threshold, energy_threshold,rms_threshold,xtb_accuracy,xtb_electronic_temperature, xtb_max_iterations, output_nummols",
+    "program, sdf, metal_complex,metal_atoms,metal_oxi,complex_type, charge, mult, xtb_solvent, ewin_cmin, initial_energy_threshold, energy_threshold,rms_threshold,xtb_accuracy,xtb_electronic_temperature, xtb_max_iterations, output_nummols",
     [
         # tests for conformer generation with RDKit
         (
@@ -116,7 +116,7 @@ def test_cmin_xtb_parameters(
     program,
     sdf,
     metal_complex,
-    metal,
+    metal_atoms,
     metal_oxi,
     complex_type,
     charge,
@@ -155,7 +155,7 @@ def test_cmin_xtb_parameters(
             program=program,
             files=sdf,
             metal_complex=metal_complex,
-            metal=metal,
+            metal_atoms=metal_atoms,
             metal_oxi=metal_oxi,
             complex_type=complex_type,
             charge=charge,
