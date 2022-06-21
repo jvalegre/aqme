@@ -647,7 +647,7 @@ def rules_get_charge(mol, args, type):
         if type == "csearch":
             return charge, metal_found
         if type == "cmin":
-            return [charge], metal_found
+            return charge_rules, metal_found
 
 
 def substituted_mol(self, mol, checkI):

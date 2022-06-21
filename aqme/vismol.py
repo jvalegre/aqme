@@ -71,6 +71,11 @@ class vismol:
                     # delete SDF files when the input was an XYZ/PDB file
                     os.remove(sdf_file)
 
+        if self.args.verbose:
+            elapsed_time = round(time.time() - start_time_overall, 2)
+            self.args.log.write(f"\nTime VIZMOL: {elapsed_time} seconds\n")
+        self.args.log.finalize()
+
     def style_selector(self, idx, s):
         conf = self.confs[idx]
         return self.MolTo3DView(conf, style=s).show()

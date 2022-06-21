@@ -246,13 +246,7 @@ class csearch:
         """
         Function to start conformer generation
         """
-        print(
-            "smi",
-            constraints_atoms,
-            constraints_dist,
-            constraints_angle,
-            constraints_dihedral,
-        )
+
         if self.args.smi is not None:
             (
                 mol,
@@ -904,7 +898,7 @@ class csearch:
         cids = list(range(len(outmols)))
         sorted_all_cids = sorted(cids, key=lambda cid: cenergy[cid])
 
-        self.args.log.write("\no  Applying filters to intial conformers")
+        self.args.log.write("\no  Applying filters to initial conformers")
 
         # filter based on energy window ewin_csearch
         sortedcids_rdkit = ewin_filter(

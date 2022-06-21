@@ -177,7 +177,7 @@ def test_csearch_others_parameters(
 
 # tests for parameters of csearch
 @pytest.mark.parametrize(
-    "program, smi, name, cregen, cregen_keywords, crest_keywords, constraints_atoms, output_nummols",
+    "program, smi, name, cregen, cregen_keywords, crest_keywords, output_nummols",
     [
         # tests for conformer generation with RDKit
         (
@@ -187,7 +187,6 @@ def test_csearch_others_parameters(
             True,
             "--ethr 1 --rthr 0.5 --bthr 0.7 --ewin 4 --cbonds 0.8 --cluster",
             "--alpb benzene",
-            [1],
             1,
         ),
     ],
@@ -199,7 +198,6 @@ def test_csearch_crest_parameters(
     cregen,
     cregen_keywords,
     crest_keywords,
-    constraints_atoms,
     output_nummols,
 ):
     os.chdir(csearch_crest_dir)
@@ -211,7 +209,6 @@ def test_csearch_crest_parameters(
         name=name,
         cregen=cregen,
         cregen_keywords=cregen_keywords,
-        constraints_atoms=constraints_atoms,
     )
 
     # tests here
