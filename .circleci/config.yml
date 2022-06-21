@@ -38,7 +38,7 @@ jobs:
           command: echo 'export OMP_STACKSIZE="5G"' >> $BASH_ENV
       - run: |
           # install RDKit and OpenBabel
-          conda install  -y -c conda-forge openmpi
+          apt-get install -y libgomp1
           conda install -y -c conda-forge rdkit
           conda install -y -c conda-forge openbabel
           # install xTB, xTB-python and CREST
