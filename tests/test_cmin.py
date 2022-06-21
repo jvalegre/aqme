@@ -10,6 +10,7 @@ import pytest
 from aqme.cmin import cmin
 import rdkit
 import shutil
+import glob
 
 # saves the working directory
 w_dir_main = os.getcwd()
