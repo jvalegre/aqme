@@ -41,13 +41,13 @@ jobs:
           conda install -y -c conda-forge xtb
           conda install -y -c conda-forge xtb-python
           conda install -y -c conda-forge crest
-          # install AQME
+          # install AQME only to install its dependencies
           python -m pip install --upgrade pip
           pip install .
           # install and run pytest
           pip install pytest
           pip install pytest-cov
-          # uninstall de pip version of AQME to avoid duplication when running the program for Codecov
+          # uninstall the pip version of AQME to avoid duplication when running the program for Codecov
           pip uninstall -y aqme
           python -m pytest -v --cov=aqme
           codecov
