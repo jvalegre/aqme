@@ -51,6 +51,10 @@ jobs:
           pip uninstall -y aqme
           python -m pytest -v --cov=aqme
           codecov
+    - run:
+      name: Disable xdebug
+      command: |
+        sudo sed -i 's/^zend_extension/;zend_extension/g' /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini
 
 # Invoke jobs via workflows
 # See: https://circleci.com/docs/2.0/configuration-reference/#workflows
