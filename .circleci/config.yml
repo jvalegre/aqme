@@ -49,6 +49,7 @@ jobs:
           # install AQME only to install its dependencies
           python -m pip install --upgrade pip
           pip install .
+          dpkg --list | grep compiler
           # install and run pytest
           pip install pytest
           pip install pytest-cov
