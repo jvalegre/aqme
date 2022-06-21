@@ -8,6 +8,7 @@ import glob
 import time
 import json
 import shutil
+import numpy as np
 from pathlib import Path
 from aqme.utils import (
     load_variables,
@@ -17,7 +18,14 @@ from aqme.utils import (
     get_boltz_avg_properties_xtb,
 )
 from aqme.crest import xyzall_2_xyz
-from aqme.xtb_to_json import *
+from aqme.xtb_to_json import (
+    read_fod,
+    read_json,
+    read_xtb,
+    read_wbo,
+    read_gfn1,
+    read_fukui,
+)
 from scipy.spatial.distance import cdist
 
 
@@ -60,6 +68,11 @@ class qdescp:
                         + "_conf_*.json"
                     )
                     get_boltz_avg_properties_xtb(json_files, name, boltz_dir, "nmr")
+
+        if self.args.verbose:
+            elapsed_time = round(time.time() - start_time_overall, 2)
+            self.args.log.write(f"\nTime QDESCP: {elapsed_time} seconds\n")
+        self.args.log.finalize()
 
     def gather_files_and_run(self, destination):
         # write input files

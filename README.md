@@ -290,9 +290,34 @@ AQME can also be run through command lines. Some examples are:
     *-- Options related to file generation to fix issues found by QCORR --*  
     New input files are generated through the QPREP module and, therefore, all QPREP arguments can be used when calling QCORR and will overwrite default options. For example, if the user specifies qm_input='wb97xd/def2svp', all the new input files generated to fix issues will contain this keywords line. See examples in the 'Example_workflows' folder for more information.  
 
+- [ ] QDESCP arguments:  
+    **w_dir_main : str, default=os.getcwd()**  
+        Working directory  
+    **destination : str, default=None,**  
+        Directory to create the JSON file(s)  
+    **files : list of str, default=''**  
+        Filenames of SDF/PDB/XYZ to calculate xTB descriptors. If \*.sdf (or other strings that are not lists such as \*.pdb) are specified, the program will look for all the SDF files in the working directory through glob.glob(\*.sdf)  
+    **program : str, default=None**  
+        Program required to create the new input files. Current options: 'gaussian', 'orca'  
+    **charge : int, default=None**  
+        Charge of the calculations used in the following input files. If charge isn't defined, it defaults to 0  
+    **mult : int, default=None**  
+        Multiplicity of the calculations used in the following input files. If mult isn't defined, it defaults to 1
+    **qdescp_temp : float, default=300**  
+        Temperature required for the xTB property calculations
+    **qdescp_acc : float, default=0.2**  
+        Accuracy required for the xTB property calculations
+    **boltz : bool, default=False**  
+        Calculation of Boltzmann averaged xTB properties
+
+- [ ] VIZMOL arguments:  
+    **files : list of str, default=''**  
+        Filenames of SDF/PDB/XYZ to visualize conformers. If \*.sdf (or other strings that are not lists such as \*.pdb) are specified, the program will look for all the SDF files in the working directory through glob.glob(\*.sdf). Internal options of "line", "stick", "sphere" incorporated. Code reference from: [https://iwatobipen.wordpress.com]
+
+
 ## Developers and help desk
 List of main developers and contact emails:  
-  - [ ] [Shree Sowndarya S. V.](https://orcid.org/0000-0002-4568-5854), main developer of the CSEARCH and CMIN modules. Contact: [svss@colostate.edu](mailto:svss@colostate.edu)  
+  - [ ] [Shree Sowndarya S. V.](https://orcid.org/0000-0002-4568-5854), main developer of the CSEARCH, CMIN, QDESCP and VIZMOL modules. Contact: [svss@colostate.edu](mailto:svss@colostate.edu)  
   - [ ] [Juan V. Alegre-Requena](https://orcid.org/0000-0002-0769-7168), main developer of the QCORR and QPREP modules. Contact: [jvalegre@unizar.es](mailto:jvalegre@unizar.es)  
   - [ ] [Turki Alturaifi](https://www.chem.pitt.edu/person/turki-alturaifi), worked in benchmarking the parameters for RDKit-based conformer generation. Contact: [turki0@rams.colostate.edu](mailto:turki0@rams.colostate.edu)  
   - [ ] [Raúl Pérez-Soto](https://orcid.org/0000-0002-6237-2155), worked in refactoring the code. Contact: [rperez@iciq.es](mailto:rperez@iciq.es)  

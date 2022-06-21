@@ -83,7 +83,7 @@ def test_qdescp_inputs(
     assert check_temp == str(temp)
     assert check_acc == str(acc)
     assert check_charge == str(charge)
-    assert check_mult == str(mult)
+    assert check_mult == str(mult - 1)
 
 
 # tests for parameters of csearch random initialzation

@@ -139,7 +139,7 @@ class cmin:
         cenergy, outmols = [], []
         start_time = time.time()
 
-        charge = rules_get_charge(self.mols[0], self.args, "cmin")
+        charge, metal_found = rules_get_charge(self.mols[0], self.args, "cmin")
         mult = []
         for Atom in self.mols[0].GetAtoms():
             mult.append(Atom.GetNumRadicalElectrons())
@@ -478,7 +478,7 @@ def rdkit_sdf_read(file, args):
     inmols = Chem.SDMolSupplier(file, removeHs=False)
 
     if inmols is None:
-        args.log.write(f"Could not open {name}{args.output}")
+        args.log.write(f"Could not open {file}")
         args.log.finalize()
         sys.exit()
     return inmols
