@@ -37,22 +37,25 @@ jobs:
           name: "Setup custom environment variables"
           command: echo 'export OMP_STACKSIZE="5G"' >> $BASH_ENV
       - run: |
-          # install RDKit and OpenBabel
+          # install system depenedecies
           apt-get update
+          apt update
+          apt upgrade
+          apt install python3-pip
+          pip3 install meson
+          pip3 install ninja
           apt-get install -y build-essential
           apt-get install -y libblas-dev liblapack-dev libgomp1
           apt-get install -y libopenblas-base libopenblas-dev
           apt-get install -y gfortran-8
           apt-get install -y gcc-8
           apt-get install -y unzip zip
+          ####
+          # install RDKit and OpenBabel
           conda install -y -c conda-forge rdkit
           conda install -y -c conda-forge openbabel
-          ###
-          # install xTB, xTB-python and CREST
-          #conda install -y -c conda-forge xtb
-          #conda install -y -c conda-forge xtb-python
-          #conda install -y -c conda-forge crest
-          ##
+          ####
+          # pip depenedencies
           pip install torch
           pip install torchvision
           pip install torchani
@@ -61,9 +64,9 @@ jobs:
           pip install numpy
           pip install cffi
           pip install qcelemental
-          pip install meson
-          pip install ninja
           ##
+          ####
+          # xtb install
           wget https://github.com/grimme-lab/xtb/archive/v6.3.0.zip
           unzip v6.3.0.zip
           cd xtb-6.3.0
@@ -89,7 +92,6 @@ jobs:
           pip install -e .
           cd ..
           cd ..
-          #
           ####
           # install AQME only to install its dependencies
           python -m pip install --upgrade pip
