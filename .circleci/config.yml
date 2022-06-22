@@ -42,8 +42,8 @@ jobs:
           apt update -y
           apt upgrade -y
           apt-get install -y build-essential
-          sudo apt-get install -y gfortran-8
-          sudo apt-get install -y gcc-8
+          #apt-get install -y gfortran-8
+          #apt-get install -y gcc-8
           apt install -y python3-pip
           pip3 install meson
           pip3 install ninja
@@ -71,7 +71,7 @@ jobs:
           wget https://github.com/grimme-lab/xtb/archive/v6.3.0.zip
           unzip v6.3.0.zip
           cd xtb-6.3.0
-          export FC=gfortran-8 CC=gcc-8
+          export FC=gfortran-10 CC=gcc-10
           meson setup build_gcc --buildtype release -Dla_backend=openblas --warnlevel 0
           XTBHOME=$PWD
           XTBPATH=${XTBHOME}/share/xtb:${XTBHOME}:${HOME}
