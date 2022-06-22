@@ -39,6 +39,7 @@ jobs:
       - run: |
           # install RDKit and OpenBabel
           apt-get update
+          apt-get install build-essential
           apt-get install -y libblas-dev liblapack-dev libgomp1
           apt-get install -y libopenblas-base libopenblas-dev
           apt-get install gfortran-8
