@@ -42,12 +42,12 @@ jobs:
           apt-get install -y unzip zip
       - run:
          # download and install miniconda
-         wget http://repo.continuum.io/miniconda/Miniconda3-4.1.11-Linux-x86_64.sh -O miniconda.sh;
-         bash miniconda.sh -b -p $HOME/conda
-         export PATH="$HOME/conda/bin:$PATH"
-         hash -r
-         conda config --set always_yes yes --set changeps1 no
-         conda update -q conda
+          wget http://repo.continuum.io/miniconda/Miniconda3-4.1.11-Linux-x86_64.sh -O miniconda.sh;
+          bash miniconda.sh -b -p $HOME/conda
+          export PATH="$HOME/conda/bin:$PATH"
+          hash -r
+          conda config --set always_yes yes --set changeps1 no
+          conda update -q conda
       - python/install-packages:
           pkg-manager: pip
           # app-dir: ~/project/package-directory/  # If you're requirements.txt isn't in the root directory.
@@ -76,7 +76,7 @@ jobs:
           wget https://github.com/grimme-lab/xtb/archive/v6.3.0.zip
           unzip v6.3.0.zip
           cd xtb-6.3.0
-          export FC=gfortran-8 CC=gcc-8 
+          export FC=gfortran-8 CC=gcc-8
           meson setup build_gcc --buildtype release -Dla_backend=openblas --warnlevel 0
           XTBHOME=$PWD
           XTBPATH=${XTBHOME}/share/xtb:${XTBHOME}:${HOME}
