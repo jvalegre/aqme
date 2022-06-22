@@ -91,20 +91,20 @@ jobs:
           PYTHONPATH=${PYTHONPATH}:${XTBHOME}/python
           export PATH XTBPATH MANPATH LD_LIBRARY_PATH PYTHONPATH
 
-          # xtb-python install
-          # git clone https://github.com/grimme-lab/xtb-python
-          git clone --branch=master https://github.com/shreesowndarya/xtb-python
-          cd xtb-python
-          # # change the previous git clone part into this wget + unzip zip when there is a release (that way the version used will always be the same)
-          # wget https://github.com/grimme-lab/xtb-python/archive/v20.1.zip
-          # unzip v20.1.zip
-          # cd xtb-python-20.1
-          # compile xtb-python
-          git submodule update --init
-          meson setup build --prefix=$PWD -Dla_backend=openblas -Dpy=3.9
-          ninja -C build install
-          pip install -e .
-          cd ..
+          # # xtb-python install
+          # # git clone https://github.com/grimme-lab/xtb-python
+          # git clone --branch=master https://github.com/shreesowndarya/xtb-python
+          # cd xtb-python
+          # # # change the previous git clone part into this wget + unzip zip when there is a release (that way the version used will always be the same)
+          # # wget https://github.com/grimme-lab/xtb-python/archive/v20.1.zip
+          # # unzip v20.1.zip
+          # # cd xtb-python-20.1
+          # # compile xtb-python
+          # git submodule update --init
+          # meson setup build --prefix=$PWD -Dla_backend=openblas -Dpy=3.9
+          # ninja -C build install
+          # pip install -e .
+          # cd ..
           cd ..
           ####
           # install AQME only to install its dependencies
