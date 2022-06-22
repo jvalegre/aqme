@@ -33,7 +33,10 @@ jobs:
           pkg-manager: pip
           # app-dir: ~/project/package-directory/  # If you're requirements.txt isn't in the root directory.
           # pip-dependency-file: test-requirements.txt  # if you have a different name for your requirements file, maybe one that combines your runtime and test requirements.
-
+      - run:
+          name: update
+          command: apt-get update -y
+          
       - run:
           name: Install GCC 8 (Ubuntu)
           command: apt-get install gcc-8
