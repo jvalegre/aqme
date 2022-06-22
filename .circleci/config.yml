@@ -27,7 +27,6 @@ jobs:
     # Here we're making sure we use just use the system-wide pip. By default it uses the project root's requirements.txt.
     # Then run your tests!
     # CircleCI will report the results back to your VCS provider.
-    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
@@ -56,15 +55,13 @@ jobs:
           python-version: 3.x
 
       - name: Install OpenBLAS (OSX)
-        if: ${{ contains(matrix.os, 'macos') }}
         run: |
           brew install openblas
-          echo "PKG_CONFIG_PATH=/usr/local/opt/openblas/lib/pkgconfig" >> $GITHUB_ENV
+          echo "PKG_CONFIG_PATH=/usr/local/opt/openblas/lib/pkgconfig" >> $BASH_ENV
 
       - name: Install GCC 8 (Ubuntu)
-        if: contains(matrix.fc, 'gfortran-8') && contains(matrix.os, 'ubuntu')
         run: |
-          sudo apt-get install gfortran-8
+          apt-get install gfortran-8
 
       - name: Install meson
         run: pip3 install meson==0.57.2 ninja cmake
