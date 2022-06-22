@@ -41,6 +41,7 @@ jobs:
           apt-get update
           apt-get install -y libblas-dev liblapack-dev libgomp1
           apt-get install -y libopenblas-base libopenblas-dev
+          pip update python
           conda install -y -c conda-forge rdkit
           conda install -y -c conda-forge openbabel
           # install xTB, xTB-python and CREST
