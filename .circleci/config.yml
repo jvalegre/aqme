@@ -40,10 +40,10 @@ jobs:
           # install system depenedecies
           apt-get update
           apt-get install -y software-properties-common
-          apt-get update
+          apt-get update -y
           apt update -y
           apt upgrade -y
-          add-apt-repository ppa:ubuntu-toolchain-r/test
+          add-apt-repository ppa:ubuntu-toolchain-r/test -y
           #apt-get install -y build-essential
           apt install -y gcc-8 g++-8
           #apt-get install -y gfortran-8
