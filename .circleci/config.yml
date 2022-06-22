@@ -60,6 +60,7 @@ jobs:
           apt-get install -y unzip zip
 
           # install RDKit and OpenBabel
+          conda install -y -c conda-forge python=3.9
           conda install -y -c conda-forge rdkit
           conda install -y -c conda-forge openbabel
 
