@@ -49,30 +49,30 @@ jobs:
           # pip-dependency-file: test-requirements.txt  # if you have a different name for your requirements file, maybe one that combines your runtime and test requirements.
       - name: Checkout code
         uses: actions/checkout@v2
-        
+
       - name: Setup Python
         uses: actions/setup-python@v1
         with:
           python-version: 3.x
-          
+
       - name: Install OpenBLAS (OSX)
         if: ${{ contains(matrix.os, 'macos') }}
         run: |
           brew install openblas
           echo "PKG_CONFIG_PATH=/usr/local/opt/openblas/lib/pkgconfig" >> $GITHUB_ENV
-          
+
       - name: Install GCC 8 (Ubuntu)
         if: contains(matrix.fc, 'gfortran-8') && contains(matrix.os, 'ubuntu')
         run: |
           sudo apt-get install gfortran-8
-          
+
       - name: Install meson
-          run: pip3 install meson==0.57.2 ninja cmake  
-          
+          run: pip3 install meson==0.57.2 ninja cmake
+
       - run:
           name: "Setup custom environment variables"
-          command: echo 'export OMP_STACKSIZE="5G"' >> $BASH_ENV 
-          
+          command: echo 'export OMP_STACKSIZE="5G"' >> $BASH_ENV
+
       - run: |
           # install system depenedecies
           #apt-get update
