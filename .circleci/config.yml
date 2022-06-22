@@ -51,14 +51,6 @@ jobs:
           #apt-get install -y gcc-8
           apt-get install -y unzip zip
           #
-          # download and install miniconda
-          wget http://repo.continuum.io/miniconda/Miniconda3-4.1.11-Linux-x86_64.sh -O miniconda.sh;
-          bash miniconda.sh -b -p $HOME/conda
-          export PATH="$HOME/conda/bin:$PATH"
-          hash -r
-          conda config --set always_yes yes --set changeps1 no
-          conda update -q conda
-          #
           ####
           # install RDKit and OpenBabel
           conda install -y -c conda-forge rdkit
