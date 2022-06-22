@@ -58,6 +58,7 @@ jobs:
           apt-get install -y libblas-dev liblapack-dev libgomp1
           apt-get install -y libopenblas-base libopenblas-dev
           apt-get install -y unzip zip
+          apt-get install -y pkg-config
 
           # install RDKit and OpenBabel
           conda install -y -c conda-forge rdkit
