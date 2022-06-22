@@ -27,26 +27,63 @@ jobs:
     # Here we're making sure we use just use the system-wide pip. By default it uses the project root's requirements.txt.
     # Then run your tests!
     # CircleCI will report the results back to your VCS provider.
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+        fc: [gfortran-10]
+        cc: [gcc-10]
+        include:
+          - os: ubuntu-latest
+            fc: gfortran-9
+            cc: gcc-9
+          - os: ubuntu-latest
+            fc: gfortran-8
+            cc: gcc-8
     steps:
       - checkout
       - python/install-packages:
           pkg-manager: pip
           # app-dir: ~/project/package-directory/  # If you're requirements.txt isn't in the root directory.
           # pip-dependency-file: test-requirements.txt  # if you have a different name for your requirements file, maybe one that combines your runtime and test requirements.
+      - name: Checkout code
+        uses: actions/checkout@v2
+        
+      - name: Setup Python
+        uses: actions/setup-python@v1
+        with:
+          python-version: 3.x
+          
+      - name: Install OpenBLAS (OSX)
+        if: ${{ contains(matrix.os, 'macos') }}
+        run: |
+          brew install openblas
+          echo "PKG_CONFIG_PATH=/usr/local/opt/openblas/lib/pkgconfig" >> $GITHUB_ENV
+          
+      - name: Install GCC 8 (Ubuntu)
+        if: contains(matrix.fc, 'gfortran-8') && contains(matrix.os, 'ubuntu')
+        run: |
+          sudo apt-get install gfortran-8
+          
+      - name: Install meson
+          run: pip3 install meson==0.57.2 ninja cmake  
+          
       - run:
           name: "Setup custom environment variables"
-          command: echo 'export OMP_STACKSIZE="5G"' >> $BASH_ENV
+          command: echo 'export OMP_STACKSIZE="5G"' >> $BASH_ENV 
+          
       - run: |
           # install system depenedecies
-          apt-get update
-          apt update -y
-          apt upgrade -y
-          apt-get install -y build-essential
+          #apt-get update
+          #apt update -y
+          #apt upgrade -y
+          #apt-get install -y build-essential
           #apt-get install -y gfortran-8
           #apt-get install -y gcc-8
-          apt install -y python3-pip
-          pip3 install meson
-          pip3 install ninja
+          #apt install -y python3-pip
+          #pip3 install meson
+          #pip3 install ninja
           apt-get install -y libblas-dev liblapack-dev libgomp1
           apt-get install -y libopenblas-base libopenblas-dev
           apt-get install -y unzip zip
