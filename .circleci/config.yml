@@ -63,6 +63,9 @@ jobs:
           conda install -y -c conda-forge python=3.9
           conda install -y -c conda-forge rdkit
           conda install -y -c conda-forge openbabel
+          conda install -y -c conda-forge xtb
+          conda install -y -c conda-forge xtb-python
+          conda install -y -c conda-forge crest
 
           # pip depenedencies
           pip install torch
