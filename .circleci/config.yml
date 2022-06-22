@@ -64,6 +64,7 @@ jobs:
           wget https://github.com/grimme-lab/xtb/archive/v6.3.0.zip
           unzip v6.3.0.zip
           cd xtb-6.3.0
+          export FC=gfortran-8 CC=gcc-8 
           meson setup build_gcc --buildtype release -Dla_backend=openblas --warnlevel 0
           XTBHOME=$PWD
           XTBPATH=${XTBHOME}/share/xtb:${XTBHOME}:${HOME}
