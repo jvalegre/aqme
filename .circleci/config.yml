@@ -58,7 +58,6 @@ jobs:
           apt-get install -y libblas-dev liblapack-dev libgomp1
           apt-get install -y libopenblas-base libopenblas-dev
           apt-get install -y unzip zip
-          apt-get install -y pkg-config
 
           # install RDKit and OpenBabel
           conda install -y -c conda-forge rdkit
@@ -98,7 +97,7 @@ jobs:
           # cd xtb-python-20.1
           # compile xtb-python
           git submodule update --init
-          meson setup build --prefix=$PWD --libdir=xtb -Dla_backend=netlib -Dpy=3.9
+          meson setup build --prefix=$PWD -Dpy=3.9
           ninja -C build install
           pip install -e .
           cd ..
