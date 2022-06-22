@@ -41,7 +41,7 @@ jobs:
           apt-get update
           apt update -y
           apt upgrade -y
-          apt install python3-pip
+          apt install -y python3-pip
           pip3 install meson
           pip3 install ninja
           apt-get install -y build-essential
