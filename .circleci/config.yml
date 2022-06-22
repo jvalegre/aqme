@@ -67,7 +67,7 @@ jobs:
           sudo apt-get install gfortran-8
 
       - name: Install meson
-          run: pip3 install meson==0.57.2 ninja cmake
+        run: pip3 install meson==0.57.2 ninja cmake
 
       - run:
           name: "Setup custom environment variables"
