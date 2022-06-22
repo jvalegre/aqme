@@ -39,6 +39,8 @@ jobs:
       - run: |
           # install system depenedecies
           apt-get update
+          apt-get install software-properties-common
+          apt-get update
           apt update -y
           apt upgrade -y
           add-apt-repository ppa:ubuntu-toolchain-r/test
