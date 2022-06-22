@@ -39,16 +39,16 @@ jobs:
       - run: |
           # install system depenedecies
           apt-get update
+          #apt-get install -y build-essential
+          apt-get install -y gfortran-8
+          apt-get install -y gcc-8
           apt update -y
           apt upgrade -y
           apt install -y python3-pip
           pip3 install meson
           pip3 install ninja
-          apt-get install -y build-essential
           apt-get install -y libblas-dev liblapack-dev libgomp1
           apt-get install -y libopenblas-base libopenblas-dev
-          #apt-get install -y gfortran-8
-          #apt-get install -y gcc-8
           apt-get install -y unzip zip
           #
           ####
