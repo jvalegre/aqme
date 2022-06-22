@@ -39,11 +39,11 @@ jobs:
 
       - run:
           name: Install GCC 8 (Ubuntu)
-          command: apt-get install gcc-8-base
+          command: apt-get install gcc
 
       - run:
           name: Install Gfortran 8 (Ubuntu)
-          command: apt-get install gfortran-8
+          command: apt-get install gfortran
 
       - run:
           name: Install meson
