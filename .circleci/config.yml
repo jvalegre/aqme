@@ -36,10 +36,10 @@ jobs:
       - run:
           name: update
           command: apt-get update -y
-          
+
       - run:
           name: Install GCC 8 (Ubuntu)
-          command: apt-get install gcc-8
+          command: apt-get install gcc-8-base
 
       - run:
           name: Install Gfortran 8 (Ubuntu)
