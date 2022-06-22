@@ -27,32 +27,12 @@ jobs:
     # Here we're making sure we use just use the system-wide pip. By default it uses the project root's requirements.txt.
     # Then run your tests!
     # CircleCI will report the results back to your VCS provider.
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [macos-latest, ubuntu-latest]
-        fc: [gfortran-10]
-        cc: [gcc-10]
-        include:
-          - os: ubuntu-latest
-            fc: gfortran-9
-            cc: gcc-9
-          - os: ubuntu-latest
-            fc: gfortran-8
-            cc: gcc-8
     steps:
       - checkout
       - python/install-packages:
           pkg-manager: pip
           # app-dir: ~/project/package-directory/  # If you're requirements.txt isn't in the root directory.
           # pip-dependency-file: test-requirements.txt  # if you have a different name for your requirements file, maybe one that combines your runtime and test requirements.
-      - name: Checkout code
-        uses: actions/checkout@v2
-
-      - name: Setup Python
-        uses: actions/setup-python@v1
-        with:
-          python-version: 3.x
 
       - name: Install OpenBLAS (OSX)
         run: |
