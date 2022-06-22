@@ -96,7 +96,8 @@ jobs:
           cd xtb-python-20.1
           # compile xtb-python
           git submodule update --init
-          meson setup build --prefix=$PWD --libdir=xtb -Dla_backend=netlib
+          git submodule update --init
+          meson setup build --prefix=$PWD
           ninja -C build install
           pip install -e .
           cd ..
