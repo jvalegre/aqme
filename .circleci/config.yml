@@ -41,6 +41,7 @@ jobs:
           apt-get update
           apt update -y
           apt upgrade -y
+          add-apt-repository ppa:ubuntu-toolchain-r/test
           #apt-get install -y build-essential
           apt install -y gcc-8 g++-8
           #apt-get install -y gfortran-8
