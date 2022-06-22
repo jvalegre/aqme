@@ -15,13 +15,13 @@ orbs:
 # See: https://circleci.com/docs/2.0/configuration-reference/#jobs
 jobs:
   build-and-test: # This is the name of the job, feel free to change it to better match what you're trying to do!
-    # These next lines defines a Docker executors: https://circleci.com/docs/2.0/executor-types/
-    # You can specify an image from Dockerhub or use one of the convenience images from CircleCI's Developer Hub
-    # A list of available CircleCI Docker convenience images are available here: https://circleci.com/developer/images/image/cimg/python
-    # The executor is the environment in which the steps below will be executed - below will use a python 3.10.2 container
-    # Change the version below to your required version of python
-    docker:
-      - image: continuumio/miniconda3
+#     # These next lines defines a Docker executors: https://circleci.com/docs/2.0/executor-types/
+#     # You can specify an image from Dockerhub or use one of the convenience images from CircleCI's Developer Hub
+#     # A list of available CircleCI Docker convenience images are available here: https://circleci.com/developer/images/image/cimg/python
+#     # The executor is the environment in which the steps below will be executed - below will use a python 3.10.2 container
+#     # Change the version below to your required version of python
+#     docker:
+#       - image: continuumio/miniconda3
     # Checkout the code as the first step. This is a dedicated CircleCI step.
     # The python orb's install-packages step will install the dependencies from a Pipfile via Pipenv by default.
     # Here we're making sure we use just use the system-wide pip. By default it uses the project root's requirements.txt.
@@ -29,14 +29,7 @@ jobs:
     # CircleCI will report the results back to your VCS provider.
     steps:
       - checkout
-      - python/install-packages:
-          pkg-manager: pip
-          # app-dir: ~/project/package-directory/  # If you're requirements.txt isn't in the root directory.
-          # pip-dependency-file: test-requirements.txt  # if you have a different name for your requirements file, maybe one that combines your runtime and test requirements.
-      - run:
-          name: "Setup custom environment variables"
-          command: echo 'export OMP_STACKSIZE="5G"' >> $BASH_ENV
-      - run: |
+       - run: |
           # install system depenedecies
           apt-get update
           pip install meson
@@ -47,6 +40,22 @@ jobs:
           apt-get install -y gfortran-8
           apt-get install -y gcc-8
           apt-get install -y unzip zip
+      - run:
+         # download and install miniconda
+         wget http://repo.continuum.io/miniconda/Miniconda3-4.1.11-Linux-x86_64.sh -O miniconda.sh;
+         bash miniconda.sh -b -p $HOME/conda
+         export PATH="$HOME/conda/bin:$PATH"
+         hash -r
+         conda config --set always_yes yes --set changeps1 no
+         conda update -q conda
+      - python/install-packages:
+          pkg-manager: pip
+          # app-dir: ~/project/package-directory/  # If you're requirements.txt isn't in the root directory.
+          # pip-dependency-file: test-requirements.txt  # if you have a different name for your requirements file, maybe one that combines your runtime and test requirements.
+      - run:
+          name: "Setup custom environment variables"
+          command: echo 'export OMP_STACKSIZE="5G"' >> $BASH_ENV
+      - run: |
           ####
           # install RDKit and OpenBabel
           conda install -y -c conda-forge rdkit
