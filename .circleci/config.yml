@@ -42,8 +42,8 @@ jobs:
           apt update
           apt upgrade
           apt install -y python3-pip
-          pip install meson
-          pip install ninja
+          pip3 install -y meson
+          pip3 install -y ninja
           apt-get install -y build-essential
           apt-get install -y libblas-dev liblapack-dev libgomp1
           apt-get install -y libopenblas-base libopenblas-dev
