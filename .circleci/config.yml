@@ -39,7 +39,7 @@ jobs:
       - run: |
           # install system depenedecies
           apt-get update
-          #apt-get install -y build-essential
+          apt-get install -y build-essential
           apt-get install -y gfortran-8
           apt-get install -y gcc-8
           apt update -y
