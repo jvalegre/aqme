@@ -34,82 +34,23 @@ jobs:
           # app-dir: ~/project/package-directory/  # If you're requirements.txt isn't in the root directory.
           # pip-dependency-file: test-requirements.txt  # if you have a different name for your requirements file, maybe one that combines your runtime and test requirements.
       - run:
-          name: update
-          command: sudo apt-get update -y
-
-      - run:
-          name: Install GCC 8 (Ubuntu)
-          command: sudo apt-get install gcc-8 -y
-
-      - run:
-          name: Install Gfortran 8 (Ubuntu)
-          command: sudo apt-get install gfortran-8 -y
-
-      - run:
-          command: conda create -q -n cienv python=3.9 pip cmake
-
-      - run:
-          command: source activate cienv
-
-      - run:
-          command: pip install meson==0.57.2 ninja cmake
-
+          name: "Setup custom environment variables"
+          command: echo 'export OMP_STACKSIZE="5G"' >> $BASH_ENV
       - run: |
-          # install system depenedecies
-          sudo apt-get install -y libblas-dev liblapack-dev libgomp1
-          sudo apt-get install -y libopenblas-base libopenblas-dev
-          sudo apt-get install -y unzip zip
-
           # install RDKit and OpenBabel
+          sudo apt-get update
+          sudo apt-get install -y libgomp1 libblas-dev liblapack-dev
+          sudo apt-get install -y libopenblas-base libopenblas-dev
           conda install -y -c conda-forge rdkit
           conda install -y -c conda-forge openbabel
+          # install xTB, xTB-python and CREST
           conda install -y -c conda-forge xtb
-          # conda install -y -c conda-forge xtb-python
-          # conda install -y -c conda-forge crest
-
-          # pip depenedencies
-          pip install torch
-          pip install torchvision
-          pip install torchani
-          pip install importlib
-          pip install numpy
-          pip install qcelemental
-          pip install cffi
-          ##
-
-          # xtb install
-          wget https://github.com/grimme-lab/xtb/archive/v6.3.0.zip
-          unzip v6.3.0.zip
-          cd xtb-6.3.0
-          export FC=gfortran-8 CC=gcc-8
-          meson setup build_gcc --buildtype release -Dla_backend=openblas --warnlevel 0
-          XTBHOME=$PWD
-          XTBPATH=${XTBHOME}/share/xtb:${XTBHOME}:${HOME}
-          MANPATH=${MANPATH}:${XTBHOME}/share/man
-          PATH=${PATH}:${XTBHOME}/bin
-          LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${XTBHOME}/lib
-          PYTHONPATH=${PYTHONPATH}:${XTBHOME}/python
-          export PATH XTBPATH MANPATH LD_LIBRARY_PATH PYTHONPATH
-
-          # xtb-python install
-          # git clone https://github.com/grimme-lab/xtb-python
-          sudo git clone --branch=master https://github.com/shreesowndarya/xtb-python
-          cd xtb-python
-          # # change the previous git clone part into this wget + unzip zip when there is a release (that way the version used will always be the same)
-          # wget https://github.com/grimme-lab/xtb-python/archive/v20.1.zip
-          # unzip v20.1.zip
-          # cd xtb-python-20.1
-          # compile xtb-python
-          sudo git submodule update --init
-          meson setup build --prefix=$PWD -Dla_backend=openblas -Dpy=3.9
-          ninja -C build install
-          pip install -e .
-          cd ..
-          cd ..
-          ####
+          conda install -y -c conda-forge xtb-python
+          conda install -y -c conda-forge crest
           # install AQME only to install its dependencies
           python -m pip install --upgrade pip
           pip install .
+          dpkg --list | grep compiler
           # install and run pytest
           pip install pytest
           pip install pytest-cov
@@ -117,7 +58,6 @@ jobs:
           pip uninstall -y aqme
           python -m pytest -v --cov=aqme
           codecov
-
 # Invoke jobs via workflows
 # See: https://circleci.com/docs/2.0/configuration-reference/#workflows
 workflows:
