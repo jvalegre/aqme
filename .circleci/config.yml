@@ -46,6 +46,9 @@ jobs:
           command: sudo apt-get install gfortran-8 -y
 
       - run:
+          command: sudo chown -R $USER:$USER ~/.conda
+
+      - run:
           command: conda create -q -n cienv python=3.9 pip cmake
 
       - run:
@@ -65,14 +68,14 @@ jobs:
           sudo apt-get install -y unzip zip
 
           # install RDKit and OpenBabel
-          conda install -y -c conda-forge rdkit
-          conda install -y -c conda-forge openbabel
-          conda install -y -c conda-forge xtb
+          sudo conda install -y -c conda-forge rdkit
+          sudo conda install -y -c conda-forge openbabel
+          sudo conda install -y -c conda-forge xtb
           # conda install -y -c conda-forge xtb-python
-          conda install -y -c conda-forge crest
+          sudo conda install -y -c conda-forge crest
 
           # pip depenedencies
-          pip install torch
+          sudo pip install torch
           pip install torchvision
           pip install torchani
           pip install importlib
