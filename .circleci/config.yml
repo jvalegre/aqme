@@ -20,13 +20,8 @@ jobs:
     # A list of available CircleCI Docker convenience images are available here: https://circleci.com/developer/images/image/cimg/python
     # The executor is the environment in which the steps below will be executed - below will use a python 3.10.2 container
     # Change the version below to your required version of python
-    # docker:
-    #   - image: continuumio/conda-ci-linux-64-python3.9
     docker:
-      - image: ubuntu:bionic
-    environment:
-      PYTHON_VERSION: 3.5.5
-      NUMPY_VERSION: 1.14.2
+      - image: continuumio/conda-ci-linux-64-python3.9
     # Checkout the code as the first step. This is a dedicated CircleCI step.
     # The python orb's install-packages step will install the dependencies from a Pipfile via Pipenv by default.
     # Here we're making sure we use just use the system-wide pip. By default it uses the project root's requirements.txt.
@@ -34,113 +29,98 @@ jobs:
     # CircleCI will report the results back to your VCS provider.
     steps:
       - checkout
-      - run:
-          name: Setup Miniconda
-          command: |
-            apt update
-            apt install -y wget
-            cd $HOME
-            wget "https://repo.anaconda.com/miniconda/Miniconda3-4.7.10-Linux-x86_64.sh" -O miniconda.sh
-            printf '%s' "8a324adcc9eaf1c09e22a992bb6234d91a94146840ee6b11c114ecadafc68121  miniconda.sh" | sha256sum -c
-            bash miniconda.sh -b -p $HOME/miniconda
-      - run:
-          name: Set up BASH
-          commnad: |
-            sudo apt-get update -y
-            sudo apt-get install gcc-8 -y
-            sudo apt-get install gfortran-8 -y
-            sudo apt-get install -y libblas-dev liblapack-dev libgomp1
-            sudo apt-get install -y libopenblas-base libopenblas-dev
-            sudo apt-get install -y unzip zip
-
-      - run:
-          name: Setup environment and run tests
-          command: |
-            export PATH="$HOME/miniconda/bin:$PATH"
-            conda update -y conda
-            conda create -n myenv python=$PYTHON_VERSION -c conda-forge
-            source activate myenv
-            conda install -y numpy=$NUMPY_VERSION
-            python --version
-            python -c "import numpy; print(numpy.__version__)"
-
       - python/install-packages:
           pkg-manager: pip
           # app-dir: ~/project/package-directory/  # If you're requirements.txt isn't in the root directory.
           # pip-dependency-file: test-requirements.txt  # if you have a different name for your requirements file, maybe one that combines your runtime and test requirements.
+      - run:
+          name: update
+          command: sudo apt-get update -y
 
       - run:
-          name: Conda installs
-          command: |
-            # install RDKit and OpenBabel
-            conda install -y -c conda-forge rdkit
-            conda install -y -c conda-forge openbabel
-            conda install -y -c conda-forge xtb
-            # conda install -y -c conda-forge xtb-python
-            conda install -y -c conda-forge crest
+          name: Install GCC 8 (Ubuntu)
+          command: sudo apt-get install gcc-8 -y
 
       - run:
-          name: PIP installs
-          command: |
-            pip install meson==0.57.2 ninja cmake
-            pip install torch
-            pip install torchvision
-            pip install torchani
-            pip install importlib
-            pip install numpy
-            pip install qcelemental
-            pip install cffi
-
+          name: Install Gfortran 8 (Ubuntu)
+          command: sudo apt-get install gfortran-8 -y
 
       - run:
-          name: Setup custom environment variables
+          command: conda create -q -n cienv python=3.9 pip cmake
+
+      - run:
+          command: source activate cienv
+
+      - run:
+          command: pip install meson==0.57.2 ninja cmake
+
+      - run:
+          name: "Setup custom environment variables"
           command: echo 'export OMP_STACKSIZE="5G"' >> $BASH_ENV
 
-      - run:
-          name: xTB installs
-          command: |
-            # xtb install
-            wget https://github.com/grimme-lab/xtb/archive/v6.3.0.zip
-            unzip v6.3.0.zip
-            cd xtb-6.3.0
-            export FC=gfortran-8 CC=gcc-8
-            meson setup build_gcc --buildtype release -Dla_backend=openblas --warnlevel 0
-            XTBHOME=$PWD
-            XTBPATH=${XTBHOME}/share/xtb:${XTBHOME}:${HOME}
-            MANPATH=${MANPATH}:${XTBHOME}/share/man
-            PATH=${PATH}:${XTBHOME}/bin
-            LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${XTBHOME}/lib
-            PYTHONPATH=${PYTHONPATH}:${XTBHOME}/python
-            export PATH XTBPATH MANPATH LD_LIBRARY_PATH PYTHONPATH
+      - run: |
+          # install system depenedecies
+          sudo apt-get install -y libblas-dev liblapack-dev libgomp1
+          sudo apt-get install -y libopenblas-base libopenblas-dev
+          sudo apt-get install -y unzip zip
 
-            # xtb-python install
-            # git clone https://github.com/grimme-lab/xtb-python
-            git clone --branch=master https://github.com/shreesowndarya/xtb-python
-            cd xtb-python
-            # # change the previous git clone part into this wget + unzip zip when there is a release (that way the version used will always be the same)
-            # wget https://github.com/grimme-lab/xtb-python/archive/v20.1.zip
-            # unzip v20.1.zip
-            # cd xtb-python-20.1
-            # compile xtb-python
-            git submodule update --init
-            meson setup build --prefix=$PWD -Dla_backend=openblas -Dpy=3.9
-            ninja -C build install
-            pip install -e .
-            cd ..
-            cd ..
+          # install RDKit and OpenBabel
+          conda install -y -c conda-forge rdkit
+          conda install -y -c conda-forge openbabel
+          conda install -y -c conda-forge xtb
+          # conda install -y -c conda-forge xtb-python
+          conda install -y -c conda-forge crest
 
-      - run:
-          name: AQME installs
-          command: |
-            python -m pip install --upgrade pip
-            pip install .
-            # install and run pytest
-            pip install pytest
-            pip install pytest-cov
-            # uninstall the pip version of AQME to avoid duplication when running the program for Codecov
-            pip uninstall -y aqme
-            python -m pytest -v --cov=aqme
-            codecov
+          # pip depenedencies
+          pip install torch
+          pip install torchvision
+          pip install torchani
+          pip install importlib
+          pip install numpy
+          pip install qcelemental
+          pip install cffi
+          ##
+
+          # xtb install
+          wget https://github.com/grimme-lab/xtb/archive/v6.3.0.zip
+          unzip v6.3.0.zip
+          cd xtb-6.3.0
+          export FC=gfortran-8 CC=gcc-8
+          meson setup build_gcc --buildtype release -Dla_backend=openblas --warnlevel 0
+          XTBHOME=$PWD
+          XTBPATH=${XTBHOME}/share/xtb:${XTBHOME}:${HOME}
+          MANPATH=${MANPATH}:${XTBHOME}/share/man
+          PATH=${PATH}:${XTBHOME}/bin
+          LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${XTBHOME}/lib
+          PYTHONPATH=${PYTHONPATH}:${XTBHOME}/python
+          export PATH XTBPATH MANPATH LD_LIBRARY_PATH PYTHONPATH
+
+          # xtb-python install
+          # git clone https://github.com/grimme-lab/xtb-python
+          git clone --branch=master https://github.com/shreesowndarya/xtb-python
+          cd xtb-python
+          # # change the previous git clone part into this wget + unzip zip when there is a release (that way the version used will always be the same)
+          # wget https://github.com/grimme-lab/xtb-python/archive/v20.1.zip
+          # unzip v20.1.zip
+          # cd xtb-python-20.1
+          # compile xtb-python
+          git submodule update --init
+          meson setup build --prefix=$PWD -Dla_backend=openblas -Dpy=3.9
+          ninja -C build install
+          pip install -e .
+          cd ..
+          cd ..
+          ####
+          # install AQME only to install its dependencies
+          python -m pip install --upgrade pip
+          pip install .
+          # install and run pytest
+          pip install pytest
+          pip install pytest-cov
+          # uninstall the pip version of AQME to avoid duplication when running the program for Codecov
+          pip uninstall -y aqme
+          python -m pytest -v --cov=aqme
+          codecov
 
 # Invoke jobs via workflows
 # See: https://circleci.com/docs/2.0/configuration-reference/#workflows
