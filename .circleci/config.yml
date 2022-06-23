@@ -38,6 +38,7 @@ jobs:
           command: echo 'export OMP_STACKSIZE="5G"' >> $BASH_ENV
       - run: |
           # install RDKit and OpenBabel
+          sudo chmod -R 775 ~/.conda
           sudo apt-get update
           sudo apt-get install -y libgomp1 libblas-dev liblapack-dev
           sudo apt-get install -y libopenblas-base libopenblas-dev
