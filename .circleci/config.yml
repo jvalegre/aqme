@@ -39,17 +39,13 @@ jobs:
 
       - run:
           name: Install GCC 8 (Ubuntu)
-          command: apt-get install gcc-9 -y
+          command: apt-get install gcc -y
 
       - run:
           name: Install Gfortran 8 (Ubuntu)
-          command: apt-get install gfortran-9 -y
+          command: apt-get install gfortran -y
 
       - run:
-          name: Install meson
-          env:
-            FC: gfortran-9
-            CC: gcc-9
           command: pip install meson==0.57.2 ninja cmake
 
       - run:
