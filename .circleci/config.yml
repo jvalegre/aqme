@@ -46,20 +46,16 @@ jobs:
           command: sudo apt-get install gfortran-8 -y
 
       - run:
-          command: sudo chown -R $USER:$USER ~/.conda
-
-      - run:
           command: conda create -q -n cienv python=3.9 pip cmake
 
       - run:
           command: source activate cienv
 
       - run:
-          command: pip install meson==0.57.2 ninja cmake
+          command: sudo chown -R $USER:$USER ~/.conda
 
       - run:
-          name: "Setup custom environment variables"
-          command: echo 'export OMP_STACKSIZE="5G"' >> $BASH_ENV
+          command: pip install meson==0.57.2 ninja cmake
 
       - run: |
           # install system depenedecies
@@ -68,11 +64,11 @@ jobs:
           sudo apt-get install -y unzip zip
 
           # install RDKit and OpenBabel
-          sudo conda install -y -c conda-forge rdkit
-          sudo conda install -y -c conda-forge openbabel
-          sudo conda install -y -c conda-forge xtb
+          conda install -y -c conda-forge rdkit
+          conda install -y -c conda-forge openbabel
+          conda install -y -c conda-forge xtb
           # conda install -y -c conda-forge xtb-python
-          sudo conda install -y -c conda-forge crest
+          conda install -y -c conda-forge crest
 
           # pip depenedencies
           sudo pip install torch
