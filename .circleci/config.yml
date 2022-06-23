@@ -40,8 +40,7 @@ jobs:
           # install RDKit and OpenBabel
           chmod -R 775 /opt/conda
           apt-get update
-          apt-get install -y libgomp1 libblas-dev liblapack-dev
-          apt-get install -y libopenblas-base libopenblas-dev
+          apt-get install -y libgomp1
           conda install -y -c conda-forge rdkit
           conda install -y -c conda-forge openbabel
           # install xTB, xTB-python and CREST
