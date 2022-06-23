@@ -45,11 +45,11 @@ jobs:
           name: Install Gfortran 8 (Ubuntu)
           command: sudo apt-get install gfortran-8 -y
 
-       - run:
-           command: conda create -q -n cienv python=3.9 pip cmake
+      - run:
+          command: conda create -q -n cienv python=3.9 pip cmake
 
-       - run:
-           command: source activate cienv
+      - run:
+          command: source activate cienv
 
       - run:
           command: pip install meson==0.57.2 ninja cmake
