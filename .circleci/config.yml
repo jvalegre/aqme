@@ -38,10 +38,10 @@ jobs:
           command: echo 'export OMP_STACKSIZE="5G"' >> $BASH_ENV
       - run: |
           # install RDKit and OpenBabel
-          sudo chmod -R 775 /opt/conda
-          sudo apt-get update
-          sudo apt-get install -y libgomp1 libblas-dev liblapack-dev
-          sudo apt-get install -y libopenblas-base libopenblas-dev
+          chmod -R 775 /opt/conda
+          apt-get update
+          apt-get install -y libgomp1 libblas-dev liblapack-dev
+          apt-get install -y libopenblas-base libopenblas-dev
           conda install -y -c conda-forge rdkit
           conda install -y -c conda-forge openbabel
           # install xTB, xTB-python and CREST
@@ -54,7 +54,7 @@ jobs:
           # install and run pytest
           pip install pytest
           pip install pytest-cov
-          # uninstall the pip version of AQME to avoid duplication when running the program for Codecov
+          # uninstsall the pip version of AQME to avoid duplication when running the program for Codecov
           pip uninstall -y aqme
           python -m pytest -v --cov=aqme
           codecov
