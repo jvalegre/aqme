@@ -39,16 +39,21 @@ jobs:
 
       - run:
           name: Install GCC 8 (Ubuntu)
-          command: apt-get install gcc -y
+          command: apt-get install gcc-9 -y
 
       - run:
           name: Install Gfortran 8 (Ubuntu)
-          command: apt-get install gfortran -y
+          command: apt-get install gfortran-9 -y
 
       - run:
           name: Install meson
           command: pip install meson==0.57.2 ninja cmake
 
+      - run:
+          name: Setup build of extension module
+          env:
+            FC: gfortran-9
+            CC: gcc-9
       - run:
           name: "Setup custom environment variables"
           command: echo 'export OMP_STACKSIZE="5G"' >> $BASH_ENV
