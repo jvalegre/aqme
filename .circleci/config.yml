@@ -52,6 +52,13 @@ jobs:
           conda install -y -c conda-forge xtb
           # conda install -y -c conda-forge crest
 
+          pip install importlib
+          pip install numpy
+          pip install cffi
+          pip install qcelemental
+          pip install meson
+          pip install ninja
+
           # xtb install
           wget https://github.com/grimme-lab/xtb/archive/v6.3.0.zip
           unzip v6.3.0.zip
