@@ -85,7 +85,7 @@ jobs:
           wget https://github.com/grimme-lab/xtb/archive/v6.3.0.zip
           unzip v6.3.0.zip
           cd xtb-6.3.0
-          export FC=gfortran-10 CC=gcc-10
+          export FC=gfortran CC=gcc
           meson setup build_gcc --buildtype release -Dla_backend=openblas --warnlevel 0
           XTBHOME=$PWD
           XTBPATH=${XTBHOME}/share/xtb:${XTBHOME}:${HOME}
@@ -104,6 +104,7 @@ jobs:
           # unzip v20.1.zip
           # cd xtb-python-20.1
           # compile xtb-python
+          export FC=gfortran CC=gcc
           git submodule update --init
           meson setup build --prefix=$PWD -Dla_backend=openblas -Dpy=3.9
           ninja -C build install
