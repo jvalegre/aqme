@@ -75,14 +75,14 @@ jobs:
 
           # xtb-python install
           # git clone https://github.com/grimme-lab/xtb-python
-          sudo git clone --branch=master https://github.com/shreesowndarya/xtb-python
-          cd xtb-python
-          # # change the previous git clone part into this wget + unzip zip when there is a release (that way the version used will always be the same)
-          # wget https://github.com/grimme-lab/xtb-python/archive/v20.1.zip
-          # unzip v20.1.zip
-          # cd xtb-python-20.1
+          # sudo git clone --branch=master https://github.com/shreesowndarya/xtb-python
+          # cd xtb-python
+          # change the previous git clone part into this wget + unzip zip when there is a release (that way the version used will always be the same)
+          wget https://github.com/grimme-lab/xtb-python/archive/v20.1.zip
+          unzip v20.1.zip
+          cd xtb-python-20.1
           # compile xtb-python
-          sudo git submodule update --init
+          sudo git submodules update --init
           meson setup build --prefix=$PWD -Dla_backend=openblas -Dpy=3.7
           ninja -C build install
           pip install -e .
