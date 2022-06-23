@@ -20,8 +20,13 @@ jobs:
     # A list of available CircleCI Docker convenience images are available here: https://circleci.com/developer/images/image/cimg/python
     # The executor is the environment in which the steps below will be executed - below will use a python 3.10.2 container
     # Change the version below to your required version of python
+    # docker:
+    #   - image: continuumio/conda-ci-linux-64-python3.9
     docker:
-      - image: continuumio/conda-ci-linux-64-python3.9
+      - image: ubuntu:bionic
+    environment:
+      PYTHON_VERSION: 3.5.5
+      NUMPY_VERSION: 1.14.2
     # Checkout the code as the first step. This is a dedicated CircleCI step.
     # The python orb's install-packages step will install the dependencies from a Pipfile via Pipenv by default.
     # Here we're making sure we use just use the system-wide pip. By default it uses the project root's requirements.txt.
@@ -29,6 +34,26 @@ jobs:
     # CircleCI will report the results back to your VCS provider.
     steps:
       - checkout
+      - run:
+          name: Setup Miniconda
+          command: |
+            apt update
+            apt install -y wget
+            cd $HOME
+            wget "https://repo.anaconda.com/miniconda/Miniconda3-4.7.10-Linux-x86_64.sh" -O miniconda.sh
+            printf '%s' "8a324adcc9eaf1c09e22a992bb6234d91a94146840ee6b11c114ecadafc68121  miniconda.sh" | sha256sum -c
+            bash miniconda.sh -b -p $HOME/miniconda
+      - run:
+          name: Setup environment and run tests
+          command: |
+            export PATH="$HOME/miniconda/bin:$PATH"
+            conda update -y conda
+            conda create -n myenv python=$PYTHON_VERSION -c conda-forge
+            source activate myenv
+            conda install -y numpy=$NUMPY_VERSION
+            python --version
+            python -c "import numpy; print(numpy.__version__)"
+
       - python/install-packages:
           pkg-manager: pip
           # app-dir: ~/project/package-directory/  # If you're requirements.txt isn't in the root directory.
@@ -44,12 +69,6 @@ jobs:
       - run:
           name: Install Gfortran 8 (Ubuntu)
           command: sudo apt-get install gfortran-8 -y
-
-      - run:
-          command: conda create -q -n cienv python=3.9 pip cmake
-
-      - run:
-          command: source activate cienv
 
       - run:
           command: pip install meson==0.57.2 ninja cmake
