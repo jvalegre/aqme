@@ -52,8 +52,8 @@ jobs:
           command: source activate cienv
 
       - run:
-          command: |
-          sudo chown -R $USER:$USER ~/.conda
+          command:
+          # sudo chown -R $USER:$USER ~/.conda
           sudo chown -R $USER:$USER /opt/conda
 
       - run:
