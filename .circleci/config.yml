@@ -39,11 +39,11 @@ jobs:
 
       - run:
           name: Install GCC 8 (Ubuntu)
-          command: sudo apt-get install gcc -y
+          command: sudo apt-get install gcc-8 -y
 
       - run:
           name: Install Gfortran 8 (Ubuntu)
-          command: sudo apt-get install gfortran -y
+          command: sudo apt-get install gfortran-8 -y
 
       - run:
           command: pip install meson==0.57.2 ninja cmake
@@ -79,7 +79,7 @@ jobs:
           wget https://github.com/grimme-lab/xtb/archive/v6.3.0.zip
           unzip v6.3.0.zip
           cd xtb-6.3.0
-          export FC=gfortran CC=gcc
+          export FC=gfortran-8 CC=gcc-8
           meson setup build_gcc --buildtype release -Dla_backend=openblas --warnlevel 0
           XTBHOME=$PWD
           XTBPATH=${XTBHOME}/share/xtb:${XTBHOME}:${HOME}
