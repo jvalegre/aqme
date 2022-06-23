@@ -38,18 +38,49 @@ jobs:
           command: echo 'export OMP_STACKSIZE="5G"' >> $BASH_ENV
       - run: |
           # install RDKit and OpenBabel
-          conda create -n cienv python=3.9
+          conda create -n cienv python=3.7
           source activate cienv
           sudo chmod -R 775 /opt/conda
           sudo apt-get update
+          sudo apt-get install -y gfortran-8
           sudo apt-get install -y libgomp1 libblas-dev liblapack-dev
           sudo apt-get install -y libopenblas-base libopenblas-dev
           conda install -y -c conda-forge rdkit
           conda install -y -c conda-forge openbabel
           # install xTB, xTB-python and CREST
           conda install -y -c conda-forge xtb
-          conda install -y -c conda-forge xtb-python
-          conda install -y -c conda-forge crest
+          # conda install -y -c conda-forge crest
+
+          # xtb install
+          wget https://github.com/grimme-lab/xtb/archive/v6.3.0.zip
+          unzip v6.3.0.zip
+          cd xtb-6.3.0
+          export FC=gfortran-8 CC=gcc-8
+          meson setup build_gcc --buildtype release -Dla_backend=openblas --warnlevel 0
+          XTBHOME=$PWD
+          XTBPATH=${XTBHOME}/share/xtb:${XTBHOME}:${HOME}
+          MANPATH=${MANPATH}:${XTBHOME}/share/man
+          PATH=${PATH}:${XTBHOME}/bin
+          LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${XTBHOME}/lib
+          PYTHONPATH=${PYTHONPATH}:${XTBHOME}/python
+          export PATH XTBPATH MANPATH LD_LIBRARY_PATH PYTHONPATH
+
+          # xtb-python install
+          # git clone https://github.com/grimme-lab/xtb-python
+          sudo git clone --branch=master https://github.com/shreesowndarya/xtb-python
+          cd xtb-python
+          # # change the previous git clone part into this wget + unzip zip when there is a release (that way the version used will always be the same)
+          # wget https://github.com/grimme-lab/xtb-python/archive/v20.1.zip
+          # unzip v20.1.zip
+          # cd xtb-python-20.1
+          # compile xtb-python
+          sudo git submodule update --init
+          meson setup build --prefix=$PWD -Dla_backend=openblas -Dpy=3.9
+          ninja -C build install
+          pip install -e .
+          cd ..
+          cd ..
+
           # install AQME only to install its dependencies
           python -m pip install --upgrade pip
           pip install .
