@@ -52,7 +52,9 @@ jobs:
           command: source activate cienv
 
       - run:
-          command: sudo chown -R $USER:$USER ~/.conda
+          command: |
+          sudo chown -R $USER:$USER ~/.conda
+          sudo chown -R $USER:$USER /opt/conda
 
       - run:
           command: pip install meson==0.57.2 ninja cmake
@@ -68,10 +70,10 @@ jobs:
           conda install -y -c conda-forge openbabel
           conda install -y -c conda-forge xtb
           # conda install -y -c conda-forge xtb-python
-          conda install -y -c conda-forge crest
+          # conda install -y -c conda-forge crest
 
           # pip depenedencies
-          sudo pip install torch
+          pip install torch
           pip install torchvision
           pip install torchani
           pip install importlib
