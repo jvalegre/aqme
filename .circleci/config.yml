@@ -83,7 +83,7 @@ jobs:
           # cd xtb-python-20.1
           # compile xtb-python
           sudo git submodule update --init
-          meson setup build --prefix=$PWD -Dla_backend=openblas -Dpy=3.9
+          meson setup build --prefix=$PWD -Dla_backend=openblas -Dpy=3.7
           ninja -C build install
           pip install -e .
           cd ..
