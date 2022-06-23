@@ -35,21 +35,15 @@ jobs:
           # pip-dependency-file: test-requirements.txt  # if you have a different name for your requirements file, maybe one that combines your runtime and test requirements.
       - run:
           name: update
-          command: apt-get update -y
+          command: sudo apt-get update -y
 
       - run:
           name: Install GCC 8 (Ubuntu)
-          command: apt-get install gcc -y
+          command: sudo apt-get install gcc -y
 
       - run:
           name: Install Gfortran 8 (Ubuntu)
-          command: apt-get install gfortran -y
-
-      - run:
-          command: conda update python
-
-      - run:
-          command: conda install cffi -c conda-forge
+          command: sudo apt-get install gfortran -y
 
       - run:
           command: pip install meson==0.57.2 ninja cmake
@@ -60,9 +54,9 @@ jobs:
 
       - run: |
           # install system depenedecies
-          apt-get install -y libblas-dev liblapack-dev libgomp1
-          apt-get install -y libopenblas-base libopenblas-dev
-          apt-get install -y unzip zip
+          sudo apt-get install -y libblas-dev liblapack-dev libgomp1
+          sudo apt-get install -y libopenblas-base libopenblas-dev
+          sudo apt-get install -y unzip zip
 
           # install RDKit and OpenBabel
           conda install -y -c conda-forge rdkit
@@ -78,6 +72,7 @@ jobs:
           pip install importlib
           pip install numpy
           pip install qcelemental
+          pip install cffi
           ##
 
           # xtb install
