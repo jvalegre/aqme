@@ -47,13 +47,11 @@ jobs:
 
       - run:
           name: Install meson
-          command: pip install meson==0.57.2 ninja cmake
-
-      - run:
-          name: Setup build of extension module
           env:
             FC: gfortran-9
             CC: gcc-9
+          command: pip install meson==0.57.2 ninja cmake
+
       - run:
           name: "Setup custom environment variables"
           command: echo 'export OMP_STACKSIZE="5G"' >> $BASH_ENV
