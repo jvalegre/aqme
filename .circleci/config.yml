@@ -49,6 +49,9 @@ jobs:
           command: conda update python
 
       - run:
+          command: conda install cffi -c conda-forge
+
+      - run:
           command: pip install meson==0.57.2 ninja cmake
 
       - run:
@@ -74,7 +77,6 @@ jobs:
           pip install torchani
           pip install importlib
           pip install numpy
-          pip install cffi
           pip install qcelemental
           ##
 
