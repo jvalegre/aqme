@@ -93,7 +93,7 @@ jobs:
 
 
       - run:
-          name: "Setup custom environment variables"
+          name: Setup custom environment variables
           command: echo 'export OMP_STACKSIZE="5G"' >> $BASH_ENV
 
       - run:
@@ -130,7 +130,7 @@ jobs:
             cd ..
 
       - run:
-          name: xTB installs
+          name: AQME installs
           command: |
             python -m pip install --upgrade pip
             pip install .
