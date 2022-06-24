@@ -76,6 +76,7 @@ jobs:
           # xtb-python install
           # git clone https://github.com/grimme-lab/xtb-python
           sudo git clone --branch=master https://github.com/shreesowndarya/xtb-python
+          sudo chmod 777 xtb-python
           cd xtb-python
           # change the previous git clone part into this wget + unzip zip when there is a release (that way the version used will always be the same)
           # wget https://github.com/grimme-lab/xtb-python/archive/v20.1.zip
