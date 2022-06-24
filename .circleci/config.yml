@@ -48,6 +48,10 @@ jobs:
           apt-get install -y libopenblas-base libopenblas-dev
           conda install -y -c conda-forge rdkit
           conda install -y -c conda-forge openbabel
+          # install xTB, xTB-python and CREST
+          conda install -y -c conda-forge xtb
+          conda install -y -c conda-forge xtb-python
+          conda install -y -c conda-forge crest
 
           pip install importlib
           pip install numpy
