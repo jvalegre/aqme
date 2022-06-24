@@ -48,60 +48,36 @@ jobs:
           apt-get install -y libopenblas-base libopenblas-dev
           conda install -y -c conda-forge rdkit
           conda install -y -c conda-forge openbabel
-          # install xTB, xTB-python and CREST
-          conda install -y -c conda-forge xtb
-          conda install -y -c conda-forge xtb-python
-          conda install -y -c conda-forge crest
 
-          export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/conda/envs/cienv/lib/python3.7/site-packages/xtb/lib64/
-          XTBHOME=/opt/conda/envs/cienv/lib/python3.7/site-packages/xtb/
-          # set up path for xtb, using the xtb directory and the users home directory
-          XTBPATH=${XTBHOME}/share/xtb:${HOME}
-          # to include the documentation we include our man pages in the users manpath
+          pip install importlib
+          pip install numpy
+          pip install cffi
+          pip install qcelemental
+          pip install meson
+          pip install ninja
+
+          # xtb install
+          wget https://github.com/grimme-lab/xtb/archive/v6.3.0.zip
+          unzip v6.3.0.zip
+          cd xtb-6.3.0
+          export FC=gfortran-10 CC=gcc-10
+          meson setup build_gcc --buildtype release -Dla_backend=openblas --warnlevel 0
+          cd ..
+
+          # xtb-python install
+          wget https://github.com/grimme-lab/xtb-python/archive/v20.1.zip
+          unzip v20.1.zip
+          cd xtb-python-20.1
+          python setup.py install
+          cd ..
+
+          XTBHOME=$PWD/xtb-6.3.0
+          XTBPATH=${XTBHOME}/share/xtb:${XTBHOME}:${HOME}
           MANPATH=${MANPATH}:${XTBHOME}/share/man
-          # finally we have to make the binaries
           PATH=${PATH}:${XTBHOME}/bin
-          # enable package config for xtb
-          PKG_CONFIG_PATH=${PKG_CONFIG_PATH}:${XTBHOME}/share/xtb
-          export PATH XTBPATH MANPATH PKG_CONFIG_PATH
-
-          # pip install importlib
-          # pip install numpy
-          # pip install cffi
-          # pip install qcelemental
-          # pip install meson
-          # pip install ninja
-          #
-          # # xtb install
-          # wget https://github.com/grimme-lab/xtb/archive/v6.3.0.zip
-          # unzip v6.3.0.zip
-          # cd xtb-6.3.0
-          # export FC=gfortran-10 CC=gcc-10
-          # meson setup build_gcc --buildtype release -Dla_backend=openblas --warnlevel 0
-          # XTBHOME=$PWD
-          # XTBPATH=${XTBHOME}/share/xtb:${XTBHOME}:${HOME}
-          # MANPATH=${MANPATH}:${XTBHOME}/share/man
-          # PATH=${PATH}:${XTBHOME}/bin
-          # LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${XTBHOME}/lib
-          # PYTHONPATH=${PYTHONPATH}:${XTBHOME}/python
-          # export PATH XTBPATH MANPATH LD_LIBRARY_PATH PYTHONPATH
-          # cd ..
-          #
-          # # xtb-python install
-          # # # git clone https://github.com/grimme-lab/xtb-python
-          # # sudo git clone --branch=master https://github.com/shreesowndarya/xtb-python
-          # # sudo chmod 777 xtb-python
-          # # cd xtb-python
-          # # change the previous git clone part into this wget + unzip zip when there is a release (that way the version used will always be the same)
-          # wget https://github.com/grimme-lab/xtb-python/archive/v20.1.zip
-          # unzip v20.1.zip
-          # cd xtb-python-20.1
-          # # # compile xtb-python
-          # # sudo git submodule update --init
-          # # meson setup build --prefix=$PWD -Dla_backend=openblas -Dpy=3.7
-          # # ninja -C build install
-          # python setup.py install
-          # cd ..
+          LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${XTBHOME}/lib
+          PYTHONPATH=${PYTHONPATH}:${XTBHOME}/python
+          export PATH XTBPATH MANPATH LD_LIBRARY_PATH PYTHONPATH
 
           # install AQME only to install its dependencies
           python -m pip install --upgrade pip
