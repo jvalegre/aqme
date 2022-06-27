@@ -33,64 +33,20 @@ jobs:
           pkg-manager: pip
           # app-dir: ~/project/package-directory/  # If you're requirements.txt isn't in the root directory.
           # pip-dependency-file: test-requirements.txt  # if you have a different name for your requirements file, maybe one that combines your runtime and test requirements.
-      - run:
-          name: "Setup custom environment variables"
-          command: echo 'export OMP_STACKSIZE="5G"' >> $BASH_ENV
       - run: |
           # install RDKit and OpenBabel
-          conda create -n cienv python=3.7
-          source activate cienv
-          apt-get update
-          apt-get install -y gcc-10
-          apt-get install -y gfortran-10
-          apt-get install -y unzip
-          apt-get install -y libgomp1 libblas-dev liblapack-dev
-          apt-get install -y libopenblas-base libopenblas-dev
           conda install -y -c conda-forge rdkit
           conda install -y -c conda-forge openbabel
           # install xTB, xTB-python and CREST
           conda install -y -c conda-forge xtb
           conda install -y -c conda-forge xtb-python
           conda install -y -c conda-forge crest
-
-          pip install importlib
-          pip install numpy
-          pip install cffi
-          pip install qcelemental
-          pip install meson
-          pip install ninja
-
-          # xtb install
-          wget https://github.com/grimme-lab/xtb/archive/v6.3.0.zip
-          unzip v6.3.0.zip
-          cd xtb-6.3.0
-          export FC=gfortran-10 CC=gcc-10
-          meson setup build_gcc --buildtype release -Dla_backend=openblas --warnlevel 0
-          cd ..
-
-          # xtb-python install
-          wget https://github.com/grimme-lab/xtb-python/archive/v20.1.zip
-          unzip v20.1.zip
-          cd xtb-python-20.1
-          python setup.py install
-          cd ..
-
-          XTBHOME=$PWD/xtb-6.3.0
-          XTBPATH=${XTBHOME}/share/xtb:${XTBHOME}:${HOME}
-          MANPATH=${MANPATH}:${XTBHOME}/share/man
-          PATH=${PATH}:${XTBHOME}/bin
-          LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${XTBHOME}/lib
-          PYTHONPATH=${PYTHONPATH}:${XTBHOME}/python
-          export PATH XTBPATH MANPATH LD_LIBRARY_PATH PYTHONPATH
-
-          # install AQME only to install its dependencies
+          # install AQME
           python -m pip install --upgrade pip
           pip install .
           # install and run pytest
           pip install pytest
           pip install pytest-cov
-          # uninstall the pip version of AQME to avoid duplication when running the program for Codecov
-          pip uninstall -y aqme
           python -m pytest -v --cov=aqme
           codecov
 # Invoke jobs via workflows
