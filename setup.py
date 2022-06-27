@@ -49,6 +49,7 @@ setup(
         "cclib",
         "matplotlib",
         "seaborn",
+        "cffi",
         "torch",
         "torchvision",
         "torchani",
