@@ -41,7 +41,7 @@ jobs:
           conda install -y -c conda-forge xtb
           conda install -y -c conda-forge xtb-python
           conda install -y -c conda-forge crest
-          sudo pip install codecov
+          pip install codecov
           # install AQME
           python -m pip install --upgrade pip
           pip install .
