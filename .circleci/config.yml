@@ -41,6 +41,7 @@ jobs:
           conda install -y -c conda-forge xtb
           conda install -y -c conda-forge xtb-python
           conda install -y -c conda-forge crest
+          sudo pip install codecov
           # install AQME
           python -m pip install --upgrade pip
           pip install .
@@ -48,7 +49,7 @@ jobs:
           pip install pytest
           pip install pytest-cov
           python -m pytest -v --cov=aqme
-          codecov
+          # codecov
 # Invoke jobs via workflows
 # See: https://circleci.com/docs/2.0/configuration-reference/#workflows
 workflows:
