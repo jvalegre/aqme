@@ -193,6 +193,7 @@ def main():
             program=args.program,
             qdescp_temp=args.qdescp_temp,
             qdescp_acc=args.qdescp_acc,
+            qdescp_solvent=args.qdescp_solvent,
             boltz=args.boltz,
         )
 

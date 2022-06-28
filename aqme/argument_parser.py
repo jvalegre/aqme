@@ -119,7 +119,8 @@ var_dict = {
     "qdescp": False,
     "qdescp_temp": 300,
     "qdescp_acc": 0.2,
-    "boltz": False
+    "qdescp_solvent": None,
+    "boltz": False,
 }
 
 
