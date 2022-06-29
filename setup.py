@@ -12,7 +12,7 @@ setup(
     name="aqme",
     packages=find_packages(exclude=["tests"]),
     package_data={"aqme": ["templates/*"]},
-    version="1.0",
+    version="1.1",
     license="MIT",
     description="Automated Quantum Mechanical Environments",
     long_description="Automated Quantum Mechanical Environments",
@@ -29,9 +29,9 @@ setup(
         "automated",
     ],
     url="https://github.com/jvalegre/aqme",
-    download_url="https://github.com/jvalegre/aqme/archive/refs/tags/1.0.tar.gz",
+    download_url="https://github.com/jvalegre/aqme/archive/refs/tags/1.1.tar.gz",
     classifiers=[
-        "Development Status :: 3 - Alpha",  # Chose either "3 - Alpha", "4 - Beta" or "5 - Production/Stable" as the current state of your package
+        "Development Status :: 5 - Production/Stable",  # Chose either "3 - Alpha", "4 - Beta" or "5 - Production/Stable" as the current state of your package
         "Intended Audience :: Developers",  # Define that your audience are developers
         "Topic :: Software Development :: Build Tools",
         "License :: OSI Approved :: MIT License",

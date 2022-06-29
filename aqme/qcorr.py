@@ -117,11 +117,12 @@ class qcorr:
                 ) = self.analyze_normal(duplicate_data, errortype, cclib_data)
 
             # fix calcs that did not terminated normally
+            
             elif termination != "normal":
                 atom_types, cartesians, cclib_data = self.analyze_abnormal(
                     errortype, cclib_data, outlines
                 )
-
+            
             # check for isomerization
             if self.args.isom_type is not None:
                 errortype = self.analyze_isom(file, cartesians, atom_types, errortype)
@@ -458,6 +459,7 @@ class qcorr:
                     min_RMS,
                     cclib_data["properties"]["number of atoms"],
                     "gaussian",
+                    cclib_data["metadata"]["keywords line"]
                 )
 
         return atom_types, cartesians, cclib_data

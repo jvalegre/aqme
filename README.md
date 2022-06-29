@@ -18,10 +18,12 @@ The code is an ensemble of automated QM workflows that can be run through jupyte
   - [ ] Post-processing of QM output files to fix convergence errors, extra imaginary frequencies, unfinished jobs, duplicates and error terminations, as well as to detect spin contamination, isomerization issues, and more optimization problems  
   - [ ] Analysis of homogeneity of QM calculations (same level of theory, grid size, program and version, solvation models, etc)  
   - [ ] Generation of xTB, DFT and RDKit descriptors in json and csv files that are ready to use in machine-learning models or used to predict NMR spectra  
-  - [ ] More other useful workflows!  
+  - [ ] More other useful workflows  
+
+Don't miss out the latest hands-on tutorials from our [YouTube channel](https://www.youtube.com/channel/UCHRqI8N61bYxWV9BjbUI4Xw)!  
 
 ## Installation
-AQME and its dependencies are installed as follows:  
+Check our [AQME installation in 2 mins](https://www.youtube.com/watch?v=LbHpM5KaxpE) video for a quick installation guide. In a nutshell, AQME and its dependencies are installed as follows:  
 1. Installing RDKit and Open Babel through conda. For shortcuts:  
   * `conda install -c rdkit rdkit` or `conda install -c conda-forge rdkit` (compatible with Python >=3.8)  
   * `conda install -c conda-forge openbabel`  

@@ -938,26 +938,31 @@ def read_file(initial_dir, w_dir, file):
     return outlines
 
 
-def QM_coords(outlines, min_RMS, n_atoms, program):
+def QM_coords(outlines, min_RMS, n_atoms, program, keywords_line):
     """
     Retrieves atom types and coordinates from QM output files
     """
-
+    
     atom_types, cartesians, range_lines = [], [], []
     per_tab = periodic_table()
     count_RMS = -1
 
     if program == "gaussian":
+        if 'nosymm' in keywords_line.lower():
+            target_ori = 'Input orientation:'
+        else:
+            target_ori = 'Standard orientation:'
+
         if min_RMS > -1:
             for i, line in enumerate(outlines):
-                if line.find("Standard orientation:") > -1:
+                if line.find(target_ori) > -1:
                     count_RMS += 1
                 if count_RMS == min_RMS:
                     range_lines = [i + 5, i + 5 + n_atoms]
                     break
         else:
             for i in reversed(range(len(outlines))):
-                if outlines[i].find("Standard orientation:") > -1:
+                if outlines[i].find(target_ori) > -1:
                     range_lines = [i + 5, i + 5 + n_atoms]
                     break
         if len(range_lines) != 0:
