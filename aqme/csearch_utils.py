@@ -47,9 +47,7 @@ def load_template(complex_type, log):
 
     file_template = folder / Path(type2template[complex_type])
     templates = Chem.SDMolSupplier(str(file_template))
-    template = templates[
-        -1
-    ]
+    template = templates[-1]
 
     return template
 
@@ -518,7 +516,7 @@ def constraint_fix(
 ):
 
     # this avoids problems when running AQME through command lines
-    if pd.isnull(constraints_atoms):
+    if all(pd.isnull(constraints_atoms)):
         constraints_atoms = []
     else:
         if not isinstance(constraints_atoms, list):
