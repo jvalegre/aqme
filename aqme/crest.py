@@ -202,7 +202,11 @@ def crest_opt(
 
     run_command(command, str(dat_dir) + "/crest.out")
 
-    if args.cregen:
+    # get number of n_atoms
+    natoms = open("crest_best.xyz").readlines()[0].strip()
+    print(int(natoms))
+
+    if args.cregen and int(natoms) != 1:
         command = ["crest", "crest_best.xyz", "--cregen", "crest_conformers.xyz"]
 
         if args.cregen_keywords is not None:
@@ -214,7 +218,8 @@ def crest_opt(
     try:
         if os.path.exists(str(dat_dir) + "/crest_clustered.xyz"):
             shutil.copy(str(dat_dir) + "/crest_clustered.xyz", xyzoutall)
-        elif args.cregen:
+
+        elif os.path.exists(str(dat_dir) + "/crest_ensemble.xyz"):
             shutil.copy(str(dat_dir) + "/crest_ensemble.xyz", xyzoutall)
         else:
             shutil.copy(str(dat_dir) + "/crest_conformers.xyz", xyzoutall)
@@ -240,7 +245,7 @@ def crest_opt(
         energy = str(open(file, "r").readlines()[0])
         mol_rd.SetProp("Energy", energy)
         mol_rd.SetProp("Real charge", str(charge))
-        mol_rd.SetProp("Mult", str(int(mult) - 1))
+        mol_rd.SetProp("Mult", str(int(mult)))
         sdwriter.write(mol_rd)
 
     dup_data.at[dup_data_idx, "crest-conformers"] = len(xyz_files)

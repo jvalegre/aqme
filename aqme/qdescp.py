@@ -203,6 +203,8 @@ class qdescp:
             "--input",
             str(self.inp),
         ]
+        if self.args.qdescp_solvent is not None:
+            command1.append("--alpb {}".format(self.args.qdescp_solvent))
         run_command(command1, self.xtb_out)
 
         os.rename("xtbout.json", self.xtb_json)
@@ -223,6 +225,8 @@ class qdescp:
             "--etemp",
             str(self.args.qdescp_temp),
         ]
+        if self.args.qdescp_solvent is not None:
+            command2.append("--alpb {}".format(self.args.qdescp_solvent))
         run_command(command2, self.xtb_gfn1)
 
         command3 = [
@@ -240,6 +244,8 @@ class qdescp:
             "--etemp",
             str(self.args.qdescp_temp),
         ]
+        if self.args.qdescp_solvent is not None:
+            command3.append("--alpb {}".format(self.args.qdescp_solvent))
         run_command(command3, self.xtb_fukui)
 
         command4 = [
@@ -257,6 +263,8 @@ class qdescp:
             "--etemp",
             str(self.args.qdescp_temp),
         ]
+        if self.args.qdescp_solvent is not None:
+            command4.append("--alpb {}".format(self.args.qdescp_solvent))
         run_command(command4, self.xtb_fod)
 
         os.chdir(self.args.w_dir_main)
