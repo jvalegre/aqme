@@ -103,38 +103,43 @@ def crest_opt(
     # for systems that were created from 1D and 2D inputs (i.e. SMILES), this part includes two xTB
     # constrained optimizations to avoid geometry problems in noncovalent complexes and transition states
     if nci_ts_complex:
-        # xTB optimization with all bonds frozen
-        xyzoutxtb1 = str(dat_dir) + "/" + name_no_path + "_xtb1.xyz"
+        if len(constraints_dist) != 0:
+            # xTB optimization with all bonds frozen
+            xyzoutxtb1 = str(dat_dir) + "/" + name_no_path + "_xtb1.xyz"
+
+            all_fix = get_constraint(mol, constraints_dist)
+
+            _ = create_xcontrol(
+                args,
+                constraints_atoms,
+                all_fix,
+                [],
+                [],
+                xyzin,
+                "constrain1.inp",
+            )
+
+            command1 = [
+                "xtb",
+                xyzin,
+                "--opt",
+                "--input",
+                "constrain1.inp",
+                "-c",
+                str(charge),
+                "--uhf",
+                str(int(mult) - 1),
+                "-P",
+                str(args.nprocs),
+            ]
+
+            run_command(command1, "{}.out".format(xyzoutxtb1.split(".xyz")[0]))
+            os.rename(str(dat_dir) + "/xtbopt.xyz", xyzoutxtb1)
+
+        else:
+            xyzoutxtb1 = xyzin
+
         xyzoutxtb2 = str(dat_dir) + "/" + name_no_path + "_xtb2.xyz"
-        all_fix = get_constraint(mol, constraints_dist)
-
-        _ = create_xcontrol(
-            args,
-            constraints_atoms,
-            all_fix,
-            [],
-            [],
-            xyzin,
-            "constrain1.inp",
-        )
-
-        command1 = [
-            "xtb",
-            xyzin,
-            "--opt",
-            "--input",
-            "constrain1.inp",
-            "-c",
-            str(charge),
-            "--uhf",
-            str(int(mult) - 1),
-            "-P",
-            str(args.nprocs),
-        ]
-
-        run_command(command1, "{}.out".format(xyzoutxtb1.split(".xyz")[0]))
-        os.rename(str(dat_dir) + "/xtbopt.xyz", xyzoutxtb1)
-
         # xTB optimization with the user-defined constraints
         _ = create_xcontrol(
             args,
