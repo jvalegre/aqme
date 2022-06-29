@@ -421,7 +421,7 @@ class qprep:
                         elif found_n_atoms:
                             break
 
-                atom_types, cartesians = QM_coords(outlines, -1, n_atoms, program)
+                atom_types, cartesians = QM_coords(outlines, -1, n_atoms, program, '')
 
             elif file.split(".")[1] == "json":
                 with open(file) as json_file:
