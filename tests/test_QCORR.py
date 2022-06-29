@@ -48,6 +48,7 @@ path_qcorr = os.getcwd()+'/Example_workflows/QCORR_processing_QM_outputs'
     ('QCORR_1', 'H_SP.log', None, 'successful_QM_outputs/SP_calcs', False), # test for single-point calcs with 1 atom
     ('QCORR_1', 'CO2_linear_3freqs_FAIL.log', None, 'unsuccessful_QM_outputs/run_1/linear_mol_wrong', False), # test for linear mols with wrong number of freqs
     ('QCORR_1', 'CO2_linear_4freqs.log', None, 'successful_QM_outputs', False), # test successful termination for linear mols
+    ('QCORR_1', 'nosymm.log', None, 'unsuccessful_QM_outputs/run_1/error/not_specified_error', False), # test successful termination for linear mols
     ('QCORR_1', 'json', None, 'successful_QM_outputs/json_files', False), # test for correct creation of json files (all the successful terminations only)
     ('QCORR_1', 'fullcheck', None, 'successful_QM_outputs/json_files', False), # test for correct fullcheck option
     ('QCORR_1', 'csv', None, None, False), # test final csv file with results
@@ -184,6 +185,12 @@ def test_QCORR_analysis(init_folder, file, command_line, target_folder, restore_
                     line_8 = 'C  -0.90757400   0.00709700  -0.00594500'
                     line_10 = 'C   1.19952600   1.19528800   0.00098400'
 
+                elif file.split('.')[0] == 'nosymm':
+                    line_2 = '# m062x def2svp nosymm int=(ultrafine) scrf=(smd,solvent=tetrahydrofuran) opt freq=(noraman)'
+                    line_6 = '0 1'
+                    line_8 = 'C   1.54100700  -0.43780100  -1.49642700'
+                    line_10 = 'N  -0.37309700  -1.37343200  -0.29066900'                
+
                 outfile = open(f'{w_dir_main}/unsuccessful_QM_outputs/run_1/fixed_QM_inputs/{file.split(".")[0]}.com', "r")
                 outlines = outfile.readlines()
                 outfile.close()
@@ -279,7 +286,7 @@ def test_QCORR_analysis(init_folder, file, command_line, target_folder, restore_
 
         elif file == 'csv':
             qcorr_stats = pd.read_csv(f'{w_dir_main}/QCORR-run_1-stats.csv')
-            assert qcorr_stats['Total files'][0] == 27
+            assert qcorr_stats['Total files'][0] == 28
             assert qcorr_stats['Normal termination'][0] == 6
             assert qcorr_stats['Single-point calcs'][0] == 3
             assert qcorr_stats['Extra imag. freq.'][0] == 3
@@ -289,7 +296,7 @@ def test_QCORR_analysis(init_folder, file, command_line, target_folder, restore_
             assert qcorr_stats['SCF error'][0] == 1
             assert qcorr_stats['No data'][0] == 1
             assert qcorr_stats['Basis set error'][0] == 2
-            assert qcorr_stats['Other errors'][0] == 4
+            assert qcorr_stats['Other errors'][0] == 5
             assert qcorr_stats['Spin contamination'][0] == 2
             assert qcorr_stats['Duplicates'][0] == 1
         
