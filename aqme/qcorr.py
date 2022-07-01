@@ -550,7 +550,7 @@ class qcorr:
             )
         else:
             destination_fix = Path(
-                f"{self.args.w_dir_main}/unsuccessful_QM_outputs/run_{self.args.round_num}/fixed_QM_inputs"
+                f"{self.args.w_dir_main}/failed/run_{self.args.round_num}/fixed_QM_inputs"
             )
 
         if cclib_data["metadata"]["QM program"].lower().find("gaussian") > -1:
@@ -692,14 +692,12 @@ class qcorr:
             destination_error = self.args.w_dir_main.joinpath(
                 f"../../run_{self.args.round_num}/"
             )
-            destination_normal = self.args.w_dir_main.joinpath(
-                "../../../successful_QM_outputs/"
-            )
+            destination_normal = self.args.w_dir_main.joinpath("../../../success/")
         else:
             destination_error = self.args.w_dir_main.joinpath(
-                f"unsuccessful_QM_outputs/run_{self.args.round_num}/"
+                f"failed/run_{self.args.round_num}/"
             )
-            destination_normal = self.args.w_dir_main.joinpath("successful_QM_outputs/")
+            destination_normal = self.args.w_dir_main.joinpath("success/")
 
         if errortype == "none" and termination == "normal":
             destination = destination_normal
