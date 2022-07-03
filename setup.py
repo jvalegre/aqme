@@ -53,6 +53,7 @@ setup(
         "torch",
         "torchvision",
         "torchani",
+        "rdkit-pypi"
     ],
     python_requires=">=3.0",
     include_package_data=True,

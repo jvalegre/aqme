@@ -34,8 +34,7 @@ jobs:
           # app-dir: ~/project/package-directory/  # If you're requirements.txt isn't in the root directory.
           # pip-dependency-file: test-requirements.txt  # if you have a different name for your requirements file, maybe one that combines your runtime and test requirements.
       - run: |
-          # install RDKit and OpenBabel
-          conda install -y -c conda-forge rdkit
+          # install OpenBabel
           conda install -y -c conda-forge openbabel
           # install xTB, xTB-python and CREST
           conda install -y -c conda-forge xtb
