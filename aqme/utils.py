@@ -1021,13 +1021,13 @@ def check_run(w_dir):
     Determines the folder where input files are gonna be generated in QCORR.
     """
 
-    if "unsuccessful_QM_outputs" in w_dir.as_posix():
+    if "failed" in w_dir.as_posix():
         resume_qcorr = True
         for folder in w_dir.as_posix().replace("\\", "/").split("/"):
             if "run_" in folder:
                 folder_count = int(folder.split("_")[1]) + 1
     else:
-        input_folder = w_dir.joinpath("unsuccessful_QM_outputs/")
+        input_folder = w_dir.joinpath("failed/")
         resume_qcorr = False
         folder_count = 1
 
