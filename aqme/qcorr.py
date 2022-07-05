@@ -129,7 +129,7 @@ class qcorr:
                 and self.args.round_num == 1
             ):
                 move_file(
-                    self.args.w_dir_main.joinpath("initial_QM_inputs/"),
+                    self.args.w_dir_main.joinpath("inputs/"),
                     self.args.w_dir_main,
                     f"{file_name}.com",
                 )

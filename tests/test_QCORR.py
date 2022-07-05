@@ -1,4 +1,4 @@
-success  #!/usr/bin/env python
+#!/usr/bin/env python
 
 ######################################################.
 # 	        Testing QCORR with pytest 	             #
@@ -659,7 +659,7 @@ def test_QCORR_analysis(init_folder, file, command_line, target_folder, restore_
             assert qcorr_stats["Duplicates"][0] == 1
 
         elif file == "check_init":
-            assert not path.exists(f"{w_dir_main}/initial_QM_inputs/")
+            assert not path.exists(f"{w_dir_main}/inputs/")
 
     elif init_folder == "QCORR_1b":
         w_dir_main = f"{path_qcorr}/QCORR_1"
@@ -751,9 +751,7 @@ def test_QCORR_analysis(init_folder, file, command_line, target_folder, restore_
         # ensure the output file moves to the right folder, including the initial COM file
         if file.split(".")[-1].lower() == "log":
             assert path.exists(f"{w_dir_main}/{target_folder}/{file}")
-            assert path.exists(
-                f'{w_dir_main}/initial_QM_inputs/{file.split(".")[0]}.com'
-            )
+            assert path.exists(f'{w_dir_main}/inputs/{file.split(".")[0]}.com')
 
         # ensure that no com files were generated
         elif file == "check_fixed":
@@ -778,9 +776,7 @@ def test_QCORR_analysis(init_folder, file, command_line, target_folder, restore_
         # ensure the output file moves to the right folder, including the initial COM file
         if file.split(".")[-1].lower() == "log":
             assert path.exists(f"{w_dir_main}/{target_folder}/{file}")
-            assert path.exists(
-                f'{w_dir_main}/initial_QM_inputs/{file.split(".")[0]}.com'
-            )
+            assert path.exists(f'{w_dir_main}/inputs/{file.split(".")[0]}.com')
 
     elif init_folder == "QCORR_2c":
         w_dir_main = f"{path_qcorr}/QCORR_2"
