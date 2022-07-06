@@ -24,13 +24,15 @@ Don't miss out the latest hands-on tutorials from our [YouTube channel](https://
 
 ## Installation
 Check our [AQME installation in 2 mins](https://www.youtube.com/watch?v=LbHpM5KaxpE) video for a quick installation guide. In a nutshell, AQME and its dependencies are installed as follows:  
-1. Installing Open Babel through conda. For shortcuts:  
+1. Installing RDKit and Open Babel through conda. For shortcuts:  
+  * `conda install -c conda-forge rdkit` (compatible with Python >=3.8)
   * `conda install -c conda-forge openbabel`  
 2. Install AQME and its dependencies:  
   * `pip install aqme` or `python setup.py install`  
 
 ## Requirements
 * Python 3  
+* RDKit
 * Open Babel  
 * Dependencies installed with setup.py (automatic install)  
 

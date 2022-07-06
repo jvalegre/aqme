@@ -591,9 +591,7 @@ class qcorr:
         termination, errortype = "normal", "none"
 
         command_run_1 = ["ccwrite", "json", file]
-        # run_command(command_run_1, "{}.out".format(file_name))
-        subprocess.run(command_run_1)
-        # os.remove("{}.out".format(file_name))
+        subprocess.run(command_run_1, capture_output=True)
 
         cclib_data = {}
         try:

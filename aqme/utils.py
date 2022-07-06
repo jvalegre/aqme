@@ -920,7 +920,7 @@ def load_variables(kwargs, aqme_module):
             if aqme_module in ["qcorr", "qprep", "qdescp", "vismol"]:
                 if len(self.files) == 0:
                     self.log.write(
-                        f"x  There are no output files in {self.w_dir_main}."
+                        f"x  There are no output files in {self.w_dir_main}"
                     )
                     error_setup = True
 

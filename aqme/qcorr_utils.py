@@ -254,7 +254,7 @@ def full_check(w_dir_main=os.getcwd(), destination_fullcheck="", files="*.json")
     fullcheck_analysis.close()
 
     if destination_fullcheck == "":
-        destination_fullcheck = w_dir_main.joinpath("successful_QM_outputs/json_files/")
+        destination_fullcheck = w_dir_main.joinpath("success/json_files/")
     else:
         destination_fullcheck = Path(destination_fullcheck)
     move_file(destination_fullcheck, w_dir_main, fullcheck_file)
