@@ -845,17 +845,26 @@ def load_variables(kwargs, aqme_module):
         self, txt_yaml = load_from_yaml(self)
 
     if aqme_module != "command":
-        self.initial_dir = Path(os.getcwd())
-        self.w_dir_main = Path(self.w_dir_main)
+        if aqme_module == "qcorr":
+            self.initial_dir = Path(os.getcwd())
+            w_dir = os.path.dirname(self.files)
+            if Path(f"{w_dir}").exists() and os.getcwd() not in w_dir:
+                self.w_dir_main = Path(f"{os.getcwd()}/{w_dir}")
+            else:
+                self.w_dir_main = Path(w_dir)
+        else:
+            self.initial_dir = Path(os.getcwd())
+            self.w_dir_main = Path(self.w_dir_main)
         if self.isom_type is not None:
             self.isom_inputs = Path(self.isom_inputs)
 
         # go to working folder and detect files
         error_setup = False
         try:
-            os.chdir(self.w_dir_main)
+            if Path(f"{self.w_dir_main}").exists():
+                pass
         except FileNotFoundError:
-            txt_yaml += "\nx  The PATH specified as input in the w_dir_main option might be invalid!"
+            txt_yaml += "\nx  The PATH specified as input in the w_dir_main option might be invalid! Using current working directory"
             error_setup = True
 
         if error_setup:
@@ -942,16 +951,16 @@ def QM_coords(outlines, min_RMS, n_atoms, program, keywords_line):
     """
     Retrieves atom types and coordinates from QM output files
     """
-    
+
     atom_types, cartesians, range_lines = [], [], []
     per_tab = periodic_table()
     count_RMS = -1
 
     if program == "gaussian":
-        if 'nosymm' in keywords_line.lower():
-            target_ori = 'Input orientation:'
+        if "nosymm" in keywords_line.lower():
+            target_ori = "Input orientation:"
         else:
-            target_ori = 'Standard orientation:'
+            target_ori = "Standard orientation:"
 
         if min_RMS > -1:
             for i, line in enumerate(outlines):
@@ -1012,13 +1021,13 @@ def check_run(w_dir):
     Determines the folder where input files are gonna be generated in QCORR.
     """
 
-    if "unsuccessful_QM_outputs" in w_dir.as_posix():
+    if "failed" in w_dir.as_posix():
         resume_qcorr = True
         for folder in w_dir.as_posix().replace("\\", "/").split("/"):
             if "run_" in folder:
                 folder_count = int(folder.split("_")[1]) + 1
     else:
-        input_folder = w_dir.joinpath("unsuccessful_QM_outputs/")
+        input_folder = w_dir.joinpath("failed/")
         resume_qcorr = False
         folder_count = 1
 
