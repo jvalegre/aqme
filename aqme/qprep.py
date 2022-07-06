@@ -115,11 +115,12 @@ class qprep:
                     sdf_files.append(file)
 
                 for sdf_file in sdf_files:
-                    sdf_name = sdf_file.replace("/", "\\").split("\\")[-1].split(".")[0]
                     try:
                         # get atom types, atomic coordinates, charge and multiplicity of all the mols in the SDF file
                         mols = mol_from_sdf_or_mol_or_mol2(sdf_file, "qprep")
+                        print(len(mols))
                         for i, mol in enumerate(mols):
+                            print(i, mol)
                             (
                                 atom_types,
                                 cartesians,
@@ -127,15 +128,19 @@ class qprep:
                                 mult,
                                 _,
                             ) = self.qprep_coords(sdf_file, mol)
-
-                            # if sdf_name.find(f"{name}_conf_") > -1:
-                            #     name_conf = sdf_name
-                            # else:
-                            #     if len(mols) > 1:
-                            #         name_conf = f"{sdf_name}_conf_{i+1}"
-                            #     else:
-                            #         name_conf = f"{sdf_name}"
-                            name_conf = f"{sdf_name}_conf_{i+1}"
+                            sdf_name = (
+                                sdf_file.replace("/", "\\")
+                                .split("\\")[-1]
+                                .split(".")[0]
+                            )
+                            if sdf_name.find(f"{name}_conf_") > -1:
+                                name_conf = sdf_name
+                            else:
+                                if len(mols) > 1:
+                                    name_conf = f"{sdf_name}_conf_{i+1}"
+                                else:
+                                    name_conf = f"{sdf_name}"
+                            print(name_conf)
                             qprep_data = {
                                 "atom_types": atom_types,
                                 "cartesians": cartesians,
@@ -151,18 +156,14 @@ class qprep:
                                 if Path(f"{destination}").exists():
                                     shutil.rmtree(f"{self.args.w_dir_main}")
                                 if self.args.destination is None:
-                                    destination = Path(f"{os.getcwd()}/QCALC")
                                     move_file(
-                                        destination,
+                                        Path(f"{os.getcwd()}/QCALC"),
                                         Path(os.getcwd()),
                                         comfile,
                                     )
                                 else:
-                                    destination = Path(
-                                        f"{os.getcwd()}/{self.args.destination}"
-                                    )
                                     move_file(
-                                        destination,
+                                        Path(f"{os.getcwd()}/{self.args.destination}"),
                                         Path(os.getcwd()),
                                         comfile,
                                     )
@@ -176,9 +177,8 @@ class qprep:
                             self.args.log.write(f"x  {name} couldn't be processed!")
                         continue
 
-                    self.args.log.write(
-                        f"o  {name} successfully processed at {destination}"
-                    )
+                    if self.args.verbose:
+                        self.args.log.write(f"o  {name} successfully processed")
 
             # for Gaussian output files (LOG/OUT), JSON files and MOL objects
             else:
@@ -205,23 +205,18 @@ class qprep:
                     if Path(f"{destination}").exists():
                         shutil.rmtree(f"{self.args.w_dir_main}")
                     if self.args.destination is None:
-                        destination = Path(f"{os.getcwd()}/QCALC")
                         move_file(
-                            destination,
-                            Path(os.getcwd()),
-                            comfile,
+                            Path(f"{os.getcwd()}/QCALC"), Path(os.getcwd()), comfile
                         )
                     else:
-                        destination = Path(f"{os.getcwd()}/{self.args.destination}")
                         move_file(
-                            destination,
+                            Path(f"{os.getcwd()}/{self.args.destination}"),
                             Path(os.getcwd()),
                             comfile,
                         )
 
-                self.args.log.write(
-                    f"o  {name} successfully processed at {destination}"
-                )
+                if self.args.verbose:
+                    self.args.log.write(f"o  {name} successfully processed")
 
         # this is added to avoid path problems in jupyter notebooks
         os.chdir(self.args.initial_dir)
@@ -426,7 +421,7 @@ class qprep:
                         elif found_n_atoms:
                             break
 
-                atom_types, cartesians = QM_coords(outlines, -1, n_atoms, program, "")
+                atom_types, cartesians = QM_coords(outlines, -1, n_atoms, program, '')
 
             elif file.split(".")[1] == "json":
                 with open(file) as json_file:
