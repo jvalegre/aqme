@@ -380,6 +380,22 @@ path_qcorr = os.getcwd() + "/Example_workflows/QCORR_processing_QM_outputs"
             None,
             True,
         ),  # reset the initial folder to start another set of tests
+        # QCORR analysis with no w_dir_main
+        (
+            "QCORR_1d",
+            "CH4.log",
+            "parent_run",
+            "success",
+            False,
+        ),  # test successful termination with no w_dir_main
+        (
+            None,
+            None,
+            None,
+            None,
+            True,
+        ),  # reset the initial folder to start another set of tests
+
         # add genECP test
         # isomerization with csv (ongoing)
         # isomeriz with csv for TSs (ongoing)
@@ -612,7 +628,7 @@ def test_QCORR_analysis(init_folder, file, command_line, target_folder, restore_
                     assert False
 
         elif file == "dat":
-            target_dat = ["\n"]
+            target_dat = ["version","citation","\n"]
             target_dat.append("Command line used in AQME: aqme --qcorr\n")
             target_dat.append("o  Analyzing output files in\n")
             target_dat.append(
@@ -625,25 +641,22 @@ def test_QCORR_analysis(init_folder, file, command_line, target_folder, restore_
                 "bpinene_spin_contamin.log: Termination = normal, Error type = spin_contaminated\n"
             )
 
-            outfile = open(f"{w_dir_main}/QCORR-run_1.dat", "r")
+            outfile = open(f"{path_main}/QCORR-run_1.dat", "r")
             outlines = outfile.readlines()
             outfile.close()
 
-            for i, line in enumerate(target_dat):
-                if i == 1:
-                    assert (
-                        outlines[i].find("Command line used in AQME: aqme --qcorr") > -1
-                    )
-                elif i == 2:
-                    assert outlines[i].find("o  Analyzing output files in") > -1
-                else:
-                    if line in outlines:
-                        pass
-                    else:
-                        assert False
+            assert 'AQME v' in outlines[0]
+            assert 'Citation: AQME v' in outlines[1]
+            assert "Command line used in AQME: aqme --qcorr" in outlines[3]
+            assert "o  Analyzing output files in" in outlines[5]
+            assert "Basis_set_error1.log: Termination = other, Error type = atomicbasiserror" in outlines[7]
+            assert "Basis_set_error2.log: Termination = other, Error type = atomicbasiserror" in outlines[8]
+            assert "bpinene_spin_contamin.log: Termination = normal, Error type = spin_contaminated" in outlines[9]
+            assert 'Time QCORR:' in outlines[-2]
+
 
         elif file == "csv":
-            qcorr_stats = pd.read_csv(f"{w_dir_main}/QCORR-run_1-stats.csv")
+            qcorr_stats = pd.read_csv(f"{path_main}/QCORR-run_1-stats.csv")
             assert qcorr_stats["Total files"][0] == 28
             assert qcorr_stats["Normal termination"][0] == 6
             assert qcorr_stats["Single-point calcs"][0] == 3
@@ -804,6 +817,7 @@ def test_QCORR_analysis(init_folder, file, command_line, target_folder, restore_
                 "0.01",
             ]
             subprocess.run(cmd_aqme)
+
         # ensure the output file moves to the right folder, including the initial COM file
         if file.split(".")[-1].lower() == "log":
             assert path.exists(f"{w_dir_main}/{target_folder}/{file}")
@@ -842,8 +856,6 @@ def test_QCORR_analysis(init_folder, file, command_line, target_folder, restore_
 
     elif init_folder == "QCORR_5b":
         w_dir_QCORR_5b = f"{path_qcorr}/QCORR_5"
-        file_QCORR_5b = Path(f"{w_dir_QCORR_5b}/failed/run_1/fixed_QM_inputs/{file}")
-        file_QCORR_5b.rename(f"{w_dir_QCORR_5b}/{file}")
 
         if command_line is not None:
             cmd_aqme = [
@@ -852,7 +864,7 @@ def test_QCORR_analysis(init_folder, file, command_line, target_folder, restore_
                 "aqme",
                 "--qcorr",
                 "--w_dir_main",
-                w_dir_QCORR_5b,
+                w_dir_QCORR_5b+'/failed/run_1/fixed_QM_inputs',
                 "--files",
                 "*.log",
                 "--freq_conv",
@@ -862,7 +874,7 @@ def test_QCORR_analysis(init_folder, file, command_line, target_folder, restore_
                 "--isom_type",
                 "gjf",
                 "--isom_inputs",
-                w_dir_QCORR_5b + "/failed/run_1/fixed_QM_inputs/",
+                w_dir_QCORR_5b+'/failed/run_1/fixed_QM_inputs',
             ]
             subprocess.run(cmd_aqme)
 
@@ -879,9 +891,42 @@ def test_QCORR_analysis(init_folder, file, command_line, target_folder, restore_
                 f"{w_dir_QCORR_5b}/{target_folder}/run_1/fixed_QM_inputs/failed"
             )
 
+    elif init_folder == 'QCORR_1d':
+        # go to the parent folder and run the program
+        w_dir_main = f"{path_qcorr}/QCORR_1"
+        os.chdir(w_dir_main)
+        cmd_aqme = [
+        "python",
+        "-m",
+        "aqme",
+        "--qcorr",
+        "--files",
+        "CH4.log",
+        "--freq_conv",
+        "opt=(calcfc,maxstep=5)",
+        ]
+        subprocess.run(cmd_aqme)
+
+        # ensure the output file moves to the right folder
+        assert path.exists(f"{w_dir_main}/{target_folder}/{file}")
+
+        # ensure that the com file is not generated
+        assert not path.exists(
+            f'{w_dir_main}/failed/run_1/fixed_QM_inputs/{file.split(".")[0]}.com'
+        )
+
     # leave the folders as they were initially to run a different batch of tests
     elif restore_folder:
         os.chdir(path_main)
         shutil.rmtree(f"{path_main}/Example_workflows")
         filepath = Path(f"{path_main}/Example_workflows_original")
         filepath.rename(f"{path_main}/Example_workflows")
+        # remove DAT and CSV files generated by QCORR
+        dat_files = glob.glob('*.dat')
+        for dat_file in dat_files:
+            if 'QCORR' in dat_file:
+                os.remove(dat_file)
+        dat_files = glob.glob('*.csv')
+        for dat_file in dat_files:
+            if 'QCORR' in dat_file:
+                os.remove(dat_file)

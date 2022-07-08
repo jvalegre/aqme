@@ -167,7 +167,7 @@ def detect_linear(errortype, atom_types, cclib_data):
     return errortype
 
 
-def full_check(w_dir_main=os.getcwd(), destination_fullcheck="", files="*.json"):
+def full_check(w_dir_main=os.getcwd(), destination_fullcheck="", files="*.json", log=''):
     """
     Checks that multiple calculations were done following the same protocols, including
     program and version, grid size, level of theory, dispersion and solvation model.
@@ -229,7 +229,7 @@ def full_check(w_dir_main=os.getcwd(), destination_fullcheck="", files="*.json")
         ]
 
     fullcheck_file = "--QCORR_Fullcheck_Analysis--.dat"
-    fullcheck_txt = "-- Full check analysis --"
+    fullcheck_txt = "\n-- Full check analysis --"
     for prop in df_fullcheck.columns:
         if prop != "file":
             unique_props = df_fullcheck[prop].unique()
@@ -249,9 +249,9 @@ def full_check(w_dir_main=os.getcwd(), destination_fullcheck="", files="*.json")
                 )
 
     fullcheck_analysis = open(fullcheck_file, "w")
-    print(fullcheck_txt)
     fullcheck_analysis.write(fullcheck_txt)
     fullcheck_analysis.close()
+    log.write(fullcheck_txt)
 
     if destination_fullcheck == "":
         destination_fullcheck = w_dir_main.joinpath("success/json_files/")

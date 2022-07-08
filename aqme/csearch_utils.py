@@ -9,8 +9,11 @@ from pathlib import Path
 from pkg_resources import resource_filename
 import pandas as pd
 import ast
-from rdkit.Chem import AllChem as Chem
-from rdkit.Chem import rdDistGeom, rdMolAlign
+try:
+    from rdkit.Chem import AllChem as Chem
+    from rdkit.Chem import rdDistGeom, rdMolAlign
+except ModuleNotFoundError:
+    print("x  RDKit is required for conformer generation! You can install the program with conda install -c conda-forge rdkit")
 from aqme.utils import (
     get_info_input,
     get_conf_RMS,

@@ -17,8 +17,7 @@ from aqme.utils import (
     get_info_input,
     load_variables,
     read_file,
-    cclib_atoms_coords,
-    run_command,
+    cclib_atoms_coords
 )
 from aqme.qcorr_utils import (
     detect_linear,
@@ -86,7 +85,6 @@ class qcorr:
         # analyze files
         for file in self.args.files:
             # get initial cclib data and termination/error types and discard calcs with no data
-            file = str(self.args.w_dir_main) + "/" + os.path.basename(file)
             file_name = os.path.basename(file).split(".")[0]
             termination, errortype, cclib_data, outlines = self.cclib_init(
                 file, file_name
@@ -98,7 +96,7 @@ class qcorr:
                 if errortype == "atomicbasiserror":
                     os.remove(file_name + ".json")
                     self.args.log.write(
-                        f"{file}: Termination = {termination}, Error type = {errortype}"
+                        f"{os.path.basename(file)}: Termination = {termination}, Error type = {errortype}"
                     )
                 continue
 
@@ -147,7 +145,7 @@ class qcorr:
 
             # This part places the calculations and json files in different folders depending on the type of termination
             self.args.log.write(
-                f"{file}: Termination = {termination}, Error type = {errortype}"
+                f"{os.path.basename(file)}: Termination = {termination}, Error type = {errortype}"
             )
 
             file_terms, destination = self.organize_outputs(
@@ -176,6 +174,7 @@ class qcorr:
                     w_dir_main=destination_json,
                     destination_fullcheck=destination_json,
                     files=json_files,
+                    log = self.args.log
                 )
             else:
                 self.args.log.write(
@@ -516,7 +515,7 @@ class qcorr:
 
         except FileNotFoundError:
             self.args.log.write(
-                f"x  No com file were found for {file}, the check_geom test will be disabled for this calculation"
+                f"x  No com file were found for {os.path.basename(file)}, the check_geom test will be disabled for this calculation"
             )
 
         if isomerized:
@@ -530,12 +529,14 @@ class qcorr:
         """
         Create com files for resubmission with the suggested protocols to correct the errors
         """
+
         # user-defined keywords line, mem and nprocs overwrites previously used parameters
         if self.args.qm_input != "":
             cclib_data["metadata"]["keywords line"] = self.args.qm_input
 
         if self.args.mem != "":
             cclib_data["metadata"]["memory"] = self.args.mem
+
         elif cclib_data["metadata"]["memory"] == "":
             cclib_data["metadata"]["memory"] = "8GB"
 
@@ -562,7 +563,7 @@ class qcorr:
             qprep(
                 destination=destination_fix,
                 w_dir_main=self.args.w_dir_main,
-                files=file,
+                files=os.path.basename(file),
                 charge=cclib_data["properties"]["charge"],
                 mult=cclib_data["properties"]["multiplicity"],
                 program=program,
@@ -577,10 +578,11 @@ class qcorr:
                 bs_gen=self.args.bs_gen,
                 bs_nogen=self.args.bs_nogen,
                 gen_atoms=self.args.gen_atoms,
+                create_dat=False
             )
         else:
             self.args.log.write(
-                f"x  Couldn't create an input file to fix {file} (compatible progras: Gaussian and ORCA)\n"
+                f"x  Couldn't create an input file to fix {os.path.basename(file)} (compatible programs: Gaussian and ORCA)\n"
             )
 
     def json_gen(self, file, file_name):
@@ -613,7 +615,7 @@ class qcorr:
 
         if errortype == "no_data":
             self.args.log.write(
-                f"x  Potential cclib compatibility problem or no data found for file {file} (Termination = {termination}, Error type = {errortype})"
+                f"x  Potential cclib compatibility problem or no data found for file {file_name} (Termination = {termination}, Error type = {errortype})"
             )
 
         return termination, errortype, cclib_data
@@ -783,7 +785,7 @@ class qcorr:
             ana_data.at[0, "geom_rules filter"] = file_terms["geom_rules_qcorr"]
         if self.args.isom_type is not None:
             ana_data.at[0, "Isomerization"] = file_terms["isomerized"]
-        path_as_str = self.args.w_dir_main.as_posix()
+        path_as_str = self.args.initial_dir.as_posix()
         csv_qcorr = path_as_str + f"/QCORR-run_{self.args.round_num}-stats.csv"
         ana_data.to_csv(csv_qcorr, index=False)
 

@@ -46,8 +46,6 @@ def atompairs(mol, atom1, atom2, constraints):
 def get_constraint(mol, constraints):
     # constrained optimization with xtb
     xx_pairs = atompairs(mol, "X", "X", constraints)
-    # xh_pairs, xh_vals = atompairs(rdmol, "X", "H", active)
-    # print(active, template)
     all_fix = []
     for x in constraints:
         all_fix.append(list(x))
@@ -209,7 +207,6 @@ def crest_opt(
 
     # get number of n_atoms
     natoms = open("crest_best.xyz").readlines()[0].strip()
-    print(int(natoms))
 
     if args.cregen and int(natoms) != 1:
         command = ["crest", "crest_best.xyz", "--cregen", "crest_conformers.xyz"]
