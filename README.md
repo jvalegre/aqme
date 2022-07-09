@@ -23,12 +23,18 @@ The code is an ensemble of automated QM workflows that can be run through jupyte
 Don't miss out the latest hands-on tutorials from our [YouTube channel](https://www.youtube.com/channel/UCHRqI8N61bYxWV9BjbUI4Xw)!  
 
 ## Installation
-Check our [AQME installation in 2 mins](https://www.youtube.com/watch?v=LbHpM5KaxpE) video for a quick installation guide. In a nutshell, AQME and its dependencies are installed as follows:  
-1. Installing RDKit and Open Babel through conda. For shortcuts:  
-  * `conda install -c conda-forge rdkit`
-  * `conda install -c conda-forge openbabel`  
-2. Install AQME and its dependencies:  
-  * `pip install aqme` or `python setup.py install`  
+Check our [AQME installation in 2 mins](https://www.youtube.com/watch?v=LbHpM5KaxpE) video for a quick installation guide using pip. In a nutshell, AQME and its dependencies are installed as follows:  
+1. Install AQME through pip:  
+  * `conda install -c conda-forge rdkit` *(only once)*  
+  * `conda install -c conda-forge openbabel` *(only once)*  
+  * `pip install aqme`  
+2. Install AQME through conda-forge:  
+  * `pip install torch` *(only once)*  
+  * `conda install -c conda-forge aqme`  
+3. Install AQME from GitHub (most updated version, recommended):  
+  * `conda install -c conda-forge rdkit` *(only once)*  
+  * `conda install -c conda-forge openbabel` *(only once)*  
+  * Download the AQME code, go to the main folder in your terminal (contains the setup.py file) and run `pip install .`  
 
 ## Requirements
 * Python 3  

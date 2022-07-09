@@ -71,6 +71,13 @@ class csearch:
         # load default and user-specified variables
         self.args = load_variables(kwargs, "csearch")
 
+        if self.args.program.lower() == 'crest':
+            try:
+                subprocess.run(['xtb','-h'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            except FileNotFoundError:
+                self.args.log.write("x  xTB is not installed! You can install the program with 'conda install -c conda-forge xtb'")
+                sys.exit()
+
         if self.args.program.lower() not in ["rdkit", "summ", "fullmonte", "crest"]:
             self.args.log.write(
                 "\nx  Program not supported for CSEARCH conformer generation! Specify: program='rdkit' (or summ, fullmonte, crest)"

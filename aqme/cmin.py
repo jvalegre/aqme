@@ -1,5 +1,5 @@
 #####################################################.
-#          This file storesthe CSEARCH class        #
+#          This file stores the CMIN class          #
 #             used in conformer refinement          #
 #####################################################.
 
@@ -13,14 +13,13 @@ from progress.bar import IncrementalBar
 from rdkit.Geometry import Point3D
 import pandas as pd
 import time
-import ase
+try:
+    import ase
+except ModuleNotFoundError:
+    print("x  ASE is not installed! You can install the program with 'conda install -c conda-forge ase' or 'pip install ase'")
+    sys.exit()
 import ase.optimize
 from ase.units import Hartree
-import torch
-import torchani
-
-os.environ["KMP_DUPLICATE_LIB_OK"] = "True"
-DEVICE = torch.device("cpu")
 from aqme.utils import (
     rules_get_charge,
     load_variables,
@@ -288,6 +287,13 @@ class cmin:
         """
 
         from xtb.ase.calculator import XTB
+        try:
+            import torch
+        except ModuleNotFoundError:
+            print("x  Torch is not installed! You can install the program with 'pip install torch'")
+            sys.exit()
+        os.environ["KMP_DUPLICATE_LIB_OK"] = "True"
+        DEVICE = torch.device("cpu")
 
         xtb_calculator = XTB(
             method=args.xtb_method,
@@ -353,6 +359,25 @@ class cmin:
                                                                                                                                                                                                    sqm_energy, coordinates
         """
 
+        try:
+            import torch
+        except ModuleNotFoundError:
+            print("x  Torch is not installed! You can install the program with 'pip install torch'")
+            sys.exit()
+        os.environ["KMP_DUPLICATE_LIB_OK"] = "True"
+        DEVICE = torch.device("cpu")
+        # the first try/except avoids bugs related to having installed pytorch but not torch
+        try:
+            import torchani
+        except ImportError:
+            print("x  Torch is not installed! You can install the program with 'pip install torch'")
+            sys.exit()
+        try:
+            import torchani
+        except ModuleNotFoundError:
+            print("x  TorchANI is not installed! You can install the program with 'conda install -c conda-forge torchani' or 'pip install torchani'")
+            sys.exit()
+
         # Select the model
         ANI_method = args.ani_method
         if ANI_method == "ANI1x":
@@ -404,6 +429,13 @@ class cmin:
             log.write("\nx  xTB is not installed correctly - xTB is not available")
             log.finalize()
             sys.exit()
+        try:
+            import torch
+        except ModuleNotFoundError:
+            print("x  Torch is not installed! You can install the program with 'pip install torch'")
+            sys.exit()
+        os.environ["KMP_DUPLICATE_LIB_OK"] = "True"
+        DEVICE = torch.device("cpu")
 
         # if large system increase stack size
         if args.stacksize != "1G":
