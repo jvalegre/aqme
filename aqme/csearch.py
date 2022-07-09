@@ -15,8 +15,19 @@ import pandas as pd
 import concurrent.futures as futures
 import multiprocessing as mp
 from progress.bar import IncrementalBar
-from rdkit.Chem import AllChem as Chem
-from rdkit.Chem import rdMolTransforms, PropertyMol, rdDistGeom, Lipinski
+try:
+    from rdkit.Chem import AllChem as Chem
+    from rdkit.Chem import rdMolTransforms, PropertyMol, rdDistGeom, Lipinski
+except ModuleNotFoundError:
+    print("x  RDKit is not installed! You can install the program with 'conda install -c conda-forge rdkit' or 'pip install rdkit-pypi'")
+    sys.exit()
+# this is a dummy import just to warn the user if Open babel is not installed
+try:
+    command_run_1 = ["obabel", "-H"]
+    subprocess.run(command_run_1, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+except FileNotFoundError:
+    print("x  Open Babel is not installed! You can install the program with 'conda install -c conda-forge openbabel'")
+    sys.exit()
 from aqme.filter import filters, ewin_filter, pre_E_filter, RMSD_and_E_filter
 from aqme.csearch_utils import (
     prepare_direct_smi,

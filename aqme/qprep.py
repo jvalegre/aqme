@@ -69,7 +69,7 @@ class qprep:
 
         # write input files
         for file in self.args.files:
-            name = file.replace("/", "\\").split("\\")[-1].split(".")[0]
+            name = os.path.basename(file).split(".")[0]
             if file.split(".")[1].lower() in ["sdf", "xyz", "pdb"]:
                 sdf_files = []
                 if file.split(".")[1].lower() == "xyz":
@@ -111,7 +111,7 @@ class qprep:
                     sdf_files.append(file)
 
                 for sdf_file in sdf_files:
-                    sdf_name = sdf_file.replace("/", "\\").split("\\")[-1].split(".")[0]
+                    sdf_name = os.path.basename(sdf_file).split(".")[0]
                     try:
                         # get atom types, atomic coordinates, charge and multiplicity of all the mols in the SDF file
                         with mol_from_sdf_or_mol_or_mol2(sdf_file, "qprep") as mols:

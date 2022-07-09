@@ -628,19 +628,6 @@ def test_QCORR_analysis(init_folder, file, command_line, target_folder, restore_
                     assert False
 
         elif file == "dat":
-            target_dat = ["version","citation","\n"]
-            target_dat.append("Command line used in AQME: aqme --qcorr\n")
-            target_dat.append("o  Analyzing output files in\n")
-            target_dat.append(
-                "Basis_set_error1.log: Termination = other, Error type = atomicbasiserror\n"
-            )
-            target_dat.append(
-                "Basis_set_error2.log: Termination = other, Error type = atomicbasiserror\n"
-            )
-            target_dat.append(
-                "bpinene_spin_contamin.log: Termination = normal, Error type = spin_contaminated\n"
-            )
-
             outfile = open(f"{path_main}/QCORR-run_1.dat", "r")
             outlines = outfile.readlines()
             outfile.close()
@@ -649,9 +636,9 @@ def test_QCORR_analysis(init_folder, file, command_line, target_folder, restore_
             assert 'Citation: AQME v' in outlines[1]
             assert "Command line used in AQME: aqme --qcorr" in outlines[3]
             assert "o  Analyzing output files in" in outlines[5]
-            assert "Basis_set_error1.log: Termination = other, Error type = atomicbasiserror" in outlines[7]
-            assert "Basis_set_error2.log: Termination = other, Error type = atomicbasiserror" in outlines[8]
-            assert "bpinene_spin_contamin.log: Termination = normal, Error type = spin_contaminated" in outlines[9]
+            assert "Basis_set_error1.log: Termination = other, Error type = atomicbasiserror\n" in outlines
+            assert "Basis_set_error2.log: Termination = other, Error type = atomicbasiserror\n" in outlines
+            assert "bpinene_spin_contamin.log: Termination = normal, Error type = spin_contaminated\n" in outlines
             assert 'Time QCORR:' in outlines[-2]
 
 
