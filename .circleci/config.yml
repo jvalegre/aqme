@@ -45,7 +45,6 @@ jobs:
           # install the dependencies of AQME with pip and then uninstall AQME from pip so codecov doesn't freak out
           python -m pip install --upgrade pip
           pip install .
-          pip uninstall -y aqme
           # install and run pytest
           pip install pytest
           pip install pytest-cov

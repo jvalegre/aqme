@@ -111,34 +111,8 @@ class qprep:
                     sdf_files.append(file)
 
                 for sdf_file in sdf_files:
-                    sdf_name = os.path.basename(sdf_file).split(".")[0]
                     try:
-                        # get atom types, atomic coordinates, charge and multiplicity of all the mols in the SDF file
-                        with mol_from_sdf_or_mol_or_mol2(sdf_file, "qprep") as mols:
-                            for i, mol in enumerate(mols):
-                                (
-                                    atom_types,
-                                    cartesians,
-                                    charge,
-                                    mult,
-                                    _,
-                                ) = self.qprep_coords(sdf_file, mol)
-
-                                if '_conf_' not in sdf_name:
-                                    name_conf = f"{sdf_name}_conf_{i+1}"
-                                else:
-                                    name_conf = sdf_name
-
-                                qprep_data = {
-                                    "atom_types": atom_types,
-                                    "cartesians": cartesians,
-                                    "charge": charge,
-                                    "mult": mult,
-                                    "name": name_conf,
-                                }
-
-                                comfile = self.write(qprep_data)
-                                move_file(destination, self.args.w_dir_main, comfile)
+                        self.sdf_2_com(sdf_file,destination)
 
                     except OSError:
                         if self.args.verbose:
@@ -182,6 +156,35 @@ class qprep:
             elapsed_time = round(time.time() - start_time_overall, 2)
             self.args.log.write(f"\nTime QPREP: {elapsed_time} seconds\n")
             self.args.log.finalize()
+
+    def sdf_2_com(self,sdf_file,destination):
+        sdf_name = os.path.basename(sdf_file).split(".")[0]
+        # get atom types, atomic coordinates, charge and multiplicity of all the mols in the SDF file
+        mols = mol_from_sdf_or_mol_or_mol2(sdf_file, "qprep")
+        for i, mol in enumerate(mols):
+            (
+                atom_types,
+                cartesians,
+                charge,
+                mult,
+                _,
+            ) = self.qprep_coords(sdf_file, mol)
+
+            if '_conf_' not in sdf_name:
+                name_conf = f"{sdf_name}_conf_{i+1}"
+            else:
+                name_conf = sdf_name
+
+            qprep_data = {
+                "atom_types": atom_types,
+                "cartesians": cartesians,
+                "charge": charge,
+                "mult": mult,
+                "name": name_conf,
+            }
+
+            comfile = self.write(qprep_data)
+            move_file(destination, self.args.w_dir_main, comfile)
 
     def get_header(self, qprep_data):
         """
