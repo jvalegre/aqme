@@ -8,7 +8,6 @@ import sys
 import glob
 import time
 import json
-import shutil
 from aqme.utils import (
     cclib_atoms_coords,
     QM_coords,
@@ -27,12 +26,13 @@ class qprep:
     Class containing all the functions from the QPREP module related to Gaussian input files
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, create_dat=True, **kwargs):
 
         start_time_overall = time.time()
         # load default and user-specified variables
-        self.args = load_variables(kwargs, "qprep")
-        if self.args.program.lower() not in ["gaussian", "orca"]:
+        self.args = load_variables(kwargs, "qprep", create_dat=create_dat)
+
+        if self.args.program.lower() not in ["gaussian", "orca"] and create_dat:
             self.args.log.write(
                 "\nx  Program not supported for QPREP input file creation! Specify: program='gaussian' (or orca)"
             )
@@ -41,55 +41,49 @@ class qprep:
 
         if self.args.destination is None:
             destination = self.args.w_dir_main.joinpath("QCALC")
+        elif self.args.w_dir_main.joinpath(self.args.destination).exists():
+            destination = Path(self.args.w_dir_main.joinpath(self.args.destination))
         else:
             destination = Path(self.args.destination)
 
-        if self.args.qm_input == "":
+        if self.args.qm_input == "" and create_dat:
             self.args.log.write(
                 "x  No keywords line was specified! (i.e. qm_input=KEYWORDS_LINE)."
             )
             self.args.log.finalize()
             sys.exit()
 
-        if self.args.gen_atoms != [] and self.args.bs_nogen == "":
+        if self.args.gen_atoms != [] and self.args.bs_nogen == "" and create_dat:
             self.args.log.write(
                 "x  Atoms for Gen(ECP) were specified (gen_atoms=[ATOM_LIST]) but no basis set was included for non-Gen(ECP) atoms (i.e. bs_nogen=BASIS_SET)."
             )
             self.args.log.finalize()
             sys.exit()
 
-        elif self.args.gen_atoms != [] and self.args.bs_gen == "":
+        elif self.args.gen_atoms != [] and self.args.bs_gen == "" and create_dat:
             self.args.log.write(
                 "x  Atoms for Gen(ECP) were specified (gen_atoms=[ATOM_LIST]) but no basis set was included for Gen(ECP) atoms (i.e. bs_gen=BASIS_SET)."
             )
             self.args.log.finalize()
             sys.exit()
 
-        # move to the folder to read the inputs and write the outpus. If command lines are used,
-        # the program is already in the working directory (from the initial command_line_args() function)
-        if not self.args.command_line:
-            os.chdir(self.args.w_dir_main)
-
         # write input files
         for file in self.args.files:
-            name = file.replace("/", "\\").split("\\")[-1].split(".")[0]
+            name = os.path.basename(file).split(".")[0]
             if file.split(".")[1].lower() in ["sdf", "xyz", "pdb"]:
                 sdf_files = []
                 if file.split(".")[1].lower() == "xyz":
                     # separate the parent XYZ file into individual XYZ files
-                    xyzall_2_xyz(file, name)
-                    for conf_file in glob.glob(f"{name}_conf_*.xyz"):
+                    xyzall_2_xyz(file, f'{self.args.w_dir_main}/{name}')
+                    for conf_file in glob.glob(f"{self.args.w_dir_main}/{name}_conf_*.xyz"):
                         charge_xyz, mult_xyz = read_xyz_charge_mult(conf_file)
                         # generate SDF files from XYZ with Openbabel
-                        conf_name = (
-                            conf_file.replace("/", "\\").split("\\")[-1].split(".")[0]
-                        )
                         command_xyz = [
                             "obabel",
                             "-ixyz",
                             conf_file,
                             "-osdf",
-                            f"-O{conf_name}.sdf",
+                            f"-O{conf_file.split('.xyz')[0]}.sdf",
                             "--property",
                             f"Real charge={str(charge_xyz)}",
                             ";",
@@ -100,85 +94,39 @@ class qprep:
                             stdout=subprocess.DEVNULL,
                             stderr=subprocess.DEVNULL,
                         )
-                        sdf_files.append(f"{conf_name}.sdf")
+                        sdf_files.append(f"{conf_file.split('.xyz')[0]}.sdf")
                         # delete individual XYZ files
                         os.remove(conf_file)
+    
                 elif file.split(".")[1].lower() == "pdb":
-                    command_pdb = ["obabel", "-ipdb", file, "-osdf", f"-O{name}.sdf"]
+                    command_pdb = ["obabel", "-ipdb", f'{file}', "-osdf", f"-O{file.split('.pdb')[0]}.sdf"]
                     subprocess.run(
                         command_pdb,
                         stdout=subprocess.DEVNULL,
                         stderr=subprocess.DEVNULL,
                     )
-                    sdf_files.append(f"{name}.sdf")
+                    sdf_files.append(f"{file.split('.pdb')[0]}.sdf")
+                    
                 else:
                     sdf_files.append(file)
 
                 for sdf_file in sdf_files:
-                    sdf_name = sdf_file.replace("/", "\\").split("\\")[-1].split(".")[0]
                     try:
-                        # get atom types, atomic coordinates, charge and multiplicity of all the mols in the SDF file
-                        mols = mol_from_sdf_or_mol_or_mol2(sdf_file, "qprep")
-                        for i, mol in enumerate(mols):
-                            (
-                                atom_types,
-                                cartesians,
-                                charge,
-                                mult,
-                                _,
-                            ) = self.qprep_coords(sdf_file, mol)
-
-                            # if sdf_name.find(f"{name}_conf_") > -1:
-                            #     name_conf = sdf_name
-                            # else:
-                            #     if len(mols) > 1:
-                            #         name_conf = f"{sdf_name}_conf_{i+1}"
-                            #     else:
-                            #         name_conf = f"{sdf_name}"
-                            name_conf = f"{sdf_name}_conf_{i+1}"
-                            qprep_data = {
-                                "atom_types": atom_types,
-                                "cartesians": cartesians,
-                                "charge": charge,
-                                "mult": mult,
-                                "name": name_conf,
-                            }
-                            comfile = self.write(qprep_data)
-                            try:
-                                move_file(destination, self.args.w_dir_main, comfile)
-                            except FileNotFoundError:
-                                # this avoids problems when partial PATHs are provided from command lines
-                                if Path(f"{destination}").exists():
-                                    shutil.rmtree(f"{self.args.w_dir_main}")
-                                if self.args.destination is None:
-                                    destination = Path(f"{os.getcwd()}/QCALC")
-                                    move_file(
-                                        destination,
-                                        Path(os.getcwd()),
-                                        comfile,
-                                    )
-                                else:
-                                    destination = Path(
-                                        f"{os.getcwd()}/{self.args.destination}"
-                                    )
-                                    move_file(
-                                        destination,
-                                        Path(os.getcwd()),
-                                        comfile,
-                                    )
-
-                        if file.split(".")[1].lower() in ["xyz", "pdb"]:
-                            # delete SDF files when the input was an XYZ/PDB file
-                            os.remove(sdf_file)
+                        self.sdf_2_com(sdf_file,destination)
 
                     except OSError:
                         if self.args.verbose:
                             self.args.log.write(f"x  {name} couldn't be processed!")
                         continue
 
-                    self.args.log.write(
-                        f"o  {name} successfully processed at {destination}"
-                    )
+                    if create_dat:
+                        self.args.log.write(
+                            f"o  {name} successfully processed at {destination}"
+                        )
+
+                    if file.split(".")[1].lower() in ["xyz", "pdb"]:
+                        # delete SDF files when the input was an XYZ/PDB file
+                        os.remove(sdf_file)
 
             # for Gaussian output files (LOG/OUT), JSON files and MOL objects
             else:
@@ -198,41 +146,45 @@ class qprep:
                 }
                 comfile = self.write(qprep_data)
 
-                try:
-                    move_file(destination, self.args.w_dir_main, comfile)
-                except FileNotFoundError:
-                    # this avoids problems when partial PATHs are provided from command lines
-                    if Path(f"{destination}").exists():
-                        shutil.rmtree(f"{self.args.w_dir_main}")
-                    if self.args.destination is None:
-                        destination = Path(f"{os.getcwd()}/QCALC")
-                        move_file(
-                            destination,
-                            Path(os.getcwd()),
-                            comfile,
-                        )
-                    else:
-                        destination = Path(f"{os.getcwd()}/{self.args.destination}")
-                        move_file(
-                            destination,
-                            Path(os.getcwd()),
-                            comfile,
-                        )
+                move_file(destination, self.args.w_dir_main, comfile)
+                if create_dat:
+                    self.args.log.write(
+                        f"o  {name} successfully processed at {destination}"
+                    )
 
-                self.args.log.write(
-                    f"o  {name} successfully processed at {destination}"
-                )
-
-        # this is added to avoid path problems in jupyter notebooks
-        os.chdir(self.args.initial_dir)
-
-        if self.args.verbose:
+        if create_dat:
             elapsed_time = round(time.time() - start_time_overall, 2)
             self.args.log.write(f"\nTime QPREP: {elapsed_time} seconds\n")
-        self.args.log.finalize()
+            self.args.log.finalize()
 
-        if not self.args.verbose:
-            os.remove(self.args.w_dir_main / "QPREP_data.dat")
+    def sdf_2_com(self,sdf_file,destination):
+        sdf_name = os.path.basename(sdf_file).split(".")[0]
+        # get atom types, atomic coordinates, charge and multiplicity of all the mols in the SDF file
+        mols = mol_from_sdf_or_mol_or_mol2(sdf_file, "qprep")
+        for i, mol in enumerate(mols):
+            (
+                atom_types,
+                cartesians,
+                charge,
+                mult,
+                _,
+            ) = self.qprep_coords(sdf_file, mol)
+
+            if '_conf_' not in sdf_name:
+                name_conf = f"{sdf_name}_conf_{i+1}"
+            else:
+                name_conf = sdf_name
+
+            qprep_data = {
+                "atom_types": atom_types,
+                "cartesians": cartesians,
+                "charge": charge,
+                "mult": mult,
+                "name": name_conf,
+            }
+
+            comfile = self.write(qprep_data)
+            move_file(destination, self.args.w_dir_main, comfile)
 
     def get_header(self, qprep_data):
         """
@@ -331,13 +283,13 @@ class qprep:
         else:
             comfile = f'{qprep_data["name"]}.{extension}'
 
-        if os.path.exists(comfile):
-            os.remove(comfile)
+        if os.path.exists(self.args.w_dir_main / comfile):
+            os.remove(self.args.w_dir_main / comfile)
 
         header = self.get_header(qprep_data)
         tail = self.get_tail(qprep_data)
 
-        fileout = open(comfile, "w")
+        fileout = open(self.args.w_dir_main / comfile, "w")
         fileout.write(header)
 
         for atom_idx in range(0, len(qprep_data["atom_types"])):

@@ -6,6 +6,7 @@
 import os
 import subprocess
 import sys
+import time
 import getopt
 import numpy as np
 import glob
@@ -26,6 +27,10 @@ from aqme.xtb_to_json import read_json
 GAS_CONSTANT = 8.3144621  # J / K / mol
 J_TO_AU = 4.184 * 627.509541 * 1000.0  # UNIT CONVERSION
 T = 298.15
+
+aqme_version = 1.2
+time_run = time.strftime("%Y/%m/%d %H:%M:%S", time.localtime())
+aqme_ref = f'AQME v {aqme_version}, Alegre-Requena, J. V.; Sowndarya, S.; Perez-Soto, R.; Alturaifi, T. M.; Paton, R. S., 2022. https://github.com/jvalegre/aqme'
 
 RDLogger.DisableLog("rdApp.*")
 
@@ -831,7 +836,7 @@ def command_line_args():
     return args
 
 
-def load_variables(kwargs, aqme_module):
+def load_variables(kwargs, aqme_module, create_dat=True):
     """
     Load default and user-defined variables
     """
@@ -843,27 +848,15 @@ def load_variables(kwargs, aqme_module):
     txt_yaml = ""
     if self.varfile is not None:
         self, txt_yaml = load_from_yaml(self)
-
     if aqme_module != "command":
-        if aqme_module == "qcorr":
-            self.initial_dir = Path(os.getcwd())
-            w_dir = os.path.dirname(self.files)
-            if Path(f"{w_dir}").exists() and os.getcwd() not in w_dir:
-                self.w_dir_main = Path(f"{os.getcwd()}/{w_dir}")
-            else:
-                self.w_dir_main = Path(w_dir)
-        else:
-            self.initial_dir = Path(os.getcwd())
-            self.w_dir_main = Path(self.w_dir_main)
+        self.initial_dir = Path(os.getcwd())
+        self.w_dir_main = Path(self.w_dir_main)
         if self.isom_type is not None:
             self.isom_inputs = Path(self.isom_inputs)
 
-        # go to working folder and detect files
         error_setup = False
-        try:
-            if Path(f"{self.w_dir_main}").exists():
-                pass
-        except FileNotFoundError:
+
+        if not self.w_dir_main.exists():
             txt_yaml += "\nx  The PATH specified as input in the w_dir_main option might be invalid! Using current working directory"
             error_setup = True
 
@@ -872,63 +865,68 @@ def load_variables(kwargs, aqme_module):
 
         if not isinstance(self.files, list):
             if not isinstance(self.files, Mol):
-                self.files = glob.glob(self.files)
+                self.files = glob.glob(f'{self.w_dir_main}/{self.files}')
             else:
                 self.files = [self.files]
 
         # start a log file to track the QCORR module
-        logger_1, logger_2 = "AQME", "data"
-        if aqme_module == "qcorr":
-            # detects cycle of analysis (0 represents the starting point)
-            self.round_num, self.resume_qcorr = check_run(self.w_dir_main)
-            logger_1 = "QCORR-run"
-            logger_2 = f"{str(self.round_num)}"
+        if create_dat:
+            logger_1, logger_2 = "AQME", "data"
+            if aqme_module == "qcorr":
+                # detects cycle of analysis (0 represents the starting point)
+                self.round_num, self.resume_qcorr = check_run(self.w_dir_main)
+                logger_1 = "QCORR-run"
+                logger_2 = f"{str(self.round_num)}"
 
-        elif aqme_module == "csearch":
-            logger_1 = "CSEARCH"
+            elif aqme_module == "csearch":
+                logger_1 = "CSEARCH"
 
-        elif aqme_module == "qprep":
-            logger_1 = "QPREP"
+            elif aqme_module == "qprep":
+                logger_1 = "QPREP"
 
-        elif aqme_module == "qdescp":
-            logger_1 = "QDESCP"
-        elif aqme_module == "vismol":
-            logger_1 == "VISMOL"
+            elif aqme_module == "qdescp":
+                logger_1 = "QDESCP"
+            elif aqme_module == "vismol":
+                logger_1 == "VISMOL"
 
-        if txt_yaml not in [
-            "",
-            f"\no  Importing AQME parameters from {self.varfile}",
-            "\nx  The specified yaml file containing parameters was not found! Make sure that the valid params file is in the folder where you are running the code.\n",
-        ]:
-            self.log = Logger(self.w_dir_main / logger_1, logger_2)
-            self.log.write(txt_yaml)
-            error_setup = True
+            if txt_yaml not in [
+                "",
+                f"\no  Importing AQME parameters from {self.varfile}",
+                "\nx  The specified yaml file containing parameters was not found! Make sure that the valid params file is in the folder where you are running the code.\n",
+            ]:
+                self.log = Logger(self.initial_dir / logger_1, logger_2)
+                self.log.write(txt_yaml)
+                error_setup = True
 
-        if not error_setup:
-            if not self.command_line:
-                self.log = Logger(self.w_dir_main / logger_1, logger_2)
-            else:
-                # prevents errors when using command lines and running to remote directories
-                path_command = Path(f"{os.getcwd()}")
-                self.log = Logger(path_command / logger_1, logger_2)
+            if not error_setup:
+                if not self.command_line:
+                    self.log = Logger(self.initial_dir / logger_1, logger_2)
+                else:
+                    # prevents errors when using command lines and running to remote directories
+                    path_command = Path(f"{os.getcwd()}")
+                    self.log = Logger(path_command / logger_1, logger_2)
 
-            if self.command_line:
                 self.log.write(
-                    f"\nCommand line used in AQME: aqme {' '.join([str(elem) for elem in sys.argv[1:]])}"
-                )
-
-            if aqme_module in ["qcorr", "qprep", "qdescp", "vismol"]:
-                if len(self.files) == 0:
-                    self.log.write(
-                        f"x  There are no output files in {self.w_dir_main}."
+                        f"AQME v {aqme_version} {time_run} \nCitation: {aqme_ref}\n"
                     )
-                    error_setup = True
 
-        if error_setup:
-            # this is added to avoid path problems in jupyter notebooks
-            self.log.finalize()
-            os.chdir(self.initial_dir)
-            sys.exit()
+                if self.command_line:
+                    self.log.write(
+                        f"Command line used in AQME: aqme {' '.join([str(elem) for elem in sys.argv[1:]])}\n"
+                    )
+
+                if aqme_module in ["qcorr", "qprep", "qdescp", "vismol"]:
+                    if len(self.files) == 0:
+                        self.log.write(
+                            f"x  There are no output files in {self.w_dir_main}\n"
+                        )
+                        error_setup = True
+
+            if error_setup:
+                # this is added to avoid path problems in jupyter notebooks
+                self.log.finalize()
+                os.chdir(self.initial_dir)
+                sys.exit()
 
     return self
 

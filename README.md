@@ -23,17 +23,23 @@ The code is an ensemble of automated QM workflows that can be run through jupyte
 Don't miss out the latest hands-on tutorials from our [YouTube channel](https://www.youtube.com/channel/UCHRqI8N61bYxWV9BjbUI4Xw)!  
 
 ## Installation
-Check our [AQME installation in 2 mins](https://www.youtube.com/watch?v=LbHpM5KaxpE) video for a quick installation guide. In a nutshell, AQME and its dependencies are installed as follows:  
-1. Installing RDKit and Open Babel through conda. For shortcuts:  
-  * `conda install -c rdkit rdkit` or `conda install -c conda-forge rdkit` (compatible with Python >=3.8)  
-  * `conda install -c conda-forge openbabel`  
-2. Install AQME and its dependencies:  
-  * `pip install aqme` or `python setup.py install`  
+Check our [AQME installation in 2 mins](https://www.youtube.com/watch?v=LbHpM5KaxpE) video for a quick installation guide using pip. In a nutshell, AQME and its dependencies are installed as follows:  
+1. Install AQME from GitHub (most updated version, recommended):  
+  * `conda install -c conda-forge rdkit openbabel` *(only once, install RDKit and Open Babel)*  
+  * Download the AQME code, go to the main folder in your terminal (contains the setup.py file) and run `pip install .`
+2. Install AQME through pip:  
+  * `conda install -c conda-forge rdkit openbabel` *(only once, install RDKit and Open Babel)*  
+  * `pip install aqme`  
+3. Install AQME through conda-forge:  
+  * `conda install -c conda-forge aqme`  
+
+If CMIN is used, torch-related modules are needed:  
+  * `pip install torch torchvision torchani`  
 
 ## Requirements
 * Python 3  
-* RDKit and Open Babel  
-* Dependencies installed with setup.py (automatic install)  
+* Any of the AQME installation options as detailed in the installation section
+* Torch-related modules if CMIN is used (shown in the installation section)
 
 ## Features and modules
 ### CSEARCH

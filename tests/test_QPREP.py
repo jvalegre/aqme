@@ -14,7 +14,7 @@ from pathlib import Path
 
 # saves the working directory
 path_main = os.getcwd()
-path_qprep = os.getcwd()+'/Example_workflows/QPREP_generating_input_files'
+path_qprep = path_main+'/Example_workflows/QPREP_generating_input_files'
 
 # QPREP tests
 @pytest.mark.parametrize("test_type, init_folder, target_folder, restore_folder",
@@ -40,7 +40,13 @@ path_qprep = os.getcwd()+'/Example_workflows/QPREP_generating_input_files'
     ('gen', 'json_files', 'gen_final_files', False), # test gen
     # from YAML file (varfile=XX)
     ('yaml', 'json_files', 'yaml_files', False), # test for yaml files
-    # (None, None, None, True), # reset the initial folder to start another set of tests
+    # calling AQME from the parent folder where the files are located (omitting the w_dir_main keyword)
+    ('parent', 'json_files', 'parent_run', False), # test for yaml files
+    # calling AQME with no destination keyword (creates a folder called QCALC by default)
+    ('no_dest', 'json_files', 'QCALC', False), # test for yaml files
+    # check if the DAT file is generated
+    ('dat_file', 'json_files', 'com_files', False), # test for DAT file
+    (None, None, None, True), # reset the initial folder to start another set of tests
 ])
 
 def test_QPREP_analysis(test_type, init_folder, target_folder, restore_folder):
@@ -67,11 +73,15 @@ def test_QPREP_analysis(test_type, init_folder, target_folder, restore_folder):
             files_assert = ['Int-I_conf_1.com', 'Int-I_conf_3.com']
         elif init_folder == 'pdb_files':
             files = '*.pdb'
-            files_assert = ['7ac8_chainsEF.com']
+            files_assert = ['7ac8_chainsEF_conf_1.com']
 
         cmd_aqme = ['python', '-m', 'aqme', '--qprep', '--w_dir_main', w_dir_main, '--destination', destination,
         '--files', files, '--program', 'gaussian', '--qm_input', 'wb97xd/lanl2dz scrf=(smd,solvent=acetonitrile)']
-        subprocess.run(cmd_aqme)  
+        subprocess.run(cmd_aqme)
+
+        if init_folder in ['xyz_files','pdb_files']:
+            # make sure all the generated SDF files are removed
+            assert len(glob.glob(f'{w_dir_main}/*.sdf')) == 0
 
         for file in files_assert:
             assert path.exists(f'{destination}/{file.split(".")[0]}.com')
@@ -118,7 +128,7 @@ def test_QPREP_analysis(test_type, init_folder, target_folder, restore_folder):
                     line_10 = 'H   2.68030000  -2.43910000   1.16970000'
                     assert len(glob.glob(f'{destination}/Int-I_conf_*.com')) == 3
 
-                elif file.split('.')[0] == '7ac8_chainsEF':
+                elif file.split('.')[0] == '7ac8_chainsEF_conf_1':
                     line_8 = 'C   5.61200000 -38.15900000   9.29600000'
                     line_10 = 'O   5.88600000 -40.54700000   9.19200000'
 
@@ -299,10 +309,75 @@ def test_QPREP_analysis(test_type, init_folder, target_folder, restore_folder):
         assert outlines[8].strip() == line_8
         assert outlines[10].strip() == line_10
 
+    elif test_type == 'parent':
+        os.chdir(w_dir_main)
+        file = 'CH4.json'
+        cmd_aqme = ['python', '-m', 'aqme', '--qprep', '--destination', destination,
+        '--files', file, '--program', 'gaussian', '--qm_input', 'wb97xd/lanl2dz scrf=(smd,solvent=acetonitrile)']
+        subprocess.run(cmd_aqme)
+
+        assert path.exists(f'{destination}/{file.split(".")[0]}.com')
+
+        outfile = open(f'{destination}/{file.split(".")[0]}.com', "r")
+        outlines = outfile.readlines()
+        outfile.close()
+
+        line_2 = '# wb97xd/lanl2dz scrf=(smd,solvent=acetonitrile)'
+        line_6 = '0 1'
+        line_8 = 'H   0.45703600  -0.46392100  -0.87651000'
+        line_10 = 'H   0.29552000   1.04984200   0.05078900'
+
+        assert outlines[8].strip() == line_8
+        assert outlines[10].strip() == line_10
+        assert outlines[2].strip() == line_2
+        assert outlines[6].strip() == line_6
+
+        # remove the DAT file from the QPREP run
+        dat_files = glob.glob('*.dat')
+        for dat_file in dat_files:
+            if 'QPREP' in dat_file:
+                os.remove(dat_file)
+        os.chdir(path_main)
+
+    elif test_type == 'no_dest':
+        file = 'CH4.json'
+        cmd_aqme = ['python', '-m', 'aqme', '--qprep', '--w_dir_main', w_dir_main,
+        '--files', file, '--program', 'gaussian', '--qm_input', 'wb97xd/lanl2dz scrf=(smd,solvent=acetonitrile)']
+        subprocess.run(cmd_aqme)
+
+        assert path.exists(f'{destination}/{file.split(".")[0]}.com')
+
+        outfile = open(f'{destination}/{file.split(".")[0]}.com', "r")
+        outlines = outfile.readlines()
+        outfile.close()
+
+        line_2 = '# wb97xd/lanl2dz scrf=(smd,solvent=acetonitrile)'
+        line_6 = '0 1'
+        line_8 = 'H   0.45703600  -0.46392100  -0.87651000'
+        line_10 = 'H   0.29552000   1.04984200   0.05078900'
+
+        assert outlines[8].strip() == line_8
+        assert outlines[10].strip() == line_10
+        assert outlines[2].strip() == line_2
+        assert outlines[6].strip() == line_6
+
+    elif test_type == 'dat_file':
+        outfile = open(f'{path_main}/QPREP_data.dat', "r")
+        outlines = outfile.readlines()
+        outfile.close()
+
+        assert 'AQME v' in outlines[0]
+        assert 'Citation: AQME v' in outlines[1]
+        assert 'Time QPREP:' in outlines[-2]
+
     # leave the folders as they were initially to run a different batch of tests
     if restore_folder:
         os.chdir(path_main)
         shutil.rmtree(f'{path_main}/Example_workflows')
         filepath = Path(f'{path_main}/Example_workflows_original')
         filepath.rename(f'{path_main}/Example_workflows')
-
+        # remove dat files generated by QPREP
+        dat_files = glob.glob('*.dat')
+        for dat_file in dat_files:
+            if 'QPREP' in dat_file:
+                os.remove(dat_file)

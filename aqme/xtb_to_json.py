@@ -10,12 +10,6 @@ from __future__ import print_function
 import numpy as np
 import json
 
-try:
-    from openbabel import openbabel
-except:
-    print("! Openbabel is required for SMILES conversion")
-
-
 def read_fukui(file):
     """
     Read fukui output file created from XTB option. Return data.
