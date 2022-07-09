@@ -31,8 +31,9 @@ Check our [AQME installation in 2 mins](https://www.youtube.com/watch?v=LbHpM5Ka
   * `conda install -c conda-forge rdkit openbabel` *(only once, install RDKit and Open Babel)*  
   * `pip install aqme`  
 3. Install AQME through conda-forge:  
-  * `pip install torch torchvision torchani` *(only once if using ANI methods in CMIN)*  
-  * `conda install -c conda-forge aqme`    
+  * `conda install -c conda-forge aqme`   
+If CMIN is used, torch-related modules are needed:  
+  * `pip install torch torchvision torchani`  
 
 ## Requirements
 * Python 3  
