@@ -24,17 +24,15 @@ Don't miss out the latest hands-on tutorials from our [YouTube channel](https://
 
 ## Installation
 Check our [AQME installation in 2 mins](https://www.youtube.com/watch?v=LbHpM5KaxpE) video for a quick installation guide using pip. In a nutshell, AQME and its dependencies are installed as follows:  
-1. Install AQME through pip:  
-  * `conda install -c conda-forge rdkit` *(only once)*  
-  * `conda install -c conda-forge openbabel` *(only once)*  
+1. Install AQME from GitHub (most updated version, recommended):  
+  * `conda install -c conda-forge rdkit openbabel` *(only once, install RDKit and Open Babel)*  
+  * Download the AQME code, go to the main folder in your terminal (contains the setup.py file) and run `pip install .`
+2. Install AQME through pip:  
+  * `conda install -c conda-forge rdkit openbabel` *(only once, install RDKit and Open Babel)*  
   * `pip install aqme`  
-2. Install AQME through conda-forge:  
-  * `pip install torch` *(only once)*  
-  * `conda install -c conda-forge aqme`  
-3. Install AQME from GitHub (most updated version, recommended):  
-  * `conda install -c conda-forge rdkit` *(only once)*  
-  * `conda install -c conda-forge openbabel` *(only once)*  
-  * Download the AQME code, go to the main folder in your terminal (contains the setup.py file) and run `pip install .`  
+3. Install AQME through conda-forge:  
+  * `pip install torch torchvision torchani` *(only once if using ANI methods in CMIN)*  
+  * `conda install -c conda-forge aqme`    
 
 ## Requirements
 * Python 3  
