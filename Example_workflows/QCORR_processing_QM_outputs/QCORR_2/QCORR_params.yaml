@@ -1,4 +1,4 @@
 qcorr: True
-files: '*.log'
+files: '/home/svss/Project-DBcg-Debug/aqme2_20220329/pytest/Example_workflows/QCORR_processing_QM_outputs/QCORR_2/*.log'
 freq_conv: 'opt=(calcfc,maxstep=5)'
 isom_type: 'com'
