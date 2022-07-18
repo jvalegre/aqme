@@ -26,7 +26,7 @@ path_qcorr = os.getcwd() + "/Example_workflows/QCORR_processing_QM_outputs"
             "QCORR_1",
             "CH4.log",
             "run_QCORR",
-            "failed/run_1/duplicates",  # there is a mix up between this and duplicate either one gets taken
+            "success",  # there is a mix up between this and duplicate either one gets taken
             False,
         ),  # test successful termination
         (
@@ -40,7 +40,7 @@ path_qcorr = os.getcwd() + "/Example_workflows/QCORR_processing_QM_outputs"
             "QCORR_1",
             "z_CH4_duplicate.log",
             None,
-            "success",
+            "failed/run_1/duplicates",
             False,
         ),  # test duplicates
         (
