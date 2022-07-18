@@ -9,10 +9,13 @@ import time
 import pandas as pd
 import json
 import subprocess
+
 try:
     import cclib
 except ModuleNotFoundError:
-    print("x  cclib is not installed! You can install the program with 'conda install -c conda-forge cclib' or 'pip install cclib'")
+    print(
+        "x  cclib is not installed! You can install the program with 'conda install -c conda-forge cclib' or 'pip install cclib'"
+    )
     sys.exit()
 from pathlib import Path
 from aqme.utils import (
@@ -21,7 +24,7 @@ from aqme.utils import (
     get_info_input,
     load_variables,
     read_file,
-    cclib_atoms_coords
+    cclib_atoms_coords,
 )
 from aqme.qcorr_utils import (
     detect_linear,
@@ -178,7 +181,7 @@ class qcorr:
                     w_dir_main=destination_json,
                     destination_fullcheck=destination_json,
                     files=json_files,
-                    log = self.args.log
+                    log=self.args.log,
                 )
             else:
                 self.args.log.write(
@@ -582,7 +585,7 @@ class qcorr:
                 bs_gen=self.args.bs_gen,
                 bs_nogen=self.args.bs_nogen,
                 gen_atoms=self.args.gen_atoms,
-                create_dat=False
+                create_dat=False,
             )
         else:
             self.args.log.write(
