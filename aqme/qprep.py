@@ -40,9 +40,9 @@ class qprep:
             sys.exit()
 
         if self.args.destination is None:
-            destination = self.args.w_dir_main.joinpath("QCALC")
-        elif self.args.w_dir_main.joinpath(self.args.destination).exists():
-            destination = Path(self.args.w_dir_main.joinpath(self.args.destination))
+            destination = self.args.initial_dir.joinpath("QCALC")
+        elif self.args.initial_dir.joinpath(self.args.destination).exists():
+            destination = Path(self.args.initial_dir.joinpath(self.args.destination))
         else:
             destination = Path(self.args.destination)
 
@@ -74,8 +74,10 @@ class qprep:
                 sdf_files = []
                 if file.split(".")[1].lower() == "xyz":
                     # separate the parent XYZ file into individual XYZ files
-                    xyzall_2_xyz(file, f'{self.args.w_dir_main}/{name}')
-                    for conf_file in glob.glob(f"{self.args.w_dir_main}/{name}_conf_*.xyz"):
+                    xyzall_2_xyz(file, f"{self.args.w_dir_main}/{name}")
+                    for conf_file in glob.glob(
+                        f"{self.args.w_dir_main}/{name}_conf_*.xyz"
+                    ):
                         charge_xyz, mult_xyz = read_xyz_charge_mult(conf_file)
                         # generate SDF files from XYZ with Openbabel
                         command_xyz = [
@@ -97,22 +99,28 @@ class qprep:
                         sdf_files.append(f"{conf_file.split('.xyz')[0]}.sdf")
                         # delete individual XYZ files
                         os.remove(conf_file)
-    
+
                 elif file.split(".")[1].lower() == "pdb":
-                    command_pdb = ["obabel", "-ipdb", f'{file}', "-osdf", f"-O{file.split('.pdb')[0]}.sdf"]
+                    command_pdb = [
+                        "obabel",
+                        "-ipdb",
+                        f"{file}",
+                        "-osdf",
+                        f"-O{file.split('.pdb')[0]}.sdf",
+                    ]
                     subprocess.run(
                         command_pdb,
                         stdout=subprocess.DEVNULL,
                         stderr=subprocess.DEVNULL,
                     )
                     sdf_files.append(f"{file.split('.pdb')[0]}.sdf")
-                    
+
                 else:
                     sdf_files.append(file)
 
                 for sdf_file in sdf_files:
                     try:
-                        self.sdf_2_com(sdf_file,destination)
+                        self.sdf_2_com(sdf_file, destination)
 
                     except OSError:
                         if self.args.verbose:
@@ -157,7 +165,7 @@ class qprep:
             self.args.log.write(f"\nTime QPREP: {elapsed_time} seconds\n")
             self.args.log.finalize()
 
-    def sdf_2_com(self,sdf_file,destination):
+    def sdf_2_com(self, sdf_file, destination):
         sdf_name = os.path.basename(sdf_file).split(".")[0]
         # get atom types, atomic coordinates, charge and multiplicity of all the mols in the SDF file
         mols = mol_from_sdf_or_mol_or_mol2(sdf_file, "qprep")
@@ -170,7 +178,7 @@ class qprep:
                 _,
             ) = self.qprep_coords(sdf_file, mol)
 
-            if '_conf_' not in sdf_name:
+            if "_conf_" not in sdf_name:
                 name_conf = f"{sdf_name}_conf_{i+1}"
             else:
                 name_conf = sdf_name

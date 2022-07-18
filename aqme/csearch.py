@@ -15,18 +15,23 @@ import pandas as pd
 import concurrent.futures as futures
 import multiprocessing as mp
 from progress.bar import IncrementalBar
+
 try:
     from rdkit.Chem import AllChem as Chem
     from rdkit.Chem import rdMolTransforms, PropertyMol, rdDistGeom, Lipinski
 except ModuleNotFoundError:
-    print("x  RDKit is not installed! You can install the program with 'conda install -c conda-forge rdkit' or 'pip install rdkit-pypi'")
+    print(
+        "x  RDKit is not installed! You can install the program with 'conda install -c conda-forge rdkit' or 'pip install rdkit-pypi'"
+    )
     sys.exit()
 # this is a dummy import just to warn the user if Open babel is not installed
 try:
     command_run_1 = ["obabel", "-H"]
     subprocess.run(command_run_1, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 except FileNotFoundError:
-    print("x  Open Babel is not installed! You can install the program with 'conda install -c conda-forge openbabel'")
+    print(
+        "x  Open Babel is not installed! You can install the program with 'conda install -c conda-forge openbabel'"
+    )
     sys.exit()
 from aqme.filter import filters, ewin_filter, pre_E_filter, RMSD_and_E_filter
 from aqme.csearch_utils import (
@@ -71,11 +76,15 @@ class csearch:
         # load default and user-specified variables
         self.args = load_variables(kwargs, "csearch")
 
-        if self.args.program.lower() == 'crest':
+        if self.args.program.lower() == "crest":
             try:
-                subprocess.run(['xtb','-h'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                subprocess.run(
+                    ["xtb", "-h"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+                )
             except FileNotFoundError:
-                self.args.log.write("x  xTB is not installed! You can install the program with 'conda install -c conda-forge xtb'")
+                self.args.log.write(
+                    "x  xTB is not installed! You can install the program with 'conda install -c conda-forge xtb'"
+                )
                 sys.exit()
 
         if self.args.program.lower() not in ["rdkit", "summ", "fullmonte", "crest"]:
@@ -337,14 +346,14 @@ class csearch:
             self.args.mult = mult
 
         if self.args.destination is None:
-            self.csearch_folder = Path(self.args.w_dir_main).joinpath(
+            self.csearch_folder = Path(self.args.initial_dir).joinpath(
                 f"CSEARCH/{self.args.program}"
             )
         else:
             if Path(f"{self.args.destination}").exists():
                 self.csearch_folder = Path(self.args.destination)
             else:
-                self.csearch_folder = Path(self.args.w_dir_main).joinpath(
+                self.csearch_folder = Path(self.args.initial_dir).joinpath(
                     self.args.destination
                 )
 
