@@ -41,7 +41,7 @@ class qdescp:
         self.args = load_variables(kwargs, "qdescp")
 
         if self.args.destination is None:
-            destination = self.args.w_dir_main.joinpath("QDESCP")
+            destination = self.args.initial_dir.joinpath("QDESCP")
         else:
             destination = Path(self.args.destination)
 
@@ -68,6 +68,8 @@ class qdescp:
                         + "_conf_*.json"
                     )
                     get_boltz_avg_properties_xtb(json_files, name, boltz_dir, "nmr")
+
+        self.args.log.write(f"o  QDESCP successfully done at {destination}")
 
         if self.args.verbose:
             elapsed_time = round(time.time() - start_time_overall, 2)

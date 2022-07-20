@@ -9,7 +9,14 @@ import time
 import pandas as pd
 import json
 import subprocess
-import cclib
+
+try:
+    import cclib
+except ModuleNotFoundError:
+    print(
+        "x  cclib is not installed! You can install the program with 'conda install -c conda-forge cclib' or 'pip install cclib'"
+    )
+    sys.exit()
 from pathlib import Path
 from aqme.utils import (
     move_file,
@@ -80,18 +87,12 @@ class qcorr:
 
         duplicate_data = {"Energies": [], "Enthalpies": [], "Gibbs": []}
 
-        try:
-            if Path(f"{self.args.w_dir_main}").exists():
-                self.args.w_dir_main = self.args.w_dir_main
-        except FileNotFoundError:
-            self.args.w_dir_main = Path(f"{os.getcwd()}/{self.args.w_dir_main}")
-
         self.args.log.write(f"o  Analyzing output files in {self.args.w_dir_main}\n")
-
+        os.chdir(self.args.w_dir_main)
         # analyze files
         for file in self.args.files:
             # get initial cclib data and termination/error types and discard calcs with no data
-            file_name = file.split(".")[0]
+            file_name = os.path.basename(file).split(".")[0]
             termination, errortype, cclib_data, outlines = self.cclib_init(
                 file, file_name
             )
@@ -102,7 +103,7 @@ class qcorr:
                 if errortype == "atomicbasiserror":
                     os.remove(file_name + ".json")
                     self.args.log.write(
-                        f"{file}: Termination = {termination}, Error type = {errortype}"
+                        f"{os.path.basename(file)}: Termination = {termination}, Error type = {errortype}"
                     )
                 continue
 
@@ -117,12 +118,12 @@ class qcorr:
                 ) = self.analyze_normal(duplicate_data, errortype, cclib_data)
 
             # fix calcs that did not terminated normally
-            
+
             elif termination != "normal":
                 atom_types, cartesians, cclib_data = self.analyze_abnormal(
                     errortype, cclib_data, outlines
                 )
-            
+
             # check for isomerization
             if self.args.isom_type is not None:
                 errortype = self.analyze_isom(file, cartesians, atom_types, errortype)
@@ -133,7 +134,7 @@ class qcorr:
                 and self.args.round_num == 1
             ):
                 move_file(
-                    self.args.w_dir_main.joinpath("initial_QM_inputs/"),
+                    self.args.w_dir_main.joinpath("inputs/"),
                     self.args.w_dir_main,
                     f"{file_name}.com",
                 )
@@ -151,13 +152,13 @@ class qcorr:
 
             # This part places the calculations and json files in different folders depending on the type of termination
             self.args.log.write(
-                f"{file}: Termination = {termination}, Error type = {errortype}"
+                f"{os.path.basename(file)}: Termination = {termination}, Error type = {errortype}"
             )
 
             file_terms, destination = self.organize_outputs(
                 file, termination, errortype, file_terms
             )
-            
+
             if errortype in ["none", "sp_calc"]:
                 destination_json = destination.joinpath("json_files/")
                 move_file(destination_json, self.args.w_dir_main, file_name + ".json")
@@ -180,6 +181,7 @@ class qcorr:
                     w_dir_main=destination_json,
                     destination_fullcheck=destination_json,
                     files=json_files,
+                    log=self.args.log,
                 )
             else:
                 self.args.log.write(
@@ -373,8 +375,11 @@ class qcorr:
 
             # detects no convergence issues during freq calcs
             if self.args.freq_conv is not None:
-                if errortype == "none" and cclib_data["optimization"]["times converged"] == 1:
-                    errortype = 'freq_no_conv'
+                if (
+                    errortype == "none"
+                    and cclib_data["optimization"]["times converged"] == 1
+                ):
+                    errortype = "freq_no_conv"
 
         if errortype in ["extra_imag_freq", "freq_no_conv", "linear_mol_wrong"]:
             if errortype == "extra_imag_freq":
@@ -459,7 +464,7 @@ class qcorr:
                     min_RMS,
                     cclib_data["properties"]["number of atoms"],
                     "gaussian",
-                    cclib_data["metadata"]["keywords line"]
+                    cclib_data["metadata"]["keywords line"],
                 )
 
         return atom_types, cartesians, cclib_data
@@ -517,7 +522,7 @@ class qcorr:
 
         except FileNotFoundError:
             self.args.log.write(
-                f"x  No com file were found for {file}, the check_geom test will be disabled for this calculation"
+                f"x  No com file were found for {os.path.basename(file)}, the check_geom test will be disabled for this calculation"
             )
 
         if isomerized:
@@ -531,12 +536,14 @@ class qcorr:
         """
         Create com files for resubmission with the suggested protocols to correct the errors
         """
+
         # user-defined keywords line, mem and nprocs overwrites previously used parameters
         if self.args.qm_input != "":
             cclib_data["metadata"]["keywords line"] = self.args.qm_input
 
         if self.args.mem != "":
             cclib_data["metadata"]["memory"] = self.args.mem
+
         elif cclib_data["metadata"]["memory"] == "":
             cclib_data["metadata"]["memory"] = "8GB"
 
@@ -551,7 +558,7 @@ class qcorr:
             )
         else:
             destination_fix = Path(
-                f"{self.args.w_dir_main}/unsuccessful_QM_outputs/run_{self.args.round_num}/fixed_QM_inputs"
+                f"{self.args.w_dir_main}/failed/run_{self.args.round_num}/fixed_QM_inputs"
             )
 
         if cclib_data["metadata"]["QM program"].lower().find("gaussian") > -1:
@@ -563,7 +570,7 @@ class qcorr:
             qprep(
                 destination=destination_fix,
                 w_dir_main=self.args.w_dir_main,
-                files=file,
+                files=os.path.basename(file),
                 charge=cclib_data["properties"]["charge"],
                 mult=cclib_data["properties"]["multiplicity"],
                 program=program,
@@ -578,10 +585,11 @@ class qcorr:
                 bs_gen=self.args.bs_gen,
                 bs_nogen=self.args.bs_nogen,
                 gen_atoms=self.args.gen_atoms,
+                create_dat=False,
             )
         else:
             self.args.log.write(
-                f"x  Couldn't create an input file to fix {file} (compatible progras: Gaussian and ORCA)\n"
+                f"x  Couldn't create an input file to fix {os.path.basename(file)} (compatible programs: Gaussian and ORCA)\n"
             )
 
     def json_gen(self, file, file_name):
@@ -592,7 +600,7 @@ class qcorr:
         termination, errortype = "normal", "none"
 
         command_run_1 = ["ccwrite", "json", file]
-        subprocess.run(command_run_1)
+        subprocess.run(command_run_1, capture_output=True)
 
         cclib_data = {}
         try:
@@ -614,7 +622,7 @@ class qcorr:
 
         if errortype == "no_data":
             self.args.log.write(
-                f"x  Potential cclib compatibility problem or no data found for file {file} (Termination = {termination}, Error type = {errortype})"
+                f"x  Potential cclib compatibility problem or no data found for file {file_name} (Termination = {termination}, Error type = {errortype})"
             )
 
         return termination, errortype, cclib_data
@@ -691,14 +699,12 @@ class qcorr:
             destination_error = self.args.w_dir_main.joinpath(
                 f"../../run_{self.args.round_num}/"
             )
-            destination_normal = self.args.w_dir_main.joinpath(
-                "../../../successful_QM_outputs/"
-            )
+            destination_normal = self.args.w_dir_main.joinpath("../../../success/")
         else:
             destination_error = self.args.w_dir_main.joinpath(
-                f"unsuccessful_QM_outputs/run_{self.args.round_num}/"
+                f"failed/run_{self.args.round_num}/"
             )
-            destination_normal = self.args.w_dir_main.joinpath("successful_QM_outputs/")
+            destination_normal = self.args.w_dir_main.joinpath("success/")
 
         if errortype == "none" and termination == "normal":
             destination = destination_normal
@@ -756,7 +762,7 @@ class qcorr:
             destination = destination_error.joinpath("error/not_specified_error/")
             file_terms["not_specified"] += 1
 
-        move_file(destination, self.args.w_dir_main, file)
+        move_file(destination, self.args.w_dir_main, os.path.basename(file))
 
         return file_terms, destination
 
@@ -786,7 +792,7 @@ class qcorr:
             ana_data.at[0, "geom_rules filter"] = file_terms["geom_rules_qcorr"]
         if self.args.isom_type is not None:
             ana_data.at[0, "Isomerization"] = file_terms["isomerized"]
-        path_as_str = self.args.w_dir_main.as_posix()
+        path_as_str = self.args.initial_dir.as_posix()
         csv_qcorr = path_as_str + f"/QCORR-run_{self.args.round_num}-stats.csv"
         ana_data.to_csv(csv_qcorr, index=False)
 

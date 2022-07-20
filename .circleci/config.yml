@@ -34,14 +34,16 @@ jobs:
           # app-dir: ~/project/package-directory/  # If you're requirements.txt isn't in the root directory.
           # pip-dependency-file: test-requirements.txt  # if you have a different name for your requirements file, maybe one that combines your runtime and test requirements.
       - run: |
-          # install OpenBabel
+          # install RDKit and OpenBabel
+          conda install -y -c conda-forge rdkit
           conda install -y -c conda-forge openbabel
           # install xTB, xTB-python and CREST
           conda install -y -c conda-forge xtb
           conda install -y -c conda-forge xtb-python
           conda install -y -c conda-forge crest
+          pip install torch torchvision torchani
           pip install codecov
-          # install AQME
+          # install the dependencies of AQME with pip and then uninstall AQME from pip so codecov doesn't freak out
           python -m pip install --upgrade pip
           pip install .
           # install and run pytest
