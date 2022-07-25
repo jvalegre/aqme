@@ -42,7 +42,7 @@ class qcorr:
     Parameters
     ----------
     kwargs : argument class
-            Specify any arguments from the QCORR module (for a complete list of variables, visit the AQME documentation)
+                    Specify any arguments from the QCORR module (for a complete list of variables, visit the AQME documentation)
     """
 
     def __init__(self, **kwargs):
@@ -192,19 +192,20 @@ class qcorr:
         self.args.log.write(f"\n Time QCORR: {elapsed_time} seconds\n")
         self.args.log.finalize()
 
+        # NOT needed as already created in initial_dir
         # move dat and csv file containing the QCORR information if this is a sequential QCORR analysis
-        if self.args.resume_qcorr:
-            destination_data = self.args.w_dir_main.joinpath("../../../")
-            move_file(
-                destination_data,
-                self.args.w_dir_main,
-                f"QCORR-run_{self.args.round_num}.dat",
-            )
-            move_file(
-                destination_data,
-                self.args.w_dir_main,
-                f"QCORR-run_{self.args.round_num}-stats.csv",
-            )
+        # if self.args.resume_qcorr:
+        #     destination_data = self.args.w_dir_main.joinpath("../../../")
+        #     move_file(
+        #         destination_data,
+        #         self.args.w_dir_main,
+        #         f"QCORR-run_{self.args.round_num}.dat",
+        #     )
+        #     move_file(
+        #         destination_data,
+        #         self.args.w_dir_main,
+        #         f"QCORR-run_{self.args.round_num}-stats.csv",
+        #     )
 
     # include geom filters (ongoing work)
 
@@ -541,16 +542,15 @@ class qcorr:
         if self.args.qm_input != "":
             cclib_data["metadata"]["keywords line"] = self.args.qm_input
 
-        if self.args.mem != "":
+        if self.args.mem != "16GB":
             cclib_data["metadata"]["memory"] = self.args.mem
+        elif "memory" not in cclib_data["metadata"]:
+            cclib_data["metadata"]["memory"] = "16GB"
 
-        elif cclib_data["metadata"]["memory"] == "":
-            cclib_data["metadata"]["memory"] = "8GB"
-
-        if self.args.nprocs != 0:
+        if self.args.nprocs != 8:
             cclib_data["metadata"]["processors"] = self.args.nprocs
-        elif cclib_data["metadata"]["processors"] == 0:
-            cclib_data["metadata"]["processors"] = 4
+        elif "processors" not in cclib_data["metadata"]:
+            cclib_data["metadata"]["processors"] = 8
 
         if self.args.resume_qcorr:
             destination_fix = Path(
@@ -634,15 +634,15 @@ class qcorr:
         Parameters
         ----------
         cclib_data : cclib object
-                Variables parsed with cclib
+                        Variables parsed with cclib
         cartesians : list of lists
-                List of lists containing the molecular coordinates as floats
+                        List of lists containing the molecular coordinates as floats
 
         Returns
         -------
         cartesians : list of lists
-                New set of cartesian coordinates generated after displacing the original
-                coordinates along the normal modes of the corresponding imaginary frequencies
+                        New set of cartesian coordinates generated after displacing the original
+                        coordinates along the normal modes of the corresponding imaginary frequencies
         """
 
         shift = []
@@ -681,18 +681,18 @@ class qcorr:
         Parameters
         ----------
         file : str
-                Output file
+                        Output file
         termination : string
-                Type of termination of the QM output file (i.e. normal, error, unfinished)
+                        Type of termination of the QM output file (i.e. normal, error, unfinished)
         errortype : string
-                Type of error type of the QM output file (i.e. None, not_specified, extra_imag_freq, etc)
+                        Type of error type of the QM output file (i.e. None, not_specified, extra_imag_freq, etc)
         file_terms : dict
-                Keeps track of the number of calculations for each termination and error type
+                        Keeps track of the number of calculations for each termination and error type
 
         Returns
         -------
         file_terms : dict
-                Keeps track of the number of calculations for each termination and error type
+                        Keeps track of the number of calculations for each termination and error type
         """
 
         if self.args.resume_qcorr:

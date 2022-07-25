@@ -9,12 +9,10 @@
 ###  (QCORR) Out put file processing from QM calculations and automated issue fixing,   ###
 ###  including imaginary freqs, spin contamination, isomerization issues and            ###
 ###  error terminations, among others                                                   ###
-###  (QPREP) Use QM output (.log or .out) and json files to create new COM files with   ###
-###  new keywords (i.e. for single-point corrections after geometry optimization)       ###
-###                                                                                     ###
-###########################################################################################
-###                                                                                     ###
-###  Version: v1.0, Release date: 11-Jun-2022                                           ###
+###  (QPREP) Use QM outputs, XYZ, SDF, PDB, JSON and other 3D formats to create input   ###
+###  files for multiple QM programs                                                     ###
+###  (QDESCP) Generate xTB molecular descriptors, including Boltzmann averaged values,  ###
+###  to use in machine learning models                                                  ###
 ###                                                                                     ###
 ###########################################################################################
 ###                                                                                     ###

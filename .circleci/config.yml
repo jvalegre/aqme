@@ -43,7 +43,7 @@ jobs:
           conda install -y -c conda-forge crest
           pip install torch torchvision torchani
           pip install codecov
-          # install the dependencies of AQME with pip and then uninstall AQME from pip so codecov doesn't freak out
+          # install the dependencies of AQME with pip
           python -m pip install --upgrade pip
           pip install .
           # install and run pytest
