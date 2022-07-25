@@ -246,8 +246,8 @@ def test_QPREP_analysis(test_type, init_folder, target_folder, restore_folder):
         outfile.close()
 
         line_0 = "# CH4"
-        line_1 = "%maxcore 4000"
-        line_2 = "%pal nprocs 2 end"
+        line_1 = "%maxcore 16000"
+        line_2 = "%pal nprocs 8 end"
         line_3 = "! Extrapolate(2/3,cc) def2/J cc-pVTZ/C DLPNO-CCSD(T) NormalPNO TightSCF RIJCOSX GridX7"
         line_4 = "%cpcm"
         line_5 = "smd true"
