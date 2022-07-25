@@ -544,12 +544,12 @@ class qcorr:
 
         if self.args.mem != "16GB":
             cclib_data["metadata"]["memory"] = self.args.mem
-        elif cclib_data["metadata"]["memory"] == "":
+        elif "memory" not in cclib_data["metadata"]:
             cclib_data["metadata"]["memory"] = "16GB"
 
         if self.args.nprocs != 8:
             cclib_data["metadata"]["processors"] = self.args.nprocs
-        elif cclib_data["metadata"]["processors"] == 0:
+        elif "processors" not in cclib_data["metadata"]:
             cclib_data["metadata"]["processors"] = 8
 
         if self.args.resume_qcorr:
