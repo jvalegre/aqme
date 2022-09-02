@@ -522,19 +522,19 @@ def constraint_fix(
         if not isinstance(constraints_atoms, list):
             constraints_atoms = ast.literal_eval(constraints_atoms)
 
-    if pd.isnull(constraints_dist):
+    if pd.isnull(constraints_dist).all():
         constraints_dist = []
     else:
         if not isinstance(constraints_dist, list):
             constraints_dist = ast.literal_eval(constraints_dist)
 
-    if pd.isnull(constraints_angle):
+    if pd.isnull(constraints_angle).all():
         constraints_angle = []
     else:
         if not isinstance(constraints_angle, list):
             constraints_angle = ast.literal_eval(constraints_angle)
 
-    if pd.isnull(constraints_dihedral):
+    if pd.isnull(constraints_dihedral).all():
         constraints_dihedral = []
     else:
         if not isinstance(constraints_dihedral, list):

@@ -1,0 +1,2 @@
+1. Activate the kernel with AQME installed
+2. Run every line in the given command.txt one after another on terminal/command line

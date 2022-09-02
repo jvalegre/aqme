@@ -1,0 +1,7 @@
+1. Download CSV in ESI from https://pubs.acs.org/doi/10.1021/ci034243x, and rename CSV to Solub_DB.csv
+2. Keep only the first 100 molecules, and remove a few molecules containing iodine (remaining 96 molecules)
+3. Run the CSEARCH_RDKit_organics.ipynb notebook
+4. Analyze results of the CSEARCH conformational sampling in CSEARCH-Data-Solub_DB.csv
+5. Run the COM files generated in the Solub_DB --> com_files folder
+6. Run the QCORR_Analysis_with_isomerization_check.ipynb notebook
+7. Analyze results of the QCORR post-processing of QM files in QCORR-run_1-stats.csv

@@ -1,11 +1,16 @@
 --- # PES
 # Double S addition
-   Reaction: [R1+R2, TS] 
+   Reaction: [R1+R2+R3, TS1+R3, Int1+Int2+R3, TS2+Int1, product+Int1+R2] 
 
 --- # SPECIES
-   R1     : F_crest*
-   R2     : O_anion*
-   TS     : TS_SN2*
+   R1     : Reactant1*
+   R2     : Reactant2*
+   R3     : Reactant3*
+   TS1     : TS1_SN2*
+   TS2     : TS2_SN2*
+   Int1     : Int1*
+   Int2    : Int2*
+   product    : Product*
   
 
 --- # FORMAT
