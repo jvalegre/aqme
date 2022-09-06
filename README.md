@@ -23,18 +23,20 @@ The code is an ensemble of automated QM workflows that can be run through jupyte
 Don't miss out the latest hands-on tutorials from our [YouTube channel](https://www.youtube.com/channel/UCHRqI8N61bYxWV9BjbUI4Xw)!  
 
 ## Installation
-Check our [AQME installation in 2 mins](https://www.youtube.com/watch?v=LbHpM5KaxpE) video for a quick installation guide using pip. In a nutshell, AQME and its dependencies are installed as follows:  
-1. Install AQME from GitHub (most updated version, recommended):  
-  * `conda install -c conda-forge rdkit openbabel` *(only once, install RDKit and Open Babel)*  
-  * Download the AQME code, go to the main folder in your terminal (contains the setup.py file) and run `pip install .`
-2. Install AQME through pip:  
-  * `conda install -c conda-forge rdkit openbabel` *(only once, install RDKit and Open Babel)*  
-  * `pip install aqme`  
-3. Install AQME through conda-forge:  
-  * `conda install -c conda-forge aqme`  
+Check our [AQME installation in 2 mins](https://www.youtube.com/watch?v=LbHpM5KaxpE) video for a quick installation guide. In a nutshell, AQME and its dependencies are installed as follows:
+1. Using conda-forge: `conda install -c conda-forge aqme` (fastest, one-command install)
+2. Using the code from GitHub: `pip install .` with setup.py (most updated version, recommended)  
+3. Using pip: `pip install aqme` 
 
-If CMIN is used, torch-related modules are needed:  
-  * `pip install torch torchvision torchani`  
+Requirements when installing from pip (options 2 and 3):  
+  * RDKit and Openbabel: `conda install -c conda-forge rdkit openbabel`  
+
+Requirements if CMIN is used:  
+  * torch-related modules: `pip install torch torchvision torchani`  
+
+Known incompatibilities:  
+  * RDKit cannot be installed through `pip install rdkit` in Windows when Anaconda prompts are used     
+
 
 ## Requirements
 * Python 3  
