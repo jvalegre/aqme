@@ -516,25 +516,25 @@ def constraint_fix(
 ):
 
     # this avoids problems when running AQME through command lines
-    if all(pd.isnull(constraints_atoms)):
+    if pd.isnull(constraints_atoms):
         constraints_atoms = []
     else:
         if not isinstance(constraints_atoms, list):
             constraints_atoms = ast.literal_eval(constraints_atoms)
 
-    if pd.isnull(constraints_dist).all():
+    if pd.isnull(constraints_dist):
         constraints_dist = []
     else:
         if not isinstance(constraints_dist, list):
             constraints_dist = ast.literal_eval(constraints_dist)
 
-    if pd.isnull(constraints_angle).all():
+    if pd.isnull(constraints_angle):
         constraints_angle = []
     else:
         if not isinstance(constraints_angle, list):
             constraints_angle = ast.literal_eval(constraints_angle)
 
-    if pd.isnull(constraints_dihedral).all():
+    if pd.isnull(constraints_dihedral):
         constraints_dihedral = []
     else:
         if not isinstance(constraints_dihedral, list):
