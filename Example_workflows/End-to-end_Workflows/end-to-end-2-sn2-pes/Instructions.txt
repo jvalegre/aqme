@@ -1,2 +1,0 @@
-1. Activate the kernel with AQME installed
-2. Run every cell in the given notebook one after another

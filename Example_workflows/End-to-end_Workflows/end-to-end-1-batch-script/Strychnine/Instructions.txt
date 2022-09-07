@@ -1,2 +1,0 @@
-1. Edit the paths under MODULES to Gaussian, and Honda environment in template.sh 
-2. Run the Template.sh in SLURM cluster

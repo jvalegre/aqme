@@ -1,0 +1,15 @@
+AQME v 1.2 2022/09/06 13:35:37 
+Citation: AQME v 1.2, Alegre-Requena, J. V.; Sowndarya, S.; Perez-Soto, R.; Alturaifi, T. M.; Paton, R. S., 2022. https://github.com/jvalegre/aqme
+
+Command line used in AQME: aqme --csearch --program rdkit --smi C1CN2CC3=CCO[C@H]4CC(=O)N5[C@H]6[C@H]4[C@H]3C[C@H]2[C@@]61C7=CC=CC=C75 --name Strychnine
+
+
+Starting CSEARCH with 1 job(s) (SDF, XYZ, CSV, etc. files might contain multiple jobs/structures inside)
+
+
+   ----- Strychnine -----
+
+o  Applying filters to initial conformers
+
+Time CSEARCH: 10.12 seconds
+

@@ -1,0 +1,10 @@
+AQME v 1.2 2022/09/06 13:39:15 
+Citation: AQME v 1.2, Alegre-Requena, J. V.; Sowndarya, S.; Perez-Soto, R.; Alturaifi, T. M.; Paton, R. S., 2022. https://github.com/jvalegre/aqme
+
+Command line used in AQME: aqme --qprep --program gaussian --files QCALC/success/*log --destination NMR-SP --qm_input B3LYP/6-311+G(2d,p) scrf=(solvent=chloroform,smd) nmr=giao --suffix SP --nprocs 12
+
+o  Strychnine_rdkit_conf_1 successfully processed at NMR-SP
+o  Strychnine_rdkit_conf_2 successfully processed at NMR-SP
+
+Time QPREP: 0.01 seconds
+

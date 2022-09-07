@@ -1,0 +1,24 @@
+$constrain
+distance: 4,6,2.35
+distance: 1,7,2.35
+distance: 1,2,1.322
+distance: 2,3,1.456
+distance: 3,4,1.321
+distance: 4,5,1.488
+distance: 5,1,1.488
+distance: 6,7,1.446
+distance: 7,8,1.412
+distance: 8,6,1.41
+distance: 1,9,1.086
+distance: 2,10,1.081
+distance: 3,11,1.082
+distance: 4,12,1.085
+distance: 5,13,1.109
+distance: 5,14,1.106
+distance: 6,15,1.083
+distance: 7,16,1.084
+distance: 8,17,1.113
+distance: 8,18,1.113
+force constant=0.5
+reference=coord.ref
+$end
