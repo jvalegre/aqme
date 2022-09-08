@@ -94,22 +94,6 @@ var_dict = {
     "covfrac": 1.1,
     "fullcheck": True,
     "suffix": "",
-    "rot_dihedral": False,
-    "dihedral": [],
-    "bond": [],
-    "angle": [],
-    "geom_par_name": "descp",
-    "dbstep_cen_lig_file": "No file passed",
-    "nmr_exp": "fromsdf",
-    "nmr_online": False,
-    "nmr_aos": "giao",
-    "nmr_nucleus": ["C", "H"],
-    "nmr_slope": [1.0673, 1.0759],
-    "nmr_intercept": [-15.191, -2.2094],
-    "nmr_tms_ref": [191.79, 31.39],
-    "qsub": False,
-    "qsub_ana": False,
-    "submission_command": "qsub_summit",
     "geom_rules": [],
     "angle_off": 30,
     "crest_keywords": None,
@@ -121,6 +105,9 @@ var_dict = {
     "qdescp_acc": 0.2,
     "qdescp_solvent": None,
     "boltz": False,
+    "nmr_atoms": [6, 1],  # [C,H]
+    "nmr_slope": [1.0673, 1.0759],  # [C,H]
+    "nmr_intercept": [-15.191, -2.2094],  # [C,H]
 }
 
 

@@ -67,7 +67,15 @@ class qdescp:
                         + name
                         + "_conf_*.json"
                     )
-                    get_boltz_avg_properties_xtb(json_files, name, boltz_dir, "nmr")
+                    get_boltz_avg_properties_xtb(
+                        json_files,
+                        name,
+                        boltz_dir,
+                        "nmr",
+                        self.args.nmr_atoms,
+                        self.args.nmr_slope,
+                        self.args.nmr_intercept,
+                    )
 
         self.args.log.write(f"o  QDESCP successfully done at {destination}")
 
