@@ -37,7 +37,6 @@ Requirements if CMIN is used:
 Known incompatibilities:  
   * RDKit cannot be installed through `pip install rdkit` in Windows when Anaconda prompts are used     
 
-
 ## Requirements
 * Python 3  
 * Any of the AQME installation options as detailed in the installation section
@@ -320,7 +319,7 @@ AQME can also be run through command lines. Some examples are:
     **boltz : bool, default=False**  
         Calculation of Boltzmann averaged xTB properties
 
-- [ ] VIZMOL arguments:  
+- [ ] VISMOL arguments:  
     **files : list of str, default=''**  
         Filenames of SDF/PDB/XYZ to visualize conformers. If \*.sdf (or other strings that are not lists such as \*.pdb) are specified, the program will look for all the SDF files in the working directory through glob.glob(\*.sdf). Internal options of "line", "stick", "sphere" incorporated. Code reference from: [https://iwatobipen.wordpress.com]
 
@@ -339,4 +338,4 @@ For suggestions and improvements of the code (greatly appreciated!), please reac
 AQME is freely available under an [MIT](https://opensource.org/licenses/MIT) License  
 
 ## Reference
-AQME v1.0, Alegre-Requena, J. V.; Sowndarya, S.; Pérez-Soto, R.; Alturaifi, T. M.; Paton, R. S., 2021. https://github.com/jvalegre/aqme  
+AQME v1.3, Alegre-Requena, J. V.; Sowndarya, S.; Pérez-Soto, R.; Alturaifi, T. M.; Paton, R. S., 2022. https://github.com/jvalegre/aqme  
