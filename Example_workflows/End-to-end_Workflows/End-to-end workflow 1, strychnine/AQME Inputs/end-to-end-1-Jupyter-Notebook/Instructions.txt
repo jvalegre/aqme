@@ -1,0 +1,2 @@
+1. Activate the Python kernel with AQME installed
+2. Run all the cells from the end-to-end-example-1.ipynb Jupyter Notebook
