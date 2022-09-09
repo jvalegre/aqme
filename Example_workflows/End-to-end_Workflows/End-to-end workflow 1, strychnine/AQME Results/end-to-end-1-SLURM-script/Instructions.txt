@@ -1,2 +1,0 @@
-1. Edit the PATHs under MODULES for Gaussian and Conda environments in template.sh 
-2. Run the template.sh in a SLURM-based cluster
