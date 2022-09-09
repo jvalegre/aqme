@@ -1,0 +1,4557 @@
+AQME v 1.2 2022/07/21 10:56:00 
+Citation: AQME v 1.2, Alegre-Requena, J. V.; Sowndarya, S.; Perez-Soto, R.; Alturaifi, T. M.; Paton, R. S., 2022. https://github.com/jvalegre/aqme
+
+
+Starting CSEARCH with 1128 job(s) (SDF, XYZ, CSV, etc. files might contain multiple jobs/structures inside)
+
+
+   ----- mol_1 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_2 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_3 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_4 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_5 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_6 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_7 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_8 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_9 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_10 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_11 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_12 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_13 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_14 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_15 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_16 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_17 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_18 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_19 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_20 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_21 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_22 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_23 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_24 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_25 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_26 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_27 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_28 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_29 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_30 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_31 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_32 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_33 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_34 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_35 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_36 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_37 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_38 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_39 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_40 -----
+
+x  MMFF is not compatible with the molecule, changing to UFF
+
+o  Applying filters to initial conformers
+
+   ----- mol_41 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_42 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_43 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_44 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_45 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_46 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_47 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_48 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_49 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_50 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_51 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_52 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_53 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_54 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_55 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_56 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_57 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_58 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_59 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_60 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_61 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_62 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_63 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_64 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_65 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_66 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_67 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_68 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_69 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_70 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_71 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_72 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_73 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_74 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_75 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_76 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_77 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_78 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_79 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_80 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_81 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_82 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_83 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_84 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_85 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_86 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_87 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_88 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_89 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_90 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_91 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_92 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_93 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_94 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_95 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_96 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_97 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_98 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_99 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_100 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_101 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_102 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_103 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_104 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_105 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_106 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_107 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_108 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_109 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_110 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_111 -----
+
+x  MMFF is not compatible with the molecule, changing to UFF
+
+x  MMFF is not compatible with the molecule, changing to UFF
+
+o  Applying filters to initial conformers
+
+   ----- mol_112 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_113 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_114 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_115 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_116 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_117 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_118 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_119 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_120 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_121 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_122 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_123 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_124 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_125 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_126 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_127 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_128 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_129 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_130 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_131 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_132 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_133 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_134 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_135 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_136 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_137 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_138 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_139 -----
+
+x  MMFF is not compatible with the molecule, changing to UFF
+
+o  Applying filters to initial conformers
+
+   ----- mol_140 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_141 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_142 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_143 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_144 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_145 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_146 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_147 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_148 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_149 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_150 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_151 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_152 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_153 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_154 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_155 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_156 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_157 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_158 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_159 -----
+
+x  MMFF is not compatible with the molecule, changing to UFF
+
+o  Applying filters to initial conformers
+
+   ----- mol_160 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_161 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_162 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_163 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_164 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_165 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_166 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_167 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_168 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_169 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_170 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_171 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_172 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_173 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_174 -----
+
+x  MMFF is not compatible with the molecule, changing to UFF
+
+o  Applying filters to initial conformers
+
+   ----- mol_175 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_176 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_177 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_178 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_179 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_180 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_181 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_182 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_183 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_184 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_185 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_186 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_187 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_188 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_189 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_190 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_191 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_192 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_193 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_194 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_195 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_196 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_197 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_198 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_199 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_200 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_201 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_202 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_203 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_204 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_205 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_206 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_207 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_208 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_209 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_210 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_211 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_212 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_213 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_214 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_215 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_216 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_217 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_218 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_219 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_220 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_221 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_222 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_223 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_224 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_225 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_226 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_227 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_228 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_229 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_230 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_231 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_232 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_233 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_234 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_235 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_236 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_237 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_238 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_239 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_240 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_241 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_242 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_243 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_244 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_245 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_246 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_247 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_248 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_249 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_250 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_251 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_252 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_253 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_254 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_255 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_256 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_257 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_258 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_259 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_260 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_261 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_262 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_263 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_264 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_265 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_266 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_267 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_268 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_269 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_270 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_271 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_272 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_273 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_274 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_275 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_276 -----
+
+x  MMFF is not compatible with the molecule, changing to UFF
+
+o  Applying filters to initial conformers
+
+   ----- mol_277 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_278 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_279 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_280 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_281 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_282 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_283 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_284 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_285 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_286 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_287 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_288 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_289 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_290 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_291 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_292 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_293 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_294 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_295 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_296 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_297 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_298 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_299 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_300 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_301 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_302 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_303 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_304 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_305 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_306 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_307 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_308 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_309 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_310 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_311 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_312 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_313 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_314 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_315 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_316 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_317 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_318 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_319 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_320 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_321 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_322 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_323 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_324 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_325 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_326 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_327 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_328 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_329 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_330 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_331 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_332 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_333 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_334 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_335 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_336 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_337 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_338 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_339 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_340 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_341 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_342 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_343 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_344 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_345 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_346 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_347 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_348 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_349 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_350 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_351 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_352 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_353 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_354 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_355 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_356 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_357 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_358 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_359 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_360 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_361 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_362 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_363 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_364 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_365 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_366 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_367 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_368 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_369 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_370 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_371 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_372 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_373 -----
+
+x  MMFF is not compatible with the molecule, changing to UFF
+
+o  Applying filters to initial conformers
+
+   ----- mol_374 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_375 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_376 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_377 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_378 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_379 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_380 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_381 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_382 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_383 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_384 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_385 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_386 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_387 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_388 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_389 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_390 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_391 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_392 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_393 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_394 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_395 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_396 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_397 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_398 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_399 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_400 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_401 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_402 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_403 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_404 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_405 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_406 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_407 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_408 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_409 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_410 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_411 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_412 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_413 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_414 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_415 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_416 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_417 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_418 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_419 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_420 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_421 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_422 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_423 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_424 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_425 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_426 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_427 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_428 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_429 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_430 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_431 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_432 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_433 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_434 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_435 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_436 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_437 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_438 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_439 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_440 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_441 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_442 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_443 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_444 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_445 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_446 -----
+
+x  MMFF is not compatible with the molecule, changing to UFF
+
+o  Applying filters to initial conformers
+
+   ----- mol_447 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_448 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_449 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_450 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_451 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_452 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_453 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_454 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_455 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_456 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_457 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_458 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_459 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_460 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_461 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_462 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_463 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_464 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_465 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_466 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_467 -----
+
+x  MMFF is not compatible with the molecule, changing to UFF
+
+o  Applying filters to initial conformers
+
+   ----- mol_468 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_469 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_470 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_471 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_472 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_473 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_474 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_475 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_476 -----
+
+x  MMFF is not compatible with the molecule, changing to UFF
+
+o  Applying filters to initial conformers
+
+   ----- mol_477 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_478 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_479 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_480 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_481 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_482 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_483 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_484 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_485 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_486 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_487 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_488 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_489 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_490 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_491 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_492 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_493 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_494 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_495 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_496 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_497 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_498 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_499 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_500 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_501 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_502 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_503 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_504 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_505 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_506 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_507 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_508 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_509 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_510 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_511 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_512 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_513 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_514 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_515 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_516 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_517 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_518 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_519 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_520 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_521 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_522 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_523 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_524 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_525 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_526 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_527 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_528 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_529 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_530 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_531 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_532 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_533 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_534 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_535 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_536 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_537 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_538 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_539 -----
+
+x  MMFF is not compatible with the molecule, changing to UFF
+
+o  Applying filters to initial conformers
+
+   ----- mol_540 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_541 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_542 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_543 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_544 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_545 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_546 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_547 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_548 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_549 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_550 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_551 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_552 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_553 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_554 -----
+
+x  MMFF is not compatible with the molecule, changing to UFF
+
+o  Applying filters to initial conformers
+
+   ----- mol_555 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_556 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_557 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_558 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_559 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_560 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_561 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_562 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_563 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_564 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_565 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_566 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_567 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_568 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_569 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_570 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_571 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_572 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_573 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_574 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_575 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_576 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_577 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_578 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_579 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_580 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_581 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_582 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_583 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_584 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_585 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_586 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_587 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_588 -----
+
+x  MMFF is not compatible with the molecule, changing to UFF
+
+o  Applying filters to initial conformers
+
+   ----- mol_589 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_590 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_591 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_592 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_593 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_594 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_595 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_596 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_597 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_598 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_599 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_600 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_601 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_602 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_603 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_604 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_605 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_606 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_607 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_608 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_609 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_610 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_611 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_612 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_613 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_614 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_615 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_616 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_617 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_618 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_619 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_620 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_621 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_622 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_623 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_624 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_625 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_626 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_627 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_628 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_629 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_630 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_631 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_632 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_633 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_634 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_635 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_636 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_637 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_638 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_639 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_640 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_641 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_642 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_643 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_644 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_645 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_646 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_647 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_648 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_649 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_650 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_651 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_652 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_653 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_654 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_655 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_656 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_657 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_658 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_659 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_660 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_661 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_662 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_663 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_664 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_665 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_666 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_667 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_668 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_669 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_670 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_671 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_672 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_673 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_674 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_675 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_676 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_677 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_678 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_679 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_680 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_681 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_682 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_683 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_684 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_685 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_686 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_687 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_688 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_689 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_690 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_691 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_692 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_693 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_694 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_695 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_696 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_697 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_698 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_699 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_700 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_701 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_702 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_703 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_704 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_705 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_706 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_707 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_708 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_709 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_710 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_711 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_712 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_713 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_714 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_715 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_716 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_717 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_718 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_719 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_720 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_721 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_722 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_723 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_724 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_725 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_726 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_727 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_728 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_729 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_730 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_731 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_732 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_733 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_734 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_735 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_736 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_737 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_738 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_739 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_740 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_741 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_742 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_743 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_744 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_745 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_746 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_747 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_748 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_749 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_750 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_751 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_752 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_753 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_754 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_755 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_756 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_757 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_758 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_759 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_760 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_761 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_762 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_763 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_764 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_765 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_766 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_767 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_768 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_769 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_770 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_771 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_772 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_773 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_774 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_775 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_776 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_777 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_778 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_779 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_780 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_781 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_782 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_783 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_784 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_785 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_786 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_787 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_788 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_789 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_790 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_791 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_792 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_793 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_794 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_795 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_796 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_797 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_798 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_799 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_800 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_801 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_802 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_803 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_804 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_805 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_806 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_807 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_808 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_809 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_810 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_811 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_812 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_813 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_814 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_815 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_816 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_817 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_818 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_819 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_820 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_821 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_822 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_823 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_824 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_825 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_826 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_827 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_828 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_829 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_830 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_831 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_832 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_833 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_834 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_835 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_836 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_837 -----
+
+x  MMFF is not compatible with the molecule, changing to UFF
+
+o  Applying filters to initial conformers
+
+   ----- mol_838 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_839 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_840 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_841 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_842 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_843 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_844 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_845 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_846 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_847 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_848 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_849 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_850 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_851 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_852 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_853 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_854 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_855 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_856 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_857 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_858 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_859 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_860 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_861 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_862 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_863 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_864 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_865 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_866 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_867 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_868 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_869 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_870 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_871 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_872 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_873 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_874 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_875 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_876 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_877 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_878 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_879 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_880 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_881 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_882 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_883 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_884 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_885 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_886 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_887 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_888 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_889 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_890 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_891 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_892 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_893 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_894 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_895 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_896 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_897 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_898 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_899 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_900 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_901 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_902 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_903 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_904 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_905 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_906 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_907 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_908 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_909 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_910 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_911 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_912 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_913 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_914 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_915 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_916 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_917 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_918 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_919 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_920 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_921 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_922 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_923 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_924 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_925 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_926 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_927 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_928 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_929 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_930 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_931 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_932 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_933 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_934 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_935 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_936 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_937 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_938 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_939 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_940 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_941 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_942 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_943 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_944 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_945 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_946 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_947 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_948 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_949 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_950 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_951 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_952 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_953 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_954 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_955 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_956 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_957 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_958 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_959 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_960 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_961 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_962 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_963 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_964 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_965 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_966 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_967 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_968 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_969 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_970 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_971 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_972 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_973 -----
+
+x  MMFF is not compatible with the molecule, changing to UFF
+
+o  Applying filters to initial conformers
+
+   ----- mol_974 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_975 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_976 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_977 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_978 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_979 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_980 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_981 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_982 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_983 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_984 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_985 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_986 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_987 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_988 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_989 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_990 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_991 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_992 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_993 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_994 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_995 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_996 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_997 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_998 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_999 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1000 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1001 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1002 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1003 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1004 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1005 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1006 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1007 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1008 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1009 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1010 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1011 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1012 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1013 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1014 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1015 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1016 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1017 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1018 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1019 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1020 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1021 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1022 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1023 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1024 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1025 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1026 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1027 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1028 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1029 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1030 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1031 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1032 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1033 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1034 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1035 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1036 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1037 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1038 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1039 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1040 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1041 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1042 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1043 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1044 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1045 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1046 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1047 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1048 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1049 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1050 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1051 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1052 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1053 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1054 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1055 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1056 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1057 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1058 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1059 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1060 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1061 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1062 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1063 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1064 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1065 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1066 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1067 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1068 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1069 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1070 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1071 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1072 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1073 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1074 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1075 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1076 -----
+
+x  MMFF is not compatible with the molecule, changing to UFF
+
+x  MMFF is not compatible with the molecule, changing to UFF
+
+o  Applying filters to initial conformers
+
+   ----- mol_1077 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1078 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1079 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1080 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1081 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1082 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1083 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1084 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1085 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1086 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1087 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1088 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1089 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1090 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1091 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1092 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1093 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1094 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1095 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1096 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1097 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1098 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1099 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1100 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1101 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1102 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1103 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1104 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1105 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1106 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1107 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1108 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1109 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1110 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1111 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1112 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1113 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1114 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1115 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1116 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1117 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1118 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1119 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1120 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1121 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1122 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1123 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1124 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1125 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1126 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1127 -----
+
+o  Applying filters to initial conformers
+
+   ----- mol_1128 -----
+
+o  Applying filters to initial conformers
+
+Time CSEARCH: 10346.25 seconds
+

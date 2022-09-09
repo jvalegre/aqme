@@ -516,7 +516,7 @@ def constraint_fix(
 ):
 
     # this avoids problems when running AQME through command lines
-    if all(pd.isnull(constraints_atoms)):
+    if pd.isnull(constraints_atoms):
         constraints_atoms = []
     else:
         if not isinstance(constraints_atoms, list):

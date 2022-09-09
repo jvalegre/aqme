@@ -1,0 +1,19 @@
+   GoodVibes v3.0.1 2022/09/06 16:48:36
+   REF: Luchini, G.; Alegre-Requena J. V.; Guan, Y.; Funes-Ardoiz, I.; Paton, R. S. (2019).
+        GoodVibes: GoodVibes 3.0.1 http://doi.org/10.5281/zenodo.595246
+   Requested: --boltz --xyz -c 1 
+
+   Temperature = 298.15 Kelvin   Concentration = 1.0 mol/l
+   All energetic values below shown in Hartree unless otherwise specified.
+   Using vibrational scale factor 1.0 for B3LYP/6-31+G(d,p) level of theory
+
+   Entropic quasi-harmonic treatment: frequency cut-off value of 100.0 wavenumbers will be applied.
+   QS = Grimme: Using a mixture of RRHO and Free-rotor vibrational entropies.
+   REF: Grimme, S. Chem. Eur. J. 2012, 18, 9955-9964
+
+
+   Structure                                           E        ZPE             H        T.S     T.qh-S          G(T)       qh-G(T)  Boltz
+   ***************************************************************************************************************************************
+o  Strychnine_rdkit_conf_1                  -1073.473612   0.398492  -1073.056828   0.058545   0.057502  -1073.115373  -1073.114330  0.998
+o  Strychnine_rdkit_conf_2                  -1073.468255   0.398824  -1073.051251   0.058210   0.057252  -1073.109461  -1073.108503  0.002
+   ***************************************************************************************************************************************

@@ -1,0 +1,11 @@
+CSEARCH time (seconds),Molecule,Mult,Overall charge,Real charge,crest-conformers,status,update_to_rdkit
+81.44,Diene,1.0,,0.0,1,1.0,False
+45.81,Do1,1.0,,0.0,1,1.0,False
+67.79,Do2,1.0,,0.0,1,1.0,False
+91.5,Do3,1.0,,0.0,1,1.0,False
+127.4,TS1,1.0,,0.0,1,1.0,False
+296.66,TS2,1.0,,0.0,1,1.0,False
+315.74,TS3,1.0,,0.0,1,1.0,False
+143.2,P1,1.0,,0.0,1,1.0,False
+175.71,P2,1.0,,0.0,1,1.0,False
+212.24,P3,1.0,,0.0,1,1.0,False
