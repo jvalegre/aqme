@@ -1,0 +1,6 @@
+$constrain
+distance: 4,6,2.35
+distance: 1,7,2.35
+force constant=0.5
+reference=coord.ref
+$end

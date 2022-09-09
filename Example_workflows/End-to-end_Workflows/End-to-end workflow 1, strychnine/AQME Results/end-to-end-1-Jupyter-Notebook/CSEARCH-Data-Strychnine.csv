@@ -1,0 +1,2 @@
+CSEARCH time (seconds),Molecule,Mult,Overall charge,RDKit-Initial-samples,RDKit-RMSD-and-energy-duplicates,RDKit-Unique-conformers,RDKit-energy-window,RDKit-initial_energy_threshold,Real charge,status,update_to_rdkit
+16.15,Strychnine,1.0,,240,0,2,0,238,0.0,1.0,False

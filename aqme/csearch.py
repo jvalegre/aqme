@@ -503,12 +503,12 @@ class csearch:
         if self.args.mult is not None:
             mult = self.args.mult
         elif self.args.mult is None:
-            if not self.args.metal_complex:
-                NumRadicalElectrons = 0
-                for Atom in mol.GetAtoms():
-                    NumRadicalElectrons += Atom.GetNumRadicalElectrons()
-                TotalElectronicSpin = NumRadicalElectrons / 2
-                mult = int((2 * TotalElectronicSpin) + 1)
+            # if not self.args.metal_complex:
+            NumRadicalElectrons = 0
+            for Atom in mol.GetAtoms():
+                NumRadicalElectrons += Atom.GetNumRadicalElectrons()
+            TotalElectronicSpin = NumRadicalElectrons / 2
+            mult = int((2 * TotalElectronicSpin) + 1)
         else:
             mult = 1
 

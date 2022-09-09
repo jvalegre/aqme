@@ -1,0 +1,7 @@
+
+-- Full check analysis --
+o  Same program (Gaussian 16, Revision C.01) used in all the calculations
+o  Same grid_type (ultrafine) used in all the calculations
+o  Same level_of_theory (B3LYP/6-31+G(d,p)) used in all the calculations
+o  Same dispersion (none) used in all the calculations
+o  Same solvation (gas_phase) used in all the calculations

@@ -1,4 +1,0 @@
-﻿SMILES,code_name,constraints_dist,constraints_angle
-[OH-],O_anion,,
-C(C)(F)C,F,,
-C([C:1]([H:6])([H:7])[H:8])([F:2])([C:3]([H:9])([H:10])[H:11])[H:5].[O-:4][H:12],TS_SN2,"[[0,2,2.2],[0,4,2.1]]","[[2,0,4,180]]"

@@ -23,17 +23,19 @@ The code is an ensemble of automated QM workflows that can be run through jupyte
 Don't miss out the latest hands-on tutorials from our [YouTube channel](https://www.youtube.com/channel/UCHRqI8N61bYxWV9BjbUI4Xw)!  
 
 ## Installation
-Check our [AQME installation in 2 mins](https://www.youtube.com/watch?v=LbHpM5KaxpE) video for a quick installation guide using pip. In a nutshell, AQME and its dependencies are installed as follows:  
-1. Using the code in GitHub: `pip install .` with setup.py (most updated version, recommended)  
-2. Using pip: `pip install aqme`  
-3. Using conda-forge: `conda install -c conda-forge aqme`  
-  
-Requirements:  
+Check our [AQME installation in 2 mins](https://www.youtube.com/watch?v=LbHpM5KaxpE) video for a quick installation guide. In a nutshell, AQME and its dependencies are installed as follows:
+1. Using conda-forge: `conda install -c conda-forge aqme` (fastest, one-command install)
+2. Using the code from GitHub: `pip install .` with setup.py (most updated version, recommended)  
+3. Using pip: `pip install aqme` 
+
+Requirements when installing from pip (options 2 and 3):  
   * RDKit and Openbabel: `conda install -c conda-forge rdkit openbabel`  
-  * If CMIN is used, torch-related modules are needed: `pip install torch torchvision torchani`  
-  
+
+Requirements if CMIN is used:  
+  * torch-related modules: `pip install torch torchvision torchani`  
+
 Known incompatibilities:  
-  * RDKit cannot be installed through `pip install rdkit` in Windows when Anaconda prompts are used  
+  * RDKit cannot be installed through `pip install rdkit` in Windows when Anaconda prompts are used     
 
 ## Requirements
 * Python 3  
@@ -317,7 +319,7 @@ AQME can also be run through command lines. Some examples are:
     **boltz : bool, default=False**  
         Calculation of Boltzmann averaged xTB properties
 
-- [ ] VIZMOL arguments:  
+- [ ] VISMOL arguments:  
     **files : list of str, default=''**  
         Filenames of SDF/PDB/XYZ to visualize conformers. If \*.sdf (or other strings that are not lists such as \*.pdb) are specified, the program will look for all the SDF files in the working directory through glob.glob(\*.sdf). Internal options of "line", "stick", "sphere" incorporated. Code reference from: [https://iwatobipen.wordpress.com]
 
@@ -336,4 +338,4 @@ For suggestions and improvements of the code (greatly appreciated!), please reac
 AQME is freely available under an [MIT](https://opensource.org/licenses/MIT) License  
 
 ## Reference
-AQME v1.0, Alegre-Requena, J. V.; Sowndarya, S.; Pérez-Soto, R.; Alturaifi, T. M.; Paton, R. S., 2021. https://github.com/jvalegre/aqme  
+AQME v1.3, Alegre-Requena, J. V.; Sowndarya, S.; Pérez-Soto, R.; Alturaifi, T. M.; Paton, R. S., 2022. https://github.com/jvalegre/aqme  
