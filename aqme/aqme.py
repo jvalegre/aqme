@@ -199,6 +199,7 @@ def main():
             nmr_atoms=args.nmr_atoms,
             nmr_slope=args.nmr_slope,
             nmr_intercept=args.nmr_intercept,
+            nmr_experim=args.nmr_experim,
         )
 
 

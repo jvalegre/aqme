@@ -75,6 +75,7 @@ class qdescp:
                         self.args.nmr_atoms,
                         self.args.nmr_slope,
                         self.args.nmr_intercept,
+                        self.args.nmr_experim,
                     )
 
         self.args.log.write(f"o  QDESCP successfully done at {destination}")
