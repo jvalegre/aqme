@@ -1,5 +1,4 @@
 #!/bin/bash
-#!/bin/bash
 #SBATCH -J Strychnine
 #SBATCH -p normal
 #SBATCH -t 24:00:00
@@ -118,8 +117,9 @@ cd $excdir
 
 #Run qcorr to create JSON files
 python -m aqme --qcorr --program gaussian --files "$excdir/NMR-SP/*.log"
+
 #Run Boltzmann averging of NMR with QDESCP
-python -m aqme --qdescp --program nmr --boltz --files "$excdir/NMR-SP/success/SP_calcs/json_files/*_SP.json"
+python -m aqme --qdescp --program nmr --boltz --files "$excdir/NMR-SP/success/SP_calcs/json_files/*_SP.json" --nmr_slope "[-1.0537, -1.0784]" --nmr_intercept "[181.7815,31.8723]" --nmr_experim 'Experimental_NMR_shifts.csv'
 
 # Run GoodVibes to obtain thermochemistry data, Boltzmann population and XYZ coordinates
 python -m goodvibes --boltz --xyz -c 1 "$excdir/QCALC/success/*.log"
