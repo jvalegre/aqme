@@ -9,6 +9,7 @@ import time
 import json
 import shutil
 import numpy as np
+import pandas as pd
 from pathlib import Path
 from aqme.utils import (
     load_variables,

@@ -26,7 +26,7 @@ Don't miss out the latest hands-on tutorials from our [YouTube channel](https://
 Check our [AQME installation in 2 mins](https://www.youtube.com/watch?v=LbHpM5KaxpE) video for a quick installation guide. In a nutshell, AQME and its dependencies are installed as follows:
 1. Using conda-forge: `conda install -c conda-forge aqme` (fastest, one-command install)
 2. Using the code from GitHub: `pip install .` with setup.py (most updated version, recommended)  
-3. Using pip: `pip install aqme` 
+3. Using pip: `pip install aqme`
 
 Requirements when installing from pip (options 2 and 3):  
   * RDKit and Openbabel: `conda install -c conda-forge rdkit openbabel`  
@@ -41,6 +41,10 @@ Known incompatibilities:
 * Python 3  
 * Any of the AQME installation options as detailed in the installation section
 * Torch-related modules if CMIN is used (shown in the installation section)
+
+## Running tests
+To run tests: download the source, install and run the tests as follows
+ `pytest --v path/to/tests/folder/`
 
 ## Features and modules
 ### CSEARCH
