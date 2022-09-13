@@ -49,7 +49,8 @@ setup(
         "cclib",
         "matplotlib",
         "seaborn",
-        "cffi"
+        "cffi",
+        "goodvibes",
     ],
     python_requires=">=3.0",
     include_package_data=True,

@@ -9,7 +9,9 @@ ___
 # <p align="center">Automated Quantum Mechanical Environments (AQME)</p>
 ## <p align="center">-- Table of contents --</p>
 ### <p align="center">[What is AQME?](https://github.com/jvalegre/aqme#what-is-aqme) &nbsp; &nbsp; [Installation](https://github.com/jvalegre/aqme#installation) &nbsp; &nbsp; [Requirements](https://github.com/jvalegre/aqme#requirements)</p>
-### <p align="center">[Features and modules](https://github.com/jvalegre/aqme#features-and-modules) &nbsp; &nbsp; [Quickstart](https://github.com/jvalegre/aqme#quickstart) &nbsp; &nbsp; [Extended documentation](https://github.com/jvalegre/aqme#extended-documentation-installation-use-examples-etc)</p>
+### <p align="center">[Example workflows and running tests](https://github.com/jvalegre/aqme#example-workflows-and-running-tests) &nbsp; &nbsp;
+### <p align="center">[Features and modules](https://github.com/jvalegre/aqme#features-and-modules) &nbsp; &nbsp;
+ [Quickstart](https://github.com/jvalegre/aqme#quickstart) &nbsp; &nbsp; [Extended documentation](https://github.com/jvalegre/aqme#extended-documentation-installation-use-examples-etc)</p>
 ### <p align="center">[Developers and help desk](https://github.com/jvalegre/aqme#developers-and-help-desk) &nbsp; &nbsp; [License](https://github.com/jvalegre/aqme#license) &nbsp; &nbsp; [Reference](https://github.com/jvalegre/aqme#reference)</p>
 ___
 ## What is AQME?  
@@ -42,9 +44,10 @@ Known incompatibilities:
 * Any of the AQME installation options as detailed in the installation section
 * Torch-related modules if CMIN is used (shown in the installation section)
 
-## Running tests
-To run tests: download the source, install and run the tests as follows
- `pytest --v path/to/tests/folder/`
+## Example workflows and running tests
+- The inputs to run pre-defined AQME end-to-end workflows are available in the "/Example_workflows/End-to-end_Workflows" folder. Choose the workflow and run the inputs.
+- Automated protocols for individual modules and tasks are provided in the /Example_workflows/ folder inside subfolders with the corresponding module names.
+- To run the tests, run pytest in a terminal as follows `pytest --v` from the main AQME folder or `pytest --v PATH` using the PATH where AQME is installed.
 
 ## Features and modules
 ### CSEARCH
