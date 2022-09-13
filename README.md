@@ -9,7 +9,8 @@ ___
 # <p align="center">Automated Quantum Mechanical Environments (AQME)</p>
 ## <p align="center">-- Table of contents --</p>
 
-### <p align="center">[What is AQME?](https://github.com/jvalegre/aqme#what-is-aqme) &nbsp; &nbsp; [Installation](https://github.com/jvalegre/aqme#installation) &nbsp; &nbsp; [Requirements](https://github.com/jvalegre/aqme#requirements) &nbsp; &nbsp; [Example workflows and running tests](https://github.com/jvalegre/aqme#example-workflows-and-running-tests)</p>
+### <p align="center">[What is AQME?](https://github.com/jvalegre/aqme#what-is-aqme) &nbsp; &nbsp; [Installation](https://github.com/jvalegre/aqme#installation) &nbsp; &nbsp; [Requirements](https://github.com/jvalegre/aqme#requirements)</p>
+### <p align="center">[Example workflows and running tests](https://github.com/jvalegre/aqme#example-workflows-and-running-tests)</p>
 ### <p align="center">[Features and modules](https://github.com/jvalegre/aqme#features-and-modules) &nbsp; &nbsp; [Quickstart](https://github.com/jvalegre/aqme#quickstart) &nbsp; &nbsp; [Extended documentation](https://github.com/jvalegre/aqme#extended-documentation-installation-use-examples-etc)</p>
 ### <p align="center">[Developers and help desk](https://github.com/jvalegre/aqme#developers-and-help-desk) &nbsp; &nbsp; [License](https://github.com/jvalegre/aqme#license) &nbsp; &nbsp; [Reference](https://github.com/jvalegre/aqme#reference)</p>
 ___
