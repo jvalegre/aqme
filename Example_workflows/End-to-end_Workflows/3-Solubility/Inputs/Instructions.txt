@@ -1,0 +1,2 @@
+1. Activate the Python kernel with AQME installed
+2. Run all the cells from the end-to-end-example-3.ipynb Jupyter Notebook (Note: the cell to run QDESCP can be done in two ways. Either one can be chosen. In the notebook the python run is commented out)
