@@ -9,6 +9,7 @@ import time
 import pandas as pd
 import json
 import subprocess
+import numpy as np
 
 try:
     import cclib
@@ -42,7 +43,7 @@ class qcorr:
     Parameters
     ----------
     kwargs : argument class
-                    Specify any arguments from the QCORR module (for a complete list of variables, visit the AQME documentation)
+                                    Specify any arguments from the QCORR module (for a complete list of variables, visit the AQME documentation)
     """
 
     def __init__(self, **kwargs):
@@ -85,7 +86,13 @@ class qcorr:
             "isomerized": 0,
         }
 
-        duplicate_data = {"Energies": [], "Enthalpies": [], "Gibbs": []}
+        duplicate_data = {
+            "File": [],
+            "Energies": [],
+            "Enthalpies": [],
+            "Gibbs": [],
+            "RO_constant": [],
+        }
 
         self.args.log.write(f"o  Analyzing output files in {self.args.w_dir_main}\n")
         os.chdir(self.args.w_dir_main)
@@ -115,7 +122,10 @@ class qcorr:
                     duplicate_data,
                     errortype,
                     cclib_data,
-                ) = self.analyze_normal(duplicate_data, errortype, cclib_data)
+                    dup_off,
+                ) = self.analyze_normal(
+                    duplicate_data, errortype, cclib_data, file_name
+                )
 
             # fix calcs that did not terminated normally
 
@@ -151,9 +161,14 @@ class qcorr:
                 self.qcorr_fixing(cclib_data, file, atom_types, cartesians)
 
             # This part places the calculations and json files in different folders depending on the type of termination
-            self.args.log.write(
-                f"{os.path.basename(file)}: Termination = {termination}, Error type = {errortype}"
-            )
+            if errortype == "duplicate_calc":
+                self.args.log.write(
+                    f"{os.path.basename(file)}: Termination = {termination}, Error type = {errortype}, Duplicate off = {dup_off}"
+                )
+            else:
+                self.args.log.write(
+                    f"{os.path.basename(file)}: Termination = {termination}, Error type = {errortype}"
+                )
 
             file_terms, destination = self.organize_outputs(
                 file, termination, errortype, file_terms
@@ -312,7 +327,7 @@ class qcorr:
 
         return termination, errortype, cclib_data, outlines
 
-    def analyze_normal(self, duplicate_data, errortype, cclib_data):
+    def analyze_normal(self, duplicate_data, errortype, cclib_data, file_name):
         """
         Analyze errors from normally terminated calculations
         """
@@ -327,6 +342,7 @@ class qcorr:
             try:
                 H_dup = cclib_data["properties"]["enthalpy"]
                 G_dup = cclib_data["properties"]["energy"]["free energy"]
+                ro_dup = cclib_data["properties"]["rotational"]["rotational constants"]
             except (AttributeError, KeyError):
                 if cclib_data["properties"]["number of atoms"] == 1:
                     if cclib_data["metadata"]["keywords line"].find("freq") == -1:
@@ -338,17 +354,26 @@ class qcorr:
                     G_dup = E_dup
 
             # detects if this calculation is a duplicate
+            dup_off = None
             for i, _ in enumerate(duplicate_data["Energies"]):
                 E_diff = abs(E_dup - duplicate_data["Energies"][i])
                 H_diff = abs(H_dup - duplicate_data["Enthalpies"][i])
                 G_diff = abs(G_dup - duplicate_data["Gibbs"][i])
-                if max([E_diff, H_diff, G_diff]) < abs(float(self.args.dup_threshold)):
+                ro_diff = np.linalg.norm(
+                    np.array(ro_dup) - np.array(duplicate_data["RO_constant"][i])
+                )
+                if max([E_diff, H_diff, G_diff]) < abs(
+                    float(self.args.dup_threshold)
+                ) and (ro_diff < self.args.ro_threshold):
                     errortype = "duplicate_calc"
+                    dup_off = duplicate_data["File"][i]
 
         if errortype == "none":
+            duplicate_data["File"].append(file_name)
             duplicate_data["Energies"].append(E_dup)
             duplicate_data["Enthalpies"].append(H_dup)
             duplicate_data["Gibbs"].append(G_dup)
+            duplicate_data["RO_constant"].append(ro_dup)
 
             initial_ifreqs = 0
             for freq in cclib_data["vibrations"]["frequencies"]:
@@ -413,7 +438,7 @@ class qcorr:
             elif errortype == "linear_mol_wrong":
                 cclib_data["metadata"]["keywords line"] += " symmetry=(PG=Cinfv)"
 
-        return atom_types, cartesians, duplicate_data, errortype, cclib_data
+        return atom_types, cartesians, duplicate_data, errortype, cclib_data, dup_off
 
     def analyze_abnormal(self, errortype, cclib_data, outlines):
         """
@@ -634,15 +659,15 @@ class qcorr:
         Parameters
         ----------
         cclib_data : cclib object
-                        Variables parsed with cclib
+                                        Variables parsed with cclib
         cartesians : list of lists
-                        List of lists containing the molecular coordinates as floats
+                                        List of lists containing the molecular coordinates as floats
 
         Returns
         -------
         cartesians : list of lists
-                        New set of cartesian coordinates generated after displacing the original
-                        coordinates along the normal modes of the corresponding imaginary frequencies
+                                        New set of cartesian coordinates generated after displacing the original
+                                        coordinates along the normal modes of the corresponding imaginary frequencies
         """
 
         shift = []
@@ -681,18 +706,18 @@ class qcorr:
         Parameters
         ----------
         file : str
-                        Output file
+                                        Output file
         termination : string
-                        Type of termination of the QM output file (i.e. normal, error, unfinished)
+                                        Type of termination of the QM output file (i.e. normal, error, unfinished)
         errortype : string
-                        Type of error type of the QM output file (i.e. None, not_specified, extra_imag_freq, etc)
+                                        Type of error type of the QM output file (i.e. None, not_specified, extra_imag_freq, etc)
         file_terms : dict
-                        Keeps track of the number of calculations for each termination and error type
+                                        Keeps track of the number of calculations for each termination and error type
 
         Returns
         -------
         file_terms : dict
-                        Keeps track of the number of calculations for each termination and error type
+                                        Keeps track of the number of calculations for each termination and error type
         """
 
         if self.args.resume_qcorr:

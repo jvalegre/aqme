@@ -84,6 +84,7 @@ var_dict = {
     "cartesians": [],
     "dup": True,
     "dup_threshold": 0.0001,
+    "ro_threshold": 0.1,
     "amplitude_ifreq": 0.2,
     "ifreq_cutoff": 0.0,
     "freq_conv": None,
