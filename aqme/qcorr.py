@@ -163,7 +163,7 @@ class qcorr:
             # This part places the calculations and json files in different folders depending on the type of termination
             if errortype == "duplicate_calc":
                 self.args.log.write(
-                    f"{os.path.basename(file)}: Termination = {termination}, Error type = {errortype}, Duplicate off = {dup_off}"
+                    f"{os.path.basename(file)}: Termination = {termination}, Error type = {errortype}, Duplicate of = {dup_off}"
                 )
             else:
                 self.args.log.write(
