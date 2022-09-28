@@ -107,8 +107,8 @@ var_dict = {
     "qdescp_solvent": None,
     "boltz": False,
     "nmr_atoms": [6, 1],  # [C,H]
-    "nmr_slope": [1.0673, 1.0759],  # [C,H]
-    "nmr_intercept": [-15.191, -2.2094],  # [C,H]
+    "nmr_slope": [-1.0537, -1.0784],  # [C,H]
+    "nmr_intercept": [181.7815,31.8723],  # [C,H]
     "nmr_experim": None,
 }
 

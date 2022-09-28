@@ -1,7 +1,3 @@
-
-import os, glob
-from pathlib import Path
-from aqme.csearch import csearch
 from aqme.qdescp import qdescp
 
 sdf_rdkit_files = f'CSEARCH/rdkit/*.sdf'
