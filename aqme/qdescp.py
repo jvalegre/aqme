@@ -45,9 +45,9 @@ class qdescp:
             destination = self.args.initial_dir.joinpath("QDESCP")
         else:
             destination = Path(self.args.destination)
-
-        if self.args.program == "xtb":
-            self.gather_files_and_run(destination)
+        #
+        # if self.args.program == "xtb":
+        #     self.gather_files_and_run(destination)
 
         if self.args.boltz:
             boltz_dir = Path(f"{destination}/boltz")
@@ -59,6 +59,8 @@ class qdescp:
                         str(destination) + "/" + name + "_conf_*.json"
                     )
                     get_boltz_avg_properties_xtb(json_files, name, boltz_dir, "xtb")
+                self.write_csv_boltz_data(destination)
+
             if self.args.program == "nmr":
                 for file in self.args.files:
                     name = file.replace("/", "\\").split("\\")[-1].split("_conf")[0]
@@ -85,6 +87,19 @@ class qdescp:
             elapsed_time = round(time.time() - start_time_overall, 2)
             self.args.log.write(f"\nTime QDESCP: {elapsed_time} seconds\n")
         self.args.log.finalize()
+
+    def write_csv_boltz_data(self, destination):
+        boltz_json_files = glob.glob(str(destination) + "/boltz/*.json")
+        dfs = []  # an empty list to store the data frames
+        for file in boltz_json_files:
+            data = pd.read_json(file, lines=True)  # read data frame from json file
+            data["Name"] = file.split(".json")[0]
+            dfs.append(data)  # append the data frame to the list
+
+        temp = pd.concat(
+            dfs, ignore_index=True
+        )  # concatenate all the data frames in the list.
+        temp.to_csv("QDESCP_boltz_avg_xtbproperties.csv", index=False)
 
     def gather_files_and_run(self, destination):
         # write input files
