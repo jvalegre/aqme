@@ -10,6 +10,7 @@ import json
 import shutil
 import numpy as np
 import pandas as pd
+from rdkit import Chem
 from pathlib import Path
 from aqme.utils import (
     load_variables,
@@ -54,11 +55,14 @@ class qdescp:
             boltz_dir.mkdir(exist_ok=True, parents=True)
             if self.args.program == "xtb":
                 for file in self.args.files:
+                    mol = Chem.SDMolSupplier(file, removeHs=False)[0]
                     name = file.replace("/", "\\").split("\\")[-1].split(".")[0]
                     json_files = glob.glob(
                         str(destination) + "/" + name + "_conf_*.json"
                     )
-                    get_boltz_avg_properties_xtb(json_files, name, boltz_dir, "xtb")
+                    get_boltz_avg_properties_xtb(
+                        json_files, name, boltz_dir, "xtb", None, None, None, None, mol
+                    )
                 self.write_csv_boltz_data(destination)
 
             if self.args.program == "nmr":
