@@ -3,8 +3,10 @@ from tensorflow.keras import layers
 import nfp
 from nfp.preprocessing.xtb_preprocessor import xTBSmilesPreprocessor
 from nfp.preprocessing.features import get_ring_size
+import numpy as np
 from tqdm import tqdm
 tqdm.pandas()
+
 
 def atom_featurizer(atom):
     """ Return a string representing the atom type
@@ -42,7 +44,7 @@ def data_split(valid, test, train, preprocessor, sol):
                 for i, row in sol[sol.smiles.isin(train.smiles)].iterrows()),
         output_signature=(preprocessor.output_signature, tf.TensorSpec((), dtype=tf.float32)))\
         .cache().shuffle(buffer_size=200)\
-        .padded_batch(batch_size=(len(train)))\
+        .padded_batch(batch_size=(len(train)), padding_values=(preprocessor.padding_values, tf.constant(np.nan, dtype=tf.float32)))\
         .prefetch(tf.data.experimental.AUTOTUNE)
 
     valid_dataset = tf.data.Dataset.from_generator(
@@ -62,8 +64,9 @@ def data_split(valid, test, train, preprocessor, sol):
     
     return train_dataset, valid_dataset, test_dataset
 
+xtb_mol_features = ['HOMO','LUMO','Dipole module/D','Total charge','Fermi-level/eV','Total dispersion C6','Total dispersion C8','Total polarizability alpha']
 # Define how to featurize the input molecules
-preprocessor = xTBSmilesPreprocessor(atom_features=atom_featurizer, bond_features=bond_featurizer, xtb_bond_features=[], scaler=False)
+preprocessor = xTBSmilesPreprocessor(atom_features=atom_featurizer, bond_features=bond_featurizer, xtb_bond_features=[], xtb_mol_features=xtb_mol_features, scaler=False)
 
 def gnn_model():
 
@@ -72,7 +75,8 @@ def gnn_model():
     bond = layers.Input(shape=[None], dtype=tf.int64, name="bond")
     connectivity = layers.Input(shape=[None, 2], dtype=tf.int64, name="connectivity")
     atom_xtb = layers.Input(shape=[None, len(preprocessor.xtb_atom_features)], dtype=tf.float64, name="atom_xtb")
-    atom_features = 8
+    mol_xtb = layers.Input(shape=[len(preprocessor.xtb_mol_features), ], dtype=tf.float64, name="mol_xtb")
+    atom_features = 128
 
     # Initialize the atom states
     atom_class = layers.Embedding(
@@ -87,20 +91,22 @@ def gnn_model():
     bond_state = layers.Embedding(
         preprocessor.bond_classes,
         atom_features, name='bond_embedding', mask_zero=True)(bond)
+    
+    mol_state = layers.Dense(atom_features,activation='relu')(mol_xtb)
 
     # Here we use our first nfp layer. This is an attention layer that looks at
     # the atom and bond states and reduces them to a single, graph-level vector. 
     # mum_heads * units has to be the same dimension as the atom / bond dimension
-    global_state = nfp.GlobalUpdate(units=8, num_heads=1)([atom_state, bond_state, connectivity])
+    global_state = nfp.GlobalUpdate(units=atom_features, num_heads=1)([atom_state, bond_state, connectivity, mol_state])
 
-    for _ in range(3):  # Do the message passing
+    for _ in range(6):  # Do the message passing
         new_bond_state = nfp.EdgeUpdate()([atom_state, bond_state, connectivity, global_state])
         bond_state = layers.Add()([bond_state, new_bond_state])
         
         new_atom_state = nfp.NodeUpdate()([atom_state, bond_state, connectivity, global_state])
         atom_state = layers.Add()([atom_state, new_atom_state])
         
-        new_global_state = nfp.GlobalUpdate(units=8, num_heads=1)(
+        new_global_state = nfp.GlobalUpdate(units=atom_features, num_heads=1)(
             [atom_state, bond_state, connectivity, global_state]) 
         global_state = layers.Add()([global_state, new_global_state])
     
@@ -109,7 +115,7 @@ def gnn_model():
     sol_prediction = layers.Dense(1)(global_state)
 
     # Construct the tf.keras model
-    model = tf.keras.Model([atom, bond, connectivity, atom_xtb], [sol_prediction])
+    model = tf.keras.Model([atom, bond, connectivity, atom_xtb, mol_xtb], [sol_prediction])
     
     return model
 

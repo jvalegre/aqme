@@ -195,6 +195,7 @@ def main():
             qdescp_acc=args.qdescp_acc,
             qdescp_solvent=args.qdescp_solvent,
             boltz=args.boltz,
+            qdescp_rdkit=args.qdescp_rdkit,
             nmr_atoms=args.nmr_atoms,
             nmr_slope=args.nmr_slope,
             nmr_intercept=args.nmr_intercept,
