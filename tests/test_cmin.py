@@ -27,7 +27,7 @@ if not os.path.exists(cmin_xtb_dir):
     [
         # tests for conformer generation with RDKit
         ("ani", "pentane_rdkit_methods.sdf", "ANI1ccx", None, 100, 0.08, 4),
-        ("xtb", "pentane_rdkit_methods.sdf", None, "GFN2-xTB", 400, 0.03, 4),
+        # ("xtb", "pentane_rdkit_methods.sdf", None, "GFN2-xTB", 400, 0.03, 4),
     ],
 )
 def test_cmin_methods(
@@ -189,18 +189,22 @@ def test_cmin_methods(
 
 # tests for removing foler
 @pytest.mark.parametrize(
-    "remove, folder, file",
+    "folder",
     [
         # tests for conformer generation with RDKit
-        (True, "tests/cmin_methods/CMIN", "tests/cmin_methods/CMIN_*"),
-        (
-            True,
-            "tests/cmin_xtb/CMIN",
-            "tests/cmin_xtb/CMIN_*",
-        ),
+        ("remove")
     ],
 )
-def test_remove(remove, folder, file):
-    shutil.rmtree(w_dir_main + "/" + folder)
-    for f in glob.glob(file):
-        os.remove(f)
+def test_remove(folder):
+    os.chdir(w_dir_main)
+    if os.path.exists(f"{w_dir_main}/tests/cmin_methods/CMIN"):
+        files_remove = [f"{w_dir_main}/tests/cmin_methods/AQME_data.dat",f"{w_dir_main}/tests/cmin_methods/ase.opt"]
+        files_remove.append(f"{w_dir_main}/tests/cmin_methods/ANI1_opt.traj")
+        shutil.rmtree(f"{w_dir_main}/tests/cmin_methods/CMIN")
+        for f in glob.glob(f"{w_dir_main}/tests/cmin_methods/CMIN*")+files_remove:
+            os.remove(f)
+    if os.path.exists(f"{w_dir_main}/tests/cmin_xtb/CMIN"):
+        files_remove = [f"{w_dir_main}/tests/cmin_xtb/AQME_data.dat",f"{w_dir_main}/tests/cmin_xtb/ase.opt"]
+        shutil.rmtree(f"{w_dir_main}/tests/cmin_xtb/CMIN")
+        for f in glob.glob(f"{w_dir_main}/tests/cmin_xtb/CMIN*")+files_remove:
+            os.remove(f)
