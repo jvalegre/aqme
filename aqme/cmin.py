@@ -77,7 +77,8 @@ class cmin:
                 if Path(f"{self.args.destination}").exists():
                     self.cmin_folder = Path(self.args.destination)
                 else:
-                    self.cmin_folder = Path(f"{os.getcwd()}/{self.args.destination}")
+                    self.cmin_folder = Path(self.args.initial_dir).joinpath(
+                    self.args.destination)
 
             self.cmin_folder.mkdir(exist_ok=True, parents=True)
 
@@ -138,7 +139,7 @@ class cmin:
         cenergy, outmols = [], []
         start_time = time.time()
 
-        charge, metal_found = rules_get_charge(self.mols[0], self.args, "cmin")
+        charge, _ = rules_get_charge(self.mols[0], self.args, "cmin")
         mult = []
         for Atom in self.mols[0].GetAtoms():
             mult.append(Atom.GetNumRadicalElectrons())
@@ -197,7 +198,7 @@ class cmin:
             else:
                 outmols[cid].SetProp("Real charge", str(self.args.charge))
             if self.args.mult is None:
-                outmols[cid].SetProp("Mult", str(mult))
+                outmols[cid].SetProp("Mult", str(final_mult))
             else:
                 outmols[cid].SetProp("Mult", str(self.args.mult))
 
@@ -421,19 +422,22 @@ class cmin:
     # xTB AND ANI MAIN OPTIMIZATION PROCESS
     def optimize(self, mol, args, program, log, dup_data, dup_data_idx, charge, mult):
 
-        # Attempt an XTB import, if it fails log it and mock xtb_calc to delay the
-        # system exit until it is used.
-        try:
-            from xtb.ase.calculator import XTB
-        except (ModuleNotFoundError, AttributeError):
-            log.write("\nx  xTB is not installed correctly - xTB is not available")
-            log.finalize()
-            sys.exit()
-        try:
-            import torch
-        except ModuleNotFoundError:
-            print("x  Torch is not installed! You can install the program with 'pip install torch'")
-            sys.exit()
+        # Attempts ANI/xTB imports and exits if the programs are not installed
+        if program == "ani":
+            try:
+                import torch
+            except ModuleNotFoundError:
+                print("x  Torch is not installed! You can install the program with 'pip install torch'")
+                sys.exit()
+        
+        elif program == "xtb":
+            try:
+                from xtb.ase.calculator import XTB
+            except (ModuleNotFoundError, AttributeError):
+                log.write("\nx  xTB is not installed correctly - xTB is not available")
+                log.finalize()
+                sys.exit()
+
         os.environ["KMP_DUPLICATE_LIB_OK"] = "True"
         DEVICE = torch.device("cpu")
 
@@ -480,7 +484,7 @@ class cmin:
 
         return mol, energy, ani_incompatible
 
-    # WRITE SDF FILES FOR xTB AND ANI1
+    # WRITE SDF FILES FOR xTB AND ANI
     def write_confs(self, conformers, selectedcids, name, args, program, log):
         if len(conformers) > 0:
             write_confs = 0
