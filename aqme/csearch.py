@@ -483,7 +483,7 @@ class csearch:
         dup_data_idx = 0
         start_time = time.time()
         status = None
-
+        print(name)
         self.args.log.write(f"\n   ----- {name} -----")
 
         ### Fixing all charges here

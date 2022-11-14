@@ -515,18 +515,18 @@ def test_csearch_rdkit_summ_parameters(
         ),
         (
             "crest",
-            "I[Pd](Cl)([PH3+])[N+]1=CC=CC=C1",
+            "I[Pd]([PH3+])(F)Cl",
             "Pd_complex",
             False,
             True,
             ["Pd"],
             [2],
             "squareplanar",
-            [],
-            [],
-            [],
+            None,
+            None,
+            None,
             True,
-            0,
+            -1,
             1,
             None,
             1,
@@ -616,7 +616,7 @@ def test_csearch_methods(
             cregen=cregen,
         )
 
-    if metal_complex is True:
+    elif metal_complex is True:
         csearch(
             w_dir_main=csearch_methods_dir,
             program=program,
@@ -629,7 +629,7 @@ def test_csearch_methods(
             cregen=cregen,
         )
 
-    if complex is True:
+    elif complex is True:
         csearch(
             w_dir_main=csearch_methods_dir,
             program=program,
@@ -663,8 +663,9 @@ def test_csearch_methods(
     assert mult == int(mols[0].GetProp("Mult"))
     if name == 'nci':
         assert len(mols) > 350
+    # the n of conformers decreases when --nci is used
     elif name == 'nci_keyword':
-        assert len(mols) < 50
+        assert len(mols) < 250
     else:
         assert len(mols) == output_nummols
     os.chdir(w_dir_main)
