@@ -438,7 +438,7 @@ def test_csearch_rdkit_summ_parameters(
 
 # tests for individual organic molecules and metal complexes with different types of csearch methods
 @pytest.mark.parametrize(
-    "program, smi, name, complex, metal_complex, metal, metal_oxi, complex_type, constraints_dist, constraints_angle, constraints_dihedral, cregen, charge, mult, output_nummols",
+    "program, smi, name, complex, metal_complex, metal, metal_oxi, complex_type, constraints_dist, constraints_angle, constraints_dihedral, cregen, charge, mult, crest_keywords, output_nummols",
     [
         # tests for conformer generation with RDKit, SUMM, FullMonte and CREST
         (
@@ -454,8 +454,9 @@ def test_csearch_rdkit_summ_parameters(
             [],
             [],
             False,
-              0,
-              1,
+            0,
+            1,
+            None,
             4,
         ),
         (
@@ -471,8 +472,9 @@ def test_csearch_rdkit_summ_parameters(
             [],
             [],
             False,
-              0,
-              1,
+            0,
+            1,
+            None,
             4,
         ),
         (
@@ -488,8 +490,9 @@ def test_csearch_rdkit_summ_parameters(
             [],
             [],
             False,
-              0,
-              1,
+            0,
+            1,
+            None,
             4,
         ),
         (
@@ -504,10 +507,11 @@ def test_csearch_rdkit_summ_parameters(
             None,
             None,
             None,
-        False,
-        -1,
-        1,
-        1
+            False,
+            -1,
+            1,
+            None,
+            1
         ),
         (
             "crest",
@@ -521,10 +525,11 @@ def test_csearch_rdkit_summ_parameters(
             [],
             [],
             [],
-        True,
-              0,
-              1,
-        None
+            True,
+            0,
+            1,
+            None,
+            1,
         ),
         (
             "crest",
@@ -539,9 +544,28 @@ def test_csearch_rdkit_summ_parameters(
             [],
             [],
             True,
-              0,
-              1,
-            436,
+            0,
+            1,
+            None,
+            None,
+        ),
+        (
+            "crest",
+            "C.O",
+            "nci_keyword",
+            True,
+            False,
+            None,
+            None,
+            None,
+            [],
+            [],
+            [],
+            True,
+            0,
+            1,
+            '--nci --cbonds 0.5',
+            None,
         ),
         (
             "crest",
@@ -556,8 +580,9 @@ def test_csearch_rdkit_summ_parameters(
             [[4, 5, 9, 180]],
             [],
             True,
-              0,
-              1,
+            0,
+            1,
+            None,
             1,
         ),
     ],
@@ -577,6 +602,7 @@ def test_csearch_methods(
     cregen,
     charge,
     mult,
+    crest_keywords,
     output_nummols,
 ):
     os.chdir(csearch_methods_dir)
@@ -610,6 +636,7 @@ def test_csearch_methods(
             smi=smi,
             name=name,
             complex=complex,
+            crest_keywords=crest_keywords,
             cregen=cregen,
             constraints_dist=constraints_dist,
             constraints_angle=constraints_angle,
@@ -634,7 +661,12 @@ def test_csearch_methods(
     mols = rdkit.Chem.SDMolSupplier(file, removeHs=False)
     assert charge == int(mols[0].GetProp("Real charge"))
     assert mult == int(mols[0].GetProp("Mult"))
-    assert len(mols) == output_nummols
+    if name == 'nci':
+        assert len(mols) > 350
+    elif name == 'nci_keyword':
+        assert len(mols) < 50
+    else:
+        assert len(mols) == output_nummols
     os.chdir(w_dir_main)
 
 
