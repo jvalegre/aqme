@@ -196,7 +196,7 @@ AQME can also be run through command lines. Some examples are:
     *-- Options for RDKit-based methods (RDKit, SUMM and Fullmonte), organometallic molecules only --*  
     **metal_complex : bool, default=False**  
         Performs modified conformational sampling of metal complexes, fixing issues related to RDKit when dealing with metals. This option works well with metal coordination numbers up to 6, but it might give trouble with metals containing 7 or more ligands  
-    **metal : list of str, default=[]**  
+    **metal_atoms : list of str, default=[]**  
         Specify metal atom(s) of the system. Multiple metals can be used simultaneously (i.e. ['Pd','Ir'])  
     **metal_oxi : list of int, default=[]**  
         Specify metal oxidation state. Multiple metals can be used simultaneously (i.e. [2,3]). This is important to calculate the charge of the molecule based on SMILES strings  

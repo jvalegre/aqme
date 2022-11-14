@@ -550,7 +550,7 @@ class csearch:
             self.csearch_file = self.csearch_folder.joinpath(
                 name + "_" + self.args.program + self.args.output
             )
-            self.sdwriter = Chem.SDWriter(str(self.csearch_file))
+            sdwriter_init = Chem.SDWriter(str(self.csearch_file))
 
             valid_structure = filters(
                 mol, self.args.log, self.args.max_mol_wt, self.args.verbose
@@ -561,6 +561,7 @@ class csearch:
                     status, update_to_rdkit = self.summ_search(
                         mol,
                         name,
+                        sdwriter_init,
                         dup_data,
                         dup_data_idx,
                         charge,
@@ -594,6 +595,7 @@ class csearch:
         self,
         mol,
         name,
+        sdwriter,
         dup_data,
         dup_data_idx,
         charge,
@@ -617,7 +619,7 @@ class csearch:
             name,
             dup_data,
             dup_data_idx,
-            self.sdwriter,
+            sdwriter,
             charge,
             mult,
             coord_Map,
@@ -628,6 +630,7 @@ class csearch:
             constraints_angle,
             constraints_dihedral,
         )
+        sdwriter.close()
         # reads the initial SDF files from RDKit and uses dihedral scan if selected
         if status not in [-1, 0]:
             # getting the energy and mols after rotations
@@ -646,78 +649,82 @@ class csearch:
         """
 
         rotated_energy = []
+        # apply filters
+        with Chem.SDMolSupplier(str(self.csearch_file), removeHs=False) as rdmols:
 
-        rdmols = Chem.SDMolSupplier(str(self.csearch_file), removeHs=False)
+            if rdmols is None:
+                self.args.log.write("\nCould not open " + name + self.args.output)
+                self.args.log.finalize()
+                sys.exit()
 
-        if rdmols is None:
-            self.args.log.write("\nCould not open " + name + self.args.output)
-            self.args.log.finalize()
-            sys.exit()
+            for i, rd_mol_i in enumerate(rdmols):
+                if coord_Map is None and alg_Map is None and mol_template is None:
+                    energy = minimize_rdkit_energy(
+                        rd_mol_i, -1, self.args.log, ff, self.args.opt_steps_rdkit
+                    )
+                else:
+                    rd_mol_i, energy = realign_mol(
+                        rd_mol_i,
+                        -1,
+                        coord_Map,
+                        alg_Map,
+                        mol_template,
+                        self.args.opt_steps_rdkit,
+                    )
+                rotated_energy.append(energy)
 
-        for i, rd_mol_i in enumerate(rdmols):
-            if coord_Map is None and alg_Map is None and mol_template is None:
-                energy = minimize_rdkit_energy(
-                    rd_mol_i, -1, self.args.log, ff, self.args.opt_steps_rdkit
-                )
-            else:
-                rd_mol_i, energy = realign_mol(
-                    rd_mol_i,
-                    -1,
-                    coord_Map,
-                    alg_Map,
-                    mol_template,
-                    self.args.opt_steps_rdkit,
-                )
-            rotated_energy.append(energy)
+            rotated_cids = list(range(len(rdmols)))
+            sorted_rotated_cids = sorted(rotated_cids, key=lambda cid: rotated_energy[cid])
 
-        rotated_cids = list(range(len(rdmols)))
-        sorted_rotated_cids = sorted(rotated_cids, key=lambda cid: rotated_energy[cid])
+            # filter based on energy window ewin_csearch
+            sortedcids_rotated = ewin_filter(
+                sorted_rotated_cids,
+                rotated_energy,
+                self.args,
+                dup_data,
+                dup_data_idx,
+                self.args.log,
+                "summ",
+                self.args.ewin_csearch,
+            )
+            # pre-filter based on energy only
+            selectedcids_initial_rotated = pre_E_filter(
+                sortedcids_rotated,
+                rotated_energy,
+                dup_data,
+                dup_data_idx,
+                self.args.log,
+                "summ",
+                self.args.initial_energy_threshold,
+                self.args.verbose,
+            )
+            # filter based on energy and RMSD
+            selectedcids_rotated = RMSD_and_E_filter(
+                rdmols,
+                selectedcids_initial_rotated,
+                rotated_energy,
+                self.args,
+                dup_data,
+                dup_data_idx,
+                self.args.log,
+                "summ",
+            )
+            mol_select = []
+            for i, cid in enumerate(selectedcids_rotated):
+                mol_rd = Chem.RWMol(rdmols[cid])
+                mol_rd.SetProp("_Name", rdmols[cid].GetProp("_Name") + " " + str(i))
+                mol_rd.SetProp("Energy", str(rotated_energy[cid]))
+                if self.args.metal_complex:
+                    set_metal_atomic_number(
+                        mol_rd, self.args.metal_idx, self.args.metal_sym
+                    )
+                mol_select.append(mol_rd) 
 
-        # filter based on energy window ewin_csearch
-        sortedcids_rotated = ewin_filter(
-            sorted_rotated_cids,
-            rotated_energy,
-            self.args,
-            dup_data,
-            dup_data_idx,
-            self.args.log,
-            "summ",
-            self.args.ewin_csearch,
-        )
-        # pre-filter based on energy only
-        selectedcids_initial_rotated = pre_E_filter(
-            sortedcids_rotated,
-            rotated_energy,
-            dup_data,
-            dup_data_idx,
-            self.args.log,
-            "summ",
-            self.args.initial_energy_threshold,
-            self.args.verbose,
-        )
-        # filter based on energy and RMSD
-        selectedcids_rotated = RMSD_and_E_filter(
-            rdmols,
-            selectedcids_initial_rotated,
-            rotated_energy,
-            self.args,
-            dup_data,
-            dup_data_idx,
-            self.args.log,
-            "summ",
-        )
-
+        # update SDF file            
         os.remove(self.csearch_file)
         sdwriter_rd = Chem.SDWriter(str(self.csearch_file))
-        for i, cid in enumerate(selectedcids_rotated):
-            mol_rd = Chem.RWMol(rdmols[cid])
-            mol_rd.SetProp("_Name", rdmols[cid].GetProp("_Name") + " " + str(i))
-            mol_rd.SetProp("Energy", str(rotated_energy[cid]))
-            if self.args.metal_complex:
-                set_metal_atomic_number(
-                    mol_rd, self.args.metal_idx, self.args.metal_sym
-                )
-            sdwriter_rd.write(mol_rd)
+        for mol in mol_select:
+            sdwriter_rd.write(mol)
         sdwriter_rd.close()
         status = 1
         return status

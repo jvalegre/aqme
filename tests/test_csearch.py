@@ -51,7 +51,7 @@ def test_csearch_varfile(varfile, nameinvarfile, output_nummols):
     csearch(w_dir_main=csearch_varfile_dir, varfile=varfile)
 
     # tests here
-    file = str("CSEARCH/" + "rdkit/" + "pentane_varfile" + "_rdkit" + ".sdf")
+    file = str("CSEARCH/" + "rdkit/" + nameinvarfile + "_rdkit" + ".sdf")
     mol1 = rdkit.Chem.SDMolSupplier(file, removeHs=False)
     assert len(mol1) == output_nummols
     os.chdir(w_dir_main)
@@ -175,18 +175,31 @@ def test_csearch_others_parameters(
     os.chdir(w_dir_main)
 
 
-# tests for parameters of csearch
+# tests for parameters of CREST
 @pytest.mark.parametrize(
-    "program, smi, name, cregen, cregen_keywords, crest_keywords, output_nummols",
+    "program, smi, name, cregen, cregen_keywords, crest_keywords, charge, mult, output_nummols",
     [
-        # tests for conformer generation with RDKit
+        # tests for conformer generation with CREST
         (
             "crest",
             "C",
             "methane",
             True,
-            "--ethr 1 --rthr 0.5 --bthr 0.7 --ewin 4 --cbonds 0.8 --cluster",
+            "--ethr 1 --rthr 0.5 --bthr 0.7 --ewin 4 --cluster",
             "--alpb benzene",
+            0,
+            1,
+            1,
+        ),
+        (
+            "crest",
+            "C",
+            "methane_charged",
+            True,
+            "--ethr 1 --rthr 0.5 --bthr 0.7 --ewin 4 --cluster",
+            "--alpb benzene",
+            1,
+            2,
             1,
         ),
     ],
@@ -198,6 +211,8 @@ def test_csearch_crest_parameters(
     cregen,
     cregen_keywords,
     crest_keywords,
+    charge,
+    mult, 
     output_nummols,
 ):
     os.chdir(csearch_crest_dir)
@@ -209,6 +224,9 @@ def test_csearch_crest_parameters(
         name=name,
         cregen=cregen,
         cregen_keywords=cregen_keywords,
+        crest_keywords=crest_keywords,
+        charge=charge,
+        mult=mult
     )
 
     # tests here
@@ -225,6 +243,8 @@ def test_csearch_crest_parameters(
     assert os.path.exists(file_cluster)
     file = str("CSEARCH/" + program + "/" + name + "_" + program + ".sdf")
     mols = rdkit.Chem.SDMolSupplier(file, removeHs=False)
+    assert charge == int(mols[0].GetProp("Real charge"))
+    assert mult == int(mols[0].GetProp("Mult"))
     assert len(mols) == output_nummols
     os.chdir(w_dir_main)
 
@@ -346,7 +366,7 @@ def test_csearch_fullmonte_parameters(
             "C[NH2+]CC",
             "charged_rdkit",
             1,
-            0,
+            1,
             "auto",
             10,
             True,
@@ -418,9 +438,9 @@ def test_csearch_rdkit_summ_parameters(
 
 # tests for individual organic molecules and metal complexes with different types of csearch methods
 @pytest.mark.parametrize(
-    "program, smi, name, complex, metal_complex, metal, metal_oxi, complex_type, constraints_dist, constraints_angle, constraints_dihedral, cregen, output_nummols",
+    "program, smi, name, complex, metal_complex, metal, metal_oxi, complex_type, constraints_dist, constraints_angle, constraints_dihedral, cregen, charge, mult, output_nummols",
     [
-        # tests for conformer generation with RDKit, xTB and ANI1
+        # tests for conformer generation with RDKit, SUMM, FullMonte and CREST
         (
             "rdkit",
             "CCCCC",
@@ -434,6 +454,8 @@ def test_csearch_rdkit_summ_parameters(
             [],
             [],
             False,
+              0,
+              1,
             4,
         ),
         (
@@ -449,6 +471,8 @@ def test_csearch_rdkit_summ_parameters(
             [],
             [],
             False,
+              0,
+              1,
             4,
         ),
         (
@@ -464,13 +488,49 @@ def test_csearch_rdkit_summ_parameters(
             [],
             [],
             False,
+              0,
+              1,
             4,
         ),
         (
-            "crest",
-            "C",
-            "methane",
+            "rdkit",
+            "I[Pd]([PH3+])(F)Cl",
+            "Pd_complex",
             False,
+            True,
+            ["Pd"],
+            [2],
+            "squareplanar",
+            None,
+            None,
+            None,
+        False,
+        -1,
+        1,
+        1
+        ),
+        (
+            "crest",
+            "I[Pd](Cl)([PH3+])[N+]1=CC=CC=C1",
+            "Pd_complex",
+            False,
+            True,
+            ["Pd"],
+            [2],
+            "squareplanar",
+            [],
+            [],
+            [],
+        True,
+              0,
+              1,
+        None
+        ),
+        (
+            "crest",
+            "C.O",
+            "nci",
+            True,
             False,
             None,
             None,
@@ -479,98 +539,27 @@ def test_csearch_rdkit_summ_parameters(
             [],
             [],
             True,
+              0,
+              1,
+            436,
+        ),
+        (
+            "crest",
+            "[Cl-:9].[F:4][C:5]([C:6]([H:12])([H:13])[H:14])([C:7]([H:15])([H:16])[H:17])[C:8]([H:18])([H:19])[H:20].[O:3]([H:10])[H:11]",
+            "ts",
+            True,
+            False,
+            None,
+            None,
+            None,
+            [[4, 5, 1.8], [5, 9, 1.8]],
+            [[4, 5, 9, 180]],
+            [],
+            True,
+              0,
+              1,
             1,
         ),
-        # (
-        #     "rdkit",
-        #     "I[Pd](Cl)([PH3+])[N+]1=CC=CC=C1",
-        #     "Pd_complex",
-        #     False,
-        #     True,
-        #     ["Pd"],
-        #     [2],
-        #     "squareplanar",
-        #     None,
-        #     None,
-        #     None,
-        # False,
-        # None
-        # ),
-        # (
-        #     "summ",
-        #     "I[Pd](Cl)([PH3+])[N+]1=CC=CC=C1",
-        #     "Pd_complex",
-        #     False,
-        #     True,
-        #     ["Pd"],
-        #     [2],
-        #     "squareplanar",
-        #     [],
-        #     [],
-        #     [],
-        # False,
-        # None
-        # ),
-        # (
-        #     "fullmonte",
-        #     "I[Pd](Cl)([PH3+])[N+]1=CC=CC=C1",
-        #     "Pd_complex",
-        #     False,
-        #     True,
-        #     ["Pd"],
-        #     [2],
-        #     "squareplanar",
-        #     [],
-        #     [],
-        #     [],
-        # False
-        # None
-        # ),
-        # (
-        #     "crest",
-        #     "I[Pd](Cl)([PH3+])[N+]1=CC=CC=C1",
-        #     "Pd_complex",
-        #     False,
-        #     True,
-        #     ["Pd"],
-        #     [2],
-        #     "squareplanar",
-        #     [],
-        #     [],
-        #     [],
-        # True
-        # None
-        # ),
-        # (
-        #     "crest",
-        #     "C.O",
-        #     "nci",
-        #     True,
-        #     False,
-        #     None,
-        #     None,
-        #     None,
-        #     [],
-        #     [],
-        #     [],
-        #     True,
-        #     436,
-        # ),  # CHECK THIS TEST again. working now
-        # (
-        #     "crest",
-        #     "[Cl-:9].[F:4][C:5]([C:6]([H:12])([H:13])[H:14])([C:7]([H:15])([H:16])[H:17])[C:8]([H:18])([H:19])[H:20].[O:3]([H:10])[H:11]",
-        #     "ts",
-        #     True,
-        #     False,
-        #     None,
-        #     None,
-        #     None,
-        #     [[4, 5, 1.8], [5, 9, 1.8]],
-        #     [[4, 5, 9, 180]],
-        #     [],
-        #     True,
-        #     1,
-        # ),
     ],
 )
 def test_csearch_methods(
@@ -586,6 +575,8 @@ def test_csearch_methods(
     constraints_angle,
     constraints_dihedral,
     cregen,
+    charge,
+    mult,
     output_nummols,
 ):
     os.chdir(csearch_methods_dir)
@@ -606,7 +597,7 @@ def test_csearch_methods(
             smi=smi,
             name=name,
             metal_complex=metal_complex,
-            metal=metal,
+            metal_atoms=metal,
             metal_oxi=metal_oxi,
             complex_type=complex_type,
             cregen=cregen,
@@ -629,7 +620,7 @@ def test_csearch_methods(
         file = str("CSEARCH/" + program + "/" + name + "_" + program + ".sdf")
     else:
         file = str(
-            csearch_cmin_dir
+            csearch_methods_dir
             + "/CSEARCH/"
             + program
             + "/"
@@ -641,42 +632,26 @@ def test_csearch_methods(
 
     assert os.path.exists(file)
     mols = rdkit.Chem.SDMolSupplier(file, removeHs=False)
+    assert charge == int(mols[0].GetProp("Real charge"))
+    assert mult == int(mols[0].GetProp("Mult"))
     assert len(mols) == output_nummols
     os.chdir(w_dir_main)
 
 
 # tests for removing foler
 @pytest.mark.parametrize(
-    "remove, folder, file",
+    "folder_list, file_list",
     [
         # tests for conformer generation with RDKit
         (
-            True,
-            "tests/csearch_methods/CSEARCH",
-            "tests/csearch_methods/CSEARCH*",
-        ),
-        (
-            True,
-            "tests/csearch_rdkit_summ/CSEARCH",
-            "tests/csearch_rdkit_summ/CSEARCH*",
-        ),
-        (
-            True,
-            "tests/csearch_fullmonte/CSEARCH",
-            "tests/csearch_fullmonte/CSEARCH*",
-        ),
-        (True, "tests/csearch_crest/CSEARCH", "tests/csearch_crest/CSEARCH*"),
-        (True, "tests/csearch_others/CSEARCH", "tests/csearch_others/CSEARCH*"),
-        (True, "tests/csearch_input/CSEARCH", "tests/csearch_input/CSEARCH*"),
-        (
-            True,
-            "tests/csearch_varfile/CSEARCH",
-            "tests/csearch_varfile/CSEARCH*",
+            ["tests/csearch_methods/CSEARCH","tests/csearch_rdkit_summ/CSEARCH","tests/csearch_fullmonte/CSEARCH","tests/csearch_crest/CSEARCH","tests/csearch_others/CSEARCH","tests/csearch_input/CSEARCH","tests/csearch_varfile/CSEARCH"],
+            ["tests/csearch_methods/CSEARCH*","tests/csearch_rdkit_summ/CSEARCH*","tests/csearch_fullmonte/CSEARCH*","tests/csearch_crest/CSEARCH*","tests/csearch_others/CSEARCH*","tests/csearch_input/CSEARCH*","tests/csearch_varfile/CSEARCH*"]
         ),
     ],
 )
-def test_remove(remove, folder, file):
+def test_remove(folder_list, file_list):
     # os.chdir(w_dir_main)
-    shutil.rmtree(w_dir_main + "/" + folder)
-    for f in glob.glob(file):
-        os.remove(f)
+    for i,folder in enumerate(folder_list):
+        shutil.rmtree(w_dir_main + "/" + folder)
+        for f in glob.glob(file_list[i]):
+            os.remove(f)
