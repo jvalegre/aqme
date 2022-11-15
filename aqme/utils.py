@@ -540,10 +540,6 @@ def smi_to_mol(
         params = Chem.SmilesParserParams()
         params.removeHs = False
         mol = Chem.MolFromSmiles(smi[0], params)
-        if program in ["crest"]:
-            molH = Chem.AddHs(mol)
-            Chem.EmbedMultipleConfs(molH, numConfs=1)
-            rdmolfiles.MolToXYZFile(molH, name + "_crest.xyz")
 
     return (
         mol,

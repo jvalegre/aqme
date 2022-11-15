@@ -8,11 +8,12 @@ from __future__ import print_function, absolute_import
 import os
 import glob
 from rdkit.Chem import AllChem as Chem
+from rdkit.Chem import rdmolfiles
 import subprocess
 import rdkit
 from pathlib import Path
 import shutil
-from aqme.utils import read_file, run_command
+from aqme.utils import read_file, run_command, set_metal_atomic_number
 from rdkit.Chem import rdMolTransforms
 
 
@@ -64,7 +65,7 @@ def crest_opt(
     name,
     dup_data,
     dup_data_idx,
-    args,
+    self,
     charge,
     mult,
     constraints_atoms,
@@ -78,6 +79,12 @@ def crest_opt(
     Run xTB using subprocess to perform CREST/CREGEN conformer sampling
     """
 
+    if mol is not None:
+        if self.args.metal_complex:
+            set_metal_atomic_number(mol, self.args.metal_idx, self.args.metal_sym)
+        Chem.EmbedMultipleConfs(mol, numConfs=1)
+        rdmolfiles.MolToXYZFile(mol, name + ".xyz")
+        
     nci_ts_complex = False
     if (
         (len(constraints_atoms) != 0)
@@ -88,18 +95,16 @@ def crest_opt(
         nci_ts_complex = True
 
     name_no_path = name.replace("/", "\\").split("\\")[-1].split(".")[0]
-    if args.destination is None:
-        csearch_dir = Path(args.w_dir_main) / "CSEARCH"
+    if self.args.destination is None:
+        csearch_dir = Path(self.args.w_dir_main) / "CSEARCH"
     # where RDKit generates the files
     else:
-        csearch_dir = Path(args.destination)
-        crest_folder = csearch_dir / 'crest'
-        crest_folder.mkdir(exist_ok=True, parents=True)
-    dat_dir = csearch_dir / "crest_xyz" / name_no_path
+        csearch_dir = Path(self.args.destination)
+    dat_dir = csearch_dir / "crest_xyz"
     dat_dir.mkdir(exist_ok=True, parents=True)
 
     xyzin = f"{dat_dir}/{name_no_path}.xyz"
-    sdwriter = Chem.SDWriter(str(f"{csearch_dir}/crest/{name_no_path}.sdf"))
+    sdwriter = Chem.SDWriter(str(f"{csearch_dir}/{name_no_path}.sdf"))
 
     shutil.move(f"{name}.xyz", xyzin)
 
@@ -114,7 +119,7 @@ def crest_opt(
             all_fix = get_constraint(mol, constraints_dist)
 
             _ = create_xcontrol(
-                args,
+                self.args,
                 constraints_atoms,
                 all_fix,
                 [],
@@ -134,7 +139,7 @@ def crest_opt(
                 "--uhf",
                 str(int(mult) - 1),
                 "-P",
-                str(args.nprocs),
+                str(self.args.nprocs),
             ]
 
             run_command(command1, "{}.out".format(xyzoutxtb1.split(".xyz")[0]))
@@ -146,7 +151,7 @@ def crest_opt(
         xyzoutxtb2 = str(dat_dir) + "/" + name_no_path + "_xtb2.xyz"
         # xTB optimization with the user-defined constraints
         _ = create_xcontrol(
-            args,
+            self.args,
             list(constraints_atoms),
             list(constraints_dist),
             list(constraints_angle),
@@ -166,7 +171,7 @@ def crest_opt(
             "--uhf",
             str(int(mult) - 1),
             "-P",
-            str(args.nprocs),
+            str(self.args.nprocs),
         ]
         run_command(command2, "{}.out".format(xyzoutxtb2.split(".xyz")[0]))
         os.rename(str(dat_dir) + "/xtbopt.xyz", xyzoutxtb2)
@@ -179,7 +184,7 @@ def crest_opt(
     constrained_sampling = False
     if nci_ts_complex:
         constrained_sampling = create_xcontrol(
-            args,
+            self.args,
             list(constraints_atoms),
             list(constraints_dist),
             list(constraints_angle),
@@ -196,17 +201,17 @@ def crest_opt(
         "--uhf",
         str(int(mult) - 1),
         "-T",
-        str(args.nprocs),
+        str(self.args.nprocs),
         "--ewin",
-        str(args.ewin_csearch),
+        str(self.args.ewin_csearch),
     ]
 
     if constrained_sampling:
         command.append("-cinp")
         command.append(".xcontrol.sample")
 
-    if args.crest_keywords is not None:
-        for keyword in args.crest_keywords.split():
+    if self.args.crest_keywords is not None:
+        for keyword in self.args.crest_keywords.split():
             command.append(keyword)
 
     run_command(command, str(dat_dir) + "/crest.out")
@@ -214,11 +219,11 @@ def crest_opt(
     # get number of n_atoms
     natoms = open("crest_best.xyz").readlines()[0].strip()
 
-    if args.cregen and int(natoms) != 1:
+    if self.args.cregen and int(natoms) != 1:
         command = ["crest", "crest_best.xyz", "--cregen", "crest_conformers.xyz"]
 
-        if args.cregen_keywords is not None:
-            for keyword in args.cregen_keywords.split():
+        if self.args.cregen_keywords is not None:
+            for keyword in self.args.cregen_keywords.split():
                 command.append(keyword)
 
         run_command(command, str(dat_dir) + "/cregen.out")
@@ -232,7 +237,7 @@ def crest_opt(
         else:
             shutil.copy(str(dat_dir) + "/crest_conformers.xyz", xyzoutall)
     except FileNotFoundError:
-        args.log.write(
+        self.args.log.write(
             "x   CREST conformer sampling failed! Please, try other options (i.e. include constrains, change the crest_keywords option, etc.)"
         )
 
@@ -258,7 +263,7 @@ def crest_opt(
 
     dup_data.at[dup_data_idx, "crest-conformers"] = len(xyz_files)
 
-    os.chdir(args.w_dir_main)
+    os.chdir(self.args.w_dir_main)
 
     return 1
 

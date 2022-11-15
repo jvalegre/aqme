@@ -640,7 +640,7 @@ def test_csearch_methods(
     if destination:
         csearch(
             w_dir_main=csearch_methods_dir,
-            destination=w_dir_main.joinpath('Pd_sdf_files'),
+            destination=csearch_methods_dir+'/Et_sdf_files',
             program=program,
             smi=smi,
             name=name
@@ -681,8 +681,10 @@ def test_csearch_methods(
             constraints_dihedral=constraints_dihedral,
         )
 
-    if metal_complex is False:
-        file = str("CSEARCH/" + program + "/" + name + "_" + program + ".sdf")
+    if destination:
+        file = str(csearch_methods_dir+"/Et_sdf_files/" + program + "/" + name + "_" + program + ".sdf")
+    elif metal_complex is False:
+        file = str(csearch_methods_dir+"/CSEARCH/" + program + "/" + name + "_" + program + ".sdf")
     else:
         file = str(
             csearch_methods_dir

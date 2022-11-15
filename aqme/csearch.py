@@ -85,6 +85,7 @@ class csearch:
                 self.args.log.write(
                     "x  xTB is not installed (CREST cannot be used)! You can install the program with 'conda install -c conda-forge xtb'"
                 )
+                self.args.log.finalize()
                 sys.exit()
 
         if self.args.program.lower() not in ["rdkit", "summ", "fullmonte", "crest"]:
@@ -402,6 +403,13 @@ class csearch:
                 "linear",
                 "trigonalplanar",
             ]
+            if self.args.complex_type != '' and self.args.complex_type not in accepted_complex_types:
+                self.args.log.write(
+                    f"x  The metal template specified in complex_type ({self.args.complex_type}) is not valid! Options: squareplanar, squarepyramidal, linear and trigonalplanar"
+                )
+                self.args.log.finalize()
+                sys.exit()
+
             if self.args.complex_type in accepted_complex_types:
                 count_metals = 0
                 for metal_idx_ind in self.args.metal_idx:
@@ -534,7 +542,7 @@ class csearch:
                 f"{name}_{self.args.program}",
                 dup_data,
                 dup_data_idx,
-                self.args,
+                self,
                 charge,
                 mult,
                 constraints_atoms,
@@ -1145,7 +1153,7 @@ class csearch:
                 f"{name}_{self.args.program}",
                 dup_data,
                 dup_data_idx,
-                self.args,
+                self,
                 charge,
                 mult,
                 constraints_atoms,
