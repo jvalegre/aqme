@@ -76,16 +76,16 @@ class csearch:
         # load default and user-specified variables
         self.args = load_variables(kwargs, "csearch")
 
-        # if self.args.program.lower() == "crest":
-        #     try:
-        #         subprocess.run(
-        #             ["xtb", "-h"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
-        #         )
-        #     except FileNotFoundError:
-        #         self.args.log.write(
-        #             "x  xTB is not installed! You can install the program with 'conda install -c conda-forge xtb'"
-        #         )
-        #         sys.exit()
+        if self.args.program.lower() == "crest":
+            try:
+                subprocess.run(
+                    ["xtb", "-h"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+                )
+            except FileNotFoundError:
+                self.args.log.write(
+                    "x  xTB is not installed (CREST cannot be used)! You can install the program with 'conda install -c conda-forge xtb'"
+                )
+                sys.exit()
 
         if self.args.program.lower() not in ["rdkit", "summ", "fullmonte", "crest"]:
             self.args.log.write(
@@ -483,7 +483,6 @@ class csearch:
         dup_data_idx = 0
         start_time = time.time()
         status = None
-        print(name)
         self.args.log.write(f"\n   ----- {name} -----")
 
         ### Fixing all charges here
@@ -503,7 +502,6 @@ class csearch:
         if self.args.mult is not None:
             mult = self.args.mult
         elif self.args.mult is None:
-            # if not self.args.metal_complex:
             NumRadicalElectrons = 0
             for Atom in mol.GetAtoms():
                 NumRadicalElectrons += Atom.GetNumRadicalElectrons()

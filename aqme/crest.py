@@ -88,12 +88,18 @@ def crest_opt(
         nci_ts_complex = True
 
     name_no_path = name.replace("/", "\\").split("\\")[-1].split(".")[0]
-    csearch_dir = Path(args.w_dir_main)
-    dat_dir = csearch_dir / "CSEARCH" / "crest_xyz" / name_no_path
+    if args.destination is None:
+        csearch_dir = Path(args.w_dir_main) / "CSEARCH"
+    # where RDKit generates the files
+    else:
+        csearch_dir = Path(args.destination)
+        crest_folder = csearch_dir / 'crest'
+        crest_folder.mkdir(exist_ok=True, parents=True)
+    dat_dir = csearch_dir / "crest_xyz" / name_no_path
     dat_dir.mkdir(exist_ok=True, parents=True)
 
     xyzin = f"{dat_dir}/{name_no_path}.xyz"
-    sdwriter = Chem.SDWriter(str(f"{csearch_dir}/CSEARCH/crest/{name_no_path}.sdf"))
+    sdwriter = Chem.SDWriter(str(f"{csearch_dir}/crest/{name_no_path}.sdf"))
 
     shutil.move(f"{name}.xyz", xyzin)
 

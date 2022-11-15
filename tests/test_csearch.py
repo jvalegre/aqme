@@ -438,7 +438,7 @@ def test_csearch_rdkit_summ_parameters(
 
 # tests for individual organic molecules and metal complexes with different types of csearch methods
 @pytest.mark.parametrize(
-    "program, smi, name, complex, metal_complex, metal, metal_oxi, complex_type, constraints_dist, constraints_angle, constraints_dihedral, cregen, charge, mult, crest_keywords, output_nummols",
+    "program, smi, name, complex, metal_complex, metal, metal_oxi, complex_type, constraints_dist, constraints_angle, constraints_dihedral, cregen, charge, mult, crest_keywords, destination, output_nummols",
     [
         # tests for conformer generation with RDKit, SUMM, FullMonte and CREST
         (
@@ -457,26 +457,28 @@ def test_csearch_rdkit_summ_parameters(
             0,
             1,
             None,
+            False,
             4,
         ),
-        (
-            "summ",
-            "CCCCC",
-            "pentane",
-            False,
-            False,
-            None,
-            None,
-            None,
-            [],
-            [],
-            [],
-            False,
-            0,
-            1,
-            None,
-            4,
-        ),
+        # (
+        #     "summ",
+        #     "CCCCC",
+        #     "pentane",
+        #     False,
+        #     False,
+        #     None,
+        #     None,
+        #     None,
+        #     [],
+        #     [],
+        #     [],
+        #     False,
+        #     0,
+        #     1,
+        #     None,
+        #     False,
+        #     4,
+        # ),
         (
             "fullmonte",
             "CCCCC",
@@ -493,6 +495,7 @@ def test_csearch_rdkit_summ_parameters(
             0,
             1,
             None,
+            False,
             4,
         ),
         (
@@ -511,8 +514,10 @@ def test_csearch_rdkit_summ_parameters(
             -1,
             1,
             None,
+            False,
             1
         ),
+        # compatibility of CREST with metal complexes
         (
             "crest",
             "I[Pd]([PH3+])(F)Cl",
@@ -525,10 +530,31 @@ def test_csearch_rdkit_summ_parameters(
             None,
             None,
             None,
-            True,
+            False,
             -1,
             1,
             None,
+            False,
+            1,
+        ),
+        # compatibility of CREST with destination
+        (
+            "crest",
+            "CC",
+            "ethane",
+            False,
+            False,
+            None,
+            None,
+            None,
+            [],
+            [],
+            [],
+            False,
+            0,
+            1,
+            None,
+            True,
             1,
         ),
         (
@@ -547,6 +573,7 @@ def test_csearch_rdkit_summ_parameters(
             0,
             1,
             None,
+            False,
             None,
         ),
         (
@@ -565,6 +592,7 @@ def test_csearch_rdkit_summ_parameters(
             0,
             1,
             '--nci --cbonds 0.5',
+            False,
             None,
         ),
         (
@@ -579,10 +607,11 @@ def test_csearch_rdkit_summ_parameters(
             [[4, 5, 1.8], [5, 9, 1.8]],
             [[4, 5, 9, 180]],
             [],
-            True,
-            0,
+            False,
+            -1,
             1,
             None,
+            False,
             1,
         ),
     ],
@@ -603,11 +632,20 @@ def test_csearch_methods(
     charge,
     mult,
     crest_keywords,
+    destination,
     output_nummols,
 ):
     os.chdir(csearch_methods_dir)
     # runs the program with the different tests
-    if not complex and not metal_complex:
+    if destination:
+        csearch(
+            w_dir_main=csearch_methods_dir,
+            destination=w_dir_main.joinpath('Pd_sdf_files'),
+            program=program,
+            smi=smi,
+            name=name
+        )
+    elif not complex and not metal_complex:
         csearch(
             w_dir_main=csearch_methods_dir,
             program=program,
