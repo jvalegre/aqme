@@ -682,15 +682,13 @@ def test_csearch_methods(
         )
 
     if destination:
-        file = str(csearch_methods_dir+"/Et_sdf_files/" + program + "/" + name + "_" + program + ".sdf")
+        file = str(csearch_methods_dir+"/Et_sdf_files/" + name + "_" + program + ".sdf")
     elif metal_complex is False:
-        file = str(csearch_methods_dir+"/CSEARCH/" + program + "/" + name + "_" + program + ".sdf")
+        file = str(csearch_methods_dir+"/CSEARCH/" + name + "_" + program + ".sdf")
     else:
         file = str(
             csearch_methods_dir
             + "/CSEARCH/"
-            + program
-            + "/"
             + name
             + "_1_"
             + program
