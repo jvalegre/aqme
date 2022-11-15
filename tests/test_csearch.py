@@ -444,7 +444,7 @@ def test_csearch_rdkit_summ_parameters(
         (
             "rdkit",
             "CCCCC",
-            "pentane",
+            "pentane_RD",
             False,
             False,
             None,
@@ -482,7 +482,7 @@ def test_csearch_rdkit_summ_parameters(
         (
             "fullmonte",
             "CCCCC",
-            "pentane",
+            "pentane_FM",
             False,
             False,
             None,
@@ -521,7 +521,7 @@ def test_csearch_rdkit_summ_parameters(
         (
             "crest",
             "I[Pd]([PH3+])(F)Cl",
-            "Pd_complex",
+            "Pd_complex_crest",
             False,
             True,
             ["Pd"],
