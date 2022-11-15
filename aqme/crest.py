@@ -13,7 +13,7 @@ import subprocess
 import rdkit
 from pathlib import Path
 import shutil
-from aqme.utils import read_file, run_command, set_metal_atomic_number
+from aqme.utils import read_file, run_command
 from rdkit.Chem import rdMolTransforms
 
 
@@ -78,12 +78,6 @@ def crest_opt(
     """
     Run xTB using subprocess to perform CREST/CREGEN conformer sampling
     """
-
-    if mol is not None:
-        if self.args.metal_complex:
-            set_metal_atomic_number(mol, self.args.metal_idx, self.args.metal_sym)
-        Chem.EmbedMultipleConfs(mol, numConfs=1)
-        rdmolfiles.MolToXYZFile(mol, name + ".xyz")
         
     nci_ts_complex = False
     if (

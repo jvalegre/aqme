@@ -384,7 +384,7 @@ class csearch:
         if self.args.verbose:
             self.args.log.write(f"\n   -> Input Molecule {Chem.MolToSmiles(mol)}")
 
-        if self.args.metal_complex:
+        if self.args.metal_complex and self.args.program != "crest":
             for _ in self.args.metal_atoms:
                 self.args.metal_idx.append(None)
                 self.args.complex_coord.append(None)
