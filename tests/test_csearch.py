@@ -51,7 +51,7 @@ def test_csearch_varfile(varfile, nameinvarfile, output_nummols):
     csearch(w_dir_main=csearch_varfile_dir, varfile=varfile)
 
     # tests here
-    file = str("CSEARCH/" + "rdkit/" + nameinvarfile + "_rdkit" + ".sdf")
+    file = str("CSEARCH/" + nameinvarfile + "_rdkit" + ".sdf")
     mol1 = rdkit.Chem.SDMolSupplier(file, removeHs=False)
     assert len(mol1) == output_nummols
     os.chdir(w_dir_main)
@@ -83,8 +83,6 @@ def test_csearch_input_parameters(program, input, output_nummols):
     if input in ["pentane.smi", "pentane.csv"]:
         file1 = str(
             "CSEARCH/"
-            + program
-            + "/"
             + "butane_"
             + input.split(".")[1]
             + "_"
@@ -93,8 +91,6 @@ def test_csearch_input_parameters(program, input, output_nummols):
         )
         file2 = str(
             "CSEARCH/"
-            + program
-            + "/"
             + "pentane_"
             + input.split(".")[1]
             + "_"
@@ -106,21 +102,21 @@ def test_csearch_input_parameters(program, input, output_nummols):
         assert len(mol1) == output_nummols[0]
         assert len(mol2) == output_nummols[1]
     elif input in ["molecules.cdx"]:
-        file1 = str("CSEARCH/" + program + "/" + "molecules_0_" + program + ".sdf")
-        file2 = str("CSEARCH/" + program + "/" + "molecules_1_" + program + ".sdf")
+        file1 = str("CSEARCH/" + "molecules_0_" + program + ".sdf")
+        file2 = str("CSEARCH/" + "molecules_1_" + program + ".sdf")
         mol1 = rdkit.Chem.SDMolSupplier(file1, removeHs=False)
         mol2 = rdkit.Chem.SDMolSupplier(file2, removeHs=False)
         assert len(mol1) == output_nummols[0]
         assert len(mol2) == output_nummols[1]
     elif input in ["pentane_sdf.sdf"]:
         file = str(
-            "CSEARCH/" + program + "/" + input.split(".")[0] + "_" + program + ".sdf"
+            "CSEARCH/" + input.split(".")[0] + "_" + program + ".sdf"
         )
         mols = rdkit.Chem.SDMolSupplier(file, removeHs=False)
         assert len(mols) == output_nummols
     else:
         file = str(
-            "CSEARCH/" + program + "/" + input.split(".")[0] + "_" + program + ".sdf"
+            "CSEARCH/" + input.split(".")[0] + "_" + program + ".sdf"
         )
         mols = rdkit.Chem.SDMolSupplier(file, removeHs=False)
         assert len(mols) == output_nummols
@@ -168,7 +164,7 @@ def test_csearch_others_parameters(
 
     # tests here
     file = str(
-        "CSEARCH/" + program + "/" + prefix + "_" + name + "_" + program + ".sdf"
+        "CSEARCH/" + prefix + "_" + name + "_" + program + ".sdf"
     )
     mols = rdkit.Chem.SDMolSupplier(file, removeHs=False)
     assert len(mols) == output_nummols
@@ -288,7 +284,7 @@ def test_csearch_fullmonte_parameters(
     )
 
     # tests here
-    file = str("CSEARCH/" + program + "/" + name + "_" + program + ".sdf")
+    file = str("CSEARCH/" + name + "_" + program + ".sdf")
     mols = rdkit.Chem.SDMolSupplier(file, removeHs=False)
     assert len(mols) == output_nummols
     assert charge == int(mols[0].GetProp("Real charge"))
@@ -316,21 +312,21 @@ def test_csearch_fullmonte_parameters(
             0.2,
             4,
         ),
-        (
-            "summ",
-            "CCCCC",
-            "pentane_summ",
-            0,
-            1,
-            "auto",
-            100,
-            True,
-            40,
-            0.0001,
-            0.2,
-            0.1,
-            5,
-        ),
+        # (
+        #     "summ",
+        #     "CCCCC",
+        #     "pentane_summ",
+        #     0,
+        #     1,
+        #     "auto",
+        #     100,
+        #     True,
+        #     40,
+        #     0.0001,
+        #     0.2,
+        #     0.1,
+        #     5,
+        # ),
         (
             "rdkit",
             "CC[CH]CC",
@@ -346,21 +342,21 @@ def test_csearch_fullmonte_parameters(
             0.3,
             41,
         ),
-        (
-            "summ",
-            "CC[CH]CC",
-            "radical_summ",
-            0,
-            2,
-            "auto",
-            500,
-            True,
-            2,
-            0.0001,
-            0.2,
-            0.2,
-            3,
-        ),
+        # (
+        #     "summ",
+        #     "CC[CH]CC",
+        #     "radical_summ",
+        #     0,
+        #     2,
+        #     "auto",
+        #     500,
+        #     True,
+        #     2,
+        #     0.0001,
+        #     0.2,
+        #     0.2,
+        #     3,
+        # ),
         (
             "rdkit",
             "C[NH2+]CC",
@@ -376,21 +372,21 @@ def test_csearch_fullmonte_parameters(
             0.6,
             5,
         ),
-        (
-            "summ",
-            "C[NH2+]CC",
-            "charged_summ",
-            1,
-            0,
-            "auto",
-            1000,
-            False,
-            10,
-            0.0001,
-            0.2,
-            0.2,
-            2,
-        ),
+        # (
+        #     "summ",
+        #     "C[NH2+]CC",
+        #     "charged_summ",
+        #     1,
+        #     0,
+        #     "auto",
+        #     1000,
+        #     False,
+        #     10,
+        #     0.0001,
+        #     0.2,
+        #     0.2,
+        #     2,
+        # ),
     ],
 )
 def test_csearch_rdkit_summ_parameters(
@@ -428,7 +424,7 @@ def test_csearch_rdkit_summ_parameters(
     )
 
     # tests here
-    file = str("CSEARCH/" + program + "/" + name + "_" + program + ".sdf")
+    file = str("CSEARCH/" + name + "_" + program + ".sdf")
     mols = rdkit.Chem.SDMolSupplier(file, removeHs=False)
     assert len(mols) == output_nummols
     assert charge == int(mols[0].GetProp("Real charge"))

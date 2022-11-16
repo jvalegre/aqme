@@ -348,7 +348,7 @@ class csearch:
 
         if self.args.destination is None:
             self.csearch_folder = Path(self.args.initial_dir).joinpath(
-                f"CSEARCH/{self.args.program}"
+                f"CSEARCH"
             )
         else:
             if Path(f"{self.args.destination}").exists():
