@@ -509,13 +509,13 @@ def test_csearch_rdkit_summ_parameters(
         # compatibility of CREST with metal complexes
         (
             "crest",
-            "F[Ni]([NH3+])([NH3+])F",
-            "Ni_complex_crest",
+            "[NH3+][Ag][NH3+]",
+            "Ag_complex_crest",
             False,
             True,
-            ["Ni"],
-            [2],
-            "squareplanar",
+            ["Ag"],
+            [1],
+            "linear",
             None,
             None,
             None,
@@ -523,7 +523,7 @@ def test_csearch_rdkit_summ_parameters(
             1,
             None,
             False,
-            2,
+            1,
         ),
         # compatibility of CREST with destination
         (
