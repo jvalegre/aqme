@@ -539,11 +539,13 @@ def smi_to_mol(
     else:
         params = Chem.SmilesParserParams()
         params.removeHs = False
-        mol = Chem.MolFromSmiles(smi[0], params)
-        if program in ["crest"]:
-            molH = Chem.AddHs(mol)
-            Chem.EmbedMultipleConfs(molH, numConfs=1)
-            rdmolfiles.MolToXYZFile(molH, name + "_crest.xyz")
+        try:
+            mol = Chem.MolFromSmiles(smi[0], params)
+        except Chem.AtomValenceException:
+            log.write(
+                f"\nx  The SMILES string provided ( {smi[0]} ) contains errors. For example, N atoms from ligands of metal complexes should be N+ since they're drawn with four bonds in ChemDraw, same for O atoms in carbonyl ligands, etc.\n"
+            )
+            sys.exit()
 
     return (
         mol,
@@ -552,6 +554,20 @@ def smi_to_mol(
         constraints_angle,
         constraints_dihedral,
     )
+
+
+def rdkit_sdf_read(file, args):
+    """
+    Reads sdf files and stops the execution if the file was not accesible.                                                                                                                                                                                      rdkit.Chem.Mol objects
+    """
+    
+    inmols = Chem.SDMolSupplier(file, removeHs=False)
+
+    if inmols is None:
+        args.log.write(f"Could not open {file}")
+        args.log.finalize()
+        sys.exit()
+    return inmols
 
 
 def nci_ts_mol(
@@ -727,10 +743,11 @@ def rules_get_charge(mol, args, type):
                     if neighbour.GetSymbol() in F_group:
                         charge_rules[i] = charge_rules[i] - 1
 
-    # for chagres not in the metal or ligand
+    # for charges not in the metal or ligand
     for i, atom in enumerate(mol.GetAtoms()):
         if atom.GetIdx() not in M_ligands and atom.GetIdx() not in args.metal_idx:
             charge_rules[i] = atom.GetFormalCharge()
+
     # recognizes charged N and O atoms in metal ligands (added to the first metal of the list as default)
     # this group contains atoms that do not count as separate charge groups (i.e. N from Py ligands)
     if len(neighbours) > 0:
@@ -1202,7 +1219,7 @@ def mol_from_sdf_or_mol_or_mol2(input_file, module):
         mols = Chem.SDMolSupplier(input_file, removeHs=False, sanitize=False)
         return mols
 
-    if module == "csearch":
+    elif module == "csearch":
 
         # using sanitize=True in this case, which is recommended for RDKit calculations
         filename = os.path.splitext(input_file)[0]

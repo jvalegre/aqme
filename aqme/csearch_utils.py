@@ -61,15 +61,14 @@ def calc_neighbours(molecule, metals_idx):
     Parameters
     ----------
     molecule : rdkit.Chem.Mol
-                                                                    [description]
+        Mol object
     metals_idx : list
-                                                                    List containing the Idx of the metals. The first match is the only one
-                                                                    considered.
+        List containing the Idx of the metals. The first match is the only one considered.
 
     Returns
     -------
     list
-                                                                    list of neighbour atoms
+        List of neighbour atoms
     """
     bonds2AtNum = dict()
     bonds2AtNum[5] = 14
@@ -457,8 +456,7 @@ def creation_of_dup_csv_csearch(program):
     Parameters
     ----------
     csearch : str
-                                                                    Conformational search method. Current valid methods are:
-                                                                    ['rdkit','fullmonte','summ']
+        Conformational search method. Current valid methods are: ['rdkit','fullmonte','summ']
 
     Returns
     -------

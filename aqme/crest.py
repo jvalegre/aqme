@@ -6,9 +6,9 @@
 
 from __future__ import print_function, absolute_import
 import os
+import sys
 import glob
 from rdkit.Chem import AllChem as Chem
-from rdkit.Chem import rdmolfiles
 import subprocess
 import rdkit
 from pathlib import Path
@@ -100,6 +100,10 @@ def crest_opt(
     xyzin = f"{dat_dir}/{name_no_path}.xyz"
     sdwriter = Chem.SDWriter(str(f"{csearch_dir}/{name_no_path}.sdf"))
 
+    os.environ["OMP_STACKSIZE"] = self.args.stacksize
+    # to run CREST with more than 1 processor
+    os.environ["OMP_NUM_THREADS"] = str(self.args.nprocs)
+
     shutil.move(f"{name}.xyz", xyzin)
 
     os.chdir(dat_dir)
@@ -171,6 +175,36 @@ def crest_opt(
         os.rename(str(dat_dir) + "/xtbopt.xyz", xyzoutxtb2)
 
     else:
+        # preoptimization with xTB to avoid issues from innacurate starting structures in CREST
+        # if you're dealing with a large system, increase the stack size
+        try:
+            command = [
+                "xtb",
+                xyzin,
+                "--opt",
+                "-c",
+                str(charge),
+                "--uhf",
+                str(int(mult) - 1),
+                "-P",
+                str(self.args.nprocs), 
+            ]
+            run_command(command, f"{xyzin.split('.')[0]}.out")
+            os.rename(str(dat_dir) + "/xtbopt.xyz", xyzin)
+        except FileNotFoundError:
+            self.args.log.write(
+                f"\nx   There was an error during the xTB pre-optimization before CREST. This error is related to parallelization of xTB jobs and is normally observed when using metal complexes in some operative systems/OpenMP versions. AQME is switching to using one processor (nprocs=1).\n"
+            )
+            self.args.nprocs = 1
+            try:
+                os.system(f"export OMP_STACKSIZE={self.args.stacksize} && export OMP_NUM_THREADS={self.args.nprocs},1 \
+                && xtb {xyzin} --opt -c {charge} --uhf {int(mult) - 1} >> {xyzin.split('.')[0]}.out")
+                os.rename(str(dat_dir) + "/xtbopt.xyz", xyzin)
+            except FileNotFoundError:
+                self.args.log.write(
+                f"\nx   There was another error during the xTB pre-optimization before CREST that could not be fixed. Tying CREST directly with no xTB preoptimization.\n"
+            )
+
         xyzoutxtb2 = xyzin
 
     xyzoutall = str(dat_dir) + "/" + name_no_path + "_conformers.xyz"
@@ -211,7 +245,14 @@ def crest_opt(
     run_command(command, str(dat_dir) + "/crest.out")
 
     # get number of n_atoms
-    natoms = open("crest_best.xyz").readlines()[0].strip()
+    try:
+        natoms = open("crest_best.xyz").readlines()[0].strip()
+    except FileNotFoundError:
+            self.args.log.write(
+                f"\nx  CREST optimization failed! This might be caused by different reasons. For example, this might happen if you're using metal complexes without specifying any kind of template in the complex_type option (i.e. squareplanar).\n"
+            )
+            sys.exit()
+
 
     if self.args.cregen and int(natoms) != 1:
         command = ["crest", "crest_best.xyz", "--cregen", "crest_conformers.xyz"]

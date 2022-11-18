@@ -22,6 +22,7 @@ import ase.optimize
 from ase.units import Hartree
 from aqme.utils import (
     rules_get_charge,
+    rdkit_sdf_read,
     load_variables,
     substituted_mol,
     creation_of_dup_csv_cmin,
@@ -505,16 +506,3 @@ class cmin:
             self.sdwriter.close()
         else:
             log.write("x  No conformers found!")
-
-
-def rdkit_sdf_read(file, args):
-    """
-    Reads sdf files and stops the execution if the file was not accesible.                                                                                                                                                                                      rdkit.Chem.Mol objects
-    """
-    inmols = Chem.SDMolSupplier(file, removeHs=False)
-
-    if inmols is None:
-        args.log.write(f"Could not open {file}")
-        args.log.finalize()
-        sys.exit()
-    return inmols
