@@ -519,7 +519,7 @@ def test_csearch_rdkit_summ_parameters(
             None,
             None,
             None,
-            0,
+            1,
             1,
             None,
             False,
@@ -663,7 +663,7 @@ def test_csearch_methods(
 
     if destination:
         file = str(csearch_methods_dir+"/Et_sdf_files/" + name + "_" + program + ".sdf")
-    elif metal_complex is False:
+    elif metal_complex is False or name == 'Ag_complex_crest':
         file = str(csearch_methods_dir+"/CSEARCH/" + name + "_" + program + ".sdf")
     else:
         file = str(

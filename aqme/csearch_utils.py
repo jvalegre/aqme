@@ -266,9 +266,9 @@ def two_embed(molecule, template, neighbours, name, maxsteps, log):
     """
     Embedding function for linear geometries. Requires 'linear.sdf' template.
     """
-    template.GetAtomWithIdx(0).setAtomicNum(neighbours[0].GetAtomicNum())
-    template.GetAtomWithIdx(1).setAtomicNum(neighbours[1].GetAtomicNum())
-    template.GetAtomWithIdx(2).setAtomicNum(53)
+    template.GetAtomWithIdx(0).SetAtomicNum(neighbours[0].GetAtomicNum())
+    template.GetAtomWithIdx(1).SetAtomicNum(neighbours[1].GetAtomicNum())
+    template.GetAtomWithIdx(2).SetAtomicNum(53)
 
     # assigning and embedding onto the core
     mol_obj, coord_map, alg_map, ci = template_embed_optimize(
@@ -287,10 +287,10 @@ def three_embed(molecule, template, neighbours, name, maxsteps, log):
     Embedding function for trigonal planar geometry. Requires
     'trigonalplanar.sdf' template.
     """
-    template.GetAtomWithIdx(0).setAtomicNum(53)
-    template.GetAtomWithIdx(1).setAtomicNum(neighbours[0].GetAtomicNum())
-    template.GetAtomWithIdx(2).setAtomicNum(neighbours[1].GetAtomicNum())
-    template.GetAtomWithIdx(3).setAtomicNum(neighbours[2].GetAtomicNum())
+    template.GetAtomWithIdx(0).SetAtomicNum(53)
+    template.GetAtomWithIdx(1).SetAtomicNum(neighbours[0].GetAtomicNum())
+    template.GetAtomWithIdx(2).SetAtomicNum(neighbours[1].GetAtomicNum())
+    template.GetAtomWithIdx(3).SetAtomicNum(neighbours[2].GetAtomicNum())
 
     # assigning and embedding onto the core
     mol_obj, coord_map, alg_map, conf_id = template_embed_optimize(
@@ -420,6 +420,7 @@ def template_embed(self, mol, complex_type, metal_idx, maxsteps, heavyonly, maxm
     depending on the number of neighbours of the metal center.
 
     """
+
     embed_functions = dict()
     embed_functions[2] = two_embed
     embed_functions[3] = three_embed
