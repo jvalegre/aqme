@@ -19,6 +19,7 @@ from progress.bar import IncrementalBar
 
 try:
     from rdkit.Chem import AllChem as Chem
+    from rdkit.Chem import Descriptors as Descriptors
     from rdkit.Chem import rdmolfiles
     from rdkit.Chem import rdMolTransforms, PropertyMol, rdDistGeom, Lipinski
 except ModuleNotFoundError:
@@ -317,10 +318,11 @@ class csearch:
                 )
                 self.args.log.finalize()
                 sys.exit()
-
+                
             # check if the optimization is constrained
             complex_ts = check_constraints(self)
 
+        # this part allows to use charges and multiplicity from COM/GJF inputs
         if self.args.charge is None:
             self.args.charge = charge
         if self.args.mult is None:
@@ -501,24 +503,16 @@ class csearch:
         if self.args.charge is not None:
             charge = self.args.charge
 
-        elif self.args.charge is None:
+        else:
             if not self.args.metal_complex:
                 charge = Chem.GetFormalCharge(mol)
             else:
                 charge = rules_get_charge(mol, self.args, "csearch")
-        else:
-            charge = 0
 
         if self.args.mult is not None:
             mult = self.args.mult
-        elif self.args.mult is None:
-            NumRadicalElectrons = 0
-            for Atom in mol.GetAtoms():
-                NumRadicalElectrons += Atom.GetNumRadicalElectrons()
-            TotalElectronicSpin = NumRadicalElectrons / 2
-            mult = int((2 * TotalElectronicSpin) + 1)
         else:
-            mult = 1
+            mult = Descriptors.NumRadicalElectrons(mol) + 1
 
         dup_data.at[dup_data_idx, "Real charge"] = charge
         dup_data.at[dup_data_idx, "Mult"] = mult
