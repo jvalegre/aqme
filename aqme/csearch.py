@@ -513,6 +513,15 @@ class csearch:
             mult = self.args.mult
         else:
             mult = Descriptors.NumRadicalElectrons(mol) + 1
+            if self.args.metal_complex:
+                # since RDKit gets the multiplicity of the metal with valence 0, the real multiplicity
+                # value needs to be adapted with the charge. If multiplicity is different than 1 or 2,
+                # the user must specify the value with the mult option
+                if (charge % 2) == 1 and charge != 0: # odd charges (i.e. +1, +3, etc)
+                    if mult == 1:
+                        mult = mult + 1
+                    if mult == 2:
+                        mult = mult - 1
 
         dup_data.at[dup_data_idx, "Real charge"] = charge
         dup_data.at[dup_data_idx, "Mult"] = mult
