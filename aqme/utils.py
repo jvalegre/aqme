@@ -764,20 +764,17 @@ def rules_get_charge(mol, args, type):
                     if atom.GetTotalValence() == 1:
                         charge_rules[0] = charge_rules[0] - 1
 
-    if metal_found:
-        if type == "csearch":
-            return np.sum(charge_rules)
-        if type == "cmin":
-            return charge_rules
+    if type == "cmin":
+        return charge_rules, metal_found
+    
+    elif type == "csearch":
+        if metal_found:
+            return np.sum(charge_rules), metal_found
 
-    # for organic molecules when using a list containing organic and organometallics molecules mixed
-    else:
-        charge = Chem.GetFormalCharge(mol)
-        if type == "csearch":
+        # for organic molecules when using a list containing organic and organometallics molecules mixed
+        else:
+            charge = Chem.GetFormalCharge(mol)
             return charge, metal_found
-        if type == "cmin":
-            return charge_rules, metal_found
-
 
 def substituted_mol(self, mol, checkI):
     """

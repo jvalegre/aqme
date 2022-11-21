@@ -497,23 +497,22 @@ class csearch:
             if not isinstance(self.args.metal_oxi, list):
                 self.args.metal_oxi = ast.literal_eval(self.args.metal_oxi)
 
-        ### Fixing all charges here
-
+        # Set charge and multiplicity
+        metal_found = False
         # user can overwrite charge and mult with the corresponding arguments
         if self.args.charge is not None:
             charge = self.args.charge
-
         else:
             if not self.args.metal_complex:
                 charge = Chem.GetFormalCharge(mol)
             else:
-                charge = rules_get_charge(mol, self.args, "csearch")
+                charge, metal_found = rules_get_charge(mol, self.args, "csearch")
 
         if self.args.mult is not None:
             mult = self.args.mult
         else:
             mult = Descriptors.NumRadicalElectrons(mol) + 1
-            if self.args.metal_complex:
+            if self.args.metal_complex and metal_found:
                 # since RDKit gets the multiplicity of the metal with valence 0, the real multiplicity
                 # value needs to be adapted with the charge. If multiplicity is different than 1 or 2,
                 # the user must specify the value with the mult option
