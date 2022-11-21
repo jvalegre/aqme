@@ -837,6 +837,20 @@ def xyz_2_sdf(file):
     subprocess.run(command_xyz, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
+def check_constraints(self):
+    if (
+        (len(self.args.constraints_atoms) != 0)
+        or (len(self.args.constraints_dist) != 0)
+        or (len(self.args.constraints_angle) != 0)
+        or (len(self.args.constraints_dihedral) != 0)
+    ):
+        complex_ts = True
+    else:
+        complex_ts = False
+
+    return complex_ts
+
+
 def com_2_xyz(input_file):
     """
     COM to XYZ to SDF for obabel

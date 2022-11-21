@@ -47,7 +47,8 @@ from aqme.csearch_utils import (
     template_embed,
     creation_of_dup_csv_csearch,
     minimize_rdkit_energy,
-    com_2_xyz
+    com_2_xyz,
+    check_constraints
 )
 from aqme.fullmonte import generating_conformations_fullmonte, realign_mol
 from aqme.utils import (
@@ -310,11 +311,15 @@ class csearch:
         else:
             # for 3D input formats, the smi variable represents the mol object
             mol = smi
-            self.args.log.write(
-                f"\nx  Failed to convert the provided input to an RDkit Mol object! Please check the starting structure."
-            )
-            self.args.log.finalize()
-            sys.exit()
+            if mol is None:
+                self.args.log.write(
+                    f"\nx  Failed to convert the provided input to an RDkit Mol object! Please check the starting structure."
+                )
+                self.args.log.finalize()
+                sys.exit()
+
+            # check if the optimization is constrained
+            complex_ts = check_constraints(self)
 
         if self.args.charge is None:
             self.args.charge = charge

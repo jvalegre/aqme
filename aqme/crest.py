@@ -79,14 +79,6 @@ def crest_opt(
     """
     Run xTB using subprocess to perform CREST/CREGEN conformer sampling
     """
-        
-    if (
-        (len(constraints_atoms) != 0)
-        or (len(constraints_dist) != 0)
-        or (len(constraints_angle) != 0)
-        or (len(constraints_dihedral) != 0)
-    ):
-        complex_ts = True
 
     name_no_path = name.replace("/", "\\").split("\\")[-1].split(".")[0]
     if self.args.destination is None:
