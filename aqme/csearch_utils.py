@@ -28,7 +28,7 @@ def load_template(complex_type, log):
     Returns
     -------
     rdkit.Chem.Mol
-                                                                    The molecule file of the corresponding template.
+        The molecule file of the corresponding template.
     """
     type2template = dict()
     type2template["squareplanar"] = "template-4-and-5.sdf"
@@ -168,19 +168,18 @@ def filter_template_mol(molecule_new, mol_objects, heavyonly, max_matches):
     Parameters
     ----------
     molecule_new : [type]
-                                                                    [description]
+        [description]
     mol_objects : [type]
-                                                                    [description]
+        [description]
     heavyonly : bool
-                                                                    If True only non-H atoms are considered for the RMS calculation
+        If True only non-H atoms are considered for the RMS calculation
     max_matches : int
-                                                                    Maximum number of matches in the RMSD?
+        Maximum number of matches in the RMSD?
 
     Returns
     -------
     bool
-                                                                    Returns True when the molecule should be kept and False when it should
-                                                                    be discarded.
+        Returns True when the molecule should be kept and False when it should be discarded.
     """
 
     if not mol_objects:
@@ -204,13 +203,14 @@ def doc_parameters(f):
     Parameters
     ----------
     f : function
-                                                                    function to decorate.
+        Function to decorate.
 
     Returns
     -------
     function
-                                                                    returns the same function with the docstring modified.
+        Returns the same function with the docstring modified.
     """
+
     description = f.__doc__
     parameters = [
         ("molecule", "rdkit.Chem.Mol", "Molecule to be embedded "),
@@ -234,13 +234,14 @@ def doc_returns(f):
     Parameters
     ----------
     f : function
-                                                                    function to decorate.
+        Function to decorate.
 
     Returns
     -------
     function
-                                                                    returns the same function with the docstring modified.
+        Returns the same function with the docstring modified.
     """
+
     description = f.__doc__
     item_fmt = "{} : {}\n    {}".format
     outputs = [

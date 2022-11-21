@@ -273,13 +273,22 @@ class csearch:
         Function to start conformer generation
         """
 
-        if self.args.smi is not None:
+        if self.args.smi is not None or self.args.input.split(".")[1] in [
+                "smi",
+                "csv",
+                "cdx",
+                "txt",
+                "yaml",
+                "yml",
+                "rtf",
+            ]:
             (
                 mol,
                 constraints_atoms,
                 constraints_dist,
                 constraints_angle,
                 constraints_dihedral,
+                complex_ts
             ) = smi_to_mol(
                 smi,
                 name,
@@ -291,50 +300,18 @@ class csearch:
                 constraints_dihedral,
             )
 
-        else:
-            if self.args.input.split(".")[1] in [
-                "smi",
-                "csv",
-                "cdx",
-                "txt",
-                "yaml",
-                "yml",
-                "rtf",
-            ]:
-                (
-                    mol,
-                    constraints_atoms,
-                    constraints_dist,
-                    constraints_angle,
-                    constraints_dihedral,
-                ) = smi_to_mol(
-                    smi,
-                    name,
-                    self.args.program.lower(),
-                    self.args.log,
-                    constraints_atoms,
-                    constraints_dist,
-                    constraints_angle,
-                    constraints_dihedral,
+            if mol is None:
+                self.args.log.write(
+                    f"\nx  Failed to convert the provided SMILES ({smi}) to an RDkit Mol object! Please check the starting smiles."
                 )
-            else:
-                (
-                    mol,
-                    constraints_atoms,
-                    constraints_dist,
-                    constraints_angle,
-                    constraints_dihedral,
-                ) = (
-                    smi,
-                    constraints_atoms,
-                    constraints_dist,
-                    constraints_angle,
-                    constraints_dihedral,
-                )
+                self.args.log.finalize()
+                sys.exit()
 
-        if mol is None:
+        else:
+            # for 3D input formats, the smi variable represents the mol object
+            mol = smi
             self.args.log.write(
-                f"\nx  Failed to convert the provided SMILES ({smi}) to RDkit Mol object! Please check the starting smiles."
+                f"\nx  Failed to convert the provided input to an RDkit Mol object! Please check the starting structure."
             )
             self.args.log.finalize()
             sys.exit()
@@ -434,6 +411,7 @@ class csearch:
                             constraints_dist,
                             constraints_angle,
                             constraints_dihedral,
+                            complex_ts,
                             coord_map,
                             alg_map,
                             template,
@@ -453,6 +431,7 @@ class csearch:
                     constraints_dist,
                     constraints_angle,
                     constraints_dihedral,
+                    complex_ts
                 )
         else:
             total_data = self.conformer_generation(
@@ -462,6 +441,7 @@ class csearch:
                 constraints_dist,
                 constraints_angle,
                 constraints_dihedral,
+                complex_ts
             )
 
         # Updates the dataframe with infromation about conformer generation
@@ -476,6 +456,7 @@ class csearch:
         constraints_dist,
         constraints_angle,
         constraints_dihedral,
+        complex_ts,
         coord_Map=None,
         alg_Map=None,
         mol_template=None,
@@ -552,6 +533,7 @@ class csearch:
                 "xyz",
             ]
         ):
+ 
             valid_structure = True
 
             status = crest_opt(
@@ -565,6 +547,7 @@ class csearch:
                 constraints_dist,
                 constraints_angle,
                 constraints_dihedral,
+                mol=mol
             )
 
         else:
@@ -580,7 +563,7 @@ class csearch:
             if valid_structure:
                 try:
                     # the conformational search for RDKit
-                    status, update_to_rdkit = self.summ_search(
+                    status = self.summ_search(
                         mol,
                         name,
                         sdwriter_init,
@@ -592,12 +575,11 @@ class csearch:
                         constraints_dist,
                         constraints_angle,
                         constraints_dihedral,
+                        complex_ts,
                         coord_Map,
                         alg_Map,
                         mol_template,
                     )
-                    dup_data.at[dup_data_idx, "status"] = status
-                    dup_data.at[dup_data_idx, "update_to_rdkit"] = update_to_rdkit
                 except (KeyboardInterrupt, SystemExit):
                     raise
 
@@ -626,9 +608,10 @@ class csearch:
         constraints_dist,
         constraints_angle,
         constraints_dihedral,
-        coord_Map=None,
-        alg_Map=None,
-        mol_template=None,
+        complex_ts,
+        coord_Map,
+        alg_Map,
+        mol_template
     ):
 
         """
@@ -636,32 +619,36 @@ class csearch:
         """
 
         # writes sdf for the first RDKit conformer generation
-        status, rotmatches, update_to_rdkit, ff, mol_crest = self.rdkit_to_sdf(
-            mol,
-            name,
-            dup_data,
-            dup_data_idx,
-            sdwriter,
-            charge,
-            mult,
-            coord_Map,
-            alg_Map,
-            mol_template
-        )
-        # this avoids memory issues when using Windows
-        try:
-            sdwriter.close()
-        except RuntimeError:
-            pass
-        # reads the initial SDF files from RDKit and uses dihedral scan if selected
-        if status not in [-1, 0]:
-            # getting the energy and mols after rotations
-            if self.args.program.lower() == "summ" and len(rotmatches) != 0:
-                status = self.dihedral_filter_and_sdf(
-                    name, dup_data, dup_data_idx, coord_Map, alg_Map, mol_template, ff
-                )
+        if not complex_ts:
+            status, rotmatches, ff, mol_crest = self.rdkit_to_sdf(
+                mol,
+                name,
+                dup_data,
+                dup_data_idx,
+                sdwriter,
+                charge,
+                mult,
+                coord_Map,
+                alg_Map,
+                mol_template
+            )
+            # this avoids memory issues when using Windows
+            try:
+                sdwriter.close()
+            except RuntimeError:
+                pass
+            # reads the initial SDF files from RDKit and uses dihedral scan if selected
+            if status not in [-1, 0]:
+                # getting the energy and mols after rotations
+                if self.args.program.lower() == "summ" and len(rotmatches) != 0:
+                    status = self.dihedral_filter_and_sdf(
+                        name, dup_data, dup_data_idx, coord_Map, alg_Map, mol_template, ff
+                    )
         if self.args.program.lower() in ['crest']:
-            rdmolfiles.MolToXYZFile(mol_crest, name + "_crest.xyz")
+            if not complex_ts:
+                rdmolfiles.MolToXYZFile(mol_crest, name + "_crest.xyz")
+            else:
+                rdmolfiles.MolToXYZFile(mol, name + "_crest.xyz")
             status = crest_opt(
                     f"{name}_{self.args.program.lower()}",
                     dup_data,
@@ -673,9 +660,11 @@ class csearch:
                     constraints_dist,
                     constraints_angle,
                     constraints_dihedral,
+                    complex_ts=complex_ts,
+                    mol=mol # this is necessary for CREST calculations with constraints
                 )
 
-        return status, update_to_rdkit
+        return status
 
     def dihedral_filter_and_sdf(
         self, name, dup_data, dup_data_idx, coord_Map, alg_Map, mol_template, ff
@@ -1193,4 +1182,4 @@ class csearch:
 
         sdwriter.close()
 
-        return status, rotmatches, update_to_rdkit, ff, mol_crest
+        return status, rotmatches, ff, mol_crest

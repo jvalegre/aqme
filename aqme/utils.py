@@ -507,6 +507,8 @@ def smi_to_mol(
     constraints_angle,
     constraints_dihedral,
 ):
+
+    complex_ts = False
     smi = smi.split(".")
     if (
         len(smi) > 1
@@ -517,7 +519,7 @@ def smi_to_mol(
     ):
         if program not in ["crest"]:
             log.write(
-                "\nx  Program not supported for conformer generation of complexes! Specify: program='crest' for complexes"
+                "\nx  Program not supported for conformer generation of complexes and TSs! Specify: program='crest' for complexes"
             )
             sys.exit()
 
@@ -535,6 +537,7 @@ def smi_to_mol(
             constraints_angle,
             constraints_dihedral,
         )
+        complex_ts = True
 
     else:
         params = Chem.SmilesParserParams()
@@ -553,6 +556,7 @@ def smi_to_mol(
         constraints_dist,
         constraints_angle,
         constraints_dihedral,
+        complex_ts
     )
 
 
@@ -603,7 +607,7 @@ def nci_ts_mol(
 
     coord = [0.0, 0.0, 5.0]
     molH = molsH[0]
-    for i, fragment in enumerate(molsH[1:]):
+    for _, fragment in enumerate(molsH[1:]):
         offset_3d = Geometry.Point3D(coord[0], coord[1], coord[2])
         molH = Chem.CombineMols(molH, fragment, offset_3d)
         coord[1] += 5
@@ -611,7 +615,7 @@ def nci_ts_mol(
 
     coord = [0.0, 0.0, 5.0]
     mol = mols[0]
-    for i, fragment in enumerate(mols[1:]):
+    for _, fragment in enumerate(mols[1:]):
         offset_3d = Geometry.Point3D(coord[0], coord[1], coord[2])
         mol = Chem.CombineMols(mol, fragment, offset_3d)
         coord[1] += 5
@@ -619,7 +623,6 @@ def nci_ts_mol(
     mol = Chem.AddHs(mol)
 
     mol = Chem.ConstrainedEmbed(mol, molH)
-    rdmolfiles.MolToXYZFile(mol, name + "_crest.xyz")
 
     atom_map = []
     for atom in mol.GetAtoms():

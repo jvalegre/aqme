@@ -72,21 +72,21 @@ def crest_opt(
     constraints_dist,
     constraints_angle,
     constraints_dihedral,
-    mol=None,
+    complex_ts=False,
+    mol=None
 ):
 
     """
     Run xTB using subprocess to perform CREST/CREGEN conformer sampling
     """
         
-    nci_ts_complex = False
     if (
         (len(constraints_atoms) != 0)
         or (len(constraints_dist) != 0)
         or (len(constraints_angle) != 0)
         or (len(constraints_dihedral) != 0)
     ):
-        nci_ts_complex = True
+        complex_ts = True
 
     name_no_path = name.replace("/", "\\").split("\\")[-1].split(".")[0]
     if self.args.destination is None:
@@ -109,7 +109,7 @@ def crest_opt(
     os.chdir(dat_dir)
     # for systems that were created from 1D and 2D inputs (i.e. SMILES), this part includes two xTB
     # constrained optimizations to avoid geometry problems in noncovalent complexes and transition states
-    if nci_ts_complex:
+    if complex_ts:
         if len(constraints_dist) != 0:
             # xTB optimization with all bonds frozen
             xyzoutxtb1 = str(dat_dir) + "/" + name_no_path + "_xtb1.xyz"
@@ -141,7 +141,10 @@ def crest_opt(
             ]
 
             run_command(command1, "{}.out".format(xyzoutxtb1.split(".xyz")[0]))
-            os.rename(str(dat_dir) + "/xtbopt.xyz", xyzoutxtb1)
+            try:
+                os.rename(str(dat_dir) + "/xtbopt.xyz", xyzoutxtb1)
+            except FileNotFoundError:
+                os.rename(str(dat_dir) + "/xtblast.xyz", xyzoutxtb1)
 
         else:
             xyzoutxtb1 = xyzin
@@ -172,7 +175,10 @@ def crest_opt(
             str(self.args.nprocs),
         ]
         run_command(command2, "{}.out".format(xyzoutxtb2.split(".xyz")[0]))
-        os.rename(str(dat_dir) + "/xtbopt.xyz", xyzoutxtb2)
+        try:
+            os.rename(str(dat_dir) + "/xtbopt.xyz", xyzoutxtb2)
+        except FileNotFoundError:
+            os.rename(str(dat_dir) + "/xtblast.xyz", xyzoutxtb2)
 
     else:
         # preoptimization with xTB to avoid issues from innacurate starting structures in CREST
@@ -210,7 +216,7 @@ def crest_opt(
     xyzoutall = str(dat_dir) + "/" + name_no_path + "_conformers.xyz"
 
     constrained_sampling = False
-    if nci_ts_complex:
+    if complex_ts:
         constrained_sampling = create_xcontrol(
             self.args,
             list(constraints_atoms),
@@ -235,7 +241,7 @@ def crest_opt(
     ]
 
     if constrained_sampling:
-        command.append("-cinp")
+        command.append("--cinp")
         command.append(".xcontrol.sample")
 
     if self.args.crest_keywords is not None:
@@ -291,6 +297,7 @@ def crest_opt(
         mol = rdkit.Chem.SDMolSupplier(file, removeHs=False, sanitize=False)
         mol_rd = rdkit.Chem.RWMol(mol[0])
         energy = str(open(file, "r").readlines()[0])
+        mol_rd.SetProp("_Name", name_no_path)
         mol_rd.SetProp("Energy", energy)
         mol_rd.SetProp("Real charge", str(charge))
         mol_rd.SetProp("Mult", str(int(mult)))

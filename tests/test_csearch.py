@@ -676,14 +676,16 @@ def test_csearch_methods(
         )
 
     assert os.path.exists(file)
-    mols = rdkit.Chem.SDMolSupplier(file, removeHs=False)
-    assert charge == int(mols[0].GetProp("Real charge"))
-    assert mult == int(mols[0].GetProp("Mult"))
+    mols = rdkit.Chem.SDMolSupplier(file, removeHs=False, sanitize=False)
+    assert charge == int(mols[-1].GetProp("Real charge"))
+    assert mult == int(mols[-1].GetProp("Mult"))
     if name == 'nci':
         assert len(mols) > 350
     # the n of conformers decreases when --nci is used
     elif name == 'nci_keyword':
         assert len(mols) < 300
+    elif name == 'ethane':
+        assert len(mols) >= 1
     else:
         assert len(mols) == output_nummols
     os.chdir(w_dir_main)
