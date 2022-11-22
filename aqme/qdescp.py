@@ -16,9 +16,10 @@ from aqme.utils import (
     load_variables,
     read_xyz_charge_mult,
     mol_from_sdf_or_mol_or_mol2,
-    run_command,
-    get_boltz_avg_properties_xtb,
+    run_command
 )
+from aqme.qdescp_utils import get_boltz_avg_properties_xtb
+
 from aqme.crest import xyzall_2_xyz
 from aqme.xtb_to_json import (
     read_fod,
@@ -235,7 +236,8 @@ class qdescp:
             str(self.inp),
         ]
         if self.args.qdescp_solvent is not None:
-            command1.append("--alpb {}".format(self.args.qdescp_solvent))
+            command1.append("--alpb")
+            command1.append(f"{self.args.qdescp_solvent}")
         run_command(command1, self.xtb_out)
 
         os.rename("xtbout.json", self.xtb_json)
@@ -257,7 +259,8 @@ class qdescp:
             str(self.args.qdescp_temp),
         ]
         if self.args.qdescp_solvent is not None:
-            command2.append("--alpb {}".format(self.args.qdescp_solvent))
+            command2.append("--alpb")
+            command2.append(f"{self.args.qdescp_solvent}")
         run_command(command2, self.xtb_gfn1)
 
         command3 = [
@@ -276,7 +279,8 @@ class qdescp:
             str(self.args.qdescp_temp),
         ]
         if self.args.qdescp_solvent is not None:
-            command3.append("--alpb {}".format(self.args.qdescp_solvent))
+            command3.append("--alpb")
+            command3.append(f"{self.args.qdescp_solvent}")
         run_command(command3, self.xtb_fukui)
 
         command4 = [
@@ -295,7 +299,8 @@ class qdescp:
             str(self.args.qdescp_temp),
         ]
         if self.args.qdescp_solvent is not None:
-            command4.append("--alpb {}".format(self.args.qdescp_solvent))
+            command4.append("--alpb")
+            command4.append(f"{self.args.qdescp_solvent}")
         run_command(command4, self.xtb_fod)
 
         os.chdir(self.args.w_dir_main)

@@ -45,22 +45,22 @@ from aqme.csearch_utils import (
     prepare_com_files,
     prepare_sdf_files,
     prepare_pdb_files,
-    template_embed,
     creation_of_dup_csv_csearch,
     minimize_rdkit_energy,
     com_2_xyz,
-    check_constraints
+    check_constraints,
+    smi_to_mol,
+    getDihedralMatches
 )
+from aqme.csearch_template_fun import template_embed
 from aqme.fullmonte import generating_conformations_fullmonte, realign_mol
 from aqme.utils import (
     rules_get_charge,
     substituted_mol,
     load_variables,
-    set_metal_atomic_number,
-    getDihedralMatches,
-    smi_to_mol
+    set_metal_atomic_number
     )
-from aqme.crest import crest_opt
+from aqme.crest_utils import crest_opt
 
 
 class csearch:
@@ -293,7 +293,6 @@ class csearch:
                 complex_ts
             ) = smi_to_mol(
                 smi,
-                name,
                 self.args.program.lower(),
                 self.args.log,
                 constraints_atoms,

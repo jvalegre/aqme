@@ -22,12 +22,11 @@ import ase.optimize
 from ase.units import Hartree
 from aqme.utils import (
     rules_get_charge,
-    rdkit_sdf_read,
     load_variables,
-    substituted_mol,
-    creation_of_dup_csv_cmin,
+    substituted_mol
 )
 from aqme.filter import ewin_filter, pre_E_filter, RMSD_and_E_filter
+from aqme.cmin_utils import creation_of_dup_csv_cmin, rdkit_sdf_read
 
 hartree_to_kcal = 627.509
 
