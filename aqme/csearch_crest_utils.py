@@ -197,8 +197,8 @@ def crest_opt(
             )
             self.args.nprocs = 1
             try:
-                os.system(f"export OMP_STACKSIZE={self.args.stacksize} && export OMP_NUM_THREADS={self.args.nprocs},1 \
-                && xtb {xyzin} --opt -c {charge} --uhf {int(mult) - 1} >> {xyzin.split('.')[0]}.out")
+                subprocess.call(f"export OMP_STACKSIZE={self.args.stacksize} && export OMP_NUM_THREADS={self.args.nprocs},1 \
+                && xtb {xyzin} --opt -c {charge} --uhf {int(mult) - 1} >> {xyzin.split('.')[0]}.out", shell=False)
                 os.rename(str(dat_dir) + "/xtbopt.xyz", xyzin)
             except FileNotFoundError:
                 self.args.log.write(

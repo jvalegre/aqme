@@ -52,15 +52,15 @@ from aqme.csearch_utils import (
     smi_to_mol,
     getDihedralMatches
 )
-from aqme.csearch_template_fun import template_embed
-from aqme.fullmonte import generating_conformations_fullmonte, realign_mol
+from aqme.csearch_template_utils import template_embed
+from aqme.csearch_fullmonte_utils import generating_conformations_fullmonte, realign_mol
 from aqme.utils import (
     rules_get_charge,
     substituted_mol,
     load_variables,
     set_metal_atomic_number
     )
-from aqme.crest_utils import crest_opt
+from aqme.csearch_crest_utils import crest_opt
 
 
 class csearch:
