@@ -16,6 +16,10 @@ Inputs structures for different sections are provided with examples and the resp
 
 Please report any bugs or missing details at the mailing list or open an issue at `github`_.
 
+.. |aqme_banner| image:: ../Logos/AQME_logo.jpg
+
+|aqme_banner|
+
 
 .. _github: https://github.com/jvalegre/aqme
 

@@ -41,7 +41,7 @@ General RDKit-based
    auto_sample : int, default=20
       Base multiplicator number used in the sample option
    ff : str, default='MMFF'
-   Force field used in RDKit optimizations and energy calculations. Current options: MMFF and UFF (if MMFF fails, AQME tries to use UFF automatically)
+      Force field used in RDKit optimizations and energy calculations. Current options: MMFF and UFF (if MMFF fails, AQME tries to use UFF automatically)
    ewin_csearch : float, default=5.0
       Energy window in kcal/mol to discard conformers (i.e. if a conformer is more than the E window compared to the most stable conformer)
    initial_energy_threshold : float, default=0.0001
@@ -114,6 +114,8 @@ Crest only
       If True, perform a CREGEN analysis after CREST (filtering options below)
    cregen_keywords : str, default=None
       Additional keywords for CREGEN (i.e. cregen_keywords='--ethr 0.02')
+
+
 """
 #####################################################.
 #          This file storesthe CSEARCH class        #

@@ -61,10 +61,10 @@ def calc_neighbours(molecule, metals_idx):
     Parameters
     ----------
     molecule : rdkit.Chem.Mol
-                                                                    [description]
+        [description]
     metals_idx : list
-                                                                    List containing the Idx of the metals. The first match is the only one
-                                                                    considered.
+        List containing the Idx of the metals. The first match is the only one
+        considered.
 
     Returns
     -------
