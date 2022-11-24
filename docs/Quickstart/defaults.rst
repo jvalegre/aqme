@@ -1,5 +1,3 @@
-.. _defaults:
-
 ===============================
 Default and Required Parameters
 ===============================

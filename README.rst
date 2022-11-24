@@ -41,7 +41,7 @@
 
     <input checked=""  disabled="" type="checkbox">
 
-.. |uncheck| raw:: html
+.. *  raw:: html
 
     <input type="checkbox">
 
@@ -62,22 +62,18 @@ What is AQME?
 .. introduction-start
 
 The code is an ensemble of automated QM workflows that can be run through jupyter notebooks, command lines and yaml files. Some of the most popular workflows include:  
-   |uncheck| RDKit- and CREST-based conformer generator leading to 
-   ready-to-submit QM input files starting from individual files or SMILES 
-   databases  
-
-   |uncheck| Post-processing of QM output files to fix convergence errors, 
-   extra imaginary frequencies, unfinished jobs, duplicates and error 
-   terminations, as well as to detect spin contamination, isomerization issues, 
-   and more optimization problems  
-
-   |uncheck| Analysis of homogeneity of QM calculations (same level of theory, 
-   grid size, program and version, solvation models, etc)  
-
-   |uncheck| Generation of xTB, DFT and RDKit descriptors in json and csv files 
-   that are ready to use in machine-learning models or used to predict NMR spectra  
-
-   |uncheck| More other useful workflows  
+   *  RDKit- and CREST-based conformer generator leading to 
+      ready-to-submit QM input files starting from individual files or SMILES 
+      databases  
+   *  Post-processing of QM output files to fix convergence errors, 
+      extra imaginary frequencies, unfinished jobs, duplicates and error 
+      terminations, as well as to detect spin contamination, isomerization issues, 
+      and more optimization problems  
+   *  Analysis of homogeneity of QM calculations (same level of theory, 
+      grid size, program and version, solvation models, etc)  
+   *  Generation of xTB, DFT and RDKit descriptors in json and csv files 
+      that are ready to use in machine-learning models or used to predict NMR spectra  
+   *  More other useful workflows  
 
 Don't miss out the latest hands-on tutorials from our 
 `YouTube channel <https://www.youtube.com/channel/UCHRqI8N61bYxWV9BjbUI4Xw>`_  
@@ -207,11 +203,9 @@ RDKit-based conformational sampling
 
 Faster sampling, suitable especially for unimolecular systems. Options:  
 
-   |uncheck| RDKit standard sampling  
-   
-   |uncheck| Systematic Unbounded Multiple Minimum search (SUMM)  
-   
-   |uncheck| FullMonte sampling  
+   *  RDKit standard sampling  
+   *  Systematic Unbounded Multiple Minimum search (SUMM)  
+   *  FullMonte sampling  
 
 CREST-based conformational sampling
 ...................................
@@ -225,20 +219,17 @@ cmin
 Module used to refine conformers generated in CSEARCH through new geometry 
 optimizations. Options:  
 
-   |uncheck| xTB (GFN0-xTB, GFN1-xTB, GFN2-xTB, GFN-FF)  
-
-   |uncheck| ANI (ANI-1x, ANI-1ccx, ANI-2x)  
+   *  xTB (GFN0-xTB, GFN1-xTB, GFN2-xTB, GFN-FF)  
+   *  ANI (ANI-1x, ANI-1ccx, ANI-2x)  
 
 qprep
 +++++
 
 Generator of input files for QM calculations. Options:  
 
-   |uncheck| Gaussian  
-
-   |uncheck| ORCA  
-
-   |uncheck| pySCF (loading parameters in jupyter notebook)  
+   *  Gaussian  
+   *  ORCA  
+   *  pySCF (loading parameters in jupyter notebook)  
 
 
 qcorr
@@ -246,27 +237,23 @@ qcorr
 
 cclib-based analyzer of output files from multiple QM programs. This module:  
 
-   |uncheck| Separates normally terminated files with no errors, extra imaginary 
-   frequencies, duplicates, isomerization to other systems and spin contamination  
-
-   |uncheck| Automatically generates new com files to "fix" the different issues 
-   of the calculations with strategies that are optimal for each type of issue 
-   (Gaussian and ORCA)  
-
-   |uncheck| Checks that all the calculations are homogeneous (i.e. using the 
-   same level of theory, same grid size, same program and version, 
-   solvation model, etc)  
+   *  Separates normally terminated files with no errors, extra imaginary 
+      frequencies, duplicates, isomerization to other systems and spin contamination  
+   *  Automatically generates new com files to "fix" the different issues 
+      of the calculations with strategies that are optimal for each type of issue 
+      (Gaussian and ORCA)  
+   *  Checks that all the calculations are homogeneous (i.e. using the 
+      same level of theory, same grid size, same program and version, 
+      solvation model, etc)  
 
 qdescp
 ++++++
 
 Descriptor generator from multiple input types such as SMILES, log files, xyz, etc. Descriptors generated with:  
 
-   |uncheck| RDKit descriptors (i.e. number of polar H, number of aromatic rings, etc)  
-
-   |uncheck| xTB (i.e. atomic charges, molecular dipole, solvation energy, etc)  
-
-   |uncheck| QM programs (i.e. descriptors from cclib) 
+   *  RDKit descriptors (i.e. number of polar H, number of aromatic rings, etc)  
+   *  xTB (i.e. atomic charges, molecular dipole, solvation energy, etc)  
+   *  QM programs (i.e. descriptors from cclib) 
 
 .. features-modules-end
 
@@ -283,11 +270,9 @@ There are multiple ready-to-use workflows presented as jupyter notebooks in the
 
   * CSEARCH_CMIN_conformer_generation folder --> CSEARCH/CMIN conformational 
     sampling from SMILES and creation of QM input files  
-
   * QCORR_processing_QM_outputs --> QCORR analysis of Gaussian output files, 
     generation of JSON files with all the information and creation of new QM input 
     files  
-
   * QPREP_generating_input_files --> QPREP preparation of input files for 
     Gaussian, ORCA and PySCF from LOG/OUT, SDF and JSON files
 
@@ -373,42 +358,38 @@ Extended documentation
 
 ** ReadTheDocs page in process **
 
-.. developers-start
-
 Developers and help desk
 ------------------------
 
+.. developers-start 
+
 List of main developers and contact emails:  
 
-|uncheck| Shree Sowndarya S. V. [
-`ORCID <https://orcid.org/0000-0002-4568-5854>`__ , 
-`Github <https://github.com/shreesowndarya>`__ , 
-`email <svss@colostate.edu>`__]
-main developer of the CSEARCH, CMIN, QDESCP and VISMOL modules. 
-
-|uncheck| Juan V. Alegre-Requena [
-`ORCID <https://orcid.org/0000-0002-0769-7168>`__ , 
-`Github <https://github.com/jvalegre>`__ , 
-`email <jvalegre@unizar.es>`__ ]
-main developer of the QCORR and QPREP modules.   
-
-|uncheck| Turki Alturaifi [
-`webpage <https://www.chem.pitt.edu/person/turki-alturaifi>`__ ,
-`Github <https://github.com/turkiAlturaifi>`__ , 
-`email <turki0@rams.colostate.edu>`__] 
-worked in benchmarking the parameters for RDKit-based conformer generation. 
-
-|uncheck| Raúl Pérez-Soto [
-`ORCID <https://orcid.org/0000-0002-6237-2155>`__ ,
-`Github <https://github.com/rperezsoto>`__ ,
-`email <rperezsoto.research@gmail.com>`__ ] 
-worked in refactoring the code.
-
-|uncheck| Robert S. Paton [
-`ORCID <https://orcid.org/0000-0002-0104-4166>`__ ,
-`Github <https://github.com/bobbypaton>`__ , 
-`email <robert.paton@colostate.edu>`__]
-research group supervisor and code advisor.
+*  Shree Sowndarya S. V. [
+   `ORCID <https://orcid.org/0000-0002-4568-5854>`__ , 
+   `Github <https://github.com/shreesowndarya>`__ , 
+   `email <svss@colostate.edu>`__]
+   main developer of the CSEARCH, CMIN, QDESCP and VISMOL modules. 
+*  Juan V. Alegre-Requena [
+   `ORCID <https://orcid.org/0000-0002-0769-7168>`__ , 
+   `Github <https://github.com/jvalegre>`__ , 
+   `email <jvalegre@unizar.es>`__ ]
+   main developer of the QCORR and QPREP modules.   
+*  Turki Alturaifi [
+   `webpage <https://www.chem.pitt.edu/person/turki-alturaifi>`__ ,
+   `Github <https://github.com/turkiAlturaifi>`__ , 
+   `email <turki0@rams.colostate.edu>`__] 
+   worked in benchmarking the parameters for RDKit-based conformer generation. 
+*  Raúl Pérez-Soto [
+   `ORCID <https://orcid.org/0000-0002-6237-2155>`__ ,
+   `Github <https://github.com/rperezsoto>`__ ,
+   `email <rperezsoto.research@gmail.com>`__ ] 
+   worked in refactoring the code.
+*  Robert S. Paton [
+   `ORCID <https://orcid.org/0000-0002-0104-4166>`__ ,
+   `Github <https://github.com/bobbypaton>`__ , 
+   `email <robert.paton@colostate.edu>`__]
+   research group supervisor and code advisor.
 
 For suggestions and improvements of the code (greatly appreciated!), please 
 reach out through the issues and pull requests options of Github.

@@ -1,90 +1,94 @@
-=====================================
-Welcome to aqme's documentation!
-=====================================
-
-This user guide focuses on the applications of aqme for creation of
-conformers and provides wrapper for  analysis of Gaussian output files.
-
-We provide a bunch examples depicting the uses of aqme in
-organic molecules, metal complexes extended upto crystals.
-
-All guides follow the a structure which allows the use of command
-line for simple tasks and .yaml files for more detailed tasks.
-
-Inputs structures for different sections are provided with examples and the respective outputs!
-
-
-Please report any bugs or missing details at the mailing list or open an issue at `github`_.
-
 .. |aqme_banner| image:: ../Logos/AQME_logo.jpg
 
 |aqme_banner|
 
+.. include:: ../README.rst
+   :start-after: badges-start
+   :end-before: badges-end
 
 .. _github: https://github.com/jvalegre/aqme
 
-.. toctree::
-	 :maxdepth: 3
-	 :caption: Quickstart
+.. include:: ../README.rst
+   :start-after: checkboxes-start
+   :end-before: checkboxes-end
 
-	 Quickstart/setup
-	 Quickstart/requirements
-	 Quickstart/basic
-	 Quickstart/defaults
-	 Quickstart/development
+=====================================
+Welcome to aqme's documentation!
+=====================================
 
-.. toctree::
-	:maxdepth: 3
-	:caption: Input Formats
+.. include:: ../README.rst
+   :start-after: introduction-start
+   :end-before: introduction-end
 
-	Input Formats/Input Formats
+.. include:: ../README.rst
+   :start-after: reference-start
+   :end-before: reference-end
 
 
-.. toctree::
-	:maxdepth: 3
-	:caption: Conformer Generation
-
-	Conformer Generation/Organic Molecules
-	Conformer Generation/Metal Complex
-	Conformer Generation/Crystals
+Please report any bugs or missing details at the mailing list or open an issue at `github`_.
 
 .. toctree::
-	:maxdepth: 3
-	:caption: Templates
+    :maxdepth: 3
+    :caption: Quickstart
 
-	Templates/Templates
+    Quickstart/setup
+    Quickstart/requirements
+    Quickstart/basic
+    Quickstart/defaults
+    Quickstart/development
+
+.. toctree::
+   :maxdepth: 3
+   :caption: Input Formats
+
+   Input Formats/Input Formats
 
 
 .. toctree::
-	:maxdepth: 3
-	:caption: Methods
+   :maxdepth: 3
+   :caption: Conformer Generation
 
-	Methods/RDKit Only
-	Methods/RDKit + xTB
-	Methods/RDKit + ANI1ccx
-
-.. toctree::
-	:maxdepth: 3
-	:caption: Gaussian Input Files
-
-	Gaussian Input Files/Options for input parameters
+   Conformer Generation/Organic Molecules
+   Conformer Generation/Metal Complex
+   Conformer Generation/Crystals
 
 .. toctree::
-	:maxdepth: 3
-	:caption: Analysis
+   :maxdepth: 3
+   :caption: Templates
 
-	Analysis/Options for Analysis
+   Templates/Templates
 
 .. toctree::
-	:maxdepth: 3
-	:caption: Misc
+   :maxdepth: 3
+   :caption: Methods
 
-	Misc/versions
-	Misc/license
-	Misc/help
+   Methods/RDKit Only
+   Methods/RDKit + xTB
+   Methods/RDKit + ANI1ccx
+
+.. toctree::
+   :maxdepth: 3
+   :caption: Gaussian Input Files
+
+   Gaussian Input Files/Options for input parameters
+
+.. toctree::
+   :maxdepth: 3
+   :caption: Analysis
+
+   Analysis/Options for Analysis
 
 .. toctree:: 
-	:caption: API Reference
+   :caption: API Reference
+   :maxdepth: 1
 
-	API/API_Reference.rst
+   API/API_Reference.rst
+
+.. toctree::
+   :maxdepth: 3
+   :caption: Misc
+
+   Misc/versions
+   Misc/license
+   Misc/help
 
