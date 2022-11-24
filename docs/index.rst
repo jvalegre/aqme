@@ -78,3 +78,9 @@ Please report any bugs or missing details at the mailing list or open an issue a
 	Misc/versions
 	Misc/license
 	Misc/help
+
+.. toctree:: 
+	:caption: API Reference
+
+	API/API_Reference.rst
+
