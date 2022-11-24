@@ -1,3 +1,42 @@
+"""
+Parameters
+----------
+
+   files : list of str, default=''
+      Filenames of QM output files to analyze. If *.log (or other strings that are not lists such as *.out) are specified, the program will look for all the log files in the working directory through glob.glob(*.log)
+   w_dir_main : str, default=os.getcwd()
+      Working directory
+   fullcheck : bool, default=True
+      Perform an analysis to detect whether the calculations were done homogeneously (i.e. same level of theory, solvent, grid size, etc)
+   varfile : str, default=None
+      Option to parse the variables using a yaml file (specify the filename)
+   ifreq_cutoff : float, default=0.0
+      Cut off for to consider whether a frequency is imaginary (absolute of the specified value is used)
+   amplitude_ifreq : float, default=0.2
+      Amplitude used to displace the imaginary frequencies to fix
+   freq_conv : str, default=None
+      If a string is defined, it will remove calculations that converged during optimization but did not convergence in the subsequent frequency calculation. Options: opt keyword as string (i.e. 'opt=(calcfc,maxstep=5)'). If readfc is specified in the string, the chk option must be included as well.
+   s2_threshold : float, default=10.0
+      Cut off for spin contamination during analysis in % of the expected value (i.e. multiplicity 3 has an the expected <S**2> of 2.0, if s2_threshold = 10, the <S**2> value is allowed to be 2.0 +- 0.2). Set s2_threshold = 0 to deactivate this option.
+   dup_threshold : float, default=0.0001
+      Energy (in hartree) used as the energy difference in E, H and G to detect duplicates
+   isom_type : str, default=None
+      Check for isomerization from the initial input file to the resulting output files. It requires the extension of the initial input files (i.e. isom_type='com' or 'gjf') and the folder of the input files must be added in the isom_inputs option
+   isom_inputs : str, default=os.getcwd()
+      Folder containing the initial input files to check for isomerization
+   vdwfrac : float, default=0.50
+      Fraction of the summed VDW radii that constitutes a bond between two atoms in the isomerization filter
+   covfrac : float, default=1.10
+      Fraction of the summed covalent radii that constitutes a bond between two atoms in the isomerization filter
+
+.. note:: 
+   New input files are generated through the QPREP module and, therefore, all 
+   QPREP arguments can be used when calling QCORR and will overwrite default 
+   options. For example, if the user specifies qm_input='wb97xd/def2svp', 
+   all the new input files generated to fix issues will contain this keywords 
+   line. See examples in the 'Example_workflows' folder for more information.
+
+"""
 ######################################################.
 #        This file stores the QCORR class            #
 ######################################################.
@@ -38,12 +77,12 @@ from aqme.qprep import qprep
 
 class qcorr:
     """
-    Class containing all the functions from the QCORR module.
-
-    Parameters
-    ----------
-    kwargs : argument class
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    Specify any arguments from the QCORR module (for a complete list of variables, visit the AQME documentation)
+    Class used to generate QM input files from QM output files (Currently 
+    only gaussian and Orca are supported). It includes generation of SP 
+    input files as well as fixing error terminations or removing imaginary 
+    frequencies. 
+    For further detail on the currently accepted keyword arguments (kwargs) 
+    please look at the Parameters section (in the module documentation).
     """
 
     def __init__(self, **kwargs):
