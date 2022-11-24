@@ -81,6 +81,8 @@ from scipy.spatial.distance import cdist
 class qdescp:
     """
     Class used to extract or calculate descriptors based on xTB calculations.
+    For further detail on the currently accepted keyword arguments (kwargs) 
+    please look at the Parameters section (in the module documentation). 
     """
 
     def __init__(self, **kwargs):

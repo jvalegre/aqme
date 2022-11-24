@@ -26,7 +26,9 @@ from aqme.utils import (
 
 class vismol:
     """
-    Class to visualize the molecules from SDF files
+    Class to visualize the molecules from SDF files.
+    For further detail on the currently accepted keyword arguments (kwargs) 
+    please look at the Parameters section (in the module documentation). 
     """
 
     def __init__(self, **kwargs):
