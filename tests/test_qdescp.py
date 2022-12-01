@@ -8,7 +8,7 @@
 import os
 import pytest
 from aqme.qdescp import qdescp
-from aqme.xtb_to_json import read_json
+from aqme.qdescp_utils import read_json
 import glob
 import shutil
 

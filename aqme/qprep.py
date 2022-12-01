@@ -17,7 +17,7 @@ from aqme.utils import (
     read_xyz_charge_mult,
     mol_from_sdf_or_mol_or_mol2,
 )
-from aqme.crest import xyzall_2_xyz
+from aqme.csearch_crest_utils import xyzall_2_xyz
 from pathlib import Path
 
 

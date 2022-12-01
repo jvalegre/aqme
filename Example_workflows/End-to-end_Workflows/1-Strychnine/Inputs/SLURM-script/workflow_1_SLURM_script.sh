@@ -81,7 +81,7 @@ echo "Time $jobname: $sec seconds"
 python -m aqme --csearch --program rdkit --smi 'C1CN2CC3=CCO[C@H]4CC(=O)N5[C@H]6[C@H]4[C@H]3C[C@H]2[C@@]61C7=CC=CC=C75' --name Strychnine
 
 # Run QPREP to create Gaussian input files
-python -m aqme --qprep --program gaussian --files "CSEARCH/rdkit/*sdf" --qm_input 'B3LYP/6-31+G(d,p) opt freq' --mem '24GB' --nprocs "$childcpu"
+python -m aqme --qprep --program gaussian --files "CSEARCH/*sdf" --qm_input 'B3LYP/6-31+G(d,p) opt freq' --mem '24GB' --nprocs "$childcpu"
 
 # Run Gaussian with the generated input files
 echo "Starting opt-freq calculations"

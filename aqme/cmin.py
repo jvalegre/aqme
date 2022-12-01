@@ -23,10 +23,10 @@ from ase.units import Hartree
 from aqme.utils import (
     rules_get_charge,
     load_variables,
-    substituted_mol,
-    creation_of_dup_csv_cmin,
+    substituted_mol
 )
 from aqme.filter import ewin_filter, pre_E_filter, RMSD_and_E_filter
+from aqme.cmin_utils import creation_of_dup_csv_cmin, rdkit_sdf_read
 
 hartree_to_kcal = 627.509
 
@@ -38,7 +38,7 @@ class cmin:
     Parameters
     ----------
     kwargs : argument class
-                                                                                                                                                                                               Specify any arguments from the CMIN module (for a complete list of variables, visit the AQME documentation)
+        Specify any arguments from the CMIN module (for a complete list of variables, visit the AQME documentation)
     """
 
     def __init__(self, **kwargs):
@@ -68,6 +68,7 @@ class cmin:
         for file in self.args.files:
             # load jobs for cmin minimization
             self.mols, self.name = self.load_jobs(file)
+            self.args.log.write(f"\n   ----- {self.name} -----")
 
             if self.args.destination is None:
                 self.cmin_folder = Path(self.args.w_dir_main).joinpath(
@@ -505,16 +506,3 @@ class cmin:
             self.sdwriter.close()
         else:
             log.write("x  No conformers found!")
-
-
-def rdkit_sdf_read(file, args):
-    """
-    Reads sdf files and stops the execution if the file was not accesible.                                                                                                                                                                                      rdkit.Chem.Mol objects
-    """
-    inmols = Chem.SDMolSupplier(file, removeHs=False)
-
-    if inmols is None:
-        args.log.write(f"Could not open {file}")
-        args.log.finalize()
-        sys.exit()
-    return inmols

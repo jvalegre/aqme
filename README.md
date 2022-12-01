@@ -196,7 +196,7 @@ AQME can also be run through command lines. Some examples are:
     *-- Options for RDKit-based methods (RDKit, SUMM and Fullmonte), organometallic molecules only --*  
     **metal_complex : bool, default=False**  
         Performs modified conformational sampling of metal complexes, fixing issues related to RDKit when dealing with metals. This option works well with metal coordination numbers up to 6, but it might give trouble with metals containing 7 or more ligands  
-    **metal : list of str, default=[]**  
+    **metal_atoms : list of str, default=[]**  
         Specify metal atom(s) of the system. Multiple metals can be used simultaneously (i.e. ['Pd','Ir'])  
     **metal_oxi : list of int, default=[]**  
         Specify metal oxidation state. Multiple metals can be used simultaneously (i.e. [2,3]). This is important to calculate the charge of the molecule based on SMILES strings  
@@ -350,7 +350,7 @@ AQME can also be run through command lines. Some examples are:
 ## Developers and help desk
 List of main developers and contact emails:  
   - [ ] [Shree Sowndarya S. V.](https://orcid.org/0000-0002-4568-5854), main developer of the CSEARCH, CMIN, QDESCP and VIZMOL modules. Contact: [svss@colostate.edu](mailto:svss@colostate.edu)  
-  - [ ] [Juan V. Alegre-Requena](https://orcid.org/0000-0002-0769-7168), main developer of the QCORR and QPREP modules. Contact: [jvalegre@unizar.es](mailto:jvalegre@unizar.es)  
+  - [ ] [Juan V. Alegre-Requena](https://orcid.org/0000-0002-0769-7168), main developer of the CSEARCH, QCORR, QPREP and QDESCP modules. Contact: [jvalegre@unizar.es](mailto:jvalegre@unizar.es)  
   - [ ] [Turki Alturaifi](https://www.chem.pitt.edu/person/turki-alturaifi), worked in benchmarking the parameters for RDKit-based conformer generation. Contact: [turki0@rams.colostate.edu](mailto:turki0@rams.colostate.edu)  
   - [ ] [Raúl Pérez-Soto](https://orcid.org/0000-0002-6237-2155), worked in refactoring the code. Contact: [rperez@iciq.es](mailto:rperez@iciq.es)  
   - [ ] [Robert S. Paton](https://orcid.org/0000-0002-0104-4166), research group supervisor and code advisor. Contact: [robert.paton@colostate.edu](mailto:robert.paton@colostate.edu)  
@@ -361,4 +361,4 @@ For suggestions and improvements of the code (greatly appreciated!), please reac
 AQME is freely available under an [MIT](https://opensource.org/licenses/MIT) License  
 
 ## Reference
-AQME v1.3, Alegre-Requena, J. V.; Sowndarya, S.; Pérez-Soto, R.; Alturaifi, T. M.; Paton, R. S., 2022. https://github.com/jvalegre/aqme  
+AQME v1.4, Alegre-Requena, J. V.; Sowndarya, S.; Pérez-Soto, R.; Alturaifi, T. M.; Paton, R. S., 2022. https://github.com/jvalegre/aqme  

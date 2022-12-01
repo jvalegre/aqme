@@ -1,12 +1,8 @@
-import glob
-from aqme.csearch import csearch
-from aqme.qdescp import qdescp
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 from gnn_functions import *
-from sklearn.metrics import r2_score
 import sklearn.metrics as metrics
 import tensorflow as tf
 
