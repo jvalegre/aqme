@@ -544,7 +544,7 @@ def load_variables(kwargs, aqme_module, create_dat=True):
                 logger_1 = "QDESCP"
 
             elif aqme_module == "vismol":
-                logger_1 == "VISMOL"
+                logger_1 = "VISMOL"
 
             if txt_yaml not in [
                 "",
