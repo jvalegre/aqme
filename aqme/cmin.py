@@ -38,7 +38,7 @@ class cmin:
     Parameters
     ----------
     kwargs : argument class
-                                                                                                                                                                                               Specify any arguments from the CMIN module (for a complete list of variables, visit the AQME documentation)
+        Specify any arguments from the CMIN module (for a complete list of variables, visit the AQME documentation)
     """
 
     def __init__(self, **kwargs):
@@ -68,6 +68,7 @@ class cmin:
         for file in self.args.files:
             # load jobs for cmin minimization
             self.mols, self.name = self.load_jobs(file)
+            self.args.log.write(f"\n   ----- {self.name} -----")
 
             if self.args.destination is None:
                 self.cmin_folder = Path(self.args.w_dir_main).joinpath(

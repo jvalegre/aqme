@@ -534,11 +534,15 @@ def load_variables(kwargs, aqme_module, create_dat=True):
             elif aqme_module == "csearch":
                 logger_1 = "CSEARCH"
 
+            elif aqme_module == "cmin":
+                logger_1 = "CMIN"
+
             elif aqme_module == "qprep":
                 logger_1 = "QPREP"
 
             elif aqme_module == "qdescp":
                 logger_1 = "QDESCP"
+
             elif aqme_module == "vismol":
                 logger_1 == "VISMOL"
 
