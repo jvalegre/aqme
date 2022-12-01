@@ -1102,7 +1102,11 @@ class csearch:
         mol.SetProp("_Name", name)
 
         # detects and applies auto-detection of initial number of conformers
-        if self.args.sample == "auto":
+        if self.args.program.lower() in ['crest']:
+            # CREST only uses the most stable conformer from RDKit,
+            # and initial_confs can be low to speed up the process
+            initial_confs = self.args.auto_sample
+        elif self.args.sample == "auto":
             initial_confs = int(self.auto_sampling(mol))
         else:
             initial_confs = int(self.args.sample)
