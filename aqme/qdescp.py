@@ -28,7 +28,7 @@ from aqme.qdescp_utils import (
     read_fukui
 )
 
-from aqme.csearch_crest_utils import xyzall_2_xyz
+from aqme.csearch.crest import xyzall_2_xyz
 from scipy.spatial.distance import cdist
 
 

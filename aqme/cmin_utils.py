@@ -12,7 +12,8 @@ hartree_to_kcal = 627.509
 
 def rdkit_sdf_read(file, args):
     """
-    Reads sdf files and stops the execution if the file was not accessible.                                                                                                                                                                                      rdkit.Chem.Mol objects
+    Reads sdf files and stops the execution if the file was not accessible.
+    rdkit.Chem.Mol objects
     """
     
     inmols = Chem.SDMolSupplier(file, removeHs=False)
