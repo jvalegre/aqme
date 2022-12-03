@@ -37,7 +37,7 @@ except FileNotFoundError:
     )
     sys.exit()
 from aqme.filter import filters, ewin_filter, pre_E_filter, RMSD_and_E_filter
-from aqme.csearch_utils import (
+from aqme.csearch.utils import (
     prepare_direct_smi,
     prepare_smiles_files,
     prepare_csv_files,
@@ -52,15 +52,15 @@ from aqme.csearch_utils import (
     smi_to_mol,
     getDihedralMatches
 )
-from aqme.csearch_template_utils import template_embed
-from aqme.csearch_fullmonte_utils import generating_conformations_fullmonte, realign_mol
+from aqme.csearch.templated import template_embed
+from aqme.csearch.fullmonte import generating_conformations_fullmonte, realign_mol
 from aqme.utils import (
     rules_get_charge,
     substituted_mol,
     load_variables,
     set_metal_atomic_number
     )
-from aqme.csearch_crest_utils import crest_opt
+from aqme.csearch.crest import crest_opt
 
 
 class csearch:

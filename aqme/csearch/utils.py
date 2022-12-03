@@ -14,7 +14,7 @@ from aqme.utils import (
     mol_from_sdf_or_mol_or_mol2,
     read_xyz_charge_mult,
 )
-from aqme.csearch_crest_utils import nci_ts_mol
+from aqme.csearch.crest import nci_ts_mol
 
 
 def creation_of_dup_csv_csearch(program):
