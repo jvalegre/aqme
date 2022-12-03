@@ -4,7 +4,7 @@ csearch
 .. autoclass:: aqme.csearch.csearch
    :members:
 
-.. automodule:: aqme.csearch
+.. automodule:: aqme.csearch.base
 
 
 
