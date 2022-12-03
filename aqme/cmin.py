@@ -274,18 +274,18 @@ class cmin:
         Parameters
         ----------
         elements : [type]
-                                                                                                                                                                                                   [description]
+            [description]
         coordinates : [type]
-                                                                                                                                                                                                   [description]
+            [description]
         args : argparse.args
-                                                                                                                                                                                                   [description]
+            [description]
         log : Logger
-                                                                                                                                                                                                   [description]
+            [description]
 
         Returns
         -------
         tuple
-                                                                                                                                                                                                   sqm_energy, coordinates
+            sqm_energy, coordinates
         """
 
         from xtb.ase.calculator import XTB
@@ -341,24 +341,24 @@ class cmin:
         Parameters
         ----------
         ase : [type]
-                                                                                                                                                                                                   [description]
+            [description]
         torch : [type]
-                                                                                                                                                                                                   [description]
+            [description]
         model : [type]
-                                                                                                                                                                                                   [description]
+            [description]
         device : [type]
-                                                                                                                                                                                                   [description]
+            [description]
         elements : [type]
-                                                                                                                                                                                                   [description]
+            [description]
         coordinates : [type]
-                                                                                                                                                                                                   [description]
+            [description]
         args : [type]
-                                                                                                                                                                                                   [description]
+            [description]
 
         Returns
         -------
         tuple
-                                                                                                                                                                                                   sqm_energy, coordinates
+            sqm_energy, coordinates
         """
 
         try:
