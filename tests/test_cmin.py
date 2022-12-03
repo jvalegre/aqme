@@ -10,7 +10,6 @@ import pytest
 from aqme.cmin import cmin
 import rdkit
 import shutil
-import glob
 
 # saves the working directory
 w_dir_main = os.getcwd()
@@ -198,13 +197,15 @@ def test_cmin_methods(
 def test_remove(folder):
     os.chdir(w_dir_main)
     if os.path.exists(f"{w_dir_main}/tests/cmin_methods/CMIN"):
-        files_remove = [f"{w_dir_main}/tests/cmin_methods/AQME_data.dat",f"{w_dir_main}/tests/cmin_methods/ase.opt"]
+        files_remove = [f"{w_dir_main}/tests/cmin_methods/CMIN_data.dat",f"{w_dir_main}/tests/cmin_methods/ase.opt"]
         files_remove.append(f"{w_dir_main}/tests/cmin_methods/ANI1_opt.traj")
+        files_remove.append(f"{w_dir_main}/tests/cmin_methods/CMIN-Data.csv")
         shutil.rmtree(f"{w_dir_main}/tests/cmin_methods/CMIN")
-        for f in glob.glob(f"{w_dir_main}/tests/cmin_methods/CMIN*")+files_remove:
+        for f in files_remove:
             os.remove(f)
     if os.path.exists(f"{w_dir_main}/tests/cmin_xtb/CMIN"):
-        files_remove = [f"{w_dir_main}/tests/cmin_xtb/AQME_data.dat",f"{w_dir_main}/tests/cmin_xtb/ase.opt"]
+        files_remove = [f"{w_dir_main}/tests/cmin_xtb/CMIN_data.dat",f"{w_dir_main}/tests/cmin_xtb/ase.opt"]
+        files_remove.append(f"{w_dir_main}/tests/cmin_xtb/CMIN-Data.csv")
         shutil.rmtree(f"{w_dir_main}/tests/cmin_xtb/CMIN")
-        for f in glob.glob(f"{w_dir_main}/tests/cmin_xtb/CMIN*")+files_remove:
+        for f in files_remove:
             os.remove(f)

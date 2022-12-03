@@ -82,8 +82,11 @@ class vismol:
                     ),
                 )
                 if file.split(".")[1].lower() in ["xyz", "pdb"]:
-                    # delete SDF files when the input was an XYZ/PDB file
-                    os.remove(sdf_file)
+                    try:
+                        # delete SDF files when the input was an XYZ/PDB file
+                        os.remove(sdf_file)
+                    except PermissionError:
+                        pass # in Windows, the generated SDF file cannot be removed
 
         if self.args.verbose:
             elapsed_time = round(time.time() - start_time_overall, 2)

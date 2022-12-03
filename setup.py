@@ -51,6 +51,8 @@ setup(
         "seaborn",
         "cffi",
         "goodvibes",
+        "py3Dmol",
+        "ipywidgets"
     ],
     python_requires=">=3.0",
     include_package_data=True,

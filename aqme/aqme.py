@@ -41,6 +41,9 @@ def main():
     args = command_line_args()
     args.command_line = True
 
+    if not args.csearch and not args.cmin and not args.qprep and not args.qcorr and not args.qdescp:
+        print('x  No module was specified in the command line! (i.e. --csearch for conformer generation)\n')
+
     # CSEARCH
     if args.csearch:
         csearch(

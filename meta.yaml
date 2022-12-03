@@ -32,6 +32,8 @@ requirements:
     - openbabel
     - rdkit
     - goodvibes
+    - py3Dmol
+    - ipywidgets
 
 test:
   imports:
