@@ -21,11 +21,7 @@ Other Modules
 .. toctree::
    :maxdepth: 1
 
-   aqme.crest
-   aqme.csearch_utils
-   aqme.fullmonte
    aqme.qcorr_utils
    aqme.utils
    aqme.vismol
-   aqme.xtb_to_json
    
