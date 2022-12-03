@@ -1,3 +1,50 @@
+"""
+Parameters
+----------
+
+General
++++++++
+
+   w_dir_main : str, default=os.getcwd()
+      Working directory
+   destination : str, default=None,
+      Directory to create the JSON file(s)
+   program : str, default=None
+      Program required to create the new descriptors. Current options: 'xtb', 'nmr'
+
+XTB descriptors
++++++++++++++++
+
+   files : list of str, default=''
+      Filenames of SDF/PDB/XYZ files to calculate xTB descriptors. If *.sdf (or other strings that are not lists such as *.pdb) are specified, the program will look for all the SDF files in the working directory through glob.glob(*.sdf)
+   charge : int, default=None
+      Charge of the calculations used in the following input files. If charge isn't defined, it defaults to 0
+   mult : int, default=None
+      Multiplicity of the calculations used in the following input files. If mult isn't defined, it defaults to 1 
+   qdescp_temp : float, default=300
+      Temperature required for the xTB property calculations
+   qdescp_acc : float, default=0.2
+      Accuracy required for the xTB property calculations 
+   boltz : bool, default=False
+      Calculation of Boltzmann averaged xTB properties
+
+NMR simulation
+++++++++++++++
+
+   files : list of str, default=''
+      Filenames of LOG files to retrieve NMR shifts from Gaussian calculations
+   boltz : bool, default=False
+      Calculation of Boltzmann averaged xTB properties
+   nmr_atoms : list of str, default=[6, 1]
+      List containing the atom types to consider. For example, if the user wants to retrieve NMR shifts from C and H atoms nmr_atoms=[6, 1]
+   nmr_slope : list of float, default=[-1.0537, -1.0784]
+      List containing the slope to apply for the raw NMR shifts calculated with Gaussian. A slope needs to be provided for each atom type in the analysis (i.e., for C and H atoms, the nmr_slope=[-1.0537, -1.0784]). These values can be adjusted using the CHESHIRE repository.
+   nmr_intercept : list of float, default=[181.7815, 31.8723]
+      List containing the intercept to apply for the raw NMR shifts calculated with Gaussian. An intercept needs to be provided for each atom type in the analysis (i.e., for C and H atoms, the nmr_slope=[-1.0537, -1.0784]). These values can be adjusted using the CHESHIRE repository.
+   nmr_experim : str, default=None
+      Filename of a CSV containing the experimental shifts. Two columnds are needed: A) 'atom_idx' should contain the indexes of the atoms to study as seen in GaussView or other molecular visualizers (i.e., the first atom of the coordinates has index 1); B) 'experimental_ppm' should contain the experimental NMR shifts in ppm observed for the atoms.
+
+"""
 ######################################################.
 #        This file stores the QDESCP class           #
 ######################################################.
@@ -34,7 +81,9 @@ from scipy.spatial.distance import cdist
 
 class qdescp:
     """
-    Class containing all the functions from the QDESCP module related to xTB properties for SDF files.
+    Class used to extract or calculate descriptors based on xTB calculations.
+    For further detail on the currently accepted keyword arguments (kwargs) 
+    please look at the Parameters section (in the module documentation). 
     """
 
     def __init__(self, **kwargs):

@@ -1,27 +1,13 @@
-.. _setup:
+.. include:: ../../README.rst
+   :start-after: installation-start
+   :end-before: installation-end
 
-------------------------
- Setup and Installation
-------------------------
 
-This documents provides steps for general setup and local installation of the ``aqme``
-program.
+.. include:: ../../README.rst
+   :start-after: tests-start
+   :end-before: tests-end
 
-.. contents::
+.. include:: ../../README.rst
+   :start-after: features-modules-start
+   :end-before: features-modules-end
 
-Getting ``aqme``
-=====================
-
-GitHub
-------
-
-The `aqme <https://github.com/jvalegre/aqme>`_ program is available free of charge on GitHub.
-
-pip
----
-
-The ``aqme`` program can also be installed *via* pip using
-
-.. code:: bash
-
-  $ pip install aqme
