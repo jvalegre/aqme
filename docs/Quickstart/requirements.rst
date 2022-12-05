@@ -22,7 +22,8 @@ Programs for Optimization
 
 - xtb
 - ANI1ccx
-- torch (pip install torch==1.5.0+cpu torchvision==0.6.0+cpu -f https://download.pytorch.org/whl/torch_stable.html)
+- torch (pip install torch)
+- torchvision (pip install torchvision)
 - torchani (pip install torchani==2.0)
 
 Cheminformatics

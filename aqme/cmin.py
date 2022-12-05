@@ -366,7 +366,7 @@ class cmin:
 
         except ModuleNotFoundError:
             self.args.log.write(
-                "x  Torch-related modules are not installed! You can install these modules with 'conda install pytorch torchvision torchaudio cpuonly -c pytorch'"
+                "x  Torch-related modules are not installed! You can install these modules with 'pip install torch torchvision torchani'"
             )
             self.args.log.finalize()
             sys.exit()

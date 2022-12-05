@@ -6,7 +6,7 @@ Check our AQME installation in 2 mins video (https://www.youtube.com/watch?v=Vea
   
 Requirements:  
   * When AQME is installed from pip, RDKit and Openbabelare required: "conda install -c conda-forge rdkit openbabel"  
-  * If CMIN is used, torch-related modules are needed: "conda install pytorch torchvision torchaudio cpuonly -c pytorch"  
+  * If CMIN is used with ANI, torch-related modules are needed: "pip install torch torchvision torchani"  
   
 Known incompatibilities:  
   * RDKit cannot be installed through "pip install rdkit" in Windows when Anaconda prompts are used

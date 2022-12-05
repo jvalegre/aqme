@@ -33,10 +33,8 @@ Check our [AQME installation in 2 mins](https://youtu.be/VeaBzqIZHbo) video for 
 Requirements when installing from pip (options 2 and 3):  
   * RDKit and Openbabel: `conda install -c conda-forge rdkit openbabel`  
 
-Requirements if CMIN is used:  
-  * torch-related modules: `conda install pytorch torchvision torchaudio cpuonly -c pytorch`  
-  * If ANI methods are used: `pip install torchani`  
-  * If xTB methods are used: `conda install -c conda-forge xtb-python`  
+Requirements if CMIN is used with ANI:  
+  * torch-related modules: `pip install torch torchvision torchani`  
 
 Known incompatibilities:  
   * RDKit cannot be installed through `pip install rdkit` in Windows when Anaconda prompts are used     
