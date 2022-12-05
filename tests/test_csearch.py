@@ -642,7 +642,6 @@ def test_csearch_methods(
             program=program,
             smi=smi,
             name=name,
-            metal_complex=metal_complex,
             metal_atoms=metal,
             metal_oxi=metal_oxi,
             complex_type=complex_type,

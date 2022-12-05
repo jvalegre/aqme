@@ -54,14 +54,14 @@ def test_cmin_methods(
         )
 
     # tests here
-    file = str("CMIN/" + program + "/" + sdf.split(".")[0] + "_" + program + ".sdf")
+    file = str("CMIN/" + sdf.split(".")[0] + "_" + program + ".sdf")
     file2 = str(
-        "CMIN/" + program + "/" + sdf.split(".")[0] + "_" + program + "_all_confs.sdf"
+        "CMIN/" + sdf.split(".")[0] + "_" + program + "_all_confs.sdf"
     )
     assert os.path.exists(file)
     assert os.path.exists(file2)
 
-    mols = rdkit.Chem.SDMolSupplier(file, removeHs=False)
+    mols = rdkit.Chem.SDMolSupplier(file, removeHs=False, sanitize=False)
     assert len(mols) == output_nummols
     os.chdir(w_dir_main)
 
@@ -153,7 +153,6 @@ def test_cmin_methods(
 #             w_dir_main=cmin_xtb_dir,
 #             program=program,
 #             files=sdf,
-#             metal_complex=metal_complex,
 #             metal_atoms=metal_atoms,
 #             metal_oxi=metal_oxi,
 #             complex_type=complex_type,
@@ -170,14 +169,14 @@ def test_cmin_methods(
 #         )
 
 #     # tests here
-#     file = str("CMIN/" + program + "/" + sdf.split(".")[0] + "_" + program + ".sdf")
+#     file = str("CMIN/" + sdf.split(".")[0] + "_" + program + ".sdf")
 #     file2 = str(
-#         "CMIN/" + program + "/" + sdf.split(".")[0] + "_" + program + "_all_confs.sdf"
+#         "CMIN/" + sdf.split(".")[0] + "_" + program + "_all_confs.sdf"
 #     )
 #     assert os.path.exists(file)
 #     assert os.path.exists(file2)
 
-#     mols = rdkit.Chem.SDMolSupplier(file, removeHs=False)
+#     mols = rdkit.Chem.SDMolSupplier(file, removeHs=False, sanitize=False)
 #     assert len(mols) == output_nummols
 
 #     assert int(mols[0].GetProp("Real charge")) == charge

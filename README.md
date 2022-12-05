@@ -25,16 +25,18 @@ The code is an ensemble of automated QM workflows that can be run through jupyte
 Don't miss out the latest hands-on tutorials from our [YouTube channel](https://www.youtube.com/channel/UCHRqI8N61bYxWV9BjbUI4Xw)!  
 
 ## Installation
-Check our [AQME installation in 2 mins](https://youtu.be/VeaBzqIZHbo) video for a quick installation guide. In a nutshell, AQME and its dependencies are installed as follows:
-1. Using conda-forge: `conda install -c conda-forge aqme` (fastest, one-command install)
+Check our [AQME installation in 2 mins](https://youtu.be/VeaBzqIZHbo) video for a quick installation guide. In a nutshell, AQME and its dependencies are installed as follows:  
+1. Using conda-forge: `conda install -c conda-forge aqme` (fastest, one-command install)  
 2. Using the code from GitHub: `pip install .` with setup.py (most updated version, recommended)  
-3. Using pip: `pip install aqme`
+3. Using pip: `pip install aqme`  
 
 Requirements when installing from pip (options 2 and 3):  
   * RDKit and Openbabel: `conda install -c conda-forge rdkit openbabel`  
 
 Requirements if CMIN is used:  
-  * torch-related modules: `pip install torch torchvision torchani`  
+  * torch-related modules: `conda install pytorch torchvision torchaudio cpuonly -c pytorch`  
+  * If ANI methods are used: `pip install torchani`  
+  * If xTB methods are used: `conda install -c conda-forge xtb-python`  
 
 Known incompatibilities:  
   * RDKit cannot be installed through `pip install rdkit` in Windows when Anaconda prompts are used     
@@ -119,19 +121,19 @@ AQME can also be run through command lines. Some examples are:
 
   * QCORR analysis of Gaussian output files and json file generation:  
     ```
-    python -m aqme --qcorr --program gaussian --freq_conv opt=(calcfc,maxstep=5) --files=*.log
+    python -m aqme --qcorr --program gaussian --freq_conv opt=(calcfc,maxstep=5) --files "*.log"
     ```  
   * QPREP input file generation from SDF files (coming from CSEARCH for example):  
     ```
-    python -m aqme --qprep --program gaussian --qm_input "M062x def2tzvp opt freq" --files *.sdf
+    python -m aqme --qprep --program gaussian --qm_input "M062x def2tzvp opt freq" --files "*.sdf"
     ```  
   * QPREP input file generation from last geometry of output files (log or out files):  
     ```
-    python -m aqme --qprep --program gaussian--qm_input "M062x def2tzvp opt freq" --files *.log --suffix M062X
+    python -m aqme --qprep --program gaussian --qm_input "M062x def2tzvp opt freq" --files "*.log" --suffix M062X
     ```  
   * QPREP input file generation from json files:  
     ```
-    python -m aqme --qprep --program orca --qm_input "BP86 def2-SVP def2/J" --files *.json --suffix BP86
+    python -m aqme --qprep --program orca --qm_input "BP86 def2-SVP def2/J" --files "*.json" --suffix BP86
     ```  
 
 ## Extended documentation (installation, use, examples, etc)
@@ -194,8 +196,6 @@ AQME can also be run through command lines. Some examples are:
         Random seed used during RDKit embedding (in the Chem.rdDistGeom.EmbedMultipleConfs() RDKit function)  
 
     *-- Options for RDKit-based methods (RDKit, SUMM and Fullmonte), organometallic molecules only --*  
-    **metal_complex : bool, default=False**  
-        Performs modified conformational sampling of metal complexes, fixing issues related to RDKit when dealing with metals. This option works well with metal coordination numbers up to 6, but it might give trouble with metals containing 7 or more ligands  
     **metal_atoms : list of str, default=[]**  
         Specify metal atom(s) of the system. Multiple metals can be used simultaneously (i.e. ['Pd','Ir'])  
     **metal_oxi : list of int, default=[]**  
@@ -236,6 +236,36 @@ AQME can also be run through command lines. Some examples are:
         If True, perform a CREGEN analysis after CREST (filtering options below)  
     **cregen_keywords : str, default=None**  
         Additional keywords for CREGEN (i.e. cregen_keywords='--ethr 0.02')  
+
+- [ ] CMIN arguments:  
+    **program : str, default=None**  
+        Program required in the conformational refining. Current options: 'xtb', 'ani'
+            files=args.files,
+            command_line=args.command_line,
+            w_dir_main=args.w_dir_main,
+            destination=args.destination,
+            verbose=args.verbose,
+            program=args.program,
+            xtb_method=args.xtb_method,
+            xtb_solvent=args.xtb_solvent,
+            output=args.output,
+            charge=args.charge,
+            mult=args.mult,
+            metal_atoms=args.metal_atoms,
+            metal_oxi=args.metal_oxi,
+            complex_type=args.complex_type,
+            ewin_cmin=args.ewin_cmin,
+            initial_energy_threshold=args.initial_energy_threshold,
+            energy_threshold=args.energy_threshold,
+            rms_threshold=args.rms_threshold,
+            xtb_accuracy=args.xtb_accuracy,
+            xtb_electronic_temperature=args.xtb_electronic_temperature,
+            xtb_max_iterations=args.xtb_max_iterations,
+            opt_steps=args.opt_steps,
+            opt_fmax=args.opt_fmax,
+            ani_method=args.ani_method,
+            stacksize=args.stacksize,
+
 
 - [ ] QPREP arguments:  
     **files : mol object, str or list of str, default=None**  
@@ -349,10 +379,10 @@ AQME can also be run through command lines. Some examples are:
 
 ## Developers and help desk
 List of main developers and contact emails:  
+  - [ ] [Juan V. Alegre-Requena](https://orcid.org/0000-0002-0769-7168), main developer of the CSEARCH, QCORR, QPREP and QDESCP modules. Contact: [jv.alegre@csic.es](mailto:jv.alegre@csic.es)  
   - [ ] [Shree Sowndarya S. V.](https://orcid.org/0000-0002-4568-5854), main developer of the CSEARCH, CMIN, QDESCP and VIZMOL modules. Contact: [svss@colostate.edu](mailto:svss@colostate.edu)  
-  - [ ] [Juan V. Alegre-Requena](https://orcid.org/0000-0002-0769-7168), main developer of the CSEARCH, QCORR, QPREP and QDESCP modules. Contact: [jvalegre@unizar.es](mailto:jvalegre@unizar.es)  
-  - [ ] [Turki Alturaifi](https://www.chem.pitt.edu/person/turki-alturaifi), worked in benchmarking the parameters for RDKit-based conformer generation. Contact: [turki0@rams.colostate.edu](mailto:turki0@rams.colostate.edu)  
-  - [ ] [Raúl Pérez-Soto](https://orcid.org/0000-0002-6237-2155), worked in refactoring the code. Contact: [rperez@iciq.es](mailto:rperez@iciq.es)  
+  - [ ] [Turki Alturaifi](https://www.chem.pitt.edu/person/turki-alturaifi), worked in benchmarking the parameters for RDKit-based conformer generation. Contact: [tma53@pitt.edu](mailto:tma53@pitt.edu)  
+  - [ ] [Raúl Pérez-Soto](https://orcid.org/0000-0002-6237-2155), worked in refactoring the code and creating the documentation. Contact: [Raul.Perez_Soto@colostate.edu](mailto:Raul.Perez_Soto@colostate.edu)  
   - [ ] [Robert S. Paton](https://orcid.org/0000-0002-0104-4166), research group supervisor and code advisor. Contact: [robert.paton@colostate.edu](mailto:robert.paton@colostate.edu)  
 
 For suggestions and improvements of the code (greatly appreciated!), please reach out through the issues and pull requests options of Github.  
@@ -361,4 +391,4 @@ For suggestions and improvements of the code (greatly appreciated!), please reac
 AQME is freely available under an [MIT](https://opensource.org/licenses/MIT) License  
 
 ## Reference
-AQME v1.4, Alegre-Requena, J. V.; Sowndarya, S.; Pérez-Soto, R.; Alturaifi, T. M.; Paton, R. S., 2022. https://github.com/jvalegre/aqme  
+AQME v1.4, Alegre-Requena, J. V.; Sowndarya, S.; Alturaifi, T.; Pérez-Soto, R.; Paton, R. ChemRxiv 2022, DOI: 10.26434/chemrxiv-2022-dnc48.  

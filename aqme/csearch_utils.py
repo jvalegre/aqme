@@ -397,7 +397,7 @@ def xyz_2_sdf(file):
     Parameters
     ----------
     file : str
-                                                                    Filename and extension of an existing .xyz file
+        Filename and extension of an existing .xyz file
     """
 
     name = str(file).split(".xyz")[0]

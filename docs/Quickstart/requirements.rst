@@ -4,7 +4,7 @@
 Requirements
 ============
 
-The following packages would be required for successfully running ``aqme``!
+The following packages would be required for successfully running ``AQME``!
 
 python
 ------

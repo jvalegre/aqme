@@ -39,9 +39,9 @@ jobs:
           conda install -y -c conda-forge openbabel
           # install xTB, xTB-python and CREST
           conda install -y -c conda-forge xtb
-          conda install -y -c conda-forge xtb-python
           conda install -y -c conda-forge crest
-          pip install torch torchvision torchani
+          conda install pytorch torchvision torchaudio cpuonly -c pytorch
+          pip install torchani
           pip install codecov
           # install the dependencies of AQME with pip
           python -m pip install --upgrade pip

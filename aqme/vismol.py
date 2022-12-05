@@ -1,7 +1,7 @@
 import py3Dmol
 from rdkit import Chem
-from ipywidgets import interact
 import ipywidgets
+from ipywidgets import interact
 import os
 import subprocess
 import time

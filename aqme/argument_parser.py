@@ -18,7 +18,6 @@ var_dict = {
     "qprep": False,
     "qcorr": False,
     "smi": None,
-    "metal_complex": False,
     "metal_atoms": [],
     "charge": None,
     "mult": None,

@@ -5,4 +5,4 @@ Versions
 ========
 
 Version 1.0.0
-   - First release of aqme!
+   - First release of AQME!

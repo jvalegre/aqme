@@ -60,7 +60,7 @@ from aqme.utils import (
     load_variables,
     set_metal_atomic_number
     )
-from aqme.csearch_crest_utils import crest_opt
+from aqme.csearch_crest_utils import xtb_opt_main
 
 
 class csearch:
@@ -245,21 +245,6 @@ class csearch:
 
         bar.finish()
 
-        # removing temporary files
-        temp_files = [
-            "gfn2.out",
-            "xTB_opt.traj",
-            "ANI1_opt.traj",
-            "wbo",
-            "xtbrestart",
-            "ase.opt",
-            "xtb.opt",
-            "gfnff_topo",
-        ]
-        for file in temp_files:
-            if os.path.exists(file):
-                os.remove(file)
-
     def compute_confs(
         self,
         smi,
@@ -365,12 +350,7 @@ class csearch:
         if self.args.verbose:
             self.args.log.write(f"\n   -> Input Molecule {Chem.MolToSmiles(mol)}")
 
-        if self.args.metal_complex:
-
-            for _ in self.args.metal_atoms:
-                self.args.metal_idx.append(None)
-                self.args.complex_coord.append(None)
-                self.args.metal_sym.append(None)
+        if len(self.args.metal_atoms) >= 1:
 
             (
                 self.args.metal_idx,
@@ -479,22 +459,18 @@ class csearch:
         status = None
         self.args.log.write(f"\n   ----- {name} -----")
 
-        # this avoids problems when using metal complexes in command lines
-        if self.args.metal_atoms != [] and self.args.metal_atoms != '[]':
-            if self.args.metal_oxi == [] or self.args.metal_oxi == '[]':
+        # check if metals and oxidation states are both used
+        if self.args.metal_atoms != []:
+            if self.args.metal_oxi == []:
                 self.args.log.write(f"\nx   Metal atoms ({self.args.metal_atoms}) were specified without their corresponding oxidation state (metal_oxi option)")
                 self.args.log.finalize()
                 sys.exit()
-            if not isinstance(self.args.metal_atoms, list):
-                self.args.metal_atoms = ast.literal_eval(self.args.metal_atoms)
 
-        if self.args.metal_oxi != [] and self.args.metal_oxi != '[]':
-            if self.args.metal_atoms == [] or self.args.metal_atoms == '[]':
+        if self.args.metal_oxi != []:
+            if self.args.metal_atoms == []:
                 self.args.log.write(f"\nx   Metal oxidation states ({self.args.metal_oxi}) were specified without their corresponding metal atoms (metal_atoms option)")
                 self.args.log.finalize()
                 sys.exit()
-            if not isinstance(self.args.metal_oxi, list):
-                self.args.metal_oxi = ast.literal_eval(self.args.metal_oxi)
 
         # Set charge and multiplicity
         metal_found = False
@@ -502,16 +478,16 @@ class csearch:
         if self.args.charge is not None:
             charge = self.args.charge
         else:
-            if not self.args.metal_complex:
+            if not len(self.args.metal_atoms) >= 1:
                 charge = Chem.GetFormalCharge(mol)
             else:
-                charge, metal_found = rules_get_charge(mol, self.args, "csearch")
+                charge, metal_found = rules_get_charge(mol, self.args)
 
         if self.args.mult is not None:
             mult = self.args.mult
         else:
             mult = Descriptors.NumRadicalElectrons(mol) + 1
-            if self.args.metal_complex and metal_found:
+            if metal_found:
                 # since RDKit gets the multiplicity of the metal with valence 0, the real multiplicity
                 # value needs to be adapted with the charge. If multiplicity is different than 1 or 2,
                 # the user must specify the value with the mult option
@@ -542,7 +518,7 @@ class csearch:
  
             valid_structure = True
 
-            status = crest_opt(
+            status = xtb_opt_main(
                 f"{name}_{self.args.program.lower()}",
                 dup_data,
                 dup_data_idx,
@@ -553,6 +529,7 @@ class csearch:
                 constraints_dist,
                 constraints_angle,
                 constraints_dihedral,
+                'crest',
                 mol=mol
             )
 
@@ -652,10 +629,13 @@ class csearch:
                     )
         if self.args.program.lower() in ['crest']:
             if not complex_ts:
+                # mol_crest is the RDKit-optimized mol object
                 rdmolfiles.MolToXYZFile(mol_crest, name + "_crest.xyz")
             else:
+                # mol is the raw mol object (no optimization with RDKit to avoid problems when using
+                # noncovalent complexes and TSs)
                 rdmolfiles.MolToXYZFile(mol, name + "_crest.xyz")
-            status = crest_opt(
+            status = xtb_opt_main(
                     f"{name}_{self.args.program.lower()}",
                     dup_data,
                     dup_data_idx,
@@ -666,6 +646,7 @@ class csearch:
                     constraints_dist,
                     constraints_angle,
                     constraints_dihedral,
+                    'crest',
                     complex_ts=complex_ts,
                     mol=mol # this is necessary for CREST calculations with constraints
                 )
@@ -745,7 +726,7 @@ class csearch:
                 mol_rd = Chem.RWMol(rdmols[cid])
                 mol_rd.SetProp("_Name", rdmols[cid].GetProp("_Name") + " " + str(i))
                 mol_rd.SetProp("Energy", str(rotated_energy[cid]))
-                if self.args.metal_complex:
+                if len(self.args.metal_atoms) >= 1:
                     set_metal_atomic_number(
                         mol_rd, self.args.metal_idx, self.args.metal_sym
                     )
@@ -765,7 +746,7 @@ class csearch:
         Detects automatically the initial number of conformers for the sampling
         """
 
-        if self.args.metal_complex:
+        if len(self.args.metal_atoms) >= 1:
             if len(self.args.metal_idx) > 0:
                 self.args.auto_sample = (
                     self.args.auto_sample * 3 * len(self.args.metal_idx)
@@ -796,13 +777,12 @@ class csearch:
         mol_template,
     ):
         """
-        If program = RDKit, this replaces iodine back to the metal (for metal_complex = True)
-        and writes the RDKit SDF files. With program = summ, this function optimizes rotamers
+        If program = RDKit, this replaces iodine back to the metal (if needed) and writes the RDKit SDF files. With program = summ, this function optimizes rotamers
         """
 
         if i >= len(matches):  # base case, torsions should be set in conf
             # setting the metal back instead of I
-            if self.args.metal_complex and (
+            if len(self.args.metal_atoms) >= 1 and (
                 self.args.program.lower() in ["rdkit","crest"] or update_to_rdkit
             ):
                 if coord_Map is None and alg_Map is None and mol_template is None:
@@ -1189,6 +1169,7 @@ class csearch:
             )
         except IndexError:
             status = -1
+            mol_crest = None
 
         sdwriter.close()
 

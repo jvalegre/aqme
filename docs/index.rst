@@ -1,11 +1,11 @@
 =====================================
-Welcome to aqme's documentation!
+Welcome to AQME's documentation!
 =====================================
 
-This user guide focuses on the applications of aqme for creation of
+This user guide focuses on the applications of AQME for creation of
 conformers and provides wrapper for  analysis of Gaussian output files.
 
-We provide a bunch examples depicting the uses of aqme in
+We provide a bunch examples depicting the uses of AQME in
 organic molecules, metal complexes extended upto crystals.
 
 All guides follow the a structure which allows the use of command

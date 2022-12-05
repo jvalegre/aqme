@@ -4,14 +4,14 @@
 Basic Structure
 ===============
 
-This documents provides steps for running the ``aqme`` program.
+This documents provides steps for running the ``AQME`` program.
 
 .. contents::
 
 Command line
 ------------
 
-The ``aqme`` program can be run from the command line by providing the necessary arguments. In the following example,
+The ``AQME`` program can be run from the command line by providing the necessary arguments. In the following example,
 an input file is provided and the compute option in invoked.
 
 .. code:: bash
@@ -22,7 +22,7 @@ an input file is provided and the compute option in invoked.
 YAML file
 ---------
 
-The ``aqme`` program can also be run by using a yaml file which contains the necessary arguments. In the following example,
+The ``AQME`` program can also be run by using a yaml file which contains the necessary arguments. In the following example,
 a yaml file named ``params.yaml`` is created where an input file name is provided and the compute option in invoked.
 
 .. code-block:: yaml
@@ -33,7 +33,7 @@ a yaml file named ``params.yaml`` is created where an input file name is provide
   # COMPUTE OPTION TRUE
   compute : True
 
-To run ``aqme`` program with the yaml file, the following command is used
+To run ``AQME`` program with the yaml file, the following command is used
 
 .. code:: bash
 
