@@ -20,7 +20,7 @@ cmin_xtb_dir = w_dir_main + "/tests/cmin_xtb"
 if not os.path.exists(cmin_xtb_dir):
     os.mkdir(cmin_xtb_dir)
 
-# tests for parameters of csearch random initialzation
+# tests of ANI optimizations
 @pytest.mark.parametrize(
     "program, sdf, ani_method, opt_steps, opt_fmax, output_nummols",
     [
@@ -184,7 +184,7 @@ def test_cmin_methods(
 #     os.chdir(w_dir_main)
 
 
-# tests for removing foler
+# tests for removing foler and creation of CMIN DAT and CSV files
 @pytest.mark.parametrize(
     "folder",
     [
@@ -195,14 +195,13 @@ def test_cmin_methods(
 def test_remove(folder):
     os.chdir(w_dir_main)
     if os.path.exists(f"{w_dir_main}/tests/cmin_methods/CMIN"):
-        files_remove = [f"{w_dir_main}/tests/cmin_methods/CMIN_data.dat",f"{w_dir_main}/tests/cmin_methods/ase.opt"]
-        files_remove.append(f"{w_dir_main}/tests/cmin_methods/ANI1_opt.traj")
+        files_remove = [f"{w_dir_main}/tests/cmin_methods/CMIN_data.dat"]
         files_remove.append(f"{w_dir_main}/tests/cmin_methods/CMIN-Data.csv")
         shutil.rmtree(f"{w_dir_main}/tests/cmin_methods/CMIN")
         for f in files_remove:
             os.remove(f)
     if os.path.exists(f"{w_dir_main}/tests/cmin_xtb/CMIN"):
-        files_remove = [f"{w_dir_main}/tests/cmin_xtb/CMIN_data.dat",f"{w_dir_main}/tests/cmin_xtb/ase.opt"]
+        files_remove = [f"{w_dir_main}/tests/cmin_xtb/CMIN_data.dat"]
         files_remove.append(f"{w_dir_main}/tests/cmin_xtb/CMIN-Data.csv")
         shutil.rmtree(f"{w_dir_main}/tests/cmin_xtb/CMIN")
         for f in files_remove:

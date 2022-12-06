@@ -112,68 +112,32 @@ def xtb_opt_main(
     os.chdir(dat_dir)
     # for systems that were created from 1D and 2D inputs (i.e. SMILES), this part includes two xTB
     # constrained optimizations to avoid geometry problems in noncovalent complexes and transition states
+    constrained_opt = False
     if complex_ts:
-        if len(constraints_dist) != 0:
-            # xTB optimization with all bonds frozen
-            xyzoutxtb1 = str(dat_dir) + "/" + name_no_path + "_xtb1.xyz"
+        if len(constraints_atoms) > 0 or len(constraints_dist) > 0 or len(constraints_angle) > 0 or len(constraints_dihedral) > 0:
+            constrained_opt = True
 
-            all_fix = get_constraint(mol, constraints_dist)
+        # xTB optimization with all bonds frozen
+        xyzoutxtb1 = str(dat_dir) + "/" + name_no_path + "_xtb1.xyz"
 
-            _ = create_xcontrol(
-                self.args,
-                constraints_atoms,
-                all_fix,
-                [],
-                [],
-                xyzin,
-                "constrain1.inp",
-            )
+        all_fix = get_constraint(mol, constraints_dist)
 
-            command1 = [
-                "xtb",
-                xyzin,
-                "--opt",
-                "--input",
-                "constrain1.inp",
-                "-c",
-                str(charge),
-                "--uhf",
-                str(int(mult) - 1),
-                "-P",
-                str(self.args.nprocs),
-            ]
-
-            if self.args.xtb_keywords is not None:
-                for keyword in self.args.xtb_keywords.split():
-                    command1.append(keyword)
-
-            run_command(command1, "{}.out".format(xyzoutxtb1.split(".xyz")[0]))
-            try:
-                os.rename(str(dat_dir) + "/xtbopt.xyz", xyzoutxtb1)
-            except FileNotFoundError:
-                os.rename(str(dat_dir) + "/xtblast.xyz", xyzoutxtb1)
-
-        else:
-            xyzoutxtb1 = xyzin
-
-        xyzoutxtb2 = str(dat_dir) + "/" + name_no_path + "_xtb2.xyz"
-        # xTB optimization with the user-defined constraints
         _ = create_xcontrol(
             self.args,
-            list(constraints_atoms),
-            list(constraints_dist),
-            list(constraints_angle),
-            list(constraints_dihedral),
+            constraints_atoms,
+            all_fix,
+            [],
+            [],
             xyzin,
-            "constrain2.inp",
+            "constrain1.inp",
         )
 
-        command2 = [
+        command1 = [
             "xtb",
-            xyzoutxtb1,
+            xyzin,
             "--opt",
             "--input",
-            "constrain2.inp",
+            "constrain1.inp",
             "-c",
             str(charge),
             "--uhf",
@@ -184,13 +148,52 @@ def xtb_opt_main(
 
         if self.args.xtb_keywords is not None:
             for keyword in self.args.xtb_keywords.split():
-                command2.append(keyword)
+                command1.append(keyword)
 
-        run_command(command2, "{}.out".format(xyzoutxtb2.split(".xyz")[0]))
+        run_command(command1, "{}.out".format(xyzoutxtb1.split(".xyz")[0]))
         try:
-            os.rename(str(dat_dir) + "/xtbopt.xyz", xyzoutxtb2)
+            os.rename(str(dat_dir) + "/xtbopt.xyz", xyzoutxtb1)
         except FileNotFoundError:
-            os.rename(str(dat_dir) + "/xtblast.xyz", xyzoutxtb2)
+            os.rename(str(dat_dir) + "/xtblast.xyz", xyzoutxtb1)
+        
+        if constrained_opt:
+            xyzoutxtb2 = str(dat_dir) + "/" + name_no_path + "_xtb2.xyz"
+            # xTB optimization with the user-defined constraints
+            _ = create_xcontrol(
+                self.args,
+                list(constraints_atoms),
+                list(constraints_dist),
+                list(constraints_angle),
+                list(constraints_dihedral),
+                xyzin,
+                "constrain2.inp",
+            )
+
+            command2 = [
+                "xtb",
+                xyzoutxtb1,
+                "--opt",
+                "--input",
+                "constrain2.inp",
+                "-c",
+                str(charge),
+                "--uhf",
+                str(int(mult) - 1),
+                "-P",
+                str(self.args.nprocs),
+            ]
+
+            if self.args.xtb_keywords is not None:
+                for keyword in self.args.xtb_keywords.split():
+                    command2.append(keyword)
+
+            run_command(command2, "{}.out".format(xyzoutxtb2.split(".xyz")[0]))
+            try:
+                os.rename(str(dat_dir) + "/xtbopt.xyz", xyzoutxtb2)
+            except FileNotFoundError:
+                os.rename(str(dat_dir) + "/xtblast.xyz", xyzoutxtb2)
+        else:
+            xyzoutxtb2 = xyzoutxtb1
 
     else:
         # Preoptimization with xTB to avoid issues from innacurate starting structures in CREST.
@@ -240,9 +243,8 @@ def xtb_opt_main(
     xyzoutall = str(dat_dir) + "/" + name_no_path + "_conformers.xyz"
 
     if self.args.program.lower() == "crest":
-        constrained_sampling = False
-        if complex_ts:
-            constrained_sampling = create_xcontrol(
+        if constrained_opt:
+            _ = create_xcontrol(
                 self.args,
                 list(constraints_atoms),
                 list(constraints_dist),
@@ -265,7 +267,7 @@ def xtb_opt_main(
             str(self.args.ewin_csearch),
         ]
 
-        if constrained_sampling:
+        if constrained_opt:
             command.append("--cinp")
             command.append(".xcontrol.sample")
 
@@ -315,6 +317,7 @@ def xtb_opt_main(
                 command_xyz, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
             )
 
+        sdwriter = Chem.SDWriter(str(f"{csearch_dir}/{name_no_path}.sdf"))
         sdf_files = glob.glob(name_no_path + "*.sdf")
         for file in sdf_files:
             mol = rdkit.Chem.SDMolSupplier(file, removeHs=False, sanitize=False)
@@ -322,10 +325,8 @@ def xtb_opt_main(
             if self.args.program.lower() == "xtb":
                 energy = str(open(file, "r").readlines()[0].split()[1])
                 mol_rd.SetProp("_Name", name_init)
-
             elif self.args.program.lower() == "crest":
                 energy = str(open(file, "r").readlines()[0])
-                sdwriter = Chem.SDWriter(str(f"{csearch_dir}/{name_no_path}.sdf"))
                 mol_rd.SetProp("_Name", name_no_path)
                 mol_rd.SetProp("Energy", energy)
                 mol_rd.SetProp("Real charge", str(charge))

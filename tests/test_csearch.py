@@ -173,11 +173,23 @@ def test_csearch_input_parameters(program, input, output_nummols):
 @pytest.mark.parametrize(
     "program, smi, name, cregen, cregen_keywords, crest_keywords, charge, mult, output_nummols",
     [
-        # tests for conformer generation with CREST
+        # tests for conformer generation with CREST and CREGEN
         (
             "crest",
             "C",
             "methane",
+            True,
+            "--ethr 1 --rthr 0.5 --bthr 0.7 --ewin 4 --cluster",
+            None,
+            0,
+            1,
+            1,
+        ),
+        # tests for crest_keywords
+        (
+            "crest",
+            "C",
+            "methane_solvent",
             True,
             "--ethr 1 --rthr 0.5 --bthr 0.7 --ewin 4 --cluster",
             "--alpb benzene",
@@ -185,13 +197,26 @@ def test_csearch_input_parameters(program, input, output_nummols):
             1,
             1,
         ),
+        # tests for n of processors
+        (
+            "crest",
+            "C",
+            "methane_nprocs",
+            True,
+            "--ethr 1 --rthr 0.5 --bthr 0.7 --ewin 4 --cluster",
+            None,
+            0,
+            1,
+            1,
+        ),
+        # test for charge and mult
         (
             "crest",
             "C",
             "methane_charged",
             True,
             "--ethr 1 --rthr 0.5 --bthr 0.7 --ewin 4 --cluster",
-            "--alpb benzene",
+            None,
             1,
             2,
             1,
@@ -210,18 +235,46 @@ def test_csearch_crest_parameters(
     output_nummols,
 ):
     os.chdir(csearch_crest_dir)
+
     # runs the program with the different tests
-    csearch(
-        w_dir_main=csearch_crest_dir,
-        program=program,
-        smi=smi,
-        name=name,
-        cregen=cregen,
-        cregen_keywords=cregen_keywords,
-        crest_keywords=crest_keywords,
-        charge=charge,
-        mult=mult
-    )
+    if name == 'methane_nprocs':
+        csearch(
+            w_dir_main=csearch_crest_dir,
+            program=program,
+            smi=smi,
+            name=name,
+            cregen=cregen,
+            cregen_keywords=cregen_keywords,
+            crest_keywords=crest_keywords,
+            charge=charge,
+            mult=mult,
+            nprocs=14
+        )
+    elif name == 'methane_solvent':
+        csearch(
+            w_dir_main=csearch_crest_dir,
+            program=program,
+            smi=smi,
+            name=name,
+            cregen=cregen,
+            cregen_keywords=cregen_keywords,
+            crest_keywords=crest_keywords,
+            charge=charge,
+            mult=mult,
+            xtb_keywords='--alpb benzene'
+        )        
+    else:
+        csearch(
+            w_dir_main=csearch_crest_dir,
+            program=program,
+            smi=smi,
+            name=name,
+            cregen=cregen,
+            cregen_keywords=cregen_keywords,
+            crest_keywords=crest_keywords,
+            charge=charge,
+            mult=mult
+        )
 
     # tests here
     file_cluster = str(
@@ -239,6 +292,53 @@ def test_csearch_crest_parameters(
     assert len(mols) == output_nummols
     os.chdir(w_dir_main)
 
+    file_crest = str(csearch_crest_dir+"/CSEARCH/crest_xyz/crest.out")
+    outfile = open(file_crest, "r")
+    outlines_crest = outfile.readlines()
+    outfile.close()
+    if name == 'methane_charged':
+        for line in outlines_crest:
+            if line.startswith(' > crest'):
+                # check if charge and mult are correct in CREST
+                assert line.find('--chrg 1 --uhf 1') > -1
+                break
+
+        file_xtb2 = str(csearch_crest_dir+"/CSEARCH/crest_xyz/methane_charged_crest.out")
+        outfile_xtb2 = open(file_xtb2, "r")
+        outlines_xtb2 = outfile_xtb2.readlines()
+        outfile.close()
+        for _,line in enumerate(outlines_xtb2):
+            if line.find('program call') > -1:
+                # check if charge and mult are correct in xTB
+                assert line.find('-c 1 --uhf 1') > -1
+    elif name == 'methane_solvent':
+        for line in outlines_crest:
+            if line.startswith(' > crest'):
+                # check if crest_keywords are correct in CREST
+                assert line.find('--alpb benzene') > -1
+                break
+        file_xtb2 = str(csearch_crest_dir+"/CSEARCH/crest_xyz/methane_solvent_crest.out")
+        outfile_xtb2 = open(file_xtb2, "r")
+        outlines_xtb2 = outfile_xtb2.readlines()
+        outfile.close()
+        for _,line in enumerate(outlines_xtb2):
+            if line.find('program call') > -1:
+                # check if xtb_keywords are correct in CREST
+                assert line.find('--alpb benzene') > -1
+    elif name == 'methane_nprocs':
+        for line in outlines_crest:
+            if line.startswith(' > crest'):
+                # check if n of procs are correct in CREST
+                assert line.find('-T 14') > -1
+                break
+        file_xtb2 = str(csearch_crest_dir+"/CSEARCH/crest_xyz/methane_nprocs_crest.out")
+        outfile_xtb2 = open(file_xtb2, "r")
+        outlines_xtb2 = outfile_xtb2.readlines()
+        outfile.close()
+        for _,line in enumerate(outlines_xtb2):
+            if line.find('program call') > -1:
+                # check if xtb_keywords are correct in CREST
+                assert line.find('-P 14') > -1
 
 # tests for parameters of csearch fullmonte
 @pytest.mark.parametrize(
@@ -651,7 +751,6 @@ def test_csearch_methods(
             program=program,
             smi=smi,
             name=name,
-            complex=complex,
             crest_keywords=crest_keywords,
             constraints_dist=constraints_dist,
             constraints_angle=constraints_angle,
@@ -672,6 +771,10 @@ def test_csearch_methods(
             + ".sdf"
         )
 
+    file_crest = str(csearch_methods_dir+"/CSEARCH/crest_xyz/crest.out")
+    outfile = open(file_crest, "r")
+    outlines_crest = outfile.readlines()
+    outfile.close()
     assert os.path.exists(file)
     mols = rdkit.Chem.SDMolSupplier(file, removeHs=False, sanitize=False)
     assert charge == int(mols[-1].GetProp("Real charge"))
@@ -681,8 +784,76 @@ def test_csearch_methods(
     # the n of conformers decreases when --nci is used
     elif name == 'nci_keyword':
         assert len(mols) < 300
+        outfile = open(file_crest, "r")
+        outlines_crest = outfile.readlines()
+        outfile.close()
+        for line in outlines_crest:
+            if line.startswith(' > crest'):
+                # check if the crest_keywords option works
+                assert line.find('--nci --cbonds 0.5') > -1
+                # check if there are no --cinp for constrained calcs
+                assert line.find('--cinp') == -1
+                # check if charge and mult are correct
+                assert line.find('--chrg 0 --uhf 0') > -1
+                break
     elif name == 'ethane':
         assert len(mols) >= 1
+    elif name == 'ts':
+        assert len(mols) == 1
+        constrain_line_found = False
+        for i,line in enumerate(outlines_crest):
+            if line.startswith(' > crest'):
+                # check if the the constraints are active in the CREST opt
+                assert line.find('--cinp .xcontrol.sample') > -1
+                # check if charge and mult are correct
+                assert line.find('--chrg -1 --uhf 0') > -1
+            if line.startswith('> $constrain'):
+                constrain_line_found = True
+                assert outlines_crest[i+1].find('distance: 2,3,1.8') > -1
+                assert outlines_crest[i+2].find('distance: 3,1,1.8') > -1
+                assert outlines_crest[i+3].find('angle: 2,3,1,180.0') > -1
+                assert outlines_crest[i+4].find('force constant=0.5') > -1
+                assert outlines_crest[i+5].find('reference=coord.ref') > -1
+                assert outlines_crest[i+6].find('$metadyn') > -1
+                assert outlines_crest[i+7].find('atoms: 4,5,6') > -1
+            if line.find('Generating MTD length') > -1:
+                break
+        assert constrain_line_found
+
+        file_xtb1 = str(csearch_methods_dir+"/CSEARCH/crest_xyz/ts_crest_xtb1.out")
+        outfile_xtb1 = open(file_xtb1, "r")
+        outlines_xtb1 = outfile_xtb1.readlines()
+        outfile.close()
+        constrain_found_xtb = False
+        for i,line in enumerate(outlines_xtb1):
+            if line.find('program call') > -1:
+                # check if charge and mult are correct in xTB
+                assert line.find('-c -1 --uhf 0') > -1
+            elif line.find('constraining bond 2 3 to    1.8') > -1:
+                constrain_found_xtb = True
+                # 5 bond constraints should be set in xtb2
+                assert outlines_xtb1[i+6].find('molecular fragmentation') > -1
+            elif line.find('G F N 2 - x T B') > -1:
+                break
+        assert constrain_found_xtb
+                
+        file_xtb2 = str(csearch_methods_dir+"/CSEARCH/crest_xyz/ts_crest_xtb2.out")
+        outfile_xtb2 = open(file_xtb2, "r")
+        outlines_xtb2 = outfile_xtb2.readlines()
+        outfile.close()
+        constrain_found_xtb = False
+        for i,line in enumerate(outlines_xtb2):
+            if line.find('program call') > -1:
+                # check if charge and mult are correct in xTB
+                assert line.find('-c -1 --uhf 0') > -1
+            elif line.find('constraining bond 2 3 to    1.8') > -1:
+                constrain_found_xtb = True
+                # only 3 constraints should be set in xtb2
+                assert outlines_xtb2[i+4].find('molecular fragmentation') > -1
+            elif line.find('G F N 2 - x T B') > -1:
+                break
+        assert constrain_found_xtb
+
     else:
         assert len(mols) == output_nummols
     os.chdir(w_dir_main)

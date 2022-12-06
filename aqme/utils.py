@@ -469,7 +469,7 @@ def command_line_args():
                     if not isinstance(value, list):
                         try:
                             value = ast.literal_eval(value)
-                        except SyntaxError:
+                        except (SyntaxError, ValueError):
                             pass
                 kwargs[arg_name] = value
 
