@@ -1,27 +1,13 @@
-.. _setup:
+.. include:: ../../README.rst
+   :start-after: installation-start
+   :end-before: installation-end
 
-------------------------
- Setup and Installation
-------------------------
 
-This documents provides steps for general setup and local installation of the ``AQME``
-program.
+.. include:: ../../README.rst
+   :start-after: tests-start
+   :end-before: tests-end
 
-.. contents::
+.. include:: ../../README.rst
+   :start-after: features-modules-start
+   :end-before: features-modules-end
 
-Getting ``AQME``
-=====================
-
-GitHub
-------
-
-The `AQME <https://github.com/jvalegre/aqme>`_ program is available free of charge on GitHub.
-
-conda
----
-
-The ``AQME`` program can also be installed (with its dependencies) *via* conda using
-
-.. code:: bash
-
-  $ conda install -c conda-forge aqme

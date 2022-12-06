@@ -1,10 +1,11 @@
-.. _development:
-
 -----------
 Development
 -----------
 
-This document provides details about possible collaborations for the developments of ``AQME``
-program.
+.. include:: ../../README.rst
+   :start-after: developers-start
+   :end-before: developers-end
 
-Please contact Juan Alegre or Robert Paton for possible collaborations to improve ``AQME`` or create new workflows!
+Here you will find ongoing and future features for ``AQME``
+
+Please contact Juan Alegre or Robert S. Paton for possible collaborations to improve ``AQME``!

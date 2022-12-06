@@ -214,7 +214,9 @@ AQME can also be run through command lines. Some examples are:
     **cregen : bool, default=False**  
         If True, perform a CREGEN analysis after CREST (filtering options below)  
     **cregen_keywords : str, default=None**  
-        Additional keywords for CREGEN (i.e. cregen_keywords='--ethr 0.02')  
+        Additional keywords for CREGEN (i.e. cregen_keywords='--ethr 0.02') 
+    **xtb_keywords : str, default=None**  
+        Define additional keywords to use in the xTB pre-optimization that are not included in -c, --uhf, -P and --input. For example: '--alpb ch2cl2 --gfn 1'   
 
 - [ ] CMIN arguments:  
     **files : str or list of str, default=None**  
@@ -249,7 +251,7 @@ AQME can also be run through command lines. Some examples are:
         Controls the stack size used (especially relevant for xTB/CREST calculations of large systems, where high stack sizes are needed)  
 
     *-- Options for xTB --*  
-    **xTB_keywords : str, default=None**  
+    **xtb_keywords : str, default=None**  
         Define additional keywords to use in xTB that are not included in -c, --uhf, -P and --input. For example: '--alpb ch2cl2 --gfn 1'  
 
     *-- Options for ANI --*  
@@ -345,7 +347,7 @@ AQME can also be run through command lines. Some examples are:
     **mult : int, default=None**  
         Multiplicity of the calculations used in the following input files. If mult isn't defined, it defaults to 1
     **qdescp_solvent : str, default=None**  
-        Solvent used in the xTB property calculations (ALPB model)
+        Solvent used in the xTB property calculations (ALPB model)  
     **qdescp_temp : float, default=300**  
         Temperature required for the xTB property calculations
     **qdescp_acc : float, default=0.2**  

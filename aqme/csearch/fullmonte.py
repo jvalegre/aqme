@@ -11,7 +11,7 @@ from rdkit.Chem import AllChem as Chem
 from rdkit.Chem import rdMolTransforms, rdMolAlign
 
 from aqme.utils import set_metal_atomic_number, get_conf_RMS
-from aqme.csearch_utils import minimize_rdkit_energy
+from aqme.csearch.utils import minimize_rdkit_energy
 
 
 def realign_mol(

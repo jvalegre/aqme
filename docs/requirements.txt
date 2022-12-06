@@ -1,0 +1,12 @@
+sphinx
+sphinx-rtd-theme
+sphinx-autoapi
+numpy
+pandas
+rdkit
+py3Dmol
+scipy
+cclib
+ipywidgets
+progress
+ase

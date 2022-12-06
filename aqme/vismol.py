@@ -1,3 +1,13 @@
+"""
+Parameters
+----------
+   files : list of str, default=''
+      Filenames of SDF/PDB/XYZ to visualize conformers. If *.sdf (or other strings 
+      that are not lists such as *.pdb) are specified, the program will look for
+      all the SDF files in the working directory through glob.glob(*.sdf). 
+      Internal options of "line", "stick", "sphere" incorporated. 
+      Code reference from: [https://iwatobipen.wordpress.com]
+"""
 import py3Dmol
 from rdkit import Chem
 import ipywidgets
