@@ -771,10 +771,11 @@ def test_csearch_methods(
             + ".sdf"
         )
 
-    file_crest = str(csearch_methods_dir+"/CSEARCH/crest_xyz/crest.out")
-    outfile = open(file_crest, "r")
-    outlines_crest = outfile.readlines()
-    outfile.close()
+    if program == 'crest':
+        file_crest = str(csearch_methods_dir+"/CSEARCH/crest_xyz/crest.out")
+        outfile = open(file_crest, "r")
+        outlines_crest = outfile.readlines()
+        outfile.close()
     assert os.path.exists(file)
     mols = rdkit.Chem.SDMolSupplier(file, removeHs=False, sanitize=False)
     assert charge == int(mols[-1].GetProp("Real charge"))
