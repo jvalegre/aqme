@@ -23,11 +23,16 @@
 .. |lgtm| image:: https://img.shields.io/lgtm/grade/python/github/jvalegre/aqme?label=LGTM%20grade&logo=lgtm 
    :target: https://lgtm.com/projects/g/jvalegre/aqme/context:python
 
+.. |readthedocs| image:: https://readthedocs.org/projects/aqme/badge/?version=latest
+    :target: https://aqme.readthedocs.io/en/latest/?badge=latest
+    :alt: Documentation Status
+
 |CircleCI|
 |Codecov|
 |CodeFactor|
 |Codacy|
 |lgtm|
+|readthedocs|
 
 .. badges-end
 
