@@ -73,7 +73,6 @@ def main():
             auto_sample=args.auto_sample,
             ff=args.ff,
             degree=args.degree,
-            verbose=args.verbose,
             output=args.output,
             seed=args.seed,
             max_torsions=args.max_torsions,
@@ -105,23 +104,19 @@ def main():
             command_line=args.command_line,
             w_dir_main=args.w_dir_main,
             destination=args.destination,
-            verbose=args.verbose,
+            varfile=args.varfile,
+            nprocs=args.nprocs,
             program=args.program,
-            xtb_method=args.xtb_method,
-            xtb_solvent=args.xtb_solvent,
             output=args.output,
             charge=args.charge,
             mult=args.mult,
             metal_atoms=args.metal_atoms,
             metal_oxi=args.metal_oxi,
-            complex_type=args.complex_type,
             ewin_cmin=args.ewin_cmin,
             initial_energy_threshold=args.initial_energy_threshold,
             energy_threshold=args.energy_threshold,
             rms_threshold=args.rms_threshold,
-            xtb_accuracy=args.xtb_accuracy,
-            xtb_electronic_temperature=args.xtb_electronic_temperature,
-            xtb_max_iterations=args.xtb_max_iterations,
+            xtb_keywords=args.xtb_keywords,
             opt_steps=args.opt_steps,
             opt_fmax=args.opt_fmax,
             ani_method=args.ani_method,
@@ -150,7 +145,6 @@ def main():
             gen_atoms=args.gen_atoms,
             bs_gen=args.bs_gen,
             bs_nogen=args.bs_nogen,
-            verbose=args.verbose,
         )
 
     # QCORR
@@ -182,8 +176,7 @@ def main():
             bs_nogen=args.bs_nogen,
         )
 
-    # qdescp
-    # required to do CSEARCH or have SDF files of coformers
+    # QDESCP
     if args.qdescp:
         qdescp(
             w_dir_main=args.w_dir_main,
@@ -196,7 +189,6 @@ def main():
             qdescp_acc=args.qdescp_acc,
             qdescp_solvent=args.qdescp_solvent,
             boltz=args.boltz,
-            qdescp_rdkit=args.qdescp_rdkit,
             nmr_atoms=args.nmr_atoms,
             nmr_slope=args.nmr_slope,
             nmr_intercept=args.nmr_intercept,

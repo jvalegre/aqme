@@ -74,9 +74,8 @@ class vismol:
                     except PermissionError:
                         pass # in Windows, the generated SDF file cannot be removed
 
-        if self.args.verbose:
-            elapsed_time = round(time.time() - start_time_overall, 2)
-            self.args.log.write(f"\nTime VIZMOL: {elapsed_time} seconds\n")
+        elapsed_time = round(time.time() - start_time_overall, 2)
+        self.args.log.write(f"\nTime VIZMOL: {elapsed_time} seconds\n")
         self.args.log.finalize()
 
     def style_selector(self, idx, s):

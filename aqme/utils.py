@@ -412,7 +412,6 @@ def command_line_args():
     kwargs = {}
     available_args = ["help"]
     bool_args = [
-        "verbose",
         "csearch",
         "cmin",
         "qprep",
@@ -466,7 +465,7 @@ def command_line_args():
                 kwargs[arg_name] = glob.glob(value)
             else:
                 # this converts the string parameters to lists
-                if arg_name.lower() in ['files', "metal_oxi", "metal_atoms", "gen_atoms", "atom_types", "cartesians", "nmr_atoms", "nmr_slope", "nmr_intercept"]:
+                if arg_name.lower() in ["metal_oxi", "metal_atoms", "gen_atoms", "atom_types", "cartesians", "nmr_atoms", "nmr_slope", "nmr_intercept"]:
                     if not isinstance(value, list):
                         value = ast.literal_eval(value)
                 kwargs[arg_name] = value
@@ -573,20 +572,14 @@ def load_variables(kwargs, aqme_module, create_dat=True):
                     path_command = Path(f"{os.getcwd()}")
                     self.log = Logger(path_command / logger_1, logger_2)
 
-                self.log.write(
-                    f"AQME v {aqme_version} {time_run} \nCitation: {aqme_ref}\n"
-                )
+                self.log.write(f"AQME v {aqme_version} {time_run} \nCitation: {aqme_ref}\n")
 
                 if self.command_line:
-                    self.log.write(
-                        f"Command line used in AQME: aqme {' '.join([str(elem) for elem in sys.argv[1:]])}\n"
-                    )
+                    self.log.write(f"Command line used in AQME: aqme {' '.join([str(elem) for elem in sys.argv[1:]])}\n")
 
                 if aqme_module in ["qcorr", "qprep", "cmin", "qdescp", "vismol"]:
                     if len(self.files) == 0:
-                        self.log.write(
-                            f"x  There are no output files in {self.w_dir_main}\n"
-                        )
+                        self.log.write(f"x  There are no output files in {self.w_dir_main}\n")
                         error_setup = True
 
             if error_setup:

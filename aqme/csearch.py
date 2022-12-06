@@ -86,23 +86,17 @@ class csearch:
                     ["xtb", "-h"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
                 )
             except FileNotFoundError:
-                self.args.log.write(
-                    "x  xTB is not installed (CREST cannot be used)! You can install the program with 'conda install -c conda-forge xtb'"
-                )
+                self.args.log.write("x  xTB is not installed (CREST cannot be used)! You can install the program with 'conda install -c conda-forge xtb'")
                 self.args.log.finalize()
                 sys.exit()
 
         if self.args.program.lower() not in ["rdkit", "summ", "fullmonte", "crest"]:
-            self.args.log.write(
-                "\nx  Program not supported for CSEARCH conformer generation! Specify: program='rdkit' (or summ, fullmonte, crest)"
-            )
+            self.args.log.write("\nx  Program not supported for CSEARCH conformer generation! Specify: program='rdkit' (or summ, fullmonte, crest)")
             self.args.log.finalize()
             sys.exit()
 
         if self.args.smi is None and self.args.input == "":
-            self.args.log.write(
-                "\nx  Program requires either a SMILES or an input file to proceed! Please look up acceptable file formats. Specify: smi='CCC' (or input='filename.csv')"
-            )
+            self.args.log.write("\nx  Program requires either a SMILES or an input file to proceed! Please look up acceptable file formats. Specify: smi='CCC' (or input='filename.csv')")
             self.args.log.finalize()
             sys.exit()
 
@@ -131,9 +125,7 @@ class csearch:
             else:
                 job_inputs = self.load_jobs(csearch_file)
 
-            self.args.log.write(
-                f"\nStarting CSEARCH with {len(job_inputs)} job(s) (SDF, XYZ, CSV, etc. files might contain multiple jobs/structures inside)\n"
-            )
+            self.args.log.write(f"\nStarting CSEARCH with {len(job_inputs)} job(s) (SDF, XYZ, CSV, etc. files might contain multiple jobs/structures inside)\n")
 
             # runs the conformer sampling with multiprocessors
             self.run_csearch(job_inputs)
@@ -287,9 +279,7 @@ class csearch:
             )
 
             if mol is None:
-                self.args.log.write(
-                    f"\nx  Failed to convert the provided SMILES ({smi}) to an RDkit Mol object! Please check the starting smiles."
-                )
+                self.args.log.write(f"\nx  Failed to convert the provided SMILES ({smi}) to an RDkit Mol object! Please check the starting smiles.")
                 self.args.log.finalize()
                 sys.exit()
 
@@ -297,9 +287,7 @@ class csearch:
             # for 3D input formats, the smi variable represents the mol object
             mol = smi
             if mol is None:
-                self.args.log.write(
-                    f"\nx  Failed to convert the provided input to an RDkit Mol object! Please check the starting structure."
-                )
+                self.args.log.write(f"\nx  Failed to convert the provided input to an RDkit Mol object! Please check the starting structure.")
                 self.args.log.finalize()
                 sys.exit()
                 
@@ -347,11 +335,7 @@ class csearch:
                 shutil.copy(f"{name}.xyz", f"{name}_{self.args.program.lower()}.xyz")
 
         # Converts each line to an RDKit mol object
-        if self.args.verbose:
-            self.args.log.write(f"\n   -> Input Molecule {Chem.MolToSmiles(mol)}")
-
         if len(self.args.metal_atoms) >= 1:
-
             (
                 self.args.metal_idx,
                 self.args.complex_coord,
@@ -366,9 +350,7 @@ class csearch:
                 "trigonalplanar",
             ]
             if self.args.complex_type != '' and self.args.complex_type not in accepted_complex_types:
-                self.args.log.write(
-                    f"x  The metal template specified in complex_type ({self.args.complex_type}) is not valid! Options: squareplanar, squarepyramidal, linear and trigonalplanar"
-                )
+                self.args.log.write(f"x  The metal template specified in complex_type ({self.args.complex_type}) is not valid! Options: squareplanar, squarepyramidal, linear and trigonalplanar")
                 self.args.log.finalize()
                 sys.exit()
 
@@ -405,9 +387,7 @@ class csearch:
                         frames = [total_data, data]
                         total_data = pd.concat(frames, sort=True)
                 else:
-                    self.args.log.write(
-                        "\nx  Cannot use templates for complexes involving more than 1 metal or for organic molecueles."
-                    )
+                    self.args.log.write("\nx  Cannot use templates for complexes involving more than 1 metal or for organic molecueles.")
                     total_data = None
             else:
                 total_data = self.conformer_generation(
@@ -541,7 +521,7 @@ class csearch:
             sdwriter_init = Chem.SDWriter(str(self.csearch_file))
 
             valid_structure = filters(
-                mol, self.args.log, self.args.max_mol_wt, self.args.verbose
+                mol, self.args.log, self.args.max_mol_wt
             )
             if valid_structure:
                 try:
@@ -708,7 +688,6 @@ class csearch:
                 self.args.log,
                 "summ",
                 self.args.initial_energy_threshold,
-                self.args.verbose,
             )
             # filter based on energy and RMSD
             selectedcids_rotated = RMSD_and_E_filter(
@@ -863,11 +842,7 @@ class csearch:
         cids = rdDistGeom.EmbedMultipleConfs(mol, initial_confs, **embed_kwargs)
 
         if len(cids) <= 1 and initial_confs != 1:
-            self.args.log.write(
-                "\no  Normal RDKit embeding process failed, trying to "
-                "generate conformers with random coordinates "
-                f"(with {str(initial_confs)} possibilities)"
-            )
+            self.args.log.write(f"\no  Normal RDKit embeding process failed, trying to generate conformers with random coordinates (with {str(initial_confs)} possibilities)")
             embed_kwargs["useRandomCoords"] = True
             embed_kwargs["boxSizeMult"] = 10.0
             embed_kwargs["numZeroFail"] = 1000
@@ -971,7 +946,6 @@ class csearch:
             self.args.log,
             "rdkit",
             self.args.initial_energy_threshold,
-            self.args.verbose,
         )
 
         # filter based on energy and RMSD
@@ -988,14 +962,6 @@ class csearch:
 
         if self.args.program.lower() in ["summ", "rdkit", "crest"]:
             # now exhaustively drive torsions of selected conformers
-            n_confs = int(
-                len(selectedcids_rdkit) * (360 / self.args.degree) ** len(rotmatches)
-            )
-            if self.args.verbose and len(rotmatches) != 0:
-                self.args.log.write(
-                    "\no  Systematic generation of " + str(n_confs) + " confomers"
-                )
-
             total = 0
             for conf in selectedcids_rdkit:
                 if self.args.program.lower() == "summ" and not update_to_rdkit:
@@ -1032,8 +998,6 @@ class csearch:
                     )
                     break
 
-            if self.args.verbose and len(rotmatches) != 0:
-                self.args.log.write("\no  %d total conformations generated" % total)
             status = 1
 
         if self.args.program.lower() == "summ":
@@ -1097,20 +1061,13 @@ class csearch:
         rotmatches = getDihedralMatches(mol, self.args.heavyonly)
 
         if len(rotmatches) > self.args.max_torsions and self.args.max_torsions > 0:
-            self.args.log.write(
-                "\nx  Too many torsions (%d). Skipping %s"
-                % (len(rotmatches), (name + self.args.output))
-            )
+            self.args.log.write(f"\nx  Too many torsions ({len(rotmatches)}). Skipping {name + self.args.output}")
         elif self.args.program.lower() == "summ" and len(rotmatches) == 0:
             update_to_rdkit = True
-            self.args.log.write(
-                "\nx  No rotatable dihedral found. Updating to CSEARCH to RDKit, writing to SUMM SDF"
-            )
+            self.args.log.write("\nx  No rotatable dihedral found. Updating to CSEARCH to RDKit, writing to SUMM SDF")
         elif self.args.program.lower() == "fullmonte" and len(rotmatches) == 0:
             update_to_rdkit = True
-            self.args.log.write(
-                "\nx  No rotatable dihedral found. Updating to CSEARCH to RDKit, writing to FULLMONTE SDF"
-            )
+            self.args.log.write("\nx  No rotatable dihedral found. Updating to CSEARCH to RDKit, writing to FULLMONTE SDF")
 
         ff = self.args.ff
         dup_data.at[dup_data_idx, "RDKit-Initial-samples"] = initial_confs
@@ -1121,34 +1078,9 @@ class csearch:
         # energy minimize all to get more realistic results
         # identify the atoms and decide Force Field
         for atom in mol.GetAtoms():
-            if (
-                atom.GetAtomicNum() > 36
-            ) and self.args.ff == "MMFF":  # up to Kr for MMFF, if not the code will use UFF
-                self.args.log.write(
-                    "\nx  "
-                    + self.args.ff
-                    + " is not compatible with the molecule, changing to UFF"
-                )
+            if atom.GetAtomicNum() > 36 and self.args.ff == "MMFF":  # up to Kr for MMFF, if not the code will use UFF
+                self.args.log.write(f"\nx  {self.args.ff} is not compatible with the molecule, changing to UFF")
                 ff = "UFF"
-        if self.args.verbose:
-            self.args.log.write(
-                "\no  Optimizing "
-                + str(len(cids))
-                + " initial conformers with "
-                + ff
-            )
-            if self.args.program.lower() == "summ":
-                self.args.log.write(
-                    "\no  Found " + str(len(rotmatches)) + " rotatable torsions"
-                )
-            elif self.args.program.lower() == "fullmonte":
-                self.args.log.write(
-                    "\no  Found " + str(len(rotmatches)) + " rotatable torsions"
-                )
-            else:
-                self.args.log.write(
-                    "\no  Systematic torsion rotation is set to OFF"
-                )
 
         try:
             status,mol_crest = self.min_after_embed(

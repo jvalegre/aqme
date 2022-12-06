@@ -143,6 +143,10 @@ def xtb_opt_main(
                 str(self.args.nprocs),
             ]
 
+            if self.args.xtb_keywords is not None:
+                for keyword in self.args.xtb_keywords.split():
+                    command1.append(keyword)
+
             run_command(command1, "{}.out".format(xyzoutxtb1.split(".xyz")[0]))
             try:
                 os.rename(str(dat_dir) + "/xtbopt.xyz", xyzoutxtb1)
@@ -177,6 +181,11 @@ def xtb_opt_main(
             "-P",
             str(self.args.nprocs),
         ]
+
+        if self.args.xtb_keywords is not None:
+            for keyword in self.args.xtb_keywords.split():
+                command2.append(keyword)
+
         run_command(command2, "{}.out".format(xyzoutxtb2.split(".xyz")[0]))
         try:
             os.rename(str(dat_dir) + "/xtbopt.xyz", xyzoutxtb2)
@@ -198,32 +207,37 @@ def xtb_opt_main(
                 "-P",
                 str(self.args.nprocs), 
             ]
+
+            if self.args.xtb_keywords is not None:
+                for keyword in self.args.xtb_keywords.split():
+                    command.append(keyword)
+
             run_command(command, f"{xyzin.split('.')[0]}.out")
             os.rename(str(dat_dir) + "/xtbopt.xyz", xyzin)
         except FileNotFoundError:
-            self.args.log.write(
-                f"\nx   There was an error during the xTB pre-optimization. This error is related to parallelization of xTB jobs and is normally observed when using metal complexes in some operative systems/OpenMP versions. AQME is switching to using one processor (nprocs=1).\n"
-            )
+            self.args.log.write(f"\nx   There was an error during the xTB pre-optimization. This error is related to parallelization of xTB jobs and is normally observed when using metal complexes in some operative systems/OpenMP versions. AQME is switching to using one processor (nprocs=1).\n")
             self.args.nprocs = 1
             try:
-                subprocess.call(f"export OMP_STACKSIZE={self.args.stacksize} && export OMP_NUM_THREADS={self.args.nprocs},1 \
-                && xtb {xyzin} --opt -c {charge} --uhf {int(mult) - 1} >> {xyzin.split('.')[0]}.out", shell=False)
+                if self.args.xtb_keywords is None:
+                    comm_xtb = f"export OMP_STACKSIZE={self.args.stacksize} && export OMP_NUM_THREADS={self.args.nprocs},1 \
+                    && xtb {xyzin} --opt -c {charge} --uhf {int(mult) - 1} >> {xyzin.split('.')[0]}.out"
+                else:
+                    comm_xtb = f"export OMP_STACKSIZE={self.args.stacksize} && export OMP_NUM_THREADS={self.args.nprocs},1 \
+                    && xtb {xyzin} --opt -c {charge} --uhf {int(mult) - 1} {self.args.xtb_keywords} >> {xyzin.split('.')[0]}.out"
+                subprocess.call(comm_xtb, shell=False)
                 os.rename(str(dat_dir) + "/xtbopt.xyz", xyzin)
             except FileNotFoundError:
                 if self.args.program.lower() == "crest":
-                    self.args.log.write(
-                    f"\nx   There was another error during the xTB pre-optimization that could not be fixed. Trying CREST directly with no xTB preoptimization.\n"
-                )
+                    self.args.log.write(f"\nx   There was another error during the xTB pre-optimization that could not be fixed. Trying CREST directly with no xTB preoptimization.\n")
                 else:
-                    self.args.log.write(
-                    f"\nx   There was another error during the xTB pre-optimization that could not be fixed (this molecule will be skipped).\n"
-                )
+                    self.args.log.write(f"\nx   There was another error during the xTB pre-optimization that could not be fixed (this molecule will be skipped).\n")
                 cmin_valid = False
                 mol_rd = None
                 energy = 0
 
         xyzoutxtb2 = xyzin
-        xyzoutall = str(dat_dir) + "/" + name_no_path + "_conformers.xyz"
+
+    xyzoutall = str(dat_dir) + "/" + name_no_path + "_conformers.xyz"
 
     if self.args.program.lower() == "crest":
         constrained_sampling = False
@@ -265,9 +279,7 @@ def xtb_opt_main(
         try:
             natoms = open("crest_best.xyz").readlines()[0].strip()
         except FileNotFoundError:
-                self.args.log.write(
-                    f"\nx  CREST optimization failed! This might be caused by different reasons. For example, this might happen if you're using metal complexes without specifying any kind of template in the complex_type option (i.e. squareplanar).\n"
-                )
+                self.args.log.write(f"\nx  CREST optimization failed! This might be caused by different reasons. For example, this might happen if you're using metal complexes without specifying any kind of template in the complex_type option (i.e. squareplanar).\n")
 
         if self.args.cregen and int(natoms) != 1:
             command = ["crest", "crest_best.xyz", "--cregen", "crest_conformers.xyz"]
@@ -287,9 +299,7 @@ def xtb_opt_main(
             else:
                 shutil.copy(str(dat_dir) + "/crest_conformers.xyz", xyzoutall)
         except FileNotFoundError:
-            self.args.log.write(
-                "\nx   CREST conformer sampling failed! Please, try other options (i.e. include constrains, change the crest_keywords option, etc.)"
-            )
+            self.args.log.write("\nx   CREST conformer sampling failed! Please, try other options (i.e. include constrains, change the crest_keywords option, etc.)")
             cmin_valid = False
 
     if cmin_valid:

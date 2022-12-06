@@ -125,10 +125,10 @@ def test_csearch_input_parameters(program, input, output_nummols):
 
 # # tests for parameters of csearch random initialzation
 # @pytest.mark.parametrize(
-#     "program, smi, name, max_matches_rmsd , max_mol_wt , ff, degree, verbose, output, max_torsions, prefix, output_nummols ",
+#     "program, smi, name, max_matches_rmsd , max_mol_wt , ff, degree, output, max_torsions, prefix, output_nummols ",
 #     [
 #         # tests for conformer generation with RDKit
-#         ("summ", "CCCCC", "pentane", 500, 200, "MMFF", 30, True, ".sdf", 20, "mol", 4),
+#         ("summ", "CCCCC", "pentane", 500, 200, "MMFF", 30, ".sdf", 20, "mol", 4),
 #     ],
 # )
 # def test_csearch_others_parameters(
@@ -139,7 +139,6 @@ def test_csearch_input_parameters(program, input, output_nummols):
 #     max_mol_wt,
 #     ff,
 #     degree,
-#     verbose,
 #     output,
 #     max_torsions,
 #     prefix,
@@ -156,7 +155,6 @@ def test_csearch_input_parameters(program, input, output_nummols):
 #         max_mol_wt=max_mol_wt,
 #         ff=ff,
 #         degree=degree,
-#         verbose=verbose,
 #         output=output,
 #         max_torsions=max_torsions,
 #         prefix=prefix,

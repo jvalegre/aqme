@@ -42,9 +42,7 @@ class cmin:
         # load default and user-specified variables
         self.args = load_variables(kwargs, "cmin")
         if self.args.program.lower() not in ["xtb", "ani"]:
-            self.args.log.write(
-                "\nx  Program not supported for CMIN refinement! Specify: program='xtb' (or 'ani')"
-            )
+            self.args.log.write("\nx  Program not supported for CMIN refinement! Specify: program='xtb' (or 'ani')")
             self.args.log.finalize()
             sys.exit()
 
@@ -87,9 +85,7 @@ class cmin:
         elif file_format.lower() == '.sdf':
             files_cmin = self.args.files
         else:
-            self.args.log.write(
-                f"\nx  The input format {file_format} is not supported for CMIN refinement! Formats allowed: SDF, XYZ, COM, GJF and PDB"
-            )
+            self.args.log.write(f"\nx  The input format {file_format} is not supported for CMIN refinement! Formats allowed: SDF, XYZ, COM, GJF and PDB")
             self.args.log.finalize()
             sys.exit()
 
@@ -148,17 +144,8 @@ class cmin:
         os.chdir(self.args.initial_dir)
 
     def load_jobs(self, file):
-        if self.args.program.lower() == "xtb":
-            if self.args.xtb_solvent == "none":
-                method = f"xTB ({self.args.xtb_method})"
-            else:
-                method = f"xTB ({self.args.xtb_method} in {self.args.xtb_solvent})"
-        if self.args.program.lower() == "ani":
-            method = f"ANI ({self.args.ani_method})"
 
-        self.args.log.write(
-            f"\n\no  Multiple minimization of {file} with {method}"
-        )
+        self.args.log.write(f"\n\no  Multiple minimization of {file} with {self.args.program}")
 
         # read SDF files from RDKit optimization
         inmols = rdkit_sdf_read(file, self.args)
@@ -176,15 +163,11 @@ class cmin:
 
         if self.args.program.lower() == "ani":
             if self.args.charge is not None:
-                self.args.log.write(
-                    "\nx  Charge is automatically calculated for ANI methods, do not use the charge option!"
-                )
+                self.args.log.write("\nx  Charge is automatically calculated for ANI methods, do not use the charge option!")
                 self.args.log.finalize()
                 sys.exit()
             elif self.args.mult is not None:
-                self.args.log.write(
-                    "\nx  Multiplicity is automatically calculated for ANI methods, do not use the mult option!"
-                )
+                self.args.log.write("\nx  Multiplicity is automatically calculated for ANI methods, do not use the mult option!")
                 self.args.log.finalize()
                 sys.exit()
             charge,mult,final_mult,dup_data = self.charge_mult_cmin(dup_data, dup_data_idx, 'ani')
@@ -282,14 +265,7 @@ class cmin:
                 write_all_confs += 1
             self.sdwriterall.close()
 
-            if self.args.verbose:
-                self.args.log.write(
-                    f"\no  Writing {str(write_all_confs)} conformers to file {name_mol}_{self.args.program.lower()}_all_confs{self.args.output}"
-                )
-
-            self.args.log.write(
-                f"\no  Applying filters to intial conformers after {self.args.program.lower()} minimization"
-            )
+            self.args.log.write(f"\no  Applying filters to intial conformers after {self.args.program.lower()} minimization")
 
             # filter based on energy window ewin_cmin
             sortedcids = ewin_filter(
@@ -311,7 +287,6 @@ class cmin:
                 self.args.log,
                 self.args.program.lower(),
                 self.args.initial_energy_threshold,
-                self.args.verbose,
             )
             # filter based on energy and RMSD
             selectedcids = RMSD_and_E_filter(
@@ -332,7 +307,7 @@ class cmin:
 
             # write the filtered, ordered conformers to external file
             self.write_confs(
-                outmols, selectedcids, name_mol, self.args, self.args.program.lower(), self.args.log
+                outmols, selectedcids, self.args.log
             )
 
         dup_data.at[dup_data_idx, "CMIN time (seconds)"] = round(
@@ -365,16 +340,14 @@ class cmin:
             warnings.filterwarnings('ignore')
 
         except ModuleNotFoundError:
-            self.args.log.write(
-                "x  Torch-related modules are not installed! You can install these modules with 'pip install torch torchvision torchani'"
-            )
+            self.args.log.write("x  Torch-related modules are not installed! You can install these modules with 'pip install torch torchvision torchani'")
             self.args.log.finalize()
             sys.exit()
         try:
             import ase
+            import ase.optimize
         except ModuleNotFoundError:
-            self.args.log.write(
-                "x  ASE is not installed! You can install the program with 'conda install -c conda-forge ase' or 'pip install ase'")
+            self.args.log.write("x  ASE is not installed! You can install the program with 'conda install -c conda-forge ase' or 'pip install ase'")
             self.args.log.finalize()
             sys.exit()
 
@@ -413,9 +386,7 @@ class cmin:
             optimizer.run(fmax=self.args.opt_fmax, steps=self.args.opt_steps)
 
         except KeyError:
-            self.args.log.write(
-                f"\nx  {self.args.ani_method} could not optimize this molecule (i.e. check if all the atoms used are compatible with ANI)"
-            )
+            self.args.log.write(f"\nx  {self.args.ani_method} could not optimize this molecule (i.e. check if all the atoms used are compatible with ANI)")
             cmin_valid = False
             energy = 0
 
@@ -449,9 +420,7 @@ class cmin:
             try:
                 import torchani
             except (ImportError,ModuleNotFoundError):
-                self.args.log.write(
-                    "x  Torchani is not installed! You can install the program with 'pip install torchani'"
-                )
+                self.args.log.write("x  Torchani is not installed! You can install the program with 'pip install torchani'")
                 self.args.log.finalize()
                 sys.exit()
 
@@ -463,9 +432,7 @@ class cmin:
                     ["xtb", "-h"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
                 )
             except FileNotFoundError:
-                self.args.log.write(
-                    "x  xTB is not installed (CREST cannot be used)! You can install the program with 'conda install -c conda-forge xtb'"
-                )
+                self.args.log.write("x  xTB is not installed (CREST cannot be used)! You can install the program with 'conda install -c conda-forge xtb'")
                 self.args.log.finalize()
                 sys.exit()
     
@@ -473,24 +440,14 @@ class cmin:
 
         return model
 
-    # WRITE SDF FILES FOR xTB AND ANI
-    def write_confs(self, conformers, selectedcids, name, args, program, log):
+    # write SDF files for xTB and ANI
+    def write_confs(self, conformers, selectedcids, log):
         if len(conformers) > 0:
             write_confs = 0
             for cid in selectedcids:
                 self.sdwriter.write(conformers[cid])
                 write_confs += 1
 
-            if args.verbose:
-                log.write(
-                    "o  Writing "
-                    + str(write_confs)
-                    + " conformers to file "
-                    + name
-                    + "_"
-                    + program
-                    + args.output
-                )
             self.sdwriter.close()
         else:
             log.write("x  No conformers found!")

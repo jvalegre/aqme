@@ -22,15 +22,15 @@ if not os.path.exists(cmin_xtb_dir):
 
 # tests for parameters of csearch random initialzation
 @pytest.mark.parametrize(
-    "program, sdf, ani_method, xtb_method, opt_steps, opt_fmax, output_nummols",
+    "program, sdf, ani_method, opt_steps, opt_fmax, output_nummols",
     [
         # tests for conformer generation with RDKit
         ("ani", "pentane_rdkit_methods.sdf", "ANI1ccx", None, 100, 0.08, 4),
-        # ("xtb", "pentane_rdkit_methods.sdf", None, "GFN2-xTB", 400, 0.03, 4),
+        # ("xtb", "pentane_rdkit_methods.sdf", None, 400, 0.03, 4),
     ],
 )
 def test_cmin_methods(
-    program, sdf, ani_method, xtb_method, opt_steps, opt_fmax, output_nummols
+    program, sdf, ani_method, opt_steps, opt_fmax, output_nummols
 ):
     os.chdir(cmin_methods_dir)
     # runs the program with the different tests
@@ -46,7 +46,6 @@ def test_cmin_methods(
     elif program == "xtb":
         cmin(
             w_dir_main=cmin_methods_dir,
-            xtb_method=xtb_method,
             program=program,
             files=sdf,
             opt_steps=opt_steps,

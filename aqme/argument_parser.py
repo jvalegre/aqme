@@ -11,7 +11,6 @@ var_dict = {
     "command_line": False,
     "name": None,
     "path": "",
-    "verbose": False,
     "output": ".sdf",
     "csearch": False,
     "cmin": False,
@@ -49,11 +48,7 @@ var_dict = {
     "max_mol_wt": 0,
     "ani_method": "ANI2x",
     "stacksize": "1G",
-    "xtb_method": "GFN2-xTB",
-    "xtb_solvent": "none",
-    "xtb_accuracy": 1.0,
-    "xtb_electronic_temperature": 300.0,
-    "xtb_max_iterations": 250,
+    "xtb_keywords": None,
     "max_workers": 4,
     "ewin_sample_fullmonte": 2.0,
     "ewin_fullmonte": 5.0,
@@ -105,7 +100,6 @@ var_dict = {
     "qdescp_acc": 0.2,
     "qdescp_solvent": None,
     "boltz": True,
-    "qdescp_rdkit": True,
     "nmr_atoms": [6, 1],  # [C,H]
     "nmr_slope": [-1.0537, -1.0784],  # [C,H]
     "nmr_intercept": [181.7815,31.8723],  # [C,H]

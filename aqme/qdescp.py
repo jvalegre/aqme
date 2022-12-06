@@ -88,9 +88,8 @@ class qdescp:
 
         self.args.log.write(f"o  QDESCP successfully done at {destination}")
 
-        if self.args.verbose:
-            elapsed_time = round(time.time() - start_time_overall, 2)
-            self.args.log.write(f"\nTime QDESCP: {elapsed_time} seconds\n")
+        elapsed_time = round(time.time() - start_time_overall, 2)
+        self.args.log.write(f"\nTime QDESCP: {elapsed_time} seconds\n")
         self.args.log.finalize()
 
     def write_csv_boltz_data(self, destination):

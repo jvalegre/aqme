@@ -53,9 +53,7 @@ class qcorr:
 
         # QCORR analysis
         if self.args.files[0].split('.')[1].lower() not in ['log','out','json']:
-            self.args.log.write(
-                f"\nx  The format used ({self.args.files[0].split('.')[1].lower()}) is not compatible with QCORR! Formats accepted: log, out, json"
-            )
+            self.args.log.write(f"\nx  The format used ({self.args.files[0].split('.')[1].lower()}) is not compatible with QCORR! Formats accepted: log, out, json")
             self.args.log.finalize()
             sys.exit()
         self.qcorr_processing()
@@ -115,9 +113,7 @@ class qcorr:
                 )
                 if errortype == "atomicbasiserror":
                     os.remove(file_name + ".json")
-                    self.args.log.write(
-                        f"{os.path.basename(file)}: Termination = {termination}, Error type = {errortype}"
-                    )
+                    self.args.log.write(f"{os.path.basename(file)}: Termination = {termination}, Error type = {errortype}")
                 continue
 
             # check for duplicates and fix wrong number of freqs in normally terminated calculations and
@@ -168,13 +164,9 @@ class qcorr:
 
             # This part places the calculations and json files in different folders depending on the type of termination
             if errortype == "duplicate_calc":
-                self.args.log.write(
-                    f"{os.path.basename(file)}: Termination = {termination}, Error type = {errortype}, Duplicate of = {dup_off}"
-                )
+                self.args.log.write(f"{os.path.basename(file)}: Termination = {termination}, Error type = {errortype}, Duplicate of = {dup_off}")
             else:
-                self.args.log.write(
-                    f"{os.path.basename(file)}: Termination = {termination}, Error type = {errortype}"
-                )
+                self.args.log.write(f"{os.path.basename(file)}: Termination = {termination}, Error type = {errortype}")
 
             file_terms, destination = self.organize_outputs(
                 file, termination, errortype, file_terms
@@ -205,9 +197,7 @@ class qcorr:
                     log=self.args.log,
                 )
             else:
-                self.args.log.write(
-                    "\nx  No normal terminations with no errors to run the full check analysis"
-                )
+                self.args.log.write("\nx  No normal terminations with no errors to run the full check analysis")
 
         elapsed_time = round(time.time() - start_time_overall, 2)
         self.args.log.write(f"\n Time QCORR: {elapsed_time} seconds\n")
@@ -558,9 +548,7 @@ class qcorr:
             isomerized = check_isomerization(isom_data, file)
 
         except FileNotFoundError:
-            self.args.log.write(
-                f"x  No com file were found for {os.path.basename(file)}, the check_geom test will be disabled for this calculation"
-            )
+            self.args.log.write(f"x  No com file were found for {os.path.basename(file)}, the check_geom test will be disabled for this calculation")
 
         if isomerized:
             errortype = "isomerization"
@@ -612,7 +600,6 @@ class qcorr:
                 program=program,
                 atom_types=atom_types,
                 cartesians=cartesians,
-                verbose=False,
                 qm_input=cclib_data["metadata"]["keywords line"],
                 mem=cclib_data["metadata"]["memory"],
                 nprocs=cclib_data["metadata"]["processors"],
@@ -624,9 +611,7 @@ class qcorr:
                 create_dat=False,
             )
         else:
-            self.args.log.write(
-                f"x  Couldn't create an input file to fix {os.path.basename(file)} (compatible programs: Gaussian and ORCA)\n"
-            )
+            self.args.log.write(f"x  Couldn't create an input file to fix {os.path.basename(file)} (compatible programs: Gaussian and ORCA)\n")
 
     def json_gen(self, file, file_name):
         """
@@ -657,9 +642,7 @@ class qcorr:
                     termination, errortype = "normal", "none"
 
         if errortype == "no_data":
-            self.args.log.write(
-                f"x  Potential cclib compatibility problem or no data found for file {file_name} (Termination = {termination}, Error type = {errortype})"
-            )
+            self.args.log.write(f"x  Potential cclib compatibility problem or no data found for file {file_name} (Termination = {termination}, Error type = {errortype})")
 
         return termination, errortype, cclib_data
 
