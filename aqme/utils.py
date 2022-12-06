@@ -465,9 +465,12 @@ def command_line_args():
                 kwargs[arg_name] = glob.glob(value)
             else:
                 # this converts the string parameters to lists
-                if arg_name.lower() in ["metal_oxi", "metal_atoms", "gen_atoms", "atom_types", "cartesians", "nmr_atoms", "nmr_slope", "nmr_intercept"]:
+                if arg_name.lower() in ["files", "metal_oxi", "metal_atoms", "gen_atoms", "atom_types", "cartesians", "nmr_atoms", "nmr_slope", "nmr_intercept"]:
                     if not isinstance(value, list):
-                        value = ast.literal_eval(value)
+                        try:
+                            value = ast.literal_eval(value)
+                        except SyntaxError:
+                            pass
                 kwargs[arg_name] = value
 
     # Second, load all the default variables as an "add_option" object

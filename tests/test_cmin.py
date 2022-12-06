@@ -25,7 +25,7 @@ if not os.path.exists(cmin_xtb_dir):
     "program, sdf, ani_method, opt_steps, opt_fmax, output_nummols",
     [
         # tests for conformer generation with RDKit
-        ("ani", "pentane_rdkit_methods.sdf", "ANI1ccx", None, 100, 0.08, 4),
+        ("ani", "pentane_rdkit_methods.sdf", "ANI1ccx", 100, 0.08, 4),
         # ("xtb", "pentane_rdkit_methods.sdf", None, 400, 0.03, 4),
     ],
 )
