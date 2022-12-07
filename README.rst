@@ -14,25 +14,12 @@
 .. |Codecov| image:: https://img.shields.io/codecov/c/github/jvalegre/aqme?label=Codecov&logo=codecov
    :target: https://codecov.io/gh/jvalegre/aqme
 
-.. |CodeFactor| image:: https://img.shields.io/codefactor/grade/github/jvalegre/aqme/master?label=Codefactor%20grade&logo=Codefactor
-   :target: https://www.codefactor.io/repository/github/jvalegre/aqme/overview/master
-
-.. |Codacy| image:: https://img.shields.io/codacy/grade/3a4cc7c7705e46129c7ea0fca58af846?label=Codacy%20grade&logo=Codacy
-   :target: https://www.codacy.com/gh/jvalegre/aqme/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=jvalegre/aqme&amp;utm_campaign=Badge_Grade
-
-.. |lgtm| image:: https://img.shields.io/lgtm/grade/python/github/jvalegre/aqme?label=LGTM%20grade&logo=lgtm 
-   :target: https://lgtm.com/projects/g/jvalegre/aqme/context:python
-
-.. |readthedocs| image:: https://readthedocs.org/projects/aqme/badge/?version=latest
-    :target: https://aqme.readthedocs.io/en/latest/?badge=latest
-    :alt: Documentation Status
+.. |ReadtheDocs| image:: https://img.shields.io/readthedocs/aqme?label=Read%20the%20Docs&logo=readthedocs
+   :target: https://aqme.readthedocs.io
 
 |CircleCI|
 |Codecov|
-|CodeFactor|
-|Codacy|
-|lgtm|
-|readthedocs|
+|ReadtheDocs|
 
 .. badges-end
 
@@ -94,34 +81,32 @@ Check our `AQME installation in 2 mins <https://youtu.be/VeaBzqIZHbo>`_ video
 for a quick installation guide. In a nutshell, AQME and its dependencies are 
 installed as follows:
 
-1. Using conda-forge (fastest, one-command install) 
+1. (First install) Using conda-forge
 
 .. code-block:: shell 
    
    conda install -c conda-forge aqme
 
-2. Using the source code (Latest version, recommended)
+2. (Update the code) Using pip: `pip install aqme`  
 
 .. code-block:: shell
-
-   python -m pip install .
-
-3. Using the Python Package Index (pip)
-
-.. code-block:: shell 
 
    python -m pip install aqme
 
 Installation of the extra requirements
 ++++++++++++++++++++++++++++++++++++++
 
-If the installation was carried out using pip: 
+Extra requirements if xTB or CREST are used (compatible with MacOS and Linux only):  
 
-.. code-block:: shell
+.. code-block:: shell 
 
-   conda install -c conda-forge rdkit openbabel
+   conda install -y -c conda-forge xtb
 
-If the `cmin` module with torchani will be used (torch-related dependencies): 
+.. code-block:: shell 
+
+   conda install -y -c conda-forge crest
+
+Extra requirements if `CMIN` is used with ANI models:  
 
 .. code-block:: shell 
 
@@ -155,6 +140,8 @@ Python and Python libraries
 *  goodvibes
 *  (opt) torch, torchvision and torchani
 
+*These libraries (except opt) are installed during the initial conda-forge installation.*
+
 Other requirements
 ++++++++++++++++++
 
@@ -162,6 +149,8 @@ Other requirements
 *  Openbabel
 *  XTB
 *  CREST
+
+*RDKit and Openbabel are installed during the initial conda-forge installation.*
 
 .. requirements-end
 
@@ -174,7 +163,7 @@ The inputs to run pre-defined AQME end-to-end workflows are available in the
 "/Example_workflows/End-to-end_Workflows" folder. Choose the workflow and run the inputs.
 
 Automated protocols for individual modules and tasks are provided in the 
-/Example_workflows/ folder inside subfolders with the corresponding module names.
+"/Example_workflows" folder inside subfolders with the corresponding module names.
 
 .. workflows-end
 
@@ -189,7 +178,7 @@ Requires the pytest library.
 
    cd path/to/aqme/source/code
    cd tests
-   pytest --v
+   pytest -v
 
 .. tests-end
 
@@ -198,7 +187,7 @@ Requires the pytest library.
 Features and modules
 --------------------
 
-csearch
+CSEARCH
 +++++++
 
 Module on charge of conformational sampling starting from multiple input types (SMILES, csv, sdf, xyz, etc). Options:
@@ -218,16 +207,16 @@ CREST-based conformational sampling
 Slower sampling, suitable for all types of systems (including noncovalent 
 complexes and constrained systems such as transition states)
 
-cmin
+CMIN
 ++++
 
 Module used to refine conformers generated in CSEARCH through new geometry 
 optimizations. Options:  
 
-   *  xTB (GFN0-xTB, GFN1-xTB, GFN2-xTB, GFN-FF)  
-   *  ANI (ANI-1x, ANI-1ccx, ANI-2x)  
+   *  xTB (GFN0-xTB, GFN1-xTB, GFN2-xTB, GFN-FF, etc.)  
+   *  ANI (ANI-1x, ANI-1ccx, ANI-2x, etc.)  
 
-qprep
+QPREP
 +++++
 
 Generator of input files for QM calculations. Options:  
@@ -237,7 +226,7 @@ Generator of input files for QM calculations. Options:
    *  pySCF (loading parameters in jupyter notebook)  
 
 
-qcorr
+QCORR
 +++++
 
 cclib-based analyzer of output files from multiple QM programs. This module:  
@@ -251,7 +240,7 @@ cclib-based analyzer of output files from multiple QM programs. This module:
       same level of theory, same grid size, same program and version, 
       solvation model, etc)  
 
-qdescp
+QDESCP
 ++++++
 
 Descriptor generator from multiple input types such as SMILES, log files, xyz, etc. Descriptors generated with:  
@@ -271,7 +260,7 @@ Using AQME in Jupyter Notebooks
 +++++++++++++++++++++++++++++++
 
 There are multiple ready-to-use workflows presented as jupyter notebooks in the 
-'Example workflows' folder. Some examples are: 
+"/Example_workflows" folder. Some examples are: 
 
   * CSEARCH_CMIN_conformer_generation folder --> CSEARCH/CMIN conformational 
     sampling from SMILES and creation of QM input files  
@@ -284,18 +273,18 @@ There are multiple ready-to-use workflows presented as jupyter notebooks in the
 Using AQME through the command line
 +++++++++++++++++++++++++++++++++++
 
-csearch examples
+CSEARCH examples
 ................
 
-Conformer generation with one SMILES and name: 
+Conformer generation with one SMILES and name using RDKit or CREST (use rdkit or crest in --program): 
 
 .. code-block:: shell
 
-   python -m aqme --csearch --program rdkit --smi CCC --name proprane
+   python -m aqme --csearch --program rdkit --smi "CCC" --name proprane
 
-Conformer generation with multiple SMILES and names:
+Conformer generation with multiple SMILES and names (i.e. from a database in CSV format):
 
-.. code-block:: shell 
+.. code-block:: shell
 
    python -m aqme --csearch --program rdkit --input FILENAME.csv
 
@@ -305,56 +294,32 @@ Conformer generation with multiple SMILES and names:
    the corresponding names in a column called "code_name" 
    (see Example_workflows for more information)
 
-Conformer generation using a YAML file containing constraints:
+CMIN examples
+................
+
+Geometry optimization with xTB or ANI (use xtb or ani in --program; use sdf, xyz, com/gjf or pdb in --files):
 
 .. code-block:: shell
 
-   python -m aqme --varfile FILENAME.yaml
+   python -m aqme --cmin --program xtb --files "*.sdf"
 
-
-The YAML file must contain the following parameters 
-
-
-::
-
-   input : 'smi.csv' #name of input
-   output_name : 'csearch' #name for output
-   csearch : True #activate CSEARCH
-   program : 'rdkit' #program used in CSEARCH
-
-
-qcorr example
-.............
-
-analysis of Gaussian output files and json file generation:  
-
-.. code-block:: shell
-
-   python -m aqme --qcorr --program gaussian --freq_conv "opt=(calcfc,maxstep=5)" --files=*.log
-
-
-qprep examples
+QPREP examples
 ..............
 
-Input file generation from SDF files (coming from CSEARCH for example):  
+Input file generation from SDF, JSON and LOG/OUT files (replace "\*.sdf" for the corresponding format):
 
 .. code-block:: shell
 
-   python -m aqme --qprep --program gaussian --qm_input "M062x def2tzvp opt freq" --files *.sdf
+   python -m aqme --qprep --program gaussian --qm_input "M062x def2tzvp opt freq" --files "*.sdf"
 
+QCORR examples
+.............
 
-Input file generation from last geometry of output files (log or out files):  
-
-.. code-block:: shell
-
-   python -m aqme --qprep --program gaussian--qm_input "M062x def2tzvp opt freq" --files *.log --suffix M062X
-
-
-Input file generation from json files:  
+Analysis of Gaussian output files and JSON file generation:  
 
 .. code-block:: shell
 
-   python -m aqme --qprep --program orca --qm_input "BP86 def2-SVP def2/J" --files *.json --suffix BP86
+   python -m aqme --qcorr --program gaussian --freq_conv "opt=(calcfc,maxstep=5)" --files "*.log"
 
 .. quickstart-end
 
@@ -370,26 +335,26 @@ Developers and help desk
 
 List of main developers and contact emails:  
 
+*  Juan V. Alegre-Requena [
+   `ORCID <https://orcid.org/0000-0002-0769-7168>`__ , 
+   `Github <https://github.com/jvalegre>`__ , 
+   `email <jv.alegre@csic.es>`__ ]
+   main developer of the CSEARCH, QCORR, QPREP and QDESCP modules.  
 *  Shree Sowndarya S. V. [
    `ORCID <https://orcid.org/0000-0002-4568-5854>`__ , 
    `Github <https://github.com/shreesowndarya>`__ , 
    `email <svss@colostate.edu>`__]
    main developer of the CSEARCH, CMIN, QDESCP and VISMOL modules. 
-*  Juan V. Alegre-Requena [
-   `ORCID <https://orcid.org/0000-0002-0769-7168>`__ , 
-   `Github <https://github.com/jvalegre>`__ , 
-   `email <jvalegre@unizar.es>`__ ]
-   main developer of the QCORR and QPREP modules.   
+*  Raúl Pérez-Soto [
+   `ORCID <https://orcid.org/0000-0002-6237-2155>`__ ,
+   `Github <https://github.com/rperezsoto>`__ ,
+   `email <rperezsoto.research@gmail.com>`__ ] 
+   worked in refactoring the code and creating the documentation.
 *  Turki Alturaifi [
    `webpage <https://www.chem.pitt.edu/person/turki-alturaifi>`__ ,
    `Github <https://github.com/turkiAlturaifi>`__ , 
    `email <turki0@rams.colostate.edu>`__] 
    worked in benchmarking the parameters for RDKit-based conformer generation. 
-*  Raúl Pérez-Soto [
-   `ORCID <https://orcid.org/0000-0002-6237-2155>`__ ,
-   `Github <https://github.com/rperezsoto>`__ ,
-   `email <rperezsoto.research@gmail.com>`__ ] 
-   worked in refactoring the code.
 *  Robert S. Paton [
    `ORCID <https://orcid.org/0000-0002-0104-4166>`__ ,
    `Github <https://github.com/bobbypaton>`__ , 
@@ -415,7 +380,6 @@ Reference
 
 .. reference-start
 
-AQME v1.3, Alegre-Requena, J. V.; Sowndarya, S.; Pérez-Soto, R.; Alturaifi, T. M.; 
-Paton, R. S., 2022. https://github.com/jvalegre/aqme  
+AQME v1.4, Alegre-Requena, J. V.; Sowndarya, S.; Alturaifi, T.; Pérez-Soto, R.; Paton, R. ChemRxiv 2022, DOI: 10.26434/chemrxiv-2022-dnc48.  
 
 .. reference-end

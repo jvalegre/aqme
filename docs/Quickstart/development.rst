@@ -6,6 +6,6 @@ Development
    :start-after: developers-start
    :end-before: developers-end
 
-Here you will find ongoing and future features for ``aqme``
+Here you will find ongoing and future features for ``AQME``
 
-Please contact Robert S. Paton for possible collaborations to improve ``aqme``!
+Please contact Juan Alegre or Robert S. Paton for possible collaborations to improve ``AQME``!

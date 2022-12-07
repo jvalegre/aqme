@@ -253,9 +253,7 @@ from aqme.utils import periodic_table, get_conf_RMS
 #         else:
 #             var = rule.split(",")
 #             if len(var) < 2:
-#                 log.write(
-#                     "x  The geom_rules parameter(s) was not correctly defined, this filter will be turned off"
-#                 )
+#                 log.write("x  The geom_rules parameter(s) was not correctly defined, this filter will be turned off")
 #                 return True
 #             atoms_filter = var[0].split("-")
 #             angle_rules = int(var[1])
@@ -294,22 +292,16 @@ from aqme.utils import periodic_table, get_conf_RMS
 #                             matches = neigh_count_first + neigh_count_second
 #                             if matches > 2:
 #                                 if not print_error_geom_rules:
-#                                     log.write(
-#                                         f"x  There are multiple options in geom_rules for {file}, this filter will be turned off"
-#                                     )
+#                                     log.write(f"x  There are multiple options in geom_rules for {file}, this filter will be turned off")
 #                                     incompatibility_found = True
 #                                     break
 #                     if neigh_count_first == 1 and neigh_count_second == 1:
 #                         find_angle += 1
 #             if find_angle == 0 and not incompatibility_found:
 #                 if not print_error_geom_rules:
-#                     log.write(
-#                         f"x  No angles matching the description from geom_rules in {file}, this filter will be turned off"
-#                     )
+#                     log.write(f"x  No angles matching the description from geom_rules in {file}, this filter will be turned off")
 #             elif find_angle > 1:
-#                 log.write(
-#                     f"x  {file} contain more than one atom that meets the geom_rules criteria, this filter will be turned off"
-#                 )
+#                 log.write(f"x  {file} contain more than one atom that meets the geom_rules criteria, this filter will be turned off")
 #             elif find_angle == 1:
 #                 # Retrieve the only 3D conformer generated in that mol object for rdMolTransforms
 #                 mol_conf = mol.GetConformer(0)
@@ -323,7 +315,7 @@ from aqme.utils import periodic_table, get_conf_RMS
 #     return passing
 
 # Mol filters
-def filters(mol, log, molwt_cutoff, verbose):
+def filters(mol, log, molwt_cutoff):
     """
     Applies some basic filters (molwt, salts[currently off], weird atom symbols)
     that only require SMILES data from a compound and returns if the molecule
@@ -332,8 +324,7 @@ def filters(mol, log, molwt_cutoff, verbose):
 
     # Filter 1
     if Descriptors.MolWt(mol) >= molwt_cutoff and molwt_cutoff > 0:
-        if verbose:
-            log.write(f"x   Exiting as total molar mass > {molwt_cutoff}")
+        log.write(f"x   Skipping this molecule as total molar mass > {molwt_cutoff}")
         return False
 
     # Filter 2
@@ -341,10 +332,7 @@ def filters(mol, log, molwt_cutoff, verbose):
 
     unknown_atoms = list(set(symbols) - set(periodic_table()))
     if unknown_atoms:
-        if verbose:
-            log.write(
-                f" Exiting as atoms [{','.join(unknown_atoms)}] are not in the periodic table"
-            )
+        log.write(f" Exiting as atoms [{','.join(unknown_atoms)}] are not in the periodic table")
         return False
 
     # Passed
@@ -394,8 +382,6 @@ def ewin_filter(
             list of cids accepted
     """
 
-    verbose = args.verbose
-
     sortedcids = []
     count = 0
 
@@ -420,16 +406,11 @@ def ewin_filter(
     # Write it
     dup_data.at[dup_data_idx, f"{key}-energy-window"] = count
 
-    # Log it
-    if verbose:
-        msg = "o  {} conformers rejected {}based on energy window ewin_csearch (E > {} kcal/mol)"
-        log.write(msg.format(count, log_msg, energy_window))
-
     return sortedcids
 
 
 def pre_E_filter(
-    sortedcids, cenergy, dup_data, dup_data_idx, log, calc_type, threshold, verbose
+    sortedcids, cenergy, dup_data, dup_data_idx, log, calc_type, threshold
 ):
     """
     This filter selects the first compound that it finds with energy an energy
@@ -480,11 +461,6 @@ def pre_E_filter(
             if conf not in selectedcids_initial:
                 selectedcids_initial.append(conf)
 
-    if verbose:
-        log.write(
-            f"o  {str(eng_dup)} duplicates removed  pre-energy filter (E < {threshold} kcal/mol)"
-        )
-
     if calc_type == "rdkit":
         column = "RDKit-initial_energy_threshold"
     elif calc_type == "summ":
@@ -510,22 +486,6 @@ def RMSD_and_E_filter(
     difference lower than the threshold with a higher than the threshold rms
     with respect to the nearest (in energy) accepted compound.
     """
-
-    rms_threshold = args.rms_threshold
-    energy_threshold = args.energy_threshold
-    verbose = args.verbose
-
-    if calc_type not in ["rdkit", "summ", "xtb", "ani"]:
-        # RAUL: If this is true "ALL conformers are going to be written"
-        #       I Think this should be taken care at the beggining of the
-        #       function or before using the function.
-        pass
-
-    if verbose:
-        log.write(
-            f"o  Removing duplicate conformers (RMSD < {rms_threshold} and E difference < {energy_threshold} kcal/mol)"
-        )
-    # bar = IncrementalBar('o  Filtering based on energy and RMSD', max = len(selectedcids_initial))
 
     selectedcids = []
     eng_rms_dup = 0
@@ -562,17 +522,10 @@ def RMSD_and_E_filter(
                     excluded_conf = True
                     eng_rms_dup += 1
                     break
+
         if not excluded_conf:
             if conf not in selectedcids:
                 selectedcids.append(conf)
-        # bar.next()
-    # bar.finish()
-
-    if verbose:
-        log.write(
-            f"o  {eng_rms_dup} duplicates removed (RMSD < {rms_threshold} / E < {energy_threshold} kcal/mol)"
-        )
-        log.write(f"o  {len(selectedcids)} unique conformers remain")
 
     # Write the found duplicates:
     if calc_type == "rdkit":

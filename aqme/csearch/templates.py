@@ -159,9 +159,7 @@ def load_template(complex_type, log):
     folder = TEMPLATES_PATH
 
     if not folder.exists():
-        log.write(
-            "x The templates folder was not found, probably due to a problem while installing AQME"
-        )
+        log.write("x The templates folder was not found, probably due to a problem while installing AQME")
         log.finalize()
         sys.exit()
 

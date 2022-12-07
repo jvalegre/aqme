@@ -1,7 +1,6 @@
 """
 Parameters
 ----------
-
    files : list of str, default=''
       Filenames of QM output files to analyze. If *.log (or other strings that are not lists such as *.out) are specified, the program will look for all the log files in the working directory through glob.glob(*.log)
    w_dir_main : str, default=os.getcwd()
@@ -28,14 +27,12 @@ Parameters
       Fraction of the summed VDW radii that constitutes a bond between two atoms in the isomerization filter
    covfrac : float, default=1.10
       Fraction of the summed covalent radii that constitutes a bond between two atoms in the isomerization filter
-
 .. note:: 
    New input files are generated through the QPREP module and, therefore, all 
    QPREP arguments can be used when calling QCORR and will overwrite default 
    options. For example, if the user specifies qm_input='wb97xd/def2svp', 
    all the new input files generated to fix issues will contain this keywords 
    line. See examples in the 'Example_workflows' folder for more information.
-
 """
 ######################################################.
 #        This file stores the QCORR class            #
@@ -77,12 +74,12 @@ from aqme.qprep import qprep
 
 class qcorr:
     """
-    Class used to generate QM input files from QM output files (Currently 
-    only gaussian and Orca are supported). It includes generation of SP 
-    input files as well as fixing error terminations or removing imaginary 
-    frequencies. 
-    For further detail on the currently accepted keyword arguments (kwargs) 
-    please look at the Parameters section (in the module documentation).
+    Class containing all the functions from the QCORR module.
+
+    Parameters
+    ----------
+    kwargs : argument class
+        Specify any arguments from the QCORR module (for a complete list of variables, visit the AQME documentation)
     """
 
     def __init__(self, **kwargs):
@@ -91,6 +88,10 @@ class qcorr:
         self.args = load_variables(kwargs, "qcorr")
 
         # QCORR analysis
+        if self.args.files[0].split('.')[1].lower() not in ['log','out','json']:
+            self.args.log.write(f"\nx  The format used ({self.args.files[0].split('.')[1].lower()}) is not compatible with QCORR! Formats accepted: log, out, json")
+            self.args.log.finalize()
+            sys.exit()
         self.qcorr_processing()
 
         # this is added to avoid path problems in jupyter notebooks
@@ -148,9 +149,7 @@ class qcorr:
                 )
                 if errortype == "atomicbasiserror":
                     os.remove(file_name + ".json")
-                    self.args.log.write(
-                        f"{os.path.basename(file)}: Termination = {termination}, Error type = {errortype}"
-                    )
+                    self.args.log.write(f"{os.path.basename(file)}: Termination = {termination}, Error type = {errortype}")
                 continue
 
             # check for duplicates and fix wrong number of freqs in normally terminated calculations and
@@ -201,13 +200,9 @@ class qcorr:
 
             # This part places the calculations and json files in different folders depending on the type of termination
             if errortype == "duplicate_calc":
-                self.args.log.write(
-                    f"{os.path.basename(file)}: Termination = {termination}, Error type = {errortype}, Duplicate of = {dup_off}"
-                )
+                self.args.log.write(f"{os.path.basename(file)}: Termination = {termination}, Error type = {errortype}, Duplicate of = {dup_off}")
             else:
-                self.args.log.write(
-                    f"{os.path.basename(file)}: Termination = {termination}, Error type = {errortype}"
-                )
+                self.args.log.write(f"{os.path.basename(file)}: Termination = {termination}, Error type = {errortype}")
 
             file_terms, destination = self.organize_outputs(
                 file, termination, errortype, file_terms
@@ -238,9 +233,7 @@ class qcorr:
                     log=self.args.log,
                 )
             else:
-                self.args.log.write(
-                    "\nx  No normal terminations with no errors to run the full check analysis"
-                )
+                self.args.log.write("\nx  No normal terminations with no errors to run the full check analysis")
 
         elapsed_time = round(time.time() - start_time_overall, 2)
         self.args.log.write(f"\n Time QCORR: {elapsed_time} seconds\n")
@@ -591,9 +584,7 @@ class qcorr:
             isomerized = check_isomerization(isom_data, file)
 
         except FileNotFoundError:
-            self.args.log.write(
-                f"x  No com file were found for {os.path.basename(file)}, the check_geom test will be disabled for this calculation"
-            )
+            self.args.log.write(f"x  No com file were found for {os.path.basename(file)}, the check_geom test will be disabled for this calculation")
 
         if isomerized:
             errortype = "isomerization"
@@ -645,7 +636,6 @@ class qcorr:
                 program=program,
                 atom_types=atom_types,
                 cartesians=cartesians,
-                verbose=False,
                 qm_input=cclib_data["metadata"]["keywords line"],
                 mem=cclib_data["metadata"]["memory"],
                 nprocs=cclib_data["metadata"]["processors"],
@@ -657,9 +647,7 @@ class qcorr:
                 create_dat=False,
             )
         else:
-            self.args.log.write(
-                f"x  Couldn't create an input file to fix {os.path.basename(file)} (compatible programs: Gaussian and ORCA)\n"
-            )
+            self.args.log.write(f"x  Couldn't create an input file to fix {os.path.basename(file)} (compatible programs: Gaussian and ORCA)\n")
 
     def json_gen(self, file, file_name):
         """
@@ -690,9 +678,7 @@ class qcorr:
                     termination, errortype = "normal", "none"
 
         if errortype == "no_data":
-            self.args.log.write(
-                f"x  Potential cclib compatibility problem or no data found for file {file_name} (Termination = {termination}, Error type = {errortype})"
-            )
+            self.args.log.write(f"x  Potential cclib compatibility problem or no data found for file {file_name} (Termination = {termination}, Error type = {errortype})")
 
         return termination, errortype, cclib_data
 
@@ -710,8 +696,7 @@ class qcorr:
         Returns
         -------
         cartesians : list of lists
-            New set of cartesian coordinates generated after displacing the original
-            coordinates along the normal modes of the corresponding imaginary frequencies
+            New set of cartesian coordinates generated after displacing the original coordinates along the normal modes of the corresponding imaginary frequencies
         """
 
         shift = []
