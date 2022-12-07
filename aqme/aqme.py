@@ -24,6 +24,9 @@
 ###########################################################################################
 ###########################################################################################.
 
+import sys
+import subprocess
+
 from aqme.csearch import csearch
 from aqme.cmin import cmin
 from aqme.qprep import qprep
@@ -43,6 +46,23 @@ def main():
 
     if not args.csearch and not args.cmin and not args.qprep and not args.qcorr and not args.qdescp:
         print('x  No module was specified in the command line! (i.e. --csearch for conformer generation)\n')
+
+    # this is a dummy import just to warn the user if Open babel is not installed
+    try:
+        command_run_1 = ["obabel", "-H"]
+        subprocess.run(command_run_1, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except FileNotFoundError:
+        print(
+            "x  Open Babel is not installed! You can install the program with 'conda install -c conda-forge openbabel'"
+        )
+        sys.exit()
+    try: 
+        from rdkit.Chem import AllChem as Chem
+    except ModuleNotFoundError:
+        print(
+            "x  RDKit is not installed! You can install the program with 'conda install -c conda-forge rdkit' or 'pip install rdkit-pypi'"
+        )
+        sys.exit()
 
     # CSEARCH
     if args.csearch:
