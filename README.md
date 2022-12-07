@@ -1,6 +1,7 @@
 ![](Logos/AQME_logo.jpg)
 [![CircleCI](https://img.shields.io/circleci/build/github/jvalegre/aqme?label=Circle%20CI&logo=circleci)](https://app.circleci.com/pipelines/github/jvalegre/aqme)
 [![Codecov](https://img.shields.io/codecov/c/github/jvalegre/aqme?label=Codecov&logo=codecov)](https://codecov.io/gh/jvalegre/aqme)
+[![Read the Docs](https://img.shields.io/readthedocs/aqme?label=Read%20the%20Docs&logo=readthedocs)](https://aqme.readthedocs.io/)
 
 ___
 # <p align="center">Automated Quantum Mechanical Environments (AQME)</p>
@@ -23,15 +24,16 @@ Don't miss out the latest hands-on tutorials from our [YouTube channel](https://
 
 ## Installation
 Check our [AQME installation in 2 mins](https://youtu.be/VeaBzqIZHbo) video for a quick installation guide. In a nutshell, AQME and its dependencies are installed as follows:  
-1. Using conda-forge: `conda install -c conda-forge aqme`  
-2. Alternatively, using the code from GitHub: `pip install .` with setup.py  
+1. (First install) Using conda-forge: `conda install -c conda-forge aqme`  
+2. (Update the code) Using pip: `pip install aqme`  
+  
+Extra requirements if xTB or CREST are used (MacOS and Linux only):  
+  * xTB: `conda install -y -c conda-forge xtb`  
+  * CREST: `conda install -y -c conda-forge crest`  
 
-Requirements when installing from pip (option 2):  
-  * RDKit and Openbabel: `conda install -c conda-forge rdkit openbabel`  
-
-Requirements if CMIN is used with ANI:  
+Extra requirements if CMIN is used with ANI models:  
   * torch-related modules: `pip install torch torchvision torchani`  
-
+  
 Known incompatibilities:  
   * RDKit cannot be installed through `pip install rdkit` in Windows when Anaconda prompts are used     
 
