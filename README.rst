@@ -16,6 +16,7 @@
 
 .. |ReadtheDocs| image:: https://img.shields.io/readthedocs/aqme?label=Read%20the%20Docs&logo=readthedocs
    :target: https://aqme.readthedocs.io
+   :alt: Documentation Status
 
 |CircleCI|
 |Codecov|
@@ -313,7 +314,7 @@ Input file generation from SDF, JSON and LOG/OUT files (replace "\*.sdf" for the
    python -m aqme --qprep --program gaussian --qm_input "M062x def2tzvp opt freq" --files "*.sdf"
 
 QCORR examples
-.............
+..............
 
 Analysis of Gaussian output files and JSON file generation:  
 
