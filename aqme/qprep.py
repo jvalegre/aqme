@@ -1,6 +1,7 @@
 """
 Parameters
 ----------
+
    files : mol object, str or list of str, default=None
       This module prepares input QM file(s). Formats accepted: mol object(s), 
       Gaussian or ORCA LOG/OUT output files, JSON, XYZ, SDF, PDB. Also, 
@@ -39,7 +40,9 @@ Parameters
       Basis set used for gen(ECP) atoms (i.e. 'def2svp')
    bs_nogen : str, default=''
       Basis set used for non gen(ECP) atoms in gen(ECP) calculations (i.e. '6-31G*')
+
 """
+
 ######################################################.
 #        This file stores the QPREP class            #
 ######################################################.
@@ -65,7 +68,10 @@ from pathlib import Path
 
 class qprep:
     """
-    Class containing all the functions from the QPREP module related to Gaussian input files
+    Class used for the generation of input files for QM programs. 
+    (Currently only gaussian and Orca are supported)
+    For further detail on the currently accepted keyword arguments (kwargs) 
+    please look at the Parameters section (in the module documentation). 
     """
 
     def __init__(self, create_dat=True, **kwargs):
@@ -75,7 +81,9 @@ class qprep:
         self.args = load_variables(kwargs, "qprep", create_dat=create_dat)
 
         if self.args.program.lower() not in ["gaussian", "orca"] and create_dat:
-            self.args.log.write("\nx  Program not supported for QPREP input file creation! Specify: program='gaussian' (or orca)")
+            self.args.log.write(
+                "\nx  Program not supported for QPREP input file creation! Specify: program='gaussian' (or orca)"
+            )
             self.args.log.finalize()
             sys.exit()
 
@@ -87,17 +95,23 @@ class qprep:
             destination = Path(self.args.destination)
 
         if self.args.qm_input == "" and create_dat:
-            self.args.log.write("x  No keywords line was specified! (i.e. qm_input=KEYWORDS_LINE).")
+            self.args.log.write(
+                "x  No keywords line was specified! (i.e. qm_input=KEYWORDS_LINE)."
+            )
             self.args.log.finalize()
             sys.exit()
 
         if self.args.gen_atoms != [] and self.args.bs_nogen == "" and create_dat:
-            self.args.log.write("x  Atoms for Gen(ECP) were specified (gen_atoms=[ATOM_LIST]) but no basis set was included for non-Gen(ECP) atoms (i.e. bs_nogen=BASIS_SET).")
+            self.args.log.write(
+                "x  Atoms for Gen(ECP) were specified (gen_atoms=[ATOM_LIST]) but no basis set was included for non-Gen(ECP) atoms (i.e. bs_nogen=BASIS_SET)."
+            )
             self.args.log.finalize()
             sys.exit()
 
         elif self.args.gen_atoms != [] and self.args.bs_gen == "" and create_dat:
-            self.args.log.write("x  Atoms for Gen(ECP) were specified (gen_atoms=[ATOM_LIST]) but no basis set was included for Gen(ECP) atoms (i.e. bs_gen=BASIS_SET).")
+            self.args.log.write(
+                "x  Atoms for Gen(ECP) were specified (gen_atoms=[ATOM_LIST]) but no basis set was included for Gen(ECP) atoms (i.e. bs_gen=BASIS_SET)."
+            )
             self.args.log.finalize()
             sys.exit()
 
@@ -157,11 +171,14 @@ class qprep:
                         self.sdf_2_com(sdf_file, destination)
 
                     except OSError:
-                        self.args.log.write(f"x  {name} couldn't be processed!")
+                        if self.args.verbose:
+                            self.args.log.write(f"x  {name} couldn't be processed!")
                         continue
 
                     if create_dat:
-                        self.args.log.write(f"o  {name} successfully processed at {destination}")
+                        self.args.log.write(
+                            f"o  {name} successfully processed at {destination}"
+                        )
 
                     if file.split(".")[1].lower() in ["xyz", "pdb"]:
                         # delete SDF files when the input was an XYZ/PDB file
@@ -187,7 +204,9 @@ class qprep:
 
                 move_file(destination, self.args.w_dir_main, comfile)
                 if create_dat:
-                    self.args.log.write(f"o  {name} successfully processed at {destination}")
+                    self.args.log.write(
+                        f"o  {name} successfully processed at {destination}"
+                    )
 
         if create_dat:
             elapsed_time = round(time.time() - start_time_overall, 2)
@@ -432,7 +451,9 @@ class qprep:
             cartesians = self.args.cartesians
 
         if atom_types == [] or cartesians == []:
-            self.args.log.write(f"x  {file} does not contain coordinates and/or atom type information")
+            self.args.log.write(
+                f"x  {file} does not contain coordinates and/or atom type information"
+            )
 
         # overwrite with user-defined charge and multiplicity (if any)
         # or sets to default charge 0 and mult 1 if the parameters weren't found
