@@ -11,6 +11,7 @@ import getopt
 import numpy as np
 import glob
 import yaml
+import ast
 from pathlib import Path
 from rdkit.Chem.rdMolAlign import GetBestRMS
 from rdkit.Chem.rdmolops import RemoveHs
@@ -226,7 +227,7 @@ def get_info_input(file):
     return atoms_and_coords, charge, mult
 
 
-def rules_get_charge(mol, args, type):
+def rules_get_charge(mol, args):
     """
     Automatically sets the charge for metal complexes
     """
@@ -235,13 +236,18 @@ def rules_get_charge(mol, args, type):
     N_group = ["N", "P", "As"]
     O_group = ["O", "S", "Se"]
     F_group = ["F", "Cl", "Br", "I"]
-
+    
+    
     M_ligands, N_carbenes, bridge_atoms, neighbours = [], [], [], []
     charge_rules = np.zeros(len(mol.GetAtoms()), dtype=int)
-    neighbours, metal_found = [], False
+    neighbours, metal_found, sanit_step = [], False, True
     for i, atom in enumerate(mol.GetAtoms()):
         # get the neighbours of metal atom and calculate the charge of metal center + ligands
         if atom.GetIdx() in args.metal_idx:
+            # a sanitation step is needed to ensure that metals and ligands show correct valences
+            if sanit_step:
+                Chem.SanitizeMol(mol)
+                sanit_step = False
             metal_found = True
             charge_idx = args.metal_idx.index(atom.GetIdx())
             neighbours = atom.GetNeighbors()
@@ -279,7 +285,6 @@ def rules_get_charge(mol, args, type):
                                 nitrone_like = True
                         if not nitrone_like:
                             charge_rules[i] = charge_rules[i] - 1
-
                 elif neighbour.GetTotalValence() == 1:
                     if neighbour.GetSymbol() in F_group:
                         charge_rules[i] = charge_rules[i] - 1
@@ -288,7 +293,6 @@ def rules_get_charge(mol, args, type):
     for i, atom in enumerate(mol.GetAtoms()):
         if atom.GetIdx() not in M_ligands and atom.GetIdx() not in args.metal_idx:
             charge_rules[i] = atom.GetFormalCharge()
-
     # recognizes charged N and O atoms in metal ligands (added to the first metal of the list as default)
     # this group contains atoms that do not count as separate charge groups (i.e. N from Py ligands)
     if len(neighbours) > 0:
@@ -302,17 +306,12 @@ def rules_get_charge(mol, args, type):
                     if atom.GetTotalValence() == 1:
                         charge_rules[0] = charge_rules[0] - 1
 
-    if type == "cmin":
-        return charge_rules, metal_found
-    
-    elif type == "csearch":
-        if metal_found:
-            return np.sum(charge_rules), metal_found
-
+    charge = np.sum(charge_rules)
+    if not metal_found:
         # for organic molecules when using a list containing organic and organometallics molecules mixed
-        else:
-            charge = Chem.GetFormalCharge(mol)
-            return charge, metal_found
+        charge = Chem.GetFormalCharge(mol)
+
+    return charge, metal_found
 
 
 def substituted_mol(self, mol, checkI):
@@ -322,6 +321,11 @@ def substituted_mol(self, mol, checkI):
     neighbors.
 
     """
+
+    for _ in self.args.metal_atoms:
+        self.args.metal_idx.append(None)
+        self.args.complex_coord.append(None)
+        self.args.metal_sym.append(None)
 
     Neighbors2FormalCharge = dict()
     for i, j in zip(range(2, 9), range(-3, 4)):
@@ -408,14 +412,12 @@ def command_line_args():
     kwargs = {}
     available_args = ["help"]
     bool_args = [
-        "verbose",
         "csearch",
         "cmin",
         "qprep",
         "qcorr",
         "qdescp",
         "qpred",
-        "metal_complex",
         "time",
         "heavyonly",
         "cregen",
@@ -454,11 +456,22 @@ def command_line_args():
             value = None
         if arg_name in ("h", "help"):
             print(
-                "o  AQME is installed correctly! For more information about the available options, see the documentation in https://github.com/jvalegre/aqme"
+                f"o  AQME v {aqme_version} is installed correctly! For more information about the available options, see the documentation in https://github.com/jvalegre/aqme"
             )
             sys.exit()
         else:
-            kwargs[arg_name] = value
+            # this "if" allows to use * to select multiple files in multiple OS
+            if arg_name.lower() == 'files' and value.find('*') > -1:
+                kwargs[arg_name] = glob.glob(value)
+            else:
+                # this converts the string parameters to lists
+                if arg_name.lower() in ["files", "metal_oxi", "metal_atoms", "gen_atoms", "atom_types", "cartesians", "nmr_atoms", "nmr_slope", "nmr_intercept"]:
+                    if not isinstance(value, list):
+                        try:
+                            value = ast.literal_eval(value)
+                        except (SyntaxError, ValueError):
+                            pass
+                kwargs[arg_name] = value
 
     # Second, load all the default variables as an "add_option" object
     args = load_variables(kwargs, "command")
@@ -473,7 +486,6 @@ def load_variables(kwargs, aqme_module, create_dat=True):
 
     # first, load default values and options manually added to the function
     self = set_options(kwargs)
-
     # this part loads variables from yaml files (if varfile is used)
     txt_yaml = ""
     if self.varfile is not None:
@@ -563,20 +575,14 @@ def load_variables(kwargs, aqme_module, create_dat=True):
                     path_command = Path(f"{os.getcwd()}")
                     self.log = Logger(path_command / logger_1, logger_2)
 
-                self.log.write(
-                    f"AQME v {aqme_version} {time_run} \nCitation: {aqme_ref}\n"
-                )
+                self.log.write(f"AQME v {aqme_version} {time_run} \nCitation: {aqme_ref}\n")
 
                 if self.command_line:
-                    self.log.write(
-                        f"Command line used in AQME: aqme {' '.join([str(elem) for elem in sys.argv[1:]])}\n"
-                    )
+                    self.log.write(f"Command line used in AQME: aqme {' '.join([str(elem) for elem in sys.argv[1:]])}\n")
 
-                if aqme_module in ["qcorr", "qprep", "qdescp", "vismol"]:
+                if aqme_module in ["qcorr", "qprep", "cmin", "qdescp", "vismol"]:
                     if len(self.files) == 0:
-                        self.log.write(
-                            f"x  There are no output files in {self.w_dir_main}\n"
-                        )
+                        self.log.write(f"x  There are no output files in {self.w_dir_main}\n")
                         error_setup = True
 
             if error_setup:

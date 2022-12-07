@@ -20,17 +20,17 @@ cmin_xtb_dir = w_dir_main + "/tests/cmin_xtb"
 if not os.path.exists(cmin_xtb_dir):
     os.mkdir(cmin_xtb_dir)
 
-# tests for parameters of csearch random initialzation
+# tests of ANI optimizations
 @pytest.mark.parametrize(
-    "program, sdf, ani_method, xtb_method, opt_steps, opt_fmax, output_nummols",
+    "program, sdf, ani_method, opt_steps, opt_fmax, output_nummols",
     [
         # tests for conformer generation with RDKit
-        ("ani", "pentane_rdkit_methods.sdf", "ANI1ccx", None, 100, 0.08, 4),
-        # ("xtb", "pentane_rdkit_methods.sdf", None, "GFN2-xTB", 400, 0.03, 4),
+        ("ani", "pentane_rdkit_methods.sdf", "ANI1ccx", 100, 0.08, 4),
+        # ("xtb", "pentane_rdkit_methods.sdf", None, 400, 0.03, 4),
     ],
 )
 def test_cmin_methods(
-    program, sdf, ani_method, xtb_method, opt_steps, opt_fmax, output_nummols
+    program, sdf, ani_method, opt_steps, opt_fmax, output_nummols
 ):
     os.chdir(cmin_methods_dir)
     # runs the program with the different tests
@@ -46,7 +46,6 @@ def test_cmin_methods(
     elif program == "xtb":
         cmin(
             w_dir_main=cmin_methods_dir,
-            xtb_method=xtb_method,
             program=program,
             files=sdf,
             opt_steps=opt_steps,
@@ -54,14 +53,14 @@ def test_cmin_methods(
         )
 
     # tests here
-    file = str("CMIN/" + program + "/" + sdf.split(".")[0] + "_" + program + ".sdf")
+    file = str("CMIN/" + sdf.split(".")[0] + "_" + program + ".sdf")
     file2 = str(
-        "CMIN/" + program + "/" + sdf.split(".")[0] + "_" + program + "_all_confs.sdf"
+        "CMIN/" + sdf.split(".")[0] + "_" + program + "_all_confs.sdf"
     )
     assert os.path.exists(file)
     assert os.path.exists(file2)
 
-    mols = rdkit.Chem.SDMolSupplier(file, removeHs=False)
+    mols = rdkit.Chem.SDMolSupplier(file, removeHs=False, sanitize=False)
     assert len(mols) == output_nummols
     os.chdir(w_dir_main)
 
@@ -153,7 +152,6 @@ def test_cmin_methods(
 #             w_dir_main=cmin_xtb_dir,
 #             program=program,
 #             files=sdf,
-#             metal_complex=metal_complex,
 #             metal_atoms=metal_atoms,
 #             metal_oxi=metal_oxi,
 #             complex_type=complex_type,
@@ -170,14 +168,14 @@ def test_cmin_methods(
 #         )
 
 #     # tests here
-#     file = str("CMIN/" + program + "/" + sdf.split(".")[0] + "_" + program + ".sdf")
+#     file = str("CMIN/" + sdf.split(".")[0] + "_" + program + ".sdf")
 #     file2 = str(
-#         "CMIN/" + program + "/" + sdf.split(".")[0] + "_" + program + "_all_confs.sdf"
+#         "CMIN/" + sdf.split(".")[0] + "_" + program + "_all_confs.sdf"
 #     )
 #     assert os.path.exists(file)
 #     assert os.path.exists(file2)
 
-#     mols = rdkit.Chem.SDMolSupplier(file, removeHs=False)
+#     mols = rdkit.Chem.SDMolSupplier(file, removeHs=False, sanitize=False)
 #     assert len(mols) == output_nummols
 
 #     assert int(mols[0].GetProp("Real charge")) == charge
@@ -186,7 +184,7 @@ def test_cmin_methods(
 #     os.chdir(w_dir_main)
 
 
-# tests for removing foler
+# tests for removing foler and creation of CMIN DAT and CSV files
 @pytest.mark.parametrize(
     "folder",
     [
@@ -197,14 +195,13 @@ def test_cmin_methods(
 def test_remove(folder):
     os.chdir(w_dir_main)
     if os.path.exists(f"{w_dir_main}/tests/cmin_methods/CMIN"):
-        files_remove = [f"{w_dir_main}/tests/cmin_methods/CMIN_data.dat",f"{w_dir_main}/tests/cmin_methods/ase.opt"]
-        files_remove.append(f"{w_dir_main}/tests/cmin_methods/ANI1_opt.traj")
+        files_remove = [f"{w_dir_main}/tests/cmin_methods/CMIN_data.dat"]
         files_remove.append(f"{w_dir_main}/tests/cmin_methods/CMIN-Data.csv")
         shutil.rmtree(f"{w_dir_main}/tests/cmin_methods/CMIN")
         for f in files_remove:
             os.remove(f)
     if os.path.exists(f"{w_dir_main}/tests/cmin_xtb/CMIN"):
-        files_remove = [f"{w_dir_main}/tests/cmin_xtb/CMIN_data.dat",f"{w_dir_main}/tests/cmin_xtb/ase.opt"]
+        files_remove = [f"{w_dir_main}/tests/cmin_xtb/CMIN_data.dat"]
         files_remove.append(f"{w_dir_main}/tests/cmin_xtb/CMIN-Data.csv")
         shutil.rmtree(f"{w_dir_main}/tests/cmin_xtb/CMIN")
         for f in files_remove:

@@ -199,9 +199,7 @@ def generate_mol_from_csv(args, csv_smiles, index):
         try:
             smiles = csv_smiles.loc[index, "smiles"]
         except KeyError:
-            args.log.write(
-                "\nx  Make sure the CSV file contains a column called 'SMILES' or 'smiles' with the SMILES of the molecules!"
-            )
+            args.log.write("\nx  Make sure the CSV file contains a column called 'SMILES' or 'smiles' with the SMILES of the molecules!")
             args.log.finalize()
             sys.exit()
 
@@ -211,9 +209,7 @@ def generate_mol_from_csv(args, csv_smiles, index):
         else:
             name = f'{args.prefix}_{csv_smiles.loc[index, "code_name"]}'
     except KeyError:
-        args.log.write(
-            "\nx  Make sure the CSV file contains a column called 'code_name' with the names of the molecules!"
-        )
+        args.log.write("\nx  Make sure the CSV file contains a column called 'code_name' with the names of the molecules!")
         args.log.finalize()
         sys.exit()
 
@@ -397,7 +393,7 @@ def xyz_2_sdf(file):
     Parameters
     ----------
     file : str
-                                                                    Filename and extension of an existing .xyz file
+        Filename and extension of an existing .xyz file
     """
 
     name = str(file).split(".xyz")[0]
@@ -510,9 +506,7 @@ def smi_to_mol(
         or len(constraints_dihedral) != 0
     ):
         if program not in ["crest"]:
-            log.write(
-                "\nx  Program not supported for conformer generation of complexes and TSs! Specify: program='crest' for complexes"
-            )
+            log.write("\nx  Program not supported for conformer generation of complexes and TSs! Specify: program='crest' for complexes")
             sys.exit()
 
         (
@@ -536,9 +530,7 @@ def smi_to_mol(
         try:
             mol = Chem.MolFromSmiles(smi[0], params)
         except Chem.AtomValenceException:
-            log.write(
-                f"\nx  The SMILES string provided ( {smi[0]} ) contains errors. For example, N atoms from ligands of metal complexes should be N+ since they're drawn with four bonds in ChemDraw, same for O atoms in carbonyl ligands, etc.\n"
-            )
+            log.write(f"\nx  The SMILES string provided ( {smi[0]} ) contains errors. For example, N atoms from ligands of metal complexes should be N+ since they're drawn with four bonds in ChemDraw, same for O atoms in carbonyl ligands, etc.\n")
             sys.exit()
 
     return (

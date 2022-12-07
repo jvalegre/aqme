@@ -104,10 +104,7 @@ def generating_conformations_fullmonte(
 
     ##working with fullmonte
     n_unique_conformers = len(selectedcids_rdkit)
-    args.log.write(
-        f"\no  Generation of confomers using FULLMONTE using "
-        f"{n_unique_conformers} unique conformer(s) as starting point(s)"
-    )
+    args.log.write(f"\no  Generation of confomers using FULLMONTE using {n_unique_conformers} unique conformer(s) as starting point(s)")
 
     # Writing the conformers as mol objects to sdf
     sdtemp = Chem.SDWriter(name + "_" + "rdkit" + args.output)
@@ -201,9 +198,6 @@ def generating_conformations_fullmonte(
 
     dup_data.at[dup_data_idx, "FullMonte-Unique-conformers"] = len(unique_mol)
 
-    if args.verbose:
-        args.log.write("o  " + str(len(unique_mol)) + " unique conformers remain")
-
     cids = list(range(len(unique_mol)))
     sorted_all_cids = sorted(cids, key=lambda cid: c_energy[cid])
 
@@ -211,7 +205,7 @@ def generating_conformations_fullmonte(
     for i, cid in enumerate(sorted_all_cids):
         unique_mol[cid].SetProp("_Name", name + " " + str(i))
         if coord_Map is None and alg_Map is None and mol_template is None:
-            if args.metal_complex:
+            if len(args.metal_atoms) >= 1:
                 set_metal_atomic_number(unique_mol[cid], args.metal_idx, args.metal_sym)
             sdwriter.write(unique_mol[cid])
         else:
@@ -223,7 +217,7 @@ def generating_conformations_fullmonte(
                 mol_template,
                 args.opt_steps_rdkit,
             )
-            if args.metal_complex:
+            if len(args.metal_atoms) >= 1:
                 set_metal_atomic_number(mol_realigned, args.metal_idx, args.metal_sym)
             sdwriter.write(mol_realigned)
 

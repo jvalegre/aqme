@@ -16,7 +16,7 @@ def rdkit_sdf_read(file, args):
     rdkit.Chem.Mol objects
     """
     
-    inmols = Chem.SDMolSupplier(file, removeHs=False)
+    inmols = Chem.SDMolSupplier(file, removeHs=False, sanitize=False)
 
     if inmols is None:
         args.log.write(f"Could not open {file}")
@@ -26,7 +26,6 @@ def rdkit_sdf_read(file, args):
 
 
 def creation_of_dup_csv_cmin(cmin):
-
     """
     Generates a pandas.DataFrame object with the appropiate columns for the
     conformational search and the minimization.
