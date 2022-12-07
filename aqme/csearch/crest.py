@@ -6,10 +6,10 @@
 
 from __future__ import print_function, absolute_import
 import os
-import sys
 import glob
 import numpy as np
 from rdkit.Chem import AllChem as Chem
+from rdkit.Chem import rdmolfiles
 from rdkit import Geometry
 import subprocess
 import rdkit
@@ -63,7 +63,7 @@ def xyzall_2_xyz(xyzin, name):
     subprocess.run(command_run_1, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
-def crest_opt(
+def xtb_opt_main(
     name,
     dup_data,
     dup_data_idx,
@@ -74,8 +74,10 @@ def crest_opt(
     constraints_dist,
     constraints_angle,
     constraints_dihedral,
+    method_opt,
     complex_ts=False,
-    mol=None
+    mol=None,
+    name_init=None
 ):
 
     """
@@ -83,49 +85,96 @@ def crest_opt(
     """
 
     name_no_path = name.replace("/", "\\").split("\\")[-1].split(".")[0]
-    if self.args.destination is None:
-        csearch_dir = Path(self.args.w_dir_main) / "CSEARCH"
     # where RDKit generates the files
+    if self.args.destination is None:
+        if method_opt == 'crest':
+            csearch_dir = Path(self.args.w_dir_main) / "CSEARCH"
+        elif method_opt == 'xtb':
+            rdmolfiles.MolToXYZFile(mol, name + ".xyz")
+            csearch_dir = Path(self.args.w_dir_main) / "CMIN"
     else:
         csearch_dir = Path(self.args.destination)
-    dat_dir = csearch_dir / "crest_xyz"
+    if method_opt == 'crest':
+        dat_dir = csearch_dir / "crest_xyz"
+        xyzin = f"{dat_dir}/{name_no_path}.xyz"
+    elif method_opt == 'xtb':
+        dat_dir = csearch_dir / "xtb_xyz"
+        xyzin = f"{dat_dir}/{name_no_path}_xtb.xyz"
     dat_dir.mkdir(exist_ok=True, parents=True)
 
-    xyzin = f"{dat_dir}/{name_no_path}.xyz"
-    sdwriter = Chem.SDWriter(str(f"{csearch_dir}/{name_no_path}.sdf"))
+    shutil.move(f"{name}.xyz", xyzin)
 
     os.environ["OMP_STACKSIZE"] = self.args.stacksize
-    # to run CREST with more than 1 processor
+    # to run xTB/CREST with more than 1 processor
     os.environ["OMP_NUM_THREADS"] = str(self.args.nprocs)
-
-    shutil.move(f"{name}.xyz", xyzin)
+    cmin_valid = True
 
     os.chdir(dat_dir)
     # for systems that were created from 1D and 2D inputs (i.e. SMILES), this part includes two xTB
     # constrained optimizations to avoid geometry problems in noncovalent complexes and transition states
+    constrained_opt = False
     if complex_ts:
-        if len(constraints_dist) != 0:
-            # xTB optimization with all bonds frozen
-            xyzoutxtb1 = str(dat_dir) + "/" + name_no_path + "_xtb1.xyz"
+        if len(constraints_atoms) > 0 or len(constraints_dist) > 0 or len(constraints_angle) > 0 or len(constraints_dihedral) > 0:
+            constrained_opt = True
 
-            all_fix = get_constraint(mol, constraints_dist)
+        # xTB optimization with all bonds frozen
+        xyzoutxtb1 = str(dat_dir) + "/" + name_no_path + "_xtb1.xyz"
 
+        all_fix = get_constraint(mol, constraints_dist)
+
+        _ = create_xcontrol(
+            self.args,
+            constraints_atoms,
+            all_fix,
+            [],
+            [],
+            xyzin,
+            "constrain1.inp",
+        )
+
+        command1 = [
+            "xtb",
+            xyzin,
+            "--opt",
+            "--input",
+            "constrain1.inp",
+            "-c",
+            str(charge),
+            "--uhf",
+            str(int(mult) - 1),
+            "-P",
+            str(self.args.nprocs),
+        ]
+
+        if self.args.xtb_keywords is not None:
+            for keyword in self.args.xtb_keywords.split():
+                command1.append(keyword)
+
+        run_command(command1, "{}.out".format(xyzoutxtb1.split(".xyz")[0]))
+        try:
+            os.rename(str(dat_dir) + "/xtbopt.xyz", xyzoutxtb1)
+        except FileNotFoundError:
+            os.rename(str(dat_dir) + "/xtblast.xyz", xyzoutxtb1)
+        
+        if constrained_opt:
+            xyzoutxtb2 = str(dat_dir) + "/" + name_no_path + "_xtb2.xyz"
+            # xTB optimization with the user-defined constraints
             _ = create_xcontrol(
                 self.args,
-                constraints_atoms,
-                all_fix,
-                [],
-                [],
+                list(constraints_atoms),
+                list(constraints_dist),
+                list(constraints_angle),
+                list(constraints_dihedral),
                 xyzin,
-                "constrain1.inp",
+                "constrain2.inp",
             )
 
-            command1 = [
+            command2 = [
                 "xtb",
-                xyzin,
+                xyzoutxtb1,
                 "--opt",
                 "--input",
-                "constrain1.inp",
+                "constrain2.inp",
                 "-c",
                 str(charge),
                 "--uhf",
@@ -134,49 +183,21 @@ def crest_opt(
                 str(self.args.nprocs),
             ]
 
-            run_command(command1, "{}.out".format(xyzoutxtb1.split(".xyz")[0]))
+            if self.args.xtb_keywords is not None:
+                for keyword in self.args.xtb_keywords.split():
+                    command2.append(keyword)
+
+            run_command(command2, "{}.out".format(xyzoutxtb2.split(".xyz")[0]))
             try:
-                os.rename(str(dat_dir) + "/xtbopt.xyz", xyzoutxtb1)
+                os.rename(str(dat_dir) + "/xtbopt.xyz", xyzoutxtb2)
             except FileNotFoundError:
-                os.rename(str(dat_dir) + "/xtblast.xyz", xyzoutxtb1)
-
+                os.rename(str(dat_dir) + "/xtblast.xyz", xyzoutxtb2)
         else:
-            xyzoutxtb1 = xyzin
-
-        xyzoutxtb2 = str(dat_dir) + "/" + name_no_path + "_xtb2.xyz"
-        # xTB optimization with the user-defined constraints
-        _ = create_xcontrol(
-            self.args,
-            list(constraints_atoms),
-            list(constraints_dist),
-            list(constraints_angle),
-            list(constraints_dihedral),
-            xyzin,
-            "constrain2.inp",
-        )
-
-        command2 = [
-            "xtb",
-            xyzoutxtb1,
-            "--opt",
-            "--input",
-            "constrain2.inp",
-            "-c",
-            str(charge),
-            "--uhf",
-            str(int(mult) - 1),
-            "-P",
-            str(self.args.nprocs),
-        ]
-        run_command(command2, "{}.out".format(xyzoutxtb2.split(".xyz")[0]))
-        try:
-            os.rename(str(dat_dir) + "/xtbopt.xyz", xyzoutxtb2)
-        except FileNotFoundError:
-            os.rename(str(dat_dir) + "/xtblast.xyz", xyzoutxtb2)
+            xyzoutxtb2 = xyzoutxtb1
 
     else:
-        # preoptimization with xTB to avoid issues from innacurate starting structures in CREST
-        # if you're dealing with a large system, increase the stack size
+        # Preoptimization with xTB to avoid issues from innacurate starting structures in CREST.
+        # If you're dealing with a large system, increase the stack size
         try:
             command = [
                 "xtb",
@@ -189,119 +210,139 @@ def crest_opt(
                 "-P",
                 str(self.args.nprocs), 
             ]
+
+            if self.args.xtb_keywords is not None:
+                for keyword in self.args.xtb_keywords.split():
+                    command.append(keyword)
+
             run_command(command, f"{xyzin.split('.')[0]}.out")
             os.rename(str(dat_dir) + "/xtbopt.xyz", xyzin)
         except FileNotFoundError:
-            self.args.log.write(
-                f"\nx   There was an error during the xTB pre-optimization before CREST. This error is related to parallelization of xTB jobs and is normally observed when using metal complexes in some operative systems/OpenMP versions. AQME is switching to using one processor (nprocs=1).\n"
-            )
+            self.args.log.write(f"\nx   There was an error during the xTB pre-optimization. This error is related to parallelization of xTB jobs and is normally observed when using metal complexes in some operative systems/OpenMP versions. AQME is switching to using one processor (nprocs=1).\n")
             self.args.nprocs = 1
             try:
-                subprocess.call(f"export OMP_STACKSIZE={self.args.stacksize} && export OMP_NUM_THREADS={self.args.nprocs},1 \
-                && xtb {xyzin} --opt -c {charge} --uhf {int(mult) - 1} >> {xyzin.split('.')[0]}.out", shell=False)
+                if self.args.xtb_keywords is None:
+                    comm_xtb = f"export OMP_STACKSIZE={self.args.stacksize} && export OMP_NUM_THREADS={self.args.nprocs},1 \
+                    && xtb {xyzin} --opt -c {charge} --uhf {int(mult) - 1} >> {xyzin.split('.')[0]}.out"
+                else:
+                    comm_xtb = f"export OMP_STACKSIZE={self.args.stacksize} && export OMP_NUM_THREADS={self.args.nprocs},1 \
+                    && xtb {xyzin} --opt -c {charge} --uhf {int(mult) - 1} {self.args.xtb_keywords} >> {xyzin.split('.')[0]}.out"
+                subprocess.call(comm_xtb, shell=False)
                 os.rename(str(dat_dir) + "/xtbopt.xyz", xyzin)
             except FileNotFoundError:
-                self.args.log.write(
-                f"\nx   There was another error during the xTB pre-optimization before CREST that could not be fixed. Tying CREST directly with no xTB preoptimization.\n"
-            )
+                if self.args.program.lower() == "crest":
+                    self.args.log.write(f"\nx   There was another error during the xTB pre-optimization that could not be fixed. Trying CREST directly with no xTB preoptimization.\n")
+                else:
+                    self.args.log.write(f"\nx   There was another error during the xTB pre-optimization that could not be fixed (this molecule will be skipped).\n")
+                cmin_valid = False
+                mol_rd = None
+                energy = 0
 
         xyzoutxtb2 = xyzin
 
     xyzoutall = str(dat_dir) + "/" + name_no_path + "_conformers.xyz"
 
-    constrained_sampling = False
-    if complex_ts:
-        constrained_sampling = create_xcontrol(
-            self.args,
-            list(constraints_atoms),
-            list(constraints_dist),
-            list(constraints_angle),
-            list(constraints_dihedral),
-            xyzin,
-            ".xcontrol.sample",
-        )
-
-    command = [
-        "crest",
-        xyzoutxtb2,
-        "--chrg",
-        str(charge),
-        "--uhf",
-        str(int(mult) - 1),
-        "-T",
-        str(self.args.nprocs),
-        "--ewin",
-        str(self.args.ewin_csearch),
-    ]
-
-    if constrained_sampling:
-        command.append("--cinp")
-        command.append(".xcontrol.sample")
-
-    if self.args.crest_keywords is not None:
-        for keyword in self.args.crest_keywords.split():
-            command.append(keyword)
-
-    run_command(command, str(dat_dir) + "/crest.out")
-
-    # get number of n_atoms
-    try:
-        natoms = open("crest_best.xyz").readlines()[0].strip()
-    except FileNotFoundError:
-            self.args.log.write(
-                f"\nx  CREST optimization failed! This might be caused by different reasons. For example, this might happen if you're using metal complexes without specifying any kind of template in the complex_type option (i.e. squareplanar).\n"
+    if self.args.program.lower() == "crest":
+        if constrained_opt:
+            _ = create_xcontrol(
+                self.args,
+                list(constraints_atoms),
+                list(constraints_dist),
+                list(constraints_angle),
+                list(constraints_dihedral),
+                xyzin,
+                ".xcontrol.sample",
             )
-            sys.exit()
 
+        command = [
+            "crest",
+            xyzoutxtb2,
+            "--chrg",
+            str(charge),
+            "--uhf",
+            str(int(mult) - 1),
+            "-T",
+            str(self.args.nprocs),
+            "--ewin",
+            str(self.args.ewin_csearch),
+        ]
 
-    if self.args.cregen and int(natoms) != 1:
-        command = ["crest", "crest_best.xyz", "--cregen", "crest_conformers.xyz"]
+        if constrained_opt:
+            command.append("--cinp")
+            command.append(".xcontrol.sample")
 
-        if self.args.cregen_keywords is not None:
-            for keyword in self.args.cregen_keywords.split():
+        if self.args.crest_keywords is not None:
+            for keyword in self.args.crest_keywords.split():
                 command.append(keyword)
 
-        run_command(command, str(dat_dir) + "/cregen.out")
+        run_command(command, str(dat_dir) + "/crest.out")
 
-    try:
-        if os.path.exists(str(dat_dir) + "/crest_clustered.xyz"):
-            shutil.copy(str(dat_dir) + "/crest_clustered.xyz", xyzoutall)
+        # get number of n_atoms
+        try:
+            natoms = open("crest_best.xyz").readlines()[0].strip()
+        except FileNotFoundError:
+                self.args.log.write(f"\nx  CREST optimization failed! This might be caused by different reasons. For example, this might happen if you're using metal complexes without specifying any kind of template in the complex_type option (i.e. squareplanar).\n")
 
-        elif os.path.exists(str(dat_dir) + "/crest_ensemble.xyz"):
-            shutil.copy(str(dat_dir) + "/crest_ensemble.xyz", xyzoutall)
-        else:
-            shutil.copy(str(dat_dir) + "/crest_conformers.xyz", xyzoutall)
-    except FileNotFoundError:
-        self.args.log.write(
-            "x   CREST conformer sampling failed! Please, try other options (i.e. include constrains, change the crest_keywords option, etc.)"
-        )
+        if self.args.cregen and int(natoms) != 1:
+            command = ["crest", "crest_best.xyz", "--cregen", "crest_conformers.xyz"]
 
-    xyzall_2_xyz(xyzoutall, name_no_path)
+            if self.args.cregen_keywords is not None:
+                for keyword in self.args.cregen_keywords.split():
+                    command.append(keyword)
 
-    xyz_files = glob.glob(name_no_path + "_conf_*.xyz")
-    for _, file in enumerate(xyz_files):
-        name_conf = file.split(".xyz")[0]
-        command_xyz = ["obabel", "-ixyz", file, "-osdf", "-O" + name_conf + ".sdf"]
-        subprocess.run(
-            command_xyz, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
-        )
+            run_command(command, str(dat_dir) + "/cregen.out")
 
-    sdf_files = glob.glob(name_no_path + "*.sdf")
-    for file in sdf_files:
-        mol = rdkit.Chem.SDMolSupplier(file, removeHs=False, sanitize=False)
-        mol_rd = rdkit.Chem.RWMol(mol[0])
-        energy = str(open(file, "r").readlines()[0])
-        mol_rd.SetProp("_Name", name_no_path)
-        mol_rd.SetProp("Energy", energy)
-        mol_rd.SetProp("Real charge", str(charge))
-        mol_rd.SetProp("Mult", str(int(mult)))
-        sdwriter.write(mol_rd)
+        try:
+            if os.path.exists(str(dat_dir) + "/crest_clustered.xyz"):
+                shutil.copy(str(dat_dir) + "/crest_clustered.xyz", xyzoutall)
 
-    dup_data.at[dup_data_idx, "crest-conformers"] = len(xyz_files)
+            elif os.path.exists(str(dat_dir) + "/crest_ensemble.xyz"):
+                shutil.copy(str(dat_dir) + "/crest_ensemble.xyz", xyzoutall)
+            else:
+                shutil.copy(str(dat_dir) + "/crest_conformers.xyz", xyzoutall)
+        except FileNotFoundError:
+            self.args.log.write("\nx   CREST conformer sampling failed! Please, try other options (i.e. include constrains, change the crest_keywords option, etc.)")
+            cmin_valid = False
+
+    if cmin_valid:
+        if self.args.program.lower() == "crest":
+            xyzall_2_xyz(xyzoutall, name_no_path)
+            xyz_files = glob.glob(name_no_path + "_conf_*.xyz")
+        if self.args.program.lower() == "xtb":
+            xyz_files = [xyzin]
+        for _, file in enumerate(xyz_files):
+            name_conf = file.split(".xyz")[0]
+            command_xyz = ["obabel", "-ixyz", file, "-osdf", "-O" + name_conf + ".sdf"]
+            subprocess.run(
+                command_xyz, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+            )
+
+        sdwriter = Chem.SDWriter(str(f"{csearch_dir}/{name_no_path}.sdf"))
+        sdf_files = glob.glob(name_no_path + "*.sdf")
+        for file in sdf_files:
+            mol = rdkit.Chem.SDMolSupplier(file, removeHs=False, sanitize=False)
+            mol_rd = rdkit.Chem.RWMol(mol[0])
+            if self.args.program.lower() == "xtb":
+                energy = str(open(file, "r").readlines()[0].split()[1])
+                mol_rd.SetProp("_Name", name_init)
+            elif self.args.program.lower() == "crest":
+                energy = str(open(file, "r").readlines()[0])
+                mol_rd.SetProp("_Name", name_no_path)
+                mol_rd.SetProp("Energy", energy)
+                mol_rd.SetProp("Real charge", str(charge))
+                mol_rd.SetProp("Mult", str(int(mult)))
+                sdwriter.write(mol_rd)
+    else:
+        xyz_files = []
 
     os.chdir(self.args.w_dir_main)
 
-    return 1
+    if method_opt == 'crest':
+        dup_data.at[dup_data_idx, "crest-conformers"] = len(xyz_files)
+        return 1
+
+    if method_opt == 'xtb':
+        return mol_rd, float(energy), cmin_valid
 
 
 def create_xcontrol(
