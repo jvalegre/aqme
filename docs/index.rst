@@ -38,45 +38,17 @@ Please report any bugs or missing details at the mailing list or open an issue a
     Quickstart/development
 
 .. toctree::
-   :maxdepth: 3
-   :caption: Input Formats
+    :maxdepth: 2
+    :caption: Examples
 
-   Input Formats/Input Formats
-
-
-.. toctree::
-   :maxdepth: 3
-   :caption: Conformer Generation
-
-   Conformer Generation/Organic Molecules
-   Conformer Generation/Metal Complex
-   Conformer Generation/Crystals
+    Examples/examples_python/examples_python
+    Examples/examples_commandline/examples_commandline
 
 .. toctree::
    :maxdepth: 3
-   :caption: Templates
+   :caption: YAML Templates
 
-   Templates/Templates
-
-.. toctree::
-   :maxdepth: 3
-   :caption: Methods
-
-   Methods/RDKit Only
-   Methods/RDKit + xTB
-   Methods/RDKit + ANI1ccx
-
-.. toctree::
-   :maxdepth: 3
-   :caption: Gaussian Input Files
-
-   Gaussian Input Files/Options for input parameters
-
-.. toctree::
-   :maxdepth: 3
-   :caption: Analysis
-
-   Analysis/Options for Analysis
+   YAML_Templates/YAML_Templates
 
 .. toctree:: 
    :caption: API Reference
