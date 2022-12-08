@@ -28,14 +28,20 @@ Welcome to aqme's documentation!
 Please report any bugs or missing details at the mailing list or open an issue at `github`_.
 
 .. toctree::
-    :maxdepth: 3
-    :caption: Quickstart
+   :maxdepth: 3
+   :caption: Quickstart
 
-    Quickstart/setup
-    Quickstart/requirements
-    Quickstart/basic
-    Quickstart/defaults
-    Quickstart/development
+   Quickstart/setup
+   Quickstart/requirements
+   Quickstart/basic
+   Quickstart/defaults
+   Quickstart/development
+
+.. toctree:: 
+   :maxdepth: 1
+   :caption: Video Tutorials
+
+   video_tutorials
 
 .. toctree::
     :maxdepth: 2

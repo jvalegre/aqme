@@ -1,13 +1,14 @@
 Using aqme to set up a PySCF calculation
 ========================================
 
+Although support for PySCF is not yet included here we provide an example on how
+to use the tools in aqme to run a PySCF job from json files. 
+
 .. code:: python
 
-    ##### Input preparation of PySCF jobs from json files
-
-.. code:: python
-
-    # run a PySCF single-point calculation with the DeepMind 21 (DM21) functional using the generated json files
+    # run a PySCF single-point calculation  
+    # with the DeepMind 21 (DM21) functional
+    # using json files as input geometries 
     
     import os
     from aqme.utils import cclib_atoms_coords
