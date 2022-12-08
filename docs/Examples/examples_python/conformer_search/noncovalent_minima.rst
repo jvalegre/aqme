@@ -10,13 +10,13 @@ Noncovalent bimolecular complex generated from SMILES
 In the following example we will generate conformers of the 
 isopentane-water complex using CREST
 
-+--------------------------+--------------------+
-|  |nocov_bimol_chemdraw|  |  |nocov_bimol_3D|  |
-+--------------------------+--------------------+
++-----------------------------------------------+
 | .. centered:: **SMILES**                      |
 +-----------------------------------------------+
 | .. centered:: CCC(C)C.O                       |
-+-----------------------------------------------+
++--------------------------+--------------------+
+|  |nocov_bimol_chemdraw|  |  |nocov_bimol_3D|  |
++--------------------------+--------------------+
 
 We start by importing the packages
 

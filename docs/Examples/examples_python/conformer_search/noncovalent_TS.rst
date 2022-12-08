@@ -13,13 +13,13 @@ TS involving a trimolecular complex generated from SMILES
 In the following example we will generate conformers of the SN2 transition state 
 involving Water, Cloride ion and 2-Fluoro-2-methylpropane. 
 
-+--------------------------+--------------------+
-|  |nocov_ts_chemdraw|     |  |nocov_ts_3D|     |
-+--------------------------+--------------------+
++-----------------------------------------------+
 | .. centered:: **SMILES**                      |
 +-----------------------------------------------+
 | .. centered:: O.FC(C)(C)C.[Cl-]               |
-+-----------------------------------------------+
++--------------------------+--------------------+
+|  |nocov_ts_chemdraw|     |  |nocov_ts_3D|     |
++--------------------------+--------------------+
 
 In the following example we will: 
 

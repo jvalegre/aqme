@@ -1,5 +1,11 @@
+.. |metal_comp_chemdraw| image:: ../../images/metal_comp_chemdraw.png
+   :width: 300
+
+.. |metal_comp_3D| image:: ../../images/Quinine-3D-balls.png
+   :width: 400
+
 Metal complex from SMILES input
--------------------------------
+===============================
 
 In the following example we will: 
 
@@ -7,31 +13,45 @@ In the following example we will:
    for square planar complexes.
 2) Generate Gaussian input files using an ECP for each of the conformers.
 
-Step 1: CSEARCH conformational sampling (creates SDF files)
-...........................................................
++-----------------------------------------------+
+| .. centered:: **SMILES**                      |
++-----------------------------------------------+
+| .. centered:: I[Pd]([PH3+])(F)Cl              |
++--------------------------+--------------------+
+|  |metal_comp_chemdraw|   |  |metal_comp_3D|   |
++--------------------------+--------------------+
+
+As with the other examples, we start by importing the necesary packages
 
 .. code:: python
 
-    import os, glob
-    from pathlib import Path                                                                                                                                                          
+    from pathlib import Path
     from aqme.csearch import csearch
-    from aqme.qprep import qprep
-    
-    # set working directory and SMILES string
-    w_dir_main = Path(os.getcwd())
-    sdf_path = w_dir_main.joinpath('Pd_sdf_files')
-    smi_metal = 'I[Pd]([PH3+])(F)Cl'
-    
-    # run CSEARCH conformational sampling, specifying:
-    # 1) PATH to create the new SDF files (destination=sdf_path)
-    # 2) Simple RDKit sampling (program='rdkit')
-    # 3) SMILES string (smi=smi_metal)
-    # 4) Name for the output SDF files (name='Pd_complex')
-    # 5) The metal is Pd (metal=['Pd'])
-    # 6) Oxidation number +2 (metal_oxi=[2])
-    # 7) The complex is squareplanar (complex_type='squareplanar')
-    csearch(destination=sdf_path,program='rdkit',smi=smi_metal,name='Pd_complex',
-            metal_atoms=['Pd'],metal_oxi=[2],mult=1,complex_type='squareplanar')
+
+Next we specify the output directory where the sdf with conformations will be 
+generated
+
+.. code:: python
+
+    w_dir_main = Path.cwd()
+    sdf_path = w_dir_main/'Pd_sdf_files'
+
+Finally we proceed to the conformational search using the smiles string of the 
+molecule. 
+
+.. code:: python
+
+    smiles = 'I[Pd]([PH3+])(F)Cl'
+    csearch(destination=sdf_path,
+            smi=smiles,
+            name='Pd_complex',
+            program='rdkit',
+            metal_atoms=['Pd',],         # Symbol of transition metal atoms included
+            metal_oxi=[2,],              # Oxidation number per metal_atom
+            mult=1,                      # multiplicity   
+            complex_type='squareplanar') # Template geometry to use
+
+
 
 Step 2: Writing Gaussian input files with the SDF obtained from CSEARCH
 .......................................................................
@@ -54,34 +74,3 @@ Step 2: Writing Gaussian input files with the SDF obtained from CSEARCH
     # 9) Processors to use in the calcs (nprocs=8)
     qprep(destination=com_path,files=sdf_rdkit_files,program='gaussian',qm_input='B3LYP/genecp opt freq',
             bs_gen='def2svp',bs_nogen='6-31G*',gen_atoms=['Pd'],mem='24GB',nprocs=8)
-     
-
-ToRemove
-........
-
-Bonus 1: If you want to use the same functions using a YAML file that stores all the variables
-                                                                                              
-
-.. code:: python
-
-    # to load the variables from a YAML file, use the varfile option
-    csearch(varfile='FILENAME.yaml')
-    
-    # for each option, specify it in the YAML file as follows:
-    # program='rdkit' --> program: 'rdkit'
-    # name='Pd_complex' --> name: 'Pd_complex'
-    # etc
-
-Bonus 2: If you want to use the same functions through command lines
-                                                                    
-
-.. code:: python
-
-    csearch(w_dir_main=w_dir_main,destination=sdf_path,program='rdkit',smi=smi_metal,name='Pd_complex',
-            metal=['Pd'],metal_oxi=[2],mult=1,complex_type='squareplanar')
-    
-    # for each option, specify it in the command line as follows:
-    # program='rdkit' --> --program 'rdkit'
-    # name='Pd_complex' --> --name Pd_complex
-    # etc
-    # for example: python -m aqme --program rdkit --smi I[Pd](Cl)([PH3+])[N+]1=CC=CC=C1 --name Pd_complex
