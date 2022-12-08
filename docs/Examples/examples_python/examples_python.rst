@@ -10,8 +10,9 @@ notebooks. The jupyter notebooks can be found
 
     conformer_search
     qm_input_generation
-    example_3
+    correction_qm_output
+    descriptor_generation
     example_4
-    example_5
+
 
 
