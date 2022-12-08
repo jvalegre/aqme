@@ -1,48 +1,41 @@
+.. |nocov_bimol_chemdraw| image:: ../../images/nocov_bimol_chem.png
+   :width: 400
+
+.. |nocov_bimol_3D| image:: ../../images/Quinine-3D-balls.png
+   :width: 400
+
 Noncovalent bimolecular complex generated from SMILES
------------------------------------------------------
+=====================================================
 
-In the following example we will: 
+In the following example we will generate conformers of the 
+isopentane-water complex using CREST
 
-1) Generate various conformers of the isopentane-water complex using CREST
-2) Generate Gaussian input files for each of the conformers
++--------------------------+--------------------+
+|  |nocov_bimol_chemdraw|  |  |nocov_bimol_3D|  |
++--------------------------+--------------------+
+| .. centered:: **SMILES**                      |
++-----------------------------------------------+
+| .. centered:: CCC(C)C.O                       |
++-----------------------------------------------+
 
-Step 1: CSEARCH conformational sampling (creates SDF files)
-...........................................................
+We start by importing the packages
 
 .. code:: python
 
-    import glob                                                                                                                                                     
+    from pathlib import Path
     from aqme.csearch import csearch
-    from aqme.qprep import qprep
-    
-    name = 'isopent-water-complex'
-    smi = 'CCC(C)C.O'
-    
-    # run CSEARCH conformational sampling, specifying:
-    # 1) SMILES string (smi=smi)
-    # 2) Name for the output SDF files (name=name)
-    # 3) CREST sampling (program='crest')
-    # 4) Additional CREST keywords (crest_keywords='--nci')
-    # 5) Include CREGEN post-analysis (cregen=True)
-    # 6) Additional CREGEN keywords (cregen_keywords='--ewin 3')
-    csearch(smi=smi,
-            name=name,program='crest',crest_keywords='--nci',
-            cregen=True,cregen_keywords='--ewin 3')
 
-Step 2: Writing Gaussian input files with the sdf obtained from CSEARCH
-.......................................................................
+Compared with the :doc:`organic molecule example <organic_molecule>` this time 
+we are going to use the default location for the output file. As a consequence
+we can now proceed to run the conformer search from the smiles string:
 
 .. code:: python
 
-    # set SDF filenames and directory where the new com files will be created
-    sdf_rdkit_files = glob.glob(f'CSEARCH/*.sdf')
-    
-    # run QPREP input files generator, with:
-    # 1) Files to convert (files=file)
-    # 2) QM program for the input (program='gaussian')
-    # 3) Keyword line for the Gaussian inputs (qm_input='wb97xd/6-31+G* opt freq')
-    # 4) Memory to use in the calculations (mem='24GB')
-    # 5) Processors to use in the calcs (nprocs=8)
-    qprep(files=sdf_rdkit_files,program='gaussian',
-            qm_input='wb97xd/6-31+G* opt freq',mem='24GB',nprocs=8)
+    smiles = 'CCC(C)C.O'
+    csearch(smi=smiles,
+            name='isopent-water-complex',
+            program='crest',
+            crest_keywords='--nci',     # indicate that it is a non-covalent complex
+            cregen=True,                # Include CREGEN post-analysis
+            cregen_keywords='--ewin 3') # energy window for CREGEN == 3.0 kcal/mol
 
