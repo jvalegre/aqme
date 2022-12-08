@@ -22,7 +22,7 @@ a file named 'test.csv' with the following contents:
 
 In this case we are going to start by generating some conformers of these 
 molecules using rdkit (for more details on the conformer generation please 
-check the :doc:`Conformer Search <../conformer_search>` section).
+check the :doc:`Conformer Search <conformer_search>` section).
 
 .. code:: python 
 
