@@ -1,54 +1,83 @@
-Preparation of QM input files
-=============================
+Benchmarking methods 
+====================
 
-QPREP input files preparation of a benchmarking containing 3 levels of theory for Gaussian and 1 level of theory for ORCA input files
-'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+In this example we provide the steps needed to use aqme to generate the input 
+for different levels of theory and softwares which is a common occurrence in 
+method benchmarking.
+
+For this example we are going to asume that we have a folder named 'log_files' 
+with several .log files corresponding to gaussian output files of optimization 
+and frequency calculations. 
+
+First we start by importing the modules
 
 .. code:: python
 
-    import os
+    from pathlib import Path
     from aqme.qprep import qprep
-    
-    # folder with input log files and their names (*.log to include all the log files in the folder)
-    log_files = os.getcwd()+'/log_files/*.log'
-    
-    # specify a list of lists with level of theory, suffix and program used to generate input files
-    # 1) Three levels of theory for Gaussian calculations
-    lot_suffix_program = [['wb97xd/def2qzvpp scrf=(smd,solvent=acetonitrile)','wb97xd','gaussian']]
-    lot_suffix_program.append(['m062x/def2qzvpp emp=gd3 scrf=(smd,solvent=acetonitrile)','m062x','gaussian'])
-    lot_suffix_program.append(['b3lyp/6-31G*','b3lyp','gaussian'])
-    
-    # 2) A DLPNO example for ORCA calculations
-    ORCA_SP = 'Extrapolate(2/3,cc) def2/J cc-pVTZ/C DLPNO-CCSD(T) NormalPNO TightSCF RIJCOSX GridX7\n'
-    ORCA_SP += '%cpcm\n'
-    ORCA_SP += 'smd true\n'
-    ORCA_SP += 'SMDsolvent \"CH2Cl2\"\n'
-    ORCA_SP += 'end\n'
-    ORCA_SP += '%method\n'
-    ORCA_SP += 'Grid 3\n'
-    ORCA_SP += 'FinalGrid 5\n'
-    ORCA_SP += 'end\n'
-    ORCA_SP += '%scf maxiter 500\n'
-    ORCA_SP += 'end\n'
-    ORCA_SP += '% mdci\n'
-    ORCA_SP += 'Density None\n'
-    ORCA_SP += 'end\n'
-    ORCA_SP += '% elprop\n'
-    ORCA_SP += 'Dipole False\n'
-    ORCA_SP += 'end'
-    
-    lot_suffix_program.append([ORCA_SP,'DLPNO','orca'])
-    
-    # run the QPREP module, with:
-    # 1) Names of the files to get atoms and coordinates (files=log_files)
-    # 2) Keyword line(s) used in the inputs (qm_input=level[0])
-    # 3) Suffix to add to the file names (suffix=level[1])
-    # 4) Program for the input file format (program=level[2])
-    # 5) Memory to use in the calculations (mem='4GB')
-    # 6) Processors to use in the calcs (nprocs=2)
-    for level in lot_suffix_program:
-        print(f'o  Creating input files with suffix "{level[1]}" \n')
-        qprep(files=log_files, 
-              qm_input=level[0], suffix=level[1], program=level[2], mem='4GB', nprocs=2)
 
+
+Next we list all the files that contain the geometries 
+
+.. code:: python
+
+    log_files = [str(filepath for filepath in Path('log_files').glob('/*.log')]
+
+We now are going to create a list with the different calculations that we want 
+to use. 
+
+.. code:: python 
+
+   # We are going to use namedtuples to make the code easier to understand
+   from collections import namedtuple 
+
+   Calculation = namedtuple('Calculation','qm_input suffix program')
+
+   inp_1 = Calculation(qm_input='wb97xd/def2qzvpp scrf=(smd,solvent=acetonitrile)',
+                       suffix='wb97xd',
+                       program='gaussian')
+   inp_2 = Calculation(qm_input='m062x/def2qzvpp emp=gd3 scrf=(smd,solvent=acetonitrile)',
+                       suffix='m062x',
+                       program='gaussian')
+   inp_3 = Calculation(qm_input='b3lyp/6-31G*',
+                       suffix='b3lyp',
+                       program='gaussian')
+
+   orca_qm_inp = r'''
+   Extrapolate(2/3,cc) def2/J cc-pVTZ/C DLPNO-CCSD(T) NormalPNO TightSCF RIJCOSX GridX7
+   %cpcm
+   smd true
+   SMDsolvent "CH2Cl2"
+   end
+   %method
+   Grid 3
+   FinalGrid 5
+   end
+   %scf maxiter 500
+   end
+   % mdci
+   Density None
+   end
+   % elprop
+   Dipole False
+   end'''.lstrip()
+
+   inp_4 = Calculation(qm_input=orca_qm_inp,
+                       suffix='DLPNO',
+                       program='orca')
+
+Finally we proceed to generate all the input files: 
+
+.. code:: 
+   
+    calculations = [inp_1,inp_2,inp_3,inp_4]
+
+   for qm_inp,suf,prog in calculations: 
+      print(f'o  Creating input files with suffix "{suf}" \n')
+      qprep(files=log_files, 
+            qm_input=qm_inp, 
+            suffix=suf, 
+            program=prog, 
+            mem='4GB', 
+            nprocs=2)
 
