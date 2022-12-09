@@ -44,7 +44,7 @@ atoms we are going to impose the constraints.
     mol = Chem.MolFromSmiles(smi)
     mol = Chem.AddHs(mol)
     for i,atom in enumerate(mol.GetAtoms()):
-        atom.SetAtomMapNum(i+3) 
+        atom.SetAtomMapNum(i+1) 
     # mapped SMILES to use in CSEARCH
     smi_new = Chem.MolToSmiles(mol)
 
