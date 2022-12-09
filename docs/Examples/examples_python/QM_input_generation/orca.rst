@@ -82,7 +82,7 @@ appropriate keywords.
           charge=0, 
           mult=3,
           qm_input=ORCA_SP,
-          suffix='m06-reduced',
+          suffix='m06-triplet',
           program='orca', 
           mem='16GB', 
           nprocs=8)

@@ -23,5 +23,3 @@ def2svp
 
 C 0
 def2svp
-****
-

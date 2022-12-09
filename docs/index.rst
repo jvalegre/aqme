@@ -28,7 +28,7 @@ Welcome to aqme's documentation!
 Please report any bugs or missing details at the mailing list or open an issue at `github`_.
 
 .. toctree::
-   :maxdepth: 3
+   :maxdepth: 2
    :caption: Quickstart
 
    Quickstart/setup
@@ -51,7 +51,7 @@ Please report any bugs or missing details at the mailing list or open an issue a
     Examples/examples_commandline/examples_commandline
 
 .. toctree::
-   :maxdepth: 3
+   :maxdepth: 2
    :caption: YAML Templates
 
    YAML_Templates/YAML_Templates
@@ -63,7 +63,7 @@ Please report any bugs or missing details at the mailing list or open an issue a
    API/API_Reference.rst
 
 .. toctree::
-   :maxdepth: 3
+   :maxdepth: 2
    :caption: Misc
 
    Misc/versions
