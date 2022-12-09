@@ -343,10 +343,8 @@ class cmin:
             sortedcids = ewin_filter(
                 sorted_all_cids,
                 cenergy,
-                self.args,
                 dup_data,
                 dup_data_idx,
-                self.args.log,
                 self.args.program.lower(),
                 self.args.ewin_cmin,
             )
@@ -356,7 +354,6 @@ class cmin:
                 cenergy,
                 dup_data,
                 dup_data_idx,
-                self.args.log,
                 self.args.program.lower(),
                 self.args.initial_energy_threshold,
             )
@@ -368,7 +365,6 @@ class cmin:
                 self.args,
                 dup_data,
                 dup_data_idx,
-                self.args.log,
                 self.args.program.lower(),
             )
 

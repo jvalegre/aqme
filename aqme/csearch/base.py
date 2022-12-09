@@ -820,10 +820,8 @@ class csearch:
             sortedcids_rotated = ewin_filter(
                 sorted_rotated_cids,
                 rotated_energy,
-                self.args,
                 dup_data,
                 dup_data_idx,
-                self.args.log,
                 "summ",
                 self.args.ewin_csearch,
             )
@@ -833,7 +831,6 @@ class csearch:
                 rotated_energy,
                 dup_data,
                 dup_data_idx,
-                self.args.log,
                 "summ",
                 self.args.initial_energy_threshold,
             )
@@ -845,7 +842,6 @@ class csearch:
                 self.args,
                 dup_data,
                 dup_data_idx,
-                self.args.log,
                 "summ",
             )
             mol_select = []
@@ -1079,10 +1075,8 @@ class csearch:
         sortedcids_rdkit = ewin_filter(
             sorted_all_cids,
             cenergy,
-            self.args,
             dup_data,
             dup_data_idx,
-            self.args.log,
             "rdkit",
             self.args.ewin_csearch,
         )
@@ -1093,7 +1087,6 @@ class csearch:
             cenergy,
             dup_data,
             dup_data_idx,
-            self.args.log,
             "rdkit",
             self.args.initial_energy_threshold,
         )
@@ -1106,7 +1099,6 @@ class csearch:
             self.args,
             dup_data,
             dup_data_idx,
-            self.args.log,
             "rdkit",
         )
 

@@ -323,6 +323,7 @@ def filters(mol, log, molwt_cutoff):
     """
 
     # Filter 1
+    molwt_cutoff = float(molwt_cutoff)
     if Descriptors.MolWt(mol) >= molwt_cutoff and molwt_cutoff > 0:
         log.write(f"x   Skipping this molecule as total molar mass > {molwt_cutoff}")
         return False
@@ -342,10 +343,8 @@ def filters(mol, log, molwt_cutoff):
 def ewin_filter(
     sorted_all_cids,
     cenergy,
-    args,
     dup_data,
     dup_data_idx,
-    log,
     calc_type,
     energy_window,
 ):
@@ -366,8 +365,6 @@ def ewin_filter(
             [description]
     dup_data_idx : pd.Dataframe?
             [description]
-    log : Logger
-            [description]
     calc_type : str
             A string that points towards the column of the dataframe that should
             be filled with the number of duplicates. The current choices are:
@@ -384,6 +381,7 @@ def ewin_filter(
 
     sortedcids = []
     count = 0
+    energy_window = float(energy_window)
 
     cenergy_min = cenergy[sorted_all_cids[0]]
     # Filter by Energy Window
@@ -393,7 +391,6 @@ def ewin_filter(
         else:
             count += 1
 
-    log_msg = ""
     if calc_type == "rdkit":
         key = "RDKit"
     elif calc_type == "summ":
@@ -410,7 +407,7 @@ def ewin_filter(
 
 
 def pre_E_filter(
-    sortedcids, cenergy, dup_data, dup_data_idx, log, calc_type, threshold
+    sortedcids, cenergy, dup_data, dup_data_idx, calc_type, threshold
 ):
     """
     This filter selects the first compound that it finds with energy an energy
@@ -426,8 +423,6 @@ def pre_E_filter(
     dup_data : pd.Dataframe
             [description]
     dup_data_idx : pd.Dataframe?
-            [description]
-    log : Logger
             [description]
     calc_type : str
             A string that points towards the column of the dataframe that should
@@ -445,6 +440,7 @@ def pre_E_filter(
 
     selectedcids_initial = []
     eng_dup = 0
+    threshold = float(threshold)
 
     # Add the first one
     selectedcids_initial.append(sortedcids[0])
@@ -479,7 +475,7 @@ def pre_E_filter(
 
 
 def RMSD_and_E_filter(
-    outmols, selectedcids_initial, cenergy, args, dup_data, dup_data_idx, log, calc_type
+    outmols, selectedcids_initial, cenergy, args, dup_data, dup_data_idx, calc_type
 ):
     """
     This filter selects the first compound that it finds with energy an energy
@@ -490,6 +486,9 @@ def RMSD_and_E_filter(
     selectedcids = []
     eng_rms_dup = 0
     selectedcids.append(selectedcids_initial[0])
+    energy_threshold = float(args.energy_threshold)
+    rms_threshold = float(args.rms_threshold)
+    max_matches_rmsd = int(args.max_matches_rmsd)
 
     for _,conf in enumerate(selectedcids_initial[1:]):
         # This keeps track of whether or not your conformer is unique
@@ -498,7 +497,7 @@ def RMSD_and_E_filter(
         # check energy and rmsd
         for seenconf in selectedcids:
             E_diff = abs(cenergy[conf] - cenergy[seenconf])  # in kcal/mol
-            if E_diff < args.energy_threshold:
+            if E_diff < energy_threshold:
                 if calc_type == "rdkit":
                     rms = get_conf_RMS(
                         outmols[seenconf],
@@ -506,7 +505,7 @@ def RMSD_and_E_filter(
                         seenconf,
                         conf,
                         args.heavyonly,
-                        args.max_matches_rmsd,
+                        max_matches_rmsd
                     )
                 # elif calc_type == 'summ' or calc_type == 'fullmonte' or calc_type =='xtb' or calc_type =='ani':
                 elif calc_type == "summ" or calc_type == "xtb" or calc_type == "ani":
@@ -516,9 +515,9 @@ def RMSD_and_E_filter(
                         -1,
                         -1,
                         args.heavyonly,
-                        args.max_matches_rmsd,
+                        max_matches_rmsd
                     )
-                if rms < args.rms_threshold:
+                if rms < rms_threshold:
                     excluded_conf = True
                     eng_rms_dup += 1
                     break
