@@ -390,10 +390,9 @@ def test_QPREP_analysis(test_type, init_folder, target_folder, restore_folder):
         assert outlines[19].strip() == ""
         assert outlines[20].strip() == "C 0"
         assert outlines[21].strip() == "LANL2TZ"
-        assert outlines[22].strip() == "****"
-        assert outlines[23].strip() == ""
-        assert outlines[24].strip() == "$nbo bndidx $end"
-        assert outlines[25] == "\n"
+        assert outlines[22].strip() == ""
+        assert outlines[23].strip() == "$nbo bndidx $end"
+        assert outlines[24] == "\n"
 
     elif test_type == "gen":
         cmd_aqme = [

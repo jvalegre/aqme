@@ -16,25 +16,21 @@ Parameters
    varfile : str, default=None
       Option to parse the variables using a yaml file (specify the filename)
    program : str, default=None
-      Program required to create the new input files. 
-      Current options: 'gaussian', 'orca'
+      Program required to create the new input files. Current options: 'gaussian', 'orca'
    qm_input : str, default=''
       Keywords line for new input files (i.e. 'B3LYP/6-31G opt freq')
    qm_end : str, default=''
       Final line(s) in the new input files
    charge : int, default=None
-      Charge of the calculations used in the following input files. 
-      If charge isn't defined, it defaults to 0
+      Charge of the calculations used in the following input files. If charge isn't defined, it defaults to 0
    mult : int, default=None
-      Multiplicity of the calculations used in the following input files. 
-      If mult isn't defined, it defaults to 1
+      Multiplicity of the calculations used in the following input files. If mult isn't defined, it defaults to 1
    suffix : str, default=''
       Suffix for the new input files (i.e. FILENAME_SUFFIX.com for FILENAME.log)
    chk : bool, default=False
       Include the chk input line in new input files for Gaussian calculations
    mem : str, default='4GB'
-      Memory for the QM calculations (i) Gaussian: total memory; 
-      (ii) ORCA: memory per processor
+      Memory for the QM calculations (i) Gaussian: total memory; (ii) ORCA: memory per processor
    nprocs : int, default=2
       Number of processors used in the QM calculations
    gen_atoms : list of str, default=[]
@@ -303,7 +299,7 @@ class qprep:
 
                 if gen_type == "genecp" and len(ecp_used) > 0:
                     txt += "\n"
-                    txt += f"{elements_used} 0\n{self.args.bs_gen}\n****\n"
+                    txt += f"{elements_used} 0\n{self.args.bs_gen}\n"
 
                 txt += "\n"
 
