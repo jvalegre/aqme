@@ -175,6 +175,7 @@ Now we can proceed to the conformer generation:
     
     csearch(input='example2.csv',
             program='crest',
+            nprocs=12,
             cregen=True,
             cregen_keywords='--ethr 0.1 --rthr 0.2 --bthr 0.3 --ewin 1')
 

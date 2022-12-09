@@ -126,7 +126,7 @@ Now we can proceed to the conformer generation:
 
 .. code:: shell 
 
-   python -m aqme --csearch --input example2.csv --program crest --cregen --cregen_keywords "--ethr 0.1 --rthr 0.2 --bthr 0.3 --ewin 1"
+   python -m aqme --csearch --input example2.csv --program crest --cregen --cregen_keywords "--ethr 0.1 --rthr 0.2 --bthr 0.3 --ewin 1" --nprocs 12
 
 
 Step 3: Creating Gaussian input files for optimization and frequency with QPREP

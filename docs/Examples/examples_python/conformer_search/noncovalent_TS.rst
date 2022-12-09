@@ -83,6 +83,7 @@ Finally we proceed to the conformer generation using CREST
     csearch(smi=smi_new,              # mapped SMILES
             name='TS-example',        # name of the output file
             program='crest',          # conformer search program
+            nprocs=12,                # number of processors
             cregen=True,              # Include CREGEN post-analysis
             crest_keywords='--nci',   # indicate that it is a non-covalent complex
             constraints_dist=constraints_dist,

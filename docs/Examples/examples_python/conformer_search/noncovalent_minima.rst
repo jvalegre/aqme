@@ -35,6 +35,7 @@ we can now proceed to run the conformer search from the smiles string:
     csearch(smi=smiles,
             name='isopent-water-complex',
             program='crest',
+            nprocs=12,
             crest_keywords='--nci',     # indicate that it is a non-covalent complex
             cregen=True,                # Include CREGEN post-analysis
             cregen_keywords='--ewin 3') # energy window for CREGEN == 3.0 kcal/mol
