@@ -94,7 +94,7 @@ are available at
 Specifically the files gnn.py and gnn_functions.py require to be on the same 
 directory as the file 'solubility.csv' and these two files depend on packages 
 that aqme does not depend on. So before continuing please make sure that you 
-have all the packages required to continue as well as the specified files.
+have all the packages required installed as well as the specified files.
 
 we can execute directly the gnn.py script to obtain the results
 

@@ -62,7 +62,7 @@ Step 2 : Run xTB calculations using QDESCP
 Step 3 : Create the CSV file with descriptors for the GNN model
 ---------------------------------------------------------------
 
-This step can be run in bash, python manually generated using a spreadsheet editor.
+This step can be run in bash, python or manually using a spreadsheet editor.
 The aim is to generate a the file 'solubility_xtb.csv' which contains a new 
 column with the respective filepaths to the qdescp generated .json file.
 
@@ -87,7 +87,7 @@ are available at
 Specifically the files gnn.py and gnn_functions.py require to be on the same 
 directory as the file 'solubility.csv' and these two files depend on packages 
 that aqme does not depend on. So before continuing please make sure that you 
-have all the packages required to continue as well as the specified files.
+have all the packages required installed as well as the specified files.
 
 We can execute directly the gnn.py script to obtain the results
 

@@ -84,7 +84,7 @@ Step 4: QCORR analysis including isomerization filter
 Step 5: Resubmission of unsuccessful calculations (if any) with suggestions from AQME
 -------------------------------------------------------------------------------------
 
-Now we need to run the generated COM files (in fixed_inp_folder) with Gaussian 
+Now we need to run the generated COM files (in fixed_QM_inputs) with Gaussian 
 like we did in Step 3
 
 Step 6: Creating Gaussian input files for NMR calcs with QPREP
