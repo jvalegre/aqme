@@ -33,6 +33,13 @@ Then we list the files that we want to analyze. In this case we are going to
 analyze Gaussian16 output files. We are going to assume that we have our 
 files in the folder 'calculations' therefore :code:`--files "calculations/*.log"`
 
+.. warning:: 
+
+   Please notice that shell wildcard arguments need to be provided as strings.
+   :code:`--files "calculations/*.sdf"` should be provided instead of 
+   :code:`--files calculations/*.sdf`. This feature might change in future to 
+   follow the usual conventions. 
+
 We can need to indicate the extension of the initial input files 
 :code:`--isom_type com` as well as the folder where those files are 
 :code:`--isom_inputs folder`

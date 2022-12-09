@@ -29,7 +29,14 @@ The sdf file contents are as follows:
 
 We will be using the qprep module :code:`--qprep`
 
-We indicate the files whose gaussian input we want :code:`--files sdf_files/*.sdf` 
+We indicate the files whose gaussian input we want :code:`--files "sdf_files/*.sdf"` 
+
+.. warning:: 
+
+   Please notice that shell wildcard arguments need to be provided as strings.
+   :code:`--files "sdf_files/*.sdf"` should be provided instead of 
+   :code:`--files sdf_files/*.sdf`. This feature might change in future to 
+   follow the usual conventions. 
 
 We include the suffix that will be appended to the base name of the files 
 :code:`--suffix "wb97xd-basic"`
@@ -44,7 +51,7 @@ Our final command will now look like this:
 
 .. code:: shell
 
-   python -m aqme --qprep --files sdf_files/*.sdf --qm_input "wb97xd/def2qzvpp scrf=(smd,solvent=acetonitrile)" --suffix wb97xd-basic --program gaussian --mem 16GB --nprocs 8
+   python -m aqme --qprep --files "sdf_files/*.sdf" --qm_input "wb97xd/def2qzvpp scrf=(smd,solvent=acetonitrile)" --suffix wb97xd-basic --program gaussian --mem 16GB --nprocs 8
 
 With this we have generated a new folder named QCALC that contains the file 
 'ethane_conf_1_wb97xd-basic.com' with the following contents:
@@ -63,7 +70,7 @@ file name that we will generate will be different)
 
 .. code:: shell
 
-   python -m aqme --qprep --suffix wb97xd-triplet --charge 0 --mult 3 --files sdf_files/*.sdf --qm_input "wb97xd/def2qzvpp scrf=(smd,solvent=acetonitrile)" --program gaussian --mem 16GB --nprocs 8
+   python -m aqme --qprep --suffix wb97xd-triplet --charge 0 --mult 3 --files "sdf_files/*.sdf" --qm_input "wb97xd/def2qzvpp scrf=(smd,solvent=acetonitrile)" --program gaussian --mem 16GB --nprocs 8
 
 Which will create the file 'ethane_conf_1_wb97xd-triplet.com' with the
 following contents: 
@@ -87,7 +94,7 @@ And we end up with the following command line:
 
 .. code:: shell
 
-   python -m aqme --qprep --suffix wb97xd-genecp --gen_atoms "['C',]" --bs_gen def2svp --bs_nogen "6-31G*" --files sdf_files/*.sdf --qm_input "wb97xd/def2qzvpp scrf=(smd,solvent=acetonitrile)" --program gaussian --mem 16GB --nprocs 8
+   python -m aqme --qprep --suffix wb97xd-genecp --gen_atoms "['C']" --bs_gen def2svp --bs_nogen "6-31G*" --files "sdf_files/*.sdf" --qm_input "wb97xd/def2qzvpp scrf=(smd,solvent=acetonitrile)" --program gaussian --mem 16GB --nprocs 8
 
 Which will lead to the creation of the file 'ethane_conf_1_wb97xd-genecp.com' with the
 following contents: 
@@ -114,7 +121,7 @@ Our final command line will look like:
 
 .. code:: shell
 
-   python -m aqme --qprep --suffix wb97xd-nbo --qm_end "$nbo bndidx $end" --qm_input "pop=(nbo6read,savenbos) wb97xd/def2svp" --files sdf_files/*.sdf  --program gaussian --mem 16GB --nprocs 8
+   python -m aqme --qprep --suffix wb97xd-nbo --qm_end "$nbo bndidx $end" --qm_input "pop=(nbo6read,savenbos) wb97xd/def2svp" --files "sdf_files/*.sdf"  --program gaussian --mem 16GB --nprocs 8
 
 Which will lead to the creation of the file 'ethane_conf_1_wb97xd-nbo.com' with the
 following contents: 
