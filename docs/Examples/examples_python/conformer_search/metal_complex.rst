@@ -7,11 +7,9 @@
 Metal complex from SMILES input
 ===============================
 
-In the following example we will: 
+In the following example we will generate various conformers of a 
+Pd complex using RDKit using a template for square planar complexes.
 
-1) Generate various conformers of a Pd complex using RDKit using a template 
-   for square planar complexes.
-2) Generate Gaussian input files using an ECP for each of the conformers.
 
 +-----------------------------------------------+
 | .. centered:: **SMILES**                      |

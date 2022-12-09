@@ -1,14 +1,18 @@
 =====================
-Examples Command Line
+Examples Command line
 =====================
 
-.. toctree::
-    :maxdepth: 1
+In this section you will find the same examples as shown in the python examples
+section but with their corresponding commandline instructions when possible. 
 
-    example_1
-    example_2
-    example_3
-    example_4
-    example_5
+.. toctree::
+    :maxdepth: 2
+
+    conformer_search
+    qm_input_generation
+    correction_qm_output
+    descriptor_generation
+    end_to_end
+
 
 

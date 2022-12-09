@@ -50,7 +50,7 @@ Here we specify the `freq_conv` which will attempt to fix calculations whose
 optimization ended normally but whose frequency calculation did not.
 
 If we want to check the .json files that we have generated in a separatedly we 
-can use the full_check function which willonly check if all calculations were 
+can use the full_check function which will only check if all calculations were 
 done using the same theory level, grid size, program and version, solvation ...
 
 .. code:: python
