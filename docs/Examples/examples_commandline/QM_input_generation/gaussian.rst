@@ -56,8 +56,12 @@ Our final command will now look like this:
 With this we have generated a new folder named QCALC that contains the file 
 'ethane_conf_1_wb97xd-basic.com' with the following contents:
 
+.. highlight:: none 
+
 .. literalinclude:: ../../chemfiles/ethane_basic.com
 
+.. highlight:: default
+   
 
 Enforce Charge and Multiplicity
 -------------------------------
@@ -75,8 +79,11 @@ file name that we will generate will be different)
 Which will create the file 'ethane_conf_1_wb97xd-triplet.com' with the
 following contents: 
 
+.. highlight:: none
+
 .. literalinclude:: ../../chemfiles/ethane_ch_mult.com
 
+.. highlight:: default
 
 Include the genecp section
 --------------------------
@@ -99,9 +106,11 @@ And we end up with the following command line:
 Which will lead to the creation of the file 'ethane_conf_1_wb97xd-genecp.com' with the
 following contents: 
 
+.. highlight:: none
+
 .. literalinclude:: ../../chemfiles/ethane_genecp.com
 
-
+.. highlight:: default
 
 Include instructions after the geometry section
 -----------------------------------------------
@@ -126,5 +135,8 @@ Our final command line will look like:
 Which will lead to the creation of the file 'ethane_conf_1_wb97xd-nbo.com' with the
 following contents: 
 
+.. highlight:: none
+
 .. literalinclude:: ../../chemfiles/ethane_nbo.com
 
+.. highlight:: default
