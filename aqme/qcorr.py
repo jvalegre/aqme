@@ -45,12 +45,14 @@ Parameters
       Fraction of the summed covalent radii that constitutes a bond between two 
       atoms in the isomerization filter
       
-.. note:: 
+.. note::
+
    New input files are generated through the QPREP module and, therefore, all 
    QPREP arguments can be used when calling QCORR and will overwrite default 
    options. For example, if the user specifies qm_input='wb97xd/def2svp', 
    all the new input files generated to fix issues will contain this keywords 
    line. See examples in the 'Example_workflows' folder for more information.
+
 """
 ######################################################.
 #        This file stores the QCORR class            #

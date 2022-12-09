@@ -5,42 +5,42 @@ Parameters
 General
 +++++++
 
-   program : str, default=None
-      Program required in the conformational sampling. Current options: 
-      'rdkit', 'summ', 'fullmonte', 'crest'
-   smi : str, default=None
-      Optionally, define a SMILES string as input
-   name : str, default=None
-      (If smi is defined) optionally, define a name for the system
-   input : str, default=''
-      (If smi is None) Optionally, file containing the SMILES strings and names 
-      of the molecules. Current file extensions: .smi, .sdf, .cdx, .csv, .com, 
-      .gjf, .mol, .mol2, .xyz, .txt, .yaml, .yml, .rtf
-      For .csv files (i.e. FILENAME.csv), two columns are required, 'code_name' 
-      with the names and 'SMILES' for the SMILES string
-   w_dir_main : str, default=os.getcwd()
-      Working directory
-   varfile : str, default=None
-      Option to parse the variables using a yaml file (specify the filename)
-   max_workers : int, default=4
-      Number of simultaneous RDKit jobs run with multiprocessing (WARNING! More 
-      than 12 simultaneous jobs might collapse your computer!)
-   charge : int, default=None
-      Charge of the calculations used in the following input files. If charge 
-      isn't defined, it automatically reads the charge of the SMILES string
-   mult : int, default=None
-      Multiplicity of the calculations used in the following input files. If 
-      mult isn't defined, it automatically reads the multiplicity of the mol 
-      object created with the SMILES string
-   verbose : bool, default=False
-      If True, more information regarding the conformational sampling is printed
-   prefix : str, default=''
-      Prefix added to all the names
-   suffix : str, default=''
-      Suffix added to all the names
-   stacksize : str, default='1G'
-      Controls the stack size used (especially relevant for xTB/CREST 
-      calculations of large systems, where high stack sizes are needed)
+    input : str, default=''  
+       (If smi is None) Optionally, file containing the SMILES strings and 
+       names of the molecules. Current file extensions: .smi, .sdf, .cdx, 
+       .csv, .com, .gjf, .mol, .mol2, .xyz, .txt, .yaml, .yml, .rtf  
+       For .csv files (i.e. FILENAME.csv), two columns are required, 
+       'code_name' with the names and 'SMILES' for the SMILES string  
+    program : str, default=None  
+       Program required in the conformational sampling. 
+       Current options: 'rdkit', 'summ', 'fullmonte', 'crest'  
+    smi : str, default=None  
+       Optionally, define a SMILES string as input  
+    name : str, default=None  
+       (If smi is defined) optionally, define a name for the system  
+    w_dir_main : str, default=os.getcwd()  
+       Working directory  
+    varfile : str, default=None  
+       Option to parse the variables using a yaml file (specify the filename)  
+    max_workers : int, default=4  
+       Number of simultaneous RDKit jobs run with multiprocessing 
+       (WARNING! More than 12 simultaneous jobs might collapse your computer!)  
+    charge : int, default=None  
+       Charge of the calculations used in the following input files. 
+       If charge isn't defined, it automatically reads the charge of the 
+       SMILES string  
+    mult : int, default=None  
+       Multiplicity of the calculations used in the following input files. If 
+       mult isn't defined, it automatically reads the multiplicity of the mol 
+       object created with the SMILES string. Be careful with the automated 
+       calculation of mult from mol objects when using metals!  
+    prefix : str, default=''  
+       Prefix added to all the names  
+    suffix : str, default=''  
+       Suffix added to all the names  
+    stacksize : str, default='1G'  
+       Controls the stack size used (especially relevant for xTB/CREST 
+       calculations of large systems, where high stack sizes are needed)  
 
 General RDKit-based
 +++++++++++++++++++
