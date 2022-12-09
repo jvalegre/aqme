@@ -7,7 +7,7 @@ General
 
     files : str or list of str, default=None
       Input files. Formats accepted: XYZ, SDF, GJF, COM and PDB. Also, lists can
-      be used (i.e. [FILE1.sdf, FILE2.sdf] or *.FORMAT such as *.sdf).  
+      be used (i.e. [FILE1.sdf, FILE2.sdf] or \*.FORMAT such as \*.sdf).  
     program : str, default=None
       Program required in the conformational refining. 
       Current options: 'xtb', 'ani'

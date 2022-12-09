@@ -58,7 +58,8 @@ What is AQME?
 
 The code is an ensemble of automated QM workflows that can be run through 
 jupyter notebooks, command lines and yaml files. Some of the most popular 
-workflows include:  
+workflows include:
+
    *  RDKit- and CREST-based conformer generator leading to 
       ready-to-submit QM input files starting from individual files or SMILES 
       databases  
@@ -397,6 +398,7 @@ Reference
 .. reference-start
 
 AQME v1.4, Alegre-Requena, J. V.; Sowndarya, S.; Alturaifi, T.; Pérez-Soto, R.; 
-Paton, R. ChemRxiv 2022, DOI: 10.26434/chemrxiv-2022-dnc48.  
+Paton, R. ChemRxiv 2022, 
+DOI: `10.26434/chemrxiv-2022-dnc48 <https://doi.org/10.26434/chemrxiv-2022-dnc48>`__ .  
 
 .. reference-end

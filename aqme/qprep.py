@@ -4,7 +4,7 @@ Parameters
    files : mol object, str or list of str, default=None
       This module prepares input QM file(s). Formats accepted: mol object(s), 
       Gaussian or ORCA LOG/OUT output files, JSON, XYZ, SDF, PDB. Also, 
-      lists can be used (i.e. [FILE1.log, FILE2.log] or *.FORMAT such as *.json).
+      lists can be used (i.e. [FILE1.log, FILE2.log] or \*.FORMAT such as \*.json).
    atom_types : list of str, default=[]
       (If files is None) List containing the atoms of the system
    cartesians : list of str, default=[]
