@@ -1,22 +1,22 @@
 .. |nocov_ts_chemdraw| image:: ../../images/nocov_ts_chem.png
    :width: 400
 
-.. |nocov_ts_3D| image:: ../../images/Quinine-3D-balls.png
+.. |nocov_ts_3D| image:: ../../images/nocov_ts_3D.png
    :width: 400
 
-.. |mapping| image:: ../../images/nocov_TS_map.png
+.. |mapping| image:: ../../images/nocov_ts_map.png
    :width: 400
 
-TS involving a trimolecular complex generated from SMILES
-=========================================================
+TS involving generated from SMILES
+==================================
 
 In the following example we will generate conformers of the SN2 transition state 
-involving Water, Cloride ion and 2-Fluoro-2-methylpropane. 
+involving a cloride ion and fluoromethane in water. 
 
 +-----------------------------------------------+
-| .. centered:: **SMILES**                      |
+|        .. centered:: **SMILES**               |
 +-----------------------------------------------+
-| .. centered:: O.FC(C)(C)C.[Cl-]               |
+|        .. centered:: O.FC.[Cl-]               |
 +--------------------------+--------------------+
 |  |nocov_ts_chemdraw|     |  |nocov_ts_3D|     |
 +--------------------------+--------------------+
@@ -25,8 +25,8 @@ In the following example we will:
 
 1) Use the atom ordering of the provided SMILES to set up the constraints.
 2) Do a constrained conformational search (using CREST) to generate various 
-   conformers  of the SN2 transition state involving Water, Cloride ion and 
-   2-Fluoro-2-methylpropane.
+   conformers  of the SN2 transition state involving a cloride ion and 
+   fluoromethane in water.
 
 We start by importing the necessary packages: 
 
@@ -40,7 +40,7 @@ atoms we are going to impose the constraints.
 
 .. code:: python
 
-    smi = 'O.FC(C)(C)C.[Cl-]'
+    smi = 'O.FC.[Cl-]'
     mol = Chem.MolFromSmiles(smi)
     mol = Chem.AddHs(mol)
     for i,atom in enumerate(mol.GetAtoms()):
@@ -70,9 +70,9 @@ equal to 1.8 angstroms and we want the angle Cl-C-F to be of 180º.
 
 .. code:: 
 
-    F = 2
-    C = 3
-    Cl = 7
+    F = 1
+    C = 2
+    Cl = 3
     constraints_dist = [[F,C,1.8],[C,Cl,1.8]]
     constraints_angle = [[F,C,Cl,180]]
 

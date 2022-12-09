@@ -1,7 +1,7 @@
 .. |nocov_bimol_chemdraw| image:: ../../images/nocov_bimol_chem.png
    :width: 400
 
-.. |nocov_bimol_3D| image:: ../../images/Quinine-3D-balls.png
+.. |nocov_bimol_3D| image:: ../../images/nocov_bimol_3D.png
    :width: 400
 
 Noncovalent bimolecular complex generated from SMILES
