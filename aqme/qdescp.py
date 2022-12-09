@@ -1,32 +1,22 @@
 """
 Parameters
 ----------
-
 General
 +++++++
-
    w_dir_main : str, default=os.getcwd()
       Working directory
    destination : str, default=None,
       Directory to create the JSON file(s)
    program : str, default=None
-      Program required to create the new descriptors. 
-      Current options: 'xtb', 'nmr'
-
+      Program required to create the new descriptors. Current options: 'xtb', 'nmr'
 XTB descriptors
 +++++++++++++++
-
    files : list of str, default=''
-      Filenames of SDF/PDB/XYZ files to calculate xTB descriptors. If *.sdf 
-      (or other strings that are not lists such as *.pdb) are specified, the 
-      program will look for all the SDF files in the working directory through 
-      glob.glob(*.sdf)
+      Filenames of SDF/PDB/XYZ files to calculate xTB descriptors. If *.sdf (or other strings that are not lists such as *.pdb) are specified, the program will look for all the SDF files in the working directory through glob.glob(*.sdf)
    charge : int, default=None
-      Charge of the calculations used in the following input files. If charge 
-      isn't defined, it defaults to 0
+      Charge of the calculations used in the following input files. If charge isn't defined, it defaults to 0
    mult : int, default=None
-      Multiplicity of the calculations used in the following input files. If 
-      mult isn't defined, it defaults to 1 
+      Multiplicity of the calculations used in the following input files. If mult isn't defined, it defaults to 1 
    qdescp_solvent : str, default=None
       Solvent used in the xTB property calculations (ALPB model)
    qdescp_temp : float, default=300
@@ -35,33 +25,20 @@ XTB descriptors
       Accuracy required for the xTB property calculations 
    boltz : bool, default=False
       Calculation of Boltzmann averaged xTB properties
-      
 NMR simulation
 ++++++++++++++
-
    files : list of str, default=''
       Filenames of LOG files to retrieve NMR shifts from Gaussian calculations
    boltz : bool, default=False
       Calculation of Boltzmann averaged xTB properties
    nmr_atoms : list of str, default=[6, 1]
-      List containing the atom types to consider. For example, if the user 
-      wants to retrieve NMR shifts from C and H atoms nmr_atoms=[6, 1]
+      List containing the atom types to consider. For example, if the user wants to retrieve NMR shifts from C and H atoms nmr_atoms=[6, 1]
    nmr_slope : list of float, default=[-1.0537, -1.0784]
-      List containing the slope to apply for the raw NMR shifts calculated with 
-      Gaussian. A slope needs to be provided for each atom type in the analysis 
-      (i.e., for C and H atoms, the nmr_slope=[-1.0537, -1.0784]). These values 
-      can be adjusted using the CHESHIRE repository.
+      List containing the slope to apply for the raw NMR shifts calculated with Gaussian. A slope needs to be provided for each atom type in the analysis (i.e., for C and H atoms, the nmr_slope=[-1.0537, -1.0784]). These values can be adjusted using the CHESHIRE repository.
    nmr_intercept : list of float, default=[181.7815, 31.8723]
-      List containing the intercept to apply for the raw NMR shifts calculated 
-      with Gaussian. An intercept needs to be provided for each atom type in the 
-      analysis (i.e., for C and H atoms, the nmr_slope=[-1.0537, -1.0784]). 
-      These values can be adjusted using the CHESHIRE repository.
+      List containing the intercept to apply for the raw NMR shifts calculated with Gaussian. An intercept needs to be provided for each atom type in the analysis (i.e., for C and H atoms, the nmr_slope=[-1.0537, -1.0784]). These values can be adjusted using the CHESHIRE repository.
    nmr_experim : str, default=None
-      Filename of a CSV containing the experimental shifts. Two columnds are 
-      needed: A) 'atom_idx' should contain the indexes of the atoms to study as 
-      seen in GaussView or other molecular visualizers (i.e., the first atom of 
-      the coordinates has index 1); B) 'experimental_ppm' should contain the 
-      experimental NMR shifts in ppm observed for the atoms.
+      Filename of a CSV containing the experimental shifts. Two columnds are needed: A) 'atom_idx' should contain the indexes of the atoms to study as seen in GaussView or other molecular visualizers (i.e., the first atom of the coordinates has index 1); B) 'experimental_ppm' should contain the experimental NMR shifts in ppm observed for the atoms.
 """
 ######################################################.
 #        This file stores the QDESCP class           #
@@ -70,6 +47,7 @@ NMR simulation
 import os
 import subprocess
 import glob
+import sys
 import time
 import json
 import shutil
@@ -119,7 +97,7 @@ class qdescp:
         if self.args.boltz:
             boltz_dir = Path(f"{destination}/boltz")
             boltz_dir.mkdir(exist_ok=True, parents=True)
-            if self.args.program == "xtb":
+            if self.args.program.lower() == "xtb":
                 for file in self.args.files:
                     mol = Chem.SDMolSupplier(file, removeHs=False)[0]
                     name = file.replace("/", "\\").split("\\")[-1].split(".")[0]
@@ -131,7 +109,7 @@ class qdescp:
                     )
                 self.write_csv_boltz_data(destination)
 
-            if self.args.program == "nmr":
+            elif self.args.program.lower() == "nmr":
                 for file in self.args.files:
                     name = file.replace("/", "\\").split("\\")[-1].split("_conf")[0]
                     json_files = glob.glob(
@@ -150,6 +128,10 @@ class qdescp:
                         self.args.nmr_intercept,
                         self.args.nmr_experim,
                     )
+            if self.args.program.lower() not in ['xtb','nmr']:
+                self.args.log.write(f"\nx  Program not supported for QDESCP! Please, use program='xtb' or 'nmr'.\n")
+                self.args.log.finalize()
+                sys.exit()
 
         self.args.log.write(f"o  QDESCP successfully done at {destination}")
 
