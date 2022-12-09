@@ -28,55 +28,33 @@ Welcome to aqme's documentation!
 Please report any bugs or missing details at the mailing list or open an issue at `github`_.
 
 .. toctree::
-    :maxdepth: 3
-    :caption: Quickstart
+   :maxdepth: 3
+   :caption: Quickstart
 
-    Quickstart/setup
-    Quickstart/requirements
-    Quickstart/basic
-    Quickstart/defaults
-    Quickstart/development
+   Quickstart/setup
+   Quickstart/requirements
+   Quickstart/basic
+   Quickstart/defaults
+   Quickstart/development
+
+.. toctree:: 
+   :maxdepth: 1
+   :caption: Video Tutorials
+
+   video_tutorials
+
+.. toctree::
+    :maxdepth: 2
+    :caption: Examples
+
+    Examples/examples_python/examples_python
+    Examples/examples_commandline/examples_commandline
 
 .. toctree::
    :maxdepth: 3
-   :caption: Input Formats
+   :caption: YAML Templates
 
-   Input Formats/Input Formats
-
-
-.. toctree::
-   :maxdepth: 3
-   :caption: Conformer Generation
-
-   Conformer Generation/Organic Molecules
-   Conformer Generation/Metal Complex
-   Conformer Generation/Crystals
-
-.. toctree::
-   :maxdepth: 3
-   :caption: Templates
-
-   Templates/Templates
-
-.. toctree::
-   :maxdepth: 3
-   :caption: Methods
-
-   Methods/RDKit Only
-   Methods/RDKit + xTB
-   Methods/RDKit + ANI1ccx
-
-.. toctree::
-   :maxdepth: 3
-   :caption: Gaussian Input Files
-
-   Gaussian Input Files/Options for input parameters
-
-.. toctree::
-   :maxdepth: 3
-   :caption: Analysis
-
-   Analysis/Options for Analysis
+   YAML_Templates/YAML_Templates
 
 .. toctree:: 
    :caption: API Reference

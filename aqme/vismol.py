@@ -1,6 +1,7 @@
 """
 Parameters
 ----------
+
    files : list of str, default=''
       Filenames of SDF/PDB/XYZ to visualize conformers. If *.sdf (or other strings 
       that are not lists such as *.pdb) are specified, the program will look for
@@ -99,15 +100,18 @@ class vismol:
         Draw molecule in 3D
 
         Args:
-        ----
+        -----
+
             mol: rdMol, molecule to show
             size: tuple(int, int), canvas size
-            style: str, type of drawing molecule
-                        style can be 'line', 'stick', 'sphere', 'carton'
-            surface, bool, display SAS
-            opacity, float, opacity of surface, range 0.0-1.0
+            style: str, type of drawing molecule ['line', 'stick', 'sphere', 'carton']
+               
+            surface: bool, display SAS
+            opacity: float, opacity of surface, range 0.0-1.0
+
         Return:
-        ----
+        -------
+
             viewer: py3Dmol.view, a class for constructing embedded 3Dmol.js views in ipython notebooks.
         """
 

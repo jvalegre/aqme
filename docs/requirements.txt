@@ -10,3 +10,4 @@ cclib
 ipywidgets
 progress
 ase
+rdkit-pypi

@@ -1,109 +1,169 @@
 """
 Parameters
 ----------
+
 General
 +++++++
-   program : str, default=None
-      Program required in the conformational sampling. Current options: 'rdkit', 'summ', 'fullmonte', 'crest'
-   smi : str, default=None
-      Optionally, define a SMILES string as input
-   name : str, default=None
-      (If smi is defined) optionally, define a name for the system
-   input : str, default=''
-      (If smi is None) Optionally, file containing the SMILES strings and names of the molecules. Current file extensions: .smi, .sdf, .cdx, .csv, .com, .gjf, .mol, .mol2, .xyz, .txt, .yaml, .yml, .rtf
-      For .csv files (i.e. FILENAME.csv), two columns are required, 'code_name' with the names and 'SMILES' for the SMILES string
-   w_dir_main : str, default=os.getcwd()
-      Working directory
-   varfile : str, default=None
-      Option to parse the variables using a yaml file (specify the filename)
-   max_workers : int, default=4
-      Number of simultaneous RDKit jobs run with multiprocessing (WARNING! More than 12 simultaneous jobs might collapse your computer!)
-   charge : int, default=None
-      Charge of the calculations used in the following input files. If charge isn't defined, it automatically reads the charge of the SMILES string
-   mult : int, default=None
-      Multiplicity of the calculations used in the following input files. If mult isn't defined, it automatically reads the multiplicity of the mol object created with the SMILES string
-   verbose : bool, default=False
-      If True, more information regarding the conformational sampling is printed
-   prefix : str, default=''
-      Prefix added to all the names
-   suffix : str, default=''
-      Suffix added to all the names
-   stacksize : str, default='1G'
-      Controls the stack size used (especially relevant for xTB/CREST calculations of large systems, where high stack sizes are needed)
+
+    input : str, default=''  
+       (If smi is None) Optionally, file containing the SMILES strings and 
+       names of the molecules. Current file extensions: .smi, .sdf, .cdx, 
+       .csv, .com, .gjf, .mol, .mol2, .xyz, .txt, .yaml, .yml, .rtf  
+       For .csv files (i.e. FILENAME.csv), two columns are required, 
+       'code_name' with the names and 'SMILES' for the SMILES string  
+    program : str, default=None  
+       Program required in the conformational sampling. 
+       Current options: 'rdkit', 'summ', 'fullmonte', 'crest'  
+    smi : str, default=None  
+       Optionally, define a SMILES string as input  
+    name : str, default=None  
+       (If smi is defined) optionally, define a name for the system  
+    w_dir_main : str, default=os.getcwd()  
+       Working directory  
+    varfile : str, default=None  
+       Option to parse the variables using a yaml file (specify the filename)  
+    max_workers : int, default=4  
+       Number of simultaneous RDKit jobs run with multiprocessing 
+       (WARNING! More than 12 simultaneous jobs might collapse your computer!)  
+    charge : int, default=None  
+       Charge of the calculations used in the following input files. 
+       If charge isn't defined, it automatically reads the charge of the 
+       SMILES string  
+    mult : int, default=None  
+       Multiplicity of the calculations used in the following input files. If 
+       mult isn't defined, it automatically reads the multiplicity of the mol 
+       object created with the SMILES string. Be careful with the automated 
+       calculation of mult from mol objects when using metals!  
+    prefix : str, default=''  
+       Prefix added to all the names  
+    suffix : str, default=''  
+       Suffix added to all the names  
+    stacksize : str, default='1G'  
+       Controls the stack size used (especially relevant for xTB/CREST 
+       calculations of large systems, where high stack sizes are needed)  
+
 General RDKit-based
 +++++++++++++++++++
+
    sample : int, default='auto'
-      Number of conformers used initially in the RDKit sampling. If this option isn't specified, AQME automatically calculates (previously benchmarked) an approximate number based on number of rotatable bonds, XH (i.e. OH) groups, saturated cycles, etc (see the auto_sampling() function in csearch.py for more information)
+      Number of conformers used initially in the RDKit sampling. If this option 
+      isn't specified, AQME automatically calculates (previously benchmarked) an
+      approximate number based on number of rotatable bonds, XH (i.e. OH) groups, 
+      saturated cycles, etc (see the auto_sampling() function in csearch.py for 
+      more information)
    auto_sample : int, default=20
       Base multiplicator number used in the sample option
    ff : str, default='MMFF'
-      Force field used in RDKit optimizations and energy calculations. Current options: MMFF and UFF (if MMFF fails, AQME tries to use UFF automatically)
+      Force field used in RDKit optimizations and energy calculations. Current 
+      options: MMFF and UFF (if MMFF fails, AQME tries to use UFF automatically)
    ewin_csearch : float, default=5.0
-      Energy window in kcal/mol to discard conformers (i.e. if a conformer is more than the E window compared to the most stable conformer)
+      Energy window in kcal/mol to discard conformers (i.e. if a conformer is 
+      more than the E window compared to the most stable conformer)
    initial_energy_threshold : float, default=0.0001
-      Energy difference in kcal/mol between unique conformers for the first filter of only E
+      Energy difference in kcal/mol between unique conformers for the first 
+      filter of only E
    energy_threshold : float, default=0.25
-      Energy difference in kcal/mol between unique conformers for the second filter of E + RMS
+      Energy difference in kcal/mol between unique conformers for the second 
+      filter of E + RMS
    rms_threshold : float, default=0.25
       RMS difference between unique conformers for the second filter of E + RMS
    opt_steps_rdkit : int, default=1000
       Max cycles used in RDKit optimizations
    heavyonly : bool, default=True
-      Only consider heavy atoms during RMS calculations for filtering (in the Chem.rdMolAlign.GetBestRMS() RDKit function)
+      Only consider heavy atoms during RMS calculations for filtering (in the 
+      Chem.rdMolAlign.GetBestRMS() RDKit function)
    max_matches_rmsd : int, default=1000
-      Max matches during RMS calculations for filtering (maxMatches option in the Chem.rdMolAlign.GetBestRMS() RDKit function)
+      Max matches during RMS calculations for filtering (maxMatches option in 
+      the Chem.rdMolAlign.GetBestRMS() RDKit function)
    max_mol_wt : int, default=0
-      Discard systems with molecular weights higher than this parameter (in g/mol). If 0 is set, this filter is off
+      Discard systems with molecular weights higher than this parameter 
+      (in g/mol). If 0 is set, this filter is off
    max_torsions : int, default=0
-      Discard systems with more than this many torsions (relevant to avoid molecules with many rotatable bonds). If 0 is set, this filter is off
+      Discard systems with more than this many torsions (relevant to avoid 
+      molecules with many rotatable bonds). If 0 is set, this filter is off
    seed : int, default=62609
-      Random seed used during RDKit embedding (in the Chem.rdDistGeom.EmbedMultipleConfs() RDKit function)
+      Random seed used during RDKit embedding (in the 
+      Chem.rdDistGeom.EmbedMultipleConfs() RDKit function)
+
 Only organometallic molecules
 .............................
+
    metal_atoms : list of str, default=[]
-     Specify metal atom(s) of the system as [ATOM_TYPE]. Multiple metals can be used simultaneously (i.e. ['Pd','Ir']).  This option is important to calculate the charge of metal complexes based on SMILES strings. Requires the use of metal_oxi.
+     Specify metal atom(s) of the system as [ATOM_TYPE]. Multiple metals can 
+     be used simultaneously (i.e. ['Pd','Ir']).  This option is important to 
+     calculate the charge of metal complexes based on SMILES strings. Requires 
+     the use of metal_oxi.
    metal_oxi : list of int, default=[]
-     Specify metal oxidation state as [NUMBER]. Multiple metals can be used simultaneously (i.e. [2,3]).
+     Specify metal oxidation state as [NUMBER]. Multiple metals can be used 
+     simultaneously (i.e. [2,3]).
    complex_type : str, default=''
-      Forces the metal complexes to adopt a predefined geometry. This option is especially relevant when RDKit predicts wrong complex geometries or gives a mixture of geometries. Current options: squareplanar, squarepyramidal, linear, trigonalplanar
+      Forces the metal complexes to adopt a predefined geometry. This option is 
+      especially relevant when RDKit predicts wrong complex geometries or gives 
+      a mixture of geometries. Current options: squareplanar, squarepyramidal, 
+      linear, trigonalplanar
+
 SUMM only
 +++++++++
+
    degree : float, default=120.0
-      Interval of degrees to rotate dihedral angles during SUMM sampling (i.e. 120.0 would create 3 conformers for each dihedral, at 0, 120 and 240 degrees)
+      Interval of degrees to rotate dihedral angles during SUMM sampling 
+      (i.e. 120.0 would create 3 conformers for each dihedral, at 0, 
+      120 and 240 degrees)
+
 Fullmonte only
 ++++++++++++++
+
    ewin_fullmonte : float, default=5.0
-      Energy window in kcal/mol to discard conformers (i.e. if a conformer is more than the E window compared to the most stable conformer)
+      Energy window in kcal/mol to discard conformers (i.e. if a conformer is 
+      more than the E window compared to the most stable conformer)
    ewin_sample_fullmonte : float, default=2.0
-      Energy window in kcal/mol to use conformers during the Fullmonte sampling (i.e. conformers inside the E window compared to the most stable conformer are considered as unique in each step of the sampling)
+      Energy window in kcal/mol to use conformers during the Fullmonte sampling 
+      (i.e. conformers inside the E window compared to the most stable conformer 
+      are considered as unique in each step of the sampling)
    nsteps_fullmonte : int, default=100
-      Number of steps (or conformer batches) to carry during the Fullmonte sampling
+      Number of steps (or conformer batches) to carry during the Fullmonte 
+      sampling
    nrot_fullmonte : int, default=3
-      Number of dihedrals to rotate simultaneously (picked at random) during each step of the Fullmonte sampling
+      Number of dihedrals to rotate simultaneously (picked at random) during 
+      each step of the Fullmonte sampling
    ang_fullmonte : float, default=30
-      Available angle interval to use in the Fullmonte sampling. For example, if the angle is 120.0, the program chooses randomly between 120 and 240 degrees (picked at random) during each step of the sampling
-CREST only
+      Available angle interval to use in the Fullmonte sampling. For example, if
+      the angle is 120.0, the program chooses randomly between 120 and 240 
+      degrees (picked at random) during each step of the sampling
+
+Crest only
 ++++++++++
-    nprocs : int, default=2
+
+   nprocs : int, default=2
       Number of processors used in CREST optimizations
    constraints_atoms : list, default=[]
-      Specify constrained atoms as [AT1,AT2,AT3]. An example of multiple constraints (atoms 1, 2 and 5 are frozen: [1,2,5]
+      Specify constrained atoms as [AT1,AT2,AT3]. An example of multiple 
+      constraints (atoms 1, 2 and 5 are frozen: [1,2,5]
    constraints_dist : list of lists, default=[]
-      Specify distance constraints as [AT1,AT2,DIST]. An example of multiple constraints (atoms 1 and 2 with distance 1.8 Å, and atoms 4 and 5 with distance 2.0 Å): [[1,2,1.8],[4,5,2.0]]
+      Specify distance constraints as [AT1,AT2,DIST]. An example of multiple 
+      constraints (atoms 1 and 2 with distance 1.8 Å, and atoms 4 and 5 with 
+      distance 2.0 Å): [[1,2,1.8],[4,5,2.0]]
    constraints_angle : list of lists, default=[]
-      Specify angle constraints as [AT1,AT2,AT3,ANGLE]. An example of multiple constraints (atoms 1, 2 and 3 with an angle of 180 degrees, and atoms 4, 5 and 6 with an angle of 120): [[1,2,3,180],[4,5,6,120]]
+      Specify angle constraints as [AT1,AT2,AT3,ANGLE]. An example of multiple 
+      constraints (atoms 1, 2 and 3 with an angle of 180 degrees, and atoms 4, 5 
+      and 6 with an angle of 120): [[1,2,3,180],[4,5,6,120]]
    constraints_dihedral : list of lists, default=[]
-      Specify dihedral constraints as [AT1,AT2,AT3,AT4,DIHEDRAL]. An example of multiple constraints (atoms 1, 2, 3 and 4 with a dihedral angle of 180 degrees, and atoms 4, 5, 6 and 7 with a dihedral angle of 120): [[1,2,3,4,180],[4,5,6,7,120]]
+      Specify dihedral constraints as [AT1,AT2,AT3,AT4,DIHEDRAL]. An example of 
+      multiple constraints (atoms 1, 2, 3 and 4 with a dihedral angle of 180 
+      degrees, and atoms 4, 5, 6 and 7 with a dihedral angle of 120): 
+      [[1,2,3,4,180],[4,5,6,7,120]]
    crest_force : float, default=0.5
       Force constant for constraints in the .xcontrol.sample file for CREST jobs
    crest_keywords : str, default=None
-      Define additional keywords to use in CREST that are not included in --chrg, --uhf, -T and -cinp. For example: '--alpb ch2cl2 --nci --cbonds 0.5'
+      Define additional keywords to use in CREST that are not included in --chrg, 
+      --uhf, -T and -cinp. For example: '--alpb ch2cl2 --nci --cbonds 0.5'
    cregen : bool, default=False
       If True, perform a CREGEN analysis after CREST (filtering options below)
    cregen_keywords : str, default=None
       Additional keywords for CREGEN (i.e. cregen_keywords='--ethr 0.02')
-    xtb_keywords : str, default=None
-      Define additional keywords to use in the xTB pre-optimization that are not included in -c, --uhf, -P and --input. For example: '--alpb ch2cl2 --gfn 1' 
+   xtb_keywords : str, default=None
+      Define additional keywords to use in the xTB pre-optimization that are not 
+      included in -c, --uhf, -P and --input. For example: '--alpb ch2cl2 --gfn 1' 
 """
 #####################################################.
 #          This file storesthe CSEARCH class        #
@@ -123,25 +183,11 @@ import concurrent.futures as futures
 import multiprocessing as mp
 from progress.bar import IncrementalBar
 
-try:
-    from rdkit.Chem import AllChem as Chem
-    from rdkit.Chem import Descriptors as Descriptors
-    from rdkit.Chem import rdmolfiles
-    from rdkit.Chem import rdMolTransforms, PropertyMol, rdDistGeom, Lipinski
-except ModuleNotFoundError:
-    print(
-        "x  RDKit is not installed! You can install the program with 'conda install -c conda-forge rdkit' or 'pip install rdkit-pypi'"
-    )
-    sys.exit()
-# this is a dummy import just to warn the user if Open babel is not installed
-try:
-    command_run_1 = ["obabel", "-H"]
-    subprocess.run(command_run_1, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-except FileNotFoundError:
-    print(
-        "x  Open Babel is not installed! You can install the program with 'conda install -c conda-forge openbabel'"
-    )
-    sys.exit()
+from rdkit.Chem import AllChem as Chem
+from rdkit.Chem import Descriptors as Descriptors
+from rdkit.Chem import rdmolfiles
+from rdkit.Chem import rdMolTransforms, PropertyMol, rdDistGeom, Lipinski
+
 from aqme.filter import filters, ewin_filter, pre_E_filter, RMSD_and_E_filter
 from aqme.csearch.utils import (
     prepare_direct_smi,
@@ -171,13 +217,9 @@ from aqme.csearch.crest import xtb_opt_main
 
 class csearch:
     """
-    Class containing all the functions from the CSEARCH module.
-
-    Parameters
-    ----------
-    kwargs : argument class
-
-    Specify any arguments from the CSEARCH module (for a complete list of variables, visit the AQME documentation)
+    Class absracting the geometry generation and conformational search procedure.
+    For further detail on the currently accepted keyword arguments (kwargs) 
+    please look at the Parameters section (in the module documentation). 
     """
 
     def __init__(self, **kwargs):
@@ -862,7 +904,9 @@ class csearch:
         mol_template,
     ):
         """
-        If program = RDKit, this replaces iodine back to the metal (if needed) and writes the RDKit SDF files. With program = summ, this function optimizes rotamers
+        If program = RDKit, this replaces iodine back to the metal (if needed) 
+        and writes the RDKit SDF files. With program = summ, this function 
+        optimizes rotamers
         """
 
         if i >= len(matches):  # base case, torsions should be set in conf

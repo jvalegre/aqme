@@ -16,6 +16,7 @@
 
 .. |ReadtheDocs| image:: https://img.shields.io/readthedocs/aqme?label=Read%20the%20Docs&logo=readthedocs
    :target: https://aqme.readthedocs.io
+   :alt: Documentation Status
 
 |CircleCI|
 |Codecov|
@@ -47,13 +48,17 @@
 Automated Quantum Mechanical Environments (AQME)
 ================================================
 
+.. contents::
+   :local:
 
 What is AQME?
 -------------
 
 .. introduction-start
 
-The code is an ensemble of automated QM workflows that can be run through jupyter notebooks, command lines and yaml files. Some of the most popular workflows include:  
+The code is an ensemble of automated QM workflows that can be run through 
+jupyter notebooks, command lines and yaml files. Some of the most popular 
+workflows include:  
    *  RDKit- and CREST-based conformer generator leading to 
       ready-to-submit QM input files starting from individual files or SMILES 
       databases  
@@ -64,7 +69,8 @@ The code is an ensemble of automated QM workflows that can be run through jupyte
    *  Analysis of homogeneity of QM calculations (same level of theory, 
       grid size, program and version, solvation models, etc)  
    *  Generation of xTB, DFT and RDKit descriptors in json and csv files 
-      that are ready to use in machine-learning models or used to predict NMR spectra  
+      that are ready to use in machine-learning models or used to predict 
+      NMR spectra  
    *  More other useful workflows  
 
 Don't miss out the latest hands-on tutorials from our 
@@ -190,7 +196,8 @@ Features and modules
 CSEARCH
 +++++++
 
-Module on charge of conformational sampling starting from multiple input types (SMILES, csv, sdf, xyz, etc). Options:
+Module on charge of conformational sampling starting from multiple input types
+(SMILES, csv, sdf, xyz, etc). Options:
 
 RDKit-based conformational sampling
 ...................................
@@ -260,7 +267,9 @@ Using AQME in Jupyter Notebooks
 +++++++++++++++++++++++++++++++
 
 There are multiple ready-to-use workflows presented as jupyter notebooks in the 
-"/Example_workflows" folder. Some examples are: 
+in the aqme repository in 
+`Example_Workflows  <https://github.com/jvalegre/aqme/Example_workflows>`__ 
+folder. Some examples are: 
 
   * CSEARCH_CMIN_conformer_generation folder --> CSEARCH/CMIN conformational 
     sampling from SMILES and creation of QM input files  
@@ -269,6 +278,11 @@ There are multiple ready-to-use workflows presented as jupyter notebooks in the
     files  
   * QPREP_generating_input_files --> QPREP preparation of input files for 
     Gaussian, ORCA and PySCF from LOG/OUT, SDF and JSON files
+
+.. note::
+   
+   For a more examples please see the 'Examples/Examples Python' section 
+   in our `ReadtheDocs <https://aqme.readthedocs.io>`__ page. 
 
 Using AQME through the command line
 +++++++++++++++++++++++++++++++++++
@@ -313,7 +327,7 @@ Input file generation from SDF, JSON and LOG/OUT files (replace "\*.sdf" for the
    python -m aqme --qprep --program gaussian --qm_input "M062x def2tzvp opt freq" --files "*.sdf"
 
 QCORR examples
-.............
+..............
 
 Analysis of Gaussian output files and JSON file generation:  
 
@@ -326,7 +340,9 @@ Analysis of Gaussian output files and JSON file generation:
 Extended documentation
 ----------------------
 
-** ReadTheDocs page in process **
+More detailed examples, an API reference and the extended list of currently 
+avaliable parameters can be found at 
+`https://aqme.readthedocs.io <https://aqme.readthedocs.io>`__ 
 
 Developers and help desk
 ------------------------
@@ -353,7 +369,7 @@ List of main developers and contact emails:
 *  Turki Alturaifi [
    `webpage <https://www.chem.pitt.edu/person/turki-alturaifi>`__ ,
    `Github <https://github.com/turkiAlturaifi>`__ , 
-   `email <turki0@rams.colostate.edu>`__] 
+   `email <turki0@tma53@pitt.edu>`__] 
    worked in benchmarking the parameters for RDKit-based conformer generation. 
 *  Robert S. Paton [
    `ORCID <https://orcid.org/0000-0002-0104-4166>`__ ,
@@ -380,6 +396,7 @@ Reference
 
 .. reference-start
 
-AQME v1.4, Alegre-Requena, J. V.; Sowndarya, S.; Alturaifi, T.; Pérez-Soto, R.; Paton, R. ChemRxiv 2022, DOI: 10.26434/chemrxiv-2022-dnc48.  
+AQME v1.4, Alegre-Requena, J. V.; Sowndarya, S.; Alturaifi, T.; Pérez-Soto, R.; 
+Paton, R. ChemRxiv 2022, DOI: 10.26434/chemrxiv-2022-dnc48.  
 
 .. reference-end
