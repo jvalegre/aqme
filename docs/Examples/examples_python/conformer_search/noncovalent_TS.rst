@@ -59,7 +59,8 @@ Otherwise we will need to save the image into a file to visualize it.
 
 .. code:: 
 
-    Chem.Draw.MolToFile(mol,'mapping.png')
+   from rdkit.Chem import Draw
+   Draw.MolToFile(mol,'mapping.png')
 
 |mapping|
 
@@ -72,8 +73,8 @@ equal to 1.8 angstroms and we want the angle Cl-C-F to be of 180º.
     F = 2
     C = 3
     Cl = 7
-    constraits_dist = [[F,C,1.8],[C,Cl,1.8]]
-    constraits_angle = [[F,C,Cl,180]]
+    constraints_dist = [[F,C,1.8],[C,Cl,1.8]]
+    constraints_angle = [[F,C,Cl,180]]
 
 Finally we proceed to the conformer generation using CREST
 
@@ -84,7 +85,7 @@ Finally we proceed to the conformer generation using CREST
             program='crest',          # conformer search program
             cregen=True,              # Include CREGEN post-analysis
             crest_keywords='--nci',   # indicate that it is a non-covalent complex
-            constraints_dist=constraits_dist,
-            constraints_angle=constraits_angle)
+            constraints_dist=constraints_dist,
+            constraints_angle=constraints_angle)
 
 
