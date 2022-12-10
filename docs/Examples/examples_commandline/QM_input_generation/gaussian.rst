@@ -122,6 +122,12 @@ for nbo6 calculations. Here we use the NBO as an example.
 We will only need to add a single extra command to include such instructions 
 :code:`--qm_end "$nbo bndidx $end"` 
 
+.. warning:: 
+
+   In linux-based systems the :code:`$` needs to be escaped so the previous 
+   option would need to be typed as :code:`--qm_end "\$nbo bndidx \$end"` 
+   instead.  
+
 But as we are using an NBO calculation as example we also need to use a gaussian
 command line that is appropriate for the calculation 
 :code:`--qm_input "pop=(nbo6read,savenbos) wb97xd/def2svp"`
