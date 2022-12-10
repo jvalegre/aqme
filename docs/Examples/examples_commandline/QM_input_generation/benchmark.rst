@@ -58,7 +58,7 @@ And finally we proceed to generate the SP inputs for orca.
 
 .. note:: 
 
-   See how to generate the three differents sets of inputs we only needed to 
+   See how to generate the four different inputs we only need to 
    change the :code:`program`, :code:`qm_input` and the :code:`suffix` but most 
-   of the command line could be re-used.
+   of the command line can be re-used.
 
