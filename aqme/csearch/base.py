@@ -136,22 +136,21 @@ Crest only
 
    nprocs : int, default=2
       Number of processors used in CREST optimizations
-   constraints_atoms : list, default=[]
-      Specify constrained atoms as [AT1,AT2,AT3]. An example of multiple 
-      constraints (atoms 1, 2 and 5 are frozen: [1,2,5]
-   constraints_dist : list of lists, default=[]
-      Specify distance constraints as [AT1,AT2,DIST]. An example of multiple 
-      constraints (atoms 1 and 2 with distance 1.8 Å, and atoms 4 and 5 with 
-      distance 2.0 Å): [[1,2,1.8],[4,5,2.0]]
-   constraints_angle : list of lists, default=[]
-      Specify angle constraints as [AT1,AT2,AT3,ANGLE]. An example of multiple 
-      constraints (atoms 1, 2 and 3 with an angle of 180 degrees, and atoms 4, 5 
-      and 6 with an angle of 120): [[1,2,3,180],[4,5,6,120]]
-   constraints_dihedral : list of lists, default=[]
-      Specify dihedral constraints as [AT1,AT2,AT3,AT4,DIHEDRAL]. An example of 
-      multiple constraints (atoms 1, 2, 3 and 4 with a dihedral angle of 180 
-      degrees, and atoms 4, 5, 6 and 7 with a dihedral angle of 120): 
-      [[1,2,3,4,180],[4,5,6,7,120]]
+    constraints_atoms : list, default=[]
+      Specify constrained atoms as [AT1,AT2,AT3]. An example of multiple constraints with
+      atoms 1, 2 and 5 frozen: [1,2,5]
+    constraints_dist : list of lists, default=[]
+      Specify distance constraints as [AT1,AT2,DIST]. An example of multiple constraints with
+      atoms 1 and 2 frozen at a distance of 1.8 Å, and atoms 4 and 5 with distance of 2.0 Å:
+      [[1,2,1.8],[4,5,2.0]]
+    constraints_angle : list of lists, default=[]
+      Specify angle constraints as [AT1,AT2,AT3,ANGLE]. An example of multiple constraints with
+      atoms 1, 2 and 3 frozen at an angle of 180 degrees, and atoms 4, 5 and 6 with an angle of 120:
+      [[1,2,3,180],[4,5,6,120]]
+    constraints_dihedral : list of lists, default=[]
+      Specify dihedral constraints as [AT1,AT2,AT3,AT4,DIHEDRAL]. An example of multiple constraints
+      with atoms 1, 2, 3 and 4 frozen at a dihedral angle of 180 degrees, and atoms 4, 5, 6 and 7
+      with a dihedral angle of 120: [[1,2,3,4,180],[4,5,6,7,120]]
    crest_force : float, default=0.5
       Force constant for constraints in the .xcontrol.sample file for CREST jobs
    crest_keywords : str, default=None
@@ -238,7 +237,13 @@ class csearch:
                 self.args.log.finalize()
                 sys.exit()
 
-        if self.args.program.lower() not in ["rdkit", "summ", "fullmonte", "crest"]:
+        csearch_program = True
+        if self.args.program is None:
+            csearch_program = False
+        if csearch_program:
+            if self.args.program.lower() not in ["rdkit", "summ", "fullmonte", "crest"]:
+                csearch_program = False
+        if not csearch_program:
             self.args.log.write("\nx  Program not supported for CSEARCH conformer generation! Specify: program='rdkit' (or summ, fullmonte, crest)")
             self.args.log.finalize()
             sys.exit()

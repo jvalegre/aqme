@@ -99,9 +99,14 @@ def constraint_fix(
 def prepare_direct_smi(args):
     job_inputs = []
     if args.prefix == "":
-        name = "".join(args.name)
+        if args.name is not None:
+            name = args.name
+        else:
+            args.log.write(f"\nx  Specify a name ('name' option) when using the 'smi' option!")
+            args.log.finalize()
+            sys.exit()
     else:
-        name = f"{args.prefix}_{''.join(args.name)}"
+        name = f"{args.prefix}_{args.name}"
     obj = (
         args.smi,
         name,

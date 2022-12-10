@@ -94,7 +94,6 @@ var_dict = {
     "crest_keywords": None,
     "crest_force": 0.5,
     "prefix": "",
-    "complex": False,
     "qdescp": False,
     "qdescp_temp": 300,
     "qdescp_acc": 0.2,
@@ -125,12 +124,6 @@ def set_options(kwargs):
         elif key.lower() in var_dict:
             vars(options)[key.lower()] = kwargs[key.lower()]
         else:
-            print(
-                "Warning! Option: [",
-                key,
-                ":",
-                kwargs[key],
-                "] provided but no option exists, try the online documentation to see available options for each module.",
-            )
+            print("Warning! Option: [", key,":",kwargs[key],"] provided but no option exists, try the online documentation to see available options for each module.",)
 
     return options

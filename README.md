@@ -255,6 +255,14 @@ AQME can also be run through command lines. Some examples are:
     *-- Options for xTB --*  
     **xtb_keywords : str, default=None**  
         Define additional keywords to use in xTB that are not included in -c, --uhf, -P and --input. For example: '--alpb ch2cl2 --gfn 1'  
+    **constraints_atoms : list, default=[]**  
+        Specify constrained atoms as [AT1,AT2,AT3]. An example of multiple constraints (atoms 1, 2 and 5 are frozen: [1,2,5]  
+    **constraints_dist : list of lists, default=[]**  
+        Specify distance constraints as [AT1,AT2,DIST]. An example of multiple constraints (atoms 1 and 2 with distance 1.8 Å, and atoms 4 and 5 with distance 2.0 Å): [[1,2,1.8],[4,5,2.0]]  
+    **constraints_angle : list of lists, default=[]**  
+        Specify angle constraints as [AT1,AT2,AT3,ANGLE]. An example of multiple constraints (atoms 1, 2 and 3 with an angle of 180 degrees, and atoms 4, 5 and 6 with an angle of 120): [[1,2,3,180],[4,5,6,120]]  
+    **constraints_dihedral : list of lists, default=[]**  
+        Specify dihedral constraints as [AT1,AT2,AT3,AT4,DIHEDRAL]. An example of multiple constraints (atoms 1, 2, 3 and 4 with a dihedral angle of 180 degrees, and atoms 4, 5, 6 and 7 with a dihedral angle of 120): [[1,2,3,4,180],[4,5,6,7,120]]  
 
     *-- Options for ANI --*  
     **opt_steps : int, default=1000**  

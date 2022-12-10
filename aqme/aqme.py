@@ -52,16 +52,12 @@ def main():
         command_run_1 = ["obabel", "-H"]
         subprocess.run(command_run_1, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     except FileNotFoundError:
-        print(
-            "x  Open Babel is not installed! You can install the program with 'conda install -c conda-forge openbabel'"
-        )
+        print("x  Open Babel is not installed! You can install the program with 'conda install -c conda-forge openbabel'")
         sys.exit()
     try: 
         from rdkit.Chem import AllChem as Chem
     except ModuleNotFoundError:
-        print(
-            "x  RDKit is not installed! You can install the program with 'conda install -c conda-forge rdkit' or 'pip install rdkit-pypi'"
-        )
+        print("x  RDKit is not installed! You can install the program with 'conda install -c conda-forge rdkit'")
         sys.exit()
 
     # CSEARCH
@@ -78,6 +74,7 @@ def main():
             sample=args.sample,
             max_workers=args.max_workers,
             metal_atoms=args.metal_atoms,
+            metal_oxi=args.metal_oxi,
             metal_idx=args.metal_idx,
             complex_coord=args.complex_coord,
             metal_sym=args.metal_sym,
@@ -136,6 +133,10 @@ def main():
             initial_energy_threshold=args.initial_energy_threshold,
             energy_threshold=args.energy_threshold,
             rms_threshold=args.rms_threshold,
+            constraints_atoms=args.constraints_atoms,
+            constraints_dist=args.constraints_dist,
+            constraints_angle=args.constraints_angle,
+            constraints_dihedral=args.constraints_dihedral,
             xtb_keywords=args.xtb_keywords,
             opt_steps=args.opt_steps,
             opt_fmax=args.opt_fmax,

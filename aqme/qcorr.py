@@ -70,9 +70,7 @@ import numpy as np
 try:
     import cclib
 except ModuleNotFoundError:
-    print(
-        "x  cclib is not installed! You can install the program with 'conda install -c conda-forge cclib' or 'pip install cclib'"
-    )
+    print("x  cclib is not installed! You can install the program with 'conda install -c conda-forge cclib' or 'pip install cclib'")
     sys.exit()
 from pathlib import Path
 from aqme.utils import (
@@ -107,11 +105,17 @@ class qcorr:
         # load default and user-specified variables
         self.args = load_variables(kwargs, "qcorr")
 
+        if len(self.args.files) == 0:
+            self.args.log.write('\nx  No files were found! Make sure you use quotation marks if you are using * (i.e. "*.sdf")')
+            self.args.log.finalize()
+            sys.exit()
+
         # QCORR analysis
         if self.args.files[0].split('.')[1].lower() not in ['log','out','json']:
             self.args.log.write(f"\nx  The format used ({self.args.files[0].split('.')[1].lower()}) is not compatible with QCORR! Formats accepted: log, out, json")
             self.args.log.finalize()
             sys.exit()
+
         self.qcorr_processing()
 
         # this is added to avoid path problems in jupyter notebooks

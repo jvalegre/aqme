@@ -3,26 +3,9 @@
 #             used in in the CMIN module            #
 #####################################################.
 
-import sys
-from rdkit.Chem import AllChem as Chem
 import pandas as pd
 
 hartree_to_kcal = 627.509
-
-
-def rdkit_sdf_read(file, args):
-    """
-    Reads sdf files and stops the execution if the file was not accessible.
-    rdkit.Chem.Mol objects
-    """
-    
-    inmols = Chem.SDMolSupplier(file, removeHs=False, sanitize=False)
-
-    if inmols is None:
-        args.log.write(f"Could not open {file}")
-        args.log.finalize()
-        sys.exit()
-    return inmols
 
 
 def creation_of_dup_csv_cmin(cmin):

@@ -59,6 +59,21 @@ xTB only
     xtb_keywords : str, default=None
       Define additional keywords to use in xTB that are not included in -c, 
       --uhf, -P and --input. For example: '--alpb ch2cl2 --gfn 1'
+    constraints_atoms : list, default=[]
+      Specify constrained atoms as [AT1,AT2,AT3]. An example of multiple constraints with
+      atoms 1, 2 and 5 frozen: [1,2,5]
+    constraints_dist : list of lists, default=[]
+      Specify distance constraints as [AT1,AT2,DIST]. An example of multiple constraints with
+      atoms 1 and 2 frozen at a distance of 1.8 Å, and atoms 4 and 5 with distance of 2.0 Å:
+      [[1,2,1.8],[4,5,2.0]]
+    constraints_angle : list of lists, default=[]
+      Specify angle constraints as [AT1,AT2,AT3,ANGLE]. An example of multiple constraints with
+      atoms 1, 2 and 3 frozen at an angle of 180 degrees, and atoms 4, 5 and 6 with an angle of 120:
+      [[1,2,3,180],[4,5,6,120]]
+    constraints_dihedral : list of lists, default=[]
+      Specify dihedral constraints as [AT1,AT2,AT3,AT4,DIHEDRAL]. An example of multiple constraints
+      with atoms 1, 2, 3 and 4 frozen at a dihedral angle of 180 degrees, and atoms 4, 5, 6 and 7
+      with a dihedral angle of 120: [[1,2,3,4,180],[4,5,6,7,120]]
 
 ANI only
 ++++++++
@@ -89,9 +104,9 @@ from rdkit.Geometry import Point3D
 import pandas as pd
 import time
 from ase.units import Hartree
-from aqme.utils import load_variables, rules_get_charge, substituted_mol
+from aqme.utils import load_variables, rules_get_charge, substituted_mol, mol_from_sdf_or_mol_or_mol2
 from aqme.filter import ewin_filter, pre_E_filter, RMSD_and_E_filter
-from aqme.cmin_utils import creation_of_dup_csv_cmin, rdkit_sdf_read
+from aqme.cmin_utils import creation_of_dup_csv_cmin
 from aqme.csearch.crest import xtb_opt_main
 from aqme.csearch.utils import prepare_com_files
 
@@ -113,7 +128,14 @@ class cmin:
         start_time_overall = time.time()
         # load default and user-specified variables
         self.args = load_variables(kwargs, "cmin")
-        if self.args.program.lower() not in ["xtb", "ani"]:
+
+        cmin_program = True
+        if self.args.program is None:
+            cmin_program = False
+        if cmin_program:
+            if self.args.program.lower() not in ["xtb", "ani"]:
+                cmin_program = False
+        if not cmin_program:
             self.args.log.write("\nx  Program not supported for CMIN refinement! Specify: program='xtb' (or 'ani')")
             self.args.log.finalize()
             sys.exit()
@@ -158,6 +180,11 @@ class cmin:
             files_cmin = self.args.files
         else:
             self.args.log.write(f"\nx  The input format {file_format} is not supported for CMIN refinement! Formats allowed: SDF, XYZ, COM, GJF and PDB")
+            self.args.log.finalize()
+            sys.exit()
+
+        if len(files_cmin) == 0:
+            self.args.log.write('\nx  No files were found! Make sure you use quotation marks if you are using * (i.e. "*.sdf")')
             self.args.log.finalize()
             sys.exit()
 
@@ -220,7 +247,12 @@ class cmin:
         self.args.log.write(f"\n\no  Multiple minimization of {file} with {self.args.program}")
 
         # read SDF files from RDKit optimization
-        inmols = rdkit_sdf_read(file, self.args)
+        try:
+            inmols = mol_from_sdf_or_mol_or_mol2(file, 'cmin')
+        except OSError:
+            file_path = Path(self.args.initial_dir).joinpath(file)
+            file_path = file_path.as_posix()
+            inmols = mol_from_sdf_or_mol_or_mol2(file_path, 'cmin')
         name_mol = os.path.basename(file).split(".sdf")[0]
 
         return inmols, name_mol

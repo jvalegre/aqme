@@ -24,7 +24,7 @@ GAS_CONSTANT = 8.3144621  # J / K / mol
 J_TO_AU = 4.184 * 627.509541 * 1000.0  # UNIT CONVERSION
 T = 298.15
 
-aqme_version = "1.4.0"
+aqme_version = "1.4.1"
 time_run = time.strftime("%Y/%m/%d %H:%M:%S", time.localtime())
 aqme_ref = f"AQME v {aqme_version}, Alegre-Requena, J. V.; Sowndarya, S.; Perez-Soto, R.; Alturaifi, T. M.; Paton, R. S., 2022. https://github.com/jvalegre/aqme"
 
@@ -417,20 +417,12 @@ def command_line_args():
         "qprep",
         "qcorr",
         "qdescp",
-        "qpred",
-        "time",
+        "vismol",
         "heavyonly",
         "cregen",
         "lowest_only",
         "lowest_n",
         "chk",
-        "dup",
-        "fullcheck",
-        "rot_dihedral",
-        "nmr_online",
-        "qsub",
-        "qsub_ana",
-        "boltz",
     ]
 
     for arg in var_dict:
@@ -455,9 +447,7 @@ def command_line_args():
         if value == "None":
             value = None
         if arg_name in ("h", "help"):
-            print(
-                f"o  AQME v {aqme_version} is installed correctly! For more information about the available options, see the documentation in https://github.com/jvalegre/aqme"
-            )
+            print(f"o  AQME v {aqme_version} is installed correctly! For more information about the available options, see the documentation in https://github.com/jvalegre/aqme")
             sys.exit()
         else:
             # this "if" allows to use * to select multiple files in multiple OS
@@ -579,11 +569,6 @@ def load_variables(kwargs, aqme_module, create_dat=True):
 
                 if self.command_line:
                     self.log.write(f"Command line used in AQME: aqme {' '.join([str(elem) for elem in sys.argv[1:]])}\n")
-
-                if aqme_module in ["qcorr", "qprep", "cmin", "qdescp", "vismol"]:
-                    if len(self.files) == 0:
-                        self.log.write(f"x  There are no output files in {self.w_dir_main}\n")
-                        error_setup = True
 
             if error_setup:
                 # this is added to avoid path problems in jupyter notebooks
@@ -734,7 +719,7 @@ def mol_from_sdf_or_mol_or_mol2(input_file, module):
     mol object from SDF, MOL or MOL2 files
     """
 
-    if module == "qprep":
+    if module in ["qprep","cmin"]:
         # using sanitize=False to avoid reading problems
         mols = Chem.SDMolSupplier(input_file, removeHs=False, sanitize=False)
         return mols
