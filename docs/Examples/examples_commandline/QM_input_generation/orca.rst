@@ -4,11 +4,6 @@
 Generate ORCA Inputs
 ====================
 
-.. warning::
-
-   This section of the documentation is in construction so currently only a copy
-   of the python example is displayed
-
 For these examples we are going to assume that we have a folder named 'sdf_files'
 that contains a single file 'ethane.sdf' with a single conformer in .sdf format 
 whose orca input file we want to generate. As you might have guessed in this 

@@ -5,12 +5,6 @@
 Correction of QM Output
 =======================
 
-.. warning:: 
-
-    The command line usage of QCORR is slightly unstable. It is recommended 
-    to use the python interface of QCORR instead until we have finished 
-    working on it. 
-
 The QCORR module focuses on the analysis and correction of the output files of 
 QM calculations. Here we refer to correction as: 
 
