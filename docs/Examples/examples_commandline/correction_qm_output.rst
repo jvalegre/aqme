@@ -5,12 +5,6 @@
 Correction of QM Output
 =======================
 
-.. warning:: 
-
-    The command line usage of QCORR is slightly unstable. It is recommended 
-    to use the python interface of QCORR instead until we have finished 
-    working on it. 
-
 The QCORR module focuses on the analysis and correction of the output files of 
 QM calculations. Here we refer to correction as: 
 
@@ -32,6 +26,13 @@ For these tasks we will be using the qcorr module :code:`--qcorr`
 Then we list the files that we want to analyze. In this case we are going to 
 analyze Gaussian16 output files. We are going to assume that we have our 
 files in the folder 'calculations' therefore :code:`--files "calculations/*.log"`
+
+.. warning:: 
+
+   Please notice that shell wildcard arguments need to be provided as strings.
+   :code:`--files "calculations/*.sdf"` should be provided instead of 
+   :code:`--files calculations/*.sdf`. This feature might change in future to 
+   follow the usual conventions. 
 
 We can need to indicate the extension of the initial input files 
 :code:`--isom_type com` as well as the folder where those files are 

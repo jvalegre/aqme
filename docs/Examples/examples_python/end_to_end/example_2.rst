@@ -175,6 +175,7 @@ Now we can proceed to the conformer generation:
     
     csearch(input='example2.csv',
             program='crest',
+            nprocs=12,
             cregen=True,
             cregen_keywords='--ethr 0.1 --rthr 0.2 --bthr 0.3 --ewin 1')
 
@@ -236,7 +237,7 @@ Step 6: QCORR analysis
 Step 7: Resubmission of unsuccessful calculations (if any) with suggestions from AQME
 -------------------------------------------------------------------------------------
 
-Now we need to run the generated COM files (in fixed_inp_folder) with Gaussian 
+Now we need to run the generated COM files (in fixed_QM_inputs) with Gaussian 
 like we did in Step 6
 
 Step 8: Creating DLPNO input files for ORCA single-point energy calculations

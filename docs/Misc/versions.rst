@@ -4,6 +4,15 @@
 Versions
 ========
 
+Version 1.4.0 [`url <https://github.com/jvalegre/aqme/releases/tag/1.4.0>`__]
+   -  Fixed a bug in the automated charge detector for metal complexes
+   -  Adapted CREST workflows to work with metal templates
+   -  Refactored utils and rearrange files to meet code analyzer standards
+   -  The mol object that CREST uses as input now comes from the RDKit 
+      conformer generator (otherwise, metal templates aren't applied and 
+      stereochemistry information might be lost)
+
+
 Version 1.3.1 [`url <https://github.com/jvalegre/aqme/releases/tag/1.3.1>`__]
    -  Workflows were updated
    -  Small fixes in CREST when using constraints

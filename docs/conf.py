@@ -47,6 +47,8 @@ templates_path = ['_templates']
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
+# Disable  smartquotes which might transform '--' into a different character
+smartquotes = False
 
 # -- Options for HTML output -------------------------------------------------
 

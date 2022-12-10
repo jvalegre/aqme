@@ -1,3 +1,6 @@
+.. |QPREP_scheme| image:: ../../images/QPREP_scheme.png
+   :width: 500
+
 Benchmarking methods 
 ====================
 
@@ -5,9 +8,12 @@ In this example we provide the steps needed to use aqme to generate the input
 for different levels of theory and softwares which is a common occurrence in 
 method benchmarking.
 
+.. centered:: |QPREP_scheme|
+
 For this example we are going to asume that we have a folder named 'log_files' 
-with several .log files corresponding to gaussian output files of optimization 
-and frequency calculations. 
+with the .log files shown in the scheme corresponding to gaussian output files 
+of optimization and frequency calculations. Our aim is to generate the input 
+files on the right hand side of the scheme to run SP calculations.
 
 First we start by importing the modules
 

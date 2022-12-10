@@ -4,11 +4,6 @@
 Generate ORCA Inputs
 ====================
 
-.. warning::
-
-   This section of the documentation is in construction so currently only a copy
-   of the python example is displayed
-
 For these examples we are going to assume that we have a folder named 'sdf_files'
 that contains a single file 'ethane.sdf' with a single conformer in .sdf format 
 whose orca input file we want to generate. As you might have guessed in this 
@@ -18,8 +13,11 @@ specific example we will be working with Ethane.
 
 The sdf file contents are as follows: 
 
+.. highlight:: none
+
 .. literalinclude:: ../../chemfiles/ethane.sdf
 
+.. highlight:: default
 
 .. note:: 
    
@@ -33,46 +31,48 @@ The sdf file contents are as follows:
    3D coordinates we will need to generate them beforehand, please see the 
    :doc:`Conformer Search <../conformer_search>` section.
 
+As we will be generating qm inputs we will use the :code:`--qprep` module. 
 
-First we start importing the required modules. 
+We include the suffix that we want to append to the base name of the generated
+files :code:`--suffix m06-basic`
 
-.. code:: python
+We specify the files whose orca input we want :code:`--files "sdf_files/*.sdf"`
 
-   from pathlib import Path
-   from aqme.qprep import qprep
+We include the number of processors :code:`--nprocs 8` and memory 
+:code:`--mem 16GB` for the calculations 
 
-Next we list all the files whose orca input we want. 
+And we specify the command line of the orca calculation: 
 
-.. code:: python
+.. code:: shell 
 
-    sdf_files = [str(filepath) for filepath in Path('sdf_files').glob('*.sdf'))]
-
-Now we are going to specify the ORCA calculation. 
-
-.. code:: python 
-
-    ORCA_SP = r'''
-    m06 def2qzvpp
+   --qm_input "m06 def2qzvpp
     %cpcm
     smd true
-    SMDsolvent "CH2Cl2"
-    end'''.lstrip()
+    SMDsolvent \"CH2Cl2\"
+    end"
 
-Now we proceed to generate the orca input files. 
+.. note:: 
 
-.. code:: python
+   the \"CH2Cl2\" in this case will ensure that the generated file contains :code:`"CH2Cl2"`
 
-   qprep(files=sdf_files, 
-         qm_input=ORCA_SP, 
-         suffix='m06-basic',
-         program='orca', 
-         mem='16GB', 
-         nprocs=8)
+Our final command line will look like: 
+
+.. code:: shell 
+
+   python -m aqme --qprep --suffix m06-basic --files "sdf_files/*.sdf" --nprocs 8 --mem 16GB --qm_input "m06 def2qzvpp
+   %cpcm
+   smd true
+   SMDsolvent \"CH2Cl2\"
+   end"
 
 With this we have generated a new folder named QCALC that contains the file 
 'ethane_conf_1_m06-basic.inp' with the following contents:
 
+.. highlight:: none
+
 .. literalinclude:: ../../chemfiles/ethane_basic.inp
+
+.. highlight:: default
 
 
 Enforce Charge and Multiplicity
@@ -81,21 +81,22 @@ Enforce Charge and Multiplicity
 If we had wanted to specify the charge and multiplicity we just need to add the 
 appropriate keywords. 
 
-.. code:: python
+.. code:: shell 
 
-    qprep(files=sdf_files, 
-          charge=0, 
-          mult=3,
-          qm_input=ORCA_SP,
-          suffix='m06-reduced',
-          program='orca', 
-          mem='16GB', 
-          nprocs=8)
+   python -m aqme --qprep --charge 0 --mult --3 --suffix "m06-triplet" --files "sdf_files/*.sdf" --nprocs 8 --mem 16GB --qm_input "m06 def2qzvpp
+   %cpcm
+   smd true
+   SMDsolvent \"CH2Cl2\"
+   end"
 
 Will lead to the creation of the file 'ethane_conf_1_wb97xd-triplet.com' with the
 following contents: 
 
+.. highlight:: none
+
 .. literalinclude:: ../../chemfiles/ethane_triplet.inp
+
+.. highlight:: default
 
 
 

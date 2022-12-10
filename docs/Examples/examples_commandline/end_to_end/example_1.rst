@@ -32,6 +32,11 @@ starting from the smiles representation of said molecule that we can see below.
    in the aqme repository in `Github  <https://github.com/jvalegre/aqme>`__ or in 
    `Figshare <https://figshare.com/articles/dataset/AQME_paper_examples/20043665/11>`__
 
+.. note:: 
+
+   A video tutorial illustrating this example can be found 
+   in our `youtube channel <https://www.youtube.com/watch?v=d4mQoE8gPJw>`__
+
 .. contents:: Steps
    :local:
 
@@ -79,7 +84,7 @@ Step 4: QCORR analysis including isomerization filter
 Step 5: Resubmission of unsuccessful calculations (if any) with suggestions from AQME
 -------------------------------------------------------------------------------------
 
-Now we need to run the generated COM files (in fixed_inp_folder) with Gaussian 
+Now we need to run the generated COM files (in fixed_QM_inputs) with Gaussian 
 like we did in Step 3
 
 Step 6: Creating Gaussian input files for NMR calcs with QPREP
@@ -87,7 +92,7 @@ Step 6: Creating Gaussian input files for NMR calcs with QPREP
 
 .. code:: shell
 
-   python -m aqme --w_dir_main "Strychnine_com_files/success" --program gaussian --mem 24GB --nprocs 12 --suffix SP --destination Strychnine_sp_files --files Strychnine_com_files/success/*.log --qm_input "B3LYP/6-311+G(2d,p) scrf=(solvent=chloroform,smd) nmr=giao" 
+   python -m aqme --w_dir_main "Strychnine_com_files/success" --program gaussian --mem 24GB --nprocs 12 --suffix SP --destination Strychnine_sp_files --files "Strychnine_com_files/success/*.log" --qm_input "B3LYP/6-311+G(2d,p) scrf=(solvent=chloroform,smd) nmr=giao" 
 
 
 Step 7: Running Gaussian NMR calcs

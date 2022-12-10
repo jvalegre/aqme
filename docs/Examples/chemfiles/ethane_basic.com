@@ -2,7 +2,7 @@
 %mem=16GB
 # wb97xd/def2qzvpp scrf=(smd,solvent=acetonitrile)
 
-ethane_conf_1_wb97xd-reduced
+ethane_conf_1_wb97xd-basic
 
 0 1
  C   0.95370000  -0.05050000  -0.07020000

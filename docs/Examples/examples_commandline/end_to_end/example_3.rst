@@ -15,6 +15,8 @@ capable of predicting their solubility.
 The set of molecules that we will use are in a file named 'solubility.csv' 
 that has the following contents:
 
+..highlight:: none
+
 ::
 
    code_name,Molecule,ESOL predicted log solubility in mols per litre,Minimum Degree,Molecular Weight,Number of H-Bond Donors,Number of Rings,Number of Rotatable Bonds,Polar Surface Area,measured log solubility in mols per litre,smiles
@@ -31,6 +33,8 @@ that has the following contents:
    mol_11,2-pyrrolidone,0.243,1,85.106,1,1,0,29.1,1.07,O=C1CCCN1
    mol_12,2-Chloronapthalene,-4.063,1,162.619,0,2,0,0,-4.14,Clc1ccc2ccccc2c1
    mol_13,1-Pentene ,-2.01,1,70.135,0,0,2,0,-2.68,CCCC=C
+
+.. highlight:: default
 
 .. note::
 
@@ -62,7 +66,7 @@ Step 2 : Run xTB calculations using QDESCP
 Step 3 : Create the CSV file with descriptors for the GNN model
 ---------------------------------------------------------------
 
-This step can be run in bash, python manually generated using a spreadsheet editor.
+This step can be run in bash, python or manually using a spreadsheet editor.
 The aim is to generate a the file 'solubility_xtb.csv' which contains a new 
 column with the respective filepaths to the qdescp generated .json file.
 
@@ -87,7 +91,7 @@ are available at
 Specifically the files gnn.py and gnn_functions.py require to be on the same 
 directory as the file 'solubility.csv' and these two files depend on packages 
 that aqme does not depend on. So before continuing please make sure that you 
-have all the packages required to continue as well as the specified files.
+have all the packages required installed as well as the specified files.
 
 We can execute directly the gnn.py script to obtain the results
 

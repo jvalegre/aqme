@@ -13,7 +13,11 @@ specific example we will be working with Ethane.
 
 The sdf file contents are as follows: 
 
+.. highlight:: none
+
 .. literalinclude:: ../../chemfiles/ethane.sdf
+
+.. highlight:: default
 
 
 .. note:: 
@@ -67,7 +71,11 @@ Now we proceed to generate the orca input files.
 With this we have generated a new folder named QCALC that contains the file 
 'ethane_conf_1_m06-basic.inp' with the following contents:
 
+.. highlight:: none
+
 .. literalinclude:: ../../chemfiles/ethane_basic.inp
+
+.. highlight:: default
 
 
 Enforce Charge and Multiplicity
@@ -82,7 +90,7 @@ appropriate keywords.
           charge=0, 
           mult=3,
           qm_input=ORCA_SP,
-          suffix='m06-reduced',
+          suffix='m06-triplet',
           program='orca', 
           mem='16GB', 
           nprocs=8)
@@ -90,7 +98,11 @@ appropriate keywords.
 Will lead to the creation of the file 'ethane_conf_1_wb97xd-triplet.com' with the
 following contents: 
 
+.. highlight:: none
+
 .. literalinclude:: ../../chemfiles/ethane_triplet.inp
+
+.. highlight:: default
 
 
 
