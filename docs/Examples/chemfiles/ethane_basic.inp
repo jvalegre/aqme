@@ -1,4 +1,4 @@
-# ethane_conf_1_dlpno-orca
+# ethane_conf_1_m06-basic
 %maxcore 16000
 %pal nprocs 8 end
 ! m06 def2qzvpp
