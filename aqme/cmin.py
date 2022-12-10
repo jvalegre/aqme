@@ -128,6 +128,7 @@ class cmin:
         start_time_overall = time.time()
         # load default and user-specified variables
         self.args = load_variables(kwargs, "cmin")
+
         if self.args.program.lower() not in ["xtb", "ani"]:
             self.args.log.write("\nx  Program not supported for CMIN refinement! Specify: program='xtb' (or 'ani')")
             self.args.log.finalize()
@@ -173,6 +174,11 @@ class cmin:
             files_cmin = self.args.files
         else:
             self.args.log.write(f"\nx  The input format {file_format} is not supported for CMIN refinement! Formats allowed: SDF, XYZ, COM, GJF and PDB")
+            self.args.log.finalize()
+            sys.exit()
+
+        if len(files_cmin) == 0:
+            self.args.log.write('\nx  No files were found! Make sure you use quotation marks if you are using * (i.e. "*.sdf")')
             self.args.log.finalize()
             sys.exit()
 

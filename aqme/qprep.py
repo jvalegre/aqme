@@ -74,6 +74,11 @@ class qprep:
         # load default and user-specified variables
         self.args = load_variables(kwargs, "qprep", create_dat=create_dat)
 
+        if len(self.args.files) == 0:
+            self.args.log.write('\nx  No files were found! Make sure you use quotation marks if you are using * (i.e. "*.sdf")')
+            self.args.log.finalize()
+            sys.exit()
+
         if self.args.program.lower() not in ["gaussian", "orca"] and create_dat:
             self.args.log.write("\nx  Program not supported for QPREP input file creation! Specify: program='gaussian' (or orca)")
             self.args.log.finalize()
