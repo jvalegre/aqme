@@ -1,58 +1,47 @@
+.. |QPREP_scheme| image:: ../../images/QPREP_scheme.png
+   :width: 500
+
 Benchmarking methods 
 ====================
-
-.. warning::
-
-   This section of the documentation is in construction so currently only a copy
-   of the python example is displayed
 
 In this example we provide the steps needed to use aqme to generate the input 
 for different levels of theory and softwares which is a common occurrence in 
 method benchmarking.
 
+.. centered:: |QPREP_scheme|
+
 For this example we are going to asume that we have a folder named 'log_files' 
-with several .log files corresponding to gaussian output files of optimization 
-and frequency calculations. 
+with the .log files shown in the scheme corresponding to gaussian output files 
+of optimization and frequency calculations. Our aim is to generate the input 
+files on the right hand side of the scheme to run SP calculations. 
 
-First we start by importing the modules
+First we are going to generate the SP inputs for the wb97xd functional using 
+gaussian: 
 
-.. code:: python
+.. code:: shell
 
-    from pathlib import Path
-    from aqme.qprep import qprep
+    python -m aqme --qprep --mem 4GB --nprocs 2 --program gaussian --suffix wb97xd --files "log_files/*.log" --qm_input "wb97xd/def2qzvpp scrf=(smd,solvent=acetonitrile)"
 
+Then we proceed to generate the SP inputs for the m062x functional:
 
-Next we list all the files that contain the geometries 
+.. code:: shell
 
-.. code:: python
+    python -m aqme --qprep --mem 4GB --nprocs 2 --program gaussian --suffix m062x --files "log_files/*.log" --qm_input "m062x/def2qzvpp emp=gd3 scrf=(smd,solvent=acetonitrile)"
 
-    log_files = [str(filepath for filepath in Path('log_files').glob('/*.log')]
+Then we move to the b3lyp functional. 
 
-We now are going to create a list with the different calculations that we want 
-to use. 
+.. code:: shell
 
-.. code:: python 
+    python -m aqme --qprep --mem 4GB --nprocs 2 --program gaussian --suffix b3lyp --files "log_files/*.log" --qm_input "b3lyp/6-31G*"
 
-   # We are going to use namedtuples to make the code easier to understand
-   from collections import namedtuple 
+And finally we proceed to generate the SP inputs for orca. 
 
-   Calculation = namedtuple('Calculation','qm_input suffix program')
+.. code:: shell
 
-   inp_1 = Calculation(qm_input='wb97xd/def2qzvpp scrf=(smd,solvent=acetonitrile)',
-                       suffix='wb97xd',
-                       program='gaussian')
-   inp_2 = Calculation(qm_input='m062x/def2qzvpp emp=gd3 scrf=(smd,solvent=acetonitrile)',
-                       suffix='m062x',
-                       program='gaussian')
-   inp_3 = Calculation(qm_input='b3lyp/6-31G*',
-                       suffix='b3lyp',
-                       program='gaussian')
-
-   orca_qm_inp = r'''
-   Extrapolate(2/3,cc) def2/J cc-pVTZ/C DLPNO-CCSD(T) NormalPNO TightSCF RIJCOSX GridX7
+   python -m aqme --qprep --mem 4GB --nprocs 2 --program orca --suffix DLPNO --files "log_files/*.log" --qm_input "Extrapolate(2/3,cc) def2/J cc-pVTZ/C DLPNO-CCSD(T) NormalPNO TightSCF RIJCOSX GridX7
    %cpcm
    smd true
-   SMDsolvent "CH2Cl2"
+   SMDsolvent \"CH2Cl2\"
    end
    %method
    Grid 3
@@ -65,24 +54,11 @@ to use.
    end
    % elprop
    Dipole False
-   end'''.lstrip()
+   end"
 
-   inp_4 = Calculation(qm_input=orca_qm_inp,
-                       suffix='DLPNO',
-                       program='orca')
+.. note:: 
 
-Finally we proceed to generate all the input files: 
-
-.. code:: 
-   
-    calculations = [inp_1,inp_2,inp_3,inp_4]
-
-   for qm_inp,suf,prog in calculations: 
-      print(f'o  Creating input files with suffix "{suf}" \n')
-      qprep(files=log_files, 
-            qm_input=qm_inp, 
-            suffix=suf, 
-            program=prog, 
-            mem='4GB', 
-            nprocs=2)
+   See how to generate the three differents sets of inputs we only needed to 
+   change the :code:`program`, :code:`qm_input` and the :code:`suffix` but most 
+   of the command line could be re-used.
 

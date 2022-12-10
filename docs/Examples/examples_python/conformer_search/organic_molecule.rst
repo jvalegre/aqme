@@ -109,10 +109,14 @@ Another way of providing the molecule to the program is by writing it into a csv
 file. Lets asume we have in our working directory the file 'ML_test.csv' with the 
 following contents: 
 
+.. highlight:: none
+
 ::
 
    code_name,SMILES
    quinine,COC1=CC2=C(C=CN=C2C=C1)[C@H]([C@@H]3C[C@@H]4CCN3C[C@@H]4C=C)O
+
+.. highlight:: default
 
 With this file we can run the same conformer search that we run at the beggining
 with the following code: 
