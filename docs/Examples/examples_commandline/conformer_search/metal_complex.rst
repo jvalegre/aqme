@@ -19,8 +19,8 @@ Pd complex using RDKit using a template for square planar complexes.
 |  |metal_comp_chemdraw|   |  |metal_comp_3D|   |
 +--------------------------+--------------------+
 
-Here we have to specify the metalic centers :code:`--metal_atoms "['Pd',]"` as well as 
-their oxidation state :code:`--metal_oxi "['2',]"`. 
+Here we have to specify the metalic centers :code:`--metal_atoms "['Pd']"` as well as 
+their oxidation state :code:`--metal_oxi "['2']"`. 
 
 We can also specify the multiplicity :code:`--mult 1`
 
@@ -39,5 +39,5 @@ The full command that we will execute will look as follows:
 
 .. code:: shell
 
-   python -m aqme --csearch --smi "I[Pd]([PH3+])(F)Cl" --destination Pd_sdf_files --program rdkit --metal_atoms "['Pd',]" --metal_oxi "['2',]" --mult 1 --complex_type squareplanar
+   python -m aqme --csearch --smi "I[Pd]([PH3+])(F)Cl" --destination Pd_sdf_files --program rdkit --metal_atoms "['Pd']" --metal_oxi "['2']" --mult 1 --complex_type squareplanar
 

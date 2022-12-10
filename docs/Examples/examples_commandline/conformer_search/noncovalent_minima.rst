@@ -24,6 +24,6 @@ we can now proceed to run the conformer search from the smiles string:
 
 .. code:: shell
 
-   python -m aqme --csearch --smi "CCC(C)C.O" --name "isopent-water-complex" --program crest --crest_keywords "--nci" --cregen --cregen_keywords "--ewin 3"
+   python -m aqme --csearch --smi "CCC(C)C.O" --name "isopent-water-complex" --program crest --crest_keywords "--nci" --cregen --cregen_keywords "--ewin 3" --nprocs 12
 
 

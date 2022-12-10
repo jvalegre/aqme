@@ -126,7 +126,7 @@ Now we can proceed to the conformer generation:
 
 .. code:: shell 
 
-   python -m aqme --csearch --input example2.csv --program crest --cregen --cregen_keywords "--ethr 0.1 --rthr 0.2 --bthr 0.3 --ewin 1"
+   python -m aqme --csearch --input example2.csv --program crest --cregen --cregen_keywords "--ethr 0.1 --rthr 0.2 --bthr 0.3 --ewin 1" --nprocs 12
 
 
 Step 3: Creating Gaussian input files for optimization and frequency with QPREP
@@ -171,45 +171,23 @@ Step 5: QCORR analysis
 Step 6: Resubmission of unsuccessful calculations (if any) with suggestions from AQME
 -------------------------------------------------------------------------------------
 
-Now we need to run the generated COM files (in fixed_inp_folder) with Gaussian 
+Now we need to run the generated COM files (in fixed_QM_inputs) with Gaussian 
 like we did in Step 4
 
 Step 7: Creating DLPNO input files for ORCA single-point energy calculations
 ----------------------------------------------------------------------------
 
-.. warning:: 
+.. code:: shell
 
-   The command line api for orca calculations is still in development so please 
-   follow the next python instructions instead
-
-.. code:: python
-
-    program = 'orca'
-    mem='16GB'
-    nprocs=8
-    
-    qm_files = os.getcwd()+'/QCALC/success/*.log' # LOG files from Steps 6 and 8
-    destination =  os.getcwd()+'/SP' # folder where the ORCA output files are generated
-    
-    # keyword lines for ORCA inputs
-    qm_input = r'''
-    DLPNO-CCSD(T) def2-tzvpp def2-tzvpp/C
-    %scf maxiter 500
-    end
-    % mdci
-    Density None
-    end
-    % elprop
-    Dipole False
-    end'''.lstrip()
-    
-    qprep(destination=destination,
-          files=qm_files,
-          program=program,
-          qm_input=qm_input,
-          mem=mem,
-          nprocs=nprocs,
-          suffix='DLPNO')
+   python -m aqme --qprep --program orca --mem 16GB --nprocs 8 --files "QCALC/success/*.log" --suffix DLPNO --qm_input "DLPNO-CCSD(T) def2-tzvpp def2-tzvpp/C
+   %scf maxiter 500
+   end
+   % mdci
+   Density None
+   end
+   % elprop
+   Dipole False
+   end"
 
 Step 8: Running ORCA inputs for single point energy calcs externally
 --------------------------------------------------------------------

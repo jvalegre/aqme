@@ -4,11 +4,6 @@
 Generate ORCA Inputs
 ====================
 
-.. warning::
-
-   This section of the documentation is in construction so currently only a copy
-   of the python example is displayed
-
 For these examples we are going to assume that we have a folder named 'sdf_files'
 that contains a single file 'ethane.sdf' with a single conformer in .sdf format 
 whose orca input file we want to generate. As you might have guessed in this 
@@ -18,8 +13,11 @@ specific example we will be working with Ethane.
 
 The sdf file contents are as follows: 
 
+.. highlight:: none
+
 .. literalinclude:: ../../chemfiles/ethane.sdf
 
+.. highlight:: default
 
 .. note:: 
    
@@ -70,7 +68,11 @@ Our final command line will look like:
 With this we have generated a new folder named QCALC that contains the file 
 'ethane_conf_1_m06-basic.inp' with the following contents:
 
+.. highlight:: none
+
 .. literalinclude:: ../../chemfiles/ethane_basic.inp
+
+.. highlight:: default
 
 
 Enforce Charge and Multiplicity
@@ -90,7 +92,11 @@ appropriate keywords.
 Will lead to the creation of the file 'ethane_conf_1_wb97xd-triplet.com' with the
 following contents: 
 
+.. highlight:: none
+
 .. literalinclude:: ../../chemfiles/ethane_triplet.inp
+
+.. highlight:: default
 
 
 

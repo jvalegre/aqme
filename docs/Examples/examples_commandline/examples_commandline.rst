@@ -11,8 +11,8 @@ section but with their corresponding commandline instructions when possible.
     conformer_search
     qm_input_generation
     correction_qm_output
-    descriptor_generation
     end_to_end
+    descriptor_generation
 
 
 

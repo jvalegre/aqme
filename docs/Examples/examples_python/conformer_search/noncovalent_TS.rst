@@ -44,7 +44,7 @@ atoms we are going to impose the constraints.
     mol = Chem.MolFromSmiles(smi)
     mol = Chem.AddHs(mol)
     for i,atom in enumerate(mol.GetAtoms()):
-        atom.SetAtomMapNum(i+3) 
+        atom.SetAtomMapNum(i+1) 
     # mapped SMILES to use in CSEARCH
     smi_new = Chem.MolToSmiles(mol)
 
@@ -83,6 +83,7 @@ Finally we proceed to the conformer generation using CREST
     csearch(smi=smi_new,              # mapped SMILES
             name='TS-example',        # name of the output file
             program='crest',          # conformer search program
+            nprocs=12,                # number of processors
             cregen=True,              # Include CREGEN post-analysis
             crest_keywords='--nci',   # indicate that it is a non-covalent complex
             constraints_dist=constraints_dist,

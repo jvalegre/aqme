@@ -6,6 +6,8 @@ In this example we are going to generate descriptors for a set of molecules
 starting from their SMILES. For this example we are going to assume that we have
 a file named 'test.csv' with the following contents: 
 
+.. highlight:: none
+
 ::
 
     SMILES,code_name
@@ -19,6 +21,8 @@ a file named 'test.csv' with the following contents:
     c1ccc([C](c2ccccc2)c2ccccc2)cc1,mol_7
     Clc1c(Cl)c(Cl)c([C](c2c(Cl)c(Cl)c(Cl)c(Cl)c2Cl)c2c(Cl)c(Cl)c(Cl)c(Cl)c2Cl)c(Cl)c1Cl,mol_8
     [CH]1C=c2ccccc2=C2C1=c1ccc3ccccc3c1=C2c1c2ccccc2cc2ccccc12,mol_9
+
+.. highlight:: default
 
 In this case we are going to start by generating some conformers of these 
 molecules using rdkit (for more details on the conformer generation please 
