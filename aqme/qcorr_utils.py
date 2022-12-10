@@ -9,7 +9,7 @@ import pandas as pd
 import json
 import cclib
 from pathlib import Path
-from aqme.utils import move_file, read_file
+from aqme.utils import move_file, read_file, Logger
 import numpy as np
 
 # Bondi VDW radii in Angstrom
@@ -167,7 +167,7 @@ def detect_linear(errortype, atom_types, cclib_data):
     return errortype
 
 
-def full_check(w_dir_main=os.getcwd(), destination_fullcheck="", files="*.json", log=''):
+def full_check(w_dir_main=os.getcwd(), destination_fullcheck="", files="*.json", log=Logger('QCORR','fullcheck')):
     """
     Checks that multiple calculations were done following the same protocols, including
     program and version, grid size, level of theory, dispersion and solvation model.

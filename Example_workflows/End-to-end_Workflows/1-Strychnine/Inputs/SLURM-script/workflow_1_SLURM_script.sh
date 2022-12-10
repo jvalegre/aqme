@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH -J Strychnine
 #SBATCH -p normal
-#SBATCH -t 24:00:00
+#SBATCH -t 48:00:00
 #SBATCH --export=NONE
 #SBATCH --ntasks-per-node=24
 

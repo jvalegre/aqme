@@ -89,9 +89,9 @@ class qdescp:
             destination = self.args.initial_dir.joinpath("QDESCP")
         else:
             destination = Path(self.args.destination)
-        #
-        # if self.args.program == "xtb":
-        #     self.gather_files_and_run(destination)
+        
+        if self.args.program == "xtb":
+            self.gather_files_and_run(destination)
 
         if self.args.boltz:
             boltz_dir = Path(f"{destination}/boltz")
@@ -231,8 +231,11 @@ class qdescp:
             for xyz_file, charge, mult in zip(xyz_files, xyz_charges, xyz_mults):
                 name = os.path.basename(xyz_file.split(".")[0])
                 self.run_sp_xtb(xyz_file, charge, mult, name, destination)
-                self.collect_xtb_properties()
-                self.cleanup(name, destination)
+                try:
+                    self.collect_xtb_properties()
+                    self.cleanup(name, destination)
+                except:
+                    pass
 
     def run_sp_xtb(self, xyz_file, charge, mult, name, destination):
         """
@@ -344,13 +347,12 @@ class qdescp:
             command4.append(f"{self.args.qdescp_solvent}")
         run_command(command4, self.xtb_fod)
 
-        os.chdir(self.args.w_dir_main)
+        os.chdir(self.args.initial_dir)
 
     def collect_xtb_properties(self):
         """
         Collects all xTB properties from the files and puts them in a JSON file
         """
-
         (
             energy,
             total_charge,
@@ -389,8 +391,8 @@ class qdescp:
             wbo_matrix[(bond[1] - 1)][(bond[0] - 1)] = wbos[i]
 
         """
-		Now add xTB descriptors to existing json files.
-		"""
+        Now add xTB descriptors to existing json files.
+        """
         json_data = read_json(self.xtb_json)
         json_data["Dipole module/D"] = dipole_module
         json_data["Total charge"] = total_charge
@@ -438,6 +440,7 @@ class qdescp:
 
         with open(self.xtb_json, "w") as outfile:
             json.dump(json_data, outfile)
+        
 
     def cleanup(self, name, destination):
         final_json = str(destination) + "/" + name + ".json"

@@ -3,7 +3,7 @@ python -m aqme --csearch --program rdkit --smi "C1CN2CC3=CCO[C@H]4CC(=O)N5[C@H]6
 
 
 # Run QPREP to create Gaussian input files
-python -m aqme --qprep --program gaussian --files CSEARCH/*sdf --qm_input "B3LYP/6-31+G(d,p) opt freq" --mem "24GB" --nprocs 24
+python -m aqme --qprep --program gaussian --files "CSEARCH/*sdf" --qm_input "B3LYP/6-31+G(d,p) opt freq" --mem "24GB" --nprocs 24
 
 
 # Run Gaussian jobs for optimization and frequency (externally)
