@@ -32,7 +32,7 @@ generated :code:`--destination Pd_sdf_files`
 
 We provide the smiles string of the molecule :code:`--smi "I[Pd]([PH3+])(F)Cl"`
 
-And we need to specify that we will be using the csearch module with rdkit to 
+And we need to specify that we will be using the CSEARCH module with rdkit to 
 generate the conformers :code:`--csearch --program rdkit`
 
 The full command that we will execute will look as follows:

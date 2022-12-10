@@ -7,7 +7,7 @@ Strychnine
 
 Along the steps of this example workflow we will show how to: 
 
-i)   Generate different conformers of the molecule using `csearch`
+i)   Generate different conformers of the molecule using CSEARCH
 ii)  Generate the inputs for the QM geometry optimization
 iii) Fix error terminations and imaginary frequencies of the output files
 iv)  Calculation and analyze the NMR chemical shifts for the conformers
