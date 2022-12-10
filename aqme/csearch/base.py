@@ -237,7 +237,13 @@ class csearch:
                 self.args.log.finalize()
                 sys.exit()
 
-        if self.args.program.lower() not in ["rdkit", "summ", "fullmonte", "crest"]:
+        csearch_program = True
+        if self.args.program is None:
+            csearch_program = False
+        if csearch_program:
+            if self.args.program.lower() not in ["rdkit", "summ", "fullmonte", "crest"]:
+                csearch_program = False
+        if not csearch_program:
             self.args.log.write("\nx  Program not supported for CSEARCH conformer generation! Specify: program='rdkit' (or summ, fullmonte, crest)")
             self.args.log.finalize()
             sys.exit()

@@ -38,6 +38,7 @@ def get_boltz_avg_properties_xtb(
     name,
     boltz_dir,
     type,
+    self,
     nmr_atoms=None,
     nmr_slope=None,
     nmr_intercept=None,
@@ -142,9 +143,10 @@ def get_boltz_avg_properties_xtb(
                 exp_data["error_boltz"] = abs(
                     exp_data["experimental_ppm"] - exp_data["boltz_avg"]
                 )
-                exp_data.round(2).to_csv(
-                    nmr_experim.split(".csv")[0] + "_predicted.csv", index=False
-                )
+                qdescp_nmr = nmr_experim.split(".csv")[0] + "_predicted.csv"
+                exp_data.round(2).to_csv(qdescp_nmr, index=False)
+                self.args.log.write(f"o  The {qdescp_nmr} file containing Boltzmann weighted NMR shifts was successfully created in {self.args.initial_dir}")
+
         elif type == "xtb":
             avg_json_data[prop] = avg_prop.tolist()
 

@@ -52,6 +52,7 @@ import time
 import json
 import shutil
 import numpy as np
+from progress.bar import IncrementalBar
 import pandas as pd
 from rdkit import Chem
 from pathlib import Path
@@ -96,7 +97,18 @@ class qdescp:
             self.args.log.finalize()
             sys.exit()
 
-        if self.args.program == "xtb":
+        qdescp_program = True
+        if self.args.program is None:
+            qdescp_program = False
+        if qdescp_program:
+            if self.args.program.lower() not in ["xtb", "nmr"]:
+                qdescp_program = False
+        if not qdescp_program:
+            self.args.log.write("\nx  Program not supported for QDESCP descriptor generation! Specify: program='xtb' (or nmr)")
+            self.args.log.finalize()
+            sys.exit()
+
+        if self.args.program.lower() == "xtb":
             self.gather_files_and_run(destination)
 
         if self.args.boltz == "False":
@@ -114,11 +126,16 @@ class qdescp:
                         str(destination) + "/" + name + "_conf_*.json"
                     )
                     get_boltz_avg_properties_xtb(
-                        json_files, name, boltz_dir, "xtb", None, None, None, None, mol
+                        json_files, name, boltz_dir, "xtb", self, None, None, None, None, mol
                     )
                 self.write_csv_boltz_data(destination)
 
             elif self.args.program.lower() == "nmr":
+                if self.args.files[0].split('.')[1].lower() not in ["json"]:
+                    self.args.log.write(f"\nx  The format used ({self.args.files[0].split('.')[1].lower()}) is not compatible with QDESCP with NMR! Formats accepted: json")
+                    self.args.log.finalize()
+                    sys.exit()
+
                 for file in self.args.files:
                     name = file.replace("/", "\\").split("\\")[-1].split("_conf")[0]
                     json_files = glob.glob(
@@ -132,17 +149,12 @@ class qdescp:
                         name,
                         boltz_dir,
                         "nmr",
+                        self,
                         self.args.nmr_atoms,
                         self.args.nmr_slope,
                         self.args.nmr_intercept,
                         self.args.nmr_experim,
                     )
-            if self.args.program.lower() not in ['xtb','nmr']:
-                self.args.log.write(f"\nx  Program not supported for QDESCP! Please, use program='xtb' or 'nmr'.\n")
-                self.args.log.finalize()
-                sys.exit()
-
-        self.args.log.write(f"o  QDESCP successfully done at {destination}")
 
         elapsed_time = round(time.time() - start_time_overall, 2)
         self.args.log.write(f"\nTime QDESCP: {elapsed_time} seconds\n")
@@ -159,13 +171,24 @@ class qdescp:
         temp = pd.concat(
             dfs, ignore_index=True
         )  # concatenate all the data frames in the list.
-        temp.to_csv("QDESCP_boltz_avg_xtbproperties.csv", index=False)
+        qdescp_csv = "QDESCP_boltz_descriptors.csv"
+        temp.to_csv(qdescp_csv, index=False)
+        self.args.log.write(f"o  The {qdescp_csv} file containing Boltzmann weighted xTB and RDKit descriptors was successfully created in {self.args.initial_dir}")
 
     def gather_files_and_run(self, destination):
+        bar = IncrementalBar(
+            "\no  Number of finished jobs from QDESCP", max=len(self.args.files)
+        )
         # write input files
+        if self.args.files[0].split('.')[1].lower() not in ["sdf", "xyz", "pdb"]:
+            self.args.log.write(f"\nx  The format used ({self.args.files[0].split('.')[1].lower()}) is not compatible with QDESCP with xTB! Formats accepted: sdf, xyz, pdb")
+            self.args.log.finalize()
+            sys.exit()
+
         for file in self.args.files:
             xyz_files, xyz_charges, xyz_mults = [], [], []
             name = file.replace("/", "\\").split("\\")[-1].split(".")[0]
+            self.args.log.write(f"\n\n   ----- {name} -----")
             if file.split(".")[1].lower() in ["sdf", "xyz", "pdb"]:
                 if file.split(".")[1].lower() == "xyz":
                     # separate the parent XYZ file into individual XYZ files
@@ -250,6 +273,8 @@ class qdescp:
                     self.cleanup(name, destination)
                 except:
                     pass
+            bar.next()
+        bar.finish()
 
     def run_sp_xtb(self, xyz_file, charge, mult, name, destination):
         """

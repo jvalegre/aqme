@@ -79,7 +79,18 @@ class qprep:
             self.args.log.finalize()
             sys.exit()
 
-        if self.args.program.lower() not in ["gaussian", "orca"] and create_dat:
+        if self.args.files[0].split('.')[1].lower() not in ['sdf', 'xyz', 'pdb', 'log','out','json']:
+            self.args.log.write(f"\nx  The format used ({self.args.files[0].split('.')[1].lower()}) is not compatible with QPREP! Formats accepted: sdf, xyz, pdb, log, out, json")
+            self.args.log.finalize()
+            sys.exit()
+
+        qprep_program = True
+        if self.args.program is None:
+            qprep_program = False
+        if qprep_program:
+            if self.args.program.lower() not in ["gaussian", "orca"]:
+                qprep_program = False
+        if not qprep_program:
             self.args.log.write("\nx  Program not supported for QPREP input file creation! Specify: program='gaussian' (or orca)")
             self.args.log.finalize()
             sys.exit()
