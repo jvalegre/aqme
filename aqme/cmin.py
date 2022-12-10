@@ -5,85 +5,85 @@ Parameters
 General
 +++++++
 
-    files : str or list of str, default=None
-      Input files. Formats accepted: XYZ, SDF, GJF, COM and PDB. Also, lists can
-      be used (i.e. [FILE1.sdf, FILE2.sdf] or \*.FORMAT such as \*.sdf).  
-    program : str, default=None
-      Program required in the conformational refining. 
-      Current options: 'xtb', 'ani'
-    w_dir_main : str, default=os.getcwd()
-      Working directory  
-    destination : str, default=None,
-      Directory to create the output file(s)  
-    varfile : str, default=None
-      Option to parse the variables using a yaml file (specify the filename)  
-    nprocs : int, default=2
-      Number of processors used in the xTB optimizations  
-    charge : int, default=None
-      Charge of the calculations used in the xTB calculations. If charge isn't 
-      defined, it automatically reads the charge from the input SDF files 
-      (if the files come from CSEARCH, which adds the property "Real charge") 
-      or calculates it from the generated mol object  
-    mult : int, default=None
-      Multiplicity of the calculations used in the xTB calculations. If charge 
-      isn't defined, it automatically reads the charge from the input SDF files 
-      (if the files come from CSEARCH, which adds the property "Mult") or 
-      calculates it from the generated mol object. Be careful with the automated 
-      calculation of mult from mol objects when using metals!  
-    metal_atoms : list of str, default=[]
-      Specify metal atom(s) of the system as [ATOM_TYPE]. Multiple metals can be 
-      used simultaneously (i.e. ['Pd','Ir']).  This option is important to 
-      calculate the charge of metal complexes based on SMILES strings. Requires 
-      the use of metal_oxi.
-    metal_oxi : list of int, default=[]
-      Specify metal oxidation state as [NUMBER]. Multiple metals can be used 
-      simultaneously (i.e. [2,3]).
-    ewin_cmin : float, default=5.0
-      Energy window in kcal/mol to discard conformers (i.e. if a conformer is 
-      more than the E window compared to the most stable conformer)  
-    initial_energy_threshold : float, default=0.0001
-      Energy difference in kcal/mol between unique conformers for the first 
-      filter of only E  
-    energy_threshold : float, default=0.25
-      Energy difference in kcal/mol between unique conformers for the second 
-      filter of E + RMS  
-    rms_threshold : float, default=0.25
-      RMS difference between unique conformers for the second filter of E + RMS  
-    stacksize : str, default='1G'
-      Controls the stack size used (especially relevant for xTB/CREST 
-      calculations of large systems, where high stack sizes are needed)
+   files : str or list of str, default=None
+     Input files. Formats accepted: XYZ, SDF, GJF, COM and PDB. Also, lists can
+     be used (i.e. [FILE1.sdf, FILE2.sdf] or \*.FORMAT such as \*.sdf).  
+   program : str, default=None
+     Program required in the conformational refining. 
+     Current options: 'xtb', 'ani'
+   w_dir_main : str, default=os.getcwd()
+     Working directory  
+   destination : str, default=None,
+     Directory to create the output file(s)  
+   varfile : str, default=None
+     Option to parse the variables using a yaml file (specify the filename)  
+   nprocs : int, default=2
+     Number of processors used in the xTB optimizations  
+   charge : int, default=None
+     Charge of the calculations used in the xTB calculations. If charge isn't 
+     defined, it automatically reads the charge from the input SDF files 
+     (if the files come from CSEARCH, which adds the property "Real charge") 
+     or calculates it from the generated mol object  
+   mult : int, default=None
+     Multiplicity of the calculations used in the xTB calculations. If charge 
+     isn't defined, it automatically reads the charge from the input SDF files 
+     (if the files come from CSEARCH, which adds the property "Mult") or 
+     calculates it from the generated mol object. Be careful with the automated 
+     calculation of mult from mol objects when using metals!  
+   metal_atoms : list of str, default=[]
+     Specify metal atom(s) of the system as [ATOM_TYPE]. Multiple metals can be 
+     used simultaneously (i.e. ['Pd','Ir']).  This option is important to 
+     calculate the charge of metal complexes based on SMILES strings. Requires 
+     the use of metal_oxi.
+   metal_oxi : list of int, default=[]
+     Specify metal oxidation state as [NUMBER]. Multiple metals can be used 
+     simultaneously (i.e. [2,3]).
+   ewin_cmin : float, default=5.0
+     Energy window in kcal/mol to discard conformers (i.e. if a conformer is 
+     more than the E window compared to the most stable conformer)  
+   initial_energy_threshold : float, default=0.0001
+     Energy difference in kcal/mol between unique conformers for the first 
+     filter of only E  
+   energy_threshold : float, default=0.25
+     Energy difference in kcal/mol between unique conformers for the second 
+     filter of E + RMS  
+   rms_threshold : float, default=0.25
+     RMS difference between unique conformers for the second filter of E + RMS  
+   stacksize : str, default='1G'
+     Controls the stack size used (especially relevant for xTB/CREST 
+     calculations of large systems, where high stack sizes are needed)
 
 xTB only
 ++++++++
 
-    xtb_keywords : str, default=None
-      Define additional keywords to use in xTB that are not included in -c, 
-      --uhf, -P and --input. For example: '--alpb ch2cl2 --gfn 1'
-    constraints_atoms : list, default=[]
-      Specify constrained atoms as [AT1,AT2,AT3]. An example of multiple constraints with
-      atoms 1, 2 and 5 frozen: [1,2,5]
-    constraints_dist : list of lists, default=[]
-      Specify distance constraints as [AT1,AT2,DIST]. An example of multiple constraints with
-      atoms 1 and 2 frozen at a distance of 1.8 Å, and atoms 4 and 5 with distance of 2.0 Å:
-      [[1,2,1.8],[4,5,2.0]]
-    constraints_angle : list of lists, default=[]
-      Specify angle constraints as [AT1,AT2,AT3,ANGLE]. An example of multiple constraints with
-      atoms 1, 2 and 3 frozen at an angle of 180 degrees, and atoms 4, 5 and 6 with an angle of 120:
-      [[1,2,3,180],[4,5,6,120]]
-    constraints_dihedral : list of lists, default=[]
-      Specify dihedral constraints as [AT1,AT2,AT3,AT4,DIHEDRAL]. An example of multiple constraints
-      with atoms 1, 2, 3 and 4 frozen at a dihedral angle of 180 degrees, and atoms 4, 5, 6 and 7
-      with a dihedral angle of 120: [[1,2,3,4,180],[4,5,6,7,120]]
+   xtb_keywords : str, default=None
+     Define additional keywords to use in xTB that are not included in -c, 
+     --uhf, -P and --input. For example: '--alpb ch2cl2 --gfn 1'
+   constraints_atoms : list, default=[]
+     Specify constrained atoms as [AT1,AT2,AT3]. An example of multiple constraints with
+     atoms 1, 2 and 5 frozen: [1,2,5]
+   constraints_dist : list of lists, default=[]
+     Specify distance constraints as [AT1,AT2,DIST]. An example of multiple constraints with
+     atoms 1 and 2 frozen at a distance of 1.8 Å, and atoms 4 and 5 with distance of 2.0 Å:
+     [[1,2,1.8],[4,5,2.0]]
+   constraints_angle : list of lists, default=[]
+     Specify angle constraints as [AT1,AT2,AT3,ANGLE]. An example of multiple constraints with
+     atoms 1, 2 and 3 frozen at an angle of 180 degrees, and atoms 4, 5 and 6 with an angle of 120:
+     [[1,2,3,180],[4,5,6,120]]
+   constraints_dihedral : list of lists, default=[]
+     Specify dihedral constraints as [AT1,AT2,AT3,AT4,DIHEDRAL]. An example of multiple constraints
+     with atoms 1, 2, 3 and 4 frozen at a dihedral angle of 180 degrees, and atoms 4, 5, 6 and 7
+     with a dihedral angle of 120: [[1,2,3,4,180],[4,5,6,7,120]]
 
 ANI only
 ++++++++
 
-    opt_steps : int, default=1000
-      Maximum number of steps used in the ase.optimize.BFGS optimizer.  
-    opt_fmax : float, default=0.05
-      Maximum force value to determine convergence in the ase.optimize.BFGS optimizer.  
-    ani_method : str, default='ANI2x'
-      ANI model used in the ase.optimize.BFGS optimizer.  
+   opt_steps : int, default=1000
+     Maximum number of steps used in the ase.optimize.BFGS optimizer.  
+   opt_fmax : float, default=0.05
+     Maximum force value to determine convergence in the ase.optimize.BFGS optimizer.  
+   ani_method : str, default='ANI2x'
+     ANI model used in the ase.optimize.BFGS optimizer.  
 """
 #####################################################.
 #          This file stores the CMIN class          #
