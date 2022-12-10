@@ -6,7 +6,7 @@ Generate ORCA Inputs
 
 For these examples we are going to assume that we have a folder named 'sdf_files'
 that contains a single file 'ethane.sdf' with a single conformer in .sdf format 
-whose orca input file we want to generate. As you might have guessed in this 
+whose ORCA input file we want to generate. As you might have guessed in this 
 specific example we will be working with Ethane. 
 
 |mol_3d|
@@ -40,7 +40,7 @@ First we start importing the required modules.
    from pathlib import Path
    from aqme.qprep import qprep
 
-Next we list all the files whose orca input we want. 
+Next we list all the files whose ORCA input we want. 
 
 .. code:: python
 
@@ -57,7 +57,7 @@ Now we are going to specify the ORCA calculation.
     SMDsolvent "CH2Cl2"
     end'''.lstrip()
 
-Now we proceed to generate the orca input files. 
+Now we proceed to generate the ORCA input files. 
 
 .. code:: python
 
