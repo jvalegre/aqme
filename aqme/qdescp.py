@@ -236,8 +236,11 @@ class qdescp:
             for xyz_file, charge, mult in zip(xyz_files, xyz_charges, xyz_mults):
                 name = os.path.basename(xyz_file.split(".")[0])
                 self.run_sp_xtb(xyz_file, charge, mult, name, destination)
-                self.collect_xtb_properties()
-                self.cleanup(name, destination)
+                try:
+                    self.collect_xtb_properties()
+                    self.cleanup(name, destination)
+                except:
+                    pass
 
     def run_sp_xtb(self, xyz_file, charge, mult, name, destination):
         """
@@ -349,7 +352,7 @@ class qdescp:
             command4.append(f"{self.args.qdescp_solvent}")
         run_command(command4, self.xtb_fod)
 
-        os.chdir(self.args.w_dir_main)
+        os.chdir(self.args.initial_dir)
 
     def collect_xtb_properties(self):
         """

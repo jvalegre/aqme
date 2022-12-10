@@ -82,22 +82,16 @@ def creation_of_dup_csv_csearch(program):
 def constraint_fix(
     constraints_atoms, constraints_dist, constraints_angle, constraints_dihedral
 ):
-
-    if constraints_atoms != [] and constraints_atoms != '[]':
-        if not isinstance(constraints_atoms, list):
-            constraints_atoms = ast.literal_eval(constraints_atoms)
-
-    if constraints_dist != [] and constraints_dist != '[]':
-        if not isinstance(constraints_dist, list):
-            constraints_dist = ast.literal_eval(constraints_dist)
-
-    if constraints_angle != [] and constraints_angle != '[]':
-        if not isinstance(constraints_angle, list):
-            constraints_angle = ast.literal_eval(constraints_angle)
-
-    if constraints_dihedral != [] and constraints_dihedral != '[]':
-        if not isinstance(constraints_dihedral, list):
-            constraints_dihedral = ast.literal_eval(constraints_dihedral)
+    
+    # this function avoids problems when reading contraints from CSV files
+    for contraints in [constraints_atoms, constraints_dist, constraints_angle, constraints_dihedral]:
+        try:
+            if pd.isnull(contraints):
+                contraints = []
+        except ValueError:
+            pass
+        if not isinstance(contraints, list):
+            contraints = ast.literal_eval(contraints)
 
     return constraints_atoms, constraints_dist, constraints_angle, constraints_dihedral
 
@@ -108,17 +102,6 @@ def prepare_direct_smi(args):
         name = "".join(args.name)
     else:
         name = f"{args.prefix}_{''.join(args.name)}"
-    (
-        args.constraints_atoms,
-        args.constraints_dist,
-        args.constraints_angle,
-        args.constraints_dihedral,
-    ) = constraint_fix(
-        args.constraints_atoms,
-        args.constraints_dist,
-        args.constraints_angle,
-        args.constraints_dihedral,
-    )
     obj = (
         args.smi,
         name,
@@ -143,17 +126,6 @@ def prepare_smiles_files(args, csearch_file):
             smi,
             name,
         ) = prepare_smiles_from_line(line, i, args)
-        (
-            args.constraints_atoms,
-            args.constraints_dist,
-            args.constraints_angle,
-            args.constraints_dihedral,
-        ) = constraint_fix(
-            args.constraints_atoms,
-            args.constraints_dist,
-            args.constraints_angle,
-            args.constraints_dihedral,
-        )
         obj = (
             smi,
             name,
@@ -262,17 +234,6 @@ def prepare_cdx_files(args, csearch_file):
     job_inputs = []
     for i, (smiles, _) in enumerate(molecules):
         name = f"{csearch_file.split('.')[0]}_{str(i)}"
-        (
-            args.constraints_atoms,
-            args.constraints_dist,
-            args.constraints_angle,
-            args.constraints_dihedral,
-        ) = constraint_fix(
-            args.constraints_atoms,
-            args.constraints_dist,
-            args.constraints_angle,
-            args.constraints_dihedral,
-        )
         obj = (
             smiles,
             name,
@@ -314,18 +275,6 @@ def prepare_com_files(args, csearch_file):
     sdffile = f"{name}.sdf"
     suppl, _, _, _ = mol_from_sdf_or_mol_or_mol2(sdffile, "csearch")
 
-    (
-        args.constraints_atoms,
-        args.constraints_dist,
-        args.constraints_angle,
-        args.constraints_dihedral,
-    ) = constraint_fix(
-        args.constraints_atoms,
-        args.constraints_dist,
-        args.constraints_angle,
-        args.constraints_dihedral,
-    )
-
     obj = (
         suppl[0],
         name,
@@ -360,17 +309,6 @@ def prepare_sdf_files(args, csearch_file):
     job_inputs = []
 
     for mol, charge, mult, name in zip(suppl, charges, mults, IDs):
-        (
-            args.constraints_atoms,
-            args.constraints_dist,
-            args.constraints_angle,
-            args.constraints_dihedral,
-        ) = constraint_fix(
-            args.constraints_atoms,
-            args.constraints_dist,
-            args.constraints_angle,
-            args.constraints_dihedral,
-        )
         obj = (
             mol,
             name,

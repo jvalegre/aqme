@@ -1,4 +1,4 @@
-﻿SMILES,code_name,constraints_dist,constraits_dihedral
+﻿SMILES,code_name,constraints_dist,constraints_dihedral
 C1=CC=CC1,Diene,,
 C1=CC1,Do1,,
 C1=CCC1,Do2,,
