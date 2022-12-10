@@ -20,7 +20,7 @@ Pd complex using RDKit using a template for square planar complexes.
 +--------------------------+--------------------+
 
 Here we have to specify the metalic centers :code:`--metal_atoms "['Pd']"` as well as 
-their oxidation state :code:`--metal_oxi "['2']"`. 
+their oxidation state :code:`--metal_oxi "[2]"`. 
 
 We can also specify the multiplicity :code:`--mult 1`
 
@@ -28,7 +28,8 @@ We also need to specify which template geometry to use for the complex
 :code:`--complex_type squareplanar`
 
 We specify the output directory where the sdf with conformations will be 
-generated :code:`--destination Pd_sdf_files`
+generated :code:`--destination Pd_sdf_files` and the base name of the file
+:code:`--name Pd_complex`
 
 We provide the smiles string of the molecule :code:`--smi "I[Pd]([PH3+])(F)Cl"`
 
@@ -39,5 +40,5 @@ The full command that we will execute will look as follows:
 
 .. code:: shell
 
-   python -m aqme --csearch --smi "I[Pd]([PH3+])(F)Cl" --destination Pd_sdf_files --program rdkit --metal_atoms "['Pd']" --metal_oxi "['2']" --mult 1 --complex_type squareplanar
+   python -m aqme --csearch --smi "I[Pd]([PH3+])(F)Cl" --destination Pd_sdf_files --name Pd_complex --program rdkit --metal_atoms "['Pd']" --metal_oxi "[2]" --mult 1 --complex_type squareplanar
 
