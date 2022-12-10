@@ -123,7 +123,6 @@ with the following code:
 
 .. code:: python 
 
-    import os, glob
     from pathlib import Path
     from aqme.csearch import csearch
 
