@@ -2,7 +2,7 @@
 Default and Required Parameters
 ===============================
 
-This documents details the default parameters used in the ``aqme`` program.
+This documents details the default parameters used in the AQME program.
 
 .. contents::
    :local:

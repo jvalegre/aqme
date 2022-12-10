@@ -26,7 +26,7 @@ The sdf file contents are as follows:
 
 .. note:: 
 
-   aqme supports various formats for providing the geometries of the conformers.
+   AQME supports various formats for providing the geometries of the conformers.
    If we want to use a format to specify the molecule that does not contain 
    3D coordinates we will need to generate them beforehand, please see the 
    :doc:`Conformer Search <../conformer_search>` section.

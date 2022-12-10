@@ -39,7 +39,7 @@ that has the following contents:
 .. note::
 
    A jupyter notebook containing all the steps shown in this example can be found 
-   in the aqme repository in `Github  <https://github.com/jvalegre/aqme>`__ or in 
+   in the AQME repository in `Github  <https://github.com/jvalegre/aqme>`__ or in 
    `Figshare <https://figshare.com/articles/dataset/AQME_paper_examples/20043665/11>`__
 
 
@@ -92,12 +92,12 @@ Step 4 : Create the CSV file with descriptors for the GNN model
 Step 5: Run the gnn.py to get results
 -------------------------------------
 
-This step requires other files that do not use aqme itself. The other files 
+This step requires other files that do not use AQME itself. The other files 
 are available at 
 `Figshare <https://figshare.com/articles/dataset/AQME_paper_examples/20043665/11>`__ .
 Specifically the files gnn.py and gnn_functions.py require to be on the same 
 directory as the file 'solubility.csv' and these two files depend on packages 
-that aqme does not depend on. So before continuing please make sure that you 
+that AQME does not depend on. So before continuing please make sure that you 
 have all the packages required installed as well as the specified files.
 
 we can execute directly the gnn.py script to obtain the results
