@@ -59,7 +59,7 @@ Our final command line will look like:
 
 .. code:: shell 
 
-   python -m aqme --qprep --suffix m06-basic --files "sdf_files/*.sdf" --nprocs 8 --mem 16GB --qm_input "m06 def2qzvpp
+   python -m aqme --qprep --program orca --suffix m06-basic --files "sdf_files/*.sdf" --nprocs 8 --mem 16GB --qm_input "m06 def2qzvpp
    %cpcm
    smd true
    SMDsolvent \"CH2Cl2\"
@@ -83,7 +83,7 @@ appropriate keywords.
 
 .. code:: shell 
 
-   python -m aqme --qprep --charge 0 --mult --3 --suffix "m06-triplet" --files "sdf_files/*.sdf" --nprocs 8 --mem 16GB --qm_input "m06 def2qzvpp
+   python -m aqme --qprep --program orca --charge 0 --mult 3 --suffix "m06-triplet" --files "sdf_files/*.sdf" --nprocs 8 --mem 16GB --qm_input "m06 def2qzvpp
    %cpcm
    smd true
    SMDsolvent \"CH2Cl2\"
