@@ -125,12 +125,6 @@ def set_options(kwargs):
         elif key.lower() in var_dict:
             vars(options)[key.lower()] = kwargs[key.lower()]
         else:
-            print(
-                "Warning! Option: [",
-                key,
-                ":",
-                kwargs[key],
-                "] provided but no option exists, try the online documentation to see available options for each module.",
-            )
+            print("Warning! Option: [", key,":",kwargs[key],"] provided but no option exists, try the online documentation to see available options for each module.",)
 
     return options
