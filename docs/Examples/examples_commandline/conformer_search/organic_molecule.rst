@@ -46,7 +46,7 @@ Minimizing the conformations
 ----------------------------
 
 Back to our conformers generated using rdkit we might be interested in running 
-an energy minization using XTB or ANI. To do so we will need the cmin module. 
+an energy minization using XTB or ANI. To do so we will need the CMIN module. 
 
 .. code:: shell
 
