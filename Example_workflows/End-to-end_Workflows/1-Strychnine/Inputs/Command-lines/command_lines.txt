@@ -3,14 +3,14 @@ python -m aqme --csearch --program rdkit --smi "C1CN2CC3=CCO[C@H]4CC(=O)N5[C@H]6
 
 
 # Run QPREP to create Gaussian input files
-python -m aqme --qprep --program gaussian --files CSEARCH/*sdf --qm_input "B3LYP/6-31+G(d,p) opt freq" --mem "24GB" --nprocs 24
+python -m aqme --qprep --program gaussian --files "CSEARCH/*sdf" --qm_input "B3LYP/6-31+G(d,p) opt freq" --mem "24GB" --nprocs 24
 
 
 # Run Gaussian jobs for optimization and frequency (externally)
 
 
 # Run first QCORR analysis
-python -m aqme --qcorr --files "QCALC/*.log" --mem "24GB" --nprocs 12 --freq_conv "opt=(calcfc,maxstep=5)" --isom_type "com" --isom_inputs "QCALC"
+python -m aqme --qcorr --files "QCALC/*log" --mem "24GB" --nprocs 12 --freq_conv "opt=(calcfc,maxstep=5)" --isom_type "com" --isom_inputs "QCALC"
 
 
 # create single-point inputs for NMR

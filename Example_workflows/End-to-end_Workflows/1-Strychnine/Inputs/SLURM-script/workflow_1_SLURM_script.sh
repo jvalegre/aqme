@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH -J Strychnine
 #SBATCH -p normal
-#SBATCH -t 24:00:00
+#SBATCH -t 48:00:00
 #SBATCH --export=NONE
 #SBATCH --ntasks-per-node=24
 
@@ -90,7 +90,7 @@ wait
 cd $excdir
 
 # Run first QCORR analysis
-python -m aqme --qcorr --files "$excdir/QCALC/*.log" --mem '24GB' --nprocs "$childcpu" --freq_conv 'opt=(calcfc,maxstep=5)' --isom_type 'com' --isom_inputs "$excdir/QCALC"
+python -m aqme --qcorr --files "$excdir/QCALC/*log" --mem '24GB' --nprocs "$childcpu" --freq_conv 'opt=(calcfc,maxstep=5)' --isom_type 'com' --isom_inputs "$excdir/QCALC"
 
 # Run second round of Gaussian/QCORR analysis
 if [ -d "$excdir/QCALC/failed/run_1/fixed_QM_inputs" ]; then

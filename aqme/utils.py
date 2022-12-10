@@ -465,7 +465,7 @@ def command_line_args():
                 kwargs[arg_name] = glob.glob(value)
             else:
                 # this converts the string parameters to lists
-                if arg_name.lower() in ["files", "metal_oxi", "metal_atoms", "gen_atoms", "atom_types", "cartesians", "nmr_atoms", "nmr_slope", "nmr_intercept"]:
+                if arg_name.lower() in ["files", "metal_oxi", "metal_atoms", "gen_atoms", "constraints_atoms", "constraints_dist", "constraints_angle", "constraints_dihedral", "atom_types", "cartesians", "nmr_atoms", "nmr_slope", "nmr_intercept"]:
                     if not isinstance(value, list):
                         try:
                             value = ast.literal_eval(value)
