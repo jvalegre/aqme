@@ -1,4 +1,4 @@
-qcorr
+QCORR
 =====
 
 .. autoclass:: aqme.qcorr.qcorr

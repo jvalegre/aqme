@@ -21,7 +21,7 @@ The following scheme shows how QCORR works and how it sorts the calculations.
 Analyzing the output files
 --------------------------
 
-For these tasks we will be using the qcorr module :code:`--qcorr`
+For these tasks we will be using the QCORR module :code:`--qcorr`
 
 Then we list the files that we want to analyze. In this case we are going to 
 analyze Gaussian16 output files. We are going to assume that we have our 
