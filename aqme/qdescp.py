@@ -90,10 +90,19 @@ class qdescp:
             destination = self.args.initial_dir.joinpath("QDESCP")
         else:
             destination = Path(self.args.destination)
-        
+
+        if len(self.args.files) == 0:
+            self.args.log.write('\nx  No files were found! Make sure you use quotation marks if you are using * (i.e. "*.sdf")')
+            self.args.log.finalize()
+            sys.exit()
+
         if self.args.program == "xtb":
             self.gather_files_and_run(destination)
 
+        if self.args.boltz == "False":
+            self.args.boltz = False
+        elif self.args.boltz == "True":
+            self.args.boltz = True
         if self.args.boltz:
             boltz_dir = Path(f"{destination}/boltz")
             boltz_dir.mkdir(exist_ok=True, parents=True)

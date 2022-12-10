@@ -417,20 +417,12 @@ def command_line_args():
         "qprep",
         "qcorr",
         "qdescp",
-        "qpred",
-        "time",
+        "vismol",
         "heavyonly",
         "cregen",
         "lowest_only",
         "lowest_n",
         "chk",
-        "dup",
-        "fullcheck",
-        "rot_dihedral",
-        "nmr_online",
-        "qsub",
-        "qsub_ana",
-        "boltz",
     ]
 
     for arg in var_dict:
@@ -577,11 +569,6 @@ def load_variables(kwargs, aqme_module, create_dat=True):
 
                 if self.command_line:
                     self.log.write(f"Command line used in AQME: aqme {' '.join([str(elem) for elem in sys.argv[1:]])}\n")
-
-                if aqme_module in ["qcorr", "qprep", "cmin", "qdescp", "vismol"]:
-                    if len(self.files) == 0:
-                        self.log.write(f"x  There are no output files in {self.w_dir_main}\n")
-                        error_setup = True
 
             if error_setup:
                 # this is added to avoid path problems in jupyter notebooks
