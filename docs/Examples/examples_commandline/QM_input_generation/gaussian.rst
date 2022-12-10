@@ -27,7 +27,7 @@ The sdf file contents are as follows:
    3D coordinates we will need to generate them beforehand, please see the 
    :doc:`Conformer Search <../conformer_search>` section.
 
-We will be using the qprep module :code:`--qprep`
+We will be using the QPREP module :code:`--qprep`
 
 We indicate the files whose gaussian input we want :code:`--files "sdf_files/*.sdf"` 
 
