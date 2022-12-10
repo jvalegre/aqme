@@ -732,7 +732,7 @@ def mol_from_sdf_or_mol_or_mol2(input_file, module):
     mol object from SDF, MOL or MOL2 files
     """
 
-    if module == "qprep":
+    if module in ["qprep","cmin"]:
         # using sanitize=False to avoid reading problems
         mols = Chem.SDMolSupplier(input_file, removeHs=False, sanitize=False)
         return mols

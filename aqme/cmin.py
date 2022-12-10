@@ -104,9 +104,9 @@ from rdkit.Geometry import Point3D
 import pandas as pd
 import time
 from ase.units import Hartree
-from aqme.utils import load_variables, rules_get_charge, substituted_mol
+from aqme.utils import load_variables, rules_get_charge, substituted_mol, mol_from_sdf_or_mol_or_mol2
 from aqme.filter import ewin_filter, pre_E_filter, RMSD_and_E_filter
-from aqme.cmin_utils import creation_of_dup_csv_cmin, rdkit_sdf_read
+from aqme.cmin_utils import creation_of_dup_csv_cmin
 from aqme.csearch.crest import xtb_opt_main
 from aqme.csearch.utils import prepare_com_files
 
@@ -235,7 +235,12 @@ class cmin:
         self.args.log.write(f"\n\no  Multiple minimization of {file} with {self.args.program}")
 
         # read SDF files from RDKit optimization
-        inmols = rdkit_sdf_read(file, self.args)
+        try:
+            inmols = mol_from_sdf_or_mol_or_mol2(file, 'cmin')
+        except OSError:
+            file_path = Path(self.args.initial_dir).joinpath(file)
+            file_path = file_path.as_posix()
+            inmols = mol_from_sdf_or_mol_or_mol2(file_path, 'cmin')
         name_mol = os.path.basename(file).split(".sdf")[0]
 
         return inmols, name_mol
