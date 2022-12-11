@@ -1,10 +1,21 @@
+.. |QDESCP_scheme| image:: ../images/QDESCP_scheme.png
+   :width: 600
+
 =====================
 Descriptor Generation
 =====================
 
-In this example we are going to generate descriptors for a set of molecules 
-starting from their SMILES. For this example we are going to assume that we have
-a file named 'test.csv' with the following contents: 
+In this example we are going to generate a collection of xtb-derived chemical 
+descriptors as well as a collection of RDKit-derived descriptors. We 
+are going to store them in .json format for each molecule. And we are going to 
+create a csv file with the boltzmann averaged values of the descriptors that we 
+have calculated per each molecule. The following scheme summarizes the contents 
+of this example. 
+
+.. centered:: |QDESCP_scheme|
+
+We are starting from a 'test.csv' file containing the SMILES of the molecules whose 
+chemical descriptors we are going to calculate:
 
 .. highlight:: none
 
@@ -36,8 +47,8 @@ check the :doc:`Conformer Search <conformer_search>` section).
            name='test',
            program='rdkit')
 
-Next we proceed to generate the descriptors, in this case we are also going to 
-apply a boltzmann average over the conformations. 
+Next we proceed to generate the descriptors which is fully automated by the 
+QDESCP module. 
 
 .. code:: python
 
