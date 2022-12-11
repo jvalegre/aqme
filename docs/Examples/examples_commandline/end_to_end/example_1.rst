@@ -108,6 +108,14 @@ Step 7: Running Gaussian NMR calcs
 Now we need to run the generated COM files (in sp_path) with Gaussian 
 like we did in Step 3
 
+After the calculations end, we create JSON files with QCORR to store the 
+information from the resulting LOG files
+
+.. code:: shell
+
+   python -m aqme --qcorr --files "Strychnine_sp_files/*.log"
+
+
 Step 8: Obtaining Boltzmann weighted NMR shifts with QDESCP
 -----------------------------------------------------------
 

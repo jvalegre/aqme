@@ -176,14 +176,18 @@ Step 8: Running Gaussian NMR calcs
 Now we need to run the generated COM files (in sp_path) with Gaussian 
 like we did in Step 4
 
+After the calculations end, we create JSON files with QCORR to store the 
+information from the resulting LOG files
+
+.. code:: python
+
+   log_files=f'{sp_path}/*.log'
+   qcorr(files=log_files)
+
 Step 9: Obtaining Boltzmann weighted NMR shifts with QDESCP
 -----------------------------------------------------------
 
 .. code:: python
-
-    # Create JSON files with QCORR to store the information from the resulting LOG files
-    log_files=f'{sp_path}/*.log'
-    qcorr(files=log_files)
     
     # Analyze the JSON files to calculate the Boltzmann averaged shielding tensors
 
