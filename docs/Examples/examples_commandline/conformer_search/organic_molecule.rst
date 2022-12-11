@@ -83,9 +83,33 @@ following contents:
 With this file we can run the same conformer search that we run at the beggining
 with the following code: 
 
-
 .. code:: shell
 
    python -m aqme --csearch --input ML_test.csv --program rdkit --destination quinine_folder
 
+
+Using csv files allows specifying multiple molecules by their SMILES string in a
+single file and facilitates the reusability of the code. If we change the 
+contents of 'ML_test.csv' to: 
+
+.. highlight:: none
+
+:: 
+
+   code_name,SMILES
+   methane,C
+   ethane,CC
+   propane,CCC
+   butane,CCCC
+   pentane,CCCCC
+
+.. highlight:: default
+
+We can re-run the exact same code, and we will end with the conformers of each 
+one of these molecules in the same directory. If we want to have them in a 
+different folder we can simply change the destination: 
+
+.. code:: shell
+
+   python -m aqme --csearch --input ML_test.csv --program rdkit --destination alkanes_folder
 

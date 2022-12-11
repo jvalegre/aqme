@@ -134,3 +134,31 @@ with the following code:
             program='rdkit',
             input=csv_input)
 
+Using csv files allows specifying multiple molecules by their SMILES string in a
+single file and facilitates the reusability of the code. If we change the 
+contents of 'ML_test.csv' to: 
+
+.. highlight:: none
+
+:: 
+
+   code_name,SMILES
+   methane,C
+   ethane,CC
+   propane,CCC
+   butane,CCCC
+   pentane,CCCCC
+
+.. highlight:: default
+
+We can re-run the exact same code, and we will end with the conformers of each 
+one of these molecules in the same directory. If we want to have them in a 
+different folder we can simply change the destination: 
+
+.. code:: python 
+
+    csearch(destination='alkanes_folder',
+            program='rdkit',
+            input=csv_input)
+
+
