@@ -7,7 +7,7 @@ Strychnine
 
 Along the steps of this example workflow we will show how to: 
 
-i)   Generate different conformers of the molecule using `csearch`
+i)   Generate different conformers of the molecule using CSEARCH
 ii)  Generate the inputs for the QM geometry optimization
 iii) Fix error terminations and imaginary frequencies of the output files
 iv)  Calculation and analyze the NMR chemical shifts for the conformers
@@ -29,7 +29,7 @@ starting from the smiles representation of said molecule that we can see below.
 .. note::
 
    A jupyter notebook containing all the steps shown in this example can be found 
-   in the aqme repository in `Github  <https://github.com/jvalegre/aqme>`__ or in 
+   in the AQME repository in `Github  <https://github.com/jvalegre/aqme>`__ or in 
    `Figshare <https://figshare.com/articles/dataset/AQME_paper_examples/20043665/11>`__
 
 .. note:: 

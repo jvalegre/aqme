@@ -5,42 +5,42 @@ Parameters
 General
 +++++++
 
-    input : str, default=''  
-       (If smi is None) Optionally, file containing the SMILES strings and 
-       names of the molecules. Current file extensions: .smi, .sdf, .cdx, 
-       .csv, .com, .gjf, .mol, .mol2, .xyz, .txt, .yaml, .yml, .rtf  
-       For .csv files (i.e. FILENAME.csv), two columns are required, 
-       'code_name' with the names and 'SMILES' for the SMILES string  
-    program : str, default=None  
-       Program required in the conformational sampling. 
-       Current options: 'rdkit', 'summ', 'fullmonte', 'crest'  
-    smi : str, default=None  
-       Optionally, define a SMILES string as input  
-    name : str, default=None  
-       (If smi is defined) optionally, define a name for the system  
-    w_dir_main : str, default=os.getcwd()  
-       Working directory  
-    varfile : str, default=None  
-       Option to parse the variables using a yaml file (specify the filename)  
-    max_workers : int, default=4  
-       Number of simultaneous RDKit jobs run with multiprocessing 
-       (WARNING! More than 12 simultaneous jobs might collapse your computer!)  
-    charge : int, default=None  
-       Charge of the calculations used in the following input files. 
-       If charge isn't defined, it automatically reads the charge of the 
-       SMILES string  
-    mult : int, default=None  
-       Multiplicity of the calculations used in the following input files. If 
-       mult isn't defined, it automatically reads the multiplicity of the mol 
-       object created with the SMILES string. Be careful with the automated 
-       calculation of mult from mol objects when using metals!  
-    prefix : str, default=''  
-       Prefix added to all the names  
-    suffix : str, default=''  
-       Suffix added to all the names  
-    stacksize : str, default='1G'  
-       Controls the stack size used (especially relevant for xTB/CREST 
-       calculations of large systems, where high stack sizes are needed)  
+   input : str, default=''  
+      (If smi is None) Optionally, file containing the SMILES strings and 
+      names of the molecules. Current file extensions: .smi, .sdf, .cdx, 
+      .csv, .com, .gjf, .mol, .mol2, .xyz, .txt, .yaml, .yml, .rtf  
+      For .csv files (i.e. FILENAME.csv), two columns are required, 
+      'code_name' with the names and 'SMILES' for the SMILES string  
+   program : str, default=None  
+      Program required in the conformational sampling. 
+      Current options: 'rdkit', 'summ', 'fullmonte', 'crest'  
+   smi : str, default=None  
+      Optionally, define a SMILES string as input  
+   name : str, default=None  
+      (If smi is defined) optionally, define a name for the system  
+   w_dir_main : str, default=os.getcwd()  
+      Working directory  
+   varfile : str, default=None  
+      Option to parse the variables using a yaml file (specify the filename)  
+   max_workers : int, default=4  
+      Number of simultaneous RDKit jobs run with multiprocessing 
+      (WARNING! More than 12 simultaneous jobs might collapse your computer!)  
+   charge : int, default=None  
+      Charge of the calculations used in the following input files. 
+      If charge isn't defined, it automatically reads the charge of the 
+      SMILES string  
+   mult : int, default=None  
+      Multiplicity of the calculations used in the following input files. If 
+      mult isn't defined, it automatically reads the multiplicity of the mol 
+      object created with the SMILES string. Be careful with the automated 
+      calculation of mult from mol objects when using metals!  
+   prefix : str, default=''  
+      Prefix added to all the names  
+   suffix : str, default=''  
+      Suffix added to all the names  
+   stacksize : str, default='1G'  
+      Controls the stack size used (especially relevant for xTB/CREST 
+      calculations of large systems, where high stack sizes are needed)  
 
 General RDKit-based
 +++++++++++++++++++
@@ -136,18 +136,18 @@ Crest only
 
    nprocs : int, default=2
       Number of processors used in CREST optimizations
-    constraints_atoms : list, default=[]
+   constraints_atoms : list, default=[]
       Specify constrained atoms as [AT1,AT2,AT3]. An example of multiple constraints with
       atoms 1, 2 and 5 frozen: [1,2,5]
-    constraints_dist : list of lists, default=[]
+   constraints_dist : list of lists, default=[]
       Specify distance constraints as [AT1,AT2,DIST]. An example of multiple constraints with
       atoms 1 and 2 frozen at a distance of 1.8 Å, and atoms 4 and 5 with distance of 2.0 Å:
       [[1,2,1.8],[4,5,2.0]]
-    constraints_angle : list of lists, default=[]
+   constraints_angle : list of lists, default=[]
       Specify angle constraints as [AT1,AT2,AT3,ANGLE]. An example of multiple constraints with
       atoms 1, 2 and 3 frozen at an angle of 180 degrees, and atoms 4, 5 and 6 with an angle of 120:
       [[1,2,3,180],[4,5,6,120]]
-    constraints_dihedral : list of lists, default=[]
+   constraints_dihedral : list of lists, default=[]
       Specify dihedral constraints as [AT1,AT2,AT3,AT4,DIHEDRAL]. An example of multiple constraints
       with atoms 1, 2, 3 and 4 frozen at a dihedral angle of 180 degrees, and atoms 4, 5, 6 and 7
       with a dihedral angle of 120: [[1,2,3,4,180],[4,5,6,7,120]]

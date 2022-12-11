@@ -39,7 +39,7 @@ that has the following contents:
 .. note::
 
    A jupyter notebook containing all the steps shown in this example can be found 
-   in the aqme repository in `Github  <https://github.com/jvalegre/aqme>`__ or in 
+   in the AQME repository in `Github  <https://github.com/jvalegre/aqme>`__ or in 
    `Figshare <https://figshare.com/articles/dataset/AQME_paper_examples/20043665/11>`__
 
 
@@ -68,7 +68,7 @@ Step 3 : Create the CSV file with descriptors for the GNN model
 
 This step can be run in bash, python or manually using a spreadsheet editor.
 The aim is to generate a the file 'solubility_xtb.csv' which contains a new 
-column with the respective filepaths to the qdescp generated .json file.
+column with the respective filepaths to the QDESCP generated .json file.
 
 Here we include the python commands to do the step.
 

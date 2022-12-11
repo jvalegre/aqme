@@ -1,4 +1,4 @@
-qdescp
+QDESCP
 ======
 
 .. autoclass:: aqme.qdescp.qdescp

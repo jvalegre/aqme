@@ -4,7 +4,7 @@
 Benchmarking methods 
 ====================
 
-In this example we provide the steps needed to use aqme to generate the input 
+In this example we provide the steps needed to use AQME to generate the input 
 for different levels of theory and softwares which is a common occurrence in 
 method benchmarking.
 
@@ -58,7 +58,7 @@ And finally we proceed to generate the SP inputs for orca.
 
 .. note:: 
 
-   See how to generate the three differents sets of inputs we only needed to 
+   See how to generate the four different inputs we only need to 
    change the :code:`program`, :code:`qm_input` and the :code:`suffix` but most 
-   of the command line could be re-used.
+   of the command line can be re-used.
 

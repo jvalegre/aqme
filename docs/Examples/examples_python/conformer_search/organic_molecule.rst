@@ -71,7 +71,7 @@ Minimizing the conformations
 ----------------------------
 
 Back to our conformers generated using rdkit we might be interested in running 
-an energy minization using XTB or ANI. To do so we will need the cmin module. 
+an energy minization using XTB or ANI. To do so we will need the CMIN module. 
 
 .. code:: python 
 
@@ -79,7 +79,7 @@ an energy minization using XTB or ANI. To do so we will need the cmin module.
 
 After importing the module we just need to provide the files that we have 
 generated. In this case we already know that we have a single file so we can 
-directly provide its location to the cmin module. 
+directly provide its location to the CMIN module. 
 
 .. code:: python
 
@@ -123,7 +123,6 @@ with the following code:
 
 .. code:: python 
 
-    import os, glob
     from pathlib import Path
     from aqme.csearch import csearch
 
@@ -134,4 +133,32 @@ with the following code:
     csearch(destination=sdf_path,
             program='rdkit',
             input=csv_input)
+
+Using csv files allows specifying multiple molecules by their SMILES string in a
+single file and facilitates the reusability of the code. If we change the 
+contents of 'ML_test.csv' to: 
+
+.. highlight:: none
+
+:: 
+
+   code_name,SMILES
+   methane,C
+   ethane,CC
+   propane,CCC
+   butane,CCCC
+   pentane,CCCCC
+
+.. highlight:: default
+
+We can re-run the exact same code, and we will end with the conformers of each 
+one of these molecules in the same directory. If we want to have them in a 
+different folder we can simply change the destination: 
+
+.. code:: python 
+
+    csearch(destination='alkanes_folder',
+            program='rdkit',
+            input=csv_input)
+
 

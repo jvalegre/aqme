@@ -1,4 +1,4 @@
-cmin
+CMIN
 ====
 
 .. autoclass:: aqme.cmin.cmin
