@@ -191,7 +191,7 @@ Step 4: Creating Gaussian input files for optimization and frequency with QPREP
     sdf_TS_files = glob.glob('CSEARCH/TS*crest.sdf')
 
     # COM files for the TSs
-    qm_input_TS = 'B3LYP/def2tzvp opt=(ts,calcfc,noeigen) freq'
+    qm_input_TS = 'B3LYP/def2tzvp opt=(ts,calcfc,noeigen,maxstep=5) freq=noraman'
     qprep(files=sdf_TS_files,
           program=program,
           qm_input=qm_input_TS,
@@ -201,7 +201,7 @@ Step 4: Creating Gaussian input files for optimization and frequency with QPREP
     sdf_INT_files = glob.glob('CSEARCH/D*.sdf') + glob.glob('CSEARCH/P*.sdf')
     
     # COM files for intermediates, reagents and products
-    qm_input_INT = 'B3LYP/def2tzvp opt freq'
+    qm_input_INT = 'B3LYP/def2tzvp opt freq=noraman'
     
     qprep(files=sdf_INT_files,
           program=program,

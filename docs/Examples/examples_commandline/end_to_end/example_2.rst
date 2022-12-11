@@ -136,14 +136,14 @@ We first create the input files of the transition states
 
 .. code:: shell 
 
-   python -m aqme --qprep --program gaussian --mem 32GB --nprocs 16 --files "CSEARCH/TS*crest.sdf" --qm_input "B3LYP/def2tzvp opt=(ts,calcfc,noeigen) freq"
+   python -m aqme --qprep --program gaussian --mem 32GB --nprocs 16 --files "CSEARCH/TS*crest.sdf" --qm_input "B3LYP/def2tzvp opt=(ts,calcfc,noeigen,maxstep=5) freq=noraman"
 
 Now we create the input files of the minima (intermediates, reagents and products) 
 
 .. code:: shell 
 
-   python -m aqme --qprep --program gaussian --mem 32GB --nprocs 16 --files "CSEARCH/D*.sdf" --qm_input "B3LYP/def2tzvp opt freq"
-   python -m aqme --qprep --program gaussian --mem 32GB --nprocs 16 --files "CSEARCH/P*.sdf" --qm_input "B3LYP/def2tzvp opt freq"
+   python -m aqme --qprep --program gaussian --mem 32GB --nprocs 16 --files "CSEARCH/D*.sdf" --qm_input "B3LYP/def2tzvp opt freq=noraman"
+   python -m aqme --qprep --program gaussian --mem 32GB --nprocs 16 --files "CSEARCH/P*.sdf" --qm_input "B3LYP/def2tzvp opt freq=noraman"
 
 
 Step 4: Running Gaussian inputs for optimization and frequency calcs externally
