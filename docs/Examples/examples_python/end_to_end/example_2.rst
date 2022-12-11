@@ -142,8 +142,8 @@ We visualize the third pair of reactants to be able to set up the constraints.
 .. centered:: |pair_3_map|
 
 According to the image we will add the following constraints to the CSV, in the 
-constraints_dist column we will include :code:`[[3,10,2.35],[0,11,2.35]]` and in 
-the constraints_dihedral column we will include :code:`[[0,3,10,11,0]]`
+constraints_dist column we will include :code:`[[3,5,2.35],[0,6,2.35]]` and in 
+the constraints_dihedral column we will include :code:`[[0,3,5,6,0]]`
 
 
 Step 3: CSEARCH conformational sampling
