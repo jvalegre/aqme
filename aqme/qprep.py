@@ -79,8 +79,9 @@ class qprep:
             self.args.log.finalize()
             sys.exit()
 
-        if self.args.files[0].split('.')[1].lower() not in ['sdf', 'xyz', 'pdb', 'log','out','json']:
-            self.args.log.write(f"\nx  The format used ({self.args.files[0].split('.')[1].lower()}) is not compatible with QPREP! Formats accepted: sdf, xyz, pdb, log, out, json")
+        file_format = os.path.splitext(self.args.files[0])[1].split('.')[1]
+        if file_format.lower() not in ['sdf', 'xyz', 'pdb', 'log', 'out', 'json']:
+            self.args.log.write(f"\nx  The format used ({file_format}) is not compatible with QPREP! Formats accepted: sdf, xyz, pdb, log, out, json")
             self.args.log.finalize()
             sys.exit()
 
@@ -120,9 +121,9 @@ class qprep:
         # write input files
         for file in self.args.files:
             name = os.path.basename(file).split(".")[0]
-            if file.split(".")[1].lower() in ["sdf", "xyz", "pdb"]:
+            if file_format.lower() in ["sdf", "xyz", "pdb"]:
                 sdf_files = []
-                if file.split(".")[1].lower() == "xyz":
+                if file_format.lower() == "xyz":
                     # separate the parent XYZ file into individual XYZ files
                     xyzall_2_xyz(file, f"{self.args.w_dir_main}/{name}")
                     for conf_file in glob.glob(
@@ -150,7 +151,7 @@ class qprep:
                         # delete individual XYZ files
                         os.remove(conf_file)
 
-                elif file.split(".")[1].lower() == "pdb":
+                elif file_format.lower() == "pdb":
                     command_pdb = [
                         "obabel",
                         "-ipdb",
@@ -170,7 +171,7 @@ class qprep:
 
                 for sdf_file in sdf_files:
                     try:
-                        self.sdf_2_com(sdf_file, destination)
+                        self.sdf_2_com(sdf_file, destination, file_format)
 
                     except OSError:
                         self.args.log.write(f"x  {name} couldn't be processed!")
@@ -179,14 +180,14 @@ class qprep:
                     if create_dat:
                         self.args.log.write(f"o  {name} successfully processed at {destination}")
 
-                    if file.split(".")[1].lower() in ["xyz", "pdb"]:
+                    if file_format.lower() in ["xyz", "pdb"]:
                         # delete SDF files when the input was an XYZ/PDB file
                         os.remove(sdf_file)
 
             # for Gaussian output files (LOG/OUT), JSON files and MOL objects
             else:
                 atom_types, cartesians, charge, mult, found_coords = self.qprep_coords(
-                    file, None
+                    file, None, file_format
                 )
 
                 if not found_coords:
@@ -210,7 +211,7 @@ class qprep:
             self.args.log.write(f"\nTime QPREP: {elapsed_time} seconds\n")
             self.args.log.finalize()
 
-    def sdf_2_com(self, sdf_file, destination):
+    def sdf_2_com(self, sdf_file, destination, file_format):
         sdf_name = os.path.basename(sdf_file).split(".")[0]
         # get atom types, atomic coordinates, charge and multiplicity of all the mols in the SDF file
         mols = mol_from_sdf_or_mol_or_mol2(sdf_file, "qprep")
@@ -221,7 +222,7 @@ class qprep:
                 charge,
                 mult,
                 _,
-            ) = self.qprep_coords(sdf_file, mol)
+            ) = self.qprep_coords(sdf_file, mol, file_format)
 
             if "_conf_" not in sdf_name:
                 name_conf = f"{sdf_name}_conf_{i+1}"
@@ -367,7 +368,7 @@ class qprep:
 
         return comfile
 
-    def qprep_coords(self, file, mol):
+    def qprep_coords(self, file, mol, file_format):
         """
         Retrieve atom types and coordinates from multiple formats (LOG, OUT, JSON, MOL)
         """
@@ -393,7 +394,7 @@ class qprep:
                 except KeyError:
                     pass
 
-            elif file.split(".")[1] in ["log", "out"]:
+            elif file_format in ["log", "out"]:
                 # detect QM program and number of atoms
                 if not self.args.command_line:
                     outlines = read_file(os.getcwd(), self.args.w_dir_main, file)
@@ -433,7 +434,7 @@ class qprep:
 
                 atom_types, cartesians = QM_coords(outlines, -1, n_atoms, program, "")
 
-            elif file.split(".")[1] == "json":
+            elif file_format == "json":
                 with open(file) as json_file:
                     cclib_data = json.load(json_file)
                 try:

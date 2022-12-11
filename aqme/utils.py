@@ -523,7 +523,11 @@ def load_variables(kwargs, aqme_module, create_dat=True):
                 self.files = glob.glob(f"{self.w_dir_main}/{check_files}")
             else:
                 self.files = [self.files]
-
+        # this function is useful when PATH objects are given
+        for i,file in enumerate(self.files):
+            if not isinstance(file, Mol):
+                self.files[i] = str(file)
+            
         # start a log file to track the QCORR module
         if create_dat:
             logger_1, logger_2 = "AQME", "data"
