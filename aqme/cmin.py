@@ -140,6 +140,12 @@ class cmin:
             self.args.w_dir_main = Path(f"{os.getcwd()}/{self.args.w_dir_main}")
             os.chdir(self.args.w_dir_main)
 
+        # retrieves the different files to run in CMIN
+        if len(self.args.files) == 0:
+            self.args.log.write('\nx  No files were found! Make sure you use quotation marks if you are using * (i.e. "*.sdf")')
+            self.args.log.finalize()
+            sys.exit()
+
         # create the dataframe to store the data
         self.final_dup_data = creation_of_dup_csv_cmin(self.args.program.lower())
 
@@ -147,7 +153,6 @@ class cmin:
             "\no  Number of finished jobs from CMIN", max=len(self.args.files)
         )
 
-        # retrieves the different files to run in CMIN
         file_format = os.path.splitext(self.args.files[0])[1]
         if file_format.lower() in ['.xyz', '.gjf', '.com']:
             for file in self.args.files:
@@ -174,11 +179,6 @@ class cmin:
             files_cmin = self.args.files
         else:
             self.args.log.write(f"\nx  The input format {file_format} is not supported for CMIN refinement! Formats allowed: SDF, XYZ, COM, GJF and PDB")
-            self.args.log.finalize()
-            sys.exit()
-
-        if len(files_cmin) == 0:
-            self.args.log.write('\nx  No files were found! Make sure you use quotation marks if you are using * (i.e. "*.sdf")')
             self.args.log.finalize()
             sys.exit()
 

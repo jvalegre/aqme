@@ -418,7 +418,6 @@ class csearch:
                 constraints_angle,
                 constraints_dihedral,
             )
-
             if mol is None:
                 self.args.log.write(f"\nx  Failed to convert the provided SMILES ({smi}) to an RDkit Mol object! Please check the starting smiles.")
                 self.args.log.finalize()

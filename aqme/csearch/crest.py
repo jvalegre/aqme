@@ -155,7 +155,13 @@ def xtb_opt_main(
             os.rename(str(dat_dir) + "/xtbopt.xyz", xyzoutxtb1)
         except FileNotFoundError:
             os.rename(str(dat_dir) + "/xtblast.xyz", xyzoutxtb1)
-        
+
+        # remove files that might interfere in subsequent calculations (i.e. wrong electron readings)
+        for file in glob.glob('*') + glob.glob('*.*') + glob.glob('.*'):
+            if os.path.exists(file):
+                if file.find('_xtb2') == -1 and file.find('_xtb1') == -1:
+                    os.remove(file)
+
         if constrained_opt:
             xyzoutxtb2 = str(dat_dir) + "/" + name_no_path + "_xtb2.xyz"
             # xTB optimization with the user-defined constraints
@@ -165,7 +171,7 @@ def xtb_opt_main(
                 list(constraints_dist),
                 list(constraints_angle),
                 list(constraints_dihedral),
-                xyzin,
+                xyzoutxtb1,
                 "constrain2.inp",
             )
 
@@ -250,7 +256,7 @@ def xtb_opt_main(
                 list(constraints_dist),
                 list(constraints_angle),
                 list(constraints_dihedral),
-                xyzin,
+                xyzoutxtb2,
                 ".xcontrol.sample",
             )
 
@@ -317,7 +323,8 @@ def xtb_opt_main(
                 command_xyz, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
             )
 
-        sdwriter = Chem.SDWriter(str(f"{csearch_dir}/{name_no_path}.sdf"))
+        if self.args.program.lower() == "crest":
+            sdwriter = Chem.SDWriter(str(f"{csearch_dir}/{name_no_path}.sdf"))
         sdf_files = glob.glob(name_no_path + "*.sdf")
         for file in sdf_files:
             mol = rdkit.Chem.SDMolSupplier(file, removeHs=False, sanitize=False)
@@ -325,6 +332,7 @@ def xtb_opt_main(
             if self.args.program.lower() == "xtb":
                 energy = str(open(file, "r").readlines()[0].split()[1])
                 mol_rd.SetProp("_Name", name_init)
+                os.remove(file)
             elif self.args.program.lower() == "crest":
                 energy = str(open(file, "r").readlines()[0])
                 mol_rd.SetProp("_Name", name_no_path)
@@ -332,8 +340,23 @@ def xtb_opt_main(
                 mol_rd.SetProp("Real charge", str(charge))
                 mol_rd.SetProp("Mult", str(int(mult)))
                 sdwriter.write(mol_rd)
+                os.remove(file)
+                os.remove(f'{file.split(".")[0]}.xyz')
     else:
         xyz_files = []
+
+    # remove xTB/CREST files to avoid wrong readings of molecular information
+    for file in glob.glob('*') + glob.glob('*.*') + glob.glob('.*'):
+        if os.path.exists(file):
+            if file.find('.out') == -1:
+                if self.args.program.lower() == "xtb":
+                    os.remove(file)
+                elif self.args.program.lower() == "crest":
+                    if file.find('_xtb2') == -1 and file.find('_xtb1') == -1:
+                        try:
+                            os.remove(file)
+                        except IsADirectoryError:
+                            shutil.rmtree(file)
 
     os.chdir(self.args.w_dir_main)
 
@@ -387,7 +410,6 @@ def create_xcontrol(
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
-        os.remove(".xcontrol.sample")
 
         # add the constraints part
         edited_xcontrol = "$constrain\n"
