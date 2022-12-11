@@ -78,7 +78,7 @@ Step 4: QCORR analysis including isomerization filter
 
 .. code:: shell 
 
-   python --qcorr --files "Strychnine_com_files/*.log" --freq_conv "opt=(calcfc,maxstep=5)" --isom_type com --isom_inputs Strychnine_com_files --nprocs 24 --mem 96GB
+   python -m aqme --qcorr --files "Strychnine_com_files/*.log" --freq_conv "opt=(calcfc,maxstep=5)" --isom_type com --isom_inputs Strychnine_com_files --nprocs 12 --mem 24GB
 
 
 Step 5: Resubmission of unsuccessful calculations (if any) with suggestions from AQME
