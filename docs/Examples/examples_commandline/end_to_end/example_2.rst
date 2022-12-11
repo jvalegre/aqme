@@ -136,14 +136,14 @@ We first create the input files of the transition states
 
 .. code:: shell 
 
-   python -m aqme --qprep --program gaussian --mem 72GB --nprocs 16 --files "CSEARCH/TS*crest.sdf" --qm_input "B3LYP/def2tzvp opt=(ts,calcfc,noeigen) freq"
+   python -m aqme --qprep --program gaussian --mem 32GB --nprocs 16 --files "CSEARCH/TS*crest.sdf" --qm_input "B3LYP/def2tzvp opt=(ts,calcfc,noeigen) freq"
 
 Now we create the input files of the minima (intermediates, reagents and products) 
 
 .. code:: shell 
 
-   python -m aqme --qprep --program gaussian --mem 72GB --nprocs 16 --files "CSEARCH/D*.sdf" --qm_input "B3LYP/def2tzvp opt freq"
-   python -m aqme --qprep --program gaussian --mem 72GB --nprocs 16 --files "CSEARCH/P*.sdf" --qm_input "B3LYP/def2tzvp opt freq"
+   python -m aqme --qprep --program gaussian --mem 32GB --nprocs 16 --files "CSEARCH/D*.sdf" --qm_input "B3LYP/def2tzvp opt freq"
+   python -m aqme --qprep --program gaussian --mem 32GB --nprocs 16 --files "CSEARCH/P*.sdf" --qm_input "B3LYP/def2tzvp opt freq"
 
 
 Step 4: Running Gaussian inputs for optimization and frequency calcs externally
@@ -166,7 +166,7 @@ Step 5: QCORR analysis
 
 .. code:: shell
 
-   python -m aqme --qcorr --files "QCALC/*.log" --freq_conv "opt=(calcfc,maxstep=5)" --mem 72GB --nprocs 16
+   python -m aqme --qcorr --files "QCALC/*.log" --freq_conv "opt=(calcfc,maxstep=5)" --mem 32GB --nprocs 16
 
 
 Step 6: Resubmission of unsuccessful calculations (if any) with suggestions from AQME

@@ -185,7 +185,7 @@ Step 4: Creating Gaussian input files for optimization and frequency with QPREP
 .. code:: python
 
     program = 'gaussian'
-    mem='72GB'
+    mem='32GB'
     nprocs=16
     
     sdf_TS_files = glob.glob('CSEARCH/TS*crest.sdf')
