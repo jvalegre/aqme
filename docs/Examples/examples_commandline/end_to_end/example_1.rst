@@ -99,7 +99,7 @@ Step 6: Creating Gaussian input files for NMR calcs with QPREP
 
 .. code:: shell
 
-   python -m aqme --w_dir_main "Strychnine_com_files/success" --program gaussian --mem 24GB --nprocs 12 --suffix SP --destination Strychnine_sp_files --files "Strychnine_com_files/success/*.log" --qm_input "B3LYP/6-311+G(2d,p) scrf=(solvent=chloroform,smd) nmr=giao" 
+   python -m aqme --qprep --w_dir_main "Strychnine_com_files/success" --program gaussian --mem 24GB --nprocs 12 --suffix SP --destination Strychnine_sp_files --files "Strychnine_com_files/success/*.log" --qm_input "B3LYP/6-311+G(2d,p) scrf=(solvent=chloroform,smd) nmr=giao" 
 
 
 Step 7: Running Gaussian NMR calcs
