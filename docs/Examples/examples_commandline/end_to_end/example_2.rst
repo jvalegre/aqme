@@ -143,6 +143,7 @@ Now we create the input files of the minima (intermediates, reagents and product
 .. code:: shell 
 
    python -m aqme --qprep --program gaussian --mem 72GB --nprocs 16 --files "CSEARCH/D*.sdf" --qm_input "B3LYP/def2tzvp opt freq"
+   python -m aqme --qprep --program gaussian --mem 72GB --nprocs 16 --files "CSEARCH/P*.sdf" --qm_input "B3LYP/def2tzvp opt freq"
 
 
 Step 4: Running Gaussian inputs for optimization and frequency calcs externally
