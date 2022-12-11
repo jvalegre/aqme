@@ -211,8 +211,10 @@ Step 10: Calculating conformer populations with GoodVibes
 
 .. code:: python
 
-    log_files = glob.glob(f'{success_folder}/*.log')
-    
+    opt_files = glob.glob(f'{success_folder}/*.log')
+    sp_files = glob.glob(f'{sp_path}/success/SP_calcs/*.log')
+    log_files = opt_files + sp_files
+
     w_dir_main  = Path(os.getcwd())
     GV_folder = w_dir_main.joinpath('Strychine_GoodVibes-analysis')
     GV_folder.mkdir(exist_ok=True, parents=True)

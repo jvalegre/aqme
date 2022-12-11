@@ -130,8 +130,9 @@ Step 9: Calculating conformer populations with GoodVibes
 
    mkdir -p Strychine_GoodVibes-analysis
    cp Strychnine_com_files/success/*.log Strychine_GoodVibes-analysis/
+   cp Strychnine_sp_files/success/SP_calcs/*.log Strychine_GoodVibes-analysis/
    cd Strychine_GoodVibes-analysis
-   python -m goodvibes --xyz -c 1 *.log --boltz 
+   python -m goodvibes --xyz -c 1 *.log --boltz --spc SP
    cd ..
 
 
