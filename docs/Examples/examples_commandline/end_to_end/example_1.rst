@@ -113,8 +113,7 @@ Step 8: Obtaining Boltzmann weighted NMR shifts with QDESCP
 
 .. code:: shell 
 
-   python -m aqme --qdescp --program nmr --boltz --destination Strychnine_nmr_files --nmr_slope "[-1.0537, -1.0784]" --nmr_intercept "[181.7815,31.8723]" --nmr_experim Experimental_NMR_shifts.csv --files "Strychnine_com_files/Strychnine_sp_files/success/SP_calcs/json_files/*.json"
-
+   python -m aqme --qdescp --program nmr --destination Strychnine_nmr_files --nmr_slope "[-1.0537, -1.0784]" --nmr_intercept "[181.7815,31.8723]" --nmr_experim Experimental_NMR_shifts.csv --files "Strychnine_sp_files/success/SP_calcs/json_files/*.json"
 
 Step 9: Calculating conformer populations with GoodVibes
 --------------------------------------------------------
