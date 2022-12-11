@@ -167,7 +167,7 @@ def detect_linear(errortype, atom_types, cclib_data):
     return errortype
 
 
-def full_check(w_dir_main=os.getcwd(), destination_fullcheck="", files="*.json", log=Logger('QCORR','fullcheck')):
+def full_check(w_dir_main=os.getcwd(), destination_fullcheck="", files="*.json", log=None):
     """
     Checks that multiple calculations were done following the same protocols, including
     program and version, grid size, level of theory, dispersion and solvation model.
@@ -175,13 +175,20 @@ def full_check(w_dir_main=os.getcwd(), destination_fullcheck="", files="*.json",
     Parameters
     ----------
     w_dir_main : str
-            Working directory
+        Working directory
     destination_fullcheck : str
-            Destination to create the file with the full check
+        Destination to create the file with the full check
     files : list of str
-            json files to compare (glob.glob('*.json') and '*.json are both valid inputs to
-            include all the json files from a folder)
+        json files to compare (glob.glob('*.json') and '*.json are both valid inputs to
+        include all the json files from a folder)
+    log : aqme.utils.Logger
+        Logging instance where the status of the calculation will be written.
+        If none provided it will default to aqme.utils.Logger('QCORR','fullcheck')
+        and it will create the file QCORR_fullcheck.dat in the working directory.
     """
+
+    if log is None: 
+        log = Logger('QCORR','fullcheck')
 
     initial_dir = os.getcwd()
     w_dir_main = Path(w_dir_main)
