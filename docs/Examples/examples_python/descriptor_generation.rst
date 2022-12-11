@@ -51,5 +51,7 @@ QDESCP module.
 
    conformer_files = [str(filepath) for filepath in Path('CSEARCH').glob('*.sdf')]
    
-   qdescp(files=conformer_files,boltz=True)
+   qdescp(files=conformer_files,
+          program='xtb',
+          boltz=True)
 
