@@ -91,8 +91,8 @@ following contents:
 .. highlight:: default
 
 
-Include the genecp section
---------------------------
+Include the gen or genecp section
+---------------------------------
 
 If we want to include a genecp with automatic detection of the atoms in the 
 molecule we have to add some extra keywords. 
@@ -115,6 +115,32 @@ following contents:
 .. highlight:: none
 
 .. literalinclude:: ../../chemfiles/ethane_genecp.com
+
+.. highlight:: default
+
+If we instead do not want to include the ECP section, or in other words we want 
+to use the ``gen`` instead of ``genecp`` we only need to substitute it in the 
+``qm_input`` parameter. AQME will automatically recognize it and write 
+the input file accordingly: 
+
+.. code:: python
+
+    qprep(files=sdf_files,
+          bs_gen='def2svp',         # Basis set to use in the atoms included in genECP
+          bs_nogen='6-31G*',        # Basis set to use in the rest of the atoms
+          gen_atoms=['C'],          # Atoms to include as genECP
+          qm_input='wb97xd/gen scrf=(smd,solvent=acetonitrile)', 
+          suffix='wb97xd-gen',
+          program='gaussian', 
+          mem='16GB', 
+          nprocs=8)
+
+Which will lead to the creation of the file 'ethane_conf_1_wb97xd-gen.com' with the
+following contents: 
+
+.. highlight:: none
+
+.. literalinclude:: ../../chemfiles/ethane_gen.com
 
 .. highlight:: default
 

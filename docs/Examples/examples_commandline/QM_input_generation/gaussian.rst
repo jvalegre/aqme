@@ -85,8 +85,8 @@ following contents:
 
 .. highlight:: default
 
-Include the genecp section
---------------------------
+Include the gen or genecp section
+---------------------------------
 
 If we want to include a genecp with automatic detection of the atoms in the 
 molecule we have to add some extra keywords:
@@ -97,11 +97,14 @@ As well as the ECP :code:`--bs_gen def2svp`
 
 The basis set for the atoms that will not use the ECP :code:`--bs_nogen "6-31G*"`
 
+Finally we need to also substitute the basis set by ``genecp`` in the qm_input 
+parameter :code:`--qm_input "wb97xd/genecp scrf=(smd,solvent=acetonitrile)"`
+
 And we end up with the following command line: 
 
 .. code:: shell
 
-   python -m aqme --qprep --suffix wb97xd-genecp --gen_atoms "['C']" --bs_gen def2svp --bs_nogen "6-31G*" --files "sdf_files/*.sdf" --qm_input "wb97xd/def2qzvpp scrf=(smd,solvent=acetonitrile)" --program gaussian --mem 16GB --nprocs 8
+   python -m aqme --qprep --suffix "wb97xd-genecp" --gen_atoms "['C']" --bs_gen def2svp --bs_nogen "6-31G*" --files "sdf_files/*.sdf" --qm_input "wb97xd/genecp scrf=(smd,solvent=acetonitrile)" --program gaussian --mem 16GB --nprocs 8
 
 Which will lead to the creation of the file 'ethane_conf_1_wb97xd-genecp.com' with the
 following contents: 
@@ -111,6 +114,25 @@ following contents:
 .. literalinclude:: ../../chemfiles/ethane_genecp.com
 
 .. highlight:: default
+
+If we instead do not want to include the ECP section, or in other words we want 
+to use the ``gen`` instead of ``genecp`` we only need to substitute it in the 
+``qm_input`` parameter. AQME will automatically recognize it and write 
+the input file accordingly: 
+
+.. code:: shell
+
+   python -m aqme --qprep --suffix "wb97xd-gen" --gen_atoms "['C']" --bs_gen def2svp --bs_nogen "6-31G*" --files "sdf_files/*.sdf" --qm_input "wb97xd/gen scrf=(smd,solvent=acetonitrile)" --program gaussian --mem 16GB --nprocs 8
+
+Which will lead to the creation of the file 'ethane_conf_1_wb97xd-gen.com' with the
+following contents: 
+
+.. highlight:: none
+
+.. literalinclude:: ../../chemfiles/ethane_gen.com
+
+.. highlight:: default
+
 
 Include instructions after the geometry section
 -----------------------------------------------
