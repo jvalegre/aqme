@@ -1,2 +1,2 @@
-1. Activate the Python kernel with AQME installed
-2. Run all the cells from the end-to-end-example-2.ipynb Jupyter Notebook
+1. Run all the cells from the end-to-end-example-2.ipynb Jupyter Notebook
+2. For the command lines version, visit: https://aqme.readthedocs.io/en/latest/Examples/examples_commandline/end_to_end/example_2.html

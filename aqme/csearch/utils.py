@@ -84,16 +84,24 @@ def constraint_fix(
 ):
     
     # this function avoids problems when reading contraints from CSV files
-    for contraints in [constraints_atoms, constraints_dist, constraints_angle, constraints_dihedral]:
-        try:
-            if pd.isnull(contraints):
-                contraints = []
-        except ValueError:
-            pass
-        if not isinstance(contraints, list):
-            contraints = ast.literal_eval(contraints)
+    constraints_atoms = constaint_2_list(constraints_atoms)
+    constraints_dist = constaint_2_list(constraints_dist)
+    constraints_angle = constaint_2_list(constraints_angle)
+    constraints_dihedral = constaint_2_list(constraints_dihedral)
 
     return constraints_atoms, constraints_dist, constraints_angle, constraints_dihedral
+
+
+def constaint_2_list(contraints):
+    try:
+        if pd.isnull(contraints):
+            contraints = []
+    except ValueError:
+        pass
+    if not isinstance(contraints, list):
+        contraints = ast.literal_eval(contraints)
+    
+    return contraints
 
 
 def prepare_direct_smi(args):
