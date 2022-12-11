@@ -1,22 +1,31 @@
 """
 Parameters
 ----------
+
 General
 +++++++
+
    w_dir_main : str, default=os.getcwd()
       Working directory
    destination : str, default=None,
       Directory to create the JSON file(s)
    program : str, default=None
       Program required to create the new descriptors. Current options: 'xtb', 'nmr'
+
 XTB descriptors
 +++++++++++++++
+
    files : list of str, default=''
-      Filenames of SDF/PDB/XYZ files to calculate xTB descriptors. If *.sdf (or other strings that are not lists such as *.pdb) are specified, the program will look for all the SDF files in the working directory through glob.glob(*.sdf)
+      Filenames of SDF/PDB/XYZ files to calculate xTB descriptors. If \*.sdf 
+      (or other strings that are not lists such as \*.pdb) are specified, 
+      the program will look for all the SDF files in the working directory 
+      through glob.glob(\*.sdf)
    charge : int, default=None
-      Charge of the calculations used in the following input files (charges from SDF files generated in CSEARCH are read automatically).
+      Charge of the calculations used in the following input files (charges from
+      SDF files generated in CSEARCH are read automatically).
    mult : int, default=None
-      Multiplicity of the calculations used in the following input files (multiplicities from SDF files generated in CSEARCH are read automatically).
+      Multiplicity of the calculations used in the following input files 
+      (multiplicities from SDF files generated in CSEARCH are read automatically).
    qdescp_solvent : str, default=None
       Solvent used in the xTB property calculations (ALPB model)
    qdescp_temp : float, default=300
@@ -24,21 +33,37 @@ XTB descriptors
    qdescp_acc : float, default=0.2
       Accuracy required for the xTB property calculations 
    boltz : bool, default=False
-      Calculation of Boltzmann averaged xTB properties and addition of RDKit molecular descriptors
+      Calculation of Boltzmann averaged xTB properties and addition of RDKit 
+      molecular descriptors
+
 NMR simulation
 ++++++++++++++
+
    files : list of str, default=''
-      Filenames of LOG files to retrieve NMR shifts from Gaussian calculations (*.log can be used to include all the log files in the working directory)
+      Filenames of LOG files to retrieve NMR shifts from Gaussian calculations 
+      (\*.log can be used to include all the log files in the working directory)
    boltz : bool, default=False
       Calculation of Boltzmann averaged NMR shifts
    nmr_atoms : list of str, default=[6, 1]
-      List containing the atom types (as atomic numbers) to consider. For example, if the user wants to retrieve NMR shifts from C and H atoms nmr_atoms=[6, 1]
+      List containing the atom types (as atomic numbers) to consider. For 
+      example, if the user wants to retrieve NMR shifts from C and H atoms 
+      nmr_atoms=[6, 1]
    nmr_slope : list of float, default=[-1.0537, -1.0784]
-      List containing the slope to apply for the raw NMR shifts calculated with Gaussian. A slope needs to be provided for each atom type in the analysis (i.e., for C and H atoms, the nmr_slope=[-1.0537, -1.0784]). These values can be adjusted using the CHESHIRE repository.
+      List containing the slope to apply for the raw NMR shifts calculated with 
+      Gaussian. A slope needs to be provided for each atom type in the analysis 
+      (i.e., for C and H atoms, the nmr_slope=[-1.0537, -1.0784]). These values 
+      can be adjusted using the CHESHIRE repository.
    nmr_intercept : list of float, default=[181.7815, 31.8723]
-      List containing the intercept to apply for the raw NMR shifts calculated with Gaussian. An intercept needs to be provided for each atom type in the analysis (i.e., for C and H atoms, the nmr_intercept=[-1.0537, -1.0784]). These values can be adjusted using the CHESHIRE repository.
+      List containing the intercept to apply for the raw NMR shifts calculated 
+      with Gaussian. An intercept needs to be provided for each atom type in the
+      analysis (i.e., for C and H atoms, the nmr_intercept=[-1.0537, -1.0784]). 
+      These values can be adjusted using the CHESHIRE repository.
    nmr_experim : str, default=None
-      Filename of a CSV containing the experimental NMR shifts. Two columnds are needed: A) 'atom_idx' should contain the indexes of the atoms to study as seen in GaussView or other molecular visualizers (i.e., the first atom of the coordinates has index 1); B) 'experimental_ppm' should contain the experimental NMR shifts in ppm observed for the atoms.
+      Filename of a CSV containing the experimental NMR shifts. Two columnds are
+      needed: A) 'atom_idx' should contain the indexes of the atoms to study as 
+      seen in GaussView or other molecular visualizers (i.e., the first atom of 
+      the coordinates has index 1); B) 'experimental_ppm' should contain the 
+      experimental NMR shifts in ppm observed for the atoms.
 """
 ######################################################.
 #        This file stores the QDESCP class           #
