@@ -85,7 +85,14 @@ Step 5: Resubmission of unsuccessful calculations (if any) with suggestions from
 -------------------------------------------------------------------------------------
 
 Now we need to run the generated COM files (in fixed_QM_inputs) with Gaussian 
-like we did in Step 3
+like we did in Step 3.
+
+After the calculations finish we check again the files using QCORR
+
+.. code:: shell
+
+   python -m aqme --qcorr --files "Strychnine_com_files/failed/run_1/fixed_QM_inputs/*.log" --isom_type com --isom_inputs "Strychnine_com_files/failed/run_1/fixed_QM_inputs" --nprocs 12 --mem 24GB
+
 
 Step 6: Creating Gaussian input files for NMR calcs with QPREP
 --------------------------------------------------------------
