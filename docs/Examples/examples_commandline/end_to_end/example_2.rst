@@ -72,8 +72,7 @@ We visualize the first pair of reactants to be able to set up the constraints.
    C1([H:8])=[C:1]([H:9])[C:2]([H:10])=[C:3]([H:11])[C:4]1([H:12])[H:13].[C:5]1([H:14])=[C:6]([H:15])[C:7]1([H:16])[H:17]
 
 According to the image we will add the following constraints to the CSV, in the 
-constraints_dist column we will include :code:`[[3,5,2.35],[0,6,2.35]]` and in 
-the constraints_dihedral column we will include :code:`[[0,3,5,6,0]]`
+constraints_dist column we will include :code:`[[3,5,2.35],[0,6,2.35]]`
 
 
 We visualize the second pair of reactants to be able to set up the constraints. 
@@ -85,8 +84,7 @@ We visualize the second pair of reactants to be able to set up the constraints.
    C1([H:9])=[C:1]([H:10])[C:2]([H:11])=[C:3]([H:12])[C:4]1([H:13])[H:14].[C:5]1([H:15])=[C:6]([H:16])[C:7]([H:17])([H:18])[C:8]1([H:19])[H:20]
 
 According to the image we will add the following constraints to the CSV, in the 
-constraints_dist column we will include :code:`[[3,5,2.4],[0,6,2.4]]` and in 
-the constraints_dihedral column we will include :code:`[[0,3,5,6,0]]`
+constraints_dist column we will include :code:`[[3,5,2.4],[0,6,2.4]]`
 
 We visualize the third pair of reactants to be able to set up the constraints. 
 
@@ -98,8 +96,7 @@ We visualize the third pair of reactants to be able to set up the constraints.
 
 
 According to the image we will add the following constraints to the CSV, in the 
-constraints_dist column we will include :code:`[[3,5,2.35],[0,6,2.35]]` and in 
-the constraints_dihedral column we will include :code:`[[0,3,5,6,0]]`
+constraints_dist column we will include :code:`[[3,5,2.35],[0,6,2.35]]`
 
 
 Step 2: CSEARCH conformational sampling
@@ -108,19 +105,12 @@ Step 2: CSEARCH conformational sampling
 With the previous step we can now create a csv file containing all the molecules
 and noncovalent complexes to calculate, which will have the following contents: 
 
-:: 
-   
-   SMILES,code_name,constraints_dist,constraints_dihedral
-   C1=CC=CC1,Diene,,
-   C1=CC1,Do1,,
-   C1=CCC1,Do2,,
-   C1=CCCC1,Do3,,
-   C1([H:8])=[C:1]([H:9])[C:2]([H:10])=[C:3]([H:11])[C:4]1([H:12])[H:13].[C:5]1([H:14])=[C:6]([H:15])[C:7]1([H:16])[H:17],TS1,"[[3,5,2.35],[0,6,2.35]]","[[0,3,5,6,0]]"
-   C1([H:9])=[C:1]([H:10])[C:2]([H:11])=[C:3]([H:12])[C:4]1([H:13])[H:14].[C:5]1([H:15])=[C:6]([H:16])[C:7]([H:17])([H:18])[C:8]1([H:19])[H:20],TS2,"[[3,5,2.4],[0,6,2.4]]","[[0,3,5,6,0]]"
-   C1([H:10])=[C:1]([H:11])[C:2]([H:12])=[C:3]([H:13])[C:4]1([H:14])[H:15].[C:5]1([H:16])=[C:6]([H:17])[C:7]([H:18])([H:19])[C:8]([H:20])([H:21])[C:9]1([H:22])[H:23],TS3,"[[3,5,2.35],[0,6,2.35]]","[[0,3,5,6,0]]"
-   [C@H]1(C2C=CC3C2)[C@@H]3C1,P1,,
-   [C@H]12[C@@H](C3C=CC2C3)CC1,P2,,
-   [C@H]1(C2C=CC3C2)[C@@H]3CCC1,P3,,
+.. highlight:: none
+
+.. literalinclude:: ../../chemfiles/end_to_end_2_inp.csv
+
+.. highlight:: default
+
 
 Now we can proceed to the conformer generation:
 
