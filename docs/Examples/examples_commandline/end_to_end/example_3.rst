@@ -52,8 +52,8 @@ Step 3 : Create the CSV file with descriptors for the GNN model
 ---------------------------------------------------------------
 
 This step can be run in bash, python or manually using a spreadsheet editor.
-The aim is to generate a the file 'solubility_xtb.csv' which contains a new 
-column with the respective filepaths to the QDESCP generated .json file.
+The aim is to generate a file named 'solubility_xtb.csv' containing an extra 
+column with the filepaths to the QDESCP generated .json files.
 
 Here we include the python commands to do the step.
 
