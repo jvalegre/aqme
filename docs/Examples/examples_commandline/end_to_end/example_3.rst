@@ -45,7 +45,7 @@ Step 2 : Run xTB calculations using QDESCP
 
 .. code:: shell
 
-   python -m aqme --qdescp --files "CSEARCH/*.sdf" --boltz --program xtb
+   python -m aqme --qdescp --files "CSEARCH/*.sdf" --program xtb
 
 
 Step 3 : Create the CSV file with descriptors for the GNN model

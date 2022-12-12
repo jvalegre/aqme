@@ -60,7 +60,6 @@ Step 3 : Run xTB calculations using QDESCP
 
    sdf_rdkit_files = glob.glob(f'CSEARCH/*.sdf')
    qdescp(files=sdf_rdkit_files,
-          boltz=True,
           program='xtb')
 
 
