@@ -13,8 +13,11 @@ specific example we will be working with Ethane.
 
 The sdf file contents are as follows: 
 
+.. highlight:: none
+
 .. literalinclude:: ../../chemfiles/ethane.sdf
 
+.. highlight:: default
 
 .. note:: 
    
