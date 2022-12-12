@@ -16,7 +16,7 @@ involving a cloride ion and fluoromethane in water.
 +-----------------------------------------------+
 |        .. centered:: **SMILES**               |
 +-----------------------------------------------+
-|        .. centered:: O.FC.[Cl-]               |
+|        .. centered::   FC.[Cl-]               |
 +--------------------------+--------------------+
 |  |nocov_ts_chemdraw|     |  |nocov_ts_3D|     |
 +--------------------------+--------------------+
@@ -40,7 +40,7 @@ atoms we are going to impose the constraints.
 
 .. code:: python
 
-    smi = 'O.FC.[Cl-]'
+    smi = 'FC.[Cl-]'
     mol = Chem.MolFromSmiles(smi)
     mol = Chem.AddHs(mol)
     for i,atom in enumerate(mol.GetAtoms()):
