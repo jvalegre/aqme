@@ -1,2 +1,0 @@
-See our Read the Docs page:
-https://aqme.readthedocs.io/en/latest/Examples/examples_commandline/end_to_end/example_1.html#step-1-csearch-conformational-sampling

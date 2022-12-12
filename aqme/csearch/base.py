@@ -374,9 +374,9 @@ class csearch:
                 )
                 jobs.append(job)
 
-            bar.next()
+                bar.next()
 
-        bar.finish()
+            bar.finish()
 
     def compute_confs(
         self,
