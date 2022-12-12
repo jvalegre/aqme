@@ -7,8 +7,8 @@
 .. |mapping| image:: ../../images/nocov_ts_map.png
    :width: 400
 
-TS involving generated from SMILES
-==================================
+SN2 TS generated from SMILES
+============================
 
 In the following example we will generate conformers of the SN2 transition state 
 involving a cloride ion and fluoromethane in water. 
