@@ -354,7 +354,10 @@ def xtb_opt_main(
                 elif self.args.program.lower() == "crest":
                     if file.find('_xtb2') == -1 and file.find('_xtb1') == -1:
                         try:
-                            os.remove(file)
+                            if file == 'crest_clustered.xyz':
+                                os.rename('crest_clustered.xyz', f"{dat_dir}/{name_no_path}_clustered.xyz")
+                            else:
+                                os.remove(file)
                         except IsADirectoryError:
                             shutil.rmtree(file)
 

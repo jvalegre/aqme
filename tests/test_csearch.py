@@ -282,6 +282,7 @@ def test_csearch_crest_parameters(
         + "/CSEARCH/"
         + program
         + "_xyz/"
+        + name + "_"
         + "crest_clustered.xyz"
     )
     assert os.path.exists(file_cluster)
