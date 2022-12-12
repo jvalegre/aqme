@@ -86,6 +86,13 @@ We visualize the second pair of reactants to be able to set up the constraints.
 According to the image we will add the following constraints to the CSV, in the 
 constraints_dist column we will include :code:`[[3,6,2.35],[0,5,2.35]]`
 
+.. warning:: 
+
+   Although the atoms 5 and 6 are equivalent, we have observed that if we use 
+   the same ordering as in the previous reaction for the constraints the TS 
+   won't be found (i.e. with :code:`[[3,5,2.35],[0,6,2.35]]`) whereas when we 
+   use the constraints as shown in the example the TS is found. 
+
 We visualize the third pair of reactants to be able to set up the constraints. 
 
 .. centered:: |pair_3_map|
