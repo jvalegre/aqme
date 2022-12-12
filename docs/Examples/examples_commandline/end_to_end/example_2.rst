@@ -30,7 +30,7 @@ ii)  Generate the inputs for Gaussian geometry optimizations and frequency calcs
      (B3LYP/def2TZVP)
 iii) Fixing errors and imaginary frequencies of the output LOG files
 iv)  Generate ORCA inputs for single-point energy corrections (SPC) using
-     DLPNO-CCSD(T)/cc-pV(DT)Z
+     DLPNO-CCSD(T)/def2TZVPP
 v)   Calculate the Boltzmann weighted thermochemistry using with GoodVibes at
      298.15 K
 
