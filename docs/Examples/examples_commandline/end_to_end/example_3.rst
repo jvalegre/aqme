@@ -17,22 +17,7 @@ that has the following contents:
 
 .. highlight:: none
 
-::
-
-   code_name,Molecule,ESOL predicted log solubility in mols per litre,Minimum Degree,Molecular Weight,Number of H-Bond Donors,Number of Rings,Number of Rotatable Bonds,Polar Surface Area,measured log solubility in mols per litre,smiles
-   mol_1,Amigdalin,-0.974,1,457.432,7,3,7,202.32,-0.77,OCC3OC(OCC2OC(OC(C#N)c1ccccc1)C(O)C(O)C2O)C(O)C(O)C3O 
-   mol_2,Fenfuram,-2.885,1,201.225,1,2,2,42.24,-3.3,Cc1occc1C(=O)Nc2ccccc2
-   mol_3,citral,-2.579,1,152.237,0,0,4,17.07,-2.06,CC(C)=CCCC(C)=CC(=O)
-   mol_4,Picene,-6.618,2,278.354,0,5,0,0,-7.87,c1ccc2c(c1)ccc3c2ccc4c5ccccc5ccc43
-   mol_5,Thiophene,-2.232,2,84.143,0,1,0,0,-1.33,c1ccsc1
-   mol_6,benzothiazole,-2.733,2,135.191,0,2,0,12.89,-1.5,c2ccc1scnc1c2 
-   mol_7,"2,2,4,6,6'-PCB",-6.545,1,326.437,0,2,1,0,-7.32,Clc1cc(Cl)c(c(Cl)c1)c2c(Cl)cccc2Cl
-   mol_8,Estradiol,-4.138,1,272.388,2,4,0,40.46,-5.03,CC12CCC3C(CCc4cc(O)ccc34)C2CCC1O
-   mol_9,Dieldrin,-4.533,1,380.913,0,5,0,12.53,-6.29,ClC4=C(Cl)C5(Cl)C3C1CC(C2OC12)C3C4(Cl)C5(Cl)Cl
-   mol_10,Rotenone,-5.246,1,394.423,0,5,3,63.22,-4.42,COc5cc4OCC3Oc2c1CC(Oc1ccc2C(=O)C3c4cc5OC)C(C)=C 
-   mol_11,2-pyrrolidone,0.243,1,85.106,1,1,0,29.1,1.07,O=C1CCCN1
-   mol_12,2-Chloronapthalene,-4.063,1,162.619,0,2,0,0,-4.14,Clc1ccc2ccccc2c1
-   mol_13,1-Pentene ,-2.01,1,70.135,0,0,2,0,-2.68,CCCC=C
+.. literalinclude:: ../../chemfiles/end_to_end_3_inp.csv
 
 .. highlight:: default
 
