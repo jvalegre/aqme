@@ -293,7 +293,7 @@ def test_csearch_crest_parameters(
     assert len(mols) == output_nummols
     os.chdir(w_dir_main)
 
-    file_crest = str(csearch_crest_dir+f"/CSEARCH/crest_xyz/{name}.out")
+    file_crest = str(csearch_crest_dir+f"/CSEARCH/crest_xyz/{name}_crest.out")
     outfile = open(file_crest, "r")
     outlines_crest = outfile.readlines()
     outfile.close()
@@ -773,7 +773,7 @@ def test_csearch_methods(
         )
 
     if program == 'crest':
-        file_crest = str(csearch_methods_dir+f"/CSEARCH/crest_xyz/{name}.out")
+        file_crest = str(csearch_methods_dir+f"/CSEARCH/crest_xyz/{name}_crest.out")
         outfile = open(file_crest, "r")
         outlines_crest = outfile.readlines()
         outfile.close()
