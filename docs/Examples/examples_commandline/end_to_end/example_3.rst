@@ -15,7 +15,7 @@ capable of predicting their solubility.
 The set of molecules that we will use are in a file named 'solubility.csv' 
 that has the following contents:
 
-..highlight:: none
+.. highlight:: none
 
 ::
 
