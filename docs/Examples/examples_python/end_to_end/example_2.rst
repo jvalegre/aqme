@@ -237,6 +237,19 @@ Step 7: Resubmission of unsuccessful calculations (if any) with suggestions from
 Now we need to run the generated COM files (in fixed_QM_inputs) with Gaussian 
 like we did in Step 6
 
+After the calculations finish we check again the files using QCORR
+
+.. code:: python
+
+   new_log_files = "QCALC/failed/run_1/fixed_QM_inputs/*.log"
+
+   qcorr(files=new_log_files,
+         isom_type='com',
+         isom_inputs='QCALC/failed/run_1/fixed_QM_inputs',
+         nprocs=16,
+         mem='32GB')
+
+
 Step 8: Creating DLPNO input files for ORCA single-point energy calculations
 ----------------------------------------------------------------------------
 
