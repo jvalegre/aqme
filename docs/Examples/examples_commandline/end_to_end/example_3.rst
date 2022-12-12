@@ -67,7 +67,7 @@ Here we include the python commands to do the step.
    data.to_csv('solubility_xtb.csv',index=False)
 
 
-Step 5: Run the gnn.py to get results
+Step 4: Run the gnn.py to get results
 -------------------------------------
 
 This step requires other files that do not use aqme itself. The other files 
