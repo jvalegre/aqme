@@ -177,7 +177,7 @@ Step 7: Creating DLPNO input files for ORCA single-point energy calculations
 
 .. code:: shell
 
-   python -m aqme --qprep --program orca --mem 16GB --nprocs 8 --files "QCALC/success/*.log" --suffix DLPNO --qm_input "DLPNO-CCSD(T) def2-tzvpp def2-tzvpp/C
+   python -m aqme --qprep --program orca --mem 16GB --nprocs 8 --files "QCALC/success/*.log" --suffix DLPNO --destination SP --qm_input "DLPNO-CCSD(T) def2-tzvpp def2-tzvpp/C
    %scf maxiter 500
    end
    % mdci
