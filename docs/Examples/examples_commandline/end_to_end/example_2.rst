@@ -30,7 +30,7 @@ ii)  Generate the inputs for Gaussian geometry optimizations and frequency calcs
      (B3LYP/def2TZVP)
 iii) Fixing errors and imaginary frequencies of the output LOG files
 iv)  Generate ORCA inputs for single-point energy corrections (SPC) using
-     DLPNO-CCSD(T)/cc-pV(DT)Z
+     DLPNO-CCSD(T)/def2TZVPP
 v)   Calculate the Boltzmann weighted thermochemistry using with GoodVibes at
      298.15 K
 
@@ -72,8 +72,7 @@ We visualize the first pair of reactants to be able to set up the constraints.
    C1([H:8])=[C:1]([H:9])[C:2]([H:10])=[C:3]([H:11])[C:4]1([H:12])[H:13].[C:5]1([H:14])=[C:6]([H:15])[C:7]1([H:16])[H:17]
 
 According to the image we will add the following constraints to the CSV, in the 
-constraints_dist column we will include :code:`[[3,5,2.35],[0,6,2.35]]` and in 
-the constraints_dihedral column we will include :code:`[[0,3,5,6,0]]`
+constraints_dist column we will include :code:`[[3,5,2.35],[0,6,2.35]]`
 
 
 We visualize the second pair of reactants to be able to set up the constraints. 
@@ -85,8 +84,14 @@ We visualize the second pair of reactants to be able to set up the constraints.
    C1([H:9])=[C:1]([H:10])[C:2]([H:11])=[C:3]([H:12])[C:4]1([H:13])[H:14].[C:5]1([H:15])=[C:6]([H:16])[C:7]([H:17])([H:18])[C:8]1([H:19])[H:20]
 
 According to the image we will add the following constraints to the CSV, in the 
-constraints_dist column we will include :code:`[[3,5,2.4],[0,6,2.4]]` and in 
-the constraints_dihedral column we will include :code:`[[0,3,5,6,0]]`
+constraints_dist column we will include :code:`[[3,6,2.35],[0,5,2.35]]`
+
+.. warning:: 
+
+   Although the atoms 5 and 6 are equivalent, we have observed that if we use 
+   the same ordering as in the previous reaction for the constraints the TS 
+   won't be found (i.e. with :code:`[[3,5,2.35],[0,6,2.35]]`) whereas when we 
+   use the constraints as shown in the example the TS is found. 
 
 We visualize the third pair of reactants to be able to set up the constraints. 
 
@@ -98,8 +103,7 @@ We visualize the third pair of reactants to be able to set up the constraints.
 
 
 According to the image we will add the following constraints to the CSV, in the 
-constraints_dist column we will include :code:`[[3,5,2.35],[0,6,2.35]]` and in 
-the constraints_dihedral column we will include :code:`[[0,3,5,6,0]]`
+constraints_dist column we will include :code:`[[3,5,2.35],[0,6,2.35]]`
 
 
 Step 2: CSEARCH conformational sampling
@@ -108,19 +112,12 @@ Step 2: CSEARCH conformational sampling
 With the previous step we can now create a csv file containing all the molecules
 and noncovalent complexes to calculate, which will have the following contents: 
 
-:: 
-   
-   SMILES,code_name,constraints_dist,constraints_dihedral
-   C1=CC=CC1,Diene,,
-   C1=CC1,Do1,,
-   C1=CCC1,Do2,,
-   C1=CCCC1,Do3,,
-   C1([H:8])=[C:1]([H:9])[C:2]([H:10])=[C:3]([H:11])[C:4]1([H:12])[H:13].[C:5]1([H:14])=[C:6]([H:15])[C:7]1([H:16])[H:17],TS1,"[[3,5,2.35],[0,6,2.35]]","[[0,3,5,6,0]]"
-   C1([H:9])=[C:1]([H:10])[C:2]([H:11])=[C:3]([H:12])[C:4]1([H:13])[H:14].[C:5]1([H:15])=[C:6]([H:16])[C:7]([H:17])([H:18])[C:8]1([H:19])[H:20],TS2,"[[3,5,2.4],[0,6,2.4]]","[[0,3,5,6,0]]"
-   C1([H:10])=[C:1]([H:11])[C:2]([H:12])=[C:3]([H:13])[C:4]1([H:14])[H:15].[C:5]1([H:16])=[C:6]([H:17])[C:7]([H:18])([H:19])[C:8]([H:20])([H:21])[C:9]1([H:22])[H:23],TS3,"[[3,5,2.35],[0,6,2.35]]","[[0,3,5,6,0]]"
-   [C@H]1(C2C=CC3C2)[C@@H]3C1,P1,,
-   [C@H]12[C@@H](C3C=CC2C3)CC1,P2,,
-   [C@H]1(C2C=CC3C2)[C@@H]3CCC1,P3,,
+.. highlight:: none
+
+.. literalinclude:: ../../chemfiles/end_to_end_2_inp.csv
+
+.. highlight:: default
+
 
 Now we can proceed to the conformer generation:
 
@@ -175,12 +172,19 @@ Step 6: Resubmission of unsuccessful calculations (if any) with suggestions from
 Now we need to run the generated COM files (in fixed_QM_inputs) with Gaussian 
 like we did in Step 4
 
+After the calculations finish we check again the files using QCORR
+
+.. code:: shell
+
+   python -m aqme --qcorr --files "QCALC/failed/run_1/fixed_QM_inputs/*.log" --isom_type com --isom_inputs "QCALC/failed/run_1/fixed_QM_inputs" --nprocs 16 --mem 32GB
+
+
 Step 7: Creating DLPNO input files for ORCA single-point energy calculations
 ----------------------------------------------------------------------------
 
 .. code:: shell
 
-   python -m aqme --qprep --program orca --mem 16GB --nprocs 8 --files "QCALC/success/*.log" --suffix DLPNO --qm_input "DLPNO-CCSD(T) def2-tzvpp def2-tzvpp/C
+   python -m aqme --qprep --program orca --mem 16GB --nprocs 8 --files "QCALC/success/*.log" --suffix DLPNO --destination SP --qm_input "DLPNO-CCSD(T) def2-tzvpp def2-tzvpp/C
    %scf maxiter 500
    end
    % mdci

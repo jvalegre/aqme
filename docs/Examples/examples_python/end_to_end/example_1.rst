@@ -137,7 +137,7 @@ After the calculations finish we check again the files using QCORR
 
    qcorr(files=new_log_files,
           isom_type='com',
-          isom_inputs=com_path/'failed/run_1/fixed_QM_inputs',
+          isom_inputs=f'{com_path}/failed/run_1/fixed_QM_inputs',
           nprocs=12,
           mem='24GB')
 
