@@ -98,8 +98,8 @@ We visualize the third pair of reactants to be able to set up the constraints.
 
 
 According to the image we will add the following constraints to the CSV, in the 
-constraints_dist column we will include :code:`[[3,10,2.35],[0,11,2.35]]` and in 
-the constraints_dihedral column we will include :code:`[[0,3,10,11,0]]`
+constraints_dist column we will include :code:`[[3,5,2.35],[0,6,2.35]]` and in 
+the constraints_dihedral column we will include :code:`[[0,3,5,6,0]]`
 
 
 Step 2: CSEARCH conformational sampling
@@ -136,13 +136,14 @@ We first create the input files of the transition states
 
 .. code:: shell 
 
-   python -m aqme --qprep --program gaussian --mem 72GB --nprocs 16 --files "CSEARCH/TS*crest.sdf" --qm_input "B3LYP/def2tzvp opt=(ts,calcfc,noeigen) freq"
+   python -m aqme --qprep --program gaussian --mem 32GB --nprocs 16 --files "CSEARCH/TS*crest.sdf" --qm_input "B3LYP/def2tzvp opt=(ts,calcfc,noeigen,maxstep=5) freq=noraman"
 
 Now we create the input files of the minima (intermediates, reagents and products) 
 
 .. code:: shell 
 
-   python -m aqme --qprep --program gaussian --mem 72GB --nprocs 16 --files "CSEARCH/D*.sdf" --qm_input "B3LYP/def2tzvp opt freq"
+   python -m aqme --qprep --program gaussian --mem 32GB --nprocs 16 --files "CSEARCH/D*.sdf" --qm_input "B3LYP/def2tzvp opt freq=noraman"
+   python -m aqme --qprep --program gaussian --mem 32GB --nprocs 16 --files "CSEARCH/P*.sdf" --qm_input "B3LYP/def2tzvp opt freq=noraman"
 
 
 Step 4: Running Gaussian inputs for optimization and frequency calcs externally
@@ -165,7 +166,7 @@ Step 5: QCORR analysis
 
 .. code:: shell
 
-   python -m aqme --qcorr --files "QCALC/*.log" --freq_conv "opt=(calcfc,maxstep=5)" --mem 72GB --nprocs 16
+   python -m aqme --qcorr --files "QCALC/*.log" --freq_conv "opt=(calcfc,maxstep=5)" --mem 32GB --nprocs 16
 
 
 Step 6: Resubmission of unsuccessful calculations (if any) with suggestions from AQME

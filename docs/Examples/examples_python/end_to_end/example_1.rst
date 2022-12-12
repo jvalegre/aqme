@@ -120,14 +120,27 @@ Step 5: QCORR analysis including isomerization filter
           freq_conv='opt=(calcfc,maxstep=5)',
           isom_type='com',
           isom_inputs=com_path,
-          nprocs=24,
-          mem='96GB')
+          nprocs=12,
+          mem='24GB')
 
 Step 6: Resubmission of unsuccessful calculations (if any) with suggestions from AQME
 -------------------------------------------------------------------------------------
 
 Now we need to run the generated COM files (in fixed_QM_inputs) with Gaussian 
 like we did in Step 4
+
+After the calculations finish we check again the files using QCORR
+
+.. code:: python
+
+   new_log_files = f'{com_path}/failed/run_1/fixed_QM_inputs/*.log'
+
+   qcorr(files=new_log_files,
+          isom_type='com',
+          isom_inputs=com_path/'failed/run_1/fixed_QM_inputs',
+          nprocs=12,
+          mem='24GB')
+
 
 Step 7: Creating Gaussian input files for NMR calcs with QPREP
 --------------------------------------------------------------
@@ -163,14 +176,18 @@ Step 8: Running Gaussian NMR calcs
 Now we need to run the generated COM files (in sp_path) with Gaussian 
 like we did in Step 4
 
+After the calculations end, we create JSON files with QCORR to store the 
+information from the resulting LOG files
+
+.. code:: python
+
+   log_files=f'{sp_path}/*.log'
+   qcorr(files=log_files)
+
 Step 9: Obtaining Boltzmann weighted NMR shifts with QDESCP
 -----------------------------------------------------------
 
 .. code:: python
-
-    # Create JSON files with QCORR to store the information from the resulting LOG files
-    log_files=f'{sp_path}/*.log'
-    qcorr(files=log_files)
     
     # Analyze the JSON files to calculate the Boltzmann averaged shielding tensors
 
@@ -194,8 +211,10 @@ Step 10: Calculating conformer populations with GoodVibes
 
 .. code:: python
 
-    log_files = glob.glob(f'{success_folder}/*.log')
-    
+    opt_files = glob.glob(f'{success_folder}/*.log')
+    sp_files = glob.glob(f'{sp_path}/success/SP_calcs/*.log')
+    log_files = opt_files + sp_files
+
     w_dir_main  = Path(os.getcwd())
     GV_folder = w_dir_main.joinpath('Strychine_GoodVibes-analysis')
     GV_folder.mkdir(exist_ok=True, parents=True)

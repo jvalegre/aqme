@@ -43,6 +43,6 @@ QDESCP module.
 
 .. code:: shell
 
-   python -m aqme --qdescp --files "CSEARCH/*.sdf" --boltz
+   python -m aqme --qdescp --program xtb --files "CSEARCH/*.sdf"
 
 

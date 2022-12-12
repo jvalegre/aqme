@@ -142,8 +142,8 @@ We visualize the third pair of reactants to be able to set up the constraints.
 .. centered:: |pair_3_map|
 
 According to the image we will add the following constraints to the CSV, in the 
-constraints_dist column we will include :code:`[[3,10,2.35],[0,11,2.35]]` and in 
-the constraints_dihedral column we will include :code:`[[0,3,10,11,0]]`
+constraints_dist column we will include :code:`[[3,5,2.35],[0,6,2.35]]` and in 
+the constraints_dihedral column we will include :code:`[[0,3,5,6,0]]`
 
 
 Step 3: CSEARCH conformational sampling
@@ -185,13 +185,13 @@ Step 4: Creating Gaussian input files for optimization and frequency with QPREP
 .. code:: python
 
     program = 'gaussian'
-    mem='72GB'
+    mem='32GB'
     nprocs=16
     
     sdf_TS_files = glob.glob('CSEARCH/TS*crest.sdf')
 
     # COM files for the TSs
-    qm_input_TS = 'B3LYP/def2tzvp opt=(ts,calcfc,noeigen) freq'
+    qm_input_TS = 'B3LYP/def2tzvp opt=(ts,calcfc,noeigen,maxstep=5) freq=noraman'
     qprep(files=sdf_TS_files,
           program=program,
           qm_input=qm_input_TS,
@@ -201,7 +201,7 @@ Step 4: Creating Gaussian input files for optimization and frequency with QPREP
     sdf_INT_files = glob.glob('CSEARCH/D*.sdf') + glob.glob('CSEARCH/P*.sdf')
     
     # COM files for intermediates, reagents and products
-    qm_input_INT = 'B3LYP/def2tzvp opt freq'
+    qm_input_INT = 'B3LYP/def2tzvp opt freq=noraman'
     
     qprep(files=sdf_INT_files,
           program=program,
