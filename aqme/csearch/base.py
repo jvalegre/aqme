@@ -1,8 +1,10 @@
 """
 Parameters
 ----------
+
 General
 +++++++
+
    input : str, default=''  
       (If smi is None) Optionally, file containing the SMILES strings and 
       names of the molecules. Current file extensions: .smi, .sdf, .cdx, 
@@ -39,8 +41,10 @@ General
    stacksize : str, default='1G'  
       Controls the stack size used (especially relevant for xTB/CREST 
       calculations of large systems, where high stack sizes are needed)  
+
 General RDKit-based
 +++++++++++++++++++
+
    sample : int, default='auto'
       Number of conformers used initially in the RDKit sampling. If this option 
       isn't specified, AQME automatically calculates (previously benchmarked) an
@@ -80,8 +84,10 @@ General RDKit-based
    seed : int, default=62609
       Random seed used during RDKit embedding (in the 
       Chem.rdDistGeom.EmbedMultipleConfs() RDKit function)
+
 Only organometallic molecules
 .............................
+
    metal_atoms : list of str, default=[]
      Specify metal atom(s) of the system as [ATOM_TYPE]. Multiple metals can 
      be used simultaneously (i.e. ['Pd','Ir']).  This option is important to 
@@ -95,14 +101,18 @@ Only organometallic molecules
       especially relevant when RDKit predicts wrong complex geometries or gives 
       a mixture of geometries. Current options: squareplanar, squarepyramidal, 
       linear, trigonalplanar
+
 SUMM only
 +++++++++
+
    degree : float, default=120.0
       Interval of degrees to rotate dihedral angles during SUMM sampling 
       (i.e. 120.0 would create 3 conformers for each dihedral, at 0, 
       120 and 240 degrees)
+
 Fullmonte only
 ++++++++++++++
+
    ewin_fullmonte : float, default=5.0
       Energy window in kcal/mol to discard conformers (i.e. if a conformer is 
       more than the E window compared to the most stable conformer)
@@ -120,8 +130,10 @@ Fullmonte only
       Available angle interval to use in the Fullmonte sampling. For example, if
       the angle is 120.0, the program chooses randomly between 120 and 240 
       degrees (picked at random) during each step of the sampling
+
 Crest only
 ++++++++++
+
    nprocs : int, default=2
       Number of processors used in CREST optimizations
    constraints_atoms : list, default=[]

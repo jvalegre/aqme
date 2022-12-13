@@ -1,16 +1,20 @@
 """
 Parameters
 ----------
+
 General
 +++++++
+
    w_dir_main : str, default=os.getcwd()
       Working directory
    destination : str, default=None,
       Directory to create the JSON file(s)
    program : str, default=None
       Program required to create the new descriptors. Current options: 'xtb', 'nmr'
+
 XTB descriptors
 +++++++++++++++
+
    files : list of str, default=''
       Filenames of SDF/PDB/XYZ files to calculate xTB descriptors. If \*.sdf 
       (or other strings that are not lists such as \*.pdb) are specified, 
@@ -31,8 +35,10 @@ XTB descriptors
    boltz : bool, default=False
       Calculation of Boltzmann averaged xTB properties and addition of RDKit 
       molecular descriptors
+
 NMR simulation
 ++++++++++++++
+
    files : list of str, default=''
       Filenames of LOG files to retrieve NMR shifts from Gaussian calculations 
       (\*.log can be used to include all the log files in the working directory)

@@ -1,8 +1,10 @@
 """
 Parameters
 ----------
+
 General
 +++++++
+
    files : str or list of str, default=None
      Input files. Formats accepted: XYZ, SDF, GJF, COM and PDB. Also, lists can
      be used (i.e. [FILE1.sdf, FILE2.sdf] or \*.FORMAT such as \*.sdf).  
@@ -50,8 +52,10 @@ General
    stacksize : str, default='1G'
      Controls the stack size used (especially relevant for xTB/CREST 
      calculations of large systems, where high stack sizes are needed)
+
 xTB only
 ++++++++
+
    xtb_keywords : str, default=None
      Define additional keywords to use in xTB that are not included in -c, 
      --uhf, -P and --input. For example: '--alpb ch2cl2 --gfn 1'
@@ -70,8 +74,10 @@ xTB only
      Specify dihedral constraints as [AT1,AT2,AT3,AT4,DIHEDRAL]. An example of multiple constraints
      with atoms 1, 2, 3 and 4 frozen at a dihedral angle of 180 degrees, and atoms 4, 5, 6 and 7
      with a dihedral angle of 120: [[1,2,3,4,180],[4,5,6,7,120]]
+
 ANI only
 ++++++++
+
    opt_steps : int, default=1000
      Maximum number of steps used in the ase.optimize.BFGS optimizer.  
    opt_fmax : float, default=0.05
