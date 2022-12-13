@@ -20,8 +20,8 @@ sys.path.insert(0, os.path.abspath('..'))
 # -- Project information -----------------------------------------------------
 
 project = 'aqme'
-copyright = '2022, Juan V. Alegre Requena, Shree Sowndarya S. V., Raul Pérez-Soto, Turki Alturaifi, Robert S. Paton'
-author = '2020, Juan V. Alegre Requena, Shree Sowndarya S. V., Raul Pérez-Soto, Turki Alturaifi, Robert S. Paton'
+copyright = '2022, Shree Sowndarya S. V., Juan V. Alegre Requena, Alturaifi T., Pérez-Soto R., Robert S. Paton'
+author = '2020, Shree Sowndarya S. V., Juan V. Alegre Requena, Alturaifi T., Pérez-Soto R., Robert S. Paton'
 
 # The full version, including alpha/beta/rc tags
 release = 'v1.4'

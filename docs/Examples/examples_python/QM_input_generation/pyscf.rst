@@ -1,8 +1,8 @@
-Using aqme to set up a PySCF calculation
+Using AQME to set up a PySCF calculation
 ========================================
 
 Although support for PySCF is not yet included here we provide an example on how
-to use the tools in aqme to run a PySCF job from json files. 
+to use the tools in AQME to run a PySCF job from json files. 
 
 .. code:: python
 

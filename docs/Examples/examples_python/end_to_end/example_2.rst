@@ -30,7 +30,7 @@ ii)  Generate the inputs for Gaussian geometry optimizations and frequency calcs
      (B3LYP/def2TZVP)
 iii) Fixing errors and imaginary frequencies of the output LOG files
 iv)  Generate ORCA inputs for single-point energy corrections (SPC) using
-     DLPNO-CCSD(T)/cc-pV(DT)Z
+     DLPNO-CCSD(T)/def2TZVPP
 v)   Calculate the Boltzmann weighted thermochemistry using with GoodVibes at
      298.15 K
 
@@ -48,8 +48,8 @@ for the Diels-Alder reaction for three pairs of reactants shown below:
 .. note::
 
    A jupyter notebook containing all the steps shown in this example can be found 
-   in the aqme repository in `Github  <https://github.com/jvalegre/aqme>`__ or in 
-   `Figshare <https://figshare.com/articles/dataset/AQME_paper_examples/20043665/11>`__
+   in the AQME repository in `Github  <https://github.com/jvalegre/aqme>`__ or in 
+   `Figshare <https://figshare.com/articles/dataset/AQME_paper_examples/20043665>`__
 
 .. contents:: Steps
    :local:
@@ -90,8 +90,7 @@ We visualize the first pair of reactants to be able to set up the constraints.
 .. centered::  |pair_1_map|
 
 According to the image we will add the following constraints to the CSV, in the 
-constraints_dist column we will include :code:`[[3,5,2.35],[0,6,2.35]]` and in 
-the constraints_dihedral column we will include :code:`[[0,3,5,6,0]]`
+constraints_dist column we will include :code:`[[3,5,2.35],[0,6,2.35]]`
 
 .. note:: 
    
@@ -122,8 +121,14 @@ We visualize the second pair of reactants to be able to set up the constraints.
 .. centered::  |pair_2_map|
 
 According to the image we will add the following constraints to the CSV, in the 
-constraints_dist column we will include :code:`[[3,5,2.4],[0,6,2.4]]` and in 
-the constraints_dihedral column we will include :code:`[[0,3,5,6,0]]`
+constraints_dist column we will include :code:`[[3,6,2.35],[0,5,2.35]]`
+
+.. warning:: 
+
+   Although the atoms 5 and 6 are equivalent, we have observed that if we use 
+   the same ordering as in the previous reaction for the constraints the TS 
+   won't be found (i.e. with :code:`[[3,5,2.35],[0,6,2.35]]`) whereas when we 
+   use the constraints as shown in the example the TS is found. 
 
 We visualize the third pair of reactants to be able to set up the constraints. 
 
@@ -142,8 +147,7 @@ We visualize the third pair of reactants to be able to set up the constraints.
 .. centered:: |pair_3_map|
 
 According to the image we will add the following constraints to the CSV, in the 
-constraints_dist column we will include :code:`[[3,10,2.35],[0,11,2.35]]` and in 
-the constraints_dihedral column we will include :code:`[[0,3,10,11,0]]`
+constraints_dist column we will include :code:`[[3,5,2.35],[0,6,2.35]]`
 
 
 Step 3: CSEARCH conformational sampling
@@ -152,19 +156,12 @@ Step 3: CSEARCH conformational sampling
 With the previous step we can now create a csv file containing all the molecules
 and noncovalent complexes to calculate, which will have the following contents: 
 
-:: 
-   
-   SMILES,code_name,constraints_dist,constraints_dihedral
-   C1=CC=CC1,Diene,,
-   C1=CC1,Do1,,
-   C1=CCC1,Do2,,
-   C1=CCCC1,Do3,,
-   C1([H:8])=[C:1]([H:9])[C:2]([H:10])=[C:3]([H:11])[C:4]1([H:12])[H:13].[C:5]1([H:14])=[C:6]([H:15])[C:7]1([H:16])[H:17],TS1,"[[3,5,2.35],[0,6,2.35]]","[[0,3,5,6,0]]"
-   C1([H:9])=[C:1]([H:10])[C:2]([H:11])=[C:3]([H:12])[C:4]1([H:13])[H:14].[C:5]1([H:15])=[C:6]([H:16])[C:7]([H:17])([H:18])[C:8]1([H:19])[H:20],TS2,"[[3,5,2.4],[0,6,2.4]]","[[0,3,5,6,0]]"
-   C1([H:10])=[C:1]([H:11])[C:2]([H:12])=[C:3]([H:13])[C:4]1([H:14])[H:15].[C:5]1([H:16])=[C:6]([H:17])[C:7]([H:18])([H:19])[C:8]([H:20])([H:21])[C:9]1([H:22])[H:23],TS3,"[[3,5,2.35],[0,6,2.35]]","[[0,3,5,6,0]]"
-   [C@H]1(C2C=CC3C2)[C@@H]3C1,P1,,
-   [C@H]12[C@@H](C3C=CC2C3)CC1,P2,,
-   [C@H]1(C2C=CC3C2)[C@@H]3CCC1,P3,,
+.. highlight:: none
+
+.. literalinclude:: ../../chemfiles/end_to_end_2_inp.csv
+
+.. highlight:: default
+
 
 Now we can proceed to the conformer generation:
 
@@ -185,13 +182,13 @@ Step 4: Creating Gaussian input files for optimization and frequency with QPREP
 .. code:: python
 
     program = 'gaussian'
-    mem='72GB'
+    mem='32GB'
     nprocs=16
     
     sdf_TS_files = glob.glob('CSEARCH/TS*crest.sdf')
 
     # COM files for the TSs
-    qm_input_TS = 'B3LYP/def2tzvp opt=(ts,calcfc,noeigen) freq'
+    qm_input_TS = 'B3LYP/def2tzvp opt=(ts,calcfc,noeigen,maxstep=5) freq=noraman'
     qprep(files=sdf_TS_files,
           program=program,
           qm_input=qm_input_TS,
@@ -201,7 +198,7 @@ Step 4: Creating Gaussian input files for optimization and frequency with QPREP
     sdf_INT_files = glob.glob('CSEARCH/D*.sdf') + glob.glob('CSEARCH/P*.sdf')
     
     # COM files for intermediates, reagents and products
-    qm_input_INT = 'B3LYP/def2tzvp opt freq'
+    qm_input_INT = 'B3LYP/def2tzvp opt freq=noraman'
     
     qprep(files=sdf_INT_files,
           program=program,
@@ -239,6 +236,19 @@ Step 7: Resubmission of unsuccessful calculations (if any) with suggestions from
 
 Now we need to run the generated COM files (in fixed_QM_inputs) with Gaussian 
 like we did in Step 6
+
+After the calculations finish we check again the files using QCORR
+
+.. code:: python
+
+   new_log_files = "QCALC/failed/run_1/fixed_QM_inputs/*.log"
+
+   qcorr(files=new_log_files,
+         isom_type='com',
+         isom_inputs='QCALC/failed/run_1/fixed_QM_inputs',
+         nprocs=16,
+         mem='32GB')
+
 
 Step 8: Creating DLPNO input files for ORCA single-point energy calculations
 ----------------------------------------------------------------------------

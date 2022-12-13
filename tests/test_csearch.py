@@ -773,7 +773,10 @@ def test_csearch_methods(
         )
 
     if program == 'crest':
-        file_crest = str(csearch_methods_dir+f"/CSEARCH/crest_xyz/{name}_crest.out")
+        if name != 'ethane':
+            file_crest = str(csearch_methods_dir+f"/CSEARCH/crest_xyz/{name}_crest.out")
+        else:
+            file_crest = str(csearch_methods_dir+f"/Et_sdf_files/crest_xyz/{name}_crest.out")
         outfile = open(file_crest, "r")
         outlines_crest = outfile.readlines()
         outfile.close()

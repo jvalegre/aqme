@@ -1,4 +1,4 @@
-csearch
+CSEARCH
 =======
 
 .. autoclass:: aqme.csearch.csearch

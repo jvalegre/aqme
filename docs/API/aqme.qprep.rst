@@ -1,4 +1,4 @@
-qprep
+QPREP
 =====
 
 .. autoclass:: aqme.qprep.qprep

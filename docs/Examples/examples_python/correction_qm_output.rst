@@ -42,12 +42,20 @@ Finally we run the analysis of the files.
 .. code:: python
 
     qcorr(files=files,
-          freq_conv='opt=(calcfc,maxstep=5)',
-          isom_type='com',         # Extension of the initial input files
-          isom_inputs=folder) # Folder with the initial input files
+          freq_conv='opt=(calcfc,maxstep=5)')
 
 Here we specify the `freq_conv` which will attempt to fix calculations whose 
 optimization ended normally but whose frequency calculation did not.
+
+Optionally we may include the extension of the initial input files and their 
+location: 
+
+.. code:: python
+
+    qcorr(files=files,
+          freq_conv='opt=(calcfc,maxstep=5)',
+          isom_type='com',         # Extension of the initial input files
+          isom_inputs=folder)      # Folder with the initial input files
 
 If we want to check the .json files that we have generated in a separatedly we 
 can use the full_check function which will only check if all calculations were 

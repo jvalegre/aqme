@@ -13,7 +13,7 @@
    :end-before: checkboxes-end
 
 =====================================
-Welcome to aqme's documentation!
+Welcome to AQME's documentation!
 =====================================
 
 .. include:: ../README.rst

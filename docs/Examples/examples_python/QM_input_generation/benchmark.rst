@@ -4,7 +4,7 @@
 Benchmarking methods 
 ====================
 
-In this example we provide the steps needed to use aqme to generate the input 
+In this example we provide the steps needed to use AQME to generate the input 
 for different levels of theory and softwares which is a common occurrence in 
 method benchmarking.
 
