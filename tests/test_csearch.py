@@ -282,6 +282,7 @@ def test_csearch_crest_parameters(
         + "/CSEARCH/"
         + program
         + "_xyz/"
+        + name + "_"
         + "crest_clustered.xyz"
     )
     assert os.path.exists(file_cluster)
@@ -292,7 +293,7 @@ def test_csearch_crest_parameters(
     assert len(mols) == output_nummols
     os.chdir(w_dir_main)
 
-    file_crest = str(csearch_crest_dir+"/CSEARCH/crest_xyz/crest.out")
+    file_crest = str(csearch_crest_dir+f"/CSEARCH/crest_xyz/{name}_crest.out")
     outfile = open(file_crest, "r")
     outlines_crest = outfile.readlines()
     outfile.close()
@@ -303,7 +304,7 @@ def test_csearch_crest_parameters(
                 assert line.find('--chrg 1 --uhf 1') > -1
                 break
 
-        file_xtb2 = str(csearch_crest_dir+"/CSEARCH/crest_xyz/methane_charged_crest.out")
+        file_xtb2 = str(csearch_crest_dir+"/CSEARCH/crest_xyz/methane_charged_crest_xtb1.out")
         outfile_xtb2 = open(file_xtb2, "r")
         outlines_xtb2 = outfile_xtb2.readlines()
         outfile.close()
@@ -317,7 +318,7 @@ def test_csearch_crest_parameters(
                 # check if crest_keywords are correct in CREST
                 assert line.find('--alpb benzene') > -1
                 break
-        file_xtb2 = str(csearch_crest_dir+"/CSEARCH/crest_xyz/methane_solvent_crest.out")
+        file_xtb2 = str(csearch_crest_dir+"/CSEARCH/crest_xyz/methane_solvent_crest_xtb1.out")
         outfile_xtb2 = open(file_xtb2, "r")
         outlines_xtb2 = outfile_xtb2.readlines()
         outfile.close()
@@ -331,7 +332,7 @@ def test_csearch_crest_parameters(
                 # check if n of procs are correct in CREST
                 assert line.find('-T 14') > -1
                 break
-        file_xtb2 = str(csearch_crest_dir+"/CSEARCH/crest_xyz/methane_nprocs_crest.out")
+        file_xtb2 = str(csearch_crest_dir+"/CSEARCH/crest_xyz/methane_nprocs_crest_xtb1.out")
         outfile_xtb2 = open(file_xtb2, "r")
         outlines_xtb2 = outfile_xtb2.readlines()
         outfile.close()
@@ -772,7 +773,10 @@ def test_csearch_methods(
         )
 
     if program == 'crest':
-        file_crest = str(csearch_methods_dir+"/CSEARCH/crest_xyz/crest.out")
+        if name != 'ethane':
+            file_crest = str(csearch_methods_dir+f"/CSEARCH/crest_xyz/{name}_crest.out")
+        else:
+            file_crest = str(csearch_methods_dir+f"/Et_sdf_files/crest_xyz/{name}_crest.out")
         outfile = open(file_crest, "r")
         outlines_crest = outfile.readlines()
         outfile.close()

@@ -107,6 +107,7 @@ def main():
             nrot_fullmonte=args.nrot_fullmonte,
             ang_fullmonte=args.ang_fullmonte,
             crest_keywords=args.crest_keywords,
+            xtb_keywords=args.xtb_keywords,
             angle_off=args.angle_off,
             nprocs=args.nprocs,
             cregen=args.cregen,

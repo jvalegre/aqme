@@ -25,7 +25,7 @@ that has the following contents:
 
    A jupyter notebook containing all the steps shown in this example can be found 
    in the AQME repository in `Github  <https://github.com/jvalegre/aqme>`__ or in 
-   `Figshare <https://figshare.com/articles/dataset/AQME_paper_examples/20043665/11>`__
+   `Figshare <https://figshare.com/articles/dataset/AQME_paper_examples/20043665>`__
 
 
 .. contents:: Steps
@@ -78,7 +78,7 @@ Step 5: Run the gnn.py to get results
 
 This step requires other files that do not use AQME itself. The other files 
 are available at 
-`Figshare <https://figshare.com/articles/dataset/AQME_paper_examples/20043665/11>`__ .
+`Figshare <https://figshare.com/articles/dataset/AQME_paper_examples/20043665>`__ .
 Specifically the files gnn.py and gnn_functions.py require to be on the same 
 directory as the file 'solubility.csv' and these two files depend on packages 
 that AQME does not depend on. So before continuing please make sure that you 

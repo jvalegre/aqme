@@ -110,15 +110,16 @@ def xtb_opt_main(
     cmin_valid = True
 
     os.chdir(dat_dir)
+    
     # for systems that were created from 1D and 2D inputs (i.e. SMILES), this part includes two xTB
     # constrained optimizations to avoid geometry problems in noncovalent complexes and transition states
+
+    # xTB optimization with all bonds frozen
     constrained_opt = False
+    xyzoutxtb1 = str(dat_dir) + "/" + name_no_path + "_xtb1.xyz"
     if complex_ts:
         if len(constraints_atoms) > 0 or len(constraints_dist) > 0 or len(constraints_angle) > 0 or len(constraints_dihedral) > 0:
             constrained_opt = True
-
-        # xTB optimization with all bonds frozen
-        xyzoutxtb1 = str(dat_dir) + "/" + name_no_path + "_xtb1.xyz"
 
         all_fix = get_constraint(mol, constraints_dist)
 
@@ -155,7 +156,13 @@ def xtb_opt_main(
             os.rename(str(dat_dir) + "/xtbopt.xyz", xyzoutxtb1)
         except FileNotFoundError:
             os.rename(str(dat_dir) + "/xtblast.xyz", xyzoutxtb1)
-        
+
+        # remove files that might interfere in subsequent calculations (i.e. wrong electron readings)
+        for file in glob.glob('*') + glob.glob('*.*') + glob.glob('.*'):
+            if os.path.exists(file):
+                if file.find('_xtb2') == -1 and file.find('_xtb1') == -1 and file.find('.out') == -1:
+                    os.remove(file)
+
         if constrained_opt:
             xyzoutxtb2 = str(dat_dir) + "/" + name_no_path + "_xtb2.xyz"
             # xTB optimization with the user-defined constraints
@@ -165,7 +172,7 @@ def xtb_opt_main(
                 list(constraints_dist),
                 list(constraints_angle),
                 list(constraints_dihedral),
-                xyzin,
+                xyzoutxtb1,
                 "constrain2.inp",
             )
 
@@ -215,20 +222,20 @@ def xtb_opt_main(
                 for keyword in self.args.xtb_keywords.split():
                     command.append(keyword)
 
-            run_command(command, f"{xyzin.split('.')[0]}.out")
-            os.rename(str(dat_dir) + "/xtbopt.xyz", xyzin)
+            run_command(command, f"{xyzin.split('.')[0]}_xtb1.out")
+            os.rename(str(dat_dir) + "/xtbopt.xyz", xyzoutxtb1)
         except FileNotFoundError:
             self.args.log.write(f"\nx   There was an error during the xTB pre-optimization. This error is related to parallelization of xTB jobs and is normally observed when using metal complexes in some operative systems/OpenMP versions. AQME is switching to using one processor (nprocs=1).\n")
             self.args.nprocs = 1
             try:
                 if self.args.xtb_keywords is None:
                     comm_xtb = f"export OMP_STACKSIZE={self.args.stacksize} && export OMP_NUM_THREADS={self.args.nprocs},1 \
-                    && xtb {xyzin} --opt -c {charge} --uhf {int(mult) - 1} >> {xyzin.split('.')[0]}.out"
+                    && xtb {xyzin} --opt -c {charge} --uhf {int(mult) - 1} >> {xyzin.split('.')[0]}_xtb1.out"
                 else:
                     comm_xtb = f"export OMP_STACKSIZE={self.args.stacksize} && export OMP_NUM_THREADS={self.args.nprocs},1 \
-                    && xtb {xyzin} --opt -c {charge} --uhf {int(mult) - 1} {self.args.xtb_keywords} >> {xyzin.split('.')[0]}.out"
+                    && xtb {xyzin} --opt -c {charge} --uhf {int(mult) - 1} {self.args.xtb_keywords} >> {xyzin.split('.')[0]}_xtb1.out"
                 subprocess.call(comm_xtb, shell=False)
-                os.rename(str(dat_dir) + "/xtbopt.xyz", xyzin)
+                os.rename(str(dat_dir) + "/xtbopt.xyz", xyzoutxtb1)
             except FileNotFoundError:
                 if self.args.program.lower() == "crest":
                     self.args.log.write(f"\nx   There was another error during the xTB pre-optimization that could not be fixed. Trying CREST directly with no xTB preoptimization.\n")
@@ -238,7 +245,7 @@ def xtb_opt_main(
                 mol_rd = None
                 energy = 0
 
-        xyzoutxtb2 = xyzin
+        xyzoutxtb2 = xyzoutxtb1
 
     xyzoutall = str(dat_dir) + "/" + name_no_path + "_conformers.xyz"
 
@@ -250,7 +257,7 @@ def xtb_opt_main(
                 list(constraints_dist),
                 list(constraints_angle),
                 list(constraints_dihedral),
-                xyzin,
+                xyzoutxtb2,
                 ".xcontrol.sample",
             )
 
@@ -275,7 +282,7 @@ def xtb_opt_main(
             for keyword in self.args.crest_keywords.split():
                 command.append(keyword)
 
-        run_command(command, str(dat_dir) + "/crest.out")
+        run_command(command, f"/{dat_dir}/{name_no_path}.out")
 
         # get number of n_atoms
         try:
@@ -290,7 +297,7 @@ def xtb_opt_main(
                 for keyword in self.args.cregen_keywords.split():
                     command.append(keyword)
 
-            run_command(command, str(dat_dir) + "/cregen.out")
+            run_command(command, f"{dat_dir}/{name_no_path}_cregen.out")
 
         try:
             if os.path.exists(str(dat_dir) + "/crest_clustered.xyz"):
@@ -317,7 +324,8 @@ def xtb_opt_main(
                 command_xyz, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
             )
 
-        sdwriter = Chem.SDWriter(str(f"{csearch_dir}/{name_no_path}.sdf"))
+        if self.args.program.lower() == "crest":
+            sdwriter = Chem.SDWriter(str(f"{csearch_dir}/{name_no_path}.sdf"))
         sdf_files = glob.glob(name_no_path + "*.sdf")
         for file in sdf_files:
             mol = rdkit.Chem.SDMolSupplier(file, removeHs=False, sanitize=False)
@@ -325,6 +333,7 @@ def xtb_opt_main(
             if self.args.program.lower() == "xtb":
                 energy = str(open(file, "r").readlines()[0].split()[1])
                 mol_rd.SetProp("_Name", name_init)
+                os.remove(file)
             elif self.args.program.lower() == "crest":
                 energy = str(open(file, "r").readlines()[0])
                 mol_rd.SetProp("_Name", name_no_path)
@@ -332,8 +341,26 @@ def xtb_opt_main(
                 mol_rd.SetProp("Real charge", str(charge))
                 mol_rd.SetProp("Mult", str(int(mult)))
                 sdwriter.write(mol_rd)
+                os.remove(file)
+                os.remove(f'{file.split(".")[0]}.xyz')
     else:
         xyz_files = []
+
+    # remove xTB/CREST files to avoid wrong readings of molecular information
+    for file in glob.glob('*') + glob.glob('*.*') + glob.glob('.*'):
+        if os.path.exists(file):
+            if file.find('.out') == -1:
+                if self.args.program.lower() == "xtb":
+                    os.remove(file)
+                elif self.args.program.lower() == "crest":
+                    if file.find('_xtb2') == -1 and file.find('_xtb1') == -1 and file.find('.out') == -1:
+                        try:
+                            if file == 'crest_clustered.xyz':
+                                os.rename('crest_clustered.xyz', f"{dat_dir}/{name_no_path}_clustered.xyz")
+                            else:
+                                os.remove(file)
+                        except IsADirectoryError:
+                            shutil.rmtree(file)
 
     os.chdir(self.args.w_dir_main)
 
@@ -387,7 +414,6 @@ def create_xcontrol(
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
-        os.remove(".xcontrol.sample")
 
         # add the constraints part
         edited_xcontrol = "$constrain\n"

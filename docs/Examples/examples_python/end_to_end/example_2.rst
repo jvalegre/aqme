@@ -49,7 +49,7 @@ for the Diels-Alder reaction for three pairs of reactants shown below:
 
    A jupyter notebook containing all the steps shown in this example can be found 
    in the AQME repository in `Github  <https://github.com/jvalegre/aqme>`__ or in 
-   `Figshare <https://figshare.com/articles/dataset/AQME_paper_examples/20043665/11>`__
+   `Figshare <https://figshare.com/articles/dataset/AQME_paper_examples/20043665>`__
 
 .. contents:: Steps
    :local:

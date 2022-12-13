@@ -3,6 +3,7 @@
 ######################################################.
 
 import json
+import sys
 import numpy as np
 import pandas as pd
 import ast
@@ -88,7 +89,12 @@ def get_boltz_avg_properties_xtb(
             "NMR Chemical Shifts",
         ]
         if nmr_experim is not None:
-            exp_data = pd.read_csv(nmr_experim)
+            try:
+                exp_data = pd.read_csv(nmr_experim)
+            except:
+                self.args.log.write(f'\nx  The CSV file with experimental NMR shifts specified ({nmr_experim}) was not found!')
+                self.args.log.finalize()
+                sys.exit()
 
     energy = []
 

@@ -164,7 +164,7 @@ class qcorr:
         for file in sorted(self.args.files):
             # get initial cclib data and termination/error types and discard calcs with no data
             file_name = os.path.basename(file).split(".")[0]
-            termination, errortype, cclib_data, outlines = self.cclib_init(
+            termination, errortype, cclib_data, outlines, file = self.cclib_init(
                 file, file_name
             )
             if errortype in ["no_data", "atomicbasiserror"]:
@@ -247,16 +247,22 @@ class qcorr:
         elif self.args.fullcheck == "True":
             self.args.fullcheck = True
         if self.args.fullcheck:
-            df_qcorr = pd.read_csv(csv_qcorr)
-            if df_qcorr["Normal termination"][0] > 0:
-                json_files = glob.glob(f"{destination_json}/*.json")
-                full_check(
-                    w_dir_main=destination_json,
-                    destination_fullcheck=destination_json,
-                    files=json_files,
-                    log=self.args.log,
-                )
-            else:
+            no_normal_terms = False
+            try:
+                df_qcorr = pd.read_csv(csv_qcorr)
+                if df_qcorr["Normal termination"][0] > 0:
+                    json_files = glob.glob(f"{destination_json}/*.json")
+                    full_check(
+                        w_dir_main=destination_json,
+                        destination_fullcheck=destination_json,
+                        files=json_files,
+                        log=self.args.log,
+                    )
+                else:
+                    no_normal_terms = True
+            except UnboundLocalError:
+                no_normal_terms = True
+            if no_normal_terms:
                 self.args.log.write("\nx  No normal terminations with no errors to run the full check analysis")
 
         elapsed_time = round(time.time() - start_time_overall, 2)
@@ -305,11 +311,11 @@ class qcorr:
         """
 
         # cclib generation of json files with ccwrite
-        termination, errortype, cclib_data = self.json_gen(file, file_name)
+        termination, errortype, cclib_data, file = self.json_gen(file, file_name)
         outlines = []
 
         if errortype == "no_data":
-            return termination, errortype, None, None
+            return termination, errortype, None, None, file 
 
         # calculations with 1 atom
         if cclib_data["properties"]["number of atoms"] == 1:
@@ -381,7 +387,7 @@ class qcorr:
                     ):
                         errortype = "spin_contaminated"
 
-        return termination, errortype, cclib_data, outlines
+        return termination, errortype, cclib_data, outlines, file 
 
     def analyze_normal(self, duplicate_data, errortype, cclib_data, file_name):
         """
@@ -688,8 +694,16 @@ class qcorr:
             with open(file_name + ".json") as json_file:
                 cclib_data = json.load(json_file)
         except FileNotFoundError:
-            termination = "other"
-            errortype = "no_data"
+            try:
+                # this part avoids problems when using cclib from command lines (not complete file PATH)
+                file = f'{self.args.initial_dir}/{file}'
+                command_run_2 = ["ccwrite", "json", file]
+                subprocess.run(command_run_2, capture_output=True)
+                with open(file_name + ".json") as json_file:
+                    cclib_data = json.load(json_file)
+            except FileNotFoundError:
+                termination = "other"
+                errortype = "no_data"
 
         # add parameters that might be missing from cclib (depends on the version)
         if not hasattr(cclib_data, "metadata") and errortype != "no_data":
@@ -704,7 +718,7 @@ class qcorr:
         if errortype == "no_data":
             self.args.log.write(f"x  Potential cclib compatibility problem or no data found for file {file_name} (Termination = {termination}, Error type = {errortype})")
 
-        return termination, errortype, cclib_data
+        return termination, errortype, cclib_data, file
 
     def fix_imag_freqs(self, cclib_data, cartesians):
         """
