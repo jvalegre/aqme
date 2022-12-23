@@ -145,7 +145,7 @@ class qdescp:
             boltz_dir.mkdir(exist_ok=True, parents=True)
             if self.args.program.lower() == "xtb":
                 for file in self.args.files:
-                    mol = Chem.SDMolSupplier(file, removeHs=False, sanitize=False)[0]
+                    mol = Chem.SDMolSupplier(file, removeHs=False)[0]
                     name = file.replace("/", "\\").split("\\")[-1].split(".")[0]
                     json_files = glob.glob(
                         str(destination) + "/" + name + "_conf_*.json"
