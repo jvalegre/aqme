@@ -116,11 +116,12 @@ def xtb_opt_main(
 
     # xTB optimization with all bonds frozen
     constrained_opt = False
+    if len(constraints_atoms) > 0 or len(constraints_dist) > 0 or len(constraints_angle) > 0 or len(constraints_dihedral) > 0:
+        constrained_opt = True
+        complex_ts = True
+
     xyzoutxtb1 = str(dat_dir) + "/" + name_no_path + "_xtb1.xyz"
     if complex_ts:
-        if len(constraints_atoms) > 0 or len(constraints_dist) > 0 or len(constraints_angle) > 0 or len(constraints_dihedral) > 0:
-            constrained_opt = True
-
         all_fix = get_constraint(mol, constraints_dist)
 
         _ = create_xcontrol(

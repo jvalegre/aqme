@@ -164,7 +164,7 @@ def load_template(complex_type, log):
         sys.exit()
 
     file_template = folder / Path(type2template[complex_type])
-    templates = Chem.SDMolSupplier(str(file_template))
+    templates = Chem.SDMolSupplier(str(file_template), sanitize=False)
     template = templates[-1]
 
     return template

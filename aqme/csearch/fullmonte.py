@@ -112,7 +112,7 @@ def generating_conformations_fullmonte(
         sdtemp.write(outmols[conf], conf)
     sdtemp.close()
 
-    fmmols = Chem.SDMolSupplier(name + "_" + "rdkit" + args.output, removeHs=False)
+    fmmols = Chem.SDMolSupplier(name + "_" + "rdkit" + args.output, removeHs=False, sanitize=False)
     if fmmols is None:
         args.log.write("Could not open " + name + args.output)
         args.log.finalize()

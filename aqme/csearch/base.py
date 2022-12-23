@@ -794,7 +794,7 @@ class csearch:
 
         rotated_energy = []
         # apply filters
-        with Chem.SDMolSupplier(str(self.csearch_file), removeHs=False) as rdmols:
+        with Chem.SDMolSupplier(str(self.csearch_file), removeHs=False, sanitize=False) as rdmols:
 
             if rdmols is None:
                 self.args.log.write("\nCould not open " + name + self.args.output)
