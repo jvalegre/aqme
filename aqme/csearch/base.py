@@ -864,7 +864,6 @@ class csearch:
         """
         If program = RDKit, this replaces iodine back to the metal (if needed) and writes the RDKit SDF files. With program = summ, this function optimizes rotamers
         """
-
         if i >= len(matches):  # base case, torsions should be set in conf
             # setting the metal back instead of I
             if len(self.args.metal_atoms) >= 1 and (
@@ -1089,20 +1088,20 @@ class csearch:
                         alg_Map,
                         mol_template,
                     )
-                elif self.args.program.lower() in ["crest"]:
-                    mol = self.genConformer_r(
-                        outmols[conf],
-                        conf,
-                        0,
-                        rotmatches,
-                        sdwriter,
-                        outmols[conf].GetProp("_Name"),
-                        update_to_rdkit,
-                        coord_Map,
-                        alg_Map,
-                        mol_template,
-                    )
-                    break
+                # elif self.args.program.lower() in ["crest"]:
+                #     mol = self.genConformer_r(
+                #         outmols[conf],
+                #         conf,
+                #         0,
+                #         rotmatches,
+                #         sdwriter,
+                #         outmols[conf].GetProp("_Name"),
+                #         update_to_rdkit,
+                #         coord_Map,
+                #         alg_Map,
+                #         mol_template,
+                #     )
+                #     break
 
             status = 1
 
