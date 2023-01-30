@@ -95,9 +95,11 @@ def xtb_opt_main(
     else:
         csearch_dir = Path(self.args.destination)
     if method_opt == 'crest':
+        self.args.log.write(f"\no  Starting xTB pre-optimization before CREST sampling")
         dat_dir = csearch_dir / "crest_xyz"
         xyzin = f"{dat_dir}/{name_no_path}.xyz"
     elif method_opt == 'xtb':
+        self.args.log.write(f"\no  Starting xTB optimization")
         dat_dir = csearch_dir / "xtb_xyz"
         xyzin = f"{dat_dir}/{name_no_path}_xtb.xyz"
     dat_dir.mkdir(exist_ok=True, parents=True)
@@ -251,6 +253,7 @@ def xtb_opt_main(
     xyzoutall = str(dat_dir) + "/" + name_no_path + "_conformers.xyz"
 
     if self.args.program.lower() == "crest":
+        self.args.log.write(f"\no  Starting CREST sampling")
         if constrained_opt:
             _ = create_xcontrol(
                 self.args,
@@ -292,6 +295,7 @@ def xtb_opt_main(
                 self.args.log.write(f"\nx  CREST optimization failed! This might be caused by different reasons. For example, this might happen if you're using metal complexes without specifying any kind of template in the complex_type option (i.e. squareplanar).\n")
 
         if self.args.cregen and int(natoms) != 1:
+            self.args.log.write(f"\no  Starting CREGEN sorting")
             command = ["crest", "crest_best.xyz", "--cregen", "crest_conformers.xyz"]
 
             if self.args.cregen_keywords is not None:

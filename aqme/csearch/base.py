@@ -165,7 +165,7 @@ Crest only
       included in -c, --uhf, -P and --input. For example: '--alpb ch2cl2 --gfn 1' 
 """
 #####################################################.
-#          This file storesthe CSEARCH class        #
+#          This file stores the CSEARCH class       #
 #             used in conformer generation          #
 #####################################################.
 
@@ -636,20 +636,10 @@ class csearch:
         if (
             self.args.program.lower() in ["crest"]
             and self.args.smi is None
-            and self.args.input.split(".")[1]
-            in [
-                "pdb",
-                "mol2",
-                "mol",
-                "sdf",
-                "gjf",
-                "com",
-                "xyz",
-            ]
+            and self.args.input.split(".")[1] in ["pdb","mol2","mol","sdf","gjf","com","xyz"]
         ):
- 
-            valid_structure = True
 
+            valid_structure = True
             status = xtb_opt_main(
                 f"{name}_{self.args.program.lower()}",
                 dup_data,
@@ -735,6 +725,13 @@ class csearch:
 
         # writes sdf for the first RDKit conformer generation
         if not complex_ts:
+            if self.args.program.lower() in ['rdkit']:
+                self.args.log.write(f"\no  Starting RDKit conformer sampling")
+            elif self.args.program.lower() in ['summ','fullmonte']:
+                self.args.log.write(f"\no  Starting RDKit-{self.args.program} conformer sampling")
+            elif self.args.program.lower() in ['crest'] and self.args.input.split(".")[1] not in ["pdb","mol2","mol","sdf","gjf","com","xyz"]:
+                self.args.log.write(f"\no  Starting initial RDKit-based mol generation from SMILES")
+
             status, rotmatches, ff, mol_crest = self.rdkit_to_sdf(
                 mol,
                 name,
@@ -759,7 +756,10 @@ class csearch:
                     status = self.dihedral_filter_and_sdf(
                         name, dup_data, dup_data_idx, coord_Map, alg_Map, mol_template, ff
                     )
+
         if self.args.program.lower() in ['crest']:
+            if self.args.input.split(".")[1] not in ["pdb","mol2","mol","sdf","gjf","com","xyz"]:
+                self.args.log.write(f"\no  RDKit-based mol generation from SMILES finished")
             if not complex_ts:
                 # mol_crest is the RDKit-optimized mol object
                 rdmolfiles.MolToXYZFile(mol_crest, name + "_crest.xyz")
@@ -767,6 +767,7 @@ class csearch:
                 # mol is the raw mol object (no optimization with RDKit to avoid problems when using
                 # noncovalent complexes and TSs)
                 rdmolfiles.MolToXYZFile(mol, name + "_crest.xyz")
+
             status = xtb_opt_main(
                     f"{name}_{self.args.program.lower()}",
                     dup_data,
@@ -910,7 +911,6 @@ class csearch:
         """
 
         if i >= len(matches):  # base case, torsions should be set in conf
-            # setting the metal back instead of I
             if len(self.args.metal_atoms) >= 1 and (
                 self.args.program.lower() in ["rdkit","crest"] or update_to_rdkit
             ):
@@ -932,6 +932,8 @@ class csearch:
                         self.args.opt_steps_rdkit,
                     )
                 mol.SetProp("Energy", str(energy))
+
+                # setting the metal back instead of I
                 set_metal_atomic_number(mol, self.args.metal_idx, self.args.metal_sym)
             try:
                 sdwriter.write(mol, conf)
@@ -944,6 +946,10 @@ class csearch:
             else:
                 return 1
 
+        if self.args.program.lower() in ["crest"]:
+            return mol
+
+        # when SUMM is selected, this cycle generates conformers based on rotation of dihedral angles
         total = 0
         deg = 0
         while deg < 360.0:
@@ -1018,7 +1024,7 @@ class csearch:
                 energy = minimize_rdkit_energy(
                     mol, conf, self.args.log, ff, self.args.opt_steps_rdkit
                 )
-            else:  # id template realign before doing calculations
+            else:  # template realign before doing calculations
                 mol, energy = realign_mol(
                     mol,
                     conf,

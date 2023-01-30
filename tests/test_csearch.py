@@ -185,6 +185,18 @@ def test_csearch_input_parameters(program, input, output_nummols):
             1,
             1,
         ),
+        # tests for conformer generation with multiple confs
+        (
+            "crest",
+            "CCCC",
+            "butane",
+            False,
+            None,
+            None,
+            0,
+            1,
+            3,
+        ),
         # tests for crest_keywords
         (
             "crest",
@@ -250,6 +262,13 @@ def test_csearch_crest_parameters(
             mult=mult,
             nprocs=14
         )
+    elif name == 'butane':
+        csearch(
+            w_dir_main=csearch_crest_dir,
+            program=program,
+            smi=smi,
+            name=name
+        )
     elif name == 'methane_solvent':
         csearch(
             w_dir_main=csearch_crest_dir,
@@ -276,16 +295,16 @@ def test_csearch_crest_parameters(
             mult=mult
         )
 
-    # tests here
-    file_cluster = str(
-        csearch_crest_dir
-        + "/CSEARCH/"
-        + program
-        + "_xyz/"
-        + name + "_"
-        + "crest_clustered.xyz"
-    )
-    assert os.path.exists(file_cluster)
+    if name != 'butane':
+        file_cluster = str(
+            csearch_crest_dir
+            + "/CSEARCH/"
+            + program
+            + "_xyz/"
+            + name + "_"
+            + "crest_clustered.xyz"
+        )
+        assert os.path.exists(file_cluster)
     file = str("CSEARCH/" + name + "_" + program + ".sdf")
     mols = rdkit.Chem.SDMolSupplier(file, removeHs=False)
     assert charge == int(mols[0].GetProp("Real charge"))

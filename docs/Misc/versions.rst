@@ -4,6 +4,11 @@
 Versions
 ========
 
+Version 1.4.2 [`url <https://github.com/jvalegre/aqme/releases/tag/1.4.2>`__]
+   -  Fixing an error that raised when using CSEARCH-CREST with organic molecules.
+   -  Adding more information printed when running CSEARCH
+   -  Updated README with citations from external programs
+
 Version 1.4.1 [`url <https://github.com/jvalegre/aqme/releases/tag/1.4.1>`__]
    -  Changed the way xTB works in CMIN. Before, it worked through xtb-python, but in this 
       version xtb is called through the xTB external command. This change speeds up the 
