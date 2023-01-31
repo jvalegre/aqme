@@ -739,11 +739,11 @@ def mol_from_sdf_or_mol_or_mol2(input_file, module):
             extension = ".sdf"
 
         if extension.lower() == ".sdf":
-            mols = Chem.SDMolSupplier(input_file, removeHs=False, sanitize=False)
+            mols = Chem.SDMolSupplier(input_file, removeHs=False)
         elif extension.lower() == ".mol":
-            mols = [Chem.MolFromMolFile(input_file, removeHs=False, sanitize=False)]
+            mols = [Chem.MolFromMolFile(input_file, removeHs=False)]
         elif extension.lower() == ".mol2":
-            mols = [Chem.MolFromMol2File(input_file, removeHs=False, sanitize=False)]
+            mols = [Chem.MolFromMol2File(input_file, removeHs=False)]
 
         IDs, charges, mults = [], [], []
 

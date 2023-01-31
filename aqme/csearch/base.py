@@ -758,8 +758,6 @@ class csearch:
                     )
 
         if self.args.program.lower() in ['crest']:
-            if self.args.input.split(".")[1] not in ["pdb","mol2","mol","sdf","gjf","com","xyz"]:
-                self.args.log.write(f"\no  RDKit-based mol generation from SMILES finished")
             if not complex_ts:
                 # mol_crest is the RDKit-optimized mol object
                 rdmolfiles.MolToXYZFile(mol_crest, name + "_crest.xyz")
@@ -795,7 +793,7 @@ class csearch:
 
         rotated_energy = []
         # apply filters
-        with Chem.SDMolSupplier(str(self.csearch_file), removeHs=False, sanitize=False) as rdmols:
+        with Chem.SDMolSupplier(str(self.csearch_file), removeHs=False) as rdmols:
 
             if rdmols is None:
                 self.args.log.write("\nCould not open " + name + self.args.output)
@@ -998,7 +996,7 @@ class csearch:
         cids = rdDistGeom.EmbedMultipleConfs(mol, initial_confs, **embed_kwargs)
 
         if len(cids) <= 1 and initial_confs != 1:
-            self.args.log.write(f"\no  Normal RDKit embeding process failed, trying to generate conformers with random coordinates (with {str(initial_confs)} possibilities)")
+            self.args.log.write(f"\nx  Normal RDKit embeding process failed, trying to generate conformers with random coordinates (with {str(initial_confs)} possibilities)")
             embed_kwargs["useRandomCoords"] = True
             embed_kwargs["boxSizeMult"] = 10.0
             embed_kwargs["numZeroFail"] = 1000
