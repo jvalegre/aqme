@@ -336,13 +336,17 @@ def xtb_opt_main(
             mol = rdkit.Chem.SDMolSupplier(file, removeHs=False, sanitize=False)
             mol_rd = rdkit.Chem.RWMol(mol[0])
             if self.args.program.lower() == "xtb":
-                energy = str(open(file, "r").readlines()[0].split()[1])
+                # convert from hartree (default in xtb) to kcal
+                energy_Eh = float(open(f'{file.split(".")[0]}1.xyz', "r").readlines()[1].split()[1])
+                energy_kcal = energy_Eh*627.5
                 mol_rd.SetProp("_Name", name_init)
                 os.remove(file)
             elif self.args.program.lower() == "crest":
-                energy = str(open(file, "r").readlines()[0])
+                # convert from hartree (default in xtb) to kcal
+                energy_Eh = float(open(file, "r").readlines()[0])
+                energy_kcal = str(energy_Eh*627.5)
                 mol_rd.SetProp("_Name", name_no_path)
-                mol_rd.SetProp("Energy", energy)
+                mol_rd.SetProp("Energy", energy_kcal)
                 mol_rd.SetProp("Real charge", str(charge))
                 mol_rd.SetProp("Mult", str(int(mult)))
                 sdwriter.write(mol_rd)
@@ -374,7 +378,7 @@ def xtb_opt_main(
         return 1
 
     if method_opt == 'xtb':
-        return mol_rd, float(energy), cmin_valid
+        return mol_rd, energy_kcal, cmin_valid
 
 
 def create_xcontrol(

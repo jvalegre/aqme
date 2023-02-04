@@ -401,7 +401,10 @@ def minimize_rdkit_energy(mol, conf, log, FF, maxsteps):
         sys.exit()
 
     forcefield.Initialize()
-    forcefield.Minimize(maxIts=maxsteps)
+    try:
+        forcefield.Minimize(maxIts=maxsteps)
+    except RuntimeError:
+        log.write(f"\nx  Geometry minimization failed with {FF}, using non-optimized geometry.")
     energy = float(forcefield.CalcEnergy())
 
     return energy

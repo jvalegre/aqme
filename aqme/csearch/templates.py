@@ -13,7 +13,7 @@ from aqme.utils import get_conf_RMS
 TEMPLATES_PATH = Path(resource_filename("aqme", "templates"))
 
 
-def template_embed(self, mol, complex_type, metal_idx, maxsteps, heavyonly, maxmatches):
+def template_embed(self, mol, complex_type, metal_idx, maxsteps, heavyonly, maxmatches, name):
     """
     Wrapper function to select automatically the appropiate embedding function
     depending on the number of neighbours of the metal center.
@@ -30,7 +30,7 @@ def template_embed(self, mol, complex_type, metal_idx, maxsteps, heavyonly, maxm
     # Generate the embeddings
     neighbours = calc_neighbours(mol, metal_idx)
     embed = embed_functions[len(neighbours)]
-    items = embed(mol, template, neighbours, self.args.name, maxsteps, self.args.log)
+    items = embed(mol, template, neighbours, name, maxsteps, self.args.log)
 
     # Filter the results
     molecules = items[0]
@@ -159,7 +159,7 @@ def load_template(complex_type, log):
     folder = TEMPLATES_PATH
 
     if not folder.exists():
-        log.write("x The templates folder was not found, probably due to a problem while installing AQME")
+        log.write("x  The templates folder was not found, probably due to a problem while installing AQME")
         log.finalize()
         sys.exit()
 
@@ -185,10 +185,11 @@ def calc_neighbours(molecule, metals_idx):
 
     Returns
     -------
-    list
+    neighbours : list
         List of neighbour atoms
     """
 
+    # depending on the amount of neighbours, use Si or I atoms to fit the templates
     bonds2AtNum = dict()
     bonds2AtNum[5] = 14
     bonds2AtNum[4] = 14
@@ -198,14 +199,51 @@ def calc_neighbours(molecule, metals_idx):
     for atom in molecule.GetAtoms():
         idx = atom.GetIdx()
         if idx in metals_idx:
+            neighbours = atom.GetNeighbors()
+            # in case metals are used with different bonds (i.e., Cu2+ and CuL2)
             n_bonds = len(atom.GetBonds())
             AtNum = bonds2AtNum[n_bonds]
             atom.SetAtomicNum(AtNum)
             if n_bonds == 5:
                 atom.SetFormalCharge(1)
-            neighbours = atom.GetNeighbors()
             return neighbours
     return []
+
+
+def check_metal_neigh(mol, complex_type, metal_idx_ind, log, valid_template):
+    """
+    Checks if the metal and the template contain the same number of ligands.
+
+    Parameters
+    ----------
+    mol : rdkit.Chem.Mol
+        Mol object
+    complex_type : str
+        Type of template to be used (i.e., squareplanar)
+    metals_idx : list
+        List containing the Idx of the metals
+
+    Returns
+    -------
+    valid_template : bool
+        Whether the complexes are compatible with the template selected
+    """
+
+    if complex_type == "linear":
+        expect_neigh = 2
+    elif complex_type == "trigonalplanar":
+        expect_neigh = 3
+    elif complex_type == "squareplanar":
+        expect_neigh = 4
+    elif complex_type == "squarepyramidal":
+        expect_neigh = 5
+    metal_atom = mol.GetAtoms()[metal_idx_ind]
+    metal_neigh = metal_atom.GetNeighbors()
+    if len(metal_neigh) != expect_neigh:
+        log.write(f"x  The number of neighbours of the metal ({len(metal_neigh)}) does not match the number of expected neighbours for the template selected ({complex_type}). No templates will be applied to this system.")
+        valid_template = False
+
+    return valid_template
 
 
 def get_distance_constrains(coordMap):

@@ -5,9 +5,15 @@ Versions
 ========
 
 Version 1.4.2 [`url <https://github.com/jvalegre/aqme/releases/tag/1.4.2>`__]
-   -  Fixing an error that raised when using CSEARCH-CREST with organic molecules.
+   -  Fixed an error that raised when using CSEARCH-CREST with organic molecules.
    -  Adding more information printed when running CSEARCH
    -  Updated README with citations from external programs
+   -  Fixed a bug during filtering of xTB conformers in CMIN (using kcal/mol instead of Hartree
+      in the filters now)
+   -  Writing CSEARCH-CREST conformers in kcal/mol instead of Hartrees
+   -  Templates are not active when using metals with different number of ligands 
+      (i.e. if complex_type='linear' and Cu2+/CuL2 are used simultaneously)
+   -  Charge and multiplicity can be specified in CSV files using "charge" and "mult" columns
 
 Version 1.4.1 [`url <https://github.com/jvalegre/aqme/releases/tag/1.4.1>`__]
    -  Changed the way xTB works in CMIN. Before, it worked through xtb-python, but in this 

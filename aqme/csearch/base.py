@@ -203,7 +203,7 @@ from aqme.csearch.utils import (
     smi_to_mol,
     getDihedralMatches
 )
-from aqme.csearch.templates import template_embed
+from aqme.csearch.templates import template_embed, check_metal_neigh
 from aqme.csearch.fullmonte import generating_conformations_fullmonte, realign_mol
 from aqme.utils import (
     rules_get_charge,
@@ -252,6 +252,13 @@ class csearch:
             self.args.log.write("\nx  Program requires either a SMILES or an input file to proceed! Please look up acceptable file formats. Specify: smi='CCC' (or input='filename.csv')")
             self.args.log.finalize()
             sys.exit()
+        elif self.args.smi is not None and self.args.input != "":
+            self.args.log.write("\nx  Program requires either a SMILES or an input file to proceed, don't use both!")
+            self.args.log.finalize()
+            sys.exit()
+        # specify a dummy extension for inputif smi is not None (avoids errors in LOG printings)
+        if self.args.smi is not None:
+            self.args.input = 'no_ext.no_ext'
 
         try:
             if Path(f"{self.args.w_dir_main}").exists():
@@ -405,15 +412,9 @@ class csearch:
         Function to start conformer generation
         """
 
-        if self.args.smi is not None or self.args.input.split(".")[1] in [
-                "smi",
-                "csv",
-                "cdx",
-                "txt",
-                "yaml",
-                "yml",
-                "rtf",
-            ]:
+        self.args.log.write(f"\n   ----- {name} -----")
+
+        if self.args.smi is not None or self.args.input.split(".")[1] in ["smi","csv","cdx","txt","yaml","yml","rtf"]:
             (
                 mol,
                 constraints_atoms,
@@ -432,8 +433,11 @@ class csearch:
             )
             if mol is None:
                 self.args.log.write(f"\nx  Failed to convert the provided SMILES ({smi}) to an RDkit Mol object! Please check the starting smiles.")
-                self.args.log.finalize()
-                sys.exit()
+                # if a list of SMILES is provided, the program doesn't stop if one SMILES fails to convert to mol
+                if self.args.input.split(".")[1] not in ["csv","cdx","txt","yaml","yml","rtf"]:
+                    self.args.log.finalize()
+                    sys.exit()
+                return
 
         else:
             # for 3D input formats, the smi variable represents the mol object
@@ -486,7 +490,8 @@ class csearch:
             elif self.args.input.split(".")[1] == "xyz":
                 shutil.copy(f"{name}.xyz", f"{name}_{self.args.program.lower()}.xyz")
 
-        # Converts each line to an RDKit mol object
+        template_opt = False
+        # replaces the metal for an I atom
         if len(self.args.metal_atoms) >= 1:
             (
                 self.args.metal_idx,
@@ -508,10 +513,16 @@ class csearch:
 
             if self.args.complex_type in accepted_complex_types:
                 count_metals = 0
+                valid_template = True
+                # check if the specified metal is included in the system
                 for metal_idx_ind in self.args.metal_idx:
                     if metal_idx_ind is not None:
+                        # calculate number of expected neighbours
+                        valid_template = check_metal_neigh(mol, self.args.complex_type, metal_idx_ind, self.args.log, valid_template)
                         count_metals += 1
-                if count_metals == 1:
+
+                if count_metals == 1 and valid_template:
+                    template_opt = True
                     template_kwargs = dict()
                     template_kwargs["complex_type"] = self.args.complex_type
                     template_kwargs["metal_idx"] = self.args.metal_idx
@@ -519,6 +530,7 @@ class csearch:
                     template_kwargs["heavyonly"] = self.args.heavyonly
                     template_kwargs["maxmatches"] = self.args.max_matches_rmsd
                     template_kwargs["mol"] = mol
+                    template_kwargs["name"] = name
                     items = template_embed(self, **template_kwargs)
 
                     total_data = creation_of_dup_csv_csearch(self.args.program.lower())
@@ -538,20 +550,11 @@ class csearch:
                         )
                         frames = [total_data, data]
                         total_data = pd.concat(frames, sort=True)
-                else:
-                    self.args.log.write("\nx  Cannot use templates for complexes involving more than 1 metal or for organic molecueles.")
-                    total_data = None
-            else:
-                total_data = self.conformer_generation(
-                    mol,
-                    name,
-                    constraints_atoms,
-                    constraints_dist,
-                    constraints_angle,
-                    constraints_dihedral,
-                    complex_ts
-                )
-        else:
+
+                elif count_metals > 1 or count_metals == 0:
+                    self.args.log.write(f"\nx  The template specified {self.args.complex_type} is not used for systems with more than 1 metal or for organic molecueles.")
+
+        if not template_opt:
             total_data = self.conformer_generation(
                 mol,
                 name,
@@ -589,7 +592,6 @@ class csearch:
         dup_data_idx = 0
         start_time = time.time()
         status = None
-        self.args.log.write(f"\n   ----- {name} -----")
 
         # check if metals and oxidation states are both used
         if self.args.metal_atoms != []:

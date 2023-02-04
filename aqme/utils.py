@@ -256,6 +256,7 @@ def rules_get_charge(mol, args):
                 M_ligands.append(neighbour.GetIdx())
                 if neighbour.GetTotalValence() == 4:
                     if neighbour.GetSymbol() in C_group:
+                        # first, detects carbenes to adjust charge
                         carbene_like = False
                         bridge_ligand = False
                         for inside_neighbour in neighbour.GetNeighbors():
@@ -266,45 +267,27 @@ def rules_get_charge(mol, args):
                                         # we use I since the M is still represented as I at this point
                                         if N_neighbour.GetSymbol() == "I":
                                             bridge_ligand = True
-                                            bridge_atoms.append(
-                                                inside_neighbour.GetIdx()
-                                            )
+                                            bridge_atoms.append(inside_neighbour.GetIdx())
                                     if not bridge_ligand:
                                         carbene_like = True
                                         N_carbenes.append(inside_neighbour.GetIdx())
                         if not carbene_like:
                             charge_rules[i] = charge_rules[i] - 1
                 elif neighbour.GetTotalValence() == 3:
-                    if neighbour.GetSymbol() in N_group:
+                    if neighbour.GetSymbol() in N_group and neighbour.GetFormalCharge() == 0:
                         charge_rules[i] = charge_rules[i] - 1
                 elif neighbour.GetTotalValence() == 2:
-                    if neighbour.GetSymbol() in O_group:
-                        nitrone_like = False
-                        for inside_neighbour in neighbour.GetNeighbors():
-                            if inside_neighbour.GetSymbol() in N_group:
-                                nitrone_like = True
-                        if not nitrone_like:
-                            charge_rules[i] = charge_rules[i] - 1
+                    if neighbour.GetSymbol() in O_group and neighbour.GetFormalCharge() == 0:
+                        charge_rules[i] = charge_rules[i] - 1
                 elif neighbour.GetTotalValence() == 1:
                     if neighbour.GetSymbol() in F_group:
                         charge_rules[i] = charge_rules[i] - 1
 
-    # for charges not in the metal or ligand
+    # for charges not in the metal, neighbours or exceptions (i.e., C=N+ from carbenes or CN from bridge atoms)
+    invalid_charged_atoms = M_ligands + N_carbenes + bridge_atoms + args.metal_idx
     for i, atom in enumerate(mol.GetAtoms()):
-        if atom.GetIdx() not in M_ligands and atom.GetIdx() not in args.metal_idx:
+        if atom.GetIdx() not in invalid_charged_atoms:
             charge_rules[i] = atom.GetFormalCharge()
-    # recognizes charged N and O atoms in metal ligands (added to the first metal of the list as default)
-    # this group contains atoms that do not count as separate charge groups (i.e. N from Py ligands)
-    if len(neighbours) > 0:
-        invalid_charged_atoms = M_ligands + N_carbenes + bridge_atoms
-        for atom in mol.GetAtoms():
-            if atom.GetIdx() not in invalid_charged_atoms:
-                if atom.GetSymbol() in N_group:
-                    if atom.GetTotalValence() == 4:
-                        charge_rules[0] = charge_rules[0] + 1
-                if atom.GetSymbol() in O_group:
-                    if atom.GetTotalValence() == 1:
-                        charge_rules[0] = charge_rules[0] - 1
 
     charge = np.sum(charge_rules)
     if not metal_found:
@@ -321,6 +304,10 @@ def substituted_mol(self, mol, checkI):
     neighbors.
 
     """
+
+    self.args.metal_idx = []
+    self.args.complex_coord = []
+    self.args.metal_sym = []
 
     for _ in self.args.metal_atoms:
         self.args.metal_idx.append(None)

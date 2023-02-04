@@ -103,7 +103,6 @@ from progress.bar import IncrementalBar
 from rdkit.Geometry import Point3D
 import pandas as pd
 import time
-from ase.units import Hartree
 from aqme.utils import load_variables, rules_get_charge, substituted_mol, mol_from_sdf_or_mol_or_mol2
 from aqme.filter import ewin_filter, pre_E_filter, RMSD_and_E_filter
 from aqme.cmin_utils import creation_of_dup_csv_cmin
@@ -349,8 +348,6 @@ class cmin:
             cids = list(range(len(outmols)))
             sorted_all_cids = sorted(cids, key=lambda cid: cenergy[cid])
 
-            name_mol = self.name
-
             for cid in sorted_all_cids:
                 outmols[cid].SetProp(
                     "_Name", outmols[cid].GetProp("_Name") + " " + self.args.program.lower()
@@ -555,7 +552,7 @@ class cmin:
 
     def charge_mult_cmin(self, dup_data, dup_data_idx, type_cmin):
         """
-        Retrieves charge and multiplicity arrays for ANI optimizations.
+        Retrieves charge and multiplicity arrays (for ANI) and values (for xTB) optimizations.
 
         Parameters
         ----------

@@ -158,7 +158,7 @@ Other requirements
 
 *  RDKit
 *  Openbabel
-*  XTB
+*  xTB
 *  CREST
 
 *RDKit and Openbabel are installed during the initial conda-forge installation.*
@@ -360,7 +360,7 @@ List of main developers and contact emails:
    `ORCID <https://orcid.org/0000-0002-0769-7168>`__ , 
    `Github <https://github.com/jvalegre>`__ , 
    `email <jv.alegre@csic.es>`__ ]
-   main developer of the CSEARCH, QCORR, QPREP and QDESCP modules.  
+   main developer of the CSEARCH, CMIN, QCORR, QPREP and QDESCP modules.  
 *  Shree Sowndarya S. V. [
    `ORCID <https://orcid.org/0000-0002-4568-5854>`__ , 
    `Github <https://github.com/shreesowndarya>`__ , 
@@ -374,7 +374,7 @@ List of main developers and contact emails:
 *  Turki Alturaifi [
    `webpage <https://www.chem.pitt.edu/person/turki-alturaifi>`__ ,
    `Github <https://github.com/turkiAlturaifi>`__ , 
-   `email <turki0@tma53@pitt.edu>`__] 
+   `email <tma53@pitt.edu>`__] 
    worked in benchmarking the parameters for RDKit-based conformer generation. 
 *  Robert S. Paton [
    `ORCID <https://orcid.org/0000-0002-0104-4166>`__ ,
