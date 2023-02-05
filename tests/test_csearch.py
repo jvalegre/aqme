@@ -606,6 +606,7 @@ def test_csearch_rdkit_summ_parameters(
             False,
             4,
         ),
+        # multiple templates
         (
             "rdkit",
             "I[Pd]([PH3+])(F)Cl",
@@ -624,7 +625,43 @@ def test_csearch_rdkit_summ_parameters(
             False,
             1
         ),
-        # compatibility of CREST with metal complexes
+        (
+            "rdkit",
+            "N#C[Cu](C#N)C#N",
+            "Cu_trigonal",
+            False,
+            True,
+            ["Cu"],
+            [1],
+            "trigonalplanar",
+            None,
+            None,
+            None,
+            -2,
+            1,
+            None,
+            False,
+            1
+        ),
+        (
+            "rdkit",
+            "[O-][V](Cl)(Cl)(Cl)Cl",
+            "V_squarepyramidal",
+            False,
+            True,
+            ["V"],
+            [4],
+            "squarepyramidal",
+            None,
+            None,
+            None,
+            -2,
+            1,
+            None,
+            False,
+            1
+        ),
+        # compatibility of CREST with metal complexes and templates
         (
             "crest",
             "[NH3+][Ag][NH3+]",
@@ -763,6 +800,8 @@ def test_csearch_methods(
             metal_atoms=metal,
             metal_oxi=metal_oxi,
             complex_type=complex_type,
+            mult=mult,
+            sample=10
         )
 
     elif complex is True:
@@ -779,7 +818,7 @@ def test_csearch_methods(
 
     if destination:
         file = str(csearch_methods_dir+"/Et_sdf_files/" + name + "_" + program + ".sdf")
-    elif metal_complex is False or name == 'Ag_complex_crest':
+    elif metal_complex is False or name in ['Ag_complex_crest','Cu_trigonal']:
         file = str(csearch_methods_dir+"/CSEARCH/" + name + "_" + program + ".sdf")
     else:
         file = str(

@@ -277,9 +277,15 @@ def rules_get_charge(mol, args):
                     if neighbour.GetSymbol() in N_group and neighbour.GetFormalCharge() == 0:
                         charge_rules[i] = charge_rules[i] - 1
                 elif neighbour.GetTotalValence() == 2:
-                    if neighbour.GetSymbol() in O_group and neighbour.GetFormalCharge() == 0:
+                    # radical chalcogen atoms (i.e., Cu-OH(rad))
+                    if neighbour.GetSymbol() in O_group and neighbour.GetFormalCharge() == 0 and len(neighbour.GetNeighbors()) == 2:
                         charge_rules[i] = charge_rules[i] - 1
+                    # double bonded chalcogen atom (i.e., V=O)
+                    elif neighbour.GetSymbol() in O_group and neighbour.GetFormalCharge() == 0 and len(neighbour.GetNeighbors()) == 1:
+                        charge_rules[i] = charge_rules[i] - 2
                 elif neighbour.GetTotalValence() == 1:
+                    if neighbour.GetSymbol() in O_group:
+                        charge_rules[i] = charge_rules[i] - 2
                     if neighbour.GetSymbol() in F_group:
                         charge_rules[i] = charge_rules[i] - 1
 

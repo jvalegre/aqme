@@ -427,7 +427,7 @@ def four_embed(molecule, template, neighbours, name, maxsteps, log):
 
 @doc_returns
 @doc_parameters
-def five_embed(molecule, mol_template, neighbours, name, maxsteps, log):
+def five_embed(molecule, template, neighbours, name, maxsteps, log):
     """
     Embedding function for squarepyramidal geometry. Requires
     'template-4-and-5.sdf' template. Attempts 15 embeddings.
@@ -439,7 +439,9 @@ def five_embed(molecule, mol_template, neighbours, name, maxsteps, log):
     alg_maps = []
     mol_templates = []
     counter = 0
-    atomic_numbers = [mol_template.GetAtomWithIdx(i).GetAtomicNum() for i in neighbours]
+    atomic_numbers = []
+    for _,atom in enumerate(neighbours):
+        atomic_numbers.append(atom.GetAtomicNum())
     replacements = [
         [4, 0, 1, 2, 3],
         [4, 0, 2, 3, 1],
@@ -459,17 +461,17 @@ def five_embed(molecule, mol_template, neighbours, name, maxsteps, log):
     ]
     for replacement in replacements:
         at0, at1, at2, at3, at4 = [atomic_numbers[r] for r in replacement]
-        mol_template.GetAtomWithIdx(0).SetAtomicNum(at0)
-        mol_template.GetAtomWithIdx(1).SetAtomicNum(at1)
-        mol_template.GetAtomWithIdx(2).SetAtomicNum(at2)
-        mol_template.GetAtomWithIdx(3).SetAtomicNum(at3)
-        mol_template.GetAtomWithIdx(4).SetAtomicNum(at4)
-        mol_template.GetAtomWithIdx(5).SetAtomicNum(14)
-        mol_template.GetAtomWithIdx(5).SetFormalCharge(1)
+        template.GetAtomWithIdx(0).SetAtomicNum(at0)
+        template.GetAtomWithIdx(1).SetAtomicNum(at1)
+        template.GetAtomWithIdx(2).SetAtomicNum(at2)
+        template.GetAtomWithIdx(3).SetAtomicNum(at3)
+        template.GetAtomWithIdx(4).SetAtomicNum(at4)
+        template.GetAtomWithIdx(5).SetAtomicNum(14)
+        template.GetAtomWithIdx(5).SetFormalCharge(1)
 
         # assigning and embedding onto the core
         mol_obj, coord_map, alg_map, conf_id = template_embed_optimize(
-            molecule, mol_template, maxsteps, log
+            molecule, template, maxsteps, log
         )
         if conf_id >= 0:
             name_out = f"{name}_{counter}"
@@ -477,6 +479,6 @@ def five_embed(molecule, mol_template, neighbours, name, maxsteps, log):
             name_return.append(name_out)
             coord_maps.append(coord_map)
             alg_maps.append(alg_map)
-            mol_templates.append(mol_template)
+            mol_templates.append(template)
             counter += 1
     return mol_objects, name_return, coord_maps, alg_maps, mol_templates

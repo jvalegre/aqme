@@ -12,45 +12,52 @@ from aqme.cmin import cmin
 import rdkit
 import shutil
 
-# # saves the working directory
-# w_dir_main = os.getcwd()
-# cmin_methods_dir = w_dir_main + "/tests/cmin_methods"
-# if not os.path.exists(cmin_methods_dir):
-#     os.mkdir(cmin_methods_dir)
-# cmin_xtb_dir = w_dir_main + "/tests/cmin_xtb"
-# if not os.path.exists(cmin_xtb_dir):
-#     os.mkdir(cmin_xtb_dir)
+# saves the working directory
+w_dir_main = os.getcwd()
+cmin_methods_dir = w_dir_main + "/tests/cmin_methods"
+if not os.path.exists(cmin_methods_dir):
+    os.mkdir(cmin_methods_dir)
+cmin_xtb_dir = w_dir_main + "/tests/cmin_xtb"
+if not os.path.exists(cmin_xtb_dir):
+    os.mkdir(cmin_xtb_dir)
 
 # tests of basic ANI and xTB optimizations
-# @pytest.mark.parametrize(
-#     "program, sdf, output_nummols",
-#     [
-#         # tests for conformer generation with RDKit
-#         ("ani", "pentane_rdkit_methods.sdf", 4),
-#         ("xtb", "pentane_rdkit_methods.sdf", 4),
-#     ],
-# )
-# def test_cmin_methods(
-#     program, sdf, output_nummols
-# ):
+@pytest.mark.parametrize(
+    "program, sdf, output_nummols",
+    [
+        # tests for conformer generation with RDKit
+        ("ani", "pentane_rdkit_methods.sdf", 4),
+        ("xtb", "pentane_rdkit_methods.sdf", 4),
+    ],
+)
+def test_cmin_methods(
+    program, sdf, output_nummols
+):
 
-#     # runs the program with the different tests
-#     base_folder = f'CMIN_{program}'
-#     cmin(
-#         w_dir_main=cmin_methods_dir,
-#         program=program,
-#         destination=f'{cmin_methods_dir}/{base_folder}',
-#         files=f'{cmin_methods_dir}/{sdf}'
-#     )
+    # runs the program with the different tests
+    os.chdir(cmin_methods_dir)
+    cmin(program=program,files=f'{cmin_methods_dir}/{sdf}')
 
-#     file = f'{cmin_methods_dir}/{base_folder}/{sdf.split(".")[0]}_{program}.sdf'
-#     file2 = f'{cmin_methods_dir}/{base_folder}/{sdf.split(".")[0]}_{program}_all_confs.sdf'
+    file = f'{cmin_methods_dir}/CMIN/{sdf.split(".")[0]}_{program}.sdf'
+    file2 = f'{cmin_methods_dir}/CMIN/{sdf.split(".")[0]}_{program}_all_confs.sdf'
 
-#     assert os.path.exists(file)
-#     assert os.path.exists(file2)
+    assert os.path.exists(file)
+    assert os.path.exists(file2)
 
-#     mols = rdkit.Chem.SDMolSupplier(file2, removeHs=False, sanitize=False)
-#     assert len(mols) == output_nummols
+    mols = rdkit.Chem.SDMolSupplier(file2, removeHs=False, sanitize=False)
+    mols_all = rdkit.Chem.SDMolSupplier(file2, removeHs=False, sanitize=False)
+    # in this case, RDKit, ANI and xTB should lead to the same 4 conformers
+    assert len(mols_all) == output_nummols
+    assert len(mols) == output_nummols
+    os.chdir(w_dir_main)
+
+    # check that the optimizations work (different geometry than initial)
+    outfile = open(file, "r")
+    outlines = outfile.readlines()
+    outfile.close()
+    coords = ['2.5236','0.0073','0.1777']
+    for coord in coords:
+        assert coord not in outlines[4]
 
 # # tests for PATHs
 # @pytest.mark.parametrize(

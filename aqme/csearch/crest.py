@@ -246,7 +246,6 @@ def xtb_opt_main(
                     self.args.log.write(f"\nx   There was another error during the xTB pre-optimization that could not be fixed (this molecule will be skipped).\n")
                 cmin_valid = False
                 mol_rd = None
-                energy = 0
 
         xyzoutxtb2 = xyzoutxtb1
 
@@ -321,7 +320,7 @@ def xtb_opt_main(
             xyzall_2_xyz(xyzoutall, name_no_path)
             xyz_files = glob.glob(name_no_path + "_conf_*.xyz")
         if self.args.program.lower() == "xtb":
-            xyz_files = [xyzin]
+            xyz_files = [xyzoutxtb1]
         for _, file in enumerate(xyz_files):
             name_conf = file.split(".xyz")[0]
             command_xyz = ["obabel", "-ixyz", file, "-osdf", "-O" + name_conf + ".sdf"]
@@ -337,7 +336,7 @@ def xtb_opt_main(
             mol_rd = rdkit.Chem.RWMol(mol[0])
             if self.args.program.lower() == "xtb":
                 # convert from hartree (default in xtb) to kcal
-                energy_Eh = float(open(f'{file.split(".")[0]}1.xyz', "r").readlines()[1].split()[1])
+                energy_Eh = float(open(f'{file.split(".")[0]}.xyz', "r").readlines()[1].split()[1])
                 energy_kcal = energy_Eh*627.5
                 mol_rd.SetProp("_Name", name_init)
                 os.remove(file)
