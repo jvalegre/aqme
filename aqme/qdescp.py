@@ -98,7 +98,6 @@ from aqme.qdescp_utils import (
 )
 
 from aqme.csearch.crest import xyzall_2_xyz
-from scipy.spatial.distance import cdist
 
 
 class qdescp:
@@ -293,10 +292,7 @@ class qdescp:
             for xyz_file, charge, mult in zip(xyz_files, xyz_charges, xyz_mults):
                 name = os.path.basename(xyz_file.split(".")[0])
                 self.run_sp_xtb(xyz_file, charge, mult, name, destination)
-                try:
-                    self.collect_xtb_properties()
-                except:
-                    pass
+                self.collect_xtb_properties()
                 self.cleanup(name, destination)
             bar.next()
         bar.finish()
@@ -498,10 +494,8 @@ class qdescp:
         coordinates = [
             inputs[i].strip().split()[1:] for i in range(2, int(inputs[0].strip()) + 2)
         ]
-        bond_dist = cdist(coordinates, coordinates)
 
         json_data["coordinates"] = coordinates
-        json_data["bond_dist"] = bond_dist.tolist()
 
         with open(self.xtb_json, "w") as outfile:
             json.dump(json_data, outfile)

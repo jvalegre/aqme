@@ -127,9 +127,6 @@ def get_boltz_avg_properties_xtb(
         for json_file in json_files:
             json_data = read_json(json_file)
             if type == "xtb":
-                print(json_data)
-                for item in json_data:
-                    print(item)
                 prop_list.append(json_data[prop])
             if type == "nmr":
                 prop_list.append(json_data["properties"]["NMR"][prop].values())
@@ -370,8 +367,8 @@ def read_xtb(file):
     for i in range(0, len(data)):
         if data[i].find("SUMMARY") > -1:
             energy = float(data[i + 2].split()[3])
-        if data[i].find("charge                     :") > -1:
-            total_charge = int(data[i].split()[-1])
+        if data[i].find("total charge") > -1:
+            total_charge = int(float(data[i].split()[3]))
         if data[i].find("(HOMO)") > -1:
             if data[i].split()[3] != "(HOMO)":
                 homo = float(data[i].split()[3])
