@@ -13,7 +13,6 @@ Version 1.4.2 [`url <https://github.com/jvalegre/aqme/releases/tag/1.4.2>`__]
    -  Writing CSEARCH-CREST conformers in kcal/mol instead of Hartrees
    -  Templates are not active when using metals with different number of ligands 
       (i.e. if complex_type='linear' and Cu2+/CuL2 are used simultaneously)
-   -  Charge and multiplicity can be specified in CSV files using "charge" and "mult" columns
    -  Fixed squarepyramidal templates
 
 Version 1.4.1 [`url <https://github.com/jvalegre/aqme/releases/tag/1.4.1>`__]
