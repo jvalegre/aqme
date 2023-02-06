@@ -33,16 +33,15 @@ T = 298.15
 
 def test_qdescp_xtb(file):
 
-    os.chdir(qdescp_input_dir)
     # conf gen
-    csearch(program='rdkit',input=file)
-    sdf_rdkit_files = glob.glob(f'CSEARCH/*.sdf')
+    folder_csearch = f'{qdescp_input_dir}/CSEARCH'
+    csearch(program='rdkit',input=f'{qdescp_input_dir}/{file}',destination=folder_csearch)
+    sdf_rdkit_files = glob.glob(f'{qdescp_input_dir}/CSEARCH/*.sdf')
     # QDESCP-xTB workflow
-    qdescp(program='xtb',files=sdf_rdkit_files)
+    folder_qdescp = f'{qdescp_input_dir}/QDESCP'
+    qdescp(program='xtb',files=sdf_rdkit_files,destination=folder_qdescp)
 
     # check if various parameters are stored correctly from xTB calculations to the generated json files
-    folder_qdescp = f'{qdescp_input_dir}/QDESCP'
-    os.chdir(folder_qdescp)
 
     file_1 = "mol_1_rdkit_conf_1"
     file_2 = "mol_1_rdkit_conf_2"
@@ -52,7 +51,7 @@ def test_qdescp_xtb(file):
 
     for file in files_xtb:
         # get data from the raw xTB calculations
-        f = open(f'{qdescp_input_dir}/QDESCP/xtb_data/{file}/{file}.out', "r")
+        f = open(f'{folder_qdescp}/xtb_data/{file}/{file}.out', "r")
         data = f.readlines()
         f.close()
         energy_found, fermi_found = False, False
@@ -66,7 +65,7 @@ def test_qdescp_xtb(file):
             if energy_found and fermi_found:
                 break
         # get data from the generated json files
-        json_data = read_json(f'{file}.json')
+        json_data = read_json(f'{folder_qdescp}/{file}.json')
         energies_json.append(json_data["total energy"])
         Fermi_lvls_json.append(json_data["Fermi-level/eV"])
     
@@ -94,8 +93,7 @@ def test_qdescp_xtb(file):
 
     # retrieve Boltzman avg values from json files
     folder_boltz = f'{folder_qdescp}/boltz'
-    os.chdir(folder_boltz)
-    json_data = read_json('mol_1_rdkit_boltz.json')
+    json_data = read_json(f'{folder_boltz}/mol_1_rdkit_boltz.json')
     energy_boltz_file = json_data["total energy"]
     Fermi_lvl_boltz_file = json_data["Fermi-level/eV"]
 
@@ -103,8 +101,7 @@ def test_qdescp_xtb(file):
     assert round(Fermi_lvl_boltz_calc,2) == round(Fermi_lvl_boltz_file,2)
 
     # retrieve Boltzman avg values and RDKit descriptors from the generated csv file
-    os.chdir(qdescp_input_dir)
-    pd_boltz = pd.read_csv('QDESCP_boltz_descriptors.csv')
+    pd_boltz = pd.read_csv(f'{qdescp_input_dir}/QDESCP_boltz_descriptors.csv')
     energy_boltz_csv = pd_boltz["total energy"][0]
     Fermi_lvl_boltz_csv = pd_boltz["Fermi-level/eV"][0]
 
@@ -113,7 +110,6 @@ def test_qdescp_xtb(file):
     assert pd_boltz["NumRotatableBonds"][0] == 3
     assert pd_boltz["NumRotatableBonds"][1] == 4
 
-    os.chdir(w_dir_main)
 
 # tests for QDESCP-NMR
 @pytest.mark.parametrize(
@@ -125,15 +121,15 @@ def test_qdescp_xtb(file):
 
 def test_qdescp_nmr(json_files):
 
-    os.chdir(qdescp_input_dir)
-    json_files = glob.glob(json_files)
+    json_files = glob.glob(f'{qdescp_input_dir}/{json_files}')
     nmr_atoms = [6, 1]  # [C,H]
     nmr_slope=[-1.0537, -1.0784]
     nmr_intercept=[181.7815,31.8723]
 
     # QDESCP-NMR workflow
     qdescp(program='nmr',files=json_files,nmr_slope=nmr_slope,
-            nmr_intercept=nmr_intercept,nmr_experim="Experimental_NMR_shifts.csv")
+            nmr_intercept=nmr_intercept,nmr_experim=f'{qdescp_input_dir}/Experimental_NMR_shifts.csv',
+            destination=f'{qdescp_input_dir}')
 
     # read json files and calculate Boltzmann shifts
     energies_json,nmr_json = [],[]
@@ -175,16 +171,13 @@ def test_qdescp_nmr(json_files):
 
     # check that the averaged NMR shifts are the same as the values included in the json file
     folder_boltz = f'{qdescp_input_dir}/QDESCP/boltz'
-    os.chdir(folder_boltz)
-    json_data_boltz = read_json('test_boltz.json')
+    json_data_boltz = read_json(f'{folder_boltz}/test_boltz.json')
     nmr_json_file = list(json_data_boltz["NMR Chemical Shifts"].values())
     for i,_ in enumerate(nmr_json_calc):
         assert round(nmr_json_calc[i],2) == round(nmr_json_file[i],2)
 
     # check that the averaged NMR shifts are the same as the values included in the csv file
-    folder_boltz = f'{qdescp_input_dir}/QDESCP/boltz'
-    os.chdir(qdescp_input_dir)
-    pd_boltz = pd.read_csv('Experimental_NMR_shifts_predicted.csv')
+    pd_boltz = pd.read_csv(f'{qdescp_input_dir}/Experimental_NMR_shifts_predicted.csv')
     nmr_boltz_csv = pd_boltz["boltz_avg"]
     nmr_json_calc_1H = nmr_json_calc[21:]
     for i,_ in enumerate(nmr_json_calc_1H):
@@ -194,8 +187,6 @@ def test_qdescp_nmr(json_files):
     nmr_experim_csv = pd_boltz["experimental_ppm"]
     error_calc = abs(nmr_boltz_csv - nmr_experim_csv)
     error_csv = pd_boltz["error_boltz"]
-    print('nmr_json_calc',error_calc)
-    print('nmr_boltz_csv',error_csv)
     for i,_ in enumerate(error_calc):
         if str(error_calc[i]) not in ['nan']:
             assert round(error_calc[i],2) == round(error_csv[i],2)
