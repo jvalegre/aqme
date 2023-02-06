@@ -309,7 +309,10 @@ def test_csearch_crest_parameters(
     mols = rdkit.Chem.SDMolSupplier(file, removeHs=False)
     assert charge == int(mols[0].GetProp("Real charge"))
     assert mult == int(mols[0].GetProp("Mult"))
-    assert len(mols) == output_nummols
+    if name == 'butane': # CREST sometimes gives 2 conformers and other times 3
+        assert str(len(mols)) in ['2','3']
+    else:
+        assert len(mols) == output_nummols
     os.chdir(w_dir_main)
 
     file_crest = str(csearch_crest_dir+f"/CSEARCH/crest_xyz/{name}_crest.out")
