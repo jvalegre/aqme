@@ -95,9 +95,11 @@ def xtb_opt_main(
     else:
         csearch_dir = Path(self.args.destination)
     if method_opt == 'crest':
+        self.args.log.write(f"\no  Starting xTB pre-optimization before CREST sampling")
         dat_dir = csearch_dir / "crest_xyz"
         xyzin = f"{dat_dir}/{name_no_path}.xyz"
     elif method_opt == 'xtb':
+        self.args.log.write(f"\no  Starting xTB optimization")
         dat_dir = csearch_dir / "xtb_xyz"
         xyzin = f"{dat_dir}/{name_no_path}_xtb.xyz"
     dat_dir.mkdir(exist_ok=True, parents=True)
@@ -116,11 +118,12 @@ def xtb_opt_main(
 
     # xTB optimization with all bonds frozen
     constrained_opt = False
+    if len(constraints_atoms) > 0 or len(constraints_dist) > 0 or len(constraints_angle) > 0 or len(constraints_dihedral) > 0:
+        constrained_opt = True
+        complex_ts = True
+
     xyzoutxtb1 = str(dat_dir) + "/" + name_no_path + "_xtb1.xyz"
     if complex_ts:
-        if len(constraints_atoms) > 0 or len(constraints_dist) > 0 or len(constraints_angle) > 0 or len(constraints_dihedral) > 0:
-            constrained_opt = True
-
         all_fix = get_constraint(mol, constraints_dist)
 
         _ = create_xcontrol(
@@ -243,13 +246,13 @@ def xtb_opt_main(
                     self.args.log.write(f"\nx   There was another error during the xTB pre-optimization that could not be fixed (this molecule will be skipped).\n")
                 cmin_valid = False
                 mol_rd = None
-                energy = 0
 
         xyzoutxtb2 = xyzoutxtb1
 
     xyzoutall = str(dat_dir) + "/" + name_no_path + "_conformers.xyz"
 
     if self.args.program.lower() == "crest":
+        self.args.log.write(f"\no  Starting CREST sampling")
         if constrained_opt:
             _ = create_xcontrol(
                 self.args,
@@ -291,6 +294,7 @@ def xtb_opt_main(
                 self.args.log.write(f"\nx  CREST optimization failed! This might be caused by different reasons. For example, this might happen if you're using metal complexes without specifying any kind of template in the complex_type option (i.e. squareplanar).\n")
 
         if self.args.cregen and int(natoms) != 1:
+            self.args.log.write(f"\no  Starting CREGEN sorting")
             command = ["crest", "crest_best.xyz", "--cregen", "crest_conformers.xyz"]
 
             if self.args.cregen_keywords is not None:
@@ -316,7 +320,7 @@ def xtb_opt_main(
             xyzall_2_xyz(xyzoutall, name_no_path)
             xyz_files = glob.glob(name_no_path + "_conf_*.xyz")
         if self.args.program.lower() == "xtb":
-            xyz_files = [xyzin]
+            xyz_files = [xyzoutxtb1]
         for _, file in enumerate(xyz_files):
             name_conf = file.split(".xyz")[0]
             command_xyz = ["obabel", "-ixyz", file, "-osdf", "-O" + name_conf + ".sdf"]
@@ -331,13 +335,17 @@ def xtb_opt_main(
             mol = rdkit.Chem.SDMolSupplier(file, removeHs=False, sanitize=False)
             mol_rd = rdkit.Chem.RWMol(mol[0])
             if self.args.program.lower() == "xtb":
-                energy = str(open(file, "r").readlines()[0].split()[1])
+                # convert from hartree (default in xtb) to kcal
+                energy_Eh = float(open(f'{file.split(".")[0]}.xyz', "r").readlines()[1].split()[1])
+                energy_kcal = energy_Eh*627.5
                 mol_rd.SetProp("_Name", name_init)
                 os.remove(file)
             elif self.args.program.lower() == "crest":
-                energy = str(open(file, "r").readlines()[0])
+                # convert from hartree (default in xtb) to kcal
+                energy_Eh = float(open(file, "r").readlines()[0])
+                energy_kcal = str(energy_Eh*627.5)
                 mol_rd.SetProp("_Name", name_no_path)
-                mol_rd.SetProp("Energy", energy)
+                mol_rd.SetProp("Energy", energy_kcal)
                 mol_rd.SetProp("Real charge", str(charge))
                 mol_rd.SetProp("Mult", str(int(mult)))
                 sdwriter.write(mol_rd)
@@ -369,7 +377,7 @@ def xtb_opt_main(
         return 1
 
     if method_opt == 'xtb':
-        return mol_rd, float(energy), cmin_valid
+        return mol_rd, energy_kcal, cmin_valid
 
 
 def create_xcontrol(

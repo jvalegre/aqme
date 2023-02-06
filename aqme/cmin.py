@@ -103,7 +103,6 @@ from progress.bar import IncrementalBar
 from rdkit.Geometry import Point3D
 import pandas as pd
 import time
-from ase.units import Hartree
 from aqme.utils import load_variables, rules_get_charge, substituted_mol, mol_from_sdf_or_mol_or_mol2
 from aqme.filter import ewin_filter, pre_E_filter, RMSD_and_E_filter
 from aqme.cmin_utils import creation_of_dup_csv_cmin
@@ -148,7 +147,7 @@ class cmin:
 
         # retrieves the different files to run in CMIN
         if len(self.args.files) == 0:
-            self.args.log.write('\nx  No files were found! Make sure you use quotation marks if you are using * (i.e. "*.sdf")')
+            self.args.log.write('\nx  No files were found! Make sure you use quotation marks if you are using * (i.e. --files "*.sdf")')
             self.args.log.finalize()
             sys.exit()
 
@@ -348,8 +347,6 @@ class cmin:
             # if SQM energy exists, overwrite RDKit energies and geometries
             cids = list(range(len(outmols)))
             sorted_all_cids = sorted(cids, key=lambda cid: cenergy[cid])
-
-            name_mol = self.name
 
             for cid in sorted_all_cids:
                 outmols[cid].SetProp(
@@ -555,7 +552,7 @@ class cmin:
 
     def charge_mult_cmin(self, dup_data, dup_data_idx, type_cmin):
         """
-        Retrieves charge and multiplicity arrays for ANI optimizations.
+        Retrieves charge and multiplicity arrays (for ANI) and values (for xTB) optimizations.
 
         Parameters
         ----------

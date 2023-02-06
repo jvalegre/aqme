@@ -1,6 +1,7 @@
 ![](Logos/AQME_logo.jpg)
 [![CircleCI](https://img.shields.io/circleci/build/github/jvalegre/aqme?label=Circle%20CI&logo=circleci)](https://app.circleci.com/pipelines/github/jvalegre/aqme)
 [![Codecov](https://img.shields.io/codecov/c/github/jvalegre/aqme?label=Codecov&logo=codecov)](https://codecov.io/gh/jvalegre/aqme)
+[![Downloads](https://img.shields.io/conda/dn/conda-forge/aqme?label=Downloads&logo=Anaconda)](https://anaconda.org/conda-forge/aqme)
 [![Read the Docs](https://img.shields.io/readthedocs/aqme?label=Read%20the%20Docs&logo=readthedocs)](https://aqme.readthedocs.io/)
 
 ___
@@ -24,8 +25,8 @@ Don't miss out the latest hands-on tutorials from our [YouTube channel](https://
 
 ## Installation
 Check our [AQME installation in 2 mins](https://youtu.be/VeaBzqIZHbo) video for a quick installation guide. In a nutshell, AQME and its dependencies are installed as follows:  
-1. (First install) Using conda-forge: `conda install -c conda-forge aqme`  
-2. (Update the code) Using pip: `pip install aqme`  
+1. Using conda-forge: `conda install -c conda-forge aqme`  
+2. Using pip: `pip install aqme`  
   
 Extra requirements if xTB or CREST are used (MacOS and Linux only):  
   * xTB: `conda install -y -c conda-forge xtb`  
@@ -216,7 +217,7 @@ AQME can also be run through command lines. Some examples are:
     **cregen : bool, default=False**  
         If True, perform a CREGEN analysis after CREST (filtering options below)  
     **cregen_keywords : str, default=None**  
-        Additional keywords for CREGEN (i.e. cregen_keywords='--ethr 0.02') 
+        Additional keywords for CREGEN (i.e. cregen_keywords='--ethr 0.02')  
     **xtb_keywords : str, default=None**  
         Define additional keywords to use in the xTB pre-optimization that are not included in -c, --uhf, -P and --input. For example: '--alpb ch2cl2 --gfn 1'   
 
@@ -224,7 +225,7 @@ AQME can also be run through command lines. Some examples are:
     **files : str or list of str, default=None**  
         Input files. Formats accepted: XYZ, SDF, GJF, COM and PDB. Also, lists can be used (i.e. [FILE1.sdf, FILE2.sdf] or \*.FORMAT such as \*.sdf).  
     **program : str, default=None**  
-        Program required in the conformational refining. Current options: 'xtb', 'ani'
+        Program required in the conformational refining. Current options: 'xtb', 'ani'  
     **w_dir_main : str, default=os.getcwd()**  
         Working directory  
     **destination : str, default=None,**  
@@ -349,7 +350,7 @@ AQME can also be run through command lines. Some examples are:
     **destination : str, default=None,**  
         Directory to create the JSON file(s)  
 
-    *-- Options for xTB descriptor generation (program='xtb') --* 
+    *-- Options for xTB descriptor generation (program='xtb') --*  
     **files : list of str, default=''**  
         Filenames of SDF/PDB/XYZ files to calculate xTB descriptors. If \*.sdf (or other strings that are not lists such as \*.pdb) are specified, the program will look for all the SDF files in the working directory through glob.glob(\*.sdf)  
     **charge : int, default=None**  
@@ -359,17 +360,17 @@ AQME can also be run through command lines. Some examples are:
     **qdescp_solvent : str, default=None**  
         Solvent used in the xTB property calculations (ALPB model)  
     **qdescp_temp : float, default=300**  
-        Temperature required for the xTB property calculations
+        Temperature required for the xTB property calculations  
     **qdescp_acc : float, default=0.2**  
-        Accuracy required for the xTB property calculations
-    **boltz : bool, default=False**  
-        Calculation of Boltzmann averaged xTB properties  
+        Accuracy required for the xTB property calculations  
+    **boltz : bool, default=True**  
+        Calculate Boltzmann averaged xTB properties and include RDKit molecular features  
   
     *-- Options for NMR spectra simulation (program='nmr') --*  
     **files : list of str, default=''**  
         Filenames of LOG files to retrieve NMR shifts from Gaussian calculations  
-    **boltz : bool, default=False**  
-        Calculation of Boltzmann averaged xTB properties  
+    **boltz : bool, default=True**  
+        Calculate Boltzmann averaged NMR shifts  
     **nmr_atoms : list of str, default=[6, 1]**  
         List containing the atom types to consider. For example, if the user wants to retrieve NMR shifts from C and H atoms nmr_atoms=[6, 1]  
     **nmr_slope : list of float, default=[-1.0537, -1.0784]**  
@@ -398,4 +399,13 @@ For suggestions and improvements of the code (greatly appreciated!), please reac
 AQME is freely available under an [MIT](https://opensource.org/licenses/MIT) License  
 
 ## Reference
+If you use any of the AQME modules, please include this citation:  
 AQME v1.4, Alegre-Requena, J. V.; Sowndarya, S.; Alturaifi, T.; Pérez-Soto, R.; Paton, R. ChemRxiv 2022, DOI: 10.26434/chemrxiv-2022-dnc48.  
+  
+Additionally, please include the corresponding references for the following programs:  
+  * If you used CSEARCH with RDKit methods or from SMILES: [RDKit](https://www.rdkit.org)  
+  * If you used CSEARCH with CREST methods: [CREST](https://crest-lab.github.io/crest-docs)  
+  * If you used CMIN with xTB: [xTB](https://xtb-docs.readthedocs.io/en/latest/contents.html)  
+  * If you used CMIN with ANI: [ANI](https://github.com/isayev/ASE_ANI)  
+  * If you used QCORR: [cclib](https://cclib.github.io/)  
+  * If you used QDESCP with xTB: [xTB](https://xtb-docs.readthedocs.io/en/latest/contents.html)

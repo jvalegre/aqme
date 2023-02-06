@@ -75,7 +75,7 @@ class qprep:
         self.args = load_variables(kwargs, "qprep", create_dat=create_dat)
 
         if len(self.args.files) == 0:
-            self.args.log.write('\nx  No files were found! Make sure you use quotation marks if you are using * (i.e. "*.sdf")')
+            self.args.log.write('\nx  No files were found! Make sure you use quotation marks if you are using * (i.e. --files "*.sdf")')
             self.args.log.finalize()
             sys.exit()
 

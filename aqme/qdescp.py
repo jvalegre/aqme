@@ -32,7 +32,7 @@ XTB descriptors
       Temperature required for the xTB property calculations
    qdescp_acc : float, default=0.2
       Accuracy required for the xTB property calculations 
-   boltz : bool, default=False
+   boltz : bool, default=True
       Calculation of Boltzmann averaged xTB properties and addition of RDKit 
       molecular descriptors
 
@@ -42,7 +42,7 @@ NMR simulation
    files : list of str, default=''
       Filenames of LOG files to retrieve NMR shifts from Gaussian calculations 
       (\*.log can be used to include all the log files in the working directory)
-   boltz : bool, default=False
+   boltz : bool, default=True
       Calculation of Boltzmann averaged NMR shifts
    nmr_atoms : list of str, default=[6, 1]
       List containing the atom types (as atomic numbers) to consider. For 
@@ -98,7 +98,6 @@ from aqme.qdescp_utils import (
 )
 
 from aqme.csearch.crest import xyzall_2_xyz
-from scipy.spatial.distance import cdist
 
 
 class qdescp:
@@ -118,7 +117,7 @@ class qdescp:
             destination = Path(self.args.destination)
 
         if len(self.args.files) == 0:
-            self.args.log.write('\nx  No files were found! Make sure you use quotation marks if you are using * (i.e. "*.sdf")')
+            self.args.log.write('\nx  No files were found! Make sure you use quotation marks if you are using * (i.e. --files "*.sdf")')
             self.args.log.finalize()
             sys.exit()
 
@@ -293,11 +292,8 @@ class qdescp:
             for xyz_file, charge, mult in zip(xyz_files, xyz_charges, xyz_mults):
                 name = os.path.basename(xyz_file.split(".")[0])
                 self.run_sp_xtb(xyz_file, charge, mult, name, destination)
-                try:
-                    self.collect_xtb_properties()
-                    self.cleanup(name, destination)
-                except:
-                    pass
+                self.collect_xtb_properties()
+                self.cleanup(name, destination)
             bar.next()
         bar.finish()
 
@@ -498,10 +494,8 @@ class qdescp:
         coordinates = [
             inputs[i].strip().split()[1:] for i in range(2, int(inputs[0].strip()) + 2)
         ]
-        bond_dist = cdist(coordinates, coordinates)
 
         json_data["coordinates"] = coordinates
-        json_data["bond_dist"] = bond_dist.tolist()
 
         with open(self.xtb_json, "w") as outfile:
             json.dump(json_data, outfile)
@@ -509,4 +503,15 @@ class qdescp:
     def cleanup(self, name, destination):
         final_json = str(destination) + "/" + name + ".json"
         shutil.move(self.xtb_json, final_json)
-        shutil.rmtree(f"{destination}/{name}")
+        # delete xTB files that does not contain useful data
+        files = glob.glob(f"{destination}/{name}/*")
+        for file in files:
+            if name not in os.path.basename(file) or '.inp' in os.path.basename(file):
+                os.remove(file)
+        if not os.path.exists(f"{destination}/xtb_data"): 
+            Path(f"{destination}/xtb_data").mkdir()
+        if os.path.exists(f"{destination}/xtb_data/{name}"): 
+            self.args.log.write(f'\nx  A previous folder of {name} already existed, it was removed and replaced with the results of this QDESCP run.')
+            shutil.rmtree(f"{destination}/xtb_data/{name}")
+        shutil.move(f"{destination}/{name}", f"{destination}/xtb_data/{name}")
+

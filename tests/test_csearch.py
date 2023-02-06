@@ -185,6 +185,18 @@ def test_csearch_input_parameters(program, input, output_nummols):
             1,
             1,
         ),
+        # tests for conformer generation with multiple confs
+        (
+            "crest",
+            "CCCC",
+            "butane",
+            False,
+            None,
+            None,
+            0,
+            1,
+            3,
+        ),
         # tests for crest_keywords
         (
             "crest",
@@ -250,6 +262,13 @@ def test_csearch_crest_parameters(
             mult=mult,
             nprocs=14
         )
+    elif name == 'butane':
+        csearch(
+            w_dir_main=csearch_crest_dir,
+            program=program,
+            smi=smi,
+            name=name
+        )
     elif name == 'methane_solvent':
         csearch(
             w_dir_main=csearch_crest_dir,
@@ -276,21 +295,24 @@ def test_csearch_crest_parameters(
             mult=mult
         )
 
-    # tests here
-    file_cluster = str(
-        csearch_crest_dir
-        + "/CSEARCH/"
-        + program
-        + "_xyz/"
-        + name + "_"
-        + "crest_clustered.xyz"
-    )
-    assert os.path.exists(file_cluster)
+    if name != 'butane':
+        file_cluster = str(
+            csearch_crest_dir
+            + "/CSEARCH/"
+            + program
+            + "_xyz/"
+            + name + "_"
+            + "crest_clustered.xyz"
+        )
+        assert os.path.exists(file_cluster)
     file = str("CSEARCH/" + name + "_" + program + ".sdf")
     mols = rdkit.Chem.SDMolSupplier(file, removeHs=False)
     assert charge == int(mols[0].GetProp("Real charge"))
     assert mult == int(mols[0].GetProp("Mult"))
-    assert len(mols) == output_nummols
+    if name == 'butane': # CREST sometimes gives 2 conformers and other times 3
+        assert str(len(mols)) in ['2','3']
+    else:
+        assert len(mols) == output_nummols
     os.chdir(w_dir_main)
 
     file_crest = str(csearch_crest_dir+f"/CSEARCH/crest_xyz/{name}_crest.out")
@@ -587,6 +609,7 @@ def test_csearch_rdkit_summ_parameters(
             False,
             4,
         ),
+        # multiple templates
         (
             "rdkit",
             "I[Pd]([PH3+])(F)Cl",
@@ -605,7 +628,43 @@ def test_csearch_rdkit_summ_parameters(
             False,
             1
         ),
-        # compatibility of CREST with metal complexes
+        (
+            "rdkit",
+            "N#C[Cu](C#N)C#N",
+            "Cu_trigonal",
+            False,
+            True,
+            ["Cu"],
+            [1],
+            "trigonalplanar",
+            None,
+            None,
+            None,
+            -2,
+            1,
+            None,
+            False,
+            1
+        ),
+        (
+            "rdkit",
+            "[O-][V](Cl)(Cl)(Cl)Cl",
+            "V_squarepyramidal",
+            False,
+            True,
+            ["V"],
+            [4],
+            "squarepyramidal",
+            None,
+            None,
+            None,
+            -2,
+            1,
+            None,
+            False,
+            1
+        ),
+        # compatibility of CREST with metal complexes and templates
         (
             "crest",
             "[NH3+][Ag][NH3+]",
@@ -744,6 +803,8 @@ def test_csearch_methods(
             metal_atoms=metal,
             metal_oxi=metal_oxi,
             complex_type=complex_type,
+            mult=mult,
+            sample=10
         )
 
     elif complex is True:
@@ -760,7 +821,7 @@ def test_csearch_methods(
 
     if destination:
         file = str(csearch_methods_dir+"/Et_sdf_files/" + name + "_" + program + ".sdf")
-    elif metal_complex is False or name == 'Ag_complex_crest':
+    elif metal_complex is False or name in ['Ag_complex_crest','Cu_trigonal']:
         file = str(csearch_methods_dir+"/CSEARCH/" + name + "_" + program + ".sdf")
     else:
         file = str(

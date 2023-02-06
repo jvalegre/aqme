@@ -14,12 +14,16 @@
 .. |Codecov| image:: https://img.shields.io/codecov/c/github/jvalegre/aqme?label=Codecov&logo=codecov
    :target: https://codecov.io/gh/jvalegre/aqme
 
+.. |Downloads| image:: https://img.shields.io/conda/dn/conda-forge/aqme?label=Downloads&logo=Anaconda
+   :target: https://anaconda.org/conda-forge/aqme
+
 .. |ReadtheDocs| image:: https://img.shields.io/readthedocs/aqme?label=Read%20the%20Docs&logo=readthedocs
    :target: https://aqme.readthedocs.io
    :alt: Documentation Status
 
 |CircleCI|
 |Codecov|
+|Downloads|
 |ReadtheDocs|
 
 .. badges-end
@@ -88,17 +92,17 @@ Check our `AQME installation in 2 mins <https://youtu.be/VeaBzqIZHbo>`_ video
 for a quick installation guide. In a nutshell, AQME and its dependencies are 
 installed as follows:
 
-1. (First install) Using conda-forge
+1. Using conda-forge  
 
 .. code-block:: shell 
    
    conda install -c conda-forge aqme
 
-2. (Update the code) Using pip: `pip install aqme`  
+2. Using pip:  
 
 .. code-block:: shell
 
-   python -m pip install aqme
+   pip install aqme
 
 Installation of the extra requirements
 ++++++++++++++++++++++++++++++++++++++
@@ -154,7 +158,7 @@ Other requirements
 
 *  RDKit
 *  Openbabel
-*  XTB
+*  xTB
 *  CREST
 
 *RDKit and Openbabel are installed during the initial conda-forge installation.*
@@ -356,7 +360,7 @@ List of main developers and contact emails:
    `ORCID <https://orcid.org/0000-0002-0769-7168>`__ , 
    `Github <https://github.com/jvalegre>`__ , 
    `email <jv.alegre@csic.es>`__ ]
-   main developer of the CSEARCH, QCORR, QPREP and QDESCP modules.  
+   main developer of the CSEARCH, CMIN, QCORR, QPREP and QDESCP modules.  
 *  Shree Sowndarya S. V. [
    `ORCID <https://orcid.org/0000-0002-4568-5854>`__ , 
    `Github <https://github.com/shreesowndarya>`__ , 
@@ -370,7 +374,7 @@ List of main developers and contact emails:
 *  Turki Alturaifi [
    `webpage <https://www.chem.pitt.edu/person/turki-alturaifi>`__ ,
    `Github <https://github.com/turkiAlturaifi>`__ , 
-   `email <turki0@tma53@pitt.edu>`__] 
+   `email <tma53@pitt.edu>`__] 
    worked in benchmarking the parameters for RDKit-based conformer generation. 
 *  Robert S. Paton [
    `ORCID <https://orcid.org/0000-0002-0104-4166>`__ ,
@@ -397,8 +401,17 @@ Reference
 
 .. reference-start
 
+If you use any of the AQME modules, please include this citation:  
 AQME v1.4, Alegre-Requena, J. V.; Sowndarya, S.; Alturaifi, T.; Pérez-Soto, R.; 
 Paton, R. ChemRxiv 2022, 
 DOI: `10.26434/chemrxiv-2022-dnc48 <https://doi.org/10.26434/chemrxiv-2022-dnc48>`__ .  
+  
+Additionally, please include the corresponding references for the following programs:  
+  * If you used CSEARCH with RDKit methods: `RDKit <https://www.rdkit.org/>`__ 
+  * If you used CSEARCH with CREST methods: `CREST <https://crest-lab.github.io/crest-docs/>`__ 
+  * If you used CMIN with xTB: `xTB <https://xtb-docs.readthedocs.io/en/latest/contents.html>`__ 
+  * If you used CMIN with ANI: `ANI <https://github.com/isayev/ASE_ANI>`__ 
+  * If you used QCORR: `cclib <https://cclib.github.io/>`__ 
+  * If you used QDESCP with xTB: `xTB <https://xtb-docs.readthedocs.io/en/latest/contents.html>`__ 
 
 .. reference-end
