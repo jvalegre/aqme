@@ -127,6 +127,9 @@ def get_boltz_avg_properties_xtb(
         for json_file in json_files:
             json_data = read_json(json_file)
             if type == "xtb":
+                print(json_data)
+                for item in json_data:
+                    print(item)
                 prop_list.append(json_data[prop])
             if type == "nmr":
                 prop_list.append(json_data["properties"]["NMR"][prop].values())
