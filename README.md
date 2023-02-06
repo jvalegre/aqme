@@ -217,7 +217,7 @@ AQME can also be run through command lines. Some examples are:
     **cregen : bool, default=False**  
         If True, perform a CREGEN analysis after CREST (filtering options below)  
     **cregen_keywords : str, default=None**  
-        Additional keywords for CREGEN (i.e. cregen_keywords='--ethr 0.02') 
+        Additional keywords for CREGEN (i.e. cregen_keywords='--ethr 0.02')  
     **xtb_keywords : str, default=None**  
         Define additional keywords to use in the xTB pre-optimization that are not included in -c, --uhf, -P and --input. For example: '--alpb ch2cl2 --gfn 1'   
 
@@ -225,7 +225,7 @@ AQME can also be run through command lines. Some examples are:
     **files : str or list of str, default=None**  
         Input files. Formats accepted: XYZ, SDF, GJF, COM and PDB. Also, lists can be used (i.e. [FILE1.sdf, FILE2.sdf] or \*.FORMAT such as \*.sdf).  
     **program : str, default=None**  
-        Program required in the conformational refining. Current options: 'xtb', 'ani'
+        Program required in the conformational refining. Current options: 'xtb', 'ani'  
     **w_dir_main : str, default=os.getcwd()**  
         Working directory  
     **destination : str, default=None,**  
@@ -350,7 +350,7 @@ AQME can also be run through command lines. Some examples are:
     **destination : str, default=None,**  
         Directory to create the JSON file(s)  
 
-    *-- Options for xTB descriptor generation (program='xtb') --* 
+    *-- Options for xTB descriptor generation (program='xtb') --*  
     **files : list of str, default=''**  
         Filenames of SDF/PDB/XYZ files to calculate xTB descriptors. If \*.sdf (or other strings that are not lists such as \*.pdb) are specified, the program will look for all the SDF files in the working directory through glob.glob(\*.sdf)  
     **charge : int, default=None**  
@@ -360,17 +360,17 @@ AQME can also be run through command lines. Some examples are:
     **qdescp_solvent : str, default=None**  
         Solvent used in the xTB property calculations (ALPB model)  
     **qdescp_temp : float, default=300**  
-        Temperature required for the xTB property calculations
+        Temperature required for the xTB property calculations  
     **qdescp_acc : float, default=0.2**  
-        Accuracy required for the xTB property calculations
-    **boltz : bool, default=False**  
-        Calculation of Boltzmann averaged xTB properties  
+        Accuracy required for the xTB property calculations  
+    **boltz : bool, default=True**  
+        Calculate Boltzmann averaged xTB properties and include RDKit molecular features  
   
     *-- Options for NMR spectra simulation (program='nmr') --*  
     **files : list of str, default=''**  
         Filenames of LOG files to retrieve NMR shifts from Gaussian calculations  
-    **boltz : bool, default=False**  
-        Calculation of Boltzmann averaged xTB properties  
+    **boltz : bool, default=True**  
+        Calculate Boltzmann averaged NMR shifts  
     **nmr_atoms : list of str, default=[6, 1]**  
         List containing the atom types to consider. For example, if the user wants to retrieve NMR shifts from C and H atoms nmr_atoms=[6, 1]  
     **nmr_slope : list of float, default=[-1.0537, -1.0784]**  

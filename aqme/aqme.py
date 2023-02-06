@@ -45,7 +45,7 @@ def main():
     args.command_line = True
 
     if not args.csearch and not args.cmin and not args.qprep and not args.qcorr and not args.qdescp:
-        print('x  No module was specified in the command line! (i.e. --csearch for conformer generation)\n')
+        print('x  No module was specified in the command line! (i.e. --csearch for conformer generation). If you did specify a module, check that you are using quotation marks when using options (i.e. --files "*.sdf").\n')
 
     # this is a dummy import just to warn the user if Open babel is not installed
     try:

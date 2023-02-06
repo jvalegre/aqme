@@ -147,7 +147,7 @@ class cmin:
 
         # retrieves the different files to run in CMIN
         if len(self.args.files) == 0:
-            self.args.log.write('\nx  No files were found! Make sure you use quotation marks if you are using * (i.e. "*.sdf")')
+            self.args.log.write('\nx  No files were found! Make sure you use quotation marks if you are using * (i.e. --files "*.sdf")')
             self.args.log.finalize()
             sys.exit()
 
