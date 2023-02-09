@@ -232,13 +232,13 @@ def rules_get_charge(mol, args):
     Automatically sets the charge for metal complexes
     """
 
-    C_group = ["C", "Se", "Ge"]
-    N_group = ["N", "P", "As"]
-    O_group = ["O", "S", "Se"]
+    C_group = ["C", "Si", "Ge", "Sn"]
+    N_group = ["N", "P", "As", "Sb"]
+    O_group = ["O", "S", "Se", "Te"]
     F_group = ["F", "Cl", "Br", "I"]
     
     
-    M_ligands, N_carbenes, bridge_atoms, neighbours = [], [], [], []
+    M_ligands, N_carbenes, bridge_atoms, C_accounted, neighbours = [], [], [], [], []
     charge_rules = np.zeros(len(mol.GetAtoms()), dtype=int)
     neighbours, metal_found, sanit_step = [], False, True
     for i, atom in enumerate(mol.GetAtoms()):
@@ -253,12 +253,32 @@ def rules_get_charge(mol, args):
             neighbours = atom.GetNeighbors()
             charge_rules[i] = args.metal_oxi[charge_idx]
             for neighbour in neighbours:
+                double_bond = False
                 M_ligands.append(neighbour.GetIdx())
                 if neighbour.GetTotalValence() == 4:
                     if neighbour.GetSymbol() in C_group:
+                        # correct for C=C interacting with M with pi interactions
+                        # when drawing these rings in ChemDraw, all the aromatic C atoms will be linked
+                        # to the M atom as part of 3 member rings
+                        atom_rings = mol.GetRingInfo().AtomRings()
+                        for ring in atom_rings:
+                            if neighbour.GetIdx() in list(ring) and args.metal_idx[0] in list(ring):
+                                # for each double bond
+                                if len(ring) == 3:
+                                    C_count, C_accounted_indiv = 0,[]
+                                    for ring_member in ring:
+                                        if mol.GetAtoms()[ring_member].GetSymbol() == "C" and ring_member not in C_accounted:
+                                            C_accounted_indiv.append(ring_member)
+                                            C_count += 1
+                                    if C_count == 2:
+                                        for ele in C_accounted_indiv:
+                                            C_accounted.append(ele)
+                                        break
                         # first, detects carbenes to adjust charge
                         carbene_like = False
                         bridge_ligand = False
+                        if neighbour.GetIdx() in C_accounted:
+                            double_bond = True
                         for inside_neighbour in neighbour.GetNeighbors():
                             if inside_neighbour.GetSymbol() in N_group:
                                 if inside_neighbour.GetTotalValence() == 4:
@@ -271,7 +291,7 @@ def rules_get_charge(mol, args):
                                     if not bridge_ligand:
                                         carbene_like = True
                                         N_carbenes.append(inside_neighbour.GetIdx())
-                        if not carbene_like:
+                        if not carbene_like and not double_bond:
                             charge_rules[i] = charge_rules[i] - 1
                 elif neighbour.GetTotalValence() == 3:
                     if neighbour.GetSymbol() in N_group and neighbour.GetFormalCharge() == 0:
@@ -288,7 +308,7 @@ def rules_get_charge(mol, args):
                         charge_rules[i] = charge_rules[i] - 2
                     if neighbour.GetSymbol() in F_group:
                         charge_rules[i] = charge_rules[i] - 1
-
+                                            
     # for charges not in the metal, neighbours or exceptions (i.e., C=N+ from carbenes or CN from bridge atoms)
     invalid_charged_atoms = M_ligands + N_carbenes + bridge_atoms + args.metal_idx
     for i, atom in enumerate(mol.GetAtoms()):

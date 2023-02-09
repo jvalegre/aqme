@@ -409,6 +409,38 @@ def test_csearch_fullmonte_parameters(
     assert mult == int(mols[0].GetProp("Mult"))
     os.chdir(w_dir_main)
 
+# tests for parameters of metals with double bonds
+@pytest.mark.parametrize(
+    "program, smi, name, charge",
+    [
+        ("rdkit", "N[SiH](N)[Cu]1CC1", "Cu_ethene", 0),
+        ("rdkit", "N[SiH](N)[Cu]1234C5C1C2C3C54", "Cu_Cp", -1),
+        ("rdkit", "N[SiH](N)[Cu]12345C6C1C2C3C4C65", "Cu_Ph", 0),
+    ],
+)
+def test_csearch_fullmonte_parameters(
+    program,
+    smi,
+    name,
+    charge,
+):
+    os.chdir(csearch_methods_dir)
+    # runs the program with the different tests
+    csearch(
+        program=program,
+        smi=smi,
+        name=name,
+        sample=10,
+        metal_atoms=['Cu'],
+        metal_oxi=[1]
+    )
+
+    # tests here
+    file = str("CSEARCH/" + name + "_" + program + ".sdf")
+    mols = rdkit.Chem.SDMolSupplier(file, removeHs=False)
+    assert charge == int(mols[0].GetProp("Real charge"))
+    os.chdir(w_dir_main)
+
 
 # tests for parameters of csearch rdkit
 @pytest.mark.parametrize(
@@ -609,6 +641,25 @@ def test_csearch_rdkit_summ_parameters(
             False,
             4,
         ),
+        # metal atoms
+        (
+            "rdkit",
+            "I[Pd]([PH3+])(F)Cl",
+            "Pd_metal_only",
+            False,
+            True,
+            ["Pd"],
+            [2],
+            None,
+            None,
+            None,
+            None,
+            -1,
+            1,
+            None,
+            False,
+            1
+        ),
         # multiple templates
         (
             "rdkit",
@@ -786,6 +837,7 @@ def test_csearch_methods(
             smi=smi,
             name=name
         )
+        
     elif not complex and not metal_complex:
         csearch(
             w_dir_main=csearch_methods_dir,
@@ -795,17 +847,29 @@ def test_csearch_methods(
         )
 
     elif metal_complex is True:
-        csearch(
-            w_dir_main=csearch_methods_dir,
-            program=program,
-            smi=smi,
-            name=name,
-            metal_atoms=metal,
-            metal_oxi=metal_oxi,
-            complex_type=complex_type,
-            mult=mult,
-            sample=10
-        )
+        if name == 'Pd_metal_only':
+            csearch(
+                w_dir_main=csearch_methods_dir,
+                program=program,
+                smi=smi,
+                name=name,
+                metal_atoms=metal,
+                metal_oxi=metal_oxi,
+                mult=mult,
+                sample=10
+            )
+        else:
+            csearch(
+                w_dir_main=csearch_methods_dir,
+                program=program,
+                smi=smi,
+                name=name,
+                metal_atoms=metal,
+                metal_oxi=metal_oxi,
+                complex_type=complex_type,
+                mult=mult,
+                sample=10
+            )
 
     elif complex is True:
         csearch(
@@ -821,7 +885,7 @@ def test_csearch_methods(
 
     if destination:
         file = str(csearch_methods_dir+"/Et_sdf_files/" + name + "_" + program + ".sdf")
-    elif metal_complex is False or name in ['Ag_complex_crest','Cu_trigonal']:
+    elif metal_complex is False or name in ['Ag_complex_crest','Cu_trigonal','Pd_metal_only']:
         file = str(csearch_methods_dir+"/CSEARCH/" + name + "_" + program + ".sdf")
     else:
         file = str(
@@ -845,6 +909,25 @@ def test_csearch_methods(
     mols = rdkit.Chem.SDMolSupplier(file, removeHs=False, sanitize=False)
     assert charge == int(mols[-1].GetProp("Real charge"))
     assert mult == int(mols[-1].GetProp("Mult"))
+
+    # check that the metal is added back to the RDKit mol objects
+    metal_found = False
+    if name in ['Pd_complex','Pd_metal_only']:
+        outfile = open(file, "r")
+        outlines_sdf = outfile.readlines()
+        outfile.close()
+        for line in outlines_sdf:
+            if 'Pd  0' in line:
+                metal_found = True
+        assert metal_found
+    if name == 'Ag_complex_crest':
+        outfile = open(file, "r")
+        outlines_sdf = outfile.readlines()
+        outfile.close()
+        for line in outlines_sdf:
+            if 'Ag  0' in line:
+                metal_found = True
+        assert metal_found
     if name == 'nci':
         assert len(mols) > 350
     # the n of conformers decreases when --nci is used
