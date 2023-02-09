@@ -418,7 +418,7 @@ def test_csearch_fullmonte_parameters(
         ("rdkit", "N[SiH](N)[Cu]12345C6C1C2C3C4C65", "Cu_Ph", 0),
     ],
 )
-def test_csearch_fullmonte_parameters(
+def test_double_bond_chrg(
     program,
     smi,
     name,
