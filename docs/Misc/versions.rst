@@ -4,8 +4,15 @@
 Versions
 ========
 
+Version 1.4.3 [`url <https://github.com/jvalegre/aqme/releases/tag/1.4.2>`__]
+   -  Return metal into RDKit mol object when using the metal_atoms option with CSEARCH-CREST
+   -  Doubles bonds do not add extra charges in metal complexes when using the automated charge 
+      calculation from SMILES
+   -  Deprotonated SiR3 groups add -1 charge to metal complexes when using the automated charge 
+      calculation from SMILES
+
 Version 1.4.2 [`url <https://github.com/jvalegre/aqme/releases/tag/1.4.2>`__]
-   -  Fixed an error that raised when using CSEARCH-CREST with organic molecules.
+   -  Fixed an error that raised when using CSEARCH-CREST with organic molecules
    -  Adding more information printed when running CSEARCH
    -  Updated README with citations from external programs
    -  Fixed a bug during filtering of xTB conformers in CMIN (using kcal/mol instead of Hartree

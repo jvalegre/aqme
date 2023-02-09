@@ -694,9 +694,6 @@ class csearch:
             error_message = "\nx  ERROR: The structure is not valid or no conformers were obtained from this SMILES string"
             self.args.log.write(error_message)
 
-        # if self.args.program.lower() == "crest" and valid_structure:
-        #     shutil.rmtree(f"{self.csearch_folder}/../crest_xyz")
-
         n_seconds = round(time.time() - start_time, 2)
         dup_data.at[dup_data_idx, "CSEARCH time (seconds)"] = n_seconds
 
@@ -935,18 +932,21 @@ class csearch:
 
                 # setting the metal back instead of I
                 set_metal_atomic_number(mol, self.args.metal_idx, self.args.metal_sym)
-            try:
-                sdwriter.write(mol, conf)
-            except (TypeError):
-                raise
-
+            
             # if CREST is used, this RDKit preoptimzed mol object will be employed to initializethe the trajectories
             if self.args.program.lower() in ["crest"]:
                 return mol
             else:
+                try:
+                    sdwriter.write(mol, conf)
+                except (TypeError):
+                    raise
                 return 1
 
-        if self.args.program.lower() in ["crest"]:
+        elif self.args.program.lower() in ["crest"]:
+            # setting the metal back instead of I
+            set_metal_atomic_number(mol, self.args.metal_idx, self.args.metal_sym)
+
             return mol
 
         # when SUMM is selected, this cycle generates conformers based on rotation of dihedral angles
