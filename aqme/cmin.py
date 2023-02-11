@@ -135,7 +135,7 @@ class cmin:
             if self.args.program.lower() not in ["xtb", "ani"]:
                 cmin_program = False
         if not cmin_program:
-            self.args.log.write("\nx  Program not supported for CMIN refinement! Specify: program='xtb' (or 'ani')")
+            self.args.log.write('\nx  Program not supported for CMIN refinement! Specify: program="xtb" (or "ani")')
             self.args.log.finalize()
             sys.exit()
 

@@ -226,11 +226,28 @@ def generate_mol_from_csv(args, csv_smiles, index):
         constraints_angle,
         constraints_dihedral,
     )
+
+    charge_found, mult_found = False, False
+    if args.charge is None or args.mult is None:
+        for csv_column in csv_smiles.columns:
+            if str(csv_smiles.loc[index, csv_column]) != 'nan':
+                if csv_column.lower() in ['charge','chrg'] and args.charge is None:
+                    charge = int(csv_smiles.loc[index, csv_column])
+                    charge_found = True
+                elif csv_column.lower() in ['mult','multiplicity'] and args.mult is None:
+                    mult = int(csv_smiles.loc[index, csv_column])
+                    mult_found = True
+
+    if not charge_found:
+        charge = args.charge
+    if not mult_found:
+        mult = args.mult
+
     obj = (
         smiles,
         name,
-        args.charge,
-        args.mult,
+        charge,
+        mult,
         constraints_atoms,
         constraints_dist,
         constraints_angle,

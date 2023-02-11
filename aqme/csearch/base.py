@@ -227,6 +227,17 @@ class csearch:
         # load default and user-specified variables
         self.args = load_variables(kwargs, "csearch")
 
+        csearch_program = True
+        if self.args.program is None:
+            csearch_program = False
+        if csearch_program:
+            if self.args.program.lower() not in ["rdkit", "summ", "fullmonte", "crest"]:
+                csearch_program = False
+        if not csearch_program:
+            self.args.log.write('\nx  Program not specified or not supported for CSEARCH! Specify: program="rdkit" (or "crest", "summ", "fullmonte")')
+            self.args.log.finalize()
+            sys.exit()
+
         if self.args.program.lower() == "crest":
             try:
                 subprocess.run(
@@ -236,17 +247,6 @@ class csearch:
                 self.args.log.write("x  xTB is not installed (CREST cannot be used)! You can install the program with 'conda install -c conda-forge xtb'")
                 self.args.log.finalize()
                 sys.exit()
-
-        csearch_program = True
-        if self.args.program is None:
-            csearch_program = False
-        if csearch_program:
-            if self.args.program.lower() not in ["rdkit", "summ", "fullmonte", "crest"]:
-                csearch_program = False
-        if not csearch_program:
-            self.args.log.write("\nx  Program not supported for CSEARCH conformer generation! Specify: program='rdkit' (or summ, fullmonte, crest)")
-            self.args.log.finalize()
-            sys.exit()
 
         if self.args.smi is None and self.args.input == "":
             self.args.log.write("\nx  Program requires either a SMILES or an input file to proceed! Please look up acceptable file formats. Specify: smi='CCC' (or input='filename.csv')")
@@ -450,12 +450,6 @@ class csearch:
             # check if the optimization is constrained
             complex_ts = check_constraints(self)
 
-        # this part allows to use charges and multiplicity from COM/GJF inputs
-        if self.args.charge is None:
-            self.args.charge = charge
-        if self.args.mult is None:
-            self.args.mult = mult
-
         if self.args.destination is None:
             self.csearch_folder = Path(self.args.initial_dir).joinpath(
                 f"CSEARCH"
@@ -544,6 +538,8 @@ class csearch:
                             constraints_angle,
                             constraints_dihedral,
                             complex_ts,
+                            charge,
+                            mult,
                             coord_map,
                             alg_map,
                             template,
@@ -562,7 +558,9 @@ class csearch:
                 constraints_dist,
                 constraints_angle,
                 constraints_dihedral,
-                complex_ts
+                complex_ts,
+                charge,
+                mult,
             )
 
         # Updates the dataframe with infromation about conformer generation
@@ -578,6 +576,8 @@ class csearch:
         constraints_angle,
         constraints_dihedral,
         complex_ts,
+        charge,
+        mult,
         coord_Map=None,
         alg_Map=None,
         mol_template=None,
@@ -609,17 +609,13 @@ class csearch:
         # Set charge and multiplicity
         metal_found = False
         # user can overwrite charge and mult with the corresponding arguments
-        if self.args.charge is not None:
-            charge = self.args.charge
-        else:
+        if charge is None:
             if not len(self.args.metal_atoms) >= 1:
                 charge = Chem.GetFormalCharge(mol)
             else:
                 charge, metal_found = rules_get_charge(mol, self.args)
 
-        if self.args.mult is not None:
-            mult = self.args.mult
-        else:
+        if mult is None:
             mult = Descriptors.NumRadicalElectrons(mol) + 1
             if metal_found:
                 # since RDKit gets the multiplicity of the metal with valence 0, the real multiplicity

@@ -92,17 +92,23 @@ Check our `AQME installation in 2 mins <https://youtu.be/VeaBzqIZHbo>`_ video
 for a quick installation guide. In a nutshell, AQME and its dependencies are 
 installed as follows:
 
-1. Using conda-forge  
+1. Install using conda-forge  
 
 .. code-block:: shell 
    
    conda install -c conda-forge aqme
 
-2. Using pip:  
+2. Install using pip:  
 
 .. code-block:: shell
 
    pip install aqme
+
+3. Update to the latest version:  
+
+.. code-block:: shell
+
+   pip install aqme --upgrade
 
 Installation of the extra requirements
 ++++++++++++++++++++++++++++++++++++++

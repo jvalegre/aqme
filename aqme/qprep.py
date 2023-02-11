@@ -92,7 +92,7 @@ class qprep:
             if self.args.program.lower() not in ["gaussian", "orca"]:
                 qprep_program = False
         if not qprep_program:
-            self.args.log.write("\nx  Program not supported for QPREP input file creation! Specify: program='gaussian' (or orca)")
+            self.args.log.write('\nx  Program not supported for QPREP input file creation! Specify: program="gaussian" (or "orca")')
             self.args.log.finalize()
             sys.exit()
 
