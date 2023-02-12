@@ -31,6 +31,8 @@ Parameters
    dup_threshold : float, default=0.0001
       Energy (in hartree) used as the energy difference in E, H and G to detect 
       duplicates
+    ro_threshold : float, default=0.1
+      Rotational constant value used as the threshold to detect duplicates 
    isom_type : str, default=None
       Check for isomerization from the initial input file to the resulting 
       output files. It requires the extension of the initial input files 
@@ -86,6 +88,7 @@ from aqme.qcorr_utils import (
     check_isomerization,
     full_check,
     get_json_data,
+    get_cclib_params
 )
 from aqme.qprep import qprep
 
@@ -393,31 +396,28 @@ class qcorr:
         """
         Analyze errors from normally terminated calculations
         """
+
+        # retrieve previous successfull results in case new calculations are duplicates
+        if self.args.resume_qcorr:
+            destination_json = self.args.w_dir_main.joinpath("../../../success/json_files/")
+        else:
+            destination_json = self.args.w_dir_main.joinpath("success/json_files/")
+        if os.path.exists(destination_json):
+            previous_success = glob.glob(f"{destination_json}/*.json")
+            for previous_json in previous_success:
+                with open(previous_json) as json_file:
+                    cclib_data_json = json.load(json_file)
+                E_json, H_json, G_json, ro_json, _ = get_cclib_params(cclib_data_json, errortype)
+                duplicate_data["File"].append(cclib_data_json["name"])
+                duplicate_data["Energies"].append(E_json)
+                duplicate_data["Enthalpies"].append(H_json)
+                duplicate_data["Gibbs"].append(G_json)
+                duplicate_data["RO_constant"].append(ro_json)
+
         atom_types, cartesians = cclib_atoms_coords(cclib_data)
         dup_off = None
         if errortype == "none":
-            # in eV, converted to hartree using the conversion factor from cclib
-            E_dup = cclib_data["properties"]["energy"]["total"]
-            E_dup = cclib.parser.utils.convertor(E_dup, "eV", "hartree")
-            # in hartree
-            try:
-                H_dup = cclib_data["properties"]["enthalpy"]
-                G_dup = cclib_data["properties"]["energy"]["free energy"]
-            except (AttributeError, KeyError):
-                if cclib_data["properties"]["number of atoms"] == 1:
-                    if cclib_data["metadata"]["keywords line"].find("freq") == -1:
-                        errortype = "sp_calc"
-                        cclib_data["metadata"][
-                            "ground or transition state"
-                        ] = "SP calculation"
-                    H_dup = E_dup
-                    G_dup = E_dup
-            try:
-                ro_dup = cclib_data["properties"]["rotational"]["rotational constants"]
-                if len(ro_dup) != 3:
-                    ro_dup = None
-            except:
-                ro_dup = None
+            E_dup, H_dup, G_dup, ro_dup, errortype = get_cclib_params(cclib_data, errortype)
 
             # detects if this calculation is a duplicate
             for i, _ in enumerate(duplicate_data["Energies"]):

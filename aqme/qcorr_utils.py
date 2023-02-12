@@ -428,6 +428,10 @@ def get_json_data(self, file, cclib_data):
                         qm_solv = keyword
                     elif keyword.lower().startswith("emp"):
                         qm_disp = keyword
+                    elif keyword == 'gen' or 'gen' in keyword.split('/'):
+                        cclib_data["metadata"]["basis set"] = 'gen'
+                    elif keyword == 'genecp' or 'genecp' in keyword.split('/'):
+                        cclib_data["metadata"]["basis set"] = 'genecp'
                 if calcfc_found and ts_found:
                     calc_type = "transition_state"
                 cclib_data["metadata"]["solvation"] = qm_solv
@@ -593,3 +597,31 @@ def get_json_data(self, file, cclib_data):
             json.dump(cclib_data, outfile, indent=1)
 
     return cclib_data
+
+def get_cclib_params(cclib_data, errortype):
+    """
+    Retrieve energy and rotational constant information from cclib dictionaries
+    """
+
+    # in eV, converted to hartree using the conversion factor from cclib
+    E_dup = cclib_data["properties"]["energy"]["total"]
+    E_dup = cclib.parser.utils.convertor(E_dup, "eV", "hartree")
+    # in hartree
+    try:
+        H_dup = cclib_data["properties"]["enthalpy"]
+        G_dup = cclib_data["properties"]["energy"]["free energy"]
+    except (AttributeError, KeyError):
+        if cclib_data["properties"]["number of atoms"] == 1:
+            if cclib_data["metadata"]["keywords line"].find("freq") == -1:
+                errortype = "sp_calc"
+                cclib_data["metadata"]["ground or transition state"] = "SP calculation"
+            H_dup = E_dup
+            G_dup = E_dup
+    try:
+        ro_dup = cclib_data["properties"]["rotational"]["rotational constants"]
+        if len(ro_dup) != 3:
+            ro_dup = None
+    except:
+        ro_dup = None
+    
+    return E_dup, H_dup, G_dup, ro_dup, errortype

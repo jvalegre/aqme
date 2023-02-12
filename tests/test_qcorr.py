@@ -388,6 +388,14 @@ path_qcorr = os.getcwd() + "/Example_workflows/QCORR_processing_QM_outputs"
             "success",
             False,
         ),  # test successful termination with no w_dir_main
+        # QCORR analysis with no w_dir_main
+        (
+            "QCORR_6",
+            "CH4_dup.log",
+            "run_QCORR",
+            "failed/run_1/duplicates",
+            False,
+        ),  # test successful termination with no w_dir_main
         (
             None,
             None,
@@ -893,6 +901,12 @@ def test_QCORR_analysis(init_folder, file, command_line, target_folder, restore_
         assert not path.exists(
             f'{w_dir_main}/failed/run_1/fixed_QM_inputs/{file.split(".")[0]}.com'
         )
+
+    elif init_folder == "QCORR_6":
+        subprocess.run(cmd_aqme)
+
+        # ensure the output file moves to the right folder
+        assert path.exists(f"{w_dir_main}/{target_folder}/{file}")
 
     # leave the folders as they were initially to run a different batch of tests
     elif restore_folder:
