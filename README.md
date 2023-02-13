@@ -25,8 +25,9 @@ Don't miss out the latest hands-on tutorials from our [YouTube channel](https://
 
 ## Installation
 Check our [AQME installation in 2 mins](https://youtu.be/VeaBzqIZHbo) video for a quick installation guide. In a nutshell, AQME and its dependencies are installed as follows:  
-1. Using conda-forge: `conda install -c conda-forge aqme`  
-2. Using pip: `pip install aqme`  
+1. Install using conda-forge: `conda install -c conda-forge aqme`  
+2. Install using pip: `pip install aqme`  
+3. Update to the latest version: `pip install aqme --upgrade`  
   
 Extra requirements if xTB or CREST are used (MacOS and Linux only):  
   * xTB: `conda install -y -c conda-forge xtb`  

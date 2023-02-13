@@ -439,6 +439,15 @@ def test_double_bond_chrg(
     file = str("CSEARCH/" + name + "_" + program + ".sdf")
     mols = rdkit.Chem.SDMolSupplier(file, removeHs=False)
     assert charge == int(mols[0].GetProp("Real charge"))
+    # check that H atoms are included
+    outfile = open(file,"r")
+    outlines = outfile.readlines()
+    outfile.close()
+    Hatoms_found = False
+    for line in outlines:
+        if "H   0" in line:
+            Hatoms_found = True
+    assert Hatoms_found
     os.chdir(w_dir_main)
 
 
@@ -579,6 +588,15 @@ def test_csearch_rdkit_summ_parameters(
     assert len(mols) == output_nummols
     assert charge == int(mols[0].GetProp("Real charge"))
     assert mult == int(mols[0].GetProp("Mult"))
+    # check that H atoms are included
+    outfile = open(file,"r")
+    outlines = outfile.readlines()
+    outfile.close()
+    Hatoms_found = False
+    for line in outlines:
+        if "H   0" in line:
+            Hatoms_found = True
+    assert Hatoms_found    
     os.chdir(w_dir_main)
 
 
