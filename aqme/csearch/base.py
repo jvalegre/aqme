@@ -753,29 +753,38 @@ class csearch:
                     )
 
         if self.args.program.lower() in ['crest']:
+            stop_xtb_opt = False
             if not complex_ts:
                 # mol_crest is the RDKit-optimized mol object
-                rdmolfiles.MolToXYZFile(mol_crest, name + "_crest.xyz")
+                if mol_crest is not None:
+                    rdmolfiles.MolToXYZFile(mol_crest, name + "_crest.xyz")
+                else:
+                    stop_xtb_opt = True
+                    status = -1
             else:
                 # mol is the raw mol object (no optimization with RDKit to avoid problems when using
                 # noncovalent complexes and TSs)
-                rdmolfiles.MolToXYZFile(mol, name + "_crest.xyz")
-
-            status = xtb_opt_main(
-                    f"{name}_{self.args.program.lower()}",
-                    dup_data,
-                    dup_data_idx,
-                    self,
-                    charge,
-                    mult,
-                    constraints_atoms,
-                    constraints_dist,
-                    constraints_angle,
-                    constraints_dihedral,
-                    'crest',
-                    complex_ts=complex_ts,
-                    mol=mol # this is necessary for CREST calculations with constraints
-                )
+                if mol is not None:
+                    rdmolfiles.MolToXYZFile(mol, name + "_crest.xyz")
+                else:
+                    stop_xtb_opt = True
+                    status = -1
+            if not stop_xtb_opt:
+                status = xtb_opt_main(
+                        f"{name}_{self.args.program.lower()}",
+                        dup_data,
+                        dup_data_idx,
+                        self,
+                        charge,
+                        mult,
+                        constraints_atoms,
+                        constraints_dist,
+                        constraints_angle,
+                        constraints_dihedral,
+                        'crest',
+                        complex_ts=complex_ts,
+                        mol=mol # this is necessary for CREST calculations with constraints
+                    )
 
         return status
 
@@ -1189,8 +1198,13 @@ class csearch:
         Conversion from RDKit to SDF
         """
 
-        Chem.SanitizeMol(mol)
-        mol = Chem.AddHs(mol)
+        try:
+            Chem.SanitizeMol(mol)
+            mol = Chem.AddHs(mol)
+        except Chem.AtomValenceException: # this happens sometimes with complex metals when substituting the metal with an I atom
+            self.args.log.write(f'\nx  The species provided could not be converted into a mol object wth RDKit. It normally happens with tricky metal complexes and might be fixed with different structures (i.e., changing a single bond + positive charge with a double bond).')
+            return -1, None, None, None
+
         mol.SetProp("_Name", name)
 
         # detects and applies auto-detection of initial number of conformers

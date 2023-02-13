@@ -501,8 +501,8 @@ def smi_to_mol(
         try:
             mol = Chem.MolFromSmiles(smi[0], params)
         except Chem.AtomValenceException:
-            log.write(f"\nx  The SMILES string provided ( {smi[0]} ) contains errors. For example, N atoms from ligands of metal complexes should be N+ since they're drawn with four bonds in ChemDraw, same for O atoms in carbonyl ligands, etc.\n")
-            sys.exit()
+            log.write(f"\nx  The SMILES string provided ( {smi[0]} ) contains errors or the molecule needs to be drawn in a different way. For example, N atoms from ligands of metal complexes should be N+ since they're drawn with four bonds in ChemDraw, same for O atoms in carbonyl ligands, etc.\n")
+            mol = None
 
     return (
         mol,

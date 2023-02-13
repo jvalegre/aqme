@@ -240,14 +240,15 @@ def rules_get_charge(mol, args):
     
     M_ligands, N_carbenes, bridge_atoms, C_accounted, neighbours = [], [], [], [], []
     charge_rules = np.zeros(len(mol.GetAtoms()), dtype=int)
-    neighbours, metal_found, sanit_step = [], False, True
+    neighbours, metal_found = [], False
+    try:
+        Chem.SanitizeMol(mol)
+    except Chem.AtomValenceException: # this happens sometimes with complex metals when substituting the metal with an I atom
+        args.log.write(f'\nx  The charge can not be safely calculated for the system provided. If the charge is not right, you can assign it manually with charge=INT.')
     for i, atom in enumerate(mol.GetAtoms()):
         # get the neighbours of metal atom and calculate the charge of metal center + ligands
         if atom.GetIdx() in args.metal_idx:
             # a sanitation step is needed to ensure that metals and ligands show correct valences
-            if sanit_step:
-                Chem.SanitizeMol(mol)
-                sanit_step = False
             metal_found = True
             charge_idx = args.metal_idx.index(atom.GetIdx())
             neighbours = atom.GetNeighbors()
@@ -473,7 +474,11 @@ def command_line_args():
                         try:
                             value = ast.literal_eval(value)
                         except (SyntaxError, ValueError):
-                            pass
+                            # this line fixes issues when using "[X]" or ["X"] instead of "['X']" when using lists
+                            if arg_name.lower() in ["files", "metal_oxi", "metal_atoms", "gen_atoms"]:
+                                value = value.replace('[',']').replace(',',']').split(']')
+                                while('' in value):
+                                    value.remove('')
                 kwargs[arg_name] = value
 
     # Second, load all the default variables as an "add_option" object

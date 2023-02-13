@@ -865,6 +865,7 @@ def test_QCORR_analysis(init_folder, file, command_line, target_folder, restore_
             ]
             subprocess.run(cmd_aqme)
 
+        # the energy of the json file was changed to avoid the duplicate filter
         if file.split(".")[0] == "CH4":
             assert path.exists(f"{w_dir_QCORR_5b}/{target_folder}/{file}")
             assert path.exists(
