@@ -810,3 +810,11 @@ def mol_from_sdf_or_mol_or_mol2(input_file, module):
                 mults.append(mult)
 
         return suppl, charges, mults, IDs
+
+def add_prefix_suffix(name, args):
+    if args.prefix != "":
+        name = f"{args.prefix}_{name}"
+    if args.suffix != "":
+        name += f'_{args.suffix}'
+
+    return name

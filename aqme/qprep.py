@@ -27,6 +27,8 @@ Parameters
       Multiplicity of the calculations used in the following input files. If mult isn't defined, it defaults to 1
    suffix : str, default=''
       Suffix for the new input files (i.e. FILENAME_SUFFIX.com for FILENAME.log)
+   prefix : str, default=''  
+      Prefix added to all the names  
    chk : bool, default=False
       Include the chk input line in new input files for Gaussian calculations
    mem : str, default='4GB'
@@ -58,6 +60,7 @@ from aqme.utils import (
     load_variables,
     read_xyz_charge_mult,
     mol_from_sdf_or_mol_or_mol2,
+    add_prefix_suffix,
 )
 from aqme.csearch.crest import xyzall_2_xyz
 from pathlib import Path
@@ -246,28 +249,19 @@ class qprep:
         """
 
         txt = ""
+        name_file = add_prefix_suffix(qprep_data["name"], self.args)
 
         if self.args.program.lower() == "gaussian":
             if self.args.chk:
-                if self.args.suffix != "":
-                    txt += f'%chk={qprep_data["name"]}_{self.args.suffix}.chk\n'
-                else:
-                    txt += f'%chk={qprep_data["name"]}.chk\n'
+                txt += f'%chk={name_file}.chk\n'
             txt += f"%nprocshared={self.args.nprocs}\n"
             txt += f"%mem={self.args.mem}\n"
-            txt += f"# {self.args.qm_input}"
-            txt += "\n\n"
-            if self.args.suffix != "":
-                txt += f'{qprep_data["name"]}_{self.args.suffix}\n\n'
-            else:
-                txt += f'{qprep_data["name"]}\n\n'
+            txt += f"# {self.args.qm_input}\n\n"
+            txt += f'{name_file}\n\n'
             txt += f'{qprep_data["charge"]} {qprep_data["mult"]}\n'
 
         elif self.args.program.lower() == "orca":
-            if self.args.suffix != "":
-                txt += f'# {qprep_data["name"]}_{self.args.suffix}\n'
-            else:
-                txt += f'# {qprep_data["name"]}\n'
+            txt += f'# {name_file}\n'
             if self.args.mem.find("GB"):
                 mem_orca = int(self.args.mem.split("GB")[0]) * 1000
             elif self.args.mem.find("MB"):
@@ -332,10 +326,9 @@ class qprep:
             extension = "com"
         elif self.args.program.lower() == "orca":
             extension = "inp"
-        if self.args.suffix != "":
-            comfile = f'{qprep_data["name"]}_{self.args.suffix}.{extension}'
-        else:
-            comfile = f'{qprep_data["name"]}.{extension}'
+
+        name_file = add_prefix_suffix(qprep_data["name"], self.args)
+        comfile = f'{name_file}.{extension}'
 
         if os.path.exists(self.args.w_dir_main / comfile):
             os.remove(self.args.w_dir_main / comfile)

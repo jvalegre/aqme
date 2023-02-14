@@ -52,6 +52,10 @@ General
    stacksize : str, default='1G'
      Controls the stack size used (especially relevant for xTB/CREST 
      calculations of large systems, where high stack sizes are needed)
+   prefix : str, default=''  
+      Prefix added to all the names  
+   suffix : str, default=''  
+      Suffix added to all the names  
 
 xTB only
 ++++++++
@@ -103,7 +107,13 @@ from progress.bar import IncrementalBar
 from rdkit.Geometry import Point3D
 import pandas as pd
 import time
-from aqme.utils import load_variables, rules_get_charge, substituted_mol, mol_from_sdf_or_mol_or_mol2
+from aqme.utils import (
+    load_variables,
+    rules_get_charge,
+    substituted_mol,
+    mol_from_sdf_or_mol_or_mol2,
+    add_prefix_suffix
+)
 from aqme.filter import ewin_filter, pre_E_filter, RMSD_and_E_filter
 from aqme.cmin_utils import creation_of_dup_csv_cmin
 from aqme.csearch.crest import xtb_opt_main
@@ -190,6 +200,8 @@ class cmin:
         for file in files_cmin:
             # load jobs for cmin minimization
             self.mols, self.name = self.load_jobs(file)
+            self.name = add_prefix_suffix(self.name, self.args)
+
             self.args.log.write(f"\n\n   ----- {self.name} -----")
 
             if self.args.destination is None:
@@ -243,9 +255,7 @@ class cmin:
 
     def load_jobs(self, file):
 
-        self.args.log.write(f"\n\no  Multiple minimization of {file} with {self.args.program}")
-
-        # read SDF files from RDKit optimization
+        # read SDF files
         try:
             inmols = mol_from_sdf_or_mol_or_mol2(file, 'cmin')
         except OSError:
@@ -447,6 +457,8 @@ class cmin:
             self.args.log.write("x  ASE is not installed! You can install the program with 'conda install -c conda-forge ase' or 'pip install ase'")
             self.args.log.finalize()
             sys.exit()
+
+        self.args.log.write(f"\no  Starting ANI optimization")
 
         os.environ["KMP_DUPLICATE_LIB_OK"] = "True"
         DEVICE = torch.device("cpu")

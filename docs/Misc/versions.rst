@@ -4,11 +4,15 @@
 Versions
 ========
 
+Version 1.4.5 [`url <https://github.com/jvalegre/aqme/releases/tag/1.4.5>`__]
+   -  Suffix/prefix options work in CSEARCH, CMIN and QPREP 
+
 Version 1.4.4 [`url <https://github.com/jvalegre/aqme/releases/tag/1.4.4>`__]
    -  When using a CSV as input, the user can specify charge and mult for each species by 
       using the charge/mult columns
    -  QCORR now detects duplicates including the successful calculations from previous runs
    -  Fixed an error in full_check from QCORR when using genecp
+   -  Admits lists in command lines specified as ["X"], "[X]" and '["X"]'
 
 Version 1.4.3 [`url <https://github.com/jvalegre/aqme/releases/tag/1.4.3>`__]
    -  Return metal into RDKit mol object when using the metal_atoms option with CSEARCH-CREST

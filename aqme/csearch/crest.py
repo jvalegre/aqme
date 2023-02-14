@@ -366,9 +366,15 @@ def xtb_opt_main(
                             if file == 'crest_clustered.xyz':
                                 os.rename('crest_clustered.xyz', f"{dat_dir}/{name_no_path}_clustered.xyz")
                             else:
-                                os.remove(file)
+                                try:
+                                    os.remove(file)
+                                except OSError: # this avoids problems when running AQME in HPCs
+                                    pass
                         except IsADirectoryError:
-                            shutil.rmtree(file)
+                            try:
+                                shutil.rmtree(file)
+                            except OSError: # this avoids problems when running AQME in HPCs
+                                pass
 
     os.chdir(self.args.w_dir_main)
 
