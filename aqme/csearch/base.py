@@ -238,6 +238,9 @@ class csearch:
             self.args.log.finalize()
             sys.exit()
 
+        if str(self.args.auto_metal_atoms) == "False":
+            self.args.auto_metal_atoms = False
+
         if self.args.program.lower() == "crest":
             try:
                 subprocess.run(
@@ -485,6 +488,22 @@ class csearch:
                 shutil.copy(f"{name}.xyz", f"{name}_{self.args.program.lower()}.xyz")
 
         template_opt = False
+
+        # check if metals and oxidation states are both used
+        if self.args.metal_atoms != []:
+            if self.args.metal_oxi == []:
+                self.args.log.write(f"\nx   Metal atoms ({self.args.metal_atoms}) were specified without their corresponding oxidation state (metal_oxi option)")
+                self.args.log.finalize()
+                sys.exit()
+
+        if self.args.metal_oxi != []:
+            if self.args.metal_atoms == []:
+                self.args.log.write(f"\nx   Metal oxidation states ({self.args.metal_oxi}) were specified without their corresponding metal atoms (metal_atoms option)")
+                self.args.log.finalize()
+                sys.exit()
+
+        if self.args.auto_metal_atoms:
+            _ = self.find_metal_atom(mol)
         # replaces the metal for an I atom
         if len(self.args.metal_atoms) >= 1:
             (
@@ -567,6 +586,17 @@ class csearch:
         frames = [self.final_dup_data, total_data]
         self.final_dup_data = pd.concat(frames, ignore_index=True, sort=True)
 
+    # automatic detection of metal atoms   
+    def find_metal_atom(self,mol):
+        transition_metals = ['Sc', 'Ti', 'V', 'Cr', 'Mn', 'Fe', 'Co', 'Ni', 'Cu', 'Zn', 'Y', 'Zr', 'Nb', 'Mo',
+                            'Tc', 'Ru', 'Rh', 'Pd', 'Ag', 'Cd', 'Hf', 'Ta', 'W', 'Re', 'Os', 'Ir', 'Pt', 'Au',
+                            'Hg', 'Rf', 'Db', 'Sg', 'Bh', 'Hs', 'Mt', 'Ds', 'Rg', 'Cn', 'Nh', 'Fl', 'Mc', 'Lv', 'Ts', 'Og']
+        for atom in mol.GetAtoms():
+            if atom.GetSymbol() in transition_metals:
+                self.args.metal_atoms.append(atom.GetSymbol())
+        if len(self.args.metal_atoms) > 0:
+            self.args.log.write(f"\no AQME recognized the following metal atoms: {self.args.metal_atoms}")
+
     def conformer_generation(
         self,
         mol,
@@ -592,19 +622,6 @@ class csearch:
         dup_data_idx = 0
         start_time = time.time()
         status = None
-
-        # check if metals and oxidation states are both used
-        if self.args.metal_atoms != []:
-            if self.args.metal_oxi == []:
-                self.args.log.write(f"\nx   Metal atoms ({self.args.metal_atoms}) were specified without their corresponding oxidation state (metal_oxi option)")
-                self.args.log.finalize()
-                sys.exit()
-
-        if self.args.metal_oxi != []:
-            if self.args.metal_atoms == []:
-                self.args.log.write(f"\nx   Metal oxidation states ({self.args.metal_oxi}) were specified without their corresponding metal atoms (metal_atoms option)")
-                self.args.log.finalize()
-                sys.exit()
 
         # Set charge and multiplicity
         metal_found = False
