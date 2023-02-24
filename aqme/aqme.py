@@ -74,6 +74,7 @@ def main():
             sample=args.sample,
             max_workers=args.max_workers,
             metal_atoms=args.metal_atoms,
+            auto_metal_atoms=args.auto_metal_atoms,
             metal_oxi=args.metal_oxi,
             metal_idx=args.metal_idx,
             complex_coord=args.complex_coord,
