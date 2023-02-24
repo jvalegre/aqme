@@ -2,7 +2,7 @@
 License
 =======
 
-.. include:: ../../README.rst
+.. include:: ../README.rst
    :start-after: license-start
    :end-before: license-end
 

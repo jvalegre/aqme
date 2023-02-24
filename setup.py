@@ -4,10 +4,6 @@ import io
 # read the contents of your README file
 from os import path
 
-this_directory = path.abspath(path.dirname(__file__))
-with io.open(path.join(this_directory, "README.md"), encoding="utf-8") as f:
-    long_description = f.read()
-
 setup(
     name="aqme",
     packages=find_packages(exclude=["tests"]),
@@ -15,7 +11,7 @@ setup(
     version="1.4.4",
     license="MIT",
     description="Automated Quantum Mechanical Environments",
-    long_description="Automated Quantum Mechanical Environments",
+    long_description="Documentation in Read The Docs: https://aqme.readthedocs.io",
     long_description_content_type="text/markdown",
     author="Shree Sowndarya S. V., Juan V. Alegre Requena",
     author_email="svss@colostate.edu, jvalegre@unizar.es",

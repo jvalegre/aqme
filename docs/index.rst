@@ -2,13 +2,13 @@
 
 |aqme_banner|
 
-.. include:: ../README.rst
+.. include:: README.rst
    :start-after: badges-start
    :end-before: badges-end
 
 .. _github: https://github.com/jvalegre/aqme
 
-.. include:: ../README.rst
+.. include:: README.rst
    :start-after: checkboxes-start
    :end-before: checkboxes-end
 
@@ -16,11 +16,11 @@
 Welcome to AQME's documentation!
 =====================================
 
-.. include:: ../README.rst
+.. include:: README.rst
    :start-after: introduction-start
    :end-before: introduction-end
 
-.. include:: ../README.rst
+.. include:: README.rst
    :start-after: reference-start
    :end-before: reference-end
 

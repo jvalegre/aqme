@@ -19,7 +19,9 @@ General
    name : str, default=None  
       (If smi is defined) optionally, define a name for the system  
    w_dir_main : str, default=os.getcwd()  
-      Working directory  
+      Working directory 
+   destination : str, default=None,
+     Directory to create the output file(s)   
    varfile : str, default=None  
       Option to parse the variables using a yaml file (specify the filename)  
    max_workers : int, default=4  
@@ -1202,7 +1204,7 @@ class csearch:
             Chem.SanitizeMol(mol)
             mol = Chem.AddHs(mol)
         except Chem.AtomValenceException: # this happens sometimes with complex metals when substituting the metal with an I atom
-            self.args.log.write(f'\nx  The species provided could not be converted into a mol object wth RDKit. It normally happens with tricky metal complexes and might be fixed with different structures (i.e., changing a single bond + positive charge with a double bond).')
+            self.args.log.write(f'\nx  The species provided could not be converted into a mol object wth RDKit. It normally happens with tricky metal complexes and might be fixed with a couple tricks (i.e., using the metal_atoms="[\'M\']" option, changing a single bond + positive charge with a double bond).')
             return -1, None, None, None
 
         mol.SetProp("_Name", name)
