@@ -5,7 +5,9 @@ Versions
 ========
 
 Version 1.4.5 [`url <https://github.com/jvalegre/aqme/releases/tag/1.4.5>`__]
-   -  Suffix/prefix options work in CSEARCH, CMIN and QPREP 
+   -  Suffix/prefix options work in CSEARCH, CMIN and QPREP  
+   -  Automatic recognition of metals with the auto_metal_atom option  
+   -  In QPREP, if qm_input starts with "p ", the Gaussian inputs starts with "#p"
 
 Version 1.4.4 [`url <https://github.com/jvalegre/aqme/releases/tag/1.4.4>`__]
    -  When using a CSV as input, the user can specify charge and mult for each species by 

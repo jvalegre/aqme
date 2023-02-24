@@ -23,7 +23,6 @@ var_dict = {
     "mult": None,
     "complex_coord": [],
     "complex_type": "",
-    "metal_oxi": [],
     "metal_idx": [],
     "metal_sym": [],
     "constraints_atoms": [],

@@ -227,103 +227,6 @@ def get_info_input(file):
     return atoms_and_coords, charge, mult
 
 
-def rules_get_charge(mol, args):
-    """
-    Automatically sets the charge for metal complexes
-    """
-
-    C_group = ["C", "Si", "Ge", "Sn"]
-    N_group = ["N", "P", "As", "Sb"]
-    O_group = ["O", "S", "Se", "Te"]
-    F_group = ["F", "Cl", "Br", "I"]
-    
-    
-    M_ligands, N_carbenes, bridge_atoms, C_accounted, neighbours = [], [], [], [], []
-    charge_rules = np.zeros(len(mol.GetAtoms()), dtype=int)
-    neighbours, metal_found = [], False
-    try:
-        Chem.SanitizeMol(mol)
-    except Chem.AtomValenceException: # this happens sometimes with complex metals when substituting the metal with an I atom
-        args.log.write(f'\nx  The charge can not be safely calculated for the system provided. If the charge is not right, you can assign it manually with charge=INT.')
-    for i, atom in enumerate(mol.GetAtoms()):
-        # get the neighbours of metal atom and calculate the charge of metal center + ligands
-        if atom.GetIdx() in args.metal_idx:
-            # a sanitation step is needed to ensure that metals and ligands show correct valences
-            metal_found = True
-            charge_idx = args.metal_idx.index(atom.GetIdx())
-            neighbours = atom.GetNeighbors()
-            charge_rules[i] = args.metal_oxi[charge_idx]
-            for neighbour in neighbours:
-                double_bond = False
-                M_ligands.append(neighbour.GetIdx())
-                if neighbour.GetTotalValence() == 4:
-                    if neighbour.GetSymbol() in C_group:
-                        # correct for C=C interacting with M with pi interactions
-                        # when drawing these rings in ChemDraw, all the aromatic C atoms will be linked
-                        # to the M atom as part of 3 member rings
-                        atom_rings = mol.GetRingInfo().AtomRings()
-                        for ring in atom_rings:
-                            if neighbour.GetIdx() in list(ring) and args.metal_idx[0] in list(ring):
-                                # for each double bond
-                                if len(ring) == 3:
-                                    C_count, C_accounted_indiv = 0,[]
-                                    for ring_member in ring:
-                                        if mol.GetAtoms()[ring_member].GetSymbol() == "C" and ring_member not in C_accounted:
-                                            C_accounted_indiv.append(ring_member)
-                                            C_count += 1
-                                    if C_count == 2:
-                                        for ele in C_accounted_indiv:
-                                            C_accounted.append(ele)
-                                        break
-                        # first, detects carbenes to adjust charge
-                        carbene_like = False
-                        bridge_ligand = False
-                        if neighbour.GetIdx() in C_accounted:
-                            double_bond = True
-                        for inside_neighbour in neighbour.GetNeighbors():
-                            if inside_neighbour.GetSymbol() in N_group:
-                                if inside_neighbour.GetTotalValence() == 4:
-                                    for N_neighbour in inside_neighbour.GetNeighbors():
-                                        # this option detects bridge ligands that connect two metals such as M--CN--M
-                                        # we use I since the M is still represented as I at this point
-                                        if N_neighbour.GetSymbol() == "I":
-                                            bridge_ligand = True
-                                            bridge_atoms.append(inside_neighbour.GetIdx())
-                                    if not bridge_ligand:
-                                        carbene_like = True
-                                        N_carbenes.append(inside_neighbour.GetIdx())
-                        if not carbene_like and not double_bond:
-                            charge_rules[i] = charge_rules[i] - 1
-                elif neighbour.GetTotalValence() == 3:
-                    if neighbour.GetSymbol() in N_group and neighbour.GetFormalCharge() == 0:
-                        charge_rules[i] = charge_rules[i] - 1
-                elif neighbour.GetTotalValence() == 2:
-                    # radical chalcogen atoms (i.e., Cu-OH(rad))
-                    if neighbour.GetSymbol() in O_group and neighbour.GetFormalCharge() == 0 and len(neighbour.GetNeighbors()) == 2:
-                        charge_rules[i] = charge_rules[i] - 1
-                    # double bonded chalcogen atom (i.e., V=O)
-                    elif neighbour.GetSymbol() in O_group and neighbour.GetFormalCharge() == 0 and len(neighbour.GetNeighbors()) == 1:
-                        charge_rules[i] = charge_rules[i] - 2
-                elif neighbour.GetTotalValence() == 1:
-                    if neighbour.GetSymbol() in O_group:
-                        charge_rules[i] = charge_rules[i] - 2
-                    if neighbour.GetSymbol() in F_group:
-                        charge_rules[i] = charge_rules[i] - 1
-                                            
-    # for charges not in the metal, neighbours or exceptions (i.e., C=N+ from carbenes or CN from bridge atoms)
-    invalid_charged_atoms = M_ligands + N_carbenes + bridge_atoms + args.metal_idx
-    for i, atom in enumerate(mol.GetAtoms()):
-        if atom.GetIdx() not in invalid_charged_atoms:
-            charge_rules[i] = atom.GetFormalCharge()
-
-    charge = np.sum(charge_rules)
-    if not metal_found:
-        # for organic molecules when using a list containing organic and organometallics molecules mixed
-        charge = Chem.GetFormalCharge(mol)
-
-    return charge, metal_found
-
-
 def substituted_mol(self, mol, checkI):
     """
     Returns a molecule object in which all metal atoms specified in args.metal_atoms
@@ -469,13 +372,13 @@ def command_line_args():
                 kwargs[arg_name] = glob.glob(value)
             else:
                 # this converts the string parameters to lists
-                if arg_name.lower() in ["files", "metal_oxi", "metal_atoms", "gen_atoms", "constraints_atoms", "constraints_dist", "constraints_angle", "constraints_dihedral", "atom_types", "cartesians", "nmr_atoms", "nmr_slope", "nmr_intercept"]:
+                if arg_name.lower() in ["files", "gen_atoms", "constraints_atoms", "constraints_dist", "constraints_angle", "constraints_dihedral", "atom_types", "cartesians", "nmr_atoms", "nmr_slope", "nmr_intercept"]:
                     if not isinstance(value, list):
                         try:
                             value = ast.literal_eval(value)
                         except (SyntaxError, ValueError):
                             # this line fixes issues when using "[X]" or ["X"] instead of "['X']" when using lists
-                            if arg_name.lower() in ["files", "metal_oxi", "metal_atoms", "gen_atoms"]:
+                            if arg_name.lower() in ["files", "gen_atoms"]:
                                 value = value.replace('[',']').replace(',',']').split(']')
                                 while('' in value):
                                     value.remove('')

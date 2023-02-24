@@ -93,15 +93,13 @@ def test_cmin_methods(
 
 # # tests for parameters of cmin paramters
 # @pytest.mark.parametrize(
-#     "program, sdf, metal_complex,metal_atoms,metal_oxi,complex_type, charge, mult, ewin_cmin, initial_energy_threshold, energy_threshold,rms_threshold, output_nummols",
+#     "program, sdf, metal_complex,complex_type, charge, mult, ewin_cmin, initial_energy_threshold, energy_threshold,rms_threshold, output_nummols",
 #     [
 #         # tests for conformer generation with RDKit
 #         (
 #             "xtb",
 #             "pentane_rdkit.sdf",
 #             False,
-#             None,
-#             None,
 #             None,
 #             0,
 #             1,
@@ -115,8 +113,6 @@ def test_cmin_methods(
 #             "xtb",
 #             "Pd_complex_0_rdkit.sdf",
 #             True,
-#             ["Pd"],
-#             [2],
 #             "squareplanar",
 #             0,
 #             1,
@@ -132,8 +128,6 @@ def test_cmin_methods(
 #     program,
 #     sdf,
 #     metal_complex,
-#     metal_atoms,
-#     metal_oxi,
 #     complex_type,
 #     charge,
 #     mult,
