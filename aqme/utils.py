@@ -401,6 +401,7 @@ def load_variables(kwargs, aqme_module, create_dat=True):
     txt_yaml = ""
     if self.varfile is not None:
         self, txt_yaml = load_from_yaml(self)
+        
     if aqme_module != "command":
 
         self.initial_dir = Path(os.getcwd())

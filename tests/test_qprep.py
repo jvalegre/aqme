@@ -38,6 +38,7 @@ path_qprep = path_main + "/Example_workflows/QPREP_generating_input_files"
             "com_files",
             False,
         ),  # test log inputs with defined charge and mult
+        ("com_gen", "p_print", "com_files", False),  # test #p in qm_input (replaces previous files)
         (
             "charge_mult",
             "sdf_files",
@@ -88,6 +89,15 @@ def test_QPREP_analysis(test_type, init_folder, target_folder, restore_folder):
         )
 
     # runs the program with the different tests
+    if init_folder == 'p_print':
+        qm_input = "p wb97xd/lanl2dz scrf=(smd,solvent=acetonitrile)"
+        line_2 = "#p wb97xd/lanl2dz scrf=(smd,solvent=acetonitrile)"
+        init_folder = 'sdf_files'
+
+    else:
+        qm_input = "wb97xd/lanl2dz scrf=(smd,solvent=acetonitrile)"
+        line_2 = "# wb97xd/lanl2dz scrf=(smd,solvent=acetonitrile)"
+
     w_dir_main = f"{path_qprep}/{init_folder}"
     destination = f"{path_qprep}/{init_folder}/{target_folder}"
 
@@ -120,7 +130,7 @@ def test_QPREP_analysis(test_type, init_folder, target_folder, restore_folder):
             "--program",
             "gaussian",
             "--qm_input",
-            "wb97xd/lanl2dz scrf=(smd,solvent=acetonitrile)",
+            qm_input,
         ]
         subprocess.run(cmd_aqme)
 
@@ -134,9 +144,7 @@ def test_QPREP_analysis(test_type, init_folder, target_folder, restore_folder):
             outfile = open(f'{destination}/{file.split(".")[0]}.com', "r")
             outlines = outfile.readlines()
             outfile.close()
-
-            line_2 = "# wb97xd/lanl2dz scrf=(smd,solvent=acetonitrile)"
-
+ 
             if file.split(".")[0] == "H_freq":
                 line_6 = "0 2"
                 line_7 = "H   0.00000000   0.00000000   0.00000000"
@@ -181,7 +189,7 @@ def test_QPREP_analysis(test_type, init_folder, target_folder, restore_folder):
 
                 assert outlines[8].strip() == line_8
                 assert outlines[10].strip() == line_10
-
+            
             assert outlines[2].strip() == line_2
             assert outlines[6].strip() == line_6
 

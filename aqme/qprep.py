@@ -256,7 +256,10 @@ class qprep:
                 txt += f'%chk={name_file}.chk\n'
             txt += f"%nprocshared={self.args.nprocs}\n"
             txt += f"%mem={self.args.mem}\n"
-            txt += f"# {self.args.qm_input}\n\n"
+            if self.args.qm_input[:2] != 'p ':
+                txt += f"# {self.args.qm_input}\n\n"
+            else:
+                txt += f"#{self.args.qm_input}\n\n"
             txt += f'{name_file}\n\n'
             txt += f'{qprep_data["charge"]} {qprep_data["mult"]}\n'
 
