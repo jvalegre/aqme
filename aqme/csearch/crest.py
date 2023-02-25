@@ -251,6 +251,7 @@ def xtb_opt_main(
 
     xyzoutall = str(dat_dir) + "/" + name_no_path + "_conformers.xyz"
 
+    # CREST sampling
     if self.args.program.lower() == "crest":
         self.args.log.write(f"\no  Starting CREST sampling")
         if constrained_opt:
@@ -287,12 +288,12 @@ def xtb_opt_main(
 
         run_command(command, f"/{dat_dir}/{name_no_path}.out")
 
-        # get number of n_atoms
         try:
             natoms = open("crest_best.xyz").readlines()[0].strip()
         except FileNotFoundError:
                 self.args.log.write(f"\nx  CREST optimization failed! This might be caused by different reasons. For example, this might happen if you're using metal complexes without specifying any kind of template in the complex_type option (i.e. squareplanar).\n")
 
+        # CREGEN sorting
         if self.args.cregen and int(natoms) != 1:
             self.args.log.write(f"\no  Starting CREGEN sorting")
             command = ["crest", "crest_best.xyz", "--cregen", "crest_conformers.xyz"]

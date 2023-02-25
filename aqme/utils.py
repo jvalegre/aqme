@@ -33,17 +33,12 @@ RDLogger.DisableLog("rdApp.*")
 
 def run_command(command, outfile):
     """
-    Runs the subprocess command and outputs to the necessary output file
+    Runs the subprocess command and saves the results in an output file (not shown in the terminal)
     """
 
-    p2 = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
-    txt = [line.decode("utf-8") for line in p2.stdout]
-    p2.stdout.close()
-
-    with open(outfile, "w") as f:
-        for line in txt:
-            f.write(line)
-    f.close()
+    output = open(outfile, "w")
+    subprocess.run(command, stdout=output, stderr=subprocess.DEVNULL)
+    output.close()
 
 
 def periodic_table():
