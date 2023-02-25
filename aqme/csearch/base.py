@@ -19,7 +19,9 @@ General
    name : str, default=None  
       (If smi is defined) optionally, define a name for the system  
    w_dir_main : str, default=os.getcwd()  
-      Working directory  
+      Working directory 
+   destination : str, default=None,
+     Directory to create the output file(s)   
    varfile : str, default=None  
       Option to parse the variables using a yaml file (specify the filename)  
    max_workers : int, default=4  
@@ -88,14 +90,10 @@ General RDKit-based
 Only organometallic molecules
 .............................
 
-   metal_atoms : list of str, default=[]
-     Specify metal atom(s) of the system as [ATOM_TYPE]. Multiple metals can 
-     be used simultaneously (i.e. ['Pd','Ir']).  This option is important to 
-     calculate the charge of metal complexes based on SMILES strings. Requires 
-     the use of metal_oxi.
-   metal_oxi : list of int, default=[]
-     Specify metal oxidation state as [NUMBER]. Multiple metals can be used 
-     simultaneously (i.e. [2,3]).
+   auto_metal_atoms : bool, default=True
+     Automatically detect metal atoms for the RDKit conformer generation. Charge 
+     and mult should be specified as well since the automatic charge and mult 
+     detection might not be precise.
    complex_type : str, default=''
       Forces the metal complexes to adopt a predefined geometry. This option is 
       especially relevant when RDKit predicts wrong complex geometries or gives 
@@ -206,7 +204,6 @@ from aqme.csearch.utils import (
 from aqme.csearch.templates import template_embed, check_metal_neigh
 from aqme.csearch.fullmonte import generating_conformations_fullmonte, realign_mol
 from aqme.utils import (
-    rules_get_charge,
     substituted_mol,
     load_variables,
     set_metal_atomic_number
@@ -237,6 +234,9 @@ class csearch:
             self.args.log.write('\nx  Program not specified or not supported for CSEARCH! Specify: program="rdkit" (or "crest", "summ", "fullmonte")')
             self.args.log.finalize()
             sys.exit()
+
+        if str(self.args.auto_metal_atoms) == "False":
+            self.args.auto_metal_atoms = False
 
         if self.args.program.lower() == "crest":
             try:
@@ -485,6 +485,11 @@ class csearch:
                 shutil.copy(f"{name}.xyz", f"{name}_{self.args.program.lower()}.xyz")
 
         template_opt = False
+
+        # detects metal atoms
+        if self.args.auto_metal_atoms:
+            _ = self.find_metal_atom(mol,charge,mult)
+
         # replaces the metal for an I atom
         if len(self.args.metal_atoms) >= 1:
             (
@@ -567,6 +572,20 @@ class csearch:
         frames = [self.final_dup_data, total_data]
         self.final_dup_data = pd.concat(frames, ignore_index=True, sort=True)
 
+    # automatic detection of metal atoms   
+    def find_metal_atom(self,mol,charge,mult):
+        self.args.metal_atoms = [] # for batch jobs such as CSV inputs with many SMILES
+        transition_metals = ['Sc', 'Ti', 'V', 'Cr', 'Mn', 'Fe', 'Co', 'Ni', 'Cu', 'Zn', 'Y', 'Zr', 'Nb', 'Mo',
+                            'Tc', 'Ru', 'Rh', 'Pd', 'Ag', 'Cd', 'Hf', 'Ta', 'W', 'Re', 'Os', 'Ir', 'Pt', 'Au',
+                            'Hg', 'Rf', 'Db', 'Sg', 'Bh', 'Hs', 'Mt', 'Ds', 'Rg', 'Cn', 'Nh', 'Fl', 'Mc', 'Lv', 'Ts', 'Og']
+        for atom in mol.GetAtoms():
+            if atom.GetSymbol() in transition_metals:
+                self.args.metal_atoms.append(atom.GetSymbol())
+        if len(self.args.metal_atoms) > 0:
+            self.args.log.write(f"\no  AQME recognized the following metal atoms: {self.args.metal_atoms}")
+            if charge is None or mult is None:
+                self.args.log.write(f"\nx  The automated charge and multiplicity calculation might not be precise for metal complexes! You should use the charge and mult options (or the charge and mult columns in CSV inputs).")
+
     def conformer_generation(
         self,
         mol,
@@ -593,39 +612,12 @@ class csearch:
         start_time = time.time()
         status = None
 
-        # check if metals and oxidation states are both used
-        if self.args.metal_atoms != []:
-            if self.args.metal_oxi == []:
-                self.args.log.write(f"\nx   Metal atoms ({self.args.metal_atoms}) were specified without their corresponding oxidation state (metal_oxi option)")
-                self.args.log.finalize()
-                sys.exit()
-
-        if self.args.metal_oxi != []:
-            if self.args.metal_atoms == []:
-                self.args.log.write(f"\nx   Metal oxidation states ({self.args.metal_oxi}) were specified without their corresponding metal atoms (metal_atoms option)")
-                self.args.log.finalize()
-                sys.exit()
-
         # Set charge and multiplicity
-        metal_found = False
         # user can overwrite charge and mult with the corresponding arguments
         if charge is None:
-            if not len(self.args.metal_atoms) >= 1:
-                charge = Chem.GetFormalCharge(mol)
-            else:
-                charge, metal_found = rules_get_charge(mol, self.args)
-
+            charge = Chem.GetFormalCharge(mol)
         if mult is None:
             mult = Descriptors.NumRadicalElectrons(mol) + 1
-            if metal_found:
-                # since RDKit gets the multiplicity of the metal with valence 0, the real multiplicity
-                # value needs to be adapted with the charge. If multiplicity is different than 1 or 2,
-                # the user must specify the value with the mult option
-                if (charge % 2) == 1 and charge != 0: # odd charges (i.e. +1, +3, etc)
-                    if mult == 1:
-                        mult = mult + 1
-                    if mult == 2:
-                        mult = mult - 1
 
         dup_data.at[dup_data_idx, "Real charge"] = charge
         dup_data.at[dup_data_idx, "Mult"] = mult
@@ -1202,7 +1194,7 @@ class csearch:
             Chem.SanitizeMol(mol)
             mol = Chem.AddHs(mol)
         except Chem.AtomValenceException: # this happens sometimes with complex metals when substituting the metal with an I atom
-            self.args.log.write(f'\nx  The species provided could not be converted into a mol object wth RDKit. It normally happens with tricky metal complexes and might be fixed with different structures (i.e., changing a single bond + positive charge with a double bond).')
+            self.args.log.write(f'\nx  The species provided could not be converted into a mol object wth RDKit. It normally happens with tricky metal complexes and might be fixed with a couple tricks (i.e., changing a single bond + positive charge with a double bond).')
             return -1, None, None, None
 
         mol.SetProp("_Name", name)

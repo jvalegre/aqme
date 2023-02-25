@@ -44,7 +44,6 @@ molecule.
             smi=smiles,
             name='Pd_complex',
             program='rdkit',
-            metal_atoms=['Pd',],         # Symbol of transition metal atoms included
-            metal_oxi=[2,],              # Oxidation number per metal_atom
+            charge=-1,              # charge
             mult=1,                      # multiplicity   
             complex_type='squareplanar') # Template geometry to use

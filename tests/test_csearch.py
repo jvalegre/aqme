@@ -409,47 +409,6 @@ def test_csearch_fullmonte_parameters(
     assert mult == int(mols[0].GetProp("Mult"))
     os.chdir(w_dir_main)
 
-# tests for parameters of metals with double bonds
-@pytest.mark.parametrize(
-    "program, smi, name, charge",
-    [
-        ("rdkit", "N[SiH](N)[Cu]1CC1", "Cu_ethene", 0),
-        ("rdkit", "N[SiH](N)[Cu]1234C5C1C2C3C54", "Cu_Cp", -1),
-        ("rdkit", "N[SiH](N)[Cu]12345C6C1C2C3C4C65", "Cu_Ph", 0),
-    ],
-)
-def test_double_bond_chrg(
-    program,
-    smi,
-    name,
-    charge,
-):
-    os.chdir(csearch_methods_dir)
-    # runs the program with the different tests
-    csearch(
-        program=program,
-        smi=smi,
-        name=name,
-        sample=10,
-        metal_atoms=['Cu'],
-        metal_oxi=[1]
-    )
-
-    # tests here
-    file = str("CSEARCH/" + name + "_" + program + ".sdf")
-    mols = rdkit.Chem.SDMolSupplier(file, removeHs=False)
-    assert charge == int(mols[0].GetProp("Real charge"))
-    # check that H atoms are included
-    outfile = open(file,"r")
-    outlines = outfile.readlines()
-    outfile.close()
-    Hatoms_found = False
-    for line in outlines:
-        if "H   0" in line:
-            Hatoms_found = True
-    assert Hatoms_found
-    os.chdir(w_dir_main)
-
 
 # tests for parameters of csearch rdkit
 @pytest.mark.parametrize(
@@ -602,7 +561,7 @@ def test_csearch_rdkit_summ_parameters(
 
 # tests for individual organic molecules and metal complexes with different types of csearch methods
 @pytest.mark.parametrize(
-    "program, smi, name, complex, metal_complex, metal, metal_oxi, complex_type, constraints_dist, constraints_angle, constraints_dihedral, charge, mult, crest_keywords, destination, output_nummols",
+    "program, smi, name, complex, metal_complex, complex_type, constraints_dist, constraints_angle, constraints_dihedral, charge, mult, crest_keywords, destination, output_nummols",
     [
         # tests for conformer generation with RDKit, SUMM, FullMonte and CREST
         (
@@ -611,8 +570,6 @@ def test_csearch_rdkit_summ_parameters(
             "pentane_RD",
             False,
             False,
-            None,
-            None,
             None,
             [],
             [],
@@ -630,8 +587,6 @@ def test_csearch_rdkit_summ_parameters(
         #     False,
         #     False,
         #     None,
-        #     None,
-        #     None,
         #     [],
         #     [],
         #     [],
@@ -647,8 +602,6 @@ def test_csearch_rdkit_summ_parameters(
             "pentane_FM",
             False,
             False,
-            None,
-            None,
             None,
             [],
             [],
@@ -666,12 +619,10 @@ def test_csearch_rdkit_summ_parameters(
             "Pd_metal_only",
             False,
             True,
-            ["Pd"],
-            [2],
             None,
-            None,
-            None,
-            None,
+            [],
+            [],
+            [],
             -1,
             1,
             None,
@@ -685,12 +636,10 @@ def test_csearch_rdkit_summ_parameters(
             "Pd_complex",
             False,
             True,
-            ["Pd"],
-            [2],
             "squareplanar",
-            None,
-            None,
-            None,
+            [],
+            [],
+            [],
             -1,
             1,
             None,
@@ -703,12 +652,10 @@ def test_csearch_rdkit_summ_parameters(
             "Cu_trigonal",
             False,
             True,
-            ["Cu"],
-            [1],
             "trigonalplanar",
-            None,
-            None,
-            None,
+            [],
+            [],
+            [],
             -2,
             1,
             None,
@@ -721,12 +668,10 @@ def test_csearch_rdkit_summ_parameters(
             "V_squarepyramidal",
             False,
             True,
-            ["V"],
-            [4],
             "squarepyramidal",
-            None,
-            None,
-            None,
+            [],
+            [],
+            [],
             -2,
             1,
             None,
@@ -740,12 +685,10 @@ def test_csearch_rdkit_summ_parameters(
             "Ag_complex_crest",
             False,
             True,
-            ["Ag"],
-            [1],
             "linear",
-            None,
-            None,
-            None,
+            [],
+            [],
+            [],
             1,
             1,
             None,
@@ -759,8 +702,6 @@ def test_csearch_rdkit_summ_parameters(
             "ethane",
             False,
             False,
-            None,
-            None,
             None,
             [],
             [],
@@ -778,8 +719,6 @@ def test_csearch_rdkit_summ_parameters(
             True,
             False,
             None,
-            None,
-            None,
             [],
             [],
             [],
@@ -796,8 +735,6 @@ def test_csearch_rdkit_summ_parameters(
             True,
             False,
             None,
-            None,
-            None,
             [],
             [],
             [],
@@ -813,8 +750,6 @@ def test_csearch_rdkit_summ_parameters(
             "ts",
             True,
             False,
-            None,
-            None,
             None,
             [[4, 5, 1.8], [5, 9, 1.8]],
             [[4, 5, 9, 180]],
@@ -833,8 +768,6 @@ def test_csearch_methods(
     name,
     complex,
     metal_complex,
-    metal,
-    metal_oxi,
     complex_type,
     constraints_dist,
     constraints_angle,
@@ -871,9 +804,8 @@ def test_csearch_methods(
                 program=program,
                 smi=smi,
                 name=name,
-                metal_atoms=metal,
-                metal_oxi=metal_oxi,
                 mult=mult,
+                charge=charge,
                 sample=10
             )
         else:
@@ -882,8 +814,7 @@ def test_csearch_methods(
                 program=program,
                 smi=smi,
                 name=name,
-                metal_atoms=metal,
-                metal_oxi=metal_oxi,
+                charge=charge,
                 complex_type=complex_type,
                 mult=mult,
                 sample=10

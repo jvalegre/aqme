@@ -408,9 +408,9 @@ Reference
 .. reference-start
 
 If you use any of the AQME modules, please include this citation:  
-AQME v1.4, Alegre-Requena, J. V.; Sowndarya, S.; Alturaifi, T.; Pérez-Soto, R.; 
-Paton, R. ChemRxiv 2022, 
-DOI: `10.26434/chemrxiv-2022-dnc48 <https://doi.org/10.26434/chemrxiv-2022-dnc48>`__ .  
+AQME v1.4, Alegre-Requena, J. V.; Sowndarya, S.; Pérez-Soto, R.; Alturaifi, T.; 
+Paton, R. AQME: Automated Quantum Mechanical Environments for Researchers and Educators. 
+Wiley Interdiscip. Rev. Comput. Mol. Sci. 2023, DOI: 10.1002/wcms.1663.  
   
 Additionally, please include the corresponding references for the following programs:  
   * If you used CSEARCH with RDKit methods: `RDKit <https://www.rdkit.org/>`__ 

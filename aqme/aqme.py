@@ -74,7 +74,7 @@ def main():
             sample=args.sample,
             max_workers=args.max_workers,
             metal_atoms=args.metal_atoms,
-            metal_oxi=args.metal_oxi,
+            auto_metal_atoms=args.auto_metal_atoms,
             metal_idx=args.metal_idx,
             complex_coord=args.complex_coord,
             metal_sym=args.metal_sym,
@@ -100,6 +100,7 @@ def main():
             constraints_angle=args.constraints_angle,
             constraints_dihedral=args.constraints_dihedral,
             prefix=args.prefix,
+            suffix=args.suffix,
             stacksize=args.stacksize,
             ewin_fullmonte=args.ewin_fullmonte,
             ewin_sample_fullmonte=args.ewin_sample_fullmonte,
@@ -129,7 +130,6 @@ def main():
             charge=args.charge,
             mult=args.mult,
             metal_atoms=args.metal_atoms,
-            metal_oxi=args.metal_oxi,
             ewin_cmin=args.ewin_cmin,
             initial_energy_threshold=args.initial_energy_threshold,
             energy_threshold=args.energy_threshold,
@@ -143,6 +143,8 @@ def main():
             opt_fmax=args.opt_fmax,
             ani_method=args.ani_method,
             stacksize=args.stacksize,
+            prefix=args.prefix,
+            suffix=args.suffix,
         )
 
     # QPREP
@@ -161,6 +163,7 @@ def main():
             charge=args.charge,
             mult=args.mult,
             suffix=args.suffix,
+            prefix=args.prefix,
             chk=args.chk,
             mem=args.mem,
             nprocs=args.nprocs,

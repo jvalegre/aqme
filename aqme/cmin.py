@@ -30,14 +30,6 @@ General
      (if the files come from CSEARCH, which adds the property "Mult") or 
      calculates it from the generated mol object. Be careful with the automated 
      calculation of mult from mol objects when using metals!  
-   metal_atoms : list of str, default=[]
-     Specify metal atom(s) of the system as [ATOM_TYPE]. Multiple metals can be 
-     used simultaneously (i.e. ['Pd','Ir']).  This option is important to 
-     calculate the charge of metal complexes based on SMILES strings. Requires 
-     the use of metal_oxi.
-   metal_oxi : list of int, default=[]
-     Specify metal oxidation state as [NUMBER]. Multiple metals can be used 
-     simultaneously (i.e. [2,3]).
    ewin_cmin : float, default=5.0
      Energy window in kcal/mol to discard conformers (i.e. if a conformer is 
      more than the E window compared to the most stable conformer)  
@@ -52,6 +44,10 @@ General
    stacksize : str, default='1G'
      Controls the stack size used (especially relevant for xTB/CREST 
      calculations of large systems, where high stack sizes are needed)
+   prefix : str, default=''  
+      Prefix added to all the names  
+   suffix : str, default=''  
+      Suffix added to all the names  
 
 xTB only
 ++++++++
@@ -103,7 +99,12 @@ from progress.bar import IncrementalBar
 from rdkit.Geometry import Point3D
 import pandas as pd
 import time
-from aqme.utils import load_variables, rules_get_charge, substituted_mol, mol_from_sdf_or_mol_or_mol2
+from aqme.utils import (
+    load_variables,
+    substituted_mol,
+    mol_from_sdf_or_mol_or_mol2,
+    add_prefix_suffix
+)
 from aqme.filter import ewin_filter, pre_E_filter, RMSD_and_E_filter
 from aqme.cmin_utils import creation_of_dup_csv_cmin
 from aqme.csearch.crest import xtb_opt_main
@@ -190,6 +191,8 @@ class cmin:
         for file in files_cmin:
             # load jobs for cmin minimization
             self.mols, self.name = self.load_jobs(file)
+            self.name = add_prefix_suffix(self.name, self.args)
+
             self.args.log.write(f"\n\n   ----- {self.name} -----")
 
             if self.args.destination is None:
@@ -243,9 +246,7 @@ class cmin:
 
     def load_jobs(self, file):
 
-        self.args.log.write(f"\n\no  Multiple minimization of {file} with {self.args.program}")
-
-        # read SDF files from RDKit optimization
+        # read SDF files
         try:
             inmols = mol_from_sdf_or_mol_or_mol2(file, 'cmin')
         except OSError:
@@ -273,7 +274,7 @@ class cmin:
                 self.args.log.write("\nx  Multiplicity is automatically calculated for ANI methods, do not use the mult option!")
                 self.args.log.finalize()
                 sys.exit()
-            charge,mult,final_mult,dup_data = self.charge_mult_cmin(dup_data, dup_data_idx, 'ani')
+            charge,mult,final_mult,dup_data = self.charge_mult_cmin(dup_data, dup_data_idx)
 
         elif self.args.program.lower() == "xtb":
             # sets charge and mult
@@ -296,15 +297,15 @@ class cmin:
                             break
             if self.args.charge is None and charge_input is None:
                 # if no charge/mult was specified or found, the charge is calculated using the mol object
-                charge,_,final_mult,_ = self.charge_mult_cmin(dup_data, dup_data_idx, 'xtb')
+                charge = 0
+                self.args.log.write(f'nx  No charge was assigned! Setting a value of 0, it can be changed with the charge option (or column in CSV inputs).')
             elif self.args.charge is None:
                 charge = charge_input
             else:
                 charge = self.args.charge
             if self.args.mult is None and mult_input is None:
-                if final_mult is None:
-                    _,_,final_mult,_ = self.charge_mult_cmin(dup_data, dup_data_idx, 'xtb')
-                mult = final_mult
+                mult = 1
+                self.args.log.write(f'nx  No multiplicity was assigned! Setting a value of 1, it can be changed with the mult option (or column in CSV inputs).')
             elif self.args.mult is None:
                 mult = mult_input
             else:
@@ -448,6 +449,8 @@ class cmin:
             self.args.log.finalize()
             sys.exit()
 
+        self.args.log.write(f"\no  Starting ANI optimization")
+
         os.environ["KMP_DUPLICATE_LIB_OK"] = "True"
         DEVICE = torch.device("cpu")
 
@@ -550,9 +553,9 @@ class cmin:
             log.write("x  No conformers found!")
 
 
-    def charge_mult_cmin(self, dup_data, dup_data_idx, type_cmin):
+    def charge_mult_cmin(self, dup_data, dup_data_idx):
         """
-        Retrieves charge and multiplicity arrays (for ANI) and values (for xTB) optimizations.
+        Retrieves charge and multiplicity arrays for ANI optimizations.
 
         Parameters
         ----------
@@ -575,43 +578,14 @@ class cmin:
 
         mol_cmin = self.mols[0]
 
-        if type_cmin == 'xtb':
-            # check if metals and oxidation states are both used
-            if self.args.metal_atoms != []:
-                if self.args.metal_oxi == []:
-                    self.args.log.write(f"\nx   Metal atoms ({self.args.metal_atoms}) were specified without their corresponding oxidation state (metal_oxi option)")
-                    self.args.log.finalize()
-                    sys.exit()
 
-            if self.args.metal_oxi != []:
-                if self.args.metal_atoms == []:
-                    self.args.log.write(f"\nx   Metal oxidation states ({self.args.metal_oxi}) were specified without their corresponding metal atoms (metal_atoms option)")
-                    self.args.log.finalize()
-                    sys.exit()
-
-            # assigns idx to metal atoms
-            self.args.metal_idx, self.args.complex_coord, self.args.metal_sym = substituted_mol(self, mol_cmin, "noI")
-            charge, metal_found = rules_get_charge(mol_cmin, self.args)
-            mult = None
-            final_mult = Descriptors.NumRadicalElectrons(mol_cmin) + 1
-            if metal_found:
-                # since RDKit gets the multiplicity of the metal with valence 0, the real multiplicity
-                # value needs to be adapted with the charge. If multiplicity is different than 1 or 2,
-                # the user must specify the value with the mult option
-                if (charge % 2) == 1 and charge != 0: # odd charges (i.e. +1, +3, etc)
-                    if final_mult == 1:
-                        final_mult = final_mult + 1
-                    if final_mult == 2:
-                        final_mult = final_mult - 1
-
-        elif type_cmin == 'ani':
-            charge = []
-            mult = []
-            for _, atom in enumerate(mol_cmin.GetAtoms()):
-                charge.append(atom.GetFormalCharge())
-                mult.append(atom.GetNumRadicalElectrons())
-            TotalElectronicSpin = np.sum(mult) / 2
-            final_mult = int((2 * TotalElectronicSpin) + 1)
+        charge = []
+        mult = []
+        for _, atom in enumerate(mol_cmin.GetAtoms()):
+            charge.append(atom.GetFormalCharge())
+            mult.append(atom.GetNumRadicalElectrons())
+        TotalElectronicSpin = np.sum(mult) / 2
+        final_mult = int((2 * TotalElectronicSpin) + 1)
 
         dup_data.at[dup_data_idx, "Overall charge"] = np.sum(charge)
         dup_data.at[dup_data_idx, "Mult"] = final_mult

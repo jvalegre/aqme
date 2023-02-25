@@ -13,6 +13,7 @@ from aqme.utils import (
     get_info_input,
     mol_from_sdf_or_mol_or_mol2,
     read_xyz_charge_mult,
+    add_prefix_suffix
 )
 from aqme.csearch.crest import nci_ts_mol
 
@@ -106,15 +107,15 @@ def constaint_2_list(contraints):
 
 def prepare_direct_smi(args):
     job_inputs = []
-    if args.prefix == "":
-        if args.name is not None:
-            name = args.name
-        else:
-            args.log.write(f"\nx  Specify a name ('name' option) when using the 'smi' option!")
-            args.log.finalize()
-            sys.exit()
+
+    if args.name is not None:
+        name = args.name
+        name = add_prefix_suffix(name, args)
     else:
-        name = f"{args.prefix}_{args.name}"
+        args.log.write(f"\nx  Specify a name ('name' option) when using the 'smi' option!")
+        args.log.finalize()
+        sys.exit()
+
     obj = (
         args.smi,
         name,
@@ -134,11 +135,11 @@ def prepare_smiles_files(args, csearch_file):
     with open(csearch_file) as smifile:
         lines = [line for line in smifile if line.strip()]
     job_inputs = []
-    for i, line in enumerate(lines):
+    for _, line in enumerate(lines):
         (
             smi,
             name,
-        ) = prepare_smiles_from_line(line, i, args)
+        ) = prepare_smiles_from_line(line, args)
         obj = (
             smi,
             name,
@@ -154,15 +155,13 @@ def prepare_smiles_files(args, csearch_file):
     return job_inputs
 
 
-def prepare_smiles_from_line(line, i, args):
+def prepare_smiles_from_line(line, args):
 
     toks = line.split()
     # editing part
     smiles = toks[0]
-    if args.prefix == "":
-        name = "".join(toks[1])
-    else:
-        name = f"{args.prefix}_{i}_{''.join(toks[1])}"
+    name = toks[1]
+    name = add_prefix_suffix(name, args)
 
     return smiles, name
 
@@ -189,10 +188,9 @@ def generate_mol_from_csv(args, csv_smiles, index):
             sys.exit()
 
     try:
-        if args.prefix == "":
-            name = csv_smiles.loc[index, "code_name"]
-        else:
-            name = f'{args.prefix}_{csv_smiles.loc[index, "code_name"]}'
+        name = csv_smiles.loc[index, "code_name"]
+        name = add_prefix_suffix(name, args)
+
     except KeyError:
         args.log.write("\nx  Make sure the CSV file contains a column called 'code_name' with the names of the molecules!")
         args.log.finalize()
@@ -264,6 +262,8 @@ def prepare_cdx_files(args, csearch_file):
     job_inputs = []
     for i, (smiles, _) in enumerate(molecules):
         name = f"{csearch_file.split('.')[0]}_{str(i)}"
+        name = add_prefix_suffix(name, args)
+
         obj = (
             smiles,
             name,
@@ -302,7 +302,9 @@ def prepare_com_files(args, csearch_file):
         charge, mult = read_xyz_charge_mult(xyz_file)
     xyz_2_sdf(xyz_file)
     name = os.path.splitext(csearch_file)[0]
-    sdffile = f"{name}.sdf"
+    name = add_prefix_suffix(name, args)
+
+    sdffile = f"{os.path.splitext(csearch_file)[0]}.sdf"
     suppl, _, _, _ = mol_from_sdf_or_mol_or_mol2(sdffile, "csearch")
 
     obj = (
@@ -339,6 +341,7 @@ def prepare_sdf_files(args, csearch_file):
     job_inputs = []
 
     for mol, charge, mult, name in zip(suppl, charges, mults, IDs):
+        name = add_prefix_suffix(name, args)
         obj = (
             mol,
             name,
