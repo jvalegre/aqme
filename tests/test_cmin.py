@@ -23,20 +23,32 @@ if not os.path.exists(cmin_xtb_dir):
 
 # tests of basic ANI and xTB optimizations
 @pytest.mark.parametrize(
-    "program, sdf, output_nummols",
+    "path, program, sdf, output_nummols",
     [
         # tests for conformer generation with RDKit
-        ("ani", "pentane_rdkit_methods.sdf", 4),
-        ("xtb", "pentane_rdkit_methods.sdf", 4),
+        ("complete", "ani", "pentane_rdkit_methods.sdf", 4),
+        ("complete", "xtb", "pentane_rdkit_methods.sdf", 4),
+        ("partial", "ani", "tests/cmin_methods/pentane_rdkit_methods.sdf", 4), # test for partial path in the files option
+        ("name", "ani", "pentane_rdkit_methods.sdf", 4), # test for direct name in the files option
     ],
 )
 def test_cmin_methods(
-    program, sdf, output_nummols
+    path, program, sdf, output_nummols
 ):
 
     # runs the program with the different tests
-    os.chdir(cmin_methods_dir)
-    cmin(program=program,files=f'{cmin_methods_dir}/{sdf}')
+    os.chdir(w_dir_main)
+    if path == 'complete':
+        cmin(program=program,files=f'{cmin_methods_dir}/{sdf}')
+        os.chdir(cmin_methods_dir)
+    elif path == 'partial':
+        cmin(program=program,files=f'{sdf}')
+        os.chdir(cmin_methods_dir)
+        sdf = 'pentane_rdkit_methods.sdf'
+    elif path == 'name':
+        os.chdir(cmin_methods_dir) # first go to the folder with SDF
+        cmin(program=program,files=f'{sdf}')
+
 
     file = f'{cmin_methods_dir}/CMIN/{sdf.split(".")[0]}_{program}.sdf'
     file2 = f'{cmin_methods_dir}/CMIN/{sdf.split(".")[0]}_{program}_all_confs.sdf'

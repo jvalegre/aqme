@@ -85,7 +85,8 @@ from aqme.utils import (
     load_variables,
     read_xyz_charge_mult,
     mol_from_sdf_or_mol_or_mol2,
-    run_command
+    run_command,
+    check_files
 )
 from aqme.qdescp_utils import (
     get_boltz_avg_properties_xtb,
@@ -116,10 +117,8 @@ class qdescp:
         else:
             destination = Path(self.args.destination)
 
-        if len(self.args.files) == 0:
-            self.args.log.write('\nx  No files were found! Make sure you use quotation marks if you are using * (i.e. --files "*.sdf")')
-            self.args.log.finalize()
-            sys.exit()
+        # retrieves the different files to run in QDESCP
+        _ = check_files(self,'qdescp')
 
         qdescp_program = True
         if self.args.program is None:

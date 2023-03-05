@@ -206,7 +206,9 @@ from aqme.csearch.fullmonte import generating_conformations_fullmonte, realign_m
 from aqme.utils import (
     substituted_mol,
     load_variables,
-    set_metal_atomic_number
+    set_metal_atomic_number,
+    check_xtb,
+    get_files
     )
 from aqme.csearch.crest import xtb_opt_main
 
@@ -239,14 +241,7 @@ class csearch:
             self.args.auto_metal_atoms = False
 
         if self.args.program.lower() == "crest":
-            try:
-                subprocess.run(
-                    ["xtb", "-h"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
-                )
-            except FileNotFoundError:
-                self.args.log.write("x  xTB is not installed (CREST cannot be used)! You can install the program with 'conda install -c conda-forge xtb'")
-                self.args.log.finalize()
-                sys.exit()
+            _ = check_xtb(self)
 
         if self.args.smi is None and self.args.input == "":
             self.args.log.write("\nx  Program requires either a SMILES or an input file to proceed! Please look up acceptable file formats. Specify: smi='CCC' (or input='filename.csv')")
@@ -271,7 +266,7 @@ class csearch:
         if self.args.smi is not None:
             csearch_files = [self.args.name]
         else:
-            csearch_files = glob.glob(self.args.input)
+            csearch_files = get_files(self.args.input)
             if len(csearch_files) == 0:
                 self.args.log.write(f"\nx  Input file ({self.args.input}) not found!")
                 self.args.log.finalize()
@@ -292,7 +287,7 @@ class csearch:
 
             # store all the information into a CSV file
             csearch_file_no_path = (
-                csearch_file.replace("/", "\\").split("\\")[-1].split(".")[0]
+                os.path.basename(csearch_file).split(".")[0]
             )
             self.csearch_csv_file = self.args.w_dir_main.joinpath(
                 f"CSEARCH-Data-{csearch_file_no_path}.csv"

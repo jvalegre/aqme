@@ -82,6 +82,7 @@ from aqme.utils import (
     load_variables,
     read_file,
     cclib_atoms_coords,
+    check_files
 )
 from aqme.qcorr_utils import (
     detect_linear,
@@ -108,13 +109,11 @@ class qcorr:
         # load default and user-specified variables
         self.args = load_variables(kwargs, "qcorr")
 
-        if len(self.args.files) == 0:
-            self.args.log.write('\nx  No files were found! Make sure you use quotation marks if you are using * (i.e. --files "*.log")')
-            self.args.log.finalize()
-            sys.exit()
+        # retrieves the different files to run in QCORR
+        _ = check_files(self,'qcorr')
 
         # QCORR analysis
-        if self.args.files[0].split('.')[1].lower() not in ['log','out','json']:
+        if os.path.basename(self.args.files[0]).split('.')[1].lower() not in ['log','out','json']:
             self.args.log.write(f"\nx  The format used ({self.args.files[0].split('.')[1].lower()}) is not compatible with QCORR! Formats accepted: log, out, json")
             self.args.log.finalize()
             sys.exit()
