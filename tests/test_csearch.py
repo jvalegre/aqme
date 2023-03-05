@@ -122,7 +122,7 @@ def test_csearch_input_parameters(program, input, output_nummols):
 @pytest.mark.parametrize(
     "program, smi, name, charge, mult, ang_summ, output_nummols",
     [
-        ("summ", "CCCCC", "pentane_summ", 3, 4, 4, 60, 4),
+        ("summ", "CCCCC", "pentane_summ", 3, 4, 120, 4),
     ],
 )
 def test_csearch_summ_parameters(
