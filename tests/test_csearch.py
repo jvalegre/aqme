@@ -912,3 +912,4 @@ def test_remove(folder_list, file_list):
         shutil.rmtree(w_dir_main + "/" + folder)
         for f in glob.glob(file_list[i]):
             os.remove(f)
+    os.chdir(w_dir_main)

@@ -756,16 +756,16 @@ def get_files(value):
             Path(f"{val}").exists()
             and os.getcwd() not in f"{val}"
             ):
-                new_value.append(Path(f"{os.getcwd()}/{val}"))
+                new_value.append(f"{os.getcwd()}/{val}")
             elif '*' in val:
                 if os.getcwd() not in f"{val}":
                     list_of_val = glob.glob(f"{os.getcwd()}/{val}")
                 else:
                     list_of_val = glob.glob(val)
                 for ele in list_of_val:
-                    new_value.append(Path(ele))
+                    new_value.append(ele)
             else:
-                new_value.append(Path(val))
+                new_value.append(val)
         else:
-            new_value.append(val)
+            new_value.append(val.as_posix())
     return new_value
