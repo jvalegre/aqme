@@ -261,7 +261,7 @@ def prepare_cdx_files(args, csearch_file):
 
     job_inputs = []
     for i, (smiles, _) in enumerate(molecules):
-        name = f"{csearch_file.split('.')[0]}_{str(i)}"
+        name = f"{os.path.basename(csearch_file).split('.')[0]}_{str(i)}"
         name = add_prefix_suffix(name, args)
 
         obj = (
@@ -294,18 +294,21 @@ def generate_mol_from_cdx(csearch_file):
 def prepare_com_files(args, csearch_file):
     job_inputs = []
 
-    if csearch_file.split(".")[1] in ["gjf", "com"]:
+    filename = os.path.basename(csearch_file)
+    if filename.split('.')[1] in ["gjf", "com"]:
         xyz_file, _, _ = com_2_xyz(csearch_file)
         _, charge, mult = get_info_input(csearch_file)
     else:
         xyz_file = csearch_file
         charge, mult = read_xyz_charge_mult(xyz_file)
-    xyz_2_sdf(xyz_file)
-    name = os.path.splitext(csearch_file)[0]
-    name = add_prefix_suffix(name, args)
+    _ = xyz_2_sdf(xyz_file)
 
-    sdffile = f"{os.path.splitext(csearch_file)[0]}.sdf"
+    sdffile = f'{os.path.dirname(csearch_file)}/{filename.split(".")[0]}.sdf'
+
     suppl, _, _, _ = mol_from_sdf_or_mol_or_mol2(sdffile, "csearch")
+
+    name = filename.split('.')[0]
+    name = add_prefix_suffix(name, args)
 
     obj = (
         suppl[0],
@@ -318,28 +321,37 @@ def prepare_com_files(args, csearch_file):
         args.constraints_dihedral,
     )
     job_inputs.append(obj)
+    if os.path.basename(csearch_file).split('.')[1] in ["gjf", "com"]:
+        os.remove(xyz_file)
+    os.remove(sdffile)
 
     return job_inputs
 
 
 def prepare_pdb_files(args, csearch_file):
+    filename = os.path.basename(csearch_file)
+    sdffile = f'{os.path.dirname(csearch_file)}/{filename.split(".")[0]}.sdf'
     command_pdb = [
         "obabel",
         "-ipdb",
         csearch_file,
         "-osdf",
-        f'-O{csearch_file.split(".")[0]}.sdf',
+        f'-O{sdffile}',
     ]
     subprocess.run(command_pdb, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     job_inputs = prepare_sdf_files(args, csearch_file)
-    os.remove(f'{csearch_file.split(".")[0]}.sdf')
+    os.remove(sdffile)
     return job_inputs
 
 
 def prepare_sdf_files(args, csearch_file):
-    suppl, charges, mults, IDs = mol_from_sdf_or_mol_or_mol2(csearch_file, "csearch")
-    job_inputs = []
+    filename = os.path.basename(csearch_file)
+    sdffile = f'{os.path.dirname(csearch_file)}/{filename}'
+    suppl, charges, mults, IDs = mol_from_sdf_or_mol_or_mol2(sdffile, "csearch")
+    if sdffile.split('.')[0] in ['mol','mol2']:
+        os.remove(f'{sdffile.split(".")[0]}.sdf')
 
+    job_inputs = []
     for mol, charge, mult, name in zip(suppl, charges, mults, IDs):
         name = add_prefix_suffix(name, args)
         obj = (
@@ -391,15 +403,16 @@ def com_2_xyz(input_file):
     COM to XYZ to SDF for obabel
     """
 
-    filename = input_file.split(".")[0]
+    filename = os.path.basename(input_file).split('.')[0]
+    path_xyz = f'{os.path.dirname(input_file)}/{filename}.xyz'
 
     # Create the 'xyz' file and/or get the total charge
     xyz, charge, mult = get_info_input(input_file)
     xyz_txt = "\n".join(xyz)
-    with open(f"{filename}.xyz", "w") as F:
+    with open(path_xyz, "w") as F:
         F.write(f"{len(xyz)}\n{filename}\n{xyz_txt}\n")
 
-    return f"{filename}.xyz", charge, mult
+    return path_xyz, charge, mult
 
 
 def minimize_rdkit_energy(mol, conf, log, FF, maxsteps):

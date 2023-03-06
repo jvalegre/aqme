@@ -64,6 +64,8 @@ def test_csearch_varfile(varfile, nameinvarfile, output_nummols):
         # tests for conformer generation with RDKit
         ("rdkit", "pentane.smi", [2, 4]),
         ("rdkit", "pentane.csv", [2, 4]),
+        ("rdkit", "partial_path", [2, 4]), # checks partial PATHs
+        ("rdkit", "file_name", [2, 4]), # checks file_name
         ("rdkit", "molecules.cdx", [4, 2]),
         ("rdkit", "pentane_gjf.gjf", 4),
         ("rdkit", "pentane_com.com", 4),
@@ -75,98 +77,81 @@ def test_csearch_varfile(varfile, nameinvarfile, output_nummols):
     ],
 )
 def test_csearch_input_parameters(program, input, output_nummols):
-    os.chdir(csearch_input_dir)
+    
     # runs the program with the different tests
-    csearch(w_dir_main=csearch_input_dir, program=program, input=input)
-
+    os.chdir(w_dir_main)
+    if input == "partial_path":
+        input = "tests/csearch_input/pentane.csv"
+        csearch(destination=f'{csearch_input_dir}/CSEARCH', program=program, input=input)
+        input = "pentane.csv"
+        os.chdir(csearch_input_dir)
+    elif input == "file_name":
+        input = "pentane.csv"
+        os.chdir(csearch_input_dir)
+        csearch(destination=f'{csearch_input_dir}/CSEARCH', program=program, input=input)
+    else:
+        csearch(destination=f'{csearch_input_dir}/CSEARCH', program=program, input=f'{csearch_input_dir}/{input}')
+        os.chdir(csearch_input_dir)
+    
     # tests here
     if input in ["pentane.smi", "pentane.csv"]:
-        file1 = str(
-            "CSEARCH/"
-            + "butane_"
-            + input.split(".")[1]
-            + "_"
-            + program
-            + ".sdf"
-        )
-        file2 = str(
-            "CSEARCH/"
-            + "pentane_"
-            + input.split(".")[1]
-            + "_"
-            + program
-            + ".sdf"
-        )
-        mol1 = rdkit.Chem.SDMolSupplier(file1, removeHs=False)
-        mol2 = rdkit.Chem.SDMolSupplier(file2, removeHs=False)
-        assert len(mol1) == output_nummols[0]
-        assert len(mol2) == output_nummols[1]
+        file1 = f'{csearch_input_dir}/CSEARCH/butane_{input.split(".")[1]}_{program}.sdf'
+        file2 = f'{csearch_input_dir}/CSEARCH/pentane_{input.split(".")[1]}_{program}.sdf'
+
+        with rdkit.Chem.SDMolSupplier(file1, removeHs=False) as mol1:
+            assert len(mol1) == output_nummols[0]
+        with rdkit.Chem.SDMolSupplier(file2, removeHs=False) as mol2:
+            assert len(mol2) == output_nummols[1]
+        os.remove(file1)
+        os.remove(file2)
     elif input in ["molecules.cdx"]:
-        file1 = str("CSEARCH/" + "molecules_0_" + program + ".sdf")
-        file2 = str("CSEARCH/" + "molecules_1_" + program + ".sdf")
+        file1 = f'{csearch_input_dir}/CSEARCH/molecules_0_{program}.sdf'
+        file2 = f'{csearch_input_dir}/CSEARCH/molecules_1_{program}.sdf'
         mol1 = rdkit.Chem.SDMolSupplier(file1, removeHs=False)
         mol2 = rdkit.Chem.SDMolSupplier(file2, removeHs=False)
         assert len(mol1) == output_nummols[0]
         assert len(mol2) == output_nummols[1]
-    elif input in ["pentane_sdf.sdf"]:
-        file = str(
-            "CSEARCH/" + input.split(".")[0] + "_" + program + ".sdf"
-        )
-        mols = rdkit.Chem.SDMolSupplier(file, removeHs=False)
-        assert len(mols) == output_nummols
     else:
-        file = str(
-            "CSEARCH/" + input.split(".")[0] + "_" + program + ".sdf"
-        )
+        file = f'{csearch_input_dir}/CSEARCH/{input.split(".")[0]}_{program}.sdf'
         mols = rdkit.Chem.SDMolSupplier(file, removeHs=False)
         assert len(mols) == output_nummols
     os.chdir(w_dir_main)
 
 
-# # tests for parameters of csearch random initialzation
-# @pytest.mark.parametrize(
-#     "program, smi, name, max_matches_rmsd , max_mol_wt , ff, degree, output, max_torsions, prefix, output_nummols ",
-#     [
-#         # tests for conformer generation with RDKit
-#         ("summ", "CCCCC", "pentane", 500, 200, "MMFF", 30, ".sdf", 20, "mol", 4),
-#     ],
-# )
-# def test_csearch_others_parameters(
-#     program,
-#     smi,
-#     name,
-#     max_matches_rmsd,
-#     max_mol_wt,
-#     ff,
-#     degree,
-#     output,
-#     max_torsions,
-#     prefix,
-#     output_nummols,
-# ):
-#     os.chdir(csearch_others_dir)
-#     # runs the program with the different tests
-#     csearch(
-#         w_dir_main=csearch_others_dir,
-#         program=program,
-#         smi=smi,
-#         name=name,
-#         max_matches_rmsd=max_matches_rmsd,
-#         max_mol_wt=max_mol_wt,
-#         ff=ff,
-#         degree=degree,
-#         output=output,
-#         max_torsions=max_torsions,
-#         prefix=prefix,
-#     )
+# tests for parameters of SUMM
+@pytest.mark.parametrize(
+    "program, smi, name, charge, mult, ang_summ, output_nummols",
+    [
+        ("summ", "CCCCC", "pentane_summ", 3, 4, 120, 4),
+    ],
+)
+def test_csearch_summ_parameters(
+    program,
+    smi,
+    name,
+    charge,
+    mult,
+    ang_summ,
+    output_nummols,
+):
+    os.chdir(csearch_rdkit_summ_dir)
+    # runs the program with the different tests
+    csearch(
+        program=program,
+        smi=smi,
+        name=name,
+        charge=charge,
+        mult=mult,
+        degree=ang_summ,
+    )
 
-#     # tests here
-#     file = str(
-#         "CSEARCH/" + prefix + "_" + name + "_" + program + ".sdf"
-#     )
-#     mols = rdkit.Chem.SDMolSupplier(file, removeHs=False)
-#     assert len(mols) == output_nummols
-#     os.chdir(w_dir_main)
+    # tests here
+    file = str("CSEARCH/" + name + "_" + program + ".sdf")
+    mols = rdkit.Chem.SDMolSupplier(file, removeHs=False)
+    assert len(mols) == output_nummols
+    assert charge == int(mols[0].GetProp("Real charge"))
+    assert mult == int(mols[0].GetProp("Mult"))
+    os.chdir(w_dir_main)
 
 
 # tests for parameters of CREST
@@ -363,11 +348,11 @@ def test_csearch_crest_parameters(
                 # check if xtb_keywords are correct in CREST
                 assert line.find('-P 14') > -1
 
+
 # tests for parameters of csearch fullmonte
 @pytest.mark.parametrize(
     "program, smi, name, charge, mult, ewin_fullmonte, ewin_sample_fullmonte, nsteps_fullmonte, nrot_fullmonte, ang_fullmonte, output_nummols",
     [
-        # tests for conformer generation with RDKit
         ("fullmonte", "CCCCC", "pentane_fullmonte", 3, 4, 12, 3, 200, 4, 10, 4),
     ],
 )
@@ -398,7 +383,6 @@ def test_csearch_fullmonte_parameters(
         nsteps_fullmonte=nsteps_fullmonte,
         nrot_fullmonte=nrot_fullmonte,
         ang_fullmonte=ang_fullmonte,
-        output_nummols=output_nummols,
     )
 
     # tests here
@@ -430,21 +414,6 @@ def test_csearch_fullmonte_parameters(
             0.2,
             4,
         ),
-        # (
-        #     "summ",
-        #     "CCCCC",
-        #     "pentane_summ",
-        #     0,
-        #     1,
-        #     "auto",
-        #     100,
-        #     True,
-        #     40,
-        #     0.0001,
-        #     0.2,
-        #     0.1,
-        #     5,
-        # ),
         (
             "rdkit",
             "CC[CH]CC",
@@ -460,21 +429,6 @@ def test_csearch_fullmonte_parameters(
             0.3,
             41,
         ),
-        # (
-        #     "summ",
-        #     "CC[CH]CC",
-        #     "radical_summ",
-        #     0,
-        #     2,
-        #     "auto",
-        #     500,
-        #     True,
-        #     2,
-        #     0.0001,
-        #     0.2,
-        #     0.2,
-        #     3,
-        # ),
         (
             "rdkit",
             "C[NH2+]CC",
@@ -490,24 +444,9 @@ def test_csearch_fullmonte_parameters(
             0.6,
             5,
         ),
-        # (
-        #     "summ",
-        #     "C[NH2+]CC",
-        #     "charged_summ",
-        #     1,
-        #     0,
-        #     "auto",
-        #     1000,
-        #     False,
-        #     10,
-        #     0.0001,
-        #     0.2,
-        #     0.2,
-        #     2,
-        # ),
     ],
 )
-def test_csearch_rdkit_summ_parameters(
+def test_csearch_rdkit_parameters(
     program,
     smi,
     name,
@@ -973,3 +912,4 @@ def test_remove(folder_list, file_list):
         shutil.rmtree(w_dir_main + "/" + folder)
         for f in glob.glob(file_list[i]):
             os.remove(f)
+    os.chdir(w_dir_main)

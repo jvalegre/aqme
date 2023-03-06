@@ -61,6 +61,7 @@ from aqme.utils import (
     read_xyz_charge_mult,
     mol_from_sdf_or_mol_or_mol2,
     add_prefix_suffix,
+    check_files
 )
 from aqme.csearch.crest import xyzall_2_xyz
 from pathlib import Path
@@ -77,10 +78,8 @@ class qprep:
         # load default and user-specified variables
         self.args = load_variables(kwargs, "qprep", create_dat=create_dat)
 
-        if len(self.args.files) == 0:
-            self.args.log.write('\nx  No files were found! Make sure you use quotation marks if you are using * (i.e. --files "*.sdf")')
-            self.args.log.finalize()
-            sys.exit()
+        # retrieves the different files to run in QPREP
+        _ = check_files(self,'qprep')
 
         file_format = os.path.splitext(self.args.files[0])[1].split('.')[1]
         if file_format.lower() not in ['sdf', 'xyz', 'pdb', 'log', 'out', 'json']:

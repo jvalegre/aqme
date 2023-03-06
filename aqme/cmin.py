@@ -101,9 +101,10 @@ import pandas as pd
 import time
 from aqme.utils import (
     load_variables,
-    substituted_mol,
     mol_from_sdf_or_mol_or_mol2,
-    add_prefix_suffix
+    add_prefix_suffix,
+    check_files,
+    check_xtb
 )
 from aqme.filter import ewin_filter, pre_E_filter, RMSD_and_E_filter
 from aqme.cmin_utils import creation_of_dup_csv_cmin
@@ -147,10 +148,7 @@ class cmin:
             os.chdir(self.args.w_dir_main)
 
         # retrieves the different files to run in CMIN
-        if len(self.args.files) == 0:
-            self.args.log.write('\nx  No files were found! Make sure you use quotation marks if you are using * (i.e. --files "*.sdf")')
-            self.args.log.finalize()
-            sys.exit()
+        _ = check_files(self,'cmin')
 
         # create the dataframe to store the data
         self.final_dup_data = creation_of_dup_csv_cmin(self.args.program.lower())
@@ -277,6 +275,8 @@ class cmin:
             charge,mult,final_mult,dup_data = self.charge_mult_cmin(dup_data, dup_data_idx)
 
         elif self.args.program.lower() == "xtb":
+            # checks if xTB is installed
+            _ = self.get_cmin_model()
             # sets charge and mult
             file_format = os.path.splitext(file)[1]
             charge_input, mult_input, final_mult = None, None, None
@@ -431,7 +431,7 @@ class cmin:
     # xTB AND ANI MAIN OPTIMIZATION PROCESS
     def ani_optimize(self, mol, charge, mult):
 
-        # Attempts ANI/xTB imports and exits if the programs are not installed
+        # Attempts ANI imports and exits if the programs are not installed
         try:
             import torch
             import warnings
@@ -527,15 +527,7 @@ class cmin:
             model = getattr(torchani.models,self.args.ani_method)()
 
         elif self.args.program.lower() == "xtb":
-            try:
-                subprocess.run(
-                    ["xtb", "-h"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
-                )
-            except FileNotFoundError:
-                self.args.log.write("x  xTB is not installed (CREST cannot be used)! You can install the program with 'conda install -c conda-forge xtb'")
-                self.args.log.finalize()
-                sys.exit()
-    
+            _ = check_xtb(self)
             model = None
 
         return model
