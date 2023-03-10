@@ -4,6 +4,9 @@
 Versions
 ========
 
+Version 1.4.7 [`url <https://github.com/jvalegre/aqme/releases/tag/1.4.7>`__]
+   -  QCORR is compatible with directories that contain a "." symbol
+
 Version 1.4.6 [`url <https://github.com/jvalegre/aqme/releases/tag/1.4.6>`__]
    -  The files and input options are compatible with partial PATHs, full PATHs, and direct names 
       from command lines and Jupyter Notebooks  

@@ -368,7 +368,6 @@ def get_json_data(self, file, cclib_data):
     """
 
     outlines = read_file(os.getcwd(), self.args.w_dir_main, file)
-
     # initial loop just to detect the QM program
     for i, line in enumerate(outlines):
         # get program
@@ -593,7 +592,10 @@ def get_json_data(self, file, cclib_data):
                 break
 
     if cclib_data != {}:
-        with open(f'{file.split(".")[0]}.json', "w") as outfile:
+        # this prevents errors when the names contain "."
+        name_path = os.path.basename(Path(file))
+        dir_path = os.path.dirname(Path(file))
+        with open(f'{dir_path}/{name_path.split(".")[0]}.json', "w") as outfile:
             json.dump(cclib_data, outfile, indent=1)
 
     return cclib_data
