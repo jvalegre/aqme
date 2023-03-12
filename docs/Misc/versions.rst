@@ -5,7 +5,11 @@ Versions
 ========
 
 Version 1.4.7 [`url <https://github.com/jvalegre/aqme/releases/tag/1.4.7>`__]
-   -  QCORR is compatible with directories that contain a "." symbol
+   -  QCORR is compatible with directories that contain a "." symbol  
+   -  QCORR is compatible with ORCA calcs (it doesn't detect spin contamination yet)
+   -  QCORR includes hessian calculations for calcs with extra imaginary frequencies by default 
+      (new option to control this: im_freq_input)
+   -  QCORR tries to fix SCF convergence issues in ORCA by adding the SlowConv keyword
 
 Version 1.4.6 [`url <https://github.com/jvalegre/aqme/releases/tag/1.4.6>`__]
    -  The files and input options are compatible with partial PATHs, full PATHs, and direct names 

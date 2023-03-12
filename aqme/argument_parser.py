@@ -82,6 +82,7 @@ var_dict = {
     "amplitude_ifreq": 0.2,
     "ifreq_cutoff": 0.0,
     "freq_conv": None,
+    "im_freq_input": 'opt=(calcfc,maxstep=5)',
     "s2_threshold": 10.0,
     "isom_type": None,
     "isom_inputs": os.getcwd(),

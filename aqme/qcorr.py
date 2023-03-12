@@ -23,6 +23,10 @@ Parameters
       optimization but did not convergence in the subsequent frequency 
       calculation. Options: opt keyword as string (i.e. 'opt=(calcfc,maxstep=5)'). 
       If readfc is specified in the string, the chk option must be included as well.
+   im_freq_input : str, default='opt=(calcfc,maxstep=5)' (Gaussian), '\n%geom\nCalc_Hess true\nMaxStep 0.05\nend' (ORCA)
+      When extra imaginery frequencies are detected by QCORR, it automatically adds
+      hessian calcs before starting geometry optimizations. This option can be 
+      disabled using im_freq_input=None.
    s2_threshold : float, default=10.0
       Cut off for spin contamination during analysis in % of the expected value 
       (i.e. multiplicity 3 has an the expected <S**2> of 2.0, 
@@ -490,19 +494,34 @@ class qcorr:
             if not opt_found:
                 cclib_data["metadata"]["keywords line"] += " opt"
 
-            if errortype == "freq_no_conv":
-                # adjust the keywords so only FREQ is calculated
-                new_keywords_line = ""
-                for keyword in cclib_data["metadata"]["keywords line"].split():
-                    if keyword.lower().startswith("opt"):
-                        keyword = self.args.freq_conv
-                        if (
-                            cclib_data["metadata"]["ground or transition state"]
-                            == "transition_state"
-                        ):
-                            keyword = keyword.replace("=(", "=(ts,noeigen,")
-                    new_keywords_line += keyword
-                    new_keywords_line += " "
+            # adding the Hessian calculation before OPT increases the rate of success
+            if errortype in ["freq_no_conv","extra_imag_freq"]:
+                new_opt = None
+                if errortype == "freq_no_conv" and self.args.freq_conv not in [None,'None']:
+                    new_opt = self.args.freq_conv
+                elif errortype == "extra_imag_freq" and self.args.im_freq_input not in [None,'None']:
+                    new_opt = self.args.im_freq_input
+                if cclib_data["metadata"]["QM program"].lower().find("gaussian") > -1:
+                    new_keywords_line = ""
+                    for keyword in cclib_data["metadata"]["keywords line"].split():
+                        if keyword.lower().startswith("opt"):
+                            if new_opt is not None:
+                                keyword = new_opt
+                                if (
+                                    cclib_data["metadata"]["ground or transition state"]
+                                    == "transition_state"
+                                ):
+                                    keyword = keyword.replace("=(", "=(ts,noeigen,")
+                        new_keywords_line += keyword
+                        new_keywords_line += " "
+                elif cclib_data["metadata"]["QM program"].lower().find("orca") > -1:
+                    new_keywords_line = cclib_data["metadata"]["keywords line"]
+                    if self.args.im_freq_input not in [None,'None']:
+                        # change the default value
+                        if self.args.im_freq_input == 'opt=(calcfc,maxstep=5)':
+                            self.args.im_freq_input = '\n%geom\nCalc_Hess true\nMaxStep 0.05\nend'
+                        new_keywords_line += self.args.im_freq_input
+
                 cclib_data["metadata"]["keywords line"] = new_keywords_line
 
             elif errortype == "linear_mol_wrong":
@@ -514,6 +533,12 @@ class qcorr:
         """
         Analyze errors from calculations that did not finish normally
         """
+
+        if cclib_data["metadata"]["QM program"].lower().find("gaussian") > -1:
+            program = 'gaussian'
+        elif cclib_data["metadata"]["QM program"].lower().find("orca") > -1:
+            program = "orca"
+
         # for calcs with finished OPT but no freqs, adjust the keywords so only FREQ is calculated
         if errortype == "no_freq":
             new_keywords_line = ""
@@ -528,20 +553,23 @@ class qcorr:
         else:
             # help to fix SCF convergence errors
             if errortype == "SCFerror":
-                if (
-                    cclib_data["metadata"]["keywords line"].find(" scf=xqc") > -1
-                    or cclib_data["metadata"]["keywords line"].find(" scf=qc") > -1
-                ):
-                    new_keywords_line = ""
-                    for keyword in cclib_data["metadata"]["keywords line"].split():
-                        if keyword == "scf=xqc":
-                            keyword = "scf=qc"
-                        new_keywords_line += keyword
-                        new_keywords_line += " "
-                    cclib_data["metadata"]["keywords line"] = new_keywords_line
-
-                else:
-                    cclib_data["metadata"]["keywords line"] += " scf=xqc"
+                if program == 'gaussian':
+                    if (
+                        cclib_data["metadata"]["keywords line"].find(" scf=xqc") > -1
+                        or cclib_data["metadata"]["keywords line"].find(" scf=qc") > -1
+                    ):
+                        new_keywords_line = ""
+                        for keyword in cclib_data["metadata"]["keywords line"].split():
+                            if keyword == "scf=xqc":
+                                keyword = "scf=qc"
+                            new_keywords_line += keyword
+                            new_keywords_line += " "
+                        cclib_data["metadata"]["keywords line"] = new_keywords_line
+                    else:
+                        cclib_data["metadata"]["keywords line"] += " scf=xqc"
+                elif program == 'orca':
+                    if 'SlowConv' not in cclib_data["metadata"]["keywords line"]:
+                        cclib_data["metadata"]["keywords line"] = 'SlowConv ' + cclib_data["metadata"]["keywords line"]
 
             if errortype in ["not_specified", "SCFerror"]:
                 if "geometric values" in cclib_data["optimization"]:
