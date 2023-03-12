@@ -252,7 +252,8 @@ class qcorr:
             csv_qcorr = self.write_qcorr_csv(file_terms)
 
         # performs a full analysis to ensure that the calcs were run with the same parameters
-        if self.args.fullcheck == "False":
+        # currently, this function is not working with ORCA calcs
+        if self.args.fullcheck == "False" or cclib_data["metadata"]["QM program"].lower().find("orca") > -1:
             self.args.fullcheck = False
         elif self.args.fullcheck == "True":
             self.args.fullcheck = True
