@@ -203,8 +203,12 @@ class qcorr:
                 errortype = self.analyze_isom(file, cartesians, atom_types, errortype)
 
             # move initial QM input files (if the files are placed in the same folder as the output files)
+            if cclib_data["metadata"]["QM program"].lower().find("gaussian") > -1:
+                input_suffix = "com"
+            elif cclib_data["metadata"]["QM program"].lower().find("orca") > -1:
+                input_suffix = "inp"
             if (
-                os.path.exists(f"{self.args.w_dir_main}/{file_name}.com")
+                os.path.exists(f"{self.args.w_dir_main}/{file_name}.{input_suffix}")
                 and self.args.round_num == 1
             ):
                 move_file(

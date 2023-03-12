@@ -385,9 +385,9 @@ def get_json_data(self, file, cclib_data):
 
         elif "* O   R   C   A *" in line:
             for j in range(i, i + 100):
-                if "Program Version" in line.strip():
+                if "Program Version" in outlines[j].strip():
                     cclib_data["metadata"] = {}
-                    version_program = "ORCA version " + line.split()[2]
+                    version_program = "ORCA version " + outlines[j].split()[2]
                     cclib_data["metadata"]["QM program"] = version_program
                     break
 
@@ -580,15 +580,51 @@ def get_json_data(self, file, cclib_data):
                 cclib_data["properties"]["NMR"]["NMR eigenvalues"] = nmr_eigen
                 cclib_data["properties"]["NMR"]["NMR isotopic tensors"] = nmr_iso
 
-
     elif cclib_data["metadata"]["QM program"].lower().find("orca") > -1:
-        for i in reversed(range(0, outlines)):
+        for i in reversed(range(0, len(outlines))):
             if outlines[i][:25] == "FINAL SINGLE POINT ENERGY":
                 # in eV to match the format from cclib
                 orca_e = float(outlines[i].split()[-1])
                 cclib_data["properties"]["energy"][
                     "final single point energy"
                 ] = cclib.parser.utils.convertor(orca_e, "hartree", "eV")
+                break
+
+        for i, line in enumerate(outlines):
+            # Extract number of processors
+            if "%pal" in line:
+                pal_line = ''
+                for j in range(i,i+3):
+                    if outlines[j][0] not in ['%','!'] or "%pal" in outlines[j]:
+                        pal_line += outlines[j].rstrip("\n")[5:]
+                if 'nprocs' in pal_line:
+                    nprocs = pal_line.strip().split()[2]
+                    cclib_data["metadata"]["processors"] = nprocs
+
+            # Extract memory
+            elif '%maxcore' in line:
+                mem = int(line.strip().split()[3])
+                cclib_data["metadata"]["memory"] = f'{mem}MB'
+            
+            # Extract input line
+            elif "!" in line:
+                keywords_line = ""
+                for j in range(i, i + 100):
+                    if "*" in outlines[j]:
+                        break
+                    else:
+                        keywords_line += outlines[j][6:]
+                cclib_data["metadata"]["keywords line"] = keywords_line[1:].rstrip("\n")
+                calc_type = "ground_state"
+                for keyword in keywords_line.split():
+                    if keyword.lower() in ["OptTS",'NEB-TS']:
+                        calc_type = "transition_state"
+                        break
+                    if keyword.lower()[0:3] == 'pal':
+                        cclib_data["metadata"]["processors"] = keyword[3]
+                cclib_data["metadata"]["ground or transition state"] = calc_type
+            
+            elif 'END OF INPUT' in line:
                 break
 
     if cclib_data != {}:
