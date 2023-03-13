@@ -374,6 +374,13 @@ path_qcorr = os.getcwd() + "/Example_workflows/QCORR_processing_QM_outputs"
             False,
         ),  # test to change amplitude for displacing imaginary frequencies
         (
+            None,
+            None,
+            None,
+            None,
+            True,
+        ),  # reset the initial folder to start another set of tests
+        (
             "QCORR_1b",
             "Imag_freq_no_corr.log",
             None,
