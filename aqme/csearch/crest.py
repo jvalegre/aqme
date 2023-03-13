@@ -85,24 +85,25 @@ def xtb_opt_main(
     """
 
     name_no_path = name.replace("/", "\\").split("\\")[-1].split(".")[0]
-    # where RDKit generates the files
+    # folder to create the files
     if self.args.destination is None:
         if method_opt == 'crest':
             csearch_dir = Path(self.args.w_dir_main) / "CSEARCH"
         elif method_opt == 'xtb':
-            rdmolfiles.MolToXYZFile(mol, f"{name}.xyz")
             csearch_dir = Path(self.args.w_dir_main) / "CMIN"
     else:
-        if Path(f"{self.args.destination}").exists() and os.getcwd() in f"{self.args.destination}":
+        if self.args.initial_dir.as_posix() in f"{self.args.destination}":
             csearch_dir = Path(self.args.destination)
         else:
             csearch_dir = Path(self.args.initial_dir).joinpath(self.args.destination)
-        rdmolfiles.MolToXYZFile(mol, f"{name}.xyz")
+
+    # create the initial xyz input
     if method_opt == 'crest':
         self.args.log.write(f"\no  Starting xTB pre-optimization before CREST sampling")
         dat_dir = csearch_dir / "crest_xyz"
         xyzin = f"{dat_dir}/{name_no_path}.xyz"
     elif method_opt == 'xtb':
+        rdmolfiles.MolToXYZFile(mol, f"{name}.xyz")
         self.args.log.write(f"\no  Starting xTB optimization")
         dat_dir = csearch_dir / "xtb_xyz"
         xyzin = f"{dat_dir}/{name_no_path}_xtb.xyz"

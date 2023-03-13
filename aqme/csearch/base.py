@@ -450,7 +450,7 @@ class csearch:
                 f"CSEARCH"
             )
         else:
-            if Path(f"{self.args.destination}").exists() and os.getcwd() in f"{self.args.destination}":
+            if self.args.initial_dir.as_posix() in f"{self.args.destination}":
                 self.csearch_folder = Path(self.args.destination)
             else:
                 self.csearch_folder = Path(self.args.initial_dir).joinpath(self.args.destination)

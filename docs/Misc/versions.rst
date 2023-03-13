@@ -10,6 +10,7 @@ Version 1.4.7 [`url <https://github.com/jvalegre/aqme/releases/tag/1.4.7>`__]
    -  QCORR includes hessian calculations for calcs with extra imaginary frequencies by default 
       (new option to control this: im_freq_input)
    -  QCORR tries to fix SCF convergence issues in ORCA by adding the SlowConv keyword
+   -  qm_end option is added after the genecp section in QPREP
 
 Version 1.4.6 [`url <https://github.com/jvalegre/aqme/releases/tag/1.4.6>`__]
    -  The files and input options are compatible with partial PATHs, full PATHs, and direct names 
