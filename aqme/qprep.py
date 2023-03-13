@@ -264,14 +264,21 @@ class qprep:
 
         elif self.args.program.lower() == "orca":
             txt += f'# {name_file}\n'
-            if self.args.mem.find("GB"):
+            if "GB" in self.args.mem:
                 mem_orca = int(self.args.mem.split("GB")[0]) * 1000
-            elif self.args.mem.find("MB"):
+            elif "MB" in self.args.mem:
                 mem_orca = self.args.mem.split("MB")[0]
-            elif self.args.args.mem.find("MW"):
+            elif "MW" in self.args.mem:
                 mem_orca = self.args.mem.split("MW")[0]
-            txt += f"%maxcore {mem_orca}\n"
-            txt += f"%pal nprocs {self.args.nprocs} end\n"
+            if '%maxcore' not in self.args.qm_input:
+                txt += f"%maxcore {mem_orca}\n"
+            pal_included = False
+            pal_list = ['%pal','pal1','pal3','pal3','pal4','pal5','pal6','pal7','pal8']
+            for keyword in self.args.qm_input.split():
+                if keyword.rstrip("\n").lower() in pal_list:
+                    pal_included = True
+            if not pal_included:
+                txt += f"%pal nprocs {self.args.nprocs} end\n"
             txt += f"! {self.args.qm_input}\n"
             txt += f'* xyz {qprep_data["charge"]} {qprep_data["mult"]}\n'
 
