@@ -508,10 +508,7 @@ class qcorr:
                         if keyword.lower().startswith("opt"):
                             if new_opt is not None:
                                 keyword = new_opt
-                                if (
-                                    cclib_data["metadata"]["ground or transition state"]
-                                    == "transition_state"
-                                ):
+                                if cclib_data["metadata"]["ground or transition state"] == "transition_state":
                                     keyword = keyword.replace("=(", "=(ts,noeigen,")
                         new_keywords_line += keyword
                         new_keywords_line += " "

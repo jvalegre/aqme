@@ -374,6 +374,13 @@ path_qcorr = os.getcwd() + "/Example_workflows/QCORR_processing_QM_outputs"
             False,
         ),  # test to change amplitude for displacing imaginary frequencies
         (
+            "QCORR_1b",
+            "Imag_freq_no_corr.log",
+            None,
+            "failed/run_1/extra_imag_freq",
+            False,
+        ),  # test the im_freq_input option
+        (
             None,
             None,
             None,
@@ -507,19 +514,19 @@ def test_QCORR_analysis(init_folder, file, command_line, target_folder, restore_
                     line_10 = "H   0.00000000  -1.04973700  -1.63442100"
 
                 elif file.split(".")[0] == "imag_freq_no_opt":
-                    line_2 = "# M062X/Def2TZVP freq=noraman opt"
+                    line_2 = "# M062X/Def2TZVP freq=noraman opt=(calcfc,maxstep=5)"
                     line_6 = "0 1"
                     line_8 = "C  -0.90757400   0.00709700  -0.00994500"
                     line_10 = "C   1.19952600   1.19528800   0.00698400"
 
                 elif file.split(".")[0] == "TS_CH3HCH3_imag_freq":
-                    line_2 = "# opt=(calcfc,ts,noeigen) freq b3lyp/3-21g"
+                    line_2 = "# opt=(ts,noeigen,calcfc,maxstep=5) freq b3lyp/3-21g"
                     line_6 = "0 2"
                     line_8 = "H  -0.87171200   0.59637700  -1.63085200"
                     line_10 = "H  -0.08200000  -1.05275500  -1.63085200"
 
                 elif file.split(".")[0] == "Imag_freq":
-                    line_2 = "# opt freq 3-21g m062x"
+                    line_2 = "# opt=(calcfc,maxstep=5) freq 3-21g m062x"
                     line_6 = "0 1"
                     line_8 = "H   0.38503600  -0.39992100  -0.94851000"
                     line_10 = "H   0.20952000   1.07184200  -0.02121100"
@@ -558,16 +565,7 @@ def test_QCORR_analysis(init_folder, file, command_line, target_folder, restore_
         elif file == "json":
             os.chdir(f"{w_dir_main}/{target_folder}")
             json_files = glob.glob("*.json")
-            target_files = [
-                "CH4.json",
-                "CO2_linear_4freqs.json",
-                "freq_ok_YYNN.json",
-                "H_freq.json",
-                "MeOH_G09.json",
-                "TS_CH3HCH3.json",
-            ]
             assert len(json_files) == 6
-            # assert sorted(json_files) == sorted(target_files)
 
         elif file == "fullcheck":
             target_fullcheck = ["-- Full check analysis --\n"]
@@ -658,10 +656,10 @@ def test_QCORR_analysis(init_folder, file, command_line, target_folder, restore_
 
         elif file == "csv":
             qcorr_stats = pd.read_csv(f"{path_main}/QCORR-run_1-stats.csv")
-            assert qcorr_stats["Total files"][0] == 28
+            assert qcorr_stats["Total files"][0] == 29
             assert qcorr_stats["Normal termination"][0] == 6
             assert qcorr_stats["Single-point calcs"][0] == 3
-            assert qcorr_stats["Extra imag. freq."][0] == 3
+            assert qcorr_stats["Extra imag. freq."][0] == 4
             assert qcorr_stats["TS with no imag. freq."][0] == 1
             assert qcorr_stats["Freq not converged"][0] == 2
             assert qcorr_stats["Linear mol with wrong n of freqs"][0] == 1
@@ -709,17 +707,24 @@ def test_QCORR_analysis(init_folder, file, command_line, target_folder, restore_
         elif file.split(".")[0] == "Imag_freq":
             cmd_aqme = cmd_aqme + ["--amplitude_ifreq", "-0.4"]
 
+        elif file.split(".")[0] == "Imag_freq_no_corr":
+            cmd_aqme = cmd_aqme + ["--im_freq_input", "None"]
+
         subprocess.run(cmd_aqme)
 
         # ensure the output file moves to the right folder
         assert path.exists(f"{w_dir_main}/{target_folder}/{file}")
 
-        if file.split(".")[0] == "Imag_freq":
+        if file.split(".")[0] in ["Imag_freq","Imag_freq_no_corr"]:
             # ensure that QCORR applies the correct structural distortions to the errored calcs
-            line_2 = "# opt freq 3-21g m062x"
-            line_6 = "0 1"
-            line_8 = "H   0.60103600  -0.59192100  -0.73251000"
-            line_10 = "H   0.46752000   1.00584200   0.19478900"
+            if file.split(".")[0] in "Imag_freq":
+                line_2 = "# opt=(calcfc,maxstep=5) freq 3-21g m062x"
+                line_6 = "0 1"
+                line_8 = "H   0.60103600  -0.59192100  -0.73251000"
+                line_10 = "H   0.46752000   1.00584200   0.19478900"
+            elif file.split(".")[0] in "Imag_freq_no_corr":
+                line_2 = "# opt freq 3-21g m062x"
+                line_6 = "0 1"
 
             outfile = open(
                 f'{w_dir_main}/failed/run_1/fixed_QM_inputs/{file.split(".")[0]}.com',
@@ -728,10 +733,14 @@ def test_QCORR_analysis(init_folder, file, command_line, target_folder, restore_
             outlines = outfile.readlines()
             outfile.close()
 
-            assert outlines[2].strip() == line_2
-            assert outlines[6].strip() == line_6
-            assert outlines[8].strip() == line_8
-            assert outlines[10].strip() == line_10
+            if file.split(".")[0] in "Imag_freq":
+                assert outlines[2].strip() == line_2
+                assert outlines[6].strip() == line_6
+                assert outlines[8].strip() == line_8
+                assert outlines[10].strip() == line_10
+            elif file.split(".")[0] in "Imag_freq_no_corr":
+                assert outlines[2].strip() == line_2
+                assert outlines[6].strip() == line_6
 
     elif init_folder == "QCORR_1c":
         w_dir_main = f"{path_qcorr}/QCORR_1"
