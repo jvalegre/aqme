@@ -292,6 +292,10 @@ class qprep:
         txt = ""
 
         if self.args.program.lower() == "gaussian":
+            # writes final section if selected
+            if self.args.qm_end != "":
+                txt += f"{self.args.qm_end}\n\n"
+
             if self.args.gen_atoms != [] and len(self.args.gen_atoms) > 0:
                 # writes part for Gen/GenECP
                 ecp_used, ecp_not_used, gen_type = [], [], "gen"
@@ -322,10 +326,6 @@ class qprep:
                     txt += f"{elements_used} 0\n{self.args.bs_gen}\n"
 
                 txt += "\n"
-
-            # writes final section if selected
-            if self.args.qm_end != "":
-                txt += f"{self.args.qm_end}\n\n"
 
         return txt
 
