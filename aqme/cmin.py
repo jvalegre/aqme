@@ -247,11 +247,11 @@ class cmin:
 
         # read SDF files
         try:
-            inmols = mol_from_sdf_or_mol_or_mol2(file, 'cmin')
+            inmols = mol_from_sdf_or_mol_or_mol2(file, 'cmin', self.args)
         except OSError:
             file_path = Path(self.args.initial_dir).joinpath(file)
             file_path = file_path.as_posix()
-            inmols = mol_from_sdf_or_mol_or_mol2(file_path, 'cmin')
+            inmols = mol_from_sdf_or_mol_or_mol2(file_path, 'cmin', self.args)
         name_mol = os.path.basename(file).split(".sdf")[0]
 
         return inmols, name_mol

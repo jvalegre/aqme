@@ -4,6 +4,12 @@
 Versions
 ========
 
+Version 1.4.8 [`url <https://github.com/jvalegre/aqme/releases/tag/1.4.8>`__]
+   -  A second ConstrainedEmbed() function with a core with no Hs was added to avoid
+      RDKit embedding issues that show up in tricky cases
+   -  Fixed the --charge and --mult options when using xyz/sdf/pdf/gjf/com files as inputs in 
+      CSEARCH (xyz fixed in QPREP as well)
+
 Version 1.4.7 [`url <https://github.com/jvalegre/aqme/releases/tag/1.4.7>`__]
    -  QCORR is compatible with directories that contain a "." symbol  
    -  QCORR is compatible with ORCA calcs (it doesn't detect spin contamination yet)
@@ -11,6 +17,7 @@ Version 1.4.7 [`url <https://github.com/jvalegre/aqme/releases/tag/1.4.7>`__]
       (new option to control this: im_freq_input)
    -  QCORR tries to fix SCF convergence issues in ORCA by adding the SlowConv keyword
    -  qm_end option is added after the genecp section in QPREP
+   -  Fixed a bug when using the destination option in CMIN-xTB
 
 Version 1.4.6 [`url <https://github.com/jvalegre/aqme/releases/tag/1.4.6>`__]
    -  The files and input options are compatible with partial PATHs, full PATHs, and direct names 
