@@ -298,11 +298,11 @@ def prepare_com_files(args, csearch_file):
     if filename.split('.')[1] in ["gjf", "com"]:
         xyz_file, _, _ = com_2_xyz(csearch_file)
         if args.charge is None:
-            charge, _ = get_info_input(csearch_file)
+            _, charge, _ = get_info_input(csearch_file)
         else:
             charge = args.charge
         if args.mult is None:
-            _, mult = get_info_input(csearch_file)
+            _, _, mult = get_info_input(csearch_file)
         else:
             mult = args.mult
     else:
