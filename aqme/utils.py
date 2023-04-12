@@ -24,9 +24,9 @@ GAS_CONSTANT = 8.3144621  # J / K / mol
 J_TO_AU = 4.184 * 627.509541 * 1000.0  # UNIT CONVERSION
 T = 298.15
 
-aqme_version = "1.4.4"
+aqme_version = "1.4.7"
 time_run = time.strftime("%Y/%m/%d %H:%M:%S", time.localtime())
-aqme_ref = f"AQME v {aqme_version}, Alegre-Requena, J. V.; Sowndarya, S.; Perez-Soto, R.; Alturaifi, T. M.; Paton, R. S., 2022. https://github.com/jvalegre/aqme"
+aqme_ref = f"AQME v {aqme_version}, Alegre-Requena, J. V.; Sowndarya, S.; Perez-Soto, R.; Alturaifi, T.; Paton, R. AQME: Automated Quantum Mechanical Environments for Researchers and Educators. Wiley Interdiscip. Rev. Comput. Mol. Sci. 2023, DOI: 10.1002/wcms.1663."
 
 RDLogger.DisableLog("rdApp.*")
 
@@ -363,8 +363,9 @@ def command_line_args():
             sys.exit()
         else:
             # this "if" allows to use * to select multiple files in multiple OS
-            if arg_name.lower() == 'files' and value.find('*') > -1:
-                kwargs[arg_name] = glob.glob(value)
+            if arg_name.lower() == 'files':
+                value = get_files(value)
+                kwargs[arg_name] = value
             else:
                 # this converts the string parameters to lists
                 if arg_name.lower() in ["files", "gen_atoms", "constraints_atoms", "constraints_dist", "constraints_angle", "constraints_dihedral", "atom_types", "cartesians", "nmr_atoms", "nmr_slope", "nmr_intercept"]:
@@ -373,7 +374,7 @@ def command_line_args():
                             value = ast.literal_eval(value)
                         except (SyntaxError, ValueError):
                             # this line fixes issues when using "[X]" or ["X"] instead of "['X']" when using lists
-                            if arg_name.lower() in ["files", "gen_atoms"]:
+                            if arg_name.lower() in ["gen_atoms"]:
                                 value = value.replace('[',']').replace(',',']').split(']')
                                 while('' in value):
                                     value.remove('')
@@ -401,9 +402,11 @@ def load_variables(kwargs, aqme_module, create_dat=True):
 
         self.initial_dir = Path(os.getcwd())
 
+        # get PATH for the files option
+        self.files = get_files(self.files)
+
         if not isinstance(self.files, list):
             self.w_dir_main = os.path.dirname(self.files)
-            check_files = os.path.basename(self.files)
         elif len(self.files) != 0:
             self.w_dir_main = os.path.dirname(self.files[0])
         else:
@@ -434,16 +437,6 @@ def load_variables(kwargs, aqme_module, create_dat=True):
 
         if error_setup:
             self.w_dir_main = Path(os.getcwd())
-
-        if not isinstance(self.files, list):
-            if not isinstance(self.files, Mol):
-                self.files = glob.glob(f"{self.w_dir_main}/{check_files}")
-            else:
-                self.files = [self.files]
-        # this function is useful when PATH objects are given
-        for i,file in enumerate(self.files):
-            if not isinstance(file, Mol):
-                self.files[i] = str(file)
             
         # start a log file to track the QCORR module
         if create_dat:
@@ -710,6 +703,7 @@ def mol_from_sdf_or_mol_or_mol2(input_file, module):
 
         return suppl, charges, mults, IDs
 
+
 def add_prefix_suffix(name, args):
     if args.prefix != "":
         name = f"{args.prefix}_{name}"
@@ -717,3 +711,61 @@ def add_prefix_suffix(name, args):
         name += f'_{args.suffix}'
 
     return name
+
+
+def check_files(self,module):
+    if module.lower() in ['cmin','qdescp','qprep']:
+        format_file = "*.sdf"
+    elif module.lower() in ['qcorr']:
+        format_file = "*.log"
+    no_file_found = False
+    if len(self.args.files) == 0:
+        self.args.log.write(f'\nx  No files were found! In the "files" option, make sure that 1) the PATH to the files is correct, 2) the PATH doesn\'t start with "/", and 3) you use quotation marks if you are using * (i.e. --files "{format_file}")')
+        no_file_found = True
+    else:
+        for file in self.args.files:
+            if not os.path.exists(file):
+                no_file_found = True
+                self.args.log.write(f'\nx  File {file} was not found! In the "files" option, make sure that 1) the PATH to the files is correct and 2) the PATH doesn\'t start with "/".')
+                break
+    if no_file_found:
+        self.args.log.finalize()
+        sys.exit()
+
+
+def check_xtb(self):
+    try:
+        subprocess.run(
+            ["xtb", "-h"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+        )
+    except FileNotFoundError:
+        self.args.log.write("x  xTB is not installed (CMIN-xTB cannot be used)! You can install the program with 'conda install -c conda-forge xtb'")
+        self.args.log.finalize()
+        sys.exit()
+
+
+def get_files(value):
+    if not isinstance(value, list):
+        value = value.replace('[',']').replace(',',']').split(']')
+        while('' in value):
+            value.remove('')
+    new_value = []
+    for val in value:
+        if not isinstance(val, Path):
+            if (
+            Path(f"{val}").exists()
+            and os.getcwd() not in f"{val}"
+            ):
+                new_value.append(f"{os.getcwd()}/{val}")
+            elif '*' in val:
+                if os.getcwd() not in f"{val}":
+                    list_of_val = glob.glob(f"{os.getcwd()}/{val}")
+                else:
+                    list_of_val = glob.glob(val)
+                for ele in list_of_val:
+                    new_value.append(ele)
+            else:
+                new_value.append(val)
+        else:
+            new_value.append(val.as_posix())
+    return new_value

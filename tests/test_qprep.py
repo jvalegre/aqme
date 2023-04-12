@@ -389,17 +389,17 @@ def test_QPREP_analysis(test_type, init_folder, target_folder, restore_folder):
         outfile.close()
 
         assert outlines[2].strip() == "# pop=(nbo6read,savenbos) wb97xd/genecp"
-        assert outlines[13].strip() == "H 0"
-        assert outlines[14].strip() == "LANL2DZ"
-        assert outlines[15].strip() == "****"
-        assert outlines[16].strip() == "C 0"
-        assert outlines[17].strip() == "LANL2TZ"
-        assert outlines[18].strip() == "****"
-        assert outlines[19].strip() == ""
-        assert outlines[20].strip() == "C 0"
-        assert outlines[21].strip() == "LANL2TZ"
-        assert outlines[22].strip() == ""
-        assert outlines[23].strip() == "$nbo bndidx $end"
+        assert outlines[13].strip() == "$nbo bndidx $end"
+        assert outlines[14].strip() == ""
+        assert outlines[15].strip() == "H 0"
+        assert outlines[16].strip() == "LANL2DZ"
+        assert outlines[17].strip() == "****"
+        assert outlines[18].strip() == "C 0"
+        assert outlines[19].strip() == "LANL2TZ"
+        assert outlines[20].strip() == "****"
+        assert outlines[21].strip() == ""
+        assert outlines[22].strip() == "C 0"
+        assert outlines[23].strip() == "LANL2TZ"
         assert outlines[24] == "\n"
 
     elif test_type == "gen":

@@ -85,25 +85,29 @@ def xtb_opt_main(
     """
 
     name_no_path = name.replace("/", "\\").split("\\")[-1].split(".")[0]
-    # where RDKit generates the files
+    # folder to create the files
     if self.args.destination is None:
         if method_opt == 'crest':
             csearch_dir = Path(self.args.w_dir_main) / "CSEARCH"
         elif method_opt == 'xtb':
-            rdmolfiles.MolToXYZFile(mol, name + ".xyz")
             csearch_dir = Path(self.args.w_dir_main) / "CMIN"
     else:
-        csearch_dir = Path(self.args.destination)
+        if self.args.initial_dir.as_posix() in f"{self.args.destination}":
+            csearch_dir = Path(self.args.destination)
+        else:
+            csearch_dir = Path(self.args.initial_dir).joinpath(self.args.destination)
+
+    # create the initial xyz input
     if method_opt == 'crest':
         self.args.log.write(f"\no  Starting xTB pre-optimization before CREST sampling")
         dat_dir = csearch_dir / "crest_xyz"
         xyzin = f"{dat_dir}/{name_no_path}.xyz"
     elif method_opt == 'xtb':
+        rdmolfiles.MolToXYZFile(mol, f"{name}.xyz")
         self.args.log.write(f"\no  Starting xTB optimization")
         dat_dir = csearch_dir / "xtb_xyz"
         xyzin = f"{dat_dir}/{name_no_path}_xtb.xyz"
     dat_dir.mkdir(exist_ok=True, parents=True)
-
     shutil.move(f"{name}.xyz", xyzin)
 
     os.environ["OMP_STACKSIZE"] = self.args.stacksize
@@ -360,7 +364,10 @@ def xtb_opt_main(
         if os.path.exists(file):
             if file.find('.out') == -1:
                 if self.args.program.lower() == "xtb":
-                    os.remove(file)
+                    try:
+                        os.remove(file)
+                    except OSError: # this avoids problems when running AQME in HPCs
+                        pass
                 elif self.args.program.lower() == "crest":
                     if file.find('_xtb2') == -1 and file.find('_xtb1') == -1 and file.find('.out') == -1:
                         try:

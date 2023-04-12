@@ -61,6 +61,7 @@ from aqme.utils import (
     read_xyz_charge_mult,
     mol_from_sdf_or_mol_or_mol2,
     add_prefix_suffix,
+    check_files
 )
 from aqme.csearch.crest import xyzall_2_xyz
 from pathlib import Path
@@ -77,10 +78,8 @@ class qprep:
         # load default and user-specified variables
         self.args = load_variables(kwargs, "qprep", create_dat=create_dat)
 
-        if len(self.args.files) == 0:
-            self.args.log.write('\nx  No files were found! Make sure you use quotation marks if you are using * (i.e. --files "*.sdf")')
-            self.args.log.finalize()
-            sys.exit()
+        # retrieves the different files to run in QPREP
+        _ = check_files(self,'qprep')
 
         file_format = os.path.splitext(self.args.files[0])[1].split('.')[1]
         if file_format.lower() not in ['sdf', 'xyz', 'pdb', 'log', 'out', 'json']:
@@ -265,14 +264,21 @@ class qprep:
 
         elif self.args.program.lower() == "orca":
             txt += f'# {name_file}\n'
-            if self.args.mem.find("GB"):
+            if "GB" in self.args.mem:
                 mem_orca = int(self.args.mem.split("GB")[0]) * 1000
-            elif self.args.mem.find("MB"):
+            elif "MB" in self.args.mem:
                 mem_orca = self.args.mem.split("MB")[0]
-            elif self.args.args.mem.find("MW"):
+            elif "MW" in self.args.mem:
                 mem_orca = self.args.mem.split("MW")[0]
-            txt += f"%maxcore {mem_orca}\n"
-            txt += f"%pal nprocs {self.args.nprocs} end\n"
+            if '%maxcore' not in self.args.qm_input:
+                txt += f"%maxcore {mem_orca}\n"
+            pal_included = False
+            pal_list = ['%pal','pal1','pal3','pal3','pal4','pal5','pal6','pal7','pal8']
+            for keyword in self.args.qm_input.split():
+                if keyword.rstrip("\n").lower() in pal_list:
+                    pal_included = True
+            if not pal_included:
+                txt += f"%pal nprocs {self.args.nprocs} end\n"
             txt += f"! {self.args.qm_input}\n"
             txt += f'* xyz {qprep_data["charge"]} {qprep_data["mult"]}\n'
 
@@ -286,6 +292,10 @@ class qprep:
         txt = ""
 
         if self.args.program.lower() == "gaussian":
+            # writes final section if selected
+            if self.args.qm_end != "":
+                txt += f"{self.args.qm_end}\n\n"
+
             if self.args.gen_atoms != [] and len(self.args.gen_atoms) > 0:
                 # writes part for Gen/GenECP
                 ecp_used, ecp_not_used, gen_type = [], [], "gen"
@@ -316,10 +326,6 @@ class qprep:
                     txt += f"{elements_used} 0\n{self.args.bs_gen}\n"
 
                 txt += "\n"
-
-            # writes final section if selected
-            if self.args.qm_end != "":
-                txt += f"{self.args.qm_end}\n\n"
 
         return txt
 

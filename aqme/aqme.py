@@ -183,6 +183,7 @@ def main():
             ifreq_cutoff=args.ifreq_cutoff,
             amplitude_ifreq=args.amplitude_ifreq,
             freq_conv=args.freq_conv,
+            im_freq_input=args.im_freq_input,
             s2_threshold=args.s2_threshold,
             dup_threshold=args.dup_threshold,
             ro_threshold=args.ro_threshold,

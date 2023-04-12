@@ -1,14 +1,10 @@
 from setuptools import setup, find_packages
-import io
-
-# read the contents of your README file
-from os import path
-
+version = "1.4.7"
 setup(
     name="aqme",
     packages=find_packages(exclude=["tests"]),
     package_data={"aqme": ["templates/*"]},
-    version="1.4.4",
+    version=version,
     license="MIT",
     description="Automated Quantum Mechanical Environments",
     long_description="Documentation in Read The Docs: https://aqme.readthedocs.io",
@@ -25,7 +21,7 @@ setup(
         "automated",
     ],
     url="https://github.com/jvalegre/aqme",
-    download_url="https://github.com/jvalegre/aqme/archive/refs/tags/1.4.4.tar.gz",
+    download_url=f"https://github.com/jvalegre/aqme/archive/refs/tags/{version}.tar.gz",
     classifiers=[
         "Development Status :: 5 - Production/Stable",  # Chose either "3 - Alpha", "4 - Beta" or "5 - Production/Stable" as the current state of your package
         "Intended Audience :: Developers",  # Define that your audience are developers
