@@ -140,12 +140,6 @@ class cmin:
             self.args.log.finalize()
             sys.exit()
 
-        try:
-            os.chdir(self.args.w_dir_main)
-        except FileNotFoundError:
-            self.args.w_dir_main = Path(f"{os.getcwd()}/{self.args.w_dir_main}")
-            os.chdir(self.args.w_dir_main)
-
         # retrieves the different files to run in CMIN
         if len(self.args.files) == 0:
             self.args.log.write('\nx  No files were found! Make sure you use quotation marks if you are using * (i.e. --files "*.sdf")')
@@ -195,16 +189,13 @@ class cmin:
 
             self.args.log.write(f"\n\n   ----- {self.name} -----")
 
+            print(os.getcwd())
             if self.args.destination is None:
-                self.cmin_folder = Path(self.args.w_dir_main).joinpath(
-                    f"CMIN"
-                )
+                self.cmin_folder = self.args.initial_dir.joinpath("CMIN")
+            elif self.args.initial_dir.joinpath(self.args.destination).exists():
+                self.cmin_folder = Path(self.args.initial_dir.joinpath(self.args.destination))
             else:
-                if Path(f"{self.args.destination}").exists():
-                    self.cmin_folder = Path(self.args.destination)
-                else:
-                    self.cmin_folder = Path(self.args.initial_dir).joinpath(
-                    self.args.destination)
+                self.cmin_folder = Path(self.args.destination)
 
             self.cmin_folder.mkdir(exist_ok=True, parents=True)
 
