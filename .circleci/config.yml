@@ -10,7 +10,7 @@ orbs:
   # so you dont have to copy and paste it everywhere.
   # See the orb documentation here: https://circleci.com/developer/orbs/orb/circleci/python
   python: circleci/python@1.5.0
-  codecov: codecov/codecov@1.0.2
+  codecov: codecov/codecov@3.2.4
 
 # Define a job to be invoked later in a workflow.
 # See: https://circleci.com/docs/2.0/configuration-reference/#jobs
@@ -49,12 +49,14 @@ jobs:
           pip install pytest
           pip install pytest-cov
           python -m pytest -v --cov=aqme
-  # codecov job to upload the coverage
-  codecov-upload:
-    executor: codecov/default
-    steps:
-      - codecov/upload:
-        file: {{ .coverage }}
+    post-steps:
+      - codecov/upload
+  # # codecov job to upload the coverage
+  # codecov-upload:
+  #   executor: codecov/default
+  #   steps:
+  #     - codecov/upload:
+  #       file: {{ .coverage }}
 # Invoke jobs via workflows
 # See: https://circleci.com/docs/2.0/configuration-reference/#workflows
 workflows:
@@ -62,4 +64,3 @@ workflows:
     # Inside the workflow, you define the jobs you want to run.
     jobs:
       - build-and-test
-      - codecov-upload
