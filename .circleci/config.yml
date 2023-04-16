@@ -51,8 +51,8 @@ jobs:
           python -m pytest -v --cov=aqme
   codecov-upload:
     steps:
-      - run:
-          codecov
+      - codecov/upload:
+        file: {{ .coverage }}
 # Invoke jobs via workflows
 # See: https://circleci.com/docs/2.0/configuration-reference/#workflows
 workflows:
