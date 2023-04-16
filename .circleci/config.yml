@@ -53,14 +53,13 @@ jobs:
           # mv /root/project/.coverage /root/project/coverage/.coverage
       - persist_to_workspace:
           root: /root
-          paths: project
 
   codecov-coverage:
     docker:
       - image: cimg/python:3.10
     steps:
       - attach_workspace:
-          at: /root/project
+          at: /root
       - run: |
           ls -l
           ls -a -l
