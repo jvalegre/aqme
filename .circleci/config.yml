@@ -49,19 +49,17 @@ jobs:
           pip install pytest
           pip install pytest-cov
           python -m pytest -v --cov=aqme
-      # - persist_to_workspace:
-      #     root: project
+      - persist_to_workspace:
+          root: /root/project
 
   codecov-coverage:
     docker:
       - image: cimg/python:3.10
     steps:
-      - run: |
-          ls
-      # - attach_workspace:
-      #     at: project
+      - attach_workspace:
+          at: /root/project
       - codecov/upload:
-          file: /home/circleci/project/.coverage
+          file: /root/project/.coverage
 # Invoke jobs via workflows
 # See: https://circleci.com/docs/2.0/configuration-reference/#workflows
 workflows:
