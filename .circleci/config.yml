@@ -49,15 +49,17 @@ jobs:
           pip install pytest
           pip install pytest-cov
           python -m pytest -v --cov=aqme
-      - persist_to_workspace
-          # root: /root/project
+      - persist_to_workspace:
+          root: 
+            - /root/project
 
   codecov-coverage:
     docker:
       - image: cimg/python:3.10
     steps:
-      - attach_workspace
-          # at: /root/project
+      - attach_workspace:
+          at:
+            - /root/project
       - codecov/upload:
           file: /root/project/.coverage
 # Invoke jobs via workflows
