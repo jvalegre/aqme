@@ -42,7 +42,6 @@ jobs:
           conda install -y -c conda-forge xtb
           conda install -y -c conda-forge crest
           pip install torch torchvision torchani
-          conda install -y -c conda-forge codecov
           # install the dependencies of AQME with pip
           python -m pip install --upgrade pip
           pip install .
@@ -50,7 +49,6 @@ jobs:
           pip install pytest
           pip install pytest-cov
           python -m pytest -v --cov=aqme
-          codecov
       - codecov/upload
 
 # Invoke jobs via workflows
