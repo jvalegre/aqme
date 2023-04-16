@@ -49,7 +49,7 @@ jobs:
           pip install pytest
           pip install pytest-cov
           python -m pytest -v --cov=aqme
-      - executor: codecov/default
+      executor: codecov/default
       - run: |
           codecov/upload
   # # codecov job to upload the coverage
