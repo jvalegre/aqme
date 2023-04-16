@@ -50,14 +50,7 @@ jobs:
           pip install pytest-cov
           python -m pytest -v --cov=aqme
           dir
-          cd tests
-          dir
-          cd ..
-          cd build
-          dir
-          cd ..
-          cd aqme
-          dir
+          dir /ah
           mv /root/project/.coverage /root/project/coverage/.coverage
       - persist_to_workspace:
           root: /root/project
@@ -70,7 +63,7 @@ jobs:
       - attach_workspace:
           at: /root/project/coverage
       - run: |
-          ls
+          ls -a
           dir
       - codecov/upload:
           file: /root/project/coverage/.coverage
