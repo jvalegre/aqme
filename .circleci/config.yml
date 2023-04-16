@@ -49,7 +49,6 @@ jobs:
           pip install pytest
           pip install pytest-cov
           python -m pytest -v --cov=aqme
-    post-steps:
       - codecov/upload
   # # codecov job to upload the coverage
   # codecov-upload:
@@ -64,3 +63,7 @@ workflows:
     # Inside the workflow, you define the jobs you want to run.
     jobs:
       - build-and-test
+      #       post-steps:
+      # executor: codecov/default
+      # - codecov/upload
+
