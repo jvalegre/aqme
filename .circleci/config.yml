@@ -56,10 +56,12 @@ jobs:
     docker:
       - image: cimg/python:3.10
     steps:
+      - run: |
+          ls
       # - attach_workspace:
       #     at: project
       - codecov/upload:
-          file: /root/project/.coverage
+          file: /home/circleci/project/.coverage
 # Invoke jobs via workflows
 # See: https://circleci.com/docs/2.0/configuration-reference/#workflows
 workflows:
