@@ -39,9 +39,9 @@ jobs:
           conda install -y -c conda-forge rdkit
           conda install -y -c conda-forge openbabel
           # install xTB, xTB-python and CREST
-          conda install -y -c conda-forge xtb
-          conda install -y -c conda-forge crest
-          pip install torch torchvision torchani
+          # conda install -y -c conda-forge xtb
+          # conda install -y -c conda-forge crest
+          # pip install torch torchvision torchani
           # install the dependencies of AQME with pip
           python -m pip install --upgrade pip
           pip install .
@@ -50,11 +50,12 @@ jobs:
           pip install pytest-cov
           python -m pytest -v --cov=aqme
           dir
-          dir /a:h
           cd tests
           dir
-          dir /a:h
-          mv /root/project/.coverage /root/project/coverage/.coverage
+          cd ..
+          cd build
+          dir
+          # mv /root/project/.coverage /root/project/coverage/.coverage
       - persist_to_workspace:
           root: /root/project
           paths: coverage
