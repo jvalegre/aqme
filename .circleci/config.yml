@@ -55,7 +55,10 @@ jobs:
           cd ..
           cd build
           dir
-          # mv /root/project/.coverage /root/project/coverage/.coverage
+          cd ..
+          cd aqme
+          dir
+          mv /root/project/.coverage /root/project/coverage/.coverage
       - persist_to_workspace:
           root: /root/project
           paths: coverage
