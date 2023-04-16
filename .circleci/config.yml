@@ -50,7 +50,7 @@ jobs:
           pip install pytest-cov
           python -m pytest -v --cov=aqme
       - codecov/upload
-jobs:
+
   codecov-coverage:
     docker:
       - image: cimg/python:3.10
