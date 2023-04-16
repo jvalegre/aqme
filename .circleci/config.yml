@@ -49,7 +49,6 @@ jobs:
           pip install pytest
           pip install pytest-cov
           python -m pytest -v --cov=aqme
-      - codecov/upload
 
   codecov-coverage:
     docker:
