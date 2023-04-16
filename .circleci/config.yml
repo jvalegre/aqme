@@ -64,4 +64,4 @@ workflows:
       - build-and-test
       - codecov-coverage:
         requires:
-          build-and-test
+          - build-and-test
