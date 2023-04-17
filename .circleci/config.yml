@@ -23,6 +23,7 @@ jobs:
     # Change the version below to your required version of python
     docker:
       - image: continuumio/miniconda3
+    working_directory: /tmp
     # working_directory: /root/project
     # Checkout the code as the first step. This is a dedicated CircleCI step.
     # The python orb's install-packages step will install the dependencies from a Pipfile via Pipenv by default.
@@ -50,15 +51,12 @@ jobs:
           pip install pytest
           pip install pytest-cov
           python -m pytest -v --cov=aqme --cov-report=xml
-          mkdir /tmp/test_codecov
           dir
-          cp coverage.xml /tmp/test_codecov/coverage.xml
-          cd /tmp/test_codecov
-          dir
-          # mv /root/project/.coverage /root/project/coverage/.coverage
       - persist_to_workspace:
-          root: /tmp/test_codecov
-          paths: coverage.xml
+          root: /tmp
+          # paths: 
+          #   - coverage.xml
+          #   - aqme
 
   # the codecov orb doesn't work with the miniconda docker, so the coverage report
   # needs to be stored and loaded in a new job using a python docker
@@ -67,7 +65,7 @@ jobs:
       - image: cimg/python:3.10
     steps:
       - attach_workspace:
-          at: /tmp/test_codecov
+          at: /tmp
       - run: |
           cd /tmp/test_codecov
           ls -l
