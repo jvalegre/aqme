@@ -65,6 +65,8 @@ jobs:
   codecov-coverage:
     docker:
       - image: cimg/python:3.10
+    environment:
+      CODECOV_TOKEN: 501bccb4-d191-4165-a06c-e41cac145142
     steps:
       - attach_workspace:
           at: /tmp/test_codecov
@@ -75,7 +77,7 @@ jobs:
           dir
       - codecov/upload:
           file: /tmp/test_codecov/coverage.xml
-          token: '501bccb4-d191-4165-a06c-e41cac145142'
+          token: $CODECOV_TOKEN
 # Invoke jobs via workflows
 # See: https://circleci.com/docs/2.0/configuration-reference/#workflows
 workflows:
