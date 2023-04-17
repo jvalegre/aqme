@@ -65,8 +65,6 @@ jobs:
   codecov-coverage:
     docker:
       - image: cimg/python:3.10
-    environment:
-      CODECOV_TOKEN: 501bccb4-d191-4165-a06c-e41cac145142
     steps:
       - attach_workspace:
           at: /tmp/test_codecov
