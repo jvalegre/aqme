@@ -54,9 +54,9 @@ jobs:
           dir
       - persist_to_workspace:
           root: /tmp
-          # paths: 
-          #   - coverage.xml
-          #   - aqme
+          paths: ''
+            # - coverage.xml
+            # - aqme
 
   # the codecov orb doesn't work with the miniconda docker, so the coverage report
   # needs to be stored and loaded in a new job using a python docker
