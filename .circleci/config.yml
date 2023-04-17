@@ -75,7 +75,8 @@ jobs:
           dir
       - codecov/upload:
           file: /tmp/test_codecov/coverage.xml
-          **token: 501bccb4-d191-4165-a06c-e41cac145142**
+          token: 
+            - CODECOV_TOKEN=501bccb4-d191-4165-a06c-e41cac145142
 # Invoke jobs via workflows
 # See: https://circleci.com/docs/2.0/configuration-reference/#workflows
 workflows:
