@@ -50,9 +50,9 @@ jobs:
           pip install pytest
           pip install pytest-cov
           python -m pytest -v --cov=aqme
-          mkdir test_codecov
+          mkdir /tmp/test_codecov
           echo "test" > /tmp/test_codecov/test
-          cd test_codecov
+          cd /tmp/test_codecov
           dir
           # mv /root/project/.coverage /root/project/coverage/.coverage
       - persist_to_workspace:
