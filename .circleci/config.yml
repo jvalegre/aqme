@@ -66,6 +66,7 @@ jobs:
       - attach_workspace:
           at: /tmp/test_codecov
       - run: |
+          cd /tmp/test_codecov
           ls -l
           ls -a -l
           dir
