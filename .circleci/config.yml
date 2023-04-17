@@ -52,7 +52,7 @@ jobs:
           python -m pytest -v --cov=aqme --cov-report=xml
           mkdir /tmp/test_codecov
           dir
-          echo "test" > /tmp/test_codecov/test
+          cp coverage.xml /tmp/test_codecov/coverage.xml
           cd /tmp/test_codecov
           dir
           # mv /root/project/.coverage /root/project/coverage/.coverage
@@ -72,7 +72,7 @@ jobs:
           ls -a -l
           dir
       - codecov/upload:
-          file: /root/project/.coverage
+          file: /tmp/test_codecov/coverage.xml
 # Invoke jobs via workflows
 # See: https://circleci.com/docs/2.0/configuration-reference/#workflows
 workflows:
