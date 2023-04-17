@@ -70,6 +70,7 @@ jobs:
           at: /tmp
       - run: |
           dir
+      - checkout
       - codecov/upload:
           file: /tmp/coverage.xml
           token: CODECOV_TOKEN
