@@ -23,7 +23,6 @@ jobs:
     # Change the version below to your required version of python
     docker:
       - image: continuumio/miniconda3
-    working_directory: /tmp
     # working_directory: /root/project
     # Checkout the code as the first step. This is a dedicated CircleCI step.
     # The python orb's install-packages step will install the dependencies from a Pipfile via Pipenv by default.
@@ -51,6 +50,9 @@ jobs:
           pip install pytest
           pip install pytest-cov
           python -m pytest -v --cov=aqme --cov-report=xml
+          rm -r /tmp/*
+          cp * /tmp/*
+          cd /tmp
           dir
       - persist_to_workspace:
           root: /tmp
