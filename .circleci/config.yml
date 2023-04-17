@@ -49,11 +49,8 @@ jobs:
           # install and run pytest
           pip install pytest
           pip install pytest-cov
-          python -m pytest -v --cov=aqme
+          python -m pytest -v --cov=aqme --cov-report=xml
           mkdir /tmp/test_codecov
-          cd /root
-          dir
-          cd /root/project
           dir
           echo "test" > /tmp/test_codecov/test
           cd /tmp/test_codecov
