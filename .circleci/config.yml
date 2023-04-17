@@ -58,7 +58,7 @@ jobs:
           # mv /root/project/.coverage /root/project/coverage/.coverage
       - persist_to_workspace:
           root: /tmp/test_codecov
-          paths: test
+          paths: coverage.xml
 
   codecov-coverage:
     docker:
