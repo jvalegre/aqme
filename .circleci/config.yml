@@ -51,7 +51,7 @@ jobs:
           pip install pytest-cov
           python -m pytest -v --cov=aqme --cov-report=xml
           rm -r /tmp/*
-          cp * /tmp
+          cp -r * /tmp
           cd /tmp
           dir
       - persist_to_workspace:
