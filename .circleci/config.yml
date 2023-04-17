@@ -50,7 +50,6 @@ jobs:
           pip install pytest
           pip install pytest-cov
           python -m pytest -v --cov=aqme
-          attrib
           mkdir test_codecov
           echo "test" > /root/project/test_codecov/test
           cd test_codecov
