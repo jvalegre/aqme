@@ -40,20 +40,19 @@ jobs:
           conda install -y -c conda-forge rdkit
           conda install -y -c conda-forge openbabel
           # install xTB, xTB-python and CREST
-          # conda install -y -c conda-forge xtb
-          # conda install -y -c conda-forge crest
-          # pip install torch torchvision torchani
+          conda install -y -c conda-forge xtb
+          conda install -y -c conda-forge crest
+          pip install torch torchvision torchani
           # install the dependencies of AQME with pip
           python -m pip install --upgrade pip
           pip install .
           # install and run pytest
           pip install pytest
           pip install pytest-cov
+          # the format of the codecov report has to be scpecified or it doesn't create for some reason
           python -m pytest -v --cov=aqme --cov-report=xml
           rm -r /tmp/*
           cp -r * /tmp
-          cd /tmp
-          dir
       - persist_to_workspace:
           root: /tmp
           paths:
@@ -68,8 +67,7 @@ jobs:
     steps:
       - attach_workspace:
           at: /tmp
-      - run: |
-          dir
+      # this checkout step is necessary to avoid an issue in which codecov thinks the report is empty
       - checkout
       - codecov/upload:
           file: /tmp/coverage.xml
