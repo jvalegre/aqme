@@ -170,6 +170,9 @@ def main():
             gen_atoms=args.gen_atoms,
             bs_gen=args.bs_gen,
             bs_nogen=args.bs_nogen,
+            lowest_only = args.lowest_only,
+            lowest_n = args.lowest_n,
+            e_threshold_qprep= args.e_threshold_qprep,
         )
 
     # QCORR

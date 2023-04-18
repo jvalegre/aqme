@@ -68,7 +68,7 @@ class vismol:
                     sdf_files.append(file)
 
             for sdf_file in sdf_files:
-                self.confs = mol_from_sdf_or_mol_or_mol2(sdf_file, "qprep")
+                self.confs = mol_from_sdf_or_mol_or_mol2(sdf_file, "qprep", None)
                 interact(
                     self.style_selector,
                     idx=ipywidgets.IntSlider(min=0, max=len(self.confs) - 1, step=1),

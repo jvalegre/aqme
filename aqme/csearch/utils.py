@@ -305,7 +305,7 @@ def prepare_com_files(args, csearch_file):
 
     sdffile = f'{os.path.dirname(csearch_file)}/{filename.split(".")[0]}.sdf'
 
-    suppl, _, _, _ = mol_from_sdf_or_mol_or_mol2(sdffile, "csearch")
+    suppl, _, _, _ = mol_from_sdf_or_mol_or_mol2(sdffile, "csearch", None)
 
     name = filename.split('.')[0]
     name = add_prefix_suffix(name, args)
@@ -347,7 +347,7 @@ def prepare_pdb_files(args, csearch_file):
 def prepare_sdf_files(args, csearch_file):
     filename = os.path.basename(csearch_file)
     sdffile = f'{os.path.dirname(csearch_file)}/{filename}'
-    suppl, charges, mults, IDs = mol_from_sdf_or_mol_or_mol2(sdffile, "csearch")
+    suppl, charges, mults, IDs = mol_from_sdf_or_mol_or_mol2(sdffile, "csearch",None)
     if sdffile.split('.')[0] in ['mol','mol2']:
         os.remove(f'{sdffile.split(".")[0]}.sdf')
 
