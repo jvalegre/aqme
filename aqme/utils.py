@@ -334,6 +334,7 @@ def command_line_args():
         "cregen",
         "lowest_only",
         "chk",
+        "nodup_check"
     ]
 
     for arg in var_dict:

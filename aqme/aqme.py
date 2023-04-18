@@ -203,6 +203,7 @@ def main():
             gen_atoms=args.gen_atoms,
             bs_gen=args.bs_gen,
             bs_nogen=args.bs_nogen,
+            nodup_check=args.nodup_check,
         )
 
     # QDESCP

@@ -104,6 +104,7 @@ var_dict = {
     "nmr_slope": [-1.0537, -1.0784],  # [C,H]
     "nmr_intercept": [181.7815,31.8723],  # [C,H]
     "nmr_experim": None,
+    "nodup_check": False,
 }
 
 

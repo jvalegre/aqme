@@ -427,21 +427,22 @@ class qcorr:
         if errortype == "none":
             E_dup, H_dup, G_dup, ro_dup, errortype = get_cclib_params(cclib_data, errortype)
 
-            # detects if this calculation is a duplicate
-            for i, _ in enumerate(duplicate_data["Energies"]):
-                E_diff = abs(E_dup - duplicate_data["Energies"][i])
-                H_diff = abs(H_dup - duplicate_data["Enthalpies"][i])
-                G_diff = abs(G_dup - duplicate_data["Gibbs"][i])
-                if (ro_dup is not None) and (
-                    duplicate_data["RO_constant"][i] is not None
-                ):
-                    ro_diff = np.linalg.norm(
-                        np.array(ro_dup) - np.array(duplicate_data["RO_constant"][i])
-                    )
-                if max([E_diff, H_diff, G_diff]) < abs(float(self.args.dup_threshold)):
-                    if (ro_dup is not None) and (ro_diff < self.args.ro_threshold):
-                        errortype = "duplicate_calc"
-                        dup_off = duplicate_data["File"][i]
+            if self.args.nodup_check==False:
+                # detects if this calculation is a duplicate
+                for i, _ in enumerate(duplicate_data["Energies"]):
+                    E_diff = abs(E_dup - duplicate_data["Energies"][i])
+                    H_diff = abs(H_dup - duplicate_data["Enthalpies"][i])
+                    G_diff = abs(G_dup - duplicate_data["Gibbs"][i])
+                    if (ro_dup is not None) and (
+                        duplicate_data["RO_constant"][i] is not None
+                    ):
+                        ro_diff = np.linalg.norm(
+                            np.array(ro_dup) - np.array(duplicate_data["RO_constant"][i])
+                        )
+                    if max([E_diff, H_diff, G_diff]) < abs(float(self.args.dup_threshold)):
+                        if (ro_dup is not None) and (ro_diff < self.args.ro_threshold):
+                            errortype = "duplicate_calc"
+                            dup_off = duplicate_data["File"][i]
 
         if errortype == "none":
             duplicate_data["File"].append(file_name)
