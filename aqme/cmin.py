@@ -153,7 +153,7 @@ class cmin:
             "\no  Number of finished jobs from CMIN", max=len(self.args.files)
         )
 
-        file_format = os.path.splitext(self.args.files[0])[1]
+        file_format = os.path.basename(Path(self.args.files[0])).split('.')[1]
         if file_format.lower() in ['.xyz', '.gjf', '.com']:
             for file in self.args.files:
                 prepare_com_files(self.args, file)
