@@ -10,6 +10,7 @@ orbs:
   # so you dont have to copy and paste it everywhere.
   # See the orb documentation here: https://circleci.com/developer/orbs/orb/circleci/python
   python: circleci/python@1.5.0
+  codecov: codecov/codecov@3.2.4
 
 # Define a job to be invoked later in a workflow.
 # See: https://circleci.com/docs/2.0/configuration-reference/#jobs
@@ -22,6 +23,7 @@ jobs:
     # Change the version below to your required version of python
     docker:
       - image: continuumio/miniconda3
+    # working_directory: /root/project
     # Checkout the code as the first step. This is a dedicated CircleCI step.
     # The python orb's install-packages step will install the dependencies from a Pipfile via Pipenv by default.
     # Here we're making sure we use just use the system-wide pip. By default it uses the project root's requirements.txt.
@@ -31,7 +33,7 @@ jobs:
       - checkout
       - python/install-packages:
           pkg-manager: pip
-          # app-dir: ~/project/package-directory/  # If you're requirements.txt isn't in the root directory.
+          # app-dir: ~/project/package-directory/  # If your requirements.txt isn't in the root directory.
           # pip-dependency-file: test-requirements.txt  # if you have a different name for your requirements file, maybe one that combines your runtime and test requirements.
       - run: |
           # install RDKit and OpenBabel
@@ -41,16 +43,35 @@ jobs:
           conda install -y -c conda-forge xtb
           conda install -y -c conda-forge crest
           pip install torch torchvision torchani
-          pip install codecov
           # install the dependencies of AQME with pip
           python -m pip install --upgrade pip
           pip install .
           # install and run pytest
           pip install pytest
           pip install pytest-cov
-          python -m pytest -v --cov=aqme
-          codecov
+          # the format of the codecov report has to be scpecified or it doesn't create for some reason
+          python -m pytest -v --cov=aqme --cov-report=xml
+          rm -r /tmp/*
+          cp -r * /tmp
+      - persist_to_workspace:
+          root: /tmp
+          paths:
+            - coverage.xml
+            - aqme
 
+  # the codecov orb doesn't work with the miniconda docker, so the coverage report
+  # needs to be stored and loaded in a new job using a python docker
+  codecov-coverage:
+    docker:
+      - image: cimg/python:3.10
+    steps:
+      - attach_workspace:
+          at: /tmp
+      # this checkout step is necessary to avoid an issue in which codecov thinks the report is empty
+      - checkout
+      - codecov/upload:
+          file: /tmp/coverage.xml
+          token: CODECOV_TOKEN
 # Invoke jobs via workflows
 # See: https://circleci.com/docs/2.0/configuration-reference/#workflows
 workflows:
@@ -58,3 +79,6 @@ workflows:
     # Inside the workflow, you define the jobs you want to run.
     jobs:
       - build-and-test
+      - codecov-coverage:
+          requires:
+            - build-and-test

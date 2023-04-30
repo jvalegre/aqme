@@ -216,7 +216,14 @@ class qprep:
     def sdf_2_com(self, sdf_file, destination, file_format):
         sdf_name = os.path.basename(sdf_file).split(".")[0]
         # get atom types, atomic coordinates, charge and multiplicity of all the mols in the SDF file
-        mols = mol_from_sdf_or_mol_or_mol2(sdf_file, "qprep")
+        low_check = None
+        if self.args.lowest_only == True:
+            low_check='lowest_only'
+        if self.args.lowest_n is not None:
+            low_check=int(self.args.lowest_n)
+        if self.args.e_threshold_qprep is not None:
+            low_check=float(self.args.e_threshold_qprep)
+        mols = mol_from_sdf_or_mol_or_mol2(sdf_file, "qprep", low_check)
         for i, mol in enumerate(mols):
             (
                 atom_types,

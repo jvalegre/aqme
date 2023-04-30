@@ -69,8 +69,8 @@ var_dict = {
     "bs_nogen": "",
     "bs_gen": "",
     "lowest_only": False,
-    "lowest_n": False,
-    "energy_threshold_for_gaussian": 100.0,
+    "lowest_n": None,
+    "e_threshold_qprep": None,
     "chk": False,
     "w_dir_main": os.getcwd(),
     "files": [],
@@ -104,6 +104,7 @@ var_dict = {
     "nmr_slope": [-1.0537, -1.0784],  # [C,H]
     "nmr_intercept": [181.7815,31.8723],  # [C,H]
     "nmr_experim": None,
+    "nodup_check": False,
 }
 
 
