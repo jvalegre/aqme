@@ -168,7 +168,13 @@ def xtb_opt_main(
         for file in glob.glob('*') + glob.glob('*.*') + glob.glob('.*'):
             if os.path.exists(file):
                 if file.find('_xtb2') == -1 and file.find('_xtb1') == -1 and file.find('.out') == -1:
-                    os.remove(file)
+                    try:
+                        os.remove(file)
+                    except IsADirectoryError:
+                        try:
+                            shutil.rmtree(file)
+                        except OSError: # this avoids problems when running AQME in HPCs
+                            pass
 
         if constrained_opt:
             xyzoutxtb2 = str(dat_dir) + "/" + name_no_path + "_xtb2.xyz"
@@ -502,22 +508,36 @@ def create_xcontrol(
 
 def nci_ts_mol(
     smi,
+    log,
+    seed,
     constraints_atoms,
     constraints_dist,
     constraints_angle,
     constraints_dihedral,
 ):
+    using_const = None
     if constraints_atoms is not None:
+        using_const = constraints_atoms
         constraints_atoms = [[float(y) for y in x] for x in constraints_atoms]
+        constraints_atoms = np.array(constraints_atoms)
     if constraints_dist is not None:
+        using_const = constraints_dist
         constraints_dist = [[float(y) for y in x] for x in constraints_dist]
         constraints_dist = np.array(constraints_dist)
     if constraints_angle is not None:
+        using_const = constraints_angle
         constraints_angle = [[float(y) for y in x] for x in constraints_angle]
         constraints_angle = np.array(constraints_angle)
     if constraints_dihedral is not None:
+        using_const = constraints_dihedral
         constraints_dihedral = [[float(y) for y in x] for x in constraints_dihedral]
         constraints_dihedral = np.array(constraints_dihedral)
+
+    if using_const is not None:
+        for smi_part in smi:
+            if ':' not in smi_part or '[' not in smi_part:
+                log.write(f"\nx  Constraints were specified {using_const} but atoms might not be mapped in the SMILES input!")
+                break
 
     molsH = []
     mols = []
@@ -526,9 +546,9 @@ def nci_ts_mol(
         molsH.append(Chem.AddHs(Chem.MolFromSmiles(m)))
 
     for m in molsH:
-        Chem.EmbedMultipleConfs(m, numConfs=1)
+        Chem.EmbedMultipleConfs(m, numConfs=1, randomSeed=seed)
     for m in mols:
-        Chem.EmbedMultipleConfs(m, numConfs=1)
+        Chem.EmbedMultipleConfs(m, numConfs=1, randomSeed=seed)
 
     coord = [0.0, 0.0, 5.0]
     molH = molsH[0]
@@ -547,7 +567,15 @@ def nci_ts_mol(
         Chem.SanitizeMol(mol)
     mol = Chem.AddHs(mol)
 
-    mol = Chem.ConstrainedEmbed(mol, molH)
+    try:
+        mol = Chem.ConstrainedEmbed(mol, molH, randomseed=seed)
+    except ValueError: # removingH in the core (molH) avoids problems related to RDKit embedding
+        molH = Chem.RemoveHs(molH)
+        try:
+            mol = Chem.ConstrainedEmbed(mol, molH, randomseed=seed)
+        except ValueError:
+            log.write(f"\nx  Constrained optimization failed due to an embedding problem with RDKit that could not be fixed!")
+            pass
 
     atom_map = []
     for atom in mol.GetAtoms():

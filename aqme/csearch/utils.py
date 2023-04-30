@@ -297,15 +297,29 @@ def prepare_com_files(args, csearch_file):
     filename = os.path.basename(csearch_file)
     if filename.split('.')[1] in ["gjf", "com"]:
         xyz_file, _, _ = com_2_xyz(csearch_file)
-        _, charge, mult = get_info_input(csearch_file)
+        if args.charge is None:
+            _, charge, _ = get_info_input(csearch_file)
+        else:
+            charge = args.charge
+        if args.mult is None:
+            _, _, mult = get_info_input(csearch_file)
+        else:
+            mult = args.mult
     else:
         xyz_file = csearch_file
-        charge, mult = read_xyz_charge_mult(xyz_file)
+        if args.charge is None:
+            charge, _ = read_xyz_charge_mult(csearch_file)
+        else:
+            charge = args.charge
+        if args.mult is None:
+            _, mult = read_xyz_charge_mult(csearch_file)
+        else:
+            mult = args.mult
     _ = xyz_2_sdf(xyz_file)
 
     sdffile = f'{os.path.dirname(csearch_file)}/{filename.split(".")[0]}.sdf'
 
-    suppl, _, _, _ = mol_from_sdf_or_mol_or_mol2(sdffile, "csearch", None)
+    suppl, _, _, _ = mol_from_sdf_or_mol_or_mol2(sdffile, "csearch", args)
 
     name = filename.split('.')[0]
     name = add_prefix_suffix(name, args)
@@ -347,7 +361,9 @@ def prepare_pdb_files(args, csearch_file):
 def prepare_sdf_files(args, csearch_file):
     filename = os.path.basename(csearch_file)
     sdffile = f'{os.path.dirname(csearch_file)}/{filename}'
-    suppl, charges, mults, IDs = mol_from_sdf_or_mol_or_mol2(sdffile, "csearch",None)
+
+    suppl, charges, mults, IDs = mol_from_sdf_or_mol_or_mol2(sdffile, "csearch", args)
+
     if sdffile.split('.')[0] in ['mol','mol2']:
         os.remove(f'{sdffile.split(".")[0]}.sdf')
 
@@ -477,6 +493,7 @@ def smi_to_mol(
     smi,
     program,
     log,
+    seed,
     constraints_atoms,
     constraints_dist,
     constraints_angle,
@@ -504,6 +521,8 @@ def smi_to_mol(
             constraints_dihedral,
         ) = nci_ts_mol(
             smi,
+            log,
+            seed,
             constraints_atoms,
             constraints_dist,
             constraints_angle,

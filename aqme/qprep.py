@@ -131,7 +131,14 @@ class qprep:
                     for conf_file in glob.glob(
                         f"{self.args.w_dir_main}/{name}_conf_*.xyz"
                     ):
-                        charge_xyz, mult_xyz = read_xyz_charge_mult(conf_file)
+                        if self.args.charge is None:
+                            charge_xyz, _ = read_xyz_charge_mult(conf_file)
+                        else:
+                            charge_xyz = self.args.charge
+                        if self.args.mult is None:
+                            _, mult_xyz = read_xyz_charge_mult(conf_file)
+                        else:
+                            mult_xyz = self.args.mult
                         # generate SDF files from XYZ with Openbabel
                         command_xyz = [
                             "obabel",
@@ -216,6 +223,7 @@ class qprep:
     def sdf_2_com(self, sdf_file, destination, file_format):
         sdf_name = os.path.basename(sdf_file).split(".")[0]
         # get atom types, atomic coordinates, charge and multiplicity of all the mols in the SDF file
+
         low_check = None
         if self.args.lowest_only == True:
             low_check='lowest_only'
@@ -223,7 +231,8 @@ class qprep:
             low_check=int(self.args.lowest_n)
         if self.args.e_threshold_qprep is not None:
             low_check=float(self.args.e_threshold_qprep)
-        mols = mol_from_sdf_or_mol_or_mol2(sdf_file, "qprep", low_check)
+        mols = mol_from_sdf_or_mol_or_mol2(sdf_file, "qprep", self.args, low_check=low_check)
+
         for i, mol in enumerate(mols):
             (
                 atom_types,

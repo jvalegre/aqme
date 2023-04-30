@@ -24,7 +24,7 @@ GAS_CONSTANT = 8.3144621  # J / K / mol
 J_TO_AU = 4.184 * 627.509541 * 1000.0  # UNIT CONVERSION
 T = 298.15
 
-aqme_version = "1.4.7"
+aqme_version = "1.4.8"
 time_run = time.strftime("%Y/%m/%d %H:%M:%S", time.localtime())
 aqme_ref = f"AQME v {aqme_version}, Alegre-Requena, J. V.; Sowndarya, S.; Perez-Soto, R.; Alturaifi, T.; Paton, R. AQME: Automated Quantum Mechanical Environments for Researchers and Educators. Wiley Interdiscip. Rev. Comput. Mol. Sci. 2023, DOI: 10.1002/wcms.1663."
 
@@ -613,9 +613,9 @@ def read_xyz_charge_mult(file):
         lines = F.readlines()
     for line in lines:
         for keyword in line.strip().split():
-            if keyword.lower().find("charge") > -1:
+            if keyword.lower().find("charge=") > -1:
                 charge_xyz = int(keyword.split("=")[1])
-            elif keyword.lower().find("mult") > -1:
+            elif keyword.lower().find("mult=") > -1:
                 mult_xyz = int(keyword.split("=")[1])
             elif charge_xyz is not None and mult_xyz is not None:
                 break
@@ -628,7 +628,8 @@ def read_xyz_charge_mult(file):
     return charge_xyz, mult_xyz
 
 
-def mol_from_sdf_or_mol_or_mol2(input_file, module, low_check=None):
+def mol_from_sdf_or_mol_or_mol2(input_file, module, args, low_check=None):
+
     """
     mol object from SDF, MOL or MOL2 files
     """
@@ -703,10 +704,15 @@ def mol_from_sdf_or_mol_or_mol2(input_file, module, low_check=None):
             else:
                 IDs.append(filename)
 
-        if len(charges) == 0:
+        if args.charge is not None:
+            for i, mol in enumerate(mols):
+                charges.append(args.charge)
+        elif len(charges) == 0:
             for i, mol in enumerate(mols):
                 charges.append(Chem.GetFormalCharge(mol))
-        if len(mults) == 0:
+        if args.mult is not None:
+            mults.append(args.mult)
+        elif len(mults) == 0:
             for i, mol in enumerate(mols):
                 NumRadicalElectrons = 0
                 for Atom in mol.GetAtoms():

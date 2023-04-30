@@ -421,6 +421,7 @@ class csearch:
                 smi,
                 self.args.program.lower(),
                 self.args.log,
+                self.args.seed,
                 constraints_atoms,
                 constraints_dist,
                 constraints_angle,
