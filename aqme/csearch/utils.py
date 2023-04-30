@@ -361,6 +361,7 @@ def prepare_pdb_files(args, csearch_file):
 def prepare_sdf_files(args, csearch_file):
     filename = os.path.basename(csearch_file)
     sdffile = f'{os.path.dirname(csearch_file)}/{filename}'
+
     suppl, charges, mults, IDs = mol_from_sdf_or_mol_or_mol2(sdffile, "csearch", args)
 
     if sdffile.split('.')[0] in ['mol','mol2']:

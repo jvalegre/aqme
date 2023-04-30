@@ -264,6 +264,7 @@ class qdescp:
             if file.split(".")[1].lower() in ["sdf", "pdb"]:
                 if self.args.charge is None:
                     _, charges, _, _ = mol_from_sdf_or_mol_or_mol2(file, "csearch", self.args)
+
                 else:
                     charges = [self.args.charge] * len(
                         glob.glob(
@@ -272,6 +273,7 @@ class qdescp:
                     )
                 if self.args.mult is None:
                     _, _, mults, _ = mol_from_sdf_or_mol_or_mol2(file, "csearch", self.args)
+
                 else:
                     mults = [self.args.mult] * len(
                         glob.glob(

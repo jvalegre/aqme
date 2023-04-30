@@ -333,8 +333,8 @@ def command_line_args():
         "heavyonly",
         "cregen",
         "lowest_only",
-        "lowest_n",
         "chk",
+        "nodup_check"
     ]
 
     for arg in var_dict:
@@ -382,7 +382,7 @@ def command_line_args():
 
     # Second, load all the default variables as an "add_option" object
     args = load_variables(kwargs, "command")
-
+    
     return args
 
 
@@ -628,15 +628,30 @@ def read_xyz_charge_mult(file):
     return charge_xyz, mult_xyz
 
 
-def mol_from_sdf_or_mol_or_mol2(input_file, module, args):
+def mol_from_sdf_or_mol_or_mol2(input_file, module, args, low_check=None):
+
     """
     mol object from SDF, MOL or MOL2 files
     """
-
     if module in ["qprep","cmin"]:
         # using sanitize=False to avoid reading problems
         mols = Chem.SDMolSupplier(input_file, removeHs=False, sanitize=False)
-        return mols
+        if low_check=='lowest_only':
+            return [mols[0]]
+        elif isinstance(low_check, int):
+            check_n = min(len(mols),low_check)
+            n_mols = []
+            for i in range(check_n):
+                n_mols.append(mols[i])
+            return n_mols
+        elif isinstance(low_check, float):
+            n_mols = []
+            for i in range(len(mols)):
+                if abs(float(mols[i].GetProp('Energy')) - float(mols[0].GetProp('Energy'))) < low_check: # kcal/mol
+                    n_mols.append(mols[i])
+            return n_mols
+        else:
+            return mols
 
     elif module == "csearch":
 

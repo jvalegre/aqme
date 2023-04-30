@@ -34,11 +34,12 @@ def test_cmin_methods(
 ):
 
     # runs the program with the different tests
-    os.chdir(w_dir_main)
+    os.chdir(cmin_methods_dir)
     if path == 'complete':
         cmin(program=program,files=f'{cmin_methods_dir}/{sdf}')
-        os.chdir(cmin_methods_dir)
+        os.chdir(w_dir_main)
     elif path == 'partial':
+        os.chdir(w_dir_main)
         cmin(program=program,files=f'{sdf}')
         os.chdir(cmin_methods_dir)
         sdf = 'pentane_rdkit_methods.sdf'

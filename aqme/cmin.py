@@ -101,10 +101,9 @@ import pandas as pd
 import time
 from aqme.utils import (
     load_variables,
+    substituted_mol,
     mol_from_sdf_or_mol_or_mol2,
-    add_prefix_suffix,
-    check_files,
-    check_xtb
+    add_prefix_suffix
 )
 from aqme.filter import ewin_filter, pre_E_filter, RMSD_and_E_filter
 from aqme.cmin_utils import creation_of_dup_csv_cmin
@@ -141,14 +140,11 @@ class cmin:
             self.args.log.finalize()
             sys.exit()
 
-        try:
-            os.chdir(self.args.w_dir_main)
-        except FileNotFoundError:
-            self.args.w_dir_main = Path(f"{os.getcwd()}/{self.args.w_dir_main}")
-            os.chdir(self.args.w_dir_main)
-
         # retrieves the different files to run in CMIN
-        _ = check_files(self,'cmin')
+        if len(self.args.files) == 0:
+            self.args.log.write('\nx  No files were found! Make sure you use quotation marks if you are using * (i.e. --files "*.sdf")')
+            self.args.log.finalize()
+            sys.exit()
 
         # create the dataframe to store the data
         self.final_dup_data = creation_of_dup_csv_cmin(self.args.program.lower())
@@ -157,15 +153,15 @@ class cmin:
             "\no  Number of finished jobs from CMIN", max=len(self.args.files)
         )
 
-        file_format = os.path.basename(Path(self.args.files[0])).split('.')[1]
-        file_dir = os.path.dirname(Path(self.args.files[0]))
-        if file_format.lower() in ['xyz', 'gjf', 'com']:
+        file_format = '.'+os.path.basename(Path(self.args.files[0])).split('.')[1]
+
+        if file_format.lower() in ['.xyz', '.gjf', '.com']:
             for file in self.args.files:
                 prepare_com_files(self.args, file)
-            if file_format.lower() in ['gjf', 'com']:
-                files_temp_extra = glob.glob(f'{file_dir}/*.xyz')
-            files_cmin = glob.glob(f'{file_dir}/*.sdf')
-        elif file_format.lower() == 'pdb':
+            if file_format.lower() in ['.gjf', '.com']:
+                files_temp_extra = glob.glob('*.xyz')
+            files_cmin = glob.glob('*.sdf')
+        elif file_format.lower() == '.pdb':
             for file in self.args.files:
                 command_pdb = [
                     "obabel",
@@ -179,8 +175,8 @@ class cmin:
                     stdout=subprocess.DEVNULL,
                     stderr=subprocess.DEVNULL,
                 )
-            files_cmin = glob.glob(f'{file_dir}/*.sdf')
-        elif file_format.lower() == 'sdf':
+            files_cmin = glob.glob('*.sdf')
+        elif file_format.lower() == '.sdf':
             files_cmin = self.args.files
         else:
             self.args.log.write(f"\nx  The input format {file_format} is not supported for CMIN refinement! Formats allowed: SDF, XYZ, COM, GJF and PDB")
@@ -195,15 +191,11 @@ class cmin:
             self.args.log.write(f"\n\n   ----- {self.name} -----")
 
             if self.args.destination is None:
-                self.cmin_folder = Path(self.args.w_dir_main).joinpath(
-                    f"CMIN"
-                )
+                self.cmin_folder = self.args.initial_dir.joinpath("CMIN")
+            elif self.args.initial_dir.joinpath(self.args.destination).exists():
+                self.cmin_folder = Path(self.args.initial_dir.joinpath(self.args.destination))
             else:
-                if self.args.initial_dir.as_posix() in f"{self.args.destination}":
-                    self.cmin_folder = Path(self.args.destination)
-                else:
-                    self.cmin_folder = Path(self.args.initial_dir).joinpath(
-                    self.args.destination)
+                self.cmin_folder = Path(self.args.destination)
 
             self.cmin_folder.mkdir(exist_ok=True, parents=True)
 
@@ -234,8 +226,8 @@ class cmin:
         self.args.log.finalize()
 
         # delete extra temporary files created when using XYZ, GJF, COM and PDB files
-        if file_format.lower() in ['xyz', 'gjf', 'com', 'pdb']:
-            if file_format.lower() in ['gjf', 'com']:
+        if file_format.lower() in ['.xyz', '.gjf', '.com', '.pdb']:
+            if file_format.lower() in ['.gjf', '.com']:
                 files_cmin = files_cmin + files_temp_extra
             for temp_file in files_cmin:
                 os.remove(temp_file)
@@ -252,6 +244,7 @@ class cmin:
             file_path = Path(self.args.initial_dir).joinpath(file)
             file_path = file_path.as_posix()
             inmols = mol_from_sdf_or_mol_or_mol2(file_path, 'cmin', self.args)
+
         name_mol = os.path.basename(file).split(".sdf")[0]
 
         return inmols, name_mol
@@ -276,12 +269,10 @@ class cmin:
             charge,mult,final_mult,dup_data = self.charge_mult_cmin(dup_data, dup_data_idx)
 
         elif self.args.program.lower() == "xtb":
-            # checks if xTB is installed
-            _ = self.get_cmin_model()
             # sets charge and mult
-            file_format = os.path.basename(Path(file)).split('.')[1]
+            file_format = os.path.splitext(file)[1]
             charge_input, mult_input, final_mult = None, None, None
-            if file_format.lower() == 'sdf':
+            if file_format.lower() == '.sdf':
                 if self.args.charge is None or self.args.mult is None:
                     # read charge and mult from SDF if possible (i.e. charge/mult of SDFs created with CSEARCH)
                     with open(file, "r") as F:
@@ -323,7 +314,9 @@ class cmin:
                     complex_ts = False
                     if len(self.args.constraints_atoms) >= 1 or len(self.args.constraints_dist) >= 1 or len(self.args.constraints_angle) >= 1 or len(self.args.constraints_dihedral) >= 1:
                         complex_ts = True
-                    name_init = str(open(file, "r").readlines()[0].strip())
+                    # name_init = str(open(file, "r").readlines()[0].strip())
+                    name_init = mol.GetProp('_Name')
+                    # print(name_init)
                     mol, energy, cmin_valid = xtb_opt_main(
                         f'{self.name}_conf_{i}',
                         dup_data,
@@ -432,7 +425,7 @@ class cmin:
     # xTB AND ANI MAIN OPTIMIZATION PROCESS
     def ani_optimize(self, mol, charge, mult):
 
-        # Attempts ANI imports and exits if the programs are not installed
+        # Attempts ANI/xTB imports and exits if the programs are not installed
         try:
             import torch
             import warnings
@@ -528,7 +521,15 @@ class cmin:
             model = getattr(torchani.models,self.args.ani_method)()
 
         elif self.args.program.lower() == "xtb":
-            _ = check_xtb(self)
+            try:
+                subprocess.run(
+                    ["xtb", "-h"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+                )
+            except FileNotFoundError:
+                self.args.log.write("x  xTB is not installed (CREST cannot be used)! You can install the program with 'conda install -c conda-forge xtb'")
+                self.args.log.finalize()
+                sys.exit()
+    
             model = None
 
         return model
