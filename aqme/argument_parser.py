@@ -106,7 +106,9 @@ var_dict = {
     "nmr_experim": None,
     "nodup_check": False,
     "qdescp_atom": None,
-    "dbstep_r": 3.5
+    "dbstep_r": 3.5,
+    "robert": True,
+    "csv_name": None
 }
 
 

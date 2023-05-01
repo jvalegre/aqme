@@ -9,6 +9,8 @@ import pandas as pd
 import ast
 import math
 import rdkit
+import warnings
+warnings.filterwarnings('ignore')
 
 GAS_CONSTANT = 8.3144621  # J / K / mol
 J_TO_AU = 4.184 * 627.509541 * 1000.0  # UNIT CONVERSION
@@ -90,6 +92,8 @@ def get_boltz_props(
         prop_list = []
         for json_file in json_files:
             json_data = read_json(json_file)
+            if self.args.qdescp_atom is None:
+                json_data['DBSTEP_Vbur'] = 'NaN'
             if type == "xtb":
                 prop_list.append(json_data[prop])
             if type == "nmr":
@@ -121,10 +125,10 @@ def get_boltz_props(
                 self.args.log.write(f"o  The {qdescp_nmr} file containing Boltzmann weighted NMR shifts was successfully created in {self.args.initial_dir}")
 
         elif type == "xtb":
-            if self.args.qdescp_atom is None:
-                avg_json_data[prop] = avg_prop.tolist()
-            else:
+            if self.args.qdescp_atom is not None or avg_prop == 'NaN':
                 avg_json_data[prop] = avg_prop
+            else:
+                avg_json_data[prop] = avg_prop.tolist()                
 
     if type == "xtb":
         for prop in mol_prop:
@@ -183,8 +187,14 @@ def average_prop_atom(weights, prop):
 
     boltz_avg = []
     for i, p in enumerate(prop):
+        if p == 'NaN':
+            boltz_avg = 'NaN'
+            break
         boltz_avg.append([number * weights[i] for number in p])
-    boltz_res = np.sum(boltz_avg, 0)
+    if boltz_avg == 'NaN':
+        boltz_res = 'NaN'
+    else:
+        boltz_res = np.sum(boltz_avg, 0)
     return boltz_res
 
 

@@ -224,7 +224,9 @@ def main():
             nmr_intercept=args.nmr_intercept,
             nmr_experim=args.nmr_experim,
             qdescp_atom=args.qdescp_atom,
-            dbstep_r=args.dbstep_r
+            dbstep_r=args.dbstep_r,
+            robert=args.robert,
+            csv_name=args.csv_name
         )
 
 

@@ -14,6 +14,9 @@ General
    qdescp_atom : str, default=None
       Type of atom to calculate atomic properties (i.e., qdescp_atom='P' to 
       study the properties of phosphorus atoms in monodentate phosphines)
+   robert : bool, default=True
+      Creates a database ready to use in an AQME-ROBERT machine learning workflow,
+      combining the input CSV with SMILES/code_name and the calculated xTB/DBSTEP descriptors
 
 xTB descriptors
 +++++++++++++++
@@ -160,6 +163,7 @@ class qdescp:
         elif self.args.boltz == "True":
             self.args.boltz = True
 
+        qdescp_csv = "QDESCP_boltz_descriptors.csv"
         if self.args.boltz:
             self.args.log.write('\no  Running RDKit and collecting molecular properties')
             boltz_dir = Path(f"{destination}/boltz")
@@ -172,7 +176,7 @@ class qdescp:
                         str(destination) + "/" + name + "_conf_*.json"
                     )
                     get_boltz_props(json_files, name, boltz_dir, "xtb", self, mol_prop, atom_prop, mol=mol)
-                self.write_csv_boltz_data(destination)
+                self.write_csv_boltz_data(destination,qdescp_csv)
 
             elif self.args.program.lower() == "nmr":
                 if self.args.files[0].split('.')[1].lower() not in ["json"]:
@@ -202,11 +206,38 @@ class qdescp:
                         self.args.nmr_experim,
                     )
 
+        if self.args.robert == "False":
+            self.args.robert = False
+        if self.args.robert:
+            if self.args.csv_name is None:
+                self.args.log.write(f"\n-  The input csv_name with SMILES and code_name is missing. A combined database for AQME-ROBERT workflows will not be created.")
+            elif not Path(f"{self.args.csv_name}").exists():
+                self.args.log.write(f"\nx  The input csv_name provided ({self.args.csv_name}) is not valid. A combined database for AQME-ROBERT workflows will not be created.")
+            else:
+                combined_df = pd.DataFrame()
+                qdescp_df = pd.read_csv(qdescp_csv)
+                input_df = pd.read_csv(self.args.csv_name)
+                if 'code_name' not in input_df.columns:
+                    self.args.log.write(f"\nx  The input csv_name provided ({self.args.csv_name}) does not contain the code_name column. A combined database for AQME-ROBERT workflows will not be created.")
+                elif 'SMILES' in input_df.columns or 'smiles' in input_df.columns or 'Smiles' in input_df.columns:
+                    path_json = os.path.dirname(Path(qdescp_df['Name'][0]))
+                    for i,input_name in enumerate(input_df['code_name']):
+                        # match the entries of the two databases using the entry name
+                        qdescp_col = input_df.loc[i].to_frame().T.reset_index(drop=True) # transposed, reset index
+                        input_col = qdescp_df.loc[(qdescp_df['Name'] == f'{path_json}/{input_name}_rdkit_boltz') | (qdescp_df['Name'] == f'{path_json}/{input_name}_boltz')]
+                        input_col = input_col.drop(['Name'], axis=1).reset_index(drop=True)
+                        combined_row = pd.concat([qdescp_col,input_col], axis=1)
+                        combined_df = combined_df.append(combined_row, ignore_index=True)
+                    _ = combined_df.to_csv(f'AQME-ROBERT_{self.args.csv_name}', index = None, header=True)
+                    self.args.log.write(f"o  The AQME-ROBERT_{self.args.csv_name} file containing the database ready for the AQME-ROBERT workflow was successfully created in {self.args.initial_dir}")
+                else:
+                    self.args.log.write(f"\nx  The input csv_name provided ({self.args.csv_name}) does not contain the SMILES column. A combined database for AQME-ROBERT workflows will not be created.")
+
         elapsed_time = round(time.time() - start_time_overall, 2)
         self.args.log.write(f"\nTime QDESCP: {elapsed_time} seconds\n")
         self.args.log.finalize()
 
-    def write_csv_boltz_data(self, destination):
+    def write_csv_boltz_data(self, destination, qdescp_csv):
         boltz_json_files = glob.glob(str(destination) + "/boltz/*.json")
         dfs = []  # an empty list to store the data frames
         for file in boltz_json_files:
@@ -217,9 +248,8 @@ class qdescp:
         temp = pd.concat(
             dfs, ignore_index=True
         )  # concatenate all the data frames in the list.
-        qdescp_csv = "QDESCP_boltz_descriptors.csv"
         temp.to_csv(qdescp_csv, index=False)
-        self.args.log.write(f"o  The {qdescp_csv} file containing Boltzmann weighted xTB and RDKit descriptors was successfully created in {self.args.initial_dir}")
+        self.args.log.write(f"o  The {qdescp_csv} file containing Boltzmann weighted xTB, DBSTEP and RDKit descriptors was successfully created in {self.args.initial_dir}")
 
     def gather_files_and_run(self, destination, atom_prop):
         bar = IncrementalBar(
