@@ -11,8 +11,14 @@ General
       Directory to create the JSON file(s)
    program : str, default=None
       Program required to create the new descriptors. Current options: 'xtb', 'nmr'
+   qdescp_atom : str, default=None
+      Type of atom to calculate atomic properties (i.e., qdescp_atom='P' to 
+      study the properties of phosphorus atoms in monodentate phosphines)
+   robert : bool, default=True
+      Creates a database ready to use in an AQME-ROBERT machine learning workflow,
+      combining the input CSV with SMILES/code_name and the calculated xTB/DBSTEP descriptors
 
-XTB descriptors
+xTB descriptors
 +++++++++++++++
 
    files : list of str, default=''
@@ -35,6 +41,12 @@ XTB descriptors
    boltz : bool, default=True
       Calculation of Boltzmann averaged xTB properties and addition of RDKit 
       molecular descriptors
+
+DBSTEP descriptors
+++++++++++++++
+
+   dbstep_r : float, default=3.5
+      Radius used in the DBSTEP calculations (in A)
 
 NMR simulation
 ++++++++++++++
@@ -81,6 +93,7 @@ from progress.bar import IncrementalBar
 import pandas as pd
 from rdkit import Chem
 from pathlib import Path
+import dbstep.Dbstep as db
 from aqme.utils import (
     load_variables,
     read_xyz_charge_mult,
@@ -89,7 +102,7 @@ from aqme.utils import (
     check_files
 )
 from aqme.qdescp_utils import (
-    get_boltz_avg_properties_xtb,
+    get_boltz_props,
     read_fod,
     read_json,
     read_xtb,
@@ -132,13 +145,27 @@ class qdescp:
             sys.exit()
 
         if self.args.program.lower() == "xtb":
-            self.gather_files_and_run(destination)
+            mol_prop = ["total energy","HOMO-LUMO gap/eV","electronic energy","Dipole module/D",
+                "Total charge","HOMO","LUMO","Fermi-level/eV","Total dispersion C6",
+                "Total dispersion C8","Total polarizability alpha","Total FOD"]
+            atom_prop = ["partial charges","mulliken charges","cm5 charges","FUKUI+","FUKUI-",
+                "FUKUIrad","s proportion","p proportion","d proportion","Coordination numbers",
+                "Dispersion coefficient C6","Polarizability alpha","FOD","FOD s proportion",
+                "FOD p proportion","FOD d proportion",'DBSTEP_Vbur']
+            self.gather_files_and_run(destination,atom_prop)
+
+        elif self.args.program.lower() == "nmr":
+            mol_prop = None
+            atom_prop = ["NMR Chemical Shifts"]
 
         if self.args.boltz == "False":
             self.args.boltz = False
         elif self.args.boltz == "True":
             self.args.boltz = True
+
+        qdescp_csv = "QDESCP_boltz_descriptors.csv"
         if self.args.boltz:
+            self.args.log.write('\no  Running RDKit and collecting molecular properties')
             boltz_dir = Path(f"{destination}/boltz")
             boltz_dir.mkdir(exist_ok=True, parents=True)
             if self.args.program.lower() == "xtb":
@@ -148,10 +175,8 @@ class qdescp:
                     json_files = glob.glob(
                         str(destination) + "/" + name + "_conf_*.json"
                     )
-                    get_boltz_avg_properties_xtb(
-                        json_files, name, boltz_dir, "xtb", self, None, None, None, None, mol
-                    )
-                self.write_csv_boltz_data(destination)
+                    get_boltz_props(json_files, name, boltz_dir, "xtb", self, mol_prop, atom_prop, mol=mol)
+                self.write_csv_boltz_data(destination,qdescp_csv)
 
             elif self.args.program.lower() == "nmr":
                 if self.args.files[0].split('.')[1].lower() not in ["json"]:
@@ -167,23 +192,52 @@ class qdescp:
                         + name
                         + "_conf_*.json"
                     )
-                    get_boltz_avg_properties_xtb(
+                    get_boltz_props(
                         json_files,
                         name,
                         boltz_dir,
                         "nmr",
                         self,
+                        mol_prop,
+                        atom_prop,
                         self.args.nmr_atoms,
                         self.args.nmr_slope,
                         self.args.nmr_intercept,
                         self.args.nmr_experim,
                     )
 
+        if self.args.robert == "False":
+            self.args.robert = False
+        if self.args.robert:
+            if self.args.csv_name is None:
+                self.args.log.write(f"\n-  The input csv_name with SMILES and code_name is missing. A combined database for AQME-ROBERT workflows will not be created.")
+            elif not Path(f"{self.args.csv_name}").exists():
+                self.args.log.write(f"\nx  The input csv_name provided ({self.args.csv_name}) is not valid. A combined database for AQME-ROBERT workflows will not be created.")
+            else:
+                combined_df = pd.DataFrame()
+                qdescp_df = pd.read_csv(qdescp_csv)
+                input_df = pd.read_csv(self.args.csv_name)
+                if 'code_name' not in input_df.columns:
+                    self.args.log.write(f"\nx  The input csv_name provided ({self.args.csv_name}) does not contain the code_name column. A combined database for AQME-ROBERT workflows will not be created.")
+                elif 'SMILES' in input_df.columns or 'smiles' in input_df.columns or 'Smiles' in input_df.columns:
+                    path_json = os.path.dirname(Path(qdescp_df['Name'][0]))
+                    for i,input_name in enumerate(input_df['code_name']):
+                        # match the entries of the two databases using the entry name
+                        qdescp_col = input_df.loc[i].to_frame().T.reset_index(drop=True) # transposed, reset index
+                        input_col = qdescp_df.loc[(qdescp_df['Name'] == f'{path_json}/{input_name}_rdkit_boltz') | (qdescp_df['Name'] == f'{path_json}/{input_name}_boltz')]
+                        input_col = input_col.drop(['Name'], axis=1).reset_index(drop=True)
+                        combined_row = pd.concat([qdescp_col,input_col], axis=1)
+                        combined_df = combined_df.append(combined_row, ignore_index=True)
+                    _ = combined_df.to_csv(f'AQME-ROBERT_{self.args.csv_name}', index = None, header=True)
+                    self.args.log.write(f"o  The AQME-ROBERT_{self.args.csv_name} file containing the database ready for the AQME-ROBERT workflow was successfully created in {self.args.initial_dir}")
+                else:
+                    self.args.log.write(f"\nx  The input csv_name provided ({self.args.csv_name}) does not contain the SMILES column. A combined database for AQME-ROBERT workflows will not be created.")
+
         elapsed_time = round(time.time() - start_time_overall, 2)
         self.args.log.write(f"\nTime QDESCP: {elapsed_time} seconds\n")
         self.args.log.finalize()
 
-    def write_csv_boltz_data(self, destination):
+    def write_csv_boltz_data(self, destination, qdescp_csv):
         boltz_json_files = glob.glob(str(destination) + "/boltz/*.json")
         dfs = []  # an empty list to store the data frames
         for file in boltz_json_files:
@@ -194,11 +248,10 @@ class qdescp:
         temp = pd.concat(
             dfs, ignore_index=True
         )  # concatenate all the data frames in the list.
-        qdescp_csv = "QDESCP_boltz_descriptors.csv"
         temp.to_csv(qdescp_csv, index=False)
-        self.args.log.write(f"o  The {qdescp_csv} file containing Boltzmann weighted xTB and RDKit descriptors was successfully created in {self.args.initial_dir}")
+        self.args.log.write(f"o  The {qdescp_csv} file containing Boltzmann weighted xTB, DBSTEP and RDKit descriptors was successfully created in {self.args.initial_dir}")
 
-    def gather_files_and_run(self, destination):
+    def gather_files_and_run(self, destination, atom_prop):
         bar = IncrementalBar(
             "\no  Number of finished jobs from QDESCP", max=len(self.args.files)
         )
@@ -264,7 +317,6 @@ class qdescp:
             if file.split(".")[1].lower() in ["sdf", "pdb"]:
                 if self.args.charge is None:
                     _, charges, _, _ = mol_from_sdf_or_mol_or_mol2(file, "csearch", self.args)
-
                 else:
                     charges = [self.args.charge] * len(
                         glob.glob(
@@ -273,7 +325,6 @@ class qdescp:
                     )
                 if self.args.mult is None:
                     _, _, mults, _ = mol_from_sdf_or_mol_or_mol2(file, "csearch", self.args)
-
                 else:
                     mults = [self.args.mult] * len(
                         glob.glob(
@@ -292,8 +343,9 @@ class qdescp:
 
             for xyz_file, charge, mult in zip(xyz_files, xyz_charges, xyz_mults):
                 name = os.path.basename(xyz_file.split(".")[0])
+                self.args.log.write(f"\n   Running xTB and collecting properties")
                 self.run_sp_xtb(xyz_file, charge, mult, name, destination)
-                self.collect_xtb_properties()
+                self.collect_xtb_properties(atom_prop)
                 self.cleanup(name, destination)
             bar.next()
         bar.finish()
@@ -410,7 +462,7 @@ class qdescp:
 
         os.chdir(self.args.initial_dir)
 
-    def collect_xtb_properties(self):
+    def collect_xtb_properties(self,atom_prop):
         """
         Collects all xTB properties from the files and puts them in a JSON file
         """
@@ -455,6 +507,7 @@ class qdescp:
         """
 		Now add xTB descriptors to existing json files.
 		"""
+
         json_data = read_json(self.xtb_json)
         json_data["Dipole module/D"] = dipole_module
         json_data["Total charge"] = total_charge
@@ -492,11 +545,46 @@ class qdescp:
         with open(self.xtb_xyz, "r") as f:
             inputs = f.readlines()
 
-        coordinates = [
-            inputs[i].strip().split()[1:] for i in range(2, int(inputs[0].strip()) + 2)
-        ]
-
+        coordinates = [inputs[i].strip().split()[1:] for i in range(2, int(inputs[0].strip()) + 2)]
         json_data["coordinates"] = coordinates
+
+        
+        if self.args.qdescp_atom is not None:
+            idx_dbstep, idx_xtb = None, None
+
+            # calculate DBSTEP descriptors
+            self.args.log.write(f"\n   Running DBSTEP and collecting properties")
+
+            hit_at = 0
+            for i,line in enumerate(inputs):
+                if i > 2:
+                    if line.split()[0] == self.args.qdescp_atom:
+                        hit_at += 1
+                        idx_dbstep = i-1 # DBSTEP starts from index 1 (i.e. first atom has idx 1)
+                        idx_xtb = i-2
+
+            if hit_at > 1:
+                self.args.log.write(f'WARNING! More than one {self.args.qdescp_atom} were found, using {self.args.qdescp_atom} with index {idx_dbstep}.')
+
+            if idx_dbstep is not None:
+                # calculates buried volume to the type of atom selected
+                try:
+                    dbstep_obj = db.dbstep(self.xtb_xyz,atom1=idx_dbstep,r=float(self.args.dbstep_r),commandline=True,verbose=False,volume=True)  
+                    json_data['DBSTEP_Vbur'] = float(dbstep_obj.bur_vol)
+                except TypeError:
+                    self.args.log.write(f'WARNING! DBSTEP is not working correctly, DBSTEP properties will not be calculated.')
+                    json_data['DBSTEP_Vbur'] = 'NaN'
+
+                # selects xTB atom properties
+                for prop in atom_prop:
+                    if prop != 'DBSTEP_Vbur': # already set the value of the atom instead of a list of values
+                        json_data[prop] = json_data[prop][idx_xtb]
+
+            else:
+                self.args.log.write(f'WARNING! No {self.args.qdescp_atom} atoms were found, using NaN as the value.')
+                json_data['DBSTEP_Vbur'] = 'NaN'
+                for prop in atom_prop:
+                    json_data[prop] = 'NaN'
 
         with open(self.xtb_json, "w") as outfile:
             json.dump(json_data, outfile)

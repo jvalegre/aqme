@@ -41,6 +41,13 @@ Parameters
       Basis set used for gen(ECP) atoms (i.e. 'def2svp')
    bs_nogen : str, default=''
       Basis set used for non gen(ECP) atoms in gen(ECP) calculations (i.e. '6-31G*')
+   lowest_only : bool, default=False
+      Only create input for the conformer with lowest energy of the SDF file
+   lowest_n : int, default=None
+      Only create inputs for the n conformers with lowest energy of the SDF file
+   e_threshold_qprep : float, default=None
+      Only create inputs for conformers below the energy threshold (to the lowest conformer)
+      of the SDF file
 """
 ######################################################.
 #        This file stores the QPREP class            #

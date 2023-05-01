@@ -4,11 +4,17 @@
 Versions
 ========
 
-Version 1.4.8 [`url <https://github.com/jvalegre/aqme/releases/tag/1.4.8>`__]
+Version 1.5.0 [`url <https://github.com/jvalegre/aqme/releases/tag/1.5.0>`__]
    -  A second ConstrainedEmbed() function with a core with no Hs was added to avoid
       RDKit embedding issues that show up in tricky cases
    -  Fixed the --charge and --mult options when using xyz/sdf/pdf/gjf/com files as inputs in 
       CSEARCH (xyz fixed in QPREP as well)
+   -  Options low_check and e_threshold_qprep were added to QPREP (create inputs only for n 
+      conformers of below a certain energy threshold)
+   -  Option nodup_check was added to QCORR (turns off the duplicate filter)
+   -  DBSTEP buried volume added in QDESCP with the qdescp_atom option
+   -  Atomic properties of a single atom type were added in QDESCP with the qdescp_atom option
+   -  Creation of databases for AQME-ROBERT workflows with the --robert option (True by default)
 
 Version 1.4.7 [`url <https://github.com/jvalegre/aqme/releases/tag/1.4.7>`__]
    -  QCORR is compatible with directories that contain a "." symbol  

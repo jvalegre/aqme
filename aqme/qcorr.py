@@ -50,6 +50,8 @@ Parameters
    covfrac : float, default=1.10
       Fraction of the summed covalent radii that constitutes a bond between two 
       atoms in the isomerization filter
+   nodup_check : bool, default=False
+      If True, the duplicate filter is disabled
       
 .. note::
 
