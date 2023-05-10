@@ -77,7 +77,8 @@ def xtb_opt_main(
     method_opt,
     complex_ts=False,
     mol=None,
-    name_init=None
+    name_init=None,
+
 ):
 
     """

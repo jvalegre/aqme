@@ -161,6 +161,8 @@ Crest only
    xtb_keywords : str, default=None
       Define additional keywords to use in the xTB pre-optimization that are not 
       included in -c, --uhf, -P and --input. For example: '--alpb ch2cl2 --gfn 1' 
+    crest_num_runs : int, default=1
+      Specify as number of runs if multiple starting points from RDKit starting points is required.
 """
 #####################################################.
 #          This file stores the CSEARCH class       #
@@ -179,6 +181,7 @@ import pandas as pd
 import concurrent.futures as futures
 import multiprocessing as mp
 from progress.bar import IncrementalBar
+import numpy as np
 
 from rdkit.Chem import AllChem as Chem
 from rdkit.Chem import Descriptors as Descriptors
@@ -199,7 +202,8 @@ from aqme.csearch.utils import (
     com_2_xyz,
     check_constraints,
     smi_to_mol,
-    getDihedralMatches
+    getDihedralMatches,
+    cluster_conformers
 )
 from aqme.csearch.templates import template_embed, check_metal_neigh
 from aqme.csearch.fullmonte import generating_conformations_fullmonte, realign_mol
@@ -485,7 +489,7 @@ class csearch:
             _ = self.find_metal_atom(mol,charge,mult)
 
         # replaces the metal for an I atom
-        if len(self.args.metal_atoms) >= 1:
+        if len(self.args.metal_atoms) >= 1 and self.args.program != 'crest':
             (
                 self.args.metal_idx,
                 self.args.complex_coord,
@@ -603,7 +607,6 @@ class csearch:
         dup_data = creation_of_dup_csv_csearch(self.args.program.lower())
 
         dup_data_idx = 0
-        start_time = time.time()
         status = None
 
         # Set charge and multiplicity
@@ -613,9 +616,6 @@ class csearch:
         if mult is None:
             mult = Descriptors.NumRadicalElectrons(mol) + 1
 
-        dup_data.at[dup_data_idx, "Real charge"] = charge
-        dup_data.at[dup_data_idx, "Mult"] = mult
-
         # inputs that go through CREST containing 3D coordinates don't require a previous RDKit conformer sampling
         if (
             self.args.program.lower() in ["crest"]
@@ -624,27 +624,62 @@ class csearch:
         ):
 
             valid_structure = True
-            status = xtb_opt_main(
-                f"{name}_{self.args.program.lower()}",
-                dup_data,
-                dup_data_idx,
-                self,
-                charge,
-                mult,
-                constraints_atoms,
-                constraints_dist,
-                constraints_angle,
-                constraints_dihedral,
-                'crest',
-                mol=mol
-            )
+            if self.args.crest_num_runs == 1:
+                start_time = time.time()
+                dup_data.at[dup_data_idx, "Real charge"] = charge
+                dup_data.at[dup_data_idx, "Mult"] = mult
+                dup_data.at[dup_data_idx, "Molecule"] = name
+                status = xtb_opt_main(
+                    f"{name}_{self.args.program.lower()}",
+                    dup_data,
+                    dup_data_idx,
+                    self,
+                    charge,
+                    mult,
+                    constraints_atoms,
+                    constraints_dist,
+                    constraints_angle,
+                    constraints_dihedral,
+                    'crest',
+                    mol=mol, 
+                )
+                n_seconds = round(time.time() - start_time, 2)
+                dup_data.at[dup_data_idx, "CSEARCH time (seconds)"] = n_seconds
+            else:
+                for pt in range(1, int(self.args.crest_num_runs)+1):
+                    start_time = time.time()
+                    dup_data.at[dup_data_idx, "Real charge"] = charge
+                    dup_data.at[dup_data_idx, "Mult"] = mult
+                    dup_data.at[dup_data_idx, "Molecule"] = name + "_run_{0}".format(pt)
+                    shutil.copy(f"{name}_{self.args.program.lower()}.xyz", f"{name}_run_{pt}_{self.args.program.lower()}.xyz")
+                    status = xtb_opt_main(
+                        f"{name}_run_{pt}_{self.args.program.lower()}",
+                        dup_data,
+                        dup_data_idx,
+                        self,
+                        charge,
+                        mult,
+                        constraints_atoms,
+                        constraints_dist,
+                        constraints_angle,
+                        constraints_dihedral,
+                        'crest',
+                        mol=mol, 
+                    )
+                    n_seconds = round(time.time() - start_time, 2)
+                    dup_data.at[dup_data_idx, "CSEARCH time (seconds)"] = n_seconds
+                    dup_data_idx +=1
 
         else:
+            start_time = time.time()
             name = name.replace("/", "\\").split("\\")[-1].split(".")[0]
             self.csearch_file = self.csearch_folder.joinpath(
                 name + "_" + self.args.program.lower() + self.args.output
             )
-            sdwriter_init = Chem.SDWriter(str(self.csearch_file))
+            if self.args.crest_num_runs != 1 and self.args.program.lower() =='crest':
+                sdwriter_init = None
+            else:
+                sdwriter_init = Chem.SDWriter(str(self.csearch_file))
 
             valid_structure = filters(
                 mol, self.args.log, self.args.max_mol_wt
@@ -652,7 +687,7 @@ class csearch:
             if valid_structure:
                 try:
                     # the conformational search for RDKit
-                    status = self.summ_search(
+                    status, dup_data = self.summ_search(
                         mol,
                         name,
                         sdwriter_init,
@@ -676,9 +711,20 @@ class csearch:
             error_message = "\nx  ERROR: The structure is not valid or no conformers were obtained from this SMILES string"
             self.args.log.write(error_message)
 
-        n_seconds = round(time.time() - start_time, 2)
-        dup_data.at[dup_data_idx, "CSEARCH time (seconds)"] = n_seconds
-
+        #combining all the sdfs from more than one run
+        if self.args.crest_num_runs != 1:
+            sdwriter_rd = Chem.SDWriter(str(self.csearch_file))
+            file_runs = glob.glob(str(self.csearch_folder)+'/'+ name +'_run_*'+ self.args.program.lower() +'.sdf')
+            allenergy, allmols = [], []
+            for file in file_runs:
+                mols = Chem.SDMolSupplier(file, removeHs=False)
+                for mol in mols:
+                    allmols.append(mol)
+                    allenergy.append(float(mol.GetProp('Energy')))
+            
+            allmols_sorted = [mol for _, mol in sorted(zip(allenergy, allmols), key=lambda pair: pair[0])]
+            for mol in allmols_sorted:
+                sdwriter_rd.write(mol)
         return dup_data
 
     def summ_search(
@@ -704,6 +750,8 @@ class csearch:
         Embeds, optimizes and filters RDKit conformers
         """
 
+        start_time = time.time()
+
         # writes sdf for the first RDKit conformer generation
         if not complex_ts:
             if self.args.program.lower() in ['rdkit']:
@@ -725,9 +773,16 @@ class csearch:
                 alg_Map,
                 mol_template
             )
+            if self.args.program.lower() in ['rdkit','fullmonte'] :
+                n_seconds = round(time.time() - start_time, 2)
+                dup_data.at[dup_data_idx, "CSEARCH time (seconds)"] = n_seconds
+
             # this avoids memory issues when using Windows
             try:
-                sdwriter.close()
+                if self.args.crest_num_runs != 1 and self.args.program.lower() =='crest':
+                    pass
+                else:
+                    sdwriter.close()
             except RuntimeError:
                 pass
             # reads the initial SDF files from RDKit and uses dihedral scan if selected
@@ -737,13 +792,26 @@ class csearch:
                     status = self.dihedral_filter_and_sdf(
                         name, dup_data, dup_data_idx, coord_Map, alg_Map, mol_template, ff
                     )
+                    n_seconds = round(time.time() - start_time, 2)
+                    dup_data.at[dup_data_idx, "CSEARCH time (seconds)"] = n_seconds
+                    
 
         if self.args.program.lower() in ['crest']:
             stop_xtb_opt = False
             if not complex_ts:
                 # mol_crest is the RDKit-optimized mol object
                 if mol_crest is not None:
-                    rdmolfiles.MolToXYZFile(mol_crest, name + "_crest.xyz")
+                    if self.args.crest_num_runs == 1:
+                        dup_data.at[dup_data_idx, "Molecule"] = name
+                        rdmolfiles.MolToXYZFile(mol_crest[0], name + "_crest.xyz")
+                    else:
+                        # clustering to get the best mol objects
+                        cluster_centroird_mols, centroids = cluster_conformers(mol_crest, self.args.heavyonly, self.args.max_matches_rmsd, self.args.cluster_thr)
+                        num_start_points = min(int(self.args.crest_num_runs), len(cluster_centroird_mols))
+                        for pt in range(1, num_start_points+1):
+                            dup_data.at[dup_data_idx, "Molecule"] = name + "_run_{0}".format(pt)
+                            rdmolfiles.MolToXYZFile(cluster_centroird_mols[pt-1], name + "_run_{0}_crest.xyz".format(pt), confId=centroids[pt-1])
+                            
                 else:
                     stop_xtb_opt = True
                     status = -1
@@ -751,28 +819,65 @@ class csearch:
                 # mol is the raw mol object (no optimization with RDKit to avoid problems when using
                 # noncovalent complexes and TSs)
                 if mol is not None:
-                    rdmolfiles.MolToXYZFile(mol, name + "_crest.xyz")
+                    if self.args.crest_num_runs == 1:
+                        dup_data.at[dup_data_idx, "Molecule"] = name
+                        rdmolfiles.MolToXYZFile(mol, name + "_crest.xyz")
+                    else:
+                        num_start_points = min(int(self.args.crest_num_runs), len(mol_crest))
+                        for pt in range(1, num_start_points+1):
+                            dup_data.at[pt-1, "Molecule"] = name + "_run_{0}".format(pt)
+                            rdmolfiles.MolToXYZFile(mol, name + "_run_{0}_crest.xyz".format(pt))
                 else:
                     stop_xtb_opt = True
                     status = -1
             if not stop_xtb_opt:
-                status = xtb_opt_main(
-                        f"{name}_{self.args.program.lower()}",
-                        dup_data,
-                        dup_data_idx,
-                        self,
-                        charge,
-                        mult,
-                        constraints_atoms,
-                        constraints_dist,
-                        constraints_angle,
-                        constraints_dihedral,
-                        'crest',
-                        complex_ts=complex_ts,
-                        mol=mol # this is necessary for CREST calculations with constraints
-                    )
+                start_time = time.time()
+                dup_data.at[dup_data_idx, "Molecule"] = name
+                if self.args.crest_num_runs == 1:
+                    status = xtb_opt_main(
+                            f"{name}_{self.args.program.lower()}",
+                            dup_data,
+                            dup_data_idx,
+                            self,
+                            charge,
+                            mult,
+                            constraints_atoms,
+                            constraints_dist,
+                            constraints_angle,
+                            constraints_dihedral,
+                            'crest',
+                            complex_ts=complex_ts,
+                            mol=mol, # this is necessary for CREST calculations with constraints
+                            
+                        )
+                    n_seconds = round(time.time() - start_time, 2)
+                    dup_data.at[dup_data_idx, "CSEARCH time (seconds)"] = n_seconds
+                else:
+                    num_start_points = min(int(self.args.crest_num_runs), len(mol_crest))
+                    dup_data = pd.DataFrame(np.repeat(dup_data.values, num_start_points, axis=0), columns=dup_data.columns)
+                    for pt in range(1, num_start_points+1):
+                        start_time = time.time()
+                        dup_data.at[pt-1, "Molecule"] = f"{name}_run_{pt}"
+                        status = xtb_opt_main(
+                            f"{name}_run_{pt}_{self.args.program.lower()}",
+                            dup_data,
+                            pt-1,
+                            self,
+                            charge,
+                            mult,
+                            constraints_atoms,
+                            constraints_dist,
+                            constraints_angle,
+                            constraints_dihedral,
+                            'crest',
+                            complex_ts=complex_ts,
+                            mol=mol, # this is necessary for CREST calculations with constraints
+                            
+                        )
+                        n_seconds = round(time.time() - start_time, 2)
+                        dup_data.at[pt-1, "CSEARCH time (seconds)"] = n_seconds
 
-        return status
+        return status, dup_data
 
     def dihedral_filter_and_sdf(
         self, name, dup_data, dup_data_idx, coord_Map, alg_Map, mol_template, ff
@@ -1164,7 +1269,7 @@ class csearch:
             # removes the rdkit file
             os.remove(name + "_" + "rdkit" + self.args.output)
 
-        return status, mol
+        return status, outmols
 
     def rdkit_to_sdf(
         self,
@@ -1203,7 +1308,6 @@ class csearch:
         else:
             initial_confs = int(self.args.sample)
 
-        dup_data.at[dup_data_idx, "Molecule"] = name
         update_to_rdkit = False
 
         rotmatches = getDihedralMatches(mol, self.args.heavyonly)
@@ -1231,7 +1335,7 @@ class csearch:
                 ff = "UFF"
 
         try:
-            status,mol_crest = self.min_after_embed(
+            status, mol_crest = self.min_after_embed(
                 mol,
                 cids,
                 name,
@@ -1251,6 +1355,9 @@ class csearch:
             status = -1
             mol_crest = None
 
-        sdwriter.close()
+        if self.args.crest_num_runs != 1 and self.args.program.lower() =='crest':
+            pass
+        else:
+            sdwriter.close()
 
         return status, rotmatches, ff, mol_crest

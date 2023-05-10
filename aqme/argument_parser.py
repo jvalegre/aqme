@@ -108,7 +108,9 @@ var_dict = {
     "qdescp_atom": None,
     "dbstep_r": 3.5,
     "robert": True,
-    "csv_name": None
+    "csv_name": None,
+    "crest_num_runs": 1,
+    "cluster_thr": 0.4
 }
 
 
