@@ -161,7 +161,7 @@ Crest only
    xtb_keywords : str, default=None
       Define additional keywords to use in the xTB pre-optimization that are not 
       included in -c, --uhf, -P and --input. For example: '--alpb ch2cl2 --gfn 1' 
-    crest_num_runs : int, default=1
+    crest_nrun : int, default=1
       Specify as number of runs if multiple starting points from RDKit starting points is required.
 """
 #####################################################.
@@ -624,7 +624,7 @@ class csearch:
         ):
 
             valid_structure = True
-            if self.args.crest_num_runs == 1:
+            if self.args.crest_nrun == 1:
                 start_time = time.time()
                 dup_data.at[dup_data_idx, "Real charge"] = charge
                 dup_data.at[dup_data_idx, "Mult"] = mult
@@ -646,7 +646,7 @@ class csearch:
                 n_seconds = round(time.time() - start_time, 2)
                 dup_data.at[dup_data_idx, "CSEARCH time (seconds)"] = n_seconds
             else:
-                for pt in range(1, int(self.args.crest_num_runs)+1):
+                for pt in range(1, int(self.args.crest_nrun)+1):
                     start_time = time.time()
                     dup_data.at[dup_data_idx, "Real charge"] = charge
                     dup_data.at[dup_data_idx, "Mult"] = mult
@@ -676,7 +676,7 @@ class csearch:
             self.csearch_file = self.csearch_folder.joinpath(
                 name + "_" + self.args.program.lower() + self.args.output
             )
-            if self.args.crest_num_runs != 1 and self.args.program.lower() =='crest':
+            if self.args.crest_nrun != 1 and self.args.program.lower() =='crest':
                 sdwriter_init = None
             else:
                 sdwriter_init = Chem.SDWriter(str(self.csearch_file))
@@ -712,7 +712,7 @@ class csearch:
             self.args.log.write(error_message)
 
         #combining all the sdfs from more than one run
-        if self.args.crest_num_runs != 1:
+        if self.args.crest_nrun != 1:
             sdwriter_rd = Chem.SDWriter(str(self.csearch_file))
             file_runs = glob.glob(str(self.csearch_folder)+'/'+ name +'_run_*'+ self.args.program.lower() +'.sdf')
             allenergy, allmols = [], []
@@ -779,7 +779,7 @@ class csearch:
 
             # this avoids memory issues when using Windows
             try:
-                if self.args.crest_num_runs != 1 and self.args.program.lower() =='crest':
+                if self.args.crest_nrun != 1 and self.args.program.lower() =='crest':
                     pass
                 else:
                     sdwriter.close()
@@ -801,13 +801,13 @@ class csearch:
             if not complex_ts:
                 # mol_crest is the RDKit-optimized mol object
                 if mol_crest is not None:
-                    if self.args.crest_num_runs == 1:
+                    if self.args.crest_nrun == 1:
                         dup_data.at[dup_data_idx, "Molecule"] = name
                         rdmolfiles.MolToXYZFile(mol_crest[0], name + "_crest.xyz")
                     else:
                         # clustering to get the best mol objects
-                        cluster_centroird_mols, centroids = cluster_conformers(mol_crest, self.args.heavyonly, self.args.max_matches_rmsd, self.args.cluster_thr)
-                        num_start_points = min(int(self.args.crest_num_runs), len(cluster_centroird_mols))
+                        cluster_centroird_mols, centroids = cluster_conformers(mol_crest, self.args.heavyonly, self.args.max_matches_rmsd, self.args.crest_nclust)
+                        num_start_points = min(int(self.args.crest_nrun), len(cluster_centroird_mols))
                         for pt in range(1, num_start_points+1):
                             dup_data.at[dup_data_idx, "Molecule"] = name + "_run_{0}".format(pt)
                             rdmolfiles.MolToXYZFile(cluster_centroird_mols[pt-1], name + "_run_{0}_crest.xyz".format(pt), confId=centroids[pt-1])
@@ -819,11 +819,11 @@ class csearch:
                 # mol is the raw mol object (no optimization with RDKit to avoid problems when using
                 # noncovalent complexes and TSs)
                 if mol is not None:
-                    if self.args.crest_num_runs == 1:
+                    if self.args.crest_nrun == 1:
                         dup_data.at[dup_data_idx, "Molecule"] = name
                         rdmolfiles.MolToXYZFile(mol, name + "_crest.xyz")
                     else:
-                        num_start_points = min(int(self.args.crest_num_runs), len(mol_crest))
+                        num_start_points = min(int(self.args.crest_nrun), len(mol_crest))
                         for pt in range(1, num_start_points+1):
                             dup_data.at[pt-1, "Molecule"] = name + "_run_{0}".format(pt)
                             rdmolfiles.MolToXYZFile(mol, name + "_run_{0}_crest.xyz".format(pt))
@@ -833,7 +833,7 @@ class csearch:
             if not stop_xtb_opt:
                 start_time = time.time()
                 dup_data.at[dup_data_idx, "Molecule"] = name
-                if self.args.crest_num_runs == 1:
+                if self.args.crest_nrun == 1:
                     status = xtb_opt_main(
                             f"{name}_{self.args.program.lower()}",
                             dup_data,
@@ -853,7 +853,7 @@ class csearch:
                     n_seconds = round(time.time() - start_time, 2)
                     dup_data.at[dup_data_idx, "CSEARCH time (seconds)"] = n_seconds
                 else:
-                    num_start_points = min(int(self.args.crest_num_runs), len(mol_crest))
+                    num_start_points = min(int(self.args.crest_nrun), len(mol_crest))
                     dup_data = pd.DataFrame(np.repeat(dup_data.values, num_start_points, axis=0), columns=dup_data.columns)
                     for pt in range(1, num_start_points+1):
                         start_time = time.time()
@@ -1355,7 +1355,7 @@ class csearch:
             status = -1
             mol_crest = None
 
-        if self.args.crest_num_runs != 1 and self.args.program.lower() =='crest':
+        if self.args.crest_nrun != 1 and self.args.program.lower() =='crest':
             pass
         else:
             sdwriter.close()
