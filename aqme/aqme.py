@@ -114,6 +114,8 @@ def main():
             cregen=args.cregen,
             cregen_keywords=args.cregen_keywords,
             crest_force=args.crest_force,
+            crest_nrun=args.crest_nrun,
+            crest_nclust=args.crest_nclust,
         )
 
     # CMIN

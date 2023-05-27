@@ -9,11 +9,13 @@ import subprocess
 import pandas as pd
 import ast
 from rdkit.Chem import AllChem as Chem
+from rdkit.ML.Cluster import Butina
 from aqme.utils import (
     get_info_input,
     mol_from_sdf_or_mol_or_mol2,
     read_xyz_charge_mult,
-    add_prefix_suffix
+    add_prefix_suffix,
+    get_conf_RMS
 )
 from aqme.csearch.crest import nci_ts_mol
 
@@ -48,7 +50,7 @@ def creation_of_dup_csv_csearch(program):
         "RDKit-RMSD-and-energy-duplicates",
         "RDKit-Unique-conformers",
     ]
-    end_columns_no_min = ["CSEARCH time (seconds)", "Overall charge"]
+    end_columns_no_min = ["CSEARCH time (seconds)"]
     fullmonte_columns = [
         "FullMonte-Unique-conformers",
     ]
@@ -547,3 +549,15 @@ def smi_to_mol(
         constraints_dihedral,
         complex_ts
     )
+
+def cluster_conformers(mols, heavy_only, max_matches_rmsd, cluster_thr):
+    dists = []
+    for i in range(len(mols)):
+        for j in range(i):
+            dists.append(get_conf_RMS(mols[i],mols[j], i, j, heavy_only, max_matches_rmsd))
+
+    clusts = Butina.ClusterData(dists, len(mols), cluster_thr, isDistData=True, reordering=True)
+    centroids = [x[0] for x in clusts]
+    cluster_mols = [mols[x] for x in centroids]
+
+    return cluster_mols, centroids
