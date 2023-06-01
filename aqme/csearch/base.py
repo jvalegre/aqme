@@ -224,11 +224,11 @@ class csearch:
     please look at the Parameters section (in the module documentation). 
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, create_dat=True, **kwargs):
 
         start_time_overall = time.time()
         # load default and user-specified variables
-        self.args = load_variables(kwargs, "csearch")
+        self.args = load_variables(kwargs, "csearch", create_dat=create_dat)
 
         csearch_program = True
         if self.args.program is None:
