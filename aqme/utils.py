@@ -403,6 +403,19 @@ def load_variables(kwargs, aqme_module, create_dat=True):
 
         self.initial_dir = Path(os.getcwd())
 
+        print(Path(f"{self.w_dir_main}").exists())
+        if (
+            Path(f"{self.w_dir_main}").exists()
+            and os.getcwd() not in f"{self.w_dir_main}"
+        ):
+            print("A")
+            self.w_dir_main = Path(f"{os.getcwd()}/{self.w_dir_main}")
+        else:
+            self.w_dir_main = Path(self.w_dir_main)
+            print("B")
+        print(self.w_dir_main.exists())
+        print(self.w_dir_main)
+
         # get PATH for the files option
         self.files = get_files(self.files)
 
@@ -410,16 +423,7 @@ def load_variables(kwargs, aqme_module, create_dat=True):
             self.w_dir_main = os.path.dirname(self.files)
         elif len(self.files) != 0:
             self.w_dir_main = os.path.dirname(self.files[0])
-        else:
-            self.w_dir_main = os.getcwd()
 
-        if (
-            Path(f"{self.w_dir_main}").exists()
-            and os.getcwd() not in f"{self.w_dir_main}"
-        ):
-            self.w_dir_main = Path(f"{os.getcwd()}/{self.w_dir_main}")
-        else:
-            self.w_dir_main = Path(self.w_dir_main)
 
         if self.isom_type is not None:
             if (
@@ -431,11 +435,9 @@ def load_variables(kwargs, aqme_module, create_dat=True):
                 self.isom_inputs = Path(self.isom_inputs)
 
         error_setup = False
-
         if not self.w_dir_main.exists():
             txt_yaml += "\nx  The PATH specified as input in the w_dir_main option might be invalid! Using current working directory"
             error_setup = True
-
         if error_setup:
             self.w_dir_main = Path(os.getcwd())
             
