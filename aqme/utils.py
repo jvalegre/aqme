@@ -469,13 +469,13 @@ def load_variables(kwargs, aqme_module, create_dat=True):
                 f"\no  Importing AQME parameters from {self.varfile}",
                 "\nx  The specified yaml file containing parameters was not found! Make sure that the valid params file is in the folder where you are running the code.\n",
             ]:
-                self.log = Logger(self.initial_dir / logger_1, logger_2)
+                self.log = Logger(self.w_dir_main / logger_1, logger_2)
                 self.log.write(txt_yaml)
                 error_setup = True
 
             if not error_setup:
                 if not self.command_line:
-                    self.log = Logger(self.initial_dir / logger_1, logger_2)
+                    self.log = Logger(self.w_dir_main / logger_1, logger_2)
                 else:
                     # prevents errors when using command lines and running to remote directories
                     path_command = Path(f"{os.getcwd()}")
