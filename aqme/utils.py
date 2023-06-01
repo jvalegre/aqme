@@ -411,7 +411,8 @@ def load_variables(kwargs, aqme_module, create_dat=True):
         elif len(self.files) != 0:
             self.w_dir_main = os.path.dirname(self.files[0])
         else:
-            self.w_dir_main = os.getcwd()
+            if  self.w_dir_main == '':
+                self.w_dir_main = os.getcwd()
 
         if (
             Path(f"{self.w_dir_main}").exists()
