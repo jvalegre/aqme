@@ -1,0 +1,39 @@
+AQME v 1.5.0 2023/06/08 10:58:57 
+Citation: AQME v 1.5.0, Alegre-Requena, J. V.; Sowndarya, S.; Perez-Soto, R.; Alturaifi, T.; Paton, R. AQME: Automated Quantum Mechanical Environments for Researchers and Educators. Wiley Interdiscip. Rev. Comput. Mol. Sci. 2023, DOI: 10.1002/wcms.1663.
+
+
+Starting CSEARCH with 5 job(s) (SDF, XYZ, CSV, etc. files might contain multiple jobs/structures inside)
+
+
+   ----- mol_1 -----
+
+o  Starting RDKit conformer sampling
+
+o  Applying filters to initial conformers
+
+   ----- mol_2 -----
+
+o  Starting RDKit conformer sampling
+
+o  Applying filters to initial conformers
+
+   ----- mol_3 -----
+
+o  Starting RDKit conformer sampling
+
+o  Applying filters to initial conformers
+
+   ----- mol_4 -----
+
+o  Starting RDKit conformer sampling
+
+o  Applying filters to initial conformers
+
+   ----- mol_5 -----
+
+o  Starting RDKit conformer sampling
+
+o  Applying filters to initial conformers
+
+Time CSEARCH: 22.64 seconds
+
