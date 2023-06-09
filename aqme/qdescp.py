@@ -228,8 +228,10 @@ class qdescp:
                         input_col = input_col.drop(['Name'], axis=1).reset_index(drop=True)
                         combined_row = pd.concat([qdescp_col,input_col], axis=1)
                         combined_df = combined_df.append(combined_row, ignore_index=True)
-                    _ = combined_df.to_csv(f'AQME-ROBERT_{self.args.csv_name}', index = None, header=True)
-                    self.args.log.write(f"o  The AQME-ROBERT_{self.args.csv_name} file containing the database ready for the AQME-ROBERT workflow was successfully created in {self.args.initial_dir}")
+                    csv_basename = os.path.basename(self.args.csv_name)
+                    csv_path = self.args.initial_dir.joinpath(f'AQME-ROBERT_{csv_basename}')
+                    _ = combined_df.to_csv(f'{csv_path}', index = None, header=True)
+                    self.args.log.write(f"o  The AQME-ROBERT_{csv_basename} file containing the database ready for the AQME-ROBERT workflow was successfully created in {self.args.initial_dir}")
                 else:
                     self.args.log.write(f"\nx  The input csv_name provided ({self.args.csv_name}) does not contain the SMILES column. A combined database for AQME-ROBERT workflows will not be created.")
 

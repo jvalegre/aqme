@@ -296,7 +296,8 @@ class csearch:
             self.csearch_csv_file = self.args.w_dir_main.joinpath(
                 f"CSEARCH-Data-{csearch_file_no_path}.csv"
             )
-            self.final_dup_data.to_csv(self.csearch_csv_file, index=False)
+            if self.args.verbose:
+                self.final_dup_data.to_csv(self.csearch_csv_file, index=False)
 
             elapsed_time = round(time.time() - start_time_overall, 2)
             self.args.log.write(f"\nTime CSEARCH: {elapsed_time} seconds\n")

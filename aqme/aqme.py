@@ -63,6 +63,7 @@ def main():
     # CSEARCH
     if args.csearch:
         csearch(
+            verbose=args.verbose,
             input=args.input,
             command_line=args.command_line,
             smi=args.smi,
@@ -121,6 +122,7 @@ def main():
     # CMIN
     if args.cmin:
         cmin(
+            verbose=args.verbose,
             files=args.files,
             command_line=args.command_line,
             w_dir_main=args.w_dir_main,
@@ -152,6 +154,7 @@ def main():
     # QPREP
     if args.qprep:
         qprep(
+            verbose=args.verbose,
             files=args.files,
             command_line=args.command_line,
             atom_types=args.atom_types,
@@ -180,6 +183,7 @@ def main():
     # QCORR
     if args.qcorr:
         qcorr(
+            verbose=args.verbose,
             files=args.files,
             command_line=args.command_line,
             w_dir_main=args.w_dir_main,
@@ -211,6 +215,7 @@ def main():
     # QDESCP
     if args.qdescp:
         qdescp(
+            verbose=args.verbose,
             w_dir_main=args.w_dir_main,
             destination=args.destination,
             files=args.files,

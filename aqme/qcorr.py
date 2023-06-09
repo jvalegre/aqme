@@ -918,6 +918,7 @@ class qcorr:
             ana_data.at[0, "Isomerization"] = file_terms["isomerized"]
         path_as_str = self.args.initial_dir.as_posix()
         csv_qcorr = path_as_str + f"/QCORR-run_{self.args.round_num}-stats.csv"
-        ana_data.to_csv(csv_qcorr, index=False)
+        if self.args.verbose:
+            ana_data.to_csv(csv_qcorr, index=False)
 
         return csv_qcorr

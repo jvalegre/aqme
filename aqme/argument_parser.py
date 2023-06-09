@@ -6,6 +6,7 @@ import os
 
 var_dict = {
     "varfile": None,
+    "verbose": True,
     "input": "",
     "output_name": "output",
     "command_line": False,

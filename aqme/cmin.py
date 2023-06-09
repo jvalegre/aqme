@@ -219,7 +219,8 @@ class cmin:
         
         # store all the information into a CSV file
         cmin_csv_file = self.args.w_dir_main.joinpath("CMIN-Data.csv")
-        self.final_dup_data.to_csv(cmin_csv_file, index=False)
+        if self.args.verbose:
+            self.final_dup_data.to_csv(cmin_csv_file, index=False)
 
         elapsed_time = round(time.time() - start_time_overall, 2)
         self.args.log.write(f"\nTime CMIN: {elapsed_time} seconds\n")
