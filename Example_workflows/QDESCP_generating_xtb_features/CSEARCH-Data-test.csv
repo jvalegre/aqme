@@ -1,6 +1,0 @@
-CSEARCH time (seconds),Molecule,Mult,RDKit-Initial-samples,RDKit-RMSD-and-energy-duplicates,RDKit-Unique-conformers,RDKit-energy-window,RDKit-initial_energy_threshold,Real charge
-1.6,,2.0,120,1,1,0,118,0.0
-5.16,,4.0,300,0,3,0,297,0.0
-5.17,,2.0,300,0,1,0,299,0.0
-3.82,,2.0,240,0,1,0,239,0.0
-6.45,,2.0,300,0,2,160,138,0.0
