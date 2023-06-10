@@ -219,7 +219,8 @@ class cmin:
         
         # store all the information into a CSV file
         cmin_csv_file = self.args.w_dir_main.joinpath("CMIN-Data.csv")
-        self.final_dup_data.to_csv(cmin_csv_file, index=False)
+        if self.args.verbose:
+            self.final_dup_data.to_csv(cmin_csv_file, index=False)
 
         elapsed_time = round(time.time() - start_time_overall, 2)
         self.args.log.write(f"\nTime CMIN: {elapsed_time} seconds\n")
@@ -314,9 +315,7 @@ class cmin:
                     complex_ts = False
                     if len(self.args.constraints_atoms) >= 1 or len(self.args.constraints_dist) >= 1 or len(self.args.constraints_angle) >= 1 or len(self.args.constraints_dihedral) >= 1:
                         complex_ts = True
-                    # name_init = str(open(file, "r").readlines()[0].strip())
                     name_init = mol.GetProp('_Name')
-                    # print(name_init)
                     mol, energy, cmin_valid = xtb_opt_main(
                         f'{self.name}_conf_{i}',
                         dup_data,

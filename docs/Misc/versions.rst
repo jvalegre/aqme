@@ -4,6 +4,14 @@
 Versions
 ========
 
+Version 1.5.1 [`url <https://github.com/jvalegre/aqme/releases/tag/1.5.1>`__]
+   -  Added the verbose option. When verbose=False, no DAT and CSV files with summaries are printed.
+   -  Fixed bug for using constraints with SMILES that are not mapped
+   -  Changed directory to create AQME-ROBERT databases (to adapt for full ML workflows in ROBERT)
+   -  Added SMARTS pattern recogniton to qdescp_atoms (the option now takes lists of atoms as well 
+      as lists of functional groups)
+   -  Added pytests for QCORR-ORCA
+
 Version 1.5.0 [`url <https://github.com/jvalegre/aqme/releases/tag/1.5.0>`__]
    -  A second ConstrainedEmbed() function with a core with no Hs was added to avoid
       RDKit embedding issues that show up in tricky cases
@@ -12,8 +20,8 @@ Version 1.5.0 [`url <https://github.com/jvalegre/aqme/releases/tag/1.5.0>`__]
    -  Options low_check and e_threshold_qprep were added to QPREP (create inputs only for n 
       conformers of below a certain energy threshold)
    -  Option nodup_check was added to QCORR (turns off the duplicate filter)
-   -  DBSTEP buried volume added in QDESCP with the qdescp_atom option
-   -  Atomic properties of a single atom type were added in QDESCP with the qdescp_atom option
+   -  DBSTEP buried volume added in QDESCP with the qdescp_atoms option
+   -  Atomic properties of a single atom type were added in QDESCP with the qdescp_atoms option
    -  Creation of databases for AQME-ROBERT workflows with the --robert option (True by default)
 
 Version 1.4.7 [`url <https://github.com/jvalegre/aqme/releases/tag/1.4.7>`__]

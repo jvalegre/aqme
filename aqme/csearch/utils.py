@@ -167,6 +167,7 @@ def prepare_smiles_from_line(line, args):
 
     return smiles, name
 
+
 def prepare_csv_files(args, csearch_file):
     csv_smiles = pd.read_csv(csearch_file)
     job_inputs = []
