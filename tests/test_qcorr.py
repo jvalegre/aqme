@@ -411,6 +411,20 @@ path_qcorr = os.getcwd() + "/Example_workflows/QCORR_processing_QM_outputs"
             False,
         ),  # test successful termination with no w_dir_main
         (
+            "QCORR_7",
+            "orca_TS_success.out",
+            "run_QCORR",
+            "success",
+            False,
+        ),  # test QCORR with ORCA optimizations
+        (
+            "QCORR_7",
+            "orca_imag_freq.out",
+            None,
+            "failed/run_1/extra_imag_freq",
+            False,
+        ),  # test QCORR with ORCA optimizations
+        (
             None,
             None,
             None,
@@ -924,6 +938,35 @@ def test_QCORR_analysis(init_folder, file, command_line, target_folder, restore_
 
         # ensure the output file moves to the right folder
         assert path.exists(f"{w_dir_main}/{target_folder}/{file}")
+
+    elif init_folder == "QCORR_7":
+        w_dir_main = f"{path_qcorr}/QCORR_7"
+        cmd_aqme = [
+            "python",
+            "-m",
+            "aqme",
+            "--qcorr",
+            "--files",
+            f"{w_dir_main}/{file}",
+        ]
+        subprocess.run(cmd_aqme)
+
+        # ensure the output file moves to the right folder
+        assert path.exists(f"{w_dir_main}/{target_folder}/{file}")
+
+        if file == "orca_imag_freq.out":
+            assert path.exists(
+                f'{w_dir_main}/failed/run_1/fixed_QM_inputs/{file.split(".")[0]}.inp'
+            )
+
+            # ensure that QCORR applies the correct structural distortions to the errored calcs
+            outfile = open(f'{w_dir_main}/failed/run_1/fixed_QM_inputs/{file.split(".")[0]}.inp',"r",)
+            outlines = outfile.readlines()
+            outfile.close()
+
+            assert 'MaxStep 0.05' in outlines[9]
+            assert 'C  -4.32349420   1.79733020  -0.42830100' in outlines[12]
+
 
     # leave the folders as they were initially to run a different batch of tests
     elif restore_folder:

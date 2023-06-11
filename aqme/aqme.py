@@ -216,6 +216,7 @@ def main():
     if args.qdescp:
         qdescp(
             verbose=args.verbose,
+            command_line=args.command_line,
             w_dir_main=args.w_dir_main,
             destination=args.destination,
             files=args.files,

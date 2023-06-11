@@ -101,9 +101,9 @@ import pandas as pd
 import time
 from aqme.utils import (
     load_variables,
-    substituted_mol,
     mol_from_sdf_or_mol_or_mol2,
-    add_prefix_suffix
+    add_prefix_suffix,
+    check_xtb
 )
 from aqme.filter import ewin_filter, pre_E_filter, RMSD_and_E_filter
 from aqme.cmin_utils import creation_of_dup_csv_cmin
@@ -139,6 +139,10 @@ class cmin:
             self.args.log.write('\nx  Program not supported for CMIN refinement! Specify: program="xtb" (or "ani")')
             self.args.log.finalize()
             sys.exit()
+
+        # check if xTB is installed
+        if self.args.program.lower() == "xtb":
+            _ = check_xtb(self)
 
         # retrieves the different files to run in CMIN
         if len(self.args.files) == 0:
@@ -421,10 +425,10 @@ class cmin:
 
         return dup_data
 
-    # xTB AND ANI MAIN OPTIMIZATION PROCESS
+    # ANI MAIN OPTIMIZATION PROCESS
     def ani_optimize(self, mol, charge, mult):
 
-        # Attempts ANI/xTB imports and exits if the programs are not installed
+        # Attempts ANI imports and exits if the programs are not installed
         try:
             import torch
             import warnings
@@ -509,27 +513,14 @@ class cmin:
         Function to generate the optimization model for CMIN (using xTB or ANI methods)
         """
 
-        if self.args.program.lower() == "ani":
-            try:
-                import torchani
-            except (ImportError,ModuleNotFoundError):
-                self.args.log.write("x  Torchani is not installed! You can install the program with 'pip install torchani'")
-                self.args.log.finalize()
-                sys.exit()
+        try:
+            import torchani
+        except (ImportError,ModuleNotFoundError):
+            self.args.log.write("x  Torchani is not installed! You can install the program with 'pip install torchani'")
+            self.args.log.finalize()
+            sys.exit()
 
-            model = getattr(torchani.models,self.args.ani_method)()
-
-        elif self.args.program.lower() == "xtb":
-            try:
-                subprocess.run(
-                    ["xtb", "-h"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
-                )
-            except FileNotFoundError:
-                self.args.log.write("x  xTB is not installed (CREST cannot be used)! You can install the program with 'conda install -c conda-forge xtb'")
-                self.args.log.finalize()
-                sys.exit()
-    
-            model = None
+        model = getattr(torchani.models,self.args.ani_method)()
 
         return model
 

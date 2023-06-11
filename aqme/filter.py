@@ -325,7 +325,7 @@ def filters(mol, log, molwt_cutoff):
     # Filter 1
     molwt_cutoff = float(molwt_cutoff)
     if Descriptors.MolWt(mol) >= molwt_cutoff and molwt_cutoff > 0:
-        log.write(f"x   Skipping this molecule as total molar mass > {molwt_cutoff}")
+        log.write(f"x  Skipping this molecule as total molar mass > {molwt_cutoff}")
         return False
 
     # Filter 2
@@ -333,7 +333,7 @@ def filters(mol, log, molwt_cutoff):
 
     unknown_atoms = list(set(symbols) - set(periodic_table()))
     if unknown_atoms:
-        log.write(f" Exiting as atoms [{','.join(unknown_atoms)}] are not in the periodic table")
+        log.write(f"x  Exiting as atoms [{','.join(unknown_atoms)}] are not in the periodic table")
         return False
 
     # Passed

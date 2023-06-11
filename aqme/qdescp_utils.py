@@ -4,6 +4,7 @@
 
 import json
 import sys
+import os
 import numpy as np
 import pandas as pd
 import ast
@@ -54,7 +55,7 @@ def get_boltz_props(
     Retrieves the properties from json files and gives Boltzmann averaged properties
     """
 
-    if type == "nmr":
+    if type.lower() == "nmr":
         if nmr_experim is not None:
             try:
                 exp_data = pd.read_csv(nmr_experim)
@@ -63,16 +64,13 @@ def get_boltz_props(
                 self.args.log.finalize()
                 sys.exit()
 
+    # calculate Boltzmann weights
     energy = []
     for k, json_file in enumerate(json_files):
         json_data = read_json(json_file)
-        if type == "xtb":
-            # filter off molecules with no atomic properties found when using the qdescp_atoms option
-            for prop in atom_props:
-                if prop not in json_data:
-                    return None
+        if type.lower() == "xtb":
             energy.append(json_data["total energy"])
-        elif type == "nmr":
+        elif type.lower() == "nmr":
             energy.append(json_data["optimization"]["scf"]["scf energies"][-1])
 
             json_data["properties"]["NMR"]["NMR Chemical Shifts"] = get_chemical_shifts(
@@ -86,31 +84,35 @@ def get_boltz_props(
                 )
                 df["atom_idx"] = df["atom_idx"] + 1
                 exp_data = exp_data.merge(df, on=["atom_idx"])
-        with open(json_file, "w") as outfile:
-            json.dump(json_data, outfile)
+            with open(json_file, "w") as outfile:
+                json.dump(json_data, outfile)
 
     boltz = get_boltz(energy)
 
+    # get weighted atomic properties
     avg_json_data = {}
-    for prop in atom_props:
+    for i,prop in enumerate(atom_props):
         prop_list = []
         for json_file in json_files:
             json_data = read_json(json_file)
-            if len(self.args.qdescp_atoms) == 0:
-                json_data['DBSTEP_Vbur'] = 'NaN'
-            if type == "xtb":
+            if type.lower() == "xtb":
+                # filter off molecules with no atomic properties found when using the qdescp_atoms option
+                if i == 0:
+                    for atom_prop in atom_props:
+                        if atom_prop not in json_data:
+                            return None
                 prop_list.append(json_data[prop])
-            if type == "nmr":
+            if type.lower() == "nmr":
                 prop_list.append(json_data["properties"]["NMR"][prop].values())
+
         if len(self.args.qdescp_atoms) == 0:
             avg_prop = average_prop_atom(boltz, prop_list)
         else:
             avg_prop = average_prop_mol(boltz, prop_list)
-
-        if type == "nmr":
+        if type.lower() == "nmr":
             dictavgprop = {}
-            for i, key in enumerate(json_data["properties"]["NMR"][prop].keys()):
-                dictavgprop[key] = avg_prop[i]
+            for j, key in enumerate(json_data["properties"]["NMR"][prop].keys()):
+                dictavgprop[key] = avg_prop[j]
             avg_json_data[prop] = dictavgprop
 
             if nmr_experim is not None:
@@ -126,15 +128,16 @@ def get_boltz_props(
                 )
                 qdescp_nmr = nmr_experim.split(".csv")[0] + "_predicted.csv"
                 exp_data.round(2).to_csv(qdescp_nmr, index=False)
-                self.args.log.write(f"o  The {qdescp_nmr} file containing Boltzmann weighted NMR shifts was successfully created in {self.args.initial_dir}")
+                self.args.log.write(f"o  The {os.path.basename(qdescp_nmr)} file containing Boltzmann weighted NMR shifts was successfully created in {self.args.initial_dir}")
 
-        elif type == "xtb":
+        elif type.lower() == "xtb":
             if len(self.args.qdescp_atoms) > 0 or avg_prop == 'NaN':
                 avg_json_data[prop] = avg_prop
             else:
-                avg_json_data[prop] = avg_prop.tolist()                
+                avg_json_data[prop] = avg_prop.tolist()
 
-    if type == "xtb":
+    # get weighted molecular properties
+    if type.lower() == "xtb":
         for prop in mol_props:
             prop_list = []
             for json_file in json_files:
@@ -144,10 +147,12 @@ def get_boltz_props(
             avg_json_data[prop] = avg_prop
 
     final_boltz_file = str(boltz_dir) + "/" + name + "_boltz.json"
-    
+
     # calculate RDKit descriptors
     if mol is not None:
         avg_json_data = get_rdkit_properties(avg_json_data, mol)
+
+    # save descriptors
     with open(final_boltz_file, "w") as outfile:
         json.dump(avg_json_data, outfile)
 

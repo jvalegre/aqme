@@ -390,7 +390,7 @@ def format_lists(value):
             value = ast.literal_eval(value)
         except (SyntaxError, ValueError):
             # this line fixes issues when using "[X]" or ["X"] instead of "['X']" when using lists
-            value = value.replace('[',']').replace(',',']').split(']')
+            value = value.replace('[',']').replace(',',']').replace("'",']').split(']')
             while('' in value):
                 value.remove('')
     return value
@@ -442,7 +442,7 @@ def load_variables(kwargs, aqme_module, create_dat=True):
         error_setup = False
 
         if not self.w_dir_main.exists():
-            txt_yaml += "\nx  The PATH specified as input in the w_dir_main option might be invalid! Using current working directory"
+            txt_yaml += "\nx  The PATH specified as input or files might be invalid!"
             error_setup = True
 
         if error_setup:
@@ -769,10 +769,21 @@ def check_xtb(self):
             ["xtb", "-h"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
         )
     except FileNotFoundError:
-        self.args.log.write("x  xTB is not installed (CMIN-xTB cannot be used)! You can install the program with 'conda install -c conda-forge xtb'")
+        self.args.log.write("x  xTB is not installed (CSEARCH-CREST and CMIN-xTB cannot be used)! You can install the program with 'conda install -c conda-forge xtb'")
         self.args.log.finalize()
         sys.exit()
 
+
+def check_crest(self):
+    try:
+        subprocess.run(
+            ["crest", "-h"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+        )
+    except FileNotFoundError:
+        self.args.log.write("x  CREST is not installed (CSEARCH-CREST cannot be used)! You can install the program with 'conda install -c conda-forge crest'")
+        self.args.log.finalize()
+        sys.exit()
+ 
 
 def get_files(value):
     if not isinstance(value, list):
