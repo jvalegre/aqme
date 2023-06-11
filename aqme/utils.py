@@ -95,8 +95,11 @@ class Logger:
     """
 
     # Class Logger to writargs.input.split('.')[0] output to a file
-    def __init__(self, filein, append, suffix="dat"):
-        self.log = open(f"{filein}_{append}.{suffix}", "w")
+    def __init__(self, filein, append, suffix="dat", verbose=True):
+        if verbose:
+            self.log = open(f"{filein}_{append}.{suffix}", "w")
+        else:
+            self.log = ''
 
     def write(self, message):
         """
@@ -107,27 +110,20 @@ class Logger:
         message : str
            Text to be written in the log file.
         """
-        self.log.write(f"{message}\n")
+        try:
+            self.log.write(f"{message}\n")
+        except AttributeError:
+            pass
         print(f"{message}\n")
-
-    def fatal(self, message):
-        """
-        Writes the message to the file. Closes the file and raises an error exit
-
-        Parameters
-        ----------
-        message : str
-           text to be written in the log file.
-        """
-        self.write(message)
-        self.finalize()
-        raise SystemExit(1)
 
     def finalize(self):
         """
         Closes the file
         """
-        self.log.close()
+        try:
+            self.log.close()
+        except AttributeError:
+            pass
 
 
 def move_file(destination, source, file):
@@ -357,8 +353,12 @@ def command_line_args():
             arg_name = arg.split("-")[1].strip()
         if arg_name in bool_args:
             value = True
-        if value == "None":
+        elif value == "None":
             value = None
+        elif value == "False":
+            value = False
+        elif value == "True":
+            value = True
         if arg_name in ("h", "help"):
             print(f"o  AQME v {aqme_version} is installed correctly! For more information about the available options, see the documentation in https://github.com/jvalegre/aqme")
             sys.exit()
@@ -369,22 +369,30 @@ def command_line_args():
                 kwargs[arg_name] = value
             else:
                 # this converts the string parameters to lists
-                if arg_name.lower() in ["files", "gen_atoms", "constraints_atoms", "constraints_dist", "constraints_angle", "constraints_dihedral", "atom_types", "cartesians", "nmr_atoms", "nmr_slope", "nmr_intercept"]:
-                    if not isinstance(value, list):
-                        try:
-                            value = ast.literal_eval(value)
-                        except (SyntaxError, ValueError):
-                            # this line fixes issues when using "[X]" or ["X"] instead of "['X']" when using lists
-                            if arg_name.lower() in ["gen_atoms"]:
-                                value = value.replace('[',']').replace(',',']').split(']')
-                                while('' in value):
-                                    value.remove('')
+                if arg_name.lower() in ["files", "gen_atoms", "constraints_atoms", "constraints_dist", "constraints_angle", "constraints_dihedral", "atom_types", "cartesians", "nmr_atoms", "nmr_slope", "nmr_intercept","qdescp_atoms"]:
+                    value = format_lists(value)
                 kwargs[arg_name] = value
 
     # Second, load all the default variables as an "add_option" object
     args = load_variables(kwargs, "command")
     
     return args
+
+
+def format_lists(value):
+    '''
+    Transforms strings into a list
+    '''
+
+    if not isinstance(value, list):
+        try:
+            value = ast.literal_eval(value)
+        except (SyntaxError, ValueError):
+            # this line fixes issues when using "[X]" or ["X"] instead of "['X']" when using lists
+            value = value.replace('[',']').replace(',',']').split(']')
+            while('' in value):
+                value.remove('')
+    return value
 
 
 def load_variables(kwargs, aqme_module, create_dat=True):
@@ -468,17 +476,17 @@ def load_variables(kwargs, aqme_module, create_dat=True):
                 f"\no  Importing AQME parameters from {self.varfile}",
                 "\nx  The specified yaml file containing parameters was not found! Make sure that the valid params file is in the folder where you are running the code.\n",
             ]:
-                self.log = Logger(self.initial_dir / logger_1, logger_2)
+                self.log = Logger(self.initial_dir / logger_1, logger_2, verbose=self.verbose)
                 self.log.write(txt_yaml)
                 error_setup = True
 
             if not error_setup:
                 if not self.command_line:
-                    self.log = Logger(self.initial_dir / logger_1, logger_2)
+                    self.log = Logger(self.initial_dir / logger_1, logger_2, verbose=self.verbose)
                 else:
                     # prevents errors when using command lines and running to remote directories
                     path_command = Path(f"{os.getcwd()}")
-                    self.log = Logger(path_command / logger_1, logger_2)
+                    self.log = Logger(path_command / logger_1, logger_2, verbose=self.verbose)
 
                 self.log.write(f"AQME v {aqme_version} {time_run} \nCitation: {aqme_ref}\n")
 

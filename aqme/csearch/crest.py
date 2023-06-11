@@ -534,12 +534,6 @@ def nci_ts_mol(
         constraints_dihedral = [[float(y) for y in x] for x in constraints_dihedral]
         constraints_dihedral = np.array(constraints_dihedral)
 
-    if using_const is not None:
-        for smi_part in smi:
-            if ':' not in smi_part or '[' not in smi_part:
-                log.write(f"\nx  Constraints were specified {using_const} but atoms might not be mapped in the SMILES input!")
-                break
-
     molsH = []
     mols = []
     for m in smi:
@@ -588,55 +582,51 @@ def nci_ts_mol(
             max_map += 1
             a.SetAtomMapNum(int(max_map))
 
-    nconstraints_atoms = []
-    if constraints_atoms is not None:
-        for _, ele in enumerate(constraints_atoms):
-            for atom in mol.GetAtoms():
-                if ele == atom.GetAtomMapNum():
-                    nconstraints_atoms.append(float(atom.GetIdx()) + 1)
-        nconstraints_atoms = np.array(nconstraints_atoms)
+    adapted_atoms = []
+    adapted_dist = []
+    adapted_angle = []
+    adapted_dihedral = []
+    # assign constraints
+    if using_const is not None:
+        for smi_part in smi:
+            if ':' not in smi_part or '[' not in smi_part: # for SMILES that are not mapped
+                log.write(f"\nx  Constraints were specified {using_const} but atoms might not be mapped in the SMILES input!")
+                adapted_atoms = constraints_atoms
+                adapted_dist = constraints_dist
+                adapted_angle = constraints_angle
+                adapted_dihedral = constraints_dihedral
+                break
 
-    nconstraints_dist = []
-    if constraints_dist is not None:
-        for _, r in enumerate(constraints_dist):
-            nr = []
-            for _, ele in enumerate(r[:2]):
-                for atom in mol.GetAtoms():
-                    if ele == atom.GetAtomMapNum():
-                        nr.append(float(atom.GetIdx()) + 1)
-            nr.append(r[-1])
-            nconstraints_dist.append(nr)
-        nconstraints_dist = np.array(nconstraints_dist)
+        if constraints_atoms is not None:
+            for _, ele in enumerate(constraints_atoms):
+                if adapted_atoms != []: # for mapped SMILES
+                    for atom in mol.GetAtoms():
+                        if ele == atom.GetAtomMapNum():
+                            adapted_atoms.append(float(atom.GetIdx()) + 1)
+                else:
+                    adapted_atoms = constraints_atoms
+            adapted_atoms = np.array(adapted_atoms)
 
-    nconstraints_angle = []
-    if constraints_angle is not None:
-
-        for _, r in enumerate(constraints_angle):
-            nr = []
-            for _, ele in enumerate(r[:3]):
-                for atom in mol.GetAtoms():
-                    if ele == atom.GetAtomMapNum():
-                        nr.append(float(atom.GetIdx()) + 1)
-            nr.append(r[-1])
-            nconstraints_angle.append(nr)
-        nconstraints_angle = np.array(nconstraints_angle)
-
-    nconstraints_dihedral = []
-    if constraints_dihedral is not None:
-        for _, r in enumerate(constraints_dihedral):
-            nr = []
-            for _, ele in enumerate(r[:4]):
-                for atom in mol.GetAtoms():
-                    if ele == atom.GetAtomMapNum():
-                        nr.append(float(atom.GetIdx()) + 1)
-            nr.append(r[-1])
-            nconstraints_dihedral.append(nr)
-        nconstraints_dihedral = np.array(nconstraints_dihedral)
+        constraints = [constraints_dist, constraints_angle, constraints_dihedral]
+        adapted_consts = [adapted_dist, adapted_angle, adapted_dihedral]
+        n_consts= [2, 3, 4]
+        for const,adapted_const,n_const in zip(constraints,adapted_consts,n_consts):
+            if adapted_const == []: # for mapped SMILES
+                for _, r in enumerate(const):
+                    nr = []
+                    for _, ele in enumerate(r[:n_const]):
+                        if const is not None:
+                            for atom in mol.GetAtoms():
+                                if ele == atom.GetAtomMapNum():
+                                    nr.append(float(atom.GetIdx()) + 1)
+                    nr.append(r[-1])
+                    adapted_const.append(nr)
+                adapted_const = np.array(adapted_const)
 
     return (
         mol,
-        nconstraints_atoms,
-        nconstraints_dist,
-        nconstraints_angle,
-        nconstraints_dihedral,
+        adapted_atoms,
+        adapted_dist,
+        adapted_angle,
+        adapted_dihedral,
     )

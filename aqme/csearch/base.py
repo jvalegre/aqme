@@ -296,7 +296,8 @@ class csearch:
             self.csearch_csv_file = self.args.w_dir_main.joinpath(
                 f"CSEARCH-Data-{csearch_file_no_path}.csv"
             )
-            self.final_dup_data.to_csv(self.csearch_csv_file, index=False)
+            if self.args.verbose:
+                self.final_dup_data.to_csv(self.csearch_csv_file, index=False)
 
             elapsed_time = round(time.time() - start_time_overall, 2)
             self.args.log.write(f"\nTime CSEARCH: {elapsed_time} seconds\n")
@@ -543,6 +544,7 @@ class csearch:
                             complex_ts,
                             charge,
                             mult,
+                            smi,
                             coord_map,
                             alg_map,
                             template,
@@ -564,6 +566,7 @@ class csearch:
                 complex_ts,
                 charge,
                 mult,
+                smi,
             )
 
         # Updates the dataframe with infromation about conformer generation
@@ -595,6 +598,7 @@ class csearch:
         complex_ts,
         charge,
         mult,
+        smi,
         coord_Map=None,
         alg_Map=None,
         mol_template=None,
@@ -703,6 +707,7 @@ class csearch:
                         coord_Map,
                         alg_Map,
                         mol_template,
+                        smi,
                     )
                 except (KeyboardInterrupt, SystemExit):
                     raise
@@ -743,7 +748,8 @@ class csearch:
         complex_ts,
         coord_Map,
         alg_Map,
-        mol_template
+        mol_template,
+        smi,
     ):
 
         """
@@ -771,7 +777,8 @@ class csearch:
                 mult,
                 coord_Map,
                 alg_Map,
-                mol_template
+                mol_template,
+                smi,
             )
             if self.args.program.lower() in ['rdkit','fullmonte'] :
                 n_seconds = round(time.time() - start_time, 2)
@@ -1151,6 +1158,7 @@ class csearch:
         charge,
         mult,
         ff,
+        smi,
     ):
         """
         Minimizes, gets the energy and filters RDKit conformers after embeding
@@ -1170,6 +1178,7 @@ class csearch:
             outmols[cid].SetProp("Energy", str(cenergy[cid]))
             outmols[cid].SetProp("Real charge", str(charge))
             outmols[cid].SetProp("Mult", str(mult))
+            outmols[cid].SetProp("SMILES", str(smi))
 
         # sorts the energies
         cids = list(range(len(outmols)))
@@ -1282,7 +1291,8 @@ class csearch:
         mult,
         coord_Map,
         alg_Map,
-        mol_template
+        mol_template,
+        smi,
     ):
 
         """
@@ -1350,6 +1360,7 @@ class csearch:
                 charge,
                 mult,
                 ff,
+                smi,
             )
         except IndexError:
             status = -1
