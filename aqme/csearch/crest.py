@@ -239,7 +239,7 @@ def xtb_opt_main(
             run_command(command, f"{xyzin.split('.')[0]}_xtb1.out")
             os.rename(str(dat_dir) + "/xtbopt.xyz", xyzoutxtb1)
         except FileNotFoundError:
-            self.args.log.write(f"\nx   There was an error during the xTB pre-optimization. This error is related to parallelization of xTB jobs and is normally observed when using metal complexes in some operative systems/OpenMP versions. AQME is switching to using one processor (nprocs=1).\n")
+            self.args.log.write(f"\nx  There was an error during the xTB pre-optimization. This error is related to parallelization of xTB jobs and is normally observed when using metal complexes in some operative systems/OpenMP versions. AQME is switching to using one processor (nprocs=1).\n")
             self.args.nprocs = 1
             try:
                 if self.args.xtb_keywords is None:
@@ -252,9 +252,9 @@ def xtb_opt_main(
                 os.rename(str(dat_dir) + "/xtbopt.xyz", xyzoutxtb1)
             except FileNotFoundError:
                 if self.args.program.lower() == "crest":
-                    self.args.log.write(f"\nx   There was another error during the xTB pre-optimization that could not be fixed. Trying CREST directly with no xTB preoptimization.\n")
+                    self.args.log.write(f"\nx  There was another error during the xTB pre-optimization that could not be fixed. Trying CREST directly with no xTB preoptimization.\n")
                 else:
-                    self.args.log.write(f"\nx   There was another error during the xTB pre-optimization that could not be fixed (this molecule will be skipped).\n")
+                    self.args.log.write(f"\nx  There was another error during the xTB pre-optimization that could not be fixed (this molecule will be skipped).\n")
                 cmin_valid = False
                 mol_rd = None
 
@@ -324,7 +324,7 @@ def xtb_opt_main(
             else:
                 shutil.copy(str(dat_dir) + "/crest_conformers.xyz", xyzoutall)
         except FileNotFoundError:
-            self.args.log.write("\nx   CREST conformer sampling failed! Please, try other options (i.e. include constrains, change the crest_keywords option, etc.)")
+            self.args.log.write("\nx  CREST conformer sampling failed! Please, try other options (i.e. include constrains, change the crest_keywords option, etc.)")
             cmin_valid = False
 
     if cmin_valid:

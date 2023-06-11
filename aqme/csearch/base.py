@@ -212,6 +212,7 @@ from aqme.utils import (
     load_variables,
     set_metal_atomic_number,
     check_xtb,
+    check_crest,
     get_files
     )
 from aqme.csearch.crest import xtb_opt_main
@@ -246,6 +247,7 @@ class csearch:
 
         if self.args.program.lower() == "crest":
             _ = check_xtb(self)
+            _ = check_crest(self)
 
         if self.args.smi is None and self.args.input == "":
             self.args.log.write("\nx  Program requires either a SMILES or an input file to proceed! Please look up acceptable file formats. Specify: smi='CCC' (or input='filename.csv')")
@@ -351,7 +353,12 @@ class csearch:
 
         # Prepare the jobs
         prepare_function = Extension2inputgen[file_format]
-        job_inputs = prepare_function(self.args, csearch_file)
+        try:
+            job_inputs = prepare_function(self.args, csearch_file)
+        except FileNotFoundError:
+            self.args.log.write(f'\nx  File {os.path.basename(csearch_file)} was not found! In the "input" option, make sure that 1) the PATH to the files is correct and 2) the PATH doesn\'t start with "/".')
+            self.args.log.finalize()
+            sys.exit()     
 
         return job_inputs
 

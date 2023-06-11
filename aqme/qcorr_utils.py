@@ -617,7 +617,7 @@ def get_json_data(self, file, cclib_data):
                 cclib_data["metadata"]["keywords line"] = keywords_line[1:].rstrip("\n")
                 calc_type = "ground_state"
                 for keyword in keywords_line.split():
-                    if keyword.lower() in ["OptTS",'NEB-TS']:
+                    if keyword.lower() in ["optts",'neb-ts']:
                         calc_type = "transition_state"
                         break
                     if keyword.lower()[0:3] == 'pal':
