@@ -315,9 +315,7 @@ class cmin:
                     complex_ts = False
                     if len(self.args.constraints_atoms) >= 1 or len(self.args.constraints_dist) >= 1 or len(self.args.constraints_angle) >= 1 or len(self.args.constraints_dihedral) >= 1:
                         complex_ts = True
-                    # name_init = str(open(file, "r").readlines()[0].strip())
                     name_init = mol.GetProp('_Name')
-                    # print(name_init)
                     mol, energy, cmin_valid = xtb_opt_main(
                         f'{self.name}_conf_{i}',
                         dup_data,

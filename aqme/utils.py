@@ -353,10 +353,13 @@ def command_line_args():
             arg_name = arg.split("-")[1].strip()
         if arg_name in bool_args:
             value = True
-        if value == "None":
+        elif value == "None":
             value = None
-        if value == "False":
+        elif value == "False":
             value = False
+        elif value == "True":
+            value = True
+
         if arg_name in ("h", "help"):
             print(f"o  AQME v {aqme_version} is installed correctly! For more information about the available options, see the documentation in https://github.com/jvalegre/aqme")
             sys.exit()
@@ -367,22 +370,30 @@ def command_line_args():
                 kwargs[arg_name] = value
             else:
                 # this converts the string parameters to lists
-                if arg_name.lower() in ["files", "gen_atoms", "constraints_atoms", "constraints_dist", "constraints_angle", "constraints_dihedral", "atom_types", "cartesians", "nmr_atoms", "nmr_slope", "nmr_intercept"]:
-                    if not isinstance(value, list):
-                        try:
-                            value = ast.literal_eval(value)
-                        except (SyntaxError, ValueError):
-                            # this line fixes issues when using "[X]" or ["X"] instead of "['X']" when using lists
-                            if arg_name.lower() in ["gen_atoms"]:
-                                value = value.replace('[',']').replace(',',']').split(']')
-                                while('' in value):
-                                    value.remove('')
+                if arg_name.lower() in ["files", "gen_atoms", "constraints_atoms", "constraints_dist", "constraints_angle", "constraints_dihedral", "atom_types", "cartesians", "nmr_atoms", "nmr_slope", "nmr_intercept","qdescp_atoms"]:
+                    value = format_lists(value)
                 kwargs[arg_name] = value
 
     # Second, load all the default variables as an "add_option" object
     args = load_variables(kwargs, "command")
     
     return args
+
+
+def format_lists(value):
+    '''
+    Transforms strings into a list
+    '''
+
+    if not isinstance(value, list):
+        try:
+            value = ast.literal_eval(value)
+        except (SyntaxError, ValueError):
+            # this line fixes issues when using "[X]" or ["X"] instead of "['X']" when using lists
+            value = value.replace('[',']').replace(',',']').split(']')
+            while('' in value):
+                value.remove('')
+    return value
 
 
 def load_variables(kwargs, aqme_module, create_dat=True):

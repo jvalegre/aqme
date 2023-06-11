@@ -42,8 +42,8 @@ def get_boltz_props(
     boltz_dir,
     type,
     self,
-    mol_prop,
-    atom_prop,
+    mol_props,
+    atom_props,
     nmr_atoms=None,
     nmr_slope=None,
     nmr_intercept=None,
@@ -67,6 +67,10 @@ def get_boltz_props(
     for k, json_file in enumerate(json_files):
         json_data = read_json(json_file)
         if type == "xtb":
+            # filter off molecules with no atomic properties found when using the qdescp_atoms option
+            for prop in atom_props:
+                if prop not in json_data:
+                    return None
             energy.append(json_data["total energy"])
         elif type == "nmr":
             energy.append(json_data["optimization"]["scf"]["scf energies"][-1])
@@ -88,17 +92,17 @@ def get_boltz_props(
     boltz = get_boltz(energy)
 
     avg_json_data = {}
-    for prop in atom_prop:
+    for prop in atom_props:
         prop_list = []
         for json_file in json_files:
             json_data = read_json(json_file)
-            if self.args.qdescp_atom is None:
+            if len(self.args.qdescp_atoms) == 0:
                 json_data['DBSTEP_Vbur'] = 'NaN'
             if type == "xtb":
                 prop_list.append(json_data[prop])
             if type == "nmr":
                 prop_list.append(json_data["properties"]["NMR"][prop].values())
-        if self.args.qdescp_atom is None:
+        if len(self.args.qdescp_atoms) == 0:
             avg_prop = average_prop_atom(boltz, prop_list)
         else:
             avg_prop = average_prop_mol(boltz, prop_list)
@@ -125,13 +129,13 @@ def get_boltz_props(
                 self.args.log.write(f"o  The {qdescp_nmr} file containing Boltzmann weighted NMR shifts was successfully created in {self.args.initial_dir}")
 
         elif type == "xtb":
-            if self.args.qdescp_atom is not None or avg_prop == 'NaN':
+            if len(self.args.qdescp_atoms) > 0 or avg_prop == 'NaN':
                 avg_json_data[prop] = avg_prop
             else:
                 avg_json_data[prop] = avg_prop.tolist()                
 
     if type == "xtb":
-        for prop in mol_prop:
+        for prop in mol_props:
             prop_list = []
             for json_file in json_files:
                 json_data = read_json(json_file)

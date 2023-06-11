@@ -106,7 +106,7 @@ var_dict = {
     "nmr_intercept": [181.7815,31.8723],  # [C,H]
     "nmr_experim": None,
     "nodup_check": False,
-    "qdescp_atom": None,
+    "qdescp_atoms": [],
     "dbstep_r": 3.5,
     "robert": True,
     "csv_name": None,
