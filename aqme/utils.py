@@ -359,6 +359,7 @@ def command_line_args():
             value = False
         elif value == "True":
             value = True
+
         if arg_name in ("h", "help"):
             print(f"o  AQME v {aqme_version} is installed correctly! For more information about the available options, see the documentation in https://github.com/jvalegre/aqme")
             sys.exit()
