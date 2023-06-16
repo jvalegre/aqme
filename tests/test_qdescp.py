@@ -90,7 +90,9 @@ def test_qdescp_xtb(file):
     elif file == 'test_group.csv':
         cmd_qdescp = cmd_qdescp + ["--qdescp_atoms", "[C=O]"]
     elif file in ['test_multigroup.csv','test_robert.csv']:
-        cmd_qdescp = cmd_qdescp + ["--qdescp_atoms", "[P,CC]"]
+        # Pd is included to check the try/except in the SMARTS pattern match,
+        # and to check if the code works even if there are atoms that aren't used
+        cmd_qdescp = cmd_qdescp + ["--qdescp_atoms", "[P,CC,Pd]"]
         if file == 'test_robert.csv':
             cmd_qdescp = cmd_qdescp + ["--csv_name", f'{qdescp_input_dir}/{file_csearch}']
 

@@ -11,6 +11,7 @@ Version 1.5.1 [`url <https://github.com/jvalegre/aqme/releases/tag/1.5.1>`__]
    -  Added SMARTS pattern recogniton to qdescp_atoms (the option now takes lists of atoms as well 
       as lists of functional groups)
    -  Added pytests for QCORR-ORCA
+   -  Added the geometry filter (geom option) to CSEARCH
 
 Version 1.5.0 [`url <https://github.com/jvalegre/aqme/releases/tag/1.5.0>`__]
    -  A second ConstrainedEmbed() function with a core with no Hs was added to avoid

@@ -3,10 +3,8 @@
 #             used for filtering                    #
 #####################################################.
 
-# from functools import partial
-# from rdkit.Chem import AllChem as Chem
-# from rdkit.Chem import rdMolTransforms, Descriptors
-from rdkit.Chem import Descriptors
+from rdkit import Chem
+from rdkit.Chem import rdMolTransforms, Descriptors
 from aqme.utils import periodic_table, get_conf_RMS
 
 # Aux functions of the geometry filter
@@ -114,6 +112,8 @@ from aqme.utils import periodic_table, get_conf_RMS
 #             Whether it passes the angle requirements or not
 #     """
 
+#     from functools import partial
+
 #     is_lineal = partial(is_around_angle, angle=180, offset=offset)
 #     get_angle = lambda i, j: rdMolTransforms.GetAngleDeg(mol, i, metal_idx, j)
 #     passing = True
@@ -133,7 +133,7 @@ from aqme.utils import periodic_table, get_conf_RMS
 #     return passing
 
 
-# def passes_Ir_bidentate_x3_rule(mol, angle_off):
+# def passes_Ir_bidentate_x3_rule(mol, angle_thres):
 #     """
 #     Checks if a mol containing an Ir metal complex passes the bidentate x3
 #     rule or not.
@@ -142,7 +142,7 @@ from aqme.utils import periodic_table, get_conf_RMS
 #     ----------
 #     mol : rdkit.Chem.Mol
 #             The molecule to be tested.
-#     angle_off : float
+#     angle_thres : float
 #             Angle in degrees that acts as tolerance around 180º
 
 #     Returns
@@ -217,102 +217,64 @@ from aqme.utils import periodic_table, get_conf_RMS
 #                                 break
 #     # Check Angles
 #     passing = passing and passes_Ir_bidentate_x3_rule_angle_requirements(
-#         ligand_atoms, mol_conf, metal_idx, angle_off
+#         ligand_atoms, mol_conf, metal_idx, angle_thres
 #     )
 #     return passing
 
 
-# # Main API of the geometry filter
-# def geom_rules_output(mol, args, log, file, print_error_geom_rules):
-#     """
-#     returns if a mol object passes all the discarding rules or not.
+# Main API of the geometry filter
+def geom_filter(self,mol):
+    """
+    Returns whether a mol object passes all the geometric rules.
 
-#     Parameters
-#     ----------
-#     mol : rdkit.Chem.Mol
-#             molecule to be tested.
-#     args : argparse.args
-#             [description]
-#     log : Logger
-#             [description]
-#     file : str
-#             Only used to write to the log
-#     print_error_geom_rules : bool
-#             Controls extra writing to the log.
+    Parameters
+    ----------
+    self : argparse.args
+            Self object with the AQME arguments used
+    mol : rdkit.Chem.Mol
+            Molecule to be tested.
 
-#     Returns
-#     -------
-#     bool
-#             If True, it means that it is in accordance with the rules
-#     """
+    Returns
+    -------
+    bool
+        If True, it means that it is in accordance with the rules
+    """
 
-#     passing = True
-#     for rule in args.geom_rules:
-#         if rule == "Ir_bidentate_x3":
-#             passing = passes_Ir_bidentate_x3_rule(mol, args.angle_off)
-#         else:
-#             var = rule.split(",")
-#             if len(var) < 2:
-#                 log.write("x  The geom_rules parameter(s) was not correctly defined, this filter will be turned off")
-#                 return True
-#             atoms_filter = var[0].split("-")
-#             angle_rules = int(var[1])
-#             # the elements of this initial list will be replaced by the corresponding atom id numebrs
-#             atom_idx = ["ATOM1", "ATOM2", "ATOM3"]
+    # detects if the geometry rule is for atoms, bonds, angles or dihedrals
 
-#             find_angle = 0
-#             incompatibility_found = False
-#             for atom in mol.GetAtoms():
-#                 # count matches
-#                 neigh_count_first = 0
-#                 neigh_count_second = 0
-#                 sym_0, sym_1, sym_2 = atoms_filter
-#                 # Finds the metal atom and gets the atom types and indexes of all its neighbours
-#                 if atom.GetSymbol() == sym_1:
-#                     # idx of the central atom
-#                     atom_idx[1] = atom.GetIdx()
-#                     for x in atom.GetNeighbors():
-#                         sym = x.GetSymbol()
-#                         if sym == sym_0 or sym == sym_2:
-#                             # this ensures that both neighbours are used
-#                             if sym == sym_0 and sym == sym_2:
-#                                 if neigh_count_first <= neigh_count_second:
-#                                     neigh_count_first += 1
-#                                     atom_idx[0] = x.GetIdx()
-#                                 else:
-#                                     neigh_count_second += 1
-#                                     atom_idx[2] = x.GetIdx()
-#                             elif sym == sym_0:
-#                                 neigh_count_first += 1
-#                                 atom_idx[0] = x.GetIdx()
-#                             elif sym == sym_2:
-#                                 neigh_count_second += 1
-#                                 atom_idx[2] = x.GetIdx()
-#                             # count matches
-#                             matches = neigh_count_first + neigh_count_second
-#                             if matches > 2:
-#                                 if not print_error_geom_rules:
-#                                     log.write(f"x  There are multiple options in geom_rules for {file}, this filter will be turned off")
-#                                     incompatibility_found = True
-#                                     break
-#                     if neigh_count_first == 1 and neigh_count_second == 1:
-#                         find_angle += 1
-#             if find_angle == 0 and not incompatibility_found:
-#                 if not print_error_geom_rules:
-#                     log.write(f"x  No angles matching the description from geom_rules in {file}, this filter will be turned off")
-#             elif find_angle > 1:
-#                 log.write(f"x  {file} contain more than one atom that meets the geom_rules criteria, this filter will be turned off")
-#             elif find_angle == 1:
-#                 # Retrieve the only 3D conformer generated in that mol object for rdMolTransforms
-#                 mol_conf = mol.GetConformer(0)
-#                 # Calculate the angle between the 3 elements
-#                 angle = rdMolTransforms.GetAngleDeg(
-#                     mol_conf, atom_idx[0], atom_idx[1], atom_idx[2]
-#                 )
-#                 passing = not is_around_angle(angle, angle_rules, args.angle_off)
-#             if not passing:
-#                 break
-#     return passing
+    passing = True
+    if self.args.geom != []:
+        passing = False
+        if len(self.args.geom) != 2:
+            self.args.log.write(f"x  The geom option {self.args.geom} was not correctly defined, the geometric filter will be turned off! Correct format: [SMARTS,THRESHOLD], for example [CCCO,180] for a 180 degree dihedral")
+            return passing
+        smarts = self.args.geom[0]
+        geom_val = self.args.geom[1]
+
+        # SMARTS match to detect the atoms and calculate the geometric value. Then, check if the value
+        # is within the threshold
+        matches = []
+        try:
+            matches = mol.GetSubstructMatches(Chem.MolFromSmarts(smarts))
+        except: # I tried to make this except more specific for Boost.Python.ArgumentError, but apparently it's not as simple as it looks
+            matches = mol.GetSubstructMatches(Chem.MolFromSmarts(f'[{smarts}]'))
+        matches = list(matches[0])
+        mol_conf = mol.GetConformer(0) # Retrieve the only 3D conformer generated in that mol object for rdMolTransforms
+        smarts_content = ''.join(smarts.replace('[',']').split(']')) # this way both 'ATOM' and '[ATOM]' work
+        if smarts_content in periodic_table():
+            if len(matches) >= 1:
+                passing = True
+        elif len(matches) == 2:
+            mol_val = rdMolTransforms.GetBondLength(mol_conf, matches[0], matches[1])
+            passing = (geom_val - self.args.bond_thres) <= mol_val <= (geom_val + self.args.bond_thres)
+        elif len(matches) == 3:
+            mol_val = rdMolTransforms.GetAngleDeg(mol_conf, matches[0], matches[1], matches[2])
+            passing = (geom_val - self.args.angle_thres) <= mol_val <= (geom_val + self.args.angle_thres)
+        elif len(matches) == 4:
+            mol_val = rdMolTransforms.GetDihedralDeg(mol_conf, matches[0], matches[1], matches[2], matches[3])
+            passing = (geom_val - self.args.dihedral_thres) <= mol_val <= (geom_val + self.args.dihedral_thres)
+
+    return passing
 
 # Mol filters
 def filters(mol, log, molwt_cutoff):

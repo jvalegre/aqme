@@ -276,6 +276,7 @@ def set_metal_atomic_number(mol, metal_idx, metal_sym):
             re_symbol = metal_sym[metal_idx.index(atom.GetIdx())]
             atomic_number = periodic_table().index(re_symbol)
             atom.SetAtomicNum(atomic_number)
+            atom.SetFormalCharge(0)
 
 
 def get_conf_RMS(mol1, mol2, c1, c2, heavy, max_matches_rmsd):
@@ -370,7 +371,7 @@ def command_line_args():
                 kwargs[arg_name] = value
             else:
                 # this converts the string parameters to lists
-                if arg_name.lower() in ["files", "gen_atoms", "constraints_atoms", "constraints_dist", "constraints_angle", "constraints_dihedral", "atom_types", "cartesians", "nmr_atoms", "nmr_slope", "nmr_intercept","qdescp_atoms"]:
+                if arg_name.lower() in ["files", "gen_atoms", "constraints_atoms", "constraints_dist", "constraints_angle", "constraints_dihedral", "atom_types", "cartesians", "nmr_atoms", "nmr_slope", "nmr_intercept","qdescp_atoms","geom"]:
                     value = format_lists(value)
                 kwargs[arg_name] = value
 

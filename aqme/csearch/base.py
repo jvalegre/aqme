@@ -86,6 +86,16 @@ General RDKit-based
    seed : int, default=62609
       Random seed used during RDKit embedding (in the 
       Chem.rdDistGeom.EmbedMultipleConfs() RDKit function)
+   geom : list, default=[]
+      Geometry rule to pass for the systems. Format: [SMARTS,VALUE]. Geometry rules
+      might be atoms, bonds, angles and dihedral. For example, a rule to keep only
+      molecules with C-Pd-C atoms at 180 degrees: ['[C][Pd][C]',180]
+   bond_thres : float, default=0.2
+      Threshold used to discard bonds in the geom option (+-0.2 A) 
+   angle_thres : float, default=30
+      Threshold used to discard angles in the geom option (+-30 degrees) 
+   dihedral_thres : float, default=30
+      Threshold used to discard dihedral angles in the geom option (+-30 degrees) 
 
 Only organometallic molecules
 .............................
@@ -129,7 +139,7 @@ Fullmonte only
       the angle is 120.0, the program chooses randomly between 120 and 240 
       degrees (picked at random) during each step of the sampling
 
-Crest only
+CREST only
 ++++++++++
 
    nprocs : int, default=2
@@ -188,7 +198,12 @@ from rdkit.Chem import Descriptors as Descriptors
 from rdkit.Chem import rdmolfiles
 from rdkit.Chem import rdMolTransforms, PropertyMol, rdDistGeom, Lipinski
 
-from aqme.filter import filters, ewin_filter, pre_E_filter, RMSD_and_E_filter
+from aqme.filter import (
+    filters, ewin_filter,
+    pre_E_filter,
+    RMSD_and_E_filter,
+    geom_filter
+    )
 from aqme.csearch.utils import (
     prepare_direct_smi,
     prepare_smiles_files,
@@ -204,7 +219,7 @@ from aqme.csearch.utils import (
     smi_to_mol,
     getDihedralMatches,
     cluster_conformers
-)
+    )
 from aqme.csearch.templates import template_embed, check_metal_neigh
 from aqme.csearch.fullmonte import generating_conformations_fullmonte, realign_mol
 from aqme.utils import (
@@ -301,12 +316,17 @@ class csearch:
             if self.args.verbose:
                 self.final_dup_data.to_csv(self.csearch_csv_file, index=False)
 
-            elapsed_time = round(time.time() - start_time_overall, 2)
-            self.args.log.write(f"\nTime CSEARCH: {elapsed_time} seconds\n")
-            self.args.log.finalize()
+            # removes systems that did not generate any conformers
+            for sdf_file in glob.glob(f'{self.args.w_dir_main}/CSEARCH/*.sdf'):
+                if os.path.getsize(sdf_file) == 0:
+                    os.remove(sdf_file)
 
-            # this is added to avoid path problems in jupyter notebooks
-            os.chdir(self.args.initial_dir)
+        elapsed_time = round(time.time() - start_time_overall, 2)
+        self.args.log.write(f"\nTime CSEARCH: {elapsed_time} seconds\n")
+        self.args.log.finalize()
+
+        # this is added to avoid path problems in jupyter notebooks
+        os.chdir(self.args.initial_dir)
 
     def load_jobs(self, csearch_file):
         """
@@ -591,8 +611,10 @@ class csearch:
                 self.args.metal_atoms.append(atom.GetSymbol())
         if len(self.args.metal_atoms) > 0:
             self.args.log.write(f"\no  AQME recognized the following metal atoms: {self.args.metal_atoms}")
-            if charge is None or mult is None:
-                self.args.log.write(f"\nx  The automated charge and multiplicity calculation might not be precise for metal complexes! You should use the charge and mult options (or the charge and mult columns in CSV inputs).")
+            if charge is None:
+                self.args.log.write(f"\nx  The automated charge calculation might not be precise for metal complexes! You should use the charge option (or the charge column in CSV inputs).")
+            if mult is None:
+                self.args.log.write(f"\nx  The automated multiplicity calculation might not be precise for metal complexes! You should use the mult option (or the mult column in CSV inputs).")
 
     def conformer_generation(
         self,
@@ -1112,7 +1134,7 @@ class csearch:
             embed_kwargs["useRandomCoords"] = True
             embed_kwargs["boxSizeMult"] = 10.0
             embed_kwargs["numZeroFail"] = 1000
-            embed_kwargs["numThreads"] = 1
+            embed_kwargs["numThreads"] = 0
             cids = rdDistGeom.EmbedMultipleConfs(mol, initial_confs, **embed_kwargs)
 
         if is_sdf_mol_or_mol2:
@@ -1143,9 +1165,16 @@ class csearch:
                     mol_template,
                     self.args.opt_steps_rdkit,
                 )
-            cenergy.append(energy)
-            pmol = PropertyMol.PropertyMol(mol)
-            outmols.append(pmol)
+
+            # removes geometries that do not pass the filters (geom option)
+            mol_geom = Chem.Mol(mol)
+            if len(self.args.metal_atoms) >= 1:
+                set_metal_atomic_number(mol_geom, self.args.metal_idx, self.args.metal_sym)
+            passing_geom = geom_filter(self,mol_geom)
+            if passing_geom:
+                cenergy.append(energy)
+                pmol = PropertyMol.PropertyMol(mol)
+                outmols.append(pmol)
 
         return outmols, cenergy
 
@@ -1172,6 +1201,8 @@ class csearch:
         """
 
         # gets optimized mol objects and energies
+        if self.args.geom != []:
+            self.args.log.write(f"o  Applying geometry filters ({self.args.geom})")
         outmols, cenergy = self.min_and_E_calc(
             mol, cids, coord_Map, alg_Map, mol_template, ff
         )

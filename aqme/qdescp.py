@@ -587,10 +587,16 @@ class qdescp:
 
             # find the target atoms or groups
             for pattern in self.args.qdescp_atoms:
-                matches = mol.GetSubstructMatches(Chem.MolFromSmarts(pattern))
+                matches = []
+                try:
+                    matches = mol.GetSubstructMatches(Chem.MolFromSmarts(pattern))
+                except: # I tried to make this except more specific for Boost.Python.ArgumentError, but apparently it's not as simple as it looks
+                    matches = mol.GetSubstructMatches(Chem.MolFromSmarts(f'[{pattern}]'))
+                if len(matches) == 0:
+                    self.args.log.write(f"x  WARNING! SMARTS pattern {pattern} not found in the system, this molecule will not be used.")
 
-                if len(matches) > 1:
-                    self.args.log.write(f"x  WARNING! More than one {pattern} atom was found in the molecule, this molecule will not be used.")
+                elif len(matches) > 1:
+                    self.args.log.write(f"x  WARNING! More than one {pattern} atom was found in the system, this molecule will not be used.")
 
                 elif len(matches) == 1:
                     # get atom types and sort them to keep the same atom order among different molecules
