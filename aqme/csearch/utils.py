@@ -82,20 +82,7 @@ def creation_of_dup_csv_csearch(program):
     return pd.DataFrame(columns=columns)
 
 
-def constraint_fix(
-    constraints_atoms, constraints_dist, constraints_angle, constraints_dihedral
-):
-    
-    # this function avoids problems when reading contraints from CSV files
-    constraints_atoms = constaint_2_list(constraints_atoms)
-    constraints_dist = constaint_2_list(constraints_dist)
-    constraints_angle = constaint_2_list(constraints_angle)
-    constraints_dihedral = constaint_2_list(constraints_dihedral)
-
-    return constraints_atoms, constraints_dist, constraints_angle, constraints_dihedral
-
-
-def constaint_2_list(contraints):
+def csv_2_list(contraints):
     try:
         if pd.isnull(contraints):
             contraints = []
@@ -127,6 +114,8 @@ def prepare_direct_smi(args):
         args.constraints_dist,
         args.constraints_angle,
         args.constraints_dihedral,
+        args.complex_type,
+        args.geom
     )
     job_inputs.append(obj)
 
@@ -151,6 +140,8 @@ def prepare_smiles_files(args, csearch_file):
             args.constraints_dist,
             args.constraints_angle,
             args.constraints_dihedral,
+            args.complex_type,
+            args.geom
         )
         job_inputs.append(obj)
 
@@ -204,44 +195,45 @@ def generate_mol_from_csv(args, csv_smiles, index):
     constraints_dihedral = args.constraints_dihedral
 
     if "constraints_atoms" in csv_smiles.columns:
-        constraints_atoms = csv_smiles.loc[index, "constraints_atoms"]
+        if str(csv_smiles.loc[index, 'constraints_atoms']).lower() != 'nan':
+            constraints_atoms = csv_smiles.loc[index, "constraints_atoms"]
 
     if "constraints_dist" in csv_smiles.columns:
-        constraints_dist = csv_smiles.loc[index, "constraints_dist"]
+        if str(csv_smiles.loc[index, 'constraints_dist']).lower() != 'nan':
+            constraints_dist = csv_smiles.loc[index, "constraints_dist"]
 
     if "constraints_angle" in csv_smiles.columns:
-        constraints_angle = csv_smiles.loc[index, "constraints_angle"]
+        if str(csv_smiles.loc[index, 'constraints_angle']).lower() != 'nan':
+            constraints_angle = csv_smiles.loc[index, "constraints_angle"]
 
     if "constraints_dihedral" in csv_smiles.columns:
-        constraints_dihedral = csv_smiles.loc[index, "constraints_dihedral"]
+        if str(csv_smiles.loc[index, 'constraints_dihedral']).lower() != 'nan':
+            constraints_dihedral = csv_smiles.loc[index, "constraints_dihedral"]
 
-    (
-        constraints_atoms,
-        constraints_dist,
-        constraints_angle,
-        constraints_dihedral,
-    ) = constraint_fix(
-        constraints_atoms,
-        constraints_dist,
-        constraints_angle,
-        constraints_dihedral,
-    )
+    constraints_atoms = csv_2_list(constraints_atoms)
+    constraints_dist = csv_2_list(constraints_dist)
+    constraints_angle = csv_2_list(constraints_angle)
+    constraints_dihedral = csv_2_list(constraints_dihedral)
 
-    charge_found, mult_found = False, False
-    if args.charge is None or args.mult is None:
-        for csv_column in csv_smiles.columns:
-            if str(csv_smiles.loc[index, csv_column]) != 'nan':
-                if csv_column.lower() in ['charge','chrg'] and args.charge is None:
-                    charge = int(csv_smiles.loc[index, csv_column])
-                    charge_found = True
-                elif csv_column.lower() in ['mult','multiplicity'] and args.mult is None:
-                    mult = int(csv_smiles.loc[index, csv_column])
-                    mult_found = True
+    charge = args.charge
+    mult = args.mult
+    if "charge" in csv_smiles.columns:
+        if str(csv_smiles.loc[index, 'charge']).lower() != 'nan':
+            charge = csv_smiles.loc[index, "charge"]
+    if "mult" in csv_smiles.columns:
+        if str(csv_smiles.loc[index, 'mult']).lower() != 'nan':
+            mult = csv_smiles.loc[index, "mult"]
 
-    if not charge_found:
-        charge = args.charge
-    if not mult_found:
-        mult = args.mult
+    complex_type = args.complex_type
+    if "complex_type" in csv_smiles.columns:
+        if str(csv_smiles.loc[index, 'complex_type']).lower() != 'nan':
+            complex_type = csv_smiles.loc[index, "complex_type"]
+
+    geom = args.geom
+    if "geom" in csv_smiles.columns:
+        if str(csv_smiles.loc[index, 'geom']).lower() != 'nan':
+            geom = csv_smiles.loc[index, "geom"]
+    geom = csv_2_list(geom)
 
     obj = (
         smiles,
@@ -252,6 +244,8 @@ def generate_mol_from_csv(args, csv_smiles, index):
         constraints_dist,
         constraints_angle,
         constraints_dihedral,
+        complex_type,
+        geom
     )
 
     return obj
@@ -275,6 +269,8 @@ def prepare_cdx_files(args, csearch_file):
             args.constraints_dist,
             args.constraints_angle,
             args.constraints_dihedral,
+            args.complex_type,
+            args.geom
         )
         job_inputs.append(obj)
     return job_inputs
@@ -335,6 +331,8 @@ def prepare_com_files(args, csearch_file):
         args.constraints_dist,
         args.constraints_angle,
         args.constraints_dihedral,
+        args.complex_type,
+        args.geom
     )
     job_inputs.append(obj)
     if os.path.basename(csearch_file).split('.')[1] in ["gjf", "com"]:
@@ -381,6 +379,8 @@ def prepare_sdf_files(args, csearch_file):
             args.constraints_dist,
             args.constraints_angle,
             args.constraints_dihedral,
+            args.complex_type,
+            args.geom
         )
         job_inputs.append(obj)
     return job_inputs

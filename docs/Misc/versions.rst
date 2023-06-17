@@ -5,13 +5,18 @@ Versions
 ========
 
 Version 1.5.1 [`url <https://github.com/jvalegre/aqme/releases/tag/1.5.1>`__]
-   -  Added the verbose option. When verbose=False, no DAT and CSV files with summaries are printed.
+   -  Added the verbose option. When verbose=False, no DAT and CSV files with summaries are printed
    -  Fixed bug for using constraints with SMILES that are not mapped
-   -  Changed directory to create AQME-ROBERT databases (to adapt for full ML workflows in ROBERT)
+   -  Changed directory to create AQME-ROBERT databases to working dir (to adapt for full ML 
+      workflows in ROBERT)
    -  Added SMARTS pattern recogniton to qdescp_atoms (the option now takes lists of atoms as well 
       as lists of functional groups)
-   -  Added pytests for QCORR-ORCA
+   -  Fix minor bugs in QCORR-ORCA
    -  Added the geometry filter (geom option) to CSEARCH
+   -  Added geom and complex_type as options in CSV columns
+   -  Fixed QDESCP when using csv_name with columns that are not code_name and SMILES
+   -  Added more RDKit descriptors in QDESCP with Descriptors.CalcMolDescriptors() (only for 
+      rdkit>=2023)
 
 Version 1.5.0 [`url <https://github.com/jvalegre/aqme/releases/tag/1.5.0>`__]
    -  A second ConstrainedEmbed() function with a core with no Hs was added to avoid

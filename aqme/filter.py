@@ -223,7 +223,7 @@ from aqme.utils import periodic_table, get_conf_RMS
 
 
 # Main API of the geometry filter
-def geom_filter(self,mol):
+def geom_filter(self,mol,geom):
     """
     Returns whether a mol object passes all the geometric rules.
 
@@ -243,13 +243,13 @@ def geom_filter(self,mol):
     # detects if the geometry rule is for atoms, bonds, angles or dihedrals
 
     passing = True
-    if self.args.geom != []:
+    if geom != []:
         passing = False
-        if len(self.args.geom) != 2:
-            self.args.log.write(f"x  The geom option {self.args.geom} was not correctly defined, the geometric filter will be turned off! Correct format: [SMARTS,THRESHOLD], for example [CCCO,180] for a 180 degree dihedral")
+        if len(geom) != 2:
+            self.args.log.write(f"x  The geom option {geom} was not correctly defined, the geometric filter will be turned off! Correct format: [SMARTS,THRESHOLD], for example [CCCO,180] for a 180 degree dihedral")
             return passing
-        smarts = self.args.geom[0]
-        geom_val = self.args.geom[1]
+        smarts = geom[0]
+        geom_val = geom[1]
 
         # SMARTS match to detect the atoms and calculate the geometric value. Then, check if the value
         # is within the threshold
@@ -258,7 +258,8 @@ def geom_filter(self,mol):
             matches = mol.GetSubstructMatches(Chem.MolFromSmarts(smarts))
         except: # I tried to make this except more specific for Boost.Python.ArgumentError, but apparently it's not as simple as it looks
             matches = mol.GetSubstructMatches(Chem.MolFromSmarts(f'[{smarts}]'))
-        matches = list(matches[0])
+        if len(matches) > 0:
+            matches = list(matches[0])
         mol_conf = mol.GetConformer(0) # Retrieve the only 3D conformer generated in that mol object for rdMolTransforms
         smarts_content = ''.join(smarts.replace('[',']').split(']')) # this way both 'ATOM' and '[ATOM]' work
         if smarts_content in periodic_table():

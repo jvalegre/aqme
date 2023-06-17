@@ -16,6 +16,7 @@ import rdkit
 from pathlib import Path
 import shutil
 from aqme.utils import read_file, run_command
+from aqme.filter import geom_filter
 from rdkit.Chem import rdMolTransforms
 
 
@@ -70,11 +71,13 @@ def xtb_opt_main(
     self,
     charge,
     mult,
+    smi,
     constraints_atoms,
     constraints_dist,
     constraints_angle,
     constraints_dihedral,
     method_opt,
+    geom,
     complex_ts=False,
     mol=None,
     name_init=None,
@@ -114,7 +117,7 @@ def xtb_opt_main(
     os.environ["OMP_STACKSIZE"] = self.args.stacksize
     # to run xTB/CREST with more than 1 processor
     os.environ["OMP_NUM_THREADS"] = str(self.args.nprocs)
-    cmin_valid = True
+    opt_valid = True
 
     os.chdir(dat_dir)
     
@@ -255,7 +258,7 @@ def xtb_opt_main(
                     self.args.log.write(f"\nx  There was another error during the xTB pre-optimization that could not be fixed. Trying CREST directly with no xTB preoptimization.\n")
                 else:
                     self.args.log.write(f"\nx  There was another error during the xTB pre-optimization that could not be fixed (this molecule will be skipped).\n")
-                cmin_valid = False
+                opt_valid = False
                 mol_rd = None
 
         xyzoutxtb2 = xyzoutxtb1
@@ -325,9 +328,9 @@ def xtb_opt_main(
                 shutil.copy(str(dat_dir) + "/crest_conformers.xyz", xyzoutall)
         except FileNotFoundError:
             self.args.log.write("\nx  CREST conformer sampling failed! Please, try other options (i.e. include constrains, change the crest_keywords option, etc.)")
-            cmin_valid = False
+            opt_valid = False
 
-    if cmin_valid:
+    if opt_valid:
         if self.args.program.lower() == "crest":
             xyzall_2_xyz(xyzoutall, name_no_path)
             xyz_files = glob.glob(name_no_path + "_conf_*.xyz")
@@ -360,9 +363,16 @@ def xtb_opt_main(
                 mol_rd.SetProp("Energy", energy_kcal)
                 mol_rd.SetProp("Real charge", str(charge))
                 mol_rd.SetProp("Mult", str(int(mult)))
-                sdwriter.write(mol_rd)
+                if smi is not None:
+                    mol_rd.SetProp("SMILES", str(smi))
+                mol_geom = Chem.Mol(mol_rd)
+                passing_geom = geom_filter(self,mol_geom,geom)
+                if passing_geom:
+                    sdwriter.write(mol_rd)
                 os.remove(file)
                 os.remove(f'{file.split(".")[0]}.xyz')
+        if self.args.program.lower() == "crest":
+            sdwriter.close()
     else:
         xyz_files = []
 
@@ -398,7 +408,7 @@ def xtb_opt_main(
         return 1
 
     if method_opt == 'xtb':
-        return mol_rd, energy_kcal, cmin_valid
+        return mol_rd, energy_kcal, opt_valid
 
 
 def create_xcontrol(

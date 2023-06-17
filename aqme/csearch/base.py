@@ -405,6 +405,8 @@ class csearch:
                     constraints_dist_,
                     constraints_angle_,
                     constraints_dihedral_,
+                    complex_type_,
+                    geom_
                 ) = job_input
                 job = executor.submit(
                     self.compute_confs(
@@ -416,6 +418,8 @@ class csearch:
                         constraints_dist_,
                         constraints_angle_,
                         constraints_dihedral_,
+                        complex_type_,
+                        geom_
                     )
                 )
                 jobs.append(job)
@@ -434,6 +438,8 @@ class csearch:
         constraints_dist,
         constraints_angle,
         constraints_dihedral,
+        complex_type,
+        geom
     ):
         """
         Function to start conformer generation
@@ -472,8 +478,10 @@ class csearch:
             mol = smi
             if mol is None:
                 self.args.log.write(f"\nx  Failed to convert the provided input to an RDkit Mol object! Please check the starting structure.")
-                self.args.log.finalize()
-                sys.exit()
+                if self.args.input.split(".")[1] not in ["csv","cdx","txt","yaml","yml","rtf"]:
+                    self.args.log.finalize()
+                    sys.exit()
+                return
                 
             # check if the optimization is constrained
             complex_ts = check_constraints(self)
@@ -490,6 +498,7 @@ class csearch:
 
         self.csearch_folder.mkdir(exist_ok=True, parents=True)
 
+        # for 3D input types
         if self.args.program.lower() in ["crest"] and self.args.smi is None:
             if self.args.input.split(".")[1] in ["pdb", "mol2", "mol", "sdf"]:
                 command_pdb = [
@@ -517,7 +526,7 @@ class csearch:
             _ = self.find_metal_atom(mol,charge,mult)
 
         # replaces the metal for an I atom
-        if len(self.args.metal_atoms) >= 1 and self.args.program != 'crest':
+        if len(self.args.metal_atoms) >= 1:
             (
                 self.args.metal_idx,
                 self.args.complex_coord,
@@ -531,25 +540,27 @@ class csearch:
                 "linear",
                 "trigonalplanar",
             ]
-            if self.args.complex_type != '' and self.args.complex_type not in accepted_complex_types:
-                self.args.log.write(f"x  The metal template specified in complex_type ({self.args.complex_type}) is not valid! Options: squareplanar, squarepyramidal, linear and trigonalplanar")
-                self.args.log.finalize()
-                sys.exit()
+            if complex_type != '' and complex_type not in accepted_complex_types:
+                self.args.log.write(f"x  The metal template specified in complex_type ({complex_type}) is not valid! Options: squareplanar, squarepyramidal, linear and trigonalplanar")
+                if self.args.input.split(".")[1] not in ["csv","cdx","txt","yaml","yml","rtf"]:
+                    self.args.log.finalize()
+                    sys.exit()
+                return
 
-            if self.args.complex_type in accepted_complex_types:
+            if complex_type in accepted_complex_types:
                 count_metals = 0
                 valid_template = True
                 # check if the specified metal is included in the system
                 for metal_idx_ind in self.args.metal_idx:
                     if metal_idx_ind is not None:
                         # calculate number of expected neighbours
-                        valid_template = check_metal_neigh(mol, self.args.complex_type, metal_idx_ind, self.args.log, valid_template)
+                        valid_template = check_metal_neigh(mol, complex_type, metal_idx_ind, self.args.log, valid_template)
                         count_metals += 1
 
                 if count_metals == 1 and valid_template:
                     template_opt = True
                     template_kwargs = dict()
-                    template_kwargs["complex_type"] = self.args.complex_type
+                    template_kwargs["complex_type"] = complex_type
                     template_kwargs["metal_idx"] = self.args.metal_idx
                     template_kwargs["maxsteps"] = self.args.opt_steps_rdkit
                     template_kwargs["heavyonly"] = self.args.heavyonly
@@ -572,15 +583,16 @@ class csearch:
                             charge,
                             mult,
                             smi,
+                            geom,
                             coord_map,
                             alg_map,
-                            template,
+                            template
                         )
                         frames = [total_data, data]
                         total_data = pd.concat(frames, sort=True)
 
                 elif count_metals > 1 or count_metals == 0:
-                    self.args.log.write(f"\nx  The template specified {self.args.complex_type} is not used for systems with more than 1 metal or for organic molecueles.")
+                    self.args.log.write(f"\nx  The template specified {complex_type} is not used for systems with more than 1 metal or for organic molecueles.")
 
         if not template_opt:
             total_data = self.conformer_generation(
@@ -594,6 +606,7 @@ class csearch:
                 charge,
                 mult,
                 smi,
+                geom
             )
 
         # Updates the dataframe with infromation about conformer generation
@@ -628,6 +641,7 @@ class csearch:
         charge,
         mult,
         smi,
+        geom,
         coord_Map=None,
         alg_Map=None,
         mol_template=None,
@@ -669,11 +683,13 @@ class csearch:
                     self,
                     charge,
                     mult,
+                    smi,
                     constraints_atoms,
                     constraints_dist,
                     constraints_angle,
                     constraints_dihedral,
                     'crest',
+                    geom,
                     mol=mol, 
                 )
                 n_seconds = round(time.time() - start_time, 2)
@@ -692,11 +708,13 @@ class csearch:
                         self,
                         charge,
                         mult,
+                        smi,
                         constraints_atoms,
                         constraints_dist,
                         constraints_angle,
                         constraints_dihedral,
                         'crest',
+                        geom,
                         mol=mol, 
                     )
                     n_seconds = round(time.time() - start_time, 2)
@@ -737,6 +755,7 @@ class csearch:
                         alg_Map,
                         mol_template,
                         smi,
+                        geom
                     )
                 except (KeyboardInterrupt, SystemExit):
                     raise
@@ -779,6 +798,7 @@ class csearch:
         alg_Map,
         mol_template,
         smi,
+        geom
     ):
 
         """
@@ -808,6 +828,7 @@ class csearch:
                 alg_Map,
                 mol_template,
                 smi,
+                geom
             )
             if self.args.program.lower() in ['rdkit','fullmonte'] :
                 n_seconds = round(time.time() - start_time, 2)
@@ -830,7 +851,6 @@ class csearch:
                     )
                     n_seconds = round(time.time() - start_time, 2)
                     dup_data.at[dup_data_idx, "CSEARCH time (seconds)"] = n_seconds
-                    
 
         if self.args.program.lower() in ['crest']:
             stop_xtb_opt = False
@@ -871,20 +891,21 @@ class csearch:
                 dup_data.at[dup_data_idx, "Molecule"] = name
                 if self.args.crest_nrun == 1:
                     status = xtb_opt_main(
-                            f"{name}_{self.args.program.lower()}",
-                            dup_data,
-                            dup_data_idx,
-                            self,
-                            charge,
-                            mult,
-                            constraints_atoms,
-                            constraints_dist,
-                            constraints_angle,
-                            constraints_dihedral,
-                            'crest',
-                            complex_ts=complex_ts,
-                            mol=mol, # this is necessary for CREST calculations with constraints
-                            
+                        f"{name}_{self.args.program.lower()}",
+                        dup_data,
+                        dup_data_idx,
+                        self,
+                        charge,
+                        mult,
+                        smi,
+                        constraints_atoms,
+                        constraints_dist,
+                        constraints_angle,
+                        constraints_dihedral,
+                        'crest',
+                        geom,
+                        complex_ts=complex_ts,
+                        mol=mol, # this is necessary for CREST calculations with constraints 
                         )
                     n_seconds = round(time.time() - start_time, 2)
                     dup_data.at[dup_data_idx, "CSEARCH time (seconds)"] = n_seconds
@@ -901,11 +922,13 @@ class csearch:
                             self,
                             charge,
                             mult,
+                            smi,
                             constraints_atoms,
                             constraints_dist,
                             constraints_angle,
                             constraints_dihedral,
                             'crest',
+                            geom,
                             complex_ts=complex_ts,
                             mol=mol, # this is necessary for CREST calculations with constraints
                             
@@ -928,8 +951,10 @@ class csearch:
         rdmols = Chem.SDMolSupplier(str(self.csearch_file), removeHs=False) 
         if rdmols is None:
             self.args.log.write("\nCould not open " + name + self.args.output)
-            self.args.log.finalize()
-            sys.exit()
+            if self.args.input.split(".")[1] not in ["csv","cdx","txt","yaml","yml","rtf"]:
+                self.args.log.finalize()
+                sys.exit()
+            return
 
         for i, rd_mol_i in enumerate(rdmols):
             if coord_Map is None and alg_Map is None and mol_template is None:
@@ -1144,7 +1169,7 @@ class csearch:
 
         return cids
 
-    def min_and_E_calc(self, mol, cids, coord_Map, alg_Map, mol_template, ff):
+    def min_and_E_calc(self, mol, cids, coord_Map, alg_Map, mol_template, ff, geom):
         """
         Minimization and E calculation with RDKit after embeding
         """
@@ -1170,7 +1195,7 @@ class csearch:
             mol_geom = Chem.Mol(mol)
             if len(self.args.metal_atoms) >= 1:
                 set_metal_atomic_number(mol_geom, self.args.metal_idx, self.args.metal_sym)
-            passing_geom = geom_filter(self,mol_geom)
+            passing_geom = geom_filter(self,mol_geom,geom)
             if passing_geom:
                 cenergy.append(energy)
                 pmol = PropertyMol.PropertyMol(mol)
@@ -1195,16 +1220,17 @@ class csearch:
         mult,
         ff,
         smi,
+        geom
     ):
         """
         Minimizes, gets the energy and filters RDKit conformers after embeding
         """
 
         # gets optimized mol objects and energies
-        if self.args.geom != []:
-            self.args.log.write(f"o  Applying geometry filters ({self.args.geom})")
+        if geom != []:
+            self.args.log.write(f"o  Applying geometry filters ({geom})")
         outmols, cenergy = self.min_and_E_calc(
-            mol, cids, coord_Map, alg_Map, mol_template, ff
+            mol, cids, coord_Map, alg_Map, mol_template, ff, geom
         )
 
         # writing charges and multiplicity after RDKit
@@ -1291,6 +1317,7 @@ class csearch:
                         alg_Map,
                         mol_template,
                     )
+                    outmols = [mol]
                     break
 
             status = 1
@@ -1331,6 +1358,7 @@ class csearch:
         alg_Map,
         mol_template,
         smi,
+        geom
     ):
 
         """
@@ -1399,6 +1427,7 @@ class csearch:
                 mult,
                 ff,
                 smi,
+                geom
             )
         except IndexError:
             status = -1

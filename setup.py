@@ -34,7 +34,7 @@ setup(
     ],
     install_requires=[
         "PyYAML",
-        "pandas",
+        "pandas>=2.0.2",
         "progress",
         "ase",
         "numpy",
