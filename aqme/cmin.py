@@ -327,11 +327,13 @@ class cmin:
                         self,
                         charge,
                         mult,
+                        None,
                         self.args.constraints_atoms,
                         self.args.constraints_dist,
                         self.args.constraints_angle,
                         self.args.constraints_dihedral,
                         'xtb',
+                        self.args.geom,
                         complex_ts=complex_ts,
                         mol=mol,
                         name_init=name_init

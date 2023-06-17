@@ -231,11 +231,11 @@ class qdescp:
                     for i,input_name in enumerate(input_df['code_name']):
                         # match the entries of the two databases using the entry name
                         qdescp_col = input_df.loc[i].to_frame().T.reset_index(drop=True) # transposed, reset index
-                        input_col = qdescp_df.loc[(qdescp_df['Name'] == f'{path_json}/{input_name}_rdkit_boltz') | (qdescp_df['Name'] == f'{path_json}/{input_name}_boltz')]
+                        input_col = qdescp_df.loc[(qdescp_df['Name'] == f'{path_json}/{input_name}_rdkit_boltz') | (qdescp_df['Name'] == f'{path_json}/{input_name}_boltz') | (qdescp_df['Name'] == f'{path_json}/{input_name}_0_rdkit_boltz') | (qdescp_df['Name'] == f'{path_json}/{input_name}_1_rdkit_boltz') | (qdescp_df['Name'] == f'{path_json}/{input_name}_2_rdkit_boltz')]
                         input_col = input_col.drop(['Name'], axis=1).reset_index(drop=True)
                         combined_row = pd.concat([qdescp_col,input_col], axis=1)
-                        combined_df = combined_df.append(combined_row, ignore_index=True)
-                    combined_df = combined_df.dropna(axis=0).reset_index(drop=True)
+                        combined_df = pd.concat([combined_df, combined_row], ignore_index=True)
+                    combined_df = combined_df.dropna(axis=0)
                     csv_basename = os.path.basename(self.args.csv_name)
                     csv_path = self.args.initial_dir.joinpath(f'AQME-ROBERT_{csv_basename}')
                     _ = combined_df.to_csv(f'{csv_path}', index = None, header=True)
@@ -587,10 +587,20 @@ class qdescp:
 
             # find the target atoms or groups
             for pattern in self.args.qdescp_atoms:
-                matches = mol.GetSubstructMatches(Chem.MolFromSmarts(pattern))
+                matches = []
+                try:
+                    matches = mol.GetSubstructMatches(Chem.MolFromSmarts(pattern))
+                except: # I tried to make this except more specific for Boost.Python.ArgumentError, but apparently it's not as simple as it looks
+                    try:
+                        matches = mol.GetSubstructMatches(Chem.MolFromSmarts(f'[{pattern}]'))
+                    except:
+                        self.args.log.write(f"x  WARNING! SMARTS pattern was not specified correctly! Make sure the qdescp_atoms option uses this format: \"[C]\" for atoms, \"[C=N]\" for bonds, and so on.")
+      
+                if len(matches) == 0:
+                    self.args.log.write(f"x  WARNING! SMARTS pattern {pattern} not found in the system, this molecule will not be used.")
 
-                if len(matches) > 1:
-                    self.args.log.write(f"x  WARNING! More than one {pattern} atom was found in the molecule, this molecule will not be used.")
+                elif len(matches) > 1:
+                    self.args.log.write(f"x  WARNING! More than one {pattern} atom was found in the system, this molecule will not be used.")
 
                 elif len(matches) == 1:
                     # get atom types and sort them to keep the same atom order among different molecules

@@ -154,7 +154,7 @@ class qcorr:
             "no_data": 0,
             "linear_mol_wrong": 0,
             "not_specified": 0,
-            "geom_rules_qcorr": 0,
+            "geom_qcorr": 0,
             "isomerized": 0,
         }
 
@@ -299,23 +299,23 @@ class qcorr:
 
     # include geom filters (ongoing work)
 
-    # 			if len(self.args.geom_rules) >= 1:
+    # 			if len(self.args.geom) >= 1:
     # 				passing_rules = True
     # 				valid_mol_gen = True
-    # 				self.args.log.write("  ----- geom_rules filter(s) will be applied to the output file -----\n")
+    # 				self.args.log.write("  ----- geom filter(s) will be applied to the output file -----\n")
     # 				try:
     # 					format_file = file.split('.')[1]
     # 					mol = output_to_mol(file,format_file)
-    # 					print_error_geom_rules=False
+    # 					print_error_geom=False
     # 					if ob_compat and rdkit_compat:
-    # 						passing_rules = geom_rules_output(mol,self.args,self.args.log,file,print_error_geom_rules)
+    # 						passing_rules = geom_output(mol,self.args,self.args.log,file,print_error_geom)
     # 						if not passing_rules:
-    # 							errortype = 'fail_geom_rules'
+    # 							errortype = 'fail_geom'
     # 					os.remove(file.split('.')[0]+'.mol')
     # 				except AttributeError:
     # 					valid_mol_gen = False
     # 					os.remove(file.split('.')[0]+'.mol')
-    # 					self.args.log.write("The file could not be converted into a mol object, geom_rules filter(s) will be disabled\n")
+    # 					self.args.log.write("The file could not be converted into a mol object, geom filter(s) will be disabled\n")
 
     def cclib_init(self, file, file_name):
         """
@@ -866,9 +866,9 @@ class qcorr:
             destination = destination_error.joinpath("error/no_data/")
             file_terms["no_data"] += 1
 
-        elif errortype == "fail_geom_rules":
-            destination = destination_error.joinpath("geom_rules_filter/")
-            file_terms["geom_rules_qcorr"] += 1
+        elif errortype == "fail_geom":
+            destination = destination_error.joinpath("geom_filter/")
+            file_terms["geom_qcorr"] += 1
 
         elif errortype == "isomerization":
             destination = destination_error.joinpath("isomerization/")
@@ -912,8 +912,8 @@ class qcorr:
         if float(self.args.s2_threshold) > 0.0:
             ana_data.at[0, "Spin contamination"] = file_terms["spin_contaminated"]
         ana_data.at[0, "Duplicates"] = file_terms["duplicate_calc"]
-        if len(self.args.geom_rules) >= 1:
-            ana_data.at[0, "geom_rules filter"] = file_terms["geom_rules_qcorr"]
+        if len(self.args.geom) >= 1:
+            ana_data.at[0, "geom filter"] = file_terms["geom_qcorr"]
         if self.args.isom_type is not None:
             ana_data.at[0, "Isomerization"] = file_terms["isomerized"]
         path_as_str = self.args.initial_dir.as_posix()

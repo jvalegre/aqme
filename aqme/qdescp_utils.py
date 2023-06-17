@@ -10,6 +10,7 @@ import pandas as pd
 import ast
 import math
 import rdkit
+from rdkit.Chem import Descriptors
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -226,19 +227,23 @@ def get_rdkit_properties(avg_json_data, mol):
     Calculates RDKit molecular descriptors
     """
 
-    avg_json_data["NHOHCount"] = rdkit.Chem.Lipinski.NHOHCount(mol)
-    avg_json_data["FractionCSP3"] = rdkit.Chem.Lipinski.FractionCSP3(mol)
-    avg_json_data["NOCount"] = rdkit.Chem.Lipinski.NOCount(mol)
-    avg_json_data["NumAliphaticRings"] = rdkit.Chem.Lipinski.NumAliphaticRings(mol)
-    avg_json_data["NumAromaticRings"] = rdkit.Chem.Lipinski.NumAromaticRings(mol)
-    avg_json_data["NumHAcceptors"] = rdkit.Chem.Lipinski.NumHAcceptors(mol)
-    avg_json_data["NumHDonors"] = rdkit.Chem.Lipinski.NumHDonors(mol)
-    avg_json_data["NumHeteroatoms"] = rdkit.Chem.Lipinski.NumHeteroatoms(mol)
-    avg_json_data["NumRotatableBonds"] = rdkit.Chem.Lipinski.NumRotatableBonds(mol)
-
-    avg_json_data["TPSA"] = rdkit.Chem.Descriptors.TPSA(mol)
-    avg_json_data["MolLogP"] = rdkit.Chem.Descriptors.MolLogP(mol)
-    # avg_json_data["NumAmideBonds"] = rdkit.Chem.Descriptors.NumAmideBonds(mol)
+    try:
+        descrs = Descriptors.CalcMolDescriptors(mol)
+        for descr in descrs:
+            if descrs[descr] != np.nan and str(descrs[descr]).lower() != 'nan':
+                avg_json_data[descr] = descrs[descr]
+    except AttributeError:
+        avg_json_data["NHOHCount"] = rdkit.Chem.Lipinski.NHOHCount(mol)
+        avg_json_data["FractionCSP3"] = rdkit.Chem.Lipinski.FractionCSP3(mol)
+        avg_json_data["NOCount"] = rdkit.Chem.Lipinski.NOCount(mol)
+        avg_json_data["NumAliphaticRings"] = rdkit.Chem.Lipinski.NumAliphaticRings(mol)
+        avg_json_data["NumAromaticRings"] = rdkit.Chem.Lipinski.NumAromaticRings(mol)
+        avg_json_data["NumHAcceptors"] = rdkit.Chem.Lipinski.NumHAcceptors(mol)
+        avg_json_data["NumHDonors"] = rdkit.Chem.Lipinski.NumHDonors(mol)
+        avg_json_data["NumHeteroatoms"] = rdkit.Chem.Lipinski.NumHeteroatoms(mol)
+        avg_json_data["NumRotatableBonds"] = rdkit.Chem.Lipinski.NumRotatableBonds(mol)
+        avg_json_data["TPSA"] = rdkit.Chem.Descriptors.TPSA(mol)
+        avg_json_data["MolLogP"] = rdkit.Chem.Descriptors.MolLogP(mol)
 
     return avg_json_data
 
