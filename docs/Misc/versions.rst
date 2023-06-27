@@ -4,6 +4,10 @@
 Versions
 ========
 
+Version 1.5.2 [`url <https://github.com/jvalegre/aqme/releases/tag/1.5.2>`__]
+   -  Fixed bug for using constraints with large molecules in CREST (related to long atom lists
+      in the .xcontrol.sample file that weren't compatible with subprocess.run())
+
 Version 1.5.1 [`url <https://github.com/jvalegre/aqme/releases/tag/1.5.1>`__]
    -  Added the verbose option. When verbose=False, no DAT and CSV files with summaries are printed
    -  Fixed bug for using constraints with SMILES that are not mapped
