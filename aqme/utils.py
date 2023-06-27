@@ -8,7 +8,6 @@ import subprocess
 import sys
 import time
 import getopt
-import numpy as np
 import glob
 import yaml
 import ast

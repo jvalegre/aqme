@@ -9,7 +9,7 @@ orbs:
   # Orb commands and jobs help you with common scripting around a language/tool
   # so you dont have to copy and paste it everywhere.
   # See the orb documentation here: https://circleci.com/developer/orbs/orb/circleci/python
-  python: circleci/python@1.5.0
+  python: circleci/python@2.1.1
   codecov: codecov/codecov@3.2.4
 
 # Define a job to be invoked later in a workflow.
@@ -42,7 +42,8 @@ jobs:
           # install xTB, xTB-python and CREST
           conda install -y -c conda-forge xtb
           conda install -y -c conda-forge crest
-          pip install torch torchvision torchani
+          conda install pytorch torchvision cpuonly -c pytorch
+          pip install torchani
           # install the dependencies of AQME with pip
           python -m pip install --upgrade pip
           pip install .
