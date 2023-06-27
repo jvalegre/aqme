@@ -295,37 +295,61 @@ def xtb_opt_main(
         if constrained_opt:
             command.append("--cinp")
             command.append(".xcontrol.sample")
+            const_command = command.copy()
 
         if self.args.crest_keywords is not None:
             for keyword in self.args.crest_keywords.split():
                 command.append(keyword)
-
-        run_command(command, f"/{dat_dir}/{name_no_path}.out")
-
         try:
+            run_command(command, f"/{dat_dir}/{name_no_path}.out")
             natoms = open("crest_best.xyz").readlines()[0].strip()
         except FileNotFoundError:
-                self.args.log.write(f"\nx  CREST optimization failed! This might be caused by different reasons. For example, this might happen if you're using metal complexes without specifying any kind of template in the complex_type option (i.e. squareplanar).\n")
+            self.args.log.write(f"\nx  CREST optimization failed! This might be caused by different reasons:\n   1) In metal complexes: using metal complexes without specifying any kind of template in the complex_type option (i.e. squareplanar).\n   2) In TSs: include the \"--noreftopo\" option in CREST with the crest_keywords option (i.e. crest_keywords=\"--noreftopo\").\n   3) In big systems: increase stacksize with the stacksize option (i.e. stacksize=\"4GB\").")
+            try:
+                self.args.log.write(f"\no  Trying the CREST calculations with stacksize=\"4GB\".")
+                os.environ["OMP_STACKSIZE"] = '4GB'
+                run_command(command, f"/{dat_dir}/{name_no_path}.out")
+                natoms = open("crest_best.xyz").readlines()[0].strip()
+            except FileNotFoundError:
+                self.args.log.write(f"\nx  CREST optimization failed again even with stacksize=\"4GB\"! Contact the administrators to check this issue in more detail.\n")
+                if constrained_opt and "--noreftopo" not in command:
+                    try:
+                        self.args.log.write(f"\no  Constraints were detected, trying a new CREST run with --noreftopo. WARNING! Check that your geometry doesn't isomerize!\n")
+                        if self.args.crest_keywords is not None:
+                            for keyword in self.args.crest_keywords.split():
+                                const_command.append(keyword)
+                        const_command.append('--noreftopo')
+                        run_command(const_command, f"/{dat_dir}/{name_no_path}.out")
+                        natoms = open("crest_best.xyz").readlines()[0].strip()
+                    except FileNotFoundError:
+                        self.args.log.write(f"\nx  CREST optimization failed again even with --noreftopo! Contact the administrators to check this issue in more detail.\n")
+                        opt_valid = False
+                else:
+                    opt_valid = False
 
         # CREGEN sorting
-        if self.args.cregen and int(natoms) != 1:
-            self.args.log.write(f"\no  Starting CREGEN sorting")
-            command = ["crest", "crest_best.xyz", "--cregen", "crest_conformers.xyz"]
+        try:
+            if self.args.cregen and int(natoms) != 1 and opt_valid:
+                self.args.log.write(f"\no  Starting CREGEN sorting")
+                command = ["crest", "crest_best.xyz", "--cregen", "crest_conformers.xyz"]
 
-            if self.args.cregen_keywords is not None:
-                for keyword in self.args.cregen_keywords.split():
-                    command.append(keyword)
+                if self.args.cregen_keywords is not None:
+                    for keyword in self.args.cregen_keywords.split():
+                        command.append(keyword)
 
-            run_command(command, f"{dat_dir}/{name_no_path}_cregen.out")
+                run_command(command, f"{dat_dir}/{name_no_path}_cregen.out")
+        except UnboundLocalError:
+            pass
 
         try:
-            if os.path.exists(str(dat_dir) + "/crest_clustered.xyz"):
-                shutil.copy(str(dat_dir) + "/crest_clustered.xyz", xyzoutall)
+            if opt_valid:
+                if os.path.exists(str(dat_dir) + "/crest_clustered.xyz"):
+                    shutil.copy(str(dat_dir) + "/crest_clustered.xyz", xyzoutall)
 
-            elif os.path.exists(str(dat_dir) + "/crest_ensemble.xyz"):
-                shutil.copy(str(dat_dir) + "/crest_ensemble.xyz", xyzoutall)
-            else:
-                shutil.copy(str(dat_dir) + "/crest_conformers.xyz", xyzoutall)
+                elif os.path.exists(str(dat_dir) + "/crest_ensemble.xyz"):
+                    shutil.copy(str(dat_dir) + "/crest_ensemble.xyz", xyzoutall)
+                else:
+                    shutil.copy(str(dat_dir) + "/crest_conformers.xyz", xyzoutall)
         except FileNotFoundError:
             self.args.log.write("\nx  CREST conformer sampling failed! Please, try other options (i.e. include constrains, change the crest_keywords option, etc.)")
             opt_valid = False
@@ -501,13 +525,33 @@ def create_xcontrol(
             n_atoms = int(outlines[0])
             edited_xcontrol += "$metadyn\n"
             edited_xcontrol += "atoms: "
-            for atom_idx in range(1, n_atoms + 1):
-                if atom_idx not in unique_atoms:
+            if n_atoms == 1: # just to avoid bugs when parsing single atoms
+                edited_xcontrol += "atoms: 1"
+            else:
+                # if the list is too long, CREST doesn't read it when called from subprocess() in Python
+                # I need to include ranges to shorten the lists of atoms for the $metadyn section
+                new_cycle = True
+                for atom_idx in range(1, n_atoms + 1):
+                    if new_cycle:
+                        new_cycle = False
+                        start_idx = atom_idx
                     if atom_idx == n_atoms:
-                        edited_xcontrol += f"{atom_idx}\n"
+                        if atom_idx not in unique_atoms:
+                            if start_idx == atom_idx:
+                                edited_xcontrol += f"{start_idx}"
+                            else:
+                                edited_xcontrol += f"{start_idx}-{atom_idx}"
                     else:
-                        edited_xcontrol += f"{atom_idx},"
-        edited_xcontrol += "$end\n"
+                        if atom_idx in unique_atoms:
+                            new_cycle = True
+                            if start_idx == (atom_idx-1):
+                                edited_xcontrol += f"{start_idx}"
+                            else:
+                                edited_xcontrol += f"{start_idx}-{atom_idx-1}"
+                            if atom_idx != n_atoms:
+                                edited_xcontrol += ','
+
+        edited_xcontrol += "\n$end\n"
 
         # write the file
         xcontrol_file = open(name_constraint, "w")
