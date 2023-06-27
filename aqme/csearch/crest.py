@@ -531,25 +531,28 @@ def create_xcontrol(
                 # if the list is too long, CREST doesn't read it when called from subprocess() in Python
                 # I need to include ranges to shorten the lists of atoms for the $metadyn section
                 new_cycle = True
+                start = True
                 for atom_idx in range(1, n_atoms + 1):
                     if new_cycle:
                         new_cycle = False
                         start_idx = atom_idx
-                    if atom_idx == n_atoms:
-                        if atom_idx not in unique_atoms:
-                            if start_idx == atom_idx:
+                    if atom_idx not in unique_atoms:
+                        if start: # just in case the first atom isn't part of the list
+                            start = False
+                            start_idx = atom_idx
+                        elif atom_idx == n_atoms:
+                            if start_idx == (atom_idx):
                                 edited_xcontrol += f"{start_idx}"
                             else:
                                 edited_xcontrol += f"{start_idx}-{atom_idx}"
-                    else:
-                        if atom_idx in unique_atoms:
-                            new_cycle = True
-                            if start_idx == (atom_idx-1):
-                                edited_xcontrol += f"{start_idx}"
-                            else:
-                                edited_xcontrol += f"{start_idx}-{atom_idx-1}"
-                            if atom_idx != n_atoms:
-                                edited_xcontrol += ','
+                    elif atom_idx in unique_atoms and not start:
+                        new_cycle = True
+                        if start_idx == (atom_idx-1):
+                            edited_xcontrol += f"{start_idx}"
+                        else:
+                            edited_xcontrol += f"{start_idx}-{atom_idx-1}"
+                        if atom_idx != n_atoms:
+                            edited_xcontrol += ','
 
         edited_xcontrol += "\n$end\n"
 

@@ -852,7 +852,7 @@ def test_csearch_methods(
                 assert outlines_crest[i+4].find('force constant=0.5') > -1
                 assert outlines_crest[i+5].find('reference=coord.ref') > -1
                 assert outlines_crest[i+6].find('$metadyn') > -1
-                assert outlines_crest[i+7].find('atoms: 4,5,6') > -1
+                assert outlines_crest[i+7].find('atoms: 4-6') > -1
             if line.find('Generating MTD length') > -1:
                 break
         assert constrain_line_found
