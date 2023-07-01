@@ -68,7 +68,7 @@ def load_from_yaml(self):
     # Variables will be updated from YAML file
     try:
         if os.path.exists(self.varfile):
-            if os.path.splitext(self.varfile)[1] in [".yaml", ".yml", ".txt"]:
+            if os.path.basename(Path(self.varfile)).split('.')[1] in ["yaml", "yml", "txt"]:
                 with open(self.varfile, "r") as file:
                     try:
                         param_list = yaml.load(file, Loader=yaml.SafeLoader)
@@ -82,7 +82,7 @@ def load_from_yaml(self):
                         setattr(self, param, param_list[param])
 
     except UnboundLocalError:
-        txt_yaml = "\nx  The specified yaml file containing parameters was not found! Make sure that the valid params file is in the folder where you are running the code."
+        txt_yaml = f"\nx  The specified yaml file containing parameters {self.varfile} was not found or the extension is not compatible ('.yaml', '.yml' or '.txt')! Also, make sure that the params file is in the folder where you are running the code."
 
     return self, txt_yaml
 
@@ -93,7 +93,7 @@ class Logger:
     Class that wraps a file object to abstract the logging.
     """
 
-    # Class Logger to writargs.input.split('.')[0] output to a file
+    # Class Logger to write output to a file
     def __init__(self, filein, append, suffix="dat", verbose=True):
         if verbose:
             self.log = open(f"{filein}_{append}.{suffix}", "w")
@@ -173,7 +173,7 @@ def get_info_input(file):
 
     line = ""
     # input for Gaussian calculations
-    if str(file).split(".")[1] in ["com", "gjf"]:
+    if os.path.basename(Path(file)).split(".")[1] in ["com", "gjf"]:
 
         # Find the command line
         while "#" not in line:
@@ -199,7 +199,7 @@ def get_info_input(file):
             line = next(_iter).strip()
 
     # input for ORCA calculations
-    if str(file).split(".")[1] == ".inp":
+    if os.path.basename(Path(file)).split(".")[1] == "inp":
 
         # Find the line with charge and multiplicity
         while "* xyz" not in line or "* int" not in line:
@@ -666,18 +666,18 @@ def mol_from_sdf_or_mol_or_mol2(input_file, module, args, low_check=None):
     elif module == "csearch":
 
         # using sanitize=True in this case, which is recommended for RDKit calculations
-        filename = os.path.splitext(input_file)[0]
-        extension = os.path.splitext(input_file)[1]
+        filename = os.path.basename(Path(input_file)).split('.')[0]
+        extension = os.path.basename(Path(input_file)).split('.')[1]
 
-        if extension.lower() == ".pdb":
-            input_file = f'{input_file.split(".")[0]}.sdf'
-            extension = ".sdf"
+        if extension.lower() == "pdb":
+            input_file = f'{os.path.dirname(Path(input_file))}/{filename}.sdf'
+            extension = "sdf"
 
-        if extension.lower() == ".sdf":
+        if extension.lower() == "sdf":
             mols = Chem.SDMolSupplier(input_file, removeHs=False)
-        elif extension.lower() == ".mol":
+        elif extension.lower() == "mol":
             mols = [Chem.MolFromMolFile(input_file, removeHs=False)]
-        elif extension.lower() == ".mol2":
+        elif extension.lower() == "mol2":
             mols = [Chem.MolFromMol2File(input_file, removeHs=False)]
 
         IDs, charges, mults = [], [], []
@@ -708,11 +708,12 @@ def mol_from_sdf_or_mol_or_mol2(input_file, module, args, low_check=None):
             suppl.append(mol)
 
         if len(IDs) == 0:
+            path_file = f'{os.path.dirname(input_file)}/{os.path.basename(input_file).split(".")[0]}'
             if len(suppl) > 1:
                 for i in range(len(suppl)):
-                    IDs.append(f"{filename}_{i+1}")
+                    IDs.append(f"{path_file}_{i+1}")
             else:
-                IDs.append(filename)
+                IDs.append(f'{path_file}')
 
         if args.charge is not None:
             for i, mol in enumerate(mols):

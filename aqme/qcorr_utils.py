@@ -208,7 +208,7 @@ def full_check(w_dir_main=os.getcwd(), destination_fullcheck="", files="*.json",
     )
 
     for file in files:
-        file_name = file.replace("/", "\\").split("\\")[-1].split(".")[0]
+        file_name = os.path.basename(Path(file)).split(".")[0]
         with open(file) as json_file:
             cclib_data = json.load(json_file)
 

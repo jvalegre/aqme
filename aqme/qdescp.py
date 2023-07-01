@@ -178,7 +178,7 @@ class qdescp:
                 self.args.log.write('\no  Running RDKit and collecting molecular properties')
                 for file in self.args.files:
                     mol = Chem.SDMolSupplier(file, removeHs=False)[0]
-                    name = file.replace("/", "\\").split("\\")[-1].split(".")[0]
+                    name = os.path.basename(Path(file)).split(".")[0]
                     json_files = glob.glob(
                         str(destination) + "/" + name + "_conf_*.json"
                     )
@@ -188,12 +188,12 @@ class qdescp:
             elif self.args.program.lower() == "nmr":
                 mol_props = None
                 atom_props = ["NMR Chemical Shifts"]
-                if self.args.files[0].split('.')[1].lower() not in ["json"]:
-                    self.args.log.write(f"\nx  The format used ({self.args.files[0].split('.')[1].lower()}) is not compatible with QDESCP with NMR! Formats accepted: json")
+                if os.path.basename(Path(self.args.files[0])).split('.')[1].lower() not in ["json"]:
+                    self.args.log.write(f"\nx  The format used ({os.path.basename(Path(self.args.files[0])).split('.')[1]}) is not compatible with QDESCP with NMR! Formats accepted: json")
                     self.args.log.finalize()
                     sys.exit()
 
-                name = self.args.files[0].replace("/", "\\").split("\\")[-1].split("_conf")[0]
+                name = os.path.basename(Path(self.args.files[0])).split("_conf")[0]
                 json_files = glob.glob(
                     str(os.path.dirname(os.path.abspath(self.args.files[0])))
                     + "/"
@@ -274,15 +274,15 @@ class qdescp:
             "\no  Number of finished jobs from QDESCP", max=len(self.args.files)
         )
         # write input files
-        if self.args.files[0].split('.')[1].lower() not in ["sdf", "xyz", "pdb"]:
-            self.args.log.write(f"\nx  The format used ({self.args.files[0].split('.')[1].lower()}) is not compatible with QDESCP with xTB! Formats accepted: sdf, xyz, pdb")
+        if os.path.basename(Path(self.args.files[0])).split('.')[1].lower() not in ["sdf", "xyz", "pdb"]:
+            self.args.log.write(f"\nx  The format used ({os.path.basename(Path(self.args.files[0])).split('.')[1]}) is not compatible with QDESCP with xTB! Formats accepted: sdf, xyz, pdb")
             self.args.log.finalize()
             sys.exit()
 
         for file in self.args.files:
             xyz_files, xyz_charges, xyz_mults = [], [], []
-            name = os.path.basename(file).split('.')[0]
-            ext = os.path.basename(file).split(".")[1]
+            name = os.path.basename(Path(file)).split('.')[0]
+            ext = os.path.basename(Path(file)).split(".")[1]
             self.args.log.write(f"\n\n   ----- {name} -----")
             if ext.lower() in ["sdf", "xyz", "pdb"]:
                 if ext.lower() == "xyz":
@@ -361,10 +361,10 @@ class qdescp:
                     xyz_mults.append(mults[count])
 
             for xyz_file, charge, mult in zip(xyz_files, xyz_charges, xyz_mults):
-                name_xtb = os.path.basename(xyz_file.split(".")[0])
+                name_xtb = os.path.basename(Path(xyz_file)).split(".")[0]
                 self.args.log.write(f"\no   Running xTB and collecting properties")
                 self.run_sp_xtb(xyz_file, charge, mult, name_xtb, destination)
-                path_name = Path(os.path.dirname(file)).joinpath(os.path.basename(file).split(".")[0])
+                path_name = Path(os.path.dirname(file)).joinpath(os.path.basename(Path(file)).split(".")[0])
                 update_atom_props = self.collect_xtb_properties(path_name, atom_props, update_atom_props)
                 self.cleanup(name_xtb, destination)
             bar.next()

@@ -120,7 +120,7 @@ class qcorr:
 
         # QCORR analysis
         if os.path.basename(self.args.files[0]).split('.')[1].lower() not in ['log','out','json']:
-            self.args.log.write(f"\nx  The format used ({self.args.files[0].split('.')[1].lower()}) is not compatible with QCORR! Formats accepted: log, out, json")
+            self.args.log.write(f"\nx  The format used ({os.path.basename(self.args.files[0]).split('.')[1]}) is not compatible with QCORR! Formats accepted: log, out, json")
             self.args.log.finalize()
             sys.exit()
 
@@ -171,7 +171,7 @@ class qcorr:
         # analyze files
         for file in sorted(self.args.files):
             # get initial cclib data and termination/error types and discard calcs with no data
-            file_name = os.path.basename(file).split(".")[0]
+            file_name = os.path.basename(Path(file)).split(".")[0]
             termination, errortype, cclib_data, outlines, file = self.cclib_init(
                 file, file_name
             )
@@ -617,7 +617,7 @@ class qcorr:
             atoms_com, coords_com, atoms_and_coords = [], [], []
             if len(self.args.isom_type.split(".")) == 1:
                 atoms_and_coords, _, _ = get_info_input(
-                    f'{file.split(".")[0]}.{self.args.isom_type}'
+                    f'{os.path.basename(Path(file)).split(".")[0]}.{self.args.isom_type}'
                 )
 
             elif self.args.isom_type.split(".")[1] != "csv":

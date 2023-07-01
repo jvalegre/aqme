@@ -8,6 +8,7 @@ import sys
 import subprocess
 import pandas as pd
 import ast
+from pathlib import Path
 from rdkit.Chem import AllChem as Chem
 from rdkit.ML.Cluster import Butina
 from aqme.utils import (
@@ -257,7 +258,7 @@ def prepare_cdx_files(args, csearch_file):
 
     job_inputs = []
     for i, (smiles, _) in enumerate(molecules):
-        name = f"{os.path.basename(csearch_file).split('.')[0]}_{str(i)}"
+        name = f"{os.path.basename(Path(csearch_file)).split('.')[0]}_{str(i)}"
         name = add_prefix_suffix(name, args)
 
         obj = (
@@ -292,8 +293,8 @@ def generate_mol_from_cdx(csearch_file):
 def prepare_com_files(args, csearch_file):
     job_inputs = []
 
-    filename = os.path.basename(csearch_file)
-    if filename.split('.')[1] in ["gjf", "com"]:
+    filename = os.path.basename(Path(csearch_file))
+    if os.path.basename(Path(filename)).split('.')[1] in ["gjf", "com"]:
         xyz_file, _, _ = com_2_xyz(csearch_file)
         if args.charge is None:
             _, charge, _ = get_info_input(csearch_file)
@@ -315,12 +316,12 @@ def prepare_com_files(args, csearch_file):
             mult = args.mult
     _ = xyz_2_sdf(xyz_file)
 
-    sdffile = f'{os.path.dirname(csearch_file)}/{filename.split(".")[0]}.sdf'
-
+    sdffile = f'{os.path.dirname(Path(csearch_file))}/{filename.split(".")[0]}.sdf'
     suppl, _, _, _ = mol_from_sdf_or_mol_or_mol2(sdffile, "csearch", args)
 
-    name = filename.split('.')[0]
+    name = f'{filename.split(".")[0]}'
     name = add_prefix_suffix(name, args)
+    name = f'{os.path.dirname(Path(csearch_file))}/{name}'
 
     obj = (
         suppl[0],
@@ -335,7 +336,7 @@ def prepare_com_files(args, csearch_file):
         args.geom
     )
     job_inputs.append(obj)
-    if os.path.basename(csearch_file).split('.')[1] in ["gjf", "com"]:
+    if os.path.basename(Path(csearch_file)).split('.')[1] in ["gjf", "com"]:
         os.remove(xyz_file)
     os.remove(sdffile)
 
@@ -363,9 +364,6 @@ def prepare_sdf_files(args, csearch_file):
     sdffile = f'{os.path.dirname(csearch_file)}/{filename}'
 
     suppl, charges, mults, IDs = mol_from_sdf_or_mol_or_mol2(sdffile, "csearch", args)
-
-    if sdffile.split('.')[0] in ['mol','mol2']:
-        os.remove(f'{sdffile.split(".")[0]}.sdf')
 
     job_inputs = []
     for mol, charge, mult, name in zip(suppl, charges, mults, IDs):
@@ -397,7 +395,7 @@ def xyz_2_sdf(file):
         Filename and extension of an existing .xyz file
     """
 
-    name = str(file).split(".xyz")[0]
+    name = f'{os.path.dirname(Path(file))}/{os.path.basename(Path(file)).split(".xyz")[0]}'
     command_xyz = ["obabel", "-ixyz", file, "-osdf", "-O" + name + ".sdf"]
     subprocess.run(command_xyz, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
@@ -421,7 +419,7 @@ def com_2_xyz(input_file):
     COM to XYZ to SDF for obabel
     """
 
-    filename = os.path.basename(input_file).split('.')[0]
+    filename = os.path.basename(Path(input_file)).split('.')[0]
     path_xyz = f'{os.path.dirname(input_file)}/{filename}.xyz'
 
     # Create the 'xyz' file and/or get the total charge

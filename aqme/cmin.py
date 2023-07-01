@@ -157,15 +157,15 @@ class cmin:
             "\no  Number of finished jobs from CMIN", max=len(self.args.files)
         )
 
-        file_format = '.'+os.path.basename(Path(self.args.files[0])).split('.')[1]
+        file_format = os.path.basename(Path(self.args.files[0])).split('.')[1]
 
-        if file_format.lower() in ['.xyz', '.gjf', '.com']:
+        if file_format.lower() in ['xyz', 'gjf', 'com']:
             for file in self.args.files:
                 prepare_com_files(self.args, file)
-            if file_format.lower() in ['.gjf', '.com']:
+            if file_format.lower() in ['gjf', 'com']:
                 files_temp_extra = glob.glob('*.xyz')
             files_cmin = glob.glob('*.sdf')
-        elif file_format.lower() == '.pdb':
+        elif file_format.lower() == 'pdb':
             for file in self.args.files:
                 command_pdb = [
                     "obabel",
@@ -180,7 +180,7 @@ class cmin:
                     stderr=subprocess.DEVNULL,
                 )
             files_cmin = glob.glob('*.sdf')
-        elif file_format.lower() == '.sdf':
+        elif file_format.lower() == 'sdf':
             files_cmin = self.args.files
         else:
             self.args.log.write(f"\nx  The input format {file_format} is not supported for CMIN refinement! Formats allowed: SDF, XYZ, COM, GJF and PDB")
@@ -231,8 +231,8 @@ class cmin:
         self.args.log.finalize()
 
         # delete extra temporary files created when using XYZ, GJF, COM and PDB files
-        if file_format.lower() in ['.xyz', '.gjf', '.com', '.pdb']:
-            if file_format.lower() in ['.gjf', '.com']:
+        if file_format.lower() in ['xyz', 'gjf', 'com', 'pdb']:
+            if file_format.lower() in ['gjf', 'com']:
                 files_cmin = files_cmin + files_temp_extra
             for temp_file in files_cmin:
                 os.remove(temp_file)
@@ -275,9 +275,9 @@ class cmin:
 
         elif self.args.program.lower() == "xtb":
             # sets charge and mult
-            file_format = os.path.splitext(file)[1]
+            file_format = os.path.basename(Path(file)).split('.')[1]
             charge_input, mult_input, final_mult = None, None, None
-            if file_format.lower() == '.sdf':
+            if file_format.lower() == 'sdf':
                 if self.args.charge is None or self.args.mult is None:
                     # read charge and mult from SDF if possible (i.e. charge/mult of SDFs created with CSEARCH)
                     with open(file, "r") as F:

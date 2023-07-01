@@ -88,7 +88,7 @@ class qprep:
         # retrieves the different files to run in QPREP
         _ = check_files(self,'qprep')
 
-        file_format = os.path.splitext(self.args.files[0])[1].split('.')[1]
+        file_format = os.path.basename(Path(self.args.files[0])).split('.')[1]
         if file_format.lower() not in ['sdf', 'xyz', 'pdb', 'log', 'out', 'json']:
             self.args.log.write(f"\nx  The format used ({file_format}) is not compatible with QPREP! Formats accepted: sdf, xyz, pdb, log, out, json")
             self.args.log.finalize()
@@ -129,7 +129,7 @@ class qprep:
 
         # write input files
         for file in self.args.files:
-            name = os.path.basename(file).split(".")[0]
+            name = os.path.basename(Path(file)).split(".")[0]
             if file_format.lower() in ["sdf", "xyz", "pdb"]:
                 sdf_files = []
                 if file_format.lower() == "xyz":
@@ -228,7 +228,7 @@ class qprep:
             self.args.log.finalize()
 
     def sdf_2_com(self, sdf_file, destination, file_format):
-        sdf_name = os.path.basename(sdf_file).split(".")[0]
+        sdf_name = os.path.basename(Path(sdf_file)).split(".")[0]
         # get atom types, atomic coordinates, charge and multiplicity of all the mols in the SDF file
 
         low_check = None
