@@ -68,7 +68,7 @@ def load_from_yaml(self):
     # Variables will be updated from YAML file
     try:
         if os.path.exists(self.varfile):
-            if os.path.basename(Path(self.varfile)).split('.')[1] in [".yaml", ".yml", ".txt"]:
+            if os.path.basename(Path(self.varfile)).split('.')[1] in ["yaml", "yml", "txt"]:
                 with open(self.varfile, "r") as file:
                     try:
                         param_list = yaml.load(file, Loader=yaml.SafeLoader)
@@ -82,7 +82,7 @@ def load_from_yaml(self):
                         setattr(self, param, param_list[param])
 
     except UnboundLocalError:
-        txt_yaml = "\nx  The specified yaml file containing parameters was not found! Make sure that the valid params file is in the folder where you are running the code."
+        txt_yaml = f"\nx  The specified yaml file containing parameters {self.varfile} was not found or the extension is not compatible ('.yaml', '.yml' or '.txt')! Also, make sure that the params file is in the folder where you are running the code."
 
     return self, txt_yaml
 
