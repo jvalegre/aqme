@@ -88,7 +88,8 @@ def xtb_opt_main(
     Run xTB using subprocess to perform CREST/CREGEN conformer sampling
     """
 
-    name_no_path = name.replace("/", "\\").split("\\")[-1].split(".")[0]
+    name_no_path = os.path.basename(Path(name)).split(".xyz")[0]
+
     # folder to create the files
     if self.args.destination is None:
         if method_opt == 'crest':
@@ -162,7 +163,8 @@ def xtb_opt_main(
             for keyword in self.args.xtb_keywords.split():
                 command1.append(keyword)
 
-        run_command(command1, "{}.out".format(xyzoutxtb1.split(".xyz")[0]))
+        xtb_out1 = f'{os.path.dirname(Path(xyzoutxtb1))}/{os.path.basename(Path(xyzoutxtb1)).split(".xyz")[0]}'
+        run_command(command1, f"{xtb_out1}.out")
         try:
             os.rename(str(dat_dir) + "/xtbopt.xyz", xyzoutxtb1)
         except FileNotFoundError:
@@ -211,7 +213,9 @@ def xtb_opt_main(
                 for keyword in self.args.xtb_keywords.split():
                     command2.append(keyword)
 
-            run_command(command2, "{}.out".format(xyzoutxtb2.split(".xyz")[0]))
+            xtb_out2 = f'{os.path.dirname(Path(xyzoutxtb2))}/{os.path.basename(Path(xyzoutxtb2)).split(".xyz")[0]}'
+            run_command(command2, f"{xtb_out2}.out")
+
             try:
                 os.rename(str(dat_dir) + "/xtbopt.xyz", xyzoutxtb2)
             except FileNotFoundError:
@@ -238,19 +242,21 @@ def xtb_opt_main(
             if self.args.xtb_keywords is not None:
                 for keyword in self.args.xtb_keywords.split():
                     command.append(keyword)
+            xtb_out1 = f'{os.path.dirname(Path(xyzin))}/{os.path.basename(Path(xyzin)).split(".xyz")[0]}'
+            run_command(command, f"{xtb_out1}_xtb1.out")
 
-            run_command(command, f"{xyzin.split('.')[0]}_xtb1.out")
             os.rename(str(dat_dir) + "/xtbopt.xyz", xyzoutxtb1)
         except FileNotFoundError:
             self.args.log.write(f"\nx  There was an error during the xTB pre-optimization. This error is related to parallelization of xTB jobs and is normally observed when using metal complexes in some operative systems/OpenMP versions. AQME is switching to using one processor (nprocs=1).\n")
             self.args.nprocs = 1
             try:
+                xtb_out1 = f'{os.path.dirname(Path(xyzin))}/{os.path.basename(Path(xyzin)).split(".xyz")[0]}'
                 if self.args.xtb_keywords is None:
                     comm_xtb = f"export OMP_STACKSIZE={self.args.stacksize} && export OMP_NUM_THREADS={self.args.nprocs},1 \
-                    && xtb {xyzin} --opt -c {charge} --uhf {int(mult) - 1} >> {xyzin.split('.')[0]}_xtb1.out"
+                    && xtb {xyzin} --opt -c {charge} --uhf {int(mult) - 1} >> {xtb_out1}_xtb1.out"
                 else:
                     comm_xtb = f"export OMP_STACKSIZE={self.args.stacksize} && export OMP_NUM_THREADS={self.args.nprocs},1 \
-                    && xtb {xyzin} --opt -c {charge} --uhf {int(mult) - 1} {self.args.xtb_keywords} >> {xyzin.split('.')[0]}_xtb1.out"
+                    && xtb {xyzin} --opt -c {charge} --uhf {int(mult) - 1} {self.args.xtb_keywords} >> {xtb_out1}_xtb1.out"
                 subprocess.call(comm_xtb, shell=False)
                 os.rename(str(dat_dir) + "/xtbopt.xyz", xyzoutxtb1)
             except FileNotFoundError:
@@ -361,11 +367,9 @@ def xtb_opt_main(
         if self.args.program.lower() == "xtb":
             xyz_files = [xyzoutxtb1]
         for _, file in enumerate(xyz_files):
-            name_conf = file.split(".xyz")[0]
+            name_conf = f'{os.path.basename(Path(file)).split(".xyz")[0]}'
             command_xyz = ["obabel", "-ixyz", file, "-osdf", "-O" + name_conf + ".sdf"]
-            subprocess.run(
-                command_xyz, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
-            )
+            subprocess.run(command_xyz, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
         if self.args.program.lower() == "crest":
             sdwriter = Chem.SDWriter(str(f"{csearch_dir}/{name_no_path}.sdf"))
@@ -373,9 +377,10 @@ def xtb_opt_main(
         for file in sdf_files:
             mol = rdkit.Chem.SDMolSupplier(file, removeHs=False, sanitize=False)
             mol_rd = rdkit.Chem.RWMol(mol[0])
+            file_nopath = f'{os.path.basename(Path(file)).split(".sdf")[0]}'
             if self.args.program.lower() == "xtb":
                 # convert from hartree (default in xtb) to kcal
-                energy_Eh = float(open(f'{file.split(".")[0]}.xyz', "r").readlines()[1].split()[1])
+                energy_Eh = float(open(f'{file_nopath}.xyz', "r").readlines()[1].split()[1])
                 energy_kcal = energy_Eh*627.5
                 mol_rd.SetProp("_Name", name_init)
                 os.remove(file)
@@ -394,7 +399,7 @@ def xtb_opt_main(
                 if passing_geom:
                     sdwriter.write(mol_rd)
                 os.remove(file)
-                os.remove(f'{file.split(".")[0]}.xyz')
+                os.remove(f'{file_nopath}.xyz')
         if self.args.program.lower() == "crest":
             sdwriter.close()
     else:

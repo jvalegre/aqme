@@ -16,6 +16,7 @@ from ipywidgets import interact
 import os
 import subprocess
 import time
+from pathlib import Path
 
 
 from aqme.utils import (
@@ -37,10 +38,10 @@ class vismol:
 
         # write input files
         for file in self.args.files:
-            name = file.replace("/", "\\").split("\\")[-1].split(".")[0]
-            if file.split(".")[1].lower() in ["sdf", "xyz", "pdb"]:
+            name = os.path.basename(Path(file)).split(".")[0]
+            if os.path.basename(Path(file)).split(".")[1].lower() in ["sdf", "xyz", "pdb"]:
                 sdf_files = []
-                if file.split(".")[1].lower() == "xyz":
+                if os.path.basename(Path(file)).split(".")[1].lower() == "xyz":
                     # separate the parent XYZ file into individual XYZ files
                     command_xyz = [
                         "obabel",
@@ -56,7 +57,7 @@ class vismol:
                     )
                     sdf_files.append(f"{name}.sdf")
 
-                elif file.split(".")[1].lower() == "pdb":
+                elif os.path.basename(Path(file)).split(".")[1].lower() == "pdb":
                     command_pdb = ["obabel", "-ipdb", file, "-osdf", f"-O{name}.sdf"]
                     subprocess.run(
                         command_pdb,
@@ -79,7 +80,7 @@ class vismol:
                         description="Style:",
                     ),
                 )
-                if file.split(".")[1].lower() in ["xyz", "pdb"]:
+                if os.path.basename(Path(file)).split(".")[1].lower() in ["xyz", "pdb"]:
                     try:
                         # delete SDF files when the input was an XYZ/PDB file
                         os.remove(sdf_file)

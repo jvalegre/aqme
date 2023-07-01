@@ -93,7 +93,7 @@ class Logger:
     Class that wraps a file object to abstract the logging.
     """
 
-    # Class Logger to writargs.input.split('.')[0] output to a file
+    # Class Logger to write output to a file
     def __init__(self, filein, append, suffix="dat", verbose=True):
         if verbose:
             self.log = open(f"{filein}_{append}.{suffix}", "w")
@@ -173,7 +173,7 @@ def get_info_input(file):
 
     line = ""
     # input for Gaussian calculations
-    if str(file).split(".")[1] in ["com", "gjf"]:
+    if os.path.basename(Path(file)).split(".")[1] in ["com", "gjf"]:
 
         # Find the command line
         while "#" not in line:
@@ -199,7 +199,7 @@ def get_info_input(file):
             line = next(_iter).strip()
 
     # input for ORCA calculations
-    if str(file).split(".")[1] == ".inp":
+    if os.path.basename(Path(file)).split(".")[1] == ".inp":
 
         # Find the line with charge and multiplicity
         while "* xyz" not in line or "* int" not in line:
@@ -670,7 +670,7 @@ def mol_from_sdf_or_mol_or_mol2(input_file, module, args, low_check=None):
         extension = os.path.splitext(input_file)[1]
 
         if extension.lower() == ".pdb":
-            input_file = f'{input_file.split(".")[0]}.sdf'
+            input_file = f'{os.path.basename(Path(input_file)).split(".")[0]}.sdf'
             extension = ".sdf"
 
         if extension.lower() == ".sdf":
