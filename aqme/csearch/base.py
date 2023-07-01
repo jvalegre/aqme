@@ -334,42 +334,42 @@ class csearch:
         """
 
         SUPPORTED_INPUTS = [
-            ".smi",
-            ".sdf",
-            ".cdx",
-            ".csv",
-            ".com",
-            ".gjf",
-            ".mol",
-            ".mol2",
-            ".xyz",
-            ".txt",
-            ".yaml",
-            ".yml",
-            ".rtf",
-            ".pdb",
+            "smi",
+            "sdf",
+            "cdx",
+            "csv",
+            "com",
+            "gjf",
+            "mol",
+            "mol2",
+            "xyz",
+            "txt",
+            "yaml",
+            "yml",
+            "rtf",
+            "pdb",
         ]
 
-        file_format = os.path.splitext(csearch_file)[1]
+        file_format = os.path.basename(Path(csearch_file)).split('.')[1]
         # Checks
         if file_format.lower() not in SUPPORTED_INPUTS:
             self.args.log.write("\nx  Input filetype not currently supported!")
             self.args.log.finalize()
             sys.exit()
 
-        smi_derivatives = [".smi", ".txt", ".yaml", ".yml", ".rtf"]
+        smi_derivatives = ["smi", "txt", "yaml", "yml", "rtf"]
         Extension2inputgen = dict()
         for key in smi_derivatives:
             Extension2inputgen[key] = prepare_smiles_files
-        Extension2inputgen[".csv"] = prepare_csv_files
-        Extension2inputgen[".cdx"] = prepare_cdx_files
-        Extension2inputgen[".gjf"] = prepare_com_files
-        Extension2inputgen[".com"] = prepare_com_files
-        Extension2inputgen[".xyz"] = prepare_com_files
-        Extension2inputgen[".sdf"] = prepare_sdf_files
-        Extension2inputgen[".mol"] = prepare_sdf_files
-        Extension2inputgen[".mol2"] = prepare_sdf_files
-        Extension2inputgen[".pdb"] = prepare_pdb_files
+        Extension2inputgen["csv"] = prepare_csv_files
+        Extension2inputgen["cdx"] = prepare_cdx_files
+        Extension2inputgen["gjf"] = prepare_com_files
+        Extension2inputgen["com"] = prepare_com_files
+        Extension2inputgen["xyz"] = prepare_com_files
+        Extension2inputgen["sdf"] = prepare_sdf_files
+        Extension2inputgen["mol"] = prepare_sdf_files
+        Extension2inputgen["mol2"] = prepare_sdf_files
+        Extension2inputgen["pdb"] = prepare_pdb_files
 
         # Prepare the jobs
         prepare_function = Extension2inputgen[file_format]
@@ -445,7 +445,7 @@ class csearch:
         Function to start conformer generation
         """
 
-        self.args.log.write(f"\n   ----- {name} -----")
+        self.args.log.write(f"\n   ----- {os.path.basename(Path(name))} -----")
 
         if self.args.smi is not None or os.path.basename(Path(self.args.input)).split(".")[1] in ["smi","csv","cdx","txt","yaml","yml","rtf"]:
             (
@@ -506,7 +506,7 @@ class csearch:
                     f'-i{os.path.basename(Path(self.args.input)).split(".")[1]}',
                     f'{name}.{os.path.basename(Path(self.args.input)).split(".")[1]}',
                     "-oxyz",
-                    f"-O{name}_{self.args.program.lower()}.xyz",
+                    f"-O{os.path.dirname(Path(name))}/{os.path.basename(Path(name)).split('.')[0]}_{self.args.program.lower()}.xyz",
                 ]
                 subprocess.run(
                     command_pdb,
@@ -515,7 +515,7 @@ class csearch:
                 )
             elif os.path.basename(Path(self.args.input)).split(".")[1] in ["gjf", "com"]:
                 xyz_file, _, _ = com_2_xyz(f'{name}.{os.path.basename(Path(self.args.input)).split(".")[1]}')
-                os.move(xyz_file, f"{name}_{self.args.program.lower()}.xyz")
+                shutil.move(xyz_file, f"{name}_{self.args.program.lower()}.xyz")
             elif os.path.basename(Path(self.args.input)).split(".")[1] == "xyz":
                 shutil.copy(f"{name}.xyz", f"{name}_{self.args.program.lower()}.xyz")
 
@@ -1136,10 +1136,10 @@ class csearch:
         Function to embed conformers
         """
 
-        is_sdf_mol_or_mol2 = os.path.splitext(self.args.input)[1].lower() in [
-            ".sdf",
-            ".mol",
-            ".mol2",
+        is_sdf_mol_or_mol2 = os.path.basename(Path(self.args.input)).split('.')[1].lower() in [
+            "sdf",
+            "mol",
+            "mol2",
         ]
 
         if is_sdf_mol_or_mol2:

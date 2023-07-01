@@ -317,11 +317,11 @@ def prepare_com_files(args, csearch_file):
     _ = xyz_2_sdf(xyz_file)
 
     sdffile = f'{os.path.dirname(Path(csearch_file))}/{filename.split(".")[0]}.sdf'
-
     suppl, _, _, _ = mol_from_sdf_or_mol_or_mol2(sdffile, "csearch", args)
 
-    name = os.path.basename(Path(filename)).split('.')[0]
+    name = f'{filename.split(".")[0]}'
     name = add_prefix_suffix(name, args)
+    name = f'{os.path.dirname(Path(csearch_file))}/{name}'
 
     obj = (
         suppl[0],
@@ -345,7 +345,7 @@ def prepare_com_files(args, csearch_file):
 
 def prepare_pdb_files(args, csearch_file):
     filename = os.path.basename(csearch_file)
-    sdffile = f'{os.path.dirname(csearch_file)}/{os.path.basename(Path(filename)).split(".")[0]}.sdf'
+    sdffile = f'{os.path.dirname(csearch_file)}/{filename.split(".")[0]}.sdf'
     command_pdb = [
         "obabel",
         "-ipdb",
@@ -364,9 +364,6 @@ def prepare_sdf_files(args, csearch_file):
     sdffile = f'{os.path.dirname(csearch_file)}/{filename}'
 
     suppl, charges, mults, IDs = mol_from_sdf_or_mol_or_mol2(sdffile, "csearch", args)
-
-    if os.path.basename(Path(sdffile)).split('.')[1] in ['mol','mol2']:
-        os.remove(f'{os.path.basename(Path(sdffile)).split(".")[0]}.sdf')
 
     job_inputs = []
     for mol, charge, mult, name in zip(suppl, charges, mults, IDs):
@@ -398,7 +395,7 @@ def xyz_2_sdf(file):
         Filename and extension of an existing .xyz file
     """
 
-    name = os.path.basename(Path(file)).split(".xyz")[0]
+    name = f'{os.path.dirname(Path(file))}/{os.path.basename(Path(file)).split(".xyz")[0]}'
     command_xyz = ["obabel", "-ixyz", file, "-osdf", "-O" + name + ".sdf"]
     subprocess.run(command_xyz, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
