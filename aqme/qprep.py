@@ -307,17 +307,39 @@ class qprep:
 
         return txt
 
+
     def get_tail(self, qprep_data):
         """
         Gets the part of the input file below the molecular coordinates.
         """
 
         txt = ""
+        # if the radius is modified for SMD, it has to be after the genecp info
+        modifysph_line = "" 
 
         if self.args.program.lower() == "gaussian":
             # writes final section if selected
             if self.args.qm_end != "":
-                txt += f"{self.args.qm_end}\n\n"
+
+                qm_end_local = self.args.qm_end
+
+                # check if the 'modifysph' line is in qm_end
+                if "modifysph" in qm_end_local.lower():
+                    end_lines = qm_end_local.split("\n")
+                    for idx, line in enumerate(end_lines):
+                        if "modifysph" in line.lower():
+                            modifysph_idx = idx
+                            break
+
+                    # Remove empty lines after "modifysph"
+                    while end_lines[modifysph_idx+1].strip() == "":
+                        del end_lines[modifysph_idx+1]
+
+                    modifysph_line = end_lines[modifysph_idx] + "\n\n" + end_lines[modifysph_idx+1] + "\n\n"
+                    del end_lines[modifysph_idx:modifysph_idx+2]
+                    qm_end_local = "\n".join(end_lines)
+
+                txt += f"{qm_end_local}\n\n"
 
             if self.args.gen_atoms != [] and len(self.args.gen_atoms) > 0:
                 # writes part for Gen/GenECP
@@ -349,9 +371,11 @@ class qprep:
                     txt += f"{elements_used} 0\n{self.args.bs_gen}\n"
 
                 txt += "\n"
-
+                
+        txt = txt.lstrip('\n')
+        txt += modifysph_line
         return txt
-
+        
     def write(self, qprep_data):
 
         if self.args.program.lower() == "gaussian":
