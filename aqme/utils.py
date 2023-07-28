@@ -333,6 +333,21 @@ def command_line_args():
         "nodup_check",
         "robert"
     ]
+    list_args = [
+        "files",
+        "gen_atoms",
+        "constraints_atoms",
+        "constraints_dist",
+        "constraints_angle",
+        "constraints_dihedral",
+        "atom_types",
+        "cartesians",
+        "nmr_atoms",
+        "nmr_slope",
+        "nmr_intercept",
+        "qdescp_atoms",
+        "geom"
+    ]
 
     for arg in var_dict:
         if arg in bool_args:
@@ -370,7 +385,7 @@ def command_line_args():
                 kwargs[arg_name] = value
             else:
                 # this converts the string parameters to lists
-                if arg_name.lower() in ["files", "gen_atoms", "constraints_atoms", "constraints_dist", "constraints_angle", "constraints_dihedral", "atom_types", "cartesians", "nmr_atoms", "nmr_slope", "nmr_intercept","qdescp_atoms","geom"]:
+                if arg_name.lower() in list_args:
                     value = format_lists(value)
                 kwargs[arg_name] = value
 

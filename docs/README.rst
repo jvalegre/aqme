@@ -92,19 +92,21 @@ Check our `AQME installation in 2 mins <https://youtu.be/VeaBzqIZHbo>`_ video
 for a quick installation guide. In a nutshell, AQME and its dependencies are 
 installed as follows:
 
-1. Install using conda-forge (recommended):  
+1. Install AQME using conda-forge (recommended):  
 
 .. code-block:: shell 
    
    conda install -c conda-forge aqme
 
-2. Install using pip:  
+2. Install AQME using pip, then install RDKit and OpenBabel with conda-forge:  
 
 .. code-block:: shell
 
    pip install aqme
+   conda install -c conda-forge rdkit
+   conda install -c conda-forge openbabel
 
-3. Update to the latest version:  
+3. Update AQME to the latest version:  
 
 .. code-block:: shell
 
