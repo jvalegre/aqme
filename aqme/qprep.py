@@ -278,7 +278,7 @@ class qprep:
                 txt += f'%chk={name_file}.chk\n'
             txt += f"%nprocshared={self.args.nprocs}\n"
             txt += f"%mem={self.args.mem}\n"
-            if self.args.qm_input[:2] != 'p ':
+            if self.args.qm_input[:2] != 'p ' or self.args.qm_input[:2] != 'P ':
                 txt += f"# {self.args.qm_input}\n\n"
             else:
                 txt += f"#{self.args.qm_input}\n\n"
