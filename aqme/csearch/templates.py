@@ -47,7 +47,7 @@ def template_embed(self, mol, complex_type, metal_idx, maxsteps, heavyonly, maxm
     return items
 
 
-def template_embed_optimize(target, template, metal_idx, maxsteps, log, tempalte_n=None, cumulative_algMap=False):
+def template_embed_optimize(target, template, metal_idx, maxsteps, log, tempalte_n=None, cumulative_algMap=[]):
     """
     Embeds a new conformation into a molecule, optimizes it using UFF and
     realigns it.
@@ -375,10 +375,13 @@ def two_embed(molecule, template, metal_idx, neighbours, name, maxsteps, log, ge
     mol_obj, coord_map, alg_map, ci, _ = template_embed_optimize(
         molecule, template, metal_idx, maxsteps, log
     )
-    if ci >= 0:  # writing to mol_object file
-        return [mol_obj], [name], [coord_map], [alg_map], [template], None
 
-    return [], [], [], [], [], None
+    original_atn_list = [None] # only working for Ir squareplanar
+
+    if ci >= 0:  # writing to mol_object file
+        return [mol_obj], [name], [coord_map], [alg_map], [template], original_atn_list
+
+    return [], [], [], [], [], original_atn_list
 
 
 @doc_returns
@@ -398,10 +401,13 @@ def three_embed(molecule, template, metal_idx, neighbours, name, maxsteps, log, 
     mol_obj, coord_map, alg_map, conf_id, _ = template_embed_optimize(
         molecule, template, metal_idx, maxsteps, log
     )
-    if conf_id >= 0:  # writing to mol_object file
-        return [mol_obj], [name], [coord_map], [alg_map], [template], None
+    
+    original_atn_list = [None] # only working for Ir squareplanar
 
-    return [], [], [], [], [], None
+    if conf_id >= 0:  # writing to mol_object file
+        return [mol_obj], [name], [coord_map], [alg_map], [template], original_atn_list
+
+    return [], [], [], [], [], original_atn_list
 
 
 @doc_returns
@@ -516,6 +522,8 @@ def five_embed(molecule, template, metal_idx, neighbours, name, maxsteps, log, g
         [0, 4, 2, 3, 1],
         [0, 4, 3, 1, 2],
     ]
+
+    original_atn_list = []
     for replacement in replacements:
         at0, at1, at2, at3, at4 = [atomic_numbers[r] for r in replacement]
         template.GetAtomWithIdx(0).SetAtomicNum(at0)
@@ -537,5 +545,6 @@ def five_embed(molecule, template, metal_idx, neighbours, name, maxsteps, log, g
             coord_maps.append(coord_map)
             alg_maps.append(alg_map)
             mol_templates.append(template)
+            original_atn_list.append(None) # only working for Ir squareplanar
             counter += 1
-    return mol_objects, name_return, coord_maps, alg_maps, mol_templates, None
+    return mol_objects, name_return, coord_maps, alg_maps, mol_templates, original_atn_list

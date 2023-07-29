@@ -507,7 +507,15 @@ def load_variables(kwargs, aqme_module, create_dat=True):
                 self.log.write(f"AQME v {aqme_version} {time_run} \nCitation: {aqme_ref}\n")
 
                 if self.command_line:
-                    self.log.write(f"Command line used in AQME: aqme {' '.join([str(elem) for elem in sys.argv[1:]])}\n")
+                    cmd_print = ''
+                    for i,elem in enumerate(sys.argv[1:]):
+                        if elem[:2] != '--' and elem != '-h':
+                            cmd_print += f'"{elem}"'
+                        else:
+                            cmd_print += f'{elem}'
+                        if i != len(sys.argv[1:])-1:
+                            cmd_print += ' '
+                    self.log.write(f"Command line used in AQME: python -m aqme {cmd_print}\n")
 
             if error_setup:
                 # this is added to avoid path problems in jupyter notebooks

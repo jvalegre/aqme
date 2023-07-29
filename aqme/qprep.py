@@ -278,9 +278,9 @@ class qprep:
                 txt += f'%chk={name_file}.chk\n'
             txt += f"%nprocshared={self.args.nprocs}\n"
             txt += f"%mem={self.args.mem}\n"
-            if self.args.qm_input[:2] != 'p ' or self.args.qm_input[:2] != 'P ':
+            if self.args.qm_input[:2] not in ['p ','P ']:
                 txt += f"# {self.args.qm_input}\n\n"
-            else:
+            else: # for #p in Gaussian inputs
                 txt += f"#{self.args.qm_input}\n\n"
             txt += f'{name_file}\n\n'
             txt += f'{qprep_data["charge"]} {qprep_data["mult"]}\n'
