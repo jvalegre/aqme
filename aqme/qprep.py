@@ -278,7 +278,10 @@ class qprep:
 
         if self.args.program.lower() == "gaussian":
             if self.args.chk:
-                txt += f'%chk={self.args.chk_path}/{name_file}.chk\n'
+                if self.args.chk_path != '':
+                    txt += f'%chk={self.args.chk_path}/{name_file}.chk\n'
+                else:
+                    txt += f'%chk={name_file}.chk\n'
             txt += f"%nprocshared={self.args.nprocs}\n"
             txt += f"%mem={self.args.mem}\n"
             if self.args.qm_input[:2] not in ['p ','P ']:
