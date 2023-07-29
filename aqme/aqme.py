@@ -60,7 +60,7 @@ def main():
         print("x  RDKit is not installed! You can install the program with 'conda install -c conda-forge rdkit'")
         sys.exit()
 
-    # CSEARCH
+       # CSEARCH
     if args.csearch:
         csearch(**vars(args))
 
