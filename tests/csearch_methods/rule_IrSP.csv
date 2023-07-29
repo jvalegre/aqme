@@ -1,0 +1,3 @@
+smiles,code_name,barrier,charge,mult,complex_type,geom
+[Ir]([P+](CC)(CC)CC)([C-]1N(C)CCN(C)1)(C#[O+])(N=C=O),rule_IrSP_A,14.8,0,1,squareplanar,"[""Ir_squareplanar""]"
+[Ir]([As+](C)(C)C)(n1cc[n+]([H])c1)(C#[O+])(O),rule_IrSP_B,17.9,0,1,squareplanar,"[""Ir_squareplanar""]"

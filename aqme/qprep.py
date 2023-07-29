@@ -31,6 +31,9 @@ Parameters
       Prefix added to all the names  
    chk : bool, default=False
       Include the chk input line in new input files for Gaussian calculations
+   chk_path : str, default=''
+      PATH to store CHK files. For example, if chk_path='root/user, the chk line of the input file would be
+      %chk=root/user/FILENAME.chk
    mem : str, default='4GB'
       Memory for the QM calculations (i) Gaussian: total memory; (ii) ORCA: memory per processor
    nprocs : int, default=2
@@ -275,7 +278,7 @@ class qprep:
 
         if self.args.program.lower() == "gaussian":
             if self.args.chk:
-                txt += f'%chk={name_file}.chk\n'
+                txt += f'%chk={self.args.chk_path}/{name_file}.chk\n'
             txt += f"%nprocshared={self.args.nprocs}\n"
             txt += f"%mem={self.args.mem}\n"
             if self.args.qm_input[:2] not in ['p ','P ']:

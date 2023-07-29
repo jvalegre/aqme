@@ -23,7 +23,7 @@ GAS_CONSTANT = 8.3144621  # J / K / mol
 J_TO_AU = 4.184 * 627.509541 * 1000.0  # UNIT CONVERSION
 T = 298.15
 
-aqme_version = "1.5.1"
+aqme_version = "1.5.2"
 time_run = time.strftime("%Y/%m/%d %H:%M:%S", time.localtime())
 aqme_ref = f"AQME v {aqme_version}, Alegre-Requena, J. V.; Sowndarya, S.; Perez-Soto, R.; Alturaifi, T.; Paton, R. AQME: Automated Quantum Mechanical Environments for Researchers and Educators. Wiley Interdiscip. Rev. Comput. Mol. Sci. 2023, DOI: 10.1002/wcms.1663."
 
@@ -348,6 +348,45 @@ def command_line_args():
         "qdescp_atoms",
         "geom"
     ]
+    int_args = [
+        "opt_steps",
+        "opt_steps_rdkit",
+        "auto_sample",
+        "seed",
+        "max_matches_rmsd",
+        "max_workers",
+        "nsteps_fullmonte",
+        "nrot_fullmonte",
+        "nprocs",
+        "crest_nrun",
+    ]
+    float_args = [
+        "ewin_cmin",
+        "ewin_csearch",
+        "opt_fmax",
+        "degree",
+        "rms_threshold",
+        "energy_threshold",
+        "initial_energy_threshold",
+        "max_mol_wt",
+        "ewin_sample_fullmonte",
+        "ewin_fullmonte",
+        "dup_threshold",
+        "ro_threshold",
+        "amplitude_ifreq",
+        "ifreq_cutoff",
+        "s2_threshold",
+        "vdwfrac",
+        "covfrac",
+        "bond_thres",
+        "angle_thres",
+        "dihedral_thres",
+        "crest_force",
+        "qdescp_temp",
+        "qdescp_acc",
+        "dbstep_r",
+        "crest_nclust",
+    ]
 
     for arg in var_dict:
         if arg in bool_args:
@@ -366,14 +405,6 @@ def command_line_args():
             arg_name = arg.split("--")[1].strip()
         elif arg.find("-") > -1:
             arg_name = arg.split("-")[1].strip()
-        if arg_name in bool_args:
-            value = True
-        elif value == "None":
-            value = None
-        elif value == "False":
-            value = False
-        elif value == "True":
-            value = True
 
         if arg_name in ("h", "help"):
             print(f"o  AQME v {aqme_version} is installed correctly! For more information about the available options, see the documentation in https://github.com/jvalegre/aqme")
@@ -385,8 +416,21 @@ def command_line_args():
                 kwargs[arg_name] = value
             else:
                 # this converts the string parameters to lists
-                if arg_name.lower() in list_args:
+                if arg_name in bool_args:
+                    value = True                    
+                elif arg_name.lower() in list_args:
                     value = format_lists(value)
+                elif arg_name.lower() in int_args:
+                    value = int(value)
+                elif arg_name.lower() in float_args:
+                    value = float(value)
+                elif value == "None":
+                    value = None
+                elif value == "False":
+                    value = False
+                elif value == "True":
+                    value = True
+
                 kwargs[arg_name] = value
 
     # Second, load all the default variables as an "add_option" object
