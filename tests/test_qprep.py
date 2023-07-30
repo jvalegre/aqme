@@ -56,6 +56,8 @@ path_qprep = path_main + "/Example_workflows/QPREP_generating_input_files"
         ("orca", "log_files", "orca_files", False),  # test ORCA input files
         # changing memory, nprocs, chk, charge, mult and suffix
         ("input_params", "json_files", "params_files", False),  # test multiple params
+        # changing chk_path
+        ("chk_path", "json_files", "params_files", False),  # test chk_path
         # using genecp and final lines
         ("final_line", "json_files", "gen_final_files", False),  # test final line
         (
@@ -326,6 +328,35 @@ def test_QPREP_analysis(test_type, init_folder, target_folder, restore_folder):
         assert outlines[2].strip() == line_2
         assert outlines[5].strip() == line_5
         assert outlines[7].strip() == line_7
+
+    elif test_type == "chk_path":
+        cmd_aqme = [
+            "python",
+            "-m",
+            "aqme",
+            "--qprep",
+            "--destination",
+            destination,
+            "--files",
+            f"{w_dir_main}/CH4.json",
+            "--program",
+            "gaussian",
+            "--qm_input",
+            "wb97xd/lanl2dz scrf=(smd,solvent=acetonitrile)",
+            "--suffix",
+            "chk_path",
+            "--chk",
+            "--chk_path",
+            "test/PATH"
+        ]
+        subprocess.run(cmd_aqme)
+
+        outfile = open(f"{destination}/CH4_chk_path.com", "r")
+        outlines = outfile.readlines()
+        outfile.close()
+
+        line_0 = "%chk=test/PATH/CH4_chk_path.chk"
+        assert outlines[0].strip() == line_0
 
     elif test_type == "final_line":
 

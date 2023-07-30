@@ -659,7 +659,7 @@ def test_QCORR_analysis(init_folder, file, command_line, target_folder, restore_
 
             assert "AQME v" in outlines[0]
             assert "Citation: AQME v" in outlines[1]
-            assert "Command line used in AQME: aqme --qcorr" in outlines[3]
+            assert "Command line used in AQME: python -m aqme --qcorr" in outlines[3]
             assert "o  Analyzing output files in" in outlines[5]
             assert (
                 "Basis_set_error1.log: Termination = other, Error type = atomicbasiserror\n"

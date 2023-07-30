@@ -92,19 +92,21 @@ Check our `AQME installation in 2 mins <https://youtu.be/VeaBzqIZHbo>`_ video
 for a quick installation guide. In a nutshell, AQME and its dependencies are 
 installed as follows:
 
-1. Install using conda-forge  
+1. Install AQME using conda-forge (recommended):  
 
 .. code-block:: shell 
    
    conda install -c conda-forge aqme
 
-2. Install using pip:  
+2. Install AQME using pip, then install RDKit and OpenBabel with conda-forge:  
 
 .. code-block:: shell
 
    pip install aqme
+   conda install -c conda-forge rdkit
+   conda install -c conda-forge openbabel
 
-3. Update to the latest version:  
+3. Update AQME to the latest version:  
 
 .. code-block:: shell
 
@@ -194,7 +196,6 @@ Requires the pytest library.
 .. code-block:: shell
 
    cd path/to/aqme/source/code
-   cd tests
    pytest -v
 
 .. tests-end
@@ -408,7 +409,7 @@ Reference
 .. reference-start
 
 If you use any of the AQME modules, please include this citation:  
-AQME v1.4, Alegre-Requena, J. V.; Sowndarya, S.; Pérez-Soto, R.; Alturaifi, T.; 
+  * AQME v1.4, Alegre-Requena, J. V.; Sowndarya, S.; Pérez-Soto, R.; Alturaifi, T.; 
 Paton, R. AQME: Automated Quantum Mechanical Environments for Researchers and Educators. 
 Wiley Interdiscip. Rev. Comput. Mol. Sci. 2023, DOI: 10.1002/wcms.1663.  
   

@@ -388,12 +388,42 @@ class qdescp:
             f.write("$write\n")
             f.write("json=true\n")
 
+        self.xtb_opt = str(dat_dir) + "/{0}.out".format(name+'_opt')
         self.xtb_out = str(dat_dir) + "/{0}.out".format(name)
         self.xtb_json = str(dat_dir) + "/{0}.json".format(name)
         self.xtb_wbo = str(dat_dir) + "/{0}.wbo".format(name)
         self.xtb_gfn1 = str(dat_dir) + "/{0}.gfn1".format(name)
         self.xtb_fukui = str(dat_dir) + "/{0}.fukui".format(name)
         self.xtb_fod = str(dat_dir) + "/{0}.fod".format(name)
+
+        # initial xTB optimization
+        os.chdir(dat_dir)
+        command1 = [
+            "xtb",
+            self.xtb_xyz,
+            "--opt",
+            "--acc",
+            str(self.args.qdescp_acc),
+            "--gfn",
+            "2",
+            "--chrg",
+            str(charge),
+            "--uhf",
+            str(int(mult) - 1),
+            "-P",
+            str(self.args.nprocs),
+        ]
+        if self.args.qdescp_solvent is not None:
+            command1.append("--alpb")
+            command1.append(f"{self.args.qdescp_solvent}")
+        run_command(command1, self.xtb_opt)
+
+        # replaces RDKit geometries with xTB geometries
+        os.remove(self.xtb_xyz)
+        try:
+            os.rename(str(dat_dir) + "/xtbopt.xyz", self.xtb_xyz)
+        except FileNotFoundError:
+            os.rename(str(dat_dir) + "/xtblast.xyz", self.xtb_xyz)
 
         os.chdir(dat_dir)
         command1 = [
@@ -413,6 +443,8 @@ class qdescp:
             str(self.args.qdescp_temp),
             "--input",
             str(self.inp),
+            "-P",
+            str(self.args.nprocs),
         ]
         if self.args.qdescp_solvent is not None:
             command1.append("--alpb")
@@ -436,6 +468,8 @@ class qdescp:
             str(int(mult) - 1),
             "--etemp",
             str(self.args.qdescp_temp),
+            "-P",
+            str(self.args.nprocs),
         ]
         if self.args.qdescp_solvent is not None:
             command2.append("--alpb")
@@ -456,6 +490,8 @@ class qdescp:
             str(int(mult) - 1),
             "--etemp",
             str(self.args.qdescp_temp),
+            "-P",
+            str(self.args.nprocs),
         ]
         if self.args.qdescp_solvent is not None:
             command3.append("--alpb")
@@ -476,6 +512,8 @@ class qdescp:
             str(int(mult) - 1),
             "--etemp",
             str(self.args.qdescp_temp),
+            "-P",
+            str(self.args.nprocs),
         ]
         if self.args.qdescp_solvent is not None:
             command4.append("--alpb")

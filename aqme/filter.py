@@ -245,39 +245,123 @@ def geom_filter(self,mol,geom):
     passing = True
     if geom != []:
         passing = False
-        if len(geom) != 2:
-            self.args.log.write(f"x  The geom option {geom} was not correctly defined, the geometric filter will be turned off! Correct format: [SMARTS,THRESHOLD], for example [CCCO,180] for a 180 degree dihedral")
-            return passing
+        if geom == ['Ir_squareplanar']:
+            new_geom = Ir_SP_filter(mol)
+            if len(new_geom) == 0:
+                self.args.log.write(f"x  This molecule is not one of the supported Ir squareplanar complexes! It was discarded by the geom filter")
+                passing = False
+            passing = matching_fun(self,mol,'Ir_squareplanar',new_geom,passing)
+
+        else:
+            if len(geom) != 2:
+                self.args.log.write(f"x  The geom option {geom} was not correctly defined, the geometric filter will be turned off! Correct format: [SMARTS,THRESHOLD], for example [CCCO,180] for a 180 degree dihedral")
+                return passing
+            passing = matching_fun(self,mol,'regular_rule',geom,passing)
+    
+    return passing
+
+
+def Ir_SP_filter(mol):
+    '''
+    Special geometry rule designed to filter the correct conformers of Ir squareplanar complexes.
+    So far, the ligands tested are those in DOI: https://doi.org/10.1039/D0SC00445F
+    '''
+
+    # get Ir and its potential neighbours
+    smarts_list = ['[Ir][C-]','[Ir][N+]','[Ir][n+]','[Ir][N]','[Ir][n]','[Ir][P+]','[Ir][p+]','[Ir][As+]']
+    Ir_neighs = []
+    L_atom_1, L_atom_2, Ir_idx = None, None, None
+    for smarts in smarts_list:
+        pairs = list(mol.GetSubstructMatches(Chem.MolFromSmarts(smarts)))
+        if len(pairs) > 0:
+            for pair in pairs:
+                if pair not in Ir_neighs:
+                    Ir_neighs.append(pair)
+
+    for Ir_neigh in Ir_neighs:
+        for idx in Ir_neigh:
+            correct_neigh = False
+            # find Ir
+            if mol.GetAtoms()[idx].GetAtomicNum() == 77 and Ir_idx is None:
+                Ir_idx = idx
+            # find right C for lugand of type A and discard all the others from types B and C (from the Chemical Science paper)
+            elif mol.GetAtoms()[idx].GetAtomicNum() == 6:
+                N_neigh = 0
+                for C_neigh in mol.GetAtoms()[idx].GetNeighbors():
+                    if C_neigh.GetAtomicNum() == 7:
+                        N_neigh += 1
+                if N_neigh == 2:
+                    correct_neigh = True
+            
+            # find right N for lugand of type A and discard all the others from types B and C (from the Chemical Science paper)
+            elif mol.GetAtoms()[idx].GetAtomicNum() == 7:
+                C_neigh = 0
+                for N_neigh in mol.GetAtoms()[idx].GetNeighbors():
+                    if N_neigh.GetAtomicNum() == 6:
+                        C_neigh += 1
+                if C_neigh in [2,3]:
+                    correct_neigh = True
+
+            # find P and As atoms from ligands of type A
+            elif mol.GetAtoms()[idx].GetAtomicNum() in [15,33]:
+                correct_neigh = True
+
+            if correct_neigh == True:
+                if L_atom_1 is None:
+                    L_atom_1 = idx
+                elif L_atom_2 is None:
+                    L_atom_2 = idx
+
+    # rule: the two ligands of type A are positioned in trans to each other
+    if None not in [L_atom_1, L_atom_2, Ir_idx]:
+        new_geom = [L_atom_1, Ir_idx, L_atom_2, 180]
+    else:
+        new_geom = []
+
+    return new_geom
+
+def matching_fun(self,mol,type_match,geom,passing):
+    '''
+    Checks matches and analyzed if they pass the geometry rules
+    '''
+
+    # SMARTS match to detect the atoms and calculate the geometric value. Then, check if the value
+    # is within the threshold
+
+    if type_match == 'regular_rule':
+        matches = []
         smarts = geom[0]
         geom_val = geom[1]
-
-        # SMARTS match to detect the atoms and calculate the geometric value. Then, check if the value
-        # is within the threshold
-        matches = []
+        smarts_content = ''.join(smarts.replace('[',']').split(']')) # this way both 'ATOM' and '[ATOM]' work
         try:
             matches = mol.GetSubstructMatches(Chem.MolFromSmarts(smarts))
         except: # I tried to make this except more specific for Boost.Python.ArgumentError, but apparently it's not as simple as it looks
             matches = mol.GetSubstructMatches(Chem.MolFromSmarts(f'[{smarts}]'))
         if len(matches) > 0:
             matches = list(matches[0])
-        mol_conf = mol.GetConformer(0) # Retrieve the only 3D conformer generated in that mol object for rdMolTransforms
-        smarts_content = ''.join(smarts.replace('[',']').split(']')) # this way both 'ATOM' and '[ATOM]' work
-        if smarts_content in periodic_table():
-            if len(matches) >= 1:
-                passing = True
-        elif len(matches) == 2:
-            mol_val = rdMolTransforms.GetBondLength(mol_conf, matches[0], matches[1])
-            passing = (geom_val - self.args.bond_thres) <= mol_val <= (geom_val + self.args.bond_thres)
-        elif len(matches) == 3:
-            mol_val = rdMolTransforms.GetAngleDeg(mol_conf, matches[0], matches[1], matches[2])
-            passing = (geom_val - self.args.angle_thres) <= mol_val <= (geom_val + self.args.angle_thres)
-        elif len(matches) == 4:
-            mol_val = rdMolTransforms.GetDihedralDeg(mol_conf, matches[0], matches[1], matches[2], matches[3])
-            passing = (geom_val - self.args.dihedral_thres) <= mol_val <= (geom_val + self.args.dihedral_thres)
+        
+    elif type_match == 'Ir_squareplanar':
+        matches = geom[:3]
+        geom_val = geom[3]
+        smarts_content = 'Ir_squareplanar'
+
+    mol_conf = mol.GetConformer(0) # Retrieve the only 3D conformer generated in that mol object for rdMolTransforms
+    if smarts_content in periodic_table():
+        if len(matches) >= 1:
+            passing = True
+    elif len(matches) == 2:
+        mol_val = rdMolTransforms.GetBondLength(mol_conf, matches[0], matches[1])
+        passing = (geom_val - self.args.bond_thres) <= mol_val <= (geom_val + self.args.bond_thres)
+    elif len(matches) == 3:
+        mol_val = rdMolTransforms.GetAngleDeg(mol_conf, matches[0], matches[1], matches[2])
+        passing = (geom_val - self.args.angle_thres) <= mol_val <= (geom_val + self.args.angle_thres)
+    elif len(matches) == 4:
+        mol_val = rdMolTransforms.GetDihedralDeg(mol_conf, matches[0], matches[1], matches[2], matches[3])
+        passing = (geom_val - self.args.dihedral_thres) <= mol_val <= (geom_val + self.args.dihedral_thres)
 
     return passing
 
-# Mol filters
+
 def filters(mol, log, molwt_cutoff):
     """
     Applies some basic filters (molwt, salts[currently off], weird atom symbols)

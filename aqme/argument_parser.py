@@ -66,6 +66,7 @@ var_dict = {
     "qm_input": "",
     "ts_input": "opt=(calcfc,noeigen,ts,maxstep=5)",
     "qm_end": "",
+    "chk_path": "",
     "gen_atoms": [],
     "bs_nogen": "",
     "bs_gen": "",

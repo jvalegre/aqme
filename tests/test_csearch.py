@@ -617,6 +617,23 @@ def test_csearch_rdkit_parameters(
             False,
             1
         ),
+        (
+            "rdkit",
+            "rule_IrSP.csv",
+            "rule_IrSP",
+            False,
+            True,
+            "Ir_squareplanar",
+            [],
+            [],
+            [],
+            0,
+            1,
+            None,
+            False,
+            3
+        ),
+
         # compatibility of CREST with metal complexes and templates
         (
             "crest",
@@ -747,6 +764,12 @@ def test_csearch_methods(
                 charge=charge,
                 sample=10
             )
+        elif name == 'rule_IrSP':
+            csearch(
+                program=program,
+                input='rule_IrSP.csv',
+                sample=10
+            )            
         else:
             csearch(
                 w_dir_main=csearch_methods_dir,
@@ -793,7 +816,17 @@ def test_csearch_methods(
         outfile = open(file_crest, "r")
         outlines_crest = outfile.readlines()
         outfile.close()
-    assert os.path.exists(file)
+    if name == 'rule_IrSP':
+        # only the NAME_2_rdkit.sdf file passes the rule. For consistency, file_2 is file (since it exists)
+        for suffix in ['A','B']:
+            file_0 = str(csearch_methods_dir+"/CSEARCH/" + name + "_" + suffix + "_0_" + program + ".sdf")
+            file_1 = str(csearch_methods_dir+"/CSEARCH/" + name + "_" + suffix + "_1_" + program + ".sdf")
+            file = str(csearch_methods_dir+"/CSEARCH/" + name + "_" + suffix + "_2_" + program + ".sdf")
+            assert not os.path.exists(file_0)
+            assert not os.path.exists(file_1)
+            assert os.path.exists(file)
+    else:
+        assert os.path.exists(file)
     mols = rdkit.Chem.SDMolSupplier(file, removeHs=False, sanitize=False)
     assert charge == int(mols[-1].GetProp("Real charge"))
     assert mult == int(mols[-1].GetProp("Mult"))
@@ -891,7 +924,7 @@ def test_csearch_methods(
                 break
         assert constrain_found_xtb
 
-    else:
+    elif name != 'rule_IrSP':
         assert len(mols) == output_nummols
     os.chdir(w_dir_main)
 

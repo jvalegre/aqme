@@ -13,7 +13,7 @@ from aqme.utils import get_conf_RMS
 TEMPLATES_PATH = Path(resource_filename("aqme", "templates"))
 
 
-def template_embed(self, mol, complex_type, metal_idx, maxsteps, heavyonly, maxmatches, name):
+def template_embed(self, mol, complex_type, metal_idx, maxsteps, heavyonly, maxmatches, name, geom):
     """
     Wrapper function to select automatically the appropiate embedding function
     depending on the number of neighbours of the metal center.
@@ -30,8 +30,8 @@ def template_embed(self, mol, complex_type, metal_idx, maxsteps, heavyonly, maxm
     # Generate the embeddings
     neighbours = calc_neighbours(mol, metal_idx)
     embed = embed_functions[len(neighbours)]
-    items = embed(mol, template, neighbours, name, maxsteps, self.args.log)
-
+    items = embed(mol, template, metal_idx, neighbours, name, maxsteps, self.args.log, geom)
+    
     # Filter the results
     molecules = items[0]
     if len(molecules) > 1:
@@ -43,10 +43,11 @@ def template_embed(self, mol, complex_type, metal_idx, maxsteps, heavyonly, maxm
             if has_big_rmsd:
                 ignored.append(i)
         items = [item for i, item in enumerate(items) if i not in ignored]
+
     return items
 
 
-def template_embed_optimize(target, template, maxsteps, log):
+def template_embed_optimize(target, template, metal_idx, maxsteps, log, tempalte_n=None, cumulative_algMap=[]):
     """
     Embeds a new conformation into a molecule, optimizes it using UFF and
     realigns it.
@@ -73,7 +74,7 @@ def template_embed_optimize(target, template, maxsteps, log):
     seed = -1
     force_constant = 10000
 
-    coord_map, alg_map = get_mappings(target, template, conformer_id=-1)
+    coord_map, alg_map, cumulative_algMap = get_mappings(target, template, metal_idx, cumulative_algMap, tempalte_n, conformer_id=-1)
 
     # add H's to molecule
     molecule = Chem.AddHs(target)
@@ -82,7 +83,7 @@ def template_embed_optimize(target, template, maxsteps, log):
 
     if conf_id < 0:
         log.write("Could not embed molecule.")
-        return molecule, None, None, conf_id
+        return molecule, None, None, conf_id, cumulative_algMap
 
     forcefield = Chem.UFFGetMoleculeForceField(molecule, confId=conf_id)
 
@@ -94,7 +95,7 @@ def template_embed_optimize(target, template, maxsteps, log):
     # rotate the embedded conformation onto the core_mol:
     rdMolAlign.AlignMol(molecule, template, atomMap=alg_map, reflect=True, maxIters=100)
 
-    return molecule, coord_map, alg_map, conf_id
+    return molecule, coord_map, alg_map, conf_id, cumulative_algMap
 
 
 def filter_template_mol(molecule_new, mol_objects, heavyonly, max_matches):
@@ -129,7 +130,7 @@ def filter_template_mol(molecule_new, mol_objects, heavyonly, max_matches):
     return True
 
 
-def get_mappings(molecule, template, conformer_id=-1):
+def get_mappings(molecule, template, metal_idx, cumulative_algMap, tempalte_n, conformer_id=-1):
     match = molecule.GetSubstructMatch(template)
     conformer = template.GetConformer(conformer_id)
     coordMap = {}
@@ -137,7 +138,42 @@ def get_mappings(molecule, template, conformer_id=-1):
     for i, atomidx in enumerate(match):
         algMap.append((atomidx, i))
         coordMap[atomidx] = conformer.GetAtomPosition(i)
-    return coordMap, algMap
+    # in cases where the neighbours of the metal are the same types of atoms but within different ligands
+    if algMap in cumulative_algMap and tempalte_n is not None:
+        new_coordMap,new_algMap = {},[]
+        # create a list with the ligands and the metal separated. This is a fix that accounts for
+        # matchings that put the metal atom in different order
+        neigh_coordMap,neigh_algMap = {},[]
+        metal_coordMap,metal_algMap = {},[]
+        for idx,match in algMap:
+            if idx == metal_idx[0]:
+                metal_algMap.append((idx,match))
+                metal_coordMap[idx] = coordMap[idx]
+            else:
+                neigh_algMap.append((idx,match))
+                neigh_coordMap[idx] = coordMap[idx]
+
+        if tempalte_n == 1:
+            rel_idx = [2,3,1]
+        if tempalte_n == 2:
+            rel_idx = [3,1,2]
+        coord_keys = list(neigh_coordMap.keys()) # add ligands
+        new_coordMap[coord_keys[0]] = neigh_coordMap[coord_keys[0]]
+        new_coordMap[coord_keys[rel_idx[0]]] = neigh_coordMap[coord_keys[1]]
+        new_coordMap[coord_keys[rel_idx[1]]] = neigh_coordMap[coord_keys[2]]
+        new_coordMap[coord_keys[rel_idx[2]]] = neigh_coordMap[coord_keys[3]]
+        new_coordMap[metal_idx[0]] = metal_coordMap[metal_idx[0]] # add metal
+        coordMap = new_coordMap
+        new_algMap.append(neigh_algMap[0]) # add ligands
+        new_algMap.append((neigh_algMap[rel_idx[0]][0],neigh_algMap[1][1]))
+        new_algMap.append((neigh_algMap[rel_idx[1]][0],neigh_algMap[2][1]))
+        new_algMap.append((neigh_algMap[rel_idx[2]][0],neigh_algMap[3][1]))
+        new_algMap.append(metal_algMap[0]) # add metal
+        algMap = new_algMap
+
+    cumulative_algMap.append(algMap)
+
+    return coordMap, algMap, cumulative_algMap
 
 
 def load_template(complex_type, log):
@@ -326,7 +362,7 @@ def doc_returns(f):
 # Embedding functions
 @doc_returns
 @doc_parameters
-def two_embed(molecule, template, neighbours, name, maxsteps, log):
+def two_embed(molecule, template, metal_idx, neighbours, name, maxsteps, log, geom):
     """
     Embedding function for linear geometries. Requires 'linear.sdf' template.
     """
@@ -336,18 +372,21 @@ def two_embed(molecule, template, neighbours, name, maxsteps, log):
     template.GetAtomWithIdx(2).SetAtomicNum(53)
 
     # assigning and embedding onto the core
-    mol_obj, coord_map, alg_map, ci = template_embed_optimize(
-        molecule, template, maxsteps, log
+    mol_obj, coord_map, alg_map, ci, _ = template_embed_optimize(
+        molecule, template, metal_idx, maxsteps, log
     )
-    if ci >= 0:  # writing to mol_object file
-        return [mol_obj], [name], [coord_map], [alg_map], [template]
 
-    return [], [], [], [], []
+    original_atn_list = [None] # only working for Ir squareplanar
+
+    if ci >= 0:  # writing to mol_object file
+        return [mol_obj], [name], [coord_map], [alg_map], [template], original_atn_list
+
+    return [], [], [], [], [], original_atn_list
 
 
 @doc_returns
 @doc_parameters
-def three_embed(molecule, template, neighbours, name, maxsteps, log):
+def three_embed(molecule, template, metal_idx, neighbours, name, maxsteps, log, geom):
     """
     Embedding function for trigonal planar geometry. Requires
     'trigonalplanar.sdf' template.
@@ -359,18 +398,21 @@ def three_embed(molecule, template, neighbours, name, maxsteps, log):
     template.GetAtomWithIdx(3).SetAtomicNum(neighbours[2].GetAtomicNum())
 
     # assigning and embedding onto the core
-    mol_obj, coord_map, alg_map, conf_id = template_embed_optimize(
-        molecule, template, maxsteps, log
+    mol_obj, coord_map, alg_map, conf_id, _ = template_embed_optimize(
+        molecule, template, metal_idx, maxsteps, log
     )
-    if conf_id >= 0:  # writing to mol_object file
-        return [mol_obj], [name], [coord_map], [alg_map], [template]
+    
+    original_atn_list = [None] # only working for Ir squareplanar
 
-    return [], [], [], [], []
+    if conf_id >= 0:  # writing to mol_object file
+        return [mol_obj], [name], [coord_map], [alg_map], [template], original_atn_list
+
+    return [], [], [], [], [], original_atn_list
 
 
 @doc_returns
 @doc_parameters
-def four_embed(molecule, template, neighbours, name, maxsteps, log):
+def four_embed(molecule, template, metal_idx, neighbours, name, maxsteps, log, geom):
     """
     Embedding function for squareplanar geometry. Requires 'template-4-and-5.sdf'
     template. Attempts 3 embeddings.
@@ -394,24 +436,44 @@ def four_embed(molecule, template, neighbours, name, maxsteps, log):
     atn1 = neighbours[1].GetAtomicNum()
     atn2 = neighbours[2].GetAtomicNum()
     atn3 = neighbours[3].GetAtomicNum()
+
+    # there are atoms that give problems in the embedding for Ir squareplanar complexes (i.e. As).
+    # This replaces them for P and them restore them back to normal after the embeding (in genConformer_r() from base.py)
+    original_atn = None
+    if geom == ['Ir_squareplanar']:
+        invalid_atn = [33]
+        atn_list = [atn0,atn1,atn2,atn3]
+        for i,atn in enumerate(atn_list):
+            if atn in invalid_atn:
+                original_atn = [atn,neighbours[i].GetIdx()]
+                molecule.GetAtomWithIdx(neighbours[i].GetIdx()).SetAtomicNum(15)
+                atn_list[i] = 15
+
+        atn0 = atn_list[0]
+        atn1 = atn_list[1]
+        atn2 = atn_list[2]
+        atn3 = atn_list[3]
+
     replacements_list = [
         (atn0, atn1, atn2, atn3, 14),
         (atn0, atn2, atn3, atn1, 14),
         (atn0, atn3, atn1, atn2, 14),
     ]
-
+    
+    cumulative_algMap = []
+    original_atn_list = []
     for i, replacements in enumerate(replacements_list):
 
         # Create a copy of the mol object
-        mol = Chem.Mol(template)
+        template_mol = Chem.Mol(template)
 
         # Assign atomic numbers to neighbour atoms
         for idx, atn in enumerate(replacements):
-            mol.GetAtomWithIdx(idx).SetAtomicNum(atn)
+            template_mol.GetAtomWithIdx(idx).SetAtomicNum(atn)
 
         # embedding of the molecule onto the core
-        mol_obj, coord_map, alg_map, conf_id = template_embed_optimize(
-            molecule, mol, maxsteps, log
+        mol_obj, coord_map, alg_map, conf_id, cumulative_algMap = template_embed_optimize(
+            molecule, template_mol, metal_idx, maxsteps, log, tempalte_n=i, cumulative_algMap=cumulative_algMap
         )
 
         if conf_id >= 0:
@@ -420,14 +482,15 @@ def four_embed(molecule, template, neighbours, name, maxsteps, log):
             name_return.append(name_out)
             coord_maps.append(coord_map)
             alg_maps.append(alg_map)
-            mol_templates.append(mol)
+            mol_templates.append(template_mol)
+            original_atn_list.append(original_atn)
 
-    return mol_objects, name_return, coord_maps, alg_maps, mol_templates
+    return mol_objects, name_return, coord_maps, alg_maps, mol_templates, original_atn_list
 
 
 @doc_returns
 @doc_parameters
-def five_embed(molecule, template, neighbours, name, maxsteps, log):
+def five_embed(molecule, template, metal_idx, neighbours, name, maxsteps, log, geom):
     """
     Embedding function for squarepyramidal geometry. Requires
     'template-4-and-5.sdf' template. Attempts 15 embeddings.
@@ -459,6 +522,8 @@ def five_embed(molecule, template, neighbours, name, maxsteps, log):
         [0, 4, 2, 3, 1],
         [0, 4, 3, 1, 2],
     ]
+
+    original_atn_list = []
     for replacement in replacements:
         at0, at1, at2, at3, at4 = [atomic_numbers[r] for r in replacement]
         template.GetAtomWithIdx(0).SetAtomicNum(at0)
@@ -470,8 +535,8 @@ def five_embed(molecule, template, neighbours, name, maxsteps, log):
         template.GetAtomWithIdx(5).SetFormalCharge(1)
 
         # assigning and embedding onto the core
-        mol_obj, coord_map, alg_map, conf_id = template_embed_optimize(
-            molecule, template, maxsteps, log
+        mol_obj, coord_map, alg_map, conf_id, _ = template_embed_optimize(
+            molecule, template, metal_idx, maxsteps, log
         )
         if conf_id >= 0:
             name_out = f"{name}_{counter}"
@@ -480,5 +545,6 @@ def five_embed(molecule, template, neighbours, name, maxsteps, log):
             coord_maps.append(coord_map)
             alg_maps.append(alg_map)
             mol_templates.append(template)
+            original_atn_list.append(None) # only working for Ir squareplanar
             counter += 1
-    return mol_objects, name_return, coord_maps, alg_maps, mol_templates
+    return mol_objects, name_return, coord_maps, alg_maps, mol_templates, original_atn_list

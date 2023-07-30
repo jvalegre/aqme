@@ -89,7 +89,9 @@ General RDKit-based
    geom : list, default=[]
       Geometry rule to pass for the systems. Format: [SMARTS,VALUE]. Geometry rules
       might be atoms, bonds, angles and dihedral. For example, a rule to keep only
-      molecules with C-Pd-C atoms at 180 degrees: ['[C][Pd][C]',180]
+      molecules with C-Pd-C atoms at 180 degrees: ['[C][Pd][C]',180].
+      Special rules (--geom ['RULE_NAME']):
+        1. ['Ir_squareplanar']
    bond_thres : float, default=0.2
       Threshold used to discard bonds in the geom option (+-0.2 A) 
    angle_thres : float, default=30
@@ -567,11 +569,12 @@ class csearch:
                     template_kwargs["maxmatches"] = self.args.max_matches_rmsd
                     template_kwargs["mol"] = mol
                     template_kwargs["name"] = name
+                    template_kwargs["geom"] = geom
                     items = template_embed(self, **template_kwargs)
 
                     total_data = creation_of_dup_csv_csearch(self.args.program.lower())
 
-                    for mol_obj, name_in, coord_map, alg_map, template in zip(*items):
+                    for mol_obj, name_in, coord_map, alg_map, template, original_atn in zip(*items):
                         data = self.conformer_generation(
                             mol_obj,
                             name_in,
@@ -586,7 +589,8 @@ class csearch:
                             geom,
                             coord_map,
                             alg_map,
-                            template
+                            template,
+                            original_atn
                         )
                         frames = [total_data, data]
                         total_data = pd.concat(frames, sort=True)
@@ -645,6 +649,7 @@ class csearch:
         coord_Map=None,
         alg_Map=None,
         mol_template=None,
+        original_atn=None
     ):
         """
         Function to load mol objects and create 3D conformers
@@ -755,7 +760,8 @@ class csearch:
                         alg_Map,
                         mol_template,
                         smi,
-                        geom
+                        geom,
+                        original_atn
                     )
                 except (KeyboardInterrupt, SystemExit):
                     raise
@@ -798,7 +804,8 @@ class csearch:
         alg_Map,
         mol_template,
         smi,
-        geom
+        geom,
+        original_atn
     ):
 
         """
@@ -828,7 +835,8 @@ class csearch:
                 alg_Map,
                 mol_template,
                 smi,
-                geom
+                geom,
+                original_atn
             )
             if self.args.program.lower() in ['rdkit','fullmonte'] :
                 n_seconds = round(time.time() - start_time, 2)
@@ -1057,6 +1065,8 @@ class csearch:
         coord_Map,
         alg_Map,
         mol_template,
+        original_atn,
+        geom
     ):
         """
         If program = RDKit, this replaces iodine back to the metal (if needed) 
@@ -1089,6 +1099,11 @@ class csearch:
 
                 # setting the metal back instead of I
                 set_metal_atomic_number(mol, self.args.metal_idx, self.args.metal_sym)
+
+                # setting the problematic As atoms back when using the Ir_squareplanar geometry rule
+                if geom == ['Ir_squareplanar']:
+                    if original_atn is not None:
+                        mol.GetAtomWithIdx(original_atn[1]).SetAtomicNum(original_atn[0])
             
             # if CREST is used, this RDKit preoptimzed mol object will be employed to initializethe the trajectories
             if self.args.program.lower() in ["crest"]:
@@ -1126,6 +1141,8 @@ class csearch:
                 coord_Map,
                 alg_Map,
                 mol_template,
+                original_atn,
+                geom
             )
             deg += int(self.args.degree)
 
@@ -1220,7 +1237,8 @@ class csearch:
         mult,
         ff,
         smi,
-        geom
+        geom,
+        original_atn
     ):
         """
         Minimizes, gets the energy and filters RDKit conformers after embeding
@@ -1303,6 +1321,8 @@ class csearch:
                         coord_Map,
                         alg_Map,
                         mol_template,
+                        original_atn,
+                        geom
                     )
                 elif self.args.program.lower() in ["crest"]:
                     mol = self.genConformer_r(
@@ -1316,6 +1336,8 @@ class csearch:
                         coord_Map,
                         alg_Map,
                         mol_template,
+                        original_atn,
+                        geom
                     )
                     outmols = [mol]
                     break
@@ -1358,7 +1380,8 @@ class csearch:
         alg_Map,
         mol_template,
         smi,
-        geom
+        geom,
+        original_atn
     ):
 
         """
@@ -1427,7 +1450,8 @@ class csearch:
                 mult,
                 ff,
                 smi,
-                geom
+                geom,
+                original_atn
             )
         except IndexError:
             status = -1
