@@ -15,6 +15,10 @@ Version 1.5.2 [`url <https://github.com/jvalegre/aqme/releases/tag/1.5.2>`__]
       were obtained from RDKit geometries, and they were pretty bad for metal complexes)
    -  The aqme.py file now takes all the arguments from command lines with vars(args) 
       without specifying the argument names explicitly in the code
+   -  Added the chk_path option to add PATH into chk lines
+   -  Added the xtb_opt option to optionally disable the initial xTB geometry optimization in QDESCP
+   -  Fixed a bug when an xTB calc failed, the whole QDESCP workflow stopped (now the specific 
+      conformer just gets ignored)
 
 Version 1.5.1 [`url <https://github.com/jvalegre/aqme/releases/tag/1.5.1>`__]
    -  Added the verbose option. When verbose=False, no DAT and CSV files with summaries are printed
