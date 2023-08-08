@@ -41,6 +41,8 @@ xTB descriptors
    boltz : bool, default=True
       Calculation of Boltzmann averaged xTB properties and addition of RDKit 
       molecular descriptors
+   xtb_opt : bool, default=True
+      Performs an initial xTB geometry optimization before calculating descriptors
 
 DBSTEP descriptors
 ++++++++++++++
@@ -363,10 +365,15 @@ class qdescp:
             for xyz_file, charge, mult in zip(xyz_files, xyz_charges, xyz_mults):
                 name_xtb = os.path.basename(Path(xyz_file)).split(".")[0]
                 self.args.log.write(f"\no   Running xTB and collecting properties")
-                self.run_sp_xtb(xyz_file, charge, mult, name_xtb, destination)
-                path_name = Path(os.path.dirname(file)).joinpath(os.path.basename(Path(file)).split(".")[0])
-                update_atom_props = self.collect_xtb_properties(path_name, atom_props, update_atom_props)
-                self.cleanup(name_xtb, destination)
+                _ = self.run_sp_xtb(xyz_file, charge, mult, name_xtb, destination)
+                # if xTB fails during any of the calculations, that molecule is not used 
+                xtb_passing = True
+                try:
+                    path_name = Path(os.path.dirname(file)).joinpath(os.path.basename(Path(file)).split(".")[0])
+                    update_atom_props = self.collect_xtb_properties(path_name, atom_props, update_atom_props)
+                except UnboundLocalError:
+                    xtb_passing = False
+                self.cleanup(name_xtb, destination, xtb_passing)
             bar.next()
         bar.finish()
 
@@ -397,33 +404,34 @@ class qdescp:
         self.xtb_fod = str(dat_dir) + "/{0}.fod".format(name)
 
         # initial xTB optimization
-        os.chdir(dat_dir)
-        command1 = [
-            "xtb",
-            self.xtb_xyz,
-            "--opt",
-            "--acc",
-            str(self.args.qdescp_acc),
-            "--gfn",
-            "2",
-            "--chrg",
-            str(charge),
-            "--uhf",
-            str(int(mult) - 1),
-            "-P",
-            str(self.args.nprocs),
-        ]
-        if self.args.qdescp_solvent is not None:
-            command1.append("--alpb")
-            command1.append(f"{self.args.qdescp_solvent}")
-        run_command(command1, self.xtb_opt)
+        if self.args.xtb_opt:
+            os.chdir(dat_dir)
+            command_opt = [
+                "xtb",
+                self.xtb_xyz,
+                "--opt",
+                "--acc",
+                str(self.args.qdescp_acc),
+                "--gfn",
+                "2",
+                "--chrg",
+                str(charge),
+                "--uhf",
+                str(int(mult) - 1),
+                "-P",
+                str(self.args.nprocs),
+            ]
+            if self.args.qdescp_solvent is not None:
+                command_opt.append("--alpb")
+                command_opt.append(f"{self.args.qdescp_solvent}")
+            run_command(command_opt, self.xtb_opt)
 
-        # replaces RDKit geometries with xTB geometries
-        os.remove(self.xtb_xyz)
-        try:
-            os.rename(str(dat_dir) + "/xtbopt.xyz", self.xtb_xyz)
-        except FileNotFoundError:
-            os.rename(str(dat_dir) + "/xtblast.xyz", self.xtb_xyz)
+            # replaces RDKit geometries with xTB geometries
+            os.remove(self.xtb_xyz)
+            try:
+                os.rename(str(dat_dir) + "/xtbopt.xyz", self.xtb_xyz)
+            except FileNotFoundError:
+                os.rename(str(dat_dir) + "/xtblast.xyz", self.xtb_xyz)
 
         os.chdir(dat_dir)
         command1 = [
@@ -709,9 +717,16 @@ class qdescp:
         
         return update_atom_props
 
-    def cleanup(self, name, destination):
-        final_json = str(destination) + "/" + name + ".json"
-        shutil.move(self.xtb_json, final_json)
+    def cleanup(self, name, destination, xtb_passing):
+        """
+        Removes files from the xTB calculations that are not relevant and place json files in the 
+        QDESCP folder
+        """
+
+        if xtb_passing: # only move molecules with successful xTB calcs
+            final_json = str(destination) + "/" + name + ".json"
+            shutil.move(self.xtb_json, final_json)
+        
         # delete xTB files that does not contain useful data
         files = glob.glob(f"{destination}/{name}/*")
         for file in files:
