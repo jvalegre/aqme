@@ -573,15 +573,19 @@ class qcorr:
                         cclib_data["metadata"]["keywords line"] = 'SlowConv ' + cclib_data["metadata"]["keywords line"]
 
             if errortype in ["not_specified", "SCFerror"]:
-                if "geometric values" in cclib_data["optimization"]:
-                    RMS_forces = [
-                        row[1] for row in cclib_data["optimization"]["geometric values"]
-                    ]
-                    # cclib uses None when the values are corrupted in the output files, replace None for a large number
-                    RMS_forces = [10000 if val is None else val for val in RMS_forces]
-                    min_RMS = RMS_forces.index(min(RMS_forces))
+                if "optimization" in cclib_data:
+                    if "geometric values" in cclib_data["optimization"]:
+                        RMS_forces = [
+                            row[1] for row in cclib_data["optimization"]["geometric values"]
+                        ]
+                        # cclib uses None when the values are corrupted in the output files, replace None for a large number
+                        RMS_forces = [10000 if val is None else val for val in RMS_forces]
+                        min_RMS = RMS_forces.index(min(RMS_forces))
+                    else:
+                        # for optimizations that fail in the first step
+                        min_RMS = 0
                 else:
-                    # for optimizations that fail in the first step
+                    # for optimizations that fail before the first step
                     min_RMS = 0
 
                 atom_types, cartesians = QM_coords(
