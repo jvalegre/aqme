@@ -299,6 +299,8 @@ class qprep:
                 mem_orca = self.args.mem.split("MB")[0]
             elif "MW" in self.args.mem:
                 mem_orca = self.args.mem.split("MW")[0]
+            else:
+                mem_orca = self.args.mem
             if '%maxcore' not in self.args.qm_input:
                 txt += f"%maxcore {mem_orca}\n"
             pal_included = False

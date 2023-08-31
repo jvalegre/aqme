@@ -365,13 +365,16 @@ class qdescp:
             for xyz_file, charge, mult in zip(xyz_files, xyz_charges, xyz_mults):
                 name_xtb = os.path.basename(Path(xyz_file)).split(".")[0]
                 self.args.log.write(f"\no   Running xTB and collecting properties")
-                _ = self.run_sp_xtb(xyz_file, charge, mult, name_xtb, destination)
-                # if xTB fails during any of the calculations, that molecule is not used 
+                
+                # if xTB fails during any of the calculations (UnboundLocalError), xTB assigns weird
+                # qm5 charges (i.e. > +10 or < -10, ValueError), or the json file is not created 
+                # for some weird xTB error (FileNotFoundError), that molecule is not used 
                 xtb_passing = True
                 try:
+                    _ = self.run_sp_xtb(xyz_file, charge, mult, name_xtb, destination)
                     path_name = Path(os.path.dirname(file)).joinpath(os.path.basename(Path(file)).split(".")[0])
                     update_atom_props = self.collect_xtb_properties(path_name, atom_props, update_atom_props)
-                except UnboundLocalError:
+                except (UnboundLocalError,ValueError,FileNotFoundError):
                     xtb_passing = False
                 self.cleanup(name_xtb, destination, xtb_passing)
             bar.next()
