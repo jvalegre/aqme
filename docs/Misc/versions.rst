@@ -4,6 +4,9 @@
 Versions
 ========
 
+Version 1.5.3 [`url <https://github.com/jvalegre/aqme/releases/tag/1.5.3>`__]
+   -  Fixed bug when GB or MB were not part of the mem argument in QPREP-ORCA
+
 Version 1.5.2 [`url <https://github.com/jvalegre/aqme/releases/tag/1.5.2>`__]
    -  Fixed bug for using constraints with large molecules in CREST (related to long atom lists 
       in the .xcontrol.sample file that weren't compatible with subprocess.run())

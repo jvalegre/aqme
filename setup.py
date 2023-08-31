@@ -38,7 +38,7 @@ setup(
         "progress",
         "ase",
         "numpy",
-        "cclib",
+        "cclib==1.7.2",
         "matplotlib",
         "seaborn",
         "cffi",
