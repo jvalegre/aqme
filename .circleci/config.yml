@@ -42,6 +42,7 @@ jobs:
           source activate base 
           conda activate cheminf
           # install RDKit and OpenBabel
+          python -m pip install --upgrade pip
           pip install rdkit-pypi
           conda install -y -c conda-forge openbabel
           # install xTB, xTB-python and CREST
@@ -50,7 +51,6 @@ jobs:
           conda install pytorch torchvision cpuonly -c pytorch
           pip install torchani
           # install the dependencies of AQME with pip
-          python -m pip install --upgrade pip
           pip install .
           # install and run pytest
           pip install pytest
