@@ -48,7 +48,8 @@ jobs:
           # install xTB, xTB-python and CREST
           conda install -y -c conda-forge xtb
           conda install -y -c conda-forge crest
-          conda install pytorch torchvision cpuonly -c pytorch
+          # conda install pytorch torchvision cpuonly -c pytorch
+          pip install torch --index-url https://download.pytorch.org/whl/cp
           pip install torchani
           # install the dependencies of AQME with pip
           pip install .
