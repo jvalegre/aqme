@@ -38,13 +38,13 @@ jobs:
       - run: |
           # update conda and create env
           conda update -y conda
-          conda create -n cheminf python=3.7
+          conda create -n cheminf python=3.10
           source activate base 
           conda activate cheminf
           # install RDKit and OpenBabel
           python -m pip install --upgrade pip
           pip install rdkit-pypi
-          conda install -y -c conda-forge openbabel
+          conda install -y -c conda-forge openbabel==3.1.0
           # install xTB, xTB-python and CREST
           conda install -y -c conda-forge xtb
           conda install -y -c conda-forge crest
