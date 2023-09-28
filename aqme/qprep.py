@@ -510,7 +510,7 @@ class qprep:
                 self.args.log.write(f"x  {file} does not contain coordinates and/or atom type information")
             if atom_types != [] and cartesians != []:
                 found_coords = True
-        except ValueError:
+        except ValueError: # avoids an issue when comparing arrays with == []
             found_coords = True
 
         # overwrite with user-defined charge and multiplicity (if any)
