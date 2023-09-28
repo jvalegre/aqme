@@ -38,7 +38,7 @@ jobs:
       - run: |
           # update conda and create env
           conda update -y conda
-          conda create -n cheminf python=3.10
+          conda create -n cheminf python=3.7
           source activate base 
           conda activate cheminf
           # install RDKit and OpenBabel

@@ -505,11 +505,8 @@ class qprep:
             atom_types = self.args.atom_types
             cartesians = self.args.cartesians
 
-        try:
-            if atom_types == [] or cartesians == []:
-                self.args.log.write(f"x  {file} does not contain coordinates and/or atom type information")
-        except ValueError:
-            pass
+        if atom_types == [] or cartesians == []:
+            self.args.log.write(f"x  {file} does not contain coordinates and/or atom type information")
 
         # overwrite with user-defined charge and multiplicity (if any)
         # or sets to default charge 0 and mult 1 if the parameters weren't found
