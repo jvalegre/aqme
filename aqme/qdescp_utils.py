@@ -132,9 +132,12 @@ def get_boltz_props(
                 self.args.log.write(f"o  The {os.path.basename(qdescp_nmr)} file containing Boltzmann weighted NMR shifts was successfully created in {self.args.initial_dir}")
 
         elif type.lower() == "xtb":
-            if len(self.args.qdescp_atoms) > 0 or avg_prop == 'NaN':
-                avg_json_data[prop] = avg_prop
-            else:
+            try:
+                if len(self.args.qdescp_atoms) > 0 or avg_prop == 'NaN':
+                    avg_json_data[prop] = avg_prop
+                else:
+                    avg_json_data[prop] = avg_prop.tolist()
+            except ValueError: # avoids an issue when comparing arrays with == 'NaN'
                 avg_json_data[prop] = avg_prop.tolist()
 
     # get weighted molecular properties

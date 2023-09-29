@@ -505,8 +505,13 @@ class qprep:
             atom_types = self.args.atom_types
             cartesians = self.args.cartesians
 
-        if atom_types == [] or cartesians == []:
-            self.args.log.write(f"x  {file} does not contain coordinates and/or atom type information")
+        try:
+            if atom_types == [] or cartesians == []:
+                self.args.log.write(f"x  {file} does not contain coordinates and/or atom type information")
+            if atom_types != [] and cartesians != []:
+                found_coords = True
+        except ValueError: # avoids an issue when comparing arrays with == []
+            found_coords = True
 
         # overwrite with user-defined charge and multiplicity (if any)
         # or sets to default charge 0 and mult 1 if the parameters weren't found
@@ -518,8 +523,5 @@ class qprep:
             mult = self.args.mult
         elif mult is None:
             mult = 1
-
-        if atom_types != [] and cartesians != []:
-            found_coords = True
 
         return atom_types, cartesians, charge, mult, found_coords
