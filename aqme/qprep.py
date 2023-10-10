@@ -412,7 +412,6 @@ class qprep:
         fileout = open(self.args.w_dir_main / comfile, "w")
         fileout.write(header)
 
-        print(self.args.freeze)
         for atom_idx in range(0, len(qprep_data["atom_types"])):
             # writes atom flags
             if atom_idx in self.args.freeze:
