@@ -409,10 +409,12 @@ class qdescp:
         # initial xTB optimization
         if self.args.xtb_opt:
             os.chdir(dat_dir)
+
             command_opt = [
                 "xtb",
                 self.xtb_xyz,
                 "--opt",
+                "vtight",
                 "--acc",
                 str(self.args.qdescp_acc),
                 "--gfn",
@@ -532,6 +534,7 @@ class qdescp:
         run_command(command4, self.xtb_fod)
 
         os.chdir(self.args.initial_dir)
+
 
     def collect_xtb_properties(self,name_initial,atom_props,update_atom_props):
         """

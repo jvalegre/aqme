@@ -101,7 +101,7 @@ var_dict = {
     "prefix": "",
     "qdescp": False,
     "qdescp_temp": 300,
-    "qdescp_acc": 0.2,
+    "qdescp_acc": 0.05,
     "qdescp_solvent": None,
     "boltz": True,
     "nmr_atoms": [6, 1],  # [C,H]

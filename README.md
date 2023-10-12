@@ -29,7 +29,7 @@ AQME is freely available under an [MIT](https://opensource.org/licenses/MIT) Lic
 
 ## Reference
 If you use any of the AQME modules, please include this citation:  
-AQME v1.4, Alegre-Requena, J. V.; Sowndarya, S.; Pérez-Soto, R.; Alturaifi, T.; Paton, R. AQME: Automated Quantum Mechanical Environments for Researchers and Educators. Wiley Interdiscip. Rev. Comput. Mol. Sci. 2023, DOI: 10.1002/wcms.1663.  
+Alegre-Requena, J. V.; Sowndarya, S.; Pérez-Soto, R.; Alturaifi, T.; Paton, R. AQME: Automated Quantum Mechanical Environments for Researchers and Educators. Wiley Interdiscip. Rev. Comput. Mol. Sci. 2023, 13, e1663. (DOI: 10.1002/wcms.1663).  
   
 Additionally, please include the corresponding references for the following programs:  
   * If you used CSEARCH with RDKit methods or from SMILES: [RDKit](https://www.rdkit.org)  
