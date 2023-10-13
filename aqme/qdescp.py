@@ -414,7 +414,7 @@ class qdescp:
                 "xtb",
                 self.xtb_xyz,
                 "--opt",
-                "vtight",
+                str(self.args.qdescp_opt),
                 "--acc",
                 str(self.args.qdescp_acc),
                 "--gfn",
