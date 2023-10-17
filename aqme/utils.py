@@ -331,6 +331,7 @@ def command_line_args():
         "lowest_only",
         "chk",
         "nodup_check",
+        "dbstep_calc",
         "robert"
     ]
     list_args = [
@@ -552,13 +553,30 @@ def load_variables(kwargs, aqme_module, create_dat=True):
 
                 if self.command_line:
                     cmd_print = ''
-                    for i,elem in enumerate(sys.argv[1:]):
-                        if elem[:2] != '--' and elem != '-h':
-                            cmd_print += f'"{elem}"'
+                    cmd_args = sys.argv[1:]
+                    for i,elem in enumerate(cmd_args):
+                        if elem[0] in ['"',"'"]:
+                            elem = elem[1:]
+                        if elem[-1] in ['"',"'"]:
+                            elem = elem[:-1]
+                        if elem != '-h' and elem.split('--')[-1] not in var_dict:
+                            # parse single elements of the list as strings (otherwise the commands cannot be reproduced)
+                            if cmd_args[i-1] == '--qdescp_atoms':
+                                elem = elem[1:-1]
+                                elem = elem.replace(', ',',').replace(' ,',',')
+                                new_elem = []
+                                for smarts_strings in elem.split(','):
+                                    new_elem.append(f'{smarts_strings}'.replace("'",''))
+                                elem = f'{new_elem}'.replace(" ","")
+                            if cmd_args[i-1].split('--')[-1] in var_dict: # check if the previous word is an arg
+                                cmd_print += f'"{elem}'
+                            if i == len(cmd_args)-1 or cmd_args[i+1].split('--')[-1] in var_dict: # check if the next word is an arg, or last word in command
+                                cmd_print += f'"'
                         else:
                             cmd_print += f'{elem}'
-                        if i != len(sys.argv[1:])-1:
+                        if i != len(cmd_args)-1:
                             cmd_print += ' '
+
                     self.log.write(f"Command line used in AQME: python -m aqme {cmd_print}\n")
 
             if error_setup:

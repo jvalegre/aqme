@@ -102,6 +102,7 @@ var_dict = {
     "qdescp": False,
     "qdescp_temp": 300,
     "qdescp_acc": 0.2,
+    "qdescp_opt": 'normal',
     "qdescp_solvent": None,
     "boltz": True,
     "nmr_atoms": [6, 1],  # [C,H]
@@ -111,6 +112,7 @@ var_dict = {
     "nodup_check": False,
     "qdescp_atoms": [],
     "xtb_opt": True,
+    "dbstep_calc": False,
     "dbstep_r": 3.5,
     "robert": True,
     "csv_name": None,

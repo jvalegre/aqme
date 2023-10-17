@@ -4,9 +4,6 @@
 Versions
 ========
 
-Version 1.5.3 [`url <https://github.com/jvalegre/aqme/releases/tag/1.5.3>`__]
-   -  Fixed bug when GB or MB were not part of the mem argument in QPREP-ORCA
-
 Version 1.5.2 [`url <https://github.com/jvalegre/aqme/releases/tag/1.5.2>`__]
    -  Fixed bug for using constraints with large molecules in CREST (related to long atom lists 
       in the .xcontrol.sample file that weren't compatible with subprocess.run())
@@ -22,6 +19,9 @@ Version 1.5.2 [`url <https://github.com/jvalegre/aqme/releases/tag/1.5.2>`__]
    -  Added the xtb_opt option to optionally disable the initial xTB geometry optimization in QDESCP
    -  Fixed a bug when an xTB calc failed, the whole QDESCP workflow stopped (now the specific 
       conformer just gets ignored)
+   -  Fixed bug when GB or MB were not part of the mem argument in QPREP-ORCA
+   -  Added the qdescp_opt option for adjusting the convergence criteria of xTB in QDESCP
+   -  DBSTEP calcs are deactivated by default in QDESCP (activate them with --dbstep_calc)
 
 Version 1.5.1 [`url <https://github.com/jvalegre/aqme/releases/tag/1.5.1>`__]
    -  Added the verbose option. When verbose=False, no DAT and CSV files with summaries are printed
