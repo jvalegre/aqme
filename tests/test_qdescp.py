@@ -86,7 +86,7 @@ def test_qdescp_xtb(file):
     ]
 
     if file == 'test_atom.csv':
-        cmd_qdescp = cmd_qdescp + ["--qdescp_atoms", "[P]"]
+        cmd_qdescp = cmd_qdescp + ["--qdescp_atoms", "[P]", "--dbstep_calc"]
     elif file == 'test_group.csv':
         cmd_qdescp = cmd_qdescp + ["--qdescp_atoms", "[C=O]"]
     elif file in ['test_multigroup.csv','test_robert.csv']:
@@ -181,7 +181,10 @@ def test_qdescp_xtb(file):
 
         # check variables and X_ prefixes in variable names
         if file in ['test_atom.csv','test_multigroup.csv','test_robert.csv']:
-            assert 'P_DBSTEP_Vbur' in pd_boltz
+            if file == 'test_atom.csv':
+                assert 'P_DBSTEP_Vbur' in pd_boltz
+            else:
+                assert 'P_DBSTEP_Vbur' not in pd_boltz
             assert 'P_FUKUI+' in pd_boltz
             
             if file == 'test_atom.csv':
@@ -189,19 +192,19 @@ def test_qdescp_xtb(file):
 
             elif file in ['test_multigroup.csv','test_robert.csv']:
                 assert pd_boltz["NumRotatableBonds"][0] == 2
-                assert 'CC_C1_DBSTEP_Vbur' in pd_boltz
-                assert 'CC_C2_DBSTEP_Vbur' in pd_boltz
+                assert 'CC_C1_DBSTEP_Vbur' not in pd_boltz
+                assert 'CC_C2_DBSTEP_Vbur' not in pd_boltz
                 assert 'CC_C1_FUKUI+' in pd_boltz
                 assert 'CC_C2_FUKUI+' in pd_boltz
                 # max and min values
-                assert 'CC_max_DBSTEP_Vbur' in pd_boltz
+                assert 'CC_max_DBSTEP_Vbur' not in pd_boltz
                 assert 'CC_min_FUKUI+' in pd_boltz
                 if file == 'test_robert.csv':
                     assert 'Name' not in pd_boltz
 
         elif file == 'test_group.csv':
-            assert 'C=O_C_DBSTEP_Vbur' in pd_boltz
-            assert 'C=O_O_DBSTEP_Vbur' in pd_boltz
+            assert 'C=O_C_DBSTEP_Vbur' not in pd_boltz
+            assert 'C=O_O_DBSTEP_Vbur' not in pd_boltz
             assert 'C=O_C_FUKUI+' in pd_boltz
             assert 'C=O_O_FUKUI+' in pd_boltz
 

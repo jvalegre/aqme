@@ -38,6 +38,8 @@ xTB descriptors
       Temperature required for the xTB property calculations
    qdescp_acc : float, default=0.2
       Accuracy required for the xTB property calculations 
+   qdescp_opt : str, default='normal'
+      Convergence criteria required for the xTB property calculations 
    boltz : bool, default=True
       Calculation of Boltzmann averaged xTB properties and addition of RDKit 
       molecular descriptors
@@ -47,6 +49,9 @@ xTB descriptors
 DBSTEP descriptors
 ++++++++++++++
 
+   dbstep_calc : bool, default=False
+      Whether to add a DBSTEP calculation of buried volume when generating atomic descriptors 
+      with qdescp_atoms. To activiate it, add --dbstep_calc to the command line
    dbstep_r : float, default=3.5
       Radius used in the DBSTEP calculations (in A)
 
@@ -160,7 +165,7 @@ class qdescp:
                 "FUKUIrad","s proportion","p proportion","d proportion","Coordination numbers",
                 "Dispersion coefficient C6","Polarizability alpha","FOD","FOD s proportion",
                 "FOD p proportion","FOD d proportion",'DBSTEP_Vbur']
-            if len(self.args.qdescp_atoms) == 0:
+            if len(self.args.qdescp_atoms) == 0 or not self.args.dbstep_calc:
                 atom_props.remove('DBSTEP_Vbur')
 
             update_atom_props = self.gather_files_and_run(destination,atom_props,update_atom_props)
@@ -263,7 +268,10 @@ class qdescp:
         if len(dfs) > 0:
             temp = pd.concat(dfs, ignore_index=True) 
             temp.to_csv(qdescp_csv, index=False)
-            self.args.log.write(f"o  The {qdescp_csv} file containing Boltzmann weighted xTB, DBSTEP and RDKit descriptors was successfully created in {self.args.initial_dir}")
+            if not self.args.dbstep_calc:
+                self.args.log.write(f"o  The {qdescp_csv} file containing Boltzmann weighted xTB and RDKit descriptors was successfully created in {self.args.initial_dir}")
+            else:
+                self.args.log.write(f"o  The {qdescp_csv} file containing Boltzmann weighted xTB, DBSTEP and RDKit descriptors was successfully created in {self.args.initial_dir}")
         else:
             self.args.log.write(f"x  No CSV file containing Boltzmann weighted descriptors was created. This might happen when using the qdescp_atoms option with an atom/group that is not found in any of the calculations")
 
@@ -671,7 +679,6 @@ class qdescp:
                     match_names = []
                     # separates atoms when functional groups are used
                     for atom_idx in sorted_indices:
-                        idx_dbstep, idx_xtb = None, None
                         idx_dbstep = atom_idx+1 # DBSTEP starts from index 1 (i.e. first atom has idx 1)
                         idx_xtb = atom_idx
                         atom_type = mol.GetAtoms()[atom_idx].GetSymbol()
@@ -686,9 +693,9 @@ class qdescp:
                         match_names.append(match_name)
 
                         # calculate DBSTEP descriptors
-                        self.args.log.write(f"\no   Running DBSTEP and collecting properties")
+                        if self.args.dbstep_calc:
+                            self.args.log.write(f"\no   Running DBSTEP and collecting properties")
 
-                        if idx_dbstep is not None:
                             # calculates buried volume to the type of atom selected
                             try:
                                 dbstep_obj = db.dbstep(self.xtb_xyz,atom1=idx_dbstep,r=float(self.args.dbstep_r),commandline=True,verbose=False,volume=True)  
@@ -698,12 +705,12 @@ class qdescp:
                             except TypeError:
                                 self.args.log.write(f'x  WARNING! DBSTEP is not working correctly, DBSTEP properties will not be calculated.')
 
-                            # selects xTB atomic properties
-                            for prop in atom_props:
-                                if prop != 'DBSTEP_Vbur': # set the value of the atom instead of a list of values
-                                    json_data[f'{match_name}_{prop}'] = json_data[prop][idx_xtb]
-                                    if f'{match_name}_{prop}' not in update_atom_props:
-                                        update_atom_props.append(f'{match_name}_{prop}')
+                        # selects xTB atomic properties
+                        for prop in atom_props:
+                            if prop != 'DBSTEP_Vbur': # set the value of the atom instead of a list of values
+                                json_data[f'{match_name}_{prop}'] = json_data[prop][idx_xtb]
+                                if f'{match_name}_{prop}' not in update_atom_props:
+                                    update_atom_props.append(f'{match_name}_{prop}')
 
                     # adding max and min values for functional groups with the same two atoms
                     if len(match_names) > 1 and n_types == 1:
