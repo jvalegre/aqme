@@ -446,15 +446,17 @@ class qprep:
                 try:
                     charge = int(mol.GetProp("Real charge"))
                 except KeyError:
-                    charge = Chem.GetFormalCharge(mol)
+                    pass
+                    # charge = Chem.GetFormalCharge(mol)
                 try:
                     mult = int(mol.GetProp("Mult"))
                 except KeyError:
-                    NumRadicalElectrons = 0
-                    for Atom in mol.GetAtoms():
-                        NumRadicalElectrons += Atom.GetNumRadicalElectrons()
-                    TotalElectronicSpin = NumRadicalElectrons / 2
-                    mult = int((2 * TotalElectronicSpin) + 1)
+                    pass
+                    # NumRadicalElectrons = 0
+                    # for Atom in mol.GetAtoms():
+                    #     NumRadicalElectrons += Atom.GetNumRadicalElectrons()
+                    # TotalElectronicSpin = NumRadicalElectrons / 2
+                    # mult = int((2 * TotalElectronicSpin) + 1)
 
             elif file_format in ["log", "out"]:
                 # detect QM program and number of atoms
