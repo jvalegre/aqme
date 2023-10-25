@@ -182,7 +182,7 @@ def generate_mol_from_csv(args, csv_smiles, index):
             sys.exit()
 
     try:
-        name = csv_smiles.loc[index, "code_name"]
+        name = str(csv_smiles.loc[index, "code_name"])
         name = add_prefix_suffix(name, args)
 
     except KeyError:
