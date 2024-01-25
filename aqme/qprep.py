@@ -413,11 +413,14 @@ class qprep:
         fileout.write(header)
 
         for atom_idx in range(0, len(qprep_data["atom_types"])):
-            # writes atom flags
-            if atom_idx in self.args.freeze:
-                atom_flag='-1'
+            if self.args.freeze != []:
+                # writes atom flags
+                if atom_idx in self.args.freeze:
+                    atom_flag='-1'
+                else:
+                    atom_flag='0'
             else:
-                atom_flag='0'
+                atom_flag=''
             fileout.write(
                 "{0:>2} {1:>3} {2:12.8f} {3:12.8f} {4:12.8f}".format(
                     qprep_data["atom_types"][atom_idx],
