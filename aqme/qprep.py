@@ -51,8 +51,8 @@ Parameters
    e_threshold_qprep : float, default=None
       Only create inputs for conformers below the energy threshold (to the lowest conformer)
       of the SDF file
-   freeze : list of int, defaul=[]
-      Atom indices (zero indexed) to receive -1 flag to be frozen during gaussian op 
+   freeze : list of int, default=[]
+      Atom indices (zero indexed) to receive -1 flag to be frozen during gaussian optimization 
 """
 ######################################################.
 #        This file stores the QPREP class            #
