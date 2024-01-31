@@ -446,7 +446,7 @@ def get_json_data(self, file, cclib_data):
                         atom_idx += 1 
                         if len(outlines[j].split()) == 0:
                             break
-                        elif outlines[j+2].split()[1] == '-1':
+                        elif outlines[j].split()[1] == '-1':
                             cclib_data["metadata"]["frozenatoms"].append(atom_idx)
 
             # Basis set name
