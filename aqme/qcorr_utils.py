@@ -440,10 +440,10 @@ def get_json_data(self, file, cclib_data):
             # Parse for frozen atom flags-- see Heidi Klem
             elif "Symbolic Z-matrix" in line:
                 if len(outlines[i+2].split()) == 5:
-                    atom_idx = 0
+                    atom_idx = -1 # to make atoms 0 indexed
                     cclib_data["metadata"]["frozenatoms"] = []
                     for j in range(i + 2, i + 2 + 10000): # to make sure it goes over all atoms
-                        atom_idx += 1 # atom indices start from 1, not 0, so we do this at start of loop
+                        atom_idx += 1 
                         if len(outlines[j].split()) == 0:
                             break
                         elif outlines[j+2].split()[1] == '-1':
