@@ -710,7 +710,7 @@ class qcorr:
                 bs_gen=self.args.bs_gen,
                 bs_nogen=self.args.bs_nogen,
                 gen_atoms=self.args.gen_atoms,
-                freeze=self.args.freeze, # this might cause an error warning for orca calcs?
+                freeze=self.args.freeze,
                 create_dat=False,
             )
         else:
