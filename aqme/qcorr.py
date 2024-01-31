@@ -687,6 +687,10 @@ class qcorr:
             program = "gaussian"
         elif cclib_data["metadata"]["QM program"].lower().find("orca") > -1:
             program = "orca"
+        
+        # frozen flag treatment-- Heidi Klem
+        if "frozenatoms" in cclib_data["metadata"].keys():
+            self.args.freeze = cclib_data["metadata"]["frozenatoms"]
 
         if program in ["gaussian", "orca"]:
             qprep(
@@ -706,6 +710,7 @@ class qcorr:
                 bs_gen=self.args.bs_gen,
                 bs_nogen=self.args.bs_nogen,
                 gen_atoms=self.args.gen_atoms,
+                freeze=self.args.freeze,
                 create_dat=False,
             )
         else:

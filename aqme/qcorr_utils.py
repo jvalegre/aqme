@@ -436,17 +436,18 @@ def get_json_data(self, file, cclib_data):
                 cclib_data["metadata"]["solvation"] = qm_solv
                 cclib_data["metadata"]["dispersion model"] = qm_disp
                 cclib_data["metadata"]["ground or transition state"] = calc_type
+            
             # Parse for frozen atom flags-- see Heidi Klem
             elif "Symbolic Z-matrix" in line:
                 if len(outlines[i+2].split()) == 5:
                     atom_idx = 0
-                    cclib_data["metadata"]["frozen atoms"] = []
+                    cclib_data["metadata"]["frozenatoms"] = []
                     for j in range(i + 2, i + 2 + 10000): # to make sure it goes over all atoms
                         atom_idx += 1 # atom indices start from 1, not 0, so we do this at start of loop
                         if len(outlines[j].split()) == 0:
                             break
                         elif outlines[j+2].split()[1] == '-1':
-                            cclib_data["metadata"]["frozen atoms"].append(atom_idx)
+                            cclib_data["metadata"]["frozenatoms"].append(atom_idx)
 
             # Basis set name
             elif line[1:15] == "Standard basis":
