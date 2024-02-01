@@ -439,15 +439,20 @@ def get_json_data(self, file, cclib_data):
             
             # Parse for frozen atom flags-- see Heidi Klem
             elif "Symbolic Z-matrix" in line:
-                if len(outlines[i+2].split()) == 5:
-                    atom_idx = -1 # to make atoms 0 indexed
-                    cclib_data["metadata"]["frozenatoms"] = []
-                    for j in range(i + 2, i + 2 + 10000): # to make sure it goes over all atoms
-                        atom_idx += 1 
-                        if len(outlines[j].split()) == 0:
-                            break
-                        elif outlines[j].split()[1] == '-1':
-                            cclib_data["metadata"]["frozenatoms"].append(atom_idx)
+                # A pull request for cclib has been submitted to parse frozen flags
+                #  so if that cclib version exists AQME will use that instead of the except loop.
+                try:  
+                    cclib_data["metadata"]["frozenatoms"] = cclib_data["optimization"]["frozen atom indices"]
+                except:
+                    if len(outlines[i+2].split()) == 5:
+                        atom_idx = -1 # to make atoms 0 indexed
+                        cclib_data["metadata"]["frozenatoms"] = []
+                        for j in range(i + 2, i + 2 + 10000): # to make sure it goes over all atoms
+                            atom_idx += 1 
+                            if len(outlines[j].split()) == 0:
+                                break
+                            elif outlines[j].split()[1] == '-1':
+                                cclib_data["metadata"]["frozenatoms"].append(atom_idx)
 
             # Basis set name
             elif line[1:15] == "Standard basis":
