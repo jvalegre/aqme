@@ -442,7 +442,9 @@ def get_json_data(self, file, cclib_data):
                 # A pull request for cclib has been submitted to parse frozen flags
                 #  so if that cclib version exists AQME will use that instead of the except loop.
                 try:  
-                    cclib_data["metadata"]["frozenatoms"] = cclib_data["optimization"]["frozen atom indices"]
+                    frozen_indices = cclib_data["optimization"]["frozen atom indices"]
+                    # to make zero indexed:
+                    cclib_data["metadata"]["frozenatoms"] = [idx-1 for idx in frozen_indices]
                 except:
                     if len(outlines[i+2].split()) == 5:
                         atom_idx = -1 # to make atoms 0 indexed

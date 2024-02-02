@@ -986,3 +986,85 @@ def test_QCORR_analysis(init_folder, file, command_line, target_folder, restore_
 
 # two tests 1) check that frozen atoms are in success json file
 # 2) check that frozen flags are included in generate .com for failed 
+
+# QCORR tests-- Heidi          
+@pytest.mark.parametrize(
+    "init_folder, file, command_line, target_folder, restore_folder",
+    [
+        # QCORR analysis tests with standard options
+        (
+            "QCORR_1",
+            "CH4.log",
+            "run_QCORR",
+            "success",  # there is a mix up between this and duplicate either one gets taken
+            False,
+        )
+    ]
+)
+
+def test_QCORR_freeze(init_folder, file, command_line, target_folder, restore_folder):
+
+    # start from main folder
+    os.chdir(path_main)
+
+    # copy the test folders
+    if not path.exists(f"{path_main}/Example_workflows_original"):
+        shutil.copytree(
+            f"{path_main}/Example_workflows", f"{path_main}/Example_workflows_original"
+        )
+
+    # runs the program with the different tests
+    w_dir_main = f"{path_qcorr}/{init_folder}"
+    cmd_aqme = [
+        "python",
+        "-m",
+        "aqme",
+        "--qcorr",
+        "--files",
+        f"{w_dir_main}/*.log",
+        "--freq_conv",
+        "opt=(calcfc,maxstep=5)",
+    ]
+
+    if init_folder == "QCORR_1":
+        if command_line is not None:
+            subprocess.run(cmd_aqme)
+
+        if file.split(".")[-1].lower() == "log":
+            # ensure the output file moves to the right folder
+            assert path.exists(f"{w_dir_main}/{target_folder}/{file}")
+
+            # ensure that the com files are generated correctly
+            if file.split(".")[0] in [
+                "CH4",
+                "MeOH_G09",
+                "z_CH4_duplicate",
+                "Basis_set_error1",
+                "Basis_set_error2",
+                "CH4_before_E",
+                "bpinene_spin_contamin",
+                "TS_CH3HCH3",
+                "TS_CH3HCH3_no_imag_freq",
+                "CH4_SP",
+                "H_freq",
+                "H_SP",
+                "MeOH_NMR",
+                "CO2_linear_4freqs",
+                "freq_ok_YYNN",
+                "CH4_T1_SP_spin_contamin",
+            ]:
+                assert not path.exists(
+                    f'{w_dir_main}/failed/run_1/fixed_QM_inputs/{file.split(".")[0]}.com'
+                )
+
+            else:
+                assert path.exists(
+                    f'{w_dir_main}/failed/run_1/fixed_QM_inputs/{file.split(".")[0]}.com'
+                )
+
+                # ensure that QCORR applies the correct structural distortions to the errored calcs
+                if file.split(".")[0] == "MeOH_G09_FAIL":
+                    line_2 = "# opt=calcfc freq=noraman cc-pvtz scrf=(solvent=chloroform,pcm) pbe1pbe g09defaults"
+                    line_6 = "0 1"
+                    line_8 = "H   1.13330900   0.94774000  -0.00000300"
+                    line_10 = "H   0.97796200  -0.55747000   0.87365300"
