@@ -999,14 +999,14 @@ def test_QCORR_analysis(init_folder, file, command_line, target_folder, restore_
             "run_QCORR",
             "failed/run_1/fix_QM_inputs", 
             False,
-        )
+        ),
         (
             "QCORR_8",
             "1oh0_cluster_success.log",
             "run_QCORR",
             "success/json_files", 
             False,
-        )
+        ),
         (
             None,
             None,
