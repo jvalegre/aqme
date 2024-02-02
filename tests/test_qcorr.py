@@ -1057,3 +1057,4 @@ def test_QCORR_freeze(init_folder, file, command_line, target_folder, restore_fo
             outlines = f.readlines()
         assert outlines[7].strip() ==  "H   0   8.14672600   6.38329100   5.31382000"
         assert outlines[8].strip() ==  "C  -1   7.64735700   5.94364800   4.44095100"
+
