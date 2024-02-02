@@ -1043,6 +1043,7 @@ def test_QCORR_freeze(init_folder, file, command_line, target_folder, restore_fo
     subprocess.run(cmd_aqme)
     
     if "success" in file:
+        print(target_folder, file)
         assert path.exists(f"{w_dir_main}/{target_folder}/{file.split('.')[0]}.json")
         with open(f"{w_dir_main}/{target_folder}/{file.split('.')[0]}.json") as f:
             json_data = json.load(f)
