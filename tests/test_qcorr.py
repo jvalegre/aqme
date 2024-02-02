@@ -997,7 +997,7 @@ def test_QCORR_analysis(init_folder, file, command_line, target_folder, restore_
             "QCORR_8",
             "1oh0_cluster_failed.log",
             "run_QCORR",
-            "failed/run_1/fix_QM_inputs", 
+            "failed/run_1/fixed_QM_inputs", 
             False,
         ),
         (
