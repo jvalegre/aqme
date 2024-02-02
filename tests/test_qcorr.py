@@ -983,3 +983,6 @@ def test_QCORR_analysis(init_folder, file, command_line, target_folder, restore_
         for dat_file in dat_files:
             if "QCORR" in dat_file:
                 os.remove(dat_file)
+
+# two tests 1) check that frozen atoms are in success json file
+# 2) check that frozen flags are included in generate .com for failed 

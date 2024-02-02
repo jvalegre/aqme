@@ -591,3 +591,69 @@ def test_QPREP_analysis(test_type, init_folder, target_folder, restore_folder):
         for dat_file in dat_files:
             if "QPREP" in dat_file:
                 os.remove(dat_file)
+
+# QPREP tests-- Heidi
+@pytest.mark.parametrize(
+    "test_type, init_folder, target_folder, restore_folder",
+    [
+        # QPREP analysis tests with standard options
+        ("com_gen", "pdb_files", "com_files", False),  # test pdb inputs
+        ("com_gen", "log_files/frozen_atoms", "com_files", False),  # test log inputs
+    ]
+)
+def test_QPREP_freeze(test_type, init_folder, target_folder, restore_folder):
+    qm_input = "opt wb97xd/6-31G(d) freq=noraman"
+    
+    w_dir_main = f"{path_qprep}/{init_folder}"
+    destination = f"{path_qprep}/{init_folder}/{target_folder}"
+
+    if test_type == "com_gen":
+        if init_folder == "pdb_files":
+            files = "1oh0_cluster.pdb"
+            files_assert = ["1oh0_cluster_conf_1.com"]
+            non_frozen_atom_line = "H   0   7.30900000   6.14100000   6.11900000"
+            frozen_atom_line_1 = "C  -1   6.94300000   5.76800000   5.15400000"
+            frozen_atom_line_2 = "H   0   6.85900000   6.61700000   4.46600000"
+            frozen_atoms = [1,20,34,44,63,70,87,101,119,133,148,165,179,190,205,213]
+        
+        elif init_folder == "log_files/frozen_atoms":
+            files = "1oh0_cluster.log"
+            files_assert = ["1oh0_cluster.com"]
+            non_frozen_atom_line = "H   0   7.30907100   6.14140700   6.11971900"
+            frozen_atom_line_1 = "C  -1   6.94314400   5.76868400   5.15438500"
+            frozen_atom_line_2 = "H   0   6.85946400   6.61728300   4.46695300"
+            # Need to edit qprep to read frozen flags from .log files-- Heidi Klem
+            frozen_atoms = [1,20,34,44,63,70,87,101,119,133,148,165,179,190,205,213]
+
+        cmd_aqme = [
+            "python",
+            "-m",
+            "aqme",
+            "--qprep",
+            "--destination",
+            destination,
+            "--files",
+            f"{w_dir_main}/{files}",
+            "--program",
+            "gaussian",
+            "--qm_input",
+            qm_input,
+            "--freeze",
+            frozen_atoms
+        ]
+        subprocess.run(cmd_aqme)
+
+        if init_folder in ["xyz_files", "pdb_files"]:
+            # make sure all the generated SDF files are removed
+            assert len(glob.glob(f"{w_dir_main}/*.sdf")) == 0
+
+        for file in files_assert:
+            assert path.exists(f'{destination}/{file.split(".")[0]}.com')
+            outfile = open(f'{destination}/{file.split(".")[0]}.com', "r")
+            outlines = outfile.readlines()
+            outfile.close()
+
+        assert outlines[7].strip() == non_frozen_atom_line
+        assert outlines[8].strip() == frozen_atom_line_1
+        assert outlines[9].strip() == frozen_atom_line_2
+     
