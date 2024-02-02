@@ -615,6 +615,22 @@ def test_QPREP_freeze(test_type, init_folder, target_folder, restore_folder):
             frozen_atom_line_1 = "C  -1   6.94300000   5.76800000   5.15400000"
             frozen_atom_line_2 = "H   0   6.85900000   6.61700000   4.46600000"
             frozen_atoms = [1,20,34,44,63,70,87,101,119,133,148,165,179,190,205,213]
+            cmd_aqme = [
+                "python",
+                "-m",
+                "aqme",
+                "--qprep",
+                "--destination",
+                destination,
+                "--files",
+                f"{w_dir_main}/{files}",
+                "--program",
+                "gaussian",
+                "--qm_input",
+                qm_input,
+                "--freeze",
+                frozen_atoms
+                ]
         
         elif init_folder == "log_files/frozen_atoms":
             files = "1oh0_cluster.log"
@@ -622,23 +638,22 @@ def test_QPREP_freeze(test_type, init_folder, target_folder, restore_folder):
             non_frozen_atom_line = "H   0   7.30907100   6.14140700   6.11971900"
             frozen_atom_line_1 = "C  -1   6.94314400   5.76868400   5.15438500"
             frozen_atom_line_2 = "H   0   6.85946400   6.61728300   4.46695300"
+            # does not have --freeze argument since that should be parsed from the log file
+            cmd_aqme = [
+                "python",
+                "-m",
+                "aqme",
+                "--qprep",
+                "--destination",
+                destination,
+                "--files",
+                f"{w_dir_main}/{files}",
+                "--program",
+                "gaussian",
+                "--qm_input",
+                qm_input,
+                ]
 
-        cmd_aqme = [
-            "python",
-            "-m",
-            "aqme",
-            "--qprep",
-            "--destination",
-            destination,
-            "--files",
-            f"{w_dir_main}/{files}",
-            "--program",
-            "gaussian",
-            "--qm_input",
-            qm_input,
-            "--freeze",
-            frozen_atoms
-        ]
         subprocess.run(cmd_aqme)
 
         if init_folder in ["xyz_files", "pdb_files"]:
