@@ -622,8 +622,6 @@ def test_QPREP_freeze(test_type, init_folder, target_folder, restore_folder):
             non_frozen_atom_line = "H   0   7.30907100   6.14140700   6.11971900"
             frozen_atom_line_1 = "C  -1   6.94314400   5.76868400   5.15438500"
             frozen_atom_line_2 = "H   0   6.85946400   6.61728300   4.46695300"
-            # Need to edit qprep to read frozen flags from .log files-- Heidi Klem
-            frozen_atoms = [1,20,34,44,63,70,87,101,119,133,148,165,179,190,205,213]
 
         cmd_aqme = [
             "python",
