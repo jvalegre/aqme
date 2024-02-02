@@ -7,6 +7,7 @@
 import os
 from os import path
 import glob
+import json
 import pytest
 import shutil
 import subprocess
@@ -991,14 +992,29 @@ def test_QCORR_analysis(init_folder, file, command_line, target_folder, restore_
 @pytest.mark.parametrize(
     "init_folder, file, command_line, target_folder, restore_folder",
     [
-        # QCORR analysis tests with standard options
+        # QCORR analysis parsing and recording frozen atom flags
         (
-            "QCORR_1",
-            "CH4.log",
+            "QCORR_8",
+            "1oh0_cluster_failed.log",
             "run_QCORR",
-            "success",  # there is a mix up between this and duplicate either one gets taken
+            "failed/run_1/fix_QM_inputs", 
             False,
         )
+        (
+            "QCORR_8",
+            "1oh0_cluster_success.log",
+            "run_QCORR",
+            "success/json_files", 
+            False,
+        )
+        (
+            None,
+            None,
+            None,
+            None,
+            True,
+        ),  # reset the initial folder to start another set of tests
+
     ]
 )
 
@@ -1021,50 +1037,22 @@ def test_QCORR_freeze(init_folder, file, command_line, target_folder, restore_fo
         "aqme",
         "--qcorr",
         "--files",
-        f"{w_dir_main}/*.log",
-        "--freq_conv",
-        "opt=(calcfc,maxstep=5)",
+        f"{w_dir_main}/{file}",
     ]
 
-    if init_folder == "QCORR_1":
-        if command_line is not None:
-            subprocess.run(cmd_aqme)
+    subprocess.run(cmd_aqme)
+    
+    if "success" in file:
+        assert path.exists(f"{w_dir_main}/{target_folder}/{file.split('.')[0]}.json")
+        with open(f"{w_dir_main}/{target_folder}/{file.split('.')[0]}.json") as f:
+            json_data = json.load(f)
+        frozen_atoms = [1,20,34,44,63,70,87,101,119,133,148,165,179,190,205,213]
+        assert "frozenatoms" in json_data["metadata"].keys()
+        assert json_data["metadata"]["frozenatoms"] == frozen_atoms
 
-        if file.split(".")[-1].lower() == "log":
-            # ensure the output file moves to the right folder
-            assert path.exists(f"{w_dir_main}/{target_folder}/{file}")
-
-            # ensure that the com files are generated correctly
-            if file.split(".")[0] in [
-                "CH4",
-                "MeOH_G09",
-                "z_CH4_duplicate",
-                "Basis_set_error1",
-                "Basis_set_error2",
-                "CH4_before_E",
-                "bpinene_spin_contamin",
-                "TS_CH3HCH3",
-                "TS_CH3HCH3_no_imag_freq",
-                "CH4_SP",
-                "H_freq",
-                "H_SP",
-                "MeOH_NMR",
-                "CO2_linear_4freqs",
-                "freq_ok_YYNN",
-                "CH4_T1_SP_spin_contamin",
-            ]:
-                assert not path.exists(
-                    f'{w_dir_main}/failed/run_1/fixed_QM_inputs/{file.split(".")[0]}.com'
-                )
-
-            else:
-                assert path.exists(
-                    f'{w_dir_main}/failed/run_1/fixed_QM_inputs/{file.split(".")[0]}.com'
-                )
-
-                # ensure that QCORR applies the correct structural distortions to the errored calcs
-                if file.split(".")[0] == "MeOH_G09_FAIL":
-                    line_2 = "# opt=calcfc freq=noraman cc-pvtz scrf=(solvent=chloroform,pcm) pbe1pbe g09defaults"
-                    line_6 = "0 1"
-                    line_8 = "H   1.13330900   0.94774000  -0.00000300"
-                    line_10 = "H   0.97796200  -0.55747000   0.87365300"
+    if "failed" in file:
+        assert path.exists(f"{w_dir_main}/{target_folder}/{file.split('.')[0]}.com")
+        with open(f"{w_dir_main}/{target_folder}/{file.split('.')[0]}.com") as f:
+            outlines = f.readlines()
+        assert outlines[7].strip() ==  "H   0   8.14672600   6.38329100   5.31382000"
+        assert outlines[8].strip() ==  "C  -1   7.64735700   5.94364800   4.44095100"
