@@ -626,7 +626,6 @@ def test_QPREP_freeze(test_type, init_folder, target_folder, restore_folder):
                 "python",
                 "-m",
                 "aqme",
-
                 "--qprep",
                 "--destination",
                 destination,
@@ -637,7 +636,7 @@ def test_QPREP_freeze(test_type, init_folder, target_folder, restore_folder):
                 "--qm_input",
                 qm_input,
                 "--freeze",
-                frozen_atoms
+                str(frozen_atoms)
                 ]
         
         elif init_folder == "log_files/frozen_atoms":
