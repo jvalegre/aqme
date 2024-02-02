@@ -603,6 +603,12 @@ def test_QPREP_analysis(test_type, init_folder, target_folder, restore_folder):
     ]
 )
 def test_QPREP_freeze(test_type, init_folder, target_folder, restore_folder):
+    # copy the test folders
+    if not path.exists(f"{path_main}/Example_workflows_original"):
+        shutil.copytree(
+            f"{path_main}/Example_workflows", f"{path_main}/Example_workflows_original"
+        )
+    
     qm_input = "opt wb97xd/6-31G(d) freq=noraman"
     
     w_dir_main = f"{path_qprep}/{init_folder}"
