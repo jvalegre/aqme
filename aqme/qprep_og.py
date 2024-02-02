@@ -421,26 +421,15 @@ class qprep:
                     atom_flag='0'
             else:
                 atom_flag=''
-            
-            if atom_flag == '':
-                fileout.write(
-                    "{0:>2} {1:12.8f} {2:12.8f} {3:12.8f}".format(
-                        qprep_data["atom_types"][atom_idx],
-                        qprep_data["cartesians"][atom_idx][0],
-                        qprep_data["cartesians"][atom_idx][1],
-                        qprep_data["cartesians"][atom_idx][2],
-                    )
-            )
-            else:
-                fileout.write(
-                    "{0:>2} {1:>3} {2:12.8f} {3:12.8f} {4:12.8f}".format(
-                        qprep_data["atom_types"][atom_idx],
-                        atom_flag,
-                        qprep_data["cartesians"][atom_idx][0],
-                        qprep_data["cartesians"][atom_idx][1],
-                        qprep_data["cartesians"][atom_idx][2],
-                    )
+            fileout.write(
+                "{0:>2} {1:>3} {2:12.8f} {3:12.8f} {4:12.8f}".format(
+                    qprep_data["atom_types"][atom_idx],
+                    atom_flag,
+                    qprep_data["cartesians"][atom_idx][0],
+                    qprep_data["cartesians"][atom_idx][1],
+                    qprep_data["cartesians"][atom_idx][2],
                 )
+            )
             if atom_idx != len(qprep_data["atom_types"]) - 1:
                 fileout.write("\n")
 
