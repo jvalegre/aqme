@@ -989,88 +989,86 @@ def test_QCORR_analysis(init_folder, file, command_line, target_folder, restore_
 # 2) check that frozen flags are included in generate .com for failed 
 
 # QCORR tests-- Heidi          
-# @pytest.mark.parametrize(
-#     "init_folder, file, command_line, target_folder, restore_folder",
-#     [
-#         # QCORR analysis parsing and recording frozen atom flags
-#         (
-#             "QCORR_8",
-#             "1oh0_cluster_failed.log",
-#             "run_QCORR",
-#             "failed/run_1/fixed_QM_inputs", 
-#             False,
-#         ),
-#         (
-#             "QCORR_8",
-#             "1oh0_cluster_success.log",
-#             "run_QCORR",
-#             "success/json_files", 
-#             False,
-#         ),
-#         (
-#             None,
-#             None,
-#             None,
-#             None,
-#             True,
-#         ),  # reset the initial folder to start another set of tests
+@pytest.mark.parametrize(
+    "init_folder, file, command_line, target_folder, restore_folder",
+    [
+        # QCORR analysis parsing and recording frozen atom flags
+        (
+            "QCORR_8",
+            "1oh0_cluster_failed.log",
+            "run_QCORR",
+            "failed/run_1/fixed_QM_inputs", 
+            False,
+        ),
+        (
+            "QCORR_8",
+            "1oh0_cluster_success.log",
+            "run_QCORR",
+            "success/json_files", 
+            False,
+        ),
+        (
+            None,
+            None,
+            None,
+            None,
+            True,
+        ),  # reset the initial folder to start another set of tests
+    ]
+)
 
-#     ]
-# )
+def test_QCORR_freeze(init_folder, file, command_line, target_folder, restore_folder):
 
-# def test_QCORR_freeze(init_folder, file, command_line, target_folder, restore_folder):
+    # start from main folder
+    os.chdir(path_main)
 
-#     # start from main folder
-#     os.chdir(path_main)
+    # copy the test folders
+    if not path.exists(f"{path_main}/Example_workflows_original"):
+        shutil.copytree(
+            f"{path_main}/Example_workflows", f"{path_main}/Example_workflows_original"
+        )
 
-#     # copy the test folders
-#     if not path.exists(f"{path_main}/Example_workflows_original"):
-#         shutil.copytree(
-#             f"{path_main}/Example_workflows", f"{path_main}/Example_workflows_original"
-#         )
-
-#     # runs the program with the different tests
-#     w_dir_main = f"{path_qcorr}/{init_folder}"
-#     cmd_aqme = [
-#         "python",
-#         "-m",
-#         "aqme",
-#         "--qcorr",
-#         "--files",
-#         f"{w_dir_main}/{file}",
-#     ]
-
-#     subprocess.run(cmd_aqme)
+    # runs the program with the different tests
+    w_dir_main = f"{path_qcorr}/{init_folder}"
+    cmd_aqme = [
+        "python",
+        "-m",
+        "aqme",
+        "--qcorr",
+        "--files",
+        f"{w_dir_main}/{file}",
+    ]
     
-#     if "success" in file:
-#         print(target_folder, file)
-#         assert path.exists(f"{w_dir_main}/{target_folder}/{file.split('.')[0]}.json")
-#         with open(f"{w_dir_main}/{target_folder}/{file.split('.')[0]}.json") as f:
-#             json_data = json.load(f)
-#         frozen_atoms = [1,20,34,44,63,70,87,101,119,133,148,165,179,190,205,213]
-#         assert "frozenatoms" in json_data["metadata"].keys()
-#         assert json_data["metadata"]["frozenatoms"] == frozen_atoms
+    if init_folder == "QCORR_8":
+        subprocess.run(cmd_aqme)
+        if "success" in file:
+            assert path.exists(f"{w_dir_main}/{target_folder}/{file.split('.')[0]}.json")
+            with open(f"{w_dir_main}/{target_folder}/{file.split('.')[0]}.json") as f:
+                json_data = json.load(f)
+            frozen_atoms = [1,20,34,44,63,70,87,101,119,133,148,165,179,190,205,213]
+            assert "frozenatoms" in json_data["metadata"].keys()
+            assert json_data["metadata"]["frozenatoms"] == frozen_atoms
+        if "failed" in file:
+            assert path.exists(f"{w_dir_main}/{target_folder}/{file.split('.')[0]}.com")
+            with open(f"{w_dir_main}/{target_folder}/{file.split('.')[0]}.com") as f:
+                outlines = f.readlines()
+            assert outlines[7].strip() ==  "H   0   8.14672600   6.38329100   5.31382000"
+            assert outlines[8].strip() ==  "C  -1   7.64735700   5.94364800   4.44095100"
 
-#     if "failed" in file:
-#         assert path.exists(f"{w_dir_main}/{target_folder}/{file.split('.')[0]}.com")
-#         with open(f"{w_dir_main}/{target_folder}/{file.split('.')[0]}.com") as f:
-#             outlines = f.readlines()
-#         assert outlines[7].strip() ==  "H   0   8.14672600   6.38329100   5.31382000"
-#         assert outlines[8].strip() ==  "C  -1   7.64735700   5.94364800   4.44095100"
+    # leave the folders as they were initially to run a different batch of tests
+    elif restore_folder:
+        os.chdir(path_main)
+        shutil.rmtree(f"{path_main}/Example_workflows")
+        filepath = Path(f"{path_main}/Example_workflows_original")
+        filepath.rename(f"{path_main}/Example_workflows")
+        # remove DAT and CSV files generated by QCORR
+        dat_files = glob.glob("*.dat")
+        for dat_file in dat_files:
+            if "QCORR" in dat_file:
+                os.remove(dat_file)
+        dat_files = glob.glob("*.csv")
+        for dat_file in dat_files:
+            if "QCORR" in dat_file:
+                os.remove(dat_file)
 
-#     # leave the folders as they were initially to run a different batch of tests
-#     elif restore_folder:
-#         os.chdir(path_main)
-#         shutil.rmtree(f"{path_main}/Example_workflows")
-#         filepath = Path(f"{path_main}/Example_workflows_original")
-#         filepath.rename(f"{path_main}/Example_workflows")
-#         # remove DAT and CSV files generated by QCORR
-#         dat_files = glob.glob("*.dat")
-#         for dat_file in dat_files:
-#             if "QCORR" in dat_file:
-#                 os.remove(dat_file)
-#         dat_files = glob.glob("*.csv")
-#         for dat_file in dat_files:
-#             if "QCORR" in dat_file:
-#                 os.remove(dat_file)
-
+                
