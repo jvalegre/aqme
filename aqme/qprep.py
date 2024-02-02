@@ -225,7 +225,9 @@ class qprep:
                     "charge": charge,
                     "mult": mult,
                     "name": name,
+                    "freeze": self.args.freeze
                 }
+                
                 comfile = self.write(qprep_data)
 
                 move_file(destination, self.args.w_dir_main, comfile)
@@ -511,6 +513,9 @@ class qprep:
                         elif outlines[i].find("Symbolic Z-matrix:") > -1:
                             for j in range(i + 2, len(outlines)):
                                 if len(outlines[j].split()) > 0:
+                                    # to parse for frozen atom flags
+                                    if outlines[j].split()[1] == '-1':
+                                        self.args.freeze.append(n_atoms) # zero indexed
                                     n_atoms += 1
                                 else:
                                     found_n_atoms = True
