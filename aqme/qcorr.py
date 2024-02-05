@@ -734,6 +734,9 @@ class qcorr:
             try:
                 # this part avoids problems when using cclib from command lines (not complete file PATH)
                 file = f'{self.args.initial_dir}/{file}'
+                # are you sure the above line is correct? It will cause double // in the path sometimes..
+                #  I think this below line is better?
+                #file = os.path.join(self.args.initial_dir, file) 
                 command_run_2 = ["ccwrite", "json", file]
                 subprocess.run(command_run_2, capture_output=True)
                 with open(file_name + ".json") as json_file:
