@@ -49,7 +49,7 @@ jobs:
           conda install -y -c conda-forge xtb
           conda install -y -c conda-forge crest
           conda install pytorch torchvision torchaudio cpuonly -c pytorch
-          pip install torchani
+          pip install torchani==2.2.3
           # install the dependencies of AQME with pip
           pip install .
           # install and run pytest

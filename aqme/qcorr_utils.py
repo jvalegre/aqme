@@ -473,24 +473,24 @@ def get_json_data(self, file, cclib_data):
         for i in reversed(range(0, len(outlines) - 30)):
             # For time dependent (TD) calculations
             if "E(TD-HF/TD-DFT)" in outlines[i]:
-                td_e = float(line.strip().split()[-1])
+                td_e = float(outlines[i].strip().split()[-1])
                 cclib_data["properties"]["energy"][
                     "TD energy"
                 ] = cclib.parser.utils.convertor(td_e, "hartree", "eV")
 
             # For G4 calculations look for G4 energies (Gaussian16a bug prints G4(0 K) as DE(HF)) --Brian modified to work for G16c-where bug is fixed.
-            elif line.strip().startswith("E(ZPE)="):  # Overwrite DFT ZPE with G4 ZPE
-                zero_point_corr = float(line.strip().split()[1])
-            elif line.strip().startswith("G4(0 K)"):
-                G4_energy = float(line.strip().split()[2])
+            elif outlines[i].strip().startswith("E(ZPE)="):  # Overwrite DFT ZPE with G4 ZPE
+                zero_point_corr = float(outlines[i].strip().split()[1])
+            elif outlines[i].strip().startswith("G4(0 K)"):
+                G4_energy = float(outlines[i].strip().split()[2])
                 G4_energy -= zero_point_corr  # Remove G4 ZPE
                 cclib_data["properties"]["energy"][
                     "G4 energy"
                 ] = cclib.parser.utils.convertor(G4_energy, "hartree", "eV")
 
             # For ONIOM calculations use the extrapolated value rather than SCF value
-            elif "ONIOM: extrapolated energy" in line.strip():
-                oniom_e = float(line.strip().split()[4])
+            elif "ONIOM: extrapolated energy" in outlines[i].strip():
+                oniom_e = float(outlines[i].strip().split()[4])
                 cclib_data["properties"]["energy"][
                     "ONIOM energy"
                 ] = cclib.parser.utils.convertor(oniom_e, "hartree", "eV")
