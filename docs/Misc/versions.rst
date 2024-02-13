@@ -4,6 +4,9 @@
 Versions
 ========
 
+Version 1.5.3 [`url <https://github.com/jvalegre/aqme/releases/tag/1.5.3>`__]
+   -  Fixed bug in QCORR when analyzing TD-DFT, ONIOM and G4 calculations in Gaussian 
+
 Version 1.5.2 [`url <https://github.com/jvalegre/aqme/releases/tag/1.5.2>`__]
    -  Fixed bug for using constraints with large molecules in CREST (related to long atom lists 
       in the .xcontrol.sample file that weren't compatible with subprocess.run())
