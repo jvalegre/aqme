@@ -1,6 +1,6 @@
-=====
-Usage
-=====
+===========
+Basic usage
+===========
 
 .. include:: ../README.rst
    :start-after: quickstart-start

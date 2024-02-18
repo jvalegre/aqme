@@ -28,14 +28,11 @@ Welcome to AQME's documentation!
 Please report any bugs or missing details at the mailing list or open an issue at `github`_.
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
    :caption: Quickstart
 
    Quickstart/setup
-   Quickstart/requirements
-   Quickstart/basic
-   Quickstart/defaults
-   Quickstart/development
+   Quickstart/note
 
 .. toctree:: 
    :maxdepth: 1
@@ -50,11 +47,11 @@ Please report any bugs or missing details at the mailing list or open an issue a
     Examples/examples_python/examples_python
     Examples/examples_commandline/examples_commandline
 
-.. toctree::
-   :maxdepth: 2
-   :caption: YAML Templates
+.. .. toctree::
+..    :maxdepth: 2
+..    :caption: YAML Templates
 
-   YAML_Templates/YAML_Templates
+..    YAML_Templates/YAML_Templates
 
 .. toctree:: 
    :caption: API Reference
@@ -64,9 +61,20 @@ Please report any bugs or missing details at the mailing list or open an issue a
 
 .. toctree::
    :maxdepth: 2
+   :caption: Technical
+
+   Quickstart/requirements
+   Quickstart/basic
+   Quickstart/defaults
+   Misc/tests
+   Misc/features
+
+.. toctree::
+   :maxdepth: 2
    :caption: Misc
 
    Misc/versions
+   Quickstart/development
    Misc/license
    Misc/help
 
