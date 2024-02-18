@@ -92,13 +92,28 @@ Check our `AQME installation in 2 mins <https://youtu.be/VeaBzqIZHbo>`_ video
 for a quick installation guide. In a nutshell, AQME and its dependencies are 
 installed as follows:
 
-1. Install AQME using conda-forge (recommended):  
+**1.** Create and activate the conda environment where you want to install the program. If you are not sure of what 
+this point means, check out the "Users with no Python experience" section. This is an example for Python 3.10, but 
+it also works for other Python versions (i.e., 3.7, 3.9 and 3.11):
+
+.. code-block:: shell 
+   
+   conda create -n aqme python=3.10
+   conda activate aqme
+
+**2.** Install AQME using conda-forge:  
 
 .. code-block:: shell 
    
    conda install -c conda-forge aqme
 
-2. Install AQME using pip, then install RDKit and OpenBabel with conda-forge:  
+**3.** Update AQME to the latest version (do not skip this step!):  
+
+.. code-block:: shell
+
+   pip install aqme --upgrade
+
+**4.** (Just if the installation with conda-forge is too slow) Users might install AQME using pip, then install RDKit and OpenBabel with conda-forge:  
 
 .. code-block:: shell
 
@@ -106,14 +121,8 @@ installed as follows:
    conda install -c conda-forge rdkit
    conda install -c conda-forge openbabel
 
-3. Update AQME to the latest version:  
-
-.. code-block:: shell
-
-   pip install aqme --upgrade
-
-Installation of the extra requirements
-++++++++++++++++++++++++++++++++++++++
+Installation of extra requirements
+++++++++++++++++++++++++++++++++++
 
 Extra requirements if xTB or CREST are used (compatible with MacOS and Linux only):  
 
@@ -137,6 +146,74 @@ Extra requirements if `CMIN` is used with ANI models:
       Anaconda prompts are used
 
 .. installation-end 
+
+.. note-start 
+
+Users with no Python experience
+-------------------------------
+
+Installation of AQME (only once)
+++++++++++++++++++++++++++++++++
+
+You need a Python environment to install and run AQME. These are some suggested first steps:  
+
+.. |br| raw:: html
+
+   <br />
+
+**1.** Install `Anaconda with Python 3 <https://docs.anaconda.com/free/anaconda/install>`__ for your 
+operating system (Windows, macOS or Linux). Alternatively, if you're familiar with conda installers, 
+you can install `Miniconda with Python 3 <https://docs.conda.io/projects/miniconda/en/latest/miniconda-install.html>`__ 
+(requires less space than Anaconda).  
+
+
+**2.** Open an Anaconda prompt (Windows users) or a terminal (macOS and Linux).
+
+
+**3.** Create a conda environment called "aqme" with Python (:code:`conda create -n aqme python=3.10`). 
+|br|
+*This is an example for Python 3.10, but it also works for other Python versions (i.e., 3.7, 3.9 and 3.11).*
+
+
+**4.** Activate the conda environment called "aqme" (:code:`conda activate aqme`).
+
+
+**5.** Install AQME as defined in the "Installation" section (:code:`conda install -c conda-forge aqme`).
+
+
+**6.** Update AQME as defined in the "Installation" section (:code:`pip install aqme --upgrade`).
+
+
+Using AQME through Jupyter Notebooks
+++++++++++++++++++++++++++++++++++++
+
+This is the recommended option, since Jupyter Notebooks can be easily shared and reused, and the resulting QM workflows become very transparent.
+
+
+**7.** Open the Jupyter Notebook from your file browser with `Visual Studio Code <https://code.visualstudio.com/download>`__ (then, install the Jupyter Notebook extension), `Anaconda <https://docs.anaconda.com/free/anaconda/install>`__ or your favorite platform.
+
+
+**8.** Run the code blocks inside the Jupyter Notebook, selecting the "aqme" environment when prompted.
+
+.. note:: 
+   There are many pre-defined Jupyter Notebooks available from GitHub in the `Example_workflows folder <https://github.com/jvalegre/aqme/tree/master/Example_workflows>`__.
+
+
+Using AQME through the command line
++++++++++++++++++++++++++++++++++++
+
+**7.** Open an Anaconda prompt (Windows users) or a terminal (macOS and Linux).
+
+
+**8.** Activate the conda environment called "aqme" (:code:`conda activate aqme`).
+
+
+**9.** Go to the folder where you want to run the program and have the input files, if any (using the "cd" command, i.e. :code:`cd C:/Users/test_aqme`).
+
+
+**10.** Run AQME as explained in the Examples Command Line section.
+
+.. note-end 
 
 .. requirements-start
 
