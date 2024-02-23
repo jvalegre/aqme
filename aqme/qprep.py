@@ -75,6 +75,7 @@ from aqme.utils import (
 )
 from aqme.csearch.crest import xyzall_2_xyz
 from pathlib import Path
+from rdkit import Chem
 
 
 class qprep:
@@ -186,6 +187,7 @@ class qprep:
                     sdf_files.append(f"{file.split('.pdb')[0]}.sdf")
 
                 else:
+
                     sdf_files.append(file)
 
                 for sdf_file in sdf_files:
@@ -445,11 +447,15 @@ class qprep:
                 try:
                     charge = int(mol.GetProp("Real charge"))
                 except KeyError:
-                    pass
+                    charge = Chem.GetFormalCharge(mol)
                 try:
                     mult = int(mol.GetProp("Mult"))
                 except KeyError:
-                    pass
+                    NumRadicalElectrons = 0
+                    for Atom in mol.GetAtoms():
+                        NumRadicalElectrons += Atom.GetNumRadicalElectrons()
+                    TotalElectronicSpin = NumRadicalElectrons / 2
+                    mult = int((2 * TotalElectronicSpin) + 1)
 
             elif file_format in ["log", "out"]:
                 # detect QM program and number of atoms

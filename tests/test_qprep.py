@@ -191,9 +191,15 @@ def test_QPREP_analysis(test_type, init_folder, target_folder, restore_folder):
 
                 assert outlines[8].strip() == line_8
                 assert outlines[10].strip() == line_10
-            
+        
             assert outlines[2].strip() == line_2
-            assert outlines[6].strip() == line_6
+            if init_folder == "pdb_files":
+                line_6 = "-2 1"
+                assert outlines[6].strip() == line_6
+            else:
+                assert outlines[6].strip() == line_6
+
+        
 
     elif test_type == "charge_mult":
         if init_folder == "json_files":
