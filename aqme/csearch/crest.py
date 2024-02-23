@@ -161,6 +161,8 @@ def xtb_opt_main(
 
         if self.args.xtb_keywords is not None:
             for keyword in self.args.xtb_keywords.split():
+                if keyword == "--ohess":
+                    command1.remove("--opt")
                 command1.append(keyword)
 
         xtb_out1 = f'{os.path.dirname(Path(xyzoutxtb1))}/{os.path.basename(Path(xyzoutxtb1)).split(".xyz")[0]}'
@@ -211,6 +213,8 @@ def xtb_opt_main(
 
             if self.args.xtb_keywords is not None:
                 for keyword in self.args.xtb_keywords.split():
+                    if keyword == "--ohess":
+                        command2.remove("--opt")
                     command2.append(keyword)
 
             xtb_out2 = f'{os.path.dirname(Path(xyzoutxtb2))}/{os.path.basename(Path(xyzoutxtb2)).split(".xyz")[0]}'
@@ -241,6 +245,8 @@ def xtb_opt_main(
 
             if self.args.xtb_keywords is not None:
                 for keyword in self.args.xtb_keywords.split():
+                    if keyword == "--ohess":
+                        command.remove("--opt")
                     command.append(keyword)
             xtb_out1 = f'{os.path.dirname(Path(xyzin))}/{os.path.basename(Path(xyzin)).split(".xyz")[0]}'
             run_command(command, f"{xtb_out1}_xtb1.out")
