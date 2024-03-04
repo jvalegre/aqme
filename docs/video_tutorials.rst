@@ -8,6 +8,16 @@
    :width: 400
    :target: https://www.youtube.com/watch?v=o7ZQU5sLpEc
 
+.. |tutorial 3| image:: https://img.youtube.com/vi/1Om_26kTh5I/maxresdefault.jpg
+   :alt: Analysis of QM outputs with QCORR 1 - Basic processing
+   :width: 400
+   :target: https://youtu.be/1Om_26kTh5I
+
+.. |tutorial 4| image:: https://img.youtube.com/vi/OyGXCxiZJPk/maxresdefault.jpg
+   :alt: Analysis of QM outputs with QCORR 2 - Isomerization filter
+   :width: 400
+   :target: https://youtu.be/OyGXCxiZJPk
+
 .. |installation| image:: https://img.youtube.com/vi/VeaBzqIZHbo/maxresdefault.jpg
    :alt: AQME installation in 2 min
    :width: 400
@@ -44,6 +54,22 @@ RDKit conformer sampling using databases for machine learning
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 |tutorial 2|
+
+AQME QCORR tutorial 1
+---------------------
+
+Analysis of QM output files
++++++++++++++++++++++++++++
+
+|tutorial 3|
+
+AQME QCORR tutorial 2
+---------------------
+
+Analysis including the isomerization filter
++++++++++++++++++++++++++++++++++++++++++++
+
+|tutorial 4|
 
 AQME workflow tutorial
 ----------------------

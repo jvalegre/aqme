@@ -29,7 +29,7 @@ We start by importing the modules.
     from aqme.qcorr import qcorr
 
 Then we list the files that we want to analyze. In this case we are going to 
-analyze Gaussian16 output files. We are going to assume that we have our 
+analyze Gaussian 16 output files. We are going to assume that we have our 
 files in the folder 'calculations'
 
 .. code:: python 
@@ -44,11 +44,12 @@ Finally we run the analysis of the files.
     qcorr(files=files,
           freq_conv='opt=(calcfc,maxstep=5)')
 
-Here we specify the `freq_conv` which will attempt to fix calculations whose 
-optimization ended normally but whose frequency calculation did not.
+Here we specify the `freq_conv` keyword, which will attempt to fix calculations whose 
+optimization converged but whose frequency calculation did not.
 
-Optionally we may include the extension of the initial input files and their 
-location: 
+Optionally, we may include the extension of the initial input files and their 
+location to apply the isomerization filter. This is important as it prevents
+undesired bond breaking/forming events: 
 
 .. code:: python
 
@@ -57,8 +58,8 @@ location:
           isom_type='com',         # Extension of the initial input files
           isom_inputs=folder)      # Folder with the initial input files
 
-If we want to check the .json files that we have generated in a separatedly we 
-can use the full_check function which will only check if all calculations were 
+If we want to check the .json files that we have generated separatedly, we 
+can use the full_check function, which will only check if all calculations were 
 done using the same theory level, grid size, program and version, solvation ...
 
 .. code:: python
@@ -69,7 +70,7 @@ done using the same theory level, grid size, program and version, solvation ...
     full_check(destination_fullcheck=folder,files=files)
 
 If we instead wanted to skip the checks and generate the .json files containing 
-information about our calculations we can use the `fullcheck` keyword.
+information about our calculations, we can use the `fullcheck` keyword.
 
 .. code:: python
 
