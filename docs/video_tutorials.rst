@@ -13,10 +13,10 @@
    :width: 400
    :target: https://youtu.be/1Om_26kTh5I
 
-.. |tutorial 4| image:: https://img.youtube.com/vi/OyGXCxiZJPk/maxresdefault.jpg
+.. |tutorial 4| image:: https://img.youtube.com/vi/rg8mAMrZd-0/maxresdefault.jpg
    :alt: Analysis of QM outputs with QCORR 2 - Isomerization filter
    :width: 400
-   :target: https://youtu.be/OyGXCxiZJPk
+   :target: https://www.youtube.com/watch?v=rg8mAMrZd-0
 
 .. |installation| image:: https://img.youtube.com/vi/VeaBzqIZHbo/maxresdefault.jpg
    :alt: AQME installation in 2 min
