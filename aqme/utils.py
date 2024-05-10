@@ -330,6 +330,7 @@ def command_line_args():
         "cregen",
         "lowest_only",
         "chk",
+        "oldchk",
         "nodup_check",
         "dbstep_calc",
         "robert"
