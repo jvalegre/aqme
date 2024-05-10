@@ -347,7 +347,7 @@ def test_QPREP_analysis(test_type, init_folder, target_folder, restore_folder):
             "chk_path",
             "--chk",
             "--chk_path",
-            "test/PATH"
+            "test/PATH/CH4_chk_path.chk"
         ]
         subprocess.run(cmd_aqme)
 
