@@ -392,7 +392,7 @@ class csearch:
             "o  Number of finished jobs from CSEARCH", max=len(job_inputs)
         )
         with futures.ProcessPoolExecutor(
-            max_workers=self.args.max_workers, mp_context=mp.get_context("spawn")
+            max_workers=self.args.max_workers,
         ) as executor:
             # Submit a set of asynchronous jobs
             jobs = []

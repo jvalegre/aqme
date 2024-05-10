@@ -294,56 +294,39 @@ class qdescp:
             name = os.path.basename(Path(file)).split('.')[0]
             ext = os.path.basename(Path(file)).split(".")[1]
             self.args.log.write(f"\n\n   ----- {name} -----")
-            if ext.lower() in ["sdf", "xyz", "pdb"]:
-                if ext.lower() == "xyz":
-                    # separate the parent XYZ file into individual XYZ files
-                    xyzall_2_xyz(file, name)
-                    for conf_file in glob.glob(f"{name}_conf_*.xyz"):
-                        if self.args.charge is None:
-                            charge_xyz, _ = read_xyz_charge_mult(conf_file)
-                        else:
-                            charge_xyz = self.args.charge
-                        if self.args.mult is None:
-                            _, mult_xyz = read_xyz_charge_mult(conf_file)
-                        else:
-                            mult_xyz = self.args.mult
-                        xyz_files.append(
-                            os.path.dirname(os.path.abspath(file)) + "/" + conf_file
-                        )
-                        xyz_charges.append(charge_xyz)
-                        xyz_mults.append(mult_xyz)
-
-                elif ext.lower() == "pdb":
-                    command_pdb = [
-                        "obabel",
-                        "-ipdb",
-                        file,
-                        "-oxyz",
-                        f"-O{os.path.dirname(os.path.abspath(file))}/{name}_conf_.xyz",
-                        "-m",
-                    ]
-                    subprocess.run(
-                        command_pdb,
-                        stdout=subprocess.DEVNULL,
-                        stderr=subprocess.DEVNULL,
+            if ext.lower() == "xyz":
+                # separate the parent XYZ file into individual XYZ files
+                xyzall_2_xyz(file, name)
+                for conf_file in glob.glob(f"{name}_conf_*.xyz"):
+                    if self.args.charge is None:
+                        charge_xyz, _ = read_xyz_charge_mult(conf_file)
+                    else:
+                        charge_xyz = self.args.charge
+                    if self.args.mult is None:
+                        _, mult_xyz = read_xyz_charge_mult(conf_file)
+                    else:
+                        mult_xyz = self.args.mult
+                    xyz_files.append(
+                        os.path.dirname(os.path.abspath(file)) + "/" + conf_file
                     )
+                    xyz_charges.append(charge_xyz)
+                    xyz_mults.append(mult_xyz)
 
-                elif ext.lower() == "sdf":
-                    command_sdf = [
-                        "obabel",
-                        "-isdf",
-                        file,
-                        "-oxyz",
-                        f"-O{os.path.dirname(os.path.abspath(file))}/{name}_conf_.xyz",
-                        "-m",
-                    ]
-                    subprocess.run(
-                        command_sdf,
-                        stdout=subprocess.DEVNULL,
-                        stderr=subprocess.DEVNULL,
-                    )
+            else:
+                command_pdb = [
+                    "obabel",
+                    f"-i{ext.lower()}",
+                    file,
+                    "-oxyz",
+                    f"-O{os.path.dirname(os.path.abspath(file))}/{name}_conf_.xyz",
+                    "-m",
+                ]
+                subprocess.run(
+                    command_pdb,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                )
 
-            if ext.lower() in ["sdf", "pdb"]:
                 if self.args.charge is None:
                     _, charges, _, _ = mol_from_sdf_or_mol_or_mol2(file, "csearch", self.args)
                 else:
@@ -373,7 +356,7 @@ class qdescp:
             for xyz_file, charge, mult in zip(xyz_files, xyz_charges, xyz_mults):
                 name_xtb = os.path.basename(Path(xyz_file)).split(".")[0]
                 self.args.log.write(f"\no   Running xTB and collecting properties")
-                
+
                 # if xTB fails during any of the calculations (UnboundLocalError), xTB assigns weird
                 # qm5 charges (i.e. > +10 or < -10, ValueError), or the json file is not created 
                 # for some weird xTB error (FileNotFoundError), that molecule is not used 
