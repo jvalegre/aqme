@@ -308,7 +308,7 @@ def get_conf_RMS(mol1, mol2, c1, c2, heavy, max_matches_rmsd):
     if heavy:
         mol1 = RemoveHs(mol1)
         mol2 = RemoveHs(mol2)
-    return GetBestRMS(mol1, mol2, c1, c2, maxMatches=max_matches_rmsd, numThreads=0)
+    return GetBestRMS(mol1, mol2, c1, c2, maxMatches=max_matches_rmsd) # don't use numThreads=0 or -1 as the documentation says, it fails! (due to multiprocessing?)
 
 
 def command_line_args():

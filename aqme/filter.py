@@ -550,14 +550,18 @@ def RMSD_and_E_filter(
                 if calc_type == "rdkit":
                     n_mol_1 = seenconf
                     n_mol_2 = conf
-                rms = get_conf_RMS(
-                    outmols[seenconf],
-                    outmols[conf],
-                    n_mol_1,
-                    n_mol_2,
-                    args.heavyonly,
-                    max_matches_rmsd
-                )
+                try:
+                    rms = get_conf_RMS(
+                        outmols[seenconf],
+                        outmols[conf],
+                        n_mol_1,
+                        n_mol_2,
+                        args.heavyonly,
+                        max_matches_rmsd
+                    )
+                except RuntimeError:
+                    rms = rms_threshold + 1
+                    args.log.write('\nx  The mols loaded by RDKit from the SDF file have different substructures and the RMS filter failed. The duplicate filter will only use E on some conformers!')
                 if rms < rms_threshold:
                     excluded_conf = True
                     eng_rms_dup += 1
