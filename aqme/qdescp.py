@@ -101,6 +101,7 @@ import numpy as np
 from progress.bar import IncrementalBar
 import pandas as pd
 from rdkit import Chem
+from rdkit.Chem import rdFMCS
 from pathlib import Path
 import dbstep.Dbstep as db
 from aqme.utils import (
@@ -161,11 +162,38 @@ class qdescp:
 
         self.args.log.write(f"\nStarting QDESCP-{self.args.program} with {len(self.args.files)} job(s)\n")
 
-        # Delete a SMARTS pattern if it is not present in more than 30% of the sdf files
+        # Obtaing SMARTS patterns from the input files automatically if no patterns are provided
         smarts_targets = self.args.qdescp_atoms.copy()
-        if len(smarts_targets) > 0 and smarts_targets[0].startswith('--'):
-            self.args.log.write("x  WARNING! No atoms have been specified in the qdescp_atoms option.")
-            sys.exit()
+        if self.args.csv_name is not None:
+            input_df = pd.read_csv(self.args.csv_name)
+            if len(smarts_targets) == 0:
+                smarts_targets = []
+                if 'SMILES' in input_df.columns:
+                    smiles_list = input_df['SMILES'].tolist()
+                elif 'smiles' in input_df.columns:
+                    smiles_list = input_df['smiles'].tolist()
+                elif 'Smiles' in input_df.columns:
+                    smiles_list = input_df['Smiles'].tolist()
+                
+                if len(smiles_list) > 0:
+                    mols = [Chem.MolFromSmiles(smiles) for smiles in smiles_list if Chem.MolFromSmiles(smiles) is not None]
+                    if len(mols) > 0:
+                        mcs = rdFMCS.FindMCS(mols)
+                        if mcs is not None:
+                            common_substructure = Chem.MolFromSmarts(mcs.smartsString)
+                            # Filter out non-metal atoms
+                            metal_smarts = []
+                            for atom in common_substructure.GetAtoms():
+                                if atom.GetSymbol() in ['Sc', 'Ti', 'V', 'Cr', 'Mn', 'Fe', 'Co', 'Ni', 'Cu', 'Zn', 'Y', 'Zr', 'Nb', 'Mo',
+                                                        'Tc', 'Ru', 'Rh', 'Pd', 'Ag', 'Cd', 'Hf', 'Ta', 'W', 'Re', 'Os', 'Ir', 'Pt', 'Au',
+                                                        'Hg', 'Rf', 'Db', 'Sg', 'Bh', 'Hs', 'Mt', 'Ds', 'Rg', 'Cn', 'Nh', 'Fl', 'Mc', 'Lv', 'Ts', 'Og']:
+                                    metal_smarts.append(f'[{atom.GetSymbol()}]')
+                            common_substructure = Chem.MolToSmiles(Chem.MolFromSmarts('.'.join(metal_smarts)))
+                            if common_substructure is not None:
+                                smarts_targets.append(common_substructure)
+                                self.args.log.write(f"\nSubstructure {(common_substructure)} found in input files. Using it for atomic descriptor calculations.")
+                            
+        # Delete a SMARTS pattern if it is not present in more than 30% of the sdf files
         elif len(smarts_targets) > 0:
             mol_list = []
             for file in self.args.files:
@@ -350,7 +378,7 @@ class qdescp:
             name = os.path.basename(Path(file)).split('.')[0]
             ext = os.path.basename(Path(file)).split(".")[1]
             self.args.log.write(f"\n\n   ----- {name} -----")
-            if ext.lower() in ["sdf", "xyz", "pdb"]:
+            if ext.lower() in ["sdf", "xyz", "pdb"]: #cargarse esta frase
                 if ext.lower() == "xyz":
                     # separate the parent XYZ file into individual XYZ files
                     xyzall_2_xyz(file, name)
@@ -369,7 +397,7 @@ class qdescp:
                         xyz_charges.append(charge_xyz)
                         xyz_mults.append(mult_xyz)
 
-                elif ext.lower() == "pdb":
+                elif ext.lower() == "pdb":  #cambiar a else, el tipo de archivo por file y juntos dos los dos elif
                     command_pdb = [
                         "obabel",
                         "-ipdb",
@@ -470,7 +498,7 @@ class qdescp:
             f.write("$write\n")
             f.write("json=true\n")
 
-        self.xtb_opt = str(dat_dir) + "/{0}.out".format(name+'_opt')
+        self.xtb_opt = str(dat_dir) + "/{0}.out".format(name+'_opt') #intentar minimizar el numero de archivos
         self.xtb_out = str(dat_dir) + "/{0}.out".format(name)
         self.xtb_json = str(dat_dir) + "/{0}.json".format(name)
         self.xtb_wbo = str(dat_dir) + "/{0}.wbo".format(name)
@@ -617,6 +645,7 @@ class qdescp:
         """
         Collects all xTB properties from the files and puts them in a JSON file
         """
+        #crear un diccionario con 2 listas una para molecular y otras para atomic y hacer append dependiendo de donde vaya cada descriptor
 
         (
             _,
@@ -737,7 +766,7 @@ class qdescp:
                     for atom_idx in atom_indices:
                         atom_types.append(mol.GetAtoms()[atom_idx].GetSymbol())
 
-                    n_types = len(set(atom_types))
+                    n_types = len(set(atom_types)) #cambiar para que en caso de tener ejemplo Jaime con 2P tambien te los calcule, el problema es del set 
                     if n_types == 1:
                         sorted_indices = sorted(atom_indices, key=lambda idx: len(mol.GetAtoms()[idx].GetNeighbors()))
                     elif n_types > 1:
