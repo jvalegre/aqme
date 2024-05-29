@@ -114,7 +114,7 @@ var_dict = {
     "xtb_opt": True,
     "dbstep_calc": False,
     "dbstep_r": 3.5,
-    "robert": False,
+    "robert": True,
     "csv_name": None,
     "crest_nrun": 1,
     "crest_nclust": 0.4
