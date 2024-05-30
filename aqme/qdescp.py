@@ -198,10 +198,10 @@ class qdescp:
                                                         'Hg', 'Rf', 'Db', 'Sg', 'Bh', 'Hs', 'Mt', 'Ds', 'Rg', 'Cn', 'Nh', 'Fl', 'Mc', 'Lv', 'Ts', 'Og']:
                                     metal_smarts.append(f'[{atom.GetSymbol()}]')
                             common_substructure = Chem.MolToSmiles(Chem.MolFromSmarts('.'.join(metal_smarts)))
-                            if common_substructure is not None:
+                            if common_substructure is not None and common_substructure != '':
                                 smarts_targets.append(common_substructure)
                                 self.args.log.write(f"\nSubstructure {(common_substructure)} found in input files. Using it for atomic descriptor calculations.")
-                            
+                          
         # Delete a SMARTS pattern if it is not present in more than 30% of the sdf files
         elif len(smarts_targets) > 0:
             mol_list = []
