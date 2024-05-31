@@ -183,9 +183,9 @@ class qdescp:
                                 break
                         smiles_list = input_df[smiles_column].tolist()
                 else:
-                    self.args.log.write("x  WARNING! No column with SMILES information found in the input CSV file.")#hasjdhkjashdkjasdhlk
+                    self.args.log.write("x  WARNING! No column with SMILES information found in the input CSV file.")
                 if len(smiles_list) > 0:
-                    mols = [Chem.MolFromSmiles(smiles) for smiles in smiles_list if Chem.MolFromSmiles(smiles) is not None]
+                    mols = [Chem.MolFromSmiles(smiles) for smiles in smiles_list if Chem.MolFromSmiles(smiles) is not None]#JDJAJKSHDKHA
                     if len(mols) > 0:
                         mcs = rdFMCS.FindMCS(mols)
                         if mcs is not None:
