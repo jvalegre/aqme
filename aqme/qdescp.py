@@ -164,17 +164,26 @@ class qdescp:
 
         # Obtaing SMARTS patterns from the input files automatically if no patterns are provided
         smarts_targets = self.args.qdescp_atoms.copy()
+        if self.args.csv_name is None:
+            self.args.csv_name = input("Please enter the name of the CSV file: ")
+            if not self.args.csv_name.endswith(".csv"):
+                self.args.csv_name += ".csv"
         if self.args.csv_name is not None:
             input_df = pd.read_csv(self.args.csv_name)
             if len(smarts_targets) == 0:
                 smarts_targets = []
-                if 'SMILES' in input_df.columns:
-                    smiles_list = input_df['SMILES'].tolist()
-                elif 'smiles' in input_df.columns:
-                    smiles_list = input_df['smiles'].tolist()
-                elif 'Smiles' in input_df.columns:
-                    smiles_list = input_df['Smiles'].tolist()
-                
+                if 'SMILES' in input_df.columns or 'smiles' in input_df.columns or any(col.startswith('smiles_') for col in input_df.columns):
+                    possible_smiles_columns = [col for col in input_df.columns if col.lower().startswith('smiles')]
+                    if len(possible_smiles_columns) == 0:
+                        self.args.log.write("x  WARNING! No column with SMILES information found in the input CSV file.")
+                    else:
+                        for col in possible_smiles_columns:
+                            if col in input_df.columns:
+                                smiles_column = col
+                                break
+                        smiles_list = input_df[smiles_column].tolist()
+                else:
+                    self.args.log.write("x  WARNING! No column with SMILES information found in the input CSV file.")#hasjdhkjashdkjasdhlk
                 if len(smiles_list) > 0:
                     mols = [Chem.MolFromSmiles(smiles) for smiles in smiles_list if Chem.MolFromSmiles(smiles) is not None]
                     if len(mols) > 0:
@@ -189,10 +198,10 @@ class qdescp:
                                                         'Hg', 'Rf', 'Db', 'Sg', 'Bh', 'Hs', 'Mt', 'Ds', 'Rg', 'Cn', 'Nh', 'Fl', 'Mc', 'Lv', 'Ts', 'Og']:
                                     metal_smarts.append(f'[{atom.GetSymbol()}]')
                             common_substructure = Chem.MolToSmiles(Chem.MolFromSmarts('.'.join(metal_smarts)))
-                            if common_substructure is not None:
+                            if common_substructure is not None and common_substructure != '':
                                 smarts_targets.append(common_substructure)
                                 self.args.log.write(f"\nSubstructure {(common_substructure)} found in input files. Using it for atomic descriptor calculations.")
-                            
+                          
         # Delete a SMARTS pattern if it is not present in more than 30% of the sdf files
         elif len(smarts_targets) > 0:
             mol_list = []
@@ -304,32 +313,27 @@ class qdescp:
         if self.args.program.lower() == "xtb":
             if self.args.robert:
                 name_db='ROBERT'
-            if self.args.csv_name is None:
-                self.args.log.write(f"\nx  The input csv_name with SMILES and code_name columns are missing. A combined database for AQME-{name_db} workflows will not be created.")
-            elif not Path(f"{self.args.csv_name}").exists():
-                self.args.log.write(f"\nx  The input csv_name provided ({self.args.csv_name}) is not valid. A combined database for AQME-{name_db} workflows will not be created.")
+            combined_df = pd.DataFrame()
+            qdescp_df = pd.read_csv(qdescp_csv)
+            input_df = pd.read_csv(self.args.csv_name)
+            if 'code_name' not in input_df.columns:
+                self.args.log.write(f"\nx  The input csv_name provided ({self.args.csv_name}) does not contain the code_name column. A combined database for AQME-{name_db} workflows will not be created.")
+            elif 'SMILES' in input_df.columns or 'smiles' in input_df.columns or 'Smiles' in input_df.columns:
+                path_json = os.path.dirname(Path(qdescp_df['Name'][0]))
+                for i,input_name in enumerate(input_df['code_name']):
+                    # match the entries of the two databases using the entry name
+                    qdescp_col = input_df.loc[i].to_frame().T.reset_index(drop=True) # transposed, reset index
+                    input_col = qdescp_df.loc[(qdescp_df['Name'] == f'{path_json}/{input_name}_rdkit_boltz') | (qdescp_df['Name'] == f'{path_json}/{input_name}_boltz') | (qdescp_df['Name'] == f'{path_json}/{input_name}_0_rdkit_boltz') | (qdescp_df['Name'] == f'{path_json}/{input_name}_1_rdkit_boltz') | (qdescp_df['Name'] == f'{path_json}/{input_name}_2_rdkit_boltz')]
+                    input_col = input_col.drop(['Name'], axis=1).reset_index(drop=True)
+                    combined_row = pd.concat([qdescp_col,input_col], axis=1)
+                    combined_df = pd.concat([combined_df, combined_row], ignore_index=True)
+                combined_df = combined_df.dropna(axis=0)
+                csv_basename = os.path.basename(self.args.csv_name)
+                csv_path = self.args.initial_dir.joinpath(f'AQME-{name_db}_{csv_basename}')
+                _ = combined_df.to_csv(f'{csv_path}', index = None, header=True)
+                self.args.log.write(f"o  The AQME-{name_db}_{csv_basename} file containing the database ready for the AQME-{name_db} workflow was successfully created in {self.args.initial_dir}")
             else:
-                combined_df = pd.DataFrame()
-                qdescp_df = pd.read_csv(qdescp_csv)
-                input_df = pd.read_csv(self.args.csv_name)
-                if 'code_name' not in input_df.columns:
-                    self.args.log.write(f"\nx  The input csv_name provided ({self.args.csv_name}) does not contain the code_name column. A combined database for AQME-{name_db} workflows will not be created.")
-                elif 'SMILES' in input_df.columns or 'smiles' in input_df.columns or 'Smiles' in input_df.columns:
-                    path_json = os.path.dirname(Path(qdescp_df['Name'][0]))
-                    for i,input_name in enumerate(input_df['code_name']):
-                        # match the entries of the two databases using the entry name
-                        qdescp_col = input_df.loc[i].to_frame().T.reset_index(drop=True) # transposed, reset index
-                        input_col = qdescp_df.loc[(qdescp_df['Name'] == f'{path_json}/{input_name}_rdkit_boltz') | (qdescp_df['Name'] == f'{path_json}/{input_name}_boltz') | (qdescp_df['Name'] == f'{path_json}/{input_name}_0_rdkit_boltz') | (qdescp_df['Name'] == f'{path_json}/{input_name}_1_rdkit_boltz') | (qdescp_df['Name'] == f'{path_json}/{input_name}_2_rdkit_boltz')]
-                        input_col = input_col.drop(['Name'], axis=1).reset_index(drop=True)
-                        combined_row = pd.concat([qdescp_col,input_col], axis=1)
-                        combined_df = pd.concat([combined_df, combined_row], ignore_index=True)
-                    combined_df = combined_df.dropna(axis=0)
-                    csv_basename = os.path.basename(self.args.csv_name)
-                    csv_path = self.args.initial_dir.joinpath(f'AQME-{name_db}_{csv_basename}')
-                    _ = combined_df.to_csv(f'{csv_path}', index = None, header=True)
-                    self.args.log.write(f"o  The AQME-{name_db}_{csv_basename} file containing the database ready for the AQME-{name_db} workflow was successfully created in {self.args.initial_dir}")
-                else:
-                    self.args.log.write(f"\nx  The input csv_name provided ({self.args.csv_name}) does not contain the SMILES column. A combined database for AQME-{name_db} workflows will not be created.")
+                self.args.log.write(f"\nx  The input csv_name provided ({self.args.csv_name}) does not contain the SMILES column. A combined database for AQME-{name_db} workflows will not be created.")
 
         df_temp = pd.read_csv(f'AQME-{name_db}_{self.args.csv_name}')
         _ = self.process_aqme_csv(name_db)
