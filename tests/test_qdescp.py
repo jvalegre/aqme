@@ -29,6 +29,7 @@ T = 298.15
     [
         ("test.csv"), # standard test
         ("test_atom.csv"), # test with qdescp_atoms using an atom
+        ("test_idx.csv"), # test with qdescp_atoms using an atom index mapped
         ("test_group.csv"), # test with qdescp_atoms using a functional group
         ("test_multigroup.csv"), # test with qdescp_atoms using a multiple atoms and functional groups
         ("test_robert.csv") # test for the AQME-ROBERT workflow
@@ -87,8 +88,13 @@ def test_qdescp_xtb(file):
 
     if file == 'test_atom.csv':
         cmd_qdescp = cmd_qdescp + ["--qdescp_atoms", "[P]", "--dbstep_calc"]
+    
+    if file == "test_idx.csv":
+        cmd_qdescp = cmd_qdescp + ["--qdescp_atoms", "[1]"]
+
     elif file == 'test_group.csv':
         cmd_qdescp = cmd_qdescp + ["--qdescp_atoms", "[C=O]"]
+
     elif file in ['test_multigroup.csv','test_robert.csv']:
         # Pd is included to check the try/except in the SMARTS pattern match,
         # and to check if the code works even if there are atoms that aren't used
@@ -167,7 +173,7 @@ def test_qdescp_xtb(file):
         assert pd_boltz["NumRotatableBonds"][1] == 4
         assert 'DBSTEP_Vbur' not in pd_boltz
 
-    elif file in ['test_atom.csv','test_group.csv','test_multigroup.csv','test_robert.csv']:
+    elif file in ['test_atom.csv','test_group.csv','test_multigroup.csv','test_robert.csv','test_idx.csv']:
         pd_boltz = pd.read_csv(file_descriptors)
 
         # mol_1 is methane and it doesn't have any P/O atoms or CC/C=O groups so the boltz json file shouldn't appear
@@ -201,6 +207,10 @@ def test_qdescp_xtb(file):
                 assert 'CC_min_FUKUI+' in pd_boltz
                 if file == 'test_robert.csv':
                     assert 'Name' not in pd_boltz
+
+        elif file == 'test_idx.csv':
+            assert 'C1_FUKUI+' in pd_boltz
+            assert round(pd_boltz['C1_partial charges'][1],1) == 50
 
         elif file == 'test_group.csv':
             assert 'C=O_C_DBSTEP_Vbur' not in pd_boltz
