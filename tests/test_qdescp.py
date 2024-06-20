@@ -210,7 +210,7 @@ def test_qdescp_xtb(file):
 
         elif file == 'test_idx.csv':
             assert 'C1_FUKUI+' in pd_boltz
-            assert round(pd_boltz['C1_partial charges'][1],1) == 50
+            assert round(pd_boltz['C1_partial charges'][1],1) == -0.2
 
         elif file == 'test_group.csv':
             assert 'C=O_C_DBSTEP_Vbur' not in pd_boltz
