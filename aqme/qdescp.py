@@ -749,26 +749,41 @@ class qdescp:
             # find the target atoms or groups
             for pattern in smarts_targets:
                 matches = []
-                try:
-                    matches = mol.GetSubstructMatches(Chem.MolFromSmarts(pattern))
-                except: # I tried to make this except more specific for Boost.Python.ArgumentError, but apparently it's not as simple as it looks
+                idx_set = None
+                
+                # we differentiate if is a number for mapped atom or we are looking for smarts pattern in the molecule
+                if not str(pattern).isalpha() and str(pattern).isdigit():
+                    matches = [-1]
+                    for atom in mol.GetAtoms():
+                        if atom.GetAtomMapNum() == int(pattern):
+                            idx_set = pattern
+                            pattern_idx = int(atom.GetIdx())
+                            matches = ((int(pattern_idx),),)
+                else: 
                     try:
-                        matches = mol.GetSubstructMatches(Chem.MolFromSmarts(f'[{pattern}]'))
-                    except:
-                        self.args.log.write(f"x  WARNING! SMARTS pattern was not specified correctly! Make sure the qdescp_atoms option uses this format: \"[C]\" for atoms, \"[C=N]\" for bonds, and so on.")
-      
+                        matches = mol.GetSubstructMatches(Chem.MolFromSmarts(pattern))
+                    except: # I tried to make this except more specific for Boost.Python.ArgumentError, but apparently it's not as simple as it looks
+                        try:
+                            matches = mol.GetSubstructMatches(Chem.MolFromSmarts(f'[{pattern}]'))
+                        except:
+                            self.args.log.write(f"x  WARNING! SMARTS pattern was not specified correctly! Make sure the qdescp_atoms option uses this format: \"[C]\" for atoms, \"[C=N]\" for bonds, and so on.")
+                
                 if len(matches) == 0:
                     self.args.log.write(f"x  WARNING! SMARTS pattern {pattern} not found in the system, this molecule will not be used.")
-
+                
+                elif matches[0] == -1:
+                    self.args.log.write(f"x  WARNING! Mapped atom {pattern} not found in the system, this molecule will not be used.")
+                
                 elif len(matches) > 1:
                     self.args.log.write(f"x  WARNING! More than one {pattern} atom was found in the system, this molecule will not be used.")
-
+                
                 elif len(matches) == 1:
                     # get atom types and sort them to keep the same atom order among different molecules
                     atom_indices = list(matches[0])
                     atom_types = []
                     for atom_idx in atom_indices:
                         atom_types.append(mol.GetAtoms()[atom_idx].GetSymbol())
+                        
 
                     n_types = len(set(atom_types)) #cambiar para que en caso de tener ejemplo Jaime con 2P tambien te los calcule, el problema es del set 
                     if n_types == 1:
@@ -784,7 +799,10 @@ class qdescp:
                         idx_xtb = atom_idx
                         atom_type = mol.GetAtoms()[atom_idx].GetSymbol()
                         if len(matches[0]) == 1:
-                            match_name = f'{atom_type}'
+                            if idx_set is None:
+                                match_name = f'{atom_type}'
+                            else:
+                                match_name = f'{atom_type}{idx_set}'
                         else:
                             if n_types == 1:
                                 match_name = f'{pattern}_{atom_type}{match_idx}'
