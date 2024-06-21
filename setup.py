@@ -37,7 +37,7 @@ setup(
         "pandas>=2.0.2",
         "progress",
         "ase",
-        "numpy",
+        "numpy==1.26.4",
         "cclib==1.7.2",
         "matplotlib",
         "seaborn",
