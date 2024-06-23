@@ -31,9 +31,14 @@ Parameters
       Prefix added to all the names  
    chk : bool, default=False
       Include the chk input line in new input files for Gaussian calculations
+   oldchk : bool, default=False
+      Include the oldchk input line in new input files for Gaussian calculations
    chk_path : str, default=''
-      PATH to store CHK files. For example, if chk_path='root/user, the chk line of the input file would be
+      PATH to store CHK files. For example, if chk_path='root/user/FILENAME.chk, the chk line of the input file would be
       %chk=root/user/FILENAME.chk
+   oldchk_path : str, default=''
+      PATH to read CHK files with %oldchk. For example, if oldchk_path='root/user/FILENAME.chk, the oldchk line of the input file would be
+      %oldchk=root/user/FILENAME.chk
    mem : str, default='4GB'
       Memory for the QM calculations (i) Gaussian: total memory; (ii) ORCA: memory per processor
    nprocs : int, default=2
@@ -284,11 +289,14 @@ class qprep:
         name_file = add_prefix_suffix(qprep_data["name"], self.args)
 
         if self.args.program.lower() == "gaussian":
-            if self.args.chk:
-                if self.args.chk_path != '':
-                    txt += f'%chk={self.args.chk_path}/{name_file}.chk\n'
-                else:
-                    txt += f'%chk={name_file}.chk\n'
+            if self.args.chk_path != '':
+                txt += f'%chk={self.args.chk_path}\n'
+            elif self.args.chk:
+                txt += f'%chk={name_file}.chk\n'
+            if self.args.oldchk_path != '':
+                txt += f'%oldchk={self.args.oldchk_path}\n'
+            elif self.args.oldchk:
+                txt += f'%oldchk={name_file}.chk\n'
             txt += f"%nprocshared={self.args.nprocs}\n"
             txt += f"%mem={self.args.mem}\n"
             if self.args.qm_input[:2] not in ['p ','P ']:

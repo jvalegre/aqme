@@ -545,25 +545,23 @@ def RMSD_and_E_filter(
         for seenconf in selectedcids:
             E_diff = abs(cenergy[conf] - cenergy[seenconf])  # in kcal/mol
             if E_diff < energy_threshold:
+                n_mol_1 = -1
+                n_mol_2 = -1
                 if calc_type == "rdkit":
+                    n_mol_1 = seenconf
+                    n_mol_2 = conf
+                try:
                     rms = get_conf_RMS(
                         outmols[seenconf],
                         outmols[conf],
-                        seenconf,
-                        conf,
+                        n_mol_1,
+                        n_mol_2,
                         args.heavyonly,
                         max_matches_rmsd
                     )
-                # elif calc_type == 'summ' or calc_type == 'fullmonte' or calc_type =='xtb' or calc_type =='ani':
-                elif calc_type == "summ" or calc_type == "xtb" or calc_type == "ani":
-                    rms = get_conf_RMS(
-                        outmols[conf],
-                        outmols[seenconf],
-                        -1,
-                        -1,
-                        args.heavyonly,
-                        max_matches_rmsd
-                    )
+                except RuntimeError:
+                    rms = rms_threshold + 1
+                    args.log.write('\nx  The mols loaded by RDKit from the SDF file have different substructures and the RMS filter failed. The duplicate filter will only use E on some conformers!')
                 if rms < rms_threshold:
                     excluded_conf = True
                     eng_rms_dup += 1
