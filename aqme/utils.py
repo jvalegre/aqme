@@ -4,6 +4,7 @@
 ######################################################.
 
 import os
+import re
 import subprocess
 import sys
 import time
@@ -678,21 +679,26 @@ def check_run(w_dir):
     Determines the folder where input files are gonna be generated in QCORR.
     """
 
-    if "failed" in w_dir.as_posix():
-        resume_qcorr = True
-        for folder in w_dir.as_posix().replace("\\", "/").split("/"):
-            if "run_" in folder:
-                folder_count = int(folder.split("_")[1]) + 1
-    else:
-        input_folder = w_dir.joinpath("failed/")
-        resume_qcorr = False
-        folder_count = 1
+    failed_run_pattern = re.compile(
+        r"(^.*)[/\\]failed[/\\]run_(?P<folder_count>\d+)[/\\]"
+    )
 
-        if os.path.exists(input_folder):
-            dir_list = os.listdir(input_folder)
-            for folder in dir_list:
-                if folder.find("run_") > -1:
-                    folder_count += 1
+    run_pattern = re.compile(r"(^.*)[/\\]run_(?P<folder_count>\d+)[/\\]")
+    resume_qcorr = False
+    folder_count = 1
+
+    failed_run_match = failed_run_pattern.match(w_dir.as_posix())
+    run_match = run_pattern.match(w_dir.as_posix())
+
+    if failed_run_match:
+        folder_count = int(failed_run_match.group("folder_count")) + 1
+        resume_qcorr = True
+        return folder_count, resume_qcorr
+
+    if run_match:
+        folder_count = int(run_match.group("folder_count"))
+        resume_qcorr = False
+        return folder_count, resume_qcorr
 
     return folder_count, resume_qcorr
 
