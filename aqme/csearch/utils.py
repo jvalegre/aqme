@@ -18,7 +18,7 @@ from aqme.utils import (
     add_prefix_suffix,
     get_conf_RMS
 )
-from aqme.csearch.crest import nci_ts_mol,fix_mapped_atoms
+from aqme.csearch.crest import nci_ts_mol
 
 
 def creation_of_dup_csv_csearch(program):
@@ -581,6 +581,27 @@ def smi_to_mol(
         constraints_dihedral,
         complex_ts
     )
+
+
+def fix_mapped_atoms(smi):
+    '''
+    This protocol to handle mapped SMILES. Otherwise, Hs are not added right and charges/mult
+    are not calculated correctly either.
+    '''
+
+    map_list = []
+    smi_map = smi.replace(']','[').split('[')
+    for piece in smi_map:
+        if ':' in piece:
+            map_list.append(f'[{piece}]')
+    for map_atom in map_list:
+        new_atom = map_atom.replace(':','[').split('[')
+        while('' in new_atom):
+            new_atom.remove('')
+        new_atom = new_atom[0]
+        smi = smi.replace(map_atom,new_atom)
+    
+    return smi
 
 
 def cluster_conformers(mols, heavy_only, max_matches_rmsd, cluster_thr):

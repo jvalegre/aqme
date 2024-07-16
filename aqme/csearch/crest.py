@@ -608,9 +608,6 @@ def nci_ts_mol(
     molsH = []
     mols = []
     for m in smi:
-        # fix mapped atoms
-        if ':' in m:
-            m = fix_mapped_atoms(m)
         mols.append(Chem.MolFromSmiles(m))
         molsH.append(Chem.AddHs(Chem.MolFromSmiles(m)))
 
@@ -704,24 +701,3 @@ def nci_ts_mol(
         adapted_angle,
         adapted_dihedral,
     )
-
-
-def fix_mapped_atoms(smi):
-    '''
-    This protocol to handle mapped SMILES. Otherwise, Hs are not added right and charges/mult
-    are not calculated correctly either.
-    '''
-
-    map_list = []
-    smi_map = smi.replace(']','[').split('[')
-    for piece in smi_map:
-        if ':' in piece:
-            map_list.append(f'[{piece}]')
-    for map_atom in map_list:
-        new_atom = map_atom.replace(':','[').split('[')
-        while('' in new_atom):
-            new_atom.remove('')
-        new_atom = new_atom[0]
-        smi = smi.replace(map_atom,new_atom)
-    
-    return smi
