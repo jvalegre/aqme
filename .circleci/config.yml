@@ -55,6 +55,7 @@ jobs:
           # install and run pytest
           pip install pytest
           pip install pytest-cov
+          pip install pytest-mock
           # the format of the codecov report has to be scpecified or it doesn't create for some reason
           python -m pytest -v --cov=aqme --cov-report=xml
           rm -r /tmp/*

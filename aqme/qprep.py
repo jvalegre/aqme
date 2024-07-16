@@ -67,6 +67,9 @@ import sys
 import glob
 import time
 import json
+import pandas as pd
+from pkg_resources import resource_filename
+
 from aqme.utils import (
     cclib_atoms_coords,
     QM_coords,
@@ -78,9 +81,12 @@ from aqme.utils import (
     add_prefix_suffix,
     check_files
 )
+
 from aqme.csearch.crest import xyzall_2_xyz
 from pathlib import Path
+from rdkit import Chem
 
+TEMPLATES_PATH = Path(resource_filename("aqme", "templates"))
 
 class qprep:
     """
@@ -191,6 +197,7 @@ class qprep:
                     sdf_files.append(f"{file.split('.pdb')[0]}.sdf")
 
                 else:
+
                     sdf_files.append(file)
 
                 for sdf_file in sdf_files:
@@ -453,11 +460,15 @@ class qprep:
                 try:
                     charge = int(mol.GetProp("Real charge"))
                 except KeyError:
-                    pass
+                    charge = Chem.GetFormalCharge(mol)
                 try:
                     mult = int(mol.GetProp("Mult"))
                 except KeyError:
-                    pass
+                    NumRadicalElectrons = 0
+                    for Atom in mol.GetAtoms():
+                        NumRadicalElectrons += Atom.GetNumRadicalElectrons()
+                    TotalElectronicSpin = NumRadicalElectrons / 2
+                    mult = int((2 * TotalElectronicSpin) + 1)
 
             elif file_format in ["log", "out"]:
                 # detect QM program and number of atoms
@@ -533,3 +544,36 @@ class qprep:
             mult = 1
 
         return atom_types, cartesians, charge, mult, found_coords
+
+    def check_level_of_theory(functional, basis, program):
+        """
+        Cross check a chosen functional and basis set against a precompiled list of available options.
+        Not necessarily a definitive list!
+        """
+
+        found = True # assume that they exist
+
+        functional_csv = TEMPLATES_PATH / Path('functionals.csv')
+        basis_set_csv = TEMPLATES_PATH / Path('basis_sets.csv')
+        
+        functional_data = pd.read_csv(functional_csv)
+        functional_data.drop_duplicates(inplace=True)
+
+        basis_set_data = pd.read_csv(basis_set_csv)
+        basis_set_data.drop_duplicates(inplace=True)
+
+        if program == 'orca':
+            functional_list = functional_data['orca'].to_numpy().flatten()
+            functional_list = [x for x in functional_list if str(x) != 'nan'] # remove NaN
+            basis_set_list = basis_set_data['orca'].to_numpy().flatten() 
+            basis_set_list = [x for x in basis_set_list if str(x) != 'nan'] # remove NaN
+            
+        if functional.upper() not in (func.upper() for func in functional_list):
+            print('\n!  {} functional requested but unknown in {}!\n'.format(functional, program))
+            found = False
+            
+        if basis.upper() not in (bs.upper() for bs in basis_set_list):
+            print('\n!  {} basis set requested but unknown in {}!\n'.format(basis, program))
+            found = False
+        
+        return found
