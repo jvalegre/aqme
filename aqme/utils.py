@@ -510,7 +510,7 @@ def load_variables(kwargs, aqme_module, create_dat=True):
         if error_setup:
             self.w_dir_main = Path(os.getcwd())
             
-        # start a log file to track the QCORR module
+        # start a log file to track the AQME modules
         if create_dat:
             logger_1, logger_2 = "AQME", "data"
             if aqme_module == "qcorr":

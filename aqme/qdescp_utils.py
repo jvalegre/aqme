@@ -46,6 +46,7 @@ def get_boltz_props(
     self,
     mol_props,
     atom_props,
+    smarts_targets,
     nmr_atoms=None,
     nmr_slope=None,
     nmr_intercept=None,
@@ -106,7 +107,7 @@ def get_boltz_props(
             if type.lower() == "nmr":
                 prop_list.append(json_data["properties"]["NMR"][prop].values())
 
-        if len(self.args.qdescp_atoms) == 0:
+        if len(smarts_targets) == 0:
             avg_prop = average_prop_atom(boltz, prop_list)
         else:
             avg_prop = average_prop_mol(boltz, prop_list)
@@ -133,7 +134,7 @@ def get_boltz_props(
 
         elif type.lower() == "xtb":
             try:
-                if len(self.args.qdescp_atoms) > 0 or avg_prop == 'NaN':
+                if len(smarts_targets) > 0 or avg_prop == 'NaN':
                     avg_json_data[prop] = avg_prop
                 else:
                     avg_json_data[prop] = avg_prop.tolist()
