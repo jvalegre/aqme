@@ -841,6 +841,18 @@ def test_csearch_methods(
             if 'Pd  0' in line:
                 metal_found = True
         assert metal_found
+
+        # check that the metal atom is already added during the CREST calculation
+        xyz_crest = str(csearch_methods_dir+f"/CSEARCH/crest_xyz/{name}_xtb1.xyz")
+        xyzfile = open(xyz_crest, "r")
+        xyzlines_crest = xyzfile.readlines()
+        xyzfile.close()
+        xyz_metal = False
+        for line in xyzlines_crest:
+            if 'Pd    ' in line:
+                xyz_metal = True
+        assert xyz_metal
+
     if name == 'Ag_complex_crest':
         outfile = open(file, "r")
         outlines_sdf = outfile.readlines()

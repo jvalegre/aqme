@@ -1016,6 +1016,7 @@ class csearch:
             mol_rd = Chem.RWMol(rdmols[cid])
             mol_rd.SetProp("_Name", rdmols[cid].GetProp("_Name") + " " + str(i))
             mol_rd.SetProp("Energy", str(rotated_energy[cid]))
+            # setting the metal back instead of I
             if len(self.args.metal_atoms) >= 1:
                 set_metal_atomic_number(
                     mol_rd, self.args.metal_idx, self.args.metal_sym
@@ -1210,8 +1211,10 @@ class csearch:
 
             # removes geometries that do not pass the filters (geom option)
             mol_geom = Chem.Mol(mol)
+            # setting the metal back instead of I
             if len(self.args.metal_atoms) >= 1:
                 set_metal_atomic_number(mol_geom, self.args.metal_idx, self.args.metal_sym)
+
             passing_geom = geom_filter(self,mol_geom,geom)
             if passing_geom:
                 cenergy.append(energy)
