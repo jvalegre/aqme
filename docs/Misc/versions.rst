@@ -4,8 +4,10 @@
 Versions
 ========
 
-Version 1.5.3 [`url <https://github.com/jvalegre/aqme/releases/tag/1.5.3>`__]
+Version 1.6.0 [`url <https://github.com/jvalegre/aqme/releases/tag/1.5.3>`__]
    -  Fixed bug in QCORR when analyzing TD-DFT, ONIOM and G4 calculations in Gaussian 
+   -  CSEARCH is now compatible with mapped atoms
+   -  QPREP now warns if the level of theory is not defined in ORCA
 
 Version 1.5.2 [`url <https://github.com/jvalegre/aqme/releases/tag/1.5.2>`__]
    -  Fixed bug for using constraints with large molecules in CREST (related to long atom lists 

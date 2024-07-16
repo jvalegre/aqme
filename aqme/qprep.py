@@ -126,11 +126,18 @@ class qprep:
         else:
             destination = Path(self.args.destination)
 
+        # check if qm_input is not empty
         if self.args.qm_input == "" and create_dat:
             self.args.log.write("x  No keywords line was specified! (i.e. qm_input=KEYWORDS_LINE).")
             self.args.log.finalize()
             sys.exit()
 
+        # check if functionals and basis sets used are correct
+        # so far, it only works for Gaussian
+        if self.args.program.lower() == 'gaussian':
+            _ = self.check_level_of_theory()
+
+        # checks for gen/genecp
         if self.args.gen_atoms != [] and self.args.bs_nogen == "" and create_dat:
             self.args.log.write("x  Atoms for Gen(ECP) were specified (gen_atoms=[ATOM_LIST]) but no basis set was included for non-Gen(ECP) atoms (i.e. bs_nogen=BASIS_SET).")
             self.args.log.finalize()
@@ -545,14 +552,14 @@ class qprep:
 
         return atom_types, cartesians, charge, mult, found_coords
 
-    def check_level_of_theory(functional, basis, program):
+
+    def check_level_of_theory(self):
         """
         Cross check a chosen functional and basis set against a precompiled list of available options.
         Not necessarily a definitive list!
         """
 
-        found = True # assume that they exist
-
+        # read the predifined list of functionals and basis sets
         functional_csv = TEMPLATES_PATH / Path('functionals.csv')
         basis_set_csv = TEMPLATES_PATH / Path('basis_sets.csv')
         
@@ -562,18 +569,32 @@ class qprep:
         basis_set_data = pd.read_csv(basis_set_csv)
         basis_set_data.drop_duplicates(inplace=True)
 
-        if program == 'orca':
-            functional_list = functional_data['orca'].to_numpy().flatten()
-            functional_list = [x for x in functional_list if str(x) != 'nan'] # remove NaN
-            basis_set_list = basis_set_data['orca'].to_numpy().flatten() 
-            basis_set_list = [x for x in basis_set_list if str(x) != 'nan'] # remove NaN
-            
-        if functional.upper() not in (func.upper() for func in functional_list):
-            print('\n!  {} functional requested but unknown in {}!\n'.format(functional, program))
-            found = False
-            
-        if basis.upper() not in (bs.upper() for bs in basis_set_list):
-            print('\n!  {} basis set requested but unknown in {}!\n'.format(basis, program))
-            found = False
-        
-        return found
+        functional_list = functional_data[self.args.program].to_numpy().flatten()
+        functional_list = [x for x in functional_list if str(x) != 'nan'] # remove NaN
+        basis_set_list = basis_set_data[self.args.program].to_numpy().flatten()
+        basis_set_list = [x for x in basis_set_list if str(x) != 'nan'] # remove NaN
+
+        found_func, found_basis = False, False
+
+        # first, look for the basis set from gen/genecp, both sets of basis sets used (i.e. for
+        # gen atoms and for other atoms)
+        if self.args.bs_gen != '':
+            if self.args.bs_gen.upper() in (bs.upper() for bs in basis_set_list):
+                if self.args.bs_nogen.upper() in (bs.upper() for bs in basis_set_list):
+                    found_basis = True
+
+        # for all the keywords in the qm_input option, check if there are compatible functionals and
+        # basis sets
+        for keyword in self.args.qm_input.split():
+            for subkey in keyword.split('/'):
+                if subkey.count('opt') == 0 and subkey.count('freq') == 0 and subkey.count('scrf') == 0 and subkey.count('pop') == 0 and subkey.count('gen') == 0:
+                    if subkey.upper() in (func.upper() for func in functional_list):
+                        found_func = True
+                    if subkey.upper() in (bs.upper() for bs in basis_set_list):
+                        found_basis = True
+
+        if not found_func:
+            self.args.log.write("x  WARNING! Verify that your functional is correct. If it is, please let us know to add it to the list of known functionals.")
+
+        if not found_basis:
+            self.args.log.write("x  WARNING! Verify that your basis set(s) is correct. If it is, please let us know to add it to the list of known basis sets.")

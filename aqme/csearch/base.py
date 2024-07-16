@@ -550,18 +550,20 @@ class csearch:
                 return
 
             if complex_type in accepted_complex_types:
+                count_metals = 0
                 valid_template = True
                 # check if the specified metal is included in the system
-                first_metal_idx = self.args.metal_idx[0] #Dirty hack to allow multiple metals when using templates (need to fix this ASAP)
-                if first_metal_idx is not None:
-                    # calculate number of expected neighbours
-                    valid_template = check_metal_neigh(mol, complex_type, first_metal_idx, self.args.log, valid_template)
+                for metal_idx_ind in self.args.metal_idx:
+                    if metal_idx_ind is not None:
+                        # calculate number of expected neighbours
+                        valid_template = check_metal_neigh(mol, complex_type, metal_idx_ind, self.args.log, valid_template)
+                        count_metals += 1
 
-                if valid_template:
+                if count_metals == 1 and valid_template:
                     template_opt = True
                     template_kwargs = dict()
                     template_kwargs["complex_type"] = complex_type
-                    template_kwargs["metal_idx"] = [first_metal_idx]
+                    template_kwargs["metal_idx"] = self.args.metal_idx
                     template_kwargs["maxsteps"] = self.args.opt_steps_rdkit
                     template_kwargs["heavyonly"] = self.args.heavyonly
                     template_kwargs["maxmatches"] = self.args.max_matches_rmsd
@@ -593,6 +595,8 @@ class csearch:
                         frames = [total_data, data]
                         total_data = pd.concat(frames, sort=True)
 
+                elif count_metals > 1 or count_metals == 0:
+                    self.args.log.write(f"\nx  The template specified {complex_type} is not used for systems with more than 1 metal or for organic molecueles.")
 
         if not template_opt:
             total_data = self.conformer_generation(
@@ -619,14 +623,9 @@ class csearch:
         transition_metals = ['Sc', 'Ti', 'V', 'Cr', 'Mn', 'Fe', 'Co', 'Ni', 'Cu', 'Zn', 'Y', 'Zr', 'Nb', 'Mo',
                             'Tc', 'Ru', 'Rh', 'Pd', 'Ag', 'Cd', 'Hf', 'Ta', 'W', 'Re', 'Os', 'Ir', 'Pt', 'Au',
                             'Hg', 'Rf', 'Db', 'Sg', 'Bh', 'Hs', 'Mt', 'Ds', 'Rg', 'Cn', 'Nh', 'Fl', 'Mc', 'Lv', 'Ts', 'Og']
-
-        # Reversed for loop to add the heaviest atom first in self.args.metal_atoms. Then, the first atom will be used in templates
-        atom_list = []
         for atom in mol.GetAtoms():
-            atom_list.append(atom.GetSymbol())
-        for transition_metal in reversed(transition_metals):
-            if transition_metal in atom_list:
-                self.args.metal_atoms.append(transition_metal)
+            if atom.GetSymbol() in transition_metals:
+                self.args.metal_atoms.append(atom.GetSymbol())
         if len(self.args.metal_atoms) > 0:
             self.args.log.write(f"\no  AQME recognized the following metal atoms: {self.args.metal_atoms}")
             if charge is None:
@@ -1388,13 +1387,6 @@ class csearch:
         """
         Conversion from RDKit to SDF
         """
-
-        try:
-            Chem.SanitizeMol(mol)
-            mol = Chem.AddHs(mol)
-        except Chem.AtomValenceException: # this happens sometimes with complex metals when substituting the metal with an I atom
-            self.args.log.write(f'\nx  The species provided could not be converted into a mol object wth RDKit. It normally happens with tricky metal complexes and might be fixed with a couple tricks (i.e., changing a single bond + positive charge with a double bond).')
-            return -1, None, None, None
 
         mol.SetProp("_Name", name)
 

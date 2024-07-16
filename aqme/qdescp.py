@@ -136,6 +136,12 @@ class qdescp:
         # load default and user-specified variables
         self.args = load_variables(kwargs, "qdescp")
 
+        # detect errors and incompatibilities before the QDESCP run
+        if self.args.program.lower() not in ["xtb", "nmr"]:
+            self.args.log.write("\nx  Program not supported for QDESCP descriptor generation! Specify: program='xtb' (or nmr)")
+            self.args.log.finalize()
+            sys.exit()
+
         # get unique files to avoid redundancy in calculations
         self.args.files = self.get_unique_files()
 
@@ -147,27 +153,13 @@ class qdescp:
         # retrieve the different files to run in QDESCP
         _ = check_files(self,'qdescp')
 
-        qdescp_program = True
-        if self.args.program is None:
-            qdescp_program = False
-        if qdescp_program:
-            if self.args.program.lower() not in ["xtb", "nmr"]:
-                qdescp_program = False
-        if not qdescp_program:
-            self.args.log.write("\nx  Program not supported for QDESCP descriptor generation! Specify: program='xtb' (or nmr)")
-            self.args.log.finalize()
-            sys.exit()
-
         update_atom_props = [] # keeps track of the molecules with suitable atomic properties when using qdescp_atoms
 
         self.args.log.write(f"\nStarting QDESCP-{self.args.program} with {len(self.args.files)} job(s)\n")
 
         # Obtaing SMARTS patterns from the input files automatically if no patterns are provided
         smarts_targets = self.args.qdescp_atoms.copy()
-        if self.args.csv_name is None:
-            self.args.csv_name = input("Please enter the name of the CSV file: ")
-            if not self.args.csv_name.endswith(".csv"):
-                self.args.csv_name += ".csv"
+
         if self.args.csv_name is not None:
             input_df = pd.read_csv(self.args.csv_name)
             if len(smarts_targets) == 0:
@@ -310,7 +302,7 @@ class qdescp:
                 )
         # AQME-ROBERT workflow
         name_db='Descriptors'
-        if self.args.program.lower() == "xtb":
+        if self.args.program.lower() == "xtb" and self.args.csv_name is not None:
             if self.args.robert:
                 name_db='ROBERT'
             combined_df = pd.DataFrame()
@@ -335,8 +327,7 @@ class qdescp:
             else:
                 self.args.log.write(f"\nx  The input csv_name provided ({self.args.csv_name}) does not contain the SMILES column. A combined database for AQME-{name_db} workflows will not be created.")
 
-        df_temp = pd.read_csv(f'AQME-{name_db}_{self.args.csv_name}')
-        _ = self.process_aqme_csv(name_db)
+            _ = self.process_aqme_csv(name_db)
 
         elapsed_time = round(time.time() - start_time_overall, 2)
         self.args.log.write(f"\nTime QDESCP: {elapsed_time} seconds\n")
@@ -632,7 +623,6 @@ class qdescp:
         """
         Collects all xTB properties from the files and puts them in a JSON file
         """
-        #crear un diccionario con 2 listas una para molecular y otras para atomic y hacer append dependiendo de donde vaya cada descriptor
 
         (
             _,
@@ -768,7 +758,7 @@ class qdescp:
                         atom_types.append(mol.GetAtoms()[atom_idx].GetSymbol())
                         
 
-                    n_types = len(set(atom_types)) #cambiar para que en caso de tener ejemplo Jaime con 2P tambien te los calcule, el problema es del set 
+                    n_types = len(set(atom_types))
                     if n_types == 1:
                         sorted_indices = sorted(atom_indices, key=lambda idx: len(mol.GetAtoms()[idx].GetNeighbors()))
                     elif n_types > 1:
