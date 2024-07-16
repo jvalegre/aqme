@@ -157,34 +157,60 @@ def prepare_smiles_from_line(line, args):
     name = toks[1]
     name = add_prefix_suffix(name, args)
 
+    # Check for N@@ or N@ in SMILES
+    if "N@@" in smiles or "N@" in smiles:
+        args.log.write(f"\nx  WARNING! AQME does not support quiral N atoms in SMILES strings (N@@ or N@). These atoms were replaced by N in the SMILES: {smiles}.")
+        smiles = smiles.replace("N@@", "N").replace("N@", "N")
+
     return smiles, name
 
 
 def prepare_csv_files(args, csearch_file):
     csv_smiles = pd.read_csv(csearch_file)
     job_inputs = []
-    for i in range(len(csv_smiles)):
-        obj = generate_mol_from_csv(args, csv_smiles, i)
-        job_inputs.append(obj)
+    unique_smiles = set()
+    for column_index, column in enumerate(csv_smiles.columns):
+        if "SMILES" == column.upper() or "SMILES_" in column.upper():
+            for i in range(len(csv_smiles)):
+                obj = generate_mol_from_csv(args, csv_smiles, i, column_index)
+                if obj[0] not in unique_smiles:
+                    job_inputs.append(obj)
+                    unique_smiles.add(obj[0])
     return job_inputs
 
 
-def generate_mol_from_csv(args, csv_smiles, index):
+def generate_mol_from_csv(args, csv_smiles, index, column_index):
     # assigning names and smi in each loop
     try:
-        smiles = csv_smiles.loc[index, "SMILES"]
-    except KeyError:
-        try:
-            smiles = csv_smiles.loc[index, "smiles"]
-        except KeyError:
-            args.log.write("\nx  Make sure the CSV file contains a column called 'SMILES' or 'smiles' with the SMILES of the molecules!")
+        smiles = None
+        for column in csv_smiles.columns:
+            if column.upper() == "SMILES" or column.upper().startswith("SMILES_"):
+                column_name = csv_smiles.columns[column_index]
+                smiles = csv_smiles.loc[index, column_name]
+                break
+        if smiles is None:
+            args.log.write("\nx  Make sure the CSV file contains a column called 'SMILES' or 'smiles' or 'SMILES_' with the SMILES of the molecules!")
             args.log.finalize()
             sys.exit()
+        
+        # Check for N@@ or N@ in SMILES
+        if "N@@" in smiles or "N@" in smiles:
+            args.log.write(f"\nx  WARNING! AQME does not support quiral N atoms in SMILES strings (N@@ or N@). These atoms were replaced by N in the SMILES: {smiles}.")
+            smiles = smiles.replace("N@@", "N").replace("N@", "N")
+        
+    except KeyError:
+        args.log.write("\nx  Make sure the CSV file contains a column called 'SMILES' or 'smiles' or 'SMILES_' with the SMILES of the molecules!")
+        args.log.finalize()
+        sys.exit()
 
     try:
         name = str(csv_smiles.loc[index, "code_name"])
-        name = add_prefix_suffix(name, args)
-
+        column_name = csv_smiles.columns[column_index]
+        if column_name.upper() == "SMILES" or not "_" in column_name:
+            name += ""
+        else:
+            suffix = column_name.split("_")[-1]
+            name += "_" + suffix
     except KeyError:
         args.log.write("\nx  Make sure the CSV file contains a column called 'code_name' with the names of the molecules!")
         args.log.finalize()
