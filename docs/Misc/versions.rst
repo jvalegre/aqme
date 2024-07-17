@@ -5,6 +5,12 @@ Versions
 ========
 
 Version 1.6.0 [`url <https://github.com/jvalegre/aqme/releases/tag/1.5.3>`__]
+   -  QDESCP now accepts multi-SMILES columns in CSV files
+   -  CSEARCH now handles multiple metals without program interruption
+   -  Check for N@@ or N@ in SMILES to avoid RDKit issues
+   -  CSEARCH now performs conformational search only for unique SMILES to avoid redundant calculations
+   -  QDESCP now automatically obtains SMARTS patterns from input files if no patterns are provided
+   -  QDESCP now uses a single processor for xtb calculations to ensure reproducibility
    -  Fixed bug in QCORR when analyzing TD-DFT, ONIOM and G4 calculations in Gaussian 
    -  CSEARCH is now compatible with mapped atoms
    -  QPREP now warns if the level of theory is not defined in ORCA
