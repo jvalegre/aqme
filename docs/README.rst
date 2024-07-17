@@ -118,7 +118,6 @@ it also works for other Python versions (i.e., 3.7, 3.9 and 3.11):
 .. code-block:: shell
 
    pip install aqme
-   conda install -c conda-forge rdkit
    conda install -c conda-forge openbabel
 
 Installation of extra requirements
@@ -138,12 +137,16 @@ Extra requirements if `CMIN` is used with ANI models:
 
 .. code-block:: shell 
 
+   pip install ase
+
+.. code-block:: shell 
    pip install torch torchvision torchani
 
-.. warning:: *Known incompatibilities:*
-   
-   -  RDKit cannot be installed through `pip install rdkit` in Windows when 
-      Anaconda prompts are used
+Extra requirements if `QDESCP` is used with DBSTEP:  
+
+.. code-block:: shell 
+
+   pip install dbstep
 
 .. installation-end 
 
@@ -223,17 +226,13 @@ Requirements
 Python and Python libraries
 +++++++++++++++++++++++++++
 
-*  Python >= 3.7
+*  Python >= 3.6
 *  pandas
 *  Numpy
 *  PyYAML
 *  progress
-*  ase (Atomic Simulation Environment)
-*  cclib (Computational Chemistry Library)
+*  cclib
 *  cffi
-*  matplotlib 
-*  seaborn
-*  goodvibes
 *  (opt) torch, torchvision and torchani
 
 *These libraries (except opt) are installed during the initial conda-forge installation.*
@@ -449,7 +448,7 @@ List of main developers and contact emails:
    `ORCID <https://orcid.org/0000-0002-4568-5854>`__ , 
    `Github <https://github.com/shreesowndarya>`__ , 
    `email <svss@colostate.edu>`__]
-   main developer of the CSEARCH, CMIN, QDESCP and VISMOL modules. 
+   main developer of the CSEARCH, CMIN and QDESCP modules. 
 *  Raúl Pérez-Soto [
    `ORCID <https://orcid.org/0000-0002-6237-2155>`__ ,
    `Github <https://github.com/rperezsoto>`__ ,

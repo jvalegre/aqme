@@ -95,10 +95,13 @@ import sys
 import time
 import json
 import shutil
+import concurrent.futures as futures
+import multiprocessing as mp
 import numpy as np
 from progress.bar import IncrementalBar
 import pandas as pd
 from rdkit import Chem
+from rdkit.Chem import rdFMCS
 from pathlib import Path
 import dbstep.Dbstep as db
 from aqme.utils import (
@@ -133,6 +136,15 @@ class qdescp:
         # load default and user-specified variables
         self.args = load_variables(kwargs, "qdescp")
 
+        # detect errors and incompatibilities before the QDESCP run
+        if self.args.program.lower() not in ["xtb", "nmr"]:
+            self.args.log.write("\nx  Program not supported for QDESCP descriptor generation! Specify: program='xtb' (or nmr)")
+            self.args.log.finalize()
+            sys.exit()
+
+        # get unique files to avoid redundancy in calculations
+        self.args.files = self.get_unique_files()
+
         if self.args.destination is None:
             destination = self.args.initial_dir.joinpath("QDESCP")
         else:
@@ -141,20 +153,94 @@ class qdescp:
         # retrieve the different files to run in QDESCP
         _ = check_files(self,'qdescp')
 
-        qdescp_program = True
-        if self.args.program is None:
-            qdescp_program = False
-        if qdescp_program:
-            if self.args.program.lower() not in ["xtb", "nmr"]:
-                qdescp_program = False
-        if not qdescp_program:
-            self.args.log.write("\nx  Program not supported for QDESCP descriptor generation! Specify: program='xtb' (or nmr)")
-            self.args.log.finalize()
-            sys.exit()
-
         update_atom_props = [] # keeps track of the molecules with suitable atomic properties when using qdescp_atoms
 
         self.args.log.write(f"\nStarting QDESCP-{self.args.program} with {len(self.args.files)} job(s)\n")
+
+        # Obtaing SMARTS patterns from the input files automatically if no patterns are provided
+        smarts_targets = self.args.qdescp_atoms.copy()
+
+        if self.args.csv_name is not None:
+            input_df = pd.read_csv(self.args.csv_name)
+            if len(smarts_targets) == 0:
+                smarts_targets = []
+                if 'SMILES' in input_df.columns or 'smiles' in input_df.columns or any(col.startswith('smiles_') for col in input_df.columns):
+                    possible_smiles_columns = [col for col in input_df.columns if col.lower().startswith('smiles')]
+                    if len(possible_smiles_columns) == 0:
+                        self.args.log.write("x  WARNING! No column with SMILES information found in the input CSV file.")
+                    else:
+                        for col in possible_smiles_columns:
+                            if col in input_df.columns:
+                                smiles_column = col
+                                break
+                        smiles_list = input_df[smiles_column].tolist()
+                else:
+                    self.args.log.write("x  WARNING! No column with SMILES information found in the input CSV file.")
+                if len(smiles_list) > 0:
+                    mols = [Chem.MolFromSmiles(smiles) for smiles in smiles_list if Chem.MolFromSmiles(smiles) is not None]#JDJAJKSHDKHA
+                    if len(mols) > 0:
+                        mcs = rdFMCS.FindMCS(mols)
+                        if mcs is not None:
+                            common_substructure = Chem.MolFromSmarts(mcs.smartsString)
+                            # Filter out non-metal atoms
+                            metal_smarts = []
+                            for atom in common_substructure.GetAtoms():
+                                if atom.GetSymbol() in ['Sc', 'Ti', 'V', 'Cr', 'Mn', 'Fe', 'Co', 'Ni', 'Cu', 'Zn', 'Y', 'Zr', 'Nb', 'Mo',
+                                                        'Tc', 'Ru', 'Rh', 'Pd', 'Ag', 'Cd', 'Hf', 'Ta', 'W', 'Re', 'Os', 'Ir', 'Pt', 'Au',
+                                                        'Hg', 'Rf', 'Db', 'Sg', 'Bh', 'Hs', 'Mt', 'Ds', 'Rg', 'Cn', 'Nh', 'Fl', 'Mc', 'Lv', 'Ts', 'Og']:
+                                    metal_smarts.append(f'[{atom.GetSymbol()}]')
+                            common_substructure = Chem.MolToSmiles(Chem.MolFromSmarts('.'.join(metal_smarts)))
+                            if common_substructure is not None and common_substructure != '':
+                                smarts_targets.append(common_substructure)
+                                self.args.log.write(f"\nSubstructure {(common_substructure)} found in input files. Using it for atomic descriptor calculations.")
+                          
+        # Delete a SMARTS pattern if it is not present in more than 30% of the sdf files
+        if len(smarts_targets) > 0:
+            mol_list = []
+            for file in self.args.files:
+                with open(file, "r") as F:
+                    lines = F.readlines()
+                    smi_exist = False
+                    for i, line in enumerate(lines):
+                        if ">  <SMILES>" in line:
+                            smi = lines[i + 1].split()[0]
+                            mol_indiv = Chem.AddHs(Chem.MolFromSmiles(smi))
+                            mol_list.append(mol_indiv)
+                            smi_exist = True
+                            break
+                    if not smi_exist:
+                        mol_indiv = Chem.SDMolSupplier(file, removeHs=False)
+                        mol_list.append(mol_indiv)
+
+            patterns_remove,matches = [],[]
+            for pattern in smarts_targets:
+                num_matches = len(mol_list)
+                for mol_indiv in mol_list:
+                    try:
+                        # we differentiate if is a number for mapped atom or we are looking for smarts pattern in the molecule
+                        if not str(pattern).isalpha() and str(pattern).isdigit():
+                            for atom in mol_indiv.GetAtoms():
+                                if atom.GetAtomMapNum() == int(pattern):
+                                    pattern_idx = int(atom.GetIdx())
+                                    matches = ((int(pattern_idx),),)
+                        else:
+                            matches = mol_indiv.GetSubstructMatches(Chem.MolFromSmarts(pattern))
+                    except:
+                        try: # I tried to make this except more specific for Boost.Python.ArgumentError, but apparently it's not as simple as it looks
+                            matches = mol_indiv.GetSubstructMatches(Chem.MolFromSmarts(f'[{pattern}]'))
+                        except:
+                            self.args.log.write(f"x  WARNING! SMARTS pattern {pattern} was not specified correctly and its corresponding atomic descriptors will not be generated! Make sure the qdescp_atoms option uses this format: \"[C]\" for atoms, \"[C=N]\" for bonds, and so on.")
+                            patterns_remove.append(pattern)
+                            break
+                    if len(matches) != 1:
+                        num_matches -= 1
+                    if (num_matches / len(mol_list)) < 0.7:
+                        patterns_remove.append(pattern)
+                        self.args.log.write(f"x  WARNING! SMARTS pattern {pattern} is not specified correctly or is not present in more than 30% of the molecules. Atomic descriptors will not be generated for this pattern.")
+                        break
+            # remove invalid patterns
+            for pattern in patterns_remove:
+                smarts_targets.remove(pattern)
 
         # run the main xTB workflow
         if self.args.program.lower() == "xtb":
@@ -165,10 +251,10 @@ class qdescp:
                 "FUKUIrad","s proportion","p proportion","d proportion","Coordination numbers",
                 "Dispersion coefficient C6","Polarizability alpha","FOD","FOD s proportion",
                 "FOD p proportion","FOD d proportion",'DBSTEP_Vbur']
-            if len(self.args.qdescp_atoms) == 0 or not self.args.dbstep_calc:
+            if len(smarts_targets) == 0 or not self.args.dbstep_calc:
                 atom_props.remove('DBSTEP_Vbur')
 
-            update_atom_props = self.gather_files_and_run(destination,atom_props,update_atom_props)
+            update_atom_props = self.gather_files_and_run(destination,atom_props,update_atom_props,smarts_targets)
 
         if len(update_atom_props) > 0:
             atom_props = update_atom_props
@@ -189,7 +275,7 @@ class qdescp:
                     json_files = glob.glob(
                         str(destination) + "/" + name + "_conf_*.json"
                     )
-                    _ = get_boltz_props(json_files, name, boltz_dir, "xtb", self, mol_props, atom_props, mol=mol)
+                    _ = get_boltz_props(json_files, name, boltz_dir, "xtb", self, mol_props, atom_props, smarts_targets, mol=mol)
                 _ = self.write_csv_boltz_data(destination,qdescp_csv)
 
             elif self.args.program.lower() == "nmr":
@@ -215,40 +301,40 @@ class qdescp:
                     self,
                     mol_props,
                     atom_props,
+                    smarts_targets,
                     self.args.nmr_atoms,
                     self.args.nmr_slope,
                     self.args.nmr_intercept,
                     self.args.nmr_experim,
                 )
-
         # AQME-ROBERT workflow
-        if self.args.robert and self.args.program.lower() == "xtb":
-            if self.args.csv_name is None:
-                self.args.log.write(f"\nx  The input csv_name with SMILES and code_name columns are missing. A combined database for AQME-ROBERT workflows will not be created.")
-            elif not Path(f"{self.args.csv_name}").exists():
-                self.args.log.write(f"\nx  The input csv_name provided ({self.args.csv_name}) is not valid. A combined database for AQME-ROBERT workflows will not be created.")
+        name_db='Descriptors'
+        if self.args.program.lower() == "xtb" and self.args.csv_name is not None:
+            if self.args.robert:
+                name_db='ROBERT'
+            combined_df = pd.DataFrame()
+            qdescp_df = pd.read_csv(qdescp_csv)
+            input_df = pd.read_csv(self.args.csv_name)
+            if 'code_name' not in input_df.columns:
+                self.args.log.write(f"\nx  The input csv_name provided ({self.args.csv_name}) does not contain the code_name column. A combined database for AQME-{name_db} workflows will not be created.")
+            elif 'SMILES' in input_df.columns or 'smiles' in input_df.columns or 'Smiles' in input_df.columns:
+                path_json = os.path.dirname(Path(qdescp_df['Name'][0]))
+                for i,input_name in enumerate(input_df['code_name']):
+                    # match the entries of the two databases using the entry name
+                    qdescp_col = input_df.loc[i].to_frame().T.reset_index(drop=True) # transposed, reset index
+                    input_col = qdescp_df.loc[(qdescp_df['Name'] == f'{path_json}/{input_name}_rdkit_boltz') | (qdescp_df['Name'] == f'{path_json}/{input_name}_boltz') | (qdescp_df['Name'] == f'{path_json}/{input_name}_0_rdkit_boltz') | (qdescp_df['Name'] == f'{path_json}/{input_name}_1_rdkit_boltz') | (qdescp_df['Name'] == f'{path_json}/{input_name}_2_rdkit_boltz')]
+                    input_col = input_col.drop(['Name'], axis=1).reset_index(drop=True)
+                    combined_row = pd.concat([qdescp_col,input_col], axis=1)
+                    combined_df = pd.concat([combined_df, combined_row], ignore_index=True)
+                combined_df = combined_df.dropna(axis=0)
+                csv_basename = os.path.basename(self.args.csv_name)
+                csv_path = self.args.initial_dir.joinpath(f'AQME-{name_db}_{csv_basename}')
+                _ = combined_df.to_csv(f'{csv_path}', index = None, header=True)
+                self.args.log.write(f"o  The AQME-{name_db}_{csv_basename} file containing the database ready for the AQME-{name_db} workflow was successfully created in {self.args.initial_dir}")
             else:
-                combined_df = pd.DataFrame()
-                qdescp_df = pd.read_csv(qdescp_csv)
-                input_df = pd.read_csv(self.args.csv_name)
-                if 'code_name' not in input_df.columns:
-                    self.args.log.write(f"\nx  The input csv_name provided ({self.args.csv_name}) does not contain the code_name column. A combined database for AQME-ROBERT workflows will not be created.")
-                elif 'SMILES' in input_df.columns or 'smiles' in input_df.columns or 'Smiles' in input_df.columns:
-                    path_json = os.path.dirname(Path(qdescp_df['Name'][0]))
-                    for i,input_name in enumerate(input_df['code_name']):
-                        # match the entries of the two databases using the entry name
-                        qdescp_col = input_df.loc[i].to_frame().T.reset_index(drop=True) # transposed, reset index
-                        input_col = qdescp_df.loc[(qdescp_df['Name'] == f'{path_json}/{input_name}_rdkit_boltz') | (qdescp_df['Name'] == f'{path_json}/{input_name}_boltz') | (qdescp_df['Name'] == f'{path_json}/{input_name}_0_rdkit_boltz') | (qdescp_df['Name'] == f'{path_json}/{input_name}_1_rdkit_boltz') | (qdescp_df['Name'] == f'{path_json}/{input_name}_2_rdkit_boltz')]
-                        input_col = input_col.drop(['Name'], axis=1).reset_index(drop=True)
-                        combined_row = pd.concat([qdescp_col,input_col], axis=1)
-                        combined_df = pd.concat([combined_df, combined_row], ignore_index=True)
-                    combined_df = combined_df.dropna(axis=0)
-                    csv_basename = os.path.basename(self.args.csv_name)
-                    csv_path = self.args.initial_dir.joinpath(f'AQME-ROBERT_{csv_basename}')
-                    _ = combined_df.to_csv(f'{csv_path}', index = None, header=True)
-                    self.args.log.write(f"o  The AQME-ROBERT_{csv_basename} file containing the database ready for the AQME-ROBERT workflow was successfully created in {self.args.initial_dir}")
-                else:
-                    self.args.log.write(f"\nx  The input csv_name provided ({self.args.csv_name}) does not contain the SMILES column. A combined database for AQME-ROBERT workflows will not be created.")
+                self.args.log.write(f"\nx  The input csv_name provided ({self.args.csv_name}) does not contain the SMILES column. A combined database for AQME-{name_db} workflows will not be created.")
+
+            _ = self.process_aqme_csv(name_db)
 
         elapsed_time = round(time.time() - start_time_overall, 2)
         self.args.log.write(f"\nTime QDESCP: {elapsed_time} seconds\n")
@@ -275,7 +361,7 @@ class qdescp:
         else:
             self.args.log.write(f"x  No CSV file containing Boltzmann weighted descriptors was created. This might happen when using the qdescp_atoms option with an atom/group that is not found in any of the calculations")
 
-    def gather_files_and_run(self, destination, atom_props, update_atom_props):
+    def gather_files_and_run(self, destination, atom_props, update_atom_props, smarts_targets):
         """
         Load all the input files, execute xTB calculations, gather descriptors and clean up scratch data
         """
@@ -353,9 +439,16 @@ class qdescp:
                     xyz_charges.append(charges[count])
                     xyz_mults.append(mults[count])
 
+            # with futures.ProcessPoolExecutor(
+            #     max_workers=self.args.nprocs, mp_context=mp.get_context("spawn")
+            #     ) as executor:
+            #         for xyz_file, charge, mult in zip(xyz_files, xyz_charges, xyz_mults):
+            #             _ = executor.submit(
+            #                     self.xtb_complete(xyz_file,charge,mult,destination,file,atom_props,smarts_targets)
+            #                 )
             for xyz_file, charge, mult in zip(xyz_files, xyz_charges, xyz_mults):
                 name_xtb = os.path.basename(Path(xyz_file)).split(".")[0]
-                self.args.log.write(f"\no   Running xTB and collecting properties")
+                self.args.log.write(f"\no  Running xTB and collecting properties")
 
                 # if xTB fails during any of the calculations (UnboundLocalError), xTB assigns weird
                 # qm5 charges (i.e. > +10 or < -10, ValueError), or the json file is not created 
@@ -364,10 +457,11 @@ class qdescp:
                 try:
                     _ = self.run_sp_xtb(xyz_file, charge, mult, name_xtb, destination)
                     path_name = Path(os.path.dirname(file)).joinpath(os.path.basename(Path(file)).split(".")[0])
-                    update_atom_props = self.collect_xtb_properties(path_name, atom_props, update_atom_props)
+                    update_atom_props = self.collect_xtb_properties(path_name, atom_props, update_atom_props, smarts_targets)
                 except (UnboundLocalError,ValueError,FileNotFoundError):
                     xtb_passing = False
                 self.cleanup(name_xtb, destination, xtb_passing)
+                # self.xtb_complete(xyz_file,charge,mult,destination,file,atom_props,smarts_targets)
             bar.next()
         bar.finish()
 
@@ -389,13 +483,18 @@ class qdescp:
             f.write("$write\n")
             f.write("json=true\n")
 
-        self.xtb_opt = str(dat_dir) + "/{0}.out".format(name+'_opt')
+        self.xtb_opt = str(dat_dir) + "/{0}.out".format(name+'_opt') #intentar minimizar el numero de archivos
         self.xtb_out = str(dat_dir) + "/{0}.out".format(name)
         self.xtb_json = str(dat_dir) + "/{0}.json".format(name)
         self.xtb_wbo = str(dat_dir) + "/{0}.wbo".format(name)
         self.xtb_gfn1 = str(dat_dir) + "/{0}.gfn1".format(name)
         self.xtb_fukui = str(dat_dir) + "/{0}.fukui".format(name)
         self.xtb_fod = str(dat_dir) + "/{0}.fod".format(name)
+
+        os.environ["OMP_STACKSIZE"] = self.args.stacksize
+        # to run xTB/CREST with more than 1 processor
+        os.environ["OMP_NUM_THREADS"] = "1"
+        os.environ["MKL_NUM_THREADS"] = "1"
 
         # initial xTB optimization
         if self.args.xtb_opt:
@@ -415,7 +514,7 @@ class qdescp:
                 "--uhf",
                 str(int(mult) - 1),
                 "-P",
-                str(self.args.nprocs),
+                "1",
             ]
             if self.args.qdescp_solvent is not None:
                 command_opt.append("--alpb")
@@ -448,7 +547,7 @@ class qdescp:
             "--input",
             str(self.inp),
             "-P",
-            str(self.args.nprocs),
+            "1",
         ]
         if self.args.qdescp_solvent is not None:
             command1.append("--alpb")
@@ -473,7 +572,7 @@ class qdescp:
             "--etemp",
             str(self.args.qdescp_temp),
             "-P",
-            str(self.args.nprocs),
+            "1",
         ]
         if self.args.qdescp_solvent is not None:
             command2.append("--alpb")
@@ -495,7 +594,7 @@ class qdescp:
             "--etemp",
             str(self.args.qdescp_temp),
             "-P",
-            str(self.args.nprocs),
+            "1",
         ]
         if self.args.qdescp_solvent is not None:
             command3.append("--alpb")
@@ -517,7 +616,7 @@ class qdescp:
             "--etemp",
             str(self.args.qdescp_temp),
             "-P",
-            str(self.args.nprocs),
+            "1",
         ]
         if self.args.qdescp_solvent is not None:
             command4.append("--alpb")
@@ -527,7 +626,7 @@ class qdescp:
         os.chdir(self.args.initial_dir)
 
 
-    def collect_xtb_properties(self,name_initial,atom_props,update_atom_props):
+    def collect_xtb_properties(self,name_initial,atom_props,update_atom_props,smarts_targets):
         """
         Collects all xTB properties from the files and puts them in a JSON file
         """
@@ -612,8 +711,7 @@ class qdescp:
 
         coordinates = [inputs[i].strip().split()[1:] for i in range(2, int(inputs[0].strip()) + 2)]
         json_data["coordinates"] = coordinates
-
-        if len(self.args.qdescp_atoms) > 0:
+        if len(smarts_targets) > 0:
             # detect SMILES from SDF files generated by CSEARCH or create mol objects from regular SDF files
             sdf_file = f'{name_initial}.sdf'
             with open(sdf_file, "r") as F:
@@ -629,28 +727,42 @@ class qdescp:
                 mol = Chem.SDMolSupplier(sdf_file, removeHs=False)
 
             # find the target atoms or groups
-            for pattern in self.args.qdescp_atoms:
+            for pattern in smarts_targets:
                 matches = []
-                try:
-                    matches = mol.GetSubstructMatches(Chem.MolFromSmarts(pattern))
-                except: # I tried to make this except more specific for Boost.Python.ArgumentError, but apparently it's not as simple as it looks
+                idx_set = None
+                
+                # we differentiate if is a number for mapped atom or we are looking for smarts pattern in the molecule
+                if not str(pattern).isalpha() and str(pattern).isdigit():
+                    for atom in mol.GetAtoms():
+                        if atom.GetAtomMapNum() == int(pattern):
+                            idx_set = pattern
+                            pattern_idx = int(atom.GetIdx())
+                            matches = ((int(pattern_idx),),)
+                else: 
                     try:
-                        matches = mol.GetSubstructMatches(Chem.MolFromSmarts(f'[{pattern}]'))
-                    except:
-                        self.args.log.write(f"x  WARNING! SMARTS pattern was not specified correctly! Make sure the qdescp_atoms option uses this format: \"[C]\" for atoms, \"[C=N]\" for bonds, and so on.")
-      
+                        matches = mol.GetSubstructMatches(Chem.MolFromSmarts(pattern))
+                    except: # I tried to make this except more specific for Boost.Python.ArgumentError, but apparently it's not as simple as it looks
+                        try:
+                            matches = mol.GetSubstructMatches(Chem.MolFromSmarts(f'[{pattern}]'))
+                        except:
+                            self.args.log.write(f"x  WARNING! SMARTS pattern was not specified correctly! Make sure the qdescp_atoms option uses this format: \"[C]\" for atoms, \"[C=N]\" for bonds, and so on.")
+                
                 if len(matches) == 0:
                     self.args.log.write(f"x  WARNING! SMARTS pattern {pattern} not found in the system, this molecule will not be used.")
-
+                
+                elif matches[0] == -1:
+                    self.args.log.write(f"x  WARNING! Mapped atom {pattern} not found in the system, this molecule will not be used.")
+                
                 elif len(matches) > 1:
                     self.args.log.write(f"x  WARNING! More than one {pattern} atom was found in the system, this molecule will not be used.")
-
+                
                 elif len(matches) == 1:
                     # get atom types and sort them to keep the same atom order among different molecules
                     atom_indices = list(matches[0])
                     atom_types = []
                     for atom_idx in atom_indices:
                         atom_types.append(mol.GetAtoms()[atom_idx].GetSymbol())
+                        
 
                     n_types = len(set(atom_types))
                     if n_types == 1:
@@ -666,7 +778,10 @@ class qdescp:
                         idx_xtb = atom_idx
                         atom_type = mol.GetAtoms()[atom_idx].GetSymbol()
                         if len(matches[0]) == 1:
-                            match_name = f'{atom_type}'
+                            if idx_set is None:
+                                match_name = f'{atom_type}'
+                            else:
+                                match_name = f'{atom_type}{idx_set}'
                         else:
                             if n_types == 1:
                                 match_name = f'{pattern}_{atom_type}{match_idx}'
@@ -735,3 +850,39 @@ class qdescp:
             shutil.rmtree(f"{destination}/xtb_data/{name}")
         shutil.move(f"{destination}/{name}", f"{destination}/xtb_data/{name}")
 
+    def get_unique_files(self):
+        unique_files = []
+        unique_smiles = []
+        for file in self.args.files:
+            with open(file, "r") as F:
+                lines = F.readlines()
+                smi_exist = False
+                for i, line in enumerate(lines):
+                    if ">  <SMILES>" in line:
+                        smi = lines[i + 1].split()[0]
+                        if smi not in unique_smiles:
+                            unique_smiles.append(smi)
+                            unique_files.append(file)
+                            smi_exist = True
+                if smi_exist:
+                    continue
+        if not unique_smiles:
+            unique_files = self.args.files
+        return unique_files
+    
+    def process_aqme_csv(self,name_db):
+        csv_temp = pd.read_csv(f'{self.args.csv_name}')
+        df_temp = pd.read_csv(f'AQME-{name_db}_{self.args.csv_name}')
+
+        if len(df_temp) < len(csv_temp):
+            missing_rows = csv_temp.loc[~csv_temp['code_name'].isin(df_temp['code_name'])]
+            missing_rows[['code_name', 'SMILES']].to_csv(f'AQME-{name_db}_{self.args.csv_name}', mode='a', header=False, index=False)
+
+            order = csv_temp['code_name'].tolist()
+
+            df_temp = df_temp.sort_values(by='code_name', key=lambda x: x.map({v: i for i, v in enumerate(order)}))
+            df_temp = df_temp.fillna(df_temp.groupby('SMILES').transform('first'))
+
+            df_temp.to_csv(f'AQME-{name_db}_{self.args.csv_name}', index=False)
+
+        return df_temp

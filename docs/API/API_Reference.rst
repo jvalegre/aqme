@@ -23,5 +23,4 @@ Other Modules
 
    aqme.qcorr_utils
    aqme.utils
-   aqme.vismol
    aqme.filter

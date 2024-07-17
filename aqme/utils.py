@@ -24,7 +24,7 @@ GAS_CONSTANT = 8.3144621  # J / K / mol
 J_TO_AU = 4.184 * 627.509541 * 1000.0  # UNIT CONVERSION
 T = 298.15
 
-aqme_version = "1.5.3"
+aqme_version = "1.6.0"
 time_run = time.strftime("%Y/%m/%d %H:%M:%S", time.localtime())
 aqme_ref = f"AQME v {aqme_version}, Alegre-Requena, J. V.; Sowndarya, S.; Perez-Soto, R.; Alturaifi, T.; Paton, R. AQME: Automated Quantum Mechanical Environments for Researchers and Educators. Wiley Interdiscip. Rev. Comput. Mol. Sci. 2023, DOI: 10.1002/wcms.1663."
 
@@ -326,7 +326,6 @@ def command_line_args():
         "qprep",
         "qcorr",
         "qdescp",
-        "vismol",
         "heavyonly",
         "cregen",
         "lowest_only",
@@ -510,7 +509,7 @@ def load_variables(kwargs, aqme_module, create_dat=True):
         if error_setup:
             self.w_dir_main = Path(os.getcwd())
             
-        # start a log file to track the QCORR module
+        # start a log file to track the AQME modules
         if create_dat:
             logger_1, logger_2 = "AQME", "data"
             if aqme_module == "qcorr":
@@ -530,9 +529,6 @@ def load_variables(kwargs, aqme_module, create_dat=True):
 
             elif aqme_module == "qdescp":
                 logger_1 = "QDESCP"
-
-            elif aqme_module == "vismol":
-                logger_1 = "VISMOL"
 
             if txt_yaml not in [
                 "",

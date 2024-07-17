@@ -103,7 +103,7 @@ var_dict = {
     "prefix": "",
     "qdescp": False,
     "qdescp_temp": 300,
-    "qdescp_acc": 0.2,
+    "qdescp_acc": 1,
     "qdescp_opt": 'normal',
     "qdescp_solvent": None,
     "boltz": True,

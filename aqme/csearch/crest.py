@@ -118,6 +118,7 @@ def xtb_opt_main(
     os.environ["OMP_STACKSIZE"] = self.args.stacksize
     # to run xTB/CREST with more than 1 processor
     os.environ["OMP_NUM_THREADS"] = str(self.args.nprocs)
+    os.environ["MKL_NUM_THREADS"] = str(self.args.nprocs)
     opt_valid = True
 
     os.chdir(dat_dir)
