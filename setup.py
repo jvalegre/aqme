@@ -34,10 +34,11 @@ setup(
     ],
     install_requires=[
         "PyYAML",
-        "pandas>=2.0.2",
+        "pandas==2.2.2",
         "progress",
         "ase",
         "numpy==1.26.4",
+        "rdkit==2024.3.3",
         "cclib==1.7.2",
         "matplotlib",
         "seaborn",

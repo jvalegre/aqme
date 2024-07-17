@@ -118,7 +118,6 @@ it also works for other Python versions (i.e., 3.7, 3.9 and 3.11):
 .. code-block:: shell
 
    pip install aqme
-   conda install -c conda-forge rdkit
    conda install -c conda-forge openbabel
 
 Installation of extra requirements
@@ -140,10 +139,6 @@ Extra requirements if `CMIN` is used with ANI models:
 
    pip install torch torchvision torchani
 
-.. warning:: *Known incompatibilities:*
-   
-   -  RDKit cannot be installed through `pip install rdkit` in Windows when 
-      Anaconda prompts are used
 
 .. installation-end 
 

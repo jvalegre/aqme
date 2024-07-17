@@ -41,9 +41,8 @@ jobs:
           conda create -n cheminf python=3.10
           source activate base 
           conda activate cheminf
-          # install RDKit and OpenBabel
           python -m pip install --upgrade pip
-          pip install rdkit-pypi
+          # install OpenBabel
           conda install -y -c conda-forge openbabel
           # install xTB, xTB-python and CREST
           conda install -y -c conda-forge xtb
