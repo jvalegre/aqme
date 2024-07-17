@@ -651,6 +651,22 @@ def test_csearch_rdkit_parameters(
             False,
             1,
         ),
+        (
+            "crest",
+            "[NH3+][Ag][NH3+]",
+            "Ag_metal_crest",
+            False,
+            True,
+            None,
+            [],
+            [],
+            [],
+            1,
+            1,
+            None,
+            False,
+            1,
+        ),
         # compatibility of CREST with destination
         (
             "crest",
@@ -754,7 +770,7 @@ def test_csearch_methods(
         )
 
     elif metal_complex is True:
-        if name == 'Pd_metal_only':
+        if name in ['Pd_metal_only','Ag_metal_crest']:
             csearch(
                 w_dir_main=csearch_methods_dir,
                 program=program,
@@ -796,7 +812,7 @@ def test_csearch_methods(
 
     if destination:
         file = str(csearch_methods_dir+"/Et_sdf_files/" + name + "_" + program + ".sdf")
-    elif metal_complex is False or name in ['Ag_complex_crest','Cu_trigonal','Pd_metal_only']:
+    elif metal_complex is False or name in ['Ag_complex_crest','Cu_trigonal','Pd_metal_only','Ag_metal_crest']:
         file = str(csearch_methods_dir+"/CSEARCH/" + name + "_" + program + ".sdf")
     else:
         file = str(
@@ -842,21 +858,7 @@ def test_csearch_methods(
                 metal_found = True
         assert metal_found
 
-        # check that the metal atom is already added during the CREST calculation
-        if name == 'Pd_metal_only':
-            xyz_crest = str(csearch_methods_dir+f"/CSEARCH/crest_xyz/{name}_crest_xtb1.xyz")
-        elif name == 'Pd_complex':
-            xyz_crest = str(csearch_methods_dir+f"/CSEARCH/crest_xyz/{name}_1_crest_xtb1.xyz")
-        xyzfile = open(xyz_crest, "r")
-        xyzlines_crest = xyzfile.readlines()
-        xyzfile.close()
-        xyz_metal = False
-        for line in xyzlines_crest:
-            if 'Pd    ' in line:
-                xyz_metal = True
-        assert xyz_metal
-
-    if name == 'Ag_complex_crest':
+    if name in ['Ag_complex_crest','Ag_metal_crest']:
         outfile = open(file, "r")
         outlines_sdf = outfile.readlines()
         outfile.close()
@@ -864,6 +866,17 @@ def test_csearch_methods(
             if 'Ag  0' in line:
                 metal_found = True
         assert metal_found
+
+        # check that the metal atom is already added during the CREST calculation
+        xyz_crest = str(csearch_methods_dir+f"/CSEARCH/crest_xyz/{name}_crest_xtb1.xyz")
+        xyzfile = open(xyz_crest, "r")
+        xyzlines_crest = xyzfile.readlines()
+        xyzfile.close()
+        xyz_metal = False
+        for line in xyzlines_crest:
+            if 'Ag    ' in line:
+                xyz_metal = True
+        assert xyz_metal
     if name == 'nci':
         assert len(mols) > 350
     # the n of conformers decreases when --nci is used
