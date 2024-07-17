@@ -195,7 +195,7 @@ class qdescp:
                                 self.args.log.write(f"\nSubstructure {(common_substructure)} found in input files. Using it for atomic descriptor calculations.")
                           
         # Delete a SMARTS pattern if it is not present in more than 30% of the sdf files
-        elif len(smarts_targets) > 0:
+        if len(smarts_targets) > 0:
             mol_list = []
             for file in self.args.files:
                 with open(file, "r") as F:
@@ -212,12 +212,19 @@ class qdescp:
                         mol_indiv = Chem.SDMolSupplier(file, removeHs=False)
                         mol_list.append(mol_indiv)
 
-            patterns_remove = []
+            patterns_remove,matches = [],[]
             for pattern in smarts_targets:
                 num_matches = len(mol_list)
                 for mol_indiv in mol_list:
                     try:
-                        matches = mol_indiv.GetSubstructMatches(Chem.MolFromSmarts(pattern))
+                        # we differentiate if is a number for mapped atom or we are looking for smarts pattern in the molecule
+                        if not str(pattern).isalpha() and str(pattern).isdigit():
+                            for atom in mol_indiv.GetAtoms():
+                                if atom.GetAtomMapNum() == int(pattern):
+                                    pattern_idx = int(atom.GetIdx())
+                                    matches = ((int(pattern_idx),),)
+                        else:
+                            matches = mol_indiv.GetSubstructMatches(Chem.MolFromSmarts(pattern))
                     except:
                         try: # I tried to make this except more specific for Boost.Python.ArgumentError, but apparently it's not as simple as it looks
                             matches = mol_indiv.GetSubstructMatches(Chem.MolFromSmarts(f'[{pattern}]'))
@@ -441,7 +448,7 @@ class qdescp:
             #                 )
             for xyz_file, charge, mult in zip(xyz_files, xyz_charges, xyz_mults):
                 name_xtb = os.path.basename(Path(xyz_file)).split(".")[0]
-                self.args.log.write(f"\no   Running xTB and collecting properties")
+                self.args.log.write(f"\no  Running xTB and collecting properties")
 
                 # if xTB fails during any of the calculations (UnboundLocalError), xTB assigns weird
                 # qm5 charges (i.e. > +10 or < -10, ValueError), or the json file is not created 
@@ -726,7 +733,6 @@ class qdescp:
                 
                 # we differentiate if is a number for mapped atom or we are looking for smarts pattern in the molecule
                 if not str(pattern).isalpha() and str(pattern).isdigit():
-                    matches = [-1]
                     for atom in mol.GetAtoms():
                         if atom.GetAtomMapNum() == int(pattern):
                             idx_set = pattern
@@ -880,22 +886,3 @@ class qdescp:
             df_temp.to_csv(f'AQME-{name_db}_{self.args.csv_name}', index=False)
 
         return df_temp
-
-    # def xtb_complete(self,xyz_file,charge,mult,destination,file,atom_props,smarts_targets):
-    #     name_xtb = os.path.basename(Path(xyz_file)).split(".")[0]
-    #     self.args.log.write(f"\no   Running xTB and collecting properties")
-
-    #     # if xTB fails during any of the calculations (UnboundLocalError), xTB assigns weird
-    #     # qm5 charges (i.e. > +10 or < -10, ValueError), or the json file is not created 
-    #     # for some weird xTB error (FileNotFoundError), that molecule is not used 
-    #     xtb_passing = True
-    #     try:
-    #         _ = self.run_sp_xtb(xyz_file, charge, mult, name_xtb, destination)
-    #         path_name = Path(os.path.dirname(file)).joinpath(os.path.basename(Path(file)).split(".")[0])
-    #         update_atom_props = self.collect_xtb_properties(path_name, atom_props, update_atom_props, smarts_targets)
-    #         print(xtb_passing,'XXXXXXXXXXXXXXXXXXXXX')
-    #     except (UnboundLocalError,ValueError,FileNotFoundError):
-    #         xtb_passing = False
-    #     self.cleanup(name_xtb, destination, xtb_passing)
-
-

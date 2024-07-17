@@ -564,7 +564,8 @@ def smi_to_mol(
         try:
             # fix mapped atoms
             if ':' in smi:
-                smi = fix_mapped_atoms(smi)
+                # smi = fix_mapped_atoms(smi)
+                log.write(f"\nx  WARNING! The SMILES string provided ( {smi} ) contains mapped atoms, make sure you include their corresponding H atoms explicitly in the SMILES (otherwise they'll be omitted). For example, use [C:1]([H])([H])([H])C instead of [C:1]C.\n")
 
             mol = Chem.MolFromSmiles(smi, params)
             Chem.SanitizeMol(mol)
@@ -582,26 +583,26 @@ def smi_to_mol(
         complex_ts
     )
 
+# this function was disabled to allow ROBERT users to use atom idx for atomic descriptor generation
+# def fix_mapped_atoms(smi):
+#     '''
+#     This protocol to handle mapped SMILES. Otherwise, Hs are not added right and charges/mult
+#     are not calculated correctly either.
+#     '''
 
-def fix_mapped_atoms(smi):
-    '''
-    This protocol to handle mapped SMILES. Otherwise, Hs are not added right and charges/mult
-    are not calculated correctly either.
-    '''
-
-    map_list = []
-    smi_map = smi.replace(']','[').split('[')
-    for piece in smi_map:
-        if ':' in piece:
-            map_list.append(f'[{piece}]')
-    for map_atom in map_list:
-        new_atom = map_atom.replace(':','[').split('[')
-        while('' in new_atom):
-            new_atom.remove('')
-        new_atom = new_atom[0]
-        smi = smi.replace(map_atom,new_atom)
+#     map_list = []
+#     smi_map = smi.replace(']','[').split('[')
+#     for piece in smi_map:
+#         if ':' in piece:
+#             map_list.append(f'[{piece}]')
+#     for map_atom in map_list:
+#         new_atom = map_atom.replace(':','[').split('[')
+#         while('' in new_atom):
+#             new_atom.remove('')
+#         new_atom = new_atom[0]
+#         smi = smi.replace(map_atom,new_atom)
     
-    return smi
+#     return smi
 
 
 def cluster_conformers(mols, heavy_only, max_matches_rmsd, cluster_thr):

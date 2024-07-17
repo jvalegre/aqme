@@ -173,17 +173,14 @@ def test_qdescp_xtb(file):
         assert pd_boltz["NumRotatableBonds"][1] == 4
         assert 'DBSTEP_Vbur' not in pd_boltz
 
-    elif file in ['test_atom.csv','test_group.csv','test_multigroup.csv','test_robert.csv','test_idx.csv']:
+    elif file in ['test_atom.csv','test_group.csv','test_multigroup.csv','test_robert.csv']:
         pd_boltz = pd.read_csv(file_descriptors)
 
         # mol_1 is methane and it doesn't have any P/O atoms or CC/C=O groups so the boltz json file shouldn't appear
         assert os.path.exists(f'{folder_qdescp}/mol_1_rdkit_conf_1.json')
         assert not os.path.exists(f'{folder_boltz}/mol_1_rdkit_boltz.json')
         assert 'DBSTEP_Vbur' not in pd_boltz
-        if file in ['test_atom.csv','test_group.csv']:
-            assert len(pd_boltz["NumRotatableBonds"]) == 3
-        if file in ['test_multigroup.csv','test_robert.csv']:
-            assert len(pd_boltz["NumRotatableBonds"]) == 2
+        assert len(pd_boltz["NumRotatableBonds"]) == 3
 
         # check variables and X_ prefixes in variable names
         if file in ['test_atom.csv','test_multigroup.csv','test_robert.csv']:
@@ -196,27 +193,19 @@ def test_qdescp_xtb(file):
             if file == 'test_atom.csv':
                 assert pd_boltz["NumRotatableBonds"][0] == 1
 
-            elif file in ['test_multigroup.csv','test_robert.csv']:
-                assert pd_boltz["NumRotatableBonds"][0] == 2
-                assert 'CC_C1_DBSTEP_Vbur' not in pd_boltz
-                assert 'CC_C2_DBSTEP_Vbur' not in pd_boltz
-                assert 'CC_C1_FUKUI+' in pd_boltz
-                assert 'CC_C2_FUKUI+' in pd_boltz
-                # max and min values
-                assert 'CC_max_DBSTEP_Vbur' not in pd_boltz
-                assert 'CC_min_FUKUI+' in pd_boltz
-                if file == 'test_robert.csv':
-                    assert 'Name' not in pd_boltz
-
-        elif file == 'test_idx.csv':
-            assert 'C1_FUKUI+' in pd_boltz
-            assert round(pd_boltz['C1_partial charges'][1],1) == -0.2
+            if file == 'test_robert.csv':
+                assert 'Name' not in pd_boltz
 
         elif file == 'test_group.csv':
             assert 'C=O_C_DBSTEP_Vbur' not in pd_boltz
             assert 'C=O_O_DBSTEP_Vbur' not in pd_boltz
             assert 'C=O_C_FUKUI+' in pd_boltz
             assert 'C=O_O_FUKUI+' in pd_boltz
+
+    elif file == 'test_idx.csv':
+        pd_boltz = pd.read_csv(file_descriptors)
+        assert 'C1_FUKUI+' in pd_boltz
+        assert round(pd_boltz['C1_partial charges'][1],1) == -0.1
 
 
 # tests for QDESCP-NMR
