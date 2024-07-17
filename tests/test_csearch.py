@@ -843,7 +843,10 @@ def test_csearch_methods(
         assert metal_found
 
         # check that the metal atom is already added during the CREST calculation
-        xyz_crest = str(csearch_methods_dir+f"/CSEARCH/crest_xyz/{name}_xtb1.xyz")
+        if name == 'Pd_metal_only':
+            xyz_crest = str(csearch_methods_dir+f"/CSEARCH/crest_xyz/{name}_crest_xtb1.xyz")
+        elif name == 'Pd_complex':
+            xyz_crest = str(csearch_methods_dir+f"/CSEARCH/crest_xyz/{name}_1_crest_xtb1.xyz")
         xyzfile = open(xyz_crest, "r")
         xyzlines_crest = xyzfile.readlines()
         xyzfile.close()
