@@ -43,7 +43,7 @@ jobs:
           conda activate cheminf
           python -m pip install --upgrade pip
           # install OpenBabel
-          conda install -y -c conda-forge openbabel
+          conda install -y -c conda-forge openbabel=3.1.1
           # install dependencies
           conda install -y -c conda-forge xtb
           conda install -y -c conda-forge crest

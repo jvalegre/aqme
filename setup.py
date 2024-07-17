@@ -38,7 +38,7 @@ setup(
         "progress",
         "numpy==1.26.4",
         "rdkit==2024.3.3",
-        "cclib==1.7.2",
+        "cclib==1.8.1",
         "cffi",
     ],
     python_requires=">=3.0",
