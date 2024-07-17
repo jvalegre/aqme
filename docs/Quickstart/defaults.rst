@@ -36,9 +36,3 @@ QDESCP
 
 .. automodule:: aqme.qdescp
    :noindex:
-
-VISMOL
-------
-
-.. automodule:: aqme.vismol
-   :noindex:

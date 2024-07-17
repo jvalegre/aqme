@@ -326,7 +326,6 @@ def command_line_args():
         "qprep",
         "qcorr",
         "qdescp",
-        "vismol",
         "heavyonly",
         "cregen",
         "lowest_only",
@@ -530,9 +529,6 @@ def load_variables(kwargs, aqme_module, create_dat=True):
 
             elif aqme_module == "qdescp":
                 logger_1 = "QDESCP"
-
-            elif aqme_module == "vismol":
-                logger_1 = "VISMOL"
 
             if txt_yaml not in [
                 "",
