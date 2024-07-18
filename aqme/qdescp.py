@@ -47,7 +47,7 @@ xTB descriptors
       Performs an initial xTB geometry optimization before calculating descriptors
 
 DBSTEP descriptors
-++++++++++++++
+++++++++++++++++++
 
    dbstep_calc : bool, default=False
       Whether to add a DBSTEP calculation of buried volume when generating atomic descriptors 
