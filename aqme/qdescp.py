@@ -118,7 +118,8 @@ from aqme.qdescp_utils import (
     read_xtb,
     read_wbo,
     read_gfn1,
-    read_fukui
+    read_fukui,
+    calculate_CDFT_descriptors
 )
 
 from aqme.csearch.crest import xyzall_2_xyz
@@ -246,7 +247,11 @@ class qdescp:
         if self.args.program.lower() == "xtb":
             mol_props = ["total energy","HOMO-LUMO gap/eV","electronic energy","Dipole module/D",
                 "Total charge","HOMO","LUMO","Fermi-level/eV","Total dispersion C6",
-                "Total dispersion C8","Total polarizability alpha","Total FOD"]
+                "Total dispersion C8","Total polarizability alpha","Total FOD",
+                "IP (eV)", "EA (eV)", "Global electrophilicity index (eV)",
+                "Chemical Hardness (eV)", "Chemical Softness (1/eV)", "Chemical potential (eV)", "Mulliken Electronegativity (eV)",
+                "Electrodonating power index (eV)", "Electroaccepting Power Index (eV)",
+                "Net Electrophilicity (eV)", "Nucleophilicity Index (eV)", "Electrofugality (eV)", "Nucleofugality (eV)", "Intrinsic Reactivity Index (eV)"]
             atom_props = ["partial charges","mulliken charges","cm5 charges","FUKUI+","FUKUI-",
                 "FUKUIrad","s proportion","p proportion","d proportion","Coordination numbers",
                 "Dispersion coefficient C6","Polarizability alpha","FOD","FOD s proportion",
@@ -571,6 +576,7 @@ class qdescp:
             str(int(mult) - 1),
             "--etemp",
             str(self.args.qdescp_temp),
+            "--vomega",
             "-P",
             "1",
         ]
@@ -660,6 +666,8 @@ class qdescp:
         MULLIKEN, CM5, s_prop, p_prop, d_prop = read_gfn1(self.xtb_gfn1)
         total_fod, fod, s_prop_fod, p_prop_fod, d_prop_fod = read_fod(self.xtb_fod)
         bonds, wbos = read_wbo(self.xtb_wbo)
+        delta_SCC_IP, delta_SCC_EA, electrophilicity_index, chemical_hardness, chemical_softness, chemical_potential, mulliken_electronegativity, electrodonating_power_index, electroaccepting_power_index, net_electrophilicity, nucleophilicity_index, electrofugality, Nucleofugality, intrinsic_reactivity_index = calculate_CDFT_descriptors(self.xtb_gfn1)
+
 
         # create matrix of Wiberg bond-orders
         nat = len(atoms)
@@ -705,7 +713,24 @@ class qdescp:
         json_data["FOD s proportion"] = s_prop_fod
         json_data["FOD p proportion"] = p_prop_fod
         json_data["FOD d proportion"] = d_prop_fod
+        #new descriptors from CDFT part 1
+        json_data["IP (eV)"] = delta_SCC_IP
+        json_data["EA (eV)"] = delta_SCC_EA
+        json_data["Global electrophilicity index (eV)"] = electrophilicity_index
+        json_data["Chemical Hardness (eV)"] = chemical_hardness
+        json_data["Chemical Softness (1/eV)"] = chemical_softness
+        json_data["Chemical potential (eV)"] = chemical_potential
+        json_data["Mulliken Electronegativity (eV)"] = mulliken_electronegativity
+        json_data["Electrodonating power index (eV)"] = electrodonating_power_index
+        json_data["Electroaccepting Power Index (eV)"] = electroaccepting_power_index
+        json_data["Net Electrophilicity (eV)"] = net_electrophilicity
+        json_data["Nucleophilicity Index (eV)"] = nucleophilicity_index
+        json_data["Electrofugality (eV)"] = electrofugality
+        json_data["Nucleofugality (eV)"] = Nucleofugality
+        json_data["Intrinsic Reactivity Index (eV)"] = intrinsic_reactivity_index
 
+
+        
         with open(self.xtb_xyz, "r") as f:
             inputs = f.readlines()
 

@@ -286,7 +286,7 @@ def read_fukui(file):
 
 def read_gfn1(file):
     """
-    Read fukui output file created from xTB. Return data.
+    Read .gfn1 output file created from xTB. Return data.
     """
 
     if file.find(".gfn1") > -1:
@@ -323,6 +323,65 @@ def read_gfn1(file):
 
         return mulliken, cm5, s_prop, p_prop, d_prop
 
+def calculate_CDFT_descriptors(file):
+    """
+    Read .gfn1 output file created from xTB and calculate CDFT descriptors
+    """
+    if not file.endswith(".gfn1"):
+        raise ValueError("File must be a .gfn1 output file")
+
+    with open(file, "r") as f:
+        data = f.readlines()
+
+    # Initialize variables for descriptors
+    delta_SCC_IP = None
+    delta_SCC_EA = None
+    electrophilicity_index = None
+
+    # Parse the data
+    for line in data:
+        if "delta SCC IP (eV):" in line:
+            delta_SCC_IP = float(line.split()[-1])
+        elif "delta SCC EA (eV):" in line:
+            delta_SCC_EA = float(line.split()[-1])
+        elif "Global electrophilicity index (eV):" in line:
+            electrophilicity_index = float(line.split()[-1])
+
+    # Check if necessary values are available
+    if delta_SCC_IP is None or delta_SCC_EA is None:
+        raise ValueError("Could not find delta_SCC_IP and delta_SCC_EA descriptors in the file")
+
+    # Calculating the CDFT descriptors
+    chemical_hardness = delta_SCC_IP - delta_SCC_EA
+    chemical_softness = round(1 / chemical_hardness, 4) if chemical_hardness != 0 else None
+    chemical_potential = round(-(delta_SCC_IP + delta_SCC_EA) / 2, 4)
+    mulliken_electronegativity = round(-chemical_potential, 4)
+    electrodonating_power_index = round((delta_SCC_IP + 3 * delta_SCC_EA) / (8 * chemical_hardness), 4)
+    electroaccepting_power_index = round((3 * delta_SCC_IP + delta_SCC_EA) / (8 * chemical_hardness), 4)
+    net_electrophilicity = round(electrodonating_power_index - electroaccepting_power_index, 4)
+    nucleophilicity_index = round(10 / electroaccepting_power_index, 4) if electroaccepting_power_index != 0 else None
+    electrofugality = round(-delta_SCC_EA + electrophilicity_index, 4) if electrophilicity_index is not None else None
+    nucleofugality = round(delta_SCC_IP + electrophilicity_index, 4) if electrophilicity_index is not None else None
+    intrinsic_reactivity_index = round((delta_SCC_IP + delta_SCC_EA) / chemical_hardness, 4) if chemical_hardness != 0 else None
+
+    return {
+        "delta_SCC_IP": delta_SCC_IP,
+        "delta_SCC_EA": delta_SCC_EA,
+        "electrophilicity_index": electrophilicity_index,
+        "chemical_hardness": chemical_hardness,
+        "chemical_softness": chemical_softness,
+        "chemical_potential": chemical_potential,
+        "mulliken_electronegativity": mulliken_electronegativity,
+        "electrodonating_power_index": electrodonating_power_index,
+        "electroaccepting_power_index": electroaccepting_power_index,
+        "net_electrophilicity": net_electrophilicity,
+        "nucleophilicity_index": nucleophilicity_index,
+        "electrofugality": electrofugality,
+        "nucleofugality": nucleofugality,
+        "intrinsic_reactivity_index": intrinsic_reactivity_index
+    }
+
+    
 
 def read_wbo(file):
     """
