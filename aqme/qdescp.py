@@ -96,7 +96,6 @@ import time
 import json
 import shutil
 import concurrent.futures as futures
-import multiprocessing as mp
 import numpy as np
 from progress.bar import IncrementalBar
 import pandas as pd
@@ -366,143 +365,153 @@ class qdescp:
         Load all the input files, execute xTB calculations, gather descriptors and clean up scratch data
         """
 
-        bar = IncrementalBar(
-            "\no  Number of finished jobs from QDESCP", max=len(self.args.files)
-        )
         # write input files
         if os.path.basename(Path(self.args.files[0])).split('.')[1].lower() not in ["sdf", "xyz", "pdb"]:
             self.args.log.write(f"\nx  The format used ({os.path.basename(Path(self.args.files[0])).split('.')[1]}) is not compatible with QDESCP with xTB! Formats accepted: sdf, xyz, pdb")
             self.args.log.finalize()
             sys.exit()
 
-        for file in self.args.files:
-            xyz_files, xyz_charges, xyz_mults = [], [], []
-            name = os.path.basename(Path(file)).split('.')[0]
-            ext = os.path.basename(Path(file)).split(".")[1]
-            self.args.log.write(f"\n\n   ----- {name} -----")
-            if ext.lower() == "xyz":
-                # separate the parent XYZ file into individual XYZ files
-                xyzall_2_xyz(file, name)
-                for conf_file in glob.glob(f"{name}_conf_*.xyz"):
-                    if self.args.charge is None:
-                        charge_xyz, _ = read_xyz_charge_mult(conf_file)
-                    else:
-                        charge_xyz = self.args.charge
-                    if self.args.mult is None:
-                        _, mult_xyz = read_xyz_charge_mult(conf_file)
-                    else:
-                        mult_xyz = self.args.mult
-                    xyz_files.append(
-                        os.path.dirname(os.path.abspath(file)) + "/" + conf_file
-                    )
-                    xyz_charges.append(charge_xyz)
-                    xyz_mults.append(mult_xyz)
-
-            else:
-                command_pdb = [
-                    "obabel",
-                    f"-i{ext.lower()}",
-                    file,
-                    "-oxyz",
-                    f"-O{os.path.dirname(os.path.abspath(file))}/{name}_conf_.xyz",
-                    "-m",
-                ]
-                subprocess.run(
-                    command_pdb,
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL,
-                )
-
-                if self.args.charge is None:
-                    _, charges, _, _ = mol_from_sdf_or_mol_or_mol2(file, "csearch", self.args)
-                else:
-                    charges = [self.args.charge] * len(
-                        glob.glob(
-                            f"{os.path.dirname(os.path.abspath(file))}/{name}_conf_*.xyz"
+        bar = IncrementalBar(
+        "\no  Number of finished jobs from QDESCP", max=len(self.args.files)
+        )
+        # asynchronous multithreading to accelerate QDESCP (since xTB uses 1 processor to be reproducible)
+        with futures.ThreadPoolExecutor(
+            max_workers=self.args.nprocs,
+            ) as executor:
+                for file in self.args.files:
+                    _ = executor.submit(
+                        self.xtb_complete, file,bar,destination,atom_props,update_atom_props,smarts_targets
                         )
-                    )
-                if self.args.mult is None:
-                    _, _, mults, _ = mol_from_sdf_or_mol_or_mol2(file, "csearch", self.args)
-                else:
-                    mults = [self.args.mult] * len(
-                        glob.glob(
-                            f"{os.path.dirname(os.path.abspath(file))}/{name}_conf_*.xyz"
-                        )
-                    )
-
-                for count, f in enumerate(
-                    glob.glob(
-                        f"{os.path.dirname(os.path.abspath(file))}/{name}_conf_*.xyz"
-                    )
-                ):
-                    xyz_files.append(f)
-                    xyz_charges.append(charges[count])
-                    xyz_mults.append(mults[count])
-
-            # with futures.ProcessPoolExecutor(
-            #     max_workers=self.args.nprocs, mp_context=mp.get_context("spawn")
-            #     ) as executor:
-            #         for xyz_file, charge, mult in zip(xyz_files, xyz_charges, xyz_mults):
-            #             _ = executor.submit(
-            #                     self.xtb_complete(xyz_file,charge,mult,destination,file,atom_props,smarts_targets)
-            #                 )
-            for xyz_file, charge, mult in zip(xyz_files, xyz_charges, xyz_mults):
-                name_xtb = os.path.basename(Path(xyz_file)).split(".")[0]
-                self.args.log.write(f"\no  Running xTB and collecting properties")
-
-                # if xTB fails during any of the calculations (UnboundLocalError), xTB assigns weird
-                # qm5 charges (i.e. > +10 or < -10, ValueError), or the json file is not created 
-                # for some weird xTB error (FileNotFoundError), that molecule is not used 
-                xtb_passing = True
-                try:
-                    _ = self.run_sp_xtb(xyz_file, charge, mult, name_xtb, destination)
-                    path_name = Path(os.path.dirname(file)).joinpath(os.path.basename(Path(file)).split(".")[0])
-                    update_atom_props = self.collect_xtb_properties(path_name, atom_props, update_atom_props, smarts_targets)
-                except (UnboundLocalError,ValueError,FileNotFoundError):
-                    xtb_passing = False
-                self.cleanup(name_xtb, destination, xtb_passing)
-                # self.xtb_complete(xyz_file,charge,mult,destination,file,atom_props,smarts_targets)
-            bar.next()
+        
         bar.finish()
 
         return update_atom_props
 
+
+    def xtb_complete(self,file,bar,destination,atom_props,update_atom_props,smarts_targets):
+        """
+        Run all the xTB calculations and collect the properties inside JSON files
+        """ 
+
+        xyz_files, xyz_charges, xyz_mults = [], [], []
+        name = os.path.basename(Path(file)).split('.')[0]
+        ext = os.path.basename(Path(file)).split(".")[1]
+        self.args.log.write(f"\n\n   ----- {name} -----")
+        if ext.lower() == "xyz":
+            # separate the parent XYZ file into individual XYZ files
+            xyzall_2_xyz(file, name)
+            for conf_file in glob.glob(f"{name}_conf_*.xyz"):
+                if self.args.charge is None:
+                    charge_xyz, _ = read_xyz_charge_mult(conf_file)
+                else:
+                    charge_xyz = self.args.charge
+                if self.args.mult is None:
+                    _, mult_xyz = read_xyz_charge_mult(conf_file)
+                else:
+                    mult_xyz = self.args.mult
+                xyz_files.append(
+                    os.path.dirname(os.path.abspath(file)) + "/" + conf_file
+                )
+                xyz_charges.append(charge_xyz)
+                xyz_mults.append(mult_xyz)
+
+        else:
+            command_pdb = [
+                "obabel",
+                f"-i{ext.lower()}",
+                file,
+                "-oxyz",
+                f"-O{os.path.dirname(os.path.abspath(file))}/{name}_conf_.xyz",
+                "-m",
+            ]
+            subprocess.run(
+                command_pdb,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+
+            if self.args.charge is None:
+                _, charges, _, _ = mol_from_sdf_or_mol_or_mol2(file, "csearch", self.args)
+            else:
+                charges = [self.args.charge] * len(
+                    glob.glob(
+                        f"{os.path.dirname(os.path.abspath(file))}/{name}_conf_*.xyz"
+                    )
+                )
+            if self.args.mult is None:
+                _, _, mults, _ = mol_from_sdf_or_mol_or_mol2(file, "csearch", self.args)
+            else:
+                mults = [self.args.mult] * len(
+                    glob.glob(
+                        f"{os.path.dirname(os.path.abspath(file))}/{name}_conf_*.xyz"
+                    )
+                )
+
+            for count, f in enumerate(
+                glob.glob(
+                    f"{os.path.dirname(os.path.abspath(file))}/{name}_conf_*.xyz"
+                )
+            ):
+                xyz_files.append(f)
+                xyz_charges.append(charges[count])
+                xyz_mults.append(mults[count])
+
+        for xyz_file, charge, mult in zip(xyz_files, xyz_charges, xyz_mults):
+            name_xtb = os.path.basename(Path(xyz_file)).split(".")[0]
+            self.args.log.write(f"\no  Running xTB and collecting properties")
+
+            # if xTB fails during any of the calculations (UnboundLocalError), xTB assigns weird
+            # qm5 charges (i.e. > +10 or < -10, ValueError), or the json file is not created 
+            # for some weird xTB error (FileNotFoundError), that molecule is not used 
+            xtb_passing = True
+            try:
+                xtb_files_props = self.run_sp_xtb(xyz_file, charge, mult, name_xtb, destination)
+                path_name = Path(os.path.dirname(file)).joinpath(os.path.basename(Path(file)).split(".")[0])
+                update_atom_props = self.collect_xtb_properties(path_name, atom_props, update_atom_props, smarts_targets, xtb_files_props)
+            except (UnboundLocalError,ValueError,FileNotFoundError):
+                xtb_passing = False
+            self.cleanup(name_xtb, destination, xtb_passing, xtb_files_props)            
+        bar.next()
+        
+
     def run_sp_xtb(self, xyz_file, charge, mult, name, destination):
         """
-        Runs single point xTB calculations to collect properties
+        Runs different types of single point xTB calculations
         """
 
         dat_dir = destination / name
         dat_dir.mkdir(exist_ok=True, parents=True)
 
-        self.xtb_xyz = str(dat_dir) + "/{0}.xyz".format(name)
-        shutil.move(xyz_file, self.xtb_xyz)
+        # dictionary with the PATHs to the different xTB files
+        xtb_files_props = {}
 
-        self.inp = str(dat_dir) + "/{0}_xtb.inp".format(name)
-        with open(self.inp, "wt") as f:
+        xtb_files_props['xtb_xyz_path'] = str(dat_dir) + "/{0}.xyz".format(name)
+        shutil.move(xyz_file, xtb_files_props['xtb_xyz_path'])
+
+        xtb_input_file = str(dat_dir) + "/{0}_xtb.inp".format(name)
+        with open(xtb_input_file, "wt") as f:
             f.write("$write\n")
             f.write("json=true\n")
 
-        self.xtb_opt = str(dat_dir) + "/{0}.out".format(name+'_opt') #intentar minimizar el numero de archivos
-        self.xtb_out = str(dat_dir) + "/{0}.out".format(name)
-        self.xtb_json = str(dat_dir) + "/{0}.json".format(name)
-        self.xtb_wbo = str(dat_dir) + "/{0}.wbo".format(name)
-        self.xtb_gfn1 = str(dat_dir) + "/{0}.gfn1".format(name)
-        self.xtb_fukui = str(dat_dir) + "/{0}.fukui".format(name)
-        self.xtb_fod = str(dat_dir) + "/{0}.fod".format(name)
+        xtb_files_props['xtb_opt'] = str(dat_dir) + "/{0}.out".format(name+'_opt')
+        xtb_files_props['xtb_out'] = str(dat_dir) + "/{0}.out".format(name)
+        xtb_files_props['xtb_json'] = str(dat_dir) + "/{0}.json".format(name)
+        xtb_files_props['xtb_wbo'] = str(dat_dir) + "/{0}.wbo".format(name)
+        xtb_files_props['xtb_gfn1'] = str(dat_dir) + "/{0}.gfn1".format(name)
+        xtb_files_props['xtb_fukui'] = str(dat_dir) + "/{0}.fukui".format(name)
+        xtb_files_props['xtb_fod'] = str(dat_dir) + "/{0}.fod".format(name)
 
         os.environ["OMP_STACKSIZE"] = self.args.stacksize
-        # to run xTB/CREST with more than 1 processor
+        # run xTB/CREST with 1 processor
         os.environ["OMP_NUM_THREADS"] = "1"
         os.environ["MKL_NUM_THREADS"] = "1"
 
         # initial xTB optimization
         if self.args.xtb_opt:
-            os.chdir(dat_dir)
 
             command_opt = [
                 "xtb",
-                self.xtb_xyz,
+                xtb_files_props['xtb_xyz_path'],
                 "--opt",
                 str(self.args.qdescp_opt),
                 "--acc",
@@ -519,19 +528,18 @@ class qdescp:
             if self.args.qdescp_solvent is not None:
                 command_opt.append("--alpb")
                 command_opt.append(f"{self.args.qdescp_solvent}")
-            run_command(command_opt, self.xtb_opt)
+            run_command(command_opt, xtb_files_props['xtb_opt'] , cwd=dat_dir)
 
             # replaces RDKit geometries with xTB geometries
-            os.remove(self.xtb_xyz)
+            os.remove(xtb_files_props['xtb_xyz_path'])
             try:
-                os.rename(str(dat_dir) + "/xtbopt.xyz", self.xtb_xyz)
+                os.rename(str(dat_dir) + "/xtbopt.xyz", xtb_files_props['xtb_xyz_path'])
             except FileNotFoundError:
-                os.rename(str(dat_dir) + "/xtblast.xyz", self.xtb_xyz)
+                os.rename(str(dat_dir) + "/xtblast.xyz", xtb_files_props['xtb_xyz_path'])
 
-        os.chdir(dat_dir)
         command1 = [
             "xtb",
-            self.xtb_xyz,
+            xtb_files_props['xtb_xyz_path'],
             "--pop",
             "--wbo",
             "--acc",
@@ -545,21 +553,21 @@ class qdescp:
             "--etemp",
             str(self.args.qdescp_temp),
             "--input",
-            str(self.inp),
+            str(xtb_input_file),
             "-P",
             "1",
         ]
         if self.args.qdescp_solvent is not None:
             command1.append("--alpb")
             command1.append(f"{self.args.qdescp_solvent}")
-        run_command(command1, self.xtb_out)
+        run_command(command1, xtb_files_props['xtb_out'], cwd=dat_dir)
 
-        os.rename("xtbout.json", self.xtb_json)
-        os.rename("wbo", self.xtb_wbo)
+        os.rename(str(dat_dir) + "/xtbout.json", xtb_files_props['xtb_json'])
+        os.rename(str(dat_dir) + "/wbo", xtb_files_props['xtb_wbo'])
 
         command2 = [
             "xtb",
-            self.xtb_xyz,
+            xtb_files_props['xtb_xyz_path'],
             "--pop",
             "--gfn",
             "1",
@@ -577,11 +585,11 @@ class qdescp:
         if self.args.qdescp_solvent is not None:
             command2.append("--alpb")
             command2.append(f"{self.args.qdescp_solvent}")
-        run_command(command2, self.xtb_gfn1)
+        run_command(command2, xtb_files_props['xtb_gfn1'], cwd=dat_dir)
 
         command3 = [
             "xtb",
-            self.xtb_xyz,
+            xtb_files_props['xtb_xyz_path'],
             "--vfukui",
             "--gfn",
             "2",
@@ -599,11 +607,11 @@ class qdescp:
         if self.args.qdescp_solvent is not None:
             command3.append("--alpb")
             command3.append(f"{self.args.qdescp_solvent}")
-        run_command(command3, self.xtb_fukui)
+        run_command(command3, xtb_files_props['xtb_fukui'], cwd=dat_dir)
 
         command4 = [
             "xtb",
-            self.xtb_xyz,
+            xtb_files_props['xtb_xyz_path'],
             "--fod",
             "--gfn",
             "2",
@@ -621,12 +629,12 @@ class qdescp:
         if self.args.qdescp_solvent is not None:
             command4.append("--alpb")
             command4.append(f"{self.args.qdescp_solvent}")
-        run_command(command4, self.xtb_fod)
+        run_command(command4, xtb_files_props['xtb_fod'],cwd=dat_dir)
 
-        os.chdir(self.args.initial_dir)
+        return xtb_files_props
 
 
-    def collect_xtb_properties(self,name_initial,atom_props,update_atom_props,smarts_targets):
+    def collect_xtb_properties(self,name_initial,atom_props,update_atom_props,smarts_targets,xtb_files_props):
         """
         Collects all xTB properties from the files and puts them in a JSON file
         """
@@ -655,11 +663,11 @@ class qdescp:
             total_C6AA,
             total_C8AA,
             total_alpha,
-        ) = read_xtb(self.xtb_out)
-        FPLUS, FMINUS, FRAD = read_fukui(self.xtb_fukui)
-        MULLIKEN, CM5, s_prop, p_prop, d_prop = read_gfn1(self.xtb_gfn1)
-        total_fod, fod, s_prop_fod, p_prop_fod, d_prop_fod = read_fod(self.xtb_fod)
-        bonds, wbos = read_wbo(self.xtb_wbo)
+        ) = read_xtb(xtb_files_props['xtb_out'])
+        FPLUS, FMINUS, FRAD = read_fukui(xtb_files_props['xtb_fukui'])
+        MULLIKEN, CM5, s_prop, p_prop, d_prop = read_gfn1(xtb_files_props['xtb_gfn1'])
+        total_fod, fod, s_prop_fod, p_prop_fod, d_prop_fod = read_fod(xtb_files_props['xtb_fod'])
+        bonds, wbos = read_wbo(xtb_files_props['xtb_wbo'])
 
         # create matrix of Wiberg bond-orders
         nat = len(atoms)
@@ -672,7 +680,7 @@ class qdescp:
 		Now add xTB descriptors to existing json files.
 		"""
 
-        json_data = read_json(self.xtb_json)
+        json_data = read_json(xtb_files_props['xtb_json'])
         json_data["Dipole module/D"] = dipole_module
         json_data["Total charge"] = total_charge
         json_data["Transition dipole module/D"] = transition_dipole_moment
@@ -706,7 +714,7 @@ class qdescp:
         json_data["FOD p proportion"] = p_prop_fod
         json_data["FOD d proportion"] = d_prop_fod
 
-        with open(self.xtb_xyz, "r") as f:
+        with open(xtb_files_props['xtb_xyz_path'], "r") as f:
             inputs = f.readlines()
 
         coordinates = [inputs[i].strip().split()[1:] for i in range(2, int(inputs[0].strip()) + 2)]
@@ -796,7 +804,7 @@ class qdescp:
 
                             # calculates buried volume to the type of atom selected
                             try:
-                                dbstep_obj = db.dbstep(self.xtb_xyz,atom1=idx_dbstep,r=float(self.args.dbstep_r),commandline=True,verbose=False,volume=True)  
+                                dbstep_obj = db.dbstep(xtb_files_props['xtb_xyz_path'],atom1=idx_dbstep,r=float(self.args.dbstep_r),commandline=True,verbose=False,volume=True)  
                                 json_data[f'{match_name}_DBSTEP_Vbur'] = float(dbstep_obj.bur_vol)
                                 if f'{match_name}_DBSTEP_Vbur' not in update_atom_props:
                                     update_atom_props.append(f'{match_name}_DBSTEP_Vbur')
@@ -823,12 +831,12 @@ class qdescp:
                             if f'{pattern}_min_{prop}' not in update_atom_props:
                                 update_atom_props.append(f'{pattern}_min_{prop}')
 
-        with open(self.xtb_json, "w") as outfile:
+        with open(xtb_files_props['xtb_json'], "w") as outfile:
             json.dump(json_data, outfile)
         
         return update_atom_props
 
-    def cleanup(self, name, destination, xtb_passing):
+    def cleanup(self, name, destination, xtb_passing, xtb_files_props):
         """
         Removes files from the xTB calculations that are not relevant and place json files in the 
         QDESCP folder
@@ -836,7 +844,7 @@ class qdescp:
 
         if xtb_passing: # only move molecules with successful xTB calcs
             final_json = str(destination) + "/" + name + ".json"
-            shutil.move(self.xtb_json, final_json)
+            shutil.move(xtb_files_props['xtb_json'], final_json)
         
         # delete xTB files that does not contain useful data
         files = glob.glob(f"{destination}/{name}/*")
