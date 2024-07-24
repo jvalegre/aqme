@@ -390,11 +390,12 @@ class csearch:
 
         # rdkit benefits from using multithreading, since the RMSD filter in RDKit's GetBestRMS 
         # doesn't parallelize well (by default, it uses 1 thread and it fails when using more, 
-        # and from our experience this function isn't efficient as we're not sure that
-        # it tries to use all the CPUs or only 1)
+        # we're not sure that it tries to use all the CPUs or only 1)
         if self.args.program.lower() == "rdkit":
-            csearch_procs = self.args.nprocs
-        else: # CREST already parallelizes CPUs
+            # we do not recommend more than 4 parallel RDKit jobs, as each job runs RDKit functions
+            # with all available CPUs/threadss (i.e. numThreads=0 in rdDistGeom.EmbedMultipleConfs)
+            csearch_procs = min(4,self.args.nprocs)
+        else: # each CREST job already parallelizes CPUs, so only 1 simultaneous job is run at a time
             csearch_procs = 1
 
         # asynchronous multithreading to accelerate CSEARCH (only benefits RDKit)
