@@ -302,7 +302,7 @@ class csearch:
             self.args.log.write(f"\nStarting CSEARCH with {len(job_inputs)} job(s) (SDF, XYZ, CSV, etc. files might contain multiple jobs/structures inside)\n")
 
             # runs the conformer sampling with multiprocessors
-            self.run_csearch(job_inputs)
+            _ = self.run_csearch(job_inputs)
 
             # store all the information into a CSV file
             csearch_file_no_path = (
@@ -388,71 +388,48 @@ class csearch:
             "o  Number of finished jobs from CSEARCH", max=len(job_inputs)
         )
 
-        # rdkit benefits from using multithreading (the RMSD filter only uses 1 proc, when trying to use
-        # more the program collapses)
+        # rdkit benefits from using multithreading, since the RMSD filter in RDKit's GetBestRMS 
+        # doesn't parallelize well (by default, it uses 1 thread and it fails when using more, 
+        # and from our experience this function isn't efficient as we're not sure that
+        # it tries to use all the CPUs or only 1)
         if self.args.program.lower() == "rdkit":
             csearch_procs = self.args.nprocs
-        else:
+        else: # CREST already parallelizes CPUs
             csearch_procs = 1
-            
-        with futures.ProcessPoolExecutor(
+
+        # asynchronous multithreading to accelerate CSEARCH (only benefits RDKit)
+        with futures.ThreadPoolExecutor(
             max_workers=csearch_procs,
         ) as executor:
-            # Submit a set of asynchronous jobs
-            jobs = []
-            # Submit the Jobs
             for job_input in job_inputs:
-                (
-                    smi_,
-                    name_,
-                    charge_,
-                    mult_,
-                    constraints_atoms_,
-                    constraints_dist_,
-                    constraints_angle_,
-                    constraints_dihedral_,
-                    complex_type_,
-                    geom_
-                ) = job_input
-                job = executor.submit(
-                    self.compute_confs(
-                        smi_,
-                        name_,
-                        charge_,
-                        mult_,
-                        constraints_atoms_,
-                        constraints_dist_,
-                        constraints_angle_,
-                        constraints_dihedral_,
-                        complex_type_,
-                        geom_
-                    )
+                _ = executor.submit(
+                    self.compute_confs, job_input,bar
                 )
-                jobs.append(job)
 
-                bar.next()
+        bar.finish()
 
-            bar.finish()
-
-    def compute_confs(
-        self,
-        smi,
-        name,
-        charge,
-        mult,
-        constraints_atoms,
-        constraints_dist,
-        constraints_angle,
-        constraints_dihedral,
-        complex_type,
-        geom
-    ):
+    def compute_confs(self,job_input,bar):
         """
         Function to start conformer generation
         """
 
+        # load variables from job_input
+        (
+            smi,
+            name,
+            charge,
+            mult,
+            constraints_atoms,
+            constraints_dist,
+            constraints_angle,
+            constraints_dihedral,
+            complex_type,
+            geom
+        ) = job_input
+        
         self.args.log.write(f"\n   ----- {os.path.basename(Path(name))} -----")
 
+        # load mol and other parameters when using SMILES as input
         if self.args.smi is not None or os.path.basename(Path(self.args.input)).split(".")[1] in ["smi","csv","cdx","txt","yaml","yml","rtf"]:
             (
                 mol,
@@ -477,6 +454,7 @@ class csearch:
                 if os.path.basename(Path(self.args.input)).split(".")[1] not in ["csv","cdx","txt","yaml","yml","rtf"]:
                     self.args.log.finalize()
                     sys.exit()
+                bar.next()
                 return
 
         else:
@@ -487,6 +465,7 @@ class csearch:
                 if os.path.basename(Path(self.args.input)).split(".")[1] not in ["csv","cdx","txt","yaml","yml","rtf"]:
                     self.args.log.finalize()
                     sys.exit()
+                bar.next()
                 return
                 
             # check if the optimization is constrained
@@ -551,6 +530,7 @@ class csearch:
                 if os.path.basename(Path(self.args.input)).split(".")[1] not in ["csv","cdx","txt","yaml","yml","rtf"]:
                     self.args.log.finalize()
                     sys.exit()
+                bar.next()
                 return
 
             if complex_type in accepted_complex_types:
@@ -620,6 +600,7 @@ class csearch:
         # Updates the dataframe with infromation about conformer generation
         frames = [self.final_dup_data, total_data]
         self.final_dup_data = pd.concat(frames, ignore_index=True, sort=True)
+        bar.next()
 
     # automatic detection of metal atoms   
     def find_metal_atom(self,mol,charge,mult):

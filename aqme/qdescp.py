@@ -374,7 +374,7 @@ class qdescp:
         bar = IncrementalBar(
         "\no  Number of finished jobs from QDESCP", max=len(self.args.files)
         )
-        # multiprocessing to accelerate QDESCP (since xTB uses 1 processor to be reproducible)
+        # asynchronous multithreading to accelerate QDESCP (since xTB uses 1 processor to be reproducible)
         with futures.ThreadPoolExecutor(
             max_workers=self.args.nprocs,
             ) as executor:
