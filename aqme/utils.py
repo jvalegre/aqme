@@ -31,13 +31,13 @@ aqme_ref = f"AQME v {aqme_version}, Alegre-Requena, J. V.; Sowndarya, S.; Perez-
 RDLogger.DisableLog("rdApp.*")
 
 
-def run_command(command, outfile):
+def run_command(command, outfile, cwd=None):
     """
     Runs the subprocess command and saves the results in an output file (not shown in the terminal)
     """
 
     output = open(outfile, "w")
-    subprocess.run(command, stdout=output, stderr=subprocess.DEVNULL)
+    subprocess.run(command, stdout=output, stderr=subprocess.DEVNULL, cwd=cwd)
     output.close()
 
 
