@@ -41,20 +41,22 @@ jobs:
           conda create -n cheminf python=3.10
           source activate base 
           conda activate cheminf
-          # install RDKit and OpenBabel
           python -m pip install --upgrade pip
-          pip install rdkit-pypi
-          conda install -y -c conda-forge openbabel
-          # install xTB, xTB-python and CREST
+          # install OpenBabel
+          conda install -y -c conda-forge openbabel=3.1.1
+          # install dependencies
           conda install -y -c conda-forge xtb
           conda install -y -c conda-forge crest
+          pip install ase
           conda install pytorch torchvision torchaudio cpuonly -c pytorch
           pip install torchani==2.2.3
+          pip install dbstep
           # install the dependencies of AQME with pip
           pip install .
           # install and run pytest
           pip install pytest
           pip install pytest-cov
+          pip install pytest-mock
           # the format of the codecov report has to be scpecified or it doesn't create for some reason
           python -m pytest -v --cov=aqme --cov-report=xml
           rm -r /tmp/*

@@ -1,0 +1,3 @@
+SMILES,code_name
+[C:1]([H])([H])([H])([H]),mol_1
+N#CCC[C:1]([H])([H])([H]),mol_2

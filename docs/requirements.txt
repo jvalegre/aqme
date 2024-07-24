@@ -4,10 +4,6 @@ sphinx-autoapi
 numpy
 pandas
 rdkit
-py3Dmol
 scipy
 cclib
-ipywidgets
 progress
-ase
-rdkit-pypi

@@ -205,6 +205,7 @@ def generating_conformations_fullmonte(
     for i, cid in enumerate(sorted_all_cids):
         unique_mol[cid].SetProp("_Name", name + " " + str(i))
         if coord_Map is None and alg_Map is None and mol_template is None:
+            # setting the metal back instead of I
             if len(args.metal_atoms) >= 1:
                 set_metal_atomic_number(unique_mol[cid], args.metal_idx, args.metal_sym)
             sdwriter.write(unique_mol[cid])
@@ -217,6 +218,7 @@ def generating_conformations_fullmonte(
                 mol_template,
                 args.opt_steps_rdkit,
             )
+            # setting the metal back instead of I
             if len(args.metal_atoms) >= 1:
                 set_metal_atomic_number(mol_realigned, args.metal_idx, args.metal_sym)
             sdwriter.write(mol_realigned)

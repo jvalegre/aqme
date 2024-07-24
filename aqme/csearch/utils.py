@@ -168,6 +168,7 @@ def prepare_smiles_from_line(line, args):
 def prepare_csv_files(args, csearch_file):
     csv_smiles = pd.read_csv(csearch_file)
     job_inputs = []
+    # run conformer searches only for unique SMILES
     unique_smiles = set()
     for column_index, column in enumerate(csv_smiles.columns):
         if "SMILES" == column.upper() or "SMILES_" in column.upper():
@@ -559,10 +560,18 @@ def smi_to_mol(
     else:
         params = Chem.SmilesParserParams()
         params.removeHs = False
+        smi = smi[0]
         try:
-            mol = Chem.MolFromSmiles(smi[0], params)
+            # fix mapped atoms
+            if ':' in smi:
+                # smi = fix_mapped_atoms(smi)
+                log.write(f"\nx  WARNING! The SMILES string provided ( {smi} ) contains mapped atoms, make sure you include their corresponding H atoms explicitly in the SMILES (otherwise they'll be omitted). For example, use [C:1]([H])([H])([H])C instead of [C:1]C.\n")
+
+            mol = Chem.MolFromSmiles(smi, params)
+            Chem.SanitizeMol(mol)
+            mol = Chem.AddHs(mol)
         except Chem.AtomValenceException:
-            log.write(f"\nx  The SMILES string provided ( {smi[0]} ) contains errors or the molecule needs to be drawn in a different way. For example, N atoms from ligands of metal complexes should be N+ since they're drawn with four bonds in ChemDraw, same for O atoms in carbonyl ligands, etc.\n")
+            log.write(f"\nx  The SMILES string provided ( {smi} ) contains errors or the molecule needs to be drawn in a different way. For example, N atoms from ligands of metal complexes should be N+ since they're drawn with four bonds in ChemDraw, same for O atoms in carbonyl ligands, etc.\n")
             mol = None
 
     return (
@@ -573,6 +582,28 @@ def smi_to_mol(
         constraints_dihedral,
         complex_ts
     )
+
+# this function was disabled to allow ROBERT users to use atom idx for atomic descriptor generation
+# def fix_mapped_atoms(smi):
+#     '''
+#     This protocol to handle mapped SMILES. Otherwise, Hs are not added right and charges/mult
+#     are not calculated correctly either.
+#     '''
+
+#     map_list = []
+#     smi_map = smi.replace(']','[').split('[')
+#     for piece in smi_map:
+#         if ':' in piece:
+#             map_list.append(f'[{piece}]')
+#     for map_atom in map_list:
+#         new_atom = map_atom.replace(':','[').split('[')
+#         while('' in new_atom):
+#             new_atom.remove('')
+#         new_atom = new_atom[0]
+#         smi = smi.replace(map_atom,new_atom)
+    
+#     return smi
+
 
 def cluster_conformers(mols, heavy_only, max_matches_rmsd, cluster_thr):
     dists = []

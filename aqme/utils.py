@@ -4,6 +4,7 @@
 ######################################################.
 
 import os
+import re
 import subprocess
 import sys
 import time
@@ -23,7 +24,7 @@ GAS_CONSTANT = 8.3144621  # J / K / mol
 J_TO_AU = 4.184 * 627.509541 * 1000.0  # UNIT CONVERSION
 T = 298.15
 
-aqme_version = "1.5.3"
+aqme_version = "1.6.0"
 time_run = time.strftime("%Y/%m/%d %H:%M:%S", time.localtime())
 aqme_ref = f"AQME v {aqme_version}, Alegre-Requena, J. V.; Sowndarya, S.; Perez-Soto, R.; Alturaifi, T.; Paton, R. AQME: Automated Quantum Mechanical Environments for Researchers and Educators. Wiley Interdiscip. Rev. Comput. Mol. Sci. 2023, DOI: 10.1002/wcms.1663."
 
@@ -308,7 +309,7 @@ def get_conf_RMS(mol1, mol2, c1, c2, heavy, max_matches_rmsd):
     if heavy:
         mol1 = RemoveHs(mol1)
         mol2 = RemoveHs(mol2)
-    return GetBestRMS(mol1, mol2, c1, c2, maxMatches=max_matches_rmsd)
+    return GetBestRMS(mol1, mol2, c1, c2, maxMatches=max_matches_rmsd) # don't use numThreads=0 or -1 as the documentation says, it fails! (due to multiprocessing?)
 
 
 def command_line_args():
@@ -325,11 +326,11 @@ def command_line_args():
         "qprep",
         "qcorr",
         "qdescp",
-        "vismol",
         "heavyonly",
         "cregen",
         "lowest_only",
         "chk",
+        "oldchk",
         "nodup_check",
         "dbstep_calc",
         "robert"
@@ -529,9 +530,6 @@ def load_variables(kwargs, aqme_module, create_dat=True):
             elif aqme_module == "qdescp":
                 logger_1 = "QDESCP"
 
-            elif aqme_module == "vismol":
-                logger_1 = "VISMOL"
-
             if txt_yaml not in [
                 "",
                 f"\no  Importing AQME parameters from {self.varfile}",
@@ -677,21 +675,26 @@ def check_run(w_dir):
     Determines the folder where input files are gonna be generated in QCORR.
     """
 
-    if "failed" in w_dir.as_posix():
-        resume_qcorr = True
-        for folder in w_dir.as_posix().replace("\\", "/").split("/"):
-            if "run_" in folder:
-                folder_count = int(folder.split("_")[1]) + 1
-    else:
-        input_folder = w_dir.joinpath("failed/")
-        resume_qcorr = False
-        folder_count = 1
+    failed_run_pattern = re.compile(
+        r"(^.*)[/\\]failed[/\\]run_(?P<folder_count>\d+)[/\\]"
+    )
 
-        if os.path.exists(input_folder):
-            dir_list = os.listdir(input_folder)
-            for folder in dir_list:
-                if folder.find("run_") > -1:
-                    folder_count += 1
+    run_pattern = re.compile(r"(^.*)[/\\]run_(?P<folder_count>\d+)[/\\]")
+    resume_qcorr = False
+    folder_count = 1
+
+    failed_run_match = failed_run_pattern.match(w_dir.as_posix())
+    run_match = run_pattern.match(w_dir.as_posix())
+
+    if failed_run_match:
+        folder_count = int(failed_run_match.group("folder_count")) + 1
+        resume_qcorr = True
+        return folder_count, resume_qcorr
+
+    if run_match:
+        folder_count = int(run_match.group("folder_count"))
+        resume_qcorr = False
+        return folder_count, resume_qcorr
 
     return folder_count, resume_qcorr
 

@@ -1,5 +1,5 @@
 from setuptools import setup, find_packages
-version = "1.5.3"
+version = "1.6.0"
 setup(
     name="aqme",
     packages=find_packages(exclude=["tests"]),
@@ -34,18 +34,12 @@ setup(
     ],
     install_requires=[
         "PyYAML",
-        "pandas>=2.0.2",
+        "pandas==2.2.2",
         "progress",
-        "ase",
-        "numpy",
+        "numpy==1.26.4",
+        "rdkit==2024.3.3",
         "cclib==1.7.2",
-        "matplotlib",
-        "seaborn",
         "cffi",
-        "goodvibes",
-        "py3Dmol",
-        "ipywidgets",
-        "dbstep"
     ],
     python_requires=">=3.0",
     include_package_data=True,

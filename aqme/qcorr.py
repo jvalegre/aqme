@@ -1,4 +1,4 @@
-"""
+r"""
 Parameters
 ----------
 
@@ -35,7 +35,7 @@ Parameters
    dup_threshold : float, default=0.0001
       Energy (in hartree) used as the energy difference in E, H and G to detect 
       duplicates
-    ro_threshold : float, default=0.1
+   ro_threshold : float, default=0.1
       Rotational constant value used as the threshold to detect duplicates 
    isom_type : str, default=None
       Check for isomerization from the initial input file to the resulting 

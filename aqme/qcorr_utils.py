@@ -171,6 +171,7 @@ def full_check(w_dir_main=os.getcwd(), destination_fullcheck="", files="*.json",
     """
     Checks that multiple calculations were done following the same protocols, including
     program and version, grid size, level of theory, dispersion and solvation model.
+    
     Parameters
     ----------
     w_dir_main : str
@@ -343,6 +344,13 @@ def gen_connectivity(isom_data, atom_types_conn, COORDINATES_conn):
     Use VDW radii to infer a connectivity matrix
     """
 
+    # if the atom doesn't have any measured VdW or covalent radius, the code assigns an arbitrary value of 1
+    for atom in atom_types_conn:
+        if atom not in bondi:
+            bondi[atom] = 1
+        if atom not in rcov:
+            rcov[atom] = 1
+          
     conn_mat = np.zeros((len(atom_types_conn), len(atom_types_conn)))
     for i, elem_i in enumerate(atom_types_conn):
         for j, elem_j in enumerate(atom_types_conn):

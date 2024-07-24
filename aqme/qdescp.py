@@ -47,7 +47,7 @@ xTB descriptors
       Performs an initial xTB geometry optimization before calculating descriptors
 
 DBSTEP descriptors
-++++++++++++++
+++++++++++++++++++
 
    dbstep_calc : bool, default=False
       Whether to add a DBSTEP calculation of buried volume when generating atomic descriptors 
@@ -136,6 +136,12 @@ class qdescp:
         # load default and user-specified variables
         self.args = load_variables(kwargs, "qdescp")
 
+        # detect errors and incompatibilities before the QDESCP run
+        if self.args.program.lower() not in ["xtb", "nmr"]:
+            self.args.log.write("\nx  Program not supported for QDESCP descriptor generation! Specify: program='xtb' (or nmr)")
+            self.args.log.finalize()
+            sys.exit()
+
         # get unique files to avoid redundancy in calculations
         self.args.files = self.get_unique_files()
 
@@ -147,27 +153,13 @@ class qdescp:
         # retrieve the different files to run in QDESCP
         _ = check_files(self,'qdescp')
 
-        qdescp_program = True
-        if self.args.program is None:
-            qdescp_program = False
-        if qdescp_program:
-            if self.args.program.lower() not in ["xtb", "nmr"]:
-                qdescp_program = False
-        if not qdescp_program:
-            self.args.log.write("\nx  Program not supported for QDESCP descriptor generation! Specify: program='xtb' (or nmr)")
-            self.args.log.finalize()
-            sys.exit()
-
         update_atom_props = [] # keeps track of the molecules with suitable atomic properties when using qdescp_atoms
 
         self.args.log.write(f"\nStarting QDESCP-{self.args.program} with {len(self.args.files)} job(s)\n")
 
         # Obtaing SMARTS patterns from the input files automatically if no patterns are provided
         smarts_targets = self.args.qdescp_atoms.copy()
-        if self.args.csv_name is None:
-            self.args.csv_name = input("Please enter the name of the CSV file: ")
-            if not self.args.csv_name.endswith(".csv"):
-                self.args.csv_name += ".csv"
+
         if self.args.csv_name is not None:
             input_df = pd.read_csv(self.args.csv_name)
             if len(smarts_targets) == 0:
@@ -183,9 +175,9 @@ class qdescp:
                                 break
                         smiles_list = input_df[smiles_column].tolist()
                 else:
-                    self.args.log.write("x  WARNING! No column with SMILES information found in the input CSV file.")#hasjdhkjashdkjasdhlk
+                    self.args.log.write("x  WARNING! No column with SMILES information found in the input CSV file.")
                 if len(smiles_list) > 0:
-                    mols = [Chem.MolFromSmiles(smiles) for smiles in smiles_list if Chem.MolFromSmiles(smiles) is not None]
+                    mols = [Chem.MolFromSmiles(smiles) for smiles in smiles_list if Chem.MolFromSmiles(smiles) is not None]#JDJAJKSHDKHA
                     if len(mols) > 0:
                         mcs = rdFMCS.FindMCS(mols)
                         if mcs is not None:
@@ -203,7 +195,7 @@ class qdescp:
                                 self.args.log.write(f"\nSubstructure {(common_substructure)} found in input files. Using it for atomic descriptor calculations.")
                           
         # Delete a SMARTS pattern if it is not present in more than 30% of the sdf files
-        elif len(smarts_targets) > 0:
+        if len(smarts_targets) > 0:
             mol_list = []
             for file in self.args.files:
                 with open(file, "r") as F:
@@ -220,12 +212,19 @@ class qdescp:
                         mol_indiv = Chem.SDMolSupplier(file, removeHs=False)
                         mol_list.append(mol_indiv)
 
-            patterns_remove = []
+            patterns_remove,matches = [],[]
             for pattern in smarts_targets:
                 num_matches = len(mol_list)
                 for mol_indiv in mol_list:
                     try:
-                        matches = mol_indiv.GetSubstructMatches(Chem.MolFromSmarts(pattern))
+                        # we differentiate if is a number for mapped atom or we are looking for smarts pattern in the molecule
+                        if not str(pattern).isalpha() and str(pattern).isdigit():
+                            for atom in mol_indiv.GetAtoms():
+                                if atom.GetAtomMapNum() == int(pattern):
+                                    pattern_idx = int(atom.GetIdx())
+                                    matches = ((int(pattern_idx),),)
+                        else:
+                            matches = mol_indiv.GetSubstructMatches(Chem.MolFromSmarts(pattern))
                     except:
                         try: # I tried to make this except more specific for Boost.Python.ArgumentError, but apparently it's not as simple as it looks
                             matches = mol_indiv.GetSubstructMatches(Chem.MolFromSmarts(f'[{pattern}]'))
@@ -310,7 +309,7 @@ class qdescp:
                 )
         # AQME-ROBERT workflow
         name_db='Descriptors'
-        if self.args.program.lower() == "xtb":
+        if self.args.program.lower() == "xtb" and self.args.csv_name is not None:
             if self.args.robert:
                 name_db='ROBERT'
             combined_df = pd.DataFrame()
@@ -335,8 +334,7 @@ class qdescp:
             else:
                 self.args.log.write(f"\nx  The input csv_name provided ({self.args.csv_name}) does not contain the SMILES column. A combined database for AQME-{name_db} workflows will not be created.")
 
-        df_temp = pd.read_csv(f'AQME-{name_db}_{self.args.csv_name}')
-        _ = self.process_aqme_csv(name_db)
+            _ = self.process_aqme_csv(name_db)
 
         elapsed_time = round(time.time() - start_time_overall, 2)
         self.args.log.write(f"\nTime QDESCP: {elapsed_time} seconds\n")
@@ -382,56 +380,39 @@ class qdescp:
             name = os.path.basename(Path(file)).split('.')[0]
             ext = os.path.basename(Path(file)).split(".")[1]
             self.args.log.write(f"\n\n   ----- {name} -----")
-            if ext.lower() in ["sdf", "xyz", "pdb"]: #cargarse esta frase
-                if ext.lower() == "xyz":
-                    # separate the parent XYZ file into individual XYZ files
-                    xyzall_2_xyz(file, name)
-                    for conf_file in glob.glob(f"{name}_conf_*.xyz"):
-                        if self.args.charge is None:
-                            charge_xyz, _ = read_xyz_charge_mult(conf_file)
-                        else:
-                            charge_xyz = self.args.charge
-                        if self.args.mult is None:
-                            _, mult_xyz = read_xyz_charge_mult(conf_file)
-                        else:
-                            mult_xyz = self.args.mult
-                        xyz_files.append(
-                            os.path.dirname(os.path.abspath(file)) + "/" + conf_file
-                        )
-                        xyz_charges.append(charge_xyz)
-                        xyz_mults.append(mult_xyz)
-
-                elif ext.lower() == "pdb":  #cambiar a else, el tipo de archivo por file y juntos dos los dos elif
-                    command_pdb = [
-                        "obabel",
-                        "-ipdb",
-                        file,
-                        "-oxyz",
-                        f"-O{os.path.dirname(os.path.abspath(file))}/{name}_conf_.xyz",
-                        "-m",
-                    ]
-                    subprocess.run(
-                        command_pdb,
-                        stdout=subprocess.DEVNULL,
-                        stderr=subprocess.DEVNULL,
+            if ext.lower() == "xyz":
+                # separate the parent XYZ file into individual XYZ files
+                xyzall_2_xyz(file, name)
+                for conf_file in glob.glob(f"{name}_conf_*.xyz"):
+                    if self.args.charge is None:
+                        charge_xyz, _ = read_xyz_charge_mult(conf_file)
+                    else:
+                        charge_xyz = self.args.charge
+                    if self.args.mult is None:
+                        _, mult_xyz = read_xyz_charge_mult(conf_file)
+                    else:
+                        mult_xyz = self.args.mult
+                    xyz_files.append(
+                        os.path.dirname(os.path.abspath(file)) + "/" + conf_file
                     )
+                    xyz_charges.append(charge_xyz)
+                    xyz_mults.append(mult_xyz)
 
-                elif ext.lower() == "sdf":
-                    command_sdf = [
-                        "obabel",
-                        "-isdf",
-                        file,
-                        "-oxyz",
-                        f"-O{os.path.dirname(os.path.abspath(file))}/{name}_conf_.xyz",
-                        "-m",
-                    ]
-                    subprocess.run(
-                        command_sdf,
-                        stdout=subprocess.DEVNULL,
-                        stderr=subprocess.DEVNULL,
-                    )
+            else:
+                command_pdb = [
+                    "obabel",
+                    f"-i{ext.lower()}",
+                    file,
+                    "-oxyz",
+                    f"-O{os.path.dirname(os.path.abspath(file))}/{name}_conf_.xyz",
+                    "-m",
+                ]
+                subprocess.run(
+                    command_pdb,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                )
 
-            if ext.lower() in ["sdf", "pdb"]:
                 if self.args.charge is None:
                     _, charges, _, _ = mol_from_sdf_or_mol_or_mol2(file, "csearch", self.args)
                 else:
@@ -467,8 +448,8 @@ class qdescp:
             #                 )
             for xyz_file, charge, mult in zip(xyz_files, xyz_charges, xyz_mults):
                 name_xtb = os.path.basename(Path(xyz_file)).split(".")[0]
-                self.args.log.write(f"\no   Running xTB and collecting properties")
-                
+                self.args.log.write(f"\no  Running xTB and collecting properties")
+
                 # if xTB fails during any of the calculations (UnboundLocalError), xTB assigns weird
                 # qm5 charges (i.e. > +10 or < -10, ValueError), or the json file is not created 
                 # for some weird xTB error (FileNotFoundError), that molecule is not used 
@@ -649,7 +630,6 @@ class qdescp:
         """
         Collects all xTB properties from the files and puts them in a JSON file
         """
-        #crear un diccionario con 2 listas una para molecular y otras para atomic y hacer append dependiendo de donde vaya cada descriptor
 
         (
             _,
@@ -749,28 +729,42 @@ class qdescp:
             # find the target atoms or groups
             for pattern in smarts_targets:
                 matches = []
-                try:
-                    matches = mol.GetSubstructMatches(Chem.MolFromSmarts(pattern))
-                except: # I tried to make this except more specific for Boost.Python.ArgumentError, but apparently it's not as simple as it looks
+                idx_set = None
+                
+                # we differentiate if is a number for mapped atom or we are looking for smarts pattern in the molecule
+                if not str(pattern).isalpha() and str(pattern).isdigit():
+                    for atom in mol.GetAtoms():
+                        if atom.GetAtomMapNum() == int(pattern):
+                            idx_set = pattern
+                            pattern_idx = int(atom.GetIdx())
+                            matches = ((int(pattern_idx),),)
+                else: 
                     try:
-                        matches = mol.GetSubstructMatches(Chem.MolFromSmarts(f'[{pattern}]'))
-                    except:
-                        self.args.log.write(f"x  WARNING! SMARTS pattern was not specified correctly! Make sure the qdescp_atoms option uses this format: \"[C]\" for atoms, \"[C=N]\" for bonds, and so on.")
-      
+                        matches = mol.GetSubstructMatches(Chem.MolFromSmarts(pattern))
+                    except: # I tried to make this except more specific for Boost.Python.ArgumentError, but apparently it's not as simple as it looks
+                        try:
+                            matches = mol.GetSubstructMatches(Chem.MolFromSmarts(f'[{pattern}]'))
+                        except:
+                            self.args.log.write(f"x  WARNING! SMARTS pattern was not specified correctly! Make sure the qdescp_atoms option uses this format: \"[C]\" for atoms, \"[C=N]\" for bonds, and so on.")
+                
                 if len(matches) == 0:
                     self.args.log.write(f"x  WARNING! SMARTS pattern {pattern} not found in the system, this molecule will not be used.")
-
+                
+                elif matches[0] == -1:
+                    self.args.log.write(f"x  WARNING! Mapped atom {pattern} not found in the system, this molecule will not be used.")
+                
                 elif len(matches) > 1:
                     self.args.log.write(f"x  WARNING! More than one {pattern} atom was found in the system, this molecule will not be used.")
-
+                
                 elif len(matches) == 1:
                     # get atom types and sort them to keep the same atom order among different molecules
                     atom_indices = list(matches[0])
                     atom_types = []
                     for atom_idx in atom_indices:
                         atom_types.append(mol.GetAtoms()[atom_idx].GetSymbol())
+                        
 
-                    n_types = len(set(atom_types)) #cambiar para que en caso de tener ejemplo Jaime con 2P tambien te los calcule, el problema es del set 
+                    n_types = len(set(atom_types))
                     if n_types == 1:
                         sorted_indices = sorted(atom_indices, key=lambda idx: len(mol.GetAtoms()[idx].GetNeighbors()))
                     elif n_types > 1:
@@ -784,7 +778,10 @@ class qdescp:
                         idx_xtb = atom_idx
                         atom_type = mol.GetAtoms()[atom_idx].GetSymbol()
                         if len(matches[0]) == 1:
-                            match_name = f'{atom_type}'
+                            if idx_set is None:
+                                match_name = f'{atom_type}'
+                            else:
+                                match_name = f'{atom_type}{idx_set}'
                         else:
                             if n_types == 1:
                                 match_name = f'{pattern}_{atom_type}{match_idx}'
@@ -889,22 +886,3 @@ class qdescp:
             df_temp.to_csv(f'AQME-{name_db}_{self.args.csv_name}', index=False)
 
         return df_temp
-
-    # def xtb_complete(self,xyz_file,charge,mult,destination,file,atom_props,smarts_targets):
-    #     name_xtb = os.path.basename(Path(xyz_file)).split(".")[0]
-    #     self.args.log.write(f"\no   Running xTB and collecting properties")
-
-    #     # if xTB fails during any of the calculations (UnboundLocalError), xTB assigns weird
-    #     # qm5 charges (i.e. > +10 or < -10, ValueError), or the json file is not created 
-    #     # for some weird xTB error (FileNotFoundError), that molecule is not used 
-    #     xtb_passing = True
-    #     try:
-    #         _ = self.run_sp_xtb(xyz_file, charge, mult, name_xtb, destination)
-    #         path_name = Path(os.path.dirname(file)).joinpath(os.path.basename(Path(file)).split(".")[0])
-    #         update_atom_props = self.collect_xtb_properties(path_name, atom_props, update_atom_props, smarts_targets)
-    #         print(xtb_passing,'XXXXXXXXXXXXXXXXXXXXX')
-    #     except (UnboundLocalError,ValueError,FileNotFoundError):
-    #         xtb_passing = False
-    #     self.cleanup(name_xtb, destination, xtb_passing)
-
-

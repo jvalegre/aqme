@@ -91,7 +91,8 @@ General RDKit-based
       might be atoms, bonds, angles and dihedral. For example, a rule to keep only
       molecules with C-Pd-C atoms at 180 degrees: ['[C][Pd][C]',180].
       Special rules (--geom ['RULE_NAME']):
-        1. ['Ir_squareplanar']
+
+         1. ['Ir_squareplanar']
    bond_thres : float, default=0.2
       Threshold used to discard bonds in the geom option (+-0.2 A) 
    angle_thres : float, default=30
@@ -172,8 +173,8 @@ CREST only
       Additional keywords for CREGEN (i.e. cregen_keywords='--ethr 0.02')
    xtb_keywords : str, default=None
       Define additional keywords to use in the xTB pre-optimization that are not 
-      included in -c, --uhf, -P and --input. For example: '--alpb ch2cl2 --gfn 1' 
-    crest_nrun : int, default=1
+      included in -c, --uhf, -P and --input. For example: '--alpb ch2cl2 --gfn 1'
+   crest_nrun : int, default=1
       Specify as number of runs if multiple starting points from RDKit starting points is required.
 """
 #####################################################.
@@ -392,7 +393,7 @@ class csearch:
             "o  Number of finished jobs from CSEARCH", max=len(job_inputs)
         )
         with futures.ProcessPoolExecutor(
-            max_workers=self.args.max_workers, mp_context=mp.get_context("spawn")
+            max_workers=self.args.max_workers,
         ) as executor:
             # Submit a set of asynchronous jobs
             jobs = []
@@ -550,18 +551,20 @@ class csearch:
                 return
 
             if complex_type in accepted_complex_types:
+                count_metals = 0
                 valid_template = True
                 # check if the specified metal is included in the system
-                first_metal_idx = self.args.metal_idx[0] #Dirty hack to allow multiple metals when using templates (need to fix this ASAP)
-                if first_metal_idx is not None:
-                    # calculate number of expected neighbours
-                    valid_template = check_metal_neigh(mol, complex_type, first_metal_idx, self.args.log, valid_template)
+                for metal_idx_ind in self.args.metal_idx:
+                    if metal_idx_ind is not None:
+                        # calculate number of expected neighbours
+                        valid_template = check_metal_neigh(mol, complex_type, metal_idx_ind, self.args.log, valid_template)
+                        count_metals += 1
 
-                if valid_template:
+                if count_metals == 1 and valid_template:
                     template_opt = True
                     template_kwargs = dict()
                     template_kwargs["complex_type"] = complex_type
-                    template_kwargs["metal_idx"] = [first_metal_idx]
+                    template_kwargs["metal_idx"] = self.args.metal_idx
                     template_kwargs["maxsteps"] = self.args.opt_steps_rdkit
                     template_kwargs["heavyonly"] = self.args.heavyonly
                     template_kwargs["maxmatches"] = self.args.max_matches_rmsd
@@ -593,6 +596,8 @@ class csearch:
                         frames = [total_data, data]
                         total_data = pd.concat(frames, sort=True)
 
+                elif count_metals > 1 or count_metals == 0:
+                    self.args.log.write(f"\nx  The template specified {complex_type} is not used for systems with more than 1 metal or for organic molecueles.")
 
         if not template_opt:
             total_data = self.conformer_generation(
@@ -619,14 +624,9 @@ class csearch:
         transition_metals = ['Sc', 'Ti', 'V', 'Cr', 'Mn', 'Fe', 'Co', 'Ni', 'Cu', 'Zn', 'Y', 'Zr', 'Nb', 'Mo',
                             'Tc', 'Ru', 'Rh', 'Pd', 'Ag', 'Cd', 'Hf', 'Ta', 'W', 'Re', 'Os', 'Ir', 'Pt', 'Au',
                             'Hg', 'Rf', 'Db', 'Sg', 'Bh', 'Hs', 'Mt', 'Ds', 'Rg', 'Cn', 'Nh', 'Fl', 'Mc', 'Lv', 'Ts', 'Og']
-
-        # Reversed for loop to add the heaviest atom first in self.args.metal_atoms. Then, the first atom will be used in templates
-        atom_list = []
         for atom in mol.GetAtoms():
-            atom_list.append(atom.GetSymbol())
-        for transition_metal in reversed(transition_metals):
-            if transition_metal in atom_list:
-                self.args.metal_atoms.append(transition_metal)
+            if atom.GetSymbol() in transition_metals:
+                self.args.metal_atoms.append(atom.GetSymbol())
         if len(self.args.metal_atoms) > 0:
             self.args.log.write(f"\no  AQME recognized the following metal atoms: {self.args.metal_atoms}")
             if charge is None:
@@ -1017,6 +1017,7 @@ class csearch:
             mol_rd = Chem.RWMol(rdmols[cid])
             mol_rd.SetProp("_Name", rdmols[cid].GetProp("_Name") + " " + str(i))
             mol_rd.SetProp("Energy", str(rotated_energy[cid]))
+            # setting the metal back instead of I
             if len(self.args.metal_atoms) >= 1:
                 set_metal_atomic_number(
                     mol_rd, self.args.metal_idx, self.args.metal_sym
@@ -1211,8 +1212,10 @@ class csearch:
 
             # removes geometries that do not pass the filters (geom option)
             mol_geom = Chem.Mol(mol)
+            # setting the metal back instead of I
             if len(self.args.metal_atoms) >= 1:
                 set_metal_atomic_number(mol_geom, self.args.metal_idx, self.args.metal_sym)
+
             passing_geom = geom_filter(self,mol_geom,geom)
             if passing_geom:
                 cenergy.append(energy)
@@ -1388,13 +1391,6 @@ class csearch:
         """
         Conversion from RDKit to SDF
         """
-
-        try:
-            Chem.SanitizeMol(mol)
-            mol = Chem.AddHs(mol)
-        except Chem.AtomValenceException: # this happens sometimes with complex metals when substituting the metal with an I atom
-            self.args.log.write(f'\nx  The species provided could not be converted into a mol object wth RDKit. It normally happens with tricky metal complexes and might be fixed with a couple tricks (i.e., changing a single bond + positive charge with a double bond).')
-            return -1, None, None, None
 
         mol.SetProp("_Name", name)
 
