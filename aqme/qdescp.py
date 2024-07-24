@@ -371,107 +371,108 @@ class qdescp:
             self.args.log.finalize()
             sys.exit()
 
-        for file in self.args.files:
-            xyz_files, xyz_charges, xyz_mults = [], [], []
-            name = os.path.basename(Path(file)).split('.')[0]
-            ext = os.path.basename(Path(file)).split(".")[1]
-            self.args.log.write(f"\n\n   ----- {name} -----")
-            if ext.lower() == "xyz":
-                # separate the parent XYZ file into individual XYZ files
-                xyzall_2_xyz(file, name)
-                for conf_file in glob.glob(f"{name}_conf_*.xyz"):
-                    if self.args.charge is None:
-                        charge_xyz, _ = read_xyz_charge_mult(conf_file)
-                    else:
-                        charge_xyz = self.args.charge
-                    if self.args.mult is None:
-                        _, mult_xyz = read_xyz_charge_mult(conf_file)
-                    else:
-                        mult_xyz = self.args.mult
-                    xyz_files.append(
-                        os.path.dirname(os.path.abspath(file)) + "/" + conf_file
-                    )
-                    xyz_charges.append(charge_xyz)
-                    xyz_mults.append(mult_xyz)
-
-            else:
-                command_pdb = [
-                    "obabel",
-                    f"-i{ext.lower()}",
-                    file,
-                    "-oxyz",
-                    f"-O{os.path.dirname(os.path.abspath(file))}/{name}_conf_.xyz",
-                    "-m",
-                ]
-                subprocess.run(
-                    command_pdb,
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL,
-                )
-
-                if self.args.charge is None:
-                    _, charges, _, _ = mol_from_sdf_or_mol_or_mol2(file, "csearch", self.args)
-                else:
-                    charges = [self.args.charge] * len(
-                        glob.glob(
-                            f"{os.path.dirname(os.path.abspath(file))}/{name}_conf_*.xyz"
+        bar = IncrementalBar(
+        "\no  Number of finished jobs from QDESCP", max=len(self.args.files)
+        )
+        # multiprocessing to accelerate QDESCP (since xTB uses 1 processor to be reproducible)
+        with futures.ThreadPoolExecutor(
+            max_workers=self.args.nprocs,
+            ) as executor:
+                for file in self.args.files:
+                    _ = executor.submit(
+                        self.xtb_complete, file,bar,destination,atom_props,update_atom_props,smarts_targets
                         )
-                    )
-                if self.args.mult is None:
-                    _, _, mults, _ = mol_from_sdf_or_mol_or_mol2(file, "csearch", self.args)
-                else:
-                    mults = [self.args.mult] * len(
-                        glob.glob(
-                            f"{os.path.dirname(os.path.abspath(file))}/{name}_conf_*.xyz"
-                        )
-                    )
-
-                for count, f in enumerate(
-                    glob.glob(
-                        f"{os.path.dirname(os.path.abspath(file))}/{name}_conf_*.xyz"
-                    )
-                ):
-                    xyz_files.append(f)
-                    xyz_charges.append(charges[count])
-                    xyz_mults.append(mults[count])
-
-            bar = IncrementalBar(
-            "\no  Number of finished jobs from QDESCP", max=len(xyz_files)
-            )
-            # multiprocessing to accelerate QDESCP (since xTB uses 1 processor to be reproducible)
-            with futures.ThreadPoolExecutor(
-                max_workers=self.args.nprocs,
-                ) as executor:
-                    for xyz_file, charge, mult in zip(xyz_files, xyz_charges, xyz_mults):
-                        _ = executor.submit(
-                                self.xtb_complete, xyz_file,charge,mult,destination,file,atom_props,smarts_targets,bar,update_atom_props
-                            )
-            bar.finish()
+        
+        bar.finish()
 
         return update_atom_props
 
 
-    def xtb_complete(self,xyz_file,charge,mult,destination,file,atom_props,smarts_targets,bar,update_atom_props):
+    def xtb_complete(self,file,bar,destination,atom_props,update_atom_props,smarts_targets):
         """
         Run all the xTB calculations and collect the properties inside JSON files
         """ 
-        
-        name_xtb = os.path.basename(Path(xyz_file)).split(".")[0]
-        self.args.log.write(f"\no  Running xTB and collecting properties")
 
-        # if xTB fails during any of the calculations (UnboundLocalError), xTB assigns weird
-        # qm5 charges (i.e. > +10 or < -10, ValueError), or the json file is not created 
-        # for some weird xTB error (FileNotFoundError), that molecule is not used 
-        xtb_passing = True
-        try:
-            xtb_files_props = self.run_sp_xtb(xyz_file, charge, mult, name_xtb, destination)
-            path_name = Path(os.path.dirname(file)).joinpath(os.path.basename(Path(file)).split(".")[0])
-            update_atom_props = self.collect_xtb_properties(path_name, atom_props, update_atom_props, smarts_targets, xtb_files_props)
-        except (UnboundLocalError,ValueError,FileNotFoundError):
-            xtb_passing = False
-        self.cleanup(name_xtb, destination, xtb_passing, xtb_files_props)
+        xyz_files, xyz_charges, xyz_mults = [], [], []
+        name = os.path.basename(Path(file)).split('.')[0]
+        ext = os.path.basename(Path(file)).split(".")[1]
+        self.args.log.write(f"\n\n   ----- {name} -----")
+        if ext.lower() == "xyz":
+            # separate the parent XYZ file into individual XYZ files
+            xyzall_2_xyz(file, name)
+            for conf_file in glob.glob(f"{name}_conf_*.xyz"):
+                if self.args.charge is None:
+                    charge_xyz, _ = read_xyz_charge_mult(conf_file)
+                else:
+                    charge_xyz = self.args.charge
+                if self.args.mult is None:
+                    _, mult_xyz = read_xyz_charge_mult(conf_file)
+                else:
+                    mult_xyz = self.args.mult
+                xyz_files.append(
+                    os.path.dirname(os.path.abspath(file)) + "/" + conf_file
+                )
+                xyz_charges.append(charge_xyz)
+                xyz_mults.append(mult_xyz)
+
+        else:
+            command_pdb = [
+                "obabel",
+                f"-i{ext.lower()}",
+                file,
+                "-oxyz",
+                f"-O{os.path.dirname(os.path.abspath(file))}/{name}_conf_.xyz",
+                "-m",
+            ]
+            subprocess.run(
+                command_pdb,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+
+            if self.args.charge is None:
+                _, charges, _, _ = mol_from_sdf_or_mol_or_mol2(file, "csearch", self.args)
+            else:
+                charges = [self.args.charge] * len(
+                    glob.glob(
+                        f"{os.path.dirname(os.path.abspath(file))}/{name}_conf_*.xyz"
+                    )
+                )
+            if self.args.mult is None:
+                _, _, mults, _ = mol_from_sdf_or_mol_or_mol2(file, "csearch", self.args)
+            else:
+                mults = [self.args.mult] * len(
+                    glob.glob(
+                        f"{os.path.dirname(os.path.abspath(file))}/{name}_conf_*.xyz"
+                    )
+                )
+
+            for count, f in enumerate(
+                glob.glob(
+                    f"{os.path.dirname(os.path.abspath(file))}/{name}_conf_*.xyz"
+                )
+            ):
+                xyz_files.append(f)
+                xyz_charges.append(charges[count])
+                xyz_mults.append(mults[count])
+
+        for xyz_file, charge, mult in zip(xyz_files, xyz_charges, xyz_mults):
+            name_xtb = os.path.basename(Path(xyz_file)).split(".")[0]
+            self.args.log.write(f"\no  Running xTB and collecting properties")
+
+            # if xTB fails during any of the calculations (UnboundLocalError), xTB assigns weird
+            # qm5 charges (i.e. > +10 or < -10, ValueError), or the json file is not created 
+            # for some weird xTB error (FileNotFoundError), that molecule is not used 
+            xtb_passing = True
+            try:
+                xtb_files_props = self.run_sp_xtb(xyz_file, charge, mult, name_xtb, destination)
+                path_name = Path(os.path.dirname(file)).joinpath(os.path.basename(Path(file)).split(".")[0])
+                update_atom_props = self.collect_xtb_properties(path_name, atom_props, update_atom_props, smarts_targets, xtb_files_props)
+            except (UnboundLocalError,ValueError,FileNotFoundError):
+                xtb_passing = False
+            self.cleanup(name_xtb, destination, xtb_passing, xtb_files_props)            
         bar.next()
-
+        
 
     def run_sp_xtb(self, xyz_file, charge, mult, name, destination):
         """

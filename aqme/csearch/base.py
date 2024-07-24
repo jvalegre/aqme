@@ -24,9 +24,6 @@ General
      Directory to create the output file(s)   
    varfile : str, default=None  
       Option to parse the variables using a yaml file (specify the filename)  
-   max_workers : int, default=4  
-      Number of simultaneous RDKit jobs run with multiprocessing 
-      (WARNING! More than 12 simultaneous jobs might collapse your computer!)  
    charge : int, default=None  
       Charge of the calculations used in the following input files. 
       If charge isn't defined, it automatically reads the charge of the 
@@ -144,7 +141,7 @@ Fullmonte only
 CREST only
 ++++++++++
 
-   nprocs : int, default=2
+   nprocs : int, default=8
       Number of processors used in CREST optimizations
    constraints_atoms : list, default=[]
       Specify constrained atoms as [AT1,AT2,AT3]. An example of multiple constraints with
@@ -390,8 +387,16 @@ class csearch:
         bar = IncrementalBar(
             "o  Number of finished jobs from CSEARCH", max=len(job_inputs)
         )
+
+        # rdkit benefits from using multithreading (the RMSD filter only uses 1 proc, when trying to use
+        # more the program collapses)
+        if self.args.program.lower() == "rdkit":
+            csearch_procs = self.args.nprocs
+        else:
+            csearch_procs = 1
+            
         with futures.ProcessPoolExecutor(
-            max_workers=self.args.max_workers,
+            max_workers=csearch_procs,
         ) as executor:
             # Submit a set of asynchronous jobs
             jobs = []

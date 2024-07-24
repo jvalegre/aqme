@@ -356,7 +356,6 @@ def command_line_args():
         "auto_sample",
         "seed",
         "max_matches_rmsd",
-        "max_workers",
         "nsteps_fullmonte",
         "nrot_fullmonte",
         "nprocs",

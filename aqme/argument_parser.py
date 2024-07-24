@@ -50,7 +50,6 @@ var_dict = {
     "ani_method": "ANI2x",
     "stacksize": "1G",
     "xtb_keywords": None,
-    "max_workers": 4,
     "ewin_sample_fullmonte": 2.0,
     "ewin_fullmonte": 5.0,
     "nsteps_fullmonte": 100,
