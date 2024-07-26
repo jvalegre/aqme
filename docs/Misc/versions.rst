@@ -4,7 +4,9 @@
 Versions
 ========
 
-Version 1.6.0 [`url <https://github.com/jvalegre/aqme/releases/tag/1.5.3>`__]
+Version 1.6.0 [`url <https://github.com/jvalegre/aqme/releases/tag/1.6.0>`__]
+   -  CSEARCH uses multithreading to accelerate jobs
+   -  QDESP uses multithreading to accelerate jobs
    -  QDESCP now accepts multi-SMILES columns in CSV files
    -  CSEARCH now handles multiple metals without program interruption
    -  Check for N@@ or N@ in SMILES to avoid RDKit issues
