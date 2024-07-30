@@ -102,7 +102,6 @@ import pandas as pd
 from rdkit import Chem
 from rdkit.Chem import rdFMCS
 from pathlib import Path
-import dbstep.Dbstep as db
 from aqme.utils import (
     load_variables,
     read_xyz_charge_mult,
@@ -800,6 +799,7 @@ class qdescp:
 
                         # calculate DBSTEP descriptors
                         if self.args.dbstep_calc:
+                            import dbstep.Dbstep as db
                             self.args.log.write(f"\no   Running DBSTEP and collecting properties")
 
                             # calculates buried volume to the type of atom selected
