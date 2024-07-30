@@ -4,6 +4,9 @@
 Versions
 ========
 
+Version 1.6.1 [`url <https://github.com/jvalegre/aqme/releases/tag/1.6.1>`__]
+   -  Hotfix of v1.6.0 (just moving the import of dbstep in QDESCP)
+
 Version 1.6.0 [`url <https://github.com/jvalegre/aqme/releases/tag/1.6.0>`__]
    -  CSEARCH uses multithreading to accelerate jobs
    -  QDESP uses multithreading to accelerate jobs
