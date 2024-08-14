@@ -56,6 +56,8 @@ Parameters
    e_threshold_qprep : float, default=None
       Only create inputs for conformers below the energy threshold (to the lowest conformer)
       of the SDF file
+   freeze : list of int, default=[]
+      Atom indices (zero indexed) to receive -1 flag to be frozen during gaussian optimization 
 """
 ######################################################.
 #        This file stores the QPREP class            #
@@ -118,6 +120,11 @@ class qprep:
             self.args.log.write('\nx  Program not supported for QPREP input file creation! Specify: program="gaussian" (or "orca")')
             self.args.log.finalize()
             sys.exit()
+
+        if self.args.freeze != [] and self.args.program != "gaussian":
+            self.args.log.write('\nx  Freeze option is only supported for Gaussian input creation currently.')
+            self.args.log.finalize()
+            sys.exit()     
 
         if self.args.destination is None:
             destination = self.args.initial_dir.joinpath("QCALC")
@@ -237,7 +244,9 @@ class qprep:
                     "charge": charge,
                     "mult": mult,
                     "name": name,
+                    "freeze": self.args.freeze
                 }
+                
                 comfile = self.write(qprep_data)
 
                 move_file(destination, self.args.w_dir_main, comfile)
@@ -371,6 +380,7 @@ class qprep:
 
                 txt += f"{qm_end_local}\n\n"
 
+
             if self.args.gen_atoms != [] and len(self.args.gen_atoms) > 0:
                 # writes part for Gen/GenECP
                 ecp_used, ecp_not_used, gen_type = [], [], "gen"
@@ -410,6 +420,7 @@ class qprep:
 
         if self.args.program.lower() == "gaussian":
             extension = "com"
+
         elif self.args.program.lower() == "orca":
             extension = "inp"
 
@@ -426,14 +437,34 @@ class qprep:
         fileout.write(header)
 
         for atom_idx in range(0, len(qprep_data["atom_types"])):
-            fileout.write(
-                "{0:>2} {1:12.8f} {2:12.8f} {3:12.8f}".format(
-                    qprep_data["atom_types"][atom_idx],
-                    qprep_data["cartesians"][atom_idx][0],
-                    qprep_data["cartesians"][atom_idx][1],
-                    qprep_data["cartesians"][atom_idx][2],
-                )
+            if self.args.freeze != []:
+                # writes atom flags
+                if atom_idx in self.args.freeze:
+                    atom_flag='-1'
+                else:
+                    atom_flag='0'
+            else:
+                atom_flag=''
+            
+            if atom_flag == '':
+                fileout.write(
+                    "{0:>2} {1:12.8f} {2:12.8f} {3:12.8f}".format(
+                        qprep_data["atom_types"][atom_idx],
+                        qprep_data["cartesians"][atom_idx][0],
+                        qprep_data["cartesians"][atom_idx][1],
+                        qprep_data["cartesians"][atom_idx][2],
+                    )
             )
+            else:
+                fileout.write(
+                    "{0:>2} {1:>3} {2:12.8f} {3:12.8f} {4:12.8f}".format(
+                        qprep_data["atom_types"][atom_idx],
+                        atom_flag,
+                        qprep_data["cartesians"][atom_idx][0],
+                        qprep_data["cartesians"][atom_idx][1],
+                        qprep_data["cartesians"][atom_idx][2],
+                    )
+                )
             if atom_idx != len(qprep_data["atom_types"]) - 1:
                 fileout.write("\n")
 
@@ -508,6 +539,9 @@ class qprep:
                         elif outlines[i].find("Symbolic Z-matrix:") > -1:
                             for j in range(i + 2, len(outlines)):
                                 if len(outlines[j].split()) > 0:
+                                    # to parse for frozen atom flags
+                                    if outlines[j].split()[1] == '-1':
+                                        self.args.freeze.append(n_atoms) # zero indexed
                                     n_atoms += 1
                                 else:
                                     found_n_atoms = True
