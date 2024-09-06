@@ -40,6 +40,7 @@ setup(
         "rdkit==2024.3.3",
         "cclib==1.7.2",
         "cffi",
+        "morfeus-ml==0.7.2"
     ],
     python_requires=">=3.0",
     include_package_data=True,
