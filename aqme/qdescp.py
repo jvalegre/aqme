@@ -120,9 +120,12 @@ from aqme.qdescp_utils import (
     calculate_local_CDFT_descriptors,
     calculate_global_CDFT_descriptors,
     calculate_global_CDFT_descriptors_part2,
+    calculate_global_morfeus_descriptors,
+    calculate_local_morfeus_descriptors
 )
 
 from aqme.csearch.crest import xyzall_2_xyz
+
 
 
 class qdescp:
@@ -248,7 +251,7 @@ class qdescp:
 
         # run the main xTB workflow
         """
-        Reccolecting descriptors from XTB
+        Reccolecting descriptors from XTB and Morfeus 
         """
         if self.args.program.lower() == "xtb":
             #Put here the descriptors for every level form XTB calculations that you want to include.
@@ -264,6 +267,9 @@ class qdescp:
             interpret_atoms = denovo_atoms + ["s proportion","p proportion","d proportion","Coordination numbers",
                             "Polarizability alpha","FOD","FOD s proportion", "FOD p proportion","FOD d proportion" ]
             #level: full
+            #Descriptors form Morfeus
+            Morfeus_mol = ["Global SASA Morfeus", "Disp. Area Morfeus", "Disp. Vol. Morfeus"]
+            Morfueus_atoms = ["SASA Local", "Frac. BuriedVolume Local", "Cone Angle Local", "Solid Angle Local", "Pyramidalization P Local", "Pyramidalization Vol Local", "Local Dispersion"]
             mol_props = ["total energy","electronic energy", "HOMO-LUMO gap", "Dipole module",
                 "Total charge","HOMO","LUMO","Fermi-level","Total dispersion C6",
                 "Total dispersion C8","Total polarizability alpha","Total FOD",
@@ -271,11 +277,15 @@ class qdescp:
                 "Chemical Hardness (eV)", "Chemical Softness (1/eV)", "Chemical Potential (eV)",
                 "Mulliken Electronegativity (eV)", "Electrodonating Power Index (eV)", "Electroaccepting Power Index (eV)", "Nucleophilicity Index (eV)",
                 "Electrofugality (eV)", "Nucleofugality (eV)", "Intrinsic Reactivity Index (eV)", "Net Electrophilicity (eV)",
-                "Vertical second IP (eV)", "Vertical second EA (eV)", "Hyper Hardness (eV)", "Global Hypersoftness (1/eV^2)", "Electrophilic descriptor (eV)", "W cubic electrophilicity index (eV)"]
+                "Vertical second IP (eV)", "Vertical second EA (eV)", "Hyper Hardness (eV)", "Global Hypersoftness (1/eV^2)", "Electrophilic descriptor (eV)",
+                "W cubic electrophilicity index (eV)"] + Morfeus_mol
+        
             atom_props = ["cm5 charges", "s proportion","p proportion","d proportion","Coordination numbers",
                         "Dispersion coefficient C6","Polarizability alpha","FOD","FOD s proportion", "FOD p proportion","FOD d proportion",
-                        "F+","F-", "F0", "dual_descriptor", "s+", "s-", "srad", "s+/s-", "s-/s+", "Grand_Canonical_Dual_Descriptor",
-                        "w+", "w-", "wrad", "Multiphilic_descriptor", "Nu+", "Nu-", "Nurad"]
+                        "F+","F-", "F0", "dual_descriptor", "s+", "s-", "srad", "s+/s-", "s-/s+", "Grand_Canonical_Dual_Descriptor",""
+                        "w+", "w-", "wrad", "Multiphilic_descriptor", "Nu+", "Nu-", "Nurad"] + Morfueus_atoms
+            
+            
 
             update_atom_props, update_denovo_atom_props, update_interpret_atom_props = self.gather_files_and_run(destination, atom_props, update_atom_props, smarts_targets, denovo_atoms, update_denovo_atom_props, interpret_atoms, update_interpret_atom_props)
             
@@ -385,7 +395,7 @@ class qdescp:
                 combined_interpret_df = combined_interpret_df.dropna(axis=0)
 
                 csv_basename = os.path.basename(self.args.csv_name)
-                csv_path = self.args.initial_dir.joinpath(f'AQME-{name_db}_{csv_basename}')
+                csv_path = self.args.initial_dir.joinpath(f'AQME-{name_db}_full_{csv_basename}')
                 csv_path_denovo = self.args.initial_dir.joinpath(f'AQME-{name_db}_denovo_{csv_basename}')
                 csv_path_interpret = self.args.initial_dir.joinpath(f'AQME-{name_db}_interpret_{csv_basename}')
 
@@ -394,7 +404,7 @@ class qdescp:
                 combined_denovo_df.to_csv(f'{csv_path_denovo}', index=None, header=True)
                 combined_interpret_df.to_csv(f'{csv_path_interpret}', index=None, header=True)
 
-                self.args.log.write(f"o  The AQME-{name_db}_{csv_basename} file containing the database ready for the AQME-{name_db} workflow was successfully created in {self.args.initial_dir}")
+                self.args.log.write(f"o  The AQME-{name_db}_full_{csv_basename} file containing the database ready for the AQME-{name_db} workflow was successfully created in {self.args.initial_dir}")
                 self.args.log.write(f"o  The AQME-{name_db}_denovo_{csv_basename} file containing the database ready for the AQME-{name_db} workflow was successfully created in {self.args.initial_dir}")
                 self.args.log.write(f"o  The AQME-{name_db}_interpret_{csv_basename} file containing the database ready for the AQME-{name_db} workflow was successfully created in {self.args.initial_dir}")
             else:
@@ -631,6 +641,12 @@ class qdescp:
             except FileNotFoundError:
                 os.rename(str(dat_dir) + "/xtblast.xyz", xtb_files_props['xtb_xyz_path'])
 
+            final_xyz_path = xtb_files_props['xtb_xyz_path']
+            self.final_xyz_path = final_xyz_path
+            with open(final_xyz_path, "r") as xyz_file:
+                self.xyz_coordinates = xyz_file.readlines() 
+
+
         command1 = [
             "xtb",
             xtb_files_props['xtb_xyz_path'],
@@ -851,6 +867,16 @@ class qdescp:
         json_data.update(localDescriptors)
         # Imprimir para control
         #print(json_data)
+
+        """
+		FGHTYTHHGGHGDSFDF
+		"""
+        #Global descriptors
+        global_properties_morfeus = calculate_global_morfeus_descriptors(self.final_xyz_path)
+        json_data.update(global_properties_morfeus)       
+        #Local descriptors
+        local_properties_morfeus = calculate_local_morfeus_descriptors(self.final_xyz_path)
+        json_data.update(local_properties_morfeus)  
 
         """
 		FGHTYTHHGGHGDSFDF
