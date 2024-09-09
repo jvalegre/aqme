@@ -257,23 +257,29 @@ class qdescp:
             #Put here the descriptors for every level form XTB calculations that you want to include.
 
             #level: denovo
-            denovo_mols = ["HOMO-LUMO gap","HOMO","LUMO", "IP (eV)", "EA (eV)", "Dipole module", "Total charge",  ]
-            denovo_atoms = ["cm5 charges", "w+", "w-", "wrad"]
+            Morfeus_denovo_mol = ["Global SASA Morfeus"]
+            Morfueus_denovo_atoms = ["SASA Local", "Frac. BuriedVolume Local", "Cone Angle Local"]
+            
+            denovo_mols = ["HOMO-LUMO gap","HOMO","LUMO", "IP (eV)", "EA (eV)", "Dipole module", "Total charge"] + Morfeus_denovo_mol
+            denovo_atoms = ["cm5 charges", "w+", "w-", "wrad"] + Morfueus_denovo_atoms
 
             #level: interpret
+            Morfeus_denovo_mol = Morfeus_denovo_mol + ["Disp. Area Morfeus", "Disp. Vol. Morfeus"]
+            Morfueus_denovo_atoms = Morfueus_denovo_atoms +  ["Solid Angle Local", "Pyramidalization P Local", "Pyramidalization Vol Local", "Local Dispersion"]
+
             interpret_mols = denovo_mols + ["Fermi-level", "Total polarizability alpha", "Total FOD",
                             "Electrophilicity index (eV)", "Chemical Hardness (eV)", "Chemical Softness (1/eV)",
-                            "Mulliken Electronegativity (eV)" , "Nucleophilicity Index (eV)", "Vertical second IP (eV)", "Vertical second EA (eV)"]
+                            "Mulliken Electronegativity (eV)" , "Nucleophilicity Index (eV)", "Vertical second IP (eV)", "Vertical second EA (eV)"] + Morfeus_denovo_mol
             interpret_atoms = denovo_atoms + ["s proportion","p proportion","d proportion","Coordination numbers",
-                            "Polarizability alpha","FOD","FOD s proportion", "FOD p proportion","FOD d proportion" ]
+                            "Polarizability alpha","FOD","FOD s proportion", "FOD p proportion","FOD d proportion"] + Morfueus_denovo_atoms
+            
+            
             #level: full
-            #Descriptors form Morfeus
             Morfeus_mol = ["Global SASA Morfeus", "Disp. Area Morfeus", "Disp. Vol. Morfeus"]
             Morfueus_atoms = ["SASA Local", "Frac. BuriedVolume Local", "Cone Angle Local", "Solid Angle Local", "Pyramidalization P Local", "Pyramidalization Vol Local", "Local Dispersion"]
-            mol_props = ["total energy","electronic energy", "HOMO-LUMO gap", "Dipole module",
-                "Total charge","HOMO","LUMO","Fermi-level","Total dispersion C6",
-                "Total dispersion C8","Total polarizability alpha","Total FOD",
-                "IP (eV)", "EA (eV)", "Electrophilicity index (eV)",
+            
+            mol_props = ["total energy", "HOMO-LUMO gap", "Dipole module", "Total charge","HOMO","LUMO","Fermi-level","Total dispersion C6",
+                "Total dispersion C8","Total polarizability alpha","Total FOD", "IP (eV)", "EA (eV)", "Electrophilicity index (eV)",
                 "Chemical Hardness (eV)", "Chemical Softness (1/eV)", "Chemical Potential (eV)",
                 "Mulliken Electronegativity (eV)", "Electrodonating Power Index (eV)", "Electroaccepting Power Index (eV)", "Nucleophilicity Index (eV)",
                 "Electrofugality (eV)", "Nucleofugality (eV)", "Intrinsic Reactivity Index (eV)", "Net Electrophilicity (eV)",
