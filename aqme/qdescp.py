@@ -121,12 +121,10 @@ from aqme.qdescp_utils import (
     calculate_global_CDFT_descriptors,
     calculate_global_CDFT_descriptors_part2,
     calculate_global_morfeus_descriptors,
-    calculate_local_morfeus_descriptors
+    calculate_local_morfeus_descriptors,
+    get_descriptors
 )
-
 from aqme.csearch.crest import xyzall_2_xyz
-
-
 
 class qdescp:
     """
@@ -157,14 +155,65 @@ class qdescp:
         # retrieve the different files to run in QDESCP
         _ = check_files(self,'qdescp')
 
-        # List of descriptors
-        update_atom_props = [] # keeps track of the molecules with suitable atomic properties when using qdescp_atoms
-        update_denovo_atom_props = [] #For the level denovo
-        update_interpret_atom_props = [] #For the level intepret
-
         self.args.log.write(f"\nStarting QDESCP-{self.args.program} with {len(self.args.files)} job(s)\n")
 
-        # Obtaing SMARTS patterns from the input files automatically if no patterns are provided
+        # obtain SMARTS patterns from the input files automatically if no patterns are provided
+        smarts_targets = self.auto_pattern_recog()
+
+        # delete SMARTS patterns that are not present in more than 30% of the molecules
+        smarts_targets = self.remove_patterns_low(smarts_targets)
+
+        """
+        Reccolecting descriptors from XTB and Morfeus
+        """
+        update_atom_props = [] 
+        update_denovo_atom_props = [] 
+        update_interpret_atom_props = [] 
+
+        if self.args.program.lower() == "xtb":
+            # Get descriptors (denovo, interpret, full)
+            denovo_descriptors = get_descriptors('denovo')
+            interpret_descriptors = get_descriptors('interpret')
+            full_descriptors = get_descriptors('full')
+
+            # Descriptors in every level
+            denovo_mols = denovo_descriptors['mol']
+            denovo_atoms = denovo_descriptors['atoms']
+
+            interpret_mols = interpret_descriptors['mol']
+            interpret_atoms = interpret_descriptors['atoms']
+
+            mol_props = full_descriptors['mol'] + interpret_mols
+            atom_props = full_descriptors['atoms'] + interpret_atoms
+
+            update_atom_props, update_denovo_atom_props, update_interpret_atom_props = self.gather_files_and_run(
+                destination, atom_props, update_atom_props, smarts_targets, 
+                denovo_atoms, update_denovo_atom_props, interpret_atoms, update_interpret_atom_props
+    )
+            
+    #Update the list of descriptors
+        if len(update_atom_props) > 0:
+            atom_props = update_atom_props
+        if len(update_denovo_atom_props) > 0:
+            denovo_atoms = update_denovo_atom_props
+        if len(update_interpret_atom_props) > 0:
+            interpret_atoms = update_interpret_atom_props
+        
+        # Function to create CSV files and Boltzmann averaged properties.
+        qdescp_csv, qdescp_denovo_csv, qdescp_interpret_csv = self.create_csv_files(destination, mol_props, atom_props, smarts_targets, denovo_mols, denovo_atoms, interpret_mols, interpret_atoms)
+
+        #AQME-ROBERT workflow: Combines the descriptor data from qdescp CSVs with the input CSV and saves the result.
+        self.combine_and_save_csvs(qdescp_csv, qdescp_denovo_csv, qdescp_interpret_csv)
+
+        elapsed_time = round(time.time() - start_time_overall, 2)
+        self.args.log.write(f"\nTime QDESCP: {elapsed_time} seconds\n")
+        self.args.log.finalize()
+
+    def auto_pattern_recog(self):
+        '''
+        Recognizes automatically patterns that are repeated in the molecule database.
+        '''
+
         smarts_targets = self.args.qdescp_atoms.copy()
 
         if self.args.csv_name is not None:
@@ -200,8 +249,13 @@ class qdescp:
                             if common_substructure is not None and common_substructure != '':
                                 smarts_targets.append(common_substructure)
                                 self.args.log.write(f"\nSubstructure {(common_substructure)} found in input files. Using it for atomic descriptor calculations.")
-                          
-        # Delete a SMARTS pattern if it is not present in more than 30% of the sdf files
+        return smarts_targets
+    
+    def remove_patterns_low(self,smarts_targets):
+        '''
+        Delete SMARTS patterns that are not present in more than 30% of the molecules.
+        '''
+
         if len(smarts_targets) > 0:
             mol_list = []
             for file in self.args.files:
@@ -245,71 +299,24 @@ class qdescp:
                         patterns_remove.append(pattern)
                         self.args.log.write(f"x  WARNING! SMARTS pattern {pattern} is not specified correctly or is not present in more than 30% of the molecules. Atomic descriptors will not be generated for this pattern.")
                         break
+
             # remove invalid patterns
             for pattern in patterns_remove:
                 smarts_targets.remove(pattern)
 
-        # run the main xTB workflow
+            return smarts_targets
+    
+    def create_csv_files(self, destination, mol_props, atom_props, smarts_targets, denovo_mols, denovo_atoms, interpret_mols, interpret_atoms):
         """
-        Reccolecting descriptors from XTB and Morfeus 
+        Function to create CSV files and Boltzmann averaged properties.
         """
-        if self.args.program.lower() == "xtb":
-            #Put here the descriptors for every level form XTB calculations that you want to include.
 
-            #level: denovo
-            Morfeus_denovo_mol = ["Global SASA Morfeus"]
-            Morfueus_denovo_atoms = ["SASA Local", "Frac. BuriedVolume Local", "Cone Angle Local"]
-            
-            denovo_mols = ["HOMO-LUMO gap","HOMO","LUMO", "IP (eV)", "EA (eV)", "Dipole module", "Total charge"] + Morfeus_denovo_mol
-            denovo_atoms = ["cm5 charges", "w+", "w-", "wrad"] + Morfueus_denovo_atoms
-
-            #level: interpret
-            Morfeus_denovo_mol = Morfeus_denovo_mol + ["Disp. Area Morfeus", "Disp. Vol. Morfeus"]
-            Morfueus_denovo_atoms = Morfueus_denovo_atoms +  ["Solid Angle Local", "Pyramidalization P Local", "Pyramidalization Vol Local", "Local Dispersion"]
-
-            interpret_mols = denovo_mols + ["Fermi-level", "Total polarizability alpha", "Total FOD",
-                            "Electrophilicity index (eV)", "Chemical Hardness (eV)", "Chemical Softness (1/eV)",
-                            "Mulliken Electronegativity (eV)" , "Nucleophilicity Index (eV)", "Vertical second IP (eV)", "Vertical second EA (eV)"] + Morfeus_denovo_mol
-            interpret_atoms = denovo_atoms + ["s proportion","p proportion","d proportion","Coordination numbers",
-                            "Polarizability alpha","FOD","FOD s proportion", "FOD p proportion","FOD d proportion"] + Morfueus_denovo_atoms
-            
-            
-            #level: full
-            Morfeus_mol = ["Global SASA Morfeus", "Disp. Area Morfeus", "Disp. Vol. Morfeus"]
-            Morfueus_atoms = ["SASA Local", "Frac. BuriedVolume Local", "Cone Angle Local", "Solid Angle Local", "Pyramidalization P Local", "Pyramidalization Vol Local", "Local Dispersion"]
-            
-            mol_props = ["total energy", "HOMO-LUMO gap", "Dipole module", "Total charge","HOMO","LUMO","Fermi-level","Total dispersion C6",
-                "Total dispersion C8","Total polarizability alpha","Total FOD", "IP (eV)", "EA (eV)", "Electrophilicity index (eV)",
-                "Chemical Hardness (eV)", "Chemical Softness (1/eV)", "Chemical Potential (eV)",
-                "Mulliken Electronegativity (eV)", "Electrodonating Power Index (eV)", "Electroaccepting Power Index (eV)", "Nucleophilicity Index (eV)",
-                "Electrofugality (eV)", "Nucleofugality (eV)", "Intrinsic Reactivity Index (eV)", "Net Electrophilicity (eV)",
-                "Vertical second IP (eV)", "Vertical second EA (eV)", "Hyper Hardness (eV)", "Global Hypersoftness (1/eV^2)", "Electrophilic descriptor (eV)",
-                "W cubic electrophilicity index (eV)"] + Morfeus_mol
-        
-            atom_props = ["cm5 charges", "s proportion","p proportion","d proportion","Coordination numbers",
-                        "Dispersion coefficient C6","Polarizability alpha","FOD","FOD s proportion", "FOD p proportion","FOD d proportion",
-                        "F+","F-", "F0", "dual_descriptor", "s+", "s-", "srad", "s+/s-", "s-/s+", "Grand_Canonical_Dual_Descriptor",""
-                        "w+", "w-", "wrad", "Multiphilic_descriptor", "Nu+", "Nu-", "Nurad"] + Morfueus_atoms
-            
-            
-
-            update_atom_props, update_denovo_atom_props, update_interpret_atom_props = self.gather_files_and_run(destination, atom_props, update_atom_props, smarts_targets, denovo_atoms, update_denovo_atom_props, interpret_atoms, update_interpret_atom_props)
-            
-
-        if len(update_atom_props) > 0:
-            atom_props = update_atom_props
-        if len(update_denovo_atom_props) > 0:
-            denovo_atoms = update_denovo_atom_props
-        if len(update_interpret_atom_props) > 0:
-            interpret_atoms = update_interpret_atom_props
-
-        #The CSV creation
         qdescp_csv = "QDESCP_full_boltz_descriptors.csv"
         qdescp_denovo_csv = "QDESCP_denovo_boltz_descriptors.csv"
-        qdescp_interpret_csv = "QDESCP_interpret_boltz_descriptors.csv" 
+        qdescp_interpret_csv = "QDESCP_interpret_boltz_descriptors.csv"
 
         boltz_dir = Path(f"{destination}/boltz")
-        if os.path.exists(f"{boltz_dir}"): 
+        if os.path.exists(f"{boltz_dir}"):
             self.args.log.write(f'\nx  A previous folder of {boltz_dir} already existed, it was removed and replaced with the results of this QDESCP run.')
             shutil.rmtree(f"{boltz_dir}")
         boltz_dir.mkdir(exist_ok=True, parents=True)
@@ -323,9 +330,11 @@ class qdescp:
                     json_files = glob.glob(str(destination) + "/" + name + "_conf_*.json")
 
                     # Generating the JSON files
-                    _ = get_boltz_props(json_files, name, boltz_dir, "xtb", self, mol_props, atom_props, smarts_targets, mol=mol, denovo_mols=denovo_mols, denovo_atoms=denovo_atoms, interpret_mols=interpret_mols, interpret_atoms=interpret_atoms)
+                    _ = get_boltz_props(json_files, name, boltz_dir, "xtb", self, mol_props, atom_props, smarts_targets,
+                                        mol=mol, denovo_mols=denovo_mols, denovo_atoms=denovo_atoms, 
+                                        interpret_mols=interpret_mols, interpret_atoms=interpret_atoms)
 
-                # Create the CSV fron the JSON files
+                # Create the CSV from the JSON files
                 _ = self.write_csv_boltz_data(destination, qdescp_csv, json_type="standard")  # CSV full
                 _ = self.write_csv_boltz_data(destination, qdescp_denovo_csv, json_type="denovo")  # CSV denovo
                 _ = self.write_csv_boltz_data(destination, qdescp_interpret_csv, json_type="interpret")  # CSV interpret
@@ -343,11 +352,18 @@ class qdescp:
                 get_boltz_props(json_files, name, boltz_dir, "nmr", self, mol_props, atom_props, smarts_targets, 
                                 self.args.nmr_atoms, self.args.nmr_slope, self.args.nmr_intercept, self.args.nmr_experim)
 
-        # AQME-ROBERT workflow
+        return qdescp_csv, qdescp_denovo_csv, qdescp_interpret_csv
+    
+    def combine_and_save_csvs(self, qdescp_csv, qdescp_denovo_csv, qdescp_interpret_csv):
+        """
+        AQME-ROBERT workflow
+        Combines the descriptor data from qdescp CSVs with the input CSV and saves the result.
+        """
         name_db = 'Descriptors'
         if self.args.program.lower() == "xtb" and self.args.csv_name is not None:
             if self.args.robert:
                 name_db = 'ROBERT'
+
             combined_df = pd.DataFrame()
             combined_denovo_df = pd.DataFrame()  # denovo
             combined_interpret_df = pd.DataFrame()  # interpret
@@ -358,7 +374,7 @@ class qdescp:
             qdescp_interpret_df = pd.read_csv(qdescp_interpret_csv)
 
             input_df = pd.read_csv(self.args.csv_name)
-            
+
             if 'code_name' not in input_df.columns:
                 self.args.log.write(f"\nx  The input csv_name provided ({self.args.csv_name}) does not contain the code_name column. A combined database for AQME-{name_db} workflows will not be created.")
             elif 'SMILES' in input_df.columns or 'smiles' in input_df.columns or 'Smiles' in input_df.columns:
@@ -394,8 +410,8 @@ class qdescp:
                     input_col_interpret = input_col_interpret.drop(['Name'], axis=1).reset_index(drop=True)
                     combined_row_interpret = pd.concat([qdescp_col, input_col_interpret], axis=1)
                     combined_interpret_df = pd.concat([combined_interpret_df, combined_row_interpret], ignore_index=True)
-                
-                # clean and save  DataFrames
+
+                # clean and save DataFrames
                 combined_df = combined_df.dropna(axis=0)
                 combined_denovo_df = combined_denovo_df.dropna(axis=0)
                 combined_interpret_df = combined_interpret_df.dropna(axis=0)
@@ -405,7 +421,7 @@ class qdescp:
                 csv_path_denovo = self.args.initial_dir.joinpath(f'AQME-{name_db}_denovo_{csv_basename}')
                 csv_path_interpret = self.args.initial_dir.joinpath(f'AQME-{name_db}_interpret_{csv_basename}')
 
-                # Save DataFrames contatenated on CSV files
+                # Save concatenated DataFrames as CSV files
                 combined_df.to_csv(f'{csv_path}', index=None, header=True)
                 combined_denovo_df.to_csv(f'{csv_path_denovo}', index=None, header=True)
                 combined_interpret_df.to_csv(f'{csv_path_interpret}', index=None, header=True)
@@ -417,17 +433,14 @@ class qdescp:
                 self.args.log.write(f"\nx  The input csv_name provided ({self.args.csv_name}) does not contain the SMILES column. A combined database for AQME-{name_db} workflows will not be created.")
 
             _ = self.process_aqme_csv(name_db)
-
-        elapsed_time = round(time.time() - start_time_overall, 2)
-        self.args.log.write(f"\nTime QDESCP: {elapsed_time} seconds\n")
-        self.args.log.finalize()
-
+                
+    
     def write_csv_boltz_data(self, destination, qdescp_csv, json_type="standard"):
         """
         Concatenate the values for all calculations
         """
         
-        # Definir los archivos JSON a partir del tipo
+        # JSON files
         if json_type == "denovo":
             json_pattern = str(destination) + "/boltz/*_denovo_boltz.json"
         elif json_type == "interpret":
@@ -446,8 +459,8 @@ class qdescp:
         if len(dfs) > 0:
             temp = pd.concat(dfs, ignore_index=True) 
             temp.to_csv(qdescp_csv, index=False)
-            if not self.args.dbstep_calc:  #Es probable que tengamos que quitar estas lineas
-                self.args.log.write(f"o  The {qdescp_csv} file containing Boltzmann weighted xTB and RDKit descriptors was successfully created in {self.args.initial_dir}") #ponerle que tiene morfeus
+            if not self.args.dbstep_calc: 
+                self.args.log.write(f"o  The {qdescp_csv} file containing Boltzmann weighted xTB, RDKit and Morfeus descriptors was successfully created in {self.args.initial_dir}")
             else:
                 self.args.log.write(f"o  The {qdescp_csv} file containing Boltzmann weighted xTB, DBSTEP and RDKit descriptors was successfully created in {self.args.initial_dir}")
         else:
@@ -570,7 +583,6 @@ class qdescp:
             update_interpret_atom_props = self.collect_xtb_properties(path_name, interptret_atoms, update_interpret_atom_props, smarts_targets, xtb_files_props)
 
         except Exception as e:
-            print(f'TU FALLO: {e}')
             xtb_passing = False
 
         self.cleanup(name_xtb, destination, xtb_passing, xtb_files_props)
@@ -871,11 +883,9 @@ class qdescp:
         json_data.update(cdft_descriptors2)
         # Local Descriptors
         json_data.update(localDescriptors)
-        # Imprimir para control
-        #print(json_data)
 
         """
-		FGHTYTHHGGHGDSFDF
+		Morfeus Descriptors
 		"""
         #Global descriptors
         global_properties_morfeus = calculate_global_morfeus_descriptors(self.final_xyz_path)
@@ -885,16 +895,16 @@ class qdescp:
         json_data.update(local_properties_morfeus)  
 
         """
-		FGHTYTHHGGHGDSFDF
+		Locate Smarts, qdescp_atoms
 		"""
-
         with open(xtb_files_props['xtb_xyz_path'], "r") as f:
             inputs = f.readlines()
 
         coordinates = [inputs[i].strip().split()[1:] for i in range(2, int(inputs[0].strip()) + 2)]
-        json_data["coordinates"] = coordinates
+        json_data["Coordinates"] = coordinates
+
         if len(smarts_targets) > 0:
-            # detect SMILES from SDF files generated by CSEARCH or create mol objects from regular SDF files
+            # Detect SMILES from SDF files generated by CSEARCH or create molecule objects.
             sdf_file = f'{name_initial}.sdf'
             with open(sdf_file, "r") as F:
                 lines = F.readlines()
@@ -905,46 +915,42 @@ class qdescp:
                     smi = lines[i + 1].split()[0]
                     mol = Chem.AddHs(Chem.MolFromSmiles(smi))
                     smi_exist = True
+                    break
             if not smi_exist:
                 mol = Chem.SDMolSupplier(sdf_file, removeHs=False)
 
-            # find the target atoms or groups
+            # Search for target atoms or groups
             for pattern in smarts_targets:
                 matches = []
                 idx_set = None
                 
-                # we differentiate if is a number for mapped atom or we are looking for smarts pattern in the molecule
                 if not str(pattern).isalpha() and str(pattern).isdigit():
                     for atom in mol.GetAtoms():
                         if atom.GetAtomMapNum() == int(pattern):
                             idx_set = pattern
                             pattern_idx = int(atom.GetIdx())
                             matches = ((int(pattern_idx),),)
-                else: 
+                else:
                     try:
                         matches = mol.GetSubstructMatches(Chem.MolFromSmarts(pattern))
-                    except: # I tried to make this except more specific for Boost.Python.ArgumentError, but apparently it's not as simple as it looks
+                    except:
                         try:
                             matches = mol.GetSubstructMatches(Chem.MolFromSmarts(f'[{pattern}]'))
                         except:
                             self.args.log.write(f"x  WARNING! SMARTS pattern was not specified correctly! Make sure the qdescp_atoms option uses this format: \"[C]\" for atoms, \"[C=N]\" for bonds, and so on.")
-                
+
                 if len(matches) == 0:
                     self.args.log.write(f"x  WARNING! SMARTS pattern {pattern} not found in the system, this molecule will not be used.")
-                
                 elif matches[0] == -1:
                     self.args.log.write(f"x  WARNING! Mapped atom {pattern} not found in the system, this molecule will not be used.")
-                
                 elif len(matches) > 1:
                     self.args.log.write(f"x  WARNING! More than one {pattern} atom was found in the system, this molecule will not be used.")
-                
                 elif len(matches) == 1:
-                    # get atom types and sort them to keep the same atom order among different molecules
+
                     atom_indices = list(matches[0])
                     atom_types = []
                     for atom_idx in atom_indices:
                         atom_types.append(mol.GetAtoms()[atom_idx].GetSymbol())
-                        
 
                     n_types = len(set(atom_types))
                     if n_types == 1:
@@ -954,10 +960,7 @@ class qdescp:
                     
                     match_idx = 1
                     match_names = []
-                    # separates atoms when functional groups are used
                     for atom_idx in sorted_indices:
-                        idx_dbstep = atom_idx+1 # DBSTEP starts from index 1 (i.e. first atom has idx 1)
-                        idx_xtb = atom_idx
                         atom_type = mol.GetAtoms()[atom_idx].GetSymbol()
                         if len(matches[0]) == 1:
                             if idx_set is None:
@@ -972,44 +975,27 @@ class qdescp:
                                 match_name = f'{pattern}_{atom_type}'
                         match_names.append(match_name)
 
-                        # calculate DBSTEP descriptors
-                        # if self.args.dbstep_calc:
-                        #     self.args.log.write(f"\no   Running DBSTEP and collecting properties")
+                    # Assign atomic descriptors to each identified atom
+                    for atom_idx, match_name in zip(sorted_indices, match_names):
+                        idx_xtb = atom_idx
+                        for prop in atom_props:
+                            json_data[f'{match_name}_{prop}'] = json_data[prop][idx_xtb]
+                            if f'{match_name}_{prop}' not in update_atom_props:
+                                update_atom_props.append(f'{match_name}_{prop}')
 
-                        #     # calculates buried volume to the type of atom selected
-                        #     try:
-                        #         dbstep_obj = db.dbstep(xtb_files_props['xtb_xyz_path'],atom1=idx_dbstep,r=float(self.args.dbstep_r),commandline=True,verbose=False,volume=True)  
-                        #         json_data[f'{match_name}_DBSTEP_Vbur'] = float(dbstep_obj.bur_vol)
-                        #         if f'{match_name}_DBSTEP_Vbur' not in update_atom_props:
-                        #             update_atom_props.append(f'{match_name}_DBSTEP_Vbur')
-                        #     except TypeError:
-                        #         self.args.log.write(f'x  WARNING! DBSTEP is not working correctly, DBSTEP properties will not be calculated.')
-
-                        # # selects xTB atomic properties
-                        # for prop in atom_props:
-                        #     if prop != 'DBSTEP_Vbur': # set the value of the atom instead of a list of values
-                        #         json_data[f'{match_name}_{prop}'] = json_data[prop][idx_xtb]
-                        #         if f'{match_name}_{prop}' not in update_atom_props:
-                        #             update_atom_props.append(f'{match_name}_{prop}')
-
-                    # adding max and min values for functional groups with the same two atoms
-                    if len(match_names) > 1 and n_types == 1: #aqui
+                    # Add maximum and minimum values for functional groups with the same two atoms
+                    if len(match_names) > 1 and n_types == 1:
                         for prop in atom_props:
                             prop_values = []
                             for prop_name in match_names:
                                 prop_values.append(json_data[f'{prop_name}_{prop}'])
                             json_data[f'{pattern}_max_{prop}'] = max(prop_values)
-                            if f'{pattern}_max_{prop}' not in update_atom_props:
-                                update_atom_props.append(f'{pattern}_max_{prop}')
                             json_data[f'{pattern}_min_{prop}'] = min(prop_values)
-                            if f'{pattern}_min_{prop}' not in update_atom_props:
-                                update_atom_props.append(f'{pattern}_min_{prop}')
 
         with open(xtb_files_props['xtb_json'], "w") as outfile:
             json.dump(json_data, outfile)
-        
+
         return update_atom_props
-    
 
     def cleanup(self, name, destination, xtb_passing, xtb_files_props):
         """

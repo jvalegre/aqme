@@ -20,6 +20,14 @@ J_TO_AU = 4.184 * 627.509541 * 1000.0  # UNIT CONVERSION
 T = 298.15
 Hartree = 27.2114 #eV UNIT CONVERSION from 1 hatree = 27.2114 eV
 
+def convert_ndarrays(data):
+    """Convert properties that are of type ndarray to lists to serialize them in JSON"""
+    for key, value in data.items():
+        if isinstance(value, np.ndarray):
+            data[key] = value.tolist()
+        elif isinstance(value, dict):
+            convert_ndarrays(value)
+
 def get_chemical_shifts(json_data, nmr_atoms, nmr_slope, nmr_intercept):
     """
     Retrieves and scales NMR shifts from json files
@@ -55,7 +63,6 @@ def get_boltz(energy):
     """
     Calculates the Boltzmann weights for a list of energies
     """
-
     energ = [number - min(energy) for number in energy]
 
     boltz_sum = 0.0
@@ -75,6 +82,9 @@ def get_boltz_props(json_files, name, boltz_dir, calc_type, self, mol_props, ato
     """
     Retrieves the properties from json files and gives Boltzmann averaged properties for rdkit, NMR and morfues descriptors.
     """
+    # Ensure smarts_targets is a list even if None
+    if smarts_targets is None:
+        smarts_targets = []
     
     def process_nmr_experim(exp_data, json_data, k):
         """Process NMR experimental data."""
@@ -189,19 +199,10 @@ def get_boltz_props(json_files, name, boltz_dir, calc_type, self, mol_props, ato
         
         # Merge selected RDKit properties with interpret_json_data
         interpret_json_data.update(interpret_rdkit_json_data)
-
-    # calculate Morfeus descriptors
-    if xyz_file is not None:
-        global_properties_morfeus = calculate_global_morfeus_descriptors(xyz_file)
-
-        # Level full, Global
-        for prop, value in global_properties_morfeus.items():
-            avg_json_data[prop] = value 
-        
-        # Level full, local
-        local_properties_morfeus = calculate_local_morfeus_descriptors(xyz_file)
-        for prop, value in local_properties_morfeus.items():
-            avg_json_data[prop] = value 
+    
+    convert_ndarrays(avg_json_data)
+    convert_ndarrays(denovo_json_data)
+    convert_ndarrays(interpret_json_data)
 
     # Save the averaged properties to a file
     final_boltz_file = os.path.join(boltz_dir, f"{name}_full_boltz.json")
@@ -221,20 +222,26 @@ def get_boltz_props(json_files, name, boltz_dir, calc_type, self, mol_props, ato
 
 def average_prop_atom(weights, prop):
     """
-    Returns Boltzmann averaged atomic properties
+    Returns the atomic properties averaged using the Boltzmann average.
     """
     boltz_avg = []
+    
     for i, p in enumerate(prop):
-        if p == 'NaN':
-            boltz_avg = 'NaN'
-            break
-        # None for 0
-        boltz_avg.append([0 if number is None else number * weights[i] for number in p])
-    if boltz_avg == 'NaN':
-        boltz_res = 'NaN'
+        
+        if isinstance(p, (float, int)):
+            boltz_avg.append(p * weights[i])
+        elif isinstance(p, list):
+            boltz_avg.append([0 if number is None else number * weights[i] for number in p])
+        else:
+            boltz_avg.append(0) 
+    
+    if isinstance(boltz_avg[0], list):
+        boltz_res = np.sum(boltz_avg, axis=0)
     else:
-        boltz_res = np.sum(boltz_avg, 0)
+        boltz_res = sum(boltz_avg)
+    
     return boltz_res
+
 
 def average_prop_mol(weights, prop):
     """
@@ -410,26 +417,21 @@ def calculate_global_CDFT_descriptors(file):
     net_electrophilicity = round((electrodonating_power_index - electroaccepting_power_index), 4) if electrodonating_power_index is not None and electroaccepting_power_index is not None else None
 
     cdft_descriptors = {
-        "IP (eV)": delta_SCC_IP,
-        "EA (eV)": delta_SCC_EA,
-        "Electrophilicity index (eV)": electrophilicity_index,
-        "Chemical Hardness (eV)": chemical_hardness,
-        "Chemical Softness (1/eV)": chemical_softness,
-        "Chemical Potential (eV)": chemical_potential,
-        "Mulliken Electronegativity (eV)": mulliken_electronegativity,
-        "Electrodonating Power Index (eV)": electrodonating_power_index,
-        "Electroaccepting Power Index (eV)": electroaccepting_power_index,
-        "Nucleophilicity Index (eV)": nucleophilicity_index,
-        "Electrofugality (eV)": electrofugality,
-        "Nucleofugality (eV)": nucleofugality,
-        "Intrinsic Reactivity Index (eV)": intrinsic_reactivity_index,
-        "Net Electrophilicity (eV)": net_electrophilicity
+        "IP": delta_SCC_IP,
+        "EA": delta_SCC_EA,
+        "Electrophil. idx": electrophilicity_index,
+        "Hardness": chemical_hardness,
+        "Softness": chemical_softness,
+        "Chem. potential": chemical_potential,
+        "Electronegativity": mulliken_electronegativity,
+        "Electrodon. power idx": electrodonating_power_index,
+        "Electroaccep. power idx": electroaccepting_power_index,
+        "Nucleophilicity idx": nucleophilicity_index,
+        "Electrofugality": electrofugality,
+        "Nucleofugality": nucleofugality,
+        "Intrinsic React. idx": intrinsic_reactivity_index,
+        "Net Electrophilicity": net_electrophilicity
     }
-    
-    # # Print for control (remove these lines in production)
-    # print("Global CDFT part 1")
-    # for key, value in cdft_descriptors.items():
-    #     print(f"{key}: {value}")
 
     return cdft_descriptors
 
@@ -462,9 +464,9 @@ def calculate_global_CDFT_descriptors_part2(file, file_Nminus1, file_Nminus2, fi
     scc_energy_Nplus1 = extract_scc_energy(data3, file_Nplus1) * Hartree
     scc_energy_Nplus2 = extract_scc_energy(data4, file_Nplus2) * Hartree
 
-    delta_SCC_IP = cdft_descriptors.get("IP (eV)")
-    delta_SCC_EA = cdft_descriptors.get("EA (eV)")
-    chemical_hardness = cdft_descriptors.get("Chemical Hardness (eV)")
+    delta_SCC_IP = cdft_descriptors.get("IP")
+    delta_SCC_EA = cdft_descriptors.get("EA")
+    chemical_hardness = cdft_descriptors.get("Hardness")
 
     Vertical_second_IP = None
     Vertical_second_EA = None
@@ -525,18 +527,13 @@ def calculate_global_CDFT_descriptors_part2(file, file_Nminus1, file_Nminus2, fi
             w_cubic = None  
     
     cdft_descriptors2 = {
-        "Vertical second IP (eV)": Vertical_second_IP,
-        "Vertical second EA (eV)": Vertical_second_EA,
-        "Hyper Hardness (eV)": hyper_hardness,
-        "Global Hypersoftness (1/eV^2)": Global_hypersoftness,
-        "Electrophilic descriptor (eV)": Electrophilic_descriptor,
-        "W cubic electrophilicity index (eV)": w_cubic
+        "Second IP": Vertical_second_IP,
+        "Second EA": Vertical_second_EA,
+        "Hyperhardness": hyper_hardness,
+        "Hypersoftness": Global_hypersoftness,
+        "Electrophilic descrip.": Electrophilic_descriptor,
+        "cub. electrophilicity idx": w_cubic
     }
-
-    # # Print for control (remove these lines in production)
-    # print("Global CDFT part 2")
-    # for key, value in cdft_descriptors2.items():
-    #     print(f"{key}: {value}")
 
     return cdft_descriptors2
 
@@ -582,10 +579,10 @@ def calculate_local_CDFT_descriptors(file_fukui, cdft_descriptors, cdft_descript
         return
     
     # Extract necessary values from the provided dictionaries
-    chemical_softness = cdft_descriptors.get("Chemical Softness (1/eV)")
-    Global_hypersoftness = cdft_descriptors2.get("Global Hypersoftness (1/eV^2)")
-    electrophilicity_index = cdft_descriptors.get("Electrophilicity index (eV)")
-    nucleophilicity_index = cdft_descriptors.get("Nucleophilicity Index (eV)")
+    chemical_softness = cdft_descriptors.get("Softness")
+    Global_hypersoftness = cdft_descriptors2.get("Hypersoftness")
+    electrophilicity_index = cdft_descriptors.get("Electrophil. idx")
+    nucleophilicity_index = cdft_descriptors.get("Nucleophilicity idx")
 
     # Calculating local Descriptors part 2
     dual_descriptor = [round(f_po - f_neg, 4) for f_po, f_neg in zip(f_pos, f_negs)]
@@ -618,29 +615,24 @@ def calculate_local_CDFT_descriptors(file_fukui, cdft_descriptors, cdft_descript
     Nu_rads = [round(nucleophilicity_index * f_rad, 4) for f_rad in f_rads]
 
     localDescriptors = {
-        "F+": f_pos,
-        "F-": f_negs,
-        "F0": f_rads,
-        "dual_descriptor": dual_descriptor,
-        "s+": s_pos,
-        "s-": s_negs,
-        "srad": s_rads,
-        "s+/s-": Relative_nucleophilicity,
-        "s-/s+": Relative_electrophilicity,
-        "Grand_Canonical_Dual_Descriptor": Grand_canonical_dual_descriptor,
-        "w+": w_pos,
-        "w-": w_negs,
-        "wrad": w_rads,
-        "Multiphilic_descriptor": Multiphilic_descriptor,
-        "Nu+": Nu_pos,
-        "Nu-": Nu_negs,
-        "Nurad": Nu_rads
+        "fukui+": f_pos,
+        "fukui-": f_negs,
+        "fukui0": f_rads,
+        "dual descrip.": dual_descriptor,
+        "softness+": s_pos, #s+
+        "softness-": s_negs, #s-
+        "softness0": s_rads, #srad
+        "Rel. nucleophilicity": Relative_nucleophilicity, #s+/s-
+        "Rel. electrophilicity": Relative_electrophilicity, #s-/s+
+        "GC Dual Descrip.": Grand_canonical_dual_descriptor,
+        "Electrophil.": w_pos, #w+
+        "Nucleophil.": w_negs, #w-
+        "Radical attack": w_rads, #wrad
+        "Mult. descrip.": Multiphilic_descriptor,
+        "Nu_Electrophil.": Nu_pos, #Nu+
+        "Nu_Nucleophil.": Nu_negs, #Nu-
+        "Nu_Radical attack": Nu_rads #Nurad
     }
-
-    # # Print for control
-    # print("Local Descriptors")
-    # for key, value in localDescriptors.items():
-    #     print(f"{key}: {value}")
 
     return localDescriptors
 
@@ -739,7 +731,7 @@ def read_xtb(file):
             h_bond.append(0.0)
 
     properties_dict = {
-        "total energy": energy,
+        "Total energy": energy,
         "Total charge": total_charge,
         "HOMO-LUMO gap": homo_lumo,
         "HOMO": homo,
@@ -749,9 +741,9 @@ def read_xtb(file):
         "charges": chrgs, 
         "Dipole module": dipole_module,
         "Fermi-level": Fermi_level,
-        "transition_dipole_moment": transition_dipole_moment,
-        "Coordination numbers": covCN,
-        "Dispersion coefficient C6": C6AA,
+        "Trans. dipole moment": transition_dipole_moment,
+        "Coord. numbers": covCN,
+        "Disp. coeff. C6": C6AA,
         "Polarizability alpha": alpha,
         "HOMO occupancy": homo_occ,
         "LUMO occupancy": lumo_occ,
@@ -759,8 +751,8 @@ def read_xtb(file):
         "Atomic SASAs": SASA,
         "Solvent H bonds": h_bond,
         "Total SASA": total_SASA,
-        "Total dispersion C6": total_C6AA,
-        "Total dispersion C8": total_C8AA,
+        "Total disp. C6": total_C6AA,
+        "Total disp. C8": total_C8AA,
         "Total polarizability alpha": total_alpha,
     }
 
@@ -812,8 +804,8 @@ def read_json(file):
     """
 
     if file.find(".json") > -1:
-        f = open(file, "r")  # Opening JSON file
-        data = json.loads(f.read())  # read file
+        f = open(file, "r")
+        data = json.loads(f.read())
         f.close()
         return data
     else:
@@ -823,25 +815,20 @@ def calculate_global_morfeus_descriptors(final_xyz_path):
         """
         Calculate descriptors using the MORFEUS 
         """
-
-        # Initialize dictionaries for storing descriptors
         global_properties_morfeus = {}
 
         try:
-            # Load the molecular structure
             elements, coordinates = read_xyz(final_xyz_path)
             elements, coordinates = read_geometry(final_xyz_path)
-            #molecule = Molecule(elements, coordinates)
         except Exception as e:
             print(f"Error loading molecule from file {final_xyz_path}: {e}")
             return global_properties_morfeus
 
-        
+        # Calculate Global SASA
         try:
-            # Calculate Global SASA
             sasa = SASA(elements, coordinates)
             sasa_area_global = round(sasa.area,4)
-            global_properties_morfeus["Global SASA Morfeus"] = sasa_area_global
+            global_properties_morfeus["Global SASA"] = sasa_area_global
         except Exception as e:
             print(f"Error calculating SASA from Morfeus: {e}")
 
@@ -850,14 +837,10 @@ def calculate_global_morfeus_descriptors(final_xyz_path):
             disp = Dispersion(elements, coordinates)
             disp_area_global = round(disp.area,4)
             disp_vol_global = round(disp.volume,4)
-            global_properties_morfeus["Disp. Area Morfeus"] = disp_area_global
-            global_properties_morfeus["Disp. Vol. Morfeus"] = disp_vol_global
+            global_properties_morfeus["Disp. Area"] = disp_area_global
+            global_properties_morfeus["Disp. Vol."] = disp_vol_global
         except Exception as e:
             print(f"Error calculating Global Dispersion from Morfeus: {e}")
-
-        print("Global MORFEUS Descriptors")
-        for key, value in global_properties_morfeus.items():
-            print(f"{key}: {value}")
 
         return global_properties_morfeus
 
@@ -866,11 +849,9 @@ def calculate_local_morfeus_descriptors(final_xyz_path):
     Calculate descriptors using the MORFEUS 
     """
 
-    # Initialize dictionaries for storing descriptors
     local_properties_morfeus = {}
 
     try:
-        # Load the molecular structure
         elements, coordinates = read_xyz(final_xyz_path)
         elements, coordinates = read_geometry(final_xyz_path)
     except Exception as e:
@@ -881,7 +862,7 @@ def calculate_local_morfeus_descriptors(final_xyz_path):
     try:
         sasa = SASA(elements, coordinates)
         local_sasa_areas = [round(area, 4) for area in sasa.atom_areas.values()] 
-        local_properties_morfeus["SASA Local"] = local_sasa_areas
+        local_properties_morfeus["SASA"] = local_sasa_areas
     except Exception as e:
         print(f"Error calculating local SASA from Morfeus: {e}")
 
@@ -892,7 +873,7 @@ def calculate_local_morfeus_descriptors(final_xyz_path):
             bv = BuriedVolume(elements, coordinates, i)
             buried_volume = round(bv.fraction_buried_volume, 4)
             local_buried_volumes.append(buried_volume)
-        local_properties_morfeus["Frac. BuriedVolume Local"] = local_buried_volumes
+        local_properties_morfeus["Buried volume"] = local_buried_volumes
     except Exception as e:
         print(f"Error calculating local BuriedVolume from Morfeus: {e}")
 
@@ -904,8 +885,8 @@ def calculate_local_morfeus_descriptors(final_xyz_path):
                 cone_angle = ConeAngle(elements, coordinates, i) 
                 local_cone_angles.append(round(cone_angle.cone_angle, 4)) 
             except Exception as e:
-                local_cone_angles.append(None)       
-        local_properties_morfeus["Cone Angle Local"] = local_cone_angles  
+                local_cone_angles.append(0)       
+        local_properties_morfeus["Cone angle"] = local_cone_angles  
     except Exception as e:
         print(f"Error calculating local Cone Angle: {e}")
 
@@ -917,20 +898,20 @@ def calculate_local_morfeus_descriptors(final_xyz_path):
                 solid_angle = SolidAngle(elements, coordinates, i) 
                 local_solid_angles.append(round(solid_angle.cone_angle, 4)) 
             except Exception as e:
-                local_solid_angles.append(None)       
-        local_properties_morfeus["Solid Angle Local"] = local_solid_angles  
+                local_solid_angles.append(0)       
+        local_properties_morfeus["Solid angle"] = local_solid_angles  
     except Exception as e:
         print(f"Error calculating local Solid Angle: {e}")
 
-    # Pyramidalization
+    #Pyramidalization
     try:
         local_Pyramidalization, local_vol_Pyramidalization = [], []
         for i in range(len(coordinates)):
             pyr = Pyramidalization(coordinates, i)
             local_Pyramidalization.append(round(pyr.P, 4))
             local_vol_Pyramidalization.append(round(pyr.P_angle, 4))
-        local_properties_morfeus["Pyramidalization P Local"] = local_Pyramidalization
-        local_properties_morfeus["Pyramidalization Vol Local"] = local_vol_Pyramidalization  
+        local_properties_morfeus["Pyramidaliz. P"] = local_Pyramidalization
+        local_properties_morfeus["Pyramidaliz. Vol"] = local_vol_Pyramidalization  
     except Exception as e:
         print(f"Error calculating Pyramidalization: {e}")
 
@@ -938,13 +919,40 @@ def calculate_local_morfeus_descriptors(final_xyz_path):
     try:
         disp = Dispersion(elements, coordinates)
         local_disp = [round(p_int, 4) for p_int in disp.atom_p_int.values()] 
-        local_properties_morfeus["Local Dispersion"] = local_disp
+        local_properties_morfeus["Dispersion"] = local_disp
     except Exception as e:
         print(f"Error calculating Local Dispersion from Morfeus: {e}")
 
-    # Print local descriptors for debugging (can be removed)
-    print("Local MORFEUS Descriptors")
-    for key, value in local_properties_morfeus.items():
-        print(f"{key}: {value}")
-
     return local_properties_morfeus
+
+def get_descriptors(level):
+    """
+    Returns descriptors for a given level from XTB and Morfeus
+    """
+    descriptors = {
+        'denovo': {
+            'mol': ["HOMO-LUMO gap", "HOMO", "LUMO", "IP", "EA", "Dipole module", "Total charge", "Global SASA"],
+            'atoms': ["cm5 charges", "Electrophil.", "Nucleophil.", "Radical attack", 
+                      "SASA", "Buried volume", "Cone angle"]
+        },
+        'interpret': {
+            'mol': ["Fermi-level", "Total polarizability alpha", "Total FOD", "Electrophil. idx", 
+                    "Hardness", "Softness", "Electronegativity", "Nucleophilicity idx", "Second IP", "Second EA",
+                    "Disp. Area", "Disp. Vol."],
+            'atoms': ["s proportion", "p proportion", "d proportion", "Coord. numbers", "Polarizability alpha", 
+                      "FOD", "FOD s proportion", "FOD p proportion", "FOD d proportion", 
+                      "Solid angle", "Pyramidaliz. P", "Pyramidaliz. Vol", 
+                      "Dispersion"]
+        },
+        'full': {
+            'mol': ["Total energy", "HOMO-LUMO gap", "Dipole module", "Total charge", "HOMO", "LUMO", "Fermi-level", 
+                    "Total disp. C6", "Total disp. C8", "Total polarizability alpha", "Total FOD", 
+                    "Chem. potential", "Electrodon. power idx", "Electroaccep. power idx", 
+                    "Electrofugality", "Nucleofugality", "Intrinsic React. idx", "Net Electrophilicity", 
+                    "Hyperhardness", "Hypersoftness", "Electrophilic descrip.", "cub. electrophilicity idx"],
+            'atoms': ["fukui+", "fukui-", "fukui0", "dual descrip.", "softness+", "softness-", "softness0", 
+                      "Rel. nucleophilicity", "Rel. electrophilicity", "GC Dual Descrip.", "Mult. descrip.", 
+                      "Nu_Electrophil.", "Nu_Nucleophil.", "Nu_Radical attack", "Disp. coeff. C6"]
+        }
+    }
+    return descriptors.get(level, {})
