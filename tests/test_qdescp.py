@@ -87,7 +87,7 @@ def test_qdescp_xtb(file):
     ]
 
     if file == 'test_atom.csv':
-        cmd_qdescp = cmd_qdescp + ["--qdescp_atoms", "[P]", "--dbstep_calc"]
+        cmd_qdescp = cmd_qdescp + ["--qdescp_atoms", "[P]"]
     
     if file == "test_idx.csv":
         cmd_qdescp = cmd_qdescp + ["--qdescp_atoms", "[1]"]
@@ -171,7 +171,6 @@ def test_qdescp_xtb(file):
         assert round(Fermi_lvl_boltz_calc,2) == round(Fermi_lvl_boltz_csv,2)
         assert pd_boltz["NumRotatableBonds"][0] == 3
         assert pd_boltz["NumRotatableBonds"][1] == 4
-        assert 'DBSTEP_Vbur' not in pd_boltz
 
     elif file in ['test_atom.csv','test_group.csv','test_multigroup.csv','test_robert.csv']:
         pd_boltz = pd.read_csv(file_descriptors)
@@ -179,15 +178,10 @@ def test_qdescp_xtb(file):
         # mol_1 is methane and it doesn't have any P/O atoms or CC/C=O groups so the boltz json file shouldn't appear
         assert os.path.exists(f'{folder_qdescp}/mol_1_rdkit_conf_1.json')
         assert not os.path.exists(f'{folder_boltz}/mol_1_rdkit_boltz.json')
-        assert 'DBSTEP_Vbur' not in pd_boltz
         assert len(pd_boltz["NumRotatableBonds"]) == 3
 
         # check variables and X_ prefixes in variable names
         if file in ['test_atom.csv','test_multigroup.csv','test_robert.csv']:
-            if file == 'test_atom.csv':
-                assert 'P_DBSTEP_Vbur' in pd_boltz
-            else:
-                assert 'P_DBSTEP_Vbur' not in pd_boltz
             assert 'P_FUKUI+' in pd_boltz
             
             if file == 'test_atom.csv':
@@ -197,8 +191,6 @@ def test_qdescp_xtb(file):
                 assert 'Name' not in pd_boltz
 
         elif file == 'test_group.csv':
-            assert 'C=O_C_DBSTEP_Vbur' not in pd_boltz
-            assert 'C=O_O_DBSTEP_Vbur' not in pd_boltz
             assert 'C=O_C_FUKUI+' in pd_boltz
             assert 'C=O_O_FUKUI+' in pd_boltz
 

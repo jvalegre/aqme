@@ -464,62 +464,69 @@ class qdescp:
             self.args.log.finalize()
             sys.exit()
 
-        for file in self.args.files:
-            xyz_files, xyz_charges, xyz_mults = [], [], []
-            name = os.path.basename(Path(file)).split('.')[0]
-            ext = os.path.basename(Path(file)).split(".")[1]
-            self.args.log.write(f"\n\n   ----- {name} -----")
-            if ext.lower() == "xyz":
-                # separate the parent XYZ file into individual XYZ files
-                xyzall_2_xyz(file, name)
-                for conf_file in glob.glob(f"{name}_conf_*.xyz"):
-                    if self.args.charge is None:
-                        charge_xyz, _ = read_xyz_charge_mult(conf_file)
-                    else:
-                        charge_xyz = self.args.charge
-                    if self.args.mult is None:
-                        _, mult_xyz = read_xyz_charge_mult(conf_file)
-                    else:
-                        mult_xyz = self.args.mult
-                    xyz_files.append(
-                        os.path.dirname(os.path.abspath(file)) + "/" + conf_file
-                    )
-                    xyz_charges.append(charge_xyz)
-                    xyz_mults.append(mult_xyz)
+        bar = IncrementalBar(
+        "\no  Number of finished jobs from QDESCP", max=len(self.args.files)
+        )
+        # asynchronous multithreading to accelerate QDESCP (since xTB uses 1 processor to be reproducible)
+        with futures.ThreadPoolExecutor(
+            max_workers=self.args.nprocs,
+            ) as executor:
+                for file in self.args.files:
+                    _ = executor.submit(
+                        self.xtb_complete, file,bar,destination,atom_props,update_atom_props,smarts_targets
+                        )
+        
+        bar.finish()
 
-            else:
-                command_pdb = [
-                    "obabel",
-                    f"-i{ext.lower()}",
-                    file,
-                    "-oxyz",
-                    f"-O{os.path.dirname(os.path.abspath(file))}/{name}_conf_.xyz",
-                    "-m",
-                ]
-                subprocess.run(
-                    command_pdb,
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL,
-                )
+        return update_atom_props
 
+
+    def xtb_complete(self,file,bar,destination,atom_props,update_atom_props,smarts_targets):
+        """
+        Run all the xTB calculations and collect the properties inside JSON files
+        """ 
+
+        xyz_files, xyz_charges, xyz_mults = [], [], []
+        name = os.path.basename(Path(file)).split('.')[0]
+        ext = os.path.basename(Path(file)).split(".")[1]
+        self.args.log.write(f"\n\n   ----- {name} -----")
+        if ext.lower() == "xyz":
+            # separate the parent XYZ file into individual XYZ files
+            xyzall_2_xyz(file, name)
+            for conf_file in glob.glob(f"{name}_conf_*.xyz"):
                 if self.args.charge is None:
-                    _, charges, _, _ = mol_from_sdf_or_mol_or_mol2(file, "csearch", self.args)
+                    charge_xyz, _ = read_xyz_charge_mult(conf_file)
                 else:
-                    charges = [self.args.charge] * len(
-                        glob.glob(
-                            f"{os.path.dirname(os.path.abspath(file))}/{name}_conf_*.xyz"
-                        )
-                    )
+                    charge_xyz = self.args.charge
                 if self.args.mult is None:
-                    _, _, mults, _ = mol_from_sdf_or_mol_or_mol2(file, "csearch", self.args)
+                    _, mult_xyz = read_xyz_charge_mult(conf_file)
                 else:
-                    mults = [self.args.mult] * len(
-                        glob.glob(
-                            f"{os.path.dirname(os.path.abspath(file))}/{name}_conf_*.xyz"
-                        )
-                    )
+                    mult_xyz = self.args.mult
+                xyz_files.append(
+                    os.path.dirname(os.path.abspath(file)) + "/" + conf_file
+                )
+                xyz_charges.append(charge_xyz)
+                xyz_mults.append(mult_xyz)
 
-                for count, f in enumerate(
+        else:
+            command_pdb = [
+                "obabel",
+                f"-i{ext.lower()}",
+                file,
+                "-oxyz",
+                f"-O{os.path.dirname(os.path.abspath(file))}/{name}_conf_.xyz",
+                "-m",
+            ]
+            subprocess.run(
+                command_pdb,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+
+            if self.args.charge is None:
+                _, charges, _, _ = mol_from_sdf_or_mol_or_mol2(file, "csearch", self.args)
+            else:
+                charges = [self.args.charge] * len(
                     glob.glob(
                         f"{os.path.dirname(os.path.abspath(file))}/{name}_conf_*.xyz"
                     )
@@ -576,7 +583,6 @@ class qdescp:
         bar.next()
 
         return update_atom_props, update_denovo_atom_props, update_interpret_atom_props
-
 
     def run_sp_xtb(self, xyz_file, charge, mult, name, destination):
         """
@@ -650,7 +656,6 @@ class qdescp:
             self.final_xyz_path = final_xyz_path
             with open(final_xyz_path, "r") as xyz_file:
                 self.xyz_coordinates = xyz_file.readlines() 
-
 
         command1 = [
             "xtb",
@@ -833,7 +838,6 @@ class qdescp:
 
         return xtb_files_props
 
-
     def collect_xtb_properties(self,name_initial,atom_props,update_atom_props,smarts_targets,xtb_files_props):
         """
         Collects all xTB properties from the files and puts them in a JSON file
@@ -845,6 +849,7 @@ class qdescp:
         cdft_descriptors = calculate_global_CDFT_descriptors(xtb_files_props['xtb_gfn1'])
         cdft_descriptors2  = calculate_global_CDFT_descriptors_part2( xtb_files_props['xtb_gfn1'], xtb_files_props['xtb_Nminus1'], xtb_files_props['xtb_Nminus2'], xtb_files_props['xtb_Nplus1'], xtb_files_props['xtb_Nplus2'], cdft_descriptors)
         localDescriptors = calculate_local_CDFT_descriptors(xtb_files_props['xtb_fukui'], cdft_descriptors, cdft_descriptors2)
+        
         # create matrix of Wiberg bond-orders
         atoms = properties_dict.get("atoms")
         nat = len(atoms)

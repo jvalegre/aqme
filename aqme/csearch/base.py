@@ -24,9 +24,6 @@ General
      Directory to create the output file(s)   
    varfile : str, default=None  
       Option to parse the variables using a yaml file (specify the filename)  
-   max_workers : int, default=4  
-      Number of simultaneous RDKit jobs run with multiprocessing 
-      (WARNING! More than 12 simultaneous jobs might collapse your computer!)  
    charge : int, default=None  
       Charge of the calculations used in the following input files. 
       If charge isn't defined, it automatically reads the charge of the 
@@ -145,7 +142,7 @@ Fullmonte only
 CREST only
 ++++++++++
 
-   nprocs : int, default=2
+   nprocs : int, default=8
       Number of processors used in CREST optimizations
    constraints_atoms : list, default=[]
       Specify constrained atoms as [AT1,AT2,AT3]. An example of multiple constraints with
@@ -192,7 +189,6 @@ import glob
 from pathlib import Path
 import pandas as pd
 import concurrent.futures as futures
-import multiprocessing as mp
 from progress.bar import IncrementalBar
 import numpy as np
 
@@ -307,7 +303,7 @@ class csearch:
             self.args.log.write(f"\nStarting CSEARCH with {len(job_inputs)} job(s) (SDF, XYZ, CSV, etc. files might contain multiple jobs/structures inside)\n")
 
             # runs the conformer sampling with multiprocessors
-            self.run_csearch(job_inputs)
+            _ = self.run_csearch(job_inputs)
 
             # store all the information into a CSV file
             csearch_file_no_path = (
@@ -392,64 +388,50 @@ class csearch:
         bar = IncrementalBar(
             "o  Number of finished jobs from CSEARCH", max=len(job_inputs)
         )
-        with futures.ProcessPoolExecutor(
-            max_workers=self.args.max_workers,
+
+        # rdkit benefits from using multithreading, since the RMSD filter in RDKit's GetBestRMS 
+        # doesn't parallelize well (by default, it uses 1 thread and it fails when using more, 
+        # we're not sure that it tries to use all the CPUs or only 1)
+        if self.args.program.lower() == "rdkit":
+            # we do not recommend more than 4 parallel RDKit jobs, as each job runs RDKit functions
+            # with all available CPUs/threadss (i.e. numThreads=0 in rdDistGeom.EmbedMultipleConfs)
+            csearch_procs = min(4,self.args.nprocs)
+        else: # each CREST job already parallelizes CPUs, so only 1 simultaneous job is run at a time
+            csearch_procs = 1
+
+        # asynchronous multithreading to accelerate CSEARCH (only benefits RDKit)
+        with futures.ThreadPoolExecutor(
+            max_workers=csearch_procs,
         ) as executor:
-            # Submit a set of asynchronous jobs
-            jobs = []
-            # Submit the Jobs
             for job_input in job_inputs:
-                (
-                    smi_,
-                    name_,
-                    charge_,
-                    mult_,
-                    constraints_atoms_,
-                    constraints_dist_,
-                    constraints_angle_,
-                    constraints_dihedral_,
-                    complex_type_,
-                    geom_
-                ) = job_input
-                job = executor.submit(
-                    self.compute_confs(
-                        smi_,
-                        name_,
-                        charge_,
-                        mult_,
-                        constraints_atoms_,
-                        constraints_dist_,
-                        constraints_angle_,
-                        constraints_dihedral_,
-                        complex_type_,
-                        geom_
-                    )
+                _ = executor.submit(
+                    self.compute_confs, job_input,bar
                 )
-                jobs.append(job)
 
-                bar.next()
+        bar.finish()
 
-            bar.finish()
-
-    def compute_confs(
-        self,
-        smi,
-        name,
-        charge,
-        mult,
-        constraints_atoms,
-        constraints_dist,
-        constraints_angle,
-        constraints_dihedral,
-        complex_type,
-        geom
-    ):
+    def compute_confs(self,job_input,bar):
         """
         Function to start conformer generation
         """
 
+        # load variables from job_input
+        (
+            smi,
+            name,
+            charge,
+            mult,
+            constraints_atoms,
+            constraints_dist,
+            constraints_angle,
+            constraints_dihedral,
+            complex_type,
+            geom
+        ) = job_input
+        
         self.args.log.write(f"\n   ----- {os.path.basename(Path(name))} -----")
 
+        # load mol and other parameters when using SMILES as input
         if self.args.smi is not None or os.path.basename(Path(self.args.input)).split(".")[1] in ["smi","csv","cdx","txt","yaml","yml","rtf"]:
             (
                 mol,
@@ -474,6 +456,7 @@ class csearch:
                 if os.path.basename(Path(self.args.input)).split(".")[1] not in ["csv","cdx","txt","yaml","yml","rtf"]:
                     self.args.log.finalize()
                     sys.exit()
+                bar.next()
                 return
 
         else:
@@ -484,6 +467,7 @@ class csearch:
                 if os.path.basename(Path(self.args.input)).split(".")[1] not in ["csv","cdx","txt","yaml","yml","rtf"]:
                     self.args.log.finalize()
                     sys.exit()
+                bar.next()
                 return
                 
             # check if the optimization is constrained
@@ -548,6 +532,7 @@ class csearch:
                 if os.path.basename(Path(self.args.input)).split(".")[1] not in ["csv","cdx","txt","yaml","yml","rtf"]:
                     self.args.log.finalize()
                     sys.exit()
+                bar.next()
                 return
 
             if complex_type in accepted_complex_types:
@@ -617,6 +602,7 @@ class csearch:
         # Updates the dataframe with infromation about conformer generation
         frames = [self.final_dup_data, total_data]
         self.final_dup_data = pd.concat(frames, ignore_index=True, sort=True)
+        bar.next()
 
     # automatic detection of metal atoms   
     def find_metal_atom(self,mol,charge,mult):
