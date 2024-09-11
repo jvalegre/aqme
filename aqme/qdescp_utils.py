@@ -221,7 +221,6 @@ def get_boltz_props(json_files, name, boltz_dir, calc_type, self, mol_props, ato
     with open(final_interpret_file, "w") as outfile:
         json.dump(interpret_json_data, outfile)
 
-
 def average_prop_atom(weights, prop):
     """
     Returns the atomic properties averaged using the Boltzmann average.
