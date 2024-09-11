@@ -46,15 +46,6 @@ xTB descriptors
    xtb_opt : bool, default=True
       Performs an initial xTB geometry optimization before calculating descriptors
 
-DBSTEP descriptors
-++++++++++++++
-
-   dbstep_calc : bool, default=False
-      Whether to add a DBSTEP calculation of buried volume when generating atomic descriptors 
-      with qdescp_atoms. To activiate it, add --dbstep_calc to the command line
-   dbstep_r : float, default=3.5
-      Radius used in the DBSTEP calculations (in A)
-
 NMR simulation
 ++++++++++++++
 
@@ -102,7 +93,6 @@ import pandas as pd
 from rdkit import Chem
 from rdkit.Chem import rdFMCS
 from pathlib import Path
-import dbstep.Dbstep as db
 from aqme.utils import (
     load_variables,
     read_xyz_charge_mult,
@@ -459,10 +449,7 @@ class qdescp:
         if len(dfs) > 0:
             temp = pd.concat(dfs, ignore_index=True) 
             temp.to_csv(qdescp_csv, index=False)
-            if not self.args.dbstep_calc: 
-                self.args.log.write(f"o  The {qdescp_csv} file containing Boltzmann weighted xTB, RDKit and Morfeus descriptors was successfully created in {self.args.initial_dir}")
-            else:
-                self.args.log.write(f"o  The {qdescp_csv} file containing Boltzmann weighted xTB, DBSTEP and RDKit descriptors was successfully created in {self.args.initial_dir}")
+            self.args.log.write(f"o  The {qdescp_csv} file containing Boltzmann weighted xTB, RDKit and Morfeus descriptors was successfully created in {self.args.initial_dir}")
         else:
             self.args.log.write(f"x  No CSV file containing Boltzmann weighted descriptors was created. This might happen when using the qdescp_atoms option with an atom/group that is not found in any of the calculations")
     
