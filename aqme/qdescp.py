@@ -552,7 +552,6 @@ class qdescp:
             update_interpret_atom_props = self.collect_xtb_properties(path_name, interptret_atoms, update_interpret_atom_props, smarts_targets, xtb_files_props)
 
         except Exception as e:
-            print(f'TU FALLO: {e}')
             xtb_passing = False
 
         self.cleanup(name_xtb, destination, xtb_passing, xtb_files_props)
@@ -903,7 +902,7 @@ class qdescp:
                 else: 
                     try:
                         matches = mol.GetSubstructMatches(Chem.MolFromSmarts(pattern))
-                    except: # I tried to make this except more specific for Boost.Python.ArgumentError, but apparently it's not as simple as it looks
+                    except: 
                         try:
                             matches = mol.GetSubstructMatches(Chem.MolFromSmarts(f'[{pattern}]'))
                         except:
