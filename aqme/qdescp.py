@@ -866,7 +866,7 @@ class qdescp:
         #print(json_data)
 
         """
-		FGHTYTHHGGHGDSFDF
+		Morfeus Descriptors
 		"""
         #Global descriptors
         global_properties_morfeus = calculate_global_morfeus_descriptors(self.final_xyz_path)
@@ -876,7 +876,7 @@ class qdescp:
         json_data.update(local_properties_morfeus)  
 
         """
-		FGHTYTHHGGHGDSFDF
+		Locate Smarts, qdescp_atoms
 		"""
 
         with open(xtb_files_props['xtb_xyz_path'], "r") as f:
