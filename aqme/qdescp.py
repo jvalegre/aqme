@@ -93,7 +93,6 @@ import pandas as pd
 from rdkit import Chem
 from rdkit.Chem import rdFMCS
 from pathlib import Path
-import dbstep.Dbstep as db
 from aqme.utils import (
     load_variables,
     read_xyz_charge_mult,
@@ -854,8 +853,6 @@ class qdescp:
         json_data.update(cdft_descriptors2)
         # Local Descriptors
         json_data.update(localDescriptors)
-        # Imprimir para control
-        #print(json_data)
 
         """
 		Morfeus Descriptors
@@ -987,7 +984,7 @@ class qdescp:
         """
 
         if xtb_passing: # only move molecules with successful xTB calcs
-            final_json = str(destination) + "/" + name + ".json"
+            final_json = f"{destination}/{name}.json"
             shutil.move(xtb_files_props['xtb_json'], final_json)
         
         # delete xTB files that does not contain useful data
