@@ -149,11 +149,6 @@ class qdescp:
         # retrieve the different files to run in QDESCP
         _ = check_files(self,'qdescp')
 
-        # List of descriptors
-        # update_atom_props = [] # keeps track of the molecules with suitable atomic properties when using qdescp_atoms
-        # update_denovo_atom_props = [] #For the level denovo
-        # update_interpret_atom_props = [] #For the level intepret
-
         self.args.log.write(f"\nStarting QDESCP-{self.args.program} with {len(self.args.files)} job(s)\n")
 
         # Obtaing SMARTS patterns from the input files automatically if no patterns are provided
@@ -1046,3 +1041,5 @@ class qdescp:
             df_temp.to_csv(f'AQME-{name_db}_{self.args.csv_name}', index=False)
 
         return df_temp
+
+
