@@ -338,7 +338,7 @@ class qdescp:
             if self.args.robert:
                 name_db = 'ROBERT'
 
-            combined_df = pd.DataFrame()
+            combined_df = pd.DataFrame() #full
             combined_denovo_df = pd.DataFrame()  # denovo
             combined_interpret_df = pd.DataFrame()  # interpret
 
@@ -432,10 +432,7 @@ class qdescp:
         if len(dfs) > 0:
             temp = pd.concat(dfs, ignore_index=True) 
             temp.to_csv(qdescp_csv, index=False)
-            if not self.args.dbstep_calc:  #Es probable que tengamos que quitar estas lineas
-                self.args.log.write(f"o  The {qdescp_csv} file containing Boltzmann weighted xTB and RDKit descriptors was successfully created in {self.args.initial_dir}") #ponerle que tiene morfeus
-            else:
-                self.args.log.write(f"o  The {qdescp_csv} file containing Boltzmann weighted xTB, DBSTEP and RDKit descriptors was successfully created in {self.args.initial_dir}")
+            self.args.log.write(f"o  The {qdescp_csv} file containing Boltzmann weighted xTB and RDKit descriptors was successfully created in {self.args.initial_dir}") #ponerle que tiene morfeus
         else:
             self.args.log.write(f"x  No CSV file containing Boltzmann weighted descriptors was created. This might happen when using the qdescp_atoms option with an atom/group that is not found in any of the calculations")
     
