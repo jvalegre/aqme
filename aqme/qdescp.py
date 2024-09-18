@@ -177,7 +177,7 @@ class qdescp:
                 else:
                     self.args.log.write("x  WARNING! No column with SMILES information found in the input CSV file.")
                 if len(smiles_list) > 0:
-                    mols = [Chem.MolFromSmiles(smiles) for smiles in smiles_list if Chem.MolFromSmiles(smiles) is not None]#JDJAJKSHDKHA
+                    mols = [Chem.MolFromSmiles(smiles) for smiles in smiles_list if Chem.MolFromSmiles(smiles) is not None]
                     if len(mols) > 0:
                         mcs = rdFMCS.FindMCS(mols)
                         if mcs is not None:

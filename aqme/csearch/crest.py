@@ -163,7 +163,7 @@ def xtb_opt_main(
         if self.args.xtb_keywords is not None:
             for keyword in self.args.xtb_keywords.split():
                 if keyword == "--ohess":
-                    command1.remove("--opt ")
+                    command1.remove("--opt")
                 command1.append(keyword)
 
         xtb_out1 = f'{os.path.dirname(Path(xyzoutxtb1))}/{os.path.basename(Path(xyzoutxtb1)).split(".xyz")[0]}'
@@ -215,7 +215,7 @@ def xtb_opt_main(
             if self.args.xtb_keywords is not None:
                 for keyword in self.args.xtb_keywords.split():
                     if keyword == "--ohess":
-                        command2.remove("--opt ")
+                        command2.remove("--opt")
                     command2.append(keyword)
 
             xtb_out2 = f'{os.path.dirname(Path(xyzoutxtb2))}/{os.path.basename(Path(xyzoutxtb2)).split(".xyz")[0]}'
@@ -247,7 +247,7 @@ def xtb_opt_main(
             if self.args.xtb_keywords is not None:
                 for keyword in self.args.xtb_keywords.split():
                     if keyword == "--ohess":
-                        command.remove("--opt ")
+                        command.remove("--opt")
                     command.append(keyword)
             xtb_out1 = f'{os.path.dirname(Path(xyzin))}/{os.path.basename(Path(xyzin)).split(".xyz")[0]}'
             run_command(command, f"{xtb_out1}_xtb1.out")
@@ -265,7 +265,7 @@ def xtb_opt_main(
                     comm_xtb = f"export OMP_STACKSIZE={self.args.stacksize} && export OMP_NUM_THREADS={self.args.nprocs},1 \
                     && xtb {xyzin} --opt -c {charge} --uhf {int(mult) - 1} {self.args.xtb_keywords} >> {xtb_out1}_xtb1.out"
                     if " --ohess " in comm_xtb:
-                        comm_xtb.remove("--opt ")
+                        comm_xtb.remove("--opt")
                 subprocess.call(comm_xtb, shell=False)
                 os.rename(str(dat_dir) + "/xtbopt.xyz", xyzoutxtb1)
             except FileNotFoundError:
