@@ -171,6 +171,7 @@ def full_check(w_dir_main=os.getcwd(), destination_fullcheck="", files="*.json",
     """
     Checks that multiple calculations were done following the same protocols, including
     program and version, grid size, level of theory, dispersion and solvation model.
+    
     Parameters
     ----------
     w_dir_main : str
