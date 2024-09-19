@@ -28,6 +28,221 @@ def convert_ndarrays(data):
         elif isinstance(value, dict):
             convert_ndarrays(value)
 
+def get_boltz(energy):
+    """
+    Calculates the Boltzmann weights for a list of energies
+    """
+    energ = [number - min(energy) for number in energy]
+
+    boltz_sum = 0.0
+    for e in energ:
+        boltz_sum += math.exp(-e * J_TO_AU / GAS_CONSTANT / T)
+    
+    weights = []
+    for e in energ:
+        weight = math.exp(-e * J_TO_AU / GAS_CONSTANT / T) / boltz_sum
+        weights.append(weight)
+
+    return weights
+
+def get_boltz_props(json_files, name, boltz_dir, calc_type, self, mol_props, atom_props, smarts_targets, 
+                    denovo_mols, denovo_atoms,interpret_mols, interpret_atoms, mol=None, xyz_file=None):
+    """
+    Retrieves the properties from json files and gives Boltzmann averaged properties for rdkit, NMR and morfues descriptors.
+    """
+    # Ensure smarts_targets is a list even if None
+    if smarts_targets is None:
+        smarts_targets = []
+    
+    def average_properties(boltz, prop_list, smarts_targets, is_atom_prop=True):
+        """Calculate average properties based on Boltzmann weights."""
+        return average_prop_atom(boltz, prop_list) if is_atom_prop else average_prop_mol(boltz, prop_list)
+
+    def update_avg_json_data(json_data, avg_json_data, prop, avg_prop, smarts_targets):
+        """Update avg_json_data with averaged properties."""
+        if len(smarts_targets) > 0 or np.isnan(avg_prop).any():
+            avg_json_data[prop] = avg_prop
+        else:
+            avg_json_data[prop] = avg_prop.tolist()
+
+    # Calculate Boltzmann weights
+    energy = []
+    for k, json_file in enumerate(json_files):
+        json_data = read_json(json_file)
+        energy.append(json_data["total energy"] if calc_type.lower() == "xtb" else json_data["optimization"]["scf"]["scf energies"][-1])
+
+    boltz = get_boltz(energy)
+    avg_json_data = {}
+    denovo_json_data = {}
+    interpret_json_data = {}
+
+    # Get weighted atomic properties
+    for i, prop in enumerate(atom_props):
+        if i == 0:  # Filter to ensure all molecules have atomic properties for qdescp_atoms option
+            for json_file in json_files:
+                json_data = read_json(json_file)
+                for atom_prop in atom_props:
+                    if atom_prop not in json_data:
+                        return None
+        
+        prop_list = [read_json(json_file)[prop] for json_file in json_files]
+        avg_prop = average_properties(boltz, prop_list, smarts_targets)
+
+    # Get weighted molecular properties from XTB
+    if calc_type.lower() == "xtb":
+        for prop in mol_props:
+            prop_list = [read_json(json_file)[prop] for json_file in json_files]
+            avg_prop = average_properties(boltz, prop_list, smarts_targets, is_atom_prop=False)
+            avg_json_data[prop] = avg_prop
+
+        # Get denovo atomic properties
+    for i, prop in enumerate(denovo_atoms):
+        prop_list = [read_json(json_file)[prop] for json_file in json_files]
+        avg_prop = average_properties(boltz, prop_list, smarts_targets)
+        update_avg_json_data(json_data, denovo_json_data, prop, avg_prop, smarts_targets)
+
+        # Get denovo molecular properties
+    for prop in denovo_mols:
+        prop_list = [read_json(json_file)[prop] for json_file in json_files]
+        avg_prop = average_properties(boltz, prop_list, smarts_targets, is_atom_prop=False)
+        denovo_json_data[prop] = avg_prop
+
+        # Get interpret atomic properties
+    for i, prop in enumerate(interpret_atoms):
+        prop_list = [read_json(json_file)[prop] for json_file in json_files]
+        avg_prop = average_properties(boltz, prop_list, smarts_targets)
+        update_avg_json_data(json_data, interpret_json_data, prop, avg_prop, smarts_targets)
+
+        # Get interpret molecular properties
+    for prop in interpret_mols:
+        prop_list = [read_json(json_file)[prop] for json_file in json_files]
+        avg_prop = average_properties(boltz, prop_list, smarts_targets, is_atom_prop=False)
+        interpret_json_data[prop] = avg_prop
+
+    # Calculate RDKit descriptors if molecule is provided
+    if mol is not None:
+        # Calculate all RDKit properties for avg_json_data
+        avg_json_data,_,_ = get_rdkit_properties(avg_json_data, mol)
+        
+        # Calculate selected RDKit properties for denovo_json_data
+        _,denovo_rdkit_json_data,_ = get_rdkit_properties({}, mol)
+        
+        # Merge selected RDKit properties with denovo_json_data
+        denovo_json_data.update(denovo_rdkit_json_data)
+
+        # Calculate selected RDKit properties for interpret_json_data
+        _,_,interpret_rdkit_json_data = get_rdkit_properties({}, mol)
+        
+        # Merge selected RDKit properties with interpret_json_data
+        interpret_json_data.update(interpret_rdkit_json_data)
+    
+    convert_ndarrays(avg_json_data)
+    convert_ndarrays(denovo_json_data)
+    convert_ndarrays(interpret_json_data)
+
+    # Save the averaged properties to a file
+    final_boltz_file = os.path.join(boltz_dir, f"{name}_full_boltz.json")
+    with open(final_boltz_file, "w") as outfile:
+        json.dump(avg_json_data, outfile)
+    
+    # Save the denovo properties to a second file
+    final_denovo_file = os.path.join(boltz_dir, f"{name}_denovo_boltz.json")
+    with open(final_denovo_file, "w") as outfile:
+        json.dump(denovo_json_data, outfile)
+
+    # Save the interpret properties to a second file
+    final_interpret_file = os.path.join(boltz_dir, f"{name}_interpret_boltz.json")
+    with open(final_interpret_file, "w") as outfile:
+        json.dump(interpret_json_data, outfile)
+
+
+
+def get_boltz_props_nmr(json_files,name,boltz_dir,self,atom_props,smarts_targets,nmr_atoms=None,nmr_slope=None,nmr_intercept=None,nmr_experim=None):
+
+    """
+    Function to process NMR properties and calculate Boltzmann averaged properties.
+    """
+
+    # Load experimental NMR data
+    if nmr_experim is not None:
+        try:
+            exp_data = pd.read_csv(nmr_experim)
+        except Exception as e:
+            self.args.log.write(f'\nx  Error loading experimental NMR shifts file: {nmr_experim}.\n{e}')
+            self.args.log.finalize()
+            sys.exit()
+
+    # Calculate Boltzmann weights based on energies
+    energy = []
+    for k, json_file in enumerate(json_files):
+        json_data = read_json(json_file)
+        
+        # Extract energy for Boltzmann factor calculation
+        try:
+            energy_value = json_data["optimization"]["scf"]["scf energies"][-1]  # SCF energy
+        except KeyError:
+            self.args.log.write(f"x  No SCF energy found in JSON file: {json_file}")
+            energy_value = 0
+        energy.append(energy_value)
+
+        # Calculate NMR chemical shifts
+        json_data["properties"]["NMR"]["NMR Chemical Shifts"] = get_chemical_shifts(json_data, nmr_atoms, nmr_slope, nmr_intercept)
+
+        # Merge with experimental data if available
+        if nmr_experim is not None:
+            list_shift = json_data["properties"]["NMR"]["NMR Chemical Shifts"]
+            df = pd.DataFrame(
+                list_shift.items(),
+                columns=["atom_idx", "conf_{}".format(k + 1)],
+            )
+            df["atom_idx"] = df["atom_idx"] + 1  # Adjust index to match experimental data
+            exp_data = exp_data.merge(df, on=["atom_idx"], how='left')
+
+        # Save updated JSON data back to the file
+        with open(json_file, "w") as outfile:
+            json.dump(json_data, outfile)
+
+    # Calculate Boltzmann factors
+    boltz = get_boltz(energy)
+
+    # Process atomic properties (NMR Chemical Shifts)
+    avg_json_data = {}
+    for i, prop in enumerate(atom_props):
+        prop_list = []
+        for json_file in json_files:
+            json_data = read_json(json_file)
+            prop_list.append(list(json_data["properties"]["NMR"][prop].values()))
+
+        # Average properties based on Boltzmann weights
+        avg_prop = average_prop_atom_nmr(boltz, prop_list)
+        dictavgprop = {}
+        for j, key in enumerate(json_data["properties"]["NMR"][prop].keys()):
+            dictavgprop[key] = avg_prop[j]
+        avg_json_data[prop] = dictavgprop
+
+    # Merge with experimental data if available and calculate error
+    if nmr_experim is not None:
+        list_shift = avg_json_data[prop]
+        df = pd.DataFrame(
+            list_shift.items(),
+            columns=["atom_idx", "boltz_avg"],
+        )
+        df["atom_idx"] = df["atom_idx"].astype(int) + 1
+        exp_data = exp_data.merge(df, on=["atom_idx"])
+        exp_data["error_boltz"] = abs(
+            exp_data["experimental_ppm"] - exp_data["boltz_avg"]
+        )
+
+        # Save the experimental data with predictions
+        qdescp_nmr = nmr_experim.split(".csv")[0] + "_predicted.csv"
+        exp_data.round(2).to_csv(qdescp_nmr, index=False)
+        self.args.log.write(f"o  The {os.path.basename(qdescp_nmr)} file containing Boltzmann weighted NMR shifts was successfully created in {self.args.initial_dir}")
+
+    # Save averaged properties to a JSON file
+    final_boltz_file = str(boltz_dir) + "/" + name + "_boltz.json"
+    with open(final_boltz_file, "w") as outfile:
+        json.dump(avg_json_data, outfile)
+
 def get_chemical_shifts(json_data, nmr_atoms, nmr_slope, nmr_intercept):
     """
     Retrieves and scales NMR shifts from json files
@@ -59,312 +274,6 @@ def get_chemical_shifts(json_data, nmr_atoms, nmr_slope, nmr_intercept):
 
     return shifts
 
-def get_boltz(energy):
-    """
-    Calculates the Boltzmann weights for a list of energies
-    """
-    energ = [number - min(energy) for number in energy]
-
-    boltz_sum = 0.0
-    for e in energ:
-        boltz_sum += math.exp(-e * J_TO_AU / GAS_CONSTANT / T)
-    
-    weights = []
-    for e in energ:
-        weight = math.exp(-e * J_TO_AU / GAS_CONSTANT / T) / boltz_sum
-        weights.append(weight)
-
-    return weights
-
-def get_boltz_props(json_files, name, boltz_dir, calc_type, self, mol_props, atom_props, smarts_targets, 
-                    denovo_mols, denovo_atoms,interpret_mols, interpret_atoms, nmr_atoms=None, nmr_slope=None, nmr_intercept=None, 
-                    nmr_experim=None, mol=None, xyz_file=None):
-    """
-    Retrieves the properties from json files and gives Boltzmann averaged properties for rdkit, NMR and morfues descriptors.
-    """
-    # Ensure smarts_targets is a list even if None
-    if smarts_targets is None:
-        smarts_targets = []
-    
-    def process_nmr_experim(exp_data, json_data, k):
-        """Process NMR experimental data."""
-        list_shift = json_data["properties"]["NMR"]["NMR Chemical Shifts"]
-        df = pd.DataFrame(list_shift.items(), columns=["atom_idx", f"conf_{k + 1}"])
-        df["atom_idx"] += 1
-        return exp_data.merge(df, on=["atom_idx"])
-    
-    def average_properties(boltz, prop_list, smarts_targets, is_atom_prop=True):
-        """Calculate average properties based on Boltzmann weights."""
-        return average_prop_atom(boltz, prop_list) if is_atom_prop else average_prop_mol(boltz, prop_list)
-
-    def update_avg_json_data(json_data, avg_json_data, prop, avg_prop, smarts_targets):
-        """Update avg_json_data with averaged properties."""
-        if len(smarts_targets) > 0 or np.isnan(avg_prop).any():
-            avg_json_data[prop] = avg_prop
-        else:
-            avg_json_data[prop] = avg_prop.tolist()
-
-    # Handle NMR experimental data
-    exp_data = None
-    if calc_type.lower() == "nmr" and nmr_experim:
-        try:
-            exp_data = pd.read_csv(nmr_experim)
-        except FileNotFoundError:
-            self.args.log.write(f'\nx  The CSV file with experimental NMR shifts specified ({nmr_experim}) was not found!')
-            self.args.log.finalize()
-            sys.exit()
-
-    # Calculate Boltzmann weights
-    energy = []
-    for k, json_file in enumerate(json_files):
-        json_data = read_json(json_file)
-        energy.append(json_data["total energy"] if calc_type.lower() == "xtb" else json_data["optimization"]["scf"]["scf energies"][-1])
-        
-        if calc_type.lower() == "nmr":
-            json_data["properties"]["NMR"]["NMR Chemical Shifts"] = get_chemical_shifts(json_data, nmr_atoms, nmr_slope, nmr_intercept)
-            if exp_data is not None:
-                exp_data = process_nmr_experim(exp_data, json_data, k)
-            with open(json_file, "w") as outfile:
-                json.dump(json_data, outfile)
-
-    boltz = get_boltz(energy)
-    avg_json_data = {}
-    denovo_json_data = {}
-    interpret_json_data = {}
-
-    # Get weighted atomic properties
-    #From NMR
-    for i, prop in enumerate(atom_props):
-        prop_list = [read_json(json_file)[prop] for json_file in json_files]
-        avg_prop = average_properties(boltz, prop_list, smarts_targets)
-        
-        if calc_type.lower() == "nmr":
-            dictavgprop = {key: avg_prop[j] for j, key in enumerate(json_data["properties"]["NMR"][prop].keys())}
-            avg_json_data[prop] = dictavgprop
-            if exp_data is not None:
-                df = pd.DataFrame(dictavgprop.items(), columns=["atom_idx", "boltz_avg"])
-                df["atom_idx"] = df["atom_idx"].astype(int) + 1
-                exp_data = exp_data.merge(df, on=["atom_idx"])
-                exp_data["error_boltz"] = abs(exp_data["experimental_ppm"] - exp_data["boltz_avg"])
-                qdescp_nmr = nmr_experim.replace(".csv", "_predicted.csv")
-                exp_data.round(2).to_csv(qdescp_nmr, index=False)
-                self.args.log.write(f"o  The {os.path.basename(qdescp_nmr)} file containing Boltzmann weighted NMR shifts was successfully created in {self.args.initial_dir}")
-        else:
-            update_avg_json_data(json_data, avg_json_data, prop, avg_prop, smarts_targets)
-
-    # Get weighted molecular properties from XTB
-    if calc_type.lower() == "xtb":
-        for prop in mol_props:
-            prop_list = [read_json(json_file)[prop] for json_file in json_files]
-            avg_prop = average_properties(boltz, prop_list, smarts_targets, is_atom_prop=False)
-            avg_json_data[prop] = avg_prop
-
-        # Get denovo atomic properties
-    for i, prop in enumerate(denovo_atoms):
-        prop_list = [read_json(json_file)[prop] for json_file in json_files]
-        avg_prop = average_properties(boltz, prop_list, smarts_targets)
-        update_avg_json_data(json_data, denovo_json_data, prop, avg_prop, smarts_targets)
-
-        # Get denovo molecular properties
-    for prop in denovo_mols:
-        prop_list = [read_json(json_file)[prop] for json_file in json_files]
-        avg_prop = average_properties(boltz, prop_list, smarts_targets, is_atom_prop=False)
-        denovo_json_data[prop] = avg_prop
-
-        # Get interpret atomic properties
-    for i, prop in enumerate(interpret_atoms):
-        prop_list = [read_json(json_file)[prop] for json_file in json_files]
-        avg_prop = average_properties(boltz, prop_list, smarts_targets)
-        update_avg_json_data(json_data, interpret_json_data, prop, avg_prop, smarts_targets)
-
-        # Get interpret molecular properties
-    for prop in interpret_mols:
-        prop_list = [read_json(json_file)[prop] for json_file in json_files]
-        avg_prop = average_properties(boltz, prop_list, smarts_targets, is_atom_prop=False)
-        interpret_json_data[prop] = avg_prop
-
-    # Calculate RDKit descriptors if molecule is provided
-    if mol is not None:
-        # Calculate all RDKit properties for avg_json_data
-        avg_json_data,_,_ = get_rdkit_properties(avg_json_data, mol)
-        
-        # Calculate selected RDKit properties for denovo_json_data
-        _,denovo_rdkit_json_data,_ = get_rdkit_properties({}, mol)
-        
-        # Merge selected RDKit properties with denovo_json_data
-        denovo_json_data.update(denovo_rdkit_json_data)
-
-        # Calculate selected RDKit properties for interpret_json_data
-        _,_,interpret_rdkit_json_data = get_rdkit_properties({}, mol)
-        
-        # Merge selected RDKit properties with interpret_json_data
-        interpret_json_data.update(interpret_rdkit_json_data)
-    
-    convert_ndarrays(avg_json_data)
-    convert_ndarrays(denovo_json_data)
-    convert_ndarrays(interpret_json_data)
-
-    # Save the averaged properties to a file
-    final_boltz_file = os.path.join(boltz_dir, f"{name}_full_boltz.json")
-    with open(final_boltz_file, "w") as outfile:
-        json.dump(avg_json_data, outfile)
-    
-    # Save the denovo properties to a second file
-    final_denovo_file = os.path.join(boltz_dir, f"{name}_denovo_boltz.json")
-    with open(final_denovo_file, "w") as outfile:
-        json.dump(denovo_json_data, outfile)
-
-    # Save the interpret properties to a second file
-    final_interpret_file = os.path.join(boltz_dir, f"{name}_interpret_boltz.json")
-    with open(final_interpret_file, "w") as outfile:
-        json.dump(interpret_json_data, outfile)
-
-def get_boltz_props(json_files, name, boltz_dir, calc_type, self, mol_props, atom_props, smarts_targets, 
-                    denovo_mols, denovo_atoms,interpret_mols, interpret_atoms, nmr_atoms=None, nmr_slope=None, nmr_intercept=None, 
-                    nmr_experim=None, mol=None, xyz_file=None):
-    """
-    Retrieves the properties from json files and gives Boltzmann averaged properties for rdkit, NMR and morfues descriptors.
-    """
-    # Ensure smarts_targets is a list even if None
-    if smarts_targets is None:
-        smarts_targets = []
-    
-    def process_nmr_experim(exp_data, json_data, k):
-        """Process NMR experimental data."""
-        list_shift = json_data["properties"]["NMR"]["NMR Chemical Shifts"]
-        df = pd.DataFrame(list_shift.items(), columns=["atom_idx", f"conf_{k + 1}"])
-        df["atom_idx"] += 1
-        return exp_data.merge(df, on=["atom_idx"])
-    
-    def average_properties(boltz, prop_list, smarts_targets, is_atom_prop=True):
-        """Calculate average properties based on Boltzmann weights."""
-        return average_prop_atom(boltz, prop_list) if is_atom_prop else average_prop_mol(boltz, prop_list)
-
-    def update_avg_json_data(json_data, avg_json_data, prop, avg_prop, smarts_targets):
-        """Update avg_json_data with averaged properties."""
-        if len(smarts_targets) > 0 or np.isnan(avg_prop).any():
-            avg_json_data[prop] = avg_prop
-        else:
-            avg_json_data[prop] = avg_prop.tolist()
-
-    # Handle NMR experimental data
-    exp_data = None
-    if calc_type.lower() == "nmr" and nmr_experim:
-        try:
-            exp_data = pd.read_csv(nmr_experim)
-        except FileNotFoundError:
-            self.args.log.write(f'\nx  The CSV file with experimental NMR shifts specified ({nmr_experim}) was not found!')
-            self.args.log.finalize()
-            sys.exit()
-
-    # Calculate Boltzmann weights
-    energy = []
-    for k, json_file in enumerate(json_files):
-        json_data = read_json(json_file)
-        energy.append(json_data["total energy"] if calc_type.lower() == "xtb" else json_data["optimization"]["scf"]["scf energies"][-1])
-        
-        if calc_type.lower() == "nmr":
-            json_data["properties"]["NMR"]["NMR Chemical Shifts"] = get_chemical_shifts(json_data, nmr_atoms, nmr_slope, nmr_intercept)
-            if exp_data is not None:
-                exp_data = process_nmr_experim(exp_data, json_data, k)
-            with open(json_file, "w") as outfile:
-                json.dump(json_data, outfile)
-
-    boltz = get_boltz(energy)
-    avg_json_data = {}
-    denovo_json_data = {}
-    interpret_json_data = {}
-
-    # Get weighted atomic properties
-    #From NMR
-    for i, prop in enumerate(atom_props):
-        prop_list = [read_json(json_file)[prop] for json_file in json_files]
-        avg_prop = average_properties(boltz, prop_list, smarts_targets)
-        
-        if calc_type.lower() == "nmr":
-            dictavgprop = {key: avg_prop[j] for j, key in enumerate(json_data["properties"]["NMR"][prop].keys())}
-            avg_json_data[prop] = dictavgprop
-            if exp_data is not None:
-                df = pd.DataFrame(dictavgprop.items(), columns=["atom_idx", "boltz_avg"])
-                df["atom_idx"] = df["atom_idx"].astype(int) + 1
-                exp_data = exp_data.merge(df, on=["atom_idx"])
-                exp_data["error_boltz"] = abs(exp_data["experimental_ppm"] - exp_data["boltz_avg"])
-                qdescp_nmr = nmr_experim.replace(".csv", "_predicted.csv")
-                exp_data.round(2).to_csv(qdescp_nmr, index=False)
-                self.args.log.write(f"o  The {os.path.basename(qdescp_nmr)} file containing Boltzmann weighted NMR shifts was successfully created in {self.args.initial_dir}")
-        else:
-            update_avg_json_data(json_data, avg_json_data, prop, avg_prop, smarts_targets)
-
-    # Get weighted molecular properties from XTB
-    if calc_type.lower() == "xtb":
-        for prop in mol_props:
-            prop_list = [read_json(json_file)[prop] for json_file in json_files]
-            avg_prop = average_properties(boltz, prop_list, smarts_targets, is_atom_prop=False)
-            avg_json_data[prop] = avg_prop
-
-        # Get denovo atomic properties
-    for i, prop in enumerate(denovo_atoms):
-        prop_list = [read_json(json_file)[prop] for json_file in json_files]
-        avg_prop = average_properties(boltz, prop_list, smarts_targets)
-        update_avg_json_data(json_data, denovo_json_data, prop, avg_prop, smarts_targets)
-
-        # Get denovo molecular properties
-    for prop in denovo_mols:
-        prop_list = [read_json(json_file)[prop] for json_file in json_files]
-        avg_prop = average_properties(boltz, prop_list, smarts_targets, is_atom_prop=False)
-        denovo_json_data[prop] = avg_prop
-
-        # Get interpret atomic properties
-    for i, prop in enumerate(interpret_atoms):
-        prop_list = [read_json(json_file)[prop] for json_file in json_files]
-        avg_prop = average_properties(boltz, prop_list, smarts_targets)
-        update_avg_json_data(json_data, interpret_json_data, prop, avg_prop, smarts_targets)
-
-        # Get interpret molecular properties
-    for prop in interpret_mols:
-        prop_list = [read_json(json_file)[prop] for json_file in json_files]
-        avg_prop = average_properties(boltz, prop_list, smarts_targets, is_atom_prop=False)
-        interpret_json_data[prop] = avg_prop
-
-    # Calculate RDKit descriptors if molecule is provided
-    if mol is not None:
-        # Calculate all RDKit properties for avg_json_data
-        avg_json_data,_,_ = get_rdkit_properties(avg_json_data, mol)
-        
-        # Calculate selected RDKit properties for denovo_json_data
-        _,denovo_rdkit_json_data,_ = get_rdkit_properties({}, mol)
-        
-        # Merge selected RDKit properties with denovo_json_data
-        denovo_json_data.update(denovo_rdkit_json_data)
-
-        # Calculate selected RDKit properties for interpret_json_data
-        _,_,interpret_rdkit_json_data = get_rdkit_properties({}, mol)
-        
-        # Merge selected RDKit properties with interpret_json_data
-        interpret_json_data.update(interpret_rdkit_json_data)
-    
-    convert_ndarrays(avg_json_data)
-    convert_ndarrays(denovo_json_data)
-    convert_ndarrays(interpret_json_data)
-
-    # Save the averaged properties to a file
-    final_boltz_file = os.path.join(boltz_dir, f"{name}_full_boltz.json")
-    with open(final_boltz_file, "w") as outfile:
-        json.dump(avg_json_data, outfile)
-    
-    # Save the denovo properties to a second file
-    final_denovo_file = os.path.join(boltz_dir, f"{name}_denovo_boltz.json")
-    with open(final_denovo_file, "w") as outfile:
-        json.dump(denovo_json_data, outfile)
-
-    # Save the interpret properties to a second file
-    final_interpret_file = os.path.join(boltz_dir, f"{name}_interpret_boltz.json")
-    with open(final_interpret_file, "w") as outfile:
-        json.dump(interpret_json_data, outfile)
-
-
-
-
 def average_prop_atom(weights, prop):
     """
     Returns the atomic properties averaged using the Boltzmann average.
@@ -385,6 +294,23 @@ def average_prop_atom(weights, prop):
     else:
         boltz_res = sum(boltz_avg)
     
+    return boltz_res
+
+def average_prop_atom_nmr(weights, prop):
+    """
+    Returns Boltzmann averaged atomic properties
+    """
+
+    boltz_avg = []
+    for i, p in enumerate(prop):
+        if p == 'NaN':
+            boltz_avg = 'NaN'
+            break
+        boltz_avg.append([number * weights[i] for number in p])
+    if boltz_avg == 'NaN':
+        boltz_res = 'NaN'
+    else:
+        boltz_res = np.sum(boltz_avg, 0)
     return boltz_res
 
 
@@ -1078,23 +1004,18 @@ def get_descriptors(level):
     descriptors = {
         'denovo': {
             'mol': ["HOMO-LUMO gap", "HOMO", "LUMO", "IP", "EA", "Dipole module", "Total charge", "Global SASA"],
-            'atoms': ["cm5 charges", "Electrophil.", "Nucleophil.", "Radical attack", 
-                      "SASA", "Buried volume", "Cone angle"]
+            'atoms': ["cm5 charges", "Electrophil.", "Nucleophil.", "Radical attack", "SASA", "Buried volume", "Cone angle"]
         },
         'interpret': {
-            'mol': ["Fermi-level", "Total polarizability alpha", "Total FOD", "Electrophil. idx", 
-                    "Hardness", "Softness", "Electronegativity", "Nucleophilicity idx", "Second IP", "Second EA",
-                    "Disp. Area", "Disp. Vol."],
-            'atoms': ["s proportion", "p proportion", "d proportion", "Coord. numbers", "Polarizability alpha", 
-                      "FOD", "FOD s proportion", "FOD p proportion", "FOD d proportion", 
-                      "Solid angle", "Pyramidaliz. P", "Pyramidaliz. Vol", 
-                      "Dispersion"]
+            'mol': ["Fermi-level", "Total polarizability alpha", "Total FOD", "Electrophil. idx", "Hardness", "Softness", "Electronegativity",
+                    "Nucleophilicity idx", "Second IP", "Second EA", "Disp. Area", "Disp. Vol."],
+            'atoms': ["s proportion", "p proportion", "d proportion", "Coord. numbers",
+                      "Polarizability alpha", "FOD", "FOD s proportion", "FOD p proportion", "FOD d proportion",
+                      "Solid angle", "Pyramidaliz. P", "Pyramidaliz. Vol", "Dispersion"]
         },
         'full': {
-            'mol': ["Total energy", "HOMO-LUMO gap", "Dipole module", "Total charge", "HOMO", "LUMO", "Fermi-level", 
-                    "Total disp. C6", "Total disp. C8", "Total polarizability alpha", "Total FOD", 
-                    "Chem. potential", "Electrodon. power idx", "Electroaccep. power idx", 
-                    "Electrofugality", "Nucleofugality", "Intrinsic React. idx", "Net Electrophilicity", 
+            'mol': ["Total energy", "Total disp. C6", "Total disp. C8", "Chem. potential", "Electrodon. power idx",
+                    "Electroaccep. power idx", "Electrofugality", "Nucleofugality", "Intrinsic React. idx", "Net Electrophilicity", 
                     "Hyperhardness", "Hypersoftness", "Electrophilic descrip.", "cub. electrophilicity idx"],
             'atoms': ["fukui+", "fukui-", "fukui0", "dual descrip.", "softness+", "softness-", "softness0", 
                       "Rel. nucleophilicity", "Rel. electrophilicity", "GC Dual Descrip.", "Mult. descrip.", 

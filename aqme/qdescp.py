@@ -112,7 +112,8 @@ from aqme.qdescp_utils import (
     calculate_global_CDFT_descriptors_part2,
     calculate_global_morfeus_descriptors,
     calculate_local_morfeus_descriptors,
-    get_descriptors
+    get_descriptors,
+    get_boltz_props_nmr
 )
 
 from aqme.csearch.crest import xyzall_2_xyz
@@ -149,6 +150,7 @@ class qdescp:
         _ = check_files(self,'qdescp')
 
         self.args.log.write(f"\nStarting QDESCP-{self.args.program} with {len(self.args.files)} job(s)\n")
+
 
         # Obtaing SMARTS patterns from the input files automatically if no patterns are provided
         smarts_targets = self.args.qdescp_atoms.copy()
@@ -253,11 +255,11 @@ class qdescp:
             denovo_mols = denovo_descriptors['mol']
             denovo_atoms = denovo_descriptors['atoms']
 
-            interpret_mols = interpret_descriptors['mol']
-            interpret_atoms = interpret_descriptors['atoms']
+            interpret_mols = denovo_mols + interpret_descriptors['mol']
+            interpret_atoms = denovo_atoms + interpret_descriptors['atoms']
 
-            mol_props = full_descriptors['mol'] + interpret_mols
-            atom_props = full_descriptors['atoms'] + interpret_atoms
+            mol_props = interpret_mols + full_descriptors['mol'] 
+            atom_props = interpret_atoms + full_descriptors['atoms']
 
             update_atom_props, update_denovo_atom_props, update_interpret_atom_props = self.gather_files_and_run(destination, atom_props, update_atom_props, smarts_targets, denovo_atoms, update_denovo_atom_props, interpret_atoms, update_interpret_atom_props)
             
@@ -268,21 +270,6 @@ class qdescp:
             denovo_atoms = update_denovo_atom_props
         if len(update_interpret_atom_props) > 0:
             interpret_atoms = update_interpret_atom_props
-
-        # Function to create CSV files and Boltzmann averaged properties.
-        qdescp_csv, qdescp_denovo_csv, qdescp_interpret_csv = self.create_csv_files(destination, mol_props, atom_props, smarts_targets, denovo_mols, denovo_atoms, interpret_mols, interpret_atoms)
-
-        #AQME-ROBERT workflow: Combines the descriptor data from qdescp CSVs with the input CSV and saves the result.
-        self.combine_and_save_csvs(qdescp_csv, qdescp_denovo_csv, qdescp_interpret_csv)
-
-        elapsed_time = round(time.time() - start_time_overall, 2)
-        self.args.log.write(f"\nTime QDESCP: {elapsed_time} seconds\n")
-        self.args.log.finalize()
-
-    def create_csv_files(self, destination, mol_props, atom_props, smarts_targets, denovo_mols, denovo_atoms, interpret_mols, interpret_atoms):
-        """
-        Function to create CSV files and Boltzmann averaged properties.
-        """
 
         qdescp_csv = "QDESCP_full_boltz_descriptors.csv"
         qdescp_denovo_csv = "QDESCP_denovo_boltz_descriptors.csv"
@@ -313,19 +300,25 @@ class qdescp:
                 _ = self.write_csv_boltz_data(destination, qdescp_interpret_csv, json_type="interpret")  # CSV interpret
 
             elif self.args.program.lower() == "nmr":
-                mol_props = None
+                print(f"Program detected: {self.args.program.lower()}")
                 atom_props = ["NMR Chemical Shifts"]
+                
                 if os.path.basename(Path(self.args.files[0])).split('.')[1].lower() not in ["json"]:
                     self.args.log.write(f"\nx  The format used ({os.path.basename(Path(self.args.files[0])).split('.')[1]}) is not compatible with QDESCP with NMR! Formats accepted: json")
                     self.args.log.finalize()
                     sys.exit()
 
                 name = os.path.basename(Path(self.args.files[0])).split("_conf")[0]
+                
                 json_files = glob.glob(str(os.path.dirname(os.path.abspath(self.args.files[0]))) + "/" + name + "_conf_*.json")
-                get_boltz_props(json_files, name, boltz_dir, "nmr", self, mol_props, atom_props, smarts_targets, 
-                                self.args.nmr_atoms, self.args.nmr_slope, self.args.nmr_intercept, self.args.nmr_experim)
+                get_boltz_props_nmr(json_files, name, boltz_dir, self, atom_props, smarts_targets, self.args.nmr_atoms, self.args.nmr_slope, self.args.nmr_intercept, self.args.nmr_experim)
 
-        return qdescp_csv, qdescp_denovo_csv, qdescp_interpret_csv
+        #AQME-ROBERT workflow: Combines the descriptor data from qdescp CSVs with the input CSV and saves the result.
+        self.combine_and_save_csvs(qdescp_csv, qdescp_denovo_csv, qdescp_interpret_csv)
+
+        elapsed_time = round(time.time() - start_time_overall, 2)
+        self.args.log.write(f"\nTime QDESCP: {elapsed_time} seconds\n")
+        self.args.log.finalize()
     
     def combine_and_save_csvs(self, qdescp_csv, qdescp_denovo_csv, qdescp_interpret_csv):
         """
@@ -355,31 +348,31 @@ class qdescp:
                 for i, input_name in enumerate(input_df['code_name']):
                     # concatenate with qdescp_df
                     qdescp_col = input_df.loc[i].to_frame().T.reset_index(drop=True)
-                    input_col = qdescp_df.loc[(qdescp_df['Name'] == f'{path_json}/{input_name}_rdkit_boltz') | 
-                                            (qdescp_df['Name'] == f'{path_json}/{input_name}_boltz') | 
-                                            (qdescp_df['Name'] == f'{path_json}/{input_name}_0_rdkit_boltz') | 
-                                            (qdescp_df['Name'] == f'{path_json}/{input_name}_1_rdkit_boltz') | 
-                                            (qdescp_df['Name'] == f'{path_json}/{input_name}_2_rdkit_boltz')]
+                    input_col = qdescp_df.loc[(qdescp_df['Name'] == f'{path_json}/{input_name}_rdkit_full_boltz') | 
+                                            (qdescp_df['Name'] == f'{path_json}/{input_name}_full_boltz') | 
+                                            (qdescp_df['Name'] == f'{path_json}/{input_name}_0_rdkit_full_boltz') | 
+                                            (qdescp_df['Name'] == f'{path_json}/{input_name}_1_rdkit_full_boltz') | 
+                                            (qdescp_df['Name'] == f'{path_json}/{input_name}_2_rdkit_full_boltz')]
                     input_col = input_col.drop(['Name'], axis=1).reset_index(drop=True)
                     combined_row = pd.concat([qdescp_col, input_col], axis=1)
                     combined_df = pd.concat([combined_df, combined_row], ignore_index=True)
 
                     # concatenate with  qdescp_denovo_df
-                    input_col_denovo = qdescp_denovo_df.loc[(qdescp_denovo_df['Name'] == f'{path_json}/{input_name}_rdkit_boltz') | 
-                                                            (qdescp_denovo_df['Name'] == f'{path_json}/{input_name}_boltz') | 
-                                                            (qdescp_denovo_df['Name'] == f'{path_json}/{input_name}_0_rdkit_boltz') | 
-                                                            (qdescp_denovo_df['Name'] == f'{path_json}/{input_name}_1_rdkit_boltz') | 
-                                                            (qdescp_denovo_df['Name'] == f'{path_json}/{input_name}_2_rdkit_boltz')]
+                    input_col_denovo = qdescp_denovo_df.loc[(qdescp_denovo_df['Name'] == f'{path_json}/{input_name}_rdkit_denovo_boltz') | 
+                                                            (qdescp_denovo_df['Name'] == f'{path_json}/{input_name}_denovo_boltz') | 
+                                                            (qdescp_denovo_df['Name'] == f'{path_json}/{input_name}_0_rdkit_denovo_boltz') | 
+                                                            (qdescp_denovo_df['Name'] == f'{path_json}/{input_name}_1_rdkit_denovo_boltz') | 
+                                                            (qdescp_denovo_df['Name'] == f'{path_json}/{input_name}_2_rdkit_denovo_boltz')]
                     input_col_denovo = input_col_denovo.drop(['Name'], axis=1).reset_index(drop=True)
                     combined_row_denovo = pd.concat([qdescp_col, input_col_denovo], axis=1)
                     combined_denovo_df = pd.concat([combined_denovo_df, combined_row_denovo], ignore_index=True)
 
                     # concatenate with  qdescp_interpret_df
-                    input_col_interpret = qdescp_interpret_df.loc[(qdescp_interpret_df['Name'] == f'{path_json}/{input_name}_rdkit_boltz') | 
-                                                                (qdescp_interpret_df['Name'] == f'{path_json}/{input_name}_boltz') | 
-                                                                (qdescp_interpret_df['Name'] == f'{path_json}/{input_name}_0_rdkit_boltz') | 
-                                                                (qdescp_interpret_df['Name'] == f'{path_json}/{input_name}_1_rdkit_boltz') | 
-                                                                (qdescp_interpret_df['Name'] == f'{path_json}/{input_name}_2_rdkit_boltz')]
+                    input_col_interpret = qdescp_interpret_df.loc[(qdescp_interpret_df['Name'] == f'{path_json}/{input_name}_rdkit_interpret_boltz') | 
+                                                                (qdescp_interpret_df['Name'] == f'{path_json}/{input_name}_interpret_boltz') | 
+                                                                (qdescp_interpret_df['Name'] == f'{path_json}/{input_name}_0_rdkit_interpret_boltz') | 
+                                                                (qdescp_interpret_df['Name'] == f'{path_json}/{input_name}_1_rdkit_interpret_boltz') | 
+                                                                (qdescp_interpret_df['Name'] == f'{path_json}/{input_name}_2_rdkit_interpret_boltz')]
                     input_col_interpret = input_col_interpret.drop(['Name'], axis=1).reset_index(drop=True)
                     combined_row_interpret = pd.concat([qdescp_col, input_col_interpret], axis=1)
                     combined_interpret_df = pd.concat([combined_interpret_df, combined_row_interpret], ignore_index=True)
@@ -431,7 +424,7 @@ class qdescp:
         if len(dfs) > 0:
             temp = pd.concat(dfs, ignore_index=True) 
             temp.to_csv(qdescp_csv, index=False)
-            self.args.log.write(f"o  The {qdescp_csv} file containing Boltzmann weighted xTB and RDKit descriptors was successfully created in {self.args.initial_dir}") #ponerle que tiene morfeus
+            self.args.log.write(f"o  The {qdescp_csv} file containing Boltzmann weighted xTB, Morfeus and RDKit descriptors was successfully created in {self.args.initial_dir}")
         else:
             self.args.log.write(f"x  No CSV file containing Boltzmann weighted descriptors was created. This might happen when using the qdescp_atoms option with an atom/group that is not found in any of the calculations")
     
@@ -884,8 +877,10 @@ class qdescp:
                     smi = lines[i + 1].split()[0]
                     mol = Chem.AddHs(Chem.MolFromSmiles(smi))
                     smi_exist = True
+                    #print(f"SMILES found: {smi}")
             if not smi_exist:
                 mol = Chem.SDMolSupplier(sdf_file, removeHs=False)
+                #print(f"No SMILES found in the SDF file. Loading molecule directly from {sdf_file}")
 
             # find the target atoms or groups
             for pattern in smarts_targets:
@@ -907,7 +902,10 @@ class qdescp:
                             matches = mol.GetSubstructMatches(Chem.MolFromSmarts(f'[{pattern}]'))
                         except:
                             self.args.log.write(f"x  WARNING! SMARTS pattern was not specified correctly! Make sure the qdescp_atoms option uses this format: \"[C]\" for atoms, \"[C=N]\" for bonds, and so on.")
-                
+
+                # Show found matches
+                #print(f"Matches found for {pattern}: {matches}")
+
                 if len(matches) == 0:
                     self.args.log.write(f"x  WARNING! SMARTS pattern {pattern} not found in the system, this molecule will not be used.")
                 
@@ -956,6 +954,122 @@ class qdescp:
                                 json_data[f'{match_name}_{prop}'] = json_data[prop][idx_xtb]
                                 if f'{match_name}_{prop}' not in update_atom_props:
                                     update_atom_props.append(f'{match_name}_{prop}')
+
+        # with open(xtb_files_props['xtb_xyz_path'], "r") as f:
+        #     print(f"Abriendo archivo: {xtb_files_props['xtb_xyz_path']}")
+        #     inputs = f.readlines()
+
+        # coordinates = [inputs[i].strip().split()[1:] for i in range(2, int(inputs[0].strip()) + 2)]
+        # #print(f"Coordenadas extraídas: {coordinates}")
+        # json_data["coordinates"] = coordinates
+
+        # if len(smarts_targets) > 0:
+        #     # detect SMILES from SDF files generated by CSEARCH or create mol objects from regular SDF files
+        #     sdf_file = f'{name_initial}.sdf'
+        #     print(f"Buscando archivo SDF: {sdf_file}")
+            
+        #     with open(sdf_file, "r") as F:
+        #         print(f"Abriendo archivo SDF: {sdf_file}")
+        #         lines = F.readlines()
+
+        #     smi_exist = False
+        #     for i, line in enumerate(lines):
+        #         if ">  <SMILES>" in line:
+        #             smi = lines[i + 1].split()[0]
+        #             print(f"SMILES encontrado: {smi}")
+        #             mol = Chem.AddHs(Chem.MolFromSmiles(smi))
+        #             smi_exist = True
+
+        #     if not smi_exist:
+        #         print(f"No se encontró SMILES en el archivo SDF. Cargando molécula directamente desde {sdf_file}")
+        #         mol = Chem.SDMolSupplier(sdf_file, removeHs=False)
+
+        #     # Buscar los átomos o grupos objetivo
+        #     for pattern in smarts_targets:
+        #         matches = []
+        #         idx_set = None
+        #         print(f"Buscando coincidencias para el patrón SMARTS: {pattern}")
+
+        #         # Se diferencian si es un número para un átomo mapeado o si se busca un patrón SMARTS en la molécula
+        #         if not str(pattern).isalpha() and str(pattern).isdigit():
+        #             for atom in mol.GetAtoms():
+        #                 if atom.GetAtomMapNum() == int(pattern):
+        #                     idx_set = pattern
+        #                     pattern_idx = int(atom.GetIdx())
+        #                     matches = ((int(pattern_idx),),)
+        #             print(f"Coincidencias encontradas para átomo mapeado: {matches}")
+        #         else:
+        #             try:
+        #                 matches = mol.GetSubstructMatches(Chem.MolFromSmarts(pattern))
+        #                 print(f"Coincidencias encontradas para patrón SMARTS {pattern}: {matches}")
+        #             except Exception as e:
+        #                 print(f"Error al buscar coincidencias para el patrón SMARTS {pattern}: {e}")
+        #                 try:
+        #                     matches = mol.GetSubstructMatches(Chem.MolFromSmarts(f'[{pattern}]'))
+        #                     print(f"Coincidencias encontradas para patrón modificado [{pattern}]: {matches}")
+        #                 except Exception as e2:
+        #                     print(f"Error al buscar coincidencias para patrón modificado [{pattern}]: {e2}")
+        #                     self.args.log.write(f"x  WARNING! El patrón SMARTS no fue especificado correctamente. Asegúrese de usar este formato: \"[C]\" para átomos, \"[C=N]\" para enlaces, etc.")
+
+        #         # Mostrar coincidencias encontradas
+        #         #print(f"Coincidencias encontradas para el patrón {pattern}: {matches}")
+
+        #         if len(matches) == 0:
+        #             print(f"Patrón SMARTS {pattern} no encontrado en el sistema.")
+        #             self.args.log.write(f"x  WARNING! Patrón SMARTS {pattern} no encontrado en el sistema, esta molécula no será utilizada.")
+                
+        #         elif matches[0] == -1:
+        #             print(f"Átomo mapeado {pattern} no encontrado en el sistema.")
+        #             self.args.log.write(f"x  WARNING! Átomo mapeado {pattern} no encontrado en el sistema, esta molécula no será utilizada.")
+                
+        #         elif len(matches) > 1:
+        #             print(f"Más de un átomo {pattern} fue encontrado en el sistema.")
+        #             self.args.log.write(f"x  WARNING! Más de un átomo {pattern} fue encontrado en el sistema, esta molécula no será utilizada.")
+                
+        #         elif len(matches) == 1:
+        #             print(f"Coincidencia única encontrada para el patrón SMARTS {pattern}.")
+        #             # Obtener tipos de átomos y ordenarlos para mantener el mismo orden de átomos entre diferentes moléculas
+        #             atom_indices = list(matches[0])
+        #             atom_types = []
+        #             for atom_idx in atom_indices:
+        #                 atom_types.append(mol.GetAtoms()[atom_idx].GetSymbol())
+        #             print(f"Tipos de átomos encontrados: {atom_types}")
+
+        #             n_types = len(set(atom_types))
+        #             if n_types == 1:
+        #                 sorted_indices = sorted(atom_indices, key=lambda idx: len(mol.GetAtoms()[idx].GetNeighbors()))
+        #             elif n_types > 1:
+        #                 sorted_indices = sorted(atom_indices, key=lambda idx: mol.GetAtoms()[idx].GetAtomicNum())
+
+        #             match_idx = 1
+        #             match_names = []
+        #             # Separa átomos cuando se usan grupos funcionales
+        #             for atom_idx in sorted_indices:
+        #                 atom_type = mol.GetAtoms()[atom_idx].GetSymbol()
+        #                 if len(matches[0]) == 1:
+        #                     if idx_set is None:
+        #                         match_name = f'{atom_type}'
+        #                     else:
+        #                         match_name = f'{atom_type}{idx_set}'
+        #                 else:
+        #                     if n_types == 1:
+        #                         match_name = f'{pattern}_{atom_type}{match_idx}'
+        #                         match_idx += 1
+        #                     elif n_types > 1:
+        #                         match_name = f'{pattern}_{atom_type}'
+        #                 match_names.append(match_name)
+        #             print(f"Nombres de las coincidencias: {match_names}")
+
+        #             # Asignar descriptores atómicos a cada átomo identificado
+        #             for atom_idx, match_name in zip(sorted_indices, match_names):
+        #                 idx_xtb = atom_idx
+        #                 print(f"Asignando descriptores para {match_name} en el índice {idx_xtb}")
+        #                 for prop in atom_props:
+        #                     json_data[f'{match_name}_{prop}'] = json_data[prop][idx_xtb]
+        #                     if f'{match_name}_{prop}' not in update_atom_props:
+        #                         update_atom_props.append(f'{match_name}_{prop}')
+        #                         print(f"Propiedad actualizada: {match_name}_{prop}")
+
 
                     # adding max and min values for functional groups with the same two atoms
                     if len(match_names) > 1 and n_types == 1:
@@ -1018,21 +1132,32 @@ class qdescp:
             unique_files = self.args.files
         return unique_files
     
-    def process_aqme_csv(self,name_db):
-        csv_temp = pd.read_csv(f'{self.args.csv_name}')
-        df_temp = pd.read_csv(f'AQME-{name_db}_{self.args.csv_name}')
+    def process_aqme_csv(self, name_db): 
+    # Process each of the three generated CSVs.
+        for suffix in ['full', 'denovo', 'interpret']:
+            # Try to read the file with the corresponding suffix.
+            csv_file = f'AQME-{name_db}_{suffix}_{self.args.csv_name}'
+            
+            try:
+                # Read the original CSV and the one generated by qdescp.
+                csv_temp = pd.read_csv(f'{self.args.csv_name}')
+                df_temp = pd.read_csv(csv_file)
 
-        if len(df_temp) < len(csv_temp):
-            missing_rows = csv_temp.loc[~csv_temp['code_name'].isin(df_temp['code_name'])]
-            missing_rows[['code_name', 'SMILES']].to_csv(f'AQME-{name_db}_{self.args.csv_name}', mode='a', header=False, index=False)
+                # Compare and add missing rows.
+                if len(df_temp) < len(csv_temp):
+                    missing_rows = csv_temp.loc[~csv_temp['code_name'].isin(df_temp['code_name'])]
+                    missing_rows[['code_name', 'SMILES']].to_csv(csv_file, mode='a', header=False, index=False)
 
-            order = csv_temp['code_name'].tolist()
+                    # Sort the data according to the order of 'code_name'
+                    order = csv_temp['code_name'].tolist()
+                    df_temp = df_temp.sort_values(by='code_name', key=lambda x: x.map({v: i for i, v in enumerate(order)}))
+                    df_temp = df_temp.fillna(df_temp.groupby('SMILES').transform('first'))
 
-            df_temp = df_temp.sort_values(by='code_name', key=lambda x: x.map({v: i for i, v in enumerate(order)}))
-            df_temp = df_temp.fillna(df_temp.groupby('SMILES').transform('first'))
+                    # Overwrite the CSV file with the processed data
+                    df_temp.to_csv(csv_file, index=False)
 
-            df_temp.to_csv(f'AQME-{name_db}_{self.args.csv_name}', index=False)
+            except FileNotFoundError:
+                print(f"Not found {csv_file}. Please check if the file was generated correctly..")
 
-        return df_temp
 
 

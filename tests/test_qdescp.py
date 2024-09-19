@@ -10,7 +10,7 @@ import pytest
 import pandas as pd
 import numpy as np
 import subprocess
-from aqme.qdescp_utils import read_json
+from aqme.qdescp_utils import read_json,get_descriptors
 import glob
 import math
 import shutil
@@ -22,6 +22,19 @@ qdescp_input_dir = w_dir_main + "/tests/qdescp_inputs"
 GAS_CONSTANT = 8.3144621  # J / K / mol
 J_TO_AU = 4.184 * 627.509541 * 1000.0  # UNIT CONVERSION
 T = 298.15
+
+# descriptors from the three levels
+descp_denovo = get_descriptors('denovo')
+descp_denovo_mol = descp_denovo['mol']
+descp_denovo_atoms = descp_denovo['atoms']
+
+descp_interpret = get_descriptors('interpret')
+descp_interpret_mol = descp_interpret['mol']
+descp_interpret_atoms = descp_interpret['atoms']
+
+descp_full = get_descriptors('full')
+descp_full_mol = descp_full['mol']
+descp_full_atoms = descp_full['atoms']
 
 # tests for QDESCP-xTB
 @pytest.mark.parametrize(
@@ -51,11 +64,15 @@ def test_qdescp_xtb(file):
     else:
         file_csearch = file
     if file == 'test_robert.csv':
-        file_descriptors = f'{w_dir_main}/AQME-ROBERT_{file_csearch}'
+        file_descriptors_interpret = f'{w_dir_main}/AQME-ROBERT_interpret_{file_csearch}'
+        file_descriptors_full = f'{w_dir_main}/AQME-ROBERT_full_{file_csearch}'
+        file_descriptors_denovo = f'{w_dir_main}/AQME-ROBERT_denovo_{file_csearch}'
     else:
-        file_descriptors = f'{w_dir_main}/QDESCP_boltz_descriptors.csv'
-    if os.path.exists(file_descriptors):
-        os.remove(file_descriptors)
+        file_descriptors_interpret = f'{w_dir_main}/QDESCP_interpret_boltz_descriptors.csv'
+        file_descriptors_full = f'{w_dir_main}/QDESCP_full_boltz_descriptors.csv'
+        file_descriptors_denovo = f'{w_dir_main}/QDESCP_denovo_boltz_descriptors.csv'
+    if os.path.exists(file_descriptors_interpret):
+        os.remove(file_descriptors_interpret)
 
     # CSEARCH conformer generation
     cmd_csearch = [
@@ -129,8 +146,8 @@ def test_qdescp_xtb(file):
                     break
             # get data from the generated json files
             json_data = read_json(f'{folder_qdescp}/{file}.json')
-            energies_json.append(json_data["total energy"])
-            Fermi_lvls_json.append(json_data["Fermi-level/eV"])
+            energies_json.append(json_data["Total FOD"])
+            Fermi_lvls_json.append(json_data["Fermi-level"])
         
         for i,_ in enumerate(energies_xtb):
             assert round(energies_xtb[i],4) == round(energies_json[i],4)
@@ -155,49 +172,113 @@ def test_qdescp_xtb(file):
             Fermi_lvl_boltz_calc += p * weights[i]
 
         # retrieve Boltzman avg values from json files
-        json_data = read_json(f'{folder_boltz}/mol_1_rdkit_boltz.json')
-        energy_boltz_file = json_data["total energy"]
-        Fermi_lvl_boltz_file = json_data["Fermi-level/eV"]
+        json_data = read_json(f'{folder_boltz}/mol_1_rdkit_interpret_boltz.json')
+        energy_boltz_file = json_data["Total FOD"]
+        Fermi_lvl_boltz_file = json_data["Fermi-level"]
 
         assert round(energy_boltz_calc,4) == round(energy_boltz_file,4)
         assert round(Fermi_lvl_boltz_calc,2) == round(Fermi_lvl_boltz_file,2)
 
         # retrieve Boltzman avg values and RDKit descriptors from the generated csv file
-        pd_boltz = pd.read_csv(file_descriptors)
-        energy_boltz_csv = pd_boltz["total energy"][0]
-        Fermi_lvl_boltz_csv = pd_boltz["Fermi-level/eV"][0]
+        pd_boltz_interpret = pd.read_csv(file_descriptors_interpret)
+        energy_boltz_csv = pd_boltz_interpret["Total FOD"][0]
+        Fermi_lvl_boltz_csv = pd_boltz_interpret["Fermi-level"][0]
 
         assert round(energy_boltz_calc,4) == round(energy_boltz_csv,4)
         assert round(Fermi_lvl_boltz_calc,2) == round(Fermi_lvl_boltz_csv,2)
-        assert pd_boltz["NumRotatableBonds"][0] == 3
-        assert pd_boltz["NumRotatableBonds"][1] == 4
+        assert pd_boltz_interpret["NumRotatableBonds"][0] == 3
+        assert pd_boltz_interpret["NumRotatableBonds"][1] == 4
+
+        # checking denovo molecular descriptors
+        pd_boltz_denovo = pd.read_csv(file_descriptors_denovo)
+        for descp in descp_denovo_mol:
+            assert descp in pd_boltz_denovo.columns
+        for descp in descp_full_mol:
+            if descp not in descp_denovo_mol:
+                assert descp not in pd_boltz_denovo.columns
+
+        # checking interpret molecular descriptors
+        pd_boltz_interpret = pd.read_csv(file_descriptors_interpret)
+        for descp in descp_interpret_mol:
+            assert descp in pd_boltz_interpret.columns
+        for descp in descp_full_mol:
+            if descp not in descp_interpret_mol:
+                assert descp not in pd_boltz_interpret.columns
+
+        # checking full molecular descriptors
+        pd_boltz_full = pd.read_csv(file_descriptors_full)
+        for descp in descp_full_mol:
+            assert descp in pd_boltz_full.columns
+
 
     elif file in ['test_atom.csv','test_group.csv','test_multigroup.csv','test_robert.csv']:
-        pd_boltz = pd.read_csv(file_descriptors)
+        pd_boltz_interpret = pd.read_csv(file_descriptors_interpret)
 
         # mol_1 is methane and it doesn't have any P/O atoms or CC/C=O groups so the boltz json file shouldn't appear
         assert os.path.exists(f'{folder_qdescp}/mol_1_rdkit_conf_1.json')
         assert not os.path.exists(f'{folder_boltz}/mol_1_rdkit_boltz.json')
-        assert len(pd_boltz["NumRotatableBonds"]) == 3
+        assert len(pd_boltz_interpret["NumRotatableBonds"]) == 3
 
         # check variables and X_ prefixes in variable names
         if file in ['test_atom.csv','test_multigroup.csv','test_robert.csv']:
-            assert 'P_FUKUI+' in pd_boltz
+            assert 'P_fukui+' in pd_boltz_interpret
             
             if file == 'test_atom.csv':
-                assert pd_boltz["NumRotatableBonds"][0] == 1
+                assert pd_boltz_interpret["NumRotatableBonds"][0] == 1
 
             if file == 'test_robert.csv':
-                assert 'Name' not in pd_boltz
+                assert 'Name' not in pd_boltz_interpret
 
         elif file == 'test_group.csv':
-            assert 'C=O_C_FUKUI+' in pd_boltz
-            assert 'C=O_O_FUKUI+' in pd_boltz
+            assert 'C=O_C_fukui+' in pd_boltz_interpret
+            assert 'C=O_O_fukui+' in pd_boltz_interpret
+
+        # checking denovo molecular descriptors
+        pd_boltz_denovo = pd.read_csv(file_descriptors_denovo)
+        for descp in descp_denovo_mol:
+            assert descp in pd_boltz_denovo.columns
+        for descp in descp_full_mol:
+            if descp not in descp_denovo_mol:
+                assert descp not in pd_boltz_denovo.columns
+
+        # checking interpret molecular descriptors
+        pd_boltz_interpret = pd.read_csv(file_descriptors_interpret)
+        for descp in descp_interpret_mol:
+            assert descp in pd_boltz_interpret.columns
+        for descp in descp_full_mol:
+            if descp not in descp_interpret_mol:
+                assert descp not in pd_boltz_interpret.columns
+
+        # checking full molecular descriptors
+        pd_boltz_full = pd.read_csv(file_descriptors_full)
+        for descp in descp_full_mol:
+            assert descp in pd_boltz_full.columns
+
+        # checking denovo atomic descriptors
+        pd_boltz_denovo = pd.read_csv(file_descriptors_denovo)
+        for descp in descp_denovo_atoms:
+            assert descp in pd_boltz_denovo.columns
+        for descp in descp_full_atoms:
+            if descp not in descp_denovo_atoms:
+                assert descp not in pd_boltz_denovo.columns
+
+        # checking interpret atomic descriptors
+        pd_boltz_interpret = pd.read_csv(file_descriptors_interpret)
+        for descp in descp_interpret_atoms:
+            assert descp in pd_boltz_interpret.columns
+        for descp in descp_full_atoms:
+            if descp not in descp_interpret_atoms:
+                assert descp not in pd_boltz_interpret.columns
+
+        # checking full atomic descriptors
+        pd_boltz_full = pd.read_csv(file_descriptors_full)
+        for descp in descp_full_atoms:
+            assert descp in pd_boltz_full.columns
 
     elif file == 'test_idx.csv':
-        pd_boltz = pd.read_csv(file_descriptors)
-        assert 'C1_FUKUI+' in pd_boltz
-        assert round(pd_boltz['C1_partial charges'][1],1) == -0.1
+        pd_boltz_interpret = pd.read_csv(file_descriptors_interpret)
+        assert 'C1_fukui+' in pd_boltz_interpret
+        assert round(pd_boltz_interpret['C1_partial charges'][1],1) == -0.1
 
 
 # tests for QDESCP-NMR
@@ -291,16 +372,16 @@ def test_qdescp_nmr(json_files):
         assert round(nmr_json_calc[i],2) == round(nmr_json_file[i],2)
 
     # check that the averaged NMR shifts are the same as the values included in the csv file
-    pd_boltz = pd.read_csv(f'{qdescp_input_dir}/Experimental_NMR_shifts_predicted.csv')
-    nmr_boltz_csv = pd_boltz["boltz_avg"]
+    pd_boltz_interpret = pd.read_csv(f'{qdescp_input_dir}/Experimental_NMR_shifts_predicted.csv')
+    nmr_boltz_csv = pd_boltz_interpret["boltz_avg"]
     nmr_json_calc_1H = nmr_json_calc[21:]
     for i,_ in enumerate(nmr_json_calc_1H):
         assert round(nmr_json_calc_1H[i],2) == round(nmr_boltz_csv[i],2)
 
     # check that the shift errors in the csv file are correct
-    nmr_experim_csv = pd_boltz["experimental_ppm"]
+    nmr_experim_csv = pd_boltz_interpret["experimental_ppm"]
     error_calc = abs(nmr_boltz_csv - nmr_experim_csv)
-    error_csv = pd_boltz["error_boltz"]
+    error_csv = pd_boltz_interpret["error_boltz"]
     for i,_ in enumerate(error_calc):
         if str(error_calc[i]) not in ['nan']:
             assert round(error_calc[i],2) == round(error_csv[i],2)
