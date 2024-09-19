@@ -56,13 +56,6 @@ def get_boltz_props(json_files, name, boltz_dir, calc_type, self, mol_props, ato
     if smarts_targets is None:
         smarts_targets = []
     
-    # def process_nmr_experim(exp_data, json_data, k):
-    #     """Process NMR experimental data."""
-    #     list_shift = json_data["properties"]["NMR"]["NMR Chemical Shifts"]
-    #     df = pd.DataFrame(list_shift.items(), columns=["atom_idx", f"conf_{k + 1}"])
-    #     df["atom_idx"] += 1
-    #     return exp_data.merge(df, on=["atom_idx"])
-    
     def average_properties(boltz, prop_list, smarts_targets, is_atom_prop=True):
         """Calculate average properties based on Boltzmann weights."""
         return average_prop_atom(boltz, prop_list) if is_atom_prop else average_prop_mol(boltz, prop_list)
@@ -74,28 +67,11 @@ def get_boltz_props(json_files, name, boltz_dir, calc_type, self, mol_props, ato
         else:
             avg_json_data[prop] = avg_prop.tolist()
 
-    # # Handle NMR experimental data
-    # exp_data = None
-    # if calc_type.lower() == "nmr" and nmr_experim:
-    #     try:
-    #         exp_data = pd.read_csv(nmr_experim)
-    #     except FileNotFoundError:
-    #         self.args.log.write(f'\nx  The CSV file with experimental NMR shifts specified ({nmr_experim}) was not found!')
-    #         self.args.log.finalize()
-    #         sys.exit()
-
     # Calculate Boltzmann weights
     energy = []
     for k, json_file in enumerate(json_files):
         json_data = read_json(json_file)
         energy.append(json_data["total energy"] if calc_type.lower() == "xtb" else json_data["optimization"]["scf"]["scf energies"][-1])
-        
-        # if calc_type.lower() == "nmr":
-        #     json_data["properties"]["NMR"]["NMR Chemical Shifts"] = get_chemical_shifts(json_data, nmr_atoms, nmr_slope, nmr_intercept)
-        #     if exp_data is not None:
-        #         exp_data = process_nmr_experim(exp_data, json_data, k)
-        #     with open(json_file, "w") as outfile:
-        #         json.dump(json_data, outfile)
 
     boltz = get_boltz(energy)
     avg_json_data = {}
@@ -103,7 +79,6 @@ def get_boltz_props(json_files, name, boltz_dir, calc_type, self, mol_props, ato
     interpret_json_data = {}
 
     # Get weighted atomic properties
-    #From NMR
     for i, prop in enumerate(atom_props):
         if i == 0:  # Filter to ensure all molecules have atomic properties for qdescp_atoms option
             for json_file in json_files:
@@ -114,20 +89,6 @@ def get_boltz_props(json_files, name, boltz_dir, calc_type, self, mol_props, ato
         
         prop_list = [read_json(json_file)[prop] for json_file in json_files]
         avg_prop = average_properties(boltz, prop_list, smarts_targets)
-        
-        # if calc_type.lower() == "nmr":
-        #     dictavgprop = {key: avg_prop[j] for j, key in enumerate(json_data["properties"]["NMR"][prop].keys())}
-        #     avg_json_data[prop] = dictavgprop
-        #     if exp_data is not None:
-        #         df = pd.DataFrame(dictavgprop.items(), columns=["atom_idx", "boltz_avg"])
-        #         df["atom_idx"] = df["atom_idx"].astype(int) + 1
-        #         exp_data = exp_data.merge(df, on=["atom_idx"])
-        #         exp_data["error_boltz"] = abs(exp_data["experimental_ppm"] - exp_data["boltz_avg"])
-        #         qdescp_nmr = nmr_experim.replace(".csv", "_predicted.csv")
-        #         exp_data.round(2).to_csv(qdescp_nmr, index=False)
-        #         self.args.log.write(f"o  The {os.path.basename(qdescp_nmr)} file containing Boltzmann weighted NMR shifts was successfully created in {self.args.initial_dir}")
-        # else:
-        #     update_avg_json_data(json_data, avg_json_data, prop, avg_prop, smarts_targets)
         update_avg_json_data(json_data, avg_json_data, prop, avg_prop, smarts_targets)
 
     # Get weighted molecular properties from XTB
