@@ -259,7 +259,7 @@ class qdescp:
             interpret_atoms = denovo_atoms + interpret_descriptors['atoms']
 
             mol_props = interpret_mols + full_descriptors['mol'] 
-            atom_props = interpret_atoms + full_descriptors['atoms']
+            atom_props =  interpret_atoms + full_descriptors['atoms']
 
             update_atom_props, update_denovo_atom_props, update_interpret_atom_props = self.gather_files_and_run(destination, atom_props, update_atom_props, smarts_targets, denovo_atoms, update_denovo_atom_props, interpret_atoms, update_interpret_atom_props)
             
@@ -293,6 +293,7 @@ class qdescp:
                     _ = get_boltz_props(json_files, name, boltz_dir, "xtb", self, mol_props, atom_props, smarts_targets,
                                         mol=mol, denovo_mols=denovo_mols, denovo_atoms=denovo_atoms, 
                                         interpret_mols=interpret_mols, interpret_atoms=interpret_atoms)
+                    
 
                 # Create the CSV from the JSON files
                 _ = self.write_csv_boltz_data(destination, qdescp_csv, json_type="standard")  # CSV full
