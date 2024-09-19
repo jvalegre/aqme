@@ -28,6 +28,8 @@ def convert_ndarrays(data):
         elif isinstance(value, dict):
             convert_ndarrays(value)
 
+
+
 def get_boltz(energy):
     """
     Calculates the Boltzmann weights for a list of energies
@@ -46,7 +48,8 @@ def get_boltz(energy):
     return weights
 
 def get_boltz_props(json_files, name, boltz_dir, calc_type, self, mol_props, atom_props, smarts_targets, 
-                    denovo_mols, denovo_atoms,interpret_mols, interpret_atoms, mol=None, xyz_file=None):
+                    denovo_mols, denovo_atoms,interpret_mols, interpret_atoms, nmr_atoms=None, nmr_slope=None, nmr_intercept=None, 
+                    nmr_experim=None, mol=None, xyz_file=None):
     """
     Retrieves the properties from json files and gives Boltzmann averaged properties for rdkit, NMR and morfues descriptors.
     """
@@ -54,12 +57,12 @@ def get_boltz_props(json_files, name, boltz_dir, calc_type, self, mol_props, ato
     if smarts_targets is None:
         smarts_targets = []
     
-    # def process_nmr_experim(exp_data, json_data, k):
-    #     """Process NMR experimental data."""
-    #     list_shift = json_data["properties"]["NMR"]["NMR Chemical Shifts"]
-    #     df = pd.DataFrame(list_shift.items(), columns=["atom_idx", f"conf_{k + 1}"])
-    #     df["atom_idx"] += 1
-    #     return exp_data.merge(df, on=["atom_idx"])
+    def process_nmr_experim(exp_data, json_data, k):
+        """Process NMR experimental data."""
+        list_shift = json_data["properties"]["NMR"]["NMR Chemical Shifts"]
+        df = pd.DataFrame(list_shift.items(), columns=["atom_idx", f"conf_{k + 1}"])
+        df["atom_idx"] += 1
+        return exp_data.merge(df, on=["atom_idx"])
     
     def average_properties(boltz, prop_list, smarts_targets, is_atom_prop=True):
         """Calculate average properties based on Boltzmann weights."""
@@ -73,14 +76,14 @@ def get_boltz_props(json_files, name, boltz_dir, calc_type, self, mol_props, ato
             avg_json_data[prop] = avg_prop.tolist()
 
     # Handle NMR experimental data
-    # exp_data = None
-    # if calc_type.lower() == "nmr" and nmr_experim:
-    #     try:
-    #         exp_data = pd.read_csv(nmr_experim)
-    #     except FileNotFoundError:
-    #         self.args.log.write(f'\nx  The CSV file with experimental NMR shifts specified ({nmr_experim}) was not found!')
-    #         self.args.log.finalize()
-    #         sys.exit()
+    exp_data = None
+    if calc_type.lower() == "nmr" and nmr_experim:
+        try:
+            exp_data = pd.read_csv(nmr_experim)
+        except FileNotFoundError:
+            self.args.log.write(f'\nx  The CSV file with experimental NMR shifts specified ({nmr_experim}) was not found!')
+            self.args.log.finalize()
+            sys.exit()
 
     # Calculate Boltzmann weights
     energy = []
@@ -88,12 +91,12 @@ def get_boltz_props(json_files, name, boltz_dir, calc_type, self, mol_props, ato
         json_data = read_json(json_file)
         energy.append(json_data["total energy"] if calc_type.lower() == "xtb" else json_data["optimization"]["scf"]["scf energies"][-1])
         
-        # if calc_type.lower() == "nmr":
-        #     json_data["properties"]["NMR"]["NMR Chemical Shifts"] = get_chemical_shifts(json_data, nmr_atoms, nmr_slope, nmr_intercept)
-        #     if exp_data is not None:
-        #         exp_data = process_nmr_experim(exp_data, json_data, k)
-        #     with open(json_file, "w") as outfile:
-        #         json.dump(json_data, outfile)
+        if calc_type.lower() == "nmr":
+            json_data["properties"]["NMR"]["NMR Chemical Shifts"] = get_chemical_shifts(json_data, nmr_atoms, nmr_slope, nmr_intercept)
+            if exp_data is not None:
+                exp_data = process_nmr_experim(exp_data, json_data, k)
+            with open(json_file, "w") as outfile:
+                json.dump(json_data, outfile)
 
     boltz = get_boltz(energy)
     avg_json_data = {}
@@ -103,22 +106,29 @@ def get_boltz_props(json_files, name, boltz_dir, calc_type, self, mol_props, ato
     # Get weighted atomic properties
     #From NMR
     for i, prop in enumerate(atom_props):
+        if i == 0:  # Filter to ensure all molecules have atomic properties for qdescp_atoms option
+            for json_file in json_files:
+                json_data = read_json(json_file)
+                for atom_prop in atom_props:
+                    if atom_prop not in json_data:
+                        return None
+        
         prop_list = [read_json(json_file)[prop] for json_file in json_files]
         avg_prop = average_properties(boltz, prop_list, smarts_targets)
         
-        # if calc_type.lower() == "nmr":
-        #     dictavgprop = {key: avg_prop[j] for j, key in enumerate(json_data["properties"]["NMR"][prop].keys())}
-        #     avg_json_data[prop] = dictavgprop
-        #     if exp_data is not None:
-        #         df = pd.DataFrame(dictavgprop.items(), columns=["atom_idx", "boltz_avg"])
-        #         df["atom_idx"] = df["atom_idx"].astype(int) + 1
-        #         exp_data = exp_data.merge(df, on=["atom_idx"])
-        #         exp_data["error_boltz"] = abs(exp_data["experimental_ppm"] - exp_data["boltz_avg"])
-        #         qdescp_nmr = nmr_experim.replace(".csv", "_predicted.csv")
-        #         exp_data.round(2).to_csv(qdescp_nmr, index=False)
-        #         self.args.log.write(f"o  The {os.path.basename(qdescp_nmr)} file containing Boltzmann weighted NMR shifts was successfully created in {self.args.initial_dir}")
-        # else:
-        update_avg_json_data(json_data, avg_json_data, prop, avg_prop, smarts_targets)
+        if calc_type.lower() == "nmr":
+            dictavgprop = {key: avg_prop[j] for j, key in enumerate(json_data["properties"]["NMR"][prop].keys())}
+            avg_json_data[prop] = dictavgprop
+            if exp_data is not None:
+                df = pd.DataFrame(dictavgprop.items(), columns=["atom_idx", "boltz_avg"])
+                df["atom_idx"] = df["atom_idx"].astype(int) + 1
+                exp_data = exp_data.merge(df, on=["atom_idx"])
+                exp_data["error_boltz"] = abs(exp_data["experimental_ppm"] - exp_data["boltz_avg"])
+                qdescp_nmr = nmr_experim.replace(".csv", "_predicted.csv")
+                exp_data.round(2).to_csv(qdescp_nmr, index=False)
+                self.args.log.write(f"o  The {os.path.basename(qdescp_nmr)} file containing Boltzmann weighted NMR shifts was successfully created in {self.args.initial_dir}")
+        else:
+            update_avg_json_data(json_data, avg_json_data, prop, avg_prop, smarts_targets)
 
     # Get weighted molecular properties from XTB
     if calc_type.lower() == "xtb":
@@ -186,7 +196,6 @@ def get_boltz_props(json_files, name, boltz_dir, calc_type, self, mol_props, ato
     final_interpret_file = os.path.join(boltz_dir, f"{name}_interpret_boltz.json")
     with open(final_interpret_file, "w") as outfile:
         json.dump(interpret_json_data, outfile)
-
 
 
 
@@ -1037,22 +1046,30 @@ def get_descriptors(level):
     descriptors = {
         'denovo': {
             'mol': ["HOMO-LUMO gap", "HOMO", "LUMO", "IP", "EA", "Dipole module", "Total charge", "Global SASA"],
-            'atoms': ["cm5 charges", "Electrophil.", "Nucleophil.", "Radical attack", "SASA", "Buried volume", "Cone angle"]
+            'atoms': ["cm5 charges", "Electrophil.", "Nucleophil.", "Radical attack", 
+                      "SASA", "Buried volume", "Cone angle"]
         },
         'interpret': {
-            'mol': ["Fermi-level", "Total polarizability alpha", "Total FOD", "Electrophil. idx", "Hardness", "Softness", "Electronegativity",
-                    "Nucleophilicity idx", "Second IP", "Second EA", "Disp. Area", "Disp. Vol."],
-            'atoms': ["s proportion", "p proportion", "d proportion", "Coord. numbers",
+            'mol': ["HOMO-LUMO gap", "HOMO", "LUMO", "Total charge", "Fermi-level", "Total polarizability alpha",
+                    "Dipole module", "Total FOD", "Electrophil. idx", "Hardness", "Softness", "Electronegativity",
+                    "Nucleophilicity idx", "IP", "EA", "Second IP", "Second EA", "Disp. Area", "Disp. Vol."],
+            'atoms': ["cm5 charges","s proportion", "p proportion", "d proportion", "Coord. numbers",
                       "Polarizability alpha", "FOD", "FOD s proportion", "FOD p proportion", "FOD d proportion",
-                      "Solid angle", "Pyramidaliz. P", "Pyramidaliz. Vol", "Dispersion"]
+                      "Solid angle", "Pyramidaliz. P", "Pyramidaliz. Vol", "Cone angle", "Buried volume",
+                      "Dispersion", "SASA", "Electrophil.", "Nucleophil.", "Radical attack"]
         },
         'full': {
-            'mol': ["Total energy", "Total disp. C6", "Total disp. C8", "Chem. potential", "Electrodon. power idx",
-                    "Electroaccep. power idx", "Electrofugality", "Nucleofugality", "Intrinsic React. idx", "Net Electrophilicity", 
+            'mol': ["Total energy", "HOMO-LUMO gap", "Dipole module", "Total charge", "HOMO", "LUMO", "Fermi-level", 
+                    "Total disp. C6", "Total disp. C8", "Total polarizability alpha", "Total FOD", 
+                    "IP", "EA", "Second IP", "Second EA", "Electrophil. idx", "Hardness", "Softness", "Electronegativity",
+                    "Chem. potential", "Electrodon. power idx", "Electroaccep. power idx", 
+                    "Electrofugality", "Nucleofugality", "Intrinsic React. idx", "Net Electrophilicity", 
                     "Hyperhardness", "Hypersoftness", "Electrophilic descrip.", "cub. electrophilicity idx"],
-            'atoms': ["fukui+", "fukui-", "fukui0", "dual descrip.", "softness+", "softness-", "softness0", 
+            'atoms': ["cm5 charges", "s proportion", "p proportion", "d proportion", "Coord. numbers",
+                    "fukui+", "fukui-", "fukui0", "dual descrip.", "softness+", "softness-", "softness0", 
                       "Rel. nucleophilicity", "Rel. electrophilicity", "GC Dual Descrip.", "Mult. descrip.", 
-                      "Nu_Electrophil.", "Nu_Nucleophil.", "Nu_Radical attack", "Disp. coeff. C6"]
+                      "Nu_Electrophil.", "Nu_Nucleophil.", "Nu_Radical attack", "Disp. coeff. C6",
+                      "Polarizability alpha","FOD", "FOD s proportion", "FOD p proportion", "FOD d proportion",]
         }
     }
     return descriptors.get(level, {})
