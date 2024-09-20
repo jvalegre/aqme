@@ -1007,30 +1007,22 @@ def get_descriptors(level):
     descriptors = {
         'denovo': {
             'mol': ["HOMO-LUMO gap", "HOMO", "LUMO", "IP", "EA", "Dipole module", "Total charge", "Global SASA"],
-            'atoms': ["cm5 charges", "Electrophil.", "Nucleophil.", "Radical attack", 
-                      "SASA", "Buried volume", "Cone angle"]
+            'atoms': ["cm5 charges", "Electrophil.", "Nucleophil.", "Radical attack", "SASA", "Buried volume", "Cone angle"]
         },
         'interpret': {
-            'mol': ["HOMO-LUMO gap", "HOMO", "LUMO", "Total charge", "Fermi-level", "Total polarizability alpha",
-                    "Dipole module", "Total FOD", "Electrophil. idx", "Hardness", "Softness", "Electronegativity",
-                    "Nucleophilicity idx", "IP", "EA", "Second IP", "Second EA", "Disp. Area", "Disp. Vol."],
-            'atoms': ["cm5 charges","s proportion", "p proportion", "d proportion", "Coord. numbers",
+            'mol': ["Fermi-level", "Total polarizability alpha", "Total FOD", "Electrophil. idx", "Hardness", "Softness", "Electronegativity",
+                    "Nucleophilicity idx", "Second IP", "Second EA", "Disp. Area", "Disp. Vol."],
+            'atoms': ["s proportion", "p proportion", "d proportion", "Coord. numbers",
                       "Polarizability alpha", "FOD", "FOD s proportion", "FOD p proportion", "FOD d proportion",
-                      "Solid angle", "Pyramidaliz. P", "Pyramidaliz. Vol", "Cone angle", "Buried volume",
-                      "Dispersion", "SASA", "Electrophil.", "Nucleophil.", "Radical attack"]
+                      "Solid angle", "Pyramidaliz. P", "Pyramidaliz. Vol", "Dispersion"]
         },
         'full': {
-            'mol': ["Total energy", "HOMO-LUMO gap", "Dipole module", "Total charge", "HOMO", "LUMO", "Fermi-level", 
-                    "Total disp. C6", "Total disp. C8", "Total polarizability alpha", "Total FOD", 
-                    "IP", "EA", "Second IP", "Second EA", "Electrophil. idx", "Hardness", "Softness", "Electronegativity",
-                    "Chem. potential", "Electrodon. power idx", "Electroaccep. power idx", 
-                    "Electrofugality", "Nucleofugality", "Intrinsic React. idx", "Net Electrophilicity", 
+            'mol': ["Total energy", "Total disp. C6", "Total disp. C8", "Chem. potential", "Electrodon. power idx",
+                    "Electroaccep. power idx", "Electrofugality", "Nucleofugality", "Intrinsic React. idx", "Net Electrophilicity", 
                     "Hyperhardness", "Hypersoftness", "Electrophilic descrip.", "cub. electrophilicity idx"],
-            'atoms': ["cm5 charges", "s proportion", "p proportion", "d proportion", "Coord. numbers",
-                    "fukui+", "fukui-", "fukui0", "dual descrip.", "softness+", "softness-", "softness0", 
+            'atoms': ["fukui+", "fukui-", "fukui0", "dual descrip.", "softness+", "softness-", "softness0", 
                       "Rel. nucleophilicity", "Rel. electrophilicity", "GC Dual Descrip.", "Mult. descrip.", 
-                      "Nu_Electrophil.", "Nu_Nucleophil.", "Nu_Radical attack", "Disp. coeff. C6",
-                      "Polarizability alpha","FOD", "FOD s proportion", "FOD p proportion", "FOD d proportion",]
+                      "Nu_Electrophil.", "Nu_Nucleophil.", "Nu_Radical attack", "Disp. coeff. C6"]
         }
     }
     return descriptors.get(level, {})
