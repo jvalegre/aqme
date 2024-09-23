@@ -818,16 +818,16 @@ def read_xtb(file):
         "Trans. dipole moment": transition_dipole_moment,
         "Coord. numbers": covCN,
         "Disp. coeff. C6": C6AA,
-        "Polarizability alpha": alpha,
-        "HOMO occupancy": homo_occ,
-        "LUMO occupancy": lumo_occ,
+        "Polariz. alpha": alpha,
+        "HOMO occup.": homo_occ,
+        "LUMO occup.": lumo_occ,
         "Born radii": born_rad,
         "Atomic SASAs": SASA,
         "Solvent H bonds": h_bond,
         "Total SASA": total_SASA,
         "Total disp. C6": total_C6AA,
         "Total disp. C8": total_C8AA,
-        "Total polarizability alpha": total_alpha,
+        "Total polariz. alpha": total_alpha,
     }
 
     return properties_dict
@@ -1010,15 +1010,16 @@ def get_descriptors(level):
             'atoms': ["cm5 charges", "Electrophil.", "Nucleophil.", "Radical attack", "SASA", "Buried volume", "Cone angle"]
         },
         'interpret': {
-            'mol': ["Fermi-level", "Total polarizability alpha", "Total FOD", "Electrophil. idx", "Hardness", "Softness", "Electronegativity",
-                    "Nucleophilicity idx", "Second IP", "Second EA", "Disp. Area", "Disp. Vol."],
+            'mol': ["Fermi-level", "Total polariz. alpha", "Total FOD", "Electrophil. idx", "Hardness", "Softness", "Electronegativity",
+                    "Nucleophilicity idx", "Second IP", "Second EA", "Disp. Area", "Disp. Vol.", "Trans. dipole moment", "HOMO occup.", "LUMO occup."],
             'atoms': ["s proportion", "p proportion", "d proportion", "Coord. numbers",
-                      "Polarizability alpha", "FOD", "FOD s proportion", "FOD p proportion", "FOD d proportion",
+                      "Polariz. alpha", "FOD", "FOD s proportion", "FOD p proportion", "FOD d proportion",
                       "Solid angle", "Pyramidaliz. P", "Pyramidaliz. Vol", "Dispersion"]
         },
         'full': {
             'mol': ["Total energy", "Total disp. C6", "Total disp. C8", "Chem. potential", "Electrodon. power idx",
-                    "Electroaccep. power idx", "Electrofugality", "Nucleofugality", "Intrinsic React. idx", "Net Electrophilicity", 
+                    "Electroaccep. power idx", 
+                    "Electrofugality", "Nucleofugality", "Intrinsic React. idx", "Net Electrophilicity", 
                     "Hyperhardness", "Hypersoftness", "Electrophilic descrip.", "cub. electrophilicity idx"],
             'atoms': ["fukui+", "fukui-", "fukui0", "dual descrip.", "softness+", "softness-", "softness0", 
                       "Rel. nucleophilicity", "Rel. electrophilicity", "GC Dual Descrip.", "Mult. descrip.", 

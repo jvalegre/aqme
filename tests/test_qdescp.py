@@ -10,7 +10,7 @@ import pytest
 import pandas as pd
 import numpy as np
 import subprocess
-from aqme.qdescp_utils import read_json,get_descriptors, get_descriptors
+from aqme.qdescp_utils import read_json,get_descriptors
 import glob
 import math
 import shutil
@@ -64,8 +64,12 @@ def test_qdescp_xtb(file):
         file_descriptors_interpret = f'{w_dir_main}/QDESCP_interpret_boltz_descriptors.csv'
         file_descriptors_full = f'{w_dir_main}/QDESCP_full_boltz_descriptors.csv'
         file_descriptors_denovo = f'{w_dir_main}/QDESCP_denovo_boltz_descriptors.csv'
-    if os.path.exists(file_descriptors_interpret):
+    if os.path.exists(file_descriptors_denovo): 
+        os.remove(file_descriptors_denovo)
+    if os.path.exists(file_descriptors_interpret): 
         os.remove(file_descriptors_interpret)
+    if os.path.exists(file_descriptors_full): 
+        os.remove(file_descriptors_full)
 
     # CSEARCH conformer generation
     cmd_csearch = ["python","-m","aqme","--csearch","--program","rdkit","--input",f'{qdescp_input_dir}/{file_csearch}',"--destination",f'{folder_csearch}',]
@@ -104,7 +108,6 @@ def test_qdescp_xtb(file):
         for file in files_xtb:
             # Build the path for the .out file
             xtb_file_path = f'{folder_qdescp}/xtb_data/{file}/{file}.out' # mol_1_rdkit_conf_1.out
-            #print(f"Reading xTB file: {xtb_file_path}")
             xtb_file_path_gn1 = f'{folder_qdescp}/xtb_data/{file}/{file}.gfn1' #mol_1_rdkit_conf_1.gfn1
             
             # Get data from the raw xTB calculations
@@ -119,15 +122,12 @@ def test_qdescp_xtb(file):
             for i in range(0, len(data)):
                 if data[i].find("TOTAL ENERGY") > -1:
                     energy_xtb = float(data[i].split()[3])
-                    print(f"Energy found in {xtb_file_path}: {energy_xtb}")
                 
                 if data[i].find("Fermi-level") > -1:
                     fermi_xtb = float(data[i].split()[-2])  # Store the latest Fermi level found
-                    print(f"Fermi-level found in {xtb_file_path}: {fermi_xtb}")
 
                 if data1[i].find("delta SCC IP (eV):") > -1:
                     delta_SCC_IP = float(data1[i].split()[-1])
-                    print(f"IP found in {xtb_file_path_gn1}: {delta_SCC_IP}")
 
             # Append the last found values to the lists
             if energy_xtb is not None:
@@ -140,7 +140,6 @@ def test_qdescp_xtb(file):
 
             # Build the path for the JSON file (mol_1_rdkit_conf_1.json and mol_1_rdkit_conf_2.json)
             json_file_path = f'{folder_qdescp}/{file}.json'
-            print(f"Reading JSON file: {json_file_path}")
 
             # Get data from the generated JSON files (mol_1_rdkit_conf_1.json and mol_1_rdkit_conf_2.json)
             json_data = read_json(json_file_path)
@@ -173,7 +172,6 @@ def test_qdescp_xtb(file):
         for e in energ:
             boltz_term = math.exp(-e * J_TO_AU / GAS_CONSTANT / T)
             boltz_sum += boltz_term
-            print(f"Boltzmann term for energy {e}: {boltz_term}")
 
         # Calculate weights
         weights = []
@@ -185,13 +183,11 @@ def test_qdescp_xtb(file):
         energy_boltz_calc = 0.0
         for i, p in enumerate(energies_xtb):
             energy_boltz_calc += p * weights[i]
-        print(f"Boltzmann-averaged energy XTB: {energy_boltz_calc}")
 
         # Calculate Boltzmann-averaged Fermi level
         Fermi_lvl_boltz_calc = 0.0
         for i, p in enumerate(Fermi_lvls_xtb):
             Fermi_lvl_boltz_calc += p * weights[i]
-        print(f"Boltzmann-averaged Fermi level XTB: {Fermi_lvl_boltz_calc}")
 
         # Calculate Boltzmann-averaged IP
         IP_boltz_calc = 0.0
@@ -202,7 +198,7 @@ def test_qdescp_xtb(file):
         json_data = read_json(f'{folder_boltz}/mol_1_rdkit_full_boltz.json')
         json_data1 = read_json(f'{folder_boltz}/mol_1_rdkit_interpret_boltz.json')
         energy_boltz_file = json_data["Total energy"]
-        Fermi_lvl_boltz_file = json_data["Fermi-level"]
+        Fermi_lvl_boltz_file = json_data1["Fermi-level"]
         IP_lvl_boltz_file = json_data1["IP"]
 
         # Assertions with detailed error messages
@@ -227,6 +223,10 @@ def test_qdescp_xtb(file):
             f"Fermi level mismatch: calculated {Fermi_lvl_boltz_calc} vs file {Fermi_lvl_boltz_csv} from CSV"
         assert round(pd_boltz_interpret["MolLogP"][0],1) == 1.8
         assert round(pd_boltz_interpret["MolLogP"][1],1)== 2.2
+
+        pd_boltz_full = pd.read_csv(file_descriptors_full)
+        assert pd_boltz_full["NumRotatableBonds"][0] == 3
+        assert pd_boltz_full["NumRotatableBonds"][1] == 4
 
     #Checking test_atom.csv,test_group.csv, test_multigroup.csv and test_robert.csv
     elif file in ['test_atom.csv','test_group.csv','test_multigroup.csv','test_robert.csv']:
@@ -396,16 +396,16 @@ def test_qdescp_nmr(json_files):
         assert round(nmr_json_calc[i],2) == round(nmr_json_file[i],2)
 
     # check that the averaged NMR shifts are the same as the values included in the csv file
-    pd_boltz_interpret = pd.read_csv(f'{qdescp_input_dir}/Experimental_NMR_shifts_predicted.csv')
-    nmr_boltz_csv = pd_boltz_interpret["boltz_avg"]
+    pd_boltz = pd.read_csv(f'{qdescp_input_dir}/Experimental_NMR_shifts_predicted.csv')
+    nmr_boltz_csv = pd_boltz["boltz_avg"]
     nmr_json_calc_1H = nmr_json_calc[21:]
     for i,_ in enumerate(nmr_json_calc_1H):
         assert round(nmr_json_calc_1H[i],2) == round(nmr_boltz_csv[i],2)
 
     # check that the shift errors in the csv file are correct
-    nmr_experim_csv = pd_boltz_interpret["experimental_ppm"]
+    nmr_experim_csv = pd_boltz["experimental_ppm"]
     error_calc = abs(nmr_boltz_csv - nmr_experim_csv)
-    error_csv = pd_boltz_interpret["error_boltz"]
+    error_csv = pd_boltz["error_boltz"]
     for i,_ in enumerate(error_calc):
         if str(error_calc[i]) not in ['nan']:
             assert round(error_calc[i],2) == round(error_csv[i],2)
