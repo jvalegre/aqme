@@ -1696,61 +1696,208 @@ def read_json(file):
     else:
         pass
 
+# def calculate_global_morfeus_descriptors(final_xyz_path):
+#         """
+#         Calculate descriptors using the MORFEUS 
+#         """
+#         global_properties_morfeus = {}
+
+#         try:
+#             elements, coordinates = read_xyz(final_xyz_path)
+#             elements, coordinates = read_geometry(final_xyz_path)
+#         except Exception as e:
+#             print(f"Error loading molecule from file {final_xyz_path}: {e}")
+#             return global_properties_morfeus
+
+#         # Calculate Global SASA
+#         try:
+#             sasa = SASA(elements, coordinates)
+#             sasa_area_global = round(sasa.area,4)
+#             global_properties_morfeus["Global SASA"] = sasa_area_global
+#         except Exception as e:
+#             print(f"Error calculating SASA from Morfeus: {e}")
+
+#         #Calculatin Global Dispersion
+#         try:
+#             disp = Dispersion(elements, coordinates)
+#             disp_area_global = round(disp.area,4)
+#             disp_vol_global = round(disp.volume,4)
+#             global_properties_morfeus["Disp. Area"] = disp_area_global
+#             global_properties_morfeus["Disp. Vol."] = disp_vol_global
+#         except Exception as e:
+#             print(f"Error calculating Global Dispersion from Morfeus: {e}")
+
+
+#         return global_properties_morfeus
+
 def calculate_global_morfeus_descriptors(final_xyz_path):
-        """
-        Calculate descriptors using the MORFEUS 
-        """
-        global_properties_morfeus = {}
-
-        try:
-            elements, coordinates = read_xyz(final_xyz_path)
-            elements, coordinates = read_geometry(final_xyz_path)
-        except Exception as e:
-            print(f"Error loading molecule from file {final_xyz_path}: {e}")
-            return global_properties_morfeus
-
-        # Calculate Global SASA
-        try:
-            sasa = SASA(elements, coordinates)
-            sasa_area_global = round(sasa.area,4)
-            global_properties_morfeus["Global SASA"] = sasa_area_global
-        except Exception as e:
-            print(f"Error calculating SASA from Morfeus: {e}")
-
-        #Calculatin Global Dispersion
-        try:
-            disp = Dispersion(elements, coordinates)
-            disp_area_global = round(disp.area,4)
-            disp_vol_global = round(disp.volume,4)
-            global_properties_morfeus["Disp. Area"] = disp_area_global
-            global_properties_morfeus["Disp. Vol."] = disp_vol_global
-        except Exception as e:
-            print(f"Error calculating Global Dispersion from Morfeus: {e}")
-
-
-        return global_properties_morfeus
-
-def calculate_local_morfeus_descriptors(final_xyz_path):
     """
-    Calculate descriptors using the MORFEUS 
+    Calculate global descriptors using the MORFEUS package. Return them in a structured dictionary.
     """
 
-    local_properties_morfeus = {}
+    # Initialize the descriptor variables as None
+    sasa_area_global = None
+    disp_area_global = None
+    disp_vol_global = None
 
+    # Try to load the molecular structure from the XYZ file
     try:
         elements, coordinates = read_xyz(final_xyz_path)
         elements, coordinates = read_geometry(final_xyz_path)
     except Exception as e:
-        print(f"Error loading molecule from file {final_xyz_path}: {e}")
-        return local_properties_morfeus
+        # Handle the error if the molecule cannot be loaded
+        print(f"x  WARNING! Error loading molecule from file {final_xyz_path}: {e}")
+        return {
+            "Global SASA": sasa_area_global,
+            "Disp. Area": disp_area_global,
+            "Disp. Vol.": disp_vol_global,
+        }
+
+    # Calculate Global SASA (Solvent Accessible Surface Area)
+    try:
+        sasa = SASA(elements, coordinates)
+        sasa_area_global = round(sasa.area, 4)  # Assign the calculated SASA value
+    except Exception as e:
+        # Handle any errors during SASA calculation
+        print(f"x  WARNING! Error calculating SASA from Morfeus: {e}")
+
+    # Calculate Global Dispersion Area and Volume
+    try:
+        disp = Dispersion(elements, coordinates)
+        disp_area_global = round(disp.area, 4)  # Assign the calculated dispersion area
+        disp_vol_global = round(disp.volume, 4)  # Assign the calculated dispersion volume
+    except Exception as e:
+        # Handle any errors during Dispersion calculation
+        print(f"x  WARNING! Error calculating Global Dispersion from Morfeus: {e}")
+
+    # Create the final dictionary with the descriptors, even if some values are None
+    global_properties_morfeus = {
+        "Global SASA": sasa_area_global,
+        "Disp. Area": disp_area_global,
+        "Disp. Vol.": disp_vol_global,
+    }
+
+    return global_properties_morfeus
+
+
+# def calculate_local_morfeus_descriptors(final_xyz_path):
+#     """
+#     Calculate descriptors using the MORFEUS 
+#     """
+
+#     local_properties_morfeus = {}
+
+#     try:
+#         elements, coordinates = read_xyz(final_xyz_path)
+#         elements, coordinates = read_geometry(final_xyz_path)
+#     except Exception as e:
+#         print(f"Error loading molecule from file {final_xyz_path}: {e}")
+#         return local_properties_morfeus
+
+#     # Calculate local SASA
+#     try:
+#         sasa = SASA(elements, coordinates)
+#         local_sasa_areas = [round(area, 4) for area in sasa.atom_areas.values()] 
+#         local_properties_morfeus["SASA"] = local_sasa_areas
+#     except Exception as e:
+#         print(f"Error calculating local SASA from Morfeus: {e}")
+
+#     # Local buried Volume
+#     try:
+#         local_buried_volumes = []
+#         for i in range(len(coordinates)):
+#             bv = BuriedVolume(elements, coordinates, i)
+#             buried_volume = round(bv.fraction_buried_volume, 4)
+#             local_buried_volumes.append(buried_volume)
+#         local_properties_morfeus["Buried volume"] = local_buried_volumes
+#     except Exception as e:
+#         print(f"Error calculating local BuriedVolume from Morfeus: {e}")
+
+#     # Local ConeAngle
+#     try:
+#         local_cone_angles = []
+#         for i in range(len(coordinates)):
+#             try:
+#                 cone_angle = ConeAngle(elements, coordinates, i) 
+#                 local_cone_angles.append(round(cone_angle.cone_angle, 4)) 
+#             except Exception as e:
+#                 local_cone_angles.append(0)       
+#         local_properties_morfeus["Cone angle"] = local_cone_angles  
+#     except Exception as e:
+#         print(f"Error calculating local Cone Angle: {e}")
+
+#     # Local Solid Angle
+#     try:
+#         local_solid_angles = []
+#         for i in range(len(coordinates)):
+#             try:
+#                 solid_angle = SolidAngle(elements, coordinates, i) 
+#                 local_solid_angles.append(round(solid_angle.cone_angle, 4)) 
+#             except Exception as e:
+#                 local_solid_angles.append(0)       
+#         local_properties_morfeus["Solid angle"] = local_solid_angles  
+#     except Exception as e:
+#         print(f"Error calculating local Solid Angle: {e}")
+
+#     #Pyramidalization
+#     try:
+#         local_Pyramidalization, local_vol_Pyramidalization = [], []
+#         for i in range(len(coordinates)):
+#             pyr = Pyramidalization(coordinates, i)
+#             local_Pyramidalization.append(round(pyr.P, 4))
+#             local_vol_Pyramidalization.append(round(pyr.P_angle, 4))
+#         local_properties_morfeus["Pyramidaliz. P"] = local_Pyramidalization
+#         local_properties_morfeus["Pyramidaliz. Vol"] = local_vol_Pyramidalization  
+#     except Exception as e:
+#         print(f"Error calculating Pyramidalization: {e}")
+
+#     # Local Dispersion
+#     try:
+#         disp = Dispersion(elements, coordinates)
+#         local_disp = [round(p_int, 4) for p_int in disp.atom_p_int.values()] 
+#         local_properties_morfeus["Dispersion"] = local_disp
+#     except Exception as e:
+#         print(f"Error calculating Local Dispersion from Morfeus: {e}")
+
+#     return local_properties_morfeus
+
+def calculate_local_morfeus_descriptors(final_xyz_path):
+    """
+    Calculate local descriptors using the MORFEUS package. Return them in a structured dictionary.
+    """
+
+    # Initialize variables as None
+    local_sasa_areas = None
+    local_buried_volumes = None
+    local_cone_angles = None
+    local_solid_angles = None
+    local_Pyramidalization = None
+    local_vol_Pyramidalization = None
+    local_disp = None
+
+    # Try to load the molecular structure from the XYZ file
+    try:
+        elements, coordinates = read_xyz(final_xyz_path)
+        elements, coordinates = read_geometry(final_xyz_path)
+    except Exception as e:
+        # If there's an issue loading the molecule, log the error and return an empty dictionary
+        print(f"x  WARNING! Error loading molecule from file {final_xyz_path}: {e}")
+        return {
+            "SASA": local_sasa_areas,
+            "Buried volume": local_buried_volumes,
+            "Cone angle": local_cone_angles,
+            "Solid angle": local_solid_angles,
+            "Pyramidaliz. P": local_Pyramidalization,
+            "Pyramidaliz. Vol": local_vol_Pyramidalization,
+            "Dispersion": local_disp
+        }
 
     # Calculate local SASA
     try:
         sasa = SASA(elements, coordinates)
-        local_sasa_areas = [round(area, 4) for area in sasa.atom_areas.values()] 
-        local_properties_morfeus["SASA"] = local_sasa_areas
+        local_sasa_areas = [round(area, 4) for area in sasa.atom_areas.values()]
     except Exception as e:
-        print(f"Error calculating local SASA from Morfeus: {e}")
+        print(f"x  WARNING! Error calculating local SASA from Morfeus: {e}")
 
     # Local buried Volume
     try:
@@ -1759,57 +1906,63 @@ def calculate_local_morfeus_descriptors(final_xyz_path):
             bv = BuriedVolume(elements, coordinates, i)
             buried_volume = round(bv.fraction_buried_volume, 4)
             local_buried_volumes.append(buried_volume)
-        local_properties_morfeus["Buried volume"] = local_buried_volumes
     except Exception as e:
-        print(f"Error calculating local BuriedVolume from Morfeus: {e}")
+        print(f"x  WARNING! Error calculating local Buried Volume from Morfeus: {e}")
 
     # Local ConeAngle
     try:
         local_cone_angles = []
         for i in range(len(coordinates)):
             try:
-                cone_angle = ConeAngle(elements, coordinates, i) 
-                local_cone_angles.append(round(cone_angle.cone_angle, 4)) 
+                cone_angle = ConeAngle(elements, coordinates, i)
+                local_cone_angles.append(round(cone_angle.cone_angle, 4))
             except Exception as e:
-                local_cone_angles.append(0)       
-        local_properties_morfeus["Cone angle"] = local_cone_angles  
+                local_cone_angles.append(None)  # Append None if there is an error for specific atom
     except Exception as e:
-        print(f"Error calculating local Cone Angle: {e}")
+        print(f"x  WARNING! Error calculating local Cone Angle from Morfeus: {e}")
 
     # Local Solid Angle
     try:
         local_solid_angles = []
         for i in range(len(coordinates)):
             try:
-                solid_angle = SolidAngle(elements, coordinates, i) 
-                local_solid_angles.append(round(solid_angle.cone_angle, 4)) 
+                solid_angle = SolidAngle(elements, coordinates, i)
+                local_solid_angles.append(round(solid_angle.cone_angle, 4))
             except Exception as e:
-                local_solid_angles.append(0)       
-        local_properties_morfeus["Solid angle"] = local_solid_angles  
+                local_solid_angles.append(None)  # Append None if there is an error for specific atom
     except Exception as e:
-        print(f"Error calculating local Solid Angle: {e}")
+        print(f"x  WARNING! Error calculating local Solid Angle from Morfeus: {e}")
 
-    #Pyramidalization
+    # Pyramidalization
     try:
         local_Pyramidalization, local_vol_Pyramidalization = [], []
         for i in range(len(coordinates)):
             pyr = Pyramidalization(coordinates, i)
             local_Pyramidalization.append(round(pyr.P, 4))
             local_vol_Pyramidalization.append(round(pyr.P_angle, 4))
-        local_properties_morfeus["Pyramidaliz. P"] = local_Pyramidalization
-        local_properties_morfeus["Pyramidaliz. Vol"] = local_vol_Pyramidalization  
     except Exception as e:
-        print(f"Error calculating Pyramidalization: {e}")
+        print(f"x  WARNING! Error calculating Pyramidalization from Morfeus: {e}")
 
     # Local Dispersion
     try:
         disp = Dispersion(elements, coordinates)
-        local_disp = [round(p_int, 4) for p_int in disp.atom_p_int.values()] 
-        local_properties_morfeus["Dispersion"] = local_disp
+        local_disp = [round(p_int, 4) for p_int in disp.atom_p_int.values()]
     except Exception as e:
-        print(f"Error calculating Local Dispersion from Morfeus: {e}")
+        print(f"x  WARNING! Error calculating Local Dispersion from Morfeus: {e}")
+
+    # Return the dictionary with local descriptors, even if some values are None
+    local_properties_morfeus = {
+        "SASA": local_sasa_areas,
+        "Buried volume": local_buried_volumes,
+        "Cone angle": local_cone_angles,
+        "Solid angle": local_solid_angles,
+        "Pyramidaliz. P": local_Pyramidalization,
+        "Pyramidaliz. Vol": local_vol_Pyramidalization,
+        "Dispersion": local_disp
+    }
 
     return local_properties_morfeus
+
 
 def get_descriptors(level):
     """
