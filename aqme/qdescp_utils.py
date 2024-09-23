@@ -375,16 +375,72 @@ def get_rdkit_properties(avg_json_data, mol):
     return avg_json_data, denovo_json_data, interpret_json_data
 
 
+# def read_gfn1(file):
+#     """
+#     Read .gfn1 output file created from xTB. Return data.
+#     """
+
+#     if file.find(".gfn1") > -1:
+#         f = open(file, "r")
+#         data = f.readlines()
+#         f.close()
+
+#         for i in range(0, len(data)):
+#             if data[i].find("Mulliken/CM5 charges") > -1:
+#                 start = i + 1
+#                 break
+#         for j in range(start, len(data)):
+#             if (
+#                 data[j].find("Wiberg/Mayer (AO) data") > -1
+#                 or data[j].find("generalized Born model") > -1
+#             ):
+#                 end = j - 1
+#                 break
+
+#         pop_data = data[start:end]
+#         mulliken, cm5, s_prop, p_prop, d_prop = [], [], [], [], []
+#         for line in pop_data:
+#             item = line.split()
+#             q_mull = round(float(item[-5]),5)
+#             q_cm5 = round(float(item[-4]),5)
+#             s_prop_ind = round(float(item[-3]),3)
+#             p_prop_ind = round(float(item[-2]),3)
+#             d_prop_ind = round(float(item[-1]),3)
+#             mulliken.append(q_mull)
+#             cm5.append(q_cm5)
+#             s_prop.append(s_prop_ind)
+#             p_prop.append(p_prop_ind)
+#             d_prop.append(d_prop_ind)
+
+#         localgfn1 = {
+#         "mulliken charges": mulliken,
+#         "cm5 charges": cm5,
+#         "s proportion": s_prop,
+#         "p proportion": p_prop,
+#         "d proportion": d_prop,
+#         }
+
+#         return localgfn1
+    
+
 def read_gfn1(file):
     """
     Read .gfn1 output file created from xTB. Return data.
     """
 
-    if file.find(".gfn1") > -1:
-        f = open(file, "r")
-        data = f.readlines()
-        f.close()
+    # Check if the file has the .wbo extension
+    if not file.endswith(".gfn1"):
+        print(f"x  WARNING! {file} is not a valid .gfn1 file.")
+        return None
 
+    # Check if the file exists
+    if not os.path.exists(file):
+        print(f"x  WARNING! The file {file} does not exist.")
+        return None
+
+    try:
+        with open(file, "r") as f:
+            data = f.readlines()
         for i in range(0, len(data)):
             if data[i].find("Mulliken/CM5 charges") > -1:
                 start = i + 1
@@ -422,6 +478,12 @@ def read_gfn1(file):
 
         return localgfn1
 
+    except Exception as e:
+        # Handle any exception that occurs during file processing
+        print(f"x  WARNING! An error occurred while processing {file}: {e}")
+        return None
+
+
 def read_wbo(file):
     """
     Read wbo output file created from xTB. Return data.
@@ -440,6 +502,46 @@ def read_wbo(file):
             bonds.append(bond)
             wbos.append(wbo)
         return bonds, wbos
+    
+
+# def read_wbo(file):
+#     """
+#     Read wbo output file created from xTB. Return data.
+#     """
+
+#     # Check if the file has the .wbo extension
+#     if not file.endswith(".wbo"):
+#         print(f"x  WARNING! {file} is not a valid .wbo file.")
+#         return None
+
+#     # Check if the file exists
+#     if not os.path.exists(file):
+#         print(f"x  WARNING! The file {file} does not exist.")
+#         return None
+
+#     try:
+#         # Safely open the file and read its content
+#         with open(file, "r") as f:
+#             data = f.readlines()
+
+#         # Initialize empty lists to store bonds and WBO values
+#         bonds, wbos = []
+#         # Process each line in the file
+#         for line in data:
+#             item = line.split()  # Split the line into components
+#             bond = [int(item[0]), int(item[1])]  # Extract bond indices
+#             wbo = round(float(item[2]), 3)  # Extract and round the WBO value
+#             bonds.append(bond)  # Add bond to list
+#             wbos.append(wbo)  # Add WBO to list
+
+#         # Return the bonds and WBO values
+#         return bonds, wbos
+
+#     except Exception as e:
+#         # Handle any exception that occurs during file processing
+#         print(f"x  WARNING! An error occurred while processing {file}: {e}")
+#         return None
+
 
 def calculate_global_CDFT_descriptors(file):
     """
