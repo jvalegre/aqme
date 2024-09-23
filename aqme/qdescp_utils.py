@@ -615,77 +615,81 @@ def read_gfn1(file):
         # Open and read the file safely
         with open(file, "r") as f:
             data = f.readlines()
-
-        # Ensure the file contains data
-        if not data:
-            print(f"x  WARNING! The file {file} is empty.")
-            return None
-
-        # Initialize variables for data extraction
-        start, end = None, None
-
-        # Find the start of the Mulliken/CM5 charges section
-        for i, line in enumerate(data):
-            if "Mulliken/CM5 charges" in line:
-                start = i + 1
-                break
-
-        # Find the end of the section (start of Wiberg/Mayer or generalized Born)
-        if start is not None:
-            for j in range(start, len(data)):
-                if "Wiberg/Mayer (AO) data" in data[j] or "generalized Born model" in data[j]:
-                    end = j - 1
-                    break
-        else:
-            print(f"x  WARNING! Mulliken/CM5 charges section not found in {file}.")
-            return None
-
-        # Ensure both start and end are found
-        if start is None or end is None:
-            print(f"x  WARNING! Required sections not found in {file}.")
-            return None
-
-        # Extract the relevant data between the start and end lines
-        pop_data = data[start:end]
-
-        # Initialize lists to store the parsed data
-        mulliken, cm5, s_prop, p_prop, d_prop = [], [], [], [], []
-
-        # Process each line in the extracted data section
-        for line in pop_data:
-            try:
-                item = line.split()
-                # Extract and round the required values from each line
-                q_mull = round(float(item[-5]), 5)
-                q_cm5 = round(float(item[-4]), 5)
-                s_prop_ind = round(float(item[-3]), 3)
-                p_prop_ind = round(float(item[-2]), 3)
-                d_prop_ind = round(float(item[-1]), 3)
-                mulliken.append(q_mull)
-                cm5.append(q_cm5)
-                s_prop.append(s_prop_ind)
-                p_prop.append(p_prop_ind)
-                d_prop.append(d_prop_ind)
-            except (ValueError, IndexError) as e:
-                # Handle errors related to parsing the line
-                print(f"x  WARNING! Error parsing line in {file}: {line}. Error: {e}")
-                return None
-
-        # Store the parsed data in a dictionary and return it
-        localgfn1 = {
-            "mulliken charges": mulliken,
-            "cm5 charges": cm5,
-            "s proportion": s_prop,
-            "p proportion": p_prop,
-            "d proportion": d_prop,
-        }
-
-        return localgfn1
-
     except IOError as e:
         # Handle errors related to file reading
         print(f"x  WARNING! An error occurred while processing {file}: {e}")
         return None
+
+    # Ensure the file contains data
+    if not data:
+        print(f"x  WARNING! The file {file} is empty.")
+        return None
+
+    # Initialize variables for data extraction
+    start, end = None, None
+
+    # Find the start of the Mulliken/CM5 charges section
+    for i, line in enumerate(data):
+        if "Mulliken/CM5 charges" in line:
+            start = i + 1
+            break
+
+    # Find the end of the section (start of Wiberg/Mayer or generalized Born)
+    if start is not None:
+        for j in range(start, len(data)):
+            if "Wiberg/Mayer (AO) data" in data[j] or "generalized Born model" in data[j]:
+                end = j - 1
+                break
+    else:
+        print(f"x  WARNING! Mulliken/CM5 charges section not found in {file}.")
+        return None
+
+    # Ensure both start and end are found
+    if start is None or end is None:
+        print(f"x  WARNING! Required sections not found in {file}.")
+        return None
+
+    # Extract the relevant data between the start and end lines
+    pop_data = data[start:end]
+
+    # Initialize lists to store the parsed data
+    mulliken, cm5, s_prop, p_prop, d_prop = [], [], [], [], []
+
+    # Process each line in the extracted data section
+    for line in pop_data:
+        try:
+            item = line.split()
+            # Extract and round the required values from each line
+            q_mull = round(float(item[-5]), 5)
+            q_cm5 = round(float(item[-4]), 5)
+            s_prop_ind = round(float(item[-3]), 3)
+            p_prop_ind = round(float(item[-2]), 3)
+            d_prop_ind = round(float(item[-1]), 3)
+            mulliken.append(q_mull)
+            cm5.append(q_cm5)
+            s_prop.append(s_prop_ind)
+            p_prop.append(p_prop_ind)
+            d_prop.append(d_prop_ind)
+        except (ValueError, IndexError) as e:
+            # Handle errors related to parsing the line
+            print(f"x  WARNING! Error parsing line in {file}: {line}. Error: {e}")
+            return None
+
+    # Store the parsed data in a dictionary and return it
+    localgfn1 = {
+        "mulliken charges": mulliken,
+        "cm5 charges": cm5,
+        "s proportion": s_prop,
+        "p proportion": p_prop,
+        "d proportion": d_prop,
+    }
+
+    return localgfn1
+
+    # except IOError as e:
+    #     # Handle errors related to file reading
+    #     print(f"x  WARNING! An error occurred while processing {file}: {e}")
+    #     return None
 
 
 # def read_wbo(file):
@@ -1309,17 +1313,142 @@ def calculate_local_CDFT_descriptors(file_fukui, cdft_descriptors, cdft_descript
 
 #     return localDescriptors
 
+# def read_xtb(file):
+#     """
+#     Read xtb.out file and return a dictionary of extracted properties.
+#     """
+#     try:
+#         with open(file, "r") as f:
+#             data = f.readlines()
+#     except IOError:
+#         raise IOError(f"Error opening or reading the file: {file}")
+
+#     # Initialize variables
+#     energy, homo_lumo, homo, lumo = np.nan, np.nan, np.nan, np.nan
+#     dipole_module, Fermi_level, transition_dipole_moment = np.nan, np.nan, np.nan
+#     total_charge, total_SASA = np.nan, np.nan
+#     total_C6AA, total_C8AA, total_alpha = np.nan, np.nan, np.nan
+#     atoms, numbers, chrgs = [], [], []
+#     covCN, C6AA, alpha = [], [], []
+#     born_rad, SASA, h_bond = [], [], []
+
+#     # Parsing file data
+#     for i, line in enumerate(data):
+#         if "SUMMARY" in line:
+#             energy = float(data[i + 2].split()[3])
+#         elif "total charge" in line:
+#             total_charge = int(float(data[i].split()[3]))
+#         elif "(HOMO)" in line:
+#             if data[i].split()[3] != "(HOMO)":
+#                 homo = round(float(data[i].split()[3]), 4)
+#                 homo_occ = round(float(data[i].split()[1]), 4)
+#             else:
+#                 homo = round(float(data[i].split()[2]), 4)
+#                 homo_occ = 0
+#         elif "(LUMO)" in line:
+#             if data[i].split()[3] != "(LUMO)":
+#                 lumo = round(float(data[i].split()[3]), 4)
+#                 lumo_occ = round(float(data[i].split()[1]), 4)
+#             else:
+#                 lumo = round(float(data[i].split()[2]), 4)
+#                 lumo_occ = 0
+#         elif "molecular dipole:" in line:
+#             dipole_module = float(data[i + 3].split()[-1])
+#         elif "transition dipole moment" in line:
+#             transition_dipole_moment = float(data[i + 2].split()[-1])
+#         elif "Fermi-level" in line:
+#             Fermi_level = float(data[i].split()[-2])
+
+#     homo_lumo = round(float(lumo - homo), 4)
+
+#     # Getting atomic properties related to charges, dispersion, etc.
+#     start, end = 0, 0
+#     for j in range(len(data)):
+#         if "#   Z          covCN" in data[j]:
+#             start = j + 1
+#             break
+#     for k in range(start, len(data)):
+#         if "Mol. " in data[k]:
+#             end = k - 1
+#             total_C6AA = float(data[k].split()[-1])
+#             total_C8AA = float(data[k + 1].split()[-1])
+#             total_alpha = float(data[k + 2].split()[-1])
+#             break
+
+#     chrg_data = data[start:end]
+#     for line in chrg_data:
+#         item = line.split()
+#         numbers.append(int(item[0]))
+#         atoms.append(item[2])
+#         covCN.append(float(item[3]))
+#         chrgs.append(float(item[4]))
+#         C6AA.append(float(item[5]))
+#         alpha.append(float(item[6]))
+
+#     # Getting atomic properties related to solvent
+#     start_solv, end_solv = 0, 0
+#     for j in range(len(data)):
+#         if "#   Z     Born rad" in data[j]:
+#             start_solv = j + 1
+#             break
+#     for k in range(start_solv, len(data)):
+#         if "total SASA " in data[k]:
+#             end_solv = k - 1
+#             total_SASA = float(data[k].split()[-1])
+#             break
+
+#     solv_data = data[start_solv:end_solv]
+#     for line in solv_data:
+#         item = line.split()
+#         born_rad.append(float(item[3]))
+#         SASA.append(float(item[4]))
+#         try:
+#             h_bond.append(float(item[5]))
+#         except IndexError:
+#             h_bond.append(0.0)
+
+#     properties_dict = {
+#         "Total energy": energy,
+#         "Total charge": total_charge,
+#         "HOMO-LUMO gap": homo_lumo,
+#         "HOMO": homo,
+#         "LUMO": lumo,
+#         "atoms": atoms,
+#         "numbers": numbers,
+#         "charges": chrgs, 
+#         "Dipole module": dipole_module,
+#         "Fermi-level": Fermi_level,
+#         "Trans. dipole moment": transition_dipole_moment,
+#         "Coord. numbers": covCN,
+#         "Disp. coeff. C6": C6AA,
+#         "Polariz. alpha": alpha,
+#         "HOMO occup.": homo_occ,
+#         "LUMO occup.": lumo_occ,
+#         "Born radii": born_rad,
+#         "Atomic SASAs": SASA,
+#         "Solvent H bonds": h_bond,
+#         "Total SASA": total_SASA,
+#         "Total disp. C6": total_C6AA,
+#         "Total disp. C8": total_C8AA,
+#         "Total polariz. alpha": total_alpha,
+#     }
+
+#     return properties_dict
+
 def read_xtb(file):
     """
     Read xtb.out file and return a dictionary of extracted properties.
+    Returns None if an error occurs while reading the file.
     """
     try:
+        # Intentar abrir y leer el archivo
         with open(file, "r") as f:
             data = f.readlines()
     except IOError:
-        raise IOError(f"Error opening or reading the file: {file}")
+        # Si ocurre un error de archivo, devolver None
+        return None
 
-    # Initialize variables
+    # Inicializar variables con valores predeterminados
     energy, homo_lumo, homo, lumo = np.nan, np.nan, np.nan, np.nan
     dipole_module, Fermi_level, transition_dipole_moment = np.nan, np.nan, np.nan
     total_charge, total_SASA = np.nan, np.nan
@@ -1328,26 +1457,24 @@ def read_xtb(file):
     covCN, C6AA, alpha = [], [], []
     born_rad, SASA, h_bond = [], [], []
 
-    # Parsing file data
+    # Procesar los datos línea por línea
     for i, line in enumerate(data):
         if "SUMMARY" in line:
             energy = float(data[i + 2].split()[3])
         elif "total charge" in line:
             total_charge = int(float(data[i].split()[3]))
         elif "(HOMO)" in line:
-            if data[i].split()[3] != "(HOMO)":
+            try:
                 homo = round(float(data[i].split()[3]), 4)
                 homo_occ = round(float(data[i].split()[1]), 4)
-            else:
-                homo = round(float(data[i].split()[2]), 4)
-                homo_occ = 0
+            except ValueError:
+                homo_occ = 0  # Valor predeterminado en caso de error
         elif "(LUMO)" in line:
-            if data[i].split()[3] != "(LUMO)":
+            try:
                 lumo = round(float(data[i].split()[3]), 4)
                 lumo_occ = round(float(data[i].split()[1]), 4)
-            else:
-                lumo = round(float(data[i].split()[2]), 4)
-                lumo_occ = 0
+            except ValueError:
+                lumo_occ = 0  # Valor predeterminado en caso de error
         elif "molecular dipole:" in line:
             dipole_module = float(data[i + 3].split()[-1])
         elif "transition dipole moment" in line:
@@ -1355,9 +1482,9 @@ def read_xtb(file):
         elif "Fermi-level" in line:
             Fermi_level = float(data[i].split()[-2])
 
-    homo_lumo = round(float(lumo - homo), 4)
+    homo_lumo = round(lumo - homo, 4) if not np.isnan(lumo) and not np.isnan(homo) else np.nan
 
-    # Getting atomic properties related to charges, dispersion, etc.
+    # Obtener propiedades atómicas relacionadas con las cargas, la dispersión, etc.
     start, end = 0, 0
     for j in range(len(data)):
         if "#   Z          covCN" in data[j]:
@@ -1371,17 +1498,18 @@ def read_xtb(file):
             total_alpha = float(data[k + 2].split()[-1])
             break
 
-    chrg_data = data[start:end]
-    for line in chrg_data:
-        item = line.split()
-        numbers.append(int(item[0]))
-        atoms.append(item[2])
-        covCN.append(float(item[3]))
-        chrgs.append(float(item[4]))
-        C6AA.append(float(item[5]))
-        alpha.append(float(item[6]))
+    if start != 0 and end != 0:
+        chrg_data = data[start:end]
+        for line in chrg_data:
+            item = line.split()
+            numbers.append(int(item[0]))
+            atoms.append(item[2])
+            covCN.append(float(item[3]))
+            chrgs.append(float(item[4]))
+            C6AA.append(float(item[5]))
+            alpha.append(float(item[6]))
 
-    # Getting atomic properties related to solvent
+    # Obtener propiedades atómicas relacionadas con el solvente
     start_solv, end_solv = 0, 0
     for j in range(len(data)):
         if "#   Z     Born rad" in data[j]:
@@ -1393,16 +1521,18 @@ def read_xtb(file):
             total_SASA = float(data[k].split()[-1])
             break
 
-    solv_data = data[start_solv:end_solv]
-    for line in solv_data:
-        item = line.split()
-        born_rad.append(float(item[3]))
-        SASA.append(float(item[4]))
-        try:
-            h_bond.append(float(item[5]))
-        except IndexError:
-            h_bond.append(0.0)
+    if start_solv != 0 and end_solv != 0:
+        solv_data = data[start_solv:end_solv]
+        for line in solv_data:
+            item = line.split()
+            born_rad.append(float(item[3]))
+            SASA.append(float(item[4]))
+            try:
+                h_bond.append(float(item[5]))
+            except IndexError:
+                h_bond.append(0.0)  # Valor predeterminado si falta un dato
 
+    # Crear el diccionario con las propiedades extraídas
     properties_dict = {
         "Total energy": energy,
         "Total charge": total_charge,
@@ -1430,6 +1560,7 @@ def read_xtb(file):
     }
 
     return properties_dict
+
 
 
 def read_fod(file):
