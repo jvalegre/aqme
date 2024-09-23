@@ -389,51 +389,51 @@ def average_prop_atom_nmr(weights, prop):
         boltz_res = np.sum(boltz_avg, 0)
     return boltz_res
 
-# def average_prop_mol(weights, prop):
-#     """
-#     Returns Boltzmann averaged molecular properties, rounded to 4 decimal places.
-
-#     Parameters:
-#     weights (list of floats): Boltzmann weights for each configuration.
-#     prop (list of floats): List of molecular properties corresponding to each configuration.
-
-#     Returns:
-#     boltz_avg (float): Boltzmann-weighted average of the molecular properties, rounded to 4 decimal places.
-#     """
-    
-#     # Initialize the Boltzmann-weighted average to 0.0
-#     boltz_avg = 0.0
-    
-#     # Loop through each property and its corresponding weight
-#     for i, p in enumerate(prop):
-#         # If the property is 'NaN', break the loop and return 'NaN'
-#         if p == 'NaN':
-#             boltz_avg = 'NaN'
-#             break
-#         # Otherwise, calculate the weighted sum of properties
-#         boltz_avg += p * weights[i]
-    
-#     # If the result is a valid number, round it to 4 decimal places
-#     if boltz_avg != 'NaN':
-#         boltz_avg = round(boltz_avg, 4)
-
-#     # Return the Boltzmann-weighted average, rounded to 4 decimal places (or 'NaN' if encountered)
-#     return boltz_avg
-
-
-
 def average_prop_mol(weights, prop):
     """
-    Returns Boltzmann averaged molecular properties
-    """
+    Returns Boltzmann averaged molecular properties, rounded to 4 decimal places.
 
+    Parameters:
+    weights (list of floats): Boltzmann weights for each configuration.
+    prop (list of floats): List of molecular properties corresponding to each configuration.
+
+    Returns:
+    boltz_avg (float): Boltzmann-weighted average of the molecular properties, rounded to 4 decimal places.
+    """
+    
+    # Initialize the Boltzmann-weighted average to 0.0
     boltz_avg = 0.0
+    
+    # Loop through each property and its corresponding weight
     for i, p in enumerate(prop):
+        # If the property is 'NaN', break the loop and return 'NaN'
         if p == 'NaN':
             boltz_avg = 'NaN'
             break
+        # Otherwise, calculate the weighted sum of properties
         boltz_avg += p * weights[i]
+    
+    # If the result is a valid number, round it to 4 decimal places
+    if boltz_avg != 'NaN':
+        boltz_avg = round(boltz_avg, 4)
+
+    # Return the Boltzmann-weighted average, rounded to 4 decimal places (or 'NaN' if encountered)
     return boltz_avg
+
+
+
+# def average_prop_mol(weights, prop):
+#     """
+#     Returns Boltzmann averaged molecular properties
+#     """
+
+#     boltz_avg = 0.0
+#     for i, p in enumerate(prop):
+#         if p == 'NaN':
+#             boltz_avg = 'NaN'
+#             break
+#         boltz_avg += p * weights[i]
+#     return boltz_avg
 
 
 
