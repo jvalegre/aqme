@@ -686,11 +686,6 @@ def read_gfn1(file):
 
     return localgfn1
 
-    # except IOError as e:
-    #     # Handle errors related to file reading
-    #     print(f"x  WARNING! An error occurred while processing {file}: {e}")
-    #     return None
-
 
 # def read_wbo(file):
 #     """
@@ -726,19 +721,20 @@ def read_wbo(file):
     try:
         with open(file, "r") as f:
             data = f.readlines()
-
-        bonds, wbos = [], []
-        for line in data:
-            item = line.split()  # Split the line into components
-            bond = [int(item[0]), int(item[1])]  # Extract bond indices
-            wbo = round(float(item[2]), 3)  # Extract and round the WBO value
-            bonds.append(bond)  # Add bond to list
-            wbos.append(wbo)  # Add WBO to list
-
-        return bonds, wbos
-
     except Exception as e:
         return None
+
+    bonds, wbos = [], []
+    for line in data:
+        item = line.split()  # Split the line into components
+        bond = [int(item[0]), int(item[1])]  # Extract bond indices
+        wbo = round(float(item[2]), 3)  # Extract and round the WBO value
+        bonds.append(bond)  # Add bond to list
+        wbos.append(wbo)  # Add WBO to list
+
+    return bonds, wbos
+
+
 
 
 # def calculate_global_CDFT_descriptors(file):
@@ -827,70 +823,70 @@ def calculate_global_CDFT_descriptors(file):
     try:
         with open(file, "r") as f:
                 data = f.readlines()
-        
-        # Initialize variables
-        delta_SCC_IP, delta_SCC_EA, electrophilicity_index = None, None, None
-        chemical_hardness, chemical_softness = None, None
-        chemical_potential, mulliken_electronegativity = None, None
-        electrodonating_power_index, electroaccepting_power_index = None, None
-        intrinsic_reactivity_index = None
-        electrofugality, nucleofugality, nucleophilicity_index, net_electrophilicity = None, None, None, None
-
-        # Extract relevant values from the file
-        for line in data:
-            if "delta SCC IP (eV):" in line:
-                delta_SCC_IP = float(line.split()[-1])
-            elif "delta SCC EA (eV):" in line:
-                delta_SCC_EA = float(line.split()[-1])
-            elif "Global electrophilicity index (eV):" in line:
-                electrophilicity_index = float(line.split()[-1])
-
-        # Check if required descriptors were found
-        if delta_SCC_IP is not None and delta_SCC_EA is not None and electrophilicity_index is not None:
-            # Calculate CDFT descriptors
-            chemical_hardness = round((delta_SCC_IP - delta_SCC_EA), 4)
-            chemical_potential = round(-(delta_SCC_IP + delta_SCC_EA) / 2, 4)
-            mulliken_electronegativity = round(-chemical_potential, 4)
-            electrofugality = round(-delta_SCC_EA + electrophilicity_index, 4)
-            nucleofugality = round(delta_SCC_IP + electrophilicity_index, 4)
-
-            if chemical_hardness != 0:
-                chemical_softness = round(1 / chemical_hardness, 4)
-                electrodonating_power_index = round(((delta_SCC_IP + 3 * delta_SCC_EA)**2) / (8 * chemical_hardness), 4)
-                electroaccepting_power_index = round(((3 * delta_SCC_IP + delta_SCC_EA)**2) / (8 * chemical_hardness), 4)
-                intrinsic_reactivity_index = round((delta_SCC_IP + delta_SCC_EA) / chemical_hardness, 4)
-
-                if electroaccepting_power_index != 0:
-                    nucleophilicity_index = round(10 / electroaccepting_power_index, 4)
-
-            net_electrophilicity = round((electrodonating_power_index - electroaccepting_power_index), 4)
-
-        else:
-            print(f"x  WARNING! delta_SCC_IP, delta_SCC_EA, or electrophilicity_index were not found in the file. Global Conceptual DFT descriptors cannot be fully calculated.")
-
-        # Collect descriptors into a dictionary
-        cdft_descriptors = {
-            "IP": delta_SCC_IP,
-            "EA": delta_SCC_EA,
-            "Electrophil. idx": electrophilicity_index,
-            "Hardness": chemical_hardness,
-            "Softness": chemical_softness,
-            "Chem. potential": chemical_potential,
-            "Electronegativity": mulliken_electronegativity,
-            "Electrodon. power idx": electrodonating_power_index,
-            "Electroaccep. power idx": electroaccepting_power_index,
-            "Nucleophilicity idx": nucleophilicity_index,
-            "Electrofugality": electrofugality,
-            "Nucleofugality": nucleofugality,
-            "Intrinsic React. idx": intrinsic_reactivity_index,
-            "Net Electrophilicity": net_electrophilicity
-        }
-
-        return cdft_descriptors
     except Exception as e:
-        # Handle any exception that occurs during file processing
         print(f"x  WARNING! An error occurred while processing {file}: {e}")
         return None
+        
+    # Initialize variables
+    delta_SCC_IP, delta_SCC_EA, electrophilicity_index = None, None, None
+    chemical_hardness, chemical_softness = None, None
+    chemical_potential, mulliken_electronegativity = None, None
+    electrodonating_power_index, electroaccepting_power_index = None, None
+    intrinsic_reactivity_index = None
+    electrofugality, nucleofugality, nucleophilicity_index, net_electrophilicity = None, None, None, None
+
+    # Extract relevant values from the file
+    for line in data:
+        if "delta SCC IP (eV):" in line:
+            delta_SCC_IP = float(line.split()[-1])
+        elif "delta SCC EA (eV):" in line:
+            delta_SCC_EA = float(line.split()[-1])
+        elif "Global electrophilicity index (eV):" in line:
+            electrophilicity_index = float(line.split()[-1])
+
+    # Check if required descriptors were found
+    if delta_SCC_IP is not None and delta_SCC_EA is not None and electrophilicity_index is not None:
+        # Calculate CDFT descriptors
+        chemical_hardness = round((delta_SCC_IP - delta_SCC_EA), 4)
+        chemical_potential = round(-(delta_SCC_IP + delta_SCC_EA) / 2, 4)
+        mulliken_electronegativity = round(-chemical_potential, 4)
+        electrofugality = round(-delta_SCC_EA + electrophilicity_index, 4)
+        nucleofugality = round(delta_SCC_IP + electrophilicity_index, 4)
+
+        if chemical_hardness != 0:
+            chemical_softness = round(1 / chemical_hardness, 4)
+            electrodonating_power_index = round(((delta_SCC_IP + 3 * delta_SCC_EA)**2) / (8 * chemical_hardness), 4)
+            electroaccepting_power_index = round(((3 * delta_SCC_IP + delta_SCC_EA)**2) / (8 * chemical_hardness), 4)
+            intrinsic_reactivity_index = round((delta_SCC_IP + delta_SCC_EA) / chemical_hardness, 4)
+
+            if electroaccepting_power_index != 0:
+                nucleophilicity_index = round(10 / electroaccepting_power_index, 4)
+
+        net_electrophilicity = round((electrodonating_power_index - electroaccepting_power_index), 4)
+
+    else:
+        print(f"x  WARNING! delta_SCC_IP, delta_SCC_EA, or electrophilicity_index were not found in the file. Global Conceptual DFT descriptors cannot be fully calculated.")
+
+    # Collect descriptors into a dictionary
+    cdft_descriptors = {
+        "IP": delta_SCC_IP,
+        "EA": delta_SCC_EA,
+        "Electrophil. idx": electrophilicity_index,
+        "Hardness": chemical_hardness,
+        "Softness": chemical_softness,
+        "Chem. potential": chemical_potential,
+        "Electronegativity": mulliken_electronegativity,
+        "Electrodon. power idx": electrodonating_power_index,
+        "Electroaccep. power idx": electroaccepting_power_index,
+        "Nucleophilicity idx": nucleophilicity_index,
+        "Electrofugality": electrofugality,
+        "Nucleofugality": nucleofugality,
+        "Intrinsic React. idx": intrinsic_reactivity_index,
+        "Net Electrophilicity": net_electrophilicity
+    }
+
+    return cdft_descriptors
+
 
 def calculate_global_CDFT_descriptors_part2(file, file_Nminus1, file_Nminus2, file_Nplus1, file_Nplus2, cdft_descriptors):
     """
@@ -921,95 +917,98 @@ def calculate_global_CDFT_descriptors_part2(file, file_Nminus1, file_Nminus2, fi
             data3 = f3.readlines()
         with open(file_Nplus2, "r") as f4:
             data4 = f4.readlines()
-
-        # Extract SCC energies, handle cases where None is returned
-        scc_energy = extract_scc_energy(data, file)
-        scc_energy_Nminus1 = extract_scc_energy(data1, file_Nminus1)
-        scc_energy_Nminus2 = extract_scc_energy(data2, file_Nminus2)
-        scc_energy_Nplus1 = extract_scc_energy(data3, file_Nplus1)
-        scc_energy_Nplus2 = extract_scc_energy(data4, file_Nplus2)
-
-        if None in [scc_energy, scc_energy_Nminus1, scc_energy_Nminus2, scc_energy_Nplus1, scc_energy_Nplus2]:
-            print(f"x  WARNING! Missing SCC energy in one or more files. Cannot calculate global CDFT descriptors.")
-            return None
-
-        # Convert SCC energies to Hartree
-        scc_energy *= Hartree
-        scc_energy_Nminus1 *= Hartree
-        scc_energy_Nminus2 *= Hartree
-        scc_energy_Nplus1 *= Hartree
-        scc_energy_Nplus2 *= Hartree
-
-        # Extract required CDFT descriptors
-        delta_SCC_IP = cdft_descriptors.get("IP")
-        delta_SCC_EA = cdft_descriptors.get("EA")
-        chemical_hardness = cdft_descriptors.get("Hardness")
-
-        if None in [delta_SCC_IP, delta_SCC_EA, chemical_hardness]:
-            print("x  WARNING! Missing required CDFT descriptors (IP, EA, or Hardness).")
-            return None
-
-        # Initialize variables
-        Vertical_second_IP, Vertical_second_EA = None, None
-        hyper_hardness, Global_hypersoftness = None, None
-        Electrophilic_descriptor, w_cubic = None, None
-
-        # Calculations if all SCC energies and descriptors are available:
-        # Calculating the following descriptors
-            # 1) Second IP
-        Vertical_second_IP = round((((scc_energy_Nminus2 - scc_energy_Nminus1) - corr_xtb)), 4)
-            # 2) Second EA
-        Vertical_second_EA = round((((scc_energy_Nplus1 - scc_energy_Nplus2) + corr_xtb)), 4)
-            # 3) Hyperhardnes
-        hyper_hardness = round((-((0.5) * (delta_SCC_IP + delta_SCC_EA - Vertical_second_IP - Vertical_second_EA))), 4)
-
-        if chemical_hardness != 0:
-            Global_hypersoftness = round((hyper_hardness / ((chemical_hardness) ** 3)), 4)
-
-            # 4) Electrophilic descriptor calculations
-        A = ((scc_energy_Nplus1 - scc_energy) + corr_xtb)
-        c = (Vertical_second_IP - (2 * delta_SCC_IP) + A) / ((2 * Vertical_second_IP) - delta_SCC_IP - A)
-        a = -((delta_SCC_IP + A) / 2) + (((delta_SCC_IP - A) / 2) * c)
-        b = ((delta_SCC_IP - A) / 2) - (((delta_SCC_IP + A) / 2) * c)
-        Gamma = (-3 * c) * (b - (a * c))
-        Eta = 2 * (b - (a * c))
-        chi = -a
-        Mu = a
-
-        discriminant = Eta ** 2 - (2 * Gamma * Mu)  # Checking the square root
-        if discriminant < 0:
-            print(f"x  WARNING! Negative discriminant encountered, skipping Electrophilic descriptor calculation.")
-        else:
-            inter_phi = math.sqrt(discriminant)
-            Phi = inter_phi - Eta
-            Electrophilic_descriptor = round(((chi * (Phi / Gamma)) - (((Phi / Gamma) ** 2) * ((Eta / 2) + (Phi / 6)))), 4)
-
-            # 5) Cubic electrophilicity index
-        Gamma_cubic = 2 * delta_SCC_IP - Vertical_second_IP - delta_SCC_EA
-        Eta_cubic = delta_SCC_IP - delta_SCC_EA
-
-        if Eta_cubic != 0:
-            Mu_cubic = (1 / 6) * ((-2 * delta_SCC_EA) - (5 * delta_SCC_IP) + Vertical_second_IP)
-            w_cubic = round(((Mu_cubic ** 2) / (2 * Eta_cubic)) * (1 + ((Mu_cubic / (3 * (Eta_cubic) ** 2)) * Gamma_cubic)), 4)
-        else:
-            print(f"x  WARNING! Eta_cubic is zero, skipping cub. electrophilicity idx calculation.")
-
-        # Return the calculated descriptors
-        cdft_descriptors2 = {
-            "Second IP": Vertical_second_IP,
-            "Second EA": Vertical_second_EA,
-            "Hyperhardness": hyper_hardness,
-            "Hypersoftness": Global_hypersoftness,
-            "Electrophilic descrip.": Electrophilic_descriptor,
-            "cub. electrophilicity idx": w_cubic
-        }
-
-        return cdft_descriptors2
-
     except Exception as e:
-        # Handle any exception that occurs during file processing
         print(f"x  WARNING! An error occurred while processing {file}: {e}")
         return None
+
+    # Extract SCC energies, handle cases where None is returned
+    scc_energy = extract_scc_energy(data, file)
+    scc_energy_Nminus1 = extract_scc_energy(data1, file_Nminus1)
+    scc_energy_Nminus2 = extract_scc_energy(data2, file_Nminus2)
+    scc_energy_Nplus1 = extract_scc_energy(data3, file_Nplus1)
+    scc_energy_Nplus2 = extract_scc_energy(data4, file_Nplus2)
+
+    if None in [scc_energy, scc_energy_Nminus1, scc_energy_Nminus2, scc_energy_Nplus1, scc_energy_Nplus2]:
+        print(f"x  WARNING! Missing SCC energy in one or more files. Cannot calculate global CDFT descriptors.")
+        return None
+
+    # Convert SCC energies to Hartree
+    scc_energy *= Hartree
+    scc_energy_Nminus1 *= Hartree
+    scc_energy_Nminus2 *= Hartree
+    scc_energy_Nplus1 *= Hartree
+    scc_energy_Nplus2 *= Hartree
+
+    # Extract required CDFT descriptors
+    delta_SCC_IP = cdft_descriptors.get("IP")
+    delta_SCC_EA = cdft_descriptors.get("EA")
+    chemical_hardness = cdft_descriptors.get("Hardness")
+
+    if None in [delta_SCC_IP, delta_SCC_EA, chemical_hardness]:
+        print("x  WARNING! Missing required CDFT descriptors (IP, EA, or Hardness).")
+        return None
+
+    # Initialize variables
+    Vertical_second_IP, Vertical_second_EA = None, None
+    hyper_hardness, Global_hypersoftness = None, None
+    Electrophilic_descriptor, w_cubic = None, None
+
+    # Calculations if all SCC energies and descriptors are available:
+    # Calculating the following descriptors
+        # 1) Second IP
+    Vertical_second_IP = round((((scc_energy_Nminus2 - scc_energy_Nminus1) - corr_xtb)), 4)
+        # 2) Second EA
+    Vertical_second_EA = round((((scc_energy_Nplus1 - scc_energy_Nplus2) + corr_xtb)), 4)
+        # 3) Hyperhardnes
+    hyper_hardness = round((-((0.5) * (delta_SCC_IP + delta_SCC_EA - Vertical_second_IP - Vertical_second_EA))), 4)
+
+    if chemical_hardness != 0:
+        Global_hypersoftness = round((hyper_hardness / ((chemical_hardness) ** 3)), 4)
+
+        # 4) Electrophilic descriptor calculations
+    A = ((scc_energy_Nplus1 - scc_energy) + corr_xtb)
+    c = (Vertical_second_IP - (2 * delta_SCC_IP) + A) / ((2 * Vertical_second_IP) - delta_SCC_IP - A)
+    a = -((delta_SCC_IP + A) / 2) + (((delta_SCC_IP - A) / 2) * c)
+    b = ((delta_SCC_IP - A) / 2) - (((delta_SCC_IP + A) / 2) * c)
+    Gamma = (-3 * c) * (b - (a * c))
+    Eta = 2 * (b - (a * c))
+    chi = -a
+    Mu = a
+
+    discriminant = Eta ** 2 - (2 * Gamma * Mu)  # Checking the square root
+    if discriminant < 0:
+        print(f"x  WARNING! Negative discriminant encountered, skipping Electrophilic descriptor calculation.")
+    else:
+        inter_phi = math.sqrt(discriminant)
+        Phi = inter_phi - Eta
+        Electrophilic_descriptor = round(((chi * (Phi / Gamma)) - (((Phi / Gamma) ** 2) * ((Eta / 2) + (Phi / 6)))), 4)
+
+        # 5) Cubic electrophilicity index
+    Gamma_cubic = 2 * delta_SCC_IP - Vertical_second_IP - delta_SCC_EA
+    Eta_cubic = delta_SCC_IP - delta_SCC_EA
+
+    if Eta_cubic != 0:
+        Mu_cubic = (1 / 6) * ((-2 * delta_SCC_EA) - (5 * delta_SCC_IP) + Vertical_second_IP)
+        w_cubic = round(((Mu_cubic ** 2) / (2 * Eta_cubic)) * (1 + ((Mu_cubic / (3 * (Eta_cubic) ** 2)) * Gamma_cubic)), 4)
+    else:
+        print(f"x  WARNING! Eta_cubic is zero, skipping cub. electrophilicity idx calculation.")
+
+    # Return the calculated descriptors
+    cdft_descriptors2 = {
+        "Second IP": Vertical_second_IP,
+        "Second EA": Vertical_second_EA,
+        "Hyperhardness": hyper_hardness,
+        "Hypersoftness": Global_hypersoftness,
+        "Electrophilic descrip.": Electrophilic_descriptor,
+        "cub. electrophilicity idx": w_cubic
+    }
+
+    return cdft_descriptors2
+
+    # except Exception as e:
+    #     # Handle any exception that occurs during file processing
+    #     print(f"x  WARNING! An error occurred while processing {file}: {e}")
+    #     return None
 
 
 
@@ -1126,92 +1125,92 @@ def calculate_local_CDFT_descriptors(file_fukui, cdft_descriptors, cdft_descript
     try:
         with open(file_fukui, "r") as f:
             data = f.readlines()
-
-        f_pos, f_negs, f_rads = [], [], []
-        start, end = None, None
-
-        for i, line in enumerate(data):
-            if "f(+) " in line:
-                start = i + 1
-            elif "-------------" in line and start is not None:
-                end = i
-                break
-
-        if start is not None and end is not None:
-            fukui_data = data[start:end]
-            for line in fukui_data:
-                try:
-                    f_po, f_neg, f_rad = map(lambda x: round(float(x), 4), line.split()[-3:])
-                    f_pos.append(f_po)
-                    f_negs.append(f_neg)
-                    f_rads.append(f_rad)
-                except ValueError:
-                    continue
-        else:
-            print("WARNING: Fukui data not found in the file. Please check the '.fukui' file.")
-            return None
-
-        if not f_pos or not f_negs or not f_rads:
-            print("WARNING: Fukui data lists are empty. Please check the '.fukui' file.")
-            return None
-
-        chemical_softness = cdft_descriptors.get("Softness")
-        Global_hypersoftness = cdft_descriptors2.get("Hypersoftness")
-        electrophilicity_index = cdft_descriptors.get("Electrophil. idx")
-        nucleophilicity_index = cdft_descriptors.get("Nucleophilicity idx")
-
-        if None in [chemical_softness, Global_hypersoftness, electrophilicity_index, nucleophilicity_index]:
-            print("x  WARNING! Missing required CDFT descriptors (Softness, Hypersoftness, Electrophil. idx or Nucleophilicity idx).")
-            return None
-
-        # Calculating local descriptors:
-            # 1) dual descrip.
-        dual_descriptor = [round(f_po - f_neg, 4) for f_po, f_neg in zip(f_pos, f_negs)]
-            # 2) softness+, softness- and softness0
-        s_pos = [round(chemical_softness * f_po, 4) for f_po in f_pos]
-        s_negs = [round(chemical_softness * f_neg, 4) for f_neg in f_negs]
-        s_rads = [round(chemical_softness * f_rad, 4) for f_rad in f_rads]
-            # 3) Rel. nucleophilicity
-        Relative_nucleophilicity = [round(s_neg / s_po, 4) if s_po != 0 else None for s_neg, s_po in zip(s_negs, s_pos)]
-            # 4) Rel. electrophilicity
-        Relative_electrophilicity = [round(s_po / s_neg, 4) if s_neg != 0 else None for s_neg, s_po in zip(s_negs, s_pos)]
-            # 5) GC Dual Descrip.
-        Grand_canonical_dual_descriptor = [round(Global_hypersoftness * dual, 4) for dual in dual_descriptor]
-            # 6) softness+, softness- and softness0
-        w_pos = [round(electrophilicity_index * f_po, 4) for f_po in f_pos]
-        w_negs = [round(electrophilicity_index * f_neg, 4) for f_negs in f_negs]
-        w_rads = [round(electrophilicity_index * f_rad, 4) for f_rad in f_rads]
-            # 7) softness+, softness- and softness0
-        Multiphilic_descriptor = [round(electrophilicity_index * dual, 4) for dual in dual_descriptor]
-            # 8) softness+, softness- and softness0
-        Nu_pos = [round(nucleophilicity_index * f_po, 4) for f_po in f_pos]
-        Nu_negs = [round(nucleophilicity_index * f_neg, 4) for f_neg in f_negs]
-        Nu_rads = [round(nucleophilicity_index * f_rad, 4) for f_rad in f_rads]
-
-        localDescriptors = {
-            "fukui+": f_pos,
-            "fukui-": f_negs,
-            "fukui0": f_rads,
-            "dual descrip.": dual_descriptor,
-            "softness+": s_pos,  # s+
-            "softness-": s_negs,  # s-
-            "softness0": s_rads,  # srad
-            "Rel. nucleophilicity": Relative_nucleophilicity,  # s+/s-
-            "Rel. electrophilicity": Relative_electrophilicity,  # s-/s+
-            "GC Dual Descrip.": Grand_canonical_dual_descriptor,
-            "Electrophil.": w_pos,  # w+
-            "Nucleophil.": w_negs,  # w-
-            "Radical attack": w_rads,  # wrad
-            "Mult. descrip.": Multiphilic_descriptor,
-            "Nu_Electrophil.": Nu_pos,  # Nu+
-            "Nu_Nucleophil.": Nu_negs,  # Nu-
-            "Nu_Radical attack": Nu_rads  # Nurad
-        }
-
-        return localDescriptors
     except IOError as e:
         print(f"x WARNING! Could not open the file {file_fukui}: {e}")
         return None
+
+    f_pos, f_negs, f_rads = [], [], []
+    start, end = None, None
+
+    for i, line in enumerate(data):
+        if "f(+) " in line:
+            start = i + 1
+        elif "-------------" in line and start is not None:
+            end = i
+            break
+
+    if start is not None and end is not None:
+        fukui_data = data[start:end]
+        for line in fukui_data:
+            try:
+                f_po, f_neg, f_rad = map(lambda x: round(float(x), 4), line.split()[-3:])
+                f_pos.append(f_po)
+                f_negs.append(f_neg)
+                f_rads.append(f_rad)
+            except ValueError:
+                continue
+    else:
+        print("WARNING: Fukui data not found in the file. Please check the '.fukui' file.")
+        return None
+
+    if not f_pos or not f_negs or not f_rads:
+        print("WARNING: Fukui data lists are empty. Please check the '.fukui' file.")
+        return None
+
+    chemical_softness = cdft_descriptors.get("Softness")
+    Global_hypersoftness = cdft_descriptors2.get("Hypersoftness")
+    electrophilicity_index = cdft_descriptors.get("Electrophil. idx")
+    nucleophilicity_index = cdft_descriptors.get("Nucleophilicity idx")
+
+    if None in [chemical_softness, Global_hypersoftness, electrophilicity_index, nucleophilicity_index]:
+        print("x  WARNING! Missing required CDFT descriptors (Softness, Hypersoftness, Electrophil. idx or Nucleophilicity idx).")
+        return None
+
+    # Calculating local descriptors:
+        # 1) dual descrip.
+    dual_descriptor = [round(f_po - f_neg, 4) for f_po, f_neg in zip(f_pos, f_negs)]
+        # 2) softness+, softness- and softness0
+    s_pos = [round(chemical_softness * f_po, 4) for f_po in f_pos]
+    s_negs = [round(chemical_softness * f_neg, 4) for f_neg in f_negs]
+    s_rads = [round(chemical_softness * f_rad, 4) for f_rad in f_rads]
+        # 3) Rel. nucleophilicity
+    Relative_nucleophilicity = [round(s_neg / s_po, 4) if s_po != 0 else None for s_neg, s_po in zip(s_negs, s_pos)]
+        # 4) Rel. electrophilicity
+    Relative_electrophilicity = [round(s_po / s_neg, 4) if s_neg != 0 else None for s_neg, s_po in zip(s_negs, s_pos)]
+        # 5) GC Dual Descrip.
+    Grand_canonical_dual_descriptor = [round(Global_hypersoftness * dual, 4) for dual in dual_descriptor]
+        # 6) softness+, softness- and softness0
+    w_pos = [round(electrophilicity_index * f_po, 4) for f_po in f_pos]
+    w_negs = [round(electrophilicity_index * f_neg, 4) for f_negs in f_negs]
+    w_rads = [round(electrophilicity_index * f_rad, 4) for f_rad in f_rads]
+        # 7) softness+, softness- and softness0
+    Multiphilic_descriptor = [round(electrophilicity_index * dual, 4) for dual in dual_descriptor]
+        # 8) softness+, softness- and softness0
+    Nu_pos = [round(nucleophilicity_index * f_po, 4) for f_po in f_pos]
+    Nu_negs = [round(nucleophilicity_index * f_neg, 4) for f_neg in f_negs]
+    Nu_rads = [round(nucleophilicity_index * f_rad, 4) for f_rad in f_rads]
+
+    localDescriptors = {
+        "fukui+": f_pos,
+        "fukui-": f_negs,
+        "fukui0": f_rads,
+        "dual descrip.": dual_descriptor,
+        "softness+": s_pos,  # s+
+        "softness-": s_negs,  # s-
+        "softness0": s_rads,  # srad
+        "Rel. nucleophilicity": Relative_nucleophilicity,  # s+/s-
+        "Rel. electrophilicity": Relative_electrophilicity,  # s-/s+
+        "GC Dual Descrip.": Grand_canonical_dual_descriptor,
+        "Electrophil.": w_pos,  # w+
+        "Nucleophil.": w_negs,  # w-
+        "Radical attack": w_rads,  # wrad
+        "Mult. descrip.": Multiphilic_descriptor,
+        "Nu_Electrophil.": Nu_pos,  # Nu+
+        "Nu_Nucleophil.": Nu_negs,  # Nu-
+        "Nu_Radical attack": Nu_rads  # Nurad
+    }
+
+    return localDescriptors
 
 
 # def calculate_local_CDFT_descriptors(file_fukui, cdft_descriptors, cdft_descriptors2):
@@ -1441,14 +1440,11 @@ def read_xtb(file):
     Returns None if an error occurs while reading the file.
     """
     try:
-        # Intentar abrir y leer el archivo
         with open(file, "r") as f:
             data = f.readlines()
     except IOError:
-        # Si ocurre un error de archivo, devolver None
         return None
 
-    # Inicializar variables con valores predeterminados
     energy, homo_lumo, homo, lumo = np.nan, np.nan, np.nan, np.nan
     dipole_module, Fermi_level, transition_dipole_moment = np.nan, np.nan, np.nan
     total_charge, total_SASA = np.nan, np.nan
@@ -1457,7 +1453,6 @@ def read_xtb(file):
     covCN, C6AA, alpha = [], [], []
     born_rad, SASA, h_bond = [], [], []
 
-    # Procesar los datos línea por línea
     for i, line in enumerate(data):
         if "SUMMARY" in line:
             energy = float(data[i + 2].split()[3])
@@ -1468,13 +1463,13 @@ def read_xtb(file):
                 homo = round(float(data[i].split()[3]), 4)
                 homo_occ = round(float(data[i].split()[1]), 4)
             except ValueError:
-                homo_occ = 0  # Valor predeterminado en caso de error
+                homo_occ = 0  # Default value if data is missing
         elif "(LUMO)" in line:
             try:
                 lumo = round(float(data[i].split()[3]), 4)
                 lumo_occ = round(float(data[i].split()[1]), 4)
             except ValueError:
-                lumo_occ = 0  # Valor predeterminado en caso de error
+                lumo_occ = 0  # Default value if data is missing
         elif "molecular dipole:" in line:
             dipole_module = float(data[i + 3].split()[-1])
         elif "transition dipole moment" in line:
@@ -1484,7 +1479,7 @@ def read_xtb(file):
 
     homo_lumo = round(lumo - homo, 4) if not np.isnan(lumo) and not np.isnan(homo) else np.nan
 
-    # Obtener propiedades atómicas relacionadas con las cargas, la dispersión, etc.
+    # Getting atomic properties related to charges, dispersion, etc.
     start, end = 0, 0
     for j in range(len(data)):
         if "#   Z          covCN" in data[j]:
@@ -1509,7 +1504,7 @@ def read_xtb(file):
             C6AA.append(float(item[5]))
             alpha.append(float(item[6]))
 
-    # Obtener propiedades atómicas relacionadas con el solvente
+    # Getting atomic properties related to solvent
     start_solv, end_solv = 0, 0
     for j in range(len(data)):
         if "#   Z     Born rad" in data[j]:
@@ -1530,9 +1525,8 @@ def read_xtb(file):
             try:
                 h_bond.append(float(item[5]))
             except IndexError:
-                h_bond.append(0.0)  # Valor predeterminado si falta un dato
+                h_bond.append(0.0)  # Default value if data is missing
 
-    # Crear el diccionario con las propiedades extraídas
     properties_dict = {
         "Total energy": energy,
         "Total charge": total_charge,
@@ -1563,44 +1557,131 @@ def read_xtb(file):
 
 
 
+# def read_fod(file):
+#     """
+#     Read xtb.fod files. Return FOD-related properties.
+#     """
+
+#     f = open(file, "r")
+#     data = f.readlines()
+#     f.close()
+
+#     # get fractional occupation density (FOD)
+#     for j in range(0, len(data)):
+#         if data[j].find("Loewdin FODpop") > -1:
+#             start_fod = j + 1
+#             total_fod = float(data[j - 2].split()[-1])
+#             break
+#     for k in range(start_fod, len(data)):
+#         if data[k].find("Wiberg/Mayer") > -1:
+#             end_fod = k - 1
+#             break
+
+#     fod_data = data[start_fod:end_fod]
+#     fod, s_prop_fod, p_prop_fod, d_prop_fod = [], [], [], []
+#     for line in fod_data:
+#         item = line.split()
+#         fod.append(float(item[1]))
+#         s_prop_fod.append(float(item[2]))
+#         p_prop_fod.append(float(item[3]))
+#         d_prop_fod.append(float(item[4]))
+
+#     properties_FOD = {
+#     "Total FOD": total_fod,
+#     "FOD": fod,
+#     "FOD s proportion": s_prop_fod,
+#     "FOD p proportion": p_prop_fod,
+#     "FOD d proportion": d_prop_fod,
+# }
+
+#     return properties_FOD
+
+
 def read_fod(file):
     """
     Read xtb.fod files. Return FOD-related properties.
     """
 
-    f = open(file, "r")
-    data = f.readlines()
-    f.close()
+    # Try to open the file and read its contents
+    try:
+        with open(file, "r") as f:
+            data = f.readlines()  # Read all lines from the file
+    except FileNotFoundError:
+        # If the file is not found, print a warning and return None
+        print(f"x  WARNING! The file {file} does not exist.")
+        return None
+    except Exception as e:
+        # Handle any other file reading errors (permissions, etc.) and return None
+        print(f"x  WARNING! An error occurred while reading the file: {e}")
+        return None
 
-    # get fractional occupation density (FOD)
-    for j in range(0, len(data)):
-        if data[j].find("Loewdin FODpop") > -1:
-            start_fod = j + 1
-            total_fod = float(data[j - 2].split()[-1])
-            break
+    # Initialize variables for storing FOD-related data
+    total_fod = None  # Will store the total FOD value
+    start_fod, end_fod = None, None  # Will mark the start and end of the FOD data section
+
+    # Look for the line containing 'Loewdin FODpop' to identify the start of the FOD data
+    for j, line in enumerate(data):
+        if "Loewdin FODpop" in line:
+            try:
+                # Extract the total FOD value from two lines above 'Loewdin FODpop'
+                total_fod = float(data[j - 2].split()[-1])
+                # Mark the start of FOD data, which is the next line after 'Loewdin FODpop'
+                start_fod = j + 1
+            except (IndexError, ValueError) as e:
+                # Handle potential errors from accessing invalid indices or incorrect value types
+                print(f"x  WARNING! Error extracting total FOD: {e}")
+                return None
+            break  # Stop the loop once 'Loewdin FODpop' is found
+
+    # If the 'Loewdin FODpop' section was not found, return None
+    if start_fod is None:
+        print(f"x  WARNING! 'Loewdin FODpop' not found in the file {file}.")
+        return None
+
+    # Look for the line that contains 'Wiberg/Mayer' to mark the end of the FOD data section
     for k in range(start_fod, len(data)):
-        if data[k].find("Wiberg/Mayer") > -1:
+        if "Wiberg/Mayer" in data[k]:
+            # The FOD data ends just before the 'Wiberg/Mayer' section
             end_fod = k - 1
             break
 
+    # If the end of the FOD section is not found, return None
+    if end_fod is None:
+        print(f"x  WARNING! 'Wiberg/Mayer' section not found in the file {file}.")
+        return None
+
+    # Extract and process the lines between start_fod and end_fod, which contain the FOD data
     fod_data = data[start_fod:end_fod]
+
+    # Initialize lists to store FOD-related properties
     fod, s_prop_fod, p_prop_fod, d_prop_fod = [], [], [], []
+
+    # Loop through each line of the FOD data and extract the relevant properties
     for line in fod_data:
-        item = line.split()
-        fod.append(float(item[1]))
-        s_prop_fod.append(float(item[2]))
-        p_prop_fod.append(float(item[3]))
-        d_prop_fod.append(float(item[4]))
+        try:
+            item = line.split()  # Split the line into individual components
+            fod.append(float(item[1]))  # Extract the FOD value (index 1)
+            s_prop_fod.append(float(item[2]))  # Extract the s proportion (index 2)
+            p_prop_fod.append(float(item[3]))  # Extract the p proportion (index 3)
+            d_prop_fod.append(float(item[4]))  # Extract the d proportion (index 4)
+        except (IndexError, ValueError) as e:
+            # Handle cases where the line is not properly formatted or contains invalid values
+            print(f"x  WARNING! Error processing FOD data in line '{line.strip()}': {e}")
+            return None
 
+    # Create a dictionary to hold all the extracted FOD properties
     properties_FOD = {
-    "Total FOD": total_fod,
-    "FOD": fod,
-    "FOD s proportion": s_prop_fod,
-    "FOD p proportion": p_prop_fod,
-    "FOD d proportion": d_prop_fod,
-}
+        "Total FOD": total_fod,  # The total FOD value extracted from above
+        "FOD": fod,  # List of FOD values for individual atoms
+        "FOD s proportion": s_prop_fod,  # List of s proportion values
+        "FOD p proportion": p_prop_fod,  # List of p proportion values
+        "FOD d proportion": d_prop_fod,  # List of d proportion values
+    }
 
+    # Return the dictionary containing all FOD-related properties
     return properties_FOD
+
+
 
 def read_json(file):
     """
