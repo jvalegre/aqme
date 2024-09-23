@@ -333,14 +333,14 @@ def get_chemical_shifts(json_data, nmr_atoms, nmr_slope, nmr_intercept):
 
 def average_prop_atom(weights, prop):
     """
-    Returns the atomic properties averaged using the Boltzmann average and rounded to 4 decimal places.
+    Returns the atomic properties averaged using the Boltzmann average.
 
     Parameters:
     weights (list of floats): Boltzmann weights calculated for each configuration.
     prop (list): List of atomic properties (either floats or lists of values) for each configuration.
 
     Returns:
-    boltz_res: The Boltzmann-weighted average of the atomic properties, rounded to 4 decimal places.
+    boltz_res: The Boltzmann-weighted average of the atomic properties.
     """
     # List to store the Boltzmann-weighted properties
     boltz_avg = []
@@ -361,14 +361,15 @@ def average_prop_atom(weights, prop):
     if isinstance(boltz_avg[0], list):
         # If so, sum along the axis (i.e., sum element-wise for multi-dimensional properties)
         boltz_res = np.sum(boltz_avg, axis=0)
-        # Round each element in the result to 4 decimal places
-        boltz_res = [round(x, 4) for x in boltz_res]
+        # Round each element in the result to 4 decimal places if it's a NumPy array
+        boltz_res = np.round(boltz_res, 4)
     else:
-        # Otherwise, sum all the weighted values as a scalar
+        # Otherwise, sum all the weighted values as a scalar and round to 4 decimal places
         boltz_res = round(sum(boltz_avg), 4)
     
-    # Return the Boltzmann-weighted result rounded to 4 decimal places
+    # Return the Boltzmann-weighted result
     return boltz_res
+
 
 
 def average_prop_atom_nmr(weights, prop):
@@ -388,51 +389,51 @@ def average_prop_atom_nmr(weights, prop):
         boltz_res = np.sum(boltz_avg, 0)
     return boltz_res
 
-def average_prop_mol(weights, prop):
-    """
-    Returns Boltzmann averaged molecular properties, rounded to 4 decimal places.
-
-    Parameters:
-    weights (list of floats): Boltzmann weights for each configuration.
-    prop (list of floats): List of molecular properties corresponding to each configuration.
-
-    Returns:
-    boltz_avg (float): Boltzmann-weighted average of the molecular properties, rounded to 4 decimal places.
-    """
-    
-    # Initialize the Boltzmann-weighted average to 0.0
-    boltz_avg = 0.0
-    
-    # Loop through each property and its corresponding weight
-    for i, p in enumerate(prop):
-        # If the property is 'NaN', break the loop and return 'NaN'
-        if p == 'NaN':
-            boltz_avg = 'NaN'
-            break
-        # Otherwise, calculate the weighted sum of properties
-        boltz_avg += p * weights[i]
-    
-    # If the result is a valid number, round it to 4 decimal places
-    if boltz_avg != 'NaN':
-        boltz_avg = round(boltz_avg, 4)
-
-    # Return the Boltzmann-weighted average, rounded to 4 decimal places (or 'NaN' if encountered)
-    return boltz_avg
-
-
-
 # def average_prop_mol(weights, prop):
 #     """
-#     Returns Boltzmann averaged molecular properties
-#     """
+#     Returns Boltzmann averaged molecular properties, rounded to 4 decimal places.
 
+#     Parameters:
+#     weights (list of floats): Boltzmann weights for each configuration.
+#     prop (list of floats): List of molecular properties corresponding to each configuration.
+
+#     Returns:
+#     boltz_avg (float): Boltzmann-weighted average of the molecular properties, rounded to 4 decimal places.
+#     """
+    
+#     # Initialize the Boltzmann-weighted average to 0.0
 #     boltz_avg = 0.0
+    
+#     # Loop through each property and its corresponding weight
 #     for i, p in enumerate(prop):
+#         # If the property is 'NaN', break the loop and return 'NaN'
 #         if p == 'NaN':
 #             boltz_avg = 'NaN'
 #             break
+#         # Otherwise, calculate the weighted sum of properties
 #         boltz_avg += p * weights[i]
+    
+#     # If the result is a valid number, round it to 4 decimal places
+#     if boltz_avg != 'NaN':
+#         boltz_avg = round(boltz_avg, 4)
+
+#     # Return the Boltzmann-weighted average, rounded to 4 decimal places (or 'NaN' if encountered)
 #     return boltz_avg
+
+
+
+def average_prop_mol(weights, prop):
+    """
+    Returns Boltzmann averaged molecular properties
+    """
+
+    boltz_avg = 0.0
+    for i, p in enumerate(prop):
+        if p == 'NaN':
+            boltz_avg = 'NaN'
+            break
+        boltz_avg += p * weights[i]
+    return boltz_avg
 
 
 
@@ -528,9 +529,76 @@ def get_rdkit_properties(avg_json_data, mol):
 #         return localgfn1
     
 
+# def read_gfn1(file):
+#     """
+#     Read .gfn1 output file created from xTB. Return data.
+#     """
+
+#     # Check if the file has the .gfn1 extension
+#     if not file.endswith(".gfn1"):
+#         print(f"x  WARNING! {file} is not a valid .gfn1 file.")
+#         return None
+
+#     # Check if the file exists
+#     if not os.path.exists(file):
+#         print(f"x  WARNING! The file {file} does not exist.")
+#         return None
+
+#     try:
+#         with open(file, "r") as f:
+#             data = f.readlines()
+#         for i in range(0, len(data)):
+#             if data[i].find("Mulliken/CM5 charges") > -1:
+#                 start = i + 1
+#                 break
+#         for j in range(start, len(data)):
+#             if (
+#                 data[j].find("Wiberg/Mayer (AO) data") > -1
+#                 or data[j].find("generalized Born model") > -1
+#             ):
+#                 end = j - 1
+#                 break
+
+#         pop_data = data[start:end]
+#         mulliken, cm5, s_prop, p_prop, d_prop = [], [], [], [], []
+#         for line in pop_data:
+#             item = line.split()
+#             q_mull = round(float(item[-5]),5)
+#             q_cm5 = round(float(item[-4]),5)
+#             s_prop_ind = round(float(item[-3]),3)
+#             p_prop_ind = round(float(item[-2]),3)
+#             d_prop_ind = round(float(item[-1]),3)
+#             mulliken.append(q_mull)
+#             cm5.append(q_cm5)
+#             s_prop.append(s_prop_ind)
+#             p_prop.append(p_prop_ind)
+#             d_prop.append(d_prop_ind)
+
+#         localgfn1 = {
+#         "mulliken charges": mulliken,
+#         "cm5 charges": cm5,
+#         "s proportion": s_prop,
+#         "p proportion": p_prop,
+#         "d proportion": d_prop,
+#         }
+
+#         return localgfn1
+
+#     except Exception as e:
+#         # Handle any exception that occurs during file processing
+#         print(f"x  WARNING! An error occurred while processing {file}: {e}")
+#         return None
+
 def read_gfn1(file):
     """
-    Read .gfn1 output file created from xTB. Return data.
+    Read .gfn1 output file created from xTB and return parsed data.
+
+    Parameters:
+    file (str): Path to the .gfn1 file.
+
+    Returns:
+    dict: Parsed data containing Mulliken charges, CM5 charges, and proportions.
+          Returns None if there's an issue with the file.
     """
 
     # Check if the file has the .gfn1 extension
@@ -544,49 +612,83 @@ def read_gfn1(file):
         return None
 
     try:
+        # Open and read the file safely
         with open(file, "r") as f:
             data = f.readlines()
-        for i in range(0, len(data)):
-            if data[i].find("Mulliken/CM5 charges") > -1:
+
+        # Ensure the file contains data
+        if not data:
+            print(f"x  WARNING! The file {file} is empty.")
+            return None
+
+        # Initialize variables for data extraction
+        start, end = None, None
+
+        # Find the start of the Mulliken/CM5 charges section
+        for i, line in enumerate(data):
+            if "Mulliken/CM5 charges" in line:
                 start = i + 1
                 break
-        for j in range(start, len(data)):
-            if (
-                data[j].find("Wiberg/Mayer (AO) data") > -1
-                or data[j].find("generalized Born model") > -1
-            ):
-                end = j - 1
-                break
 
+        # Find the end of the section (start of Wiberg/Mayer or generalized Born)
+        if start is not None:
+            for j in range(start, len(data)):
+                if "Wiberg/Mayer (AO) data" in data[j] or "generalized Born model" in data[j]:
+                    end = j - 1
+                    break
+        else:
+            print(f"x  WARNING! Mulliken/CM5 charges section not found in {file}.")
+            return None
+
+        # Ensure both start and end are found
+        if start is None or end is None:
+            print(f"x  WARNING! Required sections not found in {file}.")
+            return None
+
+        # Extract the relevant data between the start and end lines
         pop_data = data[start:end]
-        mulliken, cm5, s_prop, p_prop, d_prop = [], [], [], [], []
-        for line in pop_data:
-            item = line.split()
-            q_mull = round(float(item[-5]),5)
-            q_cm5 = round(float(item[-4]),5)
-            s_prop_ind = round(float(item[-3]),3)
-            p_prop_ind = round(float(item[-2]),3)
-            d_prop_ind = round(float(item[-1]),3)
-            mulliken.append(q_mull)
-            cm5.append(q_cm5)
-            s_prop.append(s_prop_ind)
-            p_prop.append(p_prop_ind)
-            d_prop.append(d_prop_ind)
 
+        # Initialize lists to store the parsed data
+        mulliken, cm5, s_prop, p_prop, d_prop = [], [], [], [], []
+
+        # Process each line in the extracted data section
+        for line in pop_data:
+            try:
+                item = line.split()
+                # Extract and round the required values from each line
+                q_mull = round(float(item[-5]), 5)
+                q_cm5 = round(float(item[-4]), 5)
+                s_prop_ind = round(float(item[-3]), 3)
+                p_prop_ind = round(float(item[-2]), 3)
+                d_prop_ind = round(float(item[-1]), 3)
+                mulliken.append(q_mull)
+                cm5.append(q_cm5)
+                s_prop.append(s_prop_ind)
+                p_prop.append(p_prop_ind)
+                d_prop.append(d_prop_ind)
+            except (ValueError, IndexError) as e:
+                # Handle errors related to parsing the line
+                print(f"x  WARNING! Error parsing line in {file}: {line}. Error: {e}")
+                return None
+
+        # Store the parsed data in a dictionary and return it
         localgfn1 = {
-        "mulliken charges": mulliken,
-        "cm5 charges": cm5,
-        "s proportion": s_prop,
-        "p proportion": p_prop,
-        "d proportion": d_prop,
+            "mulliken charges": mulliken,
+            "cm5 charges": cm5,
+            "s proportion": s_prop,
+            "p proportion": p_prop,
+            "d proportion": d_prop,
         }
 
         return localgfn1
 
-    except Exception as e:
-        # Handle any exception that occurs during file processing
+    except IOError as e:
+        # Handle errors related to file reading
         print(f"x  WARNING! An error occurred while processing {file}: {e}")
         return None
+
+
+
 
 
 def read_wbo(file):
