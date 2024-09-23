@@ -428,7 +428,7 @@ def read_gfn1(file):
     Read .gfn1 output file created from xTB. Return data.
     """
 
-    # Check if the file has the .wbo extension
+    # Check if the file has the .gfn1 extension
     if not file.endswith(".gfn1"):
         print(f"x  WARNING! {file} is not a valid .gfn1 file.")
         return None
@@ -543,73 +543,158 @@ def read_wbo(file):
 #         return None
 
 
+# def calculate_global_CDFT_descriptors(file):
+#     """
+#     Read .gfn1 output file created from xTB and calculate CDFT descriptors with FDA approximations part 1.
+#     """
+#     if not file.endswith(".gfn1"):
+#         raise ValueError("Missing .gfn1 output file")
+
+#     try:
+#         with open(file, "r") as f:
+#             data = f.readlines()
+#     except IOError:
+#         raise IOError("Error opening or reading the file.")
+    
+#     delta_SCC_IP, delta_SCC_EA, electrophilicity_index = None, None, None
+
+#     # Extract relevant values from the file
+#     for line in data:
+#         if "delta SCC IP (eV):" in line:
+#             delta_SCC_IP = float(line.split()[-1])
+#         elif "delta SCC EA (eV):" in line:
+#             delta_SCC_EA = float(line.split()[-1])
+#         elif "Global electrophilicity index (eV):" in line:
+#             electrophilicity_index = float(line.split()[-1])
+
+#     # Check if required descriptors were found
+#     if delta_SCC_IP is None or delta_SCC_EA is None:
+#         raise ValueError("Could not find delta_SCC_IP and delta_SCC_EA descriptors in the file")
+
+#     # Calculate CDFT descriptors
+#     chemical_hardness = round((delta_SCC_IP - delta_SCC_EA), 4)
+#     chemical_softness = round(1 / chemical_hardness, 4) if chemical_hardness != 0 else None
+#     chemical_potential = round(-(delta_SCC_IP + delta_SCC_EA) / 2, 4)
+#     mulliken_electronegativity = round(-chemical_potential, 4)
+
+#     try:
+#         electrodonating_power_index = round(((delta_SCC_IP + 3 * delta_SCC_EA)**2) / (8 * chemical_hardness), 4)
+#         electroaccepting_power_index = round(((3 * delta_SCC_IP + delta_SCC_EA)**2) / (8 * chemical_hardness), 4)
+#         nucleophilicity_index = round(10 / electroaccepting_power_index, 4) if electroaccepting_power_index != 0 else None
+#     except ZeroDivisionError:
+#         electrodonating_power_index = None
+#         electroaccepting_power_index = None
+#         nucleophilicity_index = None
+#         print("Warning: Division by zero encountered in power index calculations.")
+
+#     electrofugality = round(-delta_SCC_EA + electrophilicity_index, 4) if electrophilicity_index is not None else None
+#     nucleofugality = round(delta_SCC_IP + electrophilicity_index, 4) if electrophilicity_index is not None else None
+#     intrinsic_reactivity_index = round((delta_SCC_IP + delta_SCC_EA) / chemical_hardness, 4) if chemical_hardness != 0 else None
+#     net_electrophilicity = round((electrodonating_power_index - electroaccepting_power_index), 4) if electrodonating_power_index is not None and electroaccepting_power_index is not None else None
+
+#     cdft_descriptors = {
+#         "IP": delta_SCC_IP,
+#         "EA": delta_SCC_EA,
+#         "Electrophil. idx": electrophilicity_index,
+#         "Hardness": chemical_hardness,
+#         "Softness": chemical_softness,
+#         "Chem. potential": chemical_potential,
+#         "Electronegativity": mulliken_electronegativity,
+#         "Electrodon. power idx": electrodonating_power_index,
+#         "Electroaccep. power idx": electroaccepting_power_index,
+#         "Nucleophilicity idx": nucleophilicity_index,
+#         "Electrofugality": electrofugality,
+#         "Nucleofugality": nucleofugality,
+#         "Intrinsic React. idx": intrinsic_reactivity_index,
+#         "Net Electrophilicity": net_electrophilicity
+#     }
+
+#     return cdft_descriptors
+
+
 def calculate_global_CDFT_descriptors(file):
     """
     Read .gfn1 output file created from xTB and calculate CDFT descriptors with FDA approximations part 1.
     """
+    # Check if the file has the .gfn1 extension
     if not file.endswith(".gfn1"):
-        raise ValueError("Missing .gfn1 output file")
+        print(f"x  WARNING! {file} is not a valid .gfn1 file.")
+        return None
+
+    # Check if the file exists
+    if not os.path.exists(file):
+        print(f"x  WARNING! The file {file} does not exist.")
+        return None
 
     try:
         with open(file, "r") as f:
-            data = f.readlines()
-    except IOError:
-        raise IOError("Error opening or reading the file.")
-    
-    delta_SCC_IP, delta_SCC_EA, electrophilicity_index = None, None, None
+                data = f.readlines()
+        
+        # Initialize variables
+        delta_SCC_IP, delta_SCC_EA, electrophilicity_index = None, None, None
+        chemical_hardness, chemical_softness = None, None
+        chemical_potential, mulliken_electronegativity = None, None
+        electrodonating_power_index, electroaccepting_power_index = None, None
+        intrinsic_reactivity_index = None
+        electrofugality, nucleofugality, nucleophilicity_index, net_electrophilicity = None, None, None, None
 
-    # Extract relevant values from the file
-    for line in data:
-        if "delta SCC IP (eV):" in line:
-            delta_SCC_IP = float(line.split()[-1])
-        elif "delta SCC EA (eV):" in line:
-            delta_SCC_EA = float(line.split()[-1])
-        elif "Global electrophilicity index (eV):" in line:
-            electrophilicity_index = float(line.split()[-1])
+        # Extract relevant values from the file
+        for line in data:
+            if "delta SCC IP (eV):" in line:
+                delta_SCC_IP = float(line.split()[-1])
+            elif "delta SCC EA (eV):" in line:
+                delta_SCC_EA = float(line.split()[-1])
+            elif "Global electrophilicity index (eV):" in line:
+                electrophilicity_index = float(line.split()[-1])
 
-    # Check if required descriptors were found
-    if delta_SCC_IP is None or delta_SCC_EA is None:
-        raise ValueError("Could not find delta_SCC_IP and delta_SCC_EA descriptors in the file")
+        # Check if required descriptors were found
+        if delta_SCC_IP is not None and delta_SCC_EA is not None and electrophilicity_index is not None:
+            # Calculate CDFT descriptors
+            chemical_hardness = round((delta_SCC_IP - delta_SCC_EA), 4)
+            chemical_potential = round(-(delta_SCC_IP + delta_SCC_EA) / 2, 4)
+            mulliken_electronegativity = round(-chemical_potential, 4)
+            electrofugality = round(-delta_SCC_EA + electrophilicity_index, 4)
+            nucleofugality = round(delta_SCC_IP + electrophilicity_index, 4)
 
-    # Calculate CDFT descriptors
-    chemical_hardness = round((delta_SCC_IP - delta_SCC_EA), 4)
-    chemical_softness = round(1 / chemical_hardness, 4) if chemical_hardness != 0 else None
-    chemical_potential = round(-(delta_SCC_IP + delta_SCC_EA) / 2, 4)
-    mulliken_electronegativity = round(-chemical_potential, 4)
 
-    try:
-        electrodonating_power_index = round(((delta_SCC_IP + 3 * delta_SCC_EA)**2) / (8 * chemical_hardness), 4)
-        electroaccepting_power_index = round(((3 * delta_SCC_IP + delta_SCC_EA)**2) / (8 * chemical_hardness), 4)
-        nucleophilicity_index = round(10 / electroaccepting_power_index, 4) if electroaccepting_power_index != 0 else None
-    except ZeroDivisionError:
-        electrodonating_power_index = None
-        electroaccepting_power_index = None
-        nucleophilicity_index = None
-        print("Warning: Division by zero encountered in power index calculations.")
+            if chemical_hardness != 0:
+                chemical_softness = round(1 / chemical_hardness, 4)
+                electrodonating_power_index = round(((delta_SCC_IP + 3 * delta_SCC_EA)**2) / (8 * chemical_hardness), 4)
+                electroaccepting_power_index = round(((3 * delta_SCC_IP + delta_SCC_EA)**2) / (8 * chemical_hardness), 4)
+                intrinsic_reactivity_index = round((delta_SCC_IP + delta_SCC_EA) / chemical_hardness, 4)
 
-    electrofugality = round(-delta_SCC_EA + electrophilicity_index, 4) if electrophilicity_index is not None else None
-    nucleofugality = round(delta_SCC_IP + electrophilicity_index, 4) if electrophilicity_index is not None else None
-    intrinsic_reactivity_index = round((delta_SCC_IP + delta_SCC_EA) / chemical_hardness, 4) if chemical_hardness != 0 else None
-    net_electrophilicity = round((electrodonating_power_index - electroaccepting_power_index), 4) if electrodonating_power_index is not None and electroaccepting_power_index is not None else None
+                if electroaccepting_power_index != 0:
+                    nucleophilicity_index = round(10 / electroaccepting_power_index, 4)
+                    
+            net_electrophilicity = round((electrodonating_power_index - electroaccepting_power_index), 4)
 
-    cdft_descriptors = {
-        "IP": delta_SCC_IP,
-        "EA": delta_SCC_EA,
-        "Electrophil. idx": electrophilicity_index,
-        "Hardness": chemical_hardness,
-        "Softness": chemical_softness,
-        "Chem. potential": chemical_potential,
-        "Electronegativity": mulliken_electronegativity,
-        "Electrodon. power idx": electrodonating_power_index,
-        "Electroaccep. power idx": electroaccepting_power_index,
-        "Nucleophilicity idx": nucleophilicity_index,
-        "Electrofugality": electrofugality,
-        "Nucleofugality": nucleofugality,
-        "Intrinsic React. idx": intrinsic_reactivity_index,
-        "Net Electrophilicity": net_electrophilicity
-    }
+        else:
+            print(f"x  WARNING! delta_SCC_IP, delta_SCC_EA, or electrophilicity_index were not found in the file. Global Conceptual DFT descriptors cannot be fully calculated.")
 
-    return cdft_descriptors
+        # Collect descriptors into a dictionary
+        cdft_descriptors = {
+            "IP": delta_SCC_IP,
+            "EA": delta_SCC_EA,
+            "Electrophil. idx": electrophilicity_index,
+            "Hardness": chemical_hardness,
+            "Softness": chemical_softness,
+            "Chem. potential": chemical_potential,
+            "Electronegativity": mulliken_electronegativity,
+            "Electrodon. power idx": electrodonating_power_index,
+            "Electroaccep. power idx": electroaccepting_power_index,
+            "Nucleophilicity idx": nucleophilicity_index,
+            "Electrofugality": electrofugality,
+            "Nucleofugality": nucleofugality,
+            "Intrinsic React. idx": intrinsic_reactivity_index,
+            "Net Electrophilicity": net_electrophilicity
+        }
+
+        return cdft_descriptors
+    except Exception as e:
+        # Handle any exception that occurs during file processing
+        print(f"x  WARNING! An error occurred while processing {file}: {e}")
+        return None
+
 
 def calculate_global_CDFT_descriptors_part2(file, file_Nminus1, file_Nminus2, file_Nplus1, file_Nplus2, cdft_descriptors):
     """
