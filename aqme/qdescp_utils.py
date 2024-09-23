@@ -688,66 +688,53 @@ def read_gfn1(file):
         return None
 
 
-
-
-
-def read_wbo(file):
-    """
-    Read wbo output file created from xTB. Return data.
-    """
-
-    if file.find(".wbo") > -1:
-        f = open(file, "r")
-        data = f.readlines()
-        f.close()
-
-        bonds, wbos = [], []
-        for line in data:
-            item = line.split()
-            bond = [int(item[0]), int(item[1])]
-            wbo = round(float(item[2]),3)
-            bonds.append(bond)
-            wbos.append(wbo)
-        return bonds, wbos
-    
-
 # def read_wbo(file):
 #     """
 #     Read wbo output file created from xTB. Return data.
 #     """
 
-#     # Check if the file has the .wbo extension
-#     if not file.endswith(".wbo"):
-#         print(f"x  WARNING! {file} is not a valid .wbo file.")
-#         return None
+#     if file.find(".wbo") > -1:
+#         f = open(file, "r")
+#         data = f.readlines()
+#         f.close()
 
-#     # Check if the file exists
-#     if not os.path.exists(file):
-#         print(f"x  WARNING! The file {file} does not exist.")
-#         return None
-
-#     try:
-#         # Safely open the file and read its content
-#         with open(file, "r") as f:
-#             data = f.readlines()
-
-#         # Initialize empty lists to store bonds and WBO values
-#         bonds, wbos = []
-#         # Process each line in the file
+#         bonds, wbos = [], []
 #         for line in data:
-#             item = line.split()  # Split the line into components
-#             bond = [int(item[0]), int(item[1])]  # Extract bond indices
-#             wbo = round(float(item[2]), 3)  # Extract and round the WBO value
-#             bonds.append(bond)  # Add bond to list
-#             wbos.append(wbo)  # Add WBO to list
-
-#         # Return the bonds and WBO values
+#             item = line.split()
+#             bond = [int(item[0]), int(item[1])]
+#             wbo = round(float(item[2]),3)
+#             bonds.append(bond)
+#             wbos.append(wbo)
 #         return bonds, wbos
 
-#     except Exception as e:
-#         # Handle any exception that occurs during file processing
-#         print(f"x  WARNING! An error occurred while processing {file}: {e}")
-#         return None
+def read_wbo(file):
+    """
+    Read wbo output file created from xTB. Return data.
+    """
+    if not file.endswith(".wbo"):
+        print(f"x  WARNING! {file} is not a valid .wbo file.")
+        return None
+
+    if not os.path.exists(file):
+        print(f"x  WARNING! The file {file} does not exist.")
+        return None
+
+    try:
+        with open(file, "r") as f:
+            data = f.readlines()
+
+        bonds, wbos = [], []
+        for line in data:
+            item = line.split()  # Split the line into components
+            bond = [int(item[0]), int(item[1])]  # Extract bond indices
+            wbo = round(float(item[2]), 3)  # Extract and round the WBO value
+            bonds.append(bond)  # Add bond to list
+            wbos.append(wbo)  # Add WBO to list
+
+        return bonds, wbos
+
+    except Exception as e:
+        return None
 
 
 # def calculate_global_CDFT_descriptors(file):
@@ -963,15 +950,19 @@ def calculate_global_CDFT_descriptors_part2(file, file_Nminus1, file_Nminus2, fi
         hyper_hardness, Global_hypersoftness = None, None
         Electrophilic_descriptor, w_cubic = None, None
 
-        # Calculations if all SCC energies and descriptors are available
+        # Calculations if all SCC energies and descriptors are available:
+        # Calculating the following descriptors
+            # 1) Second IP
         Vertical_second_IP = round((((scc_energy_Nminus2 - scc_energy_Nminus1) - corr_xtb)), 4)
+            # 2) Second EA
         Vertical_second_EA = round((((scc_energy_Nplus1 - scc_energy_Nplus2) + corr_xtb)), 4)
+            # 3) Hyperhardnes
         hyper_hardness = round((-((0.5) * (delta_SCC_IP + delta_SCC_EA - Vertical_second_IP - Vertical_second_EA))), 4)
 
         if chemical_hardness != 0:
             Global_hypersoftness = round((hyper_hardness / ((chemical_hardness) ** 3)), 4)
 
-        # Electrophilic descriptor calculations
+            # 4) Electrophilic descriptor calculations
         A = ((scc_energy_Nplus1 - scc_energy) + corr_xtb)
         c = (Vertical_second_IP - (2 * delta_SCC_IP) + A) / ((2 * Vertical_second_IP) - delta_SCC_IP - A)
         a = -((delta_SCC_IP + A) / 2) + (((delta_SCC_IP - A) / 2) * c)
@@ -989,7 +980,7 @@ def calculate_global_CDFT_descriptors_part2(file, file_Nminus1, file_Nminus2, fi
             Phi = inter_phi - Eta
             Electrophilic_descriptor = round(((chi * (Phi / Gamma)) - (((Phi / Gamma) ** 2) * ((Eta / 2) + (Phi / 6)))), 4)
 
-        # Cubic electrophilicity index
+            # 5) Cubic electrophilicity index
         Gamma_cubic = 2 * delta_SCC_IP - Vertical_second_IP - delta_SCC_EA
         Eta_cubic = delta_SCC_IP - delta_SCC_EA
 
@@ -997,7 +988,7 @@ def calculate_global_CDFT_descriptors_part2(file, file_Nminus1, file_Nminus2, fi
             Mu_cubic = (1 / 6) * ((-2 * delta_SCC_EA) - (5 * delta_SCC_IP) + Vertical_second_IP)
             w_cubic = round(((Mu_cubic ** 2) / (2 * Eta_cubic)) * (1 + ((Mu_cubic / (3 * (Eta_cubic) ** 2)) * Gamma_cubic)), 4)
         else:
-            print(f"x  WARNING! Eta_cubic is zero, skipping Cubic electrophilicity index calculation.")
+            print(f"x  WARNING! Eta_cubic is zero, skipping cub. electrophilicity idx calculation.")
 
         # Return the calculated descriptors
         cdft_descriptors2 = {
@@ -1122,102 +1113,201 @@ def calculate_global_CDFT_descriptors_part2(file, file_Nminus1, file_Nminus2, fi
 
 def calculate_local_CDFT_descriptors(file_fukui, cdft_descriptors, cdft_descriptors2):
     """
-    Read fukui output file created from XTB option. Return data.
+    Read fukui output file created from XTB and calculate local CDFT descriptors.
     """
     if not file_fukui.endswith(".fukui"):
-        raise ValueError("Missing .fukui output file")
+        print(f"x WARNING! {file_fukui} is not a valid .fukui file.")
+        return None
 
-    with open(file_fukui, "r") as f:
-        data = f.readlines()
+    try:
+        with open(file_fukui, "r") as f:
+            data = f.readlines()
 
-    # Searching Fukuis
-    f_pos, f_negs, f_rads = [], [], []
-    start, end = None, None
+        f_pos, f_negs, f_rads = [], [], []
+        start, end = None, None
 
-    # Search for the start and end lines in the file_fukui
-    for i, line in enumerate(data):
-        if "f(+) " in line:
-            start = i + 1
-        elif "-------------" in line and start is not None:
-            end = i
-            break
+        for i, line in enumerate(data):
+            if "f(+) " in line:
+                start = i + 1
+            elif "-------------" in line and start is not None:
+                end = i
+                break
 
-    # Ensure start and end indices were found
-    if start is not None and end is not None:
-        fukui_data = data[start:end]
-        for line in fukui_data:
-            try:
-                f_po, f_neg, f_rad = map(lambda x: round(float(x), 4), line.split()[-3:])
-                f_pos.append(f_po)
-                f_negs.append(f_neg)
-                f_rads.append(f_rad)
-            except ValueError:
-                continue
-    else:
-        print("Fukui data not found in the file, please check the '.fukui' file.")
+        if start is not None and end is not None:
+            fukui_data = data[start:end]
+            for line in fukui_data:
+                try:
+                    f_po, f_neg, f_rad = map(lambda x: round(float(x), 4), line.split()[-3:])
+                    f_pos.append(f_po)
+                    f_negs.append(f_neg)
+                    f_rads.append(f_rad)
+                except ValueError:
+                    continue
+        else:
+            print("WARNING: Fukui data not found in the file. Please check the '.fukui' file.")
+            return None
 
-    # Check if the lists are populated
-    if not f_pos or not f_negs or not f_rads:
-        print("Fukui data not found in the file, please check the '.fukui' file.")
-        return
+        if not f_pos or not f_negs or not f_rads:
+            print("WARNING: Fukui data lists are empty. Please check the '.fukui' file.")
+            return None
+
+        chemical_softness = cdft_descriptors.get("Softness")
+        Global_hypersoftness = cdft_descriptors2.get("Hypersoftness")
+        electrophilicity_index = cdft_descriptors.get("Electrophil. idx")
+        nucleophilicity_index = cdft_descriptors.get("Nucleophilicity idx")
+
+        if None in [chemical_softness, Global_hypersoftness, electrophilicity_index, nucleophilicity_index]:
+            print("x  WARNING! Missing required CDFT descriptors (Softness, Hypersoftness, Electrophil. idx or Nucleophilicity idx).")
+            return None
+
+        # Calculating local descriptors:
+            # 1) dual descrip.
+        dual_descriptor = [round(f_po - f_neg, 4) for f_po, f_neg in zip(f_pos, f_negs)]
+            # 2) softness+, softness- and softness0
+        s_pos = [round(chemical_softness * f_po, 4) for f_po in f_pos]
+        s_negs = [round(chemical_softness * f_neg, 4) for f_neg in f_negs]
+        s_rads = [round(chemical_softness * f_rad, 4) for f_rad in f_rads]
+            # 3) Rel. nucleophilicity
+        Relative_nucleophilicity = [round(s_neg / s_po, 4) if s_po != 0 else None for s_neg, s_po in zip(s_negs, s_pos)]
+            # 4) Rel. electrophilicity
+        Relative_electrophilicity = [round(s_po / s_neg, 4) if s_neg != 0 else None for s_neg, s_po in zip(s_negs, s_pos)]
+            # 5) GC Dual Descrip.
+        Grand_canonical_dual_descriptor = [round(Global_hypersoftness * dual, 4) for dual in dual_descriptor]
+            # 6) softness+, softness- and softness0
+        w_pos = [round(electrophilicity_index * f_po, 4) for f_po in f_pos]
+        w_negs = [round(electrophilicity_index * f_neg, 4) for f_negs in f_negs]
+        w_rads = [round(electrophilicity_index * f_rad, 4) for f_rad in f_rads]
+            # 7) softness+, softness- and softness0
+        Multiphilic_descriptor = [round(electrophilicity_index * dual, 4) for dual in dual_descriptor]
+            # 8) softness+, softness- and softness0
+        Nu_pos = [round(nucleophilicity_index * f_po, 4) for f_po in f_pos]
+        Nu_negs = [round(nucleophilicity_index * f_neg, 4) for f_neg in f_negs]
+        Nu_rads = [round(nucleophilicity_index * f_rad, 4) for f_rad in f_rads]
+
+        localDescriptors = {
+            "fukui+": f_pos,
+            "fukui-": f_negs,
+            "fukui0": f_rads,
+            "dual descrip.": dual_descriptor,
+            "softness+": s_pos,  # s+
+            "softness-": s_negs,  # s-
+            "softness0": s_rads,  # srad
+            "Rel. nucleophilicity": Relative_nucleophilicity,  # s+/s-
+            "Rel. electrophilicity": Relative_electrophilicity,  # s-/s+
+            "GC Dual Descrip.": Grand_canonical_dual_descriptor,
+            "Electrophil.": w_pos,  # w+
+            "Nucleophil.": w_negs,  # w-
+            "Radical attack": w_rads,  # wrad
+            "Mult. descrip.": Multiphilic_descriptor,
+            "Nu_Electrophil.": Nu_pos,  # Nu+
+            "Nu_Nucleophil.": Nu_negs,  # Nu-
+            "Nu_Radical attack": Nu_rads  # Nurad
+        }
+
+        return localDescriptors
+    except IOError as e:
+        print(f"x WARNING! Could not open the file {file_fukui}: {e}")
+        return None
+
+
+# def calculate_local_CDFT_descriptors(file_fukui, cdft_descriptors, cdft_descriptors2):
+#     """
+#     Read fukui output file created from XTB option. Return data.
+#     """
+#     if not file_fukui.endswith(".fukui"):
+#         raise ValueError("Missing .fukui output file")
+
+#     with open(file_fukui, "r") as f:
+#         data = f.readlines()
+
+#     # Searching Fukuis
+#     f_pos, f_negs, f_rads = [], [], []
+#     start, end = None, None
+
+#     # Search for the start and end lines in the file_fukui
+#     for i, line in enumerate(data):
+#         if "f(+) " in line:
+#             start = i + 1
+#         elif "-------------" in line and start is not None:
+#             end = i
+#             break
+
+#     # Ensure start and end indices were found
+#     if start is not None and end is not None:
+#         fukui_data = data[start:end]
+#         for line in fukui_data:
+#             try:
+#                 f_po, f_neg, f_rad = map(lambda x: round(float(x), 4), line.split()[-3:])
+#                 f_pos.append(f_po)
+#                 f_negs.append(f_neg)
+#                 f_rads.append(f_rad)
+#             except ValueError:
+#                 continue
+#     else:
+#         print("Fukui data not found in the file, please check the '.fukui' file.")
+
+#     # Check if the lists are populated
+#     if not f_pos or not f_negs or not f_rads:
+#         print("Fukui data not found in the file, please check the '.fukui' file.")
+#         return
     
-    # Extract necessary values from the provided dictionaries
-    chemical_softness = cdft_descriptors.get("Softness")
-    Global_hypersoftness = cdft_descriptors2.get("Hypersoftness")
-    electrophilicity_index = cdft_descriptors.get("Electrophil. idx")
-    nucleophilicity_index = cdft_descriptors.get("Nucleophilicity idx")
+#     # Extract necessary values from the provided dictionaries
+#     chemical_softness = cdft_descriptors.get("Softness")
+#     Global_hypersoftness = cdft_descriptors2.get("Hypersoftness")
+#     electrophilicity_index = cdft_descriptors.get("Electrophil. idx")
+#     nucleophilicity_index = cdft_descriptors.get("Nucleophilicity idx")
 
-    # Calculating local Descriptors part 2
-    dual_descriptor = [round(f_po - f_neg, 4) for f_po, f_neg in zip(f_pos, f_negs)]
+#     # Calculating local Descriptors part 2
+#     dual_descriptor = [round(f_po - f_neg, 4) for f_po, f_neg in zip(f_pos, f_negs)]
 
-    s_pos = [round(chemical_softness * f_po, 4) for f_po in f_pos]
-    s_negs = [round(chemical_softness * f_neg, 4) for f_neg in f_negs]
-    s_rads = [round(chemical_softness * f_rad, 4) for f_rad in f_rads]
+#     s_pos = [round(chemical_softness * f_po, 4) for f_po in f_pos]
+#     s_negs = [round(chemical_softness * f_neg, 4) for f_neg in f_negs]
+#     s_rads = [round(chemical_softness * f_rad, 4) for f_rad in f_rads]
 
-    Relative_nucleophilicity = [
-        round(s_neg / s_po, 4) if s_po != 0 else None for s_neg, s_po in zip(s_negs, s_pos)
-    ]
-    Relative_electrophilicity = [
-        round(s_po / s_neg, 4) if s_neg != 0 else None for s_neg, s_po in zip(s_negs, s_pos)
-    ]
+#     Relative_nucleophilicity = [
+#         round(s_neg / s_po, 4) if s_po != 0 else None for s_neg, s_po in zip(s_negs, s_pos)
+#     ]
+#     Relative_electrophilicity = [
+#         round(s_po / s_neg, 4) if s_neg != 0 else None for s_neg, s_po in zip(s_negs, s_pos)
+#     ]
 
-    Grand_canonical_dual_descriptor = [
-        round(Global_hypersoftness * dual, 4) for dual in dual_descriptor
-    ]
+#     Grand_canonical_dual_descriptor = [
+#         round(Global_hypersoftness * dual, 4) for dual in dual_descriptor
+#     ]
 
-    w_pos = [round(electrophilicity_index * f_po, 4) for f_po in f_pos]
-    w_negs = [round(electrophilicity_index * f_neg, 4) for f_negs in f_negs]
-    w_rads = [round(electrophilicity_index * f_rad, 4) for f_rad in f_rads]
+#     w_pos = [round(electrophilicity_index * f_po, 4) for f_po in f_pos]
+#     w_negs = [round(electrophilicity_index * f_neg, 4) for f_negs in f_negs]
+#     w_rads = [round(electrophilicity_index * f_rad, 4) for f_rad in f_rads]
 
-    Multiphilic_descriptor = [
-        round(electrophilicity_index * dual, 4) for dual in dual_descriptor
-    ]
+#     Multiphilic_descriptor = [
+#         round(electrophilicity_index * dual, 4) for dual in dual_descriptor
+#     ]
 
-    Nu_pos = [round(nucleophilicity_index * f_po, 4) for f_po in f_pos]
-    Nu_negs = [round(nucleophilicity_index * f_neg, 4) for f_neg in f_negs]
-    Nu_rads = [round(nucleophilicity_index * f_rad, 4) for f_rad in f_rads]
+#     Nu_pos = [round(nucleophilicity_index * f_po, 4) for f_po in f_pos]
+#     Nu_negs = [round(nucleophilicity_index * f_neg, 4) for f_neg in f_negs]
+#     Nu_rads = [round(nucleophilicity_index * f_rad, 4) for f_rad in f_rads]
 
-    localDescriptors = {
-        "fukui+": f_pos,
-        "fukui-": f_negs,
-        "fukui0": f_rads,
-        "dual descrip.": dual_descriptor,
-        "softness+": s_pos, #s+
-        "softness-": s_negs, #s-
-        "softness0": s_rads, #srad
-        "Rel. nucleophilicity": Relative_nucleophilicity, #s+/s-
-        "Rel. electrophilicity": Relative_electrophilicity, #s-/s+
-        "GC Dual Descrip.": Grand_canonical_dual_descriptor,
-        "Electrophil.": w_pos, #w+
-        "Nucleophil.": w_negs, #w-
-        "Radical attack": w_rads, #wrad
-        "Mult. descrip.": Multiphilic_descriptor,
-        "Nu_Electrophil.": Nu_pos, #Nu+
-        "Nu_Nucleophil.": Nu_negs, #Nu-
-        "Nu_Radical attack": Nu_rads #Nurad
-    }
+#     localDescriptors = {
+#         "fukui+": f_pos,
+#         "fukui-": f_negs,
+#         "fukui0": f_rads,
+#         "dual descrip.": dual_descriptor,
+#         "softness+": s_pos, #s+
+#         "softness-": s_negs, #s-
+#         "softness0": s_rads, #srad
+#         "Rel. nucleophilicity": Relative_nucleophilicity, #s+/s-
+#         "Rel. electrophilicity": Relative_electrophilicity, #s-/s+
+#         "GC Dual Descrip.": Grand_canonical_dual_descriptor,
+#         "Electrophil.": w_pos, #w+
+#         "Nucleophil.": w_negs, #w-
+#         "Radical attack": w_rads, #wrad
+#         "Mult. descrip.": Multiphilic_descriptor,
+#         "Nu_Electrophil.": Nu_pos, #Nu+
+#         "Nu_Nucleophil.": Nu_negs, #Nu-
+#         "Nu_Radical attack": Nu_rads #Nurad
+#     }
 
-    return localDescriptors
+#     return localDescriptors
 
 def read_xtb(file):
     """
