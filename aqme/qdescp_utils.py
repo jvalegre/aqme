@@ -28,25 +28,6 @@ def convert_ndarrays(data):
         elif isinstance(value, dict):
             convert_ndarrays(value)
 
-
-
-# def get_boltz(energy):
-#     """
-#     Calculates the Boltzmann weights for a list of energies
-#     """
-#     energ = [number - min(energy) for number in energy]
-
-#     boltz_sum = 0.0
-#     for e in energ:
-#         boltz_sum += math.exp(-e * J_TO_AU / GAS_CONSTANT / T)
-    
-#     weights = []
-#     for e in energ:
-#         weight = math.exp(-e * J_TO_AU / GAS_CONSTANT / T) / boltz_sum
-#         weights.append(weight)
-
-#     return weights
-
 def get_boltz(energy):
     """
     Calculates the Boltzmann weights for a list of energies.
@@ -309,28 +290,6 @@ def get_chemical_shifts(json_data, nmr_atoms, nmr_slope, nmr_intercept):
 
     return shifts
 
-# def average_prop_atom(weights, prop):
-#     """
-#     Returns the atomic properties averaged using the Boltzmann average.
-#     """
-#     boltz_avg = []
-    
-#     for i, p in enumerate(prop):
-        
-#         if isinstance(p, (float, int)):
-#             boltz_avg.append(p * weights[i])
-#         elif isinstance(p, list):
-#             boltz_avg.append([0 if number is None else number * weights[i] for number in p])
-#         else:
-#             boltz_avg.append(0) 
-    
-#     if isinstance(boltz_avg[0], list):
-#         boltz_res = np.sum(boltz_avg, axis=0)
-#     else:
-#         boltz_res = sum(boltz_avg)
-    
-#     return boltz_res
-
 def average_prop_atom(weights, prop):
     """
     Returns the atomic properties averaged using the Boltzmann average.
@@ -369,8 +328,6 @@ def average_prop_atom(weights, prop):
     
     # Return the Boltzmann-weighted result
     return boltz_res
-
-
 
 def average_prop_atom_nmr(weights, prop):
     """
@@ -420,23 +377,6 @@ def average_prop_mol(weights, prop):
     # Return the Boltzmann-weighted average, rounded to 4 decimal places (or 'NaN' if encountered)
     return boltz_avg
 
-
-
-# def average_prop_mol(weights, prop):
-#     """
-#     Returns Boltzmann averaged molecular properties
-#     """
-
-#     boltz_avg = 0.0
-#     for i, p in enumerate(prop):
-#         if p == 'NaN':
-#             boltz_avg = 'NaN'
-#             break
-#         boltz_avg += p * weights[i]
-#     return boltz_avg
-
-
-
 def get_rdkit_properties(avg_json_data, mol):
     """
     Calculates RDKit molecular descriptors
@@ -459,6 +399,7 @@ def get_rdkit_properties(avg_json_data, mol):
         # descriptors for the level: interpret
         interpret_json_data["MolLogP"] = descrs.get("MolLogP", None)
 
+    # For older versions of RDKit 
     except AttributeError:
         avg_json_data["NHOHCount"] = rdkit.Chem.Lipinski.NHOHCount(mol)
         avg_json_data["FractionCSP3"] = rdkit.Chem.Lipinski.FractionCSP3(mol)
@@ -480,116 +421,7 @@ def get_rdkit_properties(avg_json_data, mol):
 
     return avg_json_data, denovo_json_data, interpret_json_data
 
-
-# def read_gfn1(file):
-#     """
-#     Read .gfn1 output file created from xTB. Return data.
-#     """
-
-#     if file.find(".gfn1") > -1:
-#         f = open(file, "r")
-#         data = f.readlines()
-#         f.close()
-
-#         for i in range(0, len(data)):
-#             if data[i].find("Mulliken/CM5 charges") > -1:
-#                 start = i + 1
-#                 break
-#         for j in range(start, len(data)):
-#             if (
-#                 data[j].find("Wiberg/Mayer (AO) data") > -1
-#                 or data[j].find("generalized Born model") > -1
-#             ):
-#                 end = j - 1
-#                 break
-
-#         pop_data = data[start:end]
-#         mulliken, cm5, s_prop, p_prop, d_prop = [], [], [], [], []
-#         for line in pop_data:
-#             item = line.split()
-#             q_mull = round(float(item[-5]),5)
-#             q_cm5 = round(float(item[-4]),5)
-#             s_prop_ind = round(float(item[-3]),3)
-#             p_prop_ind = round(float(item[-2]),3)
-#             d_prop_ind = round(float(item[-1]),3)
-#             mulliken.append(q_mull)
-#             cm5.append(q_cm5)
-#             s_prop.append(s_prop_ind)
-#             p_prop.append(p_prop_ind)
-#             d_prop.append(d_prop_ind)
-
-#         localgfn1 = {
-#         "mulliken charges": mulliken,
-#         "cm5 charges": cm5,
-#         "s proportion": s_prop,
-#         "p proportion": p_prop,
-#         "d proportion": d_prop,
-#         }
-
-#         return localgfn1
-    
-
-# def read_gfn1(file):
-#     """
-#     Read .gfn1 output file created from xTB. Return data.
-#     """
-
-#     # Check if the file has the .gfn1 extension
-#     if not file.endswith(".gfn1"):
-#         print(f"x  WARNING! {file} is not a valid .gfn1 file.")
-#         return None
-
-#     # Check if the file exists
-#     if not os.path.exists(file):
-#         print(f"x  WARNING! The file {file} does not exist.")
-#         return None
-
-#     try:
-#         with open(file, "r") as f:
-#             data = f.readlines()
-#         for i in range(0, len(data)):
-#             if data[i].find("Mulliken/CM5 charges") > -1:
-#                 start = i + 1
-#                 break
-#         for j in range(start, len(data)):
-#             if (
-#                 data[j].find("Wiberg/Mayer (AO) data") > -1
-#                 or data[j].find("generalized Born model") > -1
-#             ):
-#                 end = j - 1
-#                 break
-
-#         pop_data = data[start:end]
-#         mulliken, cm5, s_prop, p_prop, d_prop = [], [], [], [], []
-#         for line in pop_data:
-#             item = line.split()
-#             q_mull = round(float(item[-5]),5)
-#             q_cm5 = round(float(item[-4]),5)
-#             s_prop_ind = round(float(item[-3]),3)
-#             p_prop_ind = round(float(item[-2]),3)
-#             d_prop_ind = round(float(item[-1]),3)
-#             mulliken.append(q_mull)
-#             cm5.append(q_cm5)
-#             s_prop.append(s_prop_ind)
-#             p_prop.append(p_prop_ind)
-#             d_prop.append(d_prop_ind)
-
-#         localgfn1 = {
-#         "mulliken charges": mulliken,
-#         "cm5 charges": cm5,
-#         "s proportion": s_prop,
-#         "p proportion": p_prop,
-#         "d proportion": d_prop,
-#         }
-
-#         return localgfn1
-
-#     except Exception as e:
-#         # Handle any exception that occurs during file processing
-#         print(f"x  WARNING! An error occurred while processing {file}: {e}")
-#         return None
-
-def read_gfn1(file):
+def read_gfn1(file,self):
     """
     Read .gfn1 output file created from xTB and return parsed data.
 
@@ -603,12 +435,12 @@ def read_gfn1(file):
 
     # Check if the file has the .gfn1 extension
     if not file.endswith(".gfn1"):
-        print(f"x  WARNING! {file} is not a valid .gfn1 file.")
+        self.args.log.write(f"x  WARNING! {file} is not a valid .gfn1 file.")
         return None
 
     # Check if the file exists
     if not os.path.exists(file):
-        print(f"x  WARNING! The file {file} does not exist.")
+        self.args.log.write(f"x  WARNING! The file {file} does not exist.")
         return None
 
     try:
@@ -617,12 +449,12 @@ def read_gfn1(file):
             data = f.readlines()
     except IOError as e:
         # Handle errors related to file reading
-        print(f"x  WARNING! An error occurred while processing {file}: {e}")
+        self.args.log.write(f"x  WARNING! An error occurred while processing {file}: {e}")
         return None
 
     # Ensure the file contains data
     if not data:
-        print(f"x  WARNING! The file {file} is empty.")
+        self.args.log.write(f"x  WARNING! The file {file} is empty.")
         return None
 
     # Initialize variables for data extraction
@@ -641,12 +473,12 @@ def read_gfn1(file):
                 end = j - 1
                 break
     else:
-        print(f"x  WARNING! Mulliken/CM5 charges section not found in {file}.")
+        self.args.log.write(f"x  WARNING! Mulliken/CM5 charges section not found in {file}.")
         return None
 
     # Ensure both start and end are found
     if start is None or end is None:
-        print(f"x  WARNING! Required sections not found in {file}.")
+        self.args.log.write(f"x  WARNING! Required sections not found in {file}.")
         return None
 
     # Extract the relevant data between the start and end lines
@@ -686,36 +518,16 @@ def read_gfn1(file):
 
     return localgfn1
 
-
-# def read_wbo(file):
-#     """
-#     Read wbo output file created from xTB. Return data.
-#     """
-
-#     if file.find(".wbo") > -1:
-#         f = open(file, "r")
-#         data = f.readlines()
-#         f.close()
-
-#         bonds, wbos = [], []
-#         for line in data:
-#             item = line.split()
-#             bond = [int(item[0]), int(item[1])]
-#             wbo = round(float(item[2]),3)
-#             bonds.append(bond)
-#             wbos.append(wbo)
-#         return bonds, wbos
-
-def read_wbo(file):
+def read_wbo(file,self):
     """
     Read wbo output file created from xTB. Return data.
     """
     if not file.endswith(".wbo"):
-        print(f"x  WARNING! {file} is not a valid .wbo file.")
+        self.args.log.write(f"x  WARNING! {file} is not a valid .wbo file.")
         return None
 
     if not os.path.exists(file):
-        print(f"x  WARNING! The file {file} does not exist.")
+        self.args.log.write(f"x  WARNING! The file {file} does not exist.")
         return None
 
     try:
@@ -735,96 +547,25 @@ def read_wbo(file):
     return bonds, wbos
 
 
-
-
-# def calculate_global_CDFT_descriptors(file):
-#     """
-#     Read .gfn1 output file created from xTB and calculate CDFT descriptors with FDA approximations part 1.
-#     """
-#     if not file.endswith(".gfn1"):
-#         raise ValueError("Missing .gfn1 output file")
-
-#     try:
-#         with open(file, "r") as f:
-#             data = f.readlines()
-#     except IOError:
-#         raise IOError("Error opening or reading the file.")
-    
-#     delta_SCC_IP, delta_SCC_EA, electrophilicity_index = None, None, None
-
-#     # Extract relevant values from the file
-#     for line in data:
-#         if "delta SCC IP (eV):" in line:
-#             delta_SCC_IP = float(line.split()[-1])
-#         elif "delta SCC EA (eV):" in line:
-#             delta_SCC_EA = float(line.split()[-1])
-#         elif "Global electrophilicity index (eV):" in line:
-#             electrophilicity_index = float(line.split()[-1])
-
-#     # Check if required descriptors were found
-#     if delta_SCC_IP is None or delta_SCC_EA is None:
-#         raise ValueError("Could not find delta_SCC_IP and delta_SCC_EA descriptors in the file")
-
-#     # Calculate CDFT descriptors
-#     chemical_hardness = round((delta_SCC_IP - delta_SCC_EA), 4)
-#     chemical_softness = round(1 / chemical_hardness, 4) if chemical_hardness != 0 else None
-#     chemical_potential = round(-(delta_SCC_IP + delta_SCC_EA) / 2, 4)
-#     mulliken_electronegativity = round(-chemical_potential, 4)
-
-#     try:
-#         electrodonating_power_index = round(((delta_SCC_IP + 3 * delta_SCC_EA)**2) / (8 * chemical_hardness), 4)
-#         electroaccepting_power_index = round(((3 * delta_SCC_IP + delta_SCC_EA)**2) / (8 * chemical_hardness), 4)
-#         nucleophilicity_index = round(10 / electroaccepting_power_index, 4) if electroaccepting_power_index != 0 else None
-#     except ZeroDivisionError:
-#         electrodonating_power_index = None
-#         electroaccepting_power_index = None
-#         nucleophilicity_index = None
-#         print("Warning: Division by zero encountered in power index calculations.")
-
-#     electrofugality = round(-delta_SCC_EA + electrophilicity_index, 4) if electrophilicity_index is not None else None
-#     nucleofugality = round(delta_SCC_IP + electrophilicity_index, 4) if electrophilicity_index is not None else None
-#     intrinsic_reactivity_index = round((delta_SCC_IP + delta_SCC_EA) / chemical_hardness, 4) if chemical_hardness != 0 else None
-#     net_electrophilicity = round((electrodonating_power_index - electroaccepting_power_index), 4) if electrodonating_power_index is not None and electroaccepting_power_index is not None else None
-
-#     cdft_descriptors = {
-#         "IP": delta_SCC_IP,
-#         "EA": delta_SCC_EA,
-#         "Electrophil. idx": electrophilicity_index,
-#         "Hardness": chemical_hardness,
-#         "Softness": chemical_softness,
-#         "Chem. potential": chemical_potential,
-#         "Electronegativity": mulliken_electronegativity,
-#         "Electrodon. power idx": electrodonating_power_index,
-#         "Electroaccep. power idx": electroaccepting_power_index,
-#         "Nucleophilicity idx": nucleophilicity_index,
-#         "Electrofugality": electrofugality,
-#         "Nucleofugality": nucleofugality,
-#         "Intrinsic React. idx": intrinsic_reactivity_index,
-#         "Net Electrophilicity": net_electrophilicity
-#     }
-
-#     return cdft_descriptors
-
-
-def calculate_global_CDFT_descriptors(file):
+def calculate_global_CDFT_descriptors(file,self):
     """
     Read .gfn1 output file created from xTB and calculate CDFT descriptors with FDA approximations part 1.
     """
     # Check if the file has the .gfn1 extension
     if not file.endswith(".gfn1"):
-        print(f"x  WARNING! {file} is not a valid .gfn1 file.")
+        self.args.log.write(f"x  WARNING! {file} is not a valid .gfn1 file.")
         return None
 
     # Check if the file exists
     if not os.path.exists(file):
-        print(f"x  WARNING! The file {file} does not exist.")
+        self.args.log.write(f"x  WARNING! The file {file} does not exist.")
         return None
 
     try:
         with open(file, "r") as f:
                 data = f.readlines()
     except Exception as e:
-        print(f"x  WARNING! An error occurred while processing {file}: {e}")
+        self.args.log.write(f"x  WARNING! An error occurred while processing {file}: {e}")
         return None
         
     # Initialize variables
@@ -865,7 +606,7 @@ def calculate_global_CDFT_descriptors(file):
         net_electrophilicity = round((electrodonating_power_index - electroaccepting_power_index), 4)
 
     else:
-        print(f"x  WARNING! delta_SCC_IP, delta_SCC_EA, or electrophilicity_index were not found in the file. Global Conceptual DFT descriptors cannot be fully calculated.")
+        self.args.log.write(f"x  WARNING! delta_SCC_IP, delta_SCC_EA, or electrophilicity_index were not found in the file. Global Conceptual DFT descriptors cannot be fully calculated.")
 
     # Collect descriptors into a dictionary
     cdft_descriptors = {
@@ -888,7 +629,7 @@ def calculate_global_CDFT_descriptors(file):
     return cdft_descriptors
 
 
-def calculate_global_CDFT_descriptors_part2(file, file_Nminus1, file_Nminus2, file_Nplus1, file_Nplus2, cdft_descriptors):
+def calculate_global_CDFT_descriptors_part2(file, file_Nminus1, file_Nminus2, file_Nplus1, file_Nplus2, cdft_descriptors,self):
     """
     Read .gfn1 output file created from xTB and calculate CDFT descriptors with FDA approximations part 2
     """
@@ -902,7 +643,7 @@ def calculate_global_CDFT_descriptors_part2(file, file_Nminus1, file_Nminus2, fi
             if "SCC energy" in line:
                 return float(line.split()[3])
         
-        print(f"x  WARNING! Could not find SCC energy value in the file: {filename}")
+        self.args.log.write(f"x  WARNING! Could not find SCC energy value in the file: {filename}")
         return None
 
     try:
@@ -918,7 +659,7 @@ def calculate_global_CDFT_descriptors_part2(file, file_Nminus1, file_Nminus2, fi
         with open(file_Nplus2, "r") as f4:
             data4 = f4.readlines()
     except Exception as e:
-        print(f"x  WARNING! An error occurred while processing {file}: {e}")
+        self.args.log.write(f"x  WARNING! An error occurred while processing {file}: {e}")
         return None
 
     # Extract SCC energies, handle cases where None is returned
@@ -929,7 +670,7 @@ def calculate_global_CDFT_descriptors_part2(file, file_Nminus1, file_Nminus2, fi
     scc_energy_Nplus2 = extract_scc_energy(data4, file_Nplus2)
 
     if None in [scc_energy, scc_energy_Nminus1, scc_energy_Nminus2, scc_energy_Nplus1, scc_energy_Nplus2]:
-        print(f"x  WARNING! Missing SCC energy in one or more files. Cannot calculate global CDFT descriptors.")
+        self.args.log.write(f"x  WARNING! Missing SCC energy in one or more files. Cannot calculate global CDFT descriptors.")
         return None
 
     # Convert SCC energies to Hartree
@@ -945,7 +686,7 @@ def calculate_global_CDFT_descriptors_part2(file, file_Nminus1, file_Nminus2, fi
     chemical_hardness = cdft_descriptors.get("Hardness")
 
     if None in [delta_SCC_IP, delta_SCC_EA, chemical_hardness]:
-        print("x  WARNING! Missing required CDFT descriptors (IP, EA, or Hardness).")
+        self.args.log.write("x  WARNING! Missing required CDFT descriptors (IP, EA, or Hardness).")
         return None
 
     # Initialize variables
@@ -977,7 +718,7 @@ def calculate_global_CDFT_descriptors_part2(file, file_Nminus1, file_Nminus2, fi
 
     discriminant = Eta ** 2 - (2 * Gamma * Mu)  # Checking the square root
     if discriminant < 0:
-        print(f"x  WARNING! Negative discriminant encountered, skipping Electrophilic descriptor calculation.")
+        self.args.log.write(f"x  WARNING! Negative discriminant encountered, skipping Electrophilic descriptor calculation.")
     else:
         inter_phi = math.sqrt(discriminant)
         Phi = inter_phi - Eta
@@ -991,7 +732,7 @@ def calculate_global_CDFT_descriptors_part2(file, file_Nminus1, file_Nminus2, fi
         Mu_cubic = (1 / 6) * ((-2 * delta_SCC_EA) - (5 * delta_SCC_IP) + Vertical_second_IP)
         w_cubic = round(((Mu_cubic ** 2) / (2 * Eta_cubic)) * (1 + ((Mu_cubic / (3 * (Eta_cubic) ** 2)) * Gamma_cubic)), 4)
     else:
-        print(f"x  WARNING! Eta_cubic is zero, skipping cub. electrophilicity idx calculation.")
+        self.args.log.write(f"x  WARNING! Eta_cubic is zero, skipping cub. electrophilicity idx calculation.")
 
     # Return the calculated descriptors
     cdft_descriptors2 = {
@@ -1005,128 +746,19 @@ def calculate_global_CDFT_descriptors_part2(file, file_Nminus1, file_Nminus2, fi
 
     return cdft_descriptors2
 
-    # except Exception as e:
-    #     # Handle any exception that occurs during file processing
-    #     print(f"x  WARNING! An error occurred while processing {file}: {e}")
-    #     return None
-
-
-
-# def calculate_global_CDFT_descriptors_part2(file, file_Nminus1, file_Nminus2, file_Nplus1, file_Nplus2, cdft_descriptors):
-#     """
-#     Read .gfn1 output file created from xTB and calculate CDFT descriptors with FDA approximations part 2
-#     """
-#     corr_xtb = 4.8455
-
-#     def extract_scc_energy(lines, filename):
-#         for line in lines:
-#             if "SCC energy" in line:
-#                 return float(line.split()[3])
-#         raise ValueError(f"Could not find SCC energy value in the file: {filename}")
-
-#     with open(file, "r") as f:
-#         data = f.readlines()
-#     with open(file_Nminus1, "r") as f1:
-#         data1 = f1.readlines()
-#     with open(file_Nminus2, "r") as f2:
-#         data2 = f2.readlines()
-#     with open(file_Nplus1, "r") as f3:
-#         data3 = f3.readlines()
-#     with open(file_Nplus2, "r") as f4:
-#         data4 = f4.readlines()
-
-#     scc_energy = extract_scc_energy(data, file) * Hartree
-#     scc_energy_Nminus1 = extract_scc_energy(data1, file_Nminus1) * Hartree
-#     scc_energy_Nminus2 = extract_scc_energy(data2, file_Nminus2) * Hartree
-#     scc_energy_Nplus1 = extract_scc_energy(data3, file_Nplus1) * Hartree
-#     scc_energy_Nplus2 = extract_scc_energy(data4, file_Nplus2) * Hartree
-
-#     delta_SCC_IP = cdft_descriptors.get("IP")
-#     delta_SCC_EA = cdft_descriptors.get("EA")
-#     chemical_hardness = cdft_descriptors.get("Hardness")
-
-#     Vertical_second_IP = None
-#     Vertical_second_EA = None
-#     hyper_hardness = None
-#     Global_hypersoftness = None
-#     Electrophilic_descriptor = None
-#     w_cubic = None
-    
-#     if scc_energy is not None and scc_energy_Nminus1 is not None and scc_energy_Nminus2 is not None and scc_energy_Nplus1 is not None and scc_energy_Nplus2 and delta_SCC_IP is not None and delta_SCC_EA is not None:
-#         Vertical_second_IP = round((((scc_energy_Nminus2 - scc_energy_Nminus1) - corr_xtb)), 4)
-#         Vertical_second_EA = round((((scc_energy_Nplus1 - scc_energy_Nplus2) + corr_xtb)), 4)
-        
-#         # hyper_hardness
-#         hyper_hardness = round((-((0.5) * (delta_SCC_IP + delta_SCC_EA - Vertical_second_IP - Vertical_second_EA))), 4)
-
-#         # Global_hypersoftness
-#         Global_hypersoftness = round((hyper_hardness / ((chemical_hardness) ** 3)), 4)
-        
-#         # Electrophilic descriptor
-#         try:
-#             A = ((scc_energy_Nplus1 - scc_energy) + corr_xtb)
-#             c = (Vertical_second_IP - (2 * delta_SCC_IP) + A) / ((2 * Vertical_second_IP) - delta_SCC_IP - A)
-#             a = -((delta_SCC_IP + A) / 2) + (((delta_SCC_IP - A) / 2) * c)
-#             b = ((delta_SCC_IP - A) / 2) - (((delta_SCC_IP + A) / 2) * c)
-#             Gamma = (-3 * c) * (b - (a * c))
-#             Eta = 2 * (b - (a * c))
-#             chi = -a
-#             Mu = a
-            
-#             # Checking the square root
-#             discriminant = Eta ** 2 - (2 * Gamma * Mu)
-#             if discriminant < 0:
-#                 raise ValueError(f"Negative discriminant: cannot compute the square root of {discriminant}. Electrophilic descriptor was not calculated")
-            
-#             inter_phi = math.sqrt(discriminant)
-#             Phi = inter_phi - Eta
-#             Electrophilic_descriptor = round(((chi * (Phi / Gamma)) - (((Phi / Gamma) ** 2) * ((Eta / 2) + (Phi / 6)))), 4)
-
-#         except ValueError as e:
-#             Phi = None
-#             Electrophilic_descriptor = None
-        
-#         # w cubic electrophilicity index
-#         try:
-#             Gamma_cubic = 2 * delta_SCC_IP - Vertical_second_IP - delta_SCC_EA
-#             Eta_cubic = delta_SCC_IP - delta_SCC_EA
-            
-#             # Check if Eta_cubic != 0
-#             if Eta_cubic == 0:
-#                 raise ZeroDivisionError("Eta_cubic is zero, which would cause a division by zero in the calculation.")
-            
-#             Mu_cubic = (1 / 6) * ((-2 * delta_SCC_EA) - (5 * delta_SCC_IP) + Vertical_second_IP)
-#             w_cubic = round(((Mu_cubic ** 2) / (2 * Eta_cubic)) * (1 + ((Mu_cubic / (3 * (Eta_cubic) ** 2)) * Gamma_cubic)), 4)
-
-#         except ZeroDivisionError as e:
-#             w_cubic = None 
-#         except TypeError as e:
-#             w_cubic = None  
-    
-#     cdft_descriptors2 = {
-#         "Second IP": Vertical_second_IP,
-#         "Second EA": Vertical_second_EA,
-#         "Hyperhardness": hyper_hardness,
-#         "Hypersoftness": Global_hypersoftness,
-#         "Electrophilic descrip.": Electrophilic_descriptor,
-#         "cub. electrophilicity idx": w_cubic
-#     }
-
-#     return cdft_descriptors2
-
-def calculate_local_CDFT_descriptors(file_fukui, cdft_descriptors, cdft_descriptors2):
+def calculate_local_CDFT_descriptors(file_fukui, cdft_descriptors, cdft_descriptors2,self):
     """
     Read fukui output file created from XTB and calculate local CDFT descriptors.
     """
     if not file_fukui.endswith(".fukui"):
-        print(f"x WARNING! {file_fukui} is not a valid .fukui file.")
+        self.args.log.write(f"x WARNING! {file_fukui} is not a valid .fukui file.")
         return None
 
     try:
         with open(file_fukui, "r") as f:
             data = f.readlines()
     except IOError as e:
-        print(f"x WARNING! Could not open the file {file_fukui}: {e}")
+        self.args.log.write(f"x WARNING! Could not open the file {file_fukui}: {e}")
         return None
 
     f_pos, f_negs, f_rads = [], [], []
@@ -1150,11 +782,11 @@ def calculate_local_CDFT_descriptors(file_fukui, cdft_descriptors, cdft_descript
             except ValueError:
                 continue
     else:
-        print("WARNING: Fukui data not found in the file. Please check the '.fukui' file.")
+        self.args.log.write("WARNING: Fukui data not found in the file. Please check the '.fukui' file.")
         return None
 
     if not f_pos or not f_negs or not f_rads:
-        print("WARNING: Fukui data lists are empty. Please check the '.fukui' file.")
+        self.args.log.write("WARNING: Fukui data lists are empty. Please check the '.fukui' file.")
         return None
 
     chemical_softness = cdft_descriptors.get("Softness")
@@ -1163,7 +795,7 @@ def calculate_local_CDFT_descriptors(file_fukui, cdft_descriptors, cdft_descript
     nucleophilicity_index = cdft_descriptors.get("Nucleophilicity idx")
 
     if None in [chemical_softness, Global_hypersoftness, electrophilicity_index, nucleophilicity_index]:
-        print("x  WARNING! Missing required CDFT descriptors (Softness, Hypersoftness, Electrophil. idx or Nucleophilicity idx).")
+        self.args.log.write("x  WARNING! Missing required CDFT descriptors (Softness, Hypersoftness, Electrophil. idx or Nucleophilicity idx).")
         return None
 
     # Calculating local descriptors:
@@ -1212,239 +844,18 @@ def calculate_local_CDFT_descriptors(file_fukui, cdft_descriptors, cdft_descript
 
     return localDescriptors
 
-
-# def calculate_local_CDFT_descriptors(file_fukui, cdft_descriptors, cdft_descriptors2):
-#     """
-#     Read fukui output file created from XTB option. Return data.
-#     """
-#     if not file_fukui.endswith(".fukui"):
-#         raise ValueError("Missing .fukui output file")
-
-#     with open(file_fukui, "r") as f:
-#         data = f.readlines()
-
-#     # Searching Fukuis
-#     f_pos, f_negs, f_rads = [], [], []
-#     start, end = None, None
-
-#     # Search for the start and end lines in the file_fukui
-#     for i, line in enumerate(data):
-#         if "f(+) " in line:
-#             start = i + 1
-#         elif "-------------" in line and start is not None:
-#             end = i
-#             break
-
-#     # Ensure start and end indices were found
-#     if start is not None and end is not None:
-#         fukui_data = data[start:end]
-#         for line in fukui_data:
-#             try:
-#                 f_po, f_neg, f_rad = map(lambda x: round(float(x), 4), line.split()[-3:])
-#                 f_pos.append(f_po)
-#                 f_negs.append(f_neg)
-#                 f_rads.append(f_rad)
-#             except ValueError:
-#                 continue
-#     else:
-#         print("Fukui data not found in the file, please check the '.fukui' file.")
-
-#     # Check if the lists are populated
-#     if not f_pos or not f_negs or not f_rads:
-#         print("Fukui data not found in the file, please check the '.fukui' file.")
-#         return
-    
-#     # Extract necessary values from the provided dictionaries
-#     chemical_softness = cdft_descriptors.get("Softness")
-#     Global_hypersoftness = cdft_descriptors2.get("Hypersoftness")
-#     electrophilicity_index = cdft_descriptors.get("Electrophil. idx")
-#     nucleophilicity_index = cdft_descriptors.get("Nucleophilicity idx")
-
-#     # Calculating local Descriptors part 2
-#     dual_descriptor = [round(f_po - f_neg, 4) for f_po, f_neg in zip(f_pos, f_negs)]
-
-#     s_pos = [round(chemical_softness * f_po, 4) for f_po in f_pos]
-#     s_negs = [round(chemical_softness * f_neg, 4) for f_neg in f_negs]
-#     s_rads = [round(chemical_softness * f_rad, 4) for f_rad in f_rads]
-
-#     Relative_nucleophilicity = [
-#         round(s_neg / s_po, 4) if s_po != 0 else None for s_neg, s_po in zip(s_negs, s_pos)
-#     ]
-#     Relative_electrophilicity = [
-#         round(s_po / s_neg, 4) if s_neg != 0 else None for s_neg, s_po in zip(s_negs, s_pos)
-#     ]
-
-#     Grand_canonical_dual_descriptor = [
-#         round(Global_hypersoftness * dual, 4) for dual in dual_descriptor
-#     ]
-
-#     w_pos = [round(electrophilicity_index * f_po, 4) for f_po in f_pos]
-#     w_negs = [round(electrophilicity_index * f_neg, 4) for f_negs in f_negs]
-#     w_rads = [round(electrophilicity_index * f_rad, 4) for f_rad in f_rads]
-
-#     Multiphilic_descriptor = [
-#         round(electrophilicity_index * dual, 4) for dual in dual_descriptor
-#     ]
-
-#     Nu_pos = [round(nucleophilicity_index * f_po, 4) for f_po in f_pos]
-#     Nu_negs = [round(nucleophilicity_index * f_neg, 4) for f_neg in f_negs]
-#     Nu_rads = [round(nucleophilicity_index * f_rad, 4) for f_rad in f_rads]
-
-#     localDescriptors = {
-#         "fukui+": f_pos,
-#         "fukui-": f_negs,
-#         "fukui0": f_rads,
-#         "dual descrip.": dual_descriptor,
-#         "softness+": s_pos, #s+
-#         "softness-": s_negs, #s-
-#         "softness0": s_rads, #srad
-#         "Rel. nucleophilicity": Relative_nucleophilicity, #s+/s-
-#         "Rel. electrophilicity": Relative_electrophilicity, #s-/s+
-#         "GC Dual Descrip.": Grand_canonical_dual_descriptor,
-#         "Electrophil.": w_pos, #w+
-#         "Nucleophil.": w_negs, #w-
-#         "Radical attack": w_rads, #wrad
-#         "Mult. descrip.": Multiphilic_descriptor,
-#         "Nu_Electrophil.": Nu_pos, #Nu+
-#         "Nu_Nucleophil.": Nu_negs, #Nu-
-#         "Nu_Radical attack": Nu_rads #Nurad
-#     }
-
-#     return localDescriptors
-
-# def read_xtb(file):
-#     """
-#     Read xtb.out file and return a dictionary of extracted properties.
-#     """
-#     try:
-#         with open(file, "r") as f:
-#             data = f.readlines()
-#     except IOError:
-#         raise IOError(f"Error opening or reading the file: {file}")
-
-#     # Initialize variables
-#     energy, homo_lumo, homo, lumo = np.nan, np.nan, np.nan, np.nan
-#     dipole_module, Fermi_level, transition_dipole_moment = np.nan, np.nan, np.nan
-#     total_charge, total_SASA = np.nan, np.nan
-#     total_C6AA, total_C8AA, total_alpha = np.nan, np.nan, np.nan
-#     atoms, numbers, chrgs = [], [], []
-#     covCN, C6AA, alpha = [], [], []
-#     born_rad, SASA, h_bond = [], [], []
-
-#     # Parsing file data
-#     for i, line in enumerate(data):
-#         if "SUMMARY" in line:
-#             energy = float(data[i + 2].split()[3])
-#         elif "total charge" in line:
-#             total_charge = int(float(data[i].split()[3]))
-#         elif "(HOMO)" in line:
-#             if data[i].split()[3] != "(HOMO)":
-#                 homo = round(float(data[i].split()[3]), 4)
-#                 homo_occ = round(float(data[i].split()[1]), 4)
-#             else:
-#                 homo = round(float(data[i].split()[2]), 4)
-#                 homo_occ = 0
-#         elif "(LUMO)" in line:
-#             if data[i].split()[3] != "(LUMO)":
-#                 lumo = round(float(data[i].split()[3]), 4)
-#                 lumo_occ = round(float(data[i].split()[1]), 4)
-#             else:
-#                 lumo = round(float(data[i].split()[2]), 4)
-#                 lumo_occ = 0
-#         elif "molecular dipole:" in line:
-#             dipole_module = float(data[i + 3].split()[-1])
-#         elif "transition dipole moment" in line:
-#             transition_dipole_moment = float(data[i + 2].split()[-1])
-#         elif "Fermi-level" in line:
-#             Fermi_level = float(data[i].split()[-2])
-
-#     homo_lumo = round(float(lumo - homo), 4)
-
-#     # Getting atomic properties related to charges, dispersion, etc.
-#     start, end = 0, 0
-#     for j in range(len(data)):
-#         if "#   Z          covCN" in data[j]:
-#             start = j + 1
-#             break
-#     for k in range(start, len(data)):
-#         if "Mol. " in data[k]:
-#             end = k - 1
-#             total_C6AA = float(data[k].split()[-1])
-#             total_C8AA = float(data[k + 1].split()[-1])
-#             total_alpha = float(data[k + 2].split()[-1])
-#             break
-
-#     chrg_data = data[start:end]
-#     for line in chrg_data:
-#         item = line.split()
-#         numbers.append(int(item[0]))
-#         atoms.append(item[2])
-#         covCN.append(float(item[3]))
-#         chrgs.append(float(item[4]))
-#         C6AA.append(float(item[5]))
-#         alpha.append(float(item[6]))
-
-#     # Getting atomic properties related to solvent
-#     start_solv, end_solv = 0, 0
-#     for j in range(len(data)):
-#         if "#   Z     Born rad" in data[j]:
-#             start_solv = j + 1
-#             break
-#     for k in range(start_solv, len(data)):
-#         if "total SASA " in data[k]:
-#             end_solv = k - 1
-#             total_SASA = float(data[k].split()[-1])
-#             break
-
-#     solv_data = data[start_solv:end_solv]
-#     for line in solv_data:
-#         item = line.split()
-#         born_rad.append(float(item[3]))
-#         SASA.append(float(item[4]))
-#         try:
-#             h_bond.append(float(item[5]))
-#         except IndexError:
-#             h_bond.append(0.0)
-
-#     properties_dict = {
-#         "Total energy": energy,
-#         "Total charge": total_charge,
-#         "HOMO-LUMO gap": homo_lumo,
-#         "HOMO": homo,
-#         "LUMO": lumo,
-#         "atoms": atoms,
-#         "numbers": numbers,
-#         "charges": chrgs, 
-#         "Dipole module": dipole_module,
-#         "Fermi-level": Fermi_level,
-#         "Trans. dipole moment": transition_dipole_moment,
-#         "Coord. numbers": covCN,
-#         "Disp. coeff. C6": C6AA,
-#         "Polariz. alpha": alpha,
-#         "HOMO occup.": homo_occ,
-#         "LUMO occup.": lumo_occ,
-#         "Born radii": born_rad,
-#         "Atomic SASAs": SASA,
-#         "Solvent H bonds": h_bond,
-#         "Total SASA": total_SASA,
-#         "Total disp. C6": total_C6AA,
-#         "Total disp. C8": total_C8AA,
-#         "Total polariz. alpha": total_alpha,
-#     }
-
-#     return properties_dict
-
-def read_xtb(file):
+def read_xtb(file,self):
     """
     Read xtb.out file and return a dictionary of extracted properties.
-    Returns None if an error occurs while reading the file.
     """
     try:
         with open(file, "r") as f:
             data = f.readlines()
     except IOError:
+        self.args.log.write(f"Error opening or reading the file: {file}")
         return None
 
+    # Initialize variables
     energy, homo_lumo, homo, lumo = np.nan, np.nan, np.nan, np.nan
     dipole_module, Fermi_level, transition_dipole_moment = np.nan, np.nan, np.nan
     total_charge, total_SASA = np.nan, np.nan
@@ -1453,23 +864,26 @@ def read_xtb(file):
     covCN, C6AA, alpha = [], [], []
     born_rad, SASA, h_bond = [], [], []
 
+    # Parsing file data
     for i, line in enumerate(data):
         if "SUMMARY" in line:
             energy = float(data[i + 2].split()[3])
         elif "total charge" in line:
             total_charge = int(float(data[i].split()[3]))
         elif "(HOMO)" in line:
-            try:
+            if data[i].split()[3] != "(HOMO)":
                 homo = round(float(data[i].split()[3]), 4)
                 homo_occ = round(float(data[i].split()[1]), 4)
-            except ValueError:
-                homo_occ = 0  # Default value if data is missing
+            else:
+                homo = round(float(data[i].split()[2]), 4)
+                homo_occ = 0
         elif "(LUMO)" in line:
-            try:
+            if data[i].split()[3] != "(LUMO)":
                 lumo = round(float(data[i].split()[3]), 4)
                 lumo_occ = round(float(data[i].split()[1]), 4)
-            except ValueError:
-                lumo_occ = 0  # Default value if data is missing
+            else:
+                lumo = round(float(data[i].split()[2]), 4)
+                lumo_occ = 0
         elif "molecular dipole:" in line:
             dipole_module = float(data[i + 3].split()[-1])
         elif "transition dipole moment" in line:
@@ -1477,7 +891,7 @@ def read_xtb(file):
         elif "Fermi-level" in line:
             Fermi_level = float(data[i].split()[-2])
 
-    homo_lumo = round(lumo - homo, 4) if not np.isnan(lumo) and not np.isnan(homo) else np.nan
+    homo_lumo = round(float(lumo - homo), 4)
 
     # Getting atomic properties related to charges, dispersion, etc.
     start, end = 0, 0
@@ -1493,16 +907,15 @@ def read_xtb(file):
             total_alpha = float(data[k + 2].split()[-1])
             break
 
-    if start != 0 and end != 0:
-        chrg_data = data[start:end]
-        for line in chrg_data:
-            item = line.split()
-            numbers.append(int(item[0]))
-            atoms.append(item[2])
-            covCN.append(float(item[3]))
-            chrgs.append(float(item[4]))
-            C6AA.append(float(item[5]))
-            alpha.append(float(item[6]))
+    chrg_data = data[start:end]
+    for line in chrg_data:
+        item = line.split()
+        numbers.append(int(item[0]))
+        atoms.append(item[2])
+        covCN.append(float(item[3]))
+        chrgs.append(float(item[4]))
+        C6AA.append(float(item[5]))
+        alpha.append(float(item[6]))
 
     # Getting atomic properties related to solvent
     start_solv, end_solv = 0, 0
@@ -1516,16 +929,15 @@ def read_xtb(file):
             total_SASA = float(data[k].split()[-1])
             break
 
-    if start_solv != 0 and end_solv != 0:
-        solv_data = data[start_solv:end_solv]
-        for line in solv_data:
-            item = line.split()
-            born_rad.append(float(item[3]))
-            SASA.append(float(item[4]))
-            try:
-                h_bond.append(float(item[5]))
-            except IndexError:
-                h_bond.append(0.0)  # Default value if data is missing
+    solv_data = data[start_solv:end_solv]
+    for line in solv_data:
+        item = line.split()
+        born_rad.append(float(item[3]))
+        SASA.append(float(item[4]))
+        try:
+            h_bond.append(float(item[5]))
+        except IndexError:
+            h_bond.append(0.0)
 
     properties_dict = {
         "Total energy": energy,
@@ -1544,60 +956,18 @@ def read_xtb(file):
         "Polariz. alpha": alpha,
         "HOMO occup.": homo_occ,
         "LUMO occup.": lumo_occ,
-        "Born radii": born_rad,
+        "Born radii": born_rad, 
         "Atomic SASAs": SASA,
-        "Solvent H bonds": h_bond,
-        "Total SASA": total_SASA,
+        "Solvent H bonds": h_bond, 
+        "Total SASA": total_SASA, 
         "Total disp. C6": total_C6AA,
         "Total disp. C8": total_C8AA,
-        "Total polariz. alpha": total_alpha,
+        "Total polariz. alpha": total_alpha, 
     }
 
     return properties_dict
 
-
-
-# def read_fod(file):
-#     """
-#     Read xtb.fod files. Return FOD-related properties.
-#     """
-
-#     f = open(file, "r")
-#     data = f.readlines()
-#     f.close()
-
-#     # get fractional occupation density (FOD)
-#     for j in range(0, len(data)):
-#         if data[j].find("Loewdin FODpop") > -1:
-#             start_fod = j + 1
-#             total_fod = float(data[j - 2].split()[-1])
-#             break
-#     for k in range(start_fod, len(data)):
-#         if data[k].find("Wiberg/Mayer") > -1:
-#             end_fod = k - 1
-#             break
-
-#     fod_data = data[start_fod:end_fod]
-#     fod, s_prop_fod, p_prop_fod, d_prop_fod = [], [], [], []
-#     for line in fod_data:
-#         item = line.split()
-#         fod.append(float(item[1]))
-#         s_prop_fod.append(float(item[2]))
-#         p_prop_fod.append(float(item[3]))
-#         d_prop_fod.append(float(item[4]))
-
-#     properties_FOD = {
-#     "Total FOD": total_fod,
-#     "FOD": fod,
-#     "FOD s proportion": s_prop_fod,
-#     "FOD p proportion": p_prop_fod,
-#     "FOD d proportion": d_prop_fod,
-# }
-
-#     return properties_FOD
-
-
-def read_fod(file):
+def read_fod(file,self):
     """
     Read xtb.fod files. Return FOD-related properties.
     """
@@ -1608,11 +978,11 @@ def read_fod(file):
             data = f.readlines()  # Read all lines from the file
     except FileNotFoundError:
         # If the file is not found, print a warning and return None
-        print(f"x  WARNING! The file {file} does not exist.")
+        self.args.log.write(f"x  WARNING! The file {file} does not exist.")
         return None
     except Exception as e:
         # Handle any other file reading errors (permissions, etc.) and return None
-        print(f"x  WARNING! An error occurred while reading the file: {e}")
+        self.args.log.write(f"x  WARNING! An error occurred while reading the file: {e}")
         return None
 
     # Initialize variables for storing FOD-related data
@@ -1635,7 +1005,7 @@ def read_fod(file):
 
     # If the 'Loewdin FODpop' section was not found, return None
     if start_fod is None:
-        print(f"x  WARNING! 'Loewdin FODpop' not found in the file {file}.")
+        self.args.log.write(f"x  WARNING! 'Loewdin FODpop' not found in the file {file}.")
         return None
 
     # Look for the line that contains 'Wiberg/Mayer' to mark the end of the FOD data section
@@ -1647,7 +1017,7 @@ def read_fod(file):
 
     # If the end of the FOD section is not found, return None
     if end_fod is None:
-        print(f"x  WARNING! 'Wiberg/Mayer' section not found in the file {file}.")
+        self.args.log.write(f"x  WARNING! 'Wiberg/Mayer' section not found in the file {file}.")
         return None
 
     # Extract and process the lines between start_fod and end_fod, which contain the FOD data
@@ -1666,7 +1036,7 @@ def read_fod(file):
             d_prop_fod.append(float(item[4]))  # Extract the d proportion (index 4)
         except (IndexError, ValueError) as e:
             # Handle cases where the line is not properly formatted or contains invalid values
-            print(f"x  WARNING! Error processing FOD data in line '{line.strip()}': {e}")
+            self.args.log.write(f"x  WARNING! Error processing FOD data in line '{line.strip()}': {e}")
             return None
 
     # Create a dictionary to hold all the extracted FOD properties
@@ -1696,41 +1066,7 @@ def read_json(file):
     else:
         pass
 
-# def calculate_global_morfeus_descriptors(final_xyz_path):
-#         """
-#         Calculate descriptors using the MORFEUS 
-#         """
-#         global_properties_morfeus = {}
-
-#         try:
-#             elements, coordinates = read_xyz(final_xyz_path)
-#             elements, coordinates = read_geometry(final_xyz_path)
-#         except Exception as e:
-#             print(f"Error loading molecule from file {final_xyz_path}: {e}")
-#             return global_properties_morfeus
-
-#         # Calculate Global SASA
-#         try:
-#             sasa = SASA(elements, coordinates)
-#             sasa_area_global = round(sasa.area,4)
-#             global_properties_morfeus["Global SASA"] = sasa_area_global
-#         except Exception as e:
-#             print(f"Error calculating SASA from Morfeus: {e}")
-
-#         #Calculatin Global Dispersion
-#         try:
-#             disp = Dispersion(elements, coordinates)
-#             disp_area_global = round(disp.area,4)
-#             disp_vol_global = round(disp.volume,4)
-#             global_properties_morfeus["Disp. Area"] = disp_area_global
-#             global_properties_morfeus["Disp. Vol."] = disp_vol_global
-#         except Exception as e:
-#             print(f"Error calculating Global Dispersion from Morfeus: {e}")
-
-
-#         return global_properties_morfeus
-
-def calculate_global_morfeus_descriptors(final_xyz_path):
+def calculate_global_morfeus_descriptors(final_xyz_path,self):
     """
     Calculate global descriptors using the MORFEUS package. Return them in a structured dictionary.
     """
@@ -1746,7 +1082,7 @@ def calculate_global_morfeus_descriptors(final_xyz_path):
         elements, coordinates = read_geometry(final_xyz_path)
     except Exception as e:
         # Handle the error if the molecule cannot be loaded
-        print(f"x  WARNING! Error loading molecule from file {final_xyz_path}: {e}")
+        self.args.log.write(f"x  WARNING! Error loading molecule from file {final_xyz_path}: {e}")
         return {
             "Global SASA": sasa_area_global,
             "Disp. Area": disp_area_global,
@@ -1759,7 +1095,7 @@ def calculate_global_morfeus_descriptors(final_xyz_path):
         sasa_area_global = round(sasa.area, 4)  # Assign the calculated SASA value
     except Exception as e:
         # Handle any errors during SASA calculation
-        print(f"x  WARNING! Error calculating SASA from Morfeus: {e}")
+        self.args.log.write(f"x  WARNING! Error calculating SASA from Morfeus: {e}")
 
     # Calculate Global Dispersion Area and Volume
     try:
@@ -1768,7 +1104,7 @@ def calculate_global_morfeus_descriptors(final_xyz_path):
         disp_vol_global = round(disp.volume, 4)  # Assign the calculated dispersion volume
     except Exception as e:
         # Handle any errors during Dispersion calculation
-        print(f"x  WARNING! Error calculating Global Dispersion from Morfeus: {e}")
+        self.args.log.write(f"x  WARNING! Error calculating Global Dispersion from Morfeus: {e}")
 
     # Create the final dictionary with the descriptors, even if some values are None
     global_properties_morfeus = {
@@ -1779,89 +1115,7 @@ def calculate_global_morfeus_descriptors(final_xyz_path):
 
     return global_properties_morfeus
 
-
-# def calculate_local_morfeus_descriptors(final_xyz_path):
-#     """
-#     Calculate descriptors using the MORFEUS 
-#     """
-
-#     local_properties_morfeus = {}
-
-#     try:
-#         elements, coordinates = read_xyz(final_xyz_path)
-#         elements, coordinates = read_geometry(final_xyz_path)
-#     except Exception as e:
-#         print(f"Error loading molecule from file {final_xyz_path}: {e}")
-#         return local_properties_morfeus
-
-#     # Calculate local SASA
-#     try:
-#         sasa = SASA(elements, coordinates)
-#         local_sasa_areas = [round(area, 4) for area in sasa.atom_areas.values()] 
-#         local_properties_morfeus["SASA"] = local_sasa_areas
-#     except Exception as e:
-#         print(f"Error calculating local SASA from Morfeus: {e}")
-
-#     # Local buried Volume
-#     try:
-#         local_buried_volumes = []
-#         for i in range(len(coordinates)):
-#             bv = BuriedVolume(elements, coordinates, i)
-#             buried_volume = round(bv.fraction_buried_volume, 4)
-#             local_buried_volumes.append(buried_volume)
-#         local_properties_morfeus["Buried volume"] = local_buried_volumes
-#     except Exception as e:
-#         print(f"Error calculating local BuriedVolume from Morfeus: {e}")
-
-#     # Local ConeAngle
-#     try:
-#         local_cone_angles = []
-#         for i in range(len(coordinates)):
-#             try:
-#                 cone_angle = ConeAngle(elements, coordinates, i) 
-#                 local_cone_angles.append(round(cone_angle.cone_angle, 4)) 
-#             except Exception as e:
-#                 local_cone_angles.append(0)       
-#         local_properties_morfeus["Cone angle"] = local_cone_angles  
-#     except Exception as e:
-#         print(f"Error calculating local Cone Angle: {e}")
-
-#     # Local Solid Angle
-#     try:
-#         local_solid_angles = []
-#         for i in range(len(coordinates)):
-#             try:
-#                 solid_angle = SolidAngle(elements, coordinates, i) 
-#                 local_solid_angles.append(round(solid_angle.cone_angle, 4)) 
-#             except Exception as e:
-#                 local_solid_angles.append(0)       
-#         local_properties_morfeus["Solid angle"] = local_solid_angles  
-#     except Exception as e:
-#         print(f"Error calculating local Solid Angle: {e}")
-
-#     #Pyramidalization
-#     try:
-#         local_Pyramidalization, local_vol_Pyramidalization = [], []
-#         for i in range(len(coordinates)):
-#             pyr = Pyramidalization(coordinates, i)
-#             local_Pyramidalization.append(round(pyr.P, 4))
-#             local_vol_Pyramidalization.append(round(pyr.P_angle, 4))
-#         local_properties_morfeus["Pyramidaliz. P"] = local_Pyramidalization
-#         local_properties_morfeus["Pyramidaliz. Vol"] = local_vol_Pyramidalization  
-#     except Exception as e:
-#         print(f"Error calculating Pyramidalization: {e}")
-
-#     # Local Dispersion
-#     try:
-#         disp = Dispersion(elements, coordinates)
-#         local_disp = [round(p_int, 4) for p_int in disp.atom_p_int.values()] 
-#         local_properties_morfeus["Dispersion"] = local_disp
-#     except Exception as e:
-#         print(f"Error calculating Local Dispersion from Morfeus: {e}")
-
-#     return local_properties_morfeus
-
-def calculate_local_morfeus_descriptors(final_xyz_path):
+def calculate_local_morfeus_descriptors(final_xyz_path,self):
     """
     Calculate local descriptors using the MORFEUS package. Return them in a structured dictionary.
     """
@@ -1881,7 +1135,7 @@ def calculate_local_morfeus_descriptors(final_xyz_path):
         elements, coordinates = read_geometry(final_xyz_path)
     except Exception as e:
         # If there's an issue loading the molecule, log the error and return an empty dictionary
-        print(f"x  WARNING! Error loading molecule from file {final_xyz_path}: {e}")
+        self.args.log.write(f"x  WARNING! Error loading molecule from file {final_xyz_path}: {e}")
         return {
             "SASA": local_sasa_areas,
             "Buried volume": local_buried_volumes,
@@ -1897,7 +1151,7 @@ def calculate_local_morfeus_descriptors(final_xyz_path):
         sasa = SASA(elements, coordinates)
         local_sasa_areas = [round(area, 4) for area in sasa.atom_areas.values()]
     except Exception as e:
-        print(f"x  WARNING! Error calculating local SASA from Morfeus: {e}")
+        self.args.log.write(f"x  WARNING! Error calculating local SASA from Morfeus: {e}")
 
     # Local buried Volume
     try:
@@ -1907,7 +1161,7 @@ def calculate_local_morfeus_descriptors(final_xyz_path):
             buried_volume = round(bv.fraction_buried_volume, 4)
             local_buried_volumes.append(buried_volume)
     except Exception as e:
-        print(f"x  WARNING! Error calculating local Buried Volume from Morfeus: {e}")
+        self.args.log.write(f"x  WARNING! Error calculating local Buried Volume from Morfeus: {e}")
 
     # Local ConeAngle
     try:
@@ -1919,7 +1173,7 @@ def calculate_local_morfeus_descriptors(final_xyz_path):
             except Exception as e:
                 local_cone_angles.append(None)  # Append None if there is an error for specific atom
     except Exception as e:
-        print(f"x  WARNING! Error calculating local Cone Angle from Morfeus: {e}")
+        self.args.log.write(f"x  WARNING! Error calculating local Cone Angle from Morfeus: {e}")
 
     # Local Solid Angle
     try:
@@ -1931,7 +1185,7 @@ def calculate_local_morfeus_descriptors(final_xyz_path):
             except Exception as e:
                 local_solid_angles.append(None)  # Append None if there is an error for specific atom
     except Exception as e:
-        print(f"x  WARNING! Error calculating local Solid Angle from Morfeus: {e}")
+        self.args.log.write(f"x  WARNING! Error calculating local Solid Angle from Morfeus: {e}")
 
     # Pyramidalization
     try:
@@ -1941,14 +1195,14 @@ def calculate_local_morfeus_descriptors(final_xyz_path):
             local_Pyramidalization.append(round(pyr.P, 4))
             local_vol_Pyramidalization.append(round(pyr.P_angle, 4))
     except Exception as e:
-        print(f"x  WARNING! Error calculating Pyramidalization from Morfeus: {e}")
+        self.args.log.write(f"x  WARNING! Error calculating Pyramidalization from Morfeus: {e}")
 
     # Local Dispersion
     try:
         disp = Dispersion(elements, coordinates)
         local_disp = [round(p_int, 4) for p_int in disp.atom_p_int.values()]
     except Exception as e:
-        print(f"x  WARNING! Error calculating Local Dispersion from Morfeus: {e}")
+        self.args.log.write(f"x  WARNING! Error calculating Local Dispersion from Morfeus: {e}")
 
     # Return the dictionary with local descriptors, even if some values are None
     local_properties_morfeus = {

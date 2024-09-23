@@ -813,13 +813,13 @@ class qdescp:
         """
         Collects all xTB properties from the files and puts them in a JSON file
         """
-        properties_dict = read_xtb(xtb_files_props['xtb_out'])
-        localgfn1 = read_gfn1(xtb_files_props['xtb_gfn1'])
-        properties_FOD = read_fod(xtb_files_props['xtb_fod'])
-        bonds, wbos = read_wbo(xtb_files_props['xtb_wbo'])
-        cdft_descriptors = calculate_global_CDFT_descriptors(xtb_files_props['xtb_gfn1'])
-        cdft_descriptors2  = calculate_global_CDFT_descriptors_part2( xtb_files_props['xtb_gfn1'], xtb_files_props['xtb_Nminus1'], xtb_files_props['xtb_Nminus2'], xtb_files_props['xtb_Nplus1'], xtb_files_props['xtb_Nplus2'], cdft_descriptors)
-        localDescriptors = calculate_local_CDFT_descriptors(xtb_files_props['xtb_fukui'], cdft_descriptors, cdft_descriptors2)
+        properties_dict = read_xtb(xtb_files_props['xtb_out'],self)
+        localgfn1 = read_gfn1(xtb_files_props['xtb_gfn1'],self)
+        properties_FOD = read_fod(xtb_files_props['xtb_fod'],self)
+        bonds, wbos = read_wbo(xtb_files_props['xtb_wbo'],self)
+        cdft_descriptors = calculate_global_CDFT_descriptors(xtb_files_props['xtb_gfn1'],self)
+        cdft_descriptors2  = calculate_global_CDFT_descriptors_part2( xtb_files_props['xtb_gfn1'], xtb_files_props['xtb_Nminus1'], xtb_files_props['xtb_Nminus2'], xtb_files_props['xtb_Nplus1'], xtb_files_props['xtb_Nplus2'], cdft_descriptors,self)
+        localDescriptors = calculate_local_CDFT_descriptors(xtb_files_props['xtb_fukui'], cdft_descriptors, cdft_descriptors2,self)
         # create matrix of Wiberg bond-orders
         atoms = properties_dict.get("atoms")
         nat = len(atoms)
@@ -850,10 +850,10 @@ class qdescp:
 		Morfeus Descriptors
 		"""
         #Global descriptors
-        global_properties_morfeus = calculate_global_morfeus_descriptors(self.final_xyz_path)
+        global_properties_morfeus = calculate_global_morfeus_descriptors(self.final_xyz_path,self)
         json_data.update(global_properties_morfeus)       
         #Local descriptors
-        local_properties_morfeus = calculate_local_morfeus_descriptors(self.final_xyz_path)
+        local_properties_morfeus = calculate_local_morfeus_descriptors(self.final_xyz_path,self)
         json_data.update(local_properties_morfeus)  
 
         """
