@@ -30,22 +30,54 @@ def convert_ndarrays(data):
 
 
 
+# def get_boltz(energy):
+#     """
+#     Calculates the Boltzmann weights for a list of energies
+#     """
+#     energ = [number - min(energy) for number in energy]
+
+#     boltz_sum = 0.0
+#     for e in energ:
+#         boltz_sum += math.exp(-e * J_TO_AU / GAS_CONSTANT / T)
+    
+#     weights = []
+#     for e in energ:
+#         weight = math.exp(-e * J_TO_AU / GAS_CONSTANT / T) / boltz_sum
+#         weights.append(weight)
+
+#     return weights
+
 def get_boltz(energy):
     """
-    Calculates the Boltzmann weights for a list of energies
+    Calculates the Boltzmann weights for a list of energies.
+    
+    Parameters:
+    energy (list of floats): List of energies for which Boltzmann weights will be calculated.
+
+    Returns:
+    weights (list of floats): List of Boltzmann weights corresponding to the input energies.
     """
+    # Shift energies so that the minimum energy is zero (to prevent negative exponents from dominating)
     energ = [number - min(energy) for number in energy]
 
-    boltz_sum = 0.0
+    boltz_sum = 0.0 # Initialize the sum of Boltzmann factors to zero
+
+    # Calculate the sum of Boltzmann factors for all energies
     for e in energ:
+        # Apply the Boltzmann factor formula: exp(-energy / (k * T))
+        # where J_TO_AU is a conversion factor, GAS_CONSTANT is the gas constant, and T is temperature
         boltz_sum += math.exp(-e * J_TO_AU / GAS_CONSTANT / T)
     
-    weights = []
+    weights = [] # Initialize the list to store Boltzmann weights
+
+    # Calculate each individual Boltzmann weight by normalizing with the total sum of Boltzmann factors
     for e in energ:
         weight = math.exp(-e * J_TO_AU / GAS_CONSTANT / T) / boltz_sum
         weights.append(weight)
 
+    # Return the list of normalized Boltzmann weights
     return weights
+
 
 def get_boltz_props(json_files, name, boltz_dir, calc_type, self, mol_props, atom_props, smarts_targets, 
                     denovo_mols, denovo_atoms,interpret_mols, interpret_atoms, mol=None, xyz_file=None):
@@ -277,27 +309,67 @@ def get_chemical_shifts(json_data, nmr_atoms, nmr_slope, nmr_intercept):
 
     return shifts
 
+# def average_prop_atom(weights, prop):
+#     """
+#     Returns the atomic properties averaged using the Boltzmann average.
+#     """
+#     boltz_avg = []
+    
+#     for i, p in enumerate(prop):
+        
+#         if isinstance(p, (float, int)):
+#             boltz_avg.append(p * weights[i])
+#         elif isinstance(p, list):
+#             boltz_avg.append([0 if number is None else number * weights[i] for number in p])
+#         else:
+#             boltz_avg.append(0) 
+    
+#     if isinstance(boltz_avg[0], list):
+#         boltz_res = np.sum(boltz_avg, axis=0)
+#     else:
+#         boltz_res = sum(boltz_avg)
+    
+#     return boltz_res
+
 def average_prop_atom(weights, prop):
     """
-    Returns the atomic properties averaged using the Boltzmann average.
+    Returns the atomic properties averaged using the Boltzmann average and rounded to 4 decimal places.
+
+    Parameters:
+    weights (list of floats): Boltzmann weights calculated for each configuration.
+    prop (list): List of atomic properties (either floats or lists of values) for each configuration.
+
+    Returns:
+    boltz_res: The Boltzmann-weighted average of the atomic properties, rounded to 4 decimal places.
     """
+    # List to store the Boltzmann-weighted properties
     boltz_avg = []
     
+    # Loop through each property and its corresponding weight
     for i, p in enumerate(prop):
-        
+        # If the property is a single float or int, multiply it by the corresponding weight
         if isinstance(p, (float, int)):
             boltz_avg.append(p * weights[i])
+        # If the property is a list (e.g., multi-dimensional property), multiply each element by the weight
         elif isinstance(p, list):
             boltz_avg.append([0 if number is None else number * weights[i] for number in p])
+        # If the property type is not recognized, append 0 as a placeholder
         else:
-            boltz_avg.append(0) 
+            boltz_avg.append(0)
     
+    # Check if the first element in the list is a list (indicating multi-dimensional properties)
     if isinstance(boltz_avg[0], list):
+        # If so, sum along the axis (i.e., sum element-wise for multi-dimensional properties)
         boltz_res = np.sum(boltz_avg, axis=0)
+        # Round each element in the result to 4 decimal places
+        boltz_res = [round(x, 4) for x in boltz_res]
     else:
-        boltz_res = sum(boltz_avg)
+        # Otherwise, sum all the weighted values as a scalar
+        boltz_res = round(sum(boltz_avg), 4)
     
+    # Return the Boltzmann-weighted result rounded to 4 decimal places
     return boltz_res
+
 
 def average_prop_atom_nmr(weights, prop):
     """
@@ -316,19 +388,52 @@ def average_prop_atom_nmr(weights, prop):
         boltz_res = np.sum(boltz_avg, 0)
     return boltz_res
 
-
 def average_prop_mol(weights, prop):
     """
-    Returns Boltzmann averaged molecular properties
-    """
+    Returns Boltzmann averaged molecular properties, rounded to 4 decimal places.
 
+    Parameters:
+    weights (list of floats): Boltzmann weights for each configuration.
+    prop (list of floats): List of molecular properties corresponding to each configuration.
+
+    Returns:
+    boltz_avg (float): Boltzmann-weighted average of the molecular properties, rounded to 4 decimal places.
+    """
+    
+    # Initialize the Boltzmann-weighted average to 0.0
     boltz_avg = 0.0
+    
+    # Loop through each property and its corresponding weight
     for i, p in enumerate(prop):
+        # If the property is 'NaN', break the loop and return 'NaN'
         if p == 'NaN':
             boltz_avg = 'NaN'
             break
+        # Otherwise, calculate the weighted sum of properties
         boltz_avg += p * weights[i]
+    
+    # If the result is a valid number, round it to 4 decimal places
+    if boltz_avg != 'NaN':
+        boltz_avg = round(boltz_avg, 4)
+
+    # Return the Boltzmann-weighted average, rounded to 4 decimal places (or 'NaN' if encountered)
     return boltz_avg
+
+
+
+# def average_prop_mol(weights, prop):
+#     """
+#     Returns Boltzmann averaged molecular properties
+#     """
+
+#     boltz_avg = 0.0
+#     for i, p in enumerate(prop):
+#         if p == 'NaN':
+#             boltz_avg = 'NaN'
+#             break
+#         boltz_avg += p * weights[i]
+#     return boltz_avg
+
 
 
 def get_rdkit_properties(avg_json_data, mol):
@@ -656,7 +761,6 @@ def calculate_global_CDFT_descriptors(file):
             electrofugality = round(-delta_SCC_EA + electrophilicity_index, 4)
             nucleofugality = round(delta_SCC_IP + electrophilicity_index, 4)
 
-
             if chemical_hardness != 0:
                 chemical_softness = round(1 / chemical_hardness, 4)
                 electrodonating_power_index = round(((delta_SCC_IP + 3 * delta_SCC_EA)**2) / (8 * chemical_hardness), 4)
@@ -665,7 +769,7 @@ def calculate_global_CDFT_descriptors(file):
 
                 if electroaccepting_power_index != 0:
                     nucleophilicity_index = round(10 / electroaccepting_power_index, 4)
-                    
+
             net_electrophilicity = round((electrodonating_power_index - electroaccepting_power_index), 4)
 
         else:
@@ -695,108 +799,224 @@ def calculate_global_CDFT_descriptors(file):
         print(f"x  WARNING! An error occurred while processing {file}: {e}")
         return None
 
-
 def calculate_global_CDFT_descriptors_part2(file, file_Nminus1, file_Nminus2, file_Nplus1, file_Nplus2, cdft_descriptors):
     """
     Read .gfn1 output file created from xTB and calculate CDFT descriptors with FDA approximations part 2
     """
-    corr_xtb = 4.8455
+    corr_xtb = 4.8455  # correction from XTB
 
     def extract_scc_energy(lines, filename):
+        """
+        Extract SCC energy from the file. If not found, return None and log a warning.
+        """
         for line in lines:
             if "SCC energy" in line:
                 return float(line.split()[3])
-        raise ValueError(f"Could not find SCC energy value in the file: {filename}")
+        
+        print(f"x  WARNING! Could not find SCC energy value in the file: {filename}")
+        return None
 
-    with open(file, "r") as f:
-        data = f.readlines()
-    with open(file_Nminus1, "r") as f1:
-        data1 = f1.readlines()
-    with open(file_Nminus2, "r") as f2:
-        data2 = f2.readlines()
-    with open(file_Nplus1, "r") as f3:
-        data3 = f3.readlines()
-    with open(file_Nplus2, "r") as f4:
-        data4 = f4.readlines()
+    try:
+        # Open and read files
+        with open(file, "r") as f:
+            data = f.readlines()
+        with open(file_Nminus1, "r") as f1:
+            data1 = f1.readlines()
+        with open(file_Nminus2, "r") as f2:
+            data2 = f2.readlines()
+        with open(file_Nplus1, "r") as f3:
+            data3 = f3.readlines()
+        with open(file_Nplus2, "r") as f4:
+            data4 = f4.readlines()
 
-    scc_energy = extract_scc_energy(data, file) * Hartree
-    scc_energy_Nminus1 = extract_scc_energy(data1, file_Nminus1) * Hartree
-    scc_energy_Nminus2 = extract_scc_energy(data2, file_Nminus2) * Hartree
-    scc_energy_Nplus1 = extract_scc_energy(data3, file_Nplus1) * Hartree
-    scc_energy_Nplus2 = extract_scc_energy(data4, file_Nplus2) * Hartree
+        # Extract SCC energies, handle cases where None is returned
+        scc_energy = extract_scc_energy(data, file)
+        scc_energy_Nminus1 = extract_scc_energy(data1, file_Nminus1)
+        scc_energy_Nminus2 = extract_scc_energy(data2, file_Nminus2)
+        scc_energy_Nplus1 = extract_scc_energy(data3, file_Nplus1)
+        scc_energy_Nplus2 = extract_scc_energy(data4, file_Nplus2)
 
-    delta_SCC_IP = cdft_descriptors.get("IP")
-    delta_SCC_EA = cdft_descriptors.get("EA")
-    chemical_hardness = cdft_descriptors.get("Hardness")
+        if None in [scc_energy, scc_energy_Nminus1, scc_energy_Nminus2, scc_energy_Nplus1, scc_energy_Nplus2]:
+            print(f"x  WARNING! Missing SCC energy in one or more files. Cannot calculate global CDFT descriptors.")
+            return None
 
-    Vertical_second_IP = None
-    Vertical_second_EA = None
-    hyper_hardness = None
-    Global_hypersoftness = None
-    Electrophilic_descriptor = None
-    w_cubic = None
-    
-    if scc_energy is not None and scc_energy_Nminus1 is not None and scc_energy_Nminus2 is not None and scc_energy_Nplus1 is not None and scc_energy_Nplus2 and delta_SCC_IP is not None and delta_SCC_EA is not None:
+        # Convert SCC energies to Hartree
+        scc_energy *= Hartree
+        scc_energy_Nminus1 *= Hartree
+        scc_energy_Nminus2 *= Hartree
+        scc_energy_Nplus1 *= Hartree
+        scc_energy_Nplus2 *= Hartree
+
+        # Extract required CDFT descriptors
+        delta_SCC_IP = cdft_descriptors.get("IP")
+        delta_SCC_EA = cdft_descriptors.get("EA")
+        chemical_hardness = cdft_descriptors.get("Hardness")
+
+        if None in [delta_SCC_IP, delta_SCC_EA, chemical_hardness]:
+            print("x  WARNING! Missing required CDFT descriptors (IP, EA, or Hardness).")
+            return None
+
+        # Initialize variables
+        Vertical_second_IP, Vertical_second_EA = None, None
+        hyper_hardness, Global_hypersoftness = None, None
+        Electrophilic_descriptor, w_cubic = None, None
+
+        # Calculations if all SCC energies and descriptors are available
         Vertical_second_IP = round((((scc_energy_Nminus2 - scc_energy_Nminus1) - corr_xtb)), 4)
         Vertical_second_EA = round((((scc_energy_Nplus1 - scc_energy_Nplus2) + corr_xtb)), 4)
-        
-        # hyper_hardness
         hyper_hardness = round((-((0.5) * (delta_SCC_IP + delta_SCC_EA - Vertical_second_IP - Vertical_second_EA))), 4)
 
-        # Global_hypersoftness
-        Global_hypersoftness = round((hyper_hardness / ((chemical_hardness) ** 3)), 4)
-        
-        # Electrophilic descriptor
-        try:
-            A = ((scc_energy_Nplus1 - scc_energy) + corr_xtb)
-            c = (Vertical_second_IP - (2 * delta_SCC_IP) + A) / ((2 * Vertical_second_IP) - delta_SCC_IP - A)
-            a = -((delta_SCC_IP + A) / 2) + (((delta_SCC_IP - A) / 2) * c)
-            b = ((delta_SCC_IP - A) / 2) - (((delta_SCC_IP + A) / 2) * c)
-            Gamma = (-3 * c) * (b - (a * c))
-            Eta = 2 * (b - (a * c))
-            chi = -a
-            Mu = a
-            
-            # Checking the square root
-            discriminant = Eta ** 2 - (2 * Gamma * Mu)
-            if discriminant < 0:
-                raise ValueError(f"Negative discriminant: cannot compute the square root of {discriminant}. Electrophilic descriptor was not calculated")
-            
+        if chemical_hardness != 0:
+            Global_hypersoftness = round((hyper_hardness / ((chemical_hardness) ** 3)), 4)
+
+        # Electrophilic descriptor calculations
+        A = ((scc_energy_Nplus1 - scc_energy) + corr_xtb)
+        c = (Vertical_second_IP - (2 * delta_SCC_IP) + A) / ((2 * Vertical_second_IP) - delta_SCC_IP - A)
+        a = -((delta_SCC_IP + A) / 2) + (((delta_SCC_IP - A) / 2) * c)
+        b = ((delta_SCC_IP - A) / 2) - (((delta_SCC_IP + A) / 2) * c)
+        Gamma = (-3 * c) * (b - (a * c))
+        Eta = 2 * (b - (a * c))
+        chi = -a
+        Mu = a
+
+        discriminant = Eta ** 2 - (2 * Gamma * Mu)  # Checking the square root
+        if discriminant < 0:
+            print(f"x  WARNING! Negative discriminant encountered, skipping Electrophilic descriptor calculation.")
+        else:
             inter_phi = math.sqrt(discriminant)
             Phi = inter_phi - Eta
             Electrophilic_descriptor = round(((chi * (Phi / Gamma)) - (((Phi / Gamma) ** 2) * ((Eta / 2) + (Phi / 6)))), 4)
 
-        except ValueError as e:
-            Phi = None
-            Electrophilic_descriptor = None
-        
-        # w cubic electrophilicity index
-        try:
-            Gamma_cubic = 2 * delta_SCC_IP - Vertical_second_IP - delta_SCC_EA
-            Eta_cubic = delta_SCC_IP - delta_SCC_EA
-            
-            # Check if Eta_cubic != 0
-            if Eta_cubic == 0:
-                raise ZeroDivisionError("Eta_cubic is zero, which would cause a division by zero in the calculation.")
-            
+        # Cubic electrophilicity index
+        Gamma_cubic = 2 * delta_SCC_IP - Vertical_second_IP - delta_SCC_EA
+        Eta_cubic = delta_SCC_IP - delta_SCC_EA
+
+        if Eta_cubic != 0:
             Mu_cubic = (1 / 6) * ((-2 * delta_SCC_EA) - (5 * delta_SCC_IP) + Vertical_second_IP)
             w_cubic = round(((Mu_cubic ** 2) / (2 * Eta_cubic)) * (1 + ((Mu_cubic / (3 * (Eta_cubic) ** 2)) * Gamma_cubic)), 4)
+        else:
+            print(f"x  WARNING! Eta_cubic is zero, skipping Cubic electrophilicity index calculation.")
 
-        except ZeroDivisionError as e:
-            w_cubic = None 
-        except TypeError as e:
-            w_cubic = None  
+        # Return the calculated descriptors
+        cdft_descriptors2 = {
+            "Second IP": Vertical_second_IP,
+            "Second EA": Vertical_second_EA,
+            "Hyperhardness": hyper_hardness,
+            "Hypersoftness": Global_hypersoftness,
+            "Electrophilic descrip.": Electrophilic_descriptor,
+            "cub. electrophilicity idx": w_cubic
+        }
+
+        return cdft_descriptors2
+
+    except Exception as e:
+        # Handle any exception that occurs during file processing
+        print(f"x  WARNING! An error occurred while processing {file}: {e}")
+        return None
+
+
+
+# def calculate_global_CDFT_descriptors_part2(file, file_Nminus1, file_Nminus2, file_Nplus1, file_Nplus2, cdft_descriptors):
+#     """
+#     Read .gfn1 output file created from xTB and calculate CDFT descriptors with FDA approximations part 2
+#     """
+#     corr_xtb = 4.8455
+
+#     def extract_scc_energy(lines, filename):
+#         for line in lines:
+#             if "SCC energy" in line:
+#                 return float(line.split()[3])
+#         raise ValueError(f"Could not find SCC energy value in the file: {filename}")
+
+#     with open(file, "r") as f:
+#         data = f.readlines()
+#     with open(file_Nminus1, "r") as f1:
+#         data1 = f1.readlines()
+#     with open(file_Nminus2, "r") as f2:
+#         data2 = f2.readlines()
+#     with open(file_Nplus1, "r") as f3:
+#         data3 = f3.readlines()
+#     with open(file_Nplus2, "r") as f4:
+#         data4 = f4.readlines()
+
+#     scc_energy = extract_scc_energy(data, file) * Hartree
+#     scc_energy_Nminus1 = extract_scc_energy(data1, file_Nminus1) * Hartree
+#     scc_energy_Nminus2 = extract_scc_energy(data2, file_Nminus2) * Hartree
+#     scc_energy_Nplus1 = extract_scc_energy(data3, file_Nplus1) * Hartree
+#     scc_energy_Nplus2 = extract_scc_energy(data4, file_Nplus2) * Hartree
+
+#     delta_SCC_IP = cdft_descriptors.get("IP")
+#     delta_SCC_EA = cdft_descriptors.get("EA")
+#     chemical_hardness = cdft_descriptors.get("Hardness")
+
+#     Vertical_second_IP = None
+#     Vertical_second_EA = None
+#     hyper_hardness = None
+#     Global_hypersoftness = None
+#     Electrophilic_descriptor = None
+#     w_cubic = None
     
-    cdft_descriptors2 = {
-        "Second IP": Vertical_second_IP,
-        "Second EA": Vertical_second_EA,
-        "Hyperhardness": hyper_hardness,
-        "Hypersoftness": Global_hypersoftness,
-        "Electrophilic descrip.": Electrophilic_descriptor,
-        "cub. electrophilicity idx": w_cubic
-    }
+#     if scc_energy is not None and scc_energy_Nminus1 is not None and scc_energy_Nminus2 is not None and scc_energy_Nplus1 is not None and scc_energy_Nplus2 and delta_SCC_IP is not None and delta_SCC_EA is not None:
+#         Vertical_second_IP = round((((scc_energy_Nminus2 - scc_energy_Nminus1) - corr_xtb)), 4)
+#         Vertical_second_EA = round((((scc_energy_Nplus1 - scc_energy_Nplus2) + corr_xtb)), 4)
+        
+#         # hyper_hardness
+#         hyper_hardness = round((-((0.5) * (delta_SCC_IP + delta_SCC_EA - Vertical_second_IP - Vertical_second_EA))), 4)
 
-    return cdft_descriptors2
+#         # Global_hypersoftness
+#         Global_hypersoftness = round((hyper_hardness / ((chemical_hardness) ** 3)), 4)
+        
+#         # Electrophilic descriptor
+#         try:
+#             A = ((scc_energy_Nplus1 - scc_energy) + corr_xtb)
+#             c = (Vertical_second_IP - (2 * delta_SCC_IP) + A) / ((2 * Vertical_second_IP) - delta_SCC_IP - A)
+#             a = -((delta_SCC_IP + A) / 2) + (((delta_SCC_IP - A) / 2) * c)
+#             b = ((delta_SCC_IP - A) / 2) - (((delta_SCC_IP + A) / 2) * c)
+#             Gamma = (-3 * c) * (b - (a * c))
+#             Eta = 2 * (b - (a * c))
+#             chi = -a
+#             Mu = a
+            
+#             # Checking the square root
+#             discriminant = Eta ** 2 - (2 * Gamma * Mu)
+#             if discriminant < 0:
+#                 raise ValueError(f"Negative discriminant: cannot compute the square root of {discriminant}. Electrophilic descriptor was not calculated")
+            
+#             inter_phi = math.sqrt(discriminant)
+#             Phi = inter_phi - Eta
+#             Electrophilic_descriptor = round(((chi * (Phi / Gamma)) - (((Phi / Gamma) ** 2) * ((Eta / 2) + (Phi / 6)))), 4)
+
+#         except ValueError as e:
+#             Phi = None
+#             Electrophilic_descriptor = None
+        
+#         # w cubic electrophilicity index
+#         try:
+#             Gamma_cubic = 2 * delta_SCC_IP - Vertical_second_IP - delta_SCC_EA
+#             Eta_cubic = delta_SCC_IP - delta_SCC_EA
+            
+#             # Check if Eta_cubic != 0
+#             if Eta_cubic == 0:
+#                 raise ZeroDivisionError("Eta_cubic is zero, which would cause a division by zero in the calculation.")
+            
+#             Mu_cubic = (1 / 6) * ((-2 * delta_SCC_EA) - (5 * delta_SCC_IP) + Vertical_second_IP)
+#             w_cubic = round(((Mu_cubic ** 2) / (2 * Eta_cubic)) * (1 + ((Mu_cubic / (3 * (Eta_cubic) ** 2)) * Gamma_cubic)), 4)
+
+#         except ZeroDivisionError as e:
+#             w_cubic = None 
+#         except TypeError as e:
+#             w_cubic = None  
+    
+#     cdft_descriptors2 = {
+#         "Second IP": Vertical_second_IP,
+#         "Second EA": Vertical_second_EA,
+#         "Hyperhardness": hyper_hardness,
+#         "Hypersoftness": Global_hypersoftness,
+#         "Electrophilic descrip.": Electrophilic_descriptor,
+#         "cub. electrophilicity idx": w_cubic
+#     }
+
+#     return cdft_descriptors2
 
 def calculate_local_CDFT_descriptors(file_fukui, cdft_descriptors, cdft_descriptors2):
     """
