@@ -1037,7 +1037,7 @@ class qdescp:
                     df_temp.to_csv(csv_file, index=False)
 
             except FileNotFoundError:
-                print(f"Not found {csv_file}. Please check if the file was generated correctly..")
+                self.args.log.write(f"Not found {csv_file}. Please check if the file was generated correctly..")
 
 
 
