@@ -64,8 +64,12 @@ def test_qdescp_xtb(file):
         file_descriptors_interpret = f'{w_dir_main}/QDESCP_interpret_boltz_descriptors.csv'
         file_descriptors_full = f'{w_dir_main}/QDESCP_full_boltz_descriptors.csv'
         file_descriptors_denovo = f'{w_dir_main}/QDESCP_denovo_boltz_descriptors.csv'
-    if os.path.exists(file_descriptors_interpret):
+    if os.path.exists(file_descriptors_denovo): 
+        os.remove(file_descriptors_denovo)
+    if os.path.exists(file_descriptors_interpret): 
         os.remove(file_descriptors_interpret)
+    if os.path.exists(file_descriptors_full): 
+        os.remove(file_descriptors_full)
 
     # CSEARCH conformer generation
     cmd_csearch = ["python","-m","aqme","--csearch","--program","rdkit","--input",f'{qdescp_input_dir}/{file_csearch}',"--destination",f'{folder_csearch}',]
