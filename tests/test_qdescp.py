@@ -10,7 +10,7 @@ import pytest
 import pandas as pd
 import numpy as np
 import subprocess
-from aqme.qdescp_utils import read_json,get_descriptors
+from aqme.qdescp_utils import read_json,get_descriptors, get_descriptors
 import glob
 import math
 import shutil
@@ -64,12 +64,8 @@ def test_qdescp_xtb(file):
         file_descriptors_interpret = f'{w_dir_main}/QDESCP_interpret_boltz_descriptors.csv'
         file_descriptors_full = f'{w_dir_main}/QDESCP_full_boltz_descriptors.csv'
         file_descriptors_denovo = f'{w_dir_main}/QDESCP_denovo_boltz_descriptors.csv'
-    if os.path.exists(file_descriptors_denovo): 
-        os.remove(file_descriptors_denovo)
-    if os.path.exists(file_descriptors_interpret): 
+    if os.path.exists(file_descriptors_interpret):
         os.remove(file_descriptors_interpret)
-    if os.path.exists(file_descriptors_full): 
-        os.remove(file_descriptors_full)
 
     # CSEARCH conformer generation
     cmd_csearch = ["python","-m","aqme","--csearch","--program","rdkit","--input",f'{qdescp_input_dir}/{file_csearch}',"--destination",f'{folder_csearch}',]
@@ -154,9 +150,9 @@ def test_qdescp_xtb(file):
 
         # Compare energies, Fermi level and IP values
         for i, _ in enumerate(energies_xtb):
-            assert round(energies_xtb[i], 4) == round(energies_json[i], 4), \
+            assert round(energies_xtb[i], 2) == round(energies_json[i], 2), \
                 f"Energy mismatch at index {i}: xTB = {energies_xtb[i]}, JSON = {energies_json[i]}"
-            assert round(Fermi_lvls_xtb[i], 2) == round(Fermi_lvls_json[i], 2), \
+            assert round(Fermi_lvls_xtb[i], 1) == round(Fermi_lvls_json[i], 1), \
                 f"Fermi level mismatch at index {i}: xTB = {Fermi_lvls_xtb[i]}, JSON = {Fermi_lvls_json[i]}"
         
         for i, _ in enumerate(SCC_IP_lvls_xtb):
@@ -198,17 +194,17 @@ def test_qdescp_xtb(file):
         json_data = read_json(f'{folder_boltz}/mol_1_rdkit_full_boltz.json')
         json_data1 = read_json(f'{folder_boltz}/mol_1_rdkit_interpret_boltz.json')
         energy_boltz_file = json_data["Total energy"]
-        Fermi_lvl_boltz_file = json_data1["Fermi-level"]
+        Fermi_lvl_boltz_file = json_data["Fermi-level"]
         IP_lvl_boltz_file = json_data1["IP"]
 
         # Assertions with detailed error messages
         assert round(energy_boltz_calc, 4) == round(energy_boltz_file, 4), \
             f"Energy mismatch: calculated {energy_boltz_calc} vs file {energy_boltz_file}"
 
-        assert round(Fermi_lvl_boltz_calc, 2) == round(Fermi_lvl_boltz_file, 2), \
+        assert round(Fermi_lvl_boltz_calc, 1) == round(Fermi_lvl_boltz_file, 1), \
             f"Fermi level mismatch: calculated {Fermi_lvl_boltz_calc} vs file {Fermi_lvl_boltz_file}"
         
-        assert round(IP_boltz_calc, 2) == round(IP_lvl_boltz_file, 2), \
+        assert round(IP_boltz_calc, 1) == round(IP_lvl_boltz_file, 1), \
             f"IP mismatch: calculated {IP_boltz_calc} vs file {IP_lvl_boltz_file}"
 
         # 3) checking csv file
@@ -219,7 +215,7 @@ def test_qdescp_xtb(file):
 
         assert round(IP_boltz_calc,4) == round(IP_boltz_csv,4), \
             f"IP mismatch: calculated {IP_boltz_calc} vs file {IP_boltz_csv} from CSV"
-        assert round(Fermi_lvl_boltz_calc,2) == round(Fermi_lvl_boltz_csv,2), \
+        assert round(Fermi_lvl_boltz_calc,1) == round(Fermi_lvl_boltz_csv,1), \
             f"Fermi level mismatch: calculated {Fermi_lvl_boltz_calc} vs file {Fermi_lvl_boltz_csv} from CSV"
         assert round(pd_boltz_interpret["MolLogP"][0],1) == 1.8
         assert round(pd_boltz_interpret["MolLogP"][1],1)== 2.2

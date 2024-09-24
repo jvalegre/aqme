@@ -504,7 +504,7 @@ def read_gfn1(file,self):
             d_prop.append(d_prop_ind)
         except (ValueError, IndexError) as e:
             # Handle errors related to parsing the line
-            print(f"x  WARNING! Error parsing line in {file}: {line}. Error: {e}")
+            self.args.log.write(f"x  WARNING! Error parsing line in {file}: {line}. Error: {e}")
             return None
 
     # Store the parsed data in a dictionary and return it
@@ -999,7 +999,7 @@ def read_fod(file,self):
                 start_fod = j + 1
             except (IndexError, ValueError) as e:
                 # Handle potential errors from accessing invalid indices or incorrect value types
-                print(f"x  WARNING! Error extracting total FOD: {e}")
+                self.args.log.write(f"x  WARNING! Error extracting total FOD: {e}")
                 return None
             break  # Stop the loop once 'Loewdin FODpop' is found
 
@@ -1229,7 +1229,7 @@ def get_descriptors(level):
         },
         'interpret': {
             'mol': ["Fermi-level", "Total polariz. alpha", "Total FOD", "Electrophil. idx", "Hardness", "Softness", "Electronegativity",
-                    "Nucleophilicity idx", "Second IP", "Second EA", "Disp. Area", "Disp. Vol.", "Trans. dipole moment", "HOMO occup.", "LUMO occup."],
+                    "Nucleophilicity idx", "Second IP", "Second EA", "Disp. Area", "Disp. Vol.", "HOMO occup.", "LUMO occup."],
             'atoms': ["s proportion", "p proportion", "d proportion", "Coord. numbers",
                       "Polariz. alpha", "FOD", "FOD s proportion", "FOD p proportion", "FOD d proportion",
                       "Solid angle", "Pyramidaliz. P", "Pyramidaliz. Vol", "Dispersion"]
