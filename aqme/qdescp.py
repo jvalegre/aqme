@@ -271,6 +271,7 @@ class qdescp:
         if len(update_interpret_atom_props) > 0:
             interpret_atoms = update_interpret_atom_props
 
+        #Create the CSV files
         qdescp_csv = "QDESCP_full_boltz_descriptors.csv"
         qdescp_denovo_csv = "QDESCP_denovo_boltz_descriptors.csv"
         qdescp_interpret_csv = "QDESCP_interpret_boltz_descriptors.csv"
@@ -300,6 +301,7 @@ class qdescp:
                 _ = self.write_csv_boltz_data(destination, qdescp_denovo_csv, json_type="denovo")  # CSV denovo
                 _ = self.write_csv_boltz_data(destination, qdescp_interpret_csv, json_type="interpret")  # CSV interpret
 
+            #if NMR program
             elif self.args.program.lower() == "nmr":
                 atom_props = ["NMR Chemical Shifts"]
                 
@@ -405,7 +407,6 @@ class qdescp:
         Concatenate the values for all calculations
         """
         
-        # Definir los archivos JSON a partir del tipo
         if json_type == "denovo":
             json_pattern = str(destination) + "/boltz/*_denovo_boltz.json"
         elif json_type == "interpret":
