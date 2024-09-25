@@ -231,7 +231,7 @@ class qdescp:
                         num_matches -= 1
                     if (num_matches / len(mol_list)) < 0.7:
                         patterns_remove.append(pattern)
-                        self.args.log.write(f"x  WARNING! SMARTS pattern {pattern} is not specified correctly or is not present in more than 30% of the molecules. Atomic descriptors will not be generated for this pattern.")
+                        self.args.log.write(f"x  WARNING! SMARTS pattern {pattern} was not specified correctly or is not present in more than 30% of the molecules. Atomic descriptors will not be generated for this pattern.")
                         break
             # remove invalid patterns
             for pattern in patterns_remove:
