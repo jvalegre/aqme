@@ -18,14 +18,10 @@ var_dict = {
     "qprep": False,
     "qcorr": False,
     "smi": None,
-    "metal_atoms": [],
     "auto_metal_atoms": True,
     "charge": None,
     "mult": None,
-    "complex_coord": [],
     "complex_type": "",
-    "metal_idx": [],
-    "metal_sym": [],
     "constraints_atoms": [],
     "constraints_dist": [],
     "constraints_angle": [],
@@ -55,7 +51,7 @@ var_dict = {
     "nsteps_fullmonte": 100,
     "nrot_fullmonte": 3,
     "ang_fullmonte": 30,
-    "cregen": False,
+    "cregen": True,
     "cregen_keywords": None,
     "program": None,
     "nprocs": 8,
@@ -118,7 +114,8 @@ var_dict = {
     "robert": True,
     "csv_name": None,
     "crest_nrun": 1,
-    "crest_nclust": 0.4
+    "crest_nclust": 0.4,
+    "debug": False
 }
 
 

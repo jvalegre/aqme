@@ -64,6 +64,7 @@ def test_csearch_varfile(varfile, nameinvarfile, output_nummols):
         # tests for conformer generation with RDKit
         ("rdkit", "pentane.smi", [2, 4]),
         ("rdkit", "pentane.csv", [2, 4]),
+        ("rdkit", "Cu.csv", [1, 1, 1]),        
         ("rdkit", "partial_path", [2, 4]), # checks partial PATHs
         ("rdkit", "file_name", [2, 4]), # checks file_name
         ("rdkit", "molecules.cdx", [4, 2]),
@@ -89,6 +90,9 @@ def test_csearch_input_parameters(program, input, output_nummols):
         input = "pentane.csv"
         os.chdir(csearch_input_dir)
         csearch(destination=f'{csearch_input_dir}/CSEARCH', program=program, input=input)
+    elif input == "Cu.csv":
+        csearch(destination=f'{csearch_input_dir}/CSEARCH', program=program, input=f'{csearch_input_dir}/{input}', sample=5)
+        os.chdir(csearch_input_dir)
     else:
         csearch(destination=f'{csearch_input_dir}/CSEARCH', program=program, input=f'{csearch_input_dir}/{input}')
         os.chdir(csearch_input_dir)
@@ -104,6 +108,22 @@ def test_csearch_input_parameters(program, input, output_nummols):
             assert len(mol2) == output_nummols[1]
         os.remove(file1)
         os.remove(file2)
+
+    elif input == "Cu.csv":
+        file1 = f'{csearch_input_dir}/CSEARCH/cu1_{program}.sdf'
+        file2 = f'{csearch_input_dir}/CSEARCH/cu2_{program}.sdf'
+        file3 = f'{csearch_input_dir}/CSEARCH/cu3_{program}.sdf'
+
+        with rdkit.Chem.SDMolSupplier(file1, removeHs=False) as mol1:
+            assert len(mol1) == output_nummols[0]
+        with rdkit.Chem.SDMolSupplier(file2, removeHs=False) as mol2:
+            assert len(mol2) == output_nummols[1]
+        with rdkit.Chem.SDMolSupplier(file3, removeHs=False) as mol3:
+            assert len(mol3) == output_nummols[2]
+        os.remove(file1)
+        os.remove(file2)
+        os.remove(file3)
+
     elif input in ["molecules.cdx"]:
         file1 = f'{csearch_input_dir}/CSEARCH/molecules_0_{program}.sdf'
         file2 = f'{csearch_input_dir}/CSEARCH/molecules_1_{program}.sdf'
@@ -827,6 +847,7 @@ def test_csearch_methods(
     if program == 'crest':
         if name != 'ethane':
             file_crest = str(csearch_methods_dir+f"/CSEARCH/crest_xyz/{name}_crest.out")
+            sdf_crest = str(csearch_methods_dir+f"/CSEARCH/{name}_crest.sdf")
         else:
             file_crest = str(csearch_methods_dir+f"/Et_sdf_files/crest_xyz/{name}_crest.out")
         outfile = open(file_crest, "r")
@@ -894,6 +915,18 @@ def test_csearch_methods(
                 # check if charge and mult are correct
                 assert line.find('--chrg 0 --uhf 0') > -1
                 break
+        # check that the conformers are sorted by their number (avoid going from 1 to 10 instead of to 2)
+        outfile_sdf = open(sdf_crest, "r")
+        outlines_sdf = outfile_sdf.readlines()
+        outfile_sdf.close()
+        conf_number = 0
+        for line in outlines_sdf:
+            if line.startswith('nci_keyword'):
+                conf_number += 1
+                # check if the crest_keywords option works
+                assert int(line.split('_')[-1]) == conf_number
+        assert conf_number > 1
+
     elif name == 'ethane':
         assert len(mols) >= 1
     elif name == 'ts':

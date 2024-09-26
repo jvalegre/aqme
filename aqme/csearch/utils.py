@@ -616,3 +616,42 @@ def cluster_conformers(mols, heavy_only, max_matches_rmsd, cluster_thr):
     cluster_mols = [mols[x] for x in centroids]
 
     return cluster_mols, centroids
+
+
+def substituted_mol(mol, checkI, metal_atoms):
+    """
+    Returns a molecule object in which all metal atoms specified in args.metal_atoms
+    are replaced by Iodine and the charge is set depending on the number of
+    neighbors.
+
+    """
+
+    metal_idx = []
+    complex_coord = []
+    metal_sym = []
+
+    for _ in metal_atoms:
+        metal_idx.append(None)
+        complex_coord.append(None)
+        metal_sym.append(None)
+
+    Neighbors2FormalCharge = dict()
+    for i, j in zip(range(2, 9), range(-3, 4)):
+        Neighbors2FormalCharge[i] = j
+
+    for atom in mol.GetAtoms():
+        symbol = atom.GetSymbol()
+        if symbol in metal_atoms:
+            metal_sym[metal_atoms.index(symbol)] = symbol
+            metal_idx[metal_atoms.index(symbol)] = atom.GetIdx()
+            complex_coord[metal_atoms.index(symbol)] = len(
+                atom.GetNeighbors()
+            )
+            if checkI == "I":
+                atom.SetAtomicNum(53)
+                n_neighbors = len(atom.GetNeighbors())
+                if n_neighbors > 1:
+                    formal_charge = Neighbors2FormalCharge[n_neighbors]
+                    atom.SetFormalCharge(formal_charge)
+
+    return metal_idx, complex_coord, metal_sym

@@ -4,6 +4,10 @@
 Versions
 ========
 
+Version 1.6.2 [`url <https://github.com/jvalegre/aqme/releases/tag/1.6.2>`__]
+   -  Fixed bug from CSEARCH when using CSV inputs with metal atoms (removed SELF variables in multithreading)
+   -  Added --sample to CSEARCH-CREST through the CREGEN
+
 Version 1.6.1 [`url <https://github.com/jvalegre/aqme/releases/tag/1.6.1>`__]
    -  Hotfix of v1.6.0 (just moving the import of dbstep in QDESCP)
 

@@ -24,7 +24,7 @@ GAS_CONSTANT = 8.3144621  # J / K / mol
 J_TO_AU = 4.184 * 627.509541 * 1000.0  # UNIT CONVERSION
 T = 298.15
 
-aqme_version = "1.6.1"
+aqme_version = "1.6.2"
 time_run = time.strftime("%Y/%m/%d %H:%M:%S", time.localtime())
 aqme_ref = f"AQME v {aqme_version}, Alegre-Requena, J. V.; Sowndarya, S.; Perez-Soto, R.; Alturaifi, T.; Paton, R. AQME: Automated Quantum Mechanical Environments for Researchers and Educators. Wiley Interdiscip. Rev. Comput. Mol. Sci. 2023, DOI: 10.1002/wcms.1663."
 
@@ -218,45 +218,6 @@ def get_info_input(file):
     return atoms_and_coords, charge, mult
 
 
-def substituted_mol(self, mol, checkI):
-    """
-    Returns a molecule object in which all metal atoms specified in args.metal_atoms
-    are replaced by Iodine and the charge is set depending on the number of
-    neighbors.
-
-    """
-
-    self.args.metal_idx = []
-    self.args.complex_coord = []
-    self.args.metal_sym = []
-
-    for _ in self.args.metal_atoms:
-        self.args.metal_idx.append(None)
-        self.args.complex_coord.append(None)
-        self.args.metal_sym.append(None)
-
-    Neighbors2FormalCharge = dict()
-    for i, j in zip(range(2, 9), range(-3, 4)):
-        Neighbors2FormalCharge[i] = j
-
-    for atom in mol.GetAtoms():
-        symbol = atom.GetSymbol()
-        if symbol in self.args.metal_atoms:
-            self.args.metal_sym[self.args.metal_atoms.index(symbol)] = symbol
-            self.args.metal_idx[self.args.metal_atoms.index(symbol)] = atom.GetIdx()
-            self.args.complex_coord[self.args.metal_atoms.index(symbol)] = len(
-                atom.GetNeighbors()
-            )
-            if checkI == "I":
-                atom.SetAtomicNum(53)
-                n_neighbors = len(atom.GetNeighbors())
-                if n_neighbors > 1:
-                    formal_charge = Neighbors2FormalCharge[n_neighbors]
-                    atom.SetFormalCharge(formal_charge)
-
-    return self.args.metal_idx, self.args.complex_coord, self.args.metal_sym
-
-
 def set_metal_atomic_number(mol, metal_idx, metal_sym):
     """
     Changes the atomic number of the metal atoms using their indices.
@@ -333,7 +294,8 @@ def command_line_args():
         "oldchk",
         "nodup_check",
         "dbstep_calc",
-        "robert"
+        "robert",
+        "debug"
     ]
     list_args = [
         "files",

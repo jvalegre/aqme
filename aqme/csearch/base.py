@@ -163,7 +163,7 @@ CREST only
    crest_keywords : str, default=None
       Define additional keywords to use in CREST that are not included in --chrg, 
       --uhf, -T and -cinp. For example: '--alpb ch2cl2 --nci --cbonds 0.5'
-   cregen : bool, default=False
+   cregen : bool, default=True
       If True, perform a CREGEN analysis after CREST (filtering options below)
    cregen_keywords : str, default=None
       Additional keywords for CREGEN (i.e. cregen_keywords='--ethr 0.02')
@@ -216,12 +216,12 @@ from aqme.csearch.utils import (
     check_constraints,
     smi_to_mol,
     getDihedralMatches,
-    cluster_conformers
+    cluster_conformers,
+    substituted_mol
     )
 from aqme.csearch.templates import template_embed, check_metal_neigh
 from aqme.csearch.fullmonte import generating_conformations_fullmonte, realign_mol
 from aqme.utils import (
-    substituted_mol,
     load_variables,
     set_metal_atomic_number,
     check_xtb,
@@ -399,15 +399,22 @@ class csearch:
             csearch_procs = 1
 
         # asynchronous multithreading to accelerate CSEARCH (only benefits RDKit)
-        with futures.ThreadPoolExecutor(
-            max_workers=csearch_procs,
-        ) as executor:
-            for job_input in job_inputs:
-                _ = executor.submit(
-                    self.compute_confs, job_input,bar
-                )
+        # CAREFUL! All the variables inside the individual thread must be independent, and
+        # they must not be as part of self (i.e. don't use self.args.charge, use charge)
+        if not self.args.debug: # errors and try/excepts are not shown in multithreading
+            with futures.ThreadPoolExecutor(
+                max_workers=csearch_procs,
+            ) as executor:
+                for job_input in job_inputs:
+                    _ = executor.submit(
+                        self.compute_confs, job_input,bar
+                    )
+                bar.finish()
 
-        bar.finish()
+        else:
+            for job_input in job_inputs:
+                _ = self.compute_confs(job_input,bar)
+
 
     def compute_confs(self,job_input,bar):
         """
@@ -508,16 +515,17 @@ class csearch:
         template_opt = False
 
         # detects metal atoms
+        metal_atoms,metal_idx,complex_coord,metal_sym = [],[],[],[]
         if self.args.auto_metal_atoms:
-            _ = self.find_metal_atom(mol,charge,mult)
+            metal_atoms = self.find_metal_atom(mol,charge,mult)
 
         # replaces the metal for an I atom
-        if len(self.args.metal_atoms) >= 1:
+        if len(metal_atoms) >= 1:
             (
-                self.args.metal_idx,
-                self.args.complex_coord,
-                self.args.metal_sym,
-            ) = substituted_mol(self, mol, "I")
+                metal_idx,
+                complex_coord, # this variable will be used for checking n of ligands when using templates
+                metal_sym,
+            ) = substituted_mol(mol, "I", metal_atoms)
 
             # get pre-determined geometries for metal complexes
             accepted_complex_types = [
@@ -538,7 +546,7 @@ class csearch:
                 count_metals = 0
                 valid_template = True
                 # check if the specified metal is included in the system
-                for metal_idx_ind in self.args.metal_idx:
+                for metal_idx_ind in metal_idx:
                     if metal_idx_ind is not None:
                         # calculate number of expected neighbours
                         valid_template = check_metal_neigh(mol, complex_type, metal_idx_ind, self.args.log, valid_template)
@@ -548,7 +556,7 @@ class csearch:
                     template_opt = True
                     template_kwargs = dict()
                     template_kwargs["complex_type"] = complex_type
-                    template_kwargs["metal_idx"] = self.args.metal_idx
+                    template_kwargs["metal_idx"] = metal_idx
                     template_kwargs["maxsteps"] = self.args.opt_steps_rdkit
                     template_kwargs["heavyonly"] = self.args.heavyonly
                     template_kwargs["maxmatches"] = self.args.max_matches_rmsd
@@ -572,6 +580,9 @@ class csearch:
                             mult,
                             smi,
                             geom,
+                            metal_atoms,
+                            metal_idx,
+                            metal_sym,
                             coord_map,
                             alg_map,
                             template,
@@ -595,30 +606,35 @@ class csearch:
                 charge,
                 mult,
                 smi,
-                geom
+                geom,
+                metal_atoms,
+                metal_idx,
+                metal_sym
             )
 
-        # Updates the dataframe with infromation about conformer generation
+        # Updates the dataframe with information about conformer generation
         frames = [self.final_dup_data, total_data]
         self.final_dup_data = pd.concat(frames, ignore_index=True, sort=True)
         bar.next()
 
     # automatic detection of metal atoms   
     def find_metal_atom(self,mol,charge,mult):
-        self.args.metal_atoms = [] # for batch jobs such as CSV inputs with many SMILES
+        metal_atoms = [] # for batch jobs such as CSV inputs with many SMILES
         transition_metals = ['Sc', 'Ti', 'V', 'Cr', 'Mn', 'Fe', 'Co', 'Ni', 'Cu', 'Zn', 'Y', 'Zr', 'Nb', 'Mo',
                             'Tc', 'Ru', 'Rh', 'Pd', 'Ag', 'Cd', 'Hf', 'Ta', 'W', 'Re', 'Os', 'Ir', 'Pt', 'Au',
                             'Hg', 'Rf', 'Db', 'Sg', 'Bh', 'Hs', 'Mt', 'Ds', 'Rg', 'Cn', 'Nh', 'Fl', 'Mc', 'Lv', 'Ts', 'Og']
         for atom in mol.GetAtoms():
             if atom.GetSymbol() in transition_metals:
-                self.args.metal_atoms.append(atom.GetSymbol())
-        if len(self.args.metal_atoms) > 0:
-            self.args.log.write(f"\no  AQME recognized the following metal atoms: {self.args.metal_atoms}")
+                metal_atoms.append(atom.GetSymbol())
+        if len(metal_atoms) > 0:
+            self.args.log.write(f"\no  AQME recognized the following metal atoms: {metal_atoms}")
             if charge is None:
                 self.args.log.write(f"\nx  The automated charge calculation might not be precise for metal complexes! You should use the charge option (or the charge column in CSV inputs).")
             if mult is None:
                 self.args.log.write(f"\nx  The automated multiplicity calculation might not be precise for metal complexes! You should use the mult option (or the mult column in CSV inputs).")
 
+        return metal_atoms
+    
     def conformer_generation(
         self,
         mol,
@@ -632,6 +648,9 @@ class csearch:
         mult,
         smi,
         geom,
+        metal_atoms,
+        metal_idx,
+        metal_sym,
         coord_Map=None,
         alg_Map=None,
         mol_template=None,
@@ -715,13 +734,9 @@ class csearch:
         else:
             start_time = time.time()
             name = os.path.basename(Path(name)).split(".")[0]
-            self.csearch_file = self.csearch_folder.joinpath(
+            csearch_file = self.csearch_folder.joinpath(
                 name + "_" + self.args.program.lower() + self.args.output
             )
-            if self.args.crest_nrun != 1 and self.args.program.lower() =='crest':
-                sdwriter_init = None
-            else:
-                sdwriter_init = Chem.SDWriter(str(self.csearch_file))
 
             valid_structure = filters(
                 mol, self.args.log, self.args.max_mol_wt
@@ -732,7 +747,7 @@ class csearch:
                     status, dup_data = self.summ_search(
                         mol,
                         name,
-                        sdwriter_init,
+                        csearch_file,
                         dup_data,
                         dup_data_idx,
                         charge,
@@ -747,7 +762,10 @@ class csearch:
                         mol_template,
                         smi,
                         geom,
-                        original_atn
+                        original_atn,
+                        metal_atoms,
+                        metal_idx,
+                        metal_sym
                     )
                 except (KeyboardInterrupt, SystemExit):
                     raise
@@ -758,7 +776,7 @@ class csearch:
 
         #combining all the sdfs from more than one run
         if self.args.crest_nrun != 1:
-            sdwriter_rd = Chem.SDWriter(str(self.csearch_file))
+            sdwriter_rd = Chem.SDWriter(str(csearch_file))
             file_runs = glob.glob(str(self.csearch_folder)+'/'+ name +'_run_*'+ self.args.program.lower() +'.sdf')
             allenergy, allmols = [], []
             for file in file_runs:
@@ -770,13 +788,14 @@ class csearch:
             allmols_sorted = [mol for _, mol in sorted(zip(allenergy, allmols), key=lambda pair: pair[0])]
             for mol in allmols_sorted:
                 sdwriter_rd.write(mol)
+            sdwriter_rd.close()
         return dup_data
 
     def summ_search(
         self,
         mol,
         name,
-        sdwriter,
+        csearch_file,
         dup_data,
         dup_data_idx,
         charge,
@@ -791,7 +810,10 @@ class csearch:
         mol_template,
         smi,
         geom,
-        original_atn
+        original_atn,
+        metal_atoms,
+        metal_idx,
+        metal_sym
     ):
 
         """
@@ -812,9 +834,9 @@ class csearch:
             status, rotmatches, ff, mol_crest = self.rdkit_to_sdf(
                 mol,
                 name,
+                csearch_file,
                 dup_data,
                 dup_data_idx,
-                sdwriter,
                 charge,
                 mult,
                 coord_Map,
@@ -822,26 +844,22 @@ class csearch:
                 mol_template,
                 smi,
                 geom,
-                original_atn
+                original_atn,
+                metal_atoms,
+                metal_idx,
+                metal_sym
             )
             if self.args.program.lower() in ['rdkit','fullmonte'] :
                 n_seconds = round(time.time() - start_time, 2)
                 dup_data.at[dup_data_idx, "CSEARCH time (seconds)"] = n_seconds
 
-            # this avoids memory issues when using Windows
-            try:
-                if self.args.crest_nrun != 1 and self.args.program.lower() =='crest':
-                    pass
-                else:
-                    sdwriter.close()
-            except RuntimeError:
-                pass
             # reads the initial SDF files from RDKit and uses dihedral scan if selected
             if status not in [-1, 0]:
                 # getting the energy and mols after rotations
                 if self.args.program.lower() == "summ" and len(rotmatches) != 0:
                     status = self.dihedral_filter_and_sdf(
-                        name, dup_data, dup_data_idx, coord_Map, alg_Map, mol_template, ff
+                        name, csearch_file, dup_data, dup_data_idx, coord_Map, 
+                        alg_Map, mol_template, ff, metal_atoms, metal_idx, metal_sym
                     )
                     n_seconds = round(time.time() - start_time, 2)
                     dup_data.at[dup_data_idx, "CSEARCH time (seconds)"] = n_seconds
@@ -849,11 +867,11 @@ class csearch:
         if self.args.program.lower() in ['crest']:
             stop_xtb_opt = False
             if not complex_ts:
-                # mol_crest is the RDKit-optimized mol object
+                # mol_crest is the RDKit-optimized mol object with all the conformers sorted by E
                 if mol_crest is not None:
                     if self.args.crest_nrun == 1:
                         dup_data.at[dup_data_idx, "Molecule"] = name
-                        rdmolfiles.MolToXYZFile(mol_crest[0], name + "_crest.xyz")
+                        rdmolfiles.MolToXYZFile(mol_crest[0], name + "_crest.xyz") # use lowest E conformer
                     else:
                         # clustering to get the best mol objects
                         cluster_centroird_mols, centroids = cluster_conformers(mol_crest, self.args.heavyonly, self.args.max_matches_rmsd, self.args.crest_nclust)
@@ -924,8 +942,7 @@ class csearch:
                             'crest',
                             geom,
                             complex_ts=complex_ts,
-                            mol=mol, # this is necessary for CREST calculations with constraints
-                            
+                            mol=mol, # this is necessary for CREST calculations with constraints 
                         )
                         n_seconds = round(time.time() - start_time, 2)
                         dup_data.at[pt-1, "CSEARCH time (seconds)"] = n_seconds
@@ -933,7 +950,8 @@ class csearch:
         return status, dup_data
 
     def dihedral_filter_and_sdf(
-        self, name, dup_data, dup_data_idx, coord_Map, alg_Map, mol_template, ff
+        self, name, csearch_file, dup_data, dup_data_idx, coord_Map, alg_Map, 
+        mol_template, ff, metal_atoms, metal_idx, metal_sym
     ):
         """
         Filtering after dihedral scan to sdf
@@ -942,7 +960,7 @@ class csearch:
         rotated_energy = []
 
         # apply filters
-        rdmols = Chem.SDMolSupplier(str(self.csearch_file), removeHs=False) 
+        rdmols = Chem.SDMolSupplier(str(csearch_file), removeHs=False) 
         if rdmols is None:
             self.args.log.write("\nCould not open " + name + self.args.output)
             if os.path.basename(Path(self.args.input)).split(".")[1] not in ["csv","cdx","txt","yaml","yml","rtf"]:
@@ -1003,30 +1021,31 @@ class csearch:
             mol_rd.SetProp("_Name", rdmols[cid].GetProp("_Name") + " " + str(i))
             mol_rd.SetProp("Energy", str(rotated_energy[cid]))
             # setting the metal back instead of I
-            if len(self.args.metal_atoms) >= 1:
+            if len(metal_atoms) >= 1:
                 set_metal_atomic_number(
-                    mol_rd, self.args.metal_idx, self.args.metal_sym
+                    mol_rd, metal_idx, metal_sym
                 )
             mol_select.append(mol_rd) 
 
-        # update SDF file            
-        os.remove(self.csearch_file)
-        sdwriter_rd = Chem.SDWriter(str(self.csearch_file))
+        # update SDF file
+        os.remove(csearch_file)
+        sdwriter_upd = Chem.SDWriter(str(csearch_file))
         for mol in mol_select:
-            sdwriter_rd.write(mol)
-        sdwriter_rd.close()
+            sdwriter_upd.write(mol)
+        sdwriter_upd.close()
         status = 1
+
         return status
 
-    def auto_sampling(self, mol):
+    def auto_sampling(self, mol, metal_atoms, metal_idx):
         """
         Detects automatically the initial number of conformers for the sampling
         """
 
-        if len(self.args.metal_atoms) >= 1:
-            if len(self.args.metal_idx) > 0:
+        if len(metal_atoms) >= 1:
+            if len(metal_idx) > 0:
                 self.args.auto_sample = (
-                    self.args.auto_sample * 3 * len(self.args.metal_idx)
+                    self.args.auto_sample * 3 * len(metal_idx)
                 )  # this accounts for possible trans/cis isomers in metal complexes
         auto_samples = 0
         auto_samples += 3 * (Lipinski.NumRotatableBonds(mol))  # x3, for C3 rotations
@@ -1038,6 +1057,11 @@ class csearch:
             auto_samples = self.args.auto_sample
         else:
             auto_samples = self.args.auto_sample * auto_samples
+
+        # set a maximum number of conformers allowed with auto_sampling
+        if auto_samples > 500:
+            auto_samples = 500
+
         return auto_samples
 
     def genConformer_r(
@@ -1046,14 +1070,17 @@ class csearch:
         conf,
         i,
         matches,
-        sdwriter,
         name,
+        csearch_file,
         update_to_rdkit,
         coord_Map,
         alg_Map,
         mol_template,
         original_atn,
-        geom
+        geom,
+        metal_atoms,
+        metal_idx,
+        metal_sym
     ):
         """
         If program = RDKit, this replaces iodine back to the metal (if needed) 
@@ -1062,7 +1089,7 @@ class csearch:
         """
 
         if i >= len(matches):  # base case, torsions should be set in conf
-            if len(self.args.metal_atoms) >= 1 and (
+            if len(metal_atoms) >= 1 and (
                 self.args.program.lower() in ["rdkit","crest"] or update_to_rdkit
             ):
                 if coord_Map is None and alg_Map is None and mol_template is None:
@@ -1085,7 +1112,7 @@ class csearch:
                 mol.SetProp("Energy", str(energy))
 
                 # setting the metal back instead of I
-                set_metal_atomic_number(mol, self.args.metal_idx, self.args.metal_sym)
+                set_metal_atomic_number(mol, metal_idx, metal_sym)
 
                 # setting the problematic As atoms back when using the Ir_squareplanar geometry rule
                 if geom == ['Ir_squareplanar']:
@@ -1097,14 +1124,16 @@ class csearch:
                 return mol
             else:
                 try:
+                    sdwriter = Chem.SDWriter(str(csearch_file))
                     sdwriter.write(mol, conf)
+                    sdwriter.close()
                 except (TypeError):
                     raise
                 return 1
 
         elif self.args.program.lower() in ["crest"]:
             # setting the metal back instead of I
-            set_metal_atomic_number(mol, self.args.metal_idx, self.args.metal_sym)
+            set_metal_atomic_number(mol, metal_idx, metal_sym)
 
             return mol
 
@@ -1122,14 +1151,17 @@ class csearch:
                 conf,
                 i + 1,
                 matches,
-                sdwriter,
                 name,
+                csearch_file,
                 update_to_rdkit,
                 coord_Map,
                 alg_Map,
                 mol_template,
                 original_atn,
-                geom
+                geom,
+                metal_atoms,
+                metal_idx,
+                metal_sym
             )
             deg += int(self.args.degree)
 
@@ -1173,7 +1205,8 @@ class csearch:
 
         return cids
 
-    def min_and_E_calc(self, mol, cids, coord_Map, alg_Map, mol_template, ff, geom):
+    def min_and_E_calc(self, mol, cids, coord_Map, alg_Map, mol_template, 
+                       ff, geom, metal_atoms, metal_idx, metal_sym):
         """
         Minimization and E calculation with RDKit after embeding
         """
@@ -1198,8 +1231,8 @@ class csearch:
             # removes geometries that do not pass the filters (geom option)
             mol_geom = Chem.Mol(mol)
             # setting the metal back instead of I
-            if len(self.args.metal_atoms) >= 1:
-                set_metal_atomic_number(mol_geom, self.args.metal_idx, self.args.metal_sym)
+            if len(metal_atoms) >= 1:
+                set_metal_atomic_number(mol_geom, metal_idx, metal_sym)
 
             passing_geom = geom_filter(self,mol_geom,geom)
             if passing_geom:
@@ -1214,10 +1247,10 @@ class csearch:
         mol,
         cids,
         name,
+        csearch_file,
         rotmatches,
         dup_data,
         dup_data_idx,
-        sdwriter,
         update_to_rdkit,
         coord_Map,
         alg_Map,
@@ -1227,7 +1260,10 @@ class csearch:
         ff,
         smi,
         geom,
-        original_atn
+        original_atn,
+        metal_atoms,
+        metal_idx,
+        metal_sym
     ):
         """
         Minimizes, gets the energy and filters RDKit conformers after embeding
@@ -1237,7 +1273,7 @@ class csearch:
         if geom != []:
             self.args.log.write(f"o  Applying geometry filters ({geom})")
         outmols, cenergy = self.min_and_E_calc(
-            mol, cids, coord_Map, alg_Map, mol_template, ff, geom
+            mol, cids, coord_Map, alg_Map, mol_template, ff, geom, metal_atoms, metal_idx, metal_sym
         )
 
         # writing charges and multiplicity after RDKit
@@ -1289,48 +1325,58 @@ class csearch:
         )
 
         if self.args.program.lower() in ["summ", "rdkit", "crest"]:
+            sdwriter_summ = Chem.SDWriter(str(csearch_file))            
             # now exhaustively drive torsions of selected conformers
             total = 0
             for conf in selectedcids_rdkit:
                 if self.args.program.lower() == "summ" and not update_to_rdkit:
-                    sdwriter.write(outmols[conf], conf)
+                    sdwriter_summ.write(outmols[conf], conf)
                     for m in rotmatches:
                         rdMolTransforms.SetDihedralDeg(
                             outmols[conf].GetConformer(conf), *m, 180.0
                         )
+
                 if self.args.program.lower() in ["summ", "rdkit"]:
                     total += self.genConformer_r(
                         outmols[conf],
                         conf,
                         0,
                         rotmatches,
-                        sdwriter,
                         outmols[conf].GetProp("_Name"),
+                        csearch_file,
                         update_to_rdkit,
                         coord_Map,
                         alg_Map,
                         mol_template,
                         original_atn,
-                        geom
+                        geom,
+                        metal_atoms,
+                        metal_idx,
+                        metal_sym
                     )
+                    
                 elif self.args.program.lower() in ["crest"]:
                     mol = self.genConformer_r(
                         outmols[conf],
                         conf,
                         0,
                         rotmatches,
-                        sdwriter,
                         outmols[conf].GetProp("_Name"),
+                        csearch_file,
                         update_to_rdkit,
                         coord_Map,
                         alg_Map,
                         mol_template,
                         original_atn,
-                        geom
+                        geom,
+                        metal_atoms,
+                        metal_idx,
+                        metal_sym
                     )
                     outmols = [mol]
                     break
 
+            sdwriter_summ.close()
             status = 1
 
         if self.args.program.lower() == "summ":
@@ -1343,7 +1389,6 @@ class csearch:
                 rotmatches,
                 selectedcids_rdkit,
                 outmols,
-                sdwriter,
                 dup_data,
                 dup_data_idx,
                 coord_Map,
@@ -1360,9 +1405,9 @@ class csearch:
         self,
         mol,
         name,
+        csearch_file,
         dup_data,
         dup_data_idx,
-        sdwriter,
         charge,
         mult,
         coord_Map,
@@ -1370,7 +1415,10 @@ class csearch:
         mol_template,
         smi,
         geom,
-        original_atn
+        original_atn,
+        metal_atoms,
+        metal_idx,
+        metal_sym
     ):
 
         """
@@ -1385,7 +1433,7 @@ class csearch:
             # and initial_confs can be low to speed up the process
             initial_confs = self.args.auto_sample
         elif self.args.sample == "auto":
-            initial_confs = int(self.auto_sampling(mol))
+            initial_confs = int(self.auto_sampling(mol,metal_atoms,metal_idx))
         else:
             initial_confs = int(self.args.sample)
 
@@ -1420,10 +1468,10 @@ class csearch:
                 mol,
                 cids,
                 name,
+                csearch_file,
                 rotmatches,
                 dup_data,
                 dup_data_idx,
-                sdwriter,
                 update_to_rdkit,
                 coord_Map,
                 alg_Map,
@@ -1433,15 +1481,13 @@ class csearch:
                 ff,
                 smi,
                 geom,
-                original_atn
+                original_atn,
+                metal_atoms,
+                metal_idx,
+                metal_sym
             )
         except IndexError:
             status = -1
             mol_crest = None
-
-        if self.args.crest_nrun != 1 and self.args.program.lower() =='crest':
-            pass
-        else:
-            sdwriter.close()
 
         return status, rotmatches, ff, mol_crest

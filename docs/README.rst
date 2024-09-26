@@ -94,7 +94,7 @@ installed as follows:
 
 **1.** Create and activate the conda environment where you want to install the program. If you are not sure of what 
 this point means, check out the "Users with no Python experience" section. This is an example for Python 3.10, but 
-it also works for other Python versions (i.e., 3.7, 3.9 and 3.11):
+it also works for newer Python versions (i.e., 3.11 and 3.12):
 
 .. code-block:: shell 
    
@@ -175,7 +175,7 @@ you can install `Miniconda with Python 3 <https://docs.conda.io/projects/minicon
 
 **3.** Create a conda environment called "aqme" with Python (:code:`conda create -n aqme python=3.10`). 
 |br|
-*This is an example for Python 3.10, but it also works for other Python versions (i.e., 3.7, 3.9 and 3.11).*
+*This is an example for Python 3.10, but it also works for newer Python versions (i.e., 3.11 and 3.12).*
 
 
 **4.** Activate the conda environment called "aqme" (:code:`conda activate aqme`).

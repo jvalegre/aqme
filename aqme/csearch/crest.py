@@ -346,7 +346,9 @@ def xtb_opt_main(
         try:
             if self.args.cregen and int(natoms) != 1 and opt_valid:
                 self.args.log.write(f"\no  Starting CREGEN sorting")
-                command = ["crest", "crest_best.xyz", "--cregen", "crest_conformers.xyz"]
+                command = ["crest", "crest_best.xyz", "--cregen", "crest_conformers.xyz", '--esort']
+                if self.args.sample != "auto":
+                    command = command + ['--cluster', f'{self.args.sample}']
 
                 if self.args.cregen_keywords is not None:
                     for keyword in self.args.cregen_keywords.split():
@@ -360,7 +362,6 @@ def xtb_opt_main(
             if opt_valid:
                 if os.path.exists(str(dat_dir) + "/crest_clustered.xyz"):
                     shutil.copy(str(dat_dir) + "/crest_clustered.xyz", xyzoutall)
-
                 elif os.path.exists(str(dat_dir) + "/crest_ensemble.xyz"):
                     shutil.copy(str(dat_dir) + "/crest_ensemble.xyz", xyzoutall)
                 else:
@@ -383,6 +384,10 @@ def xtb_opt_main(
         if self.args.program.lower() == "crest":
             sdwriter = Chem.SDWriter(str(f"{csearch_dir}/{name_no_path}.sdf"))
         sdf_files = glob.glob(name_no_path + "*.sdf")
+        # the next function is needed to keep the order (glob.glob sorts first 1, then 10 instead of 2)
+        def func(x):
+            return int(x.split('_')[-1].split('.')[0])
+        sdf_files = sorted(sdf_files, key=func)
         for file in sdf_files:
             mol = rdkit.Chem.SDMolSupplier(file, removeHs=False, sanitize=False)
             mol_rd = rdkit.Chem.RWMol(mol[0])
@@ -397,7 +402,7 @@ def xtb_opt_main(
                 # convert from hartree (default in xtb) to kcal
                 energy_Eh = float(open(file, "r").readlines()[0])
                 energy_kcal = str(energy_Eh*627.5)
-                mol_rd.SetProp("_Name", name_no_path)
+                mol_rd.SetProp("_Name", file.split('.')[0])
                 mol_rd.SetProp("Energy", energy_kcal)
                 mol_rd.SetProp("Real charge", str(charge))
                 mol_rd.SetProp("Mult", str(int(mult)))
