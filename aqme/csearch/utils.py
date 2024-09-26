@@ -620,9 +620,8 @@ def cluster_conformers(mols, heavy_only, max_matches_rmsd, cluster_thr):
 
 def substituted_mol(mol, checkI, metal_atoms):
     """
-    Returns a molecule object in which all metal atoms specified in args.metal_atoms
-    are replaced by Iodine and the charge is set depending on the number of
-    neighbors.
+    Returns a molecule object in which all metal atoms are replaced by Iodine
+    and the charge is set depending on the number of neighbors.
 
     """
 

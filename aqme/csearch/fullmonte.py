@@ -93,19 +93,21 @@ def generating_conformations_fullmonte(
     rotmatches,
     selectedcids_rdkit,
     outmols,
-    sdwriter,
+    csearch_file,
     dup_data,
     dup_data_idx,
     coord_Map,
     alg_Map,
     mol_template,
     ff,
+    metal_atoms,
+    metal_idx, 
+    metal_sym
 ):
 
-    ##working with fullmonte
+    # working with fullmonte
     n_unique_conformers = len(selectedcids_rdkit)
-    args.log.write(f"\no  Generation of confomers using FULLMONTE using {n_unique_conformers} unique conformer(s) as starting point(s)")
-
+    args.log.write(f"\no  Generation of confomers with FULLMONTE using {n_unique_conformers} unique conformer(s) as starting point(s)")
     # Writing the conformers as mol objects to sdf
     sdtemp = Chem.SDWriter(name + "_" + "rdkit" + args.output)
     for conf in selectedcids_rdkit:
@@ -201,13 +203,14 @@ def generating_conformations_fullmonte(
     cids = list(range(len(unique_mol)))
     sorted_all_cids = sorted(cids, key=lambda cid: c_energy[cid])
 
-    # STEP 9: WRITE FINAL uniques to sdf for xtb or ani
+    # STEP 9: WRITE FINAL uniques to sdf
+    sdwriter = Chem.SDWriter(str(csearch_file))
     for i, cid in enumerate(sorted_all_cids):
         unique_mol[cid].SetProp("_Name", name + " " + str(i))
         if coord_Map is None and alg_Map is None and mol_template is None:
             # setting the metal back instead of I
-            if len(args.metal_atoms) >= 1:
-                set_metal_atomic_number(unique_mol[cid], args.metal_idx, args.metal_sym)
+            if len(metal_atoms) >= 1:
+                set_metal_atomic_number(unique_mol[cid], metal_idx, metal_sym)
             sdwriter.write(unique_mol[cid])
         else:
             mol_realigned, _ = realign_mol(
@@ -219,10 +222,11 @@ def generating_conformations_fullmonte(
                 args.opt_steps_rdkit,
             )
             # setting the metal back instead of I
-            if len(args.metal_atoms) >= 1:
-                set_metal_atomic_number(mol_realigned, args.metal_idx, args.metal_sym)
+            if len(metal_atoms) >= 1:
+                set_metal_atomic_number(mol_realigned, metal_idx, metal_sym)
             sdwriter.write(mol_realigned)
 
+    sdwriter.close()
     status = 1
 
     return status

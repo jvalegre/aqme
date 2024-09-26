@@ -1072,7 +1072,7 @@ class csearch:
         i,
         matches,
         name,
-        csearch_file,
+        sdwriter,
         update_to_rdkit,
         coord_Map,
         alg_Map,
@@ -1125,9 +1125,7 @@ class csearch:
                 return mol
             else:
                 try:
-                    sdwriter = Chem.SDWriter(str(csearch_file))
                     sdwriter.write(mol, conf)
-                    sdwriter.close()
                 except (TypeError):
                     raise
                 return 1
@@ -1153,7 +1151,7 @@ class csearch:
                 i + 1,
                 matches,
                 name,
-                csearch_file,
+                sdwriter,
                 update_to_rdkit,
                 coord_Map,
                 alg_Map,
@@ -1329,6 +1327,7 @@ class csearch:
             sdwriter_summ = Chem.SDWriter(str(csearch_file))            
             # now exhaustively drive torsions of selected conformers
             total = 0
+            sdwriter = Chem.SDWriter(str(csearch_file))
             for conf in selectedcids_rdkit:
                 if self.args.program.lower() == "summ" and not update_to_rdkit:
                     sdwriter_summ.write(outmols[conf], conf)
@@ -1344,7 +1343,7 @@ class csearch:
                         0,
                         rotmatches,
                         outmols[conf].GetProp("_Name"),
-                        csearch_file,
+                        sdwriter,
                         update_to_rdkit,
                         coord_Map,
                         alg_Map,
@@ -1363,7 +1362,7 @@ class csearch:
                         0,
                         rotmatches,
                         outmols[conf].GetProp("_Name"),
-                        csearch_file,
+                        sdwriter,
                         update_to_rdkit,
                         coord_Map,
                         alg_Map,
@@ -1377,6 +1376,7 @@ class csearch:
                     outmols = [mol]
                     break
 
+            sdwriter.close()
             sdwriter_summ.close()
             status = 1
 
@@ -1390,12 +1390,16 @@ class csearch:
                 rotmatches,
                 selectedcids_rdkit,
                 outmols,
+                csearch_file,
                 dup_data,
                 dup_data_idx,
                 coord_Map,
                 alg_Map,
                 mol_template,
                 ff,
+                metal_atoms,
+                metal_idx, 
+                metal_sym
             )
             # removes the rdkit file
             os.remove(name + "_" + "rdkit" + self.args.output)

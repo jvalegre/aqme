@@ -383,11 +383,15 @@ def xtb_opt_main(
 
         if self.args.program.lower() == "crest":
             sdwriter = Chem.SDWriter(str(f"{csearch_dir}/{name_no_path}.sdf"))
+
         sdf_files = glob.glob(name_no_path + "*.sdf")
         # the next function is needed to keep the order (glob.glob sorts first 1, then 10 instead of 2)
-        def func(x):
-            return int(x.split('_')[-1].split('.')[0])
-        sdf_files = sorted(sdf_files, key=func)
+        try:
+            def func(x):
+                return int(x.split('_')[-1].split('.')[0])
+            sdf_files = sorted(sdf_files, key=func)
+        except ValueError: # for CMIN and QDESCP xTB optimizations
+            pass
         for file in sdf_files:
             mol = rdkit.Chem.SDMolSupplier(file, removeHs=False, sanitize=False)
             mol_rd = rdkit.Chem.RWMol(mol[0])
