@@ -88,7 +88,8 @@ General RDKit-based
       might be atoms, bonds, angles and dihedral. For example, a rule to keep only
       molecules with C-Pd-C atoms at 180 degrees: ['[C][Pd][C]',180].
       Special rules (--geom ['RULE_NAME']):
-        1. ['Ir_squareplanar']
+
+         1. ['Ir_squareplanar']
    bond_thres : float, default=0.2
       Threshold used to discard bonds in the geom option (+-0.2 A) 
    angle_thres : float, default=30
@@ -169,8 +170,8 @@ CREST only
       Additional keywords for CREGEN (i.e. cregen_keywords='--ethr 0.02')
    xtb_keywords : str, default=None
       Define additional keywords to use in the xTB pre-optimization that are not 
-      included in -c, --uhf, -P and --input. For example: '--alpb ch2cl2 --gfn 1' 
-    crest_nrun : int, default=1
+      included in -c, --uhf, -P and --input. For example: '--alpb ch2cl2 --gfn 1'
+   crest_nrun : int, default=1
       Specify as number of runs if multiple starting points from RDKit starting points is required.
 """
 #####################################################.

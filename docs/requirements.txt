@@ -7,3 +7,4 @@ rdkit
 scipy
 cclib
 progress
+morfeus-ml

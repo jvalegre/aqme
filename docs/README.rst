@@ -1,6 +1,6 @@
 .. aqme-banner-start
 
-.. |aqme_banner| image:: ./Logos/AQME_logo.jpg
+.. |aqme_banner| image:: ../Logos/AQME_logo.jpg
 
 |aqme_banner|
 
@@ -140,6 +140,7 @@ Extra requirements if `CMIN` is used with ANI models:
    pip install ase
 
 .. code-block:: shell 
+
    pip install torch torchvision torchani
 
 Extra requirements if `QDESCP` is used with DBSTEP:  

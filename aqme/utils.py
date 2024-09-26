@@ -382,7 +382,7 @@ def command_line_args():
                 if arg_name in bool_args:
                     value = True                    
                 elif arg_name.lower() in list_args:
-                    value = format_lists(value)
+                    value = format_lists(value,arg_name)
                 elif arg_name.lower() in int_args:
                     value = int(value)
                 elif arg_name.lower() in float_args:
@@ -402,19 +402,22 @@ def command_line_args():
     return args
 
 
-def format_lists(value):
+def format_lists(value,arg_name):
     '''
     Transforms strings into a list
     '''
 
-    if not isinstance(value, list):
-        try:
-            value = ast.literal_eval(value)
-        except (SyntaxError, ValueError):
-            # this line fixes issues when using "[X]" or ["X"] instead of "['X']" when using lists
-            value = value.replace('[',']').replace(',',']').replace("'",']').split(']')
-            while('' in value):
-                value.remove('')
+    if arg_name.lower() != 'qdescp_atoms':
+        if not isinstance(value, list):
+            try:
+                value = ast.literal_eval(value)
+            except (SyntaxError, ValueError):
+                # this line fixes issues when using "[X]" or ["X"] instead of "['X']" when using lists
+                value = value.replace('[',']').replace(',',']').replace("'",']').split(']')
+                while('' in value):
+                    value.remove('')
+    else:
+        value = value[1:-1].split(',')
     return value
 
 
