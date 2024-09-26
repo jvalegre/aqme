@@ -924,34 +924,7 @@ class qdescp:
                     elif n_types > 1:
                         sorted_indices = sorted(atom_indices, key=lambda idx: mol.GetAtoms()[idx].GetAtomicNum())
 
-
                 # Generate unique match names for each atom type in the functional group
-                    # match_names = []
-                    # atom_counters = {}  # Dictionary to keep track of the count for each type of atom
-                    # # separates atoms when functional groups are used
-                    # for atom_idx in sorted_indices:
-                    #     atom_type = mol.GetAtoms()[atom_idx].GetSymbol()
-                    #     # Check if there is more than one atom of the same type
-                    #     n_atoms_of_type = sum(1 for idx in sorted_indices if mol.GetAtoms()[idx].GetSymbol() == atom_type)
-                    #     # Initialize the counter if it doesn't exist for this atom type yet
-                    #     if atom_type not in atom_counters:
-                    #         atom_counters[atom_type] = 1
-                    #     # If there is only one atom of this type in the pattern
-                    #     if n_atoms_of_type == 1:
-                    #         if idx_set is None:
-                    #             match_name = f'{pattern}_{atom_type}'
-                    #         else:
-                    #             match_name = f'{pattern}_{atom_type}{idx_set}'
-                    #     else:
-                    #         # If there is more than one, we add the number from the counter
-                    #         if idx_set is None:
-                    #             match_name = f'{pattern}_{atom_type}_{atom_counters[atom_type]}'
-                    #         else:
-                    #             match_name = f'{pattern}_{atom_type}{idx_set}_{atom_counters[atom_type]}'
-                    #         atom_counters[atom_type] += 1  # We increment the counter for that atom type
-                    #     match_names.append(match_name)
-
-
                     match_names = []
                     atom_counters = {}
 
@@ -993,11 +966,6 @@ class qdescp:
                         atom_counters[atom_type] += 1  # Increment counter for that atom type
 
                         match_names.append(match_name)
-                        print(f"Match name: {match_name}")
-
-
-
-
 
                     # Assign atomic descriptors to each identified atom
                     for atom_idx, match_name in zip(sorted_indices, match_names):
