@@ -15,6 +15,8 @@ import shutil
 # saves the working directory
 w_dir_main = os.getcwd()
 cmin_methods_dir = w_dir_main + "/tests/cmin_methods"
+cmin_empty_dir = w_dir_main + "/tests/cmin_empty"
+
 if not os.path.exists(cmin_methods_dir):
     os.mkdir(cmin_methods_dir)
 
@@ -49,7 +51,7 @@ def test_cmin_methods(
 
 
     file = f'{cmin_methods_dir}/CMIN/{sdf.split(".")[0]}_{program}.sdf'
-    file2 = f'{cmin_methods_dir}/CMIN/{sdf.split(".")[0]}_{program}_all_confs.sdf'
+    file2 = f'{cmin_methods_dir}/CMIN/All_confs/{sdf.split(".")[0]}_{program}_all_confs.sdf'
 
     assert os.path.exists(file)
     assert os.path.exists(file2)
@@ -69,12 +71,44 @@ def test_cmin_methods(
         assert coord not in outlines[4]
     os.chdir(w_dir_main)
 
+@pytest.mark.parametrize(
+    "test",
+    [
+        # tests for ignoring not working optimizations
+        ("empty_values"),
+    ],
+)
+def test_cmin_methods(
+    test
+):
+
+    # runs the program with the different tests
+    os.chdir(cmin_empty_dir)
+    cmin(program='xtb',files=f'{cmin_empty_dir}/*.sdf')
+    os.chdir(w_dir_main)
+
+    file = f'{cmin_empty_dir}/CMIN/a_xtb.sdf'
+    file2 = f'{cmin_empty_dir}/CMIN/All_confs/a_xtb_all_confs.sdf'
+    file3 = f'{cmin_empty_dir}/CMIN/b_fail_xtb.sdf'
+    file4 = f'{cmin_empty_dir}/CMIN/All_confs/b_fail_xtb_all_confs.sdf'
+    file5 = f'{cmin_empty_dir}/CMIN/c_xtb.sdf'
+    file6 = f'{cmin_empty_dir}/CMIN/All_confs/c_xtb_all_confs.sdf'
+
+    # a and c should be created, b_fail should not
+    assert os.path.exists(file)
+    assert os.path.exists(file2)
+    assert not os.path.exists(file3)
+    assert not os.path.exists(file4)
+    assert os.path.exists(file5)
+    assert os.path.exists(file6)
+
+
 # tests for removing foler
 @pytest.mark.parametrize(
     "folder_list, file_list",
     [
         (
-            ["tests/cmin_methods/CMIN"],["tests/cmin_methods/CMIN*"]
+            ["tests/cmin_methods/CMIN","tests/cmin_empty/CMIN"],["tests/cmin_methods/CMIN*","tests/cmin_empty/CMIN*"]
         ),
     ],
 )

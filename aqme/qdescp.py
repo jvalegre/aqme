@@ -98,7 +98,8 @@ from aqme.utils import (
     read_xyz_charge_mult,
     mol_from_sdf_or_mol_or_mol2,
     run_command,
-    check_files
+    check_files,
+    check_dependencies
 )
 from aqme.qdescp_utils import (
     get_boltz_props,
@@ -113,7 +114,9 @@ from aqme.qdescp_utils import (
     calculate_global_morfeus_descriptors,
     calculate_local_morfeus_descriptors,
     get_descriptors,
-    get_boltz_props_nmr
+    get_boltz_props_nmr,
+    fix_cols_names,
+    remove_lists
 )
 
 from aqme.csearch.crest import xyzall_2_xyz
@@ -132,9 +135,18 @@ class qdescp:
         # load default and user-specified variables
         self.args = load_variables(kwargs, "qdescp")
 
+        # check whether dependencies are installed
+        _ = check_dependencies(self)
+
         # detect errors and incompatibilities before the QDESCP run
         if self.args.program.lower() not in ["xtb", "nmr"]:
-            self.args.log.write("\nx  Program not supported for QDESCP descriptor generation! Specify: program='xtb' (or nmr)")
+            self.args.log.write(f"\nx  The program specified ({self.args.program}) is not supported for QDESCP descriptor generation! Specify: program='xtb' (or nmr)")
+            self.args.log.finalize()
+            sys.exit()
+
+        # detect if the csv_name provided exists
+        if self.args.csv_name is not None and not os.path.exists(self.args.csv_name):
+            self.args.log.write(f"\nx  The csv_name provided ({self.args.csv_name}) does not exist! Please specify this name correctly")
             self.args.log.finalize()
             sys.exit()
 
@@ -150,7 +162,6 @@ class qdescp:
         _ = check_files(self,'qdescp')
 
         self.args.log.write(f"\nStarting QDESCP-{self.args.program} with {len(self.args.files)} job(s)\n")
-
 
         # Obtaing SMARTS patterns from the input files automatically if no patterns are provided
         smarts_targets = self.args.qdescp_atoms.copy()
@@ -237,15 +248,20 @@ class qdescp:
             for pattern in patterns_remove:
                 smarts_targets.remove(pattern)
 
-        # run the main xTB workflow
-        """
-        Reccolecting descriptors from XTB and Morfeus 
-        """
-        update_atom_props = [] 
-        update_denovo_atom_props = [] 
-        update_interpret_atom_props = [] 
+        # create folder to store Boltzmann weighted properties
+        boltz_dir = Path(f"{destination}/boltz")
+        if os.path.exists(f"{boltz_dir}"):
+            self.args.log.write(f'\nx  A previous folder of {boltz_dir} already existed, it was removed and replaced with the results of this QDESCP run.')
+            shutil.rmtree(f"{boltz_dir}")
+        boltz_dir.mkdir(exist_ok=True, parents=True)
 
+        # recolecting descriptors from XTB and Morfeus
         if self.args.program.lower() == "xtb":
+
+            update_atom_props = [] 
+            update_denovo_atom_props = [] 
+            update_interpret_atom_props = [] 
+
             # Get descriptors (denovo, interpret, full)
             denovo_descriptors = get_descriptors('denovo')
             interpret_descriptors = get_descriptors('interpret')
@@ -262,61 +278,54 @@ class qdescp:
             atom_props =  interpret_atoms + full_descriptors['atoms']
 
             update_atom_props, update_denovo_atom_props, update_interpret_atom_props = self.gather_files_and_run(destination, atom_props, update_atom_props, smarts_targets, denovo_atoms, update_denovo_atom_props, interpret_atoms, update_interpret_atom_props)
+
+            if len(update_atom_props) > 0:
+                atom_props = update_atom_props
+            if len(update_denovo_atom_props) > 0:
+                denovo_atoms = update_denovo_atom_props
+            if len(update_interpret_atom_props) > 0:
+                interpret_atoms = update_interpret_atom_props
+
+            #Create the CSV files
+            qdescp_csv = "QDESCP_full_boltz_descriptors.csv"
+            qdescp_denovo_csv = "QDESCP_denovo_boltz_descriptors.csv"
+            qdescp_interpret_csv = "QDESCP_interpret_boltz_descriptors.csv"
+
+            if self.args.boltz:
+                if self.args.program.lower() == "xtb":
+                    self.args.log.write('\no  Running RDKit and collecting molecular properties')
+                    for file in self.args.files:
+                        if file not in self.args.invalid_calcs:
+                            mol = Chem.SDMolSupplier(file, removeHs=False)[0]
+                            name = os.path.basename(Path(file)).split(".")[0]
+                            json_files = glob.glob(str(destination) + "/" + name + "_conf_*.json")
+
+                            # Generating the JSON files
+                            _ = get_boltz_props(json_files, name, boltz_dir, "xtb", self, mol_props, atom_props, smarts_targets,
+                                                mol=mol, denovo_mols=denovo_mols, denovo_atoms=denovo_atoms, 
+                                                interpret_mols=interpret_mols, interpret_atoms=interpret_atoms)
+                        
+                    # Create the CSV from the JSON files
+                    _ = self.write_csv_boltz_data(destination, qdescp_csv, json_type="standard")  # CSV full
+                    _ = self.write_csv_boltz_data(destination, qdescp_denovo_csv, json_type="denovo")  # CSV denovo
+                    _ = self.write_csv_boltz_data(destination, qdescp_interpret_csv, json_type="interpret")  # CSV interpret
+
+            #AQME-ROBERT workflow: Combines the descriptor data from qdescp CSVs with the input CSV and saves the result.
+            self.combine_and_save_csvs(qdescp_csv, qdescp_denovo_csv, qdescp_interpret_csv)
+
+        # if NMR program
+        elif self.args.program.lower() == "nmr":
+            atom_props = ["NMR Chemical Shifts"]
             
+            if os.path.basename(Path(self.args.files[0])).split('.')[1].lower() not in ["json"]:
+                self.args.log.write(f"\nx  The format used ({os.path.basename(Path(self.args.files[0])).split('.')[1]}) is not compatible with QDESCP with NMR! Formats accepted: json")
+                self.args.log.finalize()
+                sys.exit()
 
-        if len(update_atom_props) > 0:
-            atom_props = update_atom_props
-        if len(update_denovo_atom_props) > 0:
-            denovo_atoms = update_denovo_atom_props
-        if len(update_interpret_atom_props) > 0:
-            interpret_atoms = update_interpret_atom_props
-
-        #Create the CSV files
-        qdescp_csv = "QDESCP_full_boltz_descriptors.csv"
-        qdescp_denovo_csv = "QDESCP_denovo_boltz_descriptors.csv"
-        qdescp_interpret_csv = "QDESCP_interpret_boltz_descriptors.csv"
-
-        boltz_dir = Path(f"{destination}/boltz")
-        if os.path.exists(f"{boltz_dir}"):
-            self.args.log.write(f'\nx  A previous folder of {boltz_dir} already existed, it was removed and replaced with the results of this QDESCP run.')
-            shutil.rmtree(f"{boltz_dir}")
-        boltz_dir.mkdir(exist_ok=True, parents=True)
-
-        if self.args.boltz:
-            if self.args.program.lower() == "xtb":
-                self.args.log.write('\no  Running RDKit and collecting molecular properties')
-                for file in self.args.files:
-                    mol = Chem.SDMolSupplier(file, removeHs=False)[0]
-                    name = os.path.basename(Path(file)).split(".")[0]
-                    json_files = glob.glob(str(destination) + "/" + name + "_conf_*.json")
-
-                    # Generating the JSON files
-                    _ = get_boltz_props(json_files, name, boltz_dir, "xtb", self, mol_props, atom_props, smarts_targets,
-                                        mol=mol, denovo_mols=denovo_mols, denovo_atoms=denovo_atoms, 
-                                        interpret_mols=interpret_mols, interpret_atoms=interpret_atoms)
-                    
-
-                # Create the CSV from the JSON files
-                _ = self.write_csv_boltz_data(destination, qdescp_csv, json_type="standard")  # CSV full
-                _ = self.write_csv_boltz_data(destination, qdescp_denovo_csv, json_type="denovo")  # CSV denovo
-                _ = self.write_csv_boltz_data(destination, qdescp_interpret_csv, json_type="interpret")  # CSV interpret
-
-            #if NMR program
-            elif self.args.program.lower() == "nmr":
-                atom_props = ["NMR Chemical Shifts"]
-                
-                if os.path.basename(Path(self.args.files[0])).split('.')[1].lower() not in ["json"]:
-                    self.args.log.write(f"\nx  The format used ({os.path.basename(Path(self.args.files[0])).split('.')[1]}) is not compatible with QDESCP with NMR! Formats accepted: json")
-                    self.args.log.finalize()
-                    sys.exit()
-
-                name = os.path.basename(Path(self.args.files[0])).split("_conf")[0]
-                
-                json_files = glob.glob(str(os.path.dirname(os.path.abspath(self.args.files[0]))) + "/" + name + "_conf_*.json")
-                get_boltz_props_nmr(json_files, name, boltz_dir, self, atom_props, smarts_targets, self.args.nmr_atoms, self.args.nmr_slope, self.args.nmr_intercept, self.args.nmr_experim)
-
-        #AQME-ROBERT workflow: Combines the descriptor data from qdescp CSVs with the input CSV and saves the result.
-        self.combine_and_save_csvs(qdescp_csv, qdescp_denovo_csv, qdescp_interpret_csv)
+            name = os.path.basename(Path(self.args.files[0])).split("_conf")[0]
+            
+            json_files = glob.glob(str(os.path.dirname(os.path.abspath(self.args.files[0]))) + "/" + name + "_conf_*.json")
+            get_boltz_props_nmr(json_files, name, boltz_dir, self, atom_props, smarts_targets, self.args.nmr_atoms, self.args.nmr_slope, self.args.nmr_intercept, self.args.nmr_experim)
 
         elapsed_time = round(time.time() - start_time_overall, 2)
         self.args.log.write(f"\nTime QDESCP: {elapsed_time} seconds\n")
@@ -343,9 +352,12 @@ class qdescp:
 
             input_df = pd.read_csv(self.args.csv_name)
 
+            # check that code_name and SMILES are written with the right format
+            input_df = fix_cols_names(input_df)
+
             if 'code_name' not in input_df.columns:
                 self.args.log.write(f"\nx  The input csv_name provided ({self.args.csv_name}) does not contain the code_name column. A combined database for AQME-{name_db} workflows will not be created.")
-            elif 'SMILES' in input_df.columns or 'smiles' in input_df.columns or 'Smiles' in input_df.columns:
+            elif 'SMILES' in input_df.columns:
                 path_json = os.path.dirname(Path(qdescp_df['Name'][0]))
                 for i, input_name in enumerate(input_df['code_name']):
                     # concatenate with qdescp_df
@@ -379,10 +391,10 @@ class qdescp:
                     combined_row_interpret = pd.concat([qdescp_col, input_col_interpret], axis=1)
                     combined_interpret_df = pd.concat([combined_interpret_df, combined_row_interpret], ignore_index=True)
 
-                # clean and save DataFrames
-                combined_df = combined_df.dropna(axis=0)
-                combined_denovo_df = combined_denovo_df.dropna(axis=0)
-                combined_interpret_df = combined_interpret_df.dropna(axis=0)
+                # if no atomic properties were created, remove those columns since they're lists
+                combined_df = remove_lists(combined_df)
+                combined_denovo_df = remove_lists(combined_denovo_df)
+                combined_interpret_df = remove_lists(combined_interpret_df)
 
                 csv_basename = os.path.basename(self.args.csv_name)
                 csv_path = self.args.initial_dir.joinpath(f'AQME-{name_db}_full_{csv_basename}')
@@ -440,124 +452,131 @@ class qdescp:
             self.args.log.finalize()
             sys.exit()
 
-        for file in self.args.files:
-            xyz_files, xyz_charges, xyz_mults = [], [], []
-            name = os.path.basename(Path(file)).split('.')[0]
-            ext = os.path.basename(Path(file)).split(".")[1]
-            self.args.log.write(f"\n\n   ----- {name} -----")
-            if ext.lower() == "xyz":
-                # separate the parent XYZ file into individual XYZ files
-                xyzall_2_xyz(file, name)
-                for conf_file in glob.glob(f"{name}_conf_*.xyz"):
-                    if self.args.charge is None:
-                        charge_xyz, _ = read_xyz_charge_mult(conf_file)
-                    else:
-                        charge_xyz = self.args.charge
-                    if self.args.mult is None:
-                        _, mult_xyz = read_xyz_charge_mult(conf_file)
-                    else:
-                        mult_xyz = self.args.mult
-                    xyz_files.append(
-                        os.path.dirname(os.path.abspath(file)) + "/" + conf_file
-                    )
-                    xyz_charges.append(charge_xyz)
-                    xyz_mults.append(mult_xyz)
+        # keep track of unvalid calcs
+        self.args.invalid_calcs = []
 
-            else:
-                command_pdb = [
-                    "obabel",
-                    f"-i{ext.lower()}",
-                    file,
-                    "-oxyz",
-                    f"-O{os.path.dirname(os.path.abspath(file))}/{name}_conf_.xyz",
-                    "-m",
-                ]
-                subprocess.run(
-                    command_pdb,
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL,
-                )
+        bar = IncrementalBar(
+            "\no  Number of finished jobs from QDESCP", max=len(self.args.files)
+        )
 
-                if self.args.charge is None:
-                    _, charges, _, _ = mol_from_sdf_or_mol_or_mol2(file, "csearch", self.args)
-                else:
-                    charges = [self.args.charge] * len(
-                        glob.glob(
-                            f"{os.path.dirname(os.path.abspath(file))}/{name}_conf_*.xyz"
-                        )
-                    )
-                if self.args.mult is None:
-                    _, _, mults, _ = mol_from_sdf_or_mol_or_mol2(file, "csearch", self.args)
-                else:
-                    mults = [self.args.mult] * len(
-                        glob.glob(
-                            f"{os.path.dirname(os.path.abspath(file))}/{name}_conf_*.xyz"
-                        )
-                    )
-
-                for count, f in enumerate(
-                    glob.glob(
-                        f"{os.path.dirname(os.path.abspath(file))}/{name}_conf_*.xyz"
-                    )
-                ):
-                    xyz_files.append(f)
-                    xyz_charges.append(charges[count])
-                    xyz_mults.append(mults[count])
-
-            bar = IncrementalBar(
-                "\no  Number of finished jobs from QDESCP", max=len(xyz_files)
-            )
-            # multiprocessing to accelerate QDESCP (since xTB uses 1 processor to be reproducible)
+        # multiprocessing to accelerate QDESCP (since xTB uses 1 processor to be reproducible)
+        if not self.args.debug: # errors and try/excepts are not shown in multithreading
             with futures.ThreadPoolExecutor(
                 max_workers=self.args.nprocs,
             ) as executor:
-                for xyz_file, charge, mult in zip(xyz_files, xyz_charges, xyz_mults):
+                for file in self.args.files:
                     _ = executor.submit(
-                        self.xtb_complete, xyz_file, charge, mult, destination, file, atom_props, smarts_targets, bar, update_atom_props, denovo_atoms, update_denovo_atom_props, interpret_atoms, update_interpret_atom_props
-                    )
-            bar.finish()
+                        self.xtb_complete, destination, file, atom_props, smarts_targets, bar, update_atom_props, denovo_atoms, update_denovo_atom_props, interpret_atoms, update_interpret_atom_props
+                        )
+        else:
+            for file in self.args.files:
+                _ = self.xtb_complete(destination, file, atom_props, smarts_targets, bar, update_atom_props, denovo_atoms, update_denovo_atom_props, interpret_atoms, update_interpret_atom_props)
+
+        bar.finish()
 
         return update_atom_props, update_denovo_atom_props, update_interpret_atom_props
 
 
-    def xtb_complete(self, xyz_file, charge, mult, destination, file, atom_props, smarts_targets, bar, update_atom_props, denovo_atoms, update_denovo_atom_props, interptret_atoms, update_interpret_atom_props):
+    def xtb_complete(self, destination, file, atom_props, smarts_targets, bar, update_atom_props, denovo_atoms, update_denovo_atom_props, interptret_atoms, update_interpret_atom_props):
         """
         Run all the xTB calculations and collect the properties inside JSON files
         """ 
-        
-        name_xtb = os.path.basename(Path(xyz_file)).split(".")[0]
-        self.args.log.write(f"\no  Running xTB and collecting properties")
 
-        # if xTB fails during any of the calculations (UnboundLocalError), xTB assigns weird
-        # qm5 charges (i.e. > +10 or < -10, ValueError), or the json file is not created 
-        # for some weird xTB error (FileNotFoundError), that molecule is not used 
-        xtb_passing = True
-        try:
-            xtb_files_props = self.run_sp_xtb(xyz_file, charge, mult, name_xtb, destination)
+        xyz_files, xyz_charges, xyz_mults = [], [], []
+        name = os.path.basename(Path(file)).split('.')[0]
+        ext = os.path.basename(Path(file)).split(".")[1]
+        self.args.log.write(f"\n\n   ----- {name} -----")
+        if ext.lower() == "xyz":
+            # separate the parent XYZ file into individual XYZ files
+            xyzall_2_xyz(file, name)
+            for conf_file in glob.glob(f"{name}_conf_*.xyz"):
+                if self.args.charge is None:
+                    charge_xyz, _ = read_xyz_charge_mult(conf_file)
+                else:
+                    charge_xyz = self.args.charge
+                if self.args.mult is None:
+                    _, mult_xyz = read_xyz_charge_mult(conf_file)
+                else:
+                    mult_xyz = self.args.mult
+                xyz_files.append(
+                    os.path.dirname(os.path.abspath(file)) + "/" + conf_file
+                )
+                xyz_charges.append(charge_xyz)
+                xyz_mults.append(mult_xyz)
+
+        else:
+            command_pdb = [
+                "obabel",
+                f"-i{ext.lower()}",
+                file,
+                "-oxyz",
+                f"-O{os.path.dirname(os.path.abspath(file))}/{name}_conf_.xyz",
+                "-m",
+            ]
+            subprocess.run(
+                command_pdb,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+
+            if self.args.charge is None:
+                _, charges, _, _ = mol_from_sdf_or_mol_or_mol2(file, "csearch", self.args)
+            else:
+                charges = [self.args.charge] * len(
+                    glob.glob(
+                        f"{os.path.dirname(os.path.abspath(file))}/{name}_conf_*.xyz"
+                    )
+                )
+            if self.args.mult is None:
+                _, _, mults, _ = mol_from_sdf_or_mol_or_mol2(file, "csearch", self.args)
+            else:
+                mults = [self.args.mult] * len(
+                    glob.glob(
+                        f"{os.path.dirname(os.path.abspath(file))}/{name}_conf_*.xyz"
+                    )
+                )
+
+            for count, f in enumerate(
+                glob.glob(
+                    f"{os.path.dirname(os.path.abspath(file))}/{name}_conf_*.xyz"
+                )
+            ):
+                xyz_files.append(f)
+                xyz_charges.append(charges[count])
+                xyz_mults.append(mults[count])
+
+        for xyz_file, charge, mult in zip(xyz_files, xyz_charges, xyz_mults):
+            name_xtb = os.path.basename(Path(xyz_file)).split(".")[0]
+            self.args.log.write(f"\no  Running xTB and collecting properties")
+
+            # if xTB fails during any of the calculations (UnboundLocalError), xTB assigns weird
+            # qm5 charges (i.e. > +10 or < -10, ValueError), or the json file is not created 
+            # for some weird xTB error (FileNotFoundError), that molecule is not used 
+            xtb_passing,xtb_files_props = self.run_sp_xtb(file, xyz_file, charge, mult, name_xtb, destination)
             path_name = Path(os.path.dirname(file)).joinpath(os.path.basename(Path(file)).split(".")[0])
 
-            #standar
-            update_atom_props = self.collect_xtb_properties(path_name, atom_props, update_atom_props, smarts_targets, xtb_files_props)
+            if xtb_passing:
+                #standard
+                update_atom_props = self.collect_xtb_properties(path_name, atom_props, update_atom_props, smarts_targets, xtb_files_props)
 
-            #denovo
-            update_denovo_atom_props = self.collect_xtb_properties(path_name, denovo_atoms, update_denovo_atom_props, smarts_targets, xtb_files_props)
+                #denovo
+                update_denovo_atom_props = self.collect_xtb_properties(path_name, denovo_atoms, update_denovo_atom_props, smarts_targets, xtb_files_props)
 
-            #interpret
-            update_interpret_atom_props = self.collect_xtb_properties(path_name, interptret_atoms, update_interpret_atom_props, smarts_targets, xtb_files_props)
+                #interpret
+                update_interpret_atom_props = self.collect_xtb_properties(path_name, interptret_atoms, update_interpret_atom_props, smarts_targets, xtb_files_props)
 
-        except Exception as e:
-            xtb_passing = False
-
-        self.cleanup(name_xtb, destination, xtb_passing, xtb_files_props)
+            self.cleanup(name_xtb, destination, xtb_passing, xtb_files_props)
         bar.next()
 
         return update_atom_props, update_denovo_atom_props, update_interpret_atom_props
 
 
-    def run_sp_xtb(self, xyz_file, charge, mult, name, destination):
+    def run_sp_xtb(self, file, xyz_file, charge, mult, name, destination):
         """
         Runs different types of single point xTB calculations
         """
+
+        xtb_passing = True
 
         dat_dir = destination / name
         dat_dir.mkdir(exist_ok=True, parents=True)
@@ -617,197 +636,215 @@ class qdescp:
 
             # replaces RDKit geometries with xTB geometries
             os.remove(xtb_files_props['xtb_xyz_path'])
-            try:
+            if os.path.exists(str(dat_dir) + "/xtbopt.xyz"): # finished optimizations
                 os.rename(str(dat_dir) + "/xtbopt.xyz", xtb_files_props['xtb_xyz_path'])
-            except FileNotFoundError:
-                os.rename(str(dat_dir) + "/xtblast.xyz", xtb_files_props['xtb_xyz_path'])
+            elif os.path.exists(str(dat_dir) + "/xtblast.xyz"): # incomplete optimizations
+                    os.rename(str(dat_dir) + "/xtblast.xyz", xtb_files_props['xtb_xyz_path'])
+            else: # failed optimizations
+                xtb_passing = False
+                if file not in self.args.invalid_calcs:
+                    self.args.invalid_calcs.append(file)
+                self.args.log.write(f"x  WARNING! {file} did not finish correctly and no descriptors will be generated for this system.")
 
-            final_xyz_path = xtb_files_props['xtb_xyz_path']
-            self.final_xyz_path = final_xyz_path
-            with open(final_xyz_path, "r") as xyz_file:
-                self.xyz_coordinates = xyz_file.readlines() 
 
+            if xtb_passing:
+                final_xyz_path = xtb_files_props['xtb_xyz_path']
+                self.final_xyz_path = final_xyz_path
+                with open(final_xyz_path, "r") as xyz_file:
+                    self.xyz_coordinates = xyz_file.readlines()
 
-        command1 = [
-            "xtb",
-            xtb_files_props['xtb_xyz_path'],
-            "--pop",
-            "--wbo",
-            "--acc",
-            str(self.args.qdescp_acc),
-            "--gfn",
-            "2",
-            "--chrg",
-            str(charge),
-            "--uhf",
-            str(int(mult) - 1),
-            "--etemp",
-            str(self.args.qdescp_temp),
-            "--input",
-            str(xtb_input_file),
-            "-P",
-            "1",
-        ]
-        if self.args.qdescp_solvent is not None:
-            command1.append("--alpb")
-            command1.append(f"{self.args.qdescp_solvent}")
-        run_command(command1, xtb_files_props['xtb_out'], cwd=dat_dir)
+        if xtb_passing:
+            command1 = [
+                "xtb",
+                xtb_files_props['xtb_xyz_path'],
+                "--pop",
+                "--wbo",
+                "--acc",
+                str(self.args.qdescp_acc),
+                "--gfn",
+                "2",
+                "--chrg",
+                str(charge),
+                "--uhf",
+                str(int(mult) - 1),
+                "--etemp",
+                str(self.args.qdescp_temp),
+                "--input",
+                str(xtb_input_file),
+                "-P",
+                "1",
+            ]
+            if self.args.qdescp_solvent is not None:
+                command1.append("--alpb")
+                command1.append(f"{self.args.qdescp_solvent}")
+            run_command(command1, xtb_files_props['xtb_out'], cwd=dat_dir)
 
-        os.rename(str(dat_dir) + "/xtbout.json", xtb_files_props['xtb_json'])
-        os.rename(str(dat_dir) + "/wbo", xtb_files_props['xtb_wbo'])
+            # check if the initial calculation finished OK
+            with open(xtb_files_props['xtb_out'], "r") as opt_file:
+                opt_lines = opt_file.readlines()
+                for line in opt_lines:
+                    if '[ERROR] Program stopped' in line:
+                        xtb_passing = False
+                        if file not in self.args.invalid_calcs:
+                            self.args.invalid_calcs.append(file)
+                        self.args.log.write(f"x  WARNING! {file} did not finish correctly and no descriptors will be generated for this system.")
 
-        command2 = [
-            "xtb",
-            xtb_files_props['xtb_xyz_path'],
-            "--pop",
-            "--gfn",
-            "1",
-            "--chrg",
-            str(charge),
-            "--acc",
-            str(self.args.qdescp_acc),
-            "--uhf",
-            str(int(mult) - 1),
-            "--etemp",
-            str(self.args.qdescp_temp),
-            "--vomega",
-            "-P",
-            "1",
-        ]
-        if self.args.qdescp_solvent is not None:
-            command2.append("--alpb")
-            command2.append(f"{self.args.qdescp_solvent}")
-        run_command(command2, xtb_files_props['xtb_gfn1'], cwd=dat_dir)
+            os.rename(str(dat_dir) + "/xtbout.json", xtb_files_props['xtb_json'])
+            os.rename(str(dat_dir) + "/wbo", xtb_files_props['xtb_wbo'])
 
-        command3 = [
-            "xtb",
-            xtb_files_props['xtb_xyz_path'],
-            "--vfukui",
-            "--gfn",
-            "2",
-            "--chrg",
-            str(charge),
-            "--acc",
-            str(self.args.qdescp_acc),
-            "--uhf",
-            str(int(mult) - 1),
-            "--etemp",
-            str(self.args.qdescp_temp),
-            "-P",
-            "1",
-        ]
-        if self.args.qdescp_solvent is not None:
-            command3.append("--alpb")
-            command3.append(f"{self.args.qdescp_solvent}")
-        run_command(command3, xtb_files_props['xtb_fukui'], cwd=dat_dir)
+        if xtb_passing:
+            command2 = [
+                "xtb",
+                xtb_files_props['xtb_xyz_path'],
+                "--pop",
+                "--gfn",
+                "1",
+                "--chrg",
+                str(charge),
+                "--acc",
+                str(self.args.qdescp_acc),
+                "--uhf",
+                str(int(mult) - 1),
+                "--etemp",
+                str(self.args.qdescp_temp),
+                "--vomega",
+                "-P",
+                "1",
+            ]
+            if self.args.qdescp_solvent is not None:
+                command2.append("--alpb")
+                command2.append(f"{self.args.qdescp_solvent}")
+            run_command(command2, xtb_files_props['xtb_gfn1'], cwd=dat_dir)
 
-        command4 = [
-            "xtb",
-            xtb_files_props['xtb_xyz_path'],
-            "--fod",
-            "--gfn",
-            "2",
-            "--chrg",
-            str(charge),
-            "--acc",
-            str(self.args.qdescp_acc),
-            "--uhf",
-            str(int(mult) - 1),
-            "--etemp",
-            str(self.args.qdescp_temp),
-            "-P",
-            "1",
-        ]
-        if self.args.qdescp_solvent is not None:
-            command4.append("--alpb")
-            command4.append(f"{self.args.qdescp_solvent}")
-        run_command(command4, xtb_files_props['xtb_fod'], cwd=dat_dir)
+            command3 = [
+                "xtb",
+                xtb_files_props['xtb_xyz_path'],
+                "--vfukui",
+                "--gfn",
+                "2",
+                "--chrg",
+                str(charge),
+                "--acc",
+                str(self.args.qdescp_acc),
+                "--uhf",
+                str(int(mult) - 1),
+                "--etemp",
+                str(self.args.qdescp_temp),
+                "-P",
+                "1",
+            ]
+            if self.args.qdescp_solvent is not None:
+                command3.append("--alpb")
+                command3.append(f"{self.args.qdescp_solvent}")
+            run_command(command3, xtb_files_props['xtb_fukui'], cwd=dat_dir)
 
-        command5 = [
-            "xtb",
-            xtb_files_props['xtb_xyz_path'],
-            "--gfn",
-            "1",
-            "--chrg",
-            str(int(charge) +1),
-            "--acc",
-            str(self.args.qdescp_acc),
-            "--uhf",
-            str(mult),
-            "--etemp",
-            str(self.args.qdescp_temp),
-            "-P",
-            "1",
-        ]
-        if self.args.qdescp_solvent is not None:
-            command5.append("--alpb")
-            command5.append(f"{self.args.qdescp_solvent}")
-        run_command(command5, xtb_files_props['xtb_Nminus1'], cwd=dat_dir)
+            command4 = [
+                "xtb",
+                xtb_files_props['xtb_xyz_path'],
+                "--fod",
+                "--gfn",
+                "2",
+                "--chrg",
+                str(charge),
+                "--acc",
+                str(self.args.qdescp_acc),
+                "--uhf",
+                str(int(mult) - 1),
+                "--etemp",
+                str(self.args.qdescp_temp),
+                "-P",
+                "1",
+            ]
+            if self.args.qdescp_solvent is not None:
+                command4.append("--alpb")
+                command4.append(f"{self.args.qdescp_solvent}")
+            run_command(command4, xtb_files_props['xtb_fod'], cwd=dat_dir)
 
-        command6 = [
-            "xtb",
-            xtb_files_props['xtb_xyz_path'],
-            "--gfn",
-            "1",
-            "--chrg",
-            str(int(charge) +2),
-            "--acc",
-            str(self.args.qdescp_acc),
-            "--uhf",
-            str(int(mult) - 1),
-            "--etemp",
-            str(self.args.qdescp_temp),
-            "-P",
-            "1",
-        ]
-        if self.args.qdescp_solvent is not None:
-            command6.append("--alpb")
-            command6.append(f"{self.args.qdescp_solvent}")
-        run_command(command6, xtb_files_props['xtb_Nminus2'], cwd=dat_dir)
+            command5 = [
+                "xtb",
+                xtb_files_props['xtb_xyz_path'],
+                "--gfn",
+                "1",
+                "--chrg",
+                str(int(charge) +1),
+                "--acc",
+                str(self.args.qdescp_acc),
+                "--uhf",
+                str(mult),
+                "--etemp",
+                str(self.args.qdescp_temp),
+                "-P",
+                "1",
+            ]
+            if self.args.qdescp_solvent is not None:
+                command5.append("--alpb")
+                command5.append(f"{self.args.qdescp_solvent}")
+            run_command(command5, xtb_files_props['xtb_Nminus1'], cwd=dat_dir)
 
-        command7 = [
-            "xtb",
-            xtb_files_props['xtb_xyz_path'],
-            "--gfn",
-            "1",
-            "--chrg",
-            str(int(charge) -1),
-            "--acc",
-            str(self.args.qdescp_acc),
-            "--uhf",
-            str(int(mult)),
-            "--etemp",
-            str(self.args.qdescp_temp),
-            "-P",
-            "1",
-        ]
-        if self.args.qdescp_solvent is not None:
-            command7.append("--alpb")
-            command7.append(f"{self.args.qdescp_solvent}")
-        run_command(command7, xtb_files_props['xtb_Nplus1'], cwd=dat_dir)
+            command6 = [
+                "xtb",
+                xtb_files_props['xtb_xyz_path'],
+                "--gfn",
+                "1",
+                "--chrg",
+                str(int(charge) +2),
+                "--acc",
+                str(self.args.qdescp_acc),
+                "--uhf",
+                str(int(mult) - 1),
+                "--etemp",
+                str(self.args.qdescp_temp),
+                "-P",
+                "1",
+            ]
+            if self.args.qdescp_solvent is not None:
+                command6.append("--alpb")
+                command6.append(f"{self.args.qdescp_solvent}")
+            run_command(command6, xtb_files_props['xtb_Nminus2'], cwd=dat_dir)
 
-        command8 = [
-            "xtb",
-            xtb_files_props['xtb_xyz_path'],
-            "--gfn",
-            "1",
-            "--chrg",
-            str(int(charge)-2),
-            "--acc",
-            str(self.args.qdescp_acc),
-            "--uhf",
-            str(int(mult)-1),
-            "--etemp",
-            str(self.args.qdescp_temp),
-            "-P",
-            "1",
-        ]
-        if self.args.qdescp_solvent is not None:
-            command8.append("--alpb")
-            command8.append(f"{self.args.qdescp_solvent}")
-        run_command(command8, xtb_files_props['xtb_Nplus2'], cwd=dat_dir)
+            command7 = [
+                "xtb",
+                xtb_files_props['xtb_xyz_path'],
+                "--gfn",
+                "1",
+                "--chrg",
+                str(int(charge) -1),
+                "--acc",
+                str(self.args.qdescp_acc),
+                "--uhf",
+                str(int(mult)),
+                "--etemp",
+                str(self.args.qdescp_temp),
+                "-P",
+                "1",
+            ]
+            if self.args.qdescp_solvent is not None:
+                command7.append("--alpb")
+                command7.append(f"{self.args.qdescp_solvent}")
+            run_command(command7, xtb_files_props['xtb_Nplus1'], cwd=dat_dir)
 
-        return xtb_files_props
+            command8 = [
+                "xtb",
+                xtb_files_props['xtb_xyz_path'],
+                "--gfn",
+                "1",
+                "--chrg",
+                str(int(charge)-2),
+                "--acc",
+                str(self.args.qdescp_acc),
+                "--uhf",
+                str(int(mult)-1),
+                "--etemp",
+                str(self.args.qdescp_temp),
+                "-P",
+                "1",
+            ]
+            if self.args.qdescp_solvent is not None:
+                command8.append("--alpb")
+                command8.append(f"{self.args.qdescp_solvent}")
+            run_command(command8, xtb_files_props['xtb_Nplus2'], cwd=dat_dir)
+
+        return xtb_passing,xtb_files_props
 
 
     def collect_xtb_properties(self,name_initial,atom_props,update_atom_props,smarts_targets,xtb_files_props):
@@ -852,15 +889,14 @@ class qdescp:
 		"""
         #Global descriptors
         global_properties_morfeus = calculate_global_morfeus_descriptors(self.final_xyz_path,self)
-        json_data.update(global_properties_morfeus)       
+        json_data.update(global_properties_morfeus)
         #Local descriptors
         local_properties_morfeus = calculate_local_morfeus_descriptors(self.final_xyz_path,self)
-        json_data.update(local_properties_morfeus)  
-
+        json_data.update(local_properties_morfeus)
 
 
         """
-        Locate Smarts, qdescp_atoms
+        Locate SMARTS, qdescp_atoms
         """
 
         with open(xtb_files_props['xtb_xyz_path'], "r") as f:
@@ -906,11 +942,11 @@ class qdescp:
                             self.args.log.write(f"x  WARNING! SMARTS pattern was not specified correctly! Make sure the qdescp_atoms option uses this format: \"[C]\" for atoms, \"[C=N]\" for bonds, and so on.")
 
                 if len(matches) == 0:
-                    self.args.log.write(f"x  WARNING! SMARTS pattern {pattern} not found in the system, this molecule will not be used.")
+                    self.args.log.write(f"x  WARNING! SMARTS pattern {pattern} not found in {os.path.basename(name_initial)}, atomic descriptors will not be generated.")
                 elif matches[0] == -1:
-                    self.args.log.write(f"x  WARNING! Mapped atom {pattern} not found in the system, this molecule will not be used.")
+                    self.args.log.write(f"x  WARNING! Mapped atom {pattern} not found in {os.path.basename(name_initial)}, atomic descriptors will not be generated.")
                 elif len(matches) > 1:
-                    self.args.log.write(f"x  WARNING! More than one {pattern} atom was found in the system, this molecule will not be used.")
+                    self.args.log.write(f"x  WARNING! More than one {pattern} patterns were found in {os.path.basename(name_initial)}, atomic descriptors will not be generated.")
                 elif len(matches) == 1:
                     # get atom types and sort them to keep the same atom order among different molecules
                     atom_indices = list(matches[0])
@@ -924,7 +960,7 @@ class qdescp:
                     elif n_types > 1:
                         sorted_indices = sorted(atom_indices, key=lambda idx: mol.GetAtoms()[idx].GetAtomicNum())
 
-                # Generate unique match names for each atom type in the functional group
+                    # Generate unique match names for each atom type in the functional group
                     match_names = []
                     atom_counters = {}
 
@@ -988,7 +1024,6 @@ class qdescp:
                             if f'{pattern}_min_{prop}' not in update_atom_props:
                                 update_atom_props.append(f'{pattern}_min_{prop}')
 
-
         with open(xtb_files_props['xtb_json'], "w") as outfile:
             json.dump(json_data, outfile)
         
@@ -1039,13 +1074,19 @@ class qdescp:
     def process_aqme_csv(self, name_db): 
     # Process each of the three generated CSVs.
         for suffix in ['full', 'denovo', 'interpret']:
-            # Try to read the file with the corresponding suffix.
-            csv_file = f'AQME-{name_db}_{suffix}_{self.args.csv_name}'
+            # Try to read the file with the corresponding suffix
+            base_filename = os.path.basename(self.args.csv_name)
+            csv_file = self.args.initial_dir.joinpath(f'AQME-{name_db}_{suffix}_{base_filename}')
+            csv_file = f'{csv_file}'
             
             try:
                 # Read the original CSV and the one generated by qdescp.
                 csv_temp = pd.read_csv(f'{self.args.csv_name}')
                 df_temp = pd.read_csv(csv_file)
+
+                # check that code_name and SMILES are written with the right format
+                csv_temp = fix_cols_names(csv_temp)
+                df_temp = fix_cols_names(df_temp)
 
                 # Compare and add missing rows.
                 if len(df_temp) < len(csv_temp):

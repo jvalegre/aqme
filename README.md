@@ -1,7 +1,7 @@
 ![](Logos/AQME_logo.jpg)
 [![CircleCI](https://img.shields.io/circleci/build/github/jvalegre/aqme?label=Circle%20CI&logo=circleci)](https://app.circleci.com/pipelines/github/jvalegre/aqme)
 [![Codecov](https://img.shields.io/codecov/c/github/jvalegre/aqme?label=Codecov&logo=codecov)](https://codecov.io/gh/jvalegre/aqme)
-[![Downloads](https://img.shields.io/conda/dn/conda-forge/aqme?label=Downloads&logo=Anaconda)](https://anaconda.org/conda-forge/aqme)
+[![Downloads](https://img.shields.io/pepy/dt/aqme?label=Downloads&logo=pypi)](https://www.pepy.tech/projects/aqme)
 [![Read the Docs](https://img.shields.io/readthedocs/aqme?label=Read%20the%20Docs&logo=readthedocs)](https://aqme.readthedocs.io/)
 
 ## Documentation  
@@ -9,10 +9,15 @@ Full documentation with installation instructions, technical details and example
 
 Don't miss out the latest hands-on tutorials from our [YouTube channel](https://www.youtube.com/channel/UCHRqI8N61bYxWV9BjbUI4Xw)!  
 
-## Recommended installation and update guide  
+## Recommended installation
 In a nutshell, AQME and its dependencies are installed/updated as follows:  
-1. Install using conda-forge: `conda install -c conda-forge aqme`  
-2. Update to the latest version: `pip install aqme --upgrade`  
+1. (Only once) Create new conda environment: `conda create -n aqme python=3.10`  
+2. Activate conda environment: `conda activate aqme`  
+3. Install AQME using pip: `pip install aqme`  
+4. Install Open Babel: `conda install -c conda-forge openbabel=3.1.1`  
+
+## Update the program
+1. Update to the latest version: `pip install aqme --upgrade`  
 
 ## Developers and help desk
 List of main developers and contact emails:  

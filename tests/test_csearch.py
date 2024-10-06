@@ -64,7 +64,9 @@ def test_csearch_varfile(varfile, nameinvarfile, output_nummols):
         # tests for conformer generation with RDKit
         ("rdkit", "pentane.smi", [2, 4]),
         ("rdkit", "pentane.csv", [2, 4]),
-        ("rdkit", "Cu.csv", [1, 1, 1]),        
+        ("rdkit", "Cu.csv", [1, 1, 1]),
+        ("rdkit", "blank_smi.csv", [1, 1]), # check blank cells
+        ("rdkit", "unique_smi.csv", [1]), # check that only unique SMILES are used
         ("rdkit", "partial_path", [2, 4]), # checks partial PATHs
         ("rdkit", "file_name", [2, 4]), # checks file_name
         ("rdkit", "molecules.cdx", [4, 2]),
@@ -123,6 +125,37 @@ def test_csearch_input_parameters(program, input, output_nummols):
         os.remove(file1)
         os.remove(file2)
         os.remove(file3)
+
+    elif input == "blank_smi.csv":
+        file1 = f'{csearch_input_dir}/CSEARCH/Me_{program}.sdf'
+        file2 = f'{csearch_input_dir}/CSEARCH/Et_{program}.sdf'
+
+        with rdkit.Chem.SDMolSupplier(file1, removeHs=False) as mol1:
+            assert len(mol1) == output_nummols[0]
+        with rdkit.Chem.SDMolSupplier(file2, removeHs=False) as mol2:
+            assert len(mol2) == output_nummols[1]
+        os.remove(file1)
+        os.remove(file2)
+
+    elif input == "unique_smi.csv":
+        file1 = f'{csearch_input_dir}/CSEARCH/Me1_{program}.sdf'
+        file2 = f'{csearch_input_dir}/CSEARCH/Me2_{program}.sdf'
+
+        assert os.path.exists(file1)
+        assert not os.path.exists(file2)
+        os.remove(file1)
+
+        # ensure that the warning is shown in the DAT file
+        file_dat = str(w_dir_main+f"/CSEARCH_data.dat")
+        outfile = open(file_dat, "r")
+        outlines_dat = outfile.readlines()
+        outfile.close()
+
+        find_warn_dup = False
+        for line in outlines_dat:
+            if 'x  SMILES "C" used in Me2 was already used with a different code_name!' in line:
+                find_warn_dup = True
+        assert find_warn_dup
 
     elif input in ["molecules.cdx"]:
         file1 = f'{csearch_input_dir}/CSEARCH/molecules_0_{program}.sdf'
@@ -440,7 +473,7 @@ def test_csearch_fullmonte_parameters(
             "radical_rdkit",
             0,
             2,
-            "auto",
+            25,
             10,
             True,
             10,
@@ -483,29 +516,89 @@ def test_csearch_rdkit_parameters(
 ):
     os.chdir(csearch_rdkit_summ_dir)
     # runs the program with the different tests
-    csearch(
-        w_dir_main=csearch_rdkit_summ_dir,
-        program=program,
-        smi=smi,
-        name=name,
-        charge=charge,
-        mult=mult,
-        sample=sample,
-        opt_steps_rdkit=opt_steps_rdkit,
-        heavyonly=heavyonly,
-        ewin_csearch=ewin_csearch,
-        initial_energy_threshold=initial_energy_threshold,
-        energy_threshold=energy_threshold,
-        rms_threshold=rms_threshold,
-        output_nummols=output_nummols,
-    )
+    if name != 'radical_rdkit':
+        csearch(
+            w_dir_main=csearch_rdkit_summ_dir,
+            program=program,
+            smi=smi,
+            name=name,
+            charge=charge,
+            mult=mult,
+            opt_steps_rdkit=opt_steps_rdkit,
+            heavyonly=heavyonly,
+            ewin_csearch=ewin_csearch,
+            initial_energy_threshold=initial_energy_threshold,
+            energy_threshold=energy_threshold,
+            rms_threshold=rms_threshold,
+        )
+    else:
+        csearch(
+            w_dir_main=csearch_rdkit_summ_dir,
+            program=program,
+            smi=smi,
+            name=name,
+            charge=charge,
+            mult=mult,
+            sample=sample,
+            opt_steps_rdkit=opt_steps_rdkit,
+            heavyonly=heavyonly,
+            ewin_csearch=ewin_csearch,
+            initial_energy_threshold=initial_energy_threshold,
+            energy_threshold=energy_threshold,
+            rms_threshold=rms_threshold,
+            pytest_testing=True
+        )
 
     # tests here
-    file = str("CSEARCH/" + name + "_" + program + ".sdf")
+    if name != 'radical_rdkit':
+        file = str("CSEARCH/" + name + "_" + program + ".sdf")
+    else: # checks all the conformers initially generated
+        file = str("CSEARCH/" + name + "_" + program + "_all_confs.sdf")
     mols = rdkit.Chem.SDMolSupplier(file, removeHs=False)
     assert len(mols) == output_nummols
     assert charge == int(mols[0].GetProp("Real charge"))
     assert mult == int(mols[0].GetProp("Mult"))
+    # check if all the energies are sorted
+    mol_energies = []
+    for mol in mols:
+        mol_energies.append(float(mol.GetProp("Energy")))
+    assert mol_energies == sorted(mol_energies)
+
+    if name == 'radical_rdkit': # test clusterized conformers
+        initial_five_E = []
+        for mol in mols:
+            initial_five_E.append(float(mol.GetProp("Energy")))
+            if len(initial_five_E) == 5:
+                break
+        file = str("CSEARCH/" + name + "_" + program + ".sdf")
+        mols = rdkit.Chem.SDMolSupplier(file, removeHs=False)
+        final_five_E = []
+        for mol in mols:
+            final_five_E.append(float(mol.GetProp("Energy")))
+            if len(final_five_E) == 5:
+                break
+        assert len(mols) == sample
+        assert charge == int(mols[0].GetProp("Real charge"))
+        assert mult == int(mols[0].GetProp("Mult"))
+        # check if the first five energies are included
+        assert initial_five_E == final_five_E
+        # check if all the energies are sorted
+        mol_energies = []
+        for mol in mols:
+            mol_energies.append(float(mol.GetProp("Energy")))
+        assert mol_energies == sorted(mol_energies)
+        
+        # check if the DAT file contains the Butina print
+        dat_rdkit = str(csearch_rdkit_summ_dir+f"/CSEARCH_data.dat")
+        datfile = open(dat_rdkit, "r")
+        datfile_rdkit = datfile.readlines()
+        datfile.close()
+        butina_found = False
+        for line in datfile_rdkit:
+            if 'conformers using a combination of energies and Butina RMS-based clustering' in line:
+                butina_found = True
+        assert butina_found
+
     # check that H atoms are included
     outfile = open(file,"r")
     outlines = outfile.readlines()
@@ -704,10 +797,11 @@ def test_csearch_rdkit_parameters(
             True,
             1,
         ),
+        # without --nci, the resulting sdf has more than 400 conformers
         (
             "crest",
             "C.O",
-            "nci",
+            "nci_keyword",
             True,
             False,
             None,
@@ -716,14 +810,30 @@ def test_csearch_rdkit_parameters(
             [],
             0,
             1,
-            None,
+            '--nci --cbonds 0.5',
             False,
             None,
         ),
         (
             "crest",
             "C.O",
-            "nci_keyword",
+            "cregen_clustering",
+            True,
+            False,
+            None,
+            [],
+            [],
+            [],
+            0,
+            1,
+            '--nci --cbonds 0.5',
+            False,
+            None,
+        ),
+        (
+            "crest",
+            "C.O",
+            "sample_keyword",
             True,
             False,
             None,
@@ -805,7 +915,7 @@ def test_csearch_methods(
                 program=program,
                 input='rule_IrSP.csv',
                 sample=10
-            )            
+            )
         else:
             csearch(
                 w_dir_main=csearch_methods_dir,
@@ -819,16 +929,50 @@ def test_csearch_methods(
             )
 
     elif complex is True:
-        csearch(
-            w_dir_main=csearch_methods_dir,
-            program=program,
-            smi=smi,
-            name=name,
-            crest_keywords=crest_keywords,
-            constraints_dist=constraints_dist,
-            constraints_angle=constraints_angle,
-            constraints_dihedral=constraints_dihedral,
-        )
+        if name == 'nci_keyword':
+            csearch(
+                w_dir_main=csearch_methods_dir,
+                program=program,
+                smi=smi,
+                name=name,
+                crest_keywords=crest_keywords,
+                auto_cluster=False # to keep track that crest options like --nci work
+            )
+        elif name == 'sample_keyword':
+            csearch(
+                w_dir_main=csearch_methods_dir,
+                program=program,
+                smi=smi,
+                name=name,
+                crest_keywords=crest_keywords,
+                constraints_dist=constraints_dist,
+                constraints_angle=constraints_angle,
+                constraints_dihedral=constraints_dihedral,
+                sample=17,
+            )
+        elif name == "cregen_clustering":
+            csearch(
+                w_dir_main=csearch_methods_dir,
+                program=program,
+                smi=smi,
+                name=name,
+                crest_keywords=crest_keywords,
+                constraints_dist=constraints_dist,
+                constraints_angle=constraints_angle,
+                constraints_dihedral=constraints_dihedral,
+                pytest_testing=True
+            )
+        else:
+            csearch(
+                w_dir_main=csearch_methods_dir,
+                program=program,
+                smi=smi,
+                name=name,
+                crest_keywords=crest_keywords,
+                constraints_dist=constraints_dist,
+                constraints_angle=constraints_angle,
+                constraints_dihedral=constraints_dihedral,
+            )
 
     if destination:
         file = str(csearch_methods_dir+"/Et_sdf_files/" + name + "_" + program + ".sdf")
@@ -898,11 +1042,23 @@ def test_csearch_methods(
             if 'Ag    ' in line:
                 xyz_metal = True
         assert xyz_metal
-    if name == 'nci':
-        assert len(mols) > 350
+    # if name == 'nci':
+    #     assert len(mols) > 350
+    #     # check that the conformers are sorted by their energy
+    #     outfile_sdf = open(sdf_crest, "r")
+    #     outlines_sdf = outfile_sdf.readlines()
+    #     outfile_sdf.close()
+    #     sdf_energies = []
+    #     for i,line in enumerate(outlines_sdf):
+    #         if line.startswith('>  <Energy>'):
+    #             # check if the crest_keywords option works
+    #             sdf_energies.append(float(outlines_sdf[i+1].split()[0]))
+    #     assert len(sdf_energies) > 10
+    #     assert sdf_energies == sorted(sdf_energies)
+
     # the n of conformers decreases when --nci is used
     elif name == 'nci_keyword':
-        assert len(mols) < 300
+        assert 100 < len(mols) < 250 # the number isn't exact, but it's between 100 and 250
         outfile = open(file_crest, "r")
         outlines_crest = outfile.readlines()
         outfile.close()
@@ -919,14 +1075,83 @@ def test_csearch_methods(
         outfile_sdf = open(sdf_crest, "r")
         outlines_sdf = outfile_sdf.readlines()
         outfile_sdf.close()
-        conf_number = 0
-        for line in outlines_sdf:
-            if line.startswith('nci_keyword'):
-                conf_number += 1
+        sdf_energies = []
+        for i,line in enumerate(outlines_sdf):
+            if line.startswith('>  <Energy>'):
                 # check if the crest_keywords option works
-                assert int(line.split('_')[-1]) == conf_number
-        assert conf_number > 1
+                sdf_energies.append(float(outlines_sdf[i+1].split()[0]))
+        assert len(sdf_energies) > 10
+        assert sdf_energies == sorted(sdf_energies)
 
+    elif name == 'cregen_clustering':
+        assert len(mols) == 25
+        dat_crest = str(csearch_methods_dir+f"/CSEARCH_data.dat")
+        datfile = open(dat_crest, "r")
+        datfile_crest = datfile.readlines()
+        datfile.close()
+        cregen_found = False
+        for line in datfile_crest:
+            if 'Starting CREGEN sorting' in line:
+                cregen_found = True
+        assert cregen_found
+        # check that the conformers are sorted by their energ
+        outfile_sdf = open(sdf_crest, "r")
+        outlines_sdf = outfile_sdf.readlines()
+        outfile_sdf.close()
+        sdf_energies = []
+        for i,line in enumerate(outlines_sdf):
+            if line.startswith('>  <Energy>'):
+                # check if the crest_keywords option works
+                sdf_energies.append(float(outlines_sdf[i+1].split()[0]))
+        assert len(sdf_energies) > 10
+        assert sdf_energies == sorted(sdf_energies)
+
+        # check if the first five most stable energies are included
+        file = str("CSEARCH/" + name + "_" + program + "_all_confs.sdf")
+        mols = rdkit.Chem.SDMolSupplier(file, removeHs=False)
+        initial_five_E = []
+        for mol in mols:
+            initial_five_E.append(float(mol.GetProp("Energy")))
+            if len(initial_five_E) == 5:
+                break
+
+        file = str("CSEARCH/" + name + "_" + program + ".sdf")
+        mols = rdkit.Chem.SDMolSupplier(file, removeHs=False)
+        final_five_E = []
+        for mol in mols:
+            final_five_E.append(float(mol.GetProp("Energy")))
+            if len(final_five_E) == 5:
+                break
+
+        assert initial_five_E == final_five_E
+
+
+    elif name == 'sample_keyword':
+        assert len(mols) == 17
+        dat_crest = str(csearch_methods_dir+f"/CSEARCH_data.dat")
+        datfile = open(dat_crest, "r")
+        datfile_crest = datfile.readlines()
+        datfile.close()
+        butina_found, cregen_clust_found = False,False
+        for line in datfile_crest:
+            if 'conformers using a combination of energies and Butina RMS-based clustering' in line:
+                butina_found = True
+            if 'Starting CREGEN sorting' in line:
+                cregen_clust_found = True
+        assert butina_found
+        assert cregen_clust_found
+        # check that the conformers are sorted by their number (avoid going from 1 to 10 instead of to 2)
+        outfile_sdf = open(sdf_crest, "r")
+        outlines_sdf = outfile_sdf.readlines()
+        outfile_sdf.close()
+        sdf_energies = []
+        for i,line in enumerate(outlines_sdf):
+            if line.startswith('>  <Energy>'):
+                # check if the crest_keywords option works
+                sdf_energies.append(float(outlines_sdf[i+1].split()[0]))
+        assert len(sdf_energies) == 17
+        assert sdf_energies == sorted(sdf_energies)
+    
     elif name == 'ethane':
         assert len(mols) >= 1
     elif name == 'ts':

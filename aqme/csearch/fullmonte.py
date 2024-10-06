@@ -94,8 +94,6 @@ def generating_conformations_fullmonte(
     selectedcids_rdkit,
     outmols,
     csearch_file,
-    dup_data,
-    dup_data_idx,
     coord_Map,
     alg_Map,
     mol_template,
@@ -197,8 +195,6 @@ def generating_conformations_fullmonte(
                 unique_mol_sample.append(unique_mol[indx])
 
         nsteps += 1
-
-    dup_data.at[dup_data_idx, "FullMonte-Unique-conformers"] = len(unique_mol)
 
     cids = list(range(len(unique_mol)))
     sorted_all_cids = sorted(cids, key=lambda cid: c_energy[cid])

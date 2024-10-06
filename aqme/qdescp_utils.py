@@ -61,19 +61,19 @@ def get_boltz(energy):
 
 
 def get_boltz_props(json_files, name, boltz_dir, calc_type, self, mol_props, atom_props, smarts_targets, 
-                    denovo_mols, denovo_atoms,interpret_mols, interpret_atoms, mol=None, xyz_file=None):
+                    denovo_mols, denovo_atoms,interpret_mols, interpret_atoms, mol=None):
     """
     Retrieves the properties from json files and gives Boltzmann averaged properties for rdkit, NMR and morfues descriptors.
     """
     # Ensure smarts_targets is a list even if None
     if smarts_targets is None:
         smarts_targets = []
-    
-    def average_properties(boltz, prop_list, smarts_targets, is_atom_prop=True):
+
+    def average_properties(boltz, prop_list, is_atom_prop=True):
         """Calculate average properties based on Boltzmann weights."""
         return average_prop_atom(boltz, prop_list) if is_atom_prop else average_prop_mol(boltz, prop_list)
 
-    def update_avg_json_data(json_data, avg_json_data, prop, avg_prop, smarts_targets):
+    def update_avg_json_data(avg_json_data, prop, avg_prop, smarts_targets):
         """Update avg_json_data with averaged properties."""
         if len(smarts_targets) > 0 or np.isnan(avg_prop).any():
             avg_json_data[prop] = avg_prop
@@ -82,7 +82,7 @@ def get_boltz_props(json_files, name, boltz_dir, calc_type, self, mol_props, ato
 
     # Calculate Boltzmann weights
     energy = []
-    for k, json_file in enumerate(json_files):
+    for _, json_file in enumerate(json_files):
         json_data = read_json(json_file)
         energy.append(json_data["total energy"] if calc_type.lower() == "xtb" else json_data["optimization"]["scf"]["scf energies"][-1])
 
@@ -90,6 +90,7 @@ def get_boltz_props(json_files, name, boltz_dir, calc_type, self, mol_props, ato
     avg_json_data = {}
     denovo_json_data = {}
     interpret_json_data = {}
+    atomic_props = True
 
     # Get weighted atomic properties
     for i, prop in enumerate(atom_props):
@@ -98,56 +99,63 @@ def get_boltz_props(json_files, name, boltz_dir, calc_type, self, mol_props, ato
                 json_data = read_json(json_file)
                 for atom_prop in atom_props:
                     if atom_prop not in json_data:
-                        return None
-        
-        prop_list = [read_json(json_file)[prop] for json_file in json_files]
-        avg_prop = average_properties(boltz, prop_list, smarts_targets)
-        update_avg_json_data(json_data, avg_json_data, prop, avg_prop, smarts_targets)
+                        atomic_props = False
+        if atomic_props:
+            prop_list = [read_json(json_file)[prop] for json_file in json_files]
+            avg_prop = average_properties(boltz, prop_list)
+        else:
+            avg_prop = np.nan
+        update_avg_json_data(avg_json_data, prop, avg_prop, smarts_targets)
 
     # Get weighted molecular properties from XTB
-    if calc_type.lower() == "xtb":
-        for prop in mol_props:
-            prop_list = [read_json(json_file)[prop] for json_file in json_files]
-            avg_prop = average_properties(boltz, prop_list, smarts_targets, is_atom_prop=False)
-            avg_json_data[prop] = avg_prop
-
-        # Get denovo atomic properties
-    for i, prop in enumerate(denovo_atoms):
+    for prop in mol_props:
         prop_list = [read_json(json_file)[prop] for json_file in json_files]
-        avg_prop = average_properties(boltz, prop_list, smarts_targets)
-        update_avg_json_data(json_data, denovo_json_data, prop, avg_prop, smarts_targets)
+        avg_prop = average_properties(boltz, prop_list, is_atom_prop=False)
+        avg_json_data[prop] = avg_prop
 
-        # Get denovo molecular properties
+    # Get denovo atomic properties
+    for i, prop in enumerate(denovo_atoms):
+        if atomic_props:
+            prop_list = [read_json(json_file)[prop] for json_file in json_files]
+            avg_prop = average_properties(boltz, prop_list)
+        else:
+            avg_prop = np.nan
+        update_avg_json_data(denovo_json_data, prop, avg_prop, smarts_targets)
+
+    # Get denovo molecular properties
     for prop in denovo_mols:
         prop_list = [read_json(json_file)[prop] for json_file in json_files]
-        avg_prop = average_properties(boltz, prop_list, smarts_targets, is_atom_prop=False)
+        avg_prop = average_properties(boltz, prop_list, is_atom_prop=False)
         denovo_json_data[prop] = avg_prop
 
-        # Get interpret atomic properties
+    # Get interpret atomic properties
     for i, prop in enumerate(interpret_atoms):
-        prop_list = [read_json(json_file)[prop] for json_file in json_files]
-        avg_prop = average_properties(boltz, prop_list, smarts_targets)
-        update_avg_json_data(json_data, interpret_json_data, prop, avg_prop, smarts_targets)
+        if atomic_props:
+            prop_list = [read_json(json_file)[prop] for json_file in json_files]
+            avg_prop = average_properties(boltz, prop_list)
+        else:
+            avg_prop = np.nan
+        update_avg_json_data(interpret_json_data, prop, avg_prop, smarts_targets)
 
-        # Get interpret molecular properties
+    # Get interpret molecular properties
     for prop in interpret_mols:
         prop_list = [read_json(json_file)[prop] for json_file in json_files]
-        avg_prop = average_properties(boltz, prop_list, smarts_targets, is_atom_prop=False)
+        avg_prop = average_properties(boltz, prop_list, is_atom_prop=False)
         interpret_json_data[prop] = avg_prop
 
     # Calculate RDKit descriptors if molecule is provided
     if mol is not None:
         # Calculate all RDKit properties for avg_json_data
-        avg_json_data,_,_ = get_rdkit_properties(avg_json_data, mol)
+        avg_json_data,_,_ = get_rdkit_properties(self,avg_json_data, mol)
         
         # Calculate selected RDKit properties for denovo_json_data
-        _,denovo_rdkit_json_data,_ = get_rdkit_properties({}, mol)
+        _,denovo_rdkit_json_data,_ = get_rdkit_properties(self,{}, mol)
         
         # Merge selected RDKit properties with denovo_json_data
         denovo_json_data.update(denovo_rdkit_json_data)
 
         # Calculate selected RDKit properties for interpret_json_data
-        _,_,interpret_rdkit_json_data = get_rdkit_properties({}, mol)
+        _,_,interpret_rdkit_json_data = get_rdkit_properties(self,{}, mol)
         
         # Merge selected RDKit properties with interpret_json_data
         interpret_json_data.update(interpret_rdkit_json_data)
@@ -170,7 +178,6 @@ def get_boltz_props(json_files, name, boltz_dir, calc_type, self, mol_props, ato
     final_interpret_file = os.path.join(boltz_dir, f"{name}_interpret_boltz.json")
     with open(final_interpret_file, "w") as outfile:
         json.dump(interpret_json_data, outfile)
-
 
 
 def get_boltz_props_nmr(json_files,name,boltz_dir,self,atom_props,smarts_targets,nmr_atoms=None,nmr_slope=None,nmr_intercept=None,nmr_experim=None):
@@ -377,7 +384,7 @@ def average_prop_mol(weights, prop):
     # Return the Boltzmann-weighted average, rounded to 4 decimal places (or 'NaN' if encountered)
     return boltz_avg
 
-def get_rdkit_properties(avg_json_data, mol):
+def get_rdkit_properties(self,avg_json_data, mol):
     """
     Calculates RDKit molecular descriptors
     """
@@ -401,16 +408,7 @@ def get_rdkit_properties(avg_json_data, mol):
 
     # For older versions of RDKit 
     except AttributeError:
-        avg_json_data["NHOHCount"] = rdkit.Chem.Lipinski.NHOHCount(mol)
-        avg_json_data["FractionCSP3"] = rdkit.Chem.Lipinski.FractionCSP3(mol)
-        avg_json_data["NOCount"] = rdkit.Chem.Lipinski.NOCount(mol)
-        avg_json_data["NumAliphaticRings"] = rdkit.Chem.Lipinski.NumAliphaticRings(mol)
-        avg_json_data["NumAromaticRings"] = rdkit.Chem.Lipinski.NumAromaticRings(mol)
-        avg_json_data["NumHAcceptors"] = rdkit.Chem.Lipinski.NumHAcceptors(mol)
-        avg_json_data["NumHDonors"] = rdkit.Chem.Lipinski.NumHDonors(mol)
-        avg_json_data["NumHeteroatoms"] = rdkit.Chem.Lipinski.NumHeteroatoms(mol)
-        avg_json_data["NumRotatableBonds"] = rdkit.Chem.Lipinski.NumRotatableBonds(mol)
-        avg_json_data["TPSA"] = rdkit.Chem.Descriptors.TPSA(mol)
+        self.args.log.write(f"x  WARNING! Install a newer version of RDKit to get all the RDKit descriptors in the databse with all the descriptors. You can use: 'pip install rdkit --upgrade'.")
         avg_json_data["MolLogP"] = rdkit.Chem.Descriptors.MolLogP(mol)
 
         # descriptors for the level_ denovo
@@ -433,24 +431,14 @@ def read_gfn1(file,self):
           Returns None if there's an issue with the file.
     """
 
-    # Check if the file has the .gfn1 extension
-    if not file.endswith(".gfn1"):
-        self.args.log.write(f"x  WARNING! {file} is not a valid .gfn1 file.")
-        return None
-
     # Check if the file exists
     if not os.path.exists(file):
         self.args.log.write(f"x  WARNING! The file {file} does not exist.")
         return None
 
-    try:
-        # Open and read the file safely
-        with open(file, "r") as f:
-            data = f.readlines()
-    except IOError as e:
-        # Handle errors related to file reading
-        self.args.log.write(f"x  WARNING! An error occurred while processing {file}: {e}")
-        return None
+    # Open and read the file safely
+    with open(file, "r") as f:
+        data = f.readlines()
 
     # Ensure the file contains data
     if not data:
@@ -522,19 +510,13 @@ def read_wbo(file,self):
     """
     Read wbo output file created from xTB. Return data.
     """
-    if not file.endswith(".wbo"):
-        self.args.log.write(f"x  WARNING! {file} is not a valid .wbo file.")
-        return None
 
     if not os.path.exists(file):
         self.args.log.write(f"x  WARNING! The file {file} does not exist.")
         return None
 
-    try:
-        with open(file, "r") as f:
-            data = f.readlines()
-    except Exception as e:
-        return None
+    with open(file, "r") as f:
+        data = f.readlines()
 
     bonds, wbos = [], []
     for line in data:
@@ -551,22 +533,14 @@ def calculate_global_CDFT_descriptors(file,self):
     """
     Read .gfn1 output file created from xTB and calculate CDFT descriptors with FDA approximations part 1.
     """
-    # Check if the file has the .gfn1 extension
-    if not file.endswith(".gfn1"):
-        self.args.log.write(f"x  WARNING! {file} is not a valid .gfn1 file.")
-        return None
 
     # Check if the file exists
     if not os.path.exists(file):
         self.args.log.write(f"x  WARNING! The file {file} does not exist.")
         return None
 
-    try:
-        with open(file, "r") as f:
-                data = f.readlines()
-    except Exception as e:
-        self.args.log.write(f"x  WARNING! An error occurred while processing {file}: {e}")
-        return None
+    with open(file, "r") as f:
+        data = f.readlines()
         
     # Initialize variables
     delta_SCC_IP, delta_SCC_EA, electrophilicity_index = None, None, None
@@ -750,16 +724,9 @@ def calculate_local_CDFT_descriptors(file_fukui, cdft_descriptors, cdft_descript
     """
     Read fukui output file created from XTB and calculate local CDFT descriptors.
     """
-    if not file_fukui.endswith(".fukui"):
-        self.args.log.write(f"x WARNING! {file_fukui} is not a valid .fukui file.")
-        return None
 
-    try:
-        with open(file_fukui, "r") as f:
-            data = f.readlines()
-    except IOError as e:
-        self.args.log.write(f"x WARNING! Could not open the file {file_fukui}: {e}")
-        return None
+    with open(file_fukui, "r") as f:
+        data = f.readlines()
 
     f_pos, f_negs, f_rads = [], [], []
     start, end = None, None
@@ -848,12 +815,14 @@ def read_xtb(file,self):
     """
     Read xtb.out file and return a dictionary of extracted properties.
     """
-    try:
-        with open(file, "r") as f:
-            data = f.readlines()
-    except IOError:
-        self.args.log.write(f"Error opening or reading the file: {file}")
+
+    # Check if the file exists
+    if not os.path.exists(file):
+        self.args.log.write(f"x  WARNING! The file {file} does not exist.")
         return None
+
+    with open(file, "r") as f:
+        data = f.readlines()
 
     # Initialize variables
     energy, homo_lumo, homo, lumo = np.nan, np.nan, np.nan, np.nan
@@ -972,18 +941,15 @@ def read_fod(file,self):
     Read xtb.fod files. Return FOD-related properties.
     """
 
-    # Try to open the file and read its contents
-    try:
-        with open(file, "r") as f:
-            data = f.readlines()  # Read all lines from the file
-    except FileNotFoundError:
-        # If the file is not found, print a warning and return None
+    # Check if the file exists
+    if not os.path.exists(file):
         self.args.log.write(f"x  WARNING! The file {file} does not exist.")
         return None
-    except Exception as e:
-        # Handle any other file reading errors (permissions, etc.) and return None
-        self.args.log.write(f"x  WARNING! An error occurred while reading the file: {e}")
-        return None
+
+    # Try to open the file and read its contents
+    with open(file, "r") as f:
+        data = f.readlines()  # Read all lines from the file
+
 
     # Initialize variables for storing FOD-related data
     total_fod = None  # Will store the total FOD value
@@ -1245,3 +1211,36 @@ def get_descriptors(level):
         }
     }
     return descriptors.get(level, {})
+
+
+def fix_cols_names(df):
+    '''
+    Set code_name and SMILES using the right format
+    '''
+    
+    for col in df.columns:
+        if col.lower() == 'smiles':
+            df = df.rename(columns={col: 'SMILES'})
+        if col.lower() == 'code_name':
+            df = df.rename(columns={col: 'code_name'})
+    
+    return df
+
+
+def remove_lists(df):
+    '''
+    Remove lists from a dataframe
+    '''
+    
+    for col in df:
+        if col in df:
+            # this for loop is fast, and it's used because sometimes the descriptors
+            # are not generated in all the rows, so the code needs to check all the rows until it finds a list
+            for val in df[col]:
+                if str(val).lower() != 'nan' and isinstance(val,float):
+                    break
+                elif isinstance(val,str):
+                    if val[0] == '[':
+                        df = df.drop([col], axis=1).reset_index(drop=True)
+                        break
+    return df

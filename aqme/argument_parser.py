@@ -34,8 +34,9 @@ var_dict = {
     "heavyonly": True,
     "degree": 120.0,
     "max_torsions": 0,
-    "sample": "auto",
-    "auto_sample": 20,
+    "sample": 25,
+    "auto_sample": True,
+    "auto_cluster": True,
     "ff": "MMFF",
     "seed": 62609,
     "rms_threshold": 0.25,
@@ -113,9 +114,10 @@ var_dict = {
     "dbstep_r": 3.5,
     "robert": True,
     "csv_name": None,
-    "crest_nrun": 1,
+    "crest_runs": 1,
     "crest_nclust": 0.4,
-    "debug": False
+    "debug": False,
+    "pytest_testing": False,
 }
 
 

@@ -1,5 +1,5 @@
 from setuptools import setup, find_packages
-version = "1.6.2"
+version = "1.7.0"
 setup(
     name="aqme",
     packages=find_packages(exclude=["tests"]),
@@ -9,8 +9,8 @@ setup(
     description="Automated Quantum Mechanical Environments",
     long_description="Documentation in Read The Docs: https://aqme.readthedocs.io",
     long_description_content_type="text/markdown",
-    author="Shree Sowndarya S. V., Juan V. Alegre Requena",
-    author_email="svss@colostate.edu, jvalegre@unizar.es",
+    author="Juan V. Alegre Requena",
+    author_email="jv.alegre@csic.es",
     keywords=[
         "workflows",
         "computational chemistry",
@@ -27,10 +27,13 @@ setup(
         "Intended Audience :: Developers",  # Define that your audience are developers
         "Topic :: Software Development :: Build Tools",
         "License :: OSI Approved :: MIT License",
-        "Programming Language :: Python :: 3.7",  # Specify which python versions you want to support
+        "Programming Language :: Python :: 3.6",  # Specify which python versions you want to support
+        "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
+        "Programming Language :: Python :: 3.12",
     ],
     install_requires=[
         "PyYAML",
@@ -42,6 +45,6 @@ setup(
         "cffi",
         "morfeus-ml==0.7.2"
     ],
-    python_requires=">=3.0",
+    python_requires=">=3.10",
     include_package_data=True,
 )

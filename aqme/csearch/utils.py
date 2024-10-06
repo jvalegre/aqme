@@ -10,77 +10,13 @@ import pandas as pd
 import ast
 from pathlib import Path
 from rdkit.Chem import AllChem as Chem
-from rdkit.ML.Cluster import Butina
 from aqme.utils import (
     get_info_input,
     mol_from_sdf_or_mol_or_mol2,
     read_xyz_charge_mult,
-    add_prefix_suffix,
-    get_conf_RMS
+    add_prefix_suffix
 )
 from aqme.csearch.crest import nci_ts_mol
-
-
-def creation_of_dup_csv_csearch(program):
-    """
-    Generates a pandas.DataFrame object with the appropiate columns for the
-    conformational search and the minimization.
-
-    Parameters
-    ----------
-    csearch : str
-        Conformational search method. Current valid methods are: ['rdkit','fullmonte','summ']
-
-    Returns
-    -------
-    pandas.DataFrame
-    """
-
-    # Boolean aliases from args
-    is_rdkit = program == "rdkit"
-    is_fullmonte = program == "fullmonte"
-    is_crest = program == "crest"
-    is_summ = program == "summ"
-
-    # column blocks definitions
-    base_columns = [
-        "Molecule",
-        "RDKit-Initial-samples",
-        "RDKit-energy-window",
-        "RDKit-initial_energy_threshold",
-        "RDKit-RMSD-and-energy-duplicates",
-        "RDKit-Unique-conformers",
-    ]
-    end_columns_no_min = ["CSEARCH time (seconds)"]
-    fullmonte_columns = [
-        "FullMonte-Unique-conformers",
-    ]
-    #'FullMonte-conformers',
-    #'FullMonte-energy-window',
-    #'FullMonte-initial_energy_threshold',
-    #'FullMonte-RMSD-and-energy-duplicates']
-    summ_columns = [
-        "summ-conformers",
-        "summ-energy-window",
-        "summ-initial_energy_threshold",
-        "summ-RMSD-and-energy-duplicates",
-        "summ-Unique-conformers",
-    ]
-    crest_columns = ["Molecule", "crest-conformers"]
-
-    # Check Conformer Search method
-    if is_rdkit:
-        columns = base_columns
-    elif is_fullmonte:
-        columns = base_columns + fullmonte_columns
-    elif is_summ:
-        columns = base_columns + summ_columns
-    elif is_crest:
-        columns = crest_columns
-    else:
-        return None
-    columns += end_columns_no_min
-    return pd.DataFrame(columns=columns)
 
 
 def csv_2_list(contraints):
@@ -170,113 +106,121 @@ def prepare_csv_files(args, csearch_file):
     job_inputs = []
     # run conformer searches only for unique SMILES
     unique_smiles = set()
+    smi_col = False
     for column_index, column in enumerate(csv_smiles.columns):
         if "SMILES" == column.upper() or "SMILES_" in column.upper():
+            smi_col = True
             for i in range(len(csv_smiles)):
                 obj = generate_mol_from_csv(args, csv_smiles, i, column_index)
-                if obj[0] not in unique_smiles:
-                    job_inputs.append(obj)
-                    unique_smiles.add(obj[0])
+                if obj is not None:
+                    if obj[0] not in unique_smiles:
+                        job_inputs.append(obj)
+                        unique_smiles.add(obj[0])
+                    else:
+                        args.log.write(f'\nx  SMILES "{obj[0]}" used in {obj[1]} was already used with a different code_name!')
+                       
+    if not smi_col:
+        args.log.write("\nx  Make sure the CSV file contains a column called 'SMILES', 'smiles' or 'SMILES_' with the SMILES of the molecules!")
+        args.log.finalize()
+        sys.exit()
     return job_inputs
 
 
 def generate_mol_from_csv(args, csv_smiles, index, column_index):
     # assigning names and smi in each loop
-    try:
-        smiles = None
-        for column in csv_smiles.columns:
-            if column.upper() == "SMILES" or column.upper().startswith("SMILES_"):
-                column_name = csv_smiles.columns[column_index]
-                smiles = csv_smiles.loc[index, column_name]
-                break
-        if smiles is None:
-            args.log.write("\nx  Make sure the CSV file contains a column called 'SMILES' or 'smiles' or 'SMILES_' with the SMILES of the molecules!")
-            args.log.finalize()
-            sys.exit()
-        
+
+    smi_valid = False
+    for column in csv_smiles.columns:
+        if column.upper() == "SMILES" or column.upper().startswith("SMILES_"):
+            column_name = csv_smiles.columns[column_index]
+            smiles = csv_smiles.loc[index, column_name]
+            # this part avoids empty cells at the end of CSV files
+            if str(smiles).lower() != 'nan':
+                smi_valid = True
+            break
+
+    if smi_valid:
         # Check for N@@ or N@ in SMILES
         if "N@@" in smiles or "N@" in smiles:
             args.log.write(f"\nx  WARNING! AQME does not support quiral N atoms in SMILES strings (N@@ or N@). These atoms were replaced by N in the SMILES: {smiles}.")
             smiles = smiles.replace("N@@", "N").replace("N@", "N")
-        
-    except KeyError:
-        args.log.write("\nx  Make sure the CSV file contains a column called 'SMILES' or 'smiles' or 'SMILES_' with the SMILES of the molecules!")
-        args.log.finalize()
-        sys.exit()
 
-    try:
-        name = str(csv_smiles.loc[index, "code_name"])
-        column_name = csv_smiles.columns[column_index]
-        if column_name.upper() == "SMILES" or not "_" in column_name:
-            name += ""
-        else:
-            suffix = column_name.split("_")[-1]
-            name += "_" + suffix
-    except KeyError:
-        args.log.write("\nx  Make sure the CSV file contains a column called 'code_name' with the names of the molecules!")
-        args.log.finalize()
-        sys.exit()
+        try:
+            name = str(csv_smiles.loc[index, "code_name"])
+            column_name = csv_smiles.columns[column_index]
+            if column_name.upper() == "SMILES" or not "_" in column_name:
+                name += ""
+            else:
+                suffix = column_name.split("_")[-1]
+                name += "_" + suffix
+        except KeyError:
+            args.log.write("\nx  Make sure the CSV file contains a column called 'code_name' with the names of the molecules!")
+            args.log.finalize()
+            sys.exit()
 
-    constraints_atoms = args.constraints_atoms
-    constraints_dist = args.constraints_dist
-    constraints_angle = args.constraints_angle
-    constraints_dihedral = args.constraints_dihedral
+        constraints_atoms = args.constraints_atoms
+        constraints_dist = args.constraints_dist
+        constraints_angle = args.constraints_angle
+        constraints_dihedral = args.constraints_dihedral
 
-    if "constraints_atoms" in csv_smiles.columns:
-        if str(csv_smiles.loc[index, 'constraints_atoms']).lower() != 'nan':
-            constraints_atoms = csv_smiles.loc[index, "constraints_atoms"]
+        if "constraints_atoms" in csv_smiles.columns:
+            if str(csv_smiles.loc[index, 'constraints_atoms']).lower() != 'nan':
+                constraints_atoms = csv_smiles.loc[index, "constraints_atoms"]
 
-    if "constraints_dist" in csv_smiles.columns:
-        if str(csv_smiles.loc[index, 'constraints_dist']).lower() != 'nan':
-            constraints_dist = csv_smiles.loc[index, "constraints_dist"]
+        if "constraints_dist" in csv_smiles.columns:
+            if str(csv_smiles.loc[index, 'constraints_dist']).lower() != 'nan':
+                constraints_dist = csv_smiles.loc[index, "constraints_dist"]
 
-    if "constraints_angle" in csv_smiles.columns:
-        if str(csv_smiles.loc[index, 'constraints_angle']).lower() != 'nan':
-            constraints_angle = csv_smiles.loc[index, "constraints_angle"]
+        if "constraints_angle" in csv_smiles.columns:
+            if str(csv_smiles.loc[index, 'constraints_angle']).lower() != 'nan':
+                constraints_angle = csv_smiles.loc[index, "constraints_angle"]
 
-    if "constraints_dihedral" in csv_smiles.columns:
-        if str(csv_smiles.loc[index, 'constraints_dihedral']).lower() != 'nan':
-            constraints_dihedral = csv_smiles.loc[index, "constraints_dihedral"]
+        if "constraints_dihedral" in csv_smiles.columns:
+            if str(csv_smiles.loc[index, 'constraints_dihedral']).lower() != 'nan':
+                constraints_dihedral = csv_smiles.loc[index, "constraints_dihedral"]
 
-    constraints_atoms = csv_2_list(constraints_atoms)
-    constraints_dist = csv_2_list(constraints_dist)
-    constraints_angle = csv_2_list(constraints_angle)
-    constraints_dihedral = csv_2_list(constraints_dihedral)
+        constraints_atoms = csv_2_list(constraints_atoms)
+        constraints_dist = csv_2_list(constraints_dist)
+        constraints_angle = csv_2_list(constraints_angle)
+        constraints_dihedral = csv_2_list(constraints_dihedral)
 
-    charge = args.charge
-    mult = args.mult
-    if "charge" in csv_smiles.columns:
-        if str(csv_smiles.loc[index, 'charge']).lower() != 'nan':
-            charge = csv_smiles.loc[index, "charge"]
-    if "mult" in csv_smiles.columns:
-        if str(csv_smiles.loc[index, 'mult']).lower() != 'nan':
-            mult = csv_smiles.loc[index, "mult"]
+        charge = args.charge
+        mult = args.mult
+        if "charge" in csv_smiles.columns:
+            if str(csv_smiles.loc[index, 'charge']).lower() != 'nan':
+                charge = csv_smiles.loc[index, "charge"]
+        if "mult" in csv_smiles.columns:
+            if str(csv_smiles.loc[index, 'mult']).lower() != 'nan':
+                mult = csv_smiles.loc[index, "mult"]
 
-    complex_type = args.complex_type
-    if "complex_type" in csv_smiles.columns:
-        if str(csv_smiles.loc[index, 'complex_type']).lower() != 'nan':
-            complex_type = csv_smiles.loc[index, "complex_type"]
+        complex_type = args.complex_type
+        if "complex_type" in csv_smiles.columns:
+            if str(csv_smiles.loc[index, 'complex_type']).lower() != 'nan':
+                complex_type = csv_smiles.loc[index, "complex_type"]
 
-    geom = args.geom
-    if "geom" in csv_smiles.columns:
-        if str(csv_smiles.loc[index, 'geom']).lower() != 'nan':
-            geom = csv_smiles.loc[index, "geom"]
-    geom = csv_2_list(geom)
+        geom = args.geom
+        if "geom" in csv_smiles.columns:
+            if str(csv_smiles.loc[index, 'geom']).lower() != 'nan':
+                geom = csv_smiles.loc[index, "geom"]
+        geom = csv_2_list(geom)
 
-    obj = (
-        smiles,
-        name,
-        charge,
-        mult,
-        constraints_atoms,
-        constraints_dist,
-        constraints_angle,
-        constraints_dihedral,
-        complex_type,
-        geom
-    )
+        obj = (
+            smiles,
+            name,
+            charge,
+            mult,
+            constraints_atoms,
+            constraints_dist,
+            constraints_angle,
+            constraints_dihedral,
+            complex_type,
+            geom
+        )
 
-    return obj
+        return obj
+    
+    else:
+        return None
 
 
 def prepare_cdx_files(args, csearch_file):
@@ -603,20 +547,6 @@ def smi_to_mol(
 #         smi = smi.replace(map_atom,new_atom)
     
 #     return smi
-
-
-def cluster_conformers(mols, heavy_only, max_matches_rmsd, cluster_thr):
-    dists = []
-    for i in range(len(mols)):
-        for j in range(i):
-            dists.append(get_conf_RMS(mols[i],mols[j], i, j, heavy_only, max_matches_rmsd))
-
-    clusts = Butina.ClusterData(dists, len(mols), cluster_thr, isDistData=True, reordering=True)
-    centroids = [x[0] for x in clusts]
-    cluster_mols = [mols[x] for x in centroids]
-
-    return cluster_mols, centroids
-
 
 def substituted_mol(mol, checkI, metal_atoms):
     """
