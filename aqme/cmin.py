@@ -105,7 +105,7 @@ from aqme.utils import (
     check_xtb,
     check_dependencies
 )
-from aqme.filter import ewin_filter, pre_E_filter, RMSD_and_E_filter
+from aqme.filter import conformer_filters
 from aqme.csearch.crest import xtb_opt_main
 from aqme.csearch.utils import prepare_com_files
 
@@ -214,6 +214,9 @@ class cmin:
                 self.name + "_" + self.args.program.lower() + self.args.output
             )
             self.sdwriter = Chem.SDWriter(str(self.cmin_file))
+
+            # run the optimizations
+            _ = self.compute_cmin(file)
 
             bar.next()
         bar.finish()
@@ -352,34 +355,12 @@ class cmin:
                     outmols[cid].SetProp("Real charge", str(charge))
                     outmols[cid].SetProp("Mult", str(mult))
 
-            write_all_confs = 0
             for cid in sorted_all_cids:
                 self.sdwriterall.write(outmols[cid])
-                write_all_confs += 1
             self.sdwriterall.close()
 
-            self.args.log.write(f"\no  Applying filters to intial conformers after {self.args.program.lower()} minimization")
-
-            # filter based on energy window ewin_cmin
-            sortedcids = ewin_filter(
-                sorted_all_cids,
-                cenergy,
-                self.args.ewin_cmin,
-            )
-            # pre-filter based on energy only
-            selectedcids_initial = pre_E_filter(
-                sortedcids,
-                cenergy,
-                self.args.initial_energy_threshold,
-            )
-            # filter based on energy and RMSD
-            selectedcids = RMSD_and_E_filter(
-                outmols,
-                selectedcids_initial,
-                cenergy,
-                self.args,
-                self.args.program.lower(),
-            )
+            self.args.log.write(f"\no  Applying filters to initial conformers after {self.args.program.lower()} minimization")
+            selectedcids = conformer_filters(self,sorted_all_cids,cenergy,outmols)
 
             # write the filtered, ordered conformers to external file
             self.write_confs(
@@ -480,11 +461,8 @@ class cmin:
     # write SDF files for xTB and ANI
     def write_confs(self, conformers, selectedcids, log):
         if len(conformers) > 0:
-            write_confs = 0
             for cid in selectedcids:
                 self.sdwriter.write(conformers[cid])
-                write_confs += 1
-
             self.sdwriter.close()
         else:
             log.write("x  No conformers found!")

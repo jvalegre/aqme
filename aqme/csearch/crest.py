@@ -16,7 +16,7 @@ import rdkit
 from pathlib import Path
 import shutil
 from aqme.utils import read_file, run_command, mol_from_sdf_or_mol_or_mol2
-from aqme.filter import geom_filter
+from aqme.filter import geom_filter,cluster_conformers
 from rdkit.Chem import rdMolTransforms
 
 
@@ -406,7 +406,10 @@ def xtb_opt_main(
                 os.remove(file)
             elif self.args.program.lower() == "crest":
                 # convert from hartree (default in xtb) to kcal
-                energy_Eh = float(open(file, "r").readlines()[0])
+                try:
+                    energy_Eh = float(open(file, "r").readlines()[0])
+                except ValueError: # for calcs with a single atom
+                    energy_Eh = float(open(f'{file}', "r").readlines()[0].split()[1])
                 energy_kcal = str(energy_Eh*627.5)
                 mol_rd.SetProp("_Name", file.split('.')[0])
                 mol_rd.SetProp("Energy", energy_kcal)
@@ -420,11 +423,13 @@ def xtb_opt_main(
                     sdwriter.write(mol_rd)
                 os.remove(file)
                 os.remove(f'{file_nopath}.xyz')
+
+        # sorting and clusterization
         if self.args.program.lower() == "crest":
             sdwriter.close()
             suppl, _, _, _ = mol_from_sdf_or_mol_or_mol2(f'{csearch_file}', "csearch", self.args)
             if len(suppl) > self.args.sample and self.args.auto_cluster:
-                _ = self.cluster_conformers(suppl,"rdkit",csearch_file)
+                _ = cluster_conformers(self,suppl,"rdkit",csearch_file)
             else:
                 os.remove(f'{csearch_file}')
                 # sort by energy (even though CREGEN should do that automatically, it fails to do so sometimes)
@@ -615,19 +620,19 @@ def nci_ts_mol(
     constraints_dihedral,
 ):
     using_const = None
-    if constraints_atoms is not None:
+    if constraints_atoms is not None and constraints_atoms != []:
         using_const = constraints_atoms
         constraints_atoms = [[float(y) for y in x] for x in constraints_atoms]
         constraints_atoms = np.array(constraints_atoms)
-    if constraints_dist is not None:
+    if constraints_dist is not None and constraints_dist != []:
         using_const = constraints_dist
         constraints_dist = [[float(y) for y in x] for x in constraints_dist]
         constraints_dist = np.array(constraints_dist)
-    if constraints_angle is not None:
+    if constraints_angle is not None and constraints_angle != []:
         using_const = constraints_angle
         constraints_angle = [[float(y) for y in x] for x in constraints_angle]
         constraints_angle = np.array(constraints_angle)
-    if constraints_dihedral is not None:
+    if constraints_dihedral is not None and constraints_dihedral != []:
         using_const = constraints_dihedral
         constraints_dihedral = [[float(y) for y in x] for x in constraints_dihedral]
         constraints_dihedral = np.array(constraints_dihedral)

@@ -3,8 +3,13 @@
 #             used for filtering                    #
 #####################################################.
 
+import os
+import shutil
+from pathlib import Path
 from rdkit import Chem
 from rdkit.Chem import rdMolTransforms, Descriptors
+from rdkit.ML.Cluster import Butina
+
 from aqme.utils import periodic_table, get_conf_RMS
 
 
@@ -173,6 +178,35 @@ def filters(mol, log, molwt_cutoff):
     return True
 
 
+def conformer_filters(self,sorted_all_cids,cenergy,outmols):
+    '''
+    Sequence of three filters based on energy and RMSD
+    '''
+    
+    # filter based on energy window ewin_cmin
+    sortedcids = ewin_filter(
+        sorted_all_cids,
+        cenergy,
+        self.args.ewin_cmin,
+    )
+    # pre-filter based on energy only
+    selectedcids_initial = pre_E_filter(
+        sortedcids,
+        cenergy,
+        self.args.initial_energy_threshold,
+    )
+    # filter based on energy and RMSD
+    selectedcids = RMSD_and_E_filter(
+        outmols,
+        selectedcids_initial,
+        cenergy,
+        self.args,
+        self.args.program.lower(),
+    )
+
+    return selectedcids
+
+
 def ewin_filter(
     sorted_all_cids,
     cenergy,
@@ -200,7 +234,6 @@ def ewin_filter(
     """
 
     sortedcids = []
-    count = 0
     energy_window = float(energy_window)
 
     cenergy_min = cenergy[sorted_all_cids[0]]
@@ -208,8 +241,6 @@ def ewin_filter(
     for cid in sorted_all_cids:
         if abs(cenergy[cid] - cenergy_min) < energy_window:
             sortedcids.append(cid)
-        else:
-            count += 1
 
     return sortedcids
 
@@ -311,6 +342,85 @@ def RMSD_and_E_filter(
                 selectedcids.append(conf)
 
     return selectedcids
+
+
+
+def cluster_conformers(self, mols, program, csearch_file):
+    '''
+    Performs a Butina clustering based on the RMS differences of the conformers
+    '''
+
+    dists = []
+    for i in range(len(mols)):
+        for j in range(i):
+            # using 100 matches only since the molecules are aligned and share the same atom numbering
+            dists.append(get_conf_RMS(mols[i], mols[j], -1, -1, self.args.heavyonly, 100))
+
+    if program.lower() == 'rdkit' or self.args.crest_runs == 1:
+        # Step 1. Automatically adjust the RMS threshold to meet self.args.sample - 20% of points 
+        # that will be added later with the most stable confs from RDKit
+        stable_points = int(round(self.args.sample*0.2))
+        cluster_points = self.args.sample - stable_points
+        if program.lower() == 'rdkit':
+            self.args.log.write(f'\no  Selecting {self.args.sample} conformers using a combination of energies and Butina RMS-based clustering. Users might disable this option with --auto_cluster False.')
+        else:
+            self.args.log.write(f'\no  Selecting the most stable RDKit conformer to start a CREST search')
+
+    if program.lower() == 'crest':
+        # Step 1. Automatically adjust the RMS threshold to meet self.args.crest_runs
+        cluster_points = self.args.crest_runs
+        self.args.log.write(f'\no  Selecting {self.args.crest_runs} RDKit conformers using Butina RMS-based clustering to start {self.args.crest_runs} different CREST searches')
+
+    # Threshold instructions: elements within this range of each other are considered to be neighbors
+    # and, therefore, the higher the threshold the fewer number of clusters will be generated
+    cluster_thr = 1.5
+
+    clusts = Butina.ClusterData(dists, len(mols), cluster_thr, isDistData=True, reordering=True)
+
+    if len(clusts) > cluster_points:
+        while len(clusts) > cluster_points:
+            cluster_thr = cluster_thr * 1.02 # each iteration the threshold is increased by 2%
+            clusts = Butina.ClusterData(dists, len(mols), cluster_thr, isDistData=True, reordering=True)
+    elif len(clusts) < cluster_points:
+        while len(clusts) < cluster_points:
+            cluster_thr = cluster_thr * 0.98 # each iteration the threshold is reduced by 2%
+            clusts = Butina.ClusterData(dists, len(mols), cluster_thr, isDistData=True, reordering=True)
+
+    # get centroids (first element of each cluster) and their corresponding mols
+    centroids = [x[0] for x in clusts]
+    cluster_mols = [mols[x] for x in centroids]
+
+    # adjust to the exact number of clusters to match self.args.sample at the end
+    cluster_mols = cluster_mols[:cluster_points]
+    allenergy = []
+    for mol in cluster_mols:
+        allenergy.append(float(mol.GetProp('Energy')))
+
+    if program.lower() == 'rdkit':
+        # Step 2. Fill the other positions with add the most stable conformers found initially
+        for mol in mols: # already sorted by energy
+            if float(mol.GetProp('Energy')) not in allenergy:
+                if len(cluster_mols) < self.args.sample:
+                    cluster_mols.append(mol)
+                    allenergy.append(float(mol.GetProp('Energy')))
+                else:
+                    break
+
+    # sort mols by energy
+    cluster_mols_sorted = [mol for _, mol in sorted(zip(allenergy, cluster_mols), key=lambda pair: pair[0])]
+
+    if program.lower() == 'rdkit':
+        # Step 3. Replace the original SDF with the updated SDF
+        if not self.args.pytest_testing:
+            os.remove(f'{csearch_file}')
+        else:
+            shutil.move(f'{csearch_file}',f'{Path(str(csearch_file).replace(".sdf","_all_confs.sdf"))}')
+        sdwriter = Chem.SDWriter(f'{csearch_file}')
+        for mol in cluster_mols_sorted:
+            sdwriter.write(mol)
+        sdwriter.close()
+
+    return cluster_mols_sorted
 
 
 # Aux functions of the geometry filter

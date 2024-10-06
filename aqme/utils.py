@@ -886,44 +886,45 @@ def check_dependencies(self):
         sys.exit()
 
     # this is a dummy command just to warn the user if xTB or CREST are not installed
-    if self.args.program.lower() in ['xtb','crest']:
-        try:
-            command_run_1 = ["xtb", "-h"]
-            subprocess.run(command_run_1, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        except FileNotFoundError:
-            self.args.log.write("x  xTB is not installed! You can install the program with 'conda install -c conda-forge xtb'")
-            self.args.log.finalize()
-            sys.exit()
-        if self.args.program.lower() == 'crest':
+    if self.args.program is not None:
+        if self.args.program.lower() in ['xtb','crest']:
             try:
-                command_run_1 = ["crest", "-h"]
+                command_run_1 = ["xtb", "-h"]
                 subprocess.run(command_run_1, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             except FileNotFoundError:
-                self.args.log.write("x  CREST is not installed! You can install the program with 'conda install -c conda-forge crest'")
+                self.args.log.write("x  xTB is not installed! You can install the program with 'conda install -c conda-forge xtb'")
                 self.args.log.finalize()
                 sys.exit()
+            if self.args.program.lower() == 'crest':
+                try:
+                    command_run_1 = ["crest", "-h"]
+                    subprocess.run(command_run_1, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                except FileNotFoundError:
+                    self.args.log.write("x  CREST is not installed! You can install the program with 'conda install -c conda-forge crest'")
+                    self.args.log.finalize()
+                    sys.exit()
 
-    # this is a dummy command just to warn the user if torch or ASE are not installed
-    if self.args.program.lower() == 'ani':
-        try:
-            import torch
-            import warnings
-            warnings.filterwarnings('ignore')
+        # this is a dummy command just to warn the user if torch or ASE are not installed
+        if self.args.program.lower() == 'ani':
+            try:
+                import torch
+                import warnings
+                warnings.filterwarnings('ignore')
 
-        except ModuleNotFoundError:
-            self.args.log.write("x  Torch-related modules are not installed! You can install these modules with 'pip install torch torchvision torchani'")
-            self.args.log.finalize()
-            sys.exit()
-        try:
-            import ase
-            import ase.optimize
-        except ModuleNotFoundError:
-            self.args.log.write("x  ASE is not installed! You can install the program with 'pip install ase' or 'conda install -c conda-forge ase'")
-            self.args.log.finalize()
-            sys.exit()
-        try:
-            import torchani
-        except (ImportError,ModuleNotFoundError):
-            self.args.log.write("x  Torchani is not installed! You can install the program with 'pip install torchani'")
-            self.args.log.finalize()
-            sys.exit()
+            except ModuleNotFoundError:
+                self.args.log.write("x  Torch-related modules are not installed! You can install these modules with 'pip install torch torchvision torchani'")
+                self.args.log.finalize()
+                sys.exit()
+            try:
+                import ase
+                import ase.optimize
+            except ModuleNotFoundError:
+                self.args.log.write("x  ASE is not installed! You can install the program with 'pip install ase' or 'conda install -c conda-forge ase'")
+                self.args.log.finalize()
+                sys.exit()
+            try:
+                import torchani
+            except (ImportError,ModuleNotFoundError):
+                self.args.log.write("x  Torchani is not installed! You can install the program with 'pip install torchani'")
+                self.args.log.finalize()
+                sys.exit()

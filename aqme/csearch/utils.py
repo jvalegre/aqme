@@ -10,11 +10,12 @@ import pandas as pd
 import ast
 from pathlib import Path
 from rdkit.Chem import AllChem as Chem
+
 from aqme.utils import (
     get_info_input,
     mol_from_sdf_or_mol_or_mol2,
     read_xyz_charge_mult,
-    add_prefix_suffix
+    add_prefix_suffix,
 )
 from aqme.csearch.crest import nci_ts_mol
 

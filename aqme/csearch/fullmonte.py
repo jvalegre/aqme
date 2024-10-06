@@ -60,6 +60,7 @@ def realign_mol(
         maxIters=100,
     )
     energy = float(forcefield.CalcEnergy())
+
     return mol, energy
 
 

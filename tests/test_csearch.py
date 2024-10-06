@@ -667,7 +667,7 @@ def test_csearch_rdkit_parameters(
         # metal atoms
         (
             "rdkit",
-            "I[Pd]([PH3+])(F)Cl",
+            "I[Pd]([PH3])(F)Cl",
             "Pd_metal_only",
             False,
             True,
@@ -684,7 +684,7 @@ def test_csearch_rdkit_parameters(
         # multiple templates
         (
             "rdkit",
-            "I[Pd]([PH3+])(F)Cl",
+            "I[Pd]([PH3])(F)Cl",
             "Pd_complex",
             False,
             True,
@@ -712,7 +712,7 @@ def test_csearch_rdkit_parameters(
             1,
             None,
             False,
-            1
+            2
         ),
         (
             "rdkit",
@@ -750,7 +750,7 @@ def test_csearch_rdkit_parameters(
         # compatibility of CREST with metal complexes and templates
         (
             "crest",
-            "[NH3+][Ag][NH3+]",
+            "[NH3][Ag][NH3]",
             "Ag_complex_crest",
             False,
             True,
@@ -766,7 +766,7 @@ def test_csearch_rdkit_parameters(
         ),
         (
             "crest",
-            "[NH3+][Ag][NH3+]",
+            "[NH3][Ag][NH3]",
             "Ag_metal_crest",
             False,
             True,
@@ -1013,14 +1013,15 @@ def test_csearch_methods(
     assert mult == int(mols[-1].GetProp("Mult"))
 
     # check that the metal is added back to the RDKit mol objects
-    metal_found = False
+    metal_found,iodine_found = False,False
     if name in ['Pd_complex','Pd_metal_only']:
         outfile = open(file, "r")
         outlines_sdf = outfile.readlines()
         outfile.close()
         for line in outlines_sdf:
-            if 'Pd  0' in line:
+            if ' Pd ' in line:
                 metal_found = True
+                break
         assert metal_found
 
     if name in ['Ag_complex_crest','Ag_metal_crest']:
@@ -1028,20 +1029,28 @@ def test_csearch_methods(
         outlines_sdf = outfile.readlines()
         outfile.close()
         for line in outlines_sdf:
-            if 'Ag  0' in line:
+            if ' Ag ' in line:
                 metal_found = True
+            if ' I ' in line:
+                iodine_found = True
+
         assert metal_found
+        assert not iodine_found
 
         # check that the metal atom is already added during the CREST calculation
         xyz_crest = str(csearch_methods_dir+f"/CSEARCH/crest_xyz/{name}_crest_xtb1.xyz")
         xyzfile = open(xyz_crest, "r")
         xyzlines_crest = xyzfile.readlines()
         xyzfile.close()
-        xyz_metal = False
+        xyz_metal,xyz_iodine = False,False
         for line in xyzlines_crest:
-            if 'Ag    ' in line:
+            if 'Ag  ' in line:
                 xyz_metal = True
+            if 'I  ' in line:
+                xyz_iodine = True
+
         assert xyz_metal
+        assert not xyz_iodine
     # if name == 'nci':
     #     assert len(mols) > 350
     #     # check that the conformers are sorted by their energy

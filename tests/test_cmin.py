@@ -78,7 +78,7 @@ def test_cmin_methods(
         ("empty_values"),
     ],
 )
-def test_cmin_methods(
+def test_empty_values(
     test
 ):
 
