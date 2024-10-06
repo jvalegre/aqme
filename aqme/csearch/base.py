@@ -498,7 +498,7 @@ class csearch:
             elif os.path.basename(Path(self.args.input)).split(".")[1] == "xyz":
                 shutil.copy(f"{name}.xyz", f"{name}_{self.args.program.lower()}.xyz")
 
-        template_opt = False
+        template_opt,valid_template_embed = False,True
 
         # detects metal atoms
         metal_atoms,metal_idx,complex_coord,metal_sym = [],[],[],[]
@@ -549,34 +549,39 @@ class csearch:
                     template_kwargs["mol"] = mol
                     template_kwargs["name"] = name
                     template_kwargs["geom"] = geom
-                    items = template_embed(self, **template_kwargs)
+                    try:
+                        items = template_embed(self, **template_kwargs)
+                    except RuntimeError:
+                        valid_template_embed = False
+                        self.args.log.write(f"\nx  Molecule {name} was not optimized in the specified template ({complex_type}). Try to use charges to make it easier for MM protocols (i.e. using [NH3+][Ag][NH3+] instead of [NH3][Ag][NH3], since N+ typically has 4 bonds).")
 
-                    for mol_obj, name_in, coord_map, alg_map, template, original_atn in zip(*items):
-                        _ = self.conformer_generation(
-                            mol_obj,
-                            name_in,
-                            constraints_atoms,
-                            constraints_dist,
-                            constraints_angle,
-                            constraints_dihedral,
-                            complex_ts,
-                            charge,
-                            mult,
-                            smi,
-                            geom,
-                            metal_atoms,
-                            metal_idx,
-                            metal_sym,
-                            coord_map,
-                            alg_map,
-                            template,
-                            original_atn
-                        )
+                    if valid_template_embed:
+                        for mol_obj, name_in, coord_map, alg_map, template, original_atn in zip(*items):
+                            _ = self.conformer_generation(
+                                mol_obj,
+                                name_in,
+                                constraints_atoms,
+                                constraints_dist,
+                                constraints_angle,
+                                constraints_dihedral,
+                                complex_ts,
+                                charge,
+                                mult,
+                                smi,
+                                geom,
+                                metal_atoms,
+                                metal_idx,
+                                metal_sym,
+                                coord_map,
+                                alg_map,
+                                template,
+                                original_atn
+                            )
 
                 elif count_metals > 1 or count_metals == 0:
-                    self.args.log.write(f"\nx  The template specified {complex_type} is not used for systems with more than 1 metal or for organic molecueles.")
+                    self.args.log.write(f"\nx  The template specified {complex_type} is not used for systems with more than 1 metal or for organic molecules.")
 
-        if not template_opt:
+        if not template_opt and valid_template_embed:
             _ = self.conformer_generation(
                 mol,
                 name,

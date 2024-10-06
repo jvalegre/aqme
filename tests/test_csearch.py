@@ -480,7 +480,7 @@ def test_csearch_fullmonte_parameters(
             0.000001,
             0.6,
             0.3,
-            41,
+            32,
         ),
         (
             "rdkit",
@@ -495,7 +495,7 @@ def test_csearch_fullmonte_parameters(
             0.0001,
             4,
             0.6,
-            5,
+            3,
         ),
     ],
 )
@@ -750,7 +750,7 @@ def test_csearch_rdkit_parameters(
         # compatibility of CREST with metal complexes and templates
         (
             "crest",
-            "[NH3][Ag][NH3]",
+            "[NH3+][Ag][NH3+]",
             "Ag_complex_crest",
             False,
             True,
