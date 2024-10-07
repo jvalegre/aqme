@@ -88,7 +88,8 @@ from aqme.utils import (
     load_variables,
     read_file,
     cclib_atoms_coords,
-    check_files
+    check_files,
+    check_dependencies
 )
 from aqme.qcorr_utils import (
     detect_linear,
@@ -114,6 +115,9 @@ class qcorr:
 
         # load default and user-specified variables
         self.args = load_variables(kwargs, "qcorr")
+
+        # check whether dependencies are installed
+        _ = check_dependencies(self)
 
         # retrieves the different files to run in QCORR
         _ = check_files(self,'qcorr')

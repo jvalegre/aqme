@@ -16,16 +16,13 @@
 ###                                                                                     ###
 ###########################################################################################
 ###                                                                                     ###
-###  Authors: Shree Sowndarya S. V., Juan V. Alegre Requena                             ###
+###  Authors: Juan V. Alegre Requena, Shree Sowndarya S. V., Brenda Manzanilla          ###
 ###                                                                                     ###
 ###  Please, report any bugs or suggestions to:                                         ###
-###  svss@colostate.edu or jvalegre@unizar.es                                           ###
+###  jv.alegre@csic.es                                                                  ###
 ###                                                                                     ###
 ###########################################################################################
 ###########################################################################################.
-
-import sys
-import subprocess
 
 from aqme.csearch import csearch
 from aqme.cmin import cmin
@@ -47,20 +44,7 @@ def main():
     if not args.csearch and not args.cmin and not args.qprep and not args.qcorr and not args.qdescp:
         print('x  No module was specified in the command line! (i.e. --csearch for conformer generation). If you did specify a module, check that you are using quotation marks when using options (i.e. --files "*.sdf").\n')
 
-    # this is a dummy import just to warn the user if Open babel is not installed
-    try:
-        command_run_1 = ["obabel", "-H"]
-        subprocess.run(command_run_1, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    except FileNotFoundError:
-        print("x  Open Babel is not installed! You can install the program with 'conda install -c conda-forge openbabel'")
-        sys.exit()
-    try: 
-        from rdkit.Chem import AllChem as Chem
-    except ModuleNotFoundError:
-        print("x  RDKit is not installed! You can install the program with 'conda install -c conda-forge rdkit'")
-        sys.exit()
-
-       # CSEARCH
+    # CSEARCH
     if args.csearch:
         csearch(**vars(args))
 

@@ -97,16 +97,15 @@ from rdkit.Chem import Descriptors as Descriptors
 from rdkit.Chem.PropertyMol import PropertyMol
 from progress.bar import IncrementalBar
 from rdkit.Geometry import Point3D
-import pandas as pd
 import time
 from aqme.utils import (
     load_variables,
     mol_from_sdf_or_mol_or_mol2,
     add_prefix_suffix,
-    check_xtb
+    check_xtb,
+    check_dependencies
 )
-from aqme.filter import ewin_filter, pre_E_filter, RMSD_and_E_filter
-from aqme.cmin_utils import creation_of_dup_csv_cmin
+from aqme.filter import conformer_filters
 from aqme.csearch.crest import xtb_opt_main
 from aqme.csearch.utils import prepare_com_files
 
@@ -129,6 +128,9 @@ class cmin:
         # load default and user-specified variables
         self.args = load_variables(kwargs, "cmin")
 
+        # check whether dependencies are installed
+        _ = check_dependencies(self)
+
         cmin_program = True
         if self.args.program is None:
             cmin_program = False
@@ -149,9 +151,6 @@ class cmin:
             self.args.log.write('\nx  No files were found! Make sure you use quotation marks if you are using * (i.e. --files "*.sdf")')
             self.args.log.finalize()
             sys.exit()
-
-        # create the dataframe to store the data
-        self.final_dup_data = creation_of_dup_csv_cmin(self.args.program.lower())
 
         bar = IncrementalBar(
             "\no  Number of finished jobs from CMIN", max=len(self.args.files)
@@ -201,10 +200,13 @@ class cmin:
             else:
                 self.cmin_folder = Path(self.args.destination)
 
+            # two destinations, one to store all the confs optimized and another to store
+            # only the confs that passed the duplicate and energy filters
             self.cmin_folder.mkdir(exist_ok=True, parents=True)
+            self.cmin_folder.joinpath('All_confs').mkdir(exist_ok=True, parents=True)
 
             self.cmin_all_file = self.cmin_folder.joinpath(
-                f"{self.name}_{self.args.program.lower()}_all_confs{self.args.output}"
+                f"All_confs/{self.name}_{self.args.program.lower()}_all_confs{self.args.output}"
             )
             self.sdwriterall = Chem.SDWriter(str(self.cmin_all_file))
 
@@ -213,18 +215,11 @@ class cmin:
             )
             self.sdwriter = Chem.SDWriter(str(self.cmin_file))
 
-            # runs the conformer sampling with multiprocessors
-            total_data = self.compute_cmin(file)
+            # run the optimizations
+            _ = self.compute_cmin(file)
 
-            frames = [self.final_dup_data, total_data]
-            self.final_dup_data = pd.concat(frames, ignore_index=True, sort=True)
             bar.next()
         bar.finish()
-        
-        # store all the information into a CSV file
-        cmin_csv_file = self.args.w_dir_main.joinpath("CMIN-Data.csv")
-        if self.args.verbose:
-            self.final_dup_data.to_csv(cmin_csv_file, index=False)
 
         elapsed_time = round(time.time() - start_time_overall, 2)
         self.args.log.write(f"\nTime CMIN: {elapsed_time} seconds\n")
@@ -236,6 +231,12 @@ class cmin:
                 files_cmin = files_cmin + files_temp_extra
             for temp_file in files_cmin:
                 os.remove(temp_file)
+        
+        # removes systems that did not generate any conformers
+        sdf_files_created = glob.glob(f'{self.cmin_folder}/*.sdf') + glob.glob(f'{self.cmin_folder.joinpath("All_confs")}/*.sdf')
+        for sdf_file in sdf_files_created:
+            if os.path.getsize(sdf_file) == 0:
+                os.remove(sdf_file)
 
         # this is added to avoid path problems in jupyter notebooks
         os.chdir(self.args.initial_dir)
@@ -256,11 +257,7 @@ class cmin:
 
     def compute_cmin(self, file):
 
-        dup_data = creation_of_dup_csv_cmin(self.args.program.lower())
-        dup_data_idx = 0
-        dup_data.at[dup_data_idx, "Molecule"] = self.name
         cenergy, outmols = [], []
-        start_time = time.time()
 
         if self.args.program.lower() == "ani":
             if self.args.charge is not None:
@@ -271,7 +268,7 @@ class cmin:
                 self.args.log.write("\nx  Multiplicity is automatically calculated for ANI methods, do not use the mult option!")
                 self.args.log.finalize()
                 sys.exit()
-            charge,mult,final_mult,dup_data = self.charge_mult_cmin(dup_data, dup_data_idx)
+            charge,mult,final_mult = self.charge_mult_cmin()
 
         elif self.args.program.lower() == "xtb":
             # sets charge and mult
@@ -322,8 +319,6 @@ class cmin:
                     name_init = mol.GetProp('_Name')
                     mol, energy, cmin_valid = xtb_opt_main(
                         f'{self.name}_conf_{i}',
-                        dup_data,
-                        dup_data_idx,
                         self,
                         charge,
                         mult,
@@ -360,56 +355,17 @@ class cmin:
                     outmols[cid].SetProp("Real charge", str(charge))
                     outmols[cid].SetProp("Mult", str(mult))
 
-            write_all_confs = 0
             for cid in sorted_all_cids:
                 self.sdwriterall.write(outmols[cid])
-                write_all_confs += 1
             self.sdwriterall.close()
 
-            self.args.log.write(f"\no  Applying filters to intial conformers after {self.args.program.lower()} minimization")
-
-            # filter based on energy window ewin_cmin
-            sortedcids = ewin_filter(
-                sorted_all_cids,
-                cenergy,
-                dup_data,
-                dup_data_idx,
-                self.args.program.lower(),
-                self.args.ewin_cmin,
-            )
-            # pre-filter based on energy only
-            selectedcids_initial = pre_E_filter(
-                sortedcids,
-                cenergy,
-                dup_data,
-                dup_data_idx,
-                self.args.program.lower(),
-                self.args.initial_energy_threshold,
-            )
-            # filter based on energy and RMSD
-            selectedcids = RMSD_and_E_filter(
-                outmols,
-                selectedcids_initial,
-                cenergy,
-                self.args,
-                dup_data,
-                dup_data_idx,
-                self.args.program.lower(),
-            )
-
-            if self.args.program.lower() == "xtb":
-                dup_data.at[dup_data_idx, "xTB-Initial-samples"] = len(self.mols)
-            elif self.args.program.lower() == "ani":
-                dup_data.at[dup_data_idx, "ANI-Initial-samples"] = len(self.mols)
+            self.args.log.write(f"\no  Applying filters to initial conformers after {self.args.program.lower()} minimization")
+            selectedcids = conformer_filters(self,sorted_all_cids,cenergy,outmols)
 
             # write the filtered, ordered conformers to external file
             self.write_confs(
                 outmols, selectedcids, self.args.log
             )
-
-        dup_data.at[dup_data_idx, "CMIN time (seconds)"] = round(
-            time.time() - start_time, 2
-        )
 
         # removing temporary files
         temp_files = [
@@ -425,29 +381,11 @@ class cmin:
             if os.path.exists(file):
                 os.remove(file)
 
-        return dup_data
-
     # ANI MAIN OPTIMIZATION PROCESS
     def ani_optimize(self, mol, charge, mult):
-
-        # Attempts ANI imports and exits if the programs are not installed
-        try:
-            import torch
-            import warnings
-            warnings.filterwarnings('ignore')
-
-        except ModuleNotFoundError:
-            self.args.log.write("x  Torch-related modules are not installed! You can install these modules with 'pip install torch torchvision torchani'")
-            self.args.log.finalize()
-            sys.exit()
-        try:
-            import ase
-            import ase.optimize
-        except ModuleNotFoundError:
-            self.args.log.write("x  ASE is not installed! You can install the program with 'conda install -c conda-forge ase' or 'pip install ase'")
-            self.args.log.finalize()
-            sys.exit()
-
+        
+        import torch
+        import ase
         self.args.log.write(f"\no  Starting ANI optimization")
 
         os.environ["KMP_DUPLICATE_LIB_OK"] = "True"
@@ -515,13 +453,7 @@ class cmin:
         Function to generate the optimization model for CMIN (using xTB or ANI methods)
         """
 
-        try:
-            import torchani
-        except (ImportError,ModuleNotFoundError):
-            self.args.log.write("x  Torchani is not installed! You can install the program with 'pip install torchani'")
-            self.args.log.finalize()
-            sys.exit()
-
+        import torchani
         model = getattr(torchani.models,self.args.ani_method)()
 
         return model
@@ -529,17 +461,14 @@ class cmin:
     # write SDF files for xTB and ANI
     def write_confs(self, conformers, selectedcids, log):
         if len(conformers) > 0:
-            write_confs = 0
             for cid in selectedcids:
                 self.sdwriter.write(conformers[cid])
-                write_confs += 1
-
             self.sdwriter.close()
         else:
             log.write("x  No conformers found!")
 
 
-    def charge_mult_cmin(self, dup_data, dup_data_idx):
+    def charge_mult_cmin(self):
         """
         Retrieves charge and multiplicity arrays for ANI optimizations.
 
@@ -547,10 +476,6 @@ class cmin:
         ----------
         mol_cmin : Mol object
             Mol used to analyze charges and multiplicity of each atom
-        dup_data : pandas.DataFrame
-            Dataframe with the information of the molecules studied (i.e. number of conformers, charge, mult, etc.)
-        dup_data_idx : int
-            Index of the molecule studied in the dup_data dataframe
 
         Returns
         -------
@@ -558,8 +483,6 @@ class cmin:
             List of atomic charges
         mult : list
             List of atomic unpaired electrons
-        dup_data : pandas.DataFrame
-            Updated dup_data dataframe
         """
 
         mol_cmin = self.mols[0]
@@ -573,7 +496,4 @@ class cmin:
         TotalElectronicSpin = np.sum(mult) / 2
         final_mult = int((2 * TotalElectronicSpin) + 1)
 
-        dup_data.at[dup_data_idx, "Overall charge"] = np.sum(charge)
-        dup_data.at[dup_data_idx, "Mult"] = final_mult
-
-        return charge,mult,final_mult,dup_data
+        return charge,mult,final_mult
