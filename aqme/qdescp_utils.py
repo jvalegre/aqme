@@ -312,26 +312,32 @@ def average_prop_atom(weights, prop):
     boltz_avg = []
     
     # Loop through each property and its corresponding weight
-    for i, p in enumerate(prop):
-        # If the property is a single float or int, multiply it by the corresponding weight
-        if isinstance(p, (float, int)):
-            boltz_avg.append(p * weights[i])
-        # If the property is a list (e.g., multi-dimensional property), multiply each element by the weight
-        elif isinstance(p, list):
-            boltz_avg.append([0 if number is None else number * weights[i] for number in p])
-        # If the property type is not recognized, append 0 as a placeholder
+    if len(prop) == len(weights): # if xTB fails a calculation in a conformer, that property won't be included
+        for i, p in enumerate(prop):
+            # If the property is a single float or int, multiply it by the corresponding weight
+            if isinstance(p, (float, int)):
+                boltz_avg.append(p * weights[i])
+            # If the property is a list (e.g., multi-dimensional property), multiply each element by the weight
+            elif isinstance(p, list):
+                boltz_avg.append([0 if number is None else number * weights[i] for number in p])
+            # If the property type is not recognized, append 0 as a placeholder
+            else:
+                boltz_avg.append(np.nan)
+
+        # Check if the first element in the list is a list (indicating multi-dimensional properties)
+        if isinstance(boltz_avg[0], list):
+            # If so, sum along the axis (i.e., sum element-wise for multi-dimensional properties)
+            try:
+                boltz_res = np.sum(boltz_avg, axis=0)
+                # Round each element in the result to 4 decimal places if it's a NumPy array
+                boltz_res = np.round(boltz_res, 4)
+            except ValueError: # in some cases, there are atoms that are missing properties because of xTB calculation errors
+                boltz_res = np.nan
         else:
-            boltz_avg.append(0)
-    
-    # Check if the first element in the list is a list (indicating multi-dimensional properties)
-    if isinstance(boltz_avg[0], list):
-        # If so, sum along the axis (i.e., sum element-wise for multi-dimensional properties)
-        boltz_res = np.sum(boltz_avg, axis=0)
-        # Round each element in the result to 4 decimal places if it's a NumPy array
-        boltz_res = np.round(boltz_res, 4)
+            # Otherwise, sum all the weighted values as a scalar and round to 4 decimal places
+            boltz_res = round(sum(boltz_avg), 4)
     else:
-        # Otherwise, sum all the weighted values as a scalar and round to 4 decimal places
-        boltz_res = round(sum(boltz_avg), 4)
+        boltz_res = np.nan
     
     # Return the Boltzmann-weighted result
     return boltz_res
