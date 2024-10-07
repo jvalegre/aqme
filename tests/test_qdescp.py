@@ -255,6 +255,7 @@ def test_qdescp_xtb(file):
                 if str(val).lower() == 'nan':
                     count_nan += 1
             assert count_nan == 1
+            assert str(pd_boltz_interpret["C=O_C_FOD"][0]).lower() == 'nan'
         else:
             # from xTB
             assert len(pd_boltz_interpret["P_FOD"]) == 4
@@ -263,6 +264,8 @@ def test_qdescp_xtb(file):
                 if str(val).lower() == 'nan':
                     count_nan += 1
             assert count_nan == 1
+            assert str(pd_boltz_interpret["P_FOD"][0]).lower() == 'nan'
+
             # from MORFEUS
             assert len(pd_boltz_interpret["P_Buried volume"]) == 4
             count_nan = 0 # dirty hack that account for different sortings of the calcs within the CSV files
@@ -270,6 +273,7 @@ def test_qdescp_xtb(file):
                 if str(val).lower() == 'nan':
                     count_nan += 1
             assert count_nan == 1
+            assert str(pd_boltz_interpret["P_Buried volume"][0]).lower() == 'nan'
 
         # check variables and X_ prefixes in variable names
         if file in ['test_atom.csv','test_multigroup.csv','test_robert_atom.csv']:

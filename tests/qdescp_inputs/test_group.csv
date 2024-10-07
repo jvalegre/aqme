@@ -1,5 +1,5 @@
 SMILES,code_name
+C,mol_1
 C=O,mol_2
 CC=O,mol_3
 CCC=O,mol_4
-C,mol_1
