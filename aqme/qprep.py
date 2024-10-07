@@ -79,7 +79,8 @@ from aqme.utils import (
     read_xyz_charge_mult,
     mol_from_sdf_or_mol_or_mol2,
     add_prefix_suffix,
-    check_files
+    check_files,
+    check_dependencies
 )
 
 from aqme.csearch.crest import xyzall_2_xyz
@@ -98,6 +99,9 @@ class qprep:
         start_time_overall = time.time()
         # load default and user-specified variables
         self.args = load_variables(kwargs, "qprep", create_dat=create_dat)
+
+        # check whether dependencies are installed
+        _ = check_dependencies(self)
 
         # retrieves the different files to run in QPREP
         _ = check_files(self,'qprep')

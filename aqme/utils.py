@@ -24,7 +24,8 @@ GAS_CONSTANT = 8.3144621  # J / K / mol
 J_TO_AU = 4.184 * 627.509541 * 1000.0  # UNIT CONVERSION
 T = 298.15
 
-aqme_version = "1.6.0"
+obabel_version = "3.1.1" # this MUST match the meta.yaml
+aqme_version = "1.7.0"
 time_run = time.strftime("%Y/%m/%d %H:%M:%S", time.localtime())
 aqme_ref = f"AQME v {aqme_version}, Alegre-Requena, J. V.; Sowndarya, S.; Perez-Soto, R.; Alturaifi, T.; Paton, R. AQME: Automated Quantum Mechanical Environments for Researchers and Educators. Wiley Interdiscip. Rev. Comput. Mol. Sci. 2023, DOI: 10.1002/wcms.1663."
 
@@ -218,45 +219,6 @@ def get_info_input(file):
     return atoms_and_coords, charge, mult
 
 
-def substituted_mol(self, mol, checkI):
-    """
-    Returns a molecule object in which all metal atoms specified in args.metal_atoms
-    are replaced by Iodine and the charge is set depending on the number of
-    neighbors.
-
-    """
-
-    self.args.metal_idx = []
-    self.args.complex_coord = []
-    self.args.metal_sym = []
-
-    for _ in self.args.metal_atoms:
-        self.args.metal_idx.append(None)
-        self.args.complex_coord.append(None)
-        self.args.metal_sym.append(None)
-
-    Neighbors2FormalCharge = dict()
-    for i, j in zip(range(2, 9), range(-3, 4)):
-        Neighbors2FormalCharge[i] = j
-
-    for atom in mol.GetAtoms():
-        symbol = atom.GetSymbol()
-        if symbol in self.args.metal_atoms:
-            self.args.metal_sym[self.args.metal_atoms.index(symbol)] = symbol
-            self.args.metal_idx[self.args.metal_atoms.index(symbol)] = atom.GetIdx()
-            self.args.complex_coord[self.args.metal_atoms.index(symbol)] = len(
-                atom.GetNeighbors()
-            )
-            if checkI == "I":
-                atom.SetAtomicNum(53)
-                n_neighbors = len(atom.GetNeighbors())
-                if n_neighbors > 1:
-                    formal_charge = Neighbors2FormalCharge[n_neighbors]
-                    atom.SetFormalCharge(formal_charge)
-
-    return self.args.metal_idx, self.args.complex_coord, self.args.metal_sym
-
-
 def set_metal_atomic_number(mol, metal_idx, metal_sym):
     """
     Changes the atomic number of the metal atoms using their indices.
@@ -333,7 +295,9 @@ def command_line_args():
         "oldchk",
         "nodup_check",
         "dbstep_calc",
-        "robert"
+        "robert",
+        "debug",
+        "pytest_testing"
     ]
     list_args = [
         "files",
@@ -353,13 +317,13 @@ def command_line_args():
     int_args = [
         "opt_steps",
         "opt_steps_rdkit",
-        "auto_sample",
         "seed",
         "max_matches_rmsd",
         "nsteps_fullmonte",
         "nrot_fullmonte",
         "nprocs",
-        "crest_nrun",
+        "crest_runs",
+        "sample"
     ]
     float_args = [
         "ewin_cmin",
@@ -420,7 +384,7 @@ def command_line_args():
                 if arg_name in bool_args:
                     value = True                    
                 elif arg_name.lower() in list_args:
-                    value = format_lists(value)
+                    value = format_lists(value,arg_name)
                 elif arg_name.lower() in int_args:
                     value = int(value)
                 elif arg_name.lower() in float_args:
@@ -440,19 +404,22 @@ def command_line_args():
     return args
 
 
-def format_lists(value):
+def format_lists(value,arg_name):
     '''
     Transforms strings into a list
     '''
 
-    if not isinstance(value, list):
-        try:
-            value = ast.literal_eval(value)
-        except (SyntaxError, ValueError):
-            # this line fixes issues when using "[X]" or ["X"] instead of "['X']" when using lists
-            value = value.replace('[',']').replace(',',']').replace("'",']').split(']')
-            while('' in value):
-                value.remove('')
+    if arg_name.lower() != 'qdescp_atoms':
+        if not isinstance(value, list):
+            try:
+                value = ast.literal_eval(value)
+            except (SyntaxError, ValueError):
+                # this line fixes issues when using "[X]" or ["X"] instead of "['X']" when using lists
+                value = value.replace('[',']').replace(',',']').replace("'",']').split(']')
+                while('' in value):
+                    value.remove('')
+    else:
+        value = value[1:-1].split(',')
     return value
 
 
@@ -898,3 +865,66 @@ def get_files(value):
         else:
             new_value.append(val.as_posix())
     return new_value
+
+
+def check_dependencies(self):
+    # this is a dummy command just to warn the user if OpenBabel is not installed
+    try:
+        command_run_1 = ["obabel", "-H"]
+        subprocess.run(command_run_1, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except FileNotFoundError:
+        self.args.log.write(f"x  Open Babel is not installed! You can install the program with 'conda install -c conda-forge openbabel={obabel_version}'")
+        self.args.log.finalize()
+        sys.exit()
+
+    # this is a dummy import just to warn the user if RDKit is not installed
+    try: 
+        from rdkit.Chem import AllChem as Chem
+    except ModuleNotFoundError:
+        self.args.log.write("x  RDKit is not installed! You can install the program with 'pip install rdkit' or 'conda install -c conda-forge rdkit'")
+        self.args.log.finalize()
+        sys.exit()
+
+    # this is a dummy command just to warn the user if xTB or CREST are not installed
+    if self.args.program is not None:
+        if self.args.program.lower() in ['xtb','crest']:
+            try:
+                command_run_1 = ["xtb", "-h"]
+                subprocess.run(command_run_1, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            except FileNotFoundError:
+                self.args.log.write("x  xTB is not installed! You can install the program with 'conda install -c conda-forge xtb'")
+                self.args.log.finalize()
+                sys.exit()
+            if self.args.program.lower() == 'crest':
+                try:
+                    command_run_1 = ["crest", "-h"]
+                    subprocess.run(command_run_1, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                except FileNotFoundError:
+                    self.args.log.write("x  CREST is not installed! You can install the program with 'conda install -c conda-forge crest'")
+                    self.args.log.finalize()
+                    sys.exit()
+
+        # this is a dummy command just to warn the user if torch or ASE are not installed
+        if self.args.program.lower() == 'ani':
+            try:
+                import torch
+                import warnings
+                warnings.filterwarnings('ignore')
+
+            except ModuleNotFoundError:
+                self.args.log.write("x  Torch-related modules are not installed! You can install these modules with 'pip install torch torchvision torchani'")
+                self.args.log.finalize()
+                sys.exit()
+            try:
+                import ase
+                import ase.optimize
+            except ModuleNotFoundError:
+                self.args.log.write("x  ASE is not installed! You can install the program with 'pip install ase' or 'conda install -c conda-forge ase'")
+                self.args.log.finalize()
+                sys.exit()
+            try:
+                import torchani
+            except (ImportError,ModuleNotFoundError):
+                self.args.log.write("x  Torchani is not installed! You can install the program with 'pip install torchani'")
+                self.args.log.finalize()
+                sys.exit()
