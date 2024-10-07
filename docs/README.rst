@@ -440,6 +440,11 @@ List of main developers and contact emails:
    `Github <https://github.com/rperezsoto>`__ ,
    `email <rperezsoto.research@gmail.com>`__ ] 
    worked in refactoring the code and creating the documentation.
+*  Brenda Manzanilla [
+   `webpage <https://orcid.org/0000-0001-5955-6079>`__ ,
+   `Github <https://github.com/ManzanillaB>`__ , 
+   `email <iqmanzanilla@gmail.com>`__] 
+   developer of the QDESCP module.
 *  Turki Alturaifi [
    `webpage <https://www.chem.pitt.edu/person/turki-alturaifi>`__ ,
    `Github <https://github.com/turkiAlturaifi>`__ , 

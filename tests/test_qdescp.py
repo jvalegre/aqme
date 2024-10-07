@@ -241,19 +241,35 @@ def test_qdescp_xtb(file):
         assert os.path.exists(f'{folder_qdescp}/mol_1_rdkit_conf_1.json') # check if exist 
         assert os.path.exists(f'{folder_boltz}/mol_1_rdkit_interpret_boltz.json') # check if exist
         assert len(pd_boltz_interpret["MolLogP"]) == 4
-        assert str(pd_boltz_interpret["MolLogP"][0]).lower() != 'nan'
+        
+        count_nan = 0 # dirty hack that account for different sortings of the calcs within the CSV files
+        for val in pd_boltz_interpret["MolLogP"]:
+            if str(val).lower() == 'nan':
+                count_nan += 1
+        assert count_nan == 0
+
         if file == 'test_group.csv':
             assert len(pd_boltz_interpret["C=O_C_FOD"]) == 4
-            assert str(pd_boltz_interpret["C=O_C_FOD"][0]).lower() == 'nan'
-            assert str(pd_boltz_interpret["C=O_C_FOD"][1]) != 'nan'
+            count_nan = 0 # dirty hack that account for different sortings of the calcs within the CSV files
+            for val in pd_boltz_interpret["C=O_C_FOD"]:
+                if str(val).lower() == 'nan':
+                    count_nan += 1
+            assert count_nan == 1
         else:
             # from xTB
             assert len(pd_boltz_interpret["P_FOD"]) == 4
-            assert str(pd_boltz_interpret["P_FOD"][0]).lower() == 'nan'
-            assert str(pd_boltz_interpret["P_FOD"][1]) != 'nan'
+            count_nan = 0 # dirty hack that account for different sortings of the calcs within the CSV files
+            for val in pd_boltz_interpret["P_FOD"]:
+                if str(val).lower() == 'nan':
+                    count_nan += 1
+            assert count_nan == 1
             # from MORFEUS
-            assert str(pd_boltz_interpret["P_Buried volume"][0]).lower() == 'nan'
-            assert str(pd_boltz_interpret["P_Buried volume"][1]) != 'nan'
+            assert len(pd_boltz_interpret["P_Buried volume"]) == 4
+            count_nan = 0 # dirty hack that account for different sortings of the calcs within the CSV files
+            for val in pd_boltz_interpret["P_Buried volume"]:
+                if str(val).lower() == 'nan':
+                    count_nan += 1
+            assert count_nan == 1
 
         # check variables and X_ prefixes in variable names
         if file in ['test_atom.csv','test_multigroup.csv','test_robert_atom.csv']:
