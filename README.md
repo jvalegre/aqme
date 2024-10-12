@@ -1,4 +1,9 @@
 ![](Logos/AQME_logo.jpg)
+#
+## <p align="center"> AQME (Automated Quantum Mechanical Environments)</p>
+
+
+
 [![CircleCI](https://img.shields.io/circleci/build/github/jvalegre/aqme?label=Circle%20CI&logo=circleci)](https://app.circleci.com/pipelines/github/jvalegre/aqme)
 [![Codecov](https://img.shields.io/codecov/c/github/jvalegre/aqme?label=Codecov&logo=codecov)](https://codecov.io/gh/jvalegre/aqme)
 [![Downloads](https://img.shields.io/pepy/dt/aqme?label=Downloads&logo=pypi)](https://www.pepy.tech/projects/aqme)
