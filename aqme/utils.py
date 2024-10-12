@@ -824,7 +824,7 @@ def check_xtb(self):
             ["xtb", "-h"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
         )
     except FileNotFoundError:
-        self.args.log.write("x  xTB is not installed (CSEARCH-CREST and CMIN-xTB cannot be used)! You can install the program with 'conda install -c conda-forge xtb'")
+        self.args.log.write("x  xTB is not installed (CSEARCH-CREST and CMIN-xTB cannot be used)! You can install the program with 'conda install -y -c conda-forge xtb'")
         self.args.log.finalize()
         sys.exit()
 
@@ -835,7 +835,7 @@ def check_crest(self):
             ["crest", "-h"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
         )
     except FileNotFoundError:
-        self.args.log.write("x  CREST is not installed (CSEARCH-CREST cannot be used)! You can install the program with 'conda install -c conda-forge crest'")
+        self.args.log.write("x  CREST is not installed (CSEARCH-CREST cannot be used)! You can install the program with 'conda install -y -c conda-forge crest'")
         self.args.log.finalize()
         sys.exit()
  
@@ -873,7 +873,7 @@ def check_dependencies(self):
         command_run_1 = ["obabel", "-H"]
         subprocess.run(command_run_1, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     except FileNotFoundError:
-        self.args.log.write(f"x  Open Babel is not installed! You can install the program with 'conda install -c conda-forge openbabel={obabel_version}'")
+        self.args.log.write(f"x  Open Babel is not installed! You can install the program with 'conda install -y -c conda-forge openbabel={obabel_version}'")
         self.args.log.finalize()
         sys.exit()
 
@@ -881,7 +881,7 @@ def check_dependencies(self):
     try: 
         from rdkit.Chem import AllChem as Chem
     except ModuleNotFoundError:
-        self.args.log.write("x  RDKit is not installed! You can install the program with 'pip install rdkit' or 'conda install -c conda-forge rdkit'")
+        self.args.log.write("x  RDKit is not installed! You can install the program with 'pip install rdkit' or 'conda install -y -c conda-forge rdkit'")
         self.args.log.finalize()
         sys.exit()
 
@@ -892,7 +892,7 @@ def check_dependencies(self):
                 command_run_1 = ["xtb", "-h"]
                 subprocess.run(command_run_1, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             except FileNotFoundError:
-                self.args.log.write("x  xTB is not installed! You can install the program with 'conda install -c conda-forge xtb'")
+                self.args.log.write("x  xTB is not installed! You can install the program with 'conda install -y -c conda-forge xtb'")
                 self.args.log.finalize()
                 sys.exit()
             if self.args.program.lower() == 'crest':
@@ -900,7 +900,7 @@ def check_dependencies(self):
                     command_run_1 = ["crest", "-h"]
                     subprocess.run(command_run_1, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
                 except FileNotFoundError:
-                    self.args.log.write("x  CREST is not installed! You can install the program with 'conda install -c conda-forge crest'")
+                    self.args.log.write("x  CREST is not installed! You can install the program with 'conda install -y -c conda-forge crest'")
                     self.args.log.finalize()
                     sys.exit()
 
@@ -919,7 +919,7 @@ def check_dependencies(self):
                 import ase
                 import ase.optimize
             except ModuleNotFoundError:
-                self.args.log.write("x  ASE is not installed! You can install the program with 'pip install ase' or 'conda install -c conda-forge ase'")
+                self.args.log.write("x  ASE is not installed! You can install the program with 'pip install ase' or 'conda install -y -c conda-forge ase'")
                 self.args.log.finalize()
                 sys.exit()
             try:

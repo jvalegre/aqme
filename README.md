@@ -19,7 +19,7 @@ In a nutshell, AQME and its dependencies are installed/updated as follows:
 1. (Only once) Create new conda environment: `conda create -n aqme python=3.10`  
 2. Activate conda environment: `conda activate aqme`  
 3. Install AQME using pip: `pip install aqme`  
-4. Install Open Babel: `conda install -c conda-forge openbabel=3.1.1`  
+4. Install Open Babel: `conda install -y -c conda-forge openbabel=3.1.1`  
 
 ## Update the program
 1. Update to the latest version: `pip install aqme --upgrade`  
@@ -40,7 +40,7 @@ AQME is freely available under an [MIT](https://opensource.org/licenses/MIT) Lic
 
 ## Reference
 If you use any of the AQME modules, please include this citation:  
-Alegre-Requena, J. V.; Sowndarya, S.; Pérez-Soto, R.; Alturaifi, T.; Paton, R. AQME: Automated Quantum Mechanical Environments for Researchers and Educators. Wiley Interdiscip. Rev. Comput. Mol. Sci. 2023, 13, e1663. (DOI: 10.1002/wcms.1663).  
+Alegre-Requena, J. V.; Sowndarya, S.; Pérez-Soto, R.; Alturaifi, T.; Paton, R. AQME: Automated Quantum Mechanical Environments for Researchers and Educators. *Wiley Interdiscip. Rev. Comput. Mol. Sci.* **2023**, *13*, e1663. (DOI: 10.1002/wcms.1663).  
   
 Additionally, please include the corresponding references for the following programs:  
   * If you used CSEARCH with RDKit methods or from SMILES: [RDKit](https://www.rdkit.org)  
