@@ -12,9 +12,10 @@
    :start-after: checkboxes-start
    :end-before: checkboxes-end
 
-=====================================
+================================
+
 Welcome to AQME's documentation!
-=====================================
+================================
 
 .. include:: README.rst
    :start-after: introduction-start

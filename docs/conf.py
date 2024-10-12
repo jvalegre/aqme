@@ -24,7 +24,7 @@ copyright = '2024, Juan V. Alegre Requena, Shree Sowndarya S. V., Alturaifi T., 
 author = '2020, Juan V. Alegre Requena, Shree Sowndarya S. V., Alturaifi T., Pérez-Soto R., Robert S. Paton'
 
 # The full version, including alpha/beta/rc tags
-release = 'v1.5'
+release = 'v1.7.0'
 
 
 # -- General configuration ---------------------------------------------------

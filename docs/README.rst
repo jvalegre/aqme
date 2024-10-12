@@ -106,13 +106,13 @@ it also works for newer Python versions (i.e., 3.11 and 3.12):
 .. code-block:: shell 
    
    pip install aqme
-   conda install -c conda-forge openbabel=3.1.1
+   conda install -y -c conda-forge openbabel=3.1.1
 
-**3.** (Just if the installation with pip is too slow) Users might install AQME using conda and update it with pip:  
+**3.** (Just if the installation with pip of step 2 is too slow) Users might install AQME using conda and update it with pip:  
 
 .. code-block:: shell
 
-   conda install -c conda-forge aqme
+   conda install -y -c conda-forge aqme
    pip install aqme --upgrade
 
 Installation of extra requirements
@@ -174,7 +174,7 @@ you can install `Miniconda with Python 3 <https://docs.conda.io/projects/minicon
 **5.** Install AQME as defined in the "Installation" section (:code:`pip install aqme`).
 
 
-**6.** Install OpenBabel as defined in the "Installation" section (:code:`conda install -c conda-forge openbabel=3.1.1`).
+**6.** Install OpenBabel as defined in the "Installation" section (:code:`conda install -y -c conda-forge openbabel=3.1.1`).
 
 
 Using AQME through Jupyter Notebooks
@@ -476,7 +476,7 @@ Reference
 .. reference-start
 
 If you use any of the AQME modules, please include this citation:  
-  * AQME v1.5, Alegre-Requena, J. V.; Sowndarya, S.; Pérez-Soto, R.; Alturaifi, T.; Paton, R. AQME: Automated Quantum Mechanical Environments for Researchers and Educators. Wiley Interdiscip. Rev. Comput. Mol. Sci. 2023, 13, e1663. (DOI: 10.1002/wcms.1663.)  
+  * Alegre-Requena, J. V.; Sowndarya, S.; Pérez-Soto, R.; Alturaifi, T.; Paton, R. AQME: Automated Quantum Mechanical Environments for Researchers and Educators. *Wiley Interdiscip. Rev. Comput. Mol. Sci.* **2023**, *13*, e1663. (DOI: 10.1002/wcms.1663)  
   
 Additionally, please include the corresponding references for the following programs:  
   * If you used CSEARCH with RDKit methods: `RDKit <https://www.rdkit.org/>`__ 
