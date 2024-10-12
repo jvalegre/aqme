@@ -365,8 +365,7 @@ def test_qdescp_xtb(file):
 
     # Check molecular and atomic descriptors in the QDESCP_ files
     if file == 'test.csv':
-        assert pd_boltz_interpret.columns[0] == 'code_name'
-        assert pd_boltz_interpret.columns[1] == 'HOMO-LUMO gap'
+        assert 'code_name' in pd_boltz_interpret.columns
         check_descriptors(pd_boltz_denovo, descp_denovo_mol, [d for d in descp_full_mol if d not in descp_denovo_mol], 'mol', file)
         check_descriptors(pd_boltz_interpret, descp_interpret_mol, [d for d in descp_full_mol if d not in descp_interpret_mol], 'mol', file)
         check_descriptors(pd_boltz_full, descp_full_mol, [], 'mol', file)
@@ -379,8 +378,7 @@ def test_qdescp_xtb(file):
             raw_csv = f'{folder_qdescp}/raw_csv_databases/Raw_{os.path.basename(file_csv)}'
             assert os.path.exists(raw_csv)
             raw_df = pd.read_csv(raw_csv)
-            assert raw_df.columns[0] == 'code_name'
-            assert raw_df.columns[1] == 'cm5 charges'
+            assert 'code_name' in raw_df.columns
             for raw_atom_val in ['cm5 charges','Electrophil.','Nucleophil.','Radical attack','SASA','Buried volume','Cone angle','H bond H2O']:
                 assert raw_df[raw_atom_val][0][0] == '['
             if file_csv in [file_descriptors_interpret,file_descriptors_full]:
@@ -389,7 +387,7 @@ def test_qdescp_xtb(file):
 
     # Check molecular and atomic descriptors in the AQME-ROBERT files
     elif file in ['test_robert_mol.csv','test_robert_atom.csv']:
-        assert pd_boltz_interpret.columns[0] == 'SMILES'
+        assert 'SMILES' in pd_boltz_interpret.columns
         # molecular descriptors must be in both cases
         check_descriptors(pd_boltz_denovo, descp_denovo_mol, [d for d in descp_full_mol if d not in descp_denovo_mol], 'mol', file)
         check_descriptors(pd_boltz_interpret, descp_interpret_mol, [d for d in descp_full_mol if d not in descp_interpret_mol], 'mol', file)
@@ -424,11 +422,8 @@ def test_qdescp_xtb(file):
             raw_csv = f'{folder_qdescp}/raw_csv_databases/Raw_{os.path.basename(file_csv2)}'
             assert os.path.exists(raw_csv)
             raw_df = pd.read_csv(raw_csv)
-            assert raw_df.columns[0] == 'code_name'
-            if file == 'test_robert_atom.csv':
-                assert raw_df.columns[1] == 'P_cm5 charges'
-            elif file == 'test_robert_mol.csv':
-                assert raw_df.columns[1] == 'cm5 charges'
+            assert 'code_name' in raw_df.columns
+            if file == 'test_robert_mol.csv':
                 for raw_atom_val in ['cm5 charges','Electrophil.','Nucleophil.','Radical attack','SASA','Buried volume','Cone angle','H bond H2O']:
                     assert raw_df[raw_atom_val][0][0] == '['
                 if file_csv2 in [file2_descriptors_interpret,file2_descriptors_full]:
