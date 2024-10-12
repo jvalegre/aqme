@@ -101,47 +101,66 @@ def get_boltz_props(json_files, name, boltz_dir, calc_type, self, mol_props, ato
                     if atom_prop not in json_data:
                         atomic_props = False
         if atomic_props:
-            prop_list = [read_json(json_file)[prop] for json_file in json_files]
-            avg_prop = average_properties(boltz, prop_list)
+            try:
+                prop_list = [read_json(json_file)[prop] for json_file in json_files]
+                avg_prop = average_properties(boltz, prop_list)
+            except KeyError:
+                avg_json_data[prop] = np.nan
         else:
             avg_prop = np.nan
         update_avg_json_data(avg_json_data, prop, avg_prop, smarts_targets)
 
     # Get weighted molecular properties from XTB
     for prop in mol_props:
-        prop_list = [read_json(json_file)[prop] for json_file in json_files]
-        avg_prop = average_properties(boltz, prop_list, is_atom_prop=False)
-        avg_json_data[prop] = avg_prop
+        try:
+            prop_list = [read_json(json_file)[prop] for json_file in json_files]
+            avg_prop = average_properties(boltz, prop_list, is_atom_prop=False)
+            avg_json_data[prop] = avg_prop
+        except KeyError:
+            avg_json_data[prop] = np.nan
 
     # Get denovo atomic properties
     for i, prop in enumerate(denovo_atoms):
         if atomic_props:
-            prop_list = [read_json(json_file)[prop] for json_file in json_files]
-            avg_prop = average_properties(boltz, prop_list)
+            try:
+                prop_list = [read_json(json_file)[prop] for json_file in json_files]
+                avg_prop = average_properties(boltz, prop_list)
+            except KeyError:
+                avg_json_data[prop] = np.nan
         else:
             avg_prop = np.nan
         update_avg_json_data(denovo_json_data, prop, avg_prop, smarts_targets)
 
     # Get denovo molecular properties
     for prop in denovo_mols:
-        prop_list = [read_json(json_file)[prop] for json_file in json_files]
-        avg_prop = average_properties(boltz, prop_list, is_atom_prop=False)
-        denovo_json_data[prop] = avg_prop
+        try:
+            prop_list = [read_json(json_file)[prop] for json_file in json_files]
+            avg_prop = average_properties(boltz, prop_list, is_atom_prop=False)
+            denovo_json_data[prop] = avg_prop
+        except KeyError:
+            avg_json_data[prop] = np.nan
 
     # Get interpret atomic properties
     for i, prop in enumerate(interpret_atoms):
         if atomic_props:
-            prop_list = [read_json(json_file)[prop] for json_file in json_files]
-            avg_prop = average_properties(boltz, prop_list)
+            try:
+                prop_list = [read_json(json_file)[prop] for json_file in json_files]
+                avg_prop = average_properties(boltz, prop_list)
+            except KeyError:
+                avg_json_data[prop] = np.nan
+
         else:
             avg_prop = np.nan
         update_avg_json_data(interpret_json_data, prop, avg_prop, smarts_targets)
 
     # Get interpret molecular properties
     for prop in interpret_mols:
-        prop_list = [read_json(json_file)[prop] for json_file in json_files]
-        avg_prop = average_properties(boltz, prop_list, is_atom_prop=False)
-        interpret_json_data[prop] = avg_prop
+        try:
+            prop_list = [read_json(json_file)[prop] for json_file in json_files]
+            avg_prop = average_properties(boltz, prop_list, is_atom_prop=False)
+            interpret_json_data[prop] = avg_prop
+        except KeyError:
+            avg_json_data[prop] = np.nan
 
     # Calculate RDKit descriptors if molecule is provided
     if mol is not None:
@@ -180,7 +199,7 @@ def get_boltz_props(json_files, name, boltz_dir, calc_type, self, mol_props, ato
         json.dump(interpret_json_data, outfile)
 
 
-def get_boltz_props_nmr(json_files,name,boltz_dir,self,atom_props,smarts_targets,nmr_atoms=None,nmr_slope=None,nmr_intercept=None,nmr_experim=None):
+def get_boltz_props_nmr(json_files,name,boltz_dir,self,atom_props,nmr_atoms=None,nmr_slope=None,nmr_intercept=None,nmr_experim=None):
 
     """
     Function to process NMR properties and calculate Boltzmann averaged properties.
@@ -325,17 +344,18 @@ def average_prop_atom(weights, prop):
                 boltz_avg.append(np.nan)
 
         # Check if the first element in the list is a list (indicating multi-dimensional properties)
-        if isinstance(boltz_avg[0], list):
-            # If so, sum along the axis (i.e., sum element-wise for multi-dimensional properties)
-            try:
+        try:
+            if isinstance(boltz_avg[0], list):
+                # If so, sum along the axis (i.e., sum element-wise for multi-dimensional properties)
                 boltz_res = np.sum(boltz_avg, axis=0)
                 # Round each element in the result to 4 decimal places if it's a NumPy array
                 boltz_res = np.round(boltz_res, 4)
-            except ValueError: # in some cases, there are atoms that are missing properties because of xTB calculation errors
-                boltz_res = np.nan
-        else:
-            # Otherwise, sum all the weighted values as a scalar and round to 4 decimal places
-            boltz_res = round(sum(boltz_avg), 4)
+            else:
+                # Otherwise, sum all the weighted values as a scalar and round to 4 decimal places
+                boltz_res = round(sum(boltz_avg), 4)
+        except (ValueError,IndexError): # in some cases, there are atoms that are missing properties because of xTB calculation errors
+            boltz_res = np.nan
+
     else:
         boltz_res = np.nan
     
@@ -762,6 +782,10 @@ def calculate_local_CDFT_descriptors(file_fukui, cdft_descriptors, cdft_descript
         self.args.log.write("WARNING: Fukui data lists are empty. Please check the '.fukui' file.")
         return None
 
+    if None in [cdft_descriptors, cdft_descriptors2]:
+        self.args.log.write("x  WARNING! Missing required CDFT descriptors (Softness, Hypersoftness, Electrophil. idx or Nucleophilicity idx).")
+        return None
+
     chemical_softness = cdft_descriptors.get("Softness")
     Global_hypersoftness = cdft_descriptors2.get("Hypersoftness")
     electrophilicity_index = cdft_descriptors.get("Electrophil. idx")
@@ -837,7 +861,6 @@ def read_xtb(file,self):
     total_C6AA, total_C8AA, total_alpha = np.nan, np.nan, np.nan
     atoms, numbers, chrgs = [], [], []
     covCN, C6AA, alpha = [], [], []
-    born_rad, SASA, h_bond = [], [], []
 
     # Parsing file data
     for i, line in enumerate(data):
@@ -892,28 +915,6 @@ def read_xtb(file,self):
         C6AA.append(float(item[5]))
         alpha.append(float(item[6]))
 
-    # Getting atomic properties related to solvent
-    start_solv, end_solv = 0, 0
-    for j in range(len(data)):
-        if "#   Z     Born rad" in data[j]:
-            start_solv = j + 1
-            break
-    for k in range(start_solv, len(data)):
-        if "total SASA " in data[k]:
-            end_solv = k - 1
-            total_SASA = float(data[k].split()[-1])
-            break
-
-    solv_data = data[start_solv:end_solv]
-    for line in solv_data:
-        item = line.split()
-        born_rad.append(float(item[3]))
-        SASA.append(float(item[4]))
-        try:
-            h_bond.append(float(item[5]))
-        except IndexError:
-            h_bond.append(0.0)
-
     properties_dict = {
         "Total energy": energy,
         "Total charge": total_charge,
@@ -931,9 +932,6 @@ def read_xtb(file,self):
         "Polariz. alpha": alpha,
         "HOMO occup.": homo_occ,
         "LUMO occup.": lumo_occ,
-        "Born radii": born_rad, 
-        "Atomic SASAs": SASA,
-        "Solvent H bonds": h_bond, 
         "Total SASA": total_SASA, 
         "Total disp. C6": total_C6AA,
         "Total disp. C8": total_C8AA,
@@ -941,6 +939,7 @@ def read_xtb(file,self):
     }
 
     return properties_dict
+
 
 def read_fod(file,self):
     """
@@ -1024,7 +1023,6 @@ def read_fod(file,self):
     return properties_FOD
 
 
-
 def read_json(file):
     """
     Takes json files and parses data into pandas table. Returns data.
@@ -1037,6 +1035,66 @@ def read_json(file):
         return data
     else:
         pass
+
+
+def read_solv(file_solv):
+    '''
+    Retrieve properties from the single-point in solvent
+    '''
+    
+    with open(file_solv, "r") as f:
+        data = f.readlines()
+
+        # Get molecular properties related to solvation (in kcal/mol)
+        hartree_to_kcal = 627.509
+        g_solv, g_elec, g_sasa, g_hb, g_shift = np.nan,np.nan,np.nan,np.nan,np.nan
+        for _,line in enumerate(data):
+            if '-> Gsolv' in line:
+                g_solv = float(line.split()[3])*hartree_to_kcal
+            elif '-> Gelec' in line:
+                g_elec = float(line.split()[3])*hartree_to_kcal
+            elif '-> Gsasa' in line:
+                g_sasa = float(line.split()[3])*hartree_to_kcal
+            elif '-> Ghb' in line:
+                g_hb = float(line.split()[3])*hartree_to_kcal
+            elif '-> Gshift' in line:
+                g_shift = float(line.split()[3])*hartree_to_kcal
+
+        # getting atomic properties related to solvation
+        born_rad, atom_sasa, h_bond = [], [], []
+        start_solv, end_solv = 0, 0
+        for j in range(len(data)):
+            if "#   Z     Born rad" in data[j]:
+                start_solv = j + 1
+                break
+        for k in range(start_solv, len(data)):
+            if "total SASA " in data[k]:
+                end_solv = k - 1
+                break
+
+        solv_data = data[start_solv:end_solv]
+        for line in solv_data:
+            item = line.split()
+            born_rad.append(float(item[3]))
+            atom_sasa.append(float(item[4]))
+            try:
+                h_bond.append(float(item[5]))
+            except IndexError:
+                h_bond.append(0.0)
+
+    properties_dict = {
+        "G solv. in H2O": g_solv,
+        "G of H-bonds H2O": g_hb,
+        "G solv. elec.": g_elec,
+        "G solv. SASA": g_sasa,
+        "G solv. shift": g_shift,
+        "Born radii": born_rad, 
+        "Atomic SASAs": atom_sasa,
+        "H bond H2O": h_bond, 
+    }
+
+    return properties_dict
+
 
 def calculate_global_morfeus_descriptors(final_xyz_path,self):
     """
@@ -1196,12 +1254,13 @@ def get_descriptors(level):
     """
     descriptors = {
         'denovo': {
-            'mol': ["HOMO-LUMO gap", "HOMO", "LUMO", "IP", "EA", "Dipole module", "Total charge", "Global SASA"],
-            'atoms': ["cm5 charges", "Electrophil.", "Nucleophil.", "Radical attack", "SASA", "Buried volume", "Cone angle"]
+            'mol': ["HOMO-LUMO gap", "HOMO", "LUMO", "IP", "EA", "Dipole module", "Total charge", "Global SASA", "G solv. in H2O", "G of H-bonds H2O"],
+            'atoms': ["cm5 charges", "Electrophil.", "Nucleophil.", "Radical attack", "SASA", "Buried volume", "Cone angle", "H bond H2O"]
         },
         'interpret': {
             'mol': ["Fermi-level", "Total polariz. alpha", "Total FOD", "Electrophil. idx", "Hardness", "Softness", "Electronegativity",
-                    "Nucleophilicity idx", "Second IP", "Second EA", "Disp. Area", "Disp. Vol.", "HOMO occup.", "LUMO occup."],
+                    "Nucleophilicity idx", "Second IP", "Second EA", "Disp. Area", "Disp. Vol.", 
+                    "HOMO occup.", "LUMO occup."],
             'atoms': ["s proportion", "p proportion", "d proportion", "Coord. numbers",
                       "Polariz. alpha", "FOD", "FOD s proportion", "FOD p proportion", "FOD d proportion",
                       "Solid angle", "Pyramidaliz. P", "Pyramidaliz. Vol", "Dispersion"]
@@ -1210,12 +1269,14 @@ def get_descriptors(level):
             'mol': ["Total energy", "Total disp. C6", "Total disp. C8", "Chem. potential", "Electrodon. power idx",
                     "Electroaccep. power idx", 
                     "Electrofugality", "Nucleofugality", "Intrinsic React. idx", "Net Electrophilicity", 
-                    "Hyperhardness", "Hypersoftness", "Electrophilic descrip.", "cub. electrophilicity idx"],
+                    "Hyperhardness", "Hypersoftness", "Electrophilic descrip.", "cub. electrophilicity idx",
+                    "G solv. elec.", "G solv. SASA", "G solv. shift"],
             'atoms': ["fukui+", "fukui-", "fukui0", "dual descrip.", "softness+", "softness-", "softness0", 
                       "Rel. nucleophilicity", "Rel. electrophilicity", "GC Dual Descrip.", "Mult. descrip.", 
-                      "Nu_Electrophil.", "Nu_Nucleophil.", "Nu_Radical attack", "Disp. coeff. C6"]
+                      "Nu_Electrophil.", "Nu_Nucleophil.", "Nu_Radical attack", "Disp. coeff. C6", "Born radii"]
         }
     }
+
     return descriptors.get(level, {})
 
 
@@ -1238,15 +1299,38 @@ def remove_lists(df):
     Remove lists from a dataframe
     '''
     
-    for col in df:
-        if col in df:
-            # this for loop is fast, and it's used because sometimes the descriptors
-            # are not generated in all the rows, so the code needs to check all the rows until it finds a list
-            for val in df[col]:
-                if str(val).lower() != 'nan' and isinstance(val,float):
+    for col in df.columns:
+        # this for loop is fast, and it's used because sometimes the descriptors
+        # are not generated in all the rows, so the code needs to check all the rows until it finds a list
+        for val in df[col]:
+            if str(val).lower() != 'nan' and isinstance(val,float):
+                break
+            elif isinstance(val,str):
+                if val[0] == '[':
+                    df = df.drop([col], axis=1).reset_index(drop=True)
                     break
-                elif isinstance(val,str):
-                    if val[0] == '[':
-                        df = df.drop([col], axis=1).reset_index(drop=True)
-                        break
+            elif isinstance(val,list):
+                df = df.drop([col], axis=1).reset_index(drop=True)
+                break
+
     return df
+
+
+def load_file_formats():
+    '''
+    Load formats for xTB calculations (loaded in QDESCP and in pytest).
+    '''
+    
+    file_formats = {'_opt.out': 'Optimization',
+                    '.out': 'Single-point',
+                    '.fod': 'FOD',
+                    '.fukui': 'Fukui',
+                    '.gfn1': 'GFN1',
+                    '.Nminus1': 'Nminus1',
+                    '.Nminus2': 'Nminus2',
+                    '.Nplus1': 'Nplus1',
+                    '.Nplus2': 'Nplus2',
+                    '.wbo': 'WBO',
+                    '.solv': 'Solvation in H2O'}
+
+    return file_formats
