@@ -530,7 +530,7 @@ def test_qdescp_csv(
 ):
 
     # reset folder and files
-    folder_qdescp = f'{qdescp_sdf_dir}/QDESCP'
+    folder_qdescp = f'{qdescp_csv_dir}/QDESCP'
     folder_boltz = f'{folder_qdescp}/boltz'
     for folder in [folder_qdescp,folder_boltz]:
         if os.path.exists(folder):
@@ -547,7 +547,7 @@ def test_qdescp_csv(
         os.remove(file_descriptors_full)
 
     # QDESCP-xTB workflow
-    cmd_qdescp = ["python","-m","aqme","--qdescp","--program","xtb","--files",f'{qdescp_csv_dir}/{file}', "--destination",f'{folder_qdescp}',]
+    cmd_qdescp = ["python","-m","aqme","--qdescp","--input",f'{qdescp_csv_dir}/{file}', "--destination",f'{folder_qdescp}',]
 
     subprocess.run(cmd_qdescp)
 
