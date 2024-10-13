@@ -222,6 +222,7 @@ from aqme.utils import (
     get_files,
     check_dependencies,
     mol_from_sdf_or_mol_or_mol2,
+    set_destination
     )
 from aqme.csearch.crest import xtb_opt_main
 
@@ -465,15 +466,7 @@ class csearch:
             # check if the optimization is constrained
             complex_ts = check_constraints(self)
 
-        if self.args.destination is None:
-            self.csearch_folder = Path(self.args.initial_dir).joinpath(
-                f"CSEARCH"
-            )
-        else:
-            if self.args.initial_dir.as_posix() in f"{self.args.destination}":
-                self.csearch_folder = Path(self.args.destination)
-            else:
-                self.csearch_folder = Path(self.args.initial_dir).joinpath(self.args.destination)
+        self.csearch_folder = set_destination(self,'CSEARCH')
 
         self.csearch_folder.mkdir(exist_ok=True, parents=True)
 

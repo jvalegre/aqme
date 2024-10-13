@@ -22,10 +22,9 @@ xTB descriptors
 +++++++++++++++
 
    files : list of str, default=''
-      Filenames of SDF/PDB/XYZ files to calculate xTB descriptors. If \*.sdf 
-      (or other strings that are not lists such as \*.pdb) are specified, 
-      the program will look for all the SDF files in the working directory 
-      through glob.glob(\*.sdf)
+      Filenames of SDF/PDB/XYZ/CSV files to calculate xTB descriptors. If CSV is selected, a CSV
+      with two columns is required (code_name and SMILES), since AQME will generate conformers
+      from SMILES with CSEARCH before QDESCP generates descriptors.
    charge : int, default=None
       Charge of the calculations used in the following input files (charges from
       SDF files generated in CSEARCH are read automatically).
@@ -99,7 +98,8 @@ from aqme.utils import (
     mol_from_sdf_or_mol_or_mol2,
     run_command,
     check_files,
-    check_dependencies
+    check_dependencies,
+    set_destination
 )
 from aqme.qdescp_utils import (
     get_boltz_props,
@@ -160,12 +160,31 @@ class qdescp:
         '''
         Full xTB workflow in QDESCP for descriptor generation and collection
         '''
+
+        # if the files input is a CSV, first the program generates conformers
+        if len(self.args.files) == 1 and os.path.basename(self.args.files[0]).split('.')[1].lower() == 'csv':
+            if self.args.sample == 25:
+                sample_qdescp = 5
+            else:
+                sample_qdescp = self.args.sample
+            self.args.csv_name = os.path.basename(self.args.files[0])
+
+            if f'{os.path.basename(destination).upper()}' == 'QDESCP':
+                destination_csearch = Path(os.path.dirname(destination)).joinpath('CSEARCH')
+            else:
+                destination_csearch = destination.joinpath('CSEARCH')
         
+            cmd_csearch = ['python', '-m', 'aqme', '--csearch', '--program', 'rdkit', '--input', 
+                        f'{self.args.csv_name}', '--sample', f'{sample_qdescp}', '--destination', f'{destination_csearch}']
+            subprocess.run(cmd_csearch)
+
+            self.args.files = glob.glob(f'{destination_csearch}/*.sdf')
+
         # obtaining mols from input files that will be used to set up atomic descriptors
         mol_list = self.get_mols_qdescp()
 
         # obtaing SMARTS patterns from the input files automatically if no patterns are provided
-        if len(smarts_targets) == 0:
+        if len(smarts_targets) == 0 and len(self.args.files) > 1:
             smarts_targets = self.auto_pattern(mol_list,smarts_targets)
 
         # Delete a SMARTS pattern if it is not compatible with more than 75% of the sdf files
@@ -255,11 +274,8 @@ class qdescp:
         # copy smarts patterns used to generate atomic descriptors
         smarts_targets = self.args.qdescp_atoms.copy()
 
-        if self.args.destination is None:
-            destination = self.args.initial_dir.joinpath("QDESCP")
-        else:
-            destination = Path(self.args.destination)
-        
+        destination = set_destination(self,'QDESCP')
+
         # create folder to store Boltzmann weighted properties
         boltz_dir = Path(f"{destination}/boltz")
         if os.path.exists(f"{boltz_dir}"):

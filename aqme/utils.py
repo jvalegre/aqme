@@ -150,6 +150,21 @@ def move_file(destination, source, file):
         filepath.replace(destination / file)
 
 
+def set_destination(self,module):
+    '''
+    Sets up the destination folder
+    '''
+    
+    if self.args.destination is None:
+        destination = self.args.initial_dir.joinpath(module)
+    elif self.args.initial_dir.joinpath(self.args.destination).exists():
+        destination = Path(self.args.initial_dir.joinpath(self.args.destination))
+    else:
+        destination = Path(self.args.destination)
+    
+    return destination
+
+
 def get_info_input(file):
     """
     Takes an input file and retrieves the coordinates of the atoms and the

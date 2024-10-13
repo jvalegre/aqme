@@ -103,7 +103,8 @@ from aqme.utils import (
     mol_from_sdf_or_mol_or_mol2,
     add_prefix_suffix,
     check_xtb,
-    check_dependencies
+    check_dependencies,
+    set_destination
 )
 from aqme.filter import conformer_filters
 from aqme.csearch.crest import xtb_opt_main
@@ -193,12 +194,7 @@ class cmin:
 
             self.args.log.write(f"\n\n   ----- {self.name} -----")
 
-            if self.args.destination is None:
-                self.cmin_folder = self.args.initial_dir.joinpath("CMIN")
-            elif self.args.initial_dir.joinpath(self.args.destination).exists():
-                self.cmin_folder = Path(self.args.initial_dir.joinpath(self.args.destination))
-            else:
-                self.cmin_folder = Path(self.args.destination)
+            self.cmin_folder = set_destination(self,'CMIN')
 
             # two destinations, one to store all the confs optimized and another to store
             # only the confs that passed the duplicate and energy filters
