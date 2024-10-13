@@ -74,12 +74,6 @@ import pandas as pd
 import json
 import subprocess
 import numpy as np
-
-try:
-    import cclib
-except ModuleNotFoundError:
-    print("x  cclib is not installed! You can install the program with 'conda install -c conda-forge cclib' or 'pip install cclib'")
-    sys.exit()
 from pathlib import Path
 from aqme.utils import (
     move_file,

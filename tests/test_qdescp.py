@@ -10,7 +10,7 @@ import pytest
 import pandas as pd
 import numpy as np
 import subprocess
-from aqme.qdescp_utils import read_json,get_descriptors, get_descriptors
+from aqme.qdescp_utils import read_json,get_descriptors, get_descriptors, load_file_formats
 import glob
 import math
 import shutil
@@ -19,15 +19,17 @@ import shutil
 w_dir_main = os.getcwd()
 qdescp_input_dir = w_dir_main + "/tests/qdescp_inputs"
 qdescp_empty_dir = w_dir_main + "/tests/qdescp_empty"
+qdescp_sdf_dir = w_dir_main + "/tests/qdescp_sdf"
 
 GAS_CONSTANT = 8.3144621  # J / K / mol
 J_TO_AU = 4.184 * 627.509541 * 1000.0  # UNIT CONVERSION
 T = 298.15
 
-# import descriptors
+# import descriptors and file formats
 denovo_descriptors = get_descriptors('denovo')
 interpret_descriptors = get_descriptors('interpret')
 full_descriptors = get_descriptors('full')
+file_formats = load_file_formats()
 
 
 # tests for QDESCP-xTB
@@ -62,10 +64,14 @@ def test_qdescp_xtb(file):
         file_descriptors_interpret = f'{w_dir_main}/AQME-ROBERT_interpret_{file_csearch}'
         file_descriptors_full = f'{w_dir_main}/AQME-ROBERT_full_{file_csearch}'
         file_descriptors_denovo = f'{w_dir_main}/AQME-ROBERT_denovo_{file_csearch}'
+        file2_descriptors_interpret = f'{w_dir_main}/QDESCP_interpret_descriptors.csv'
+        file2_descriptors_full = f'{w_dir_main}/QDESCP_full_descriptors.csv'
+        file2_descriptors_denovo = f'{w_dir_main}/QDESCP_denovo_descriptors.csv'
+
     else:
-        file_descriptors_interpret = f'{w_dir_main}/QDESCP_interpret_boltz_descriptors.csv'
-        file_descriptors_full = f'{w_dir_main}/QDESCP_full_boltz_descriptors.csv'
-        file_descriptors_denovo = f'{w_dir_main}/QDESCP_denovo_boltz_descriptors.csv'
+        file_descriptors_interpret = f'{w_dir_main}/QDESCP_interpret_descriptors.csv'
+        file_descriptors_full = f'{w_dir_main}/QDESCP_full_descriptors.csv'
+        file_descriptors_denovo = f'{w_dir_main}/QDESCP_denovo_descriptors.csv'
     if os.path.exists(file_descriptors_denovo): 
         os.remove(file_descriptors_denovo)
     if os.path.exists(file_descriptors_interpret): 
@@ -110,29 +116,54 @@ def test_qdescp_xtb(file):
         energies_xtb, Fermi_lvls_xtb, SCC_IP_lvls_xtb = [], [], []
         energies_json, Fermi_lvls_json, SCC_IP_lvls_json = [], [], []
 
-        for file in files_xtb:
-            # Build the path for the .out file
-            xtb_file_path = f'{folder_qdescp}/xtb_data/{file}/{file}.out' # mol_1_rdkit_conf_1.out
-            xtb_file_path_gn1 = f'{folder_qdescp}/xtb_data/{file}/{file}.gfn1' #mol_1_rdkit_conf_1.gfn1
-            
+        for file_xtb in files_xtb:
+            # only two files should remain inside the xtb_data folders
+            xtb_data_path = f'{folder_qdescp}/xtb_data/{file_xtb}'
+            assert len(glob.glob(f'{xtb_data_path}/*')) == 2
+            assert os.path.exists(f'{xtb_data_path}/{file_xtb}.xyz')
+            assert os.path.exists(f'{xtb_data_path}/{file_xtb}_All_Calcs.out')
+
+            # Build the path for the out file
+            xtb_file_path = f'{xtb_data_path}/{file_xtb}_All_Calcs.out' # mol_1_rdkit_conf_1.out
+             
             # Get data from the raw xTB calculations
             f = open(xtb_file_path, "r")
             data = f.readlines()
             f.close()
-            f1 = open(xtb_file_path_gn1, "r")
-            data1 = f1.readlines()
-            f1.close()
 
             energy_xtb, fermi_xtb, delta_SCC_IP = None, None, None
+            E_section = False
+            IP_section = False
             for i in range(0, len(data)):
-                if data[i].find("TOTAL ENERGY") > -1:
+                if '----- Single-point -----' in data[i]:
+                    E_section = True
+                elif '----- FOD -----' in data[i]:
+                    E_section = False
+
+                if '----- GFN1 -----' in data[i]:
+                    IP_section = True
+                elif '----- Nminus1 -----' in data[i]:
+                    IP_section = False
+
+                if data[i].find("TOTAL ENERGY") > -1 and E_section:
                     energy_xtb = float(data[i].split()[3])
                 
-                if data[i].find("Fermi-level") > -1:
+                if data[i].find("Fermi-level") > -1 and E_section:
                     fermi_xtb = float(data[i].split()[-2])  # Store the latest Fermi level found
 
-                if data1[i].find("delta SCC IP (eV):") > -1:
-                    delta_SCC_IP = float(data1[i].split()[-1])
+                if data[i].find("delta SCC IP (eV):") > -1 and IP_section:
+                    delta_SCC_IP = float(data[i].split()[-1])
+            
+            # check that all the calcs are inside the All_calcs.out file
+            start_line,find_format = 0,0
+            for file_format in file_formats:
+                for i in range(start_line, len(data)):
+                    if f'----- {file_formats[file_format]} -----' in data[i]:
+                        find_format += 1
+                        start_line = i
+                        break
+            assert find_format == len(file_formats)
+
 
             # Append the last found values to the lists
             if energy_xtb is not None:
@@ -144,7 +175,7 @@ def test_qdescp_xtb(file):
 
 
             # Build the path for the JSON file (mol_1_rdkit_conf_1.json and mol_1_rdkit_conf_2.json)
-            json_file_path = f'{folder_qdescp}/{file}.json'
+            json_file_path = f'{folder_qdescp}/{file_xtb}.json'
 
             # Get data from the generated JSON files (mol_1_rdkit_conf_1.json and mol_1_rdkit_conf_2.json)
             json_data = read_json(json_file_path)
@@ -255,7 +286,6 @@ def test_qdescp_xtb(file):
                 if str(val).lower() == 'nan':
                     count_nan += 1
             assert count_nan == 1
-            assert str(pd_boltz_interpret["C=O_C_FOD"][0]).lower() == 'nan'
         else:
             # from xTB
             assert len(pd_boltz_interpret["P_FOD"]) == 4
@@ -264,7 +294,6 @@ def test_qdescp_xtb(file):
                 if str(val).lower() == 'nan':
                     count_nan += 1
             assert count_nan == 1
-            assert str(pd_boltz_interpret["P_FOD"][0]).lower() == 'nan'
 
             # from MORFEUS
             assert len(pd_boltz_interpret["P_Buried volume"]) == 4
@@ -273,7 +302,6 @@ def test_qdescp_xtb(file):
                 if str(val).lower() == 'nan':
                     count_nan += 1
             assert count_nan == 1
-            assert str(pd_boltz_interpret["P_Buried volume"][0]).lower() == 'nan'
 
         # check variables and X_ prefixes in variable names
         if file in ['test_atom.csv','test_multigroup.csv','test_robert_atom.csv']:
@@ -295,8 +323,8 @@ def test_qdescp_xtb(file):
         assert 'C1_cm5 charges' in pd_boltz_interpret
         assert round(pd_boltz_interpret['C1_cm5 charges'][1],1) == -0.2
 
-#Checking molecular and atomic descriptors
-    def check_descriptors(pd_boltz, descriptors, excluded_descriptors, desc_type):
+    # Checking molecular and atomic descriptors
+    def check_descriptors(pd_boltz, descriptors, excluded_descriptors, desc_type, file_test):
         """
         Function to check the presence and absence of descriptors in the DataFrame.
         pd_boltz: Pandas DataFrame with the calculated descriptors.
@@ -306,7 +334,10 @@ def test_qdescp_xtb(file):
         """
         # Check for the presence of descriptors
         for descp in descriptors:
-            assert descp in pd_boltz.columns, f"{desc_type.capitalize()} descriptor {descp} is missing from columns!"
+            for val in pd_boltz[descp]:
+                if file_test in ['test.csv','test_robert_mol.csv']:
+                    assert str(val).lower() != 'nan'
+                assert descp in pd_boltz.columns, f"{desc_type.capitalize()} descriptor {descp} is missing from columns!"
 
         # Check for the absence of descriptors that should not be present
         for descp in excluded_descriptors:
@@ -327,60 +358,82 @@ def test_qdescp_xtb(file):
     descp_interpret_atoms = [f'P_{descp}' for descp in descp_interpret_atoms]
     descp_full_atoms = [f'P_{descp}' for descp in descp_full_atoms]
 
-    # Read the CSV files
-    if file == 'test.csv':
-        file_descriptors_denovo = f'{w_dir_main}/QDESCP_denovo_boltz_descriptors.csv'
-        file_descriptors_interpret = f'{w_dir_main}/QDESCP_interpret_boltz_descriptors.csv'
-        file_descriptors_full = f'{w_dir_main}/QDESCP_full_boltz_descriptors.csv'
-    elif file in ['test_robert_mol.csv','test_robert_atom.csv']:
-        file_descriptors_denovo = f'{w_dir_main}/AQME-ROBERT_denovo_test_atom.csv'
-        file_descriptors_interpret = f'{w_dir_main}/AQME-ROBERT_interpret_test_atom.csv'
-        file_descriptors_full = f'{w_dir_main}/AQME-ROBERT_full_test_atom.csv'      
+    # Read the CSV files   
     pd_boltz_denovo = pd.read_csv(file_descriptors_denovo)
     pd_boltz_interpret = pd.read_csv(file_descriptors_interpret)
     pd_boltz_full = pd.read_csv(file_descriptors_full)
 
     # Check molecular and atomic descriptors in the QDESCP_ files
     if file == 'test.csv':
-        assert pd_boltz_interpret.columns[0] == 'HOMO-LUMO gap'
-        check_descriptors(pd_boltz_denovo, descp_denovo_mol, [d for d in descp_full_mol if d not in descp_denovo_mol], 'mol')
-        check_descriptors(pd_boltz_interpret, descp_interpret_mol, [d for d in descp_full_mol if d not in descp_interpret_mol], 'mol')
-        check_descriptors(pd_boltz_full, descp_full_mol, [], 'mol')
-        assert pd_boltz_denovo.columns[-1] == 'Name'
-        assert len(pd_boltz_denovo.columns) == len(descp_denovo_mol)+2 # 2 extra: name and MolLogP
-        assert pd_boltz_interpret.columns[-1] == 'Name'
-        assert len(pd_boltz_interpret.columns) == len(descp_interpret_mol)+2
-        assert pd_boltz_full.columns[-1] == 'Name'
-        assert len(pd_boltz_full.columns) == len(descp_full_mol)+2
+        assert pd_boltz_interpret.columns[0] == 'code_name'
+        assert pd_boltz_interpret.columns[1] == 'HOMO-LUMO gap'
+        check_descriptors(pd_boltz_denovo, descp_denovo_mol, [d for d in descp_full_mol if d not in descp_denovo_mol], 'mol', file)
+        check_descriptors(pd_boltz_interpret, descp_interpret_mol, [d for d in descp_full_mol if d not in descp_interpret_mol], 'mol', file)
+        check_descriptors(pd_boltz_full, descp_full_mol, [], 'mol', file)
+        assert len(pd_boltz_denovo.columns) == 12 == len(descp_denovo_mol)+2 # descps + 2 extra: code_name and MolLogP
+        assert len(pd_boltz_interpret.columns) == 26 == len(descp_interpret_mol)+2
+        assert len(pd_boltz_full.columns) == 244 # this might change in future RDKit versions
+
+        # check whether the QDESCP original and raw files were moved to the raw_csv_databases folder
+        for file_csv in [file_descriptors_denovo, file_descriptors_interpret,file_descriptors_full]:
+            raw_csv = f'{folder_qdescp}/raw_csv_databases/Raw_{os.path.basename(file_csv)}'
+            assert os.path.exists(raw_csv)
+            raw_df = pd.read_csv(raw_csv)
+            assert raw_df.columns[0] == 'code_name'
+            assert raw_df.columns[1] == 'cm5 charges'
+            for raw_atom_val in ['cm5 charges','Electrophil.','Nucleophil.','Radical attack','SASA','Buried volume','Cone angle','H bond H2O']:
+                assert raw_df[raw_atom_val][0][0] == '['
+            if file_csv in [file_descriptors_interpret,file_descriptors_full]:
+                for raw_atom_val in ["s proportion", "p proportion", "d proportion", "Coord. numbers","Polariz. alpha", "FOD", "FOD s proportion", "FOD p proportion", "FOD d proportion","Solid angle", "Pyramidaliz. P", "Pyramidaliz. Vol", "Dispersion"]:
+                    assert raw_df[raw_atom_val][0][0] == '['
 
     # Check molecular and atomic descriptors in the AQME-ROBERT files
     elif file in ['test_robert_mol.csv','test_robert_atom.csv']:
         assert pd_boltz_interpret.columns[0] == 'SMILES'
         # molecular descriptors must be in both cases
-        check_descriptors(pd_boltz_denovo, descp_denovo_mol, [d for d in descp_full_mol if d not in descp_denovo_mol], 'mol')
-        check_descriptors(pd_boltz_interpret, descp_interpret_mol, [d for d in descp_full_mol if d not in descp_interpret_mol], 'mol')
-        check_descriptors(pd_boltz_full, descp_full_mol, [], 'mol')
+        check_descriptors(pd_boltz_denovo, descp_denovo_mol, [d for d in descp_full_mol if d not in descp_denovo_mol], 'mol', file)
+        check_descriptors(pd_boltz_interpret, descp_interpret_mol, [d for d in descp_full_mol if d not in descp_interpret_mol], 'mol', file)
+        check_descriptors(pd_boltz_full, descp_full_mol, [], 'mol', file)
 
-        # molecular descriptors must be here
+        # atomic descriptors must be here
         if file == 'test_robert_atom.csv':
-            check_descriptors(pd_boltz_denovo, descp_denovo_atoms, [d for d in descp_full_atoms if d not in descp_denovo_atoms], 'atoms')
-            check_descriptors(pd_boltz_interpret, descp_interpret_atoms, [d for d in descp_full_atoms if d not in descp_interpret_atoms], 'atoms')
-            check_descriptors(pd_boltz_full, descp_full_atoms, [], 'atoms')
+            check_descriptors(pd_boltz_denovo, descp_denovo_atoms, [d for d in descp_full_atoms if d not in descp_denovo_atoms], 'atoms', file)
+            check_descriptors(pd_boltz_interpret, descp_interpret_atoms, [d for d in descp_full_atoms if d not in descp_interpret_atoms], 'atoms', file)
+            check_descriptors(pd_boltz_full, descp_full_atoms, [], 'atoms', file)
             assert pd_boltz_denovo.columns[:2].tolist() == ['SMILES','code_name']
-            assert len(pd_boltz_denovo.columns) == len(descp_denovo_mol)+len(descp_denovo_atoms)+3 # 3 extra: SMILES, code_name and MolLogP
+            assert len(pd_boltz_denovo.columns) == 21 == len(descp_denovo_mol)+len(descp_denovo_atoms)+3 # 3 extra: SMILES, code_name and MolLogP
             assert pd_boltz_interpret.columns[:2].tolist() == ['SMILES','code_name']
-            assert len(pd_boltz_interpret.columns) == len(descp_interpret_mol)+len(descp_interpret_atoms)+3
+            assert len(pd_boltz_interpret.columns) == 48 == len(descp_interpret_mol)+len(descp_interpret_atoms)+3
             assert pd_boltz_full.columns[:2].tolist() == ['SMILES','code_name']
-            assert len(pd_boltz_full.columns) > 250 # bunch of RDKit descps
-    
-        # molecular descriptors must not be here
+            assert len(pd_boltz_full.columns) == 282 # bunch of RDKit descps
+
+        # atomic descriptors must not be here
         elif file == 'test_robert_mol.csv':
             assert pd_boltz_denovo.columns[:2].tolist() == ['SMILES','code_name']
-            assert len(pd_boltz_denovo.columns) == len(descp_denovo_mol)+3 # 3 extra: SMILES, code_name and MolLogP
+            assert len(pd_boltz_denovo.columns) == 13 == len(descp_denovo_mol)+3 # 3 extra: SMILES, code_name and MolLogP
             assert pd_boltz_interpret.columns[:2].tolist() == ['SMILES','code_name']
-            assert len(pd_boltz_interpret.columns) == len(descp_interpret_mol)+3
+            assert len(pd_boltz_interpret.columns) == 27 == len(descp_interpret_mol)+3
             assert pd_boltz_full.columns[:2].tolist() == ['SMILES','code_name']
-            assert len(pd_boltz_full.columns) > 200 # bunch of RDKit descps
+            assert len(pd_boltz_full.columns) == 245 # this might change in future RDKit versions
+
+        # check whether the QDESCP original and raw files were moved to the raw_csv_databases folder
+        for file_csv in [file_descriptors_denovo, file_descriptors_interpret,file_descriptors_full]:
+            assert os.path.exists(file_csv)
+        for file_csv2 in [file2_descriptors_denovo, file2_descriptors_interpret, file2_descriptors_full]:
+            assert os.path.exists(f'{folder_qdescp}/raw_csv_databases/{os.path.basename(file_csv2)}')
+            raw_csv = f'{folder_qdescp}/raw_csv_databases/Raw_{os.path.basename(file_csv2)}'
+            assert os.path.exists(raw_csv)
+            raw_df = pd.read_csv(raw_csv)
+            assert raw_df.columns[0] == 'code_name'
+            if file == 'test_robert_atom.csv':
+                assert raw_df.columns[1] == 'P_cm5 charges'
+            elif file == 'test_robert_mol.csv':
+                assert raw_df.columns[1] == 'cm5 charges'
+                for raw_atom_val in ['cm5 charges','Electrophil.','Nucleophil.','Radical attack','SASA','Buried volume','Cone angle','H bond H2O']:
+                    assert raw_df[raw_atom_val][0][0] == '['
+                if file_csv2 in [file2_descriptors_interpret,file2_descriptors_full]:
+                    for raw_atom_val in ["s proportion", "p proportion", "d proportion", "Coord. numbers","Polariz. alpha", "FOD", "FOD s proportion", "FOD p proportion", "FOD d proportion","Solid angle", "Pyramidaliz. P", "Pyramidaliz. Vol", "Dispersion"]:
+                        assert raw_df[raw_atom_val][0][0] == '['
 
 @pytest.mark.parametrize(
     "test",
@@ -400,9 +453,9 @@ def test_qdescp_missing(
         if os.path.exists(folder):
             shutil.rmtree(folder)
 
-    file_descriptors_interpret = f'{w_dir_main}/QDESCP_interpret_boltz_descriptors.csv'
-    file_descriptors_full = f'{w_dir_main}/QDESCP_full_boltz_descriptors.csv'
-    file_descriptors_denovo = f'{w_dir_main}/QDESCP_denovo_boltz_descriptors.csv'
+    file_descriptors_interpret = f'{w_dir_main}/QDESCP_interpret_descriptors.csv'
+    file_descriptors_full = f'{w_dir_main}/QDESCP_full_descriptors.csv'
+    file_descriptors_denovo = f'{w_dir_main}/QDESCP_denovo_descriptors.csv'
     if os.path.exists(file_descriptors_denovo): 
         os.remove(file_descriptors_denovo)
     if os.path.exists(file_descriptors_interpret): 
@@ -417,9 +470,57 @@ def test_qdescp_missing(
 
     # checking csv file
     df_interpret = pd.read_csv(file_descriptors_interpret)
-    assert len(df_interpret['Name']) == 2
-    assert 'boltz/a' in df_interpret['Name'][0]
-    assert 'boltz/c' in df_interpret['Name'][1]
+    assert len(df_interpret['code_name']) == 2
+    assert 'a' in df_interpret['code_name'][0]
+    assert 'c' in df_interpret['code_name'][1]
+
+
+@pytest.mark.parametrize(
+    "test",
+    [
+        # tests for using SDF as inputs and automated detection of common atom patterns
+        ("sdf_input_n_auto"),
+    ],
+)
+def test_qdescp_sdf(
+    test
+):
+
+    # reset folder and files
+    folder_qdescp = f'{qdescp_sdf_dir}/QDESCP'
+    folder_boltz = f'{folder_qdescp}/boltz'
+    for folder in [folder_qdescp,folder_boltz]:
+        if os.path.exists(folder):
+            shutil.rmtree(folder)
+
+    file_descriptors_interpret = f'{w_dir_main}/QDESCP_interpret_descriptors.csv'
+    file_descriptors_full = f'{w_dir_main}/QDESCP_full_descriptors.csv'
+    file_descriptors_denovo = f'{w_dir_main}/QDESCP_denovo_descriptors.csv'
+    if os.path.exists(file_descriptors_denovo): 
+        os.remove(file_descriptors_denovo)
+    if os.path.exists(file_descriptors_interpret): 
+        os.remove(file_descriptors_interpret)
+    if os.path.exists(file_descriptors_full): 
+        os.remove(file_descriptors_full)
+
+    # QDESCP-xTB workflow
+    cmd_qdescp = ["python","-m","aqme","--qdescp","--program","xtb","--files",f'{qdescp_sdf_dir}/*.sdf', "--destination",f'{folder_qdescp}',]
+
+    subprocess.run(cmd_qdescp)
+
+    # checking csv file
+    df_interpret = pd.read_csv(file_descriptors_interpret)
+    assert len(df_interpret['code_name']) == 2
+    assert 'mol1' == df_interpret['code_name'][0]
+    assert 'mol_2' == df_interpret['code_name'][1]
+    assert len(df_interpret.columns) == 47
+
+    # check if the automated detection of common pattern works
+    count_nan = 0 # dirty hack that account for different sortings of the calcs within the CSV files
+    for val in df_interpret["P_FOD"]:
+        if str(val).lower() == 'nan':
+            count_nan += 1
+    assert count_nan == 0
 
 
 # tests for QDESCP-NMR
