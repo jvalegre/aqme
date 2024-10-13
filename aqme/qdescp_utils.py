@@ -1294,24 +1294,14 @@ def fix_cols_names(df):
     return df
 
 
-def remove_lists(df):
+def remove_atom_descp(df,atom_props):
     '''
-    Remove lists from a dataframe
+    Remove atomic descriptors from a dataframe if they were not specified
     '''
     
     for col in df.columns:
-        # this for loop is fast, and it's used because sometimes the descriptors
-        # are not generated in all the rows, so the code needs to check all the rows until it finds a list
-        for val in df[col]:
-            if str(val).lower() != 'nan' and isinstance(val,float):
-                break
-            elif isinstance(val,str):
-                if val[0] == '[':
-                    df = df.drop([col], axis=1).reset_index(drop=True)
-                    break
-            elif isinstance(val,list):
-                df = df.drop([col], axis=1).reset_index(drop=True)
-                break
+        if col in atom_props:
+            df = df.drop([col], axis=1).reset_index(drop=True)
 
     return df
 

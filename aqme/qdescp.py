@@ -9,7 +9,7 @@ General
       Working directory
    destination : str, default=None,
       Directory to create the JSON file(s)
-   program : str, default=None
+   program : str, default=xtb
       Program required to create the new descriptors. Current options: 'xtb', 'nmr'
    qdescp_atoms : list of str, default=[]
       Type of atom or group to calculate atomic properties. This option admits atoms 
@@ -21,11 +21,10 @@ General
 xTB descriptors
 +++++++++++++++
 
-   files : list of str, default=''
-      Filenames of SDF/PDB/XYZ files to calculate xTB descriptors. If \*.sdf 
-      (or other strings that are not lists such as \*.pdb) are specified, 
-      the program will look for all the SDF files in the working directory 
-      through glob.glob(\*.sdf)
+   files or input (both options are valid) : list of str, default=''
+      Filenames of SDF/PDB/XYZ/CSV files to calculate xTB descriptors. If CSV is selected, a CSV
+      with two columns is required (code_name and SMILES), since AQME will generate conformers
+      from SMILES with CSEARCH before QDESCP generates descriptors.
    charge : int, default=None
       Charge of the calculations used in the following input files (charges from
       SDF files generated in CSEARCH are read automatically).
@@ -99,7 +98,8 @@ from aqme.utils import (
     mol_from_sdf_or_mol_or_mol2,
     run_command,
     check_files,
-    check_dependencies
+    check_dependencies,
+    set_destination
 )
 from aqme.qdescp_utils import (
     get_boltz_props,
@@ -116,7 +116,7 @@ from aqme.qdescp_utils import (
     get_descriptors,
     get_boltz_props_nmr,
     fix_cols_names,
-    remove_lists,
+    remove_atom_descp,
     load_file_formats,
     read_solv
 )
@@ -160,12 +160,57 @@ class qdescp:
         '''
         Full xTB workflow in QDESCP for descriptor generation and collection
         '''
-        
+
+        # check whether the user have chosen the "input" or "files" option (QDESCP will use "files" from this point on)
+        valid_input = True
+        if self.args.files == [] and self.args.input != '':
+            if os.path.basename(self.args.input).split('.')[1].lower() != "csv":
+                self.args.log.write(f"\nx  The format used ({os.path.basename(self.args.input).split('.')[1]}) is not compatible with the 'input' option! Formats accepted: csv")
+                valid_input = False
+            if self.args.input[0] == '[' or isinstance(self.args.input, list):
+                self.args.log.write(f"\nx  The 'input' option was specified as a list! Please provide only the PATH or name of the CSV (i.e. --input test.csv)")
+                valid_input = False
+            qdescp_files = [self.args.input]
+        else:
+            if os.path.basename(self.args.files[0]).split('.')[1].lower() != "sdf":
+                self.args.log.write(f"\nx  The format used ({os.path.basename(self.args.files[0]).split('.')[1]}) is not compatible with the 'files' option! Formats accepted: sdf")
+                valid_input = False
+            qdescp_files = self.args.files
+
+        if not valid_input:
+            self.args.log.finalize()
+            sys.exit()
+
+        # if the files input is a CSV, first the program generates conformers
+        if len(qdescp_files) == 1 and os.path.basename(qdescp_files[0]).split('.')[1].lower() == 'csv':
+            if not os.path.exists(qdescp_files[0]):
+                self.args.log.write(f"\nx  The csv_name provided ({qdescp_files[0]}) does not exist! Please specify this name correctly")
+                self.args.log.finalize()
+                sys.exit()
+            if self.args.sample == 25:
+                sample_qdescp = 5
+            else:
+                sample_qdescp = self.args.sample
+            self.args.csv_name = qdescp_files[0]
+
+            if f'{os.path.basename(destination).upper()}' == 'QDESCP':
+                destination_csearch = Path(os.path.dirname(destination)).joinpath('CSEARCH')
+            else:
+                destination_csearch = destination.joinpath('CSEARCH')
+
+            cmd_csearch = ['python', '-m', 'aqme', '--csearch', '--program', 'rdkit', '--input', 
+                        f'{self.args.csv_name}', '--sample', f'{sample_qdescp}', '--destination', f'{destination_csearch}']
+            subprocess.run(cmd_csearch)
+
+            qdescp_files = glob.glob(f'{destination_csearch}/*.sdf')
+
+        self.args.log.write(f"\nStarting QDESCP-{self.args.program} with {len(qdescp_files)} job(s)\n")
+
         # obtaining mols from input files that will be used to set up atomic descriptors
-        mol_list = self.get_mols_qdescp()
+        mol_list = self.get_mols_qdescp(qdescp_files)
 
         # obtaing SMARTS patterns from the input files automatically if no patterns are provided
-        if len(smarts_targets) == 0:
+        if len(smarts_targets) == 0 and len(qdescp_files) > 1:
             smarts_targets = self.auto_pattern(mol_list,smarts_targets)
 
         # Delete a SMARTS pattern if it is not compatible with more than 75% of the sdf files
@@ -191,7 +236,7 @@ class qdescp:
         mol_props = interpret_mols + full_descriptors['mol'] 
         atom_props =  interpret_atoms + full_descriptors['atoms']
 
-        update_atom_props, update_denovo_atom_props, update_interpret_atom_props = self.gather_files_and_run(destination, atom_props, update_atom_props, smarts_targets, denovo_atoms, update_denovo_atom_props, interpret_atoms, update_interpret_atom_props)
+        update_atom_props, update_denovo_atom_props, update_interpret_atom_props = self.gather_files_and_run(qdescp_files, destination, atom_props, update_atom_props, smarts_targets, denovo_atoms, update_denovo_atom_props, interpret_atoms, update_interpret_atom_props)
 
         if len(update_atom_props) > 0:
             atom_props = update_atom_props
@@ -208,7 +253,7 @@ class qdescp:
         if self.args.boltz:
             if self.args.program.lower() == "xtb":
                 self.args.log.write('\no  Running RDKit and collecting molecular properties')
-                for file in self.args.files:
+                for file in qdescp_files:
                     if file not in self.args.invalid_calcs:
                         mol = Chem.SDMolSupplier(file, removeHs=False)[0]
                         name = os.path.basename(Path(file)).split(".")[0]
@@ -221,9 +266,9 @@ class qdescp:
                     
                 # Create the CSV files from the JSON files
                 folder_raw = Path(destination).joinpath(f'raw_csv_databases')
-                _ = self.write_csv_boltz_data(destination, qdescp_csv, folder_raw, json_type="standard")  # CSV full
-                _ = self.write_csv_boltz_data(destination, qdescp_denovo_csv, folder_raw, json_type="denovo")  # CSV denovo
-                _ = self.write_csv_boltz_data(destination, qdescp_interpret_csv, folder_raw, json_type="interpret")  # CSV interpret
+                _ = self.write_csv_boltz_data(destination, qdescp_csv, folder_raw, atom_props, smarts_targets, json_type="standard")  # CSV full
+                _ = self.write_csv_boltz_data(destination, qdescp_denovo_csv, folder_raw, atom_props, smarts_targets, json_type="denovo")  # CSV denovo
+                _ = self.write_csv_boltz_data(destination, qdescp_interpret_csv, folder_raw, atom_props, smarts_targets, json_type="interpret")  # CSV interpret
                 self.args.log.write(f"o  The {qdescp_denovo_csv}, {qdescp_interpret_csv} and {qdescp_csv} files containing Boltzmann weighted xTB, Morfeus and RDKit descriptors were created in {self.args.initial_dir}")
 
         #AQME-ROBERT workflow: Combines the descriptor data from qdescp CSVs with the input CSV and saves the result.
@@ -234,6 +279,10 @@ class qdescp:
         '''
         Detects errors and updates variables before the QDESCP run
         '''
+
+        # most users employ QDESCP to generate descriptors
+        if self.args.program is None:
+            self.args.program = "xtb"
 
         if self.args.program.lower() not in ["xtb", "nmr"]:
             self.args.log.write(f"\nx  The program specified ({self.args.program}) is not supported for QDESCP descriptor generation! Specify: program='xtb' (or nmr)")
@@ -246,20 +295,18 @@ class qdescp:
             self.args.log.finalize()
             sys.exit()
 
-        # check if the input files are valid
-        _ = check_files(self,'qdescp')
+        if self.args.files != [] and self.args.input == '':
+            # check if the input files are valid
+            _ = check_files(self,'qdescp')
 
-        # get unique files to avoid redundancy in calculations
-        self.args.files = self.get_unique_files()
+            # get unique files to avoid redundancy in calculations
+            self.args.files = self.get_unique_files()
 
         # copy smarts patterns used to generate atomic descriptors
         smarts_targets = self.args.qdescp_atoms.copy()
 
-        if self.args.destination is None:
-            destination = self.args.initial_dir.joinpath("QDESCP")
-        else:
-            destination = Path(self.args.destination)
-        
+        destination = set_destination(self,'QDESCP')
+
         # create folder to store Boltzmann weighted properties
         boltz_dir = Path(f"{destination}/boltz")
         if os.path.exists(f"{boltz_dir}"):
@@ -267,18 +314,16 @@ class qdescp:
             shutil.rmtree(f"{boltz_dir}")
         boltz_dir.mkdir(exist_ok=True, parents=True)
 
-        self.args.log.write(f"\nStarting QDESCP-{self.args.program} with {len(self.args.files)} job(s)\n")
-
         return self,destination,smarts_targets,boltz_dir
     
 
-    def get_mols_qdescp(self):
+    def get_mols_qdescp(self,qdescp_files):
         '''
         Obtaining mols from input files
         '''
         
         mol_list = []
-        for file in self.args.files:
+        for file in qdescp_files:
             with open(file, "r") as F:
                 lines = F.readlines()
                 smi_exist = False
@@ -365,6 +410,7 @@ class qdescp:
         AQME-ROBERT workflow
         Combines the descriptor data from qdescp CSVs with the input CSV and saves the result.
         """
+
         name_db = 'Descriptors'
         if self.args.csv_name is not None:
             if self.args.robert:
@@ -439,7 +485,7 @@ class qdescp:
 
             _ = self.process_aqme_csv(name_db)
 
-    def write_csv_boltz_data(self, destination, qdescp_csv, folder_raw, json_type="standard"):
+    def write_csv_boltz_data(self, destination, qdescp_csv, folder_raw, atom_props, smarts_targets, json_type="standard"):
         """
         Concatenate the values for all calculations
         """
@@ -469,27 +515,22 @@ class qdescp:
             folder_raw.mkdir(exist_ok=True, parents=True)
         temp.to_csv(folder_raw.joinpath(f'Raw_{qdescp_csv}'), index=False)
 
-        # in the main folder, if no atomic properties were created, remove those columns since they're lists
-        temp = remove_lists(temp)
+        # in the main folder, if there were no SMARTS matches, remove atomic descps since they're lists
+        if len(smarts_targets) == 0:
+            temp = remove_atom_descp(temp,atom_props)
         temp.to_csv(qdescp_csv, index=False)
     
     
-    def gather_files_and_run(self, destination, atom_props, update_atom_props, smarts_targets, denovo_atoms, update_denovo_atom_props, interpret_atoms, update_interpret_atom_props):
+    def gather_files_and_run(self, qdescp_files, destination, atom_props, update_atom_props, smarts_targets, denovo_atoms, update_denovo_atom_props, interpret_atoms, update_interpret_atom_props):
         """
         Load all the input files, execute xTB calculations, gather descriptors and clean up scratch data
         """
-
-        # write input files
-        if os.path.basename(Path(self.args.files[0])).split('.')[1].lower() not in ["sdf", "xyz", "pdb"]:
-            self.args.log.write(f"\nx  The format used ({os.path.basename(Path(self.args.files[0])).split('.')[1]}) is not compatible with QDESCP with xTB! Formats accepted: sdf, xyz, pdb")
-            self.args.log.finalize()
-            sys.exit()
 
         # keep track of unvalid calcs
         self.args.invalid_calcs = []
 
         bar = IncrementalBar(
-            "\no  Number of finished jobs from QDESCP", max=len(self.args.files)
+            "\no  Number of finished jobs from QDESCP", max=len(qdescp_files)
         )
 
         # multiprocessing to accelerate QDESCP (since xTB uses 1 processor to be reproducible)
@@ -497,12 +538,12 @@ class qdescp:
             with futures.ThreadPoolExecutor(
                 max_workers=self.args.nprocs,
             ) as executor:
-                for file in self.args.files:
+                for file in qdescp_files:
                     _ = executor.submit(
                         self.xtb_complete, destination, file, atom_props, smarts_targets, bar, update_atom_props, denovo_atoms, update_denovo_atom_props, interpret_atoms, update_interpret_atom_props
                         )
         else:
-            for file in self.args.files:
+            for file in qdescp_files:
                 _ = self.xtb_complete(destination, file, atom_props, smarts_targets, bar, update_atom_props, denovo_atoms, update_denovo_atom_props, interpret_atoms, update_interpret_atom_props)
 
         bar.finish()
@@ -1205,6 +1246,8 @@ class qdescp:
         Full NMR workflow in QDESCP for NMR prediction
         '''
         
+        self.args.log.write(f"\nStarting QDESCP-{self.args.program} with {len(self.args.files)} job(s)\n")
+
         atom_props = ["NMR Chemical Shifts"]
         
         if os.path.basename(Path(self.args.files[0])).split('.')[1].lower() not in ["json"]:

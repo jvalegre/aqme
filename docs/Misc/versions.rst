@@ -24,6 +24,7 @@ Version 1.7.0 [`url <https://github.com/jvalegre/aqme/releases/tag/1.7.0>`__]
    -  qdescp_atoms works from SDF with no property SMILES
    -  Automatic pattern recognition for qdescp_atoms now works for all types of atoms and multiple instances (not only metals)
    -  Big QDESCP refactoring to make the workflows easier to follow
+   -  Add automated workflow from SMILES to descriptors using --input FILENAME.csv in QDESCP
 
 Version 1.6.1 [`url <https://github.com/jvalegre/aqme/releases/tag/1.6.1>`__]
    -  Hotfix of v1.6.0 (just moving the import of dbstep in QDESCP)

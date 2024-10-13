@@ -15,7 +15,7 @@ import subprocess
 import rdkit
 from pathlib import Path
 import shutil
-from aqme.utils import read_file, run_command, mol_from_sdf_or_mol_or_mol2
+from aqme.utils import read_file, run_command, mol_from_sdf_or_mol_or_mol2,set_destination
 from aqme.filter import geom_filter,cluster_conformers
 from rdkit.Chem import rdMolTransforms
 
@@ -89,16 +89,10 @@ def xtb_opt_main(
     name_no_path = os.path.basename(Path(name)).split(".xyz")[0]
 
     # folder to create the files
-    if self.args.destination is None:
-        if method_opt == 'crest':
-            csearch_dir = Path(self.args.w_dir_main) / "CSEARCH"
-        elif method_opt == 'xtb':
-            csearch_dir = Path(self.args.w_dir_main) / "CMIN"
-    else:
-        if self.args.initial_dir.as_posix() in f"{self.args.destination}":
-            csearch_dir = Path(self.args.destination)
-        else:
-            csearch_dir = Path(self.args.initial_dir).joinpath(self.args.destination)
+    if method_opt == 'crest':
+        csearch_dir = set_destination(self,'CSEARCH')
+    elif method_opt == 'xtb':
+        csearch_dir = set_destination(self,'CMIN')
 
     # create the initial xyz input
     if method_opt == 'crest':
