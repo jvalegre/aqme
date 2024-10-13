@@ -99,7 +99,8 @@ from aqme.utils import (
     run_command,
     check_files,
     check_dependencies,
-    set_destination
+    set_destination,
+    periodic_table
 )
 from aqme.qdescp_utils import (
     get_boltz_props,
@@ -507,7 +508,6 @@ class qdescp:
                 name_indiv = ['_'.join(name_indiv)]
             data.insert(loc=0, column='code_name', value=name_indiv)
             dfs.append(data)
-
         temp = pd.concat(dfs, ignore_index=True)
 
         # first, create raw files that will store all the information, including atomic descriptors in lists
@@ -597,9 +597,7 @@ class qdescp:
                 _, charges, _, _ = mol_from_sdf_or_mol_or_mol2(file, "csearch", self.args)
             else:
                 charges = [self.args.charge] * len(
-                    glob.glob(
-                        f"{os.path.dirname(os.path.abspath(file))}/{name}_conf_*.xyz"
-                    )
+                    glob.glob(f"{os.path.dirname(os.path.abspath(file))}/{name}_conf_*.xyz")
                 )
             if self.args.mult is None:
                 _, _, mults, _ = mol_from_sdf_or_mol_or_mol2(file, "csearch", self.args)
@@ -724,7 +722,6 @@ class qdescp:
 
             if xtb_passing:
                 final_xyz_path = xtb_files_props['xtb_xyz_path']
-                self.final_xyz_path = final_xyz_path
                 with open(final_xyz_path, "r") as xyz_file:
                     self.xyz_coordinates = xyz_file.readlines()
 
@@ -993,10 +990,10 @@ class qdescp:
 		Morfeus Descriptors
 		"""
         #Global descriptors
-        global_properties_morfeus = calculate_global_morfeus_descriptors(self.final_xyz_path,self)
+        global_properties_morfeus = calculate_global_morfeus_descriptors(xtb_files_props['xtb_xyz_path'],self)
         json_data.update(global_properties_morfeus)
         #Local descriptors
-        local_properties_morfeus = calculate_local_morfeus_descriptors(self.final_xyz_path,self)
+        local_properties_morfeus = calculate_local_morfeus_descriptors(xtb_files_props['xtb_xyz_path'],self)
         json_data.update(local_properties_morfeus)
 
 
@@ -1079,21 +1076,22 @@ class qdescp:
                         # Initialize counter if it doesn't exist for this atom type
                         if atom_type not in atom_counters:
                             atom_counters[atom_type] = 1
-
                         # If the pattern is a single atom number, we include that number in the match name
                         if str(pattern).isdigit():  # This means the pattern is an atom number
                             match_name = f'{atom_type}{pattern}'
                         else:
                             # If it's a SMARTS pattern or more than one atom
-                            if len(smarts_targets) == 1 and len(smarts_targets[0]) == 1:
+                            if len(smarts_targets) == 1 and smarts_targets[0] in periodic_table():
                                 # Case where it's just an atom type without SMARTS
                                 if n_atoms_of_type == 1:
                                     match_name = f'{atom_type}'
                                 else:
                                     match_name = f'{atom_type}_{atom_counters[atom_type]}'
                             else:
+                                if pattern[0] == '#':
+                                    match_name = f'{atom_type}'
                                 # Regular SMARTS pattern handling
-                                if n_atoms_of_type == 1:
+                                elif n_atoms_of_type == 1:
                                     if idx_set is None:
                                         match_name = f'{pattern}_{atom_type}'
                                     else:
@@ -1112,9 +1110,12 @@ class qdescp:
                     for atom_idx, match_name in zip(sorted_indices, match_names):
                         idx_xtb = atom_idx
                         for prop in atom_props:
-                            json_data[f'{match_name}_{prop}'] = json_data[prop][idx_xtb]
-                            if f'{match_name}_{prop}' not in update_atom_props:
-                                update_atom_props.append(f'{match_name}_{prop}')
+                            try:
+                                json_data[f'{match_name}_{prop}'] = json_data[prop][idx_xtb]
+                                if f'{match_name}_{prop}' not in update_atom_props:
+                                    update_atom_props.append(f'{match_name}_{prop}')
+                            except (KeyError,IndexError): # prevents missing values
+                                pass
 
                     # Adding max and min values for functional groups with the same two atoms
                     if len(match_names) > 1 and n_types == 1:
