@@ -80,7 +80,8 @@ from aqme.utils import (
     mol_from_sdf_or_mol_or_mol2,
     add_prefix_suffix,
     check_files,
-    check_dependencies
+    check_dependencies,
+    set_destination
 )
 
 from aqme.csearch.crest import xyzall_2_xyz
@@ -123,12 +124,7 @@ class qprep:
             self.args.log.finalize()
             sys.exit()
 
-        if self.args.destination is None:
-            destination = self.args.initial_dir.joinpath("QCALC")
-        elif self.args.initial_dir.joinpath(self.args.destination).exists():
-            destination = Path(self.args.initial_dir.joinpath(self.args.destination))
-        else:
-            destination = Path(self.args.destination)
+        destination = set_destination(self,'QCALC')
 
         # check if qm_input is not empty
         if self.args.qm_input == "" and create_dat:

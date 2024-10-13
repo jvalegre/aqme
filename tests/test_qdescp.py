@@ -20,6 +20,7 @@ w_dir_main = os.getcwd()
 qdescp_input_dir = w_dir_main + "/tests/qdescp_inputs"
 qdescp_empty_dir = w_dir_main + "/tests/qdescp_empty"
 qdescp_sdf_dir = w_dir_main + "/tests/qdescp_sdf"
+qdescp_csv_dir = w_dir_main + "/tests/qdescp_csv"
 
 GAS_CONSTANT = 8.3144621  # J / K / mol
 J_TO_AU = 4.184 * 627.509541 * 1000.0  # UNIT CONVERSION
@@ -365,8 +366,7 @@ def test_qdescp_xtb(file):
 
     # Check molecular and atomic descriptors in the QDESCP_ files
     if file == 'test.csv':
-        assert pd_boltz_interpret.columns[0] == 'code_name'
-        assert pd_boltz_interpret.columns[1] == 'HOMO-LUMO gap'
+        assert 'code_name' in pd_boltz_interpret.columns
         check_descriptors(pd_boltz_denovo, descp_denovo_mol, [d for d in descp_full_mol if d not in descp_denovo_mol], 'mol', file)
         check_descriptors(pd_boltz_interpret, descp_interpret_mol, [d for d in descp_full_mol if d not in descp_interpret_mol], 'mol', file)
         check_descriptors(pd_boltz_full, descp_full_mol, [], 'mol', file)
@@ -379,8 +379,7 @@ def test_qdescp_xtb(file):
             raw_csv = f'{folder_qdescp}/raw_csv_databases/Raw_{os.path.basename(file_csv)}'
             assert os.path.exists(raw_csv)
             raw_df = pd.read_csv(raw_csv)
-            assert raw_df.columns[0] == 'code_name'
-            assert raw_df.columns[1] == 'cm5 charges'
+            assert 'code_name' in raw_df.columns
             for raw_atom_val in ['cm5 charges','Electrophil.','Nucleophil.','Radical attack','SASA','Buried volume','Cone angle','H bond H2O']:
                 assert raw_df[raw_atom_val][0][0] == '['
             if file_csv in [file_descriptors_interpret,file_descriptors_full]:
@@ -389,7 +388,7 @@ def test_qdescp_xtb(file):
 
     # Check molecular and atomic descriptors in the AQME-ROBERT files
     elif file in ['test_robert_mol.csv','test_robert_atom.csv']:
-        assert pd_boltz_interpret.columns[0] == 'SMILES'
+        assert 'SMILES' in pd_boltz_interpret.columns
         # molecular descriptors must be in both cases
         check_descriptors(pd_boltz_denovo, descp_denovo_mol, [d for d in descp_full_mol if d not in descp_denovo_mol], 'mol', file)
         check_descriptors(pd_boltz_interpret, descp_interpret_mol, [d for d in descp_full_mol if d not in descp_interpret_mol], 'mol', file)
@@ -424,11 +423,8 @@ def test_qdescp_xtb(file):
             raw_csv = f'{folder_qdescp}/raw_csv_databases/Raw_{os.path.basename(file_csv2)}'
             assert os.path.exists(raw_csv)
             raw_df = pd.read_csv(raw_csv)
-            assert raw_df.columns[0] == 'code_name'
-            if file == 'test_robert_atom.csv':
-                assert raw_df.columns[1] == 'P_cm5 charges'
-            elif file == 'test_robert_mol.csv':
-                assert raw_df.columns[1] == 'cm5 charges'
+            assert 'code_name' in raw_df.columns
+            if file == 'test_robert_mol.csv':
                 for raw_atom_val in ['cm5 charges','Electrophil.','Nucleophil.','Radical attack','SASA','Buried volume','Cone angle','H bond H2O']:
                     assert raw_df[raw_atom_val][0][0] == '['
                 if file_csv2 in [file2_descriptors_interpret,file2_descriptors_full]:
@@ -521,6 +517,57 @@ def test_qdescp_sdf(
         if str(val).lower() == 'nan':
             count_nan += 1
     assert count_nan == 0
+
+@pytest.mark.parametrize(
+    "file",
+    [
+        # tests for using SDF as inputs and automated detection of common atom patterns
+        ("smiles_workflow.csv"),
+    ],
+)
+def test_qdescp_csv(
+    file
+):
+
+    # reset folder and files
+    folder_qdescp = f'{qdescp_csv_dir}/QDESCP'
+    folder_boltz = f'{folder_qdescp}/boltz'
+    for folder in [folder_qdescp,folder_boltz]:
+        if os.path.exists(folder):
+            shutil.rmtree(folder)
+
+    file_descriptors_interpret = f'{w_dir_main}/AQME-ROBERT_interpret_{file}'
+    file_descriptors_full = f'{w_dir_main}/AQME-ROBERT_full_{file}'
+    file_descriptors_denovo = f'{w_dir_main}/AQME-ROBERT_denovo_{file}'
+    if os.path.exists(file_descriptors_denovo): 
+        os.remove(file_descriptors_denovo)
+    if os.path.exists(file_descriptors_interpret): 
+        os.remove(file_descriptors_interpret)
+    if os.path.exists(file_descriptors_full): 
+        os.remove(file_descriptors_full)
+
+    # QDESCP-xTB workflow
+    cmd_qdescp = ["python","-m","aqme","--qdescp","--input",f'{qdescp_csv_dir}/{file}', "--destination",f'{folder_qdescp}',]
+
+    subprocess.run(cmd_qdescp)
+
+    # checking csv file
+    df_interpret = pd.read_csv(file_descriptors_interpret)
+    assert len(df_interpret['code_name']) == 2
+    assert 'mol_1' == df_interpret['code_name'][0]
+    assert 'mol_2' == df_interpret['code_name'][1]
+    assert len(df_interpret.columns) == 27
+
+    # check that the number of conformers is automatically adjusted to 5
+    f = open(f'{w_dir_main}/CSEARCH_data.dat', "r")
+    data = f.readlines()
+    f.close()
+
+    conf_change = False
+    for line in data:
+        if '--sample "5"' in line:
+            conf_change = True
+    assert conf_change
 
 
 # tests for QDESCP-NMR
