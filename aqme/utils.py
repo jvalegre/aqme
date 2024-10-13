@@ -754,7 +754,6 @@ def mol_from_sdf_or_mol_or_mol2(input_file, module, args, low_check=None):
         with open(input_file, "r") as F:
             lines = F.readlines()
 
-        molecule_count = 0
         for i, line in enumerate(lines):
             if line.find(">  <ID>") > -1:
                 ID = lines[i + 1].split()[0]
@@ -765,12 +764,6 @@ def mol_from_sdf_or_mol_or_mol2(input_file, module, args, low_check=None):
             if line.find(">  <Mult>") > -1:
                 mult = lines[i + 1].split()[0]
                 mults.append(mult)
-            if line.find("$$$$") > -1:
-                molecule_count += 1
-                if molecule_count != len(charges):
-                    charges.append(0)
-                if molecule_count != len(mults):
-                    mults.append(1)
 
         suppl = []
         for i, mol in enumerate(mols):
