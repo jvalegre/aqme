@@ -90,7 +90,7 @@ def get_boltz_props(json_files, name, boltz_dir, calc_type, self, mol_props, ato
     avg_json_data = {}
     denovo_json_data = {}
     interpret_json_data = {}
-    atomic_props = True
+    atomic_props = False
 
     # Get weighted atomic properties
     for i, prop in enumerate(atom_props):
@@ -98,14 +98,16 @@ def get_boltz_props(json_files, name, boltz_dir, calc_type, self, mol_props, ato
             for json_file in json_files:
                 json_data = read_json(json_file)
                 for atom_prop in atom_props:
-                    if atom_prop not in json_data:
-                        atomic_props = False
+                    if atom_prop in json_data:
+                        atomic_props = True
+                        break
         if atomic_props:
             try:
                 prop_list = [read_json(json_file)[prop] for json_file in json_files]
                 avg_prop = average_properties(boltz, prop_list)
             except KeyError:
                 avg_json_data[prop] = np.nan
+            
         else:
             avg_prop = np.nan
         update_avg_json_data(avg_json_data, prop, avg_prop, smarts_targets)
@@ -122,63 +124,32 @@ def get_boltz_props(json_files, name, boltz_dir, calc_type, self, mol_props, ato
     # Get denovo atomic properties
     for i, prop in enumerate(denovo_atoms):
         if atomic_props:
-            try:
-                prop_list = [read_json(json_file)[prop] for json_file in json_files]
-                avg_prop = average_properties(boltz, prop_list)
-            except KeyError:
-                avg_json_data[prop] = np.nan
-        else:
-            avg_prop = np.nan
-        update_avg_json_data(denovo_json_data, prop, avg_prop, smarts_targets)
+            denovo_json_data[prop] = avg_json_data[prop]
 
     # Get denovo molecular properties
     for prop in denovo_mols:
-        try:
-            prop_list = [read_json(json_file)[prop] for json_file in json_files]
-            avg_prop = average_properties(boltz, prop_list, is_atom_prop=False)
-            denovo_json_data[prop] = avg_prop
-        except KeyError:
-            avg_json_data[prop] = np.nan
+        denovo_json_data[prop] = avg_json_data[prop]
 
     # Get interpret atomic properties
     for i, prop in enumerate(interpret_atoms):
         if atomic_props:
-            try:
-                prop_list = [read_json(json_file)[prop] for json_file in json_files]
-                avg_prop = average_properties(boltz, prop_list)
-            except KeyError:
-                avg_json_data[prop] = np.nan
-
-        else:
-            avg_prop = np.nan
-        update_avg_json_data(interpret_json_data, prop, avg_prop, smarts_targets)
+            interpret_json_data[prop] = avg_json_data[prop]
 
     # Get interpret molecular properties
     for prop in interpret_mols:
-        try:
-            prop_list = [read_json(json_file)[prop] for json_file in json_files]
-            avg_prop = average_properties(boltz, prop_list, is_atom_prop=False)
-            interpret_json_data[prop] = avg_prop
-        except KeyError:
-            avg_json_data[prop] = np.nan
+        interpret_json_data[prop] = avg_json_data[prop]
 
     # Calculate RDKit descriptors if molecule is provided
     if mol is not None:
         # Calculate all RDKit properties for avg_json_data
-        avg_json_data,_,_ = get_rdkit_properties(self,avg_json_data, mol)
+        avg_json_data = get_rdkit_properties(self,avg_json_data, mol)
         
-        # Calculate selected RDKit properties for denovo_json_data
-        _,denovo_rdkit_json_data,_ = get_rdkit_properties(self,{}, mol)
-        
-        # Merge selected RDKit properties with denovo_json_data
-        denovo_json_data.update(denovo_rdkit_json_data)
+        # Get selected RDKit properties for denovo_json_data
+        denovo_json_data["MolLogP"] = avg_json_data["MolLogP"]
 
-        # Calculate selected RDKit properties for interpret_json_data
-        _,_,interpret_rdkit_json_data = get_rdkit_properties(self,{}, mol)
-        
-        # Merge selected RDKit properties with interpret_json_data
-        interpret_json_data.update(interpret_rdkit_json_data)
-    
+        # Get selected RDKit properties with interpret_json_data
+        interpret_json_data["MolLogP"] = avg_json_data["MolLogP"]
+
     convert_ndarrays(avg_json_data)
     convert_ndarrays(denovo_json_data)
     convert_ndarrays(interpret_json_data)
@@ -369,12 +340,12 @@ def average_prop_atom_nmr(weights, prop):
 
     boltz_avg = []
     for i, p in enumerate(prop):
-        if p == 'NaN':
-            boltz_avg = 'NaN'
+        if str(p).lower() == 'nan' or p is None:
+            boltz_avg = np.nan
             break
         boltz_avg.append([number * weights[i] for number in p])
-    if boltz_avg == 'NaN':
-        boltz_res = 'NaN'
+    if str(p).lower() == 'nan':
+        boltz_res = np.nan
     else:
         boltz_res = np.sum(boltz_avg, 0)
     return boltz_res
@@ -397,14 +368,14 @@ def average_prop_mol(weights, prop):
     # Loop through each property and its corresponding weight
     for i, p in enumerate(prop):
         # If the property is 'NaN', break the loop and return 'NaN'
-        if p == 'NaN':
-            boltz_avg = 'NaN'
+        if str(p).lower() == 'nan' or p is None:
+            boltz_avg = np.nan
             break
         # Otherwise, calculate the weighted sum of properties
         boltz_avg += p * weights[i]
     
     # If the result is a valid number, round it to 4 decimal places
-    if boltz_avg != 'NaN':
+    if str(boltz_avg).lower() != 'nan':
         boltz_avg = round(boltz_avg, 4)
 
     # Return the Boltzmann-weighted average, rounded to 4 decimal places (or 'NaN' if encountered)
@@ -415,35 +386,20 @@ def get_rdkit_properties(self,avg_json_data, mol):
     Calculates RDKit molecular descriptors
     """
 
-    #Level: denovo descriptors
-    denovo_json_data = {}
-    #Level: interpret descriptors
-    interpret_json_data = {}
-
     try:
         #level: full
         descrs = Descriptors.CalcMolDescriptors(mol)
         for descr in descrs:
             if descrs[descr] != np.nan and str(descrs[descr]).lower() != 'nan':
                 avg_json_data[descr] = descrs[descr]
-        
-        # descriptors for the level_ denovo
-        denovo_json_data["MolLogP"] = descrs.get("MolLogP", None)
-        # descriptors for the level: interpret
-        interpret_json_data["MolLogP"] = descrs.get("MolLogP", None)
 
     # For older versions of RDKit 
     except AttributeError:
         self.args.log.write(f"x  WARNING! Install a newer version of RDKit to get all the RDKit descriptors in the databse with all the descriptors. You can use: 'pip install rdkit --upgrade'.")
         avg_json_data["MolLogP"] = rdkit.Chem.Descriptors.MolLogP(mol)
 
-        # descriptors for the level_ denovo
-        denovo_json_data["MolLogP"] = avg_json_data["MolLogP"]
-        # descriptors for the level: interpret
-        interpret_json_data["MolLogP"] = avg_json_data["MolLogP"]
+    return avg_json_data
 
-
-    return avg_json_data, denovo_json_data, interpret_json_data
 
 def read_gfn1(file,self):
     """
@@ -506,8 +462,8 @@ def read_gfn1(file,self):
         try:
             item = line.split()
             # Extract and round the required values from each line
-            q_mull = round(float(item[-5]), 5)
-            q_cm5 = round(float(item[-4]), 5)
+            q_mull = round(float(item[-5]), 3)
+            q_cm5 = round(float(item[-4]), 3)
             s_prop_ind = round(float(item[-3]), 3)
             p_prop_ind = round(float(item[-2]), 3)
             d_prop_ind = round(float(item[-1]), 3)
@@ -523,8 +479,8 @@ def read_gfn1(file,self):
 
     # Store the parsed data in a dictionary and return it
     localgfn1 = {
-        "mulliken charges": mulliken,
-        "cm5 charges": cm5,
+        "mulliken charge": mulliken,
+        "cm5 charge": cm5,
         "s proportion": s_prop,
         "p proportion": p_prop,
         "d proportion": d_prop,
@@ -911,7 +867,7 @@ def read_xtb(file,self):
         numbers.append(int(item[0]))
         atoms.append(item[2])
         covCN.append(float(item[3]))
-        chrgs.append(float(item[4]))
+        chrgs.append(round(float(item[4]),3))
         C6AA.append(float(item[5]))
         alpha.append(float(item[6]))
 
@@ -923,7 +879,7 @@ def read_xtb(file,self):
         "LUMO": lumo,
         "atoms": atoms,
         "numbers": numbers,
-        "charges": chrgs, 
+        "Partial charge": chrgs, 
         "Dipole module": dipole_module,
         "Fermi-level": Fermi_level,
         "Trans. dipole moment": transition_dipole_moment,
@@ -1245,6 +1201,11 @@ def calculate_local_morfeus_descriptors(final_xyz_path,self):
         "Dispersion": local_disp
     }
 
+    # for properties that failed in all calculations
+    for prop in local_properties_morfeus:
+        if local_properties_morfeus[prop] == []:
+            local_properties_morfeus[prop] = [None]*len(local_properties_morfeus["Buried volume"])
+
     return local_properties_morfeus
 
 
@@ -1255,7 +1216,7 @@ def get_descriptors(level):
     descriptors = {
         'denovo': {
             'mol': ["HOMO-LUMO gap", "HOMO", "LUMO", "IP", "EA", "Dipole module", "Total charge", "Global SASA", "G solv. in H2O", "G of H-bonds H2O"],
-            'atoms': ["cm5 charges", "Electrophil.", "Nucleophil.", "Radical attack", "SASA", "Buried volume", "Cone angle", "H bond H2O"]
+            'atoms': ["Partial charge", "Electrophil.", "Nucleophil.", "Radical attack", "SASA", "Buried volume", "Cone angle", "H bond H2O"]
         },
         'interpret': {
             'mol': ["Fermi-level", "Total polariz. alpha", "Total FOD", "Electrophil. idx", "Hardness", "Softness", "Electronegativity",
@@ -1266,8 +1227,8 @@ def get_descriptors(level):
                       "Solid angle", "Pyramidaliz. P", "Pyramidaliz. Vol", "Dispersion"]
         },
         'full': {
-            'mol': ["Total energy", "Total disp. C6", "Total disp. C8", "Chem. potential", "Electrodon. power idx",
-                    "Electroaccep. power idx", 
+            'mol': ["Total energy", "Total disp. C6", "Total disp. C8", "Chem. potential", 
+                    "Electrodon. power idx", "Electroaccep. power idx", 
                     "Electrofugality", "Nucleofugality", "Intrinsic React. idx", "Net Electrophilicity", 
                     "Hyperhardness", "Hypersoftness", "Electrophilic descrip.", "cub. electrophilicity idx",
                     "G solv. elec.", "G solv. SASA", "G solv. shift"],
