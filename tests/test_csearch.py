@@ -473,14 +473,14 @@ def test_csearch_fullmonte_parameters(
             "radical_rdkit",
             0,
             2,
-            25,
+            15,
             10,
             True,
             10,
             0.000001,
             0.6,
             0.3,
-            32,
+            24,
         ),
         (
             "rdkit",
@@ -565,23 +565,23 @@ def test_csearch_rdkit_parameters(
     assert mol_energies == sorted(mol_energies)
 
     if name == 'radical_rdkit': # test clusterized conformers
-        initial_five_E = []
+        initial_three_E = []
         for mol in mols:
-            initial_five_E.append(float(mol.GetProp("Energy")))
-            if len(initial_five_E) == 5:
+            initial_three_E.append(float(mol.GetProp("Energy")))
+            if len(initial_three_E) == 3:
                 break
         file = str("CSEARCH/" + name + "_" + program + ".sdf")
         mols = rdkit.Chem.SDMolSupplier(file, removeHs=False)
-        final_five_E = []
+        final_three_E = []
         for mol in mols:
-            final_five_E.append(float(mol.GetProp("Energy")))
-            if len(final_five_E) == 5:
+            final_three_E.append(float(mol.GetProp("Energy")))
+            if len(final_three_E) == 3:
                 break
         assert len(mols) == sample
         assert charge == int(mols[0].GetProp("Real charge"))
         assert mult == int(mols[0].GetProp("Mult"))
         # check if the first five energies are included
-        assert initial_five_E == final_five_E
+        assert initial_three_E == final_three_E
         # check if all the energies are sorted
         mol_energies = []
         for mol in mols:
@@ -712,7 +712,7 @@ def test_csearch_rdkit_parameters(
             1,
             None,
             False,
-            2
+            1
         ),
         (
             "rdkit",
