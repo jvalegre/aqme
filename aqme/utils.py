@@ -286,7 +286,7 @@ def get_conf_RMS(mol1, mol2, c1, c2, heavy, max_matches_rmsd):
     if heavy:
         mol1 = RemoveHs(mol1)
         mol2 = RemoveHs(mol2)
-    return GetBestRMS(mol1, mol2, c1, c2, maxMatches=max_matches_rmsd) # don't use numThreads=0 or -1 as the documentation says, it fails! (due to multithreading in CSEARCH module?)
+    return GetBestRMS(mol1, mol2, c1, c2, maxMatches=max_matches_rmsd, numThreads=1) # numThreads must be 1, otherwise it either fails or becomes VERY slow
 
 
 def command_line_args():
@@ -309,7 +309,6 @@ def command_line_args():
         "chk",
         "oldchk",
         "nodup_check",
-        "dbstep_calc",
         "robert",
         "debug",
         "pytest_testing"

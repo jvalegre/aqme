@@ -408,16 +408,19 @@ def minimize_rdkit_energy(mol, conf, log, FF, maxsteps):
     Minimizes a conformer of a molecule and returns the final energy.
     """
 
-    if FF == "MMFF":
+    forcefield = None
+    if FF.upper() == "MMFF":
         properties = Chem.MMFFGetMoleculeProperties(mol)
         forcefield = Chem.MMFFGetMoleculeForceField(mol, properties, confId=conf)
+        if forcefield is None:
+            log.write(f"x  Force field {FF} did not work! Changing to UFF.")
 
-    if FF == "UFF" or forcefield is None:
+    if FF.upper() == "UFF" or forcefield is None:
         # if forcefield is None means that MMFF will not work. Attempt UFF.
         forcefield = Chem.UFFGetMoleculeForceField(mol, confId=conf)
 
-    if FF not in ["MMFF", "UFF"] or forcefield is None:
-        log.write(f" Force field {FF} not supported!")
+    if FF.upper() not in ["MMFF", "UFF"] or forcefield is None:
+        log.write(f"x  Force field {FF} not supported!")
         log.finalize()
         sys.exit()
 
