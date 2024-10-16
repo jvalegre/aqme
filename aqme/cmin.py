@@ -132,13 +132,10 @@ class cmin:
         # check whether dependencies are installed
         _ = check_dependencies(self)
 
-        cmin_program = True
+        # most users employ xTB to refine RDKit structures
         if self.args.program is None:
-            cmin_program = False
-        if cmin_program:
-            if self.args.program.lower() not in ["xtb", "ani"]:
-                cmin_program = False
-        if not cmin_program:
+            self.args.program = "xtb"
+        elif self.args.program.lower() not in ["xtb", "ani"]:
             self.args.log.write('\nx  Program not supported for CMIN refinement! Specify: program="xtb" (or "ani")')
             self.args.log.finalize()
             sys.exit()

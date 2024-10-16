@@ -188,10 +188,13 @@ class qdescp:
                 self.args.log.write(f"\nx  The csv_name provided ({qdescp_files[0]}) does not exist! Please specify this name correctly")
                 self.args.log.finalize()
                 sys.exit()
+            # the default number of conformers is reduced to 5 unless overwritten by the user
             if self.args.sample == 25:
                 sample_qdescp = 5
             else:
                 sample_qdescp = self.args.sample
+
+            # sets the csv_name variable to create the AQME-ROBERT descriptor file
             self.args.csv_name = qdescp_files[0]
 
             if f'{os.path.basename(destination).upper()}' == 'QDESCP':
@@ -200,7 +203,15 @@ class qdescp:
                 destination_csearch = destination.joinpath('CSEARCH')
 
             cmd_csearch = ['python', '-m', 'aqme', '--csearch', '--program', 'rdkit', '--input', 
-                        f'{self.args.csv_name}', '--sample', f'{sample_qdescp}', '--destination', f'{destination_csearch}']
+                        f'{self.args.csv_name}', '--sample', f'{sample_qdescp}', '--destination', f'{destination_csearch}',
+                        '--nprocs', f'{self.args.nprocs}','--auto_sample',self.args.auto_sample]
+
+            # overwrites charge/mult if the user specifies values
+            if self.args.charge is not None:
+                cmd_csearch = cmd_csearch + ['--charge', f'{self.args.charge}']
+            if self.args.mult is not None:
+                cmd_csearch = cmd_csearch + ['--mult', f'{self.args.mult}']
+
             subprocess.run(cmd_csearch)
 
             qdescp_files = glob.glob(f'{destination_csearch}/*.sdf')
@@ -281,7 +292,7 @@ class qdescp:
         Detects errors and updates variables before the QDESCP run
         '''
 
-        # most users employ QDESCP to generate descriptors
+        # most users employ QDESCP to generate descriptors with xTB
         if self.args.program is None:
             self.args.program = "xtb"
 
@@ -289,6 +300,10 @@ class qdescp:
             self.args.log.write(f"\nx  The program specified ({self.args.program}) is not supported for QDESCP descriptor generation! Specify: program='xtb' (or nmr)")
             self.args.log.finalize()
             sys.exit()
+
+        # default value of auto_sample
+        if self.args.auto_sample == 'auto':
+            self.args.auto_sample = 'low'
 
         # detect if the csv_name provided exists
         if self.args.csv_name is not None and not os.path.exists(self.args.csv_name):

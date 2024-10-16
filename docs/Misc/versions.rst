@@ -23,8 +23,9 @@ Version 1.7.0 [`url <https://github.com/jvalegre/aqme/releases/tag/1.7.0>`__]
    -  QDESCP generates only 2 raw xTB files (instead of 11), and performs a clean-up before each calculation to avoid reading from previous restart points   
    -  qdescp_atoms works from SDF with no property SMILES
    -  Automatic pattern recognition for qdescp_atoms now works for all types of atoms and multiple instances (not only metals)
-   -  Big QDESCP refactoring to make the workflows easier to follow
+   -  QDESCP refactoring to make the workflows easier to follow
    -  Add automated workflow from SMILES to descriptors using --input FILENAME.csv in QDESCP
+   -  QDESCP calculates charges from SDF that doesn't come from CSEARCH
 
 Version 1.6.1 [`url <https://github.com/jvalegre/aqme/releases/tag/1.6.1>`__]
    -  Hotfix of v1.6.0 (just moving the import of dbstep in QDESCP)
@@ -60,6 +61,7 @@ Version 1.5.2 [`url <https://github.com/jvalegre/aqme/releases/tag/1.5.2>`__]
    -  Fixed bug when GB or MB were not part of the mem argument in QPREP-ORCA
    -  Added the qdescp_opt option for adjusting the convergence criteria of xTB in QDESCP
    -  DBSTEP calcs are deactivated by default in QDESCP (activate them with --dbstep_calc)
+   -  --auto_sample now modulates the amount of initial RDKit conformers generated with three options: low, mid and high
 
 Version 1.5.1 [`url <https://github.com/jvalegre/aqme/releases/tag/1.5.1>`__]
    -  Added the verbose option. When verbose=False, no DAT and CSV files with summaries are printed
