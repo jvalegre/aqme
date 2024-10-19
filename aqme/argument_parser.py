@@ -102,6 +102,7 @@ var_dict = {
     "qdescp_acc": 1,
     "qdescp_opt": 'normal',
     "qdescp_solvent": None,
+    "gfn_version": '2',
     "boltz": True,
     "nmr_atoms": [6, 1],  # [C,H]
     "nmr_slope": [-1.0537, -1.0784],  # [C,H]

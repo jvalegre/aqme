@@ -31,6 +31,8 @@ xTB descriptors
    mult : int, default=None
       Multiplicity of the calculations used in the following input files 
       (multiplicities from SDF files generated in CSEARCH are read automatically).
+   gfn_version : int, default="2"
+      GFN version used in QDESCP to calculate descriptors.
    qdescp_solvent : str, default=None
       Solvent used in the xTB property calculations (ALPB model)
    qdescp_temp : float, default=300
@@ -111,7 +113,6 @@ from aqme.qdescp_utils import (
     read_gfn1,
     calculate_local_CDFT_descriptors,
     calculate_global_CDFT_descriptors,
-    calculate_global_CDFT_descriptors_part2,
     calculate_global_morfeus_descriptors,
     calculate_local_morfeus_descriptors,
     get_descriptors,
@@ -119,11 +120,11 @@ from aqme.qdescp_utils import (
     fix_cols_names,
     remove_atom_descp,
     load_file_formats,
-    read_solv
+    read_solv,
+    read_triplet
 )
 
 from aqme.csearch.crest import xyzall_2_xyz
-
 
 
 class qdescp:
@@ -685,7 +686,6 @@ class qdescp:
         xtb_files_props['xtb_json'] = str(dat_dir) + "/{0}.json".format(name)
         xtb_files_props['xtb_wbo'] = str(dat_dir) + "/{0}.wbo".format(name)
         xtb_files_props['xtb_gfn1'] = str(dat_dir) + "/{0}.gfn1".format(name)
-        xtb_files_props['xtb_gfn1'] = str(dat_dir) + "/{0}.gfn1".format(name)
         xtb_files_props['xtb_Nminus1'] = str(dat_dir) + "/{0}.Nminus1".format(name)
         xtb_files_props['xtb_Nminus2'] = str(dat_dir) + "/{0}.Nminus2".format(name)
         xtb_files_props['xtb_Nplus1'] = str(dat_dir) + "/{0}.Nplus1".format(name)
@@ -693,6 +693,7 @@ class qdescp:
         xtb_files_props['xtb_fukui'] = str(dat_dir) + "/{0}.fukui".format(name)
         xtb_files_props['xtb_fod'] = str(dat_dir) + "/{0}.fod".format(name)
         xtb_files_props['xtb_solv'] = str(dat_dir) + "/{0}.solv".format(name)
+        xtb_files_props['xtb_triplet'] = str(dat_dir) + "/{0}.triplet".format(name)
 
         os.environ["OMP_STACKSIZE"] = self.args.stacksize
         # run xTB/CREST with 1 processor
@@ -710,14 +711,14 @@ class qdescp:
                 "--acc",
                 str(self.args.qdescp_acc),
                 "--gfn",
-                "2",
+                str(self.args.gfn_version),
                 "--chrg",
                 str(charge),
                 "--uhf",
                 str(int(mult) - 1),
                 "-P",
                 "1",
-            ]
+            ] # optimization
             if self.args.qdescp_solvent is not None:
                 command_opt.append("--alpb")
                 command_opt.append(f"{self.args.qdescp_solvent}")
@@ -744,12 +745,10 @@ class qdescp:
             command1 = [
                 "xtb",
                 xtb_files_props['xtb_xyz_path'],
-                "--pop",
-                "--wbo",
                 "--acc",
                 str(self.args.qdescp_acc),
                 "--gfn",
-                "2",
+                str(self.args.gfn_version),
                 "--chrg",
                 str(charge),
                 "--uhf",
@@ -760,7 +759,7 @@ class qdescp:
                 str(xtb_input_file),
                 "-P",
                 "1",
-            ]
+            ] #Single point (file_N)
             if self.args.qdescp_solvent is not None:
                 command1.append("--alpb")
                 command1.append(f"{self.args.qdescp_solvent}")
@@ -798,7 +797,7 @@ class qdescp:
                 "--vomega",
                 "-P",
                 "1",
-            ]
+            ] #For cm5 charges and proportions (localgfn1)
             if self.args.qdescp_solvent is not None:
                 command2.append("--alpb")
                 command2.append(f"{self.args.qdescp_solvent}")
@@ -811,7 +810,7 @@ class qdescp:
                 xtb_files_props['xtb_xyz_path'],
                 "--vfukui",
                 "--gfn",
-                "2",
+                str(self.args.gfn_version),
                 "--chrg",
                 str(charge),
                 "--acc",
@@ -822,7 +821,7 @@ class qdescp:
                 str(self.args.qdescp_temp),
                 "-P",
                 "1",
-            ]
+            ] #For fukuis
             if self.args.qdescp_solvent is not None:
                 command3.append("--alpb")
                 command3.append(f"{self.args.qdescp_solvent}")
@@ -834,7 +833,7 @@ class qdescp:
                 xtb_files_props['xtb_xyz_path'],
                 "--fod",
                 "--gfn",
-                "2",
+                str(self.args.gfn_version),
                 "--chrg",
                 str(charge),
                 "--acc",
@@ -845,7 +844,7 @@ class qdescp:
                 str(self.args.qdescp_temp),
                 "-P",
                 "1",
-            ]
+            ] # for FOD
             if self.args.qdescp_solvent is not None:
                 command4.append("--alpb")
                 command4.append(f"{self.args.qdescp_solvent}")
@@ -856,7 +855,7 @@ class qdescp:
                 "xtb",
                 xtb_files_props['xtb_xyz_path'],
                 "--gfn",
-                "1",
+                str(self.args.gfn_version),
                 "--chrg",
                 str(int(charge) +1),
                 "--acc",
@@ -867,7 +866,7 @@ class qdescp:
                 str(self.args.qdescp_temp),
                 "-P",
                 "1",
-            ]
+            ] #file_Nminus1 (N-1)
             if self.args.qdescp_solvent is not None:
                 command5.append("--alpb")
                 command5.append(f"{self.args.qdescp_solvent}")
@@ -878,7 +877,7 @@ class qdescp:
                 "xtb",
                 xtb_files_props['xtb_xyz_path'],
                 "--gfn",
-                "1",
+                str(self.args.gfn_version),
                 "--chrg",
                 str(int(charge) +2),
                 "--acc",
@@ -889,7 +888,7 @@ class qdescp:
                 str(self.args.qdescp_temp),
                 "-P",
                 "1",
-            ]
+            ] #file_N-2 (N-2)
             if self.args.qdescp_solvent is not None:
                 command6.append("--alpb")
                 command6.append(f"{self.args.qdescp_solvent}")
@@ -900,7 +899,7 @@ class qdescp:
                 "xtb",
                 xtb_files_props['xtb_xyz_path'],
                 "--gfn",
-                "1",
+                str(self.args.gfn_version),
                 "--chrg",
                 str(int(charge) -1),
                 "--acc",
@@ -911,7 +910,7 @@ class qdescp:
                 str(self.args.qdescp_temp),
                 "-P",
                 "1",
-            ]
+            ] #file_Nplus1 (N+1)
             if self.args.qdescp_solvent is not None:
                 command7.append("--alpb")
                 command7.append(f"{self.args.qdescp_solvent}")
@@ -922,7 +921,7 @@ class qdescp:
                 "xtb",
                 xtb_files_props['xtb_xyz_path'],
                 "--gfn",
-                "1",
+                str(self.args.gfn_version),
                 "--chrg",
                 str(int(charge)-2),
                 "--acc",
@@ -933,7 +932,7 @@ class qdescp:
                 str(self.args.qdescp_temp),
                 "-P",
                 "1",
-            ]
+            ] #file_Nplus2 (N+2)
             if self.args.qdescp_solvent is not None:
                 command8.append("--alpb")
                 command8.append(f"{self.args.qdescp_solvent}")
@@ -950,7 +949,7 @@ class qdescp:
                 "--acc",
                 str(self.args.qdescp_acc),
                 "--gfn",
-                "2",
+                str(self.args.gfn_version),
                 "--chrg",
                 str(charge),
                 "--uhf",
@@ -963,9 +962,31 @@ class qdescp:
                 "1",
                 "--alpb",
                 "h2o"
-            ]
+            ] # file solvation
             run_command(command9, xtb_files_props['xtb_solv'], cwd=dat_dir)
             _ = self.cleanup(name, destination, xtb_passing, xtb_files_props)
+
+            if int(mult) == 1:
+                command10 = [
+                    "xtb",
+                    xtb_files_props['xtb_xyz_path'],
+                    "--acc",
+                    str(self.args.qdescp_acc),
+                    "--gfn",
+                    str(self.args.gfn_version),
+                    "--chrg",
+                    str(charge),
+                    "--uhf",
+                    '2',
+                    "--etemp",
+                    str(self.args.qdescp_temp),
+                    "--input",
+                    str(xtb_input_file),
+                    "-P",
+                    "1",
+                ] # file triplet
+                run_command(command10, xtb_files_props['xtb_triplet'], cwd=dat_dir)
+                _ = self.cleanup(name, destination, xtb_passing, xtb_files_props)
 
         return xtb_passing,xtb_files_props
 
@@ -979,9 +1000,9 @@ class qdescp:
         properties_FOD = read_fod(xtb_files_props['xtb_fod'],self)
         bonds, wbos = read_wbo(xtb_files_props['xtb_wbo'],self)
         properties_solv = read_solv(xtb_files_props['xtb_solv'])
-        cdft_descriptors = calculate_global_CDFT_descriptors(xtb_files_props['xtb_gfn1'],self)
-        cdft_descriptors2  = calculate_global_CDFT_descriptors_part2( xtb_files_props['xtb_gfn1'], xtb_files_props['xtb_Nminus1'], xtb_files_props['xtb_Nminus2'], xtb_files_props['xtb_Nplus1'], xtb_files_props['xtb_Nplus2'], cdft_descriptors,self)
-        localDescriptors = calculate_local_CDFT_descriptors(xtb_files_props['xtb_fukui'], cdft_descriptors, cdft_descriptors2,self)
+        properties_triplet = read_triplet(xtb_files_props['xtb_triplet'],properties_dict['Total energy'])
+        cdft_descriptors  = calculate_global_CDFT_descriptors(xtb_files_props['xtb_out'], xtb_files_props['xtb_Nminus1'], xtb_files_props['xtb_Nminus2'], xtb_files_props['xtb_Nplus1'], xtb_files_props['xtb_Nplus2'],self)
+        localDescriptors = calculate_local_CDFT_descriptors(xtb_files_props['xtb_fukui'], cdft_descriptors,self)
         # create matrix of Wiberg bond-orders
         atoms = properties_dict.get("atoms")
         nat = len(atoms)
@@ -995,7 +1016,7 @@ class qdescp:
 		"""
         json_data = read_json(xtb_files_props['xtb_json']) 
         json_data["Wiberg matrix"] = wbo_matrix.tolist()
-        list_properties = [properties_dict,properties_FOD,properties_solv,localgfn1,cdft_descriptors,cdft_descriptors2,localDescriptors]
+        list_properties = [properties_dict,properties_FOD,properties_solv,localgfn1,cdft_descriptors,localDescriptors,properties_triplet]
         for properties in list_properties:
             if properties is not None:
                 json_data.update(properties)
