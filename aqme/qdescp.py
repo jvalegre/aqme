@@ -700,6 +700,10 @@ class qdescp:
         os.environ["OMP_NUM_THREADS"] = "1"
         os.environ["MKL_NUM_THREADS"] = "1"
 
+        # this avoids problems when parsing charges and mults from SDF files
+        mult = int(float(mult))
+        charge = int(float(charge))
+
         # initial xTB optimization
         if self.args.xtb_opt:
 
@@ -715,7 +719,7 @@ class qdescp:
                 "--chrg",
                 str(charge),
                 "--uhf",
-                str(int(mult) - 1),
+                str(mult - 1),
                 "-P",
                 "1",
             ] # optimization
@@ -752,7 +756,7 @@ class qdescp:
                 "--chrg",
                 str(charge),
                 "--uhf",
-                str(int(mult) - 1),
+                str(mult - 1),
                 "--etemp",
                 str(self.args.qdescp_temp),
                 "--input",
@@ -791,7 +795,7 @@ class qdescp:
                 "--acc",
                 str(self.args.qdescp_acc),
                 "--uhf",
-                str(int(mult) - 1),
+                str(mult - 1),
                 "--etemp",
                 str(self.args.qdescp_temp),
                 "--vomega",
@@ -816,7 +820,7 @@ class qdescp:
                 "--acc",
                 str(self.args.qdescp_acc),
                 "--uhf",
-                str(int(mult) - 1),
+                str(mult - 1),
                 "--etemp",
                 str(self.args.qdescp_temp),
                 "-P",
@@ -839,7 +843,7 @@ class qdescp:
                 "--acc",
                 str(self.args.qdescp_acc),
                 "--uhf",
-                str(int(mult) - 1),
+                str(mult - 1),
                 "--etemp",
                 str(self.args.qdescp_temp),
                 "-P",
@@ -883,7 +887,7 @@ class qdescp:
                 "--acc",
                 str(self.args.qdescp_acc),
                 "--uhf",
-                str(int(mult) - 1),
+                str(mult - 1),
                 "--etemp",
                 str(self.args.qdescp_temp),
                 "-P",
@@ -953,7 +957,7 @@ class qdescp:
                 "--chrg",
                 str(charge),
                 "--uhf",
-                str(int(mult) - 1),
+                str(mult - 1),
                 "--etemp",
                 str(self.args.qdescp_temp),
                 "--input",
