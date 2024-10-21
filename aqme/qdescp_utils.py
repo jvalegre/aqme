@@ -510,86 +510,11 @@ def read_wbo(file,self):
 
     return bonds, wbos
 
-
-def calculate_global_CDFT_descriptors(file,self):
-    """
-    Read .gfn1 output file created from xTB and calculate CDFT descriptors with FDA approximations part 1.
-    """
-
-    # Check if the file exists
-    if not os.path.exists(file):
-        self.args.log.write(f"x  WARNING! The file {file} does not exist.")
-        return None
-
-    with open(file, "r") as f:
-        data = f.readlines()
-        
-    # Initialize variables
-    delta_SCC_IP, delta_SCC_EA, electrophilicity_index = None, None, None
-    chemical_hardness, chemical_softness = None, None
-    chemical_potential, mulliken_electronegativity = None, None
-    electrodonating_power_index, electroaccepting_power_index = None, None
-    intrinsic_reactivity_index = None
-    electrofugality, nucleofugality, nucleophilicity_index, net_electrophilicity = None, None, None, None
-
-    # Extract relevant values from the file
-    for line in data:
-        if "delta SCC IP (eV):" in line:
-            delta_SCC_IP = float(line.split()[-1])
-        elif "delta SCC EA (eV):" in line:
-            delta_SCC_EA = float(line.split()[-1])
-        elif "Global electrophilicity index (eV):" in line:
-            electrophilicity_index = float(line.split()[-1])
-
-    # Check if required descriptors were found
-    if delta_SCC_IP is not None and delta_SCC_EA is not None and electrophilicity_index is not None:
-        # Calculate CDFT descriptors
-        chemical_hardness = round((delta_SCC_IP - delta_SCC_EA), 4)
-        chemical_potential = round(-(delta_SCC_IP + delta_SCC_EA) / 2, 4)
-        mulliken_electronegativity = round(-chemical_potential, 4)
-        electrofugality = round(-delta_SCC_EA + electrophilicity_index, 4)
-        nucleofugality = round(delta_SCC_IP + electrophilicity_index, 4)
-
-        if chemical_hardness != 0:
-            chemical_softness = round(1 / chemical_hardness, 4)
-            electrodonating_power_index = round(((delta_SCC_IP + 3 * delta_SCC_EA)**2) / (8 * chemical_hardness), 4)
-            electroaccepting_power_index = round(((3 * delta_SCC_IP + delta_SCC_EA)**2) / (8 * chemical_hardness), 4)
-            intrinsic_reactivity_index = round((delta_SCC_IP + delta_SCC_EA) / chemical_hardness, 4)
-
-            if electroaccepting_power_index != 0:
-                nucleophilicity_index = round(10 / electroaccepting_power_index, 4)
-
-        net_electrophilicity = round((electrodonating_power_index - electroaccepting_power_index), 4)
-
-    else:
-        self.args.log.write(f"x  WARNING! delta_SCC_IP, delta_SCC_EA, or electrophilicity_index were not found in the file. Global Conceptual DFT descriptors cannot be fully calculated.")
-
-    # Collect descriptors into a dictionary
-    cdft_descriptors = {
-        "IP": delta_SCC_IP,
-        "EA": delta_SCC_EA,
-        "Electrophil. idx": electrophilicity_index,
-        "Hardness": chemical_hardness,
-        "Softness": chemical_softness,
-        "Chem. potential": chemical_potential,
-        "Electronegativity": mulliken_electronegativity,
-        "Electrodon. power idx": electrodonating_power_index,
-        "Electroaccep. power idx": electroaccepting_power_index,
-        "Nucleophilicity idx": nucleophilicity_index,
-        "Electrofugality": electrofugality,
-        "Nucleofugality": nucleofugality,
-        "Intrinsic React. idx": intrinsic_reactivity_index,
-        "Net Electrophilicity": net_electrophilicity
-    }
-
-    return cdft_descriptors
-
-
-def calculate_global_CDFT_descriptors_part2(file, file_Nminus1, file_Nminus2, file_Nplus1, file_Nplus2, cdft_descriptors,self):
+def calculate_global_CDFT_descriptors(file, file_Nminus1, file_Nminus2, file_Nplus1, file_Nplus2,self):
     """
     Read .gfn1 output file created from xTB and calculate CDFT descriptors with FDA approximations part 2
     """
-    corr_xtb = 4.8455  # correction from XTB
+    corr_xtb = 4.8455  # correction from xTB
 
     def extract_scc_energy(lines, filename):
         """
@@ -636,33 +561,46 @@ def calculate_global_CDFT_descriptors_part2(file, file_Nminus1, file_Nminus2, fi
     scc_energy_Nplus1 *= Hartree
     scc_energy_Nplus2 *= Hartree
 
-    # Extract required CDFT descriptors
-    delta_SCC_IP = cdft_descriptors.get("IP")
-    delta_SCC_EA = cdft_descriptors.get("EA")
-    chemical_hardness = cdft_descriptors.get("Hardness")
-
-    if None in [delta_SCC_IP, delta_SCC_EA, chemical_hardness]:
-        self.args.log.write("x  WARNING! Missing required CDFT descriptors (IP, EA, or Hardness).")
-        return None
-
     # Initialize variables
+    delta_SCC_IP, delta_SCC_EA, electrophilicity_index = None, None, None
+    chemical_hardness, chemical_softness = None, None
+    chemical_potential, mulliken_electronegativity = None, None
+    electrodonating_power_index, electroaccepting_power_index = None, None
+    intrinsic_reactivity_index = None
+    electrofugality, nucleofugality, nucleophilicity_index, net_electrophilicity = None, None, None, None
     Vertical_second_IP, Vertical_second_EA = None, None
     hyper_hardness, Global_hypersoftness = None, None
     Electrophilic_descriptor, w_cubic = None, None
 
-    # Calculations if all SCC energies and descriptors are available:
-    # Calculating the following descriptors
-        # 1) Second IP
+    # Calculate Global CDFT descriptors
+    delta_SCC_IP = round(((scc_energy_Nminus1 - corr_xtb) - scc_energy),4)
+    delta_SCC_EA = round((scc_energy - (scc_energy_Nplus1 + corr_xtb)),4)
+    chemical_hardness = round((delta_SCC_IP - delta_SCC_EA), 4)
+    chemical_potential = round(-(delta_SCC_IP + delta_SCC_EA) / 2, 4)
+    electrophilicity_index = (chemical_potential**2)/(2*chemical_hardness)
+    mulliken_electronegativity = round(-chemical_potential, 4)
+    electrofugality = round(-delta_SCC_EA + electrophilicity_index, 4)
+    nucleofugality = round(delta_SCC_IP + electrophilicity_index, 4)
+    electrodonating_maximum_electron_flow = round((-(chemical_potential/chemical_hardness)),4)
+    electrodonating_chemical_potential = round(((1/4)*((-3*delta_SCC_IP) - delta_SCC_EA)),4)
+    lectrodonating_maximum_electron_flow = round((-(electrodonating_chemical_potential/chemical_hardness)),4)
     Vertical_second_IP = round((((scc_energy_Nminus2 - scc_energy_Nminus1) - corr_xtb)), 4)
-        # 2) Second EA
     Vertical_second_EA = round((((scc_energy_Nplus1 - scc_energy_Nplus2) + corr_xtb)), 4)
-        # 3) Hyperhardnes
     hyper_hardness = round((-((0.5) * (delta_SCC_IP + delta_SCC_EA - Vertical_second_IP - Vertical_second_EA))), 4)
 
     if chemical_hardness != 0:
+        chemical_softness = round(1 / chemical_hardness, 4)
+        electrodonating_power_index = round(((delta_SCC_IP + 3 * delta_SCC_EA)**2) / (8 * chemical_hardness), 4)
+        electroaccepting_power_index = round(((3 * delta_SCC_IP + delta_SCC_EA)**2) / (8 * chemical_hardness), 4)
+        intrinsic_reactivity_index = round((delta_SCC_IP + delta_SCC_EA) / chemical_hardness, 4)
         Global_hypersoftness = round((hyper_hardness / ((chemical_hardness) ** 3)), 4)
 
-        # 4) Electrophilic descriptor calculations
+        if electroaccepting_power_index != 0:
+            nucleophilicity_index = round(10 / electroaccepting_power_index, 4)
+
+    net_electrophilicity = round((electrodonating_power_index - electroaccepting_power_index), 4)
+
+    # For lectrophilic descriptor calculations
     A = ((scc_energy_Nplus1 - scc_energy) + corr_xtb)
     c = (Vertical_second_IP - (2 * delta_SCC_IP) + A) / ((2 * Vertical_second_IP) - delta_SCC_IP - A)
     a = -((delta_SCC_IP + A) / 2) + (((delta_SCC_IP - A) / 2) * c)
@@ -680,7 +618,7 @@ def calculate_global_CDFT_descriptors_part2(file, file_Nminus1, file_Nminus2, fi
         Phi = inter_phi - Eta
         Electrophilic_descriptor = round(((chi * (Phi / Gamma)) - (((Phi / Gamma) ** 2) * ((Eta / 2) + (Phi / 6)))), 4)
 
-        # 5) Cubic electrophilicity index
+    # For cubic electrophilicity index
     Gamma_cubic = 2 * delta_SCC_IP - Vertical_second_IP - delta_SCC_EA
     Eta_cubic = delta_SCC_IP - delta_SCC_EA
 
@@ -691,18 +629,35 @@ def calculate_global_CDFT_descriptors_part2(file, file_Nminus1, file_Nminus2, fi
         self.args.log.write(f"x  WARNING! Eta_cubic is zero, skipping cub. electrophilicity idx calculation.")
 
     # Return the calculated descriptors
-    cdft_descriptors2 = {
+    cdft_descriptors = {
+        "IP": delta_SCC_IP,
+        "EA": delta_SCC_EA,
+        "Electrophil. idx": electrophilicity_index,
+        "Hardness": chemical_hardness,
+        "Softness": chemical_softness,
+        "Chem. potential": chemical_potential,
+        "Electronegativity": mulliken_electronegativity,
+        "Electrodon. power idx": electrodonating_power_index,
+        "Electroaccep. power idx": electroaccepting_power_index,
+        "Nucleophilicity idx": nucleophilicity_index,
+        "Electrofugality": electrofugality,
+        "Nucleofugality": nucleofugality,
+        "Intrinsic React. idx": intrinsic_reactivity_index,
+        "Net Electrophilicity": net_electrophilicity,
         "Second IP": Vertical_second_IP,
         "Second EA": Vertical_second_EA,
         "Hyperhardness": hyper_hardness,
         "Hypersoftness": Global_hypersoftness,
         "Electrophilic descrip.": Electrophilic_descriptor,
-        "cub. electrophilicity idx": w_cubic
+        "cub. electrophilicity idx": w_cubic,
+        "max. electron flow": electrodonating_maximum_electron_flow,
+        "Electrodon. Chem. potential": electrodonating_chemical_potential,
+        "Electrodon. max. electron flow": lectrodonating_maximum_electron_flow
     }
 
-    return cdft_descriptors2
+    return cdft_descriptors
 
-def calculate_local_CDFT_descriptors(file_fukui, cdft_descriptors, cdft_descriptors2,self):
+def calculate_local_CDFT_descriptors(file_fukui, cdft_descriptors,self):
     """
     Read fukui output file created from XTB and calculate local CDFT descriptors.
     """
@@ -738,12 +693,12 @@ def calculate_local_CDFT_descriptors(file_fukui, cdft_descriptors, cdft_descript
         self.args.log.write("WARNING: Fukui data lists are empty. Please check the '.fukui' file.")
         return None
 
-    if None in [cdft_descriptors, cdft_descriptors2]:
+    if None in [cdft_descriptors]:
         self.args.log.write("x  WARNING! Missing required CDFT descriptors (Softness, Hypersoftness, Electrophil. idx or Nucleophilicity idx).")
         return None
 
     chemical_softness = cdft_descriptors.get("Softness")
-    Global_hypersoftness = cdft_descriptors2.get("Hypersoftness")
+    Global_hypersoftness = cdft_descriptors.get("Hypersoftness")
     electrophilicity_index = cdft_descriptors.get("Electrophil. idx")
     nucleophilicity_index = cdft_descriptors.get("Nucleophilicity idx")
 
@@ -812,7 +767,7 @@ def read_xtb(file,self):
 
     # Initialize variables
     energy, homo_lumo, homo, lumo = np.nan, np.nan, np.nan, np.nan
-    dipole_module, Fermi_level, transition_dipole_moment = np.nan, np.nan, np.nan
+    dipole_module, Fermi_level = np.nan, np.nan
     total_charge, total_SASA = np.nan, np.nan
     total_C6AA, total_C8AA, total_alpha = np.nan, np.nan, np.nan
     atoms, numbers, chrgs = [], [], []
@@ -840,8 +795,6 @@ def read_xtb(file,self):
                 lumo_occ = 0
         elif "molecular dipole:" in line:
             dipole_module = float(data[i + 3].split()[-1])
-        elif "transition dipole moment" in line:
-            transition_dipole_moment = float(data[i + 2].split()[-1])
         elif "Fermi-level" in line:
             Fermi_level = float(data[i].split()[-2])
 
@@ -882,7 +835,6 @@ def read_xtb(file,self):
         "Partial charge": chrgs, 
         "Dipole module": dipole_module,
         "Fermi-level": Fermi_level,
-        "Trans. dipole moment": transition_dipole_moment,
         "Coord. numbers": covCN,
         "Disp. coeff. C6": C6AA,
         "Polariz. alpha": alpha,
@@ -1046,10 +998,39 @@ def read_solv(file_solv):
         "G solv. shift": g_shift,
         "Born radii": born_rad, 
         "Atomic SASAs": atom_sasa,
-        "H bond H2O": h_bond, 
+        "H bond with H2O": h_bond, 
     }
 
     return properties_dict
+
+
+def read_triplet(file_triplet,singlet_e):
+    '''
+    Retrieve properties from the single-point in triplet
+    '''
+
+    hartree_to_kcal = 627.509
+    triplet_e, transition_dipole_moment, singlet_triplet_gap = np.nan,np.nan,np.nan
+
+    if os.path.exists(file_triplet):
+        with open(file_triplet, "r") as f:
+            data = f.readlines()
+
+            # Get molecular properties related to solvation (in kcal/mol)
+            for i,line in enumerate(data):
+                if "transition dipole moment" in line:
+                    transition_dipole_moment = float(data[i + 2].split()[-1])
+                elif "SUMMARY" in line:
+                    triplet_e = float(data[i + 2].split()[3])
+
+        singlet_triplet_gap = (triplet_e-singlet_e)*hartree_to_kcal
+
+    properties_triplet = {
+        "S0-T1 gap": singlet_triplet_gap,
+        "Trans. dipole moment": transition_dipole_moment
+        }
+
+    return properties_triplet
 
 
 def calculate_global_morfeus_descriptors(final_xyz_path,self):
@@ -1071,8 +1052,8 @@ def calculate_global_morfeus_descriptors(final_xyz_path,self):
         self.args.log.write(f"x  WARNING! Error loading molecule from file {final_xyz_path}: {e}")
         return {
             "Global SASA": sasa_area_global,
-            "Disp. Area": disp_area_global,
-            "Disp. Vol.": disp_vol_global,
+            "Dispersion area": disp_area_global,
+            "Dispersion volume": disp_vol_global,
         }
 
     # Calculate Global SASA (Solvent Accessible Surface Area)
@@ -1095,8 +1076,8 @@ def calculate_global_morfeus_descriptors(final_xyz_path,self):
     # Create the final dictionary with the descriptors, even if some values are None
     global_properties_morfeus = {
         "Global SASA": sasa_area_global,
-        "Disp. Area": disp_area_global,
-        "Disp. Vol.": disp_vol_global,
+        "Dispersion area": disp_area_global,
+        "Dispersion volume": disp_vol_global,
     }
 
     return global_properties_morfeus
@@ -1127,8 +1108,8 @@ def calculate_local_morfeus_descriptors(final_xyz_path,self):
             "Buried volume": local_buried_volumes,
             "Cone angle": local_cone_angles,
             "Solid angle": local_solid_angles,
-            "Pyramidaliz. P": local_Pyramidalization,
-            "Pyramidaliz. Vol": local_vol_Pyramidalization,
+            "Pyramidalization": local_Pyramidalization,
+            "Pyramidaliz. volume": local_vol_Pyramidalization,
             "Dispersion": local_disp
         }
 
@@ -1196,8 +1177,8 @@ def calculate_local_morfeus_descriptors(final_xyz_path,self):
         "Buried volume": local_buried_volumes,
         "Cone angle": local_cone_angles,
         "Solid angle": local_solid_angles,
-        "Pyramidaliz. P": local_Pyramidalization,
-        "Pyramidaliz. Vol": local_vol_Pyramidalization,
+        "Pyramidalization": local_Pyramidalization,
+        "Pyramidaliz. volume": local_vol_Pyramidalization,
         "Dispersion": local_disp
     }
 
@@ -1216,25 +1197,25 @@ def get_descriptors(level):
     descriptors = {
         'denovo': {
             'mol': ["HOMO-LUMO gap", "HOMO", "LUMO", "IP", "EA", "Dipole module", "Total charge", "Global SASA", "G solv. in H2O", "G of H-bonds H2O"],
-            'atoms': ["Partial charge", "Electrophil.", "Nucleophil.", "Radical attack", "SASA", "Buried volume", "Cone angle", "H bond H2O"]
+            'atoms': ["Partial charge", "Electrophil.", "Nucleophil.", "Radical attack", "SASA", "Buried volume", "H bond with H2O"]
         },
         'interpret': {
-            'mol': ["Fermi-level", "Total polariz. alpha", "Total FOD", "Electrophil. idx", "Hardness", "Softness", "Electronegativity",
-                    "Nucleophilicity idx", "Second IP", "Second EA", "Disp. Area", "Disp. Vol.", 
-                    "HOMO occup.", "LUMO occup."],
+            'mol': ["Fermi-level", "Total polariz. alpha", "Total FOD", "Hardness", "Softness", "Electronegativity",
+                    "Electrophil. idx", "Nucleophilicity idx", "Second IP", "Second EA", "S0-T1 gap"],
             'atoms': ["s proportion", "p proportion", "d proportion", "Coord. numbers",
-                      "Polariz. alpha", "FOD", "FOD s proportion", "FOD p proportion", "FOD d proportion",
-                      "Solid angle", "Pyramidaliz. P", "Pyramidaliz. Vol", "Dispersion"]
+                      "Polariz. alpha", "FOD", "Dispersion", "Pyramidalization", "Pyramidaliz. volume"]
         },
         'full': {
-            'mol': ["Total energy", "Total disp. C6", "Total disp. C8", "Chem. potential", 
-                    "Electrodon. power idx", "Electroaccep. power idx", 
+            'mol': ["Total energy", "Total disp. C6", "Total disp. C8", "Dispersion area", "Dispersion volume", "Chem. potential", 
+                    "Electrodon. power idx", "Electroaccep. power idx", "max. electron flow", "Electrodon. Chem. potential", "Electrodon. max. electron flow",
                     "Electrofugality", "Nucleofugality", "Intrinsic React. idx", "Net Electrophilicity", 
                     "Hyperhardness", "Hypersoftness", "Electrophilic descrip.", "cub. electrophilicity idx",
-                    "G solv. elec.", "G solv. SASA", "G solv. shift"],
+                    "G solv. elec.", "G solv. SASA", "G solv. shift", "Trans. dipole moment",
+                    "HOMO occup.", "LUMO occup."],
             'atoms': ["fukui+", "fukui-", "fukui0", "dual descrip.", "softness+", "softness-", "softness0", 
                       "Rel. nucleophilicity", "Rel. electrophilicity", "GC Dual Descrip.", "Mult. descrip.", 
-                      "Nu_Electrophil.", "Nu_Nucleophil.", "Nu_Radical attack", "Disp. coeff. C6", "Born radii"]
+                      "Nu_Electrophil.", "Nu_Nucleophil.", "Nu_Radical attack", "Disp. coeff. C6", "Born radii",
+                      "Cone angle", "Solid angle", "FOD s proportion", "FOD p proportion", "FOD d proportion"]
         }
     }
 
@@ -1282,6 +1263,8 @@ def load_file_formats():
                     '.Nplus1': 'Nplus1',
                     '.Nplus2': 'Nplus2',
                     '.wbo': 'WBO',
-                    '.solv': 'Solvation in H2O'}
+                    '.solv': 'Solvation in H2O',
+                    '.triplet': 'Triplet',                    
+                    }
 
     return file_formats

@@ -252,10 +252,10 @@ def xtb_opt_main(
                 xtb_out1 = f'{os.path.dirname(Path(xyzin))}/{os.path.basename(Path(xyzin)).split(".xyz")[0]}'
                 if self.args.xtb_keywords is None:
                     comm_xtb = f"export OMP_STACKSIZE={self.args.stacksize} && export OMP_NUM_THREADS={self.args.nprocs},1 \
-                    && xtb {xyzin} --opt -c {charge} --uhf {int(mult) - 1} >> {xtb_out1}_xtb1.out"
+                    && xtb {xyzin} --opt -c {charge} --uhf {int(mult) - 1} -P 1 >> {xtb_out1}_xtb1.out"
                 else:
                     comm_xtb = f"export OMP_STACKSIZE={self.args.stacksize} && export OMP_NUM_THREADS={self.args.nprocs},1 \
-                    && xtb {xyzin} --opt -c {charge} --uhf {int(mult) - 1} {self.args.xtb_keywords} >> {xtb_out1}_xtb1.out"
+                    && xtb {xyzin} --opt -c {charge} --uhf {int(mult) - 1} {self.args.xtb_keywords} -P 1 >> {xtb_out1}_xtb1.out"
                     if " --ohess " in comm_xtb:
                         comm_xtb.remove("--opt ")
                 subprocess.call(comm_xtb, shell=False)
@@ -405,7 +405,7 @@ def xtb_opt_main(
                 except ValueError: # for calcs with a single atom
                     energy_Eh = float(open(f'{file}', "r").readlines()[0].split()[1])
                 energy_kcal = str(energy_Eh*627.5)
-                mol_rd.SetProp("_Name", file.split('.')[0])
+                mol_rd.SetProp("_Name", '.'.join(file.split('.')[:-1]))
                 mol_rd.SetProp("Energy", energy_kcal)
                 mol_rd.SetProp("Real charge", str(charge))
                 mol_rd.SetProp("Mult", str(int(mult)))

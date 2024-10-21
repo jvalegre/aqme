@@ -35,7 +35,7 @@ var_dict = {
     "degree": 120.0,
     "max_torsions": 0,
     "sample": 25,
-    "auto_sample": True,
+    "auto_sample": 'auto',
     "auto_cluster": True,
     "ff": "MMFF",
     "seed": 62609,
@@ -102,6 +102,7 @@ var_dict = {
     "qdescp_acc": 1,
     "qdescp_opt": 'normal',
     "qdescp_solvent": None,
+    "gfn_version": '2',
     "boltz": True,
     "nmr_atoms": [6, 1],  # [C,H]
     "nmr_slope": [-1.0537, -1.0784],  # [C,H]
@@ -110,7 +111,6 @@ var_dict = {
     "nodup_check": False,
     "qdescp_atoms": [],
     "xtb_opt": True,
-    "dbstep_calc": False,
     "dbstep_r": 3.5,
     "robert": True,
     "csv_name": None,
