@@ -348,7 +348,7 @@ class csearch:
             "pdb",
         ]
 
-        file_format = os.path.basename(Path(csearch_file)).split('.')[1]
+        file_format = os.path.basename(Path(csearch_file)).split('.')[-1]
         # Checks
         if file_format.lower() not in SUPPORTED_INPUTS:
             self.args.log.write("\nx  Input filetype not currently supported!")
@@ -414,7 +414,7 @@ class csearch:
         self.args.log.write(f"\n   ----- {os.path.basename(Path(name))} -----")
 
         # load mol and other parameters when using SMILES as input
-        if self.args.smi is not None or os.path.basename(Path(self.args.input)).split(".")[1] in ["smi","csv","cdx","txt","yaml","yml","rtf"]:
+        if self.args.smi is not None or os.path.basename(Path(self.args.input)).split(".")[-1] in ["smi","csv","cdx","txt","yaml","yml","rtf"]:
             (
                 mol,
                 constraints_atoms,
@@ -435,7 +435,7 @@ class csearch:
             if mol is None:
                 self.args.log.write(f"\nx  Failed to convert the provided SMILES ({smi}) to an RDkit Mol object! Please check the starting smiles.")
                 # if a list of SMILES is provided, the program doesn't stop if one SMILES fails to convert to mol
-                if os.path.basename(Path(self.args.input)).split(".")[1] not in ["csv","cdx","txt","yaml","yml","rtf"]:
+                if os.path.basename(Path(self.args.input)).split(".")[-1] not in ["csv","cdx","txt","yaml","yml","rtf"]:
                     self.args.log.finalize()
                     sys.exit()
                 bar.next()
@@ -446,7 +446,7 @@ class csearch:
             mol = smi
             if mol is None:
                 self.args.log.write(f"\nx  Failed to convert the provided input to an RDkit Mol object! Please check the starting structure.")
-                if os.path.basename(Path(self.args.input)).split(".")[1] not in ["csv","cdx","txt","yaml","yml","rtf"]:
+                if os.path.basename(Path(self.args.input)).split(".")[-1] not in ["csv","cdx","txt","yaml","yml","rtf"]:
                     self.args.log.finalize()
                     sys.exit()
                 bar.next()
@@ -461,23 +461,23 @@ class csearch:
 
         # for 3D input types
         if self.args.program.lower() in ["crest"] and self.args.smi is None:
-            if os.path.basename(Path(self.args.input)).split(".")[1] in ["pdb", "mol2", "mol", "sdf"]:
+            if os.path.basename(Path(self.args.input)).split(".")[-1] in ["pdb", "mol2", "mol", "sdf"]:
                 command_pdb = [
                     "obabel",
-                    f'-i{os.path.basename(Path(self.args.input)).split(".")[1]}',
-                    f'{name}.{os.path.basename(Path(self.args.input)).split(".")[1]}',
+                    f'-i{os.path.basename(Path(self.args.input)).split(".")[-1]}',
+                    f'{name}.{os.path.basename(Path(self.args.input)).split(".")[-1]}',
                     "-oxyz",
-                    f"-O{os.path.dirname(Path(name))}/{os.path.basename(Path(name)).split('.')[0]}_{self.args.program.lower()}.xyz",
+                    f"-O{os.path.dirname(Path(name))}/{'.'.join(os.path.basename(Path(name)).split('.')[:-1])}_{self.args.program.lower()}.xyz",
                 ]
                 subprocess.run(
                     command_pdb,
                     stdout=subprocess.DEVNULL,
                     stderr=subprocess.DEVNULL,
                 )
-            elif os.path.basename(Path(self.args.input)).split(".")[1] in ["gjf", "com"]:
-                xyz_file, _, _ = com_2_xyz(f'{name}.{os.path.basename(Path(self.args.input)).split(".")[1]}')
+            elif os.path.basename(Path(self.args.input)).split(".")[-1] in ["gjf", "com"]:
+                xyz_file, _, _ = com_2_xyz(f'{name}.{os.path.basename(Path(self.args.input)).split(".")[-1]}')
                 shutil.move(xyz_file, f"{name}_{self.args.program.lower()}.xyz")
-            elif os.path.basename(Path(self.args.input)).split(".")[1] == "xyz":
+            elif os.path.basename(Path(self.args.input)).split(".")[-1] == "xyz":
                 shutil.copy(f"{name}.xyz", f"{name}_{self.args.program.lower()}.xyz")
 
         template_opt,valid_template_embed = False,True
@@ -504,7 +504,7 @@ class csearch:
             ]
             if complex_type != '' and complex_type not in accepted_complex_types:
                 self.args.log.write(f"x  The metal template specified in complex_type ({complex_type}) is not valid! Options: squareplanar, squarepyramidal, linear and trigonalplanar")
-                if os.path.basename(Path(self.args.input)).split(".")[1] not in ["csv","cdx","txt","yaml","yml","rtf"]:
+                if os.path.basename(Path(self.args.input)).split(".")[-1] not in ["csv","cdx","txt","yaml","yml","rtf"]:
                     self.args.log.finalize()
                     sys.exit()
                 bar.next()
@@ -640,7 +640,7 @@ class csearch:
         if (
             self.args.program.lower() in ["crest"]
             and self.args.smi is None
-            and os.path.basename(Path(self.args.input)).split(".")[1] in ["pdb","mol2","mol","sdf","gjf","com","xyz"]
+            and os.path.basename(Path(self.args.input)).split(".")[-1] in ["pdb","mol2","mol","sdf","gjf","com","xyz"]
         ):
 
             valid_structure = True
@@ -678,7 +678,6 @@ class csearch:
                     )
 
         else:
-            name = os.path.basename(Path(name)).split(".")[0]
             csearch_file = self.csearch_folder.joinpath(
                 name + "_" + self.args.program.lower() + self.args.output
             )
@@ -766,7 +765,7 @@ class csearch:
                 self.args.log.write(f"\no  Starting RDKit conformer sampling")
             elif self.args.program.lower() in ['summ','fullmonte']:
                 self.args.log.write(f"\no  Starting RDKit-{self.args.program} conformer sampling")
-            elif self.args.program.lower() in ['crest'] and os.path.basename(Path(self.args.input)).split(".")[1] not in ["pdb","mol2","mol","sdf","gjf","com","xyz"]:
+            elif self.args.program.lower() in ['crest'] and os.path.basename(Path(self.args.input)).split(".")[-1] not in ["pdb","mol2","mol","sdf","gjf","com","xyz"]:
                 self.args.log.write(f"\no  Starting initial RDKit-based mol generation from SMILES")
 
             status, rotmatches, ff, mol_crest = self.rdkit_to_sdf(
@@ -877,7 +876,7 @@ class csearch:
         rdmols = Chem.SDMolSupplier(f'{csearch_file}', removeHs=False) 
         if rdmols is None:
             self.args.log.write("\nCould not open " + name + self.args.output)
-            if os.path.basename(Path(self.args.input)).split(".")[1] not in ["csv","cdx","txt","yaml","yml","rtf"]:
+            if os.path.basename(Path(self.args.input)).split(".")[-1] not in ["csv","cdx","txt","yaml","yml","rtf"]:
                 self.args.log.finalize()
                 sys.exit()
             return
@@ -1066,7 +1065,7 @@ class csearch:
         Function to embed conformers
         """
 
-        is_sdf_mol_or_mol2 = os.path.basename(Path(self.args.input)).split('.')[1].lower() in [
+        is_sdf_mol_or_mol2 = os.path.basename(Path(self.args.input)).split('.')[-1].lower() in [
             "sdf",
             "mol",
             "mol2",

@@ -405,7 +405,7 @@ def xtb_opt_main(
                 except ValueError: # for calcs with a single atom
                     energy_Eh = float(open(f'{file}', "r").readlines()[0].split()[1])
                 energy_kcal = str(energy_Eh*627.5)
-                mol_rd.SetProp("_Name", file.split('.')[0])
+                mol_rd.SetProp("_Name", '.'.join(file.split('.')[:-1]))
                 mol_rd.SetProp("Energy", energy_kcal)
                 mol_rd.SetProp("Real charge", str(charge))
                 mol_rd.SetProp("Mult", str(int(mult)))

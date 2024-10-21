@@ -166,16 +166,16 @@ class qdescp:
         # check whether the user have chosen the "input" or "files" option (QDESCP will use "files" from this point on)
         valid_input = True
         if self.args.files == [] and self.args.input != '':
-            if os.path.basename(self.args.input).split('.')[1].lower() != "csv":
-                self.args.log.write(f"\nx  The format used ({os.path.basename(self.args.input).split('.')[1]}) is not compatible with the 'input' option! Formats accepted: csv")
+            if os.path.basename(self.args.input).split('.')[-1].lower() != "csv":
+                self.args.log.write(f"\nx  The format used ({os.path.basename(self.args.input).split('.')[-1]}) is not compatible with the 'input' option! Formats accepted: csv")
                 valid_input = False
             if self.args.input[0] == '[' or isinstance(self.args.input, list):
                 self.args.log.write(f"\nx  The 'input' option was specified as a list! Please provide only the PATH or name of the CSV (i.e. --input test.csv)")
                 valid_input = False
             qdescp_files = [self.args.input]
         else:
-            if os.path.basename(self.args.files[0]).split('.')[1].lower() != "sdf":
-                self.args.log.write(f"\nx  The format used ({os.path.basename(self.args.files[0]).split('.')[1]}) is not compatible with the 'files' option! Formats accepted: sdf")
+            if os.path.basename(self.args.files[0]).split('.')[-1].lower() != "sdf":
+                self.args.log.write(f"\nx  The format used ({os.path.basename(self.args.files[0]).split('.')[-1]}) is not compatible with the 'files' option! Formats accepted: sdf")
                 valid_input = False
             qdescp_files = self.args.files
 
@@ -183,8 +183,10 @@ class qdescp:
             self.args.log.finalize()
             sys.exit()
 
+        self.args.log.write(f"\nStarting QDESCP-{self.args.program} with {len(qdescp_files)} job(s)\n")
+
         # if the files input is a CSV, first the program generates conformers
-        if len(qdescp_files) == 1 and os.path.basename(qdescp_files[0]).split('.')[1].lower() == 'csv':
+        if len(qdescp_files) == 1 and os.path.basename(qdescp_files[0]).split('.')[-1].lower() == 'csv':
             if not os.path.exists(qdescp_files[0]):
                 self.args.log.write(f"\nx  The csv_name provided ({qdescp_files[0]}) does not exist! Please specify this name correctly")
                 self.args.log.finalize()
@@ -216,8 +218,6 @@ class qdescp:
             subprocess.run(cmd_csearch)
 
             qdescp_files = glob.glob(f'{destination_csearch}/*.sdf')
-
-        self.args.log.write(f"\nStarting QDESCP-{self.args.program} with {len(qdescp_files)} job(s)\n")
 
         # obtaining mols from input files that will be used to set up atomic descriptors
         mol_list = self.get_mols_qdescp(qdescp_files)
@@ -269,8 +269,9 @@ class qdescp:
                 for file in qdescp_files:
                     if file not in self.args.invalid_calcs:
                         mol = Chem.SDMolSupplier(file, removeHs=False)[0]
-                        name = os.path.basename(Path(file)).split(".")[0]
-                        json_files = glob.glob(str(destination) + "/" + name + "_conf_*.json")
+                        name = '.'.join(os.path.basename(Path(file)).split(".")[:-1])
+                        # to locate difficult names (i.e. with special characters), glob.glob doesn't work, this is needed:
+                        json_files = [x for x in glob.glob(f"{destination}/*.json") if f'{name}_conf_' in x]
 
                         # Generating the JSON files
                         _ = get_boltz_props(json_files, name, boltz_dir, "xtb", self, mol_props, atom_props, smarts_targets,
@@ -323,6 +324,24 @@ class qdescp:
         smarts_targets = self.args.qdescp_atoms.copy()
 
         destination = set_destination(self,'QDESCP')
+
+        # print version of xTB
+        destination.mkdir(exist_ok=True, parents=True)
+        xtb_version_dat = f'{destination}/xtb_version.dat'
+        run_command(['xtb','-version'], xtb_version_dat, cwd=destination)
+
+        xtb_version = None
+        with open(xtb_version_dat, 'r') as datfile:
+            lines = datfile.readlines()
+            for _,line in enumerate(lines):
+                if 'xtb version' in line:
+                    xtb_version = line.split('version')[1].split()[0]
+        os.remove(xtb_version_dat)
+
+        if xtb_version is not None:
+            self.args.log.write(f"xTB version used: {xtb_version}\n")
+        else:
+            self.args.log.write(f"xTB version could not be determined! Please, provide it along the results to allow other researchers to reproduce the results.\n")
 
         # create folder to store Boltzmann weighted properties
         boltz_dir = Path(f"{destination}/boltz")
@@ -573,13 +592,16 @@ class qdescp:
         """ 
 
         xyz_files, xyz_charges, xyz_mults = [], [], []
-        name = os.path.basename(Path(file)).split('.')[0]
-        ext = os.path.basename(Path(file)).split(".")[1]
+        name = '.'.join(os.path.basename(Path(file)).split('.')[:-1])
+        ext = os.path.basename(Path(file)).split(".")[-1]
         self.args.log.write(f"\n\n   ----- {name} -----")
         if ext.lower() == "xyz":
             # separate the parent XYZ file into individual XYZ files
             xyzall_2_xyz(file, name)
-            for conf_file in glob.glob(f"{name}_conf_*.xyz"):
+            # to locate difficult names (i.e. with special characters), glob.glob doesn't work, this is needed:
+            xyz_files_list = [x for x in glob.glob(f"{os.path.dirname(Path(file))}/*.xyz") if f'{name}_conf_' in x]
+
+            for conf_file in xyz_files_list:
                 if self.args.charge is None:
                     charge_xyz, _ = read_xyz_charge_mult(conf_file)
                 else:
@@ -609,39 +631,32 @@ class qdescp:
                 stderr=subprocess.DEVNULL,
             )
 
+            # to locate difficult names (i.e. with special characters), glob.glob doesn't work, this is needed:
+            xyz_files_list = [x for x in glob.glob(f"{os.path.dirname(Path(file))}/*.xyz") if f'{name}_conf_' in x]
+
             if self.args.charge is None:
                 _, charges, _, _ = mol_from_sdf_or_mol_or_mol2(file, "csearch", self.args)
             else:
-                charges = [self.args.charge] * len(
-                    glob.glob(f"{os.path.dirname(os.path.abspath(file))}/{name}_conf_*.xyz")
-                )
+                charges = [self.args.charge] * len(xyz_files_list)
             if self.args.mult is None:
                 _, _, mults, _ = mol_from_sdf_or_mol_or_mol2(file, "csearch", self.args)
             else:
-                mults = [self.args.mult] * len(
-                    glob.glob(
-                        f"{os.path.dirname(os.path.abspath(file))}/{name}_conf_*.xyz"
-                    )
-                )
+                mults = [self.args.mult] * len(xyz_files_list)
 
-            for count, f in enumerate(
-                glob.glob(
-                    f"{os.path.dirname(os.path.abspath(file))}/{name}_conf_*.xyz"
-                )
-            ):
+            for count, f in enumerate(xyz_files_list):
                 xyz_files.append(f)
                 xyz_charges.append(charges[count])
                 xyz_mults.append(mults[count])
 
         for xyz_file, charge, mult in zip(xyz_files, xyz_charges, xyz_mults):
-            name_xtb = os.path.basename(Path(xyz_file)).split(".")[0]
+            name_xtb = '.'.join(os.path.basename(Path(xyz_file)).split(".")[:-1])
             self.args.log.write(f"\no  Running xTB and collecting properties")
 
             # if xTB fails during any of the calculations (UnboundLocalError), xTB assigns weird
             # qm5 charges (i.e. > +10 or < -10, ValueError), or the json file is not created 
             # for some weird xTB error (FileNotFoundError), that molecule is not used 
             xtb_passing,xtb_files_props = self.run_sp_xtb(file, xyz_file, charge, mult, name_xtb, destination)
-            path_name = Path(os.path.dirname(file)).joinpath(os.path.basename(Path(file)).split(".")[0])
+            path_name = Path(os.path.dirname(file)).joinpath('.'.join(os.path.basename(Path(file)).split(".")[:-1]))
 
             if xtb_passing:
                 #standard
@@ -1209,7 +1224,7 @@ class qdescp:
         # combine all the results in one single file
         file_formats = load_file_formats()
 
-        name = os.path.basename(xtb_files_props['xtb_out']).split('.')[0]
+        name = '.'.join(os.path.basename(xtb_files_props['xtb_out']).split('.')[:-1])
         raw_content = ''
         for file_format in file_formats:
             xtb_file = f"{destination}/xtb_data/{name}/{name}{file_format}"
@@ -1291,12 +1306,12 @@ class qdescp:
 
         atom_props = ["NMR Chemical Shifts"]
         
-        if os.path.basename(Path(self.args.files[0])).split('.')[1].lower() not in ["json"]:
-            self.args.log.write(f"\nx  The format used ({os.path.basename(Path(self.args.files[0])).split('.')[1]}) is not compatible with QDESCP with NMR! Formats accepted: json")
+        if os.path.basename(Path(self.args.files[0])).split('.')[-1].lower() not in ["json"]:
+            self.args.log.write(f"\nx  The format used ({os.path.basename(Path(self.args.files[0])).split('.')[-1]}) is not compatible with QDESCP with NMR! Formats accepted: json")
             self.args.log.finalize()
             sys.exit()
 
         name = os.path.basename(Path(self.args.files[0])).split("_conf")[0]
         
-        json_files = glob.glob(str(os.path.dirname(os.path.abspath(self.args.files[0]))) + "/" + name + "_conf_*.json")
+        json_files = glob.glob(str(os.path.dirname(Path(self.args.files[0]))) + "/" + name + "_conf_*.json")
         get_boltz_props_nmr(json_files, name, boltz_dir, self, atom_props, self.args.nmr_atoms, self.args.nmr_slope, self.args.nmr_intercept, self.args.nmr_experim)

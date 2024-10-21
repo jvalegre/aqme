@@ -154,7 +154,7 @@ class cmin:
             "\no  Number of finished jobs from CMIN", max=len(self.args.files)
         )
 
-        file_format = os.path.basename(Path(self.args.files[0])).split('.')[1]
+        file_format = os.path.basename(Path(self.args.files[0])).split('.')[-1]
 
         if file_format.lower() in ['xyz', 'gjf', 'com']:
             for file in self.args.files:
@@ -265,7 +265,7 @@ class cmin:
 
         elif self.args.program.lower() == "xtb":
             # sets charge and mult
-            file_format = os.path.basename(Path(file)).split('.')[1]
+            file_format = os.path.basename(Path(file)).split('.')[-1]
             charge_input, mult_input, final_mult = None, None, None
             if file_format.lower() == 'sdf':
                 if self.args.charge is None or self.args.mult is None:

@@ -70,7 +70,7 @@ def load_from_yaml(self):
     # Variables will be updated from YAML file
     try:
         if os.path.exists(self.varfile):
-            if os.path.basename(Path(self.varfile)).split('.')[1] in ["yaml", "yml", "txt"]:
+            if os.path.basename(Path(self.varfile)).split('.')[-1] in ["yaml", "yml", "txt"]:
                 with open(self.varfile, "r") as file:
                     try:
                         param_list = yaml.load(file, Loader=yaml.SafeLoader)
@@ -190,7 +190,7 @@ def get_info_input(file):
 
     line = ""
     # input for Gaussian calculations
-    if os.path.basename(Path(file)).split(".")[1] in ["com", "gjf"]:
+    if os.path.basename(Path(file)).split(".")[-1] in ["com", "gjf"]:
 
         # Find the command line
         while "#" not in line:
@@ -216,7 +216,7 @@ def get_info_input(file):
             line = next(_iter).strip()
 
     # input for ORCA calculations
-    if os.path.basename(Path(file)).split(".")[1] == "inp":
+    if os.path.basename(Path(file)).split(".")[-1] == "inp":
 
         # Find the line with charge and multiplicity
         while "* xyz" not in line or "* int" not in line:
@@ -734,8 +734,8 @@ def mol_from_sdf_or_mol_or_mol2(input_file, module, args, low_check=None):
     elif module == "csearch":
 
         # using sanitize=True in this case, which is recommended for RDKit calculations
-        filename = os.path.basename(Path(input_file)).split('.')[0]
-        extension = os.path.basename(Path(input_file)).split('.')[1]
+        filename = '.'.join(os.path.basename(Path(input_file)).split('.')[:-1])
+        extension = os.path.basename(Path(input_file)).split('.')[-1]
 
         if extension.lower() == "pdb":
             input_file = f'{os.path.dirname(Path(input_file))}/{filename}.sdf'
@@ -755,7 +755,7 @@ def mol_from_sdf_or_mol_or_mol2(input_file, module, args, low_check=None):
 
         for i, line in enumerate(lines):
             if line.find(">  <ID>") > -1:
-                ID = lines[i + 1].split()[0]
+                ID = ' '.join(lines[i + 1].split()[:-1])
                 IDs.append(ID)
             if line.find(">  <Real charge>") > -1:
                 charge = lines[i + 1].split()[0]
@@ -769,7 +769,7 @@ def mol_from_sdf_or_mol_or_mol2(input_file, module, args, low_check=None):
             suppl.append(mol)
 
         if len(IDs) == 0:
-            path_file = f'{os.path.dirname(input_file)}/{os.path.basename(input_file).split(".")[0]}'
+            path_file = f'{os.path.dirname(input_file)}/{".".join(os.path.basename(input_file).split(".")[:-1])}'
             if len(suppl) > 1:
                 for i in range(len(suppl)):
                     IDs.append(f"{path_file}_{i+1}")

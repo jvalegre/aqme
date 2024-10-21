@@ -546,6 +546,17 @@ def test_qdescp_csv(
             conf_change = True
     assert conf_change
 
+    # check that the xTB version is printed
+    f = open(f'{w_dir_main}/QDESCP_data.dat', "r")
+    data = f.readlines()
+    f.close()
+
+    version_print = False
+    for line in data:
+        if 'xTB version used: 6.6.1' in line:
+            version_print = True
+    assert version_print
+
 
 @pytest.mark.parametrize(
     "file, run_test",

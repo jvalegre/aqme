@@ -580,8 +580,8 @@ def test_csearch_rdkit_parameters(
         assert len(mols) == sample
         assert charge == int(mols[0].GetProp("Real charge"))
         assert mult == int(mols[0].GetProp("Mult"))
-        # check if the first five energies are included
-        assert initial_three_E == final_three_E
+        # check if the first three energies are included
+        assert sorted(initial_three_E) == sorted(final_three_E)
         # check if all the energies are sorted
         mol_energies = []
         for mol in mols:
@@ -1132,7 +1132,7 @@ def test_csearch_methods(
             if len(final_five_E) == 5:
                 break
 
-        assert initial_five_E == final_five_E
+        assert sorted(initial_five_E) == sorted(final_five_E)
 
 
     elif name == 'sample_keyword':
