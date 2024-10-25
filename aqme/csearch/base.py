@@ -47,8 +47,15 @@ General RDKit-based
    sample : int, default=25
       Number of conformers to keep after the initial RDKit sampling. They are selected using a
       combination of RDKit energies and Butina clustering
-   auto_sample : bool, default=True
-      Apply automatic calculation of the number of conformers generated initially with RDKit
+   auto_sample : str, default=mid in CSEARCH, low in QDESCP
+      Apply automatic calculation of the number of conformers generated initially with RDKit. This number
+      of conformers is initially generated and then reduced to the number specified in --sample with
+      different filters. There is a sampling factor, which is multiplied by the number of rotatable bonds,
+      and a maximum number of conformers allowed to pass to the filters. Options:
+      1. Low: good for descriptor generation in machine learning. Base multiplier = 5, max number of confs = 100
+      2. Mid: standard, good compromise between number of conformers and computing time. Base multiplier = 10, max number of confs = 250
+      3. High: demanding method, more conformers and time. Base multiplier = 20, max number of confs = 500
+      4. False: use the number of conformers specified in --sample
    ff : str, default='MMFF'
       Force field used in RDKit optimizations and energy calculations. Current 
       options: MMFF and UFF (if MMFF fails, AQME tries to use UFF automatically)
@@ -257,6 +264,10 @@ class csearch:
         if str(self.args.auto_metal_atoms) == "False":
             self.args.auto_metal_atoms = False
 
+        # default value of auto_sample
+        if self.args.auto_sample == 'auto':
+            self.args.auto_sample = 'mid'
+
         if self.args.program.lower() == "crest":
             _ = check_xtb(self)
             _ = check_crest(self)
@@ -337,7 +348,7 @@ class csearch:
             "pdb",
         ]
 
-        file_format = os.path.basename(Path(csearch_file)).split('.')[1]
+        file_format = os.path.basename(Path(csearch_file)).split('.')[-1]
         # Checks
         if file_format.lower() not in SUPPORTED_INPUTS:
             self.args.log.write("\nx  Input filetype not currently supported!")
@@ -375,32 +386,10 @@ class csearch:
             "o  Number of finished jobs from CSEARCH", max=len(job_inputs)
         )
 
-        # rdkit benefits from using multithreading, since the RMSD filter in RDKit's GetBestRMS 
-        # doesn't parallelize well (by default, it uses 1 thread and it fails when using more, 
-        # we're not sure that it tries to use all the CPUs or only 1)
-        if self.args.program.lower() == "rdkit":
-            # we do not recommend more than 4 parallel RDKit jobs, as each job runs RDKit functions
-            # with all available CPUs/threadss (i.e. numThreads=0 in rdDistGeom.EmbedMultipleConfs)
-            csearch_procs = min(4,self.args.nprocs)
-        else: # each CREST job already parallelizes CPUs, so only 1 simultaneous job is run at a time
-            csearch_procs = 1
-
-        # asynchronous multithreading to accelerate CSEARCH (only benefits RDKit)
-        # CAREFUL! All the variables inside the individual thread must be independent, and
-        # they must not be as part of self (i.e. don't use self.args.charge, use charge)
-        if not self.args.debug: # errors and try/excepts are not shown in multithreading
-            with futures.ThreadPoolExecutor(
-                max_workers=csearch_procs,
-            ) as executor:
-                for job_input in job_inputs:
-                    _ = executor.submit(
-                        self.compute_confs, job_input,bar
-                    )
-                bar.finish()
-
-        else:
-            for job_input in job_inputs:
-                _ = self.compute_confs(job_input,bar)
+        # we tried to use multithreading, but it didn't accelerate the workflows since 
+        # RDKit also does multithreading (even though some functions don't work faster)
+        for job_input in job_inputs:
+            _ = self.compute_confs(job_input,bar)
 
 
     def compute_confs(self,job_input,bar):
@@ -425,7 +414,7 @@ class csearch:
         self.args.log.write(f"\n   ----- {os.path.basename(Path(name))} -----")
 
         # load mol and other parameters when using SMILES as input
-        if self.args.smi is not None or os.path.basename(Path(self.args.input)).split(".")[1] in ["smi","csv","cdx","txt","yaml","yml","rtf"]:
+        if self.args.smi is not None or os.path.basename(Path(self.args.input)).split(".")[-1] in ["smi","csv","cdx","txt","yaml","yml","rtf"]:
             (
                 mol,
                 constraints_atoms,
@@ -446,7 +435,7 @@ class csearch:
             if mol is None:
                 self.args.log.write(f"\nx  Failed to convert the provided SMILES ({smi}) to an RDkit Mol object! Please check the starting smiles.")
                 # if a list of SMILES is provided, the program doesn't stop if one SMILES fails to convert to mol
-                if os.path.basename(Path(self.args.input)).split(".")[1] not in ["csv","cdx","txt","yaml","yml","rtf"]:
+                if os.path.basename(Path(self.args.input)).split(".")[-1] not in ["csv","cdx","txt","yaml","yml","rtf"]:
                     self.args.log.finalize()
                     sys.exit()
                 bar.next()
@@ -457,7 +446,7 @@ class csearch:
             mol = smi
             if mol is None:
                 self.args.log.write(f"\nx  Failed to convert the provided input to an RDkit Mol object! Please check the starting structure.")
-                if os.path.basename(Path(self.args.input)).split(".")[1] not in ["csv","cdx","txt","yaml","yml","rtf"]:
+                if os.path.basename(Path(self.args.input)).split(".")[-1] not in ["csv","cdx","txt","yaml","yml","rtf"]:
                     self.args.log.finalize()
                     sys.exit()
                 bar.next()
@@ -472,23 +461,23 @@ class csearch:
 
         # for 3D input types
         if self.args.program.lower() in ["crest"] and self.args.smi is None:
-            if os.path.basename(Path(self.args.input)).split(".")[1] in ["pdb", "mol2", "mol", "sdf"]:
+            if os.path.basename(Path(self.args.input)).split(".")[-1] in ["pdb", "mol2", "mol", "sdf"]:
                 command_pdb = [
                     "obabel",
-                    f'-i{os.path.basename(Path(self.args.input)).split(".")[1]}',
-                    f'{name}.{os.path.basename(Path(self.args.input)).split(".")[1]}',
+                    f'-i{os.path.basename(Path(self.args.input)).split(".")[-1]}',
+                    f'{name}.{os.path.basename(Path(self.args.input)).split(".")[-1]}',
                     "-oxyz",
-                    f"-O{os.path.dirname(Path(name))}/{os.path.basename(Path(name)).split('.')[0]}_{self.args.program.lower()}.xyz",
+                    f"-O{os.path.dirname(Path(name))}/{'.'.join(os.path.basename(Path(name)).split('.')[:-1])}_{self.args.program.lower()}.xyz",
                 ]
                 subprocess.run(
                     command_pdb,
                     stdout=subprocess.DEVNULL,
                     stderr=subprocess.DEVNULL,
                 )
-            elif os.path.basename(Path(self.args.input)).split(".")[1] in ["gjf", "com"]:
-                xyz_file, _, _ = com_2_xyz(f'{name}.{os.path.basename(Path(self.args.input)).split(".")[1]}')
+            elif os.path.basename(Path(self.args.input)).split(".")[-1] in ["gjf", "com"]:
+                xyz_file, _, _ = com_2_xyz(f'{name}.{os.path.basename(Path(self.args.input)).split(".")[-1]}')
                 shutil.move(xyz_file, f"{name}_{self.args.program.lower()}.xyz")
-            elif os.path.basename(Path(self.args.input)).split(".")[1] == "xyz":
+            elif os.path.basename(Path(self.args.input)).split(".")[-1] == "xyz":
                 shutil.copy(f"{name}.xyz", f"{name}_{self.args.program.lower()}.xyz")
 
         template_opt,valid_template_embed = False,True
@@ -515,7 +504,7 @@ class csearch:
             ]
             if complex_type != '' and complex_type not in accepted_complex_types:
                 self.args.log.write(f"x  The metal template specified in complex_type ({complex_type}) is not valid! Options: squareplanar, squarepyramidal, linear and trigonalplanar")
-                if os.path.basename(Path(self.args.input)).split(".")[1] not in ["csv","cdx","txt","yaml","yml","rtf"]:
+                if os.path.basename(Path(self.args.input)).split(".")[-1] not in ["csv","cdx","txt","yaml","yml","rtf"]:
                     self.args.log.finalize()
                     sys.exit()
                 bar.next()
@@ -651,7 +640,7 @@ class csearch:
         if (
             self.args.program.lower() in ["crest"]
             and self.args.smi is None
-            and os.path.basename(Path(self.args.input)).split(".")[1] in ["pdb","mol2","mol","sdf","gjf","com","xyz"]
+            and os.path.basename(Path(self.args.input)).split(".")[-1] in ["pdb","mol2","mol","sdf","gjf","com","xyz"]
         ):
 
             valid_structure = True
@@ -689,7 +678,6 @@ class csearch:
                     )
 
         else:
-            name = os.path.basename(Path(name)).split(".")[0]
             csearch_file = self.csearch_folder.joinpath(
                 name + "_" + self.args.program.lower() + self.args.output
             )
@@ -777,7 +765,7 @@ class csearch:
                 self.args.log.write(f"\no  Starting RDKit conformer sampling")
             elif self.args.program.lower() in ['summ','fullmonte']:
                 self.args.log.write(f"\no  Starting RDKit-{self.args.program} conformer sampling")
-            elif self.args.program.lower() in ['crest'] and os.path.basename(Path(self.args.input)).split(".")[1] not in ["pdb","mol2","mol","sdf","gjf","com","xyz"]:
+            elif self.args.program.lower() in ['crest'] and os.path.basename(Path(self.args.input)).split(".")[-1] not in ["pdb","mol2","mol","sdf","gjf","com","xyz"]:
                 self.args.log.write(f"\no  Starting initial RDKit-based mol generation from SMILES")
 
             status, rotmatches, ff, mol_crest = self.rdkit_to_sdf(
@@ -888,7 +876,7 @@ class csearch:
         rdmols = Chem.SDMolSupplier(f'{csearch_file}', removeHs=False) 
         if rdmols is None:
             self.args.log.write("\nCould not open " + name + self.args.output)
-            if os.path.basename(Path(self.args.input)).split(".")[1] not in ["csv","cdx","txt","yaml","yml","rtf"]:
+            if os.path.basename(Path(self.args.input)).split(".")[-1] not in ["csv","cdx","txt","yaml","yml","rtf"]:
                 self.args.log.finalize()
                 sys.exit()
             return
@@ -943,24 +931,38 @@ class csearch:
         """
 
         auto_samples = 0
-        sampling_factor = 20 # arbitrarily set based on benchmarking from v1.0
+        # low: good for descriptor generation in machine learning
+        if self.args.auto_sample.lower() == 'low':
+            sampling_factor = 5
+            max_confs = 100
+        # mid: standard, good compromise between number of conformers and computing time
+        elif self.args.auto_sample.lower() == 'mid':
+            sampling_factor = 10
+            max_confs = 250
+        # high: more demanding method, more conformers and time
+        elif self.args.auto_sample.lower() == 'high':
+            sampling_factor = 20
+            max_confs = 500
+        else:
+            self.args.log.write(f'x  {self.args.auto_sample} is not a valid option for --auto_sample! Please use "low", "mid" or "high"')
+            self.args.log.finalize()
+            sys.exit()
+
         if len(metal_atoms) >= 1:
             if len(metal_idx) > 0:
                 auto_samples += 3 * len(metal_idx) # this accounts for possible trans/cis isomers in metal complexes
 
         auto_samples += 3 * (Lipinski.NumRotatableBonds(mol))  # x3, for C3 rotations
         auto_samples += 3 * (Lipinski.NHOHCount(mol))  # x3, for OH/NH rotations
-        auto_samples += 3 * (
-            Lipinski.NumSaturatedRings(mol)
-        )  # x3, for boat/chair/envelope confs
+        auto_samples += 3 * (Lipinski.NumSaturatedRings(mol))  # x3, for boat/chair/envelope confs
         if auto_samples == 0:
             auto_samples = sampling_factor
         else:
             auto_samples = sampling_factor * auto_samples
 
         # set a maximum number of conformers allowed with auto_sampling
-        if auto_samples > 500:
-            auto_samples = 500
+        if auto_samples > max_confs:
+            auto_samples = max_confs
 
         return auto_samples
 
@@ -1063,7 +1065,7 @@ class csearch:
         Function to embed conformers
         """
 
-        is_sdf_mol_or_mol2 = os.path.basename(Path(self.args.input)).split('.')[1].lower() in [
+        is_sdf_mol_or_mol2 = os.path.basename(Path(self.args.input)).split('.')[-1].lower() in [
             "sdf",
             "mol",
             "mol2",
@@ -1075,7 +1077,7 @@ class csearch:
         embed_kwargs = dict()
         embed_kwargs["ignoreSmoothingFailures"] = True
         embed_kwargs["randomSeed"] = self.args.seed
-        embed_kwargs["numThreads"] = 0
+        embed_kwargs["numThreads"] = self.args.nprocs
 
         if (coord_Map, alg_Map, mol_template) != (None, None, None):
             embed_kwargs["coordMap"] = coord_Map
@@ -1086,7 +1088,7 @@ class csearch:
             embed_kwargs["useRandomCoords"] = True
             embed_kwargs["boxSizeMult"] = 10.0
             embed_kwargs["numZeroFail"] = 1000
-            embed_kwargs["numThreads"] = 0
+            embed_kwargs["numThreads"] = self.args.nprocs
             cids = rdDistGeom.EmbedMultipleConfs(mol, initial_confs, **embed_kwargs)
 
         if is_sdf_mol_or_mol2:

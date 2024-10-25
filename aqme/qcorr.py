@@ -117,8 +117,8 @@ class qcorr:
         _ = check_files(self,'qcorr')
 
         # QCORR analysis
-        if os.path.basename(self.args.files[0]).split('.')[1].lower() not in ['log','out','json']:
-            self.args.log.write(f"\nx  The format used ({os.path.basename(self.args.files[0]).split('.')[1]}) is not compatible with QCORR! Formats accepted: log, out, json")
+        if os.path.basename(self.args.files[0]).split('.')[-1].lower() not in ['log','out','json']:
+            self.args.log.write(f"\nx  The format used ({os.path.basename(self.args.files[0]).split('.')[-1]}) is not compatible with QCORR! Formats accepted: log, out, json")
             self.args.log.finalize()
             sys.exit()
 

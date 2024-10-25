@@ -31,6 +31,8 @@ xTB descriptors
    mult : int, default=None
       Multiplicity of the calculations used in the following input files 
       (multiplicities from SDF files generated in CSEARCH are read automatically).
+   gfn_version : int, default="2"
+      GFN version used in QDESCP to calculate descriptors.
    qdescp_solvent : str, default=None
       Solvent used in the xTB property calculations (ALPB model)
    qdescp_temp : float, default=300
@@ -111,7 +113,6 @@ from aqme.qdescp_utils import (
     read_gfn1,
     calculate_local_CDFT_descriptors,
     calculate_global_CDFT_descriptors,
-    calculate_global_CDFT_descriptors_part2,
     calculate_global_morfeus_descriptors,
     calculate_local_morfeus_descriptors,
     get_descriptors,
@@ -119,11 +120,11 @@ from aqme.qdescp_utils import (
     fix_cols_names,
     remove_atom_descp,
     load_file_formats,
-    read_solv
+    read_solv,
+    read_triplet
 )
 
 from aqme.csearch.crest import xyzall_2_xyz
-
 
 
 class qdescp:
@@ -165,16 +166,16 @@ class qdescp:
         # check whether the user have chosen the "input" or "files" option (QDESCP will use "files" from this point on)
         valid_input = True
         if self.args.files == [] and self.args.input != '':
-            if os.path.basename(self.args.input).split('.')[1].lower() != "csv":
-                self.args.log.write(f"\nx  The format used ({os.path.basename(self.args.input).split('.')[1]}) is not compatible with the 'input' option! Formats accepted: csv")
+            if os.path.basename(self.args.input).split('.')[-1].lower() != "csv":
+                self.args.log.write(f"\nx  The format used ({os.path.basename(self.args.input).split('.')[-1]}) is not compatible with the 'input' option! Formats accepted: csv")
                 valid_input = False
             if self.args.input[0] == '[' or isinstance(self.args.input, list):
                 self.args.log.write(f"\nx  The 'input' option was specified as a list! Please provide only the PATH or name of the CSV (i.e. --input test.csv)")
                 valid_input = False
             qdescp_files = [self.args.input]
         else:
-            if os.path.basename(self.args.files[0]).split('.')[1].lower() != "sdf":
-                self.args.log.write(f"\nx  The format used ({os.path.basename(self.args.files[0]).split('.')[1]}) is not compatible with the 'files' option! Formats accepted: sdf")
+            if os.path.basename(self.args.files[0]).split('.')[-1].lower() != "sdf":
+                self.args.log.write(f"\nx  The format used ({os.path.basename(self.args.files[0]).split('.')[-1]}) is not compatible with the 'files' option! Formats accepted: sdf")
                 valid_input = False
             qdescp_files = self.args.files
 
@@ -182,16 +183,21 @@ class qdescp:
             self.args.log.finalize()
             sys.exit()
 
+        self.args.log.write(f"\nStarting QDESCP-{self.args.program} with {len(qdescp_files)} job(s)\n")
+
         # if the files input is a CSV, first the program generates conformers
-        if len(qdescp_files) == 1 and os.path.basename(qdescp_files[0]).split('.')[1].lower() == 'csv':
+        if len(qdescp_files) == 1 and os.path.basename(qdescp_files[0]).split('.')[-1].lower() == 'csv':
             if not os.path.exists(qdescp_files[0]):
                 self.args.log.write(f"\nx  The csv_name provided ({qdescp_files[0]}) does not exist! Please specify this name correctly")
                 self.args.log.finalize()
                 sys.exit()
+            # the default number of conformers is reduced to 5 unless overwritten by the user
             if self.args.sample == 25:
                 sample_qdescp = 5
             else:
                 sample_qdescp = self.args.sample
+
+            # sets the csv_name variable to create the AQME-ROBERT descriptor file
             self.args.csv_name = qdescp_files[0]
 
             if f'{os.path.basename(destination).upper()}' == 'QDESCP':
@@ -200,12 +206,18 @@ class qdescp:
                 destination_csearch = destination.joinpath('CSEARCH')
 
             cmd_csearch = ['python', '-m', 'aqme', '--csearch', '--program', 'rdkit', '--input', 
-                        f'{self.args.csv_name}', '--sample', f'{sample_qdescp}', '--destination', f'{destination_csearch}']
+                        f'{self.args.csv_name}', '--sample', f'{sample_qdescp}', '--destination', f'{destination_csearch}',
+                        '--nprocs', f'{self.args.nprocs}','--auto_sample',self.args.auto_sample]
+
+            # overwrites charge/mult if the user specifies values
+            if self.args.charge is not None:
+                cmd_csearch = cmd_csearch + ['--charge', f'{self.args.charge}']
+            if self.args.mult is not None:
+                cmd_csearch = cmd_csearch + ['--mult', f'{self.args.mult}']
+
             subprocess.run(cmd_csearch)
 
             qdescp_files = glob.glob(f'{destination_csearch}/*.sdf')
-
-        self.args.log.write(f"\nStarting QDESCP-{self.args.program} with {len(qdescp_files)} job(s)\n")
 
         # obtaining mols from input files that will be used to set up atomic descriptors
         mol_list = self.get_mols_qdescp(qdescp_files)
@@ -257,8 +269,9 @@ class qdescp:
                 for file in qdescp_files:
                     if file not in self.args.invalid_calcs:
                         mol = Chem.SDMolSupplier(file, removeHs=False)[0]
-                        name = os.path.basename(Path(file)).split(".")[0]
-                        json_files = glob.glob(str(destination) + "/" + name + "_conf_*.json")
+                        name = '.'.join(os.path.basename(Path(file)).split(".")[:-1])
+                        # to locate difficult names (i.e. with special characters), glob.glob doesn't work, this is needed:
+                        json_files = [x for x in glob.glob(f"{destination}/*.json") if f'{name}_conf_' in x]
 
                         # Generating the JSON files
                         _ = get_boltz_props(json_files, name, boltz_dir, "xtb", self, mol_props, atom_props, smarts_targets,
@@ -281,7 +294,7 @@ class qdescp:
         Detects errors and updates variables before the QDESCP run
         '''
 
-        # most users employ QDESCP to generate descriptors
+        # most users employ QDESCP to generate descriptors with xTB
         if self.args.program is None:
             self.args.program = "xtb"
 
@@ -289,6 +302,10 @@ class qdescp:
             self.args.log.write(f"\nx  The program specified ({self.args.program}) is not supported for QDESCP descriptor generation! Specify: program='xtb' (or nmr)")
             self.args.log.finalize()
             sys.exit()
+
+        # default value of auto_sample
+        if self.args.auto_sample == 'auto':
+            self.args.auto_sample = 'low'
 
         # detect if the csv_name provided exists
         if self.args.csv_name is not None and not os.path.exists(self.args.csv_name):
@@ -307,6 +324,24 @@ class qdescp:
         smarts_targets = self.args.qdescp_atoms.copy()
 
         destination = set_destination(self,'QDESCP')
+
+        # print version of xTB
+        destination.mkdir(exist_ok=True, parents=True)
+        xtb_version_dat = f'{destination}/xtb_version.dat'
+        run_command(['xtb','-version'], xtb_version_dat, cwd=destination)
+
+        xtb_version = None
+        with open(xtb_version_dat, 'r') as datfile:
+            lines = datfile.readlines()
+            for _,line in enumerate(lines):
+                if 'xtb version' in line:
+                    xtb_version = line.split('version')[1].split()[0]
+        os.remove(xtb_version_dat)
+
+        if xtb_version is not None:
+            self.args.log.write(f"xTB version used: {xtb_version}\n")
+        else:
+            self.args.log.write(f"xTB version could not be determined! Please, provide it along the results to allow other researchers to reproduce the results.\n")
 
         # create folder to store Boltzmann weighted properties
         boltz_dir = Path(f"{destination}/boltz")
@@ -557,13 +592,16 @@ class qdescp:
         """ 
 
         xyz_files, xyz_charges, xyz_mults = [], [], []
-        name = os.path.basename(Path(file)).split('.')[0]
-        ext = os.path.basename(Path(file)).split(".")[1]
+        name = '.'.join(os.path.basename(Path(file)).split('.')[:-1])
+        ext = os.path.basename(Path(file)).split(".")[-1]
         self.args.log.write(f"\n\n   ----- {name} -----")
         if ext.lower() == "xyz":
             # separate the parent XYZ file into individual XYZ files
             xyzall_2_xyz(file, name)
-            for conf_file in glob.glob(f"{name}_conf_*.xyz"):
+            # to locate difficult names (i.e. with special characters), glob.glob doesn't work, this is needed:
+            xyz_files_list = [x for x in glob.glob(f"{os.path.dirname(Path(file))}/*.xyz") if f'{name}_conf_' in x]
+
+            for conf_file in xyz_files_list:
                 if self.args.charge is None:
                     charge_xyz, _ = read_xyz_charge_mult(conf_file)
                 else:
@@ -593,39 +631,32 @@ class qdescp:
                 stderr=subprocess.DEVNULL,
             )
 
+            # to locate difficult names (i.e. with special characters), glob.glob doesn't work, this is needed:
+            xyz_files_list = [x for x in glob.glob(f"{os.path.dirname(Path(file))}/*.xyz") if f'{name}_conf_' in x]
+
             if self.args.charge is None:
                 _, charges, _, _ = mol_from_sdf_or_mol_or_mol2(file, "csearch", self.args)
             else:
-                charges = [self.args.charge] * len(
-                    glob.glob(f"{os.path.dirname(os.path.abspath(file))}/{name}_conf_*.xyz")
-                )
+                charges = [self.args.charge] * len(xyz_files_list)
             if self.args.mult is None:
                 _, _, mults, _ = mol_from_sdf_or_mol_or_mol2(file, "csearch", self.args)
             else:
-                mults = [self.args.mult] * len(
-                    glob.glob(
-                        f"{os.path.dirname(os.path.abspath(file))}/{name}_conf_*.xyz"
-                    )
-                )
+                mults = [self.args.mult] * len(xyz_files_list)
 
-            for count, f in enumerate(
-                glob.glob(
-                    f"{os.path.dirname(os.path.abspath(file))}/{name}_conf_*.xyz"
-                )
-            ):
+            for count, f in enumerate(xyz_files_list):
                 xyz_files.append(f)
                 xyz_charges.append(charges[count])
                 xyz_mults.append(mults[count])
 
         for xyz_file, charge, mult in zip(xyz_files, xyz_charges, xyz_mults):
-            name_xtb = os.path.basename(Path(xyz_file)).split(".")[0]
+            name_xtb = '.'.join(os.path.basename(Path(xyz_file)).split(".")[:-1])
             self.args.log.write(f"\no  Running xTB and collecting properties")
 
             # if xTB fails during any of the calculations (UnboundLocalError), xTB assigns weird
             # qm5 charges (i.e. > +10 or < -10, ValueError), or the json file is not created 
             # for some weird xTB error (FileNotFoundError), that molecule is not used 
             xtb_passing,xtb_files_props = self.run_sp_xtb(file, xyz_file, charge, mult, name_xtb, destination)
-            path_name = Path(os.path.dirname(file)).joinpath(os.path.basename(Path(file)).split(".")[0])
+            path_name = Path(os.path.dirname(file)).joinpath('.'.join(os.path.basename(Path(file)).split(".")[:-1]))
 
             if xtb_passing:
                 #standard
@@ -670,7 +701,6 @@ class qdescp:
         xtb_files_props['xtb_json'] = str(dat_dir) + "/{0}.json".format(name)
         xtb_files_props['xtb_wbo'] = str(dat_dir) + "/{0}.wbo".format(name)
         xtb_files_props['xtb_gfn1'] = str(dat_dir) + "/{0}.gfn1".format(name)
-        xtb_files_props['xtb_gfn1'] = str(dat_dir) + "/{0}.gfn1".format(name)
         xtb_files_props['xtb_Nminus1'] = str(dat_dir) + "/{0}.Nminus1".format(name)
         xtb_files_props['xtb_Nminus2'] = str(dat_dir) + "/{0}.Nminus2".format(name)
         xtb_files_props['xtb_Nplus1'] = str(dat_dir) + "/{0}.Nplus1".format(name)
@@ -678,11 +708,16 @@ class qdescp:
         xtb_files_props['xtb_fukui'] = str(dat_dir) + "/{0}.fukui".format(name)
         xtb_files_props['xtb_fod'] = str(dat_dir) + "/{0}.fod".format(name)
         xtb_files_props['xtb_solv'] = str(dat_dir) + "/{0}.solv".format(name)
+        xtb_files_props['xtb_triplet'] = str(dat_dir) + "/{0}.triplet".format(name)
 
         os.environ["OMP_STACKSIZE"] = self.args.stacksize
         # run xTB/CREST with 1 processor
         os.environ["OMP_NUM_THREADS"] = "1"
         os.environ["MKL_NUM_THREADS"] = "1"
+
+        # this avoids problems when parsing charges and mults from SDF files
+        mult = int(float(mult))
+        charge = int(float(charge))
 
         # initial xTB optimization
         if self.args.xtb_opt:
@@ -695,14 +730,14 @@ class qdescp:
                 "--acc",
                 str(self.args.qdescp_acc),
                 "--gfn",
-                "2",
+                str(self.args.gfn_version),
                 "--chrg",
                 str(charge),
                 "--uhf",
-                str(int(mult) - 1),
+                str(mult - 1),
                 "-P",
                 "1",
-            ]
+            ] # optimization
             if self.args.qdescp_solvent is not None:
                 command_opt.append("--alpb")
                 command_opt.append(f"{self.args.qdescp_solvent}")
@@ -729,23 +764,21 @@ class qdescp:
             command1 = [
                 "xtb",
                 xtb_files_props['xtb_xyz_path'],
-                "--pop",
-                "--wbo",
                 "--acc",
                 str(self.args.qdescp_acc),
                 "--gfn",
-                "2",
+                str(self.args.gfn_version),
                 "--chrg",
                 str(charge),
                 "--uhf",
-                str(int(mult) - 1),
+                str(mult - 1),
                 "--etemp",
                 str(self.args.qdescp_temp),
                 "--input",
                 str(xtb_input_file),
                 "-P",
                 "1",
-            ]
+            ] #Single point (file_N)
             if self.args.qdescp_solvent is not None:
                 command1.append("--alpb")
                 command1.append(f"{self.args.qdescp_solvent}")
@@ -777,13 +810,13 @@ class qdescp:
                 "--acc",
                 str(self.args.qdescp_acc),
                 "--uhf",
-                str(int(mult) - 1),
+                str(mult - 1),
                 "--etemp",
                 str(self.args.qdescp_temp),
                 "--vomega",
                 "-P",
                 "1",
-            ]
+            ] #For cm5 charges and proportions (localgfn1)
             if self.args.qdescp_solvent is not None:
                 command2.append("--alpb")
                 command2.append(f"{self.args.qdescp_solvent}")
@@ -796,18 +829,18 @@ class qdescp:
                 xtb_files_props['xtb_xyz_path'],
                 "--vfukui",
                 "--gfn",
-                "2",
+                str(self.args.gfn_version),
                 "--chrg",
                 str(charge),
                 "--acc",
                 str(self.args.qdescp_acc),
                 "--uhf",
-                str(int(mult) - 1),
+                str(mult - 1),
                 "--etemp",
                 str(self.args.qdescp_temp),
                 "-P",
                 "1",
-            ]
+            ] #For fukuis
             if self.args.qdescp_solvent is not None:
                 command3.append("--alpb")
                 command3.append(f"{self.args.qdescp_solvent}")
@@ -819,18 +852,18 @@ class qdescp:
                 xtb_files_props['xtb_xyz_path'],
                 "--fod",
                 "--gfn",
-                "2",
+                str(self.args.gfn_version),
                 "--chrg",
                 str(charge),
                 "--acc",
                 str(self.args.qdescp_acc),
                 "--uhf",
-                str(int(mult) - 1),
+                str(mult - 1),
                 "--etemp",
                 str(self.args.qdescp_temp),
                 "-P",
                 "1",
-            ]
+            ] # for FOD
             if self.args.qdescp_solvent is not None:
                 command4.append("--alpb")
                 command4.append(f"{self.args.qdescp_solvent}")
@@ -841,7 +874,7 @@ class qdescp:
                 "xtb",
                 xtb_files_props['xtb_xyz_path'],
                 "--gfn",
-                "1",
+                str(self.args.gfn_version),
                 "--chrg",
                 str(int(charge) +1),
                 "--acc",
@@ -852,7 +885,7 @@ class qdescp:
                 str(self.args.qdescp_temp),
                 "-P",
                 "1",
-            ]
+            ] #file_Nminus1 (N-1)
             if self.args.qdescp_solvent is not None:
                 command5.append("--alpb")
                 command5.append(f"{self.args.qdescp_solvent}")
@@ -863,18 +896,18 @@ class qdescp:
                 "xtb",
                 xtb_files_props['xtb_xyz_path'],
                 "--gfn",
-                "1",
+                str(self.args.gfn_version),
                 "--chrg",
                 str(int(charge) +2),
                 "--acc",
                 str(self.args.qdescp_acc),
                 "--uhf",
-                str(int(mult) - 1),
+                str(mult - 1),
                 "--etemp",
                 str(self.args.qdescp_temp),
                 "-P",
                 "1",
-            ]
+            ] #file_N-2 (N-2)
             if self.args.qdescp_solvent is not None:
                 command6.append("--alpb")
                 command6.append(f"{self.args.qdescp_solvent}")
@@ -885,7 +918,7 @@ class qdescp:
                 "xtb",
                 xtb_files_props['xtb_xyz_path'],
                 "--gfn",
-                "1",
+                str(self.args.gfn_version),
                 "--chrg",
                 str(int(charge) -1),
                 "--acc",
@@ -896,7 +929,7 @@ class qdescp:
                 str(self.args.qdescp_temp),
                 "-P",
                 "1",
-            ]
+            ] #file_Nplus1 (N+1)
             if self.args.qdescp_solvent is not None:
                 command7.append("--alpb")
                 command7.append(f"{self.args.qdescp_solvent}")
@@ -907,7 +940,7 @@ class qdescp:
                 "xtb",
                 xtb_files_props['xtb_xyz_path'],
                 "--gfn",
-                "1",
+                str(self.args.gfn_version),
                 "--chrg",
                 str(int(charge)-2),
                 "--acc",
@@ -918,7 +951,7 @@ class qdescp:
                 str(self.args.qdescp_temp),
                 "-P",
                 "1",
-            ]
+            ] #file_Nplus2 (N+2)
             if self.args.qdescp_solvent is not None:
                 command8.append("--alpb")
                 command8.append(f"{self.args.qdescp_solvent}")
@@ -935,11 +968,11 @@ class qdescp:
                 "--acc",
                 str(self.args.qdescp_acc),
                 "--gfn",
-                "2",
+                str(self.args.gfn_version),
                 "--chrg",
                 str(charge),
                 "--uhf",
-                str(int(mult) - 1),
+                str(mult - 1),
                 "--etemp",
                 str(self.args.qdescp_temp),
                 "--input",
@@ -948,9 +981,31 @@ class qdescp:
                 "1",
                 "--alpb",
                 "h2o"
-            ]
+            ] # file solvation
             run_command(command9, xtb_files_props['xtb_solv'], cwd=dat_dir)
             _ = self.cleanup(name, destination, xtb_passing, xtb_files_props)
+
+            if int(mult) == 1:
+                command10 = [
+                    "xtb",
+                    xtb_files_props['xtb_xyz_path'],
+                    "--acc",
+                    str(self.args.qdescp_acc),
+                    "--gfn",
+                    str(self.args.gfn_version),
+                    "--chrg",
+                    str(charge),
+                    "--uhf",
+                    '2',
+                    "--etemp",
+                    str(self.args.qdescp_temp),
+                    "--input",
+                    str(xtb_input_file),
+                    "-P",
+                    "1",
+                ] # file triplet
+                run_command(command10, xtb_files_props['xtb_triplet'], cwd=dat_dir)
+                _ = self.cleanup(name, destination, xtb_passing, xtb_files_props)
 
         return xtb_passing,xtb_files_props
 
@@ -964,9 +1019,9 @@ class qdescp:
         properties_FOD = read_fod(xtb_files_props['xtb_fod'],self)
         bonds, wbos = read_wbo(xtb_files_props['xtb_wbo'],self)
         properties_solv = read_solv(xtb_files_props['xtb_solv'])
-        cdft_descriptors = calculate_global_CDFT_descriptors(xtb_files_props['xtb_gfn1'],self)
-        cdft_descriptors2  = calculate_global_CDFT_descriptors_part2( xtb_files_props['xtb_gfn1'], xtb_files_props['xtb_Nminus1'], xtb_files_props['xtb_Nminus2'], xtb_files_props['xtb_Nplus1'], xtb_files_props['xtb_Nplus2'], cdft_descriptors,self)
-        localDescriptors = calculate_local_CDFT_descriptors(xtb_files_props['xtb_fukui'], cdft_descriptors, cdft_descriptors2,self)
+        properties_triplet = read_triplet(xtb_files_props['xtb_triplet'],properties_dict['Total energy'])
+        cdft_descriptors  = calculate_global_CDFT_descriptors(xtb_files_props['xtb_out'], xtb_files_props['xtb_Nminus1'], xtb_files_props['xtb_Nminus2'], xtb_files_props['xtb_Nplus1'], xtb_files_props['xtb_Nplus2'],self)
+        localDescriptors = calculate_local_CDFT_descriptors(xtb_files_props['xtb_fukui'], cdft_descriptors,self)
         # create matrix of Wiberg bond-orders
         atoms = properties_dict.get("atoms")
         nat = len(atoms)
@@ -980,7 +1035,7 @@ class qdescp:
 		"""
         json_data = read_json(xtb_files_props['xtb_json']) 
         json_data["Wiberg matrix"] = wbo_matrix.tolist()
-        list_properties = [properties_dict,properties_FOD,properties_solv,localgfn1,cdft_descriptors,cdft_descriptors2,localDescriptors]
+        list_properties = [properties_dict,properties_FOD,properties_solv,localgfn1,cdft_descriptors,localDescriptors,properties_triplet]
         for properties in list_properties:
             if properties is not None:
                 json_data.update(properties)
@@ -1169,7 +1224,7 @@ class qdescp:
         # combine all the results in one single file
         file_formats = load_file_formats()
 
-        name = os.path.basename(xtb_files_props['xtb_out']).split('.')[0]
+        name = '.'.join(os.path.basename(xtb_files_props['xtb_out']).split('.')[:-1])
         raw_content = ''
         for file_format in file_formats:
             xtb_file = f"{destination}/xtb_data/{name}/{name}{file_format}"
@@ -1251,12 +1306,12 @@ class qdescp:
 
         atom_props = ["NMR Chemical Shifts"]
         
-        if os.path.basename(Path(self.args.files[0])).split('.')[1].lower() not in ["json"]:
-            self.args.log.write(f"\nx  The format used ({os.path.basename(Path(self.args.files[0])).split('.')[1]}) is not compatible with QDESCP with NMR! Formats accepted: json")
+        if os.path.basename(Path(self.args.files[0])).split('.')[-1].lower() not in ["json"]:
+            self.args.log.write(f"\nx  The format used ({os.path.basename(Path(self.args.files[0])).split('.')[-1]}) is not compatible with QDESCP with NMR! Formats accepted: json")
             self.args.log.finalize()
             sys.exit()
 
         name = os.path.basename(Path(self.args.files[0])).split("_conf")[0]
         
-        json_files = glob.glob(str(os.path.dirname(os.path.abspath(self.args.files[0]))) + "/" + name + "_conf_*.json")
+        json_files = glob.glob(str(os.path.dirname(Path(self.args.files[0]))) + "/" + name + "_conf_*.json")
         get_boltz_props_nmr(json_files, name, boltz_dir, self, atom_props, self.args.nmr_atoms, self.args.nmr_slope, self.args.nmr_intercept, self.args.nmr_experim)
