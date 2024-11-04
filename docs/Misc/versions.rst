@@ -4,6 +4,10 @@
 Versions
 ========
 
+Version 1.7.1 [`url <https://github.com/jvalegre/aqme/releases/tag/1.7.1>`__]
+   -  Fixed bug from MORFEUS descriptors in QDESCP
+   -  Improved SDF reader compatible with SDF files from GaussView
+
 Version 1.7.0 [`url <https://github.com/jvalegre/aqme/releases/tag/1.7.0>`__]
    -  Fixed bug from CSEARCH when using CSV inputs with metal atoms (removed SELF variables in multithreading)
    -  Added --sample to CSEARCH-CREST through RMS-based Butina sampling

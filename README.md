@@ -8,6 +8,7 @@
 [![Codecov](https://img.shields.io/codecov/c/github/jvalegre/aqme?label=Codecov&logo=codecov)](https://codecov.io/gh/jvalegre/aqme)
 [![Downloads](https://img.shields.io/pepy/dt/aqme?label=Downloads&logo=pypi)](https://www.pepy.tech/projects/aqme)
 [![Read the Docs](https://img.shields.io/readthedocs/aqme?label=Read%20the%20Docs&logo=readthedocs)](https://aqme.readthedocs.io/)
+[![PyPI](https://img.shields.io/pypi/v/aqme)](https://pypi.org/project/aqme/)
 
 ## Documentation  
 Full documentation with installation instructions, technical details and examples can be found in [Read the Docs](https://aqme.readthedocs.io).  

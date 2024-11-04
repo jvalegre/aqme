@@ -102,7 +102,8 @@ from aqme.utils import (
     check_files,
     check_dependencies,
     set_destination,
-    periodic_table
+    periodic_table,
+    load_sdf
 )
 from aqme.qdescp_utils import (
     get_boltz_props,
@@ -173,6 +174,9 @@ class qdescp:
                 self.args.log.write(f"\nx  The 'input' option was specified as a list! Please provide only the PATH or name of the CSV (i.e. --input test.csv)")
                 valid_input = False
             qdescp_files = [self.args.input]
+        elif self.args.files == []:
+            self.args.log.write(f'\nx  No files were found! Please provide the correct PATH to your input files (i.e. --files "*.sdf")')
+            valid_input = False
         else:
             if os.path.basename(self.args.files[0]).split('.')[-1].lower() != "sdf":
                 self.args.log.write(f"\nx  The format used ({os.path.basename(self.args.files[0]).split('.')[-1]}) is not compatible with the 'files' option! Formats accepted: sdf")
@@ -268,7 +272,8 @@ class qdescp:
                 self.args.log.write('\no  Running RDKit and collecting molecular properties')
                 for file in qdescp_files:
                     if file not in self.args.invalid_calcs:
-                        mol = Chem.SDMolSupplier(file, removeHs=False)[0]
+                        mols = load_sdf(file)
+                        mol = mols[0]
                         name = '.'.join(os.path.basename(Path(file)).split(".")[:-1])
                         # to locate difficult names (i.e. with special characters), glob.glob doesn't work, this is needed:
                         json_files = [x for x in glob.glob(f"{destination}/*.json") if f'{name}_conf_' in x]
@@ -371,7 +376,8 @@ class qdescp:
                         smi_exist = True
                         break
                 if not smi_exist:
-                    mol_indiv = Chem.SDMolSupplier(file, removeHs=False)[0]
+                    mols = load_sdf(file)
+                    mol_indiv = mols[0]
                     mol_list.append(mol_indiv)
         
         return mol_list
@@ -405,12 +411,21 @@ class qdescp:
             num_matches = len(mol_list)
             for mol_indiv in mol_list:
                 try:
-                    # we differentiate if is a number for mapped atom or we are looking for smarts pattern in the molecule
+                    # we differentiate if the pattern is a number for mapped atom or we are looking for smarts pattern in the molecule
                     if not str(pattern).isalpha() and str(pattern).isdigit():
-                        for atom in mol_indiv.GetAtoms():
-                            if atom.GetAtomMapNum() == int(pattern):
-                                pattern_idx = int(atom.GetIdx())
-                                matches = ((int(pattern_idx),),)
+                        # for non-mapped mols (i.e. SDF input files)
+                        mol_idxs = [atom.GetAtomMapNum() for atom in mol_indiv.GetAtoms()]
+                        if len(set(mol_idxs)) == 1 and mol_idxs[0] == 0:
+                            for i,atom in enumerate(mol_indiv.GetAtoms()):
+                                if i == int(pattern)-1: # atoms in SDF starts in index 1, but Python starts in idx 0
+                                    pattern_idx = int(atom.GetIdx())
+                                    matches = ((int(pattern_idx),),)
+                        # for mapped SMILES
+                        else:
+                            for atom in mol_indiv.GetAtoms():
+                                if atom.GetAtomMapNum() == int(pattern):
+                                    pattern_idx = int(atom.GetIdx())
+                                    matches = ((int(pattern_idx),),)
                     else:
                         matches = mol_indiv.GetSubstructMatches(Chem.MolFromSmarts(pattern))
                 except:
@@ -1075,7 +1090,8 @@ class qdescp:
                     mol = Chem.AddHs(Chem.MolFromSmiles(smi))
                     smi_exist = True
             if not smi_exist:
-                mol = Chem.SDMolSupplier(sdf_file, removeHs=False)[0]
+                mols = load_sdf(sdf_file)
+                mol = mols[0]
 
             # find the target atoms or groups
             for pattern in smarts_targets:
@@ -1084,11 +1100,22 @@ class qdescp:
                 
                 # we differentiate if is a number for mapped atom or we are looking for smarts pattern in the molecule
                 if not str(pattern).isalpha() and str(pattern).isdigit():
-                    for atom in mol.GetAtoms():
-                        if atom.GetAtomMapNum() == int(pattern):
-                            idx_set = pattern
-                            pattern_idx = int(atom.GetIdx())
-                            matches = ((int(pattern_idx),),)
+                    idx_set = pattern
+
+                    # for non-mapped mols (i.e. SDF input files)
+                    mol_idxs = [atom.GetAtomMapNum() for atom in mol.GetAtoms()]
+                    if len(set(mol_idxs)) == 1 and mol_idxs[0] == 0:
+                        for i,atom in enumerate(mol.GetAtoms()):
+                            if i == int(pattern)-1: # atoms in SDF starts in index 1, but Python starts in idx 0
+                                pattern_idx = int(atom.GetIdx())
+                                matches = ((int(pattern_idx),),)
+                    # for mapped SMILES
+                    else:
+                        for atom in mol.GetAtoms():
+                            if atom.GetAtomMapNum() == int(pattern):
+                                pattern_idx = int(atom.GetIdx())
+                                matches = ((int(pattern_idx),),)
+
                 else: 
                     try:
                         matches = mol.GetSubstructMatches(Chem.MolFromSmarts(pattern))

@@ -25,7 +25,7 @@ J_TO_AU = 4.184 * 627.509541 * 1000.0  # UNIT CONVERSION
 T = 298.15
 
 obabel_version = "3.1.1" # this MUST match the meta.yaml
-aqme_version = "1.7.0"
+aqme_version = "1.7.1"
 time_run = time.strftime("%Y/%m/%d %H:%M:%S", time.localtime())
 aqme_ref = f"AQME v {aqme_version}, Alegre-Requena, J. V.; Sowndarya, S.; Perez-Soto, R.; Alturaifi, T.; Paton, R. AQME: Automated Quantum Mechanical Environments for Researchers and Educators. Wiley Interdiscip. Rev. Comput. Mol. Sci. 2023, DOI: 10.1002/wcms.1663."
 
@@ -714,6 +714,9 @@ def mol_from_sdf_or_mol_or_mol2(input_file, module, args, low_check=None):
     if module in ["qprep","cmin"]:
         # using sanitize=False to avoid reading problems
         mols = Chem.SDMolSupplier(input_file, removeHs=False, sanitize=False)
+        # transform invalid SDF files created with GaussView into valid SDF from Open Babel
+        if None in mols:
+            mols = load_sdf(input_file)
         if low_check=='lowest_only':
             return [mols[0]]
         elif isinstance(low_check, int):
@@ -742,7 +745,8 @@ def mol_from_sdf_or_mol_or_mol2(input_file, module, args, low_check=None):
             extension = "sdf"
 
         if extension.lower() == "sdf":
-            mols = Chem.SDMolSupplier(input_file, removeHs=False)
+            mols = load_sdf(input_file)
+
         elif extension.lower() == "mol":
             mols = [Chem.MolFromMolFile(input_file, removeHs=False)]
         elif extension.lower() == "mol2":
@@ -794,6 +798,53 @@ def mol_from_sdf_or_mol_or_mol2(input_file, module, args, low_check=None):
                 mults.append(mult)
 
         return suppl, charges, mults, IDs
+
+
+def load_sdf(input_file):
+    '''
+    Get mols from SDF files
+    '''
+
+    mols = Chem.SDMolSupplier(input_file, removeHs=False)
+
+    # some software don't generate valid mol objects (i.e. SDF files created with GaussView)
+    if None in mols:
+        command_sdf = [
+            "obabel",
+            "-isdf",
+            f"{input_file}",
+            "-osdf",
+            f"-O{input_file}",
+        ]
+
+        subprocess.run(
+            command_sdf,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+
+        mols = Chem.SDMolSupplier(input_file, removeHs=False)
+
+        # sometimes, even SDF files created with Open Babel fail - try again from XYZ files
+        if None in mols:
+            xyz_file = input_file.replace('.sdf','.xyz')
+            command_xyz = [
+                "obabel",
+                "-isdf",
+                f"{input_file}",
+                "-oxyz",
+                f"-O{xyz_file}",
+            ]
+            subprocess.run(
+                command_xyz,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+
+            mols = [Chem.rdmolfiles.MolFromXYZFile(xyz_file)]
+            os.remove(xyz_file)
+
+    return mols
 
 
 def add_prefix_suffix(name, args):
