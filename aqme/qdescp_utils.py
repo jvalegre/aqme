@@ -1123,7 +1123,7 @@ def calculate_local_morfeus_descriptors(final_xyz_path,self):
     # Local buried Volume
     try:
         local_buried_volumes = []
-        for i in range(len(coordinates)):
+        for i in range(1,len(coordinates)+1):
             bv = BuriedVolume(elements, coordinates, i)
             buried_volume = round(bv.fraction_buried_volume, 4)
             local_buried_volumes.append(buried_volume)
@@ -1133,7 +1133,7 @@ def calculate_local_morfeus_descriptors(final_xyz_path,self):
     # Local ConeAngle
     try:
         local_cone_angles = []
-        for i in range(len(coordinates)):
+        for i in range(1,len(coordinates)+1):
             try:
                 cone_angle = ConeAngle(elements, coordinates, i)
                 local_cone_angles.append(round(cone_angle.cone_angle, 4))
@@ -1145,7 +1145,7 @@ def calculate_local_morfeus_descriptors(final_xyz_path,self):
     # Local Solid Angle
     try:
         local_solid_angles = []
-        for i in range(len(coordinates)):
+        for i in range(1,len(coordinates)+1):
             try:
                 solid_angle = SolidAngle(elements, coordinates, i)
                 local_solid_angles.append(round(solid_angle.cone_angle, 4))
@@ -1157,7 +1157,7 @@ def calculate_local_morfeus_descriptors(final_xyz_path,self):
     # Pyramidalization
     try:
         local_Pyramidalization, local_vol_Pyramidalization = [], []
-        for i in range(len(coordinates)):
+        for i in range(1,len(coordinates)+1):
             pyr = Pyramidalization(coordinates, i)
             local_Pyramidalization.append(round(pyr.P, 4))
             local_vol_Pyramidalization.append(round(pyr.P_angle, 4))

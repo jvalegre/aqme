@@ -10,7 +10,7 @@ import random
 from rdkit.Chem import AllChem as Chem
 from rdkit.Chem import rdMolTransforms, rdMolAlign
 
-from aqme.utils import set_metal_atomic_number, get_conf_RMS
+from aqme.utils import set_metal_atomic_number, get_conf_RMS, load_sdf
 from aqme.csearch.utils import minimize_rdkit_energy
 
 
@@ -113,7 +113,7 @@ def generating_conformations_fullmonte(
         sdtemp.write(outmols[conf], conf)
     sdtemp.close()
 
-    fmmols = Chem.SDMolSupplier(name + "_" + "rdkit" + args.output, removeHs=False)
+    fmmols = load_sdf(name + "_" + "rdkit" + args.output)
     if fmmols is None:
         args.log.write("Could not open " + name + args.output)
         args.log.finalize()

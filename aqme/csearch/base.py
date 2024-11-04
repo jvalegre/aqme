@@ -229,7 +229,8 @@ from aqme.utils import (
     get_files,
     check_dependencies,
     mol_from_sdf_or_mol_or_mol2,
-    set_destination
+    set_destination,
+    load_sdf
     )
 from aqme.csearch.crest import xtb_opt_main
 
@@ -722,7 +723,7 @@ class csearch:
             file_runs = glob.glob(str(self.csearch_folder)+'/'+ name +'_run_*'+ self.args.program.lower() +'.sdf')
             allenergy, allmols = [], []
             for file in file_runs:
-                mols = Chem.SDMolSupplier(file, removeHs=False)
+                mols = load_sdf(file)
                 for mol in mols:
                     allmols.append(mol)
                     allenergy.append(float(mol.GetProp('Energy')))
@@ -873,13 +874,7 @@ class csearch:
 
         rotated_energy = []
         # apply filters
-        rdmols = Chem.SDMolSupplier(f'{csearch_file}', removeHs=False) 
-        if rdmols is None:
-            self.args.log.write("\nCould not open " + name + self.args.output)
-            if os.path.basename(Path(self.args.input)).split(".")[-1] not in ["csv","cdx","txt","yaml","yml","rtf"]:
-                self.args.log.finalize()
-                sys.exit()
-            return
+        rdmols = load_sdf(csearch_file)
 
         for i, rd_mol_i in enumerate(rdmols):
             if coord_Map is None and alg_Map is None and mol_template is None:

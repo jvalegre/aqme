@@ -8,7 +8,7 @@ from pathlib import Path
 from pkg_resources import resource_filename
 from rdkit.Chem import AllChem as Chem
 from rdkit.Chem import rdDistGeom, rdMolAlign
-from aqme.utils import get_conf_RMS
+from aqme.utils import get_conf_RMS, load_sdf
 
 TEMPLATES_PATH = Path(resource_filename("aqme", "templates"))
 
@@ -200,7 +200,7 @@ def load_template(complex_type, log):
         sys.exit()
 
     file_template = folder / Path(type2template[complex_type])
-    templates = Chem.SDMolSupplier(str(file_template))
+    templates = load_sdf(str(file_template))
     template = templates[-1]
 
     return template

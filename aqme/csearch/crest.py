@@ -15,7 +15,7 @@ import subprocess
 import rdkit
 from pathlib import Path
 import shutil
-from aqme.utils import read_file, run_command, mol_from_sdf_or_mol_or_mol2,set_destination
+from aqme.utils import read_file, run_command, mol_from_sdf_or_mol_or_mol2,set_destination,load_sdf
 from aqme.filter import geom_filter,cluster_conformers
 from rdkit.Chem import rdMolTransforms
 
@@ -390,6 +390,9 @@ def xtb_opt_main(
             pass
         for file in sdf_files:
             mol = rdkit.Chem.SDMolSupplier(file, removeHs=False, sanitize=False)
+            # transform invalid SDF files created with GaussView into valid SDF from Open Babel
+            if None in mol:
+                mol = load_sdf(file)
             mol_rd = rdkit.Chem.RWMol(mol[0])
             file_nopath = f'{os.path.basename(Path(file)).split(".sdf")[0]}'
             if self.args.program.lower() == "xtb":

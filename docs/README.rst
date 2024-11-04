@@ -21,10 +21,14 @@
    :target: https://aqme.readthedocs.io
    :alt: Documentation Status
 
+.. |PyPI| image:: https://img.shields.io/pypi/v/aqme
+   :target: https://pypi.org/project/aqme/
+
 |CircleCI|
 |Codecov|
 |Downloads|
 |ReadtheDocs|
+|PyPI|
 
 .. badges-end
 
