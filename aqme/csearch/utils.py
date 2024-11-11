@@ -118,7 +118,7 @@ def prepare_csv_files(args, csearch_file):
                         job_inputs.append(obj)
                         unique_smiles.add(obj[0])
                     else:
-                        args.log.write(f'\nx  SMILES "{obj[0]}" used in {obj[1]} was already used with a different code_name!')
+                        args.log.write(f'\nx  SMILES "{obj[0]}" used in {obj[1]} is a duplicate, it was already used with a different code_name!')
                        
     if not smi_col:
         args.log.write("\nx  Make sure the CSV file contains a column called 'SMILES', 'smiles' or 'SMILES_' with the SMILES of the molecules!")
