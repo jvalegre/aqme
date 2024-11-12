@@ -222,6 +222,10 @@ class qdescp:
             subprocess.run(cmd_csearch)
 
             qdescp_files = glob.glob(f'{destination_csearch}/*.sdf')
+            if len(qdescp_files) == 0:
+                self.args.log.write(f"\nx  WARNING! The CSEARCH conformational search did not produce any results.")
+                self.args.log.finalize()
+                sys.exit()           
 
         # obtaining mols from input files that will be used to set up atomic descriptors
         mol_list = self.get_mols_qdescp(qdescp_files)
@@ -1226,9 +1230,15 @@ class qdescp:
         if xtb_passing and move_folder: # only move molecules with successful xTB calcs
             final_json = f"{destination}/{name}.json"
             shutil.move(xtb_files_props['xtb_json'], final_json)
-        
+
         # delete xTB files that does not contain useful data
         files = glob.glob(f"{destination}/{name}/*")
+
+        # in case the files contain special characters such as [, ], etc.
+        if len(files) == 0:
+            files_list = os.listdir(f"{destination}/{name}")
+            files = [f"{destination}/{name}/{x}" for x in files_list]
+
         for file in files:
             if name not in os.path.basename(file):
                 os.remove(file)

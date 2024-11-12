@@ -153,7 +153,7 @@ def test_csearch_input_parameters(program, input, output_nummols):
 
         find_warn_dup = False
         for line in outlines_dat:
-            if 'x  SMILES "C" used in Me2 was already used with a different code_name!' in line:
+            if 'x  SMILES "C" used in Me2 is a duplicate, it was already used with a different code_name!' in line:
                 find_warn_dup = True
         assert find_warn_dup
 
