@@ -191,7 +191,6 @@ import shutil
 import subprocess
 import glob
 from pathlib import Path
-import concurrent.futures as futures
 from progress.bar import IncrementalBar
 
 from rdkit.Chem import AllChem as Chem

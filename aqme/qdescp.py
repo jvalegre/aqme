@@ -222,6 +222,10 @@ class qdescp:
             subprocess.run(cmd_csearch)
 
             qdescp_files = glob.glob(f'{destination_csearch}/*.sdf')
+            if len(qdescp_files) == 0:
+                self.args.log.write(f"\nx  WARNING! The CSEARCH conformational search did not produce any results.")
+                self.args.log.finalize()
+                sys.exit()           
 
         # obtaining mols from input files that will be used to set up atomic descriptors
         mol_list = self.get_mols_qdescp(qdescp_files)
@@ -276,7 +280,7 @@ class qdescp:
                         mol = mols[0]
                         name = '.'.join(os.path.basename(Path(file)).split(".")[:-1])
                         # to locate difficult names (i.e. with special characters), glob.glob doesn't work, this is needed:
-                        json_files = [x for x in glob.glob(f"{destination}/*.json") if f'{name}_conf_' in x]
+                        json_files = [x for x in glob.glob(f"{destination}/*.json") if os.path.basename(x).startswith(f'{name}_conf_')]
 
                         # Generating the JSON files
                         _ = get_boltz_props(json_files, name, boltz_dir, "xtb", self, mol_props, atom_props, smarts_targets,
@@ -614,7 +618,7 @@ class qdescp:
             # separate the parent XYZ file into individual XYZ files
             xyzall_2_xyz(file, name)
             # to locate difficult names (i.e. with special characters), glob.glob doesn't work, this is needed:
-            xyz_files_list = [x for x in glob.glob(f"{os.path.dirname(Path(file))}/*.xyz") if f'{name}_conf_' in x]
+            xyz_files_list = [x for x in glob.glob(f"{os.path.dirname(Path(file))}/*.xyz") if os.path.basename(x).startswith(f'{name}_conf_')]
 
             for conf_file in xyz_files_list:
                 if self.args.charge is None:
@@ -647,7 +651,7 @@ class qdescp:
             )
 
             # to locate difficult names (i.e. with special characters), glob.glob doesn't work, this is needed:
-            xyz_files_list = [x for x in glob.glob(f"{os.path.dirname(Path(file))}/*.xyz") if f'{name}_conf_' in x]
+            xyz_files_list = [x for x in glob.glob(f"{os.path.dirname(Path(file))}/*.xyz") if os.path.basename(x).startswith(f'{name}_conf_')]
 
             if self.args.charge is None:
                 _, charges, _, _ = mol_from_sdf_or_mol_or_mol2(file, "csearch", self.args)
@@ -665,7 +669,7 @@ class qdescp:
 
         for xyz_file, charge, mult in zip(xyz_files, xyz_charges, xyz_mults):
             name_xtb = '.'.join(os.path.basename(Path(xyz_file)).split(".")[:-1])
-            self.args.log.write(f"\no  Running xTB and collecting properties")
+            self.args.log.write(f"\no  Running xTB and collecting properties ({name_xtb})")
 
             # if xTB fails during any of the calculations (UnboundLocalError), xTB assigns weird
             # qm5 charges (i.e. > +10 or < -10, ValueError), or the json file is not created 
@@ -1226,9 +1230,15 @@ class qdescp:
         if xtb_passing and move_folder: # only move molecules with successful xTB calcs
             final_json = f"{destination}/{name}.json"
             shutil.move(xtb_files_props['xtb_json'], final_json)
-        
+
         # delete xTB files that does not contain useful data
         files = glob.glob(f"{destination}/{name}/*")
+
+        # in case the files contain special characters such as [, ], etc.
+        if len(files) == 0:
+            files_list = os.listdir(f"{destination}/{name}")
+            files = [f"{destination}/{name}/{x}" for x in files_list]
+
         for file in files:
             if name not in os.path.basename(file):
                 os.remove(file)
