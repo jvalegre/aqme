@@ -107,7 +107,7 @@ def prepare_csv_files(args, csearch_file):
     # avoid running calcs with special signs (i.e. *)
 
     for name_csv_indiv in csv_smiles['code_name']:
-        if '*' in name_csv_indiv:
+        if '*' in f'{name_csv_indiv}':
             args.log.write(f"\nx  WARNING! The names provided in the CSV contain * (i.e. {name_csv_indiv}). Please, remove all the * characters.")
             args.log.finalize()
             sys.exit()
