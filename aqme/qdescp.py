@@ -412,6 +412,8 @@ class qdescp:
 
         patterns_remove,matches = [],[]
         for pattern in smarts_targets:
+            if "'" in pattern or '"' in pattern:
+                pattern = pattern.replace("'",'').replace('"','')
             num_matches = len(mol_list)
             for mol_indiv in mol_list:
                 try:
@@ -727,7 +729,7 @@ class qdescp:
         xtb_files_props['xtb_fukui'] = str(dat_dir) + "/{0}.fukui".format(name)
         xtb_files_props['xtb_fod'] = str(dat_dir) + "/{0}.fod".format(name)
         xtb_files_props['xtb_solv'] = str(dat_dir) + "/{0}.solv".format(name)
-        xtb_files_props['xtb_triplet'] = str(dat_dir) + "/{0}.triplet".format(name)
+        xtb_files_props['stgap'] = str(dat_dir) + "/{0}.stgap".format(name)
 
         os.environ["OMP_STACKSIZE"] = self.args.stacksize
         # run xTB/CREST with 1 processor
@@ -1023,7 +1025,30 @@ class qdescp:
                     "-P",
                     "1",
                 ] # file triplet
-                run_command(command10, xtb_files_props['xtb_triplet'], cwd=dat_dir)
+                run_command(command10, xtb_files_props['stgap'], cwd=dat_dir)
+                _ = self.cleanup(name, destination, xtb_passing, xtb_files_props)
+
+            elif int(mult) == 3:
+                command10 = [
+                    "xtb",
+                    xtb_files_props['xtb_xyz_path'],
+                    "--acc",
+                    str(self.args.qdescp_acc),
+                    "--gfn",
+                    str(self.args.gfn_version),
+                    "--chrg",
+                    str(charge),
+                    "--uhf",
+                    '0',
+                    "--etemp",
+                    str(self.args.qdescp_temp),
+                    "--input",
+                    str(xtb_input_file),
+                    "-P",
+                    "1",
+                ] # file triplet
+
+                run_command(command10, xtb_files_props['stgap'], cwd=dat_dir)
                 _ = self.cleanup(name, destination, xtb_passing, xtb_files_props)
 
         return xtb_passing,xtb_files_props
@@ -1038,7 +1063,7 @@ class qdescp:
         properties_FOD = read_fod(xtb_files_props['xtb_fod'],self)
         bonds, wbos = read_wbo(xtb_files_props['xtb_wbo'],self)
         properties_solv = read_solv(xtb_files_props['xtb_solv'])
-        properties_triplet = read_triplet(xtb_files_props['xtb_triplet'],properties_dict['Total energy'])
+        properties_triplet = read_triplet(xtb_files_props['stgap'],properties_dict['Total energy'])
         cdft_descriptors  = calculate_global_CDFT_descriptors(xtb_files_props['xtb_out'], xtb_files_props['xtb_Nminus1'], xtb_files_props['xtb_Nminus2'], xtb_files_props['xtb_Nplus1'], xtb_files_props['xtb_Nplus2'],self)
         localDescriptors = calculate_local_CDFT_descriptors(xtb_files_props['xtb_fukui'], cdft_descriptors,self)
         # create matrix of Wiberg bond-orders
@@ -1099,6 +1124,8 @@ class qdescp:
 
             # find the target atoms or groups
             for pattern in smarts_targets:
+                if "'" in pattern or '"' in pattern:
+                    pattern = pattern.replace("'",'').replace('"','')
                 matches = []
                 idx_set = None
                 
@@ -1167,7 +1194,7 @@ class qdescp:
                             match_name = f'{atom_type}{pattern}'
                         else:
                             # If it's a SMARTS pattern or more than one atom
-                            if len(smarts_targets) == 1 and smarts_targets[0] in periodic_table():
+                            if len(smarts_targets) == 1 and pattern in periodic_table():
                                 # Case where it's just an atom type without SMARTS
                                 if n_atoms_of_type == 1:
                                     match_name = f'{atom_type}'

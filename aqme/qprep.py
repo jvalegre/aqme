@@ -134,7 +134,7 @@ class qprep:
 
         # check if functionals and basis sets used are correct
         # so far, it only works for Gaussian
-        if self.args.program.lower() == 'gaussian':
+        if self.args.program.lower() == 'gaussian' and create_dat:
             _ = self.check_level_of_theory()
 
         # checks for gen/genecp

@@ -493,7 +493,7 @@ def smi_to_mol(
         or len(constraints_dihedral) != 0
     ):
         if program not in ["crest"]:
-            log.write("\nx  Program not supported for conformer generation of complexes and TSs! Specify: program='crest' for complexes")
+            log.write(f"\nx  {program} not supported for conformer generation of complexes and TSs (your SMILES has {len(smi)} parts, separated by a period)! Specify: program='crest' for complexes")
             sys.exit()
 
         (

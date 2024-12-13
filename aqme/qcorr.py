@@ -691,6 +691,18 @@ class qcorr:
             program = "orca"
 
         if program in ["gaussian", "orca"]:
+            if program == 'gaussian':
+                for keyword in cclib_data["metadata"]["keywords line"].split():
+                    for subkey in keyword.split('/'):
+                        if subkey in ['gen','genecp']:
+                            if '' in [self.args.bs_gen,self.args.bs_nogen]:
+                                self.args.log.write("x  WARNING! You are using gen(ECP) but you are not specifying two basis sets. Please, add them with the bs_gen and bs_nogen options.")
+                                self.args.log.finalize()
+                                sys.exit()
+                            elif len(self.args.gen_atoms) == 0:
+                                self.args.log.write("x  WARNING! You are using gen(ECP) but you are not specifying the atoms included for gen(ECP). Please, add them with the gen_atoms option.")
+                                self.args.log.finalize()
+                                sys.exit()
             qprep(
                 destination=destination_fix,
                 w_dir_main=self.args.w_dir_main,

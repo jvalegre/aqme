@@ -4,6 +4,12 @@
 Versions
 ========
 
+Version 1.7.2 [`url <https://github.com/jvalegre/aqme/releases/tag/1.7.2>`__]
+   -  Fixed bug from QCORR when using gen(ECP)
+   -  CSEARCH uses multithreading to ensure reproducbility acorss runs
+   -  Added T1-S0 gap (not only S0-T1)
+   -  PTB is now used to calculate HOMO-LUMO gaps, charges, dipole moments, and other descriptors
+
 Version 1.7.1 [`url <https://github.com/jvalegre/aqme/releases/tag/1.7.1>`__]
    -  Fixed bug from MORFEUS descriptors in QDESCP
    -  Improved SDF reader compatible with SDF files from GaussView

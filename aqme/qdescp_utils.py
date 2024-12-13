@@ -1264,7 +1264,7 @@ def load_file_formats():
                     '.Nplus2': 'Nplus2',
                     '.wbo': 'WBO',
                     '.solv': 'Solvation in H2O',
-                    '.triplet': 'Triplet',                    
+                    '.stgap': 'S0-T1 (or T1-S0) gap',                    
                     }
 
     return file_formats
