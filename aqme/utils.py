@@ -434,6 +434,11 @@ def format_lists(value,arg_name):
                     value.remove('')
     else:
         value = value[1:-1].split(',')
+
+    # remove extra spaces that sometimes are included by mistake
+    value = [ele[1:] if ele[0] == ' ' else ele for ele in value]
+    value = [ele[:-1] if ele[-1] == ' ' else ele for ele in value]
+
     return value
 
 

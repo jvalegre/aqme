@@ -589,7 +589,7 @@ class qdescp:
             "\no  Number of finished jobs from QDESCP", max=len(qdescp_files)
         )
 
-        # multiprocessing to accelerate QDESCP (since xTB uses 1 processor to be reproducible)
+        # multiprocessing to accelerate and make QDESCP reproducible (since xTB uses 1 processor to be reproducible)
         if not self.args.debug: # errors and try/excepts are not shown in multithreading
             with futures.ThreadPoolExecutor(
                 max_workers=self.args.nprocs,
