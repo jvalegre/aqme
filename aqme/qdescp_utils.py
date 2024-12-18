@@ -61,7 +61,7 @@ def get_boltz(energy):
 
 
 def get_boltz_props(json_files, name, boltz_dir, calc_type, self, mol_props, atom_props, smarts_targets, 
-                    denovo_mols, denovo_atoms,interpret_mols, interpret_atoms, mol=None):
+                    denovo_mols, denovo_atoms, interpret_mols, interpret_atoms, mol=None):
     """
     Retrieves the properties from json files and gives Boltzmann averaged properties for rdkit, NMR and morfues descriptors.
     """
@@ -752,6 +752,7 @@ def calculate_local_CDFT_descriptors(file_fukui, cdft_descriptors,self):
 
     return localDescriptors
 
+
 def read_xtb(file,self):
     """
     Read xtb.out file and return a dictionary of extracted properties.
@@ -827,13 +828,13 @@ def read_xtb(file,self):
     properties_dict = {
         "Total energy": energy,
         "Total charge": total_charge,
-        "HOMO-LUMO gap": homo_lumo,
-        "HOMO": homo,
-        "LUMO": lumo,
+        "HOMO-LUMO gap_GFN": homo_lumo,
+        "HOMO_GFN": homo,
+        "LUMO_GFN": lumo,
         "atoms": atoms,
         "numbers": numbers,
-        "Partial charge": chrgs, 
-        "Dipole module": dipole_module,
+        "Partial charge_GFN": chrgs, 
+        "Dipole module_GFN": dipole_module,
         "Fermi-level": Fermi_level,
         "Coord. numbers": covCN,
         "Disp. coeff. C6": C6AA,
@@ -844,6 +845,71 @@ def read_xtb(file,self):
         "Total disp. C6": total_C6AA,
         "Total disp. C8": total_C8AA,
         "Total polariz. alpha": total_alpha, 
+    }
+
+    return properties_dict
+
+
+def read_ptb(file,self):
+    """
+    Read xtb.ptb file and return a dictionary of extracted properties.
+    """
+
+    # Check if the file exists
+    if not os.path.exists(file):
+        self.args.log.write(f"x  WARNING! The file {file} does not exist.")
+        return None
+
+    with open(file, "r") as f:
+        data = f.readlines()
+
+    # Initialize variables
+    homo_lumo, homo, lumo = np.nan, np.nan, np.nan
+    dipole_module = np.nan
+    atom_dipoles, chrgs = [], []
+
+    # Parsing file data
+    for i, line in enumerate(data):
+        if "(HOMO)" in line:
+            if data[i].split()[3] != "(HOMO)":
+                homo = round(float(data[i].split()[3]), 4)
+            else:
+                homo = round(float(data[i].split()[2]), 4)
+        elif "(LUMO)" in line:
+            if data[i].split()[3] != "(LUMO)":
+                lumo = round(float(data[i].split()[3]), 4)
+            else:
+                lumo = round(float(data[i].split()[2]), 4)
+        elif "Total dipole moment" in line:
+            dipole_module = float(data[i + 1].split()[-1])
+
+    homo_lumo = round(float(lumo - homo), 4)
+
+    ptb_json = str(os.path.dirname(file)) + "/xtbout_ptb.json"
+    if os.path.exists(ptb_json):
+        # this part fixes a bug in xTB v1.7.1 when creating the json files
+        with open(ptb_json, 'r', encoding='utf-8') as file:
+            lines = file.readlines()
+
+        # Remove empty lines at the end of the file
+        with open(ptb_json, 'w') as file:
+            for line in lines:
+                if line.rstrip('\n') != ',':
+                    file.write(line)
+
+        json_data = read_json(ptb_json)
+        chrgs = json_data['partial charges']
+        for dip_vector in json_data['atomic dipole moments']:
+            atom_dipoles.append(math.sqrt(sum(pow(element, 2) for element in np.array(dip_vector))))
+        os.remove(ptb_json)
+
+    properties_dict = {
+        "HOMO-LUMO gap": homo_lumo,
+        "HOMO": homo,
+        "LUMO": lumo,
+        "Partial charge": chrgs,
+        "Dipole module": dipole_module,
+        "Dipole moment": atom_dipoles,
     }
 
     return properties_dict
@@ -1197,7 +1263,7 @@ def get_descriptors(level):
     descriptors = {
         'denovo': {
             'mol': ["HOMO-LUMO gap", "HOMO", "LUMO", "IP", "EA", "Dipole module", "Total charge", "Global SASA", "G solv. in H2O", "G of H-bonds H2O"],
-            'atoms': ["Partial charge", "Electrophil.", "Nucleophil.", "Radical attack", "SASA", "Buried volume", "H bond with H2O"]
+            'atoms': ["Partial charge", "Dipole moment", "Electrophil.", "Nucleophil.", "Radical attack", "SASA", "Buried volume", "H bond with H2O"]
         },
         'interpret': {
             'mol': ["Fermi-level", "Total polariz. alpha", "Total FOD", "Hardness", "Softness", "Electronegativity",
@@ -1206,13 +1272,13 @@ def get_descriptors(level):
                       "Polariz. alpha", "FOD", "Dispersion", "Pyramidalization", "Pyramidaliz. volume"]
         },
         'full': {
-            'mol': ["Total energy", "Total disp. C6", "Total disp. C8", "Dispersion area", "Dispersion volume", "Chem. potential", 
+            'mol': ["HOMO-LUMO gap_GFN", "HOMO_GFN", "LUMO_GFN", "Dipole module_GFN", "Total energy", "Total disp. C6", "Total disp. C8", "Dispersion area", "Dispersion volume", "Chem. potential", 
                     "Electrodon. power idx", "Electroaccep. power idx", "max. electron flow", "Electrodon. Chem. potential", "Electrodon. max. electron flow",
                     "Electrofugality", "Nucleofugality", "Intrinsic React. idx", "Net Electrophilicity", 
                     "Hyperhardness", "Hypersoftness", "Electrophilic descrip.", "cub. electrophilicity idx",
                     "G solv. elec.", "G solv. SASA", "G solv. shift", "Trans. dipole moment",
                     "HOMO occup.", "LUMO occup."],
-            'atoms': ["fukui+", "fukui-", "fukui0", "dual descrip.", "softness+", "softness-", "softness0", 
+            'atoms': ["Partial charge_GFN", "fukui+", "fukui-", "fukui0", "dual descrip.", "softness+", "softness-", "softness0", 
                       "Rel. nucleophilicity", "Rel. electrophilicity", "GC Dual Descrip.", "Mult. descrip.", 
                       "Nu_Electrophil.", "Nu_Nucleophil.", "Nu_Radical attack", "Disp. coeff. C6", "Born radii",
                       "Cone angle", "Solid angle", "FOD s proportion", "FOD p proportion", "FOD d proportion"]
@@ -1232,7 +1298,10 @@ def fix_cols_names(df):
             df = df.rename(columns={col: 'SMILES'})
         if col.lower() == 'code_name':
             df = df.rename(columns={col: 'code_name'})
-    
+        if col.lower() == 'charge': # to fix Charge
+            df = df.rename(columns={col: 'charge'})
+        if col.lower() == 'mult': # to fix Mult
+            df = df.rename(columns={col: 'mult'})    
     return df
 
 
@@ -1254,6 +1323,7 @@ def load_file_formats():
     '''
     
     file_formats = {'_opt.out': 'Optimization',
+                    '.ptb': 'PTB',
                     '.out': 'Single-point',
                     '.fod': 'FOD',
                     '.fukui': 'Fukui',
@@ -1268,3 +1338,38 @@ def load_file_formats():
                     }
 
     return file_formats
+
+
+def prefix_atom_props(update_atom_props,atom_props,interpret_atoms,denovo_atoms):
+    '''
+    Assign prefixes to atomic properties based on the atoms used
+    '''
+
+    prefix_list = []
+    for ele in update_atom_props:
+        if f'_{atom_props[0]}' in ele:
+            prefix_append = ele.split(atom_props[0])[0]
+            if prefix_append not in prefix_list:
+                prefix_list.append(prefix_append)
+    atom_props = update_atom_props
+    interpret_atoms = add_prefix(prefix_list, interpret_atoms)
+    denovo_atoms = add_prefix(prefix_list, denovo_atoms)
+
+    return atom_props,interpret_atoms,denovo_atoms
+
+def add_prefix(prefix_list, prop_list):
+    '''
+    Add prefix to each atomic property
+    '''
+    
+    new_atom_props = []
+    for prefix in prefix_list:
+        new_atom_props.append([f'{prefix}{ele}' for ele in prop_list])
+
+    for i,new_name in enumerate(new_atom_props):
+        if i == 0:
+            prop_list = new_name
+        else:
+            prop_list = prop_list + new_name
+            
+    return prop_list

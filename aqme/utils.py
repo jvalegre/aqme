@@ -28,6 +28,8 @@ obabel_version = "3.1.1" # this MUST match the meta.yaml
 aqme_version = "1.7.1"
 time_run = time.strftime("%Y/%m/%d %H:%M:%S", time.localtime())
 aqme_ref = f"AQME v {aqme_version}, Alegre-Requena, J. V.; Sowndarya, S.; Perez-Soto, R.; Alturaifi, T.; Paton, R. AQME: Automated Quantum Mechanical Environments for Researchers and Educators. Wiley Interdiscip. Rev. Comput. Mol. Sci. 2023, DOI: 10.1002/wcms.1663."
+xtb_version = '6.7.1'
+crest_version = '3.0.2'
 
 RDLogger.DisableLog("rdApp.*")
 
@@ -955,17 +957,22 @@ def check_dependencies(self):
                 command_run_1 = ["xtb", "-h"]
                 subprocess.run(command_run_1, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             except FileNotFoundError:
-                self.args.log.write("x  xTB is not installed! You can install the program with 'conda install -y -c conda-forge xtb'")
+                self.args.log.write(f"x  xTB is not installed! You can install the program with 'conda install -y -c conda-forge xtb={xtb_version}'")
                 self.args.log.finalize()
                 sys.exit()
+
+            _ = check_version(self, 'xTB', 'xtb version', xtb_version, 3, f'conda install -y -c conda-forge xtb={xtb_version}')
+                
             if self.args.program.lower() == 'crest':
                 try:
                     command_run_1 = ["crest", "-h"]
                     subprocess.run(command_run_1, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
                 except FileNotFoundError:
-                    self.args.log.write("x  CREST is not installed! You can install the program with 'conda install -y -c conda-forge crest'")
+                    self.args.log.write(f"x  CREST is not installed! You can install the program with 'conda install -y -c conda-forge crest={crest_version}'")
                     self.args.log.finalize()
                     sys.exit()
+
+                _ = check_version(self, 'CREST', 'Version', crest_version, 1, f'conda install -y -c conda-forge crest={crest_version}')
 
         # this is a dummy command just to warn the user if torch or ASE are not installed
         if self.args.program.lower() == 'ani':
@@ -991,3 +998,42 @@ def check_dependencies(self):
                 self.args.log.write("x  Torchani is not installed! You can install the program with 'pip install torchani'")
                 self.args.log.finalize()
                 sys.exit()
+
+def check_version(self, program, version_line, target_version, n_split, install_cmd):
+    '''
+    Check whether the version of xTB/CREST used is compatible with AQME
+    '''
+
+    file_txt = self.args.initial_dir.joinpath(f'{program.lower()}_internal_test.txt')
+    version_found = '0.0.0'
+    command_run_1 = [program.lower(), "--version", '>', f'{file_txt}']
+    run_command(command_run_1, f'{file_txt}', cwd=self.args.initial_dir)
+    subprocess.run(command_run_1, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    with open(file_txt, 'r') as datfile:
+        lines = datfile.readlines()
+        for _,line in enumerate(lines):
+            if version_line in line:
+                if program.lower() == 'crest':
+                    version_found = line.split()[n_split].split(',')[0]
+                else:
+                    version_found = line.split()[n_split] 
+                break
+    if os.path.exists(file_txt):
+        os.remove(file_txt)
+
+    lower_version = True
+    if int(version_found.split('.')[0]) == int(target_version.split('.')[0]):
+        if len(target_version.split('.')) >= 2 and int(version_found.split('.')[1]) == int(target_version.split('.')[1]):
+            if len(target_version.split('.')) >= 3 \
+                and int(version_found.split('.')[2]) >= int(target_version.split('.')[2]) \
+                and int(version_found.split('.')[2]) < int(target_version.split('.')[2])+5: # up to four versions ahead
+                lower_version = False
+
+    if version_found == '0.0.0':
+        version_found = 'Unknown'
+    self.args.log.write(f"{program} version used: {version_found}\n")
+
+    if lower_version:
+        self.args.log.write(f"x  {program} needs to be adjusted to ensure that AQME works as intended! You can adjust the version with '{install_cmd}'")
+        self.args.log.finalize()
+        sys.exit()

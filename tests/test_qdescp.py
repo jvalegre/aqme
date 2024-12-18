@@ -553,7 +553,7 @@ def test_qdescp_csv(
 
     version_print = False
     for line in data:
-        if 'xTB version used: 6.6.1' in line:
+        if 'xTB version used: 6.7.1' in line:
             version_print = True
     assert version_print
 
