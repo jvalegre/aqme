@@ -426,7 +426,7 @@ def xtb_opt_main(
             sdwriter.close()
             suppl, _, _, _ = mol_from_sdf_or_mol_or_mol2(f'{csearch_file}', "csearch", self.args)
             if len(suppl) > self.args.sample and self.args.auto_cluster:
-                _ = cluster_conformers(self,suppl,"rdkit",csearch_file)
+                _ = cluster_conformers(self,suppl,"rdkit",csearch_file,name)
             else:
                 os.remove(f'{csearch_file}')
                 # sort by energy (even though CREGEN should do that automatically, it fails to do so sometimes)
