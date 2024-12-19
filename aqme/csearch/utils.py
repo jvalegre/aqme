@@ -104,6 +104,14 @@ def prepare_smiles_from_line(line, args):
 
 def prepare_csv_files(args, csearch_file):
     csv_smiles = pd.read_csv(csearch_file)
+    # avoid running calcs with special signs (i.e. *)
+
+    for name_csv_indiv in csv_smiles['code_name']:
+        if '*' in f'{name_csv_indiv}':
+            args.log.write(f"\nx  WARNING! The names provided in the CSV contain * (i.e. {name_csv_indiv}). Please, remove all the * characters.")
+            args.log.finalize()
+            sys.exit()
+
     job_inputs = []
     # run conformer searches only for unique SMILES
     unique_smiles = set()
@@ -118,7 +126,7 @@ def prepare_csv_files(args, csearch_file):
                         job_inputs.append(obj)
                         unique_smiles.add(obj[0])
                     else:
-                        args.log.write(f'\nx  SMILES "{obj[0]}" used in {obj[1]} was already used with a different code_name!')
+                        args.log.write(f'\nx  SMILES "{obj[0]}" used in {obj[1]} is a duplicate, it was already used with a different code_name!')
                        
     if not smi_col:
         args.log.write("\nx  Make sure the CSV file contains a column called 'SMILES', 'smiles' or 'SMILES_' with the SMILES of the molecules!")
@@ -419,11 +427,6 @@ def minimize_rdkit_energy(mol, conf, log, FF, maxsteps):
         # if forcefield is None means that MMFF will not work. Attempt UFF.
         forcefield = Chem.UFFGetMoleculeForceField(mol, confId=conf)
 
-    if FF.upper() not in ["MMFF", "UFF"] or forcefield is None:
-        log.write(f"x  Force field {FF} not supported!")
-        log.finalize()
-        sys.exit()
-
     forcefield.Initialize()
     try:
         forcefield.Minimize(maxIts=maxsteps)
@@ -485,7 +488,7 @@ def smi_to_mol(
         or len(constraints_dihedral) != 0
     ):
         if program not in ["crest"]:
-            log.write("\nx  Program not supported for conformer generation of complexes and TSs! Specify: program='crest' for complexes")
+            log.write(f"\nx  {program} not supported for conformer generation of complexes and TSs (your SMILES has {len(smi)} parts, separated by a period)! Specify: program='crest' for complexes")
             sys.exit()
 
         (
