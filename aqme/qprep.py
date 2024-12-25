@@ -41,7 +41,7 @@ Parameters
       %oldchk=root/user/FILENAME.chk
    mem : str, default='4GB'
       Memory for the QM calculations (i) Gaussian: total memory; (ii) ORCA: memory per processor
-   nprocs : int, default=2
+   nprocs : int, default=None
       Number of processors used in the QM calculations
    gen_atoms : list of str, default=[]
       Atoms included in the gen(ECP) basis set (i.e. ['I','Pd'])
@@ -98,6 +98,7 @@ class qprep:
     def __init__(self, create_dat=True, **kwargs):
 
         start_time_overall = time.time()
+
         # load default and user-specified variables
         self.args = load_variables(kwargs, "qprep", create_dat=create_dat)
 
@@ -123,6 +124,10 @@ class qprep:
             self.args.log.write('\nx  Program not supported for QPREP input file creation! Specify: program="gaussian" (or "orca")')
             self.args.log.finalize()
             sys.exit()
+
+        # set number of processors
+        if self.args.nprocs is None:
+            self.args.nprocs = 8
 
         destination = set_destination(self,'QCALC')
 

@@ -662,7 +662,7 @@ def read_xtb(file,self):
     # Initialize variables
     energy, homo_lumo, homo, lumo = np.nan, np.nan, np.nan, np.nan
     dipole_module, Fermi_level = np.nan, np.nan
-    total_charge, total_SASA = np.nan, np.nan
+    total_charge = np.nan
     total_C6AA, total_C8AA, total_alpha = np.nan, np.nan, np.nan
     atoms, numbers, chrgs = [], [], []
     covCN, C6AA, alpha = [], [], []
@@ -734,7 +734,6 @@ def read_xtb(file,self):
         "Polariz. alpha": alpha,
         "HOMO occup.": homo_occ,
         "LUMO occup.": lumo_occ,
-        "Total SASA": total_SASA, 
         "Total disp. C6": total_C6AA,
         "Total disp. C8": total_C8AA,
         "Total polariz. alpha": total_alpha, 
@@ -956,7 +955,6 @@ def read_solv(file_solv):
         "G solv. SASA": g_sasa,
         "G solv. shift": g_shift,
         "Born radii": born_rad, 
-        "Atomic SASAs": atom_sasa,
         "H bond with H2O": h_bond, 
     }
 
@@ -1488,8 +1486,6 @@ def get_atom_matches(self,pattern,mol):
     Find the target atoms or groups in the mol object
     '''
 
-    if "'" in pattern or '"' in pattern:
-        pattern = pattern.replace("'",'').replace('"','')
     matches = []
     idx_set = None
     

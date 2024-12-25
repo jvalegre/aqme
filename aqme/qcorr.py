@@ -110,6 +110,10 @@ class qcorr:
         # load default and user-specified variables
         self.args = load_variables(kwargs, "qcorr")
 
+        # set number of processors
+        if self.args.nprocs is None:
+            self.args.nprocs = 8
+
         # check whether dependencies are installed
         _ = check_dependencies(self)
 

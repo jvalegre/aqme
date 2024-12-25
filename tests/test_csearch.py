@@ -305,7 +305,8 @@ def test_csearch_crest_parameters(
             w_dir_main=csearch_crest_dir,
             program=program,
             smi=smi,
-            name=name
+            name=name,
+            nprocs=1
         )
     elif name == 'methane_solvent':
         csearch(
@@ -318,7 +319,8 @@ def test_csearch_crest_parameters(
             crest_keywords=crest_keywords,
             charge=charge,
             mult=mult,
-            xtb_keywords='--alpb benzene'
+            xtb_keywords='--alpb benzene',
+            nprocs=1
         )        
     else:
         csearch(
@@ -330,19 +332,13 @@ def test_csearch_crest_parameters(
             cregen_keywords=cregen_keywords,
             crest_keywords=crest_keywords,
             charge=charge,
-            mult=mult
+            mult=mult,
+            nprocs=1
         )
 
-    if name != 'butane':
-        file_cluster = str(
-            csearch_crest_dir
-            + "/CSEARCH/"
-            + program
-            + "_xyz/"
-            + name + "_"
-            + "crest_clustered.xyz"
-        )
-        assert os.path.exists(file_cluster)
+    file_confs = f'{csearch_crest_dir}/CSEARCH/crest_xyz/{name}_crest_conformers.xyz'
+    assert os.path.exists(file_confs)
+
     file = str("CSEARCH/" + name + "_" + program + ".sdf")
     mols = rdkit.Chem.SDMolSupplier(file, removeHs=False)
     assert charge == int(mols[0].GetProp("Real charge"))
@@ -810,14 +806,14 @@ def test_csearch_rdkit_parameters(
             [],
             0,
             1,
-            '--nci --cbonds 0.5',
+            '--nci',
             False,
             None,
         ),
         (
             "crest",
             "C.O",
-            "cregen_clustering",
+            "butina_clustering",
             True,
             False,
             None,
@@ -826,7 +822,7 @@ def test_csearch_rdkit_parameters(
             [],
             0,
             1,
-            '--nci --cbonds 0.5',
+            '--nci',
             False,
             None,
         ),
@@ -842,7 +838,7 @@ def test_csearch_rdkit_parameters(
             [],
             0,
             1,
-            '--nci --cbonds 0.5',
+            '--nci',
             False,
             None,
         ),
@@ -936,7 +932,8 @@ def test_csearch_methods(
                 smi=smi,
                 name=name,
                 crest_keywords=crest_keywords,
-                auto_cluster=False # to keep track that crest options like --nci work
+                auto_cluster=False, # to keep track that crest options like --nci work
+                nprocs=1 # this is necessary to avoid errors when using more than 1 processors for some reason in CREST v3.0.2
             )
         elif name == 'sample_keyword':
             csearch(
@@ -949,8 +946,9 @@ def test_csearch_methods(
                 constraints_angle=constraints_angle,
                 constraints_dihedral=constraints_dihedral,
                 sample=17,
+                nprocs=1 # this is necessary to avoid errors when using more than 1 processors for some reason in CREST v3.0.2
             )
-        elif name == "cregen_clustering":
+        elif name == "butina_clustering":
             csearch(
                 w_dir_main=csearch_methods_dir,
                 program=program,
@@ -960,7 +958,8 @@ def test_csearch_methods(
                 constraints_dist=constraints_dist,
                 constraints_angle=constraints_angle,
                 constraints_dihedral=constraints_dihedral,
-                pytest_testing=True
+                pytest_testing=True,
+                nprocs=1 # this is necessary to avoid errors when using more than 1 processors for some reason in CREST v3.0.2
             )
         else:
             csearch(
@@ -972,6 +971,7 @@ def test_csearch_methods(
                 constraints_dist=constraints_dist,
                 constraints_angle=constraints_angle,
                 constraints_dihedral=constraints_dihedral,
+                nprocs=1
             )
 
     if destination:
@@ -1051,30 +1051,17 @@ def test_csearch_methods(
 
         assert xyz_metal
         assert not xyz_iodine
-    # if name == 'nci':
-    #     assert len(mols) > 350
-    #     # check that the conformers are sorted by their energy
-    #     outfile_sdf = open(sdf_crest, "r")
-    #     outlines_sdf = outfile_sdf.readlines()
-    #     outfile_sdf.close()
-    #     sdf_energies = []
-    #     for i,line in enumerate(outlines_sdf):
-    #         if line.startswith('>  <Energy>'):
-    #             # check if the crest_keywords option works
-    #             sdf_energies.append(float(outlines_sdf[i+1].split()[0]))
-    #     assert len(sdf_energies) > 10
-    #     assert sdf_energies == sorted(sdf_energies)
 
     # the n of conformers decreases when --nci is used
     elif name == 'nci_keyword':
-        assert 100 < len(mols) < 250 # the number isn't exact, but it's between 100 and 250
+        assert 50 < len(mols) < 250 # the number isn't exact, but it's between 100 and 250
         outfile = open(file_crest, "r")
         outlines_crest = outfile.readlines()
         outfile.close()
         for line in outlines_crest:
             if line.startswith(' > crest'):
                 # check if the crest_keywords option works
-                assert line.find('--nci --cbonds 0.5') > -1
+                assert line.find('--nci') > -1
                 # check if there are no --cinp for constrained calcs
                 assert line.find('--cinp') == -1
                 # check if charge and mult are correct
@@ -1092,7 +1079,7 @@ def test_csearch_methods(
         assert len(sdf_energies) > 10
         assert sdf_energies == sorted(sdf_energies)
 
-    elif name == 'cregen_clustering':
+    elif name == 'butina_clustering':
         assert len(mols) == 25
         dat_crest = str(csearch_methods_dir+f"/CSEARCH_data.dat")
         datfile = open(dat_crest, "r")

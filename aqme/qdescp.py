@@ -11,6 +11,9 @@ General
       Directory to create the JSON file(s)
    program : str, default=xtb
       Program required to create the new descriptors. Current options: 'xtb', 'nmr'
+   nprocs : int, default=None
+      Number of xTB jobs run in parallel with 1 proc each (1 proc for reproducibility 
+      in the results). Also, nprocs used in CSEARCH
    qdescp_atoms : list of str, default=[]
       Type of atom or group to calculate atomic properties. This option admits atoms 
       (i.e., qdescp_atoms=['P']) and SMART patterns (i.e., qdescp_atoms=['C=O']) 
@@ -404,6 +407,10 @@ class qdescp:
             self.args.log.finalize()
             sys.exit()
 
+        # set number of processors
+        if self.args.nprocs is None:
+            self.args.nprocs = 8
+
         # default value of auto_sample
         if self.args.auto_sample == 'auto':
             self.args.auto_sample = 'low'
@@ -411,6 +418,11 @@ class qdescp:
         # detect if the csv_name provided exists
         if self.args.csv_name is not None and not os.path.exists(self.args.csv_name):
             self.args.log.write(f"\nx  The csv_name provided ({self.args.csv_name}) does not exist! Please specify this name correctly")
+            self.args.log.finalize()
+            sys.exit()
+
+        if self.args.qdescp_solvent is not None:
+            self.args.log.write(f"\nx  Currently, PTB calculations do not work with solvent! Please, remove the --qdescp_solvent option")
             self.args.log.finalize()
             sys.exit()
 
@@ -551,9 +563,8 @@ class qdescp:
                 folder_raw.mkdir(exist_ok=True, parents=True)
             temp.to_csv(folder_raw.joinpath(f'Raw_{qdescp_csv}'), index=False)
 
-            # in the main folder, if there were no SMARTS matches, remove atomic descps since they're lists
-            if len(all_prefixes_atoms) == 0:
-                temp = remove_atom_descp(temp,atom_props)
+            # in the main folder, if there were no SMARTS matches in a molecule or qdescp_atoms was not specified, remove atomic descps since they're lists
+            temp = remove_atom_descp(temp,atom_props)
             temp.to_csv(qdescp_csv, index=False)
         else:
             valid_csv = False
@@ -1131,6 +1142,8 @@ class qdescp:
 
             # find the target atoms or groups in the mol object
             for pattern in smarts_targets:
+                if "'" in pattern or '"' in pattern:
+                    pattern = pattern.replace("'",'').replace('"','')
                 matches, idx_set = get_atom_matches(self,pattern,mol)
 
                 if len(matches) == 0:

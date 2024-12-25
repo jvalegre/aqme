@@ -27,7 +27,7 @@ T = 298.15
 obabel_version = "3.1.1" # this MUST match the meta.yaml
 aqme_version = "1.7.2"
 time_run = time.strftime("%Y/%m/%d %H:%M:%S", time.localtime())
-aqme_ref = f"AQME v {aqme_version}, Alegre-Requena, J. V.; Sowndarya, S.; Perez-Soto, R.; Alturaifi, T.; Paton, R. AQME: Automated Quantum Mechanical Environments for Researchers and Educators. Wiley Interdiscip. Rev. Comput. Mol. Sci. 2023, DOI: 10.1002/wcms.1663."
+aqme_ref = f"AQME v {aqme_version}, Alegre-Requena, J. V.; Sowndarya, S.; Perez-Soto, R.; Alturaifi, T.; Paton, R. AQME: Automated Quantum Mechanical Environments for Researchers and Educators. Wiley Interdiscip. Rev. Comput. Mol. Sci. 2023, 13, e1663 (DOI: 10.1002/wcms.1663)."
 xtb_version = '6.7.1'
 crest_version = '3.0.2'
 
@@ -438,8 +438,7 @@ def format_lists(value,arg_name):
         value = value[1:-1].split(',')
 
     # remove extra spaces that sometimes are included by mistake
-    value = [ele[1:] if ele[0] == ' ' else ele for ele in value]
-    value = [ele[:-1] if ele[-1] == ' ' else ele for ele in value]
+    value = [str(ele).strip() if isinstance(ele, str) else ele for ele in value]
 
     return value
 

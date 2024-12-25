@@ -267,8 +267,9 @@ class csearch:
             self.args.log.finalize()
             sys.exit()
 
-        if str(self.args.auto_metal_atoms) == "False":
-            self.args.auto_metal_atoms = False
+        # set number of processors (threads for CSEARCH)
+        if self.args.nprocs is None:
+            self.args.nprocs = 4
 
         # default value of auto_sample
         if self.args.auto_sample == 'auto':

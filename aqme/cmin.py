@@ -17,7 +17,7 @@ General
      Directory to create the output file(s)  
    varfile : str, default=None
      Option to parse the variables using a yaml file (specify the filename)  
-   nprocs : int, default=2
+   nprocs : int, default=None
      Number of processors used in the xTB optimizations  
    charge : int, default=None
      Charge of the calculations used in the xTB calculations. If charge isn't 
@@ -139,6 +139,10 @@ class cmin:
             self.args.log.write('\nx  Program not supported for CMIN refinement! Specify: program="xtb" (or "ani")')
             self.args.log.finalize()
             sys.exit()
+
+        # set number of processors
+        if self.args.nprocs is None:
+            self.args.nprocs = 1
 
         # check if xTB is installed
         if self.args.program.lower() == "xtb":
