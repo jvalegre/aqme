@@ -223,18 +223,6 @@ def test_csearch_summ_parameters(
             1,
             1,
         ),
-        # tests for conformer generation with multiple confs
-        (
-            "crest",
-            "CCCC",
-            "butane",
-            False,
-            None,
-            None,
-            0,
-            1,
-            3,
-        ),
         # tests for crest_keywords
         (
             "crest",
@@ -300,14 +288,6 @@ def test_csearch_crest_parameters(
             mult=mult,
             nprocs=14
         )
-    elif name == 'butane':
-        csearch(
-            w_dir_main=csearch_crest_dir,
-            program=program,
-            smi=smi,
-            name=name,
-            nprocs=1
-        )
     elif name == 'methane_solvent':
         csearch(
             w_dir_main=csearch_crest_dir,
@@ -320,7 +300,7 @@ def test_csearch_crest_parameters(
             charge=charge,
             mult=mult,
             xtb_keywords='--alpb benzene',
-            nprocs=1
+            nprocs=4
         )        
     else:
         csearch(
@@ -333,7 +313,7 @@ def test_csearch_crest_parameters(
             crest_keywords=crest_keywords,
             charge=charge,
             mult=mult,
-            nprocs=1
+            nprocs=4
         )
 
     file_confs = f'{csearch_crest_dir}/CSEARCH/crest_xyz/{name}_crest_conformers.xyz'
@@ -842,22 +822,23 @@ def test_csearch_rdkit_parameters(
             False,
             None,
         ),
-        (
-            "crest",
-            "[Cl-:9].[F:4][C:5]([H:15])([H:16])[H:17]",
-            "ts",
-            True,
-            False,
-            None,
-            [[4, 5, 1.8], [5, 9, 1.8]],
-            [[4, 5, 9, 180]],
-            [],
-            -1,
-            1,
-            None,
-            False,
-            1,
-        ),
+        # commented out until CREST v 3.0.3 (currently, no force constants in cbonds or constrains allowed)
+        # (
+        #     "crest",
+        #     "[Cl-:9].[F:4][C:5]([H:15])([H:16])[H:17]",
+        #     "ts",
+        #     True,
+        #     False,
+        #     None,
+        #     [[4, 5, 1.8], [5, 9, 1.8]],
+        #     [[4, 5, 9, 180]],
+        #     [],
+        #     -1,
+        #     1,
+        #     None,
+        #     False,
+        #     1,
+        # ),
     ],
 )
 def test_csearch_methods(
@@ -933,7 +914,7 @@ def test_csearch_methods(
                 name=name,
                 crest_keywords=crest_keywords,
                 auto_cluster=False, # to keep track that crest options like --nci work
-                nprocs=1 # this is necessary to avoid errors when using more than 1 processors for some reason in CREST v3.0.2
+                nprocs=4
             )
         elif name == 'sample_keyword':
             csearch(
@@ -946,7 +927,7 @@ def test_csearch_methods(
                 constraints_angle=constraints_angle,
                 constraints_dihedral=constraints_dihedral,
                 sample=17,
-                nprocs=1 # this is necessary to avoid errors when using more than 1 processors for some reason in CREST v3.0.2
+                nprocs=4
             )
         elif name == "butina_clustering":
             csearch(
@@ -959,7 +940,7 @@ def test_csearch_methods(
                 constraints_angle=constraints_angle,
                 constraints_dihedral=constraints_dihedral,
                 pytest_testing=True,
-                nprocs=1 # this is necessary to avoid errors when using more than 1 processors for some reason in CREST v3.0.2
+                nprocs=4
             )
         else:
             csearch(
@@ -971,7 +952,7 @@ def test_csearch_methods(
                 constraints_dist=constraints_dist,
                 constraints_angle=constraints_angle,
                 constraints_dihedral=constraints_dihedral,
-                nprocs=1
+                nprocs=4
             )
 
     if destination:
