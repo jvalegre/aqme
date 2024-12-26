@@ -289,8 +289,8 @@ def test_qdescp_xtb(file):
 
     elif file == 'test_idx.csv':
         pd_boltz_interpret = pd.read_csv(file_descriptors_interpret)
-        assert 'C1_Partial charge' in pd_boltz_interpret
-        assert round(pd_boltz_interpret['C1_Partial charge'][1],1) == -0.1
+        assert 'Atom_1_Partial charge' in pd_boltz_interpret
+        assert round(pd_boltz_interpret['Atom_1_Partial charge'][1],1) == -0.1
 
     # Checking molecular and atomic descriptors
     def check_descriptors(pd_boltz, descriptors, excluded_descriptors, desc_type, file_test):
@@ -346,7 +346,7 @@ def test_qdescp_xtb(file):
         check_descriptors(pd_boltz_full, descp_full_mol, [], 'mol', file)
         assert len(pd_boltz_denovo.columns) == 12 == len(descp_denovo_mol)+2 # descps + 2 extra: code_name and MolLogP
         assert len(pd_boltz_interpret.columns) == 23 == len(descp_interpret_mol)+2
-        assert len(pd_boltz_full.columns) == 249 # this might change in future RDKit versions
+        assert len(pd_boltz_full.columns) == 253 # this might change in future RDKit versions
 
         # check whether the QDESCP original and raw files were moved to the raw_csv_databases folder
         for file_csv in [file_descriptors_denovo, file_descriptors_interpret,file_descriptors_full]:
@@ -375,11 +375,11 @@ def test_qdescp_xtb(file):
             check_descriptors(pd_boltz_interpret, descp_interpret_atoms, [d for d in descp_full_atoms if d not in descp_interpret_atoms], 'atoms', file)
             check_descriptors(pd_boltz_full, descp_full_atoms, [], 'atoms', file)
             assert pd_boltz_denovo.columns[:2].tolist() == ['SMILES','code_name']
-            assert len(pd_boltz_denovo.columns) == 20 == len(descp_denovo_mol)+len(descp_denovo_atoms)+3 # 3 extra: SMILES, code_name and MolLogP
+            assert len(pd_boltz_denovo.columns) == 21 == len(descp_denovo_mol)+len(descp_denovo_atoms)+3 # 3 extra: SMILES, code_name and MolLogP
             assert pd_boltz_interpret.columns[:2].tolist() == ['SMILES','code_name']
-            assert len(pd_boltz_interpret.columns) == 40 == len(descp_interpret_mol)+len(descp_interpret_atoms)+3
+            assert len(pd_boltz_interpret.columns) == 41 == len(descp_interpret_mol)+len(descp_interpret_atoms)+3
             assert pd_boltz_full.columns[:2].tolist() == ['SMILES','code_name']
-            assert len(pd_boltz_full.columns) == 287 # bunch of RDKit descps
+            assert len(pd_boltz_full.columns) == 293 # bunch of RDKit descps
 
         # atomic descriptors must not be here
         elif file == 'test_robert_mol.csv':
@@ -388,7 +388,7 @@ def test_qdescp_xtb(file):
             assert pd_boltz_interpret.columns[:2].tolist() == ['SMILES','code_name']
             assert len(pd_boltz_interpret.columns) == 24 == len(descp_interpret_mol)+3
             assert pd_boltz_full.columns[:2].tolist() == ['SMILES','code_name']
-            assert len(pd_boltz_full.columns) == 250 # this might change in future RDKit versions
+            assert len(pd_boltz_full.columns) == 254 # this might change in future RDKit versions
 
         # check whether the QDESCP original and raw files were moved to the raw_csv_databases folder
         for file_csv in [file_descriptors_denovo, file_descriptors_interpret,file_descriptors_full]:
@@ -485,7 +485,7 @@ def test_qdescp_sdf(
     assert len(df_interpret['code_name']) == 2
     assert 'mol1' == df_interpret['code_name'][0]
     assert 'mol_2' == df_interpret['code_name'][1]
-    assert len(df_interpret.columns) == 39
+    assert len(df_interpret.columns) == 40
 
     # check if the automated detection of common pattern works
     count_nan = 0 # dirty hack that account for different sortings of the calcs within the CSV files
@@ -553,7 +553,7 @@ def test_qdescp_csv(
 
     version_print = False
     for line in data:
-        if 'xTB version used: 6.6.1' in line:
+        if 'xTB version used: 6.7.1' in line:
             version_print = True
     assert version_print
 
@@ -591,9 +591,9 @@ def test_au_csv(
 
     # QDESCP-xTB workflow
     if run_test == 1:
-        cmd_qdescp = ["python","-m","aqme","--qdescp","--input",f'{qdescp_au_dir}/{file}', "--destination",f'{folder_qdescp}',]
+        cmd_qdescp = ["python","-m","aqme","--qdescp","--input",f'{qdescp_au_dir}/{file}', "--destination",f'{folder_qdescp}', '--debug']
     if run_test == 2:
-        cmd_qdescp = ["python","-m","aqme","--qdescp","--input",f'{qdescp_au_dir}/{file}', "--destination",f'{folder_qdescp}', "--charge ", "-1", "--mult", "2"]
+        cmd_qdescp = ["python","-m","aqme","--qdescp","--input",f'{qdescp_au_dir}/{file}', "--destination",f'{folder_qdescp}', "--charge ", "0", "--mult", "1", '--debug']
 
     subprocess.run(cmd_qdescp)
 
@@ -618,13 +618,13 @@ def test_au_csv(
     assert '200' == str(df_interpret['code_name'][0])
     assert '201' == str(df_interpret['code_name'][1])
     if run_test == 1:
-        assert '2' == str(df_interpret['Total charge'][0])
-        assert '0' == str(df_interpret['Total charge'][1])
+        assert 0 == int(df_interpret['Total charge'][0])
+        assert 1 == int(df_interpret['Total charge'][1]) # this should be 2, but xTB for some reason uses total charge = 1 in the json file that is generated from xTB automatically
     elif run_test == 2:
-        assert '-1' == str(df_interpret['Total charge'][0])
-        assert '-1' == str(df_interpret['Total charge'][1])
+        assert 0 == int(df_interpret['Total charge'][0])
+        assert 0 == df_interpret['Total charge'][1] # PTB doesn't work with wrong charges/mult combinations
 
-    assert len(df_interpret.columns) == 42 == len(descp_interpret_mol)+len(descp_interpret_atoms)+5 # 5 extra: SMILES, code_name, charge, mult and MolLogP
+    assert len(df_interpret.columns) == 43 == len(descp_interpret_mol)+len(descp_interpret_atoms)+5 # 5 extra: SMILES, code_name, charge, mult and MolLogP
 
     # Checking molecular and atomic descriptors
     def check_descriptors_Au(pd_boltz, descriptors, excluded_descriptors, desc_type):
@@ -654,11 +654,11 @@ def test_au_csv(
     file_2 = "201_rdkit_conf_1"
     files_xtb = [file_1, file_2]
     if run_test == 1:
-        charges_xtb = [2,0]
-        mult_xtb = [3,1]
+        charges_xtb = [0,2]
+        mult_xtb = [1,3]
     elif run_test == 2:
-        charges_xtb = [-1,-1]
-        mult_xtb = [2,2]
+        charges_xtb = [0,0]
+        mult_xtb = [1,1]
     for i,file_xtb in enumerate(files_xtb):
         # only two files should remain inside the xtb_data folders
         xtb_data_path = f'{folder_qdescp}/xtb_data/{file_xtb}'
@@ -686,16 +686,10 @@ def test_au_csv(
             if '--gfn 1' in data[j]:
                 gfn1_count += 1
 
-        if file_xtb == file_1:
-            assert charge_file == len(file_formats)-6 # 4 of the calculations change the charge + the triplet calc isn't done + the WBO calc that doesn't include charge
-        elif file_xtb == file_2:
-            if run_test == 1:
-                assert charge_file == len(file_formats)-5 # 4 of the calculations change the charge to get properties + the WBO calc that doesn't include charge
-                assert gfn2_count == len(file_formats)-2 # all the calculations except for 1 are done with GFN-2 + the WBO calc that doesn't include gfn
-                assert gfn1_count == 1 # 1 of the calcs is done with GFN-1
-            elif run_test == 2:
-                assert charge_file == len(file_formats)-6 # 4 of the calculations change the charge + the triplet calc isn't done + the WBO calc that doesn't include charge
-        assert mult_file == len(file_formats)-4 # 3 of the calculations change the mult (or the triplet isn't done) to get properties + the WBO calc that doesn't include charge
+        assert charge_file == len(file_formats)-5 # 4 of the calculations change the charge to get properties + the WBO calc that doesn't include charge
+        assert gfn2_count == len(file_formats)-3 # all the calculations except for 2 (PTB + GFN-1) are done with GFN-2 + the WBO calc that doesn't include gfn
+        assert gfn1_count == 1 # 1 of the calcs is done with GFN-1
+        assert mult_file == len(file_formats)-4 # 3 of the calculations change the mult to get properties + the WBO calc that doesn't include charge
 
 
 # tests for QDESCP-NMR

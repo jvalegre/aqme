@@ -345,7 +345,7 @@ def RMSD_and_E_filter(
 
 
 
-def cluster_conformers(self, mols, program, csearch_file):
+def cluster_conformers(self, mols, program, csearch_file, name):
     '''
     Performs a Butina clustering based on the RMS differences of the conformers
     '''
@@ -362,7 +362,7 @@ def cluster_conformers(self, mols, program, csearch_file):
         stable_points = int(round(self.args.sample*0.2))
         cluster_points = self.args.sample - stable_points
         if program.lower() == 'rdkit':
-            self.args.log.write(f'\no  Selecting {self.args.sample} conformers using a combination of energies and Butina RMS-based clustering. Users might disable this option with --auto_cluster False.')
+            self.args.log.write(f'\no  Selecting {self.args.sample} conformers using a combination of energies and Butina RMS-based clustering. Users might disable this option with --auto_cluster False ({os.path.basename(Path(name))})')
         else:
             self.args.log.write(f'\no  Selecting the most stable RDKit conformer to start a CREST search')
 

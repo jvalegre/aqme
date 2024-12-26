@@ -55,7 +55,7 @@ var_dict = {
     "cregen": True,
     "cregen_keywords": None,
     "program": None,
-    "nprocs": 8,
+    "nprocs": None,
     "mem": "16GB",
     "mol": None,
     "destination": None,
