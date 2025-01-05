@@ -21,10 +21,14 @@
    :target: https://aqme.readthedocs.io
    :alt: Documentation Status
 
+.. |PyPI| image:: https://img.shields.io/pypi/v/aqme
+   :target: https://pypi.org/project/aqme/
+
 |CircleCI|
 |Codecov|
 |Downloads|
 |ReadtheDocs|
+|PyPI|
 
 .. badges-end
 
@@ -122,11 +126,11 @@ Extra requirements if xTB or CREST are used (compatible with MacOS and Linux onl
 
 .. code-block:: shell 
 
-   conda install -y -c conda-forge xtb
+   conda install -y -c conda-forge xtb=6.7.1
 
 .. code-block:: shell 
 
-   conda install -y -c conda-forge crest
+   conda install -y -c conda-forge crest=3.0.2
 
 Extra requirements if `CMIN` is used with ANI models:  
 

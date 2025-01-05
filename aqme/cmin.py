@@ -17,7 +17,7 @@ General
      Directory to create the output file(s)  
    varfile : str, default=None
      Option to parse the variables using a yaml file (specify the filename)  
-   nprocs : int, default=2
+   nprocs : int, default=None
      Number of processors used in the xTB optimizations  
    charge : int, default=None
      Charge of the calculations used in the xTB calculations. If charge isn't 
@@ -132,16 +132,17 @@ class cmin:
         # check whether dependencies are installed
         _ = check_dependencies(self)
 
-        cmin_program = True
+        # most users employ xTB to refine RDKit structures
         if self.args.program is None:
-            cmin_program = False
-        if cmin_program:
-            if self.args.program.lower() not in ["xtb", "ani"]:
-                cmin_program = False
-        if not cmin_program:
+            self.args.program = "xtb"
+        elif self.args.program.lower() not in ["xtb", "ani"]:
             self.args.log.write('\nx  Program not supported for CMIN refinement! Specify: program="xtb" (or "ani")')
             self.args.log.finalize()
             sys.exit()
+
+        # set number of processors
+        if self.args.nprocs is None:
+            self.args.nprocs = 1
 
         # check if xTB is installed
         if self.args.program.lower() == "xtb":
@@ -157,7 +158,7 @@ class cmin:
             "\no  Number of finished jobs from CMIN", max=len(self.args.files)
         )
 
-        file_format = os.path.basename(Path(self.args.files[0])).split('.')[1]
+        file_format = os.path.basename(Path(self.args.files[0])).split('.')[-1]
 
         if file_format.lower() in ['xyz', 'gjf', 'com']:
             for file in self.args.files:
@@ -268,7 +269,7 @@ class cmin:
 
         elif self.args.program.lower() == "xtb":
             # sets charge and mult
-            file_format = os.path.basename(Path(file)).split('.')[1]
+            file_format = os.path.basename(Path(file)).split('.')[-1]
             charge_input, mult_input, final_mult = None, None, None
             if file_format.lower() == 'sdf':
                 if self.args.charge is None or self.args.mult is None:
@@ -313,11 +314,8 @@ class cmin:
                     if len(self.args.constraints_atoms) >= 1 or len(self.args.constraints_dist) >= 1 or len(self.args.constraints_angle) >= 1 or len(self.args.constraints_dihedral) >= 1:
                         complex_ts = True
                     name_init = mol.GetProp('_Name')
-                    name_file_out = '_'.join(name_init.split())
                     mol, energy, cmin_valid = xtb_opt_main(
                         f'{self.name}_conf_{i}',
-                        dup_data,
-                        dup_data_idx,
                         self,
                         charge,
                         mult,

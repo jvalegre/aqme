@@ -25,9 +25,11 @@ J_TO_AU = 4.184 * 627.509541 * 1000.0  # UNIT CONVERSION
 T = 298.15
 
 obabel_version = "3.1.1" # this MUST match the meta.yaml
-aqme_version = "1.7.0"
+aqme_version = "1.7.2"
 time_run = time.strftime("%Y/%m/%d %H:%M:%S", time.localtime())
-aqme_ref = f"AQME v {aqme_version}, Alegre-Requena, J. V.; Sowndarya, S.; Perez-Soto, R.; Alturaifi, T.; Paton, R. AQME: Automated Quantum Mechanical Environments for Researchers and Educators. Wiley Interdiscip. Rev. Comput. Mol. Sci. 2023, DOI: 10.1002/wcms.1663."
+aqme_ref = f"AQME v {aqme_version}, Alegre-Requena, J. V.; Sowndarya, S.; Perez-Soto, R.; Alturaifi, T.; Paton, R. AQME: Automated Quantum Mechanical Environments for Researchers and Educators. Wiley Interdiscip. Rev. Comput. Mol. Sci. 2023, 13, e1663 (DOI: 10.1002/wcms.1663)."
+xtb_version = '6.7.1'
+crest_version = '3.0.2'
 
 RDLogger.DisableLog("rdApp.*")
 
@@ -70,7 +72,7 @@ def load_from_yaml(self):
     # Variables will be updated from YAML file
     try:
         if os.path.exists(self.varfile):
-            if os.path.basename(Path(self.varfile)).split('.')[1] in ["yaml", "yml", "txt"]:
+            if os.path.basename(Path(self.varfile)).split('.')[-1] in ["yaml", "yml", "txt"]:
                 with open(self.varfile, "r") as file:
                     try:
                         param_list = yaml.load(file, Loader=yaml.SafeLoader)
@@ -190,7 +192,7 @@ def get_info_input(file):
 
     line = ""
     # input for Gaussian calculations
-    if os.path.basename(Path(file)).split(".")[1] in ["com", "gjf"]:
+    if os.path.basename(Path(file)).split(".")[-1] in ["com", "gjf"]:
 
         # Find the command line
         while "#" not in line:
@@ -216,7 +218,7 @@ def get_info_input(file):
             line = next(_iter).strip()
 
     # input for ORCA calculations
-    if os.path.basename(Path(file)).split(".")[1] == "inp":
+    if os.path.basename(Path(file)).split(".")[-1] == "inp":
 
         # Find the line with charge and multiplicity
         while "* xyz" not in line or "* int" not in line:
@@ -286,7 +288,7 @@ def get_conf_RMS(mol1, mol2, c1, c2, heavy, max_matches_rmsd):
     if heavy:
         mol1 = RemoveHs(mol1)
         mol2 = RemoveHs(mol2)
-    return GetBestRMS(mol1, mol2, c1, c2, maxMatches=max_matches_rmsd) # don't use numThreads=0 or -1 as the documentation says, it fails! (due to multithreading in CSEARCH module?)
+    return GetBestRMS(mol1, mol2, c1, c2, maxMatches=max_matches_rmsd, numThreads=1) # numThreads must be 1, otherwise it either fails or becomes VERY slow
 
 
 def command_line_args():
@@ -309,7 +311,6 @@ def command_line_args():
         "chk",
         "oldchk",
         "nodup_check",
-        "dbstep_calc",
         "robert",
         "debug",
         "pytest_testing"
@@ -435,6 +436,10 @@ def format_lists(value,arg_name):
                     value.remove('')
     else:
         value = value[1:-1].split(',')
+
+    # remove extra spaces that sometimes are included by mistake
+    value = [str(ele).strip() if isinstance(ele, str) else ele for ele in value]
+
     return value
 
 
@@ -715,6 +720,9 @@ def mol_from_sdf_or_mol_or_mol2(input_file, module, args, low_check=None):
     if module in ["qprep","cmin"]:
         # using sanitize=False to avoid reading problems
         mols = Chem.SDMolSupplier(input_file, removeHs=False, sanitize=False)
+        # transform invalid SDF files created with GaussView into valid SDF from Open Babel
+        if None in mols:
+            mols = load_sdf(input_file)
         if low_check=='lowest_only':
             return [mols[0]]
         elif isinstance(low_check, int):
@@ -735,15 +743,16 @@ def mol_from_sdf_or_mol_or_mol2(input_file, module, args, low_check=None):
     elif module == "csearch":
 
         # using sanitize=True in this case, which is recommended for RDKit calculations
-        filename = os.path.basename(Path(input_file)).split('.')[0]
-        extension = os.path.basename(Path(input_file)).split('.')[1]
+        filename = '.'.join(os.path.basename(Path(input_file)).split('.')[:-1])
+        extension = os.path.basename(Path(input_file)).split('.')[-1]
 
         if extension.lower() == "pdb":
             input_file = f'{os.path.dirname(Path(input_file))}/{filename}.sdf'
             extension = "sdf"
 
         if extension.lower() == "sdf":
-            mols = Chem.SDMolSupplier(input_file, removeHs=False)
+            mols = load_sdf(input_file)
+
         elif extension.lower() == "mol":
             mols = [Chem.MolFromMolFile(input_file, removeHs=False)]
         elif extension.lower() == "mol2":
@@ -756,7 +765,7 @@ def mol_from_sdf_or_mol_or_mol2(input_file, module, args, low_check=None):
 
         for i, line in enumerate(lines):
             if line.find(">  <ID>") > -1:
-                ID = lines[i + 1].split()[0]
+                ID = ' '.join(lines[i + 1].split()[:-1])
                 IDs.append(ID)
             if line.find(">  <Real charge>") > -1:
                 charge = lines[i + 1].split()[0]
@@ -770,7 +779,7 @@ def mol_from_sdf_or_mol_or_mol2(input_file, module, args, low_check=None):
             suppl.append(mol)
 
         if len(IDs) == 0:
-            path_file = f'{os.path.dirname(input_file)}/{os.path.basename(input_file).split(".")[0]}'
+            path_file = f'{os.path.dirname(input_file)}/{".".join(os.path.basename(input_file).split(".")[:-1])}'
             if len(suppl) > 1:
                 for i in range(len(suppl)):
                     IDs.append(f"{path_file}_{i+1}")
@@ -795,6 +804,53 @@ def mol_from_sdf_or_mol_or_mol2(input_file, module, args, low_check=None):
                 mults.append(mult)
 
         return suppl, charges, mults, IDs
+
+
+def load_sdf(input_file):
+    '''
+    Get mols from SDF files
+    '''
+
+    mols = Chem.SDMolSupplier(input_file, removeHs=False)
+
+    # some software don't generate valid mol objects (i.e. SDF files created with GaussView)
+    if None in mols:
+        command_sdf = [
+            "obabel",
+            "-isdf",
+            f"{input_file}",
+            "-osdf",
+            f"-O{input_file}",
+        ]
+
+        subprocess.run(
+            command_sdf,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+
+        mols = Chem.SDMolSupplier(input_file, removeHs=False)
+
+        # sometimes, even SDF files created with Open Babel fail - try again from XYZ files
+        if None in mols:
+            xyz_file = input_file.replace('.sdf','.xyz')
+            command_xyz = [
+                "obabel",
+                "-isdf",
+                f"{input_file}",
+                "-oxyz",
+                f"-O{xyz_file}",
+            ]
+            subprocess.run(
+                command_xyz,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+
+            mols = [Chem.rdmolfiles.MolFromXYZFile(xyz_file)]
+            os.remove(xyz_file)
+
+    return mols
 
 
 def add_prefix_suffix(name, args):
@@ -900,17 +956,22 @@ def check_dependencies(self):
                 command_run_1 = ["xtb", "-h"]
                 subprocess.run(command_run_1, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             except FileNotFoundError:
-                self.args.log.write("x  xTB is not installed! You can install the program with 'conda install -y -c conda-forge xtb'")
+                self.args.log.write(f"x  xTB is not installed! You can install the program with 'conda install -y -c conda-forge xtb={xtb_version}'")
                 self.args.log.finalize()
                 sys.exit()
+
+            _ = check_version(self, 'xTB', 'xtb version', xtb_version, 3, f'conda install -y -c conda-forge xtb={xtb_version}')
+                
             if self.args.program.lower() == 'crest':
                 try:
                     command_run_1 = ["crest", "-h"]
                     subprocess.run(command_run_1, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
                 except FileNotFoundError:
-                    self.args.log.write("x  CREST is not installed! You can install the program with 'conda install -y -c conda-forge crest'")
+                    self.args.log.write(f"x  CREST is not installed! You can install the program with 'conda install -y -c conda-forge crest={crest_version}'")
                     self.args.log.finalize()
                     sys.exit()
+
+                _ = check_version(self, 'CREST', 'Version', crest_version, 1, f'conda install -y -c conda-forge crest={crest_version}')
 
         # this is a dummy command just to warn the user if torch or ASE are not installed
         if self.args.program.lower() == 'ani':
@@ -936,3 +997,42 @@ def check_dependencies(self):
                 self.args.log.write("x  Torchani is not installed! You can install the program with 'pip install torchani'")
                 self.args.log.finalize()
                 sys.exit()
+
+def check_version(self, program, version_line, target_version, n_split, install_cmd):
+    '''
+    Check whether the version of xTB/CREST used is compatible with AQME
+    '''
+
+    file_txt = self.args.initial_dir.joinpath(f'{program.lower()}_internal_test.txt')
+    version_found = '0.0.0'
+    command_run_1 = [program.lower(), "--version", '>', f'{file_txt}']
+    run_command(command_run_1, f'{file_txt}', cwd=self.args.initial_dir)
+    subprocess.run(command_run_1, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    with open(file_txt, 'r') as datfile:
+        lines = datfile.readlines()
+        for _,line in enumerate(lines):
+            if version_line in line:
+                if program.lower() == 'crest':
+                    version_found = line.split()[n_split].split(',')[0]
+                else:
+                    version_found = line.split()[n_split] 
+                break
+    if os.path.exists(file_txt):
+        os.remove(file_txt)
+
+    lower_version = True
+    if int(version_found.split('.')[0]) == int(target_version.split('.')[0]):
+        if len(target_version.split('.')) >= 2 and int(version_found.split('.')[1]) == int(target_version.split('.')[1]):
+            if len(target_version.split('.')) >= 3 \
+                and int(version_found.split('.')[2]) >= int(target_version.split('.')[2]) \
+                and int(version_found.split('.')[2]) < int(target_version.split('.')[2])+5: # up to four versions ahead
+                lower_version = False
+
+    if version_found == '0.0.0':
+        version_found = 'Unknown'
+    self.args.log.write(f"{program} version used: {version_found}\n")
+
+    if lower_version:
+        self.args.log.write(f"x  {program} needs to be adjusted to ensure that AQME works as intended! You can adjust the version with '{install_cmd}'")
+        self.args.log.finalize()
+        sys.exit()

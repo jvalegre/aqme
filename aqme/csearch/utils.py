@@ -104,6 +104,14 @@ def prepare_smiles_from_line(line, args):
 
 def prepare_csv_files(args, csearch_file):
     csv_smiles = pd.read_csv(csearch_file)
+    # avoid running calcs with special signs (i.e. *)
+
+    for name_csv_indiv in csv_smiles['code_name']:
+        if '*' in f'{name_csv_indiv}':
+            args.log.write(f"\nx  WARNING! The names provided in the CSV contain * (i.e. {name_csv_indiv}). Please, remove all the * characters.")
+            args.log.finalize()
+            sys.exit()
+
     job_inputs = []
     # run conformer searches only for unique SMILES
     unique_smiles = set()
@@ -118,7 +126,7 @@ def prepare_csv_files(args, csearch_file):
                         job_inputs.append(obj)
                         unique_smiles.add(obj[0])
                     else:
-                        args.log.write(f'\nx  SMILES "{obj[0]}" used in {obj[1]} was already used with a different code_name!')
+                        args.log.write(f'\nx  SMILES "{obj[0]}" used in {obj[1]} is a duplicate, it was already used with a different code_name!')
                        
     if not smi_col:
         args.log.write("\nx  Make sure the CSV file contains a column called 'SMILES', 'smiles' or 'SMILES_' with the SMILES of the molecules!")
@@ -230,7 +238,7 @@ def prepare_cdx_files(args, csearch_file):
 
     job_inputs = []
     for i, (smiles, _) in enumerate(molecules):
-        name = f"{os.path.basename(Path(csearch_file)).split('.')[0]}_{str(i)}"
+        name = f"{'.'.join(os.path.basename(Path(csearch_file)).split('.')[:-1])}_{str(i)}"
         name = add_prefix_suffix(name, args)
 
         obj = (
@@ -266,7 +274,7 @@ def prepare_com_files(args, csearch_file):
     job_inputs = []
 
     filename = os.path.basename(Path(csearch_file))
-    if os.path.basename(Path(filename)).split('.')[1] in ["gjf", "com"]:
+    if os.path.basename(Path(filename)).split('.')[-1] in ["gjf", "com"]:
         xyz_file, _, _ = com_2_xyz(csearch_file)
         if args.charge is None:
             _, charge, _ = get_info_input(csearch_file)
@@ -288,12 +296,11 @@ def prepare_com_files(args, csearch_file):
             mult = args.mult
     _ = xyz_2_sdf(xyz_file)
 
-    sdffile = f'{os.path.dirname(Path(csearch_file))}/{filename.split(".")[0]}.sdf'
+    sdffile = f'{os.path.dirname(Path(csearch_file))}/{".".join(filename.split(".")[:-1])}.sdf'
     suppl, _, _, _ = mol_from_sdf_or_mol_or_mol2(sdffile, "csearch", args)
 
-    name = f'{filename.split(".")[0]}'
+    name = f'{".".join(filename.split(".")[:-1])}'
     name = add_prefix_suffix(name, args)
-    name = f'{os.path.dirname(Path(csearch_file))}/{name}'
 
     obj = (
         suppl[0],
@@ -308,7 +315,7 @@ def prepare_com_files(args, csearch_file):
         args.geom
     )
     job_inputs.append(obj)
-    if os.path.basename(Path(csearch_file)).split('.')[1] in ["gjf", "com"]:
+    if os.path.basename(Path(csearch_file)).split('.')[-1] in ["gjf", "com"]:
         os.remove(xyz_file)
     os.remove(sdffile)
 
@@ -317,7 +324,7 @@ def prepare_com_files(args, csearch_file):
 
 def prepare_pdb_files(args, csearch_file):
     filename = os.path.basename(csearch_file)
-    sdffile = f'{os.path.dirname(csearch_file)}/{filename.split(".")[0]}.sdf'
+    sdffile = f'{os.path.dirname(csearch_file)}/{".".join(filename.split(".")[:-1])}.sdf'
     command_pdb = [
         "obabel",
         "-ipdb",
@@ -336,6 +343,7 @@ def prepare_sdf_files(args, csearch_file):
     sdffile = f'{os.path.dirname(csearch_file)}/{filename}'
 
     suppl, charges, mults, IDs = mol_from_sdf_or_mol_or_mol2(sdffile, "csearch", args)
+    IDs = [os.path.basename(x) for x in IDs]
 
     job_inputs = []
     for mol, charge, mult, name in zip(suppl, charges, mults, IDs):
@@ -391,7 +399,7 @@ def com_2_xyz(input_file):
     COM to XYZ to SDF for obabel
     """
 
-    filename = os.path.basename(Path(input_file)).split('.')[0]
+    filename = '.'.join(os.path.basename(Path(input_file)).split('.')[:-1])
     path_xyz = f'{os.path.dirname(input_file)}/{filename}.xyz'
 
     # Create the 'xyz' file and/or get the total charge
@@ -408,18 +416,16 @@ def minimize_rdkit_energy(mol, conf, log, FF, maxsteps):
     Minimizes a conformer of a molecule and returns the final energy.
     """
 
-    if FF == "MMFF":
+    forcefield = None
+    if FF.upper() == "MMFF":
         properties = Chem.MMFFGetMoleculeProperties(mol)
         forcefield = Chem.MMFFGetMoleculeForceField(mol, properties, confId=conf)
+        if forcefield is None:
+            log.write(f"x  Force field {FF} did not work! Changing to UFF.")
 
-    if FF == "UFF" or forcefield is None:
+    if FF.upper() == "UFF" or forcefield is None:
         # if forcefield is None means that MMFF will not work. Attempt UFF.
         forcefield = Chem.UFFGetMoleculeForceField(mol, confId=conf)
-
-    if FF not in ["MMFF", "UFF"] or forcefield is None:
-        log.write(f" Force field {FF} not supported!")
-        log.finalize()
-        sys.exit()
 
     forcefield.Initialize()
     try:
@@ -482,7 +488,7 @@ def smi_to_mol(
         or len(constraints_dihedral) != 0
     ):
         if program not in ["crest"]:
-            log.write("\nx  Program not supported for conformer generation of complexes and TSs! Specify: program='crest' for complexes")
+            log.write(f"\nx  {program} not supported for conformer generation of complexes and TSs (your SMILES has {len(smi)} parts, separated by a period)! Specify: program='crest' for complexes")
             sys.exit()
 
         (
