@@ -417,7 +417,7 @@ def calculate_global_CDFT_descriptors(file, file_Nminus1, file_Nminus2, file_Npl
             if "SCC energy" in line:
                 return float(line.split()[3])
         
-        self.args.log.write(f"x  WARNING! Could not find SCC energy value in the file: {filename}")
+        self.args.log.write(f"x  WARNING! Could not find SCC energy value in the file: {os.path.basename(filename)}. Some CDFT-based descriptors will be missing.")
         return None
 
     try:
@@ -443,16 +443,17 @@ def calculate_global_CDFT_descriptors(file, file_Nminus1, file_Nminus2, file_Npl
     scc_energy_Nplus1 = extract_scc_energy(data3, file_Nplus1)
     scc_energy_Nplus2 = extract_scc_energy(data4, file_Nplus2)
 
-    if None in [scc_energy, scc_energy_Nminus1, scc_energy_Nminus2, scc_energy_Nplus1, scc_energy_Nplus2]:
-        self.args.log.write(f"x  WARNING! Missing SCC energy in one or more files. Cannot calculate global CDFT descriptors.")
-        return None
-
     # Convert SCC energies to Hartree
-    scc_energy *= Hartree
-    scc_energy_Nminus1 *= Hartree
-    scc_energy_Nminus2 *= Hartree
-    scc_energy_Nplus1 *= Hartree
-    scc_energy_Nplus2 *= Hartree
+    if scc_energy is not None:
+        scc_energy *= Hartree
+    if scc_energy_Nminus1 is not None:
+        scc_energy_Nminus1 *= Hartree
+    if scc_energy_Nminus2 is not None:
+        scc_energy_Nminus2 *= Hartree
+    if scc_energy_Nplus1 is not None:
+        scc_energy_Nplus1 *= Hartree
+    if scc_energy_Nplus2 is not None:
+        scc_energy_Nplus2 *= Hartree
 
     # Initialize variables
     delta_SCC_IP, delta_SCC_EA, electrophilicity_index = None, None, None
@@ -466,60 +467,66 @@ def calculate_global_CDFT_descriptors(file, file_Nminus1, file_Nminus2, file_Npl
     Electrophilic_descriptor, w_cubic = None, None
 
     # Calculate Global CDFT descriptors
-    delta_SCC_IP = round(((scc_energy_Nminus1 - corr_xtb) - scc_energy),4)
-    delta_SCC_EA = round((scc_energy - (scc_energy_Nplus1 + corr_xtb)),4)
-    chemical_hardness = round((delta_SCC_IP - delta_SCC_EA), 4)
-    chemical_potential = round(-(delta_SCC_IP + delta_SCC_EA) / 2, 4)
-    electrophilicity_index = (chemical_potential**2)/(2*chemical_hardness)
-    mulliken_electronegativity = round(-chemical_potential, 4)
-    electrofugality = round(-delta_SCC_EA + electrophilicity_index, 4)
-    nucleofugality = round(delta_SCC_IP + electrophilicity_index, 4)
-    electrodonating_maximum_electron_flow = round((-(chemical_potential/chemical_hardness)),4)
-    electrodonating_chemical_potential = round(((1/4)*((-3*delta_SCC_IP) - delta_SCC_EA)),4)
-    lectrodonating_maximum_electron_flow = round((-(electrodonating_chemical_potential/chemical_hardness)),4)
-    Vertical_second_IP = round((((scc_energy_Nminus2 - scc_energy_Nminus1) - corr_xtb)), 4)
-    Vertical_second_EA = round((((scc_energy_Nplus1 - scc_energy_Nplus2) + corr_xtb)), 4)
-    hyper_hardness = round((-((0.5) * (delta_SCC_IP + delta_SCC_EA - Vertical_second_IP - Vertical_second_EA))), 4)
+    if None not in [scc_energy_Nminus1,scc_energy]:
+        delta_SCC_IP = round(((scc_energy_Nminus1 - corr_xtb) - scc_energy),4)
+    if None not in [scc_energy_Nplus1,scc_energy]:
+        delta_SCC_EA = round((scc_energy - (scc_energy_Nplus1 + corr_xtb)),4)
+    if None not in [delta_SCC_IP,delta_SCC_EA]:
+        chemical_hardness = round((delta_SCC_IP - delta_SCC_EA), 4)
+        chemical_potential = round(-(delta_SCC_IP + delta_SCC_EA) / 2, 4)
+        electrophilicity_index = (chemical_potential**2)/(2*chemical_hardness)
+        mulliken_electronegativity = round(-chemical_potential, 4)
+        electrofugality = round(-delta_SCC_EA + electrophilicity_index, 4)
+        nucleofugality = round(delta_SCC_IP + electrophilicity_index, 4)
+        electrodonating_maximum_electron_flow = round((-(chemical_potential/chemical_hardness)),4)
+        electrodonating_chemical_potential = round(((1/4)*((-3*delta_SCC_IP) - delta_SCC_EA)),4)
+        electrodonating_maximum_electron_flow = round((-(electrodonating_chemical_potential/chemical_hardness)),4)
+    if None not in [scc_energy_Nminus2,scc_energy_Nminus1]:
+        Vertical_second_IP = round((((scc_energy_Nminus2 - scc_energy_Nminus1) - corr_xtb)), 4)
+    if None not in [scc_energy_Nplus1,scc_energy_Nplus2]:
+        Vertical_second_EA = round((((scc_energy_Nplus1 - scc_energy_Nplus2) + corr_xtb)), 4)
+    if None not in [delta_SCC_IP,delta_SCC_EA,Vertical_second_IP,Vertical_second_EA]:  
+        hyper_hardness = round((-((0.5) * (delta_SCC_IP + delta_SCC_EA - Vertical_second_IP - Vertical_second_EA))), 4)
 
-    if chemical_hardness != 0:
+    if chemical_hardness is not None and chemical_hardness != 0:
         chemical_softness = round(1 / chemical_hardness, 4)
         electrodonating_power_index = round(((delta_SCC_IP + 3 * delta_SCC_EA)**2) / (8 * chemical_hardness), 4)
         electroaccepting_power_index = round(((3 * delta_SCC_IP + delta_SCC_EA)**2) / (8 * chemical_hardness), 4)
         intrinsic_reactivity_index = round((delta_SCC_IP + delta_SCC_EA) / chemical_hardness, 4)
-        Global_hypersoftness = round((hyper_hardness / ((chemical_hardness) ** 3)), 4)
+        if hyper_hardness is not None:
+            Global_hypersoftness = round((hyper_hardness / ((chemical_hardness) ** 3)), 4)
 
         if electroaccepting_power_index != 0:
             nucleophilicity_index = round(10 / electroaccepting_power_index, 4)
 
-    net_electrophilicity = round((electrodonating_power_index - electroaccepting_power_index), 4)
+    if None not in [electrodonating_power_index,electroaccepting_power_index]:
+        net_electrophilicity = round((electrodonating_power_index - electroaccepting_power_index), 4)
 
-    # For lectrophilic descriptor calculations
-    A = ((scc_energy_Nplus1 - scc_energy) + corr_xtb)
-    c = (Vertical_second_IP - (2 * delta_SCC_IP) + A) / ((2 * Vertical_second_IP) - delta_SCC_IP - A)
-    a = -((delta_SCC_IP + A) / 2) + (((delta_SCC_IP - A) / 2) * c)
-    b = ((delta_SCC_IP - A) / 2) - (((delta_SCC_IP + A) / 2) * c)
-    Gamma = (-3 * c) * (b - (a * c))
-    Eta = 2 * (b - (a * c))
-    chi = -a
-    Mu = a
+    # For electrophilic descriptor calculations
+    if None not in [scc_energy_Nplus1,scc_energy,Vertical_second_IP,delta_SCC_IP]:
+        A = ((scc_energy_Nplus1 - scc_energy) + corr_xtb)
+        c = (Vertical_second_IP - (2 * delta_SCC_IP) + A) / ((2 * Vertical_second_IP) - delta_SCC_IP - A)
+        a = -((delta_SCC_IP + A) / 2) + (((delta_SCC_IP - A) / 2) * c)
+        b = ((delta_SCC_IP - A) / 2) - (((delta_SCC_IP + A) / 2) * c)
+        Gamma = (-3 * c) * (b - (a * c))
+        Eta = 2 * (b - (a * c))
+        chi = -a
+        Mu = a
 
-    discriminant = Eta ** 2 - (2 * Gamma * Mu)  # Checking the square root
-    if discriminant < 0:
-        self.args.log.write(f"x  WARNING! Negative discriminant encountered, skipping Electrophilic descriptor calculation.")
-    else:
-        inter_phi = math.sqrt(discriminant)
-        Phi = inter_phi - Eta
-        Electrophilic_descriptor = round(((chi * (Phi / Gamma)) - (((Phi / Gamma) ** 2) * ((Eta / 2) + (Phi / 6)))), 4)
+        discriminant = Eta ** 2 - (2 * Gamma * Mu)  # Checking the square root
+        if discriminant >= 0:
+            inter_phi = math.sqrt(discriminant)
+            Phi = inter_phi - Eta
+            Electrophilic_descriptor = round(((chi * (Phi / Gamma)) - (((Phi / Gamma) ** 2) * ((Eta / 2) + (Phi / 6)))), 4)
 
     # For cubic electrophilicity index
-    Gamma_cubic = 2 * delta_SCC_IP - Vertical_second_IP - delta_SCC_EA
-    Eta_cubic = delta_SCC_IP - delta_SCC_EA
+    if None not in [delta_SCC_IP,Vertical_second_IP,delta_SCC_EA]:
+        Gamma_cubic = 2 * delta_SCC_IP - Vertical_second_IP - delta_SCC_EA
+        Eta_cubic = delta_SCC_IP - delta_SCC_EA
 
     if Eta_cubic != 0:
         Mu_cubic = (1 / 6) * ((-2 * delta_SCC_EA) - (5 * delta_SCC_IP) + Vertical_second_IP)
         w_cubic = round(((Mu_cubic ** 2) / (2 * Eta_cubic)) * (1 + ((Mu_cubic / (3 * (Eta_cubic) ** 2)) * Gamma_cubic)), 4)
-    else:
-        self.args.log.write(f"x  WARNING! Eta_cubic is zero, skipping cub. electrophilicity idx calculation.")
 
     # Return the calculated descriptors
     cdft_descriptors = {
@@ -545,7 +552,7 @@ def calculate_global_CDFT_descriptors(file, file_Nminus1, file_Nminus2, file_Npl
         "cub. electrophilicity idx": w_cubic,
         "max. electron flow": electrodonating_maximum_electron_flow,
         "Electrodon. Chem. potential": electrodonating_chemical_potential,
-        "Electrodon. max. electron flow": lectrodonating_maximum_electron_flow
+        "Electrodon. max. electron flow": electrodonating_maximum_electron_flow
     }
 
     return cdft_descriptors
@@ -558,7 +565,13 @@ def calculate_local_CDFT_descriptors(file_fukui, cdft_descriptors,self):
     with open(file_fukui, "r") as f:
         data = f.readlines()
 
+    # Initialize variables
     f_pos, f_negs, f_rads = [], [], []
+    dual_descriptor,s_pos,s_negs,s_rads = None,None,None,None
+    Relative_nucleophilicity,Relative_electrophilicity,Grand_canonical_dual_descriptor = None,None,None
+    w_pos,w_negs,w_rads,Multiphilic_descriptor = None,None,None,None
+    Nu_pos,Nu_negs,Nu_rads = None,None,None
+
     start, end = None, None
 
     for i, line in enumerate(data):
@@ -578,50 +591,46 @@ def calculate_local_CDFT_descriptors(file_fukui, cdft_descriptors,self):
                 f_rads.append(f_rad)
             except ValueError:
                 continue
-    else:
-        self.args.log.write("WARNING: Fukui data not found in the file. Please check the '.fukui' file.")
-        return None
 
-    if not f_pos or not f_negs or not f_rads:
-        self.args.log.write("WARNING: Fukui data lists are empty. Please check the '.fukui' file.")
-        return None
-
-    if None in [cdft_descriptors]:
-        self.args.log.write("x  WARNING! Missing required CDFT descriptors (Softness, Hypersoftness, Electrophil. idx or Nucleophilicity idx).")
-        return None
+    if f_pos == [] or f_negs == [] or f_rads == []:
+        self.args.log.write("x  WARNING! Fukui indices did not generate, please check the '.fukui' file.")
 
     chemical_softness = cdft_descriptors.get("Softness")
     Global_hypersoftness = cdft_descriptors.get("Hypersoftness")
     electrophilicity_index = cdft_descriptors.get("Electrophil. idx")
     nucleophilicity_index = cdft_descriptors.get("Nucleophilicity idx")
 
-    if None in [chemical_softness, Global_hypersoftness, electrophilicity_index, nucleophilicity_index]:
-        self.args.log.write("x  WARNING! Missing required CDFT descriptors (Softness, Hypersoftness, Electrophil. idx or Nucleophilicity idx).")
-        return None
+    # Calculating local descriptors
+    if chemical_softness is not None and f_pos != [] and f_negs != [] and f_rads != []:
+            # 1) dual descrip.
+        dual_descriptor = [round(f_po - f_neg, 4) for f_po, f_neg in zip(f_pos, f_negs)]
+            # 2) softness+, softness- and softness0
+        s_pos = [round(chemical_softness * f_po, 4) for f_po in f_pos]
+        s_negs = [round(chemical_softness * f_neg, 4) for f_neg in f_negs]
+        s_rads = [round(chemical_softness * f_rad, 4) for f_rad in f_rads]
+            # 3) Rel. nucleophilicity
+        Relative_nucleophilicity = [round(s_neg / s_po, 4) if s_po != 0 else None for s_neg, s_po in zip(s_negs, s_pos)]
+            # 4) Rel. electrophilicity
+        Relative_electrophilicity = [round(s_po / s_neg, 4) if s_neg != 0 else None for s_neg, s_po in zip(s_negs, s_pos)]
 
-    # Calculating local descriptors:
-        # 1) dual descrip.
-    dual_descriptor = [round(f_po - f_neg, 4) for f_po, f_neg in zip(f_pos, f_negs)]
-        # 2) softness+, softness- and softness0
-    s_pos = [round(chemical_softness * f_po, 4) for f_po in f_pos]
-    s_negs = [round(chemical_softness * f_neg, 4) for f_neg in f_negs]
-    s_rads = [round(chemical_softness * f_rad, 4) for f_rad in f_rads]
-        # 3) Rel. nucleophilicity
-    Relative_nucleophilicity = [round(s_neg / s_po, 4) if s_po != 0 else None for s_neg, s_po in zip(s_negs, s_pos)]
-        # 4) Rel. electrophilicity
-    Relative_electrophilicity = [round(s_po / s_neg, 4) if s_neg != 0 else None for s_neg, s_po in zip(s_negs, s_pos)]
-        # 5) GC Dual Descrip.
-    Grand_canonical_dual_descriptor = [round(Global_hypersoftness * dual, 4) for dual in dual_descriptor]
-        # 6) softness+, softness- and softness0
-    w_pos = [round(electrophilicity_index * f_po, 4) for f_po in f_pos]
-    w_negs = [round(electrophilicity_index * f_neg, 4) for f_negs in f_negs]
-    w_rads = [round(electrophilicity_index * f_rad, 4) for f_rad in f_rads]
-        # 7) softness+, softness- and softness0
-    Multiphilic_descriptor = [round(electrophilicity_index * dual, 4) for dual in dual_descriptor]
-        # 8) softness+, softness- and softness0
-    Nu_pos = [round(nucleophilicity_index * f_po, 4) for f_po in f_pos]
-    Nu_negs = [round(nucleophilicity_index * f_neg, 4) for f_neg in f_negs]
-    Nu_rads = [round(nucleophilicity_index * f_rad, 4) for f_rad in f_rads]
+    if Global_hypersoftness is not None and dual_descriptor is not None:
+            # 5) GC Dual Descrip.
+        Grand_canonical_dual_descriptor = [round(Global_hypersoftness * dual, 4) for dual in dual_descriptor]
+
+    if electrophilicity_index is not None and f_pos != [] and f_negs != [] and f_rads != []:
+            # 6) softness+, softness- and softness0
+        w_pos = [round(electrophilicity_index * f_po, 4) for f_po in f_pos]
+        w_negs = [round(electrophilicity_index * f_neg, 4) for f_neg in f_negs]
+        w_rads = [round(electrophilicity_index * f_rad, 4) for f_rad in f_rads]
+        if dual_descriptor is not None:
+                # 7) softness+, softness- and softness0
+            Multiphilic_descriptor = [round(electrophilicity_index * dual, 4) for dual in dual_descriptor]
+
+    if nucleophilicity_index is not None and f_pos != [] and f_negs != [] and f_rads != []:
+            # 8) softness+, softness- and softness0
+        Nu_pos = [round(nucleophilicity_index * f_po, 4) for f_po in f_pos]
+        Nu_negs = [round(nucleophilicity_index * f_neg, 4) for f_neg in f_negs]
+        Nu_rads = [round(nucleophilicity_index * f_rad, 4) for f_rad in f_rads]
 
     localDescriptors = {
         "fukui+": f_pos,
@@ -1598,7 +1607,10 @@ def update_atom_props_json(sorted_indices,match_names,atom_props,json_data,prefi
         idx_xtb = atom_idx
         for prop in atom_props:
             try:
-                json_data[f'{match_name}_{prop}'] = json_data[prop][idx_xtb]
+                if json_data[prop] is not None:
+                    json_data[f'{match_name}_{prop}'] = json_data[prop][idx_xtb]
+                else:
+                    json_data[f'{match_name}_{prop}'] = None
                 if f'{match_name}_' not in prefixes_atom_prop:
                     prefixes_atom_prop.append(f'{match_name}_')
             except (KeyError,IndexError): # prevents missing values
@@ -1610,8 +1622,12 @@ def update_atom_props_json(sorted_indices,match_names,atom_props,json_data,prefi
             prop_values = []
             for prop_name in match_names:
                 prop_values.append(json_data[f'{prop_name}_{prop}'])
-            json_data[f'{pattern}_max_{prop}'] = max(prop_values)
-            json_data[f'{pattern}_min_{prop}'] = min(prop_values)
+            if None not in prop_values:
+                json_data[f'{pattern}_max_{prop}'] = max(prop_values)
+                json_data[f'{pattern}_min_{prop}'] = min(prop_values)
+            else:
+                json_data[f'{pattern}_max_{prop}'] = None
+                json_data[f'{pattern}_min_{prop}'] = None
             if f'{pattern}_max_{prop}' not in prefixes_atom_prop:
                 prefixes_atom_prop.append(f'{pattern}_max_')
             if f'{pattern}_min_{prop}' not in prefixes_atom_prop:
