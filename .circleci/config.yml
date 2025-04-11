@@ -46,9 +46,9 @@ jobs:
           conda install -y -c conda-forge openbabel=3.1.1
           # install dependencies
           conda install -y -c conda-forge xtb=6.7.1
-          conda install -y -c conda-forge crest=3.0.2
-          pip install ase
-          conda install pytorch torchvision torchaudio cpuonly -c pytorch
+          conda install -y -c conda-forge crest=2.12
+          pip install ase==3.24.0
+          pip install torch==2.5.1 torchvision==0.20.1 torchaudio==2.5.1 --index-url https://download.pytorch.org/whl/cpu
           pip install torchani==2.2.3
           # install the dependencies of AQME with pip
           pip install .

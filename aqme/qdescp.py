@@ -863,7 +863,7 @@ class qdescp:
                 "--uhf",
                 str(mult - 1),
                 "--etemp",
-                str(self.args.qdescp_temp),
+                '5000',
                 "-P",
                 "1",
             ] # for FOD
