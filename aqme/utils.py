@@ -25,7 +25,7 @@ J_TO_AU = 4.184 * 627.509541 * 1000.0  # UNIT CONVERSION
 T = 298.15
 
 obabel_version = "3.1.1" # this MUST match the meta.yaml
-aqme_version = "1.7.2"
+aqme_version = "1.7.1"
 time_run = time.strftime("%Y/%m/%d %H:%M:%S", time.localtime())
 aqme_ref = f"AQME v {aqme_version}, Alegre-Requena, J. V.; Sowndarya, S.; Perez-Soto, R.; Alturaifi, T.; Paton, R. AQME: Automated Quantum Mechanical Environments for Researchers and Educators. Wiley Interdiscip. Rev. Comput. Mol. Sci. 2023, 13, e1663 (DOI: 10.1002/wcms.1663)."
 xtb_version = '6.7.1'
@@ -1022,11 +1022,16 @@ def check_version(self, program, version_line, target_version, n_split, install_
 
     lower_version = True
     if int(version_found.split('.')[0]) == int(target_version.split('.')[0]):
-        if len(target_version.split('.')) >= 2 and int(version_found.split('.')[1]) == int(target_version.split('.')[1]):
-            if len(target_version.split('.')) >= 3 \
-                and int(version_found.split('.')[2]) >= int(target_version.split('.')[2]) \
-                and int(version_found.split('.')[2]) < int(target_version.split('.')[2])+5: # up to four versions ahead
-                lower_version = False
+        if len(target_version.split('.')) == 2 \
+            and int(version_found.split('.')[1]) >= int(target_version.split('.')[1]) \
+            and int(version_found.split('.')[1]) < int(target_version.split('.')[1])+3: # up to two versions ahead
+            lower_version = False
+
+        if len(target_version.split('.')) == 3 \
+            and int(version_found.split('.')[1]) == int(target_version.split('.')[1]) \
+            and int(version_found.split('.')[2]) >= int(target_version.split('.')[2]) \
+            and int(version_found.split('.')[2]) < int(target_version.split('.')[2])+5: # up to four versions ahead
+            lower_version = False
 
     if version_found == '0.0.0':
         version_found = 'Unknown'
