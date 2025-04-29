@@ -1,5 +1,5 @@
 from setuptools import setup, find_packages
-version = "1.7.1"
+version = "1.7.2"
 setup(
     name="aqme",
     packages=find_packages(exclude=["tests"]),
@@ -27,13 +27,16 @@ setup(
         "Intended Audience :: Developers",  # Define that your audience are developers
         "Topic :: Software Development :: Build Tools",
         "License :: OSI Approved :: MIT License",
+        "Programming Language :: Python :: 3.7",  # Specify which python versions you want to support
+        "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
         "Programming Language :: Python :: 3.12",
     ],
     install_requires=[
         "PyYAML",
-        "pandas==2.2.2",
+        "pandas==2.2.3",
         "progress",
         "numpy==1.26.4",
         "rdkit==2024.3.3",
