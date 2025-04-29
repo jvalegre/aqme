@@ -4,6 +4,9 @@
 Versions
 ========
 
+Version 1.7.2 [`url <https://github.com/jvalegre/aqme/releases/tag/1.7.2>`__]
+   -  Matching Pandas and Python versions in setup.py for ALMOS installation
+
 Version 1.7.1 [`url <https://github.com/jvalegre/aqme/releases/tag/1.7.1>`__]
    -  Fixed bug from QCORR when using gen(ECP)
    -  CSEARCH uses multithreading to ensure reproducbility acorss runs
