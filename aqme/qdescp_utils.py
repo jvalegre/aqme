@@ -462,6 +462,12 @@ def calculate_global_CDFT_descriptors(file, file_Nminus1, file_Nminus2, file_Npl
     electrodonating_power_index, electroaccepting_power_index = None, None
     intrinsic_reactivity_index = None
     electrofugality, nucleofugality, nucleophilicity_index, net_electrophilicity = None, None, None, None
+    delta_SCC_IP, delta_SCC_EA, electrophilicity_index = None, None, None
+    chemical_hardness, chemical_softness = None, None
+    chemical_potential, mulliken_electronegativity = None, None
+    electrodonating_power_index, electroaccepting_power_index = None, None
+    intrinsic_reactivity_index = None
+    electrofugality, nucleofugality, nucleophilicity_index, net_electrophilicity = None, None, None, None
     Vertical_second_IP, Vertical_second_EA = None, None
     hyper_hardness, Global_hypersoftness = None, None
     Electrophilic_descriptor, w_cubic = None, None
@@ -494,7 +500,11 @@ def calculate_global_CDFT_descriptors(file, file_Nminus1, file_Nminus2, file_Npl
         electroaccepting_power_index = round(((3 * delta_SCC_IP + delta_SCC_EA)**2) / (8 * chemical_hardness), 4)
         intrinsic_reactivity_index = round((delta_SCC_IP + delta_SCC_EA) / chemical_hardness, 4)
         if hyper_hardness is not None:
-            Global_hypersoftness = round((hyper_hardness / ((chemical_hardness) ** 3)), 4)
+            chemical_softness = round(1 / chemical_hardness, 4)
+        electrodonating_power_index = round(((delta_SCC_IP + 3 * delta_SCC_EA)**2) / (8 * chemical_hardness), 4)
+        electroaccepting_power_index = round(((3 * delta_SCC_IP + delta_SCC_EA)**2) / (8 * chemical_hardness), 4)
+        intrinsic_reactivity_index = round((delta_SCC_IP + delta_SCC_EA) / chemical_hardness, 4)
+        Global_hypersoftness = round((hyper_hardness / ((chemical_hardness) ** 3)), 4)
 
         if electroaccepting_power_index != 0:
             nucleophilicity_index = round(10 / electroaccepting_power_index, 4)
