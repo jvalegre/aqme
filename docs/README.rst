@@ -24,9 +24,6 @@
 .. |PyPI| image:: https://img.shields.io/pypi/v/aqme
    :target: https://pypi.org/project/aqme/
 
-.. |PyPI| image:: https://img.shields.io/pypi/v/aqme
-   :target: https://pypi.org/project/aqme/
-
 |CircleCI|
 |Codecov|
 |Downloads|
@@ -133,7 +130,7 @@ Extra requirements if xTB or CREST are used (compatible with MacOS and Linux onl
 
 .. code-block:: shell 
 
-   conda install -y -c conda-forge crest=3.0.2
+   conda install -y -c conda-forge crest=2.12
 
 Extra requirements if `CMIN` is used with ANI models:  
 

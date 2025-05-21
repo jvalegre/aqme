@@ -312,7 +312,7 @@ def read_gfn1(file,self):
         return None
 
     # Open and read the file safely
-    with open(file, "r") as f:
+    with open(file, "r", encoding='utf-8') as f:
         data = f.readlines()
 
     # Ensure the file contains data
@@ -390,7 +390,7 @@ def read_wbo(file,self):
         self.args.log.write(f"x  WARNING! The file {file} does not exist.")
         return None
 
-    with open(file, "r") as f:
+    with open(file, "r", encoding='utf-8') as f:
         data = f.readlines()
 
     bonds, wbos = [], []
@@ -422,15 +422,15 @@ def calculate_global_CDFT_descriptors(file, file_Nminus1, file_Nminus2, file_Npl
 
     try:
         # Open and read files
-        with open(file, "r") as f:
+        with open(file, "r", encoding='utf-8') as f:
             data = f.readlines()
-        with open(file_Nminus1, "r") as f1:
+        with open(file_Nminus1, "r", encoding='utf-8') as f1:
             data1 = f1.readlines()
-        with open(file_Nminus2, "r") as f2:
+        with open(file_Nminus2, "r", encoding='utf-8') as f2:
             data2 = f2.readlines()
-        with open(file_Nplus1, "r") as f3:
+        with open(file_Nplus1, "r", encoding='utf-8') as f3:
             data3 = f3.readlines()
-        with open(file_Nplus2, "r") as f4:
+        with open(file_Nplus2, "r", encoding='utf-8') as f4:
             data4 = f4.readlines()
     except Exception as e:
         self.args.log.write(f"x  WARNING! An error occurred while processing {file}: {e}")
@@ -456,12 +456,6 @@ def calculate_global_CDFT_descriptors(file, file_Nminus1, file_Nminus2, file_Npl
         scc_energy_Nplus2 *= Hartree
 
     # Initialize variables
-    delta_SCC_IP, delta_SCC_EA, electrophilicity_index = None, None, None
-    chemical_hardness, chemical_softness = None, None
-    chemical_potential, mulliken_electronegativity = None, None
-    electrodonating_power_index, electroaccepting_power_index = None, None
-    intrinsic_reactivity_index = None
-    electrofugality, nucleofugality, nucleophilicity_index, net_electrophilicity = None, None, None, None
     delta_SCC_IP, delta_SCC_EA, electrophilicity_index = None, None, None
     chemical_hardness, chemical_softness = None, None
     chemical_potential, mulliken_electronegativity = None, None
@@ -500,11 +494,7 @@ def calculate_global_CDFT_descriptors(file, file_Nminus1, file_Nminus2, file_Npl
         electroaccepting_power_index = round(((3 * delta_SCC_IP + delta_SCC_EA)**2) / (8 * chemical_hardness), 4)
         intrinsic_reactivity_index = round((delta_SCC_IP + delta_SCC_EA) / chemical_hardness, 4)
         if hyper_hardness is not None:
-            chemical_softness = round(1 / chemical_hardness, 4)
-        electrodonating_power_index = round(((delta_SCC_IP + 3 * delta_SCC_EA)**2) / (8 * chemical_hardness), 4)
-        electroaccepting_power_index = round(((3 * delta_SCC_IP + delta_SCC_EA)**2) / (8 * chemical_hardness), 4)
-        intrinsic_reactivity_index = round((delta_SCC_IP + delta_SCC_EA) / chemical_hardness, 4)
-        Global_hypersoftness = round((hyper_hardness / ((chemical_hardness) ** 3)), 4)
+            Global_hypersoftness = round((hyper_hardness / ((chemical_hardness) ** 3)), 4)
 
         if electroaccepting_power_index != 0:
             nucleophilicity_index = round(10 / electroaccepting_power_index, 4)
@@ -572,7 +562,7 @@ def calculate_local_CDFT_descriptors(file_fukui, cdft_descriptors,self):
     Read fukui output file created from XTB and calculate local CDFT descriptors.
     """
 
-    with open(file_fukui, "r") as f:
+    with open(file_fukui, "r", encoding='utf-8') as f:
         data = f.readlines()
 
     # Initialize variables
@@ -675,7 +665,7 @@ def read_xtb(file,self):
         self.args.log.write(f"x  WARNING! The file {file} does not exist.")
         return None
 
-    with open(file, "r") as f:
+    with open(file, "r", encoding='utf-8') as f:
         data = f.readlines()
 
     # Initialize variables
@@ -771,7 +761,7 @@ def read_ptb(file,self):
         self.args.log.write(f"x  WARNING! The file {file} does not exist.")
         return None
 
-    with open(file, "r") as f:
+    with open(file, "r", encoding='utf-8') as f:
         data = f.readlines()
 
     # Initialize variables
@@ -837,7 +827,7 @@ def read_fod(file,self):
         return None
 
     # Try to open the file and read its contents
-    with open(file, "r") as f:
+    with open(file, "r", encoding='utf-8') as f:
         data = f.readlines()  # Read all lines from the file
 
 
@@ -910,16 +900,25 @@ def read_fod(file,self):
 
 def read_json(file):
     """
-    Takes json files and parses data into pandas table. Returns data.
+    Loads JSON content from a file and returns it as a Python dictionary.
+    This function replaces single backslashes with double backslashes before parsing.
+    Returns None if the file cannot be opened or parsed.
     """
-
+    
     if file.find(".json") > -1:
-        f = open(file, "r")  # Opening JSON file
-        data = json.loads(f.read())  # read file
-        f.close()
-        return data
+        try:
+            with open(file, "r", encoding='utf-8') as f:
+                content = f.read()
+                fixed_content = content.replace('\\', '\\\\')
+                try:
+                    data = json.loads(fixed_content)
+                    return data
+                except Exception:
+                    return None
+        except Exception:
+            return None
     else:
-        pass
+        return None
 
 
 def read_solv(file_solv):
@@ -927,7 +926,7 @@ def read_solv(file_solv):
     Retrieve properties from the single-point in solvent
     '''
     
-    with open(file_solv, "r") as f:
+    with open(file_solv, "r", encoding='utf-8') as f:
         data = f.readlines()
 
         # Get molecular properties related to solvation (in kcal/mol)
@@ -989,7 +988,7 @@ def read_triplet(file_triplet,singlet_e):
     triplet_e, transition_dipole_moment, singlet_triplet_gap = np.nan,np.nan,np.nan
 
     if os.path.exists(file_triplet):
-        with open(file_triplet, "r") as f:
+        with open(file_triplet, "r", encoding='utf-8') as f:
             data = f.readlines()
 
             # Get molecular properties related to solvation (in kcal/mol)
@@ -1384,7 +1383,7 @@ def get_mols_qdescp(qdescp_files):
     
     mol_list = []
     for file in qdescp_files:
-        with open(file, "r") as F:
+        with open(file, "r", encoding='utf-8') as F:
             lines = F.readlines()
             smi_exist = False
             for i, line in enumerate(lines):
@@ -1408,7 +1407,7 @@ def get_mol_assign(name_initial):
     '''
 
     sdf_file = f'{name_initial}.sdf'
-    with open(sdf_file, "r") as F:
+    with open(sdf_file, "r", encoding='utf-8') as F:
         lines = F.readlines()
 
     smi_exist = False

@@ -766,8 +766,15 @@ class qdescp:
             # check if the initial calculation finished OK
             xtb_passing = self.check_xtb_errors(name,file,xtb_files_props['xtb_ptb'],xtb_passing)
 
-            if os.path.exists(str(dat_dir) + "/xtbout.json"):
-                os.rename(str(dat_dir) + "/xtbout.json", str(dat_dir) + "/xtbout_ptb.json",)
+            try:
+                src = str(dat_dir) + "/xtbout.json"
+                dst = str(dat_dir) + "/xtbout_ptb.json"
+                if os.path.exists(src):
+                    if os.path.exists(dst):
+                        os.remove(dst)  # remove destination file if it exists
+                    os.rename(src, dst)
+            except Exception as e:
+                print('Error trying to rename xtbout.json:', e)
             _ = self.cleanup(name, destination, xtb_passing, xtb_files_props)
 
         if xtb_passing:
@@ -797,8 +804,31 @@ class qdescp:
             # check if the initial calculation finished OK
             xtb_passing = self.check_xtb_errors(name,file,xtb_files_props['xtb_out'],xtb_passing)
 
-            os.rename(str(dat_dir) + "/xtbout.json", xtb_files_props['xtb_json'])
-            os.rename(str(dat_dir) + "/wbo", xtb_files_props['xtb_wbo'])
+            # Robust renaming for xtbout.json
+            src_xtb_json = os.path.join(str(dat_dir), "xtbout.json")
+            dst_xtb_json = xtb_files_props['xtb_json']
+            try:
+                if os.path.exists(src_xtb_json):
+                    if os.path.exists(dst_xtb_json):
+                        os.remove(dst_xtb_json)
+                    os.rename(src_xtb_json, dst_xtb_json)
+                else:
+                    print(f"[WARN] xtbout.json not found at {src_xtb_json}, skipping rename.")
+            except Exception as e:
+                print(f"[ERROR] Could not rename xtbout.json: {e}")
+
+            # Robust renaming for wbo
+            src_wbo = os.path.join(str(dat_dir), "wbo")
+            dst_wbo = xtb_files_props['xtb_wbo']
+            try:
+                if os.path.exists(src_wbo):
+                    if os.path.exists(dst_wbo):
+                        os.remove(dst_wbo)
+                    os.rename(src_wbo, dst_wbo)
+                else:
+                    print(f"[WARN] wbo not found at {src_wbo}, skipping rename.")
+            except Exception as e:
+                print(f"[ERROR] Could not rename wbo: {e}")
             _ = self.cleanup(name, destination, xtb_passing, xtb_files_props)
 
         if xtb_passing:
@@ -1040,8 +1070,7 @@ class qdescp:
         '''
         Check if the initial calculation finished OK
         '''
-        
-        with open(file_check, "r") as opt_file:
+        with open(file_check, "r", encoding='utf-8') as opt_file:
             opt_lines = opt_file.readlines()
             for line in opt_lines:
                 if '[ERROR] Program stopped' in line:
