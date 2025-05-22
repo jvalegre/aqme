@@ -900,16 +900,25 @@ def read_fod(file,self):
 
 def read_json(file):
     """
-    Takes json files and parses data into pandas table. Returns data.
+    Loads JSON content from a file and returns it as a Python dictionary.
+    This function replaces single backslashes with double backslashes before parsing.
+    Returns None if the file cannot be opened or parsed.
     """
 
     if file.find(".json") > -1:
-        f = open(file, "r", encoding='utf-8')  # Opening JSON file
-        data = json.loads(f.read())  # read file
-        f.close()
-        return data
+        try:
+            with open(file, "r", encoding='utf-8') as f:
+                content = f.read()
+                fixed_content = content.replace('\\', '\\\\')
+                try:
+                    data = json.loads(fixed_content)
+                    return data
+                except Exception:
+                    return None
+        except Exception:
+            return None
     else:
-        pass
+        return None
 
 
 def read_solv(file_solv):
