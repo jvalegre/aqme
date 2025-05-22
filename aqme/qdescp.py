@@ -670,7 +670,7 @@ class qdescp:
         shutil.move(xyz_file, xtb_files_props['xtb_xyz_path'])
 
         xtb_input_file = str(dat_dir) + "/{0}_xtb.inp".format(name)
-        with open(xtb_input_file, "wt") as f:
+        with open(xtb_input_file, "wt", encoding='utf-8') as f:
             f.write("$write\n")
             f.write("json=true\n")
 
@@ -738,7 +738,7 @@ class qdescp:
 
             if xtb_passing:
                 final_xyz_path = xtb_files_props['xtb_xyz_path']
-                with open(final_xyz_path, "r") as xyz_file:
+                with open(final_xyz_path, "r", encoding='utf-8') as xyz_file:
                     self.xyz_coordinates = xyz_file.readlines()
 
         if xtb_passing:
@@ -766,8 +766,15 @@ class qdescp:
             # check if the initial calculation finished OK
             xtb_passing = self.check_xtb_errors(name,file,xtb_files_props['xtb_ptb'],xtb_passing)
 
-            if os.path.exists(str(dat_dir) + "/xtbout.json"):
-                os.rename(str(dat_dir) + "/xtbout.json", str(dat_dir) + "/xtbout_ptb.json",)
+            try:
+                src = str(dat_dir) + "/xtbout.json"
+                dst = str(dat_dir) + "/xtbout_ptb.json"
+                if os.path.exists(src):
+                    if os.path.exists(dst):
+                        os.remove(dst)  # remove destination file if it exists
+                    os.rename(src, dst)
+            except Exception as e:
+                print('Error trying to rename xtbout.json:', e)
             _ = self.cleanup(name, destination, xtb_passing, xtb_files_props)
 
         if xtb_passing:
@@ -797,8 +804,31 @@ class qdescp:
             # check if the initial calculation finished OK
             xtb_passing = self.check_xtb_errors(name,file,xtb_files_props['xtb_out'],xtb_passing)
 
-            os.rename(str(dat_dir) + "/xtbout.json", xtb_files_props['xtb_json'])
-            os.rename(str(dat_dir) + "/wbo", xtb_files_props['xtb_wbo'])
+            # Robust renaming for xtbout.json
+            src_xtb_json = os.path.join(str(dat_dir), "xtbout.json")
+            dst_xtb_json = xtb_files_props['xtb_json']
+            try:
+                if os.path.exists(src_xtb_json):
+                    if os.path.exists(dst_xtb_json):
+                        os.remove(dst_xtb_json)
+                    os.rename(src_xtb_json, dst_xtb_json)
+                else:
+                    print(f"[WARN] xtbout.json not found at {src_xtb_json}, skipping rename.")
+            except Exception as e:
+                print(f"[ERROR] Could not rename xtbout.json: {e}")
+
+            # Robust renaming for wbo
+            src_wbo = os.path.join(str(dat_dir), "wbo")
+            dst_wbo = xtb_files_props['xtb_wbo']
+            try:
+                if os.path.exists(src_wbo):
+                    if os.path.exists(dst_wbo):
+                        os.remove(dst_wbo)
+                    os.rename(src_wbo, dst_wbo)
+                else:
+                    print(f"[WARN] wbo not found at {src_wbo}, skipping rename.")
+            except Exception as e:
+                print(f"[ERROR] Could not rename wbo: {e}")
             _ = self.cleanup(name, destination, xtb_passing, xtb_files_props)
 
         if xtb_passing:
@@ -961,7 +991,7 @@ class qdescp:
             run_command(command8, xtb_files_props['xtb_Nplus2'], cwd=dat_dir)
             _ = self.cleanup(name, destination, xtb_passing, xtb_files_props)
 
-            with open(xtb_input_file, "wt") as f:
+            with open(xtb_input_file, "wt", encoding='utf-8') as f:
                 f.write("$write\n")
                 f.write('gbsa=true\n')
 
@@ -1041,7 +1071,7 @@ class qdescp:
         Check if the initial calculation finished OK
         '''
         
-        with open(file_check, "r") as opt_file:
+        with open(file_check, "r", encoding='utf-8') as opt_file:
             opt_lines = opt_file.readlines()
             for line in opt_lines:
                 if '[ERROR] Program stopped' in line:
@@ -1070,7 +1100,7 @@ class qdescp:
         # assign atomic properties to the corresponding atoms
         json_data = self.assign_atomic_properties(json_data,name_initial,atom_props,smarts_targets)
 
-        with open(xtb_files_props['xtb_json'], "w") as outfile:
+        with open(xtb_files_props['xtb_json'], "w", encoding='utf-8') as outfile:
             json.dump(json_data, outfile)
 
 
@@ -1104,7 +1134,7 @@ class qdescp:
             if xtb_collected_props[xtb_props] is not None:
                 json_data.update(xtb_collected_props[xtb_props])
 
-        with open(xtb_files_props['xtb_xyz_path'], "r") as f:
+        with open(xtb_files_props['xtb_xyz_path'], "r", encoding='utf-8') as f:
             inputs = f.readlines()
 
         coordinates = [inputs[i].strip().split()[1:] for i in range(2, int(inputs[0].strip()) + 2)]
@@ -1223,7 +1253,7 @@ class qdescp:
                         raw_content += line
                 os.remove(xtb_file)
 
-        raw_file = open(f"{destination}/xtb_data/{name}/{name}_All_Calcs.out", "w")
+        raw_file = open(f"{destination}/xtb_data/{name}/{name}_All_Calcs.out", "w", encoding='utf-8')
         raw_file.write(f"{raw_content}\n")
         raw_file.close()
 
@@ -1233,7 +1263,7 @@ class qdescp:
         unique_smiles = []
         for file in self.args.files:
             smi = None
-            with open(file, "r") as F:
+            with open(file, "r", encoding='utf-8') as F:
                 lines = F.readlines()
                 smi_exist = False
                 for i, line in enumerate(lines):
