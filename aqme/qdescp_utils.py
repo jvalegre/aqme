@@ -901,20 +901,12 @@ def read_fod(file,self):
 def read_json(file):
     """
     Loads JSON content from a file and returns it as a Python dictionary.
-    This function replaces single backslashes with double backslashes before parsing.
     Returns None if the file cannot be opened or parsed.
     """
-
-    if file.find(".json") > -1:
+    if file.endswith(".json"):
         try:
             with open(file, "r", encoding='utf-8') as f:
-                content = f.read()
-                fixed_content = content.replace('\\', '\\\\')
-                try:
-                    data = json.loads(fixed_content)
-                    return data
-                except Exception:
-                    return None
+                return json.load(f)
         except Exception:
             return None
     else:
