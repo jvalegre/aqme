@@ -4,6 +4,10 @@
 Versions
 ========
 
+Version 1.7.3 [`url <https://github.com/jvalegre/aqme/releases/tag/1.7.3>`__]
+   -  Fixed bug from QDESCP when trying to open JSON files
+   -  Using libgfortran=14.2.0 to avoid issues when using xTB and CREST
+
 Version 1.7.2 [`url <https://github.com/jvalegre/aqme/releases/tag/1.7.2>`__]
    -  Matching Pandas and Python versions in setup.py for ALMOS installation
 

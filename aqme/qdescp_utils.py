@@ -901,13 +901,28 @@ def read_fod(file,self):
 def read_json(file):
     """
     Loads JSON content from a file and returns it as a Python dictionary.
+    On Windows, if parsing fails due to invalid backslash escapes, tries to fix by doubling backslashes.
     Returns None if the file cannot be opened or parsed.
     """
     if file.endswith(".json"):
         try:
             with open(file, "r", encoding='utf-8') as f:
                 return json.load(f)
-        except Exception:
+        except json.JSONDecodeError as e:
+            # Only try the fix if the error is about invalid escape
+            if "Invalid \\escape" in str(e):
+                try:
+                    with open(file, "r", encoding='utf-8') as f:
+                        content = f.read()
+                        fixed_content = content.replace('\\', '\\\\')
+                        return json.loads(fixed_content)
+                except Exception:
+                    return None
+            else:
+                print(f"[ERROR] JSON decode error in {file}: {e}")
+                return None
+        except Exception as e:
+            print(f"[ERROR] Error reading {file}: {e}")
             return None
     else:
         return None
