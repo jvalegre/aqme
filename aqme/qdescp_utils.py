@@ -105,7 +105,7 @@ def get_boltz_props_nmr(json_files,name,boltz_dir,self,atom_props,nmr_atoms=None
             exp_data = exp_data.merge(df, on=["atom_idx"], how='left')
 
         # Save updated JSON data back to the file
-        with open(json_file, "w") as outfile:
+        with open(json_file, "w", encoding='utf-8') as outfile:
             json.dump(json_data, outfile)
 
     # Calculate Boltzmann factors
@@ -146,7 +146,7 @@ def get_boltz_props_nmr(json_files,name,boltz_dir,self,atom_props,nmr_atoms=None
 
     # Save averaged properties to a JSON file
     final_boltz_file = str(boltz_dir) + "/" + name + "_boltz.json"
-    with open(final_boltz_file, "w") as outfile:
+    with open(final_boltz_file, "w", encoding='utf-8') as outfile:
         json.dump(full_json_data, outfile)
 
 def get_chemical_shifts(json_data, nmr_atoms, nmr_slope, nmr_intercept):
@@ -793,7 +793,7 @@ def read_ptb(file,self):
             lines = file.readlines()
 
         # Remove empty lines at the end of the file
-        with open(ptb_json, 'w') as file:
+        with open(ptb_json, 'w', encoding='utf-8') as file:
             for line in lines:
                 if line.rstrip('\n') != ',':
                     file.write(line)
@@ -900,25 +900,16 @@ def read_fod(file,self):
 
 def read_json(file):
     """
-    Loads JSON content from a file and returns it as a Python dictionary.
-    This function replaces single backslashes with double backslashes before parsing.
-    Returns None if the file cannot be opened or parsed.
+    Takes json files and parses data into pandas table. Returns data.
     """
-    
+
     if file.find(".json") > -1:
-        try:
-            with open(file, "r", encoding='utf-8') as f:
-                content = f.read()
-                fixed_content = content.replace('\\', '\\\\')
-                try:
-                    data = json.loads(fixed_content)
-                    return data
-                except Exception:
-                    return None
-        except Exception:
-            return None
+        f = open(file, "r", encoding='utf-8')  # Opening JSON file
+        data = json.loads(f.read())  # read file
+        f.close()
+        return data
     else:
-        return None
+        pass
 
 
 def read_solv(file_solv):
@@ -1372,7 +1363,7 @@ def dict_to_json(name, dict_data):
     Saves a dictionary as a JSON file
     '''
     
-    with open(name, "w") as outfile:
+    with open(name, "w", encoding='utf-8') as outfile:
         json.dump(dict_data, outfile)
 
 
