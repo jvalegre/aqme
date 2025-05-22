@@ -5,6 +5,7 @@
 import json
 import sys
 import os
+import re
 import numpy as np
 import pandas as pd
 import ast
@@ -909,20 +910,14 @@ def read_json(file):
             with open(file, "r", encoding='utf-8') as f:
                 return json.load(f)
         except json.JSONDecodeError as e:
-            # Only try the fix if the error is about invalid escape
-            if "Invalid \\escape" in str(e):
                 try:
                     with open(file, "r", encoding='utf-8') as f:
                         content = f.read()
-                        fixed_content = content.replace('\\', '\\\\')
+                        fixed_content = re.sub(r'\\(?![\\nt"rbfu/])', r'\\\\', content)
                         return json.loads(fixed_content)
                 except Exception:
                     return None
-            else:
-                print(f"[ERROR] JSON decode error in {file}: {e}")
-                return None
-        except Exception as e:
-            print(f"[ERROR] Error reading {file}: {e}")
+        except Exception:
             return None
     else:
         return None
