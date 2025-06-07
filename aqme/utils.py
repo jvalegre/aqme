@@ -306,6 +306,7 @@ def command_line_args():
         "qcorr",
         "qdescp",
         "heavyonly",
+        "single_system",
         "cregen",
         "lowest_only",
         "chk",

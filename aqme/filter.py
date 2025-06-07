@@ -345,7 +345,7 @@ def RMSD_and_E_filter(
 
 
 
-def cluster_conformers(self, mols, program, csearch_file, name):
+def cluster_conformers(self, mols, program, csearch_file, name, sample):
     '''
     Performs a Butina clustering based on the RMS differences of the conformers
     '''
@@ -357,12 +357,12 @@ def cluster_conformers(self, mols, program, csearch_file, name):
             dists.append(get_conf_RMS(mols[i], mols[j], -1, -1, self.args.heavyonly, 100))
 
     if program.lower() == 'rdkit' or self.args.crest_runs == 1:
-        # Step 1. Automatically adjust the RMS threshold to meet self.args.sample - 20% of points 
+        # Step 1. Automatically adjust the RMS threshold to meet sample - 20% of points 
         # that will be added later with the most stable confs from RDKit
-        stable_points = int(round(self.args.sample*0.2))
-        cluster_points = self.args.sample - stable_points
+        stable_points = int(round(sample*0.2))
+        cluster_points = sample - stable_points
         if program.lower() == 'rdkit':
-            self.args.log.write(f'\no  Selecting {self.args.sample} conformers using a combination of energies and Butina RMS-based clustering. Users might disable this option with --auto_cluster False ({os.path.basename(Path(name))})')
+            self.args.log.write(f'\no  Selecting {sample} conformers using a combination of energies and Butina RMS-based clustering. Users might disable this option with --auto_cluster False ({os.path.basename(Path(name))})')
         else:
             self.args.log.write(f'\no  Selecting the most stable RDKit conformer to start a CREST search')
 
@@ -390,7 +390,7 @@ def cluster_conformers(self, mols, program, csearch_file, name):
     centroids = [x[0] for x in clusts]
     cluster_mols = [mols[x] for x in centroids]
 
-    # adjust to the exact number of clusters to match self.args.sample at the end
+    # adjust to the exact number of clusters to match sample at the end
     cluster_mols = cluster_mols[:cluster_points]
     allenergy = []
     for mol in cluster_mols:
@@ -400,7 +400,7 @@ def cluster_conformers(self, mols, program, csearch_file, name):
         # Step 2. Fill the other positions with add the most stable conformers found initially
         for mol in mols: # already sorted by energy
             if float(mol.GetProp('Energy')) not in allenergy:
-                if len(cluster_mols) < self.args.sample:
+                if len(cluster_mols) < sample:
                     cluster_mols.append(mol)
                     allenergy.append(float(mol.GetProp('Energy')))
                 else:

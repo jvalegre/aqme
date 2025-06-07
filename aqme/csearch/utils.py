@@ -53,7 +53,8 @@ def prepare_direct_smi(args):
         args.constraints_angle,
         args.constraints_dihedral,
         args.complex_type,
-        args.geom
+        args.geom,
+        args.sample
     )
     job_inputs.append(obj)
 
@@ -79,7 +80,8 @@ def prepare_smiles_files(args, csearch_file):
             args.constraints_angle,
             args.constraints_dihedral,
             args.complex_type,
-            args.geom
+            args.geom,
+            args.sample
         )
         job_inputs.append(obj)
 
@@ -213,6 +215,11 @@ def generate_mol_from_csv(args, csv_smiles, index, column_index):
                 geom = csv_smiles.loc[index, "geom"]
         geom = csv_2_list(geom)
 
+        sample = args.sample
+        if "sample" in csv_smiles.columns:
+            if str(csv_smiles.loc[index, 'sample']).lower() != 'nan':
+                sample = csv_smiles.loc[index, "sample"]
+
         obj = (
             smiles,
             name,
@@ -223,7 +230,8 @@ def generate_mol_from_csv(args, csv_smiles, index, column_index):
             constraints_angle,
             constraints_dihedral,
             complex_type,
-            geom
+            geom,
+            sample
         )
 
         return obj
@@ -251,7 +259,8 @@ def prepare_cdx_files(args, csearch_file):
             args.constraints_angle,
             args.constraints_dihedral,
             args.complex_type,
-            args.geom
+            args.geom,
+            args.sample
         )
         job_inputs.append(obj)
     return job_inputs
@@ -312,7 +321,8 @@ def prepare_com_files(args, csearch_file):
         args.constraints_angle,
         args.constraints_dihedral,
         args.complex_type,
-        args.geom
+        args.geom,
+        args.sample
     )
     job_inputs.append(obj)
     if os.path.basename(Path(csearch_file)).split('.')[-1] in ["gjf", "com"]:
@@ -358,7 +368,8 @@ def prepare_sdf_files(args, csearch_file):
             args.constraints_angle,
             args.constraints_dihedral,
             args.complex_type,
-            args.geom
+            args.geom,
+            args.sample
         )
         job_inputs.append(obj)
     return job_inputs

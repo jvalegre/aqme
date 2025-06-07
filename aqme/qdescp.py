@@ -284,6 +284,9 @@ class qdescp:
                     f'{self.args.csv_name}', '--sample', f'{sample_qdescp}', '--destination', f'{destination_csearch}',
                     '--nprocs', f'{self.args.nprocs}','--auto_sample',self.args.auto_sample]
 
+        if self.args.single_system:
+            cmd_csearch.append('--single_system')
+
         # overwrites charge/mult if the user specifies values
         if self.args.charge is not None:
             cmd_csearch = cmd_csearch + ['--charge', f'{self.args.charge}']
