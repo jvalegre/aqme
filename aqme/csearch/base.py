@@ -1171,15 +1171,23 @@ class csearch:
             if len(metal_atoms) >= 1:
                 set_metal_atomic_number(mol_geom, metal_idx, metal_sym)
 
-            for i,ele in enumerate(geom):
-                if i % 2 == 0: # since rules go in pairs of elements (SMARTS + value), only apply this function in even i indexes
-                    if i == 0:
-                        passing_geom = False
-                    if passing_geom or i == 0:
-                        rule = [ele,geom[i+1]]
-                        passing_geom = geom_filter(self,mol_geom,rule)
-                    else:
-                        passing_geom = False
+            if len(geom) > 0:
+                if geom == ['Ir_squareplanar']:
+                    passing_geom = geom_filter(self,mol_geom,geom)
+
+                else:
+                    for i,ele in enumerate(geom):
+                        if i % 2 == 0: # since rules go in pairs of elements (SMARTS + value), only apply this function in even i indexes
+                            if i == 0:
+                                passing_geom = False
+                            if passing_geom or i == 0:
+                                rule = [ele,geom[i+1]]
+                                passing_geom = geom_filter(self,mol_geom,rule)
+                            else:
+                                passing_geom = False
+            else:
+                passing_geom = True
+
             if passing_geom:
                 cenergy.append(energy)
                 pmol = PropertyMol.PropertyMol(mol)

@@ -25,7 +25,7 @@ J_TO_AU = 4.184 * 627.509541 * 1000.0  # UNIT CONVERSION
 T = 298.15
 
 obabel_version = "3.1.1" # this MUST match the meta.yaml
-aqme_version = "1.7.3"
+aqme_version = "1.7.4"
 time_run = time.strftime("%Y/%m/%d %H:%M:%S", time.localtime())
 aqme_ref = f"AQME v {aqme_version}, Alegre-Requena, J. V.; Sowndarya, S.; Perez-Soto, R.; Alturaifi, T.; Paton, R. AQME: Automated Quantum Mechanical Environments for Researchers and Educators. Wiley Interdiscip. Rev. Comput. Mol. Sci. 2023, 13, e1663 (DOI: 10.1002/wcms.1663)."
 xtb_version = '6.7.1'

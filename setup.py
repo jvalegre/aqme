@@ -1,5 +1,5 @@
 from setuptools import setup, find_packages
-version = "1.7.3"
+version = "1.7.4"
 setup(
     name="aqme",
     packages=find_packages(exclude=["tests"]),
