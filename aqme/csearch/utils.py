@@ -428,22 +428,26 @@ def minimize_rdkit_energy(mol, conf, log, FF, maxsteps):
     """
 
     forcefield = None
-    if FF.upper() == "MMFF":
-        properties = Chem.MMFFGetMoleculeProperties(mol)
-        forcefield = Chem.MMFFGetMoleculeForceField(mol, properties, confId=conf)
-        if forcefield is None:
-            log.write(f"x  Force field {FF} did not work! Changing to UFF.")
+    if FF.upper() == "NO FF":
+        energy = 0
 
-    if FF.upper() == "UFF" or forcefield is None:
-        # if forcefield is None means that MMFF will not work. Attempt UFF.
-        forcefield = Chem.UFFGetMoleculeForceField(mol, confId=conf)
+    else:
+        if FF.upper() == "MMFF":
+            properties = Chem.MMFFGetMoleculeProperties(mol)
+            forcefield = Chem.MMFFGetMoleculeForceField(mol, properties, confId=conf)
+            if forcefield is None:
+                log.write(f"x  Force field {FF} did not work! Changing to UFF.")
 
-    forcefield.Initialize()
-    try:
-        forcefield.Minimize(maxIts=maxsteps)
-    except RuntimeError:
-        log.write(f"\nx  Geometry minimization failed with {FF}, using non-optimized geometry.")
-    energy = float(forcefield.CalcEnergy())
+        if FF.upper() == "UFF" or forcefield is None:
+            # if forcefield is None means that MMFF will not work. Attempt UFF.
+            forcefield = Chem.UFFGetMoleculeForceField(mol, confId=conf)
+
+        forcefield.Initialize()
+        try:
+            forcefield.Minimize(maxIts=maxsteps)
+        except RuntimeError:
+            log.write(f"\nx  Geometry minimization failed with {FF}, using non-optimized geometry.")
+        energy = float(forcefield.CalcEnergy())
 
     return energy
 

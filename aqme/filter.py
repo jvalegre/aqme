@@ -14,7 +14,7 @@ from aqme.utils import periodic_table, get_conf_RMS
 
 
 # Main API of the geometry filter
-def geom_filter(self,mol,geom):
+def geom_filter(self,mol_ensemb,mol_geom,geom):
     """
     Returns whether a mol object passes all the geometric rules.
 
@@ -23,7 +23,9 @@ def geom_filter(self,mol,geom):
     self : argparse.args
             Self object with the AQME arguments used
     mol : rdkit.Chem.Mol
-            Molecule to be tested.
+            Molecule to be tested (all conformers).
+    mol_geom : 
+            Mol for the specific conformer
 
     Returns
     -------
@@ -37,17 +39,17 @@ def geom_filter(self,mol,geom):
     if geom != []:
         passing = False
         if geom == ['Ir_squareplanar']:
-            new_geom = Ir_SP_filter(mol)
+            new_geom = Ir_SP_filter(mol_ensemb)
             if len(new_geom) == 0:
                 self.args.log.write(f"x  This molecule is not one of the supported Ir squareplanar complexes! It was discarded by the geom filter")
                 passing = False
-            passing = matching_fun(self,mol,'Ir_squareplanar',new_geom,passing)
+            passing = matching_fun(self,mol_ensemb,mol_geom,'Ir_squareplanar',new_geom,passing)
 
         else:
             if len(geom) != 2:
                 self.args.log.write(f"x  The geom option {geom} was not correctly defined, the geometric filter will be turned off! Correct format: [SMARTS,THRESHOLD], for example [CCCO,180] for a 180 degree dihedral")
                 return passing
-            passing = matching_fun(self,mol,'regular_rule',geom,passing)
+            passing = matching_fun(self,mol_ensemb,mol_geom,'regular_rule',geom,passing)
     
     return passing
 
@@ -111,7 +113,7 @@ def Ir_SP_filter(mol):
 
     return new_geom
 
-def matching_fun(self,mol,type_match,geom,passing):
+def matching_fun(self,mol_ensemb,mol_geom,type_match,geom,passing):
     '''
     Checks matches and analyzed if they pass the geometry rules
     '''
@@ -125,9 +127,9 @@ def matching_fun(self,mol,type_match,geom,passing):
         geom_val = geom[1]
         smarts_content = ''.join(smarts.replace('[',']').split(']')) # this way both 'ATOM' and '[ATOM]' work
         try:
-            matches = mol.GetSubstructMatches(Chem.MolFromSmarts(smarts))
+            matches = mol_ensemb.GetSubstructMatches(Chem.MolFromSmarts(smarts))
         except: # I tried to make this except more specific for Boost.Python.ArgumentError, but apparently it's not as simple as it looks
-            matches = mol.GetSubstructMatches(Chem.MolFromSmarts(f'[{smarts}]'))
+            matches = mol_ensemb.GetSubstructMatches(Chem.MolFromSmarts(f'[{smarts}]'))
         if len(matches) > 0:
             matches = list(matches[0])
         
@@ -136,18 +138,18 @@ def matching_fun(self,mol,type_match,geom,passing):
         geom_val = geom[3]
         smarts_content = 'Ir_squareplanar'
 
-    mol_conf = mol.GetConformer(0) # Retrieve the only 3D conformer generated in that mol object for rdMolTransforms
     if smarts_content in periodic_table():
         if len(matches) >= 1:
             passing = True
     elif len(matches) == 2:
-        mol_val = rdMolTransforms.GetBondLength(mol_conf, matches[0], matches[1])
+        mol_val = rdMolTransforms.GetBondLength(mol_geom, matches[0], matches[1])
         passing = (geom_val - self.args.bond_thres) <= mol_val <= (geom_val + self.args.bond_thres)
     elif len(matches) == 3:
-        mol_val = rdMolTransforms.GetAngleDeg(mol_conf, matches[0], matches[1], matches[2])
+        mol_val = rdMolTransforms.GetAngleDeg(mol_geom, matches[0], matches[1], matches[2])
         passing = (geom_val - self.args.angle_thres) <= mol_val <= (geom_val + self.args.angle_thres)
+
     elif len(matches) == 4:
-        mol_val = rdMolTransforms.GetDihedralDeg(mol_conf, matches[0], matches[1], matches[2], matches[3])
+        mol_val = rdMolTransforms.GetDihedralDeg(mol_geom, matches[0], matches[1], matches[2], matches[3])
         passing = (geom_val - self.args.dihedral_thres) <= mol_val <= (geom_val + self.args.dihedral_thres)
 
     return passing
@@ -317,9 +319,9 @@ def RMSD_and_E_filter(
             if E_diff < energy_threshold:
                 n_mol_1 = -1
                 n_mol_2 = -1
-                if calc_type == "rdkit":
-                    n_mol_1 = seenconf
-                    n_mol_2 = conf
+                # if calc_type == "rdkit":
+                #     n_mol_1 = seenconf
+                #     n_mol_2 = conf
                 try:
                     rms = get_conf_RMS(
                         outmols[seenconf],

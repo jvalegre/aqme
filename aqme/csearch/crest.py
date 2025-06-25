@@ -414,8 +414,8 @@ def xtb_opt_main(
                 mol_rd.SetProp("Mult", str(int(mult)))
                 if smi is not None:
                     mol_rd.SetProp("SMILES", str(smi))
-                mol_geom = Chem.Mol(mol_rd)
-                passing_geom = geom_filter(self,mol_geom,geom)
+                mol_ensemb = Chem.Mol(mol_rd)
+                passing_geom = geom_filter(self,mol_ensemb,mol_rd,geom)
                 if passing_geom:
                     sdwriter.write(mol_rd)
                 os.remove(file)
