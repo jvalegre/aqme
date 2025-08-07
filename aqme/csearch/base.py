@@ -13,7 +13,7 @@ General
       'code_name' with the names and 'SMILES' for the SMILES string  
    program : str, default=None  
       Program required in the conformational sampling. 
-      Current options: 'rdkit', 'summ', 'fullmonte', 'crest'  
+      Current options: 'rdkit', 'crest'  
    smi : str, default=None  
       Optionally, define a SMILES string as input  
    name : str, default=None  
@@ -119,35 +119,6 @@ Only organometallic molecules
       This option is useful to avoid repetition when the complex has two identical
       ligands (i.e. two Cl substituents).
 
-SUMM only
-+++++++++
-
-   degree : float, default=120.0
-      Interval of degrees to rotate dihedral angles during SUMM sampling 
-      (i.e. 120.0 would create 3 conformers for each dihedral, at 0, 
-      120 and 240 degrees)
-
-Fullmonte only
-++++++++++++++
-
-   ewin_fullmonte : float, default=5.0
-      Energy window in kcal/mol to discard conformers (i.e. if a conformer is 
-      more than the E window compared to the most stable conformer)
-   ewin_sample_fullmonte : float, default=2.0
-      Energy window in kcal/mol to use conformers during the Fullmonte sampling 
-      (i.e. conformers inside the E window compared to the most stable conformer 
-      are considered as unique in each step of the sampling)
-   nsteps_fullmonte : int, default=100
-      Number of steps (or conformer batches) to carry during the Fullmonte 
-      sampling
-   nrot_fullmonte : int, default=3
-      Number of dihedrals to rotate simultaneously (picked at random) during 
-      each step of the Fullmonte sampling
-   ang_fullmonte : float, default=30
-      Available angle interval to use in the Fullmonte sampling. For example, if
-      the angle is 120.0, the program chooses randomly between 120 and 240 
-      degrees (picked at random) during each step of the sampling
-
 CREST only
 ++++++++++
 
@@ -201,7 +172,7 @@ from progress.bar import IncrementalBar
 
 from rdkit.Chem import AllChem as Chem
 from rdkit.Chem import Descriptors as Descriptors
-from rdkit.Chem import rdmolfiles, rdMolTransforms, PropertyMol, rdDistGeom, Lipinski
+from rdkit.Chem import rdmolfiles, PropertyMol, rdDistGeom, Lipinski
 
 from aqme.filter import (
     filters,
@@ -222,10 +193,10 @@ from aqme.csearch.utils import (
     check_constraints,
     smi_to_mol,
     getDihedralMatches,
-    substituted_mol
+    substituted_mol,
+    realign_mol
     )
 from aqme.csearch.templates import template_embed, check_metal_neigh
-from aqme.csearch.fullmonte import generating_conformations_fullmonte, realign_mol
 from aqme.utils import (
     load_variables,
     set_metal_atomic_number,
@@ -260,10 +231,10 @@ class csearch:
         if self.args.program is None:
             csearch_program = False
         if csearch_program:
-            if self.args.program.lower() not in ["rdkit", "summ", "fullmonte", "crest"]:
+            if self.args.program.lower() not in ["rdkit", "crest"]:
                 csearch_program = False
         if not csearch_program:
-            self.args.log.write('\nx  Program not specified or not supported for CSEARCH! Specify: program="rdkit" (or "crest", "summ", "fullmonte")')
+            self.args.log.write('\nx  Program not specified or not supported for CSEARCH! Specify: program="rdkit" (or "crest")')
             self.args.log.finalize()
             sys.exit()
 
@@ -737,7 +708,7 @@ class csearch:
             if valid_structure:
                 try:
                     # the conformational search for RDKit
-                    status = self.summ_search(
+                    status = self.rdkit_search(
                         mol,
                         name,
                         csearch_file,
@@ -783,7 +754,7 @@ class csearch:
                 sdwriter_rd.write(mol)
             sdwriter_rd.close()
 
-    def summ_search(
+    def rdkit_search(
         self,
         mol,
         name,
@@ -816,8 +787,6 @@ class csearch:
         if not complex_ts:
             if self.args.program.lower() in ['rdkit']:
                 self.args.log.write(f"\no  Starting RDKit conformer sampling ({os.path.basename(Path(name))})")
-            elif self.args.program.lower() in ['summ','fullmonte']:
-                self.args.log.write(f"\no  Starting RDKit-{self.args.program} conformer sampling ({os.path.basename(Path(name))})")
             elif self.args.program.lower() in ['crest'] and os.path.basename(Path(self.args.input)).split(".")[-1] not in ["pdb","mol2","mol","sdf","gjf","com","xyz"]:
                 self.args.log.write(f"\no  Starting initial RDKit-based mol generation from SMILES")
 
@@ -839,15 +808,6 @@ class csearch:
                 csearch_nprocs,
                 sample
             )
-
-            # reads the initial SDF files from RDKit and uses dihedral scan if selected
-            if status not in [-1, 0]:
-                # getting the energy and mols after rotations
-                if self.args.program.lower() == "summ" and len(rotmatches) != 0:
-                    status = self.dihedral_filter_and_sdf(
-                        name, csearch_file, coord_Map, 
-                        alg_Map, mol_template, ff, metal_atoms, metal_idx, metal_sym
-                    )
 
         if self.args.program.lower() in ['crest']:
             stop_xtb_opt = False
@@ -920,65 +880,6 @@ class csearch:
 
         return status
 
-    def dihedral_filter_and_sdf(
-        self, name, csearch_file, coord_Map, alg_Map, 
-        mol_template, ff, metal_atoms, metal_idx, metal_sym
-    ):
-        """
-        Filtering after dihedral scan to sdf
-        """
-
-        rotated_energy = []
-        # apply filters
-        rdmols = load_sdf(csearch_file)
-
-        for i, rd_mol_i in enumerate(rdmols):
-            if coord_Map is None and alg_Map is None and mol_template is None:
-                energy = minimize_rdkit_energy(
-                    rd_mol_i, -1, self.args.log, ff, self.args.opt_steps_rdkit
-                )
-            else:
-                rd_mol_i, energy = realign_mol(
-                    rd_mol_i,
-                    -1,
-                    coord_Map,
-                    alg_Map,
-                    mol_template,
-                    self.args.opt_steps_rdkit,
-                )
-            rotated_energy.append(energy)
-
-        rotated_cids = list(range(len(rdmols)))
-        sorted_rotated_cids = sorted(rotated_cids, key=lambda cid: rotated_energy[cid])
-
-        # filter based on energy window ewin_csearch
-        if ff.upper() == "NO FF":
-            selectedcids_rotated = sorted_rotated_cids
-        else:
-            selectedcids_rotated = conformer_filters(self,sorted_rotated_cids,rotated_energy,rdmols)
-
-        mol_select = []
-        for i, cid in enumerate(selectedcids_rotated):
-            mol_rd = Chem.RWMol(rdmols[cid])
-            mol_rd.SetProp("_Name", rdmols[cid].GetProp("_Name") + " " + str(i))
-            mol_rd.SetProp("Energy", str(rotated_energy[cid]))
-            # setting the metal back instead of I
-            if len(metal_atoms) >= 1:
-                set_metal_atomic_number(
-                    mol_rd, metal_idx, metal_sym
-                )
-            mol_select.append(mol_rd) 
-
-        # update SDF file
-        os.remove(csearch_file)
-        sdwriter_upd = Chem.SDWriter(f'{csearch_file}')
-        for mol in mol_select:
-            sdwriter_upd.write(mol)
-        sdwriter_upd.close()
-        status = 1
-
-        return status
-
     def auto_sampling(self, mol, metal_atoms, metal_idx):
         """
         Detects automatically the initial number of conformers for the sampling
@@ -1041,11 +942,10 @@ class csearch:
     ):
         """
         If program = RDKit, this replaces iodine back to the metal (if needed) 
-        and writes the RDKit SDF files. With program = summ, this function 
-        optimizes rotamers
+        and writes the RDKit SDF files
         """
 
-        if i >= len(matches):  # base case, torsions should be set in conf
+        if i >= len(matches):
             if len(metal_atoms) >= 1:
                 if self.args.program.lower() in ["rdkit","crest"] or update_to_rdkit:
                     if coord_Map is None and alg_Map is None and mol_template is None:
@@ -1085,36 +985,6 @@ class csearch:
 
             return 1
 
-        # when SUMM is selected, this cycle generates conformers based on rotation of dihedral angles
-        total = 0
-        deg = 0
-        while deg < 360.0:
-            rad = math.pi * deg / 180.0
-            rdMolTransforms.SetDihedralRad(
-                mol.GetConformer(conf), *matches[i], value=rad
-            )
-            mol.SetProp("_Name", name)
-            total += self.genConformer_r(
-                mol,
-                conf,
-                i + 1,
-                matches,
-                name,
-                sdwriter,
-                update_to_rdkit,
-                coord_Map,
-                alg_Map,
-                mol_template,
-                original_atn,
-                geom,
-                metal_atoms,
-                metal_idx,
-                metal_sym,
-                ff
-            )
-            deg += int(self.args.degree)
-
-        return total
 
     def embed_conf(self, mol, initial_confs, coord_Map, alg_Map, mol_template, csearch_nprocs, name):
         """
@@ -1265,41 +1135,31 @@ class csearch:
             self.args.log.write(f"\no  Applying filters to initial conformers ({os.path.basename(Path(name))})")
             selectedcids_rdkit = conformer_filters(self,sorted_all_cids,cenergy,outmols)
 
-        if self.args.program.lower() in ["summ", "rdkit", "crest"]:
-            sdwriter_summ = Chem.SDWriter(f'{csearch_file}')            
+        if self.args.program.lower() in ["rdkit", "crest"]:
             # now exhaustively drive torsions of selected conformers
             total = 0
             sdwriter = Chem.SDWriter(f'{csearch_file}')
             for conf in selectedcids_rdkit:
-                if self.args.program.lower() == "summ" and not update_to_rdkit:
-                    sdwriter_summ.write(outmols[conf], conf)
-                    for m in rotmatches:
-                        rdMolTransforms.SetDihedralDeg(
-                            outmols[conf].GetConformer(conf), *m, 180.0
-                        )
-
-                if self.args.program.lower() in ["summ", "rdkit", "crest"]:
-                    total += self.genConformer_r(
-                        outmols[conf],
-                        -1,
-                        0,
-                        rotmatches,
-                        outmols[conf].GetProp("_Name"),
-                        sdwriter,
-                        update_to_rdkit,
-                        coord_Map,
-                        alg_Map,
-                        mol_template,
-                        original_atn,
-                        geom,
-                        metal_atoms,
-                        metal_idx,
-                        metal_sym,
-                        ff
-                    )
+                total += self.genConformer_r(
+                    outmols[conf],
+                    -1,
+                    0,
+                    rotmatches,
+                    outmols[conf].GetProp("_Name"),
+                    sdwriter,
+                    update_to_rdkit,
+                    coord_Map,
+                    alg_Map,
+                    mol_template,
+                    original_atn,
+                    geom,
+                    metal_atoms,
+                    metal_idx,
+                    metal_sym,
+                    ff
+                )
 
             sdwriter.close()
-            sdwriter_summ.close()
             status = 1
 
         # keep only structurally different conformers
@@ -1310,25 +1170,6 @@ class csearch:
                 outmols = cluster_mols_sorted
             else:
                 outmols = suppl
-
-        if self.args.program.lower() == "fullmonte":
-            status = generating_conformations_fullmonte(
-                name,
-                self.args,
-                rotmatches,
-                selectedcids_rdkit,
-                outmols,
-                csearch_file,
-                coord_Map,
-                alg_Map,
-                mol_template,
-                ff,
-                metal_atoms,
-                metal_idx, 
-                metal_sym
-            )
-            # removes the rdkit file
-            os.remove(name + "_" + "rdkit" + self.args.output)
 
         return status, outmols
 
@@ -1370,12 +1211,6 @@ class csearch:
 
         if len(rotmatches) > self.args.max_torsions and self.args.max_torsions > 0:
             self.args.log.write(f"\nx  Too many torsions ({len(rotmatches)}). Skipping {name + self.args.output}")
-        elif self.args.program.lower() == "summ" and len(rotmatches) == 0:
-            update_to_rdkit = True
-            self.args.log.write(f"\nx  No rotatable dihedral found. Updating to CSEARCH to RDKit, writing to SUMM SDF ({os.path.basename(Path(name))})")
-        elif self.args.program.lower() == "fullmonte" and len(rotmatches) == 0:
-            update_to_rdkit = True
-            self.args.log.write(f"\nx  No rotatable dihedral found. Updating to CSEARCH to RDKit, writing to FULLMONTE SDF ({os.path.basename(Path(name))})")
 
         ff = self.args.ff
         if self.args.program.lower() == "rdkit":

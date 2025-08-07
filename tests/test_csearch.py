@@ -16,7 +16,6 @@ import shutil
 w_dir_main = os.getcwd()
 csearch_methods_dir = w_dir_main + "/tests/csearch_methods"
 csearch_rdkit_summ_dir = w_dir_main + "/tests/csearch_rdkit_summ"
-csearch_fullmonte_dir = w_dir_main + "/tests/csearch_fullmonte"
 csearch_crest_dir = w_dir_main + "/tests/csearch_crest"
 csearch_others_dir = w_dir_main + "/tests/csearch_others"
 csearch_input_dir = w_dir_main + "/tests/csearch_input"
@@ -26,8 +25,6 @@ if not os.path.exists(csearch_methods_dir):
     os.mkdir(csearch_methods_dir)
 if not os.path.exists(csearch_rdkit_summ_dir):
     os.mkdir(csearch_rdkit_summ_dir)
-if not os.path.exists(csearch_fullmonte_dir):
-    os.mkdir(csearch_fullmonte_dir)
 if not os.path.exists(csearch_crest_dir):
     os.mkdir(csearch_crest_dir)
 if not os.path.exists(csearch_others_dir):
@@ -168,42 +165,6 @@ def test_csearch_input_parameters(program, input, output_nummols):
         file = f'{csearch_input_dir}/CSEARCH/{input.split(".")[0]}_{program}.sdf'
         mols = rdkit.Chem.SDMolSupplier(file, removeHs=False)
         assert len(mols) == output_nummols
-    os.chdir(w_dir_main)
-
-
-# tests for parameters of SUMM
-@pytest.mark.parametrize(
-    "program, smi, name, charge, mult, ang_summ, output_nummols",
-    [
-        ("summ", "CCCCC", "pentane_summ", 3, 4, 120, 4),
-    ],
-)
-def test_csearch_summ_parameters(
-    program,
-    smi,
-    name,
-    charge,
-    mult,
-    ang_summ,
-    output_nummols,
-):
-    os.chdir(csearch_rdkit_summ_dir)
-    # runs the program with the different tests
-    csearch(
-        program=program,
-        smi=smi,
-        name=name,
-        charge=charge,
-        mult=mult,
-        degree=ang_summ,
-    )
-
-    # tests here
-    file = str("CSEARCH/" + name + "_" + program + ".sdf")
-    mols = rdkit.Chem.SDMolSupplier(file, removeHs=False)
-    assert len(mols) == output_nummols
-    assert charge == int(mols[0].GetProp("Real charge"))
-    assert mult == int(mols[0].GetProp("Mult"))
     os.chdir(w_dir_main)
 
 
@@ -377,52 +338,6 @@ def test_csearch_crest_parameters(
                 # check if xtb_keywords are correct in CREST
                 assert line.find('-P 14') > -1
 
-
-# tests for parameters of csearch fullmonte
-@pytest.mark.parametrize(
-    "program, smi, name, charge, mult, ewin_fullmonte, ewin_sample_fullmonte, nsteps_fullmonte, nrot_fullmonte, ang_fullmonte, output_nummols",
-    [
-        ("fullmonte", "CCCCC", "pentane_fullmonte", 3, 4, 12, 3, 200, 4, 10, 4),
-    ],
-)
-def test_csearch_fullmonte_parameters(
-    program,
-    smi,
-    name,
-    charge,
-    mult,
-    ewin_fullmonte,
-    ewin_sample_fullmonte,
-    nsteps_fullmonte,
-    nrot_fullmonte,
-    ang_fullmonte,
-    output_nummols,
-):
-    os.chdir(csearch_fullmonte_dir)
-    # runs the program with the different tests
-    csearch(
-        w_dir_main=csearch_fullmonte_dir,
-        program=program,
-        smi=smi,
-        name=name,
-        charge=charge,
-        mult=mult,
-        ewin_fullmonte=ewin_fullmonte,
-        ewin_sample_fullmonte=ewin_sample_fullmonte,
-        nsteps_fullmonte=nsteps_fullmonte,
-        nrot_fullmonte=nrot_fullmonte,
-        ang_fullmonte=ang_fullmonte,
-    )
-
-    # tests here
-    file = str("CSEARCH/" + name + "_" + program + ".sdf")
-    mols = rdkit.Chem.SDMolSupplier(file, removeHs=False)
-    assert len(mols) == output_nummols
-    assert charge == int(mols[0].GetProp("Real charge"))
-    assert mult == int(mols[0].GetProp("Mult"))
-    os.chdir(w_dir_main)
-
-
 # tests for parameters of csearch rdkit
 @pytest.mark.parametrize(
     "program, smi, name, charge, mult, sample, opt_steps_rdkit, heavyonly, ewin_csearch, initial_energy_threshold, energy_threshold, rms_threshold, output_nummols ",
@@ -591,43 +506,11 @@ def test_csearch_rdkit_parameters(
 @pytest.mark.parametrize(
     "program, smi, name, complex, metal_complex, complex_type, constraints_dist, constraints_angle, constraints_dihedral, charge, mult, crest_keywords, destination, output_nummols",
     [
-        # tests for conformer generation with RDKit, SUMM, FullMonte and CREST
+        # tests for conformer generation with RDKit and CREST
         (
             "rdkit",
             "CCCCC",
             "pentane_RD",
-            False,
-            False,
-            None,
-            [],
-            [],
-            [],
-            0,
-            1,
-            None,
-            False,
-            4,
-        ),
-        # (
-        #     "summ",
-        #     "CCCCC",
-        #     "pentane",
-        #     False,
-        #     False,
-        #     None,
-        #     [],
-        #     [],
-        #     [],
-        #     0,
-        #     1,
-        #     None,
-        #     False,
-        #     4,
-        # ),
-        (
-            "fullmonte",
-            "CCCCC",
-            "pentane_FM",
             False,
             False,
             None,
@@ -1198,8 +1081,8 @@ def test_csearch_methods(
     [
         # tests for conformer generation with RDKit
         (
-            ["tests/csearch_methods/CSEARCH","tests/csearch_rdkit_summ/CSEARCH","tests/csearch_fullmonte/CSEARCH","tests/csearch_crest/CSEARCH","tests/csearch_input/CSEARCH","tests/csearch_varfile/CSEARCH"],
-            ["tests/csearch_methods/CSEARCH*","tests/csearch_rdkit_summ/CSEARCH*","tests/csearch_fullmonte/CSEARCH*","tests/csearch_crest/CSEARCH*","tests/csearch_input/CSEARCH*","tests/csearch_varfile/CSEARCH*"]
+            ["tests/csearch_methods/CSEARCH","tests/csearch_crest/CSEARCH","tests/csearch_input/CSEARCH","tests/csearch_varfile/CSEARCH"],
+            ["tests/csearch_methods/CSEARCH*","tests/csearch_crest/CSEARCH*","tests/csearch_input/CSEARCH*","tests/csearch_varfile/CSEARCH*"]
         ),
     ],
 )

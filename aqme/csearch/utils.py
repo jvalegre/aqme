@@ -10,6 +10,7 @@ import pandas as pd
 import ast
 from pathlib import Path
 from rdkit.Chem import AllChem as Chem
+from rdkit.Chem import rdMolAlign
 
 from aqme.utils import (
     get_info_input,
@@ -420,6 +421,56 @@ def com_2_xyz(input_file):
         F.write(f"{len(xyz)}\n{filename}\n{xyz_txt}\n")
 
     return path_xyz, charge, mult
+
+
+def realign_mol(
+    mol, conf, coord_Map, alg_Map, mol_template, maxsteps
+):  # RAUL: This function requires a clear separation between minimization and alignment.
+    """
+    Minimizes and aligns the molecule provided freezing the atoms that match the mol_template
+
+    Parameters
+    ----------
+    mol : RDKit mol object
+        Molecule to be minimized and aligned
+    conf : int
+        Number that indicates which conformation of the molecule will be minimized and aligned
+    coord_Map : [type]
+        [description]
+    alg_Map : [type]
+        [description]
+    mol_template : [type]
+        [description]
+    maxsteps : int
+        Maximum number of iterations in FF minimization
+
+    Returns
+    -------
+    mol,energy
+        The updated mol object and the final forcefield energy.
+    """
+
+    num_atom_match = mol.GetSubstructMatch(mol_template)
+    forcefield = Chem.UFFGetMoleculeForceField(mol, confId=conf)
+    for i, idxI in enumerate(num_atom_match):
+        for idxJ in num_atom_match[i + 1 :]:
+            d = coord_Map[idxI].Distance(coord_Map[idxJ])
+            forcefield.AddDistanceConstraint(idxI, idxJ, d, d, 10000)
+    forcefield.Initialize()
+    forcefield.Minimize(maxIts=maxsteps)
+    # rotate the embedded conformation onto the core_mol:
+    rdMolAlign.AlignMol(
+        mol,
+        mol_template,
+        prbCid=conf,
+        refCid=-1,
+        atomMap=alg_Map,
+        reflect=True,
+        maxIters=100,
+    )
+    energy = float(forcefield.CalcEnergy())
+
+    return mol, energy
 
 
 def minimize_rdkit_energy(mol, conf, log, FF, maxsteps):
