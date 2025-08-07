@@ -25,7 +25,7 @@ J_TO_AU = 4.184 * 627.509541 * 1000.0  # UNIT CONVERSION
 T = 298.15
 
 obabel_version = "3.1.1" # this MUST match the meta.yaml
-aqme_version = "1.7.3"
+aqme_version = "1.7.4"
 time_run = time.strftime("%Y/%m/%d %H:%M:%S", time.localtime())
 aqme_ref = f"AQME v {aqme_version}, Alegre-Requena, J. V.; Sowndarya, S.; Perez-Soto, R.; Alturaifi, T.; Paton, R. AQME: Automated Quantum Mechanical Environments for Researchers and Educators. Wiley Interdiscip. Rev. Comput. Mol. Sci. 2023, 13, e1663 (DOI: 10.1002/wcms.1663)."
 xtb_version = '6.7.1'
@@ -306,6 +306,7 @@ def command_line_args():
         "qcorr",
         "qdescp",
         "heavyonly",
+        "single_system",
         "cregen",
         "lowest_only",
         "chk",
@@ -335,8 +336,6 @@ def command_line_args():
         "opt_steps_rdkit",
         "seed",
         "max_matches_rmsd",
-        "nsteps_fullmonte",
-        "nrot_fullmonte",
         "nprocs",
         "crest_runs",
         "sample"
@@ -345,13 +344,10 @@ def command_line_args():
         "ewin_cmin",
         "ewin_csearch",
         "opt_fmax",
-        "degree",
         "rms_threshold",
         "energy_threshold",
         "initial_energy_threshold",
         "max_mol_wt",
-        "ewin_sample_fullmonte",
-        "ewin_fullmonte",
         "dup_threshold",
         "ro_threshold",
         "amplitude_ifreq",

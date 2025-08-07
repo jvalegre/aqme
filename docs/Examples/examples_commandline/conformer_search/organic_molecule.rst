@@ -34,14 +34,6 @@ At this point we will have a new folder already created named 'quinine_folder'
 that contains a file named quinine_rdkit.sdf that contains all the conformers
 generated. 
 
-If we wanted to use fullmonte instead to generate the geometries then we just 
-need to change the program parameter to 'fullmonte': 
-
-.. code :: shell
-
-    python -m aqme --csearch --smi "COC1=CC2=C(C=CN=C2C=C1)[C@H]([C@@H]3C[C@@H]4CCN3C[C@@H]4C=C)O" --destination quinine_folder --name quinine --program fullmonte
-
-
 Minimizing the conformations
 ----------------------------
 
