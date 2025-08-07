@@ -400,14 +400,22 @@ class csearch:
 
         # multiprocessing to accelerate and make CSEARCH reproducible (since RDKit uses 1 thread to be reproducible)
         if not self.args.debug and self.args.program.lower() != 'crest': # errors and try/excepts are not shown in multithreading
-            with futures.ThreadPoolExecutor(
-                max_workers=self.args.nprocs,
-            ) as executor:
+            with futures.ThreadPoolExecutor(max_workers=self.args.nprocs) as executor:
                 csearch_nprocs = 1
+                future_tasks = []
+
                 for job_input in job_inputs:
-                    _ = executor.submit(
-                        self.compute_confs, job_input,bar,csearch_nprocs
-                        )
+                    future = executor.submit(
+                        self.compute_confs, job_input, bar, csearch_nprocs
+                    )
+                    future_tasks.append(future)
+
+                # Wait for all tasks to complete
+                for future in futures.as_completed(future_tasks):
+                    try:
+                        future.result()  # Will raise any exceptions caught during execution
+                    except Exception as e:
+                        print(f"Task raised an exception: {e}")
 
         else:
             for job_input in job_inputs:

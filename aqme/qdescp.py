@@ -207,13 +207,20 @@ class qdescp:
 
         # multiprocessing to accelerate and make QDESCP reproducible (since xTB uses 1 processor to be reproducible)
         if not self.args.debug: # errors and try/excepts are not shown in multithreading
-            with futures.ThreadPoolExecutor(
-                max_workers=self.args.nprocs,
-            ) as executor:
+            with futures.ThreadPoolExecutor(max_workers=self.args.nprocs) as executor:
+                future_tasks = []
                 for file in qdescp_files:
-                    _ = executor.submit(
+                    future = executor.submit(
                         self.gather_files_and_run, destination, file, descp_dict['atom_props'], smarts_targets, bar
-                        )
+                    )
+                    future_tasks.append(future)
+                
+                # Wait for all tasks to complete
+                for future in futures.as_completed(future_tasks):
+                    try:
+                        future.result()  # raises exception if any occurred
+                    except Exception as e:
+                        self.args.log.write(f"QDESCP raised an exception: {e}")
         else:
             for file in qdescp_files:
                 _ = self.gather_files_and_run(destination, file, descp_dict['atom_props'], smarts_targets, bar)
