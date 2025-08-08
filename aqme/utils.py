@@ -1037,3 +1037,19 @@ def check_version(self, program, version_line, target_version, n_split, install_
         self.args.log.write(f"x  {program} needs to be adjusted to ensure that AQME works as intended! You can adjust the version with '{install_cmd}'")
         self.args.log.finalize()
         sys.exit()
+
+
+def blocking_wrapper(func, *args, **kwargs):
+    """
+    Calls the given function and ensures any subprocess.Popen
+    objects are waited for before returning.
+    """
+    
+    result = func(*args, **kwargs)
+
+    # If the function returns a list of Popen objects, wait on them
+    if isinstance(result, list) and all(hasattr(p, 'wait') for p in result):
+        for p in result:
+            p.wait()
+
+    return result

@@ -206,7 +206,8 @@ from aqme.utils import (
     check_dependencies,
     mol_from_sdf_or_mol_or_mol2,
     set_destination,
-    load_sdf
+    load_sdf,
+    blocking_wrapper
     )
 from aqme.csearch.crest import xtb_opt_main
 
@@ -373,20 +374,26 @@ class csearch:
         if not self.args.debug and self.args.program.lower() != 'crest': # errors and try/excepts are not shown in multithreading
             with futures.ThreadPoolExecutor(max_workers=self.args.nprocs) as executor:
                 csearch_nprocs = 1
-                future_tasks = []
-
-                for job_input in job_inputs:
-                    future = executor.submit(
-                        self.compute_confs, job_input, bar, csearch_nprocs
+                future_tasks = [
+                    executor.submit(
+                        blocking_wrapper,
+                        self.compute_confs,
+                        job_input,
+                        bar,
+                        csearch_nprocs
                     )
-                    future_tasks.append(future)
+                    for job_input in job_inputs
+                ]
 
                 # Wait for all tasks to complete
-                for future in futures.as_completed(future_tasks):
+                done, _ = futures.wait(future_tasks, return_when=futures.ALL_COMPLETED)
+
+                # Handle exceptions
+                for future in done:
                     try:
-                        future.result()  # Will raise any exceptions caught during execution
+                        future.result()  # Raises any exceptions caught during execution
                     except Exception as e:
-                        print(f"Task raised an exception: {e}")
+                        self.args.log.write(f"CSEARCH raised an exception: {e}")
 
         else:
             for job_input in job_inputs:
