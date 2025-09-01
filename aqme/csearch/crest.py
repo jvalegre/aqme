@@ -76,6 +76,7 @@ def xtb_opt_main(
     constraints_dihedral,
     method_opt,
     geom,
+    sample,
     complex_ts=False,
     mol=None,
     name_init=None,
@@ -342,7 +343,7 @@ def xtb_opt_main(
                 # we don't use this part, since the code runs a Butina clustering afterwards
                 # if self.args.auto_cluster:
                 #     cregen_text += ' and conformer selection through clustering (users can disable conformer selection with --auto_cluster False)'
-                #     command = command + ['--cluster', f'{self.args.sample}']
+                #     command = command + ['--cluster', f'{sample}']
 
                 if self.args.cregen_keywords is not None:
                     for keyword in self.args.cregen_keywords.split():
@@ -413,8 +414,8 @@ def xtb_opt_main(
                 mol_rd.SetProp("Mult", str(int(mult)))
                 if smi is not None:
                     mol_rd.SetProp("SMILES", str(smi))
-                mol_geom = Chem.Mol(mol_rd)
-                passing_geom = geom_filter(self,mol_geom,geom)
+                mol_ensemb = Chem.Mol(mol_rd)
+                passing_geom = geom_filter(self,mol_ensemb,mol_rd,geom)
                 if passing_geom:
                     sdwriter.write(mol_rd)
                 os.remove(file)
@@ -435,8 +436,8 @@ def xtb_opt_main(
             for mol in suppl:
                 sdwriter.write(mol)
             sdwriter.close()
-            if len(suppl) > self.args.sample and self.args.auto_cluster:
-                _ = cluster_conformers(self,suppl,"rdkit",csearch_file,name)
+            if len(suppl) > sample and self.args.auto_cluster:
+                _ = cluster_conformers(self,suppl,"rdkit",csearch_file,name,sample)
             
     else:
         xyz_files = []

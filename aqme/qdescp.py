@@ -282,7 +282,10 @@ class qdescp:
 
         cmd_csearch = ['python', '-m', 'aqme', '--csearch', '--program', 'rdkit', '--input', 
                     f'{self.args.csv_name}', '--sample', f'{sample_qdescp}', '--destination', f'{destination_csearch}',
-                    '--nprocs', f'{self.args.nprocs}','--auto_sample',self.args.auto_sample]
+                    '--nprocs', f'{self.args.nprocs}','--auto_sample',self.args.auto_sample, '--ff',self.args.ff]
+
+        if self.args.single_system:
+            cmd_csearch.append('--single_system')
 
         # overwrites charge/mult if the user specifies values
         if self.args.charge is not None:
@@ -774,7 +777,7 @@ class qdescp:
                         os.remove(dst)  # remove destination file if it exists
                     os.rename(src, dst)
             except Exception as e:
-                print('Error trying to rename xtbout.json:', e)
+                self.args.log.write('Error trying to rename xtbout.json:', e)
             _ = self.cleanup(name, destination, xtb_passing, xtb_files_props)
 
         if xtb_passing:
@@ -813,9 +816,9 @@ class qdescp:
                         os.remove(dst_xtb_json)
                     os.rename(src_xtb_json, dst_xtb_json)
                 else:
-                    print(f"[WARN] xtbout.json not found at {src_xtb_json}, skipping rename.")
+                    self.args.log.write(f"[WARN] xtbout.json not found at {src_xtb_json}, skipping rename.")
             except Exception as e:
-                print(f"[ERROR] Could not rename xtbout.json: {e}")
+                self.args.log.write(f"[ERROR] Could not rename xtbout.json: {e}")
 
             # Robust renaming for wbo
             src_wbo = os.path.join(str(dat_dir), "wbo")
@@ -826,9 +829,9 @@ class qdescp:
                         os.remove(dst_wbo)
                     os.rename(src_wbo, dst_wbo)
                 else:
-                    print(f"[WARN] wbo not found at {src_wbo}, skipping rename.")
+                    self.args.log.write(f"[WARN] wbo not found at {src_wbo}, skipping rename.")
             except Exception as e:
-                print(f"[ERROR] Could not rename wbo: {e}")
+                self.args.log.write(f"[ERROR] Could not rename wbo: {e}")
             _ = self.cleanup(name, destination, xtb_passing, xtb_files_props)
 
         if xtb_passing:
@@ -1147,7 +1150,7 @@ class qdescp:
         """
 		Add and/or update MORFEUS properties to JSON
 		"""
-
+        print(self.args.charge,self.args.mult)
         # Global descriptors
         global_properties_morfeus = calculate_global_morfeus_descriptors(xtb_files_props['xtb_xyz_path'],self)
         json_data.update(global_properties_morfeus)

@@ -52,6 +52,7 @@ var_dict = {
     "nsteps_fullmonte": 100,
     "nrot_fullmonte": 3,
     "ang_fullmonte": 30,
+    "single_system": False,
     "cregen": True,
     "cregen_keywords": None,
     "program": None,

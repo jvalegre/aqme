@@ -16,8 +16,8 @@ from rdkit.Chem import rdFMCS
 from rdkit.Chem import Descriptors
 import warnings
 warnings.filterwarnings('ignore')
-from morfeus import SASA, Dispersion, BuriedVolume, ConeAngle, SolidAngle, Pyramidalization, read_xyz, read_geometry
-from aqme.utils import load_sdf, periodic_table
+from morfeus import SASA, Dispersion, BuriedVolume, ConeAngle, SolidAngle, Pyramidalization, read_xyz, read_geometry, XTB
+from aqme.utils import load_sdf, periodic_table, read_xyz_charge_mult
 
 GAS_CONSTANT = 8.3144621  # J / K / mol
 J_TO_AU = 4.184 * 627.509541 * 1000.0  # UNIT CONVERSION
@@ -1013,6 +1013,7 @@ def read_triplet(file_triplet,singlet_e):
 def calculate_global_morfeus_descriptors(final_xyz_path,self):
     """
     Calculate global descriptors using the MORFEUS package. Return them in a structured dictionary.
+    Also calculates extra descriptors using Morfeus.XTB
     """
 
     # Initialize the descriptor variables as None
@@ -1050,12 +1051,89 @@ def calculate_global_morfeus_descriptors(final_xyz_path,self):
         # Handle any errors during Dispersion calculation
         self.args.log.write(f"x  WARNING! Error calculating Global Dispersion from Morfeus: {e}")
 
-    # Create the final dictionary with the descriptors, even if some values are None
+    # Extra Morfeus descriptors using XTB
+    morfeus_data = {}
+    charge = read_xyz_charge_mult(final_xyz_path)[0]
+    mult = read_xyz_charge_mult(final_xyz_path)[1]
+    try:
+        print(f"\no  Running MORFEUS for {os.path.basename(final_xyz_path)} with charge {charge} and multiplicity {mult}")
+        n_unpaired = int(mult) - 1 if mult is not None else 0
+
+        # PTB method for descriptors that support it
+        xtb_ptb = XTB(elements, coordinates, charge=charge, n_unpaired=n_unpaired, solvent=None, method='ptb')
+        homo = xtb_ptb.get_homo(unit="eV")
+        lumo = xtb_ptb.get_lumo(unit="eV")
+        homo_lumo_gap = xtb_ptb.get_homo_lumo_gap(unit="eV")
+        dipole_moment = xtb_ptb.get_dipole_moment(unit="debye")
+        dipole_vect = xtb_ptb.get_dipole()
+        charges = xtb_ptb.get_charges(model="Mulliken")
+        bond_orders = xtb_ptb.get_bond_orders()
+
+        # GFN2 method for the rest (GFN2 is method=2)
+        xtb2 = XTB(elements, coordinates, charge=charge, n_unpaired=n_unpaired, solvent=getattr(self.args, "qdescp_solvent", None), method=2)
+        ip = xtb2.get_ip()
+        ea = xtb2.get_ea()
+        hardness = xtb2.get_hardness()
+        softness = xtb2.get_softness()
+        chemical_potential = xtb2.get_chemical_potential()
+        polarizability = xtb2.get_molecular_polarizability()
+        atom_polarizabilities = xtb2.get_atom_polarizabilities()
+        fod_pop = xtb2.get_fod_population()
+        FOD = xtb2.get_nfod()
+        fukui_plus = xtb2.get_fukui("plus")
+        fukui_minus = xtb2.get_fukui("minus")
+        fukui_radical = xtb2.get_fukui("radical")
+        nucleophilicity = xtb2.get_global_descriptor("nucleophilicity")
+        electrophilicity = xtb2.get_global_descriptor("electrophilicity")
+        nucleofugality = xtb2.get_global_descriptor("nucleofugality")
+        electrofugality = xtb2.get_global_descriptor("electrofugality")
+        # Solvation descriptors (if solvent specified)
+        g_solv = None
+        g_solv_hb = None
+        atom_hb_terms = None
+        if getattr(self.args, "qdescp_solvent", None):
+            g_solv = xtb2.get_solvation_energy()
+            g_solv_hb = xtb2.get_solvation_h_bond_correction()
+            atom_hb_terms = xtb2.get_atomic_h_bond_corrections()
+
+        morfeus_data = {
+            "homo_morfeus": homo,
+            "lumo_morfeus": lumo,
+            "homo_lumo_gap_morfeus": homo_lumo_gap,
+            "dipole_moment_morfeus": dipole_moment,
+            "dipole_vect_morfeus": dipole_vect,
+            "charges_morfeus": charges,
+            "bond_orders_morfeus": bond_orders,
+            "ip_morfeus": ip,
+            "ea_morfeus": ea,
+            "hardness_morfeus": hardness,
+            "softness_morfeus": softness,
+            "chemical_potential_morfeus": chemical_potential,
+            "polarizability_morfeus": polarizability,
+            "atom_polarizabilities_morfeus": atom_polarizabilities,
+            "fod_pop_morfeus": fod_pop,
+            "FOD_morfeus": FOD,
+            "fukui_plus_morfeus": fukui_plus,
+            "fukui_minus_morfeus": fukui_minus,
+            "fukui_radical_morfeus": fukui_radical,
+            "nucleophilicity_morfeus": nucleophilicity,
+            "electrophilicity_morfeus": electrophilicity,
+            "nucleofugality_morfeus": nucleofugality,
+            "electrofugality_morfeus": electrofugality,
+            "g_solv_morfeus": g_solv,
+            "g_solv_hb_morfeus": g_solv_hb,
+            "atom_hb_terms_morfeus": atom_hb_terms,
+        }
+    except Exception as e:
+        self.args.log.write(f"x  WARNING! Error calculating extra Morfeus descriptors: {e}")
+
+    # Combine all descriptors
     global_properties_morfeus = {
         "Global SASA": sasa_area_global,
         "Dispersion area": disp_area_global,
         "Dispersion volume": disp_vol_global,
     }
+    global_properties_morfeus.update(morfeus_data)
 
     return global_properties_morfeus
 
@@ -1219,10 +1297,56 @@ def get_descriptors(level):
             'atoms': ["Partial charge", "Dipole moment", "Electrophil.", "Nucleophil.", "Radical attack", "SASA", "Buried volume", "H bond with H2O"]
         },
         'interpret': {
-            'mol': ["Fermi-level", "Total polariz. alpha", "Total FOD", "Hardness", "Softness", "Electronegativity",
-                    "Electrophil. idx", "Nucleophilicity idx", "Second IP", "Second EA", "S0-T1 gap"],
-            'atoms': ["s proportion", "p proportion", "d proportion", "Coord. numbers",
-                      "Polariz. alpha", "FOD", "Dispersion", "Pyramidalization", "Pyramidaliz. volume"]
+            'mol': [
+                # Morfeus global descriptors (actualizados)
+                "Global SASA",                # Superficie accesible al solvente (Morfeus)
+                "Dispersion area",            # Área de dispersión (Morfeus)
+                "Dispersion volume",          # Volumen de dispersión (Morfeus)
+                "homo_morfeus",               # HOMO (eV, Morfeus/xTB)
+                "lumo_morfeus",               # LUMO (eV, Morfeus/xTB)
+                "homo_lumo_gap_morfeus",      # Gap HOMO-LUMO (eV, Morfeus/xTB)
+                "dipole_moment_morfeus",      # Momento dipolar (Debye, Morfeus/xTB)
+                "dipole_vect_morfeus",        # Vector dipolar (Morfeus/xTB)
+                "ip_morfeus",                 # Potencial de ionización (Morfeus/xTB)
+                "ea_morfeus",                 # Afinidad electrónica (Morfeus/xTB)
+                "hardness_morfeus",           # Dureza química (Morfeus/xTB)
+                "softness_morfeus",           # Suavidad química (Morfeus/xTB)
+                "chemical_potential_morfeus", # Potencial químico (Morfeus/xTB)
+                "polarizability_morfeus",     # Polarizabilidad molecular (Morfeus/xTB)
+                "FOD_morfeus",                # Número de electrones FOD (Morfeus/xTB)
+                "fod_pop_morfeus",            # Población FOD atómica (Morfeus/xTB)
+                "nucleophilicity_morfeus",    # Nucleofilia global (Morfeus/xTB)
+                "electrophilicity_morfeus",   # Electrofília global (Morfeus/xTB)
+                "nucleofugality_morfeus",     # Nucleofugalidad global (Morfeus/xTB)
+                "electrofugality_morfeus",    # Electrofugalidad global (Morfeus/xTB)
+                "g_solv_morfeus",             # Energía de solvatación (Morfeus/xTB)
+                "g_solv_hb_morfeus",          # Corrección H-bond solvatación (Morfeus/xTB)
+                # Otros interpretativos previos
+                "Fermi-level", "Total polariz. alpha", "Total FOD", "Hardness", "Softness", "Electronegativity",
+                "Electrophil. idx", "Nucleophilicity idx", "Second IP", "Second EA", "S0-T1 gap"
+            ],
+            'atoms': [
+                # Morfeus atomicos (actualizados)
+                "charges_morfeus",            # Cargas atómicas (Morfeus/xTB)
+                "bond_orders_morfeus",        # Ordenes de enlace (Morfeus/xTB)
+                "atom_polarizabilities_morfeus", # Polarizabilidad atómica (Morfeus/xTB)
+                "fod_pop_morfeus",            # Población FOD atómica (Morfeus/xTB)
+                "fukui_plus_morfeus",         # Fukui + (Morfeus/xTB)
+                "fukui_minus_morfeus",        # Fukui - (Morfeus/xTB)
+                "fukui_radical_morfeus",      # Fukui radical (Morfeus/xTB)
+                "atom_hb_terms_morfeus",      # Corrección H-bond atómica (Morfeus/xTB)
+                # Morfeus geométricos
+                "SASA",                       # SASA atómico (Morfeus)
+                "Buried volume",              # Volumen enterrado (Morfeus)
+                "Cone angle",                 # Ángulo de cono (Morfeus)
+                "Solid angle",                # Ángulo sólido (Morfeus)
+                "Pyramidalization",           # Piramidalización (Morfeus)
+                "Pyramidaliz. volume",        # Volumen de piramidalización (Morfeus)
+                "Dispersion"                  # Dispersión atómica (Morfeus)
+                # Otros interpretativos previos
+                ,"s proportion", "p proportion", "d proportion", "Coord. numbers",
+                "Polariz. alpha", "FOD"
+            ]
         },
         'full': {
             'mol': ["HOMO-LUMO gap_GFN", "HOMO_GFN", "LUMO_GFN", "Dipole module_GFN", "Total energy", "Total disp. C6", "Total disp. C8", "Dispersion area", "Dispersion volume", "Chem. potential", 

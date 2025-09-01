@@ -326,6 +326,7 @@ class cmin:
                         self.args.constraints_dihedral,
                         'xtb',
                         self.args.geom,
+                        self.args.sample,
                         complex_ts=complex_ts,
                         mol=mol,
                         name_init=name_init
