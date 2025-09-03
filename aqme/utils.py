@@ -336,8 +336,6 @@ def command_line_args():
         "opt_steps_rdkit",
         "seed",
         "max_matches_rmsd",
-        "nsteps_fullmonte",
-        "nrot_fullmonte",
         "nprocs",
         "crest_runs",
         "sample"
@@ -346,13 +344,10 @@ def command_line_args():
         "ewin_cmin",
         "ewin_csearch",
         "opt_fmax",
-        "degree",
         "rms_threshold",
         "energy_threshold",
         "initial_energy_threshold",
         "max_mol_wt",
-        "ewin_sample_fullmonte",
-        "ewin_fullmonte",
         "dup_threshold",
         "ro_threshold",
         "amplitude_ifreq",
@@ -1042,3 +1037,19 @@ def check_version(self, program, version_line, target_version, n_split, install_
         self.args.log.write(f"x  {program} needs to be adjusted to ensure that AQME works as intended! You can adjust the version with '{install_cmd}'")
         self.args.log.finalize()
         sys.exit()
+
+
+def blocking_wrapper(func, *args, **kwargs):
+    """
+    Calls the given function and ensures any subprocess.Popen
+    objects are waited for before returning.
+    """
+    
+    result = func(*args, **kwargs)
+
+    # If the function returns a list of Popen objects, wait on them
+    if isinstance(result, list) and all(hasattr(p, 'wait') for p in result):
+        for p in result:
+            p.wait()
+
+    return result

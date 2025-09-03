@@ -103,7 +103,8 @@ from aqme.utils import (
     check_files,
     check_dependencies,
     set_destination,
-    load_sdf
+    load_sdf,
+    blocking_wrapper
 )
 from aqme.qdescp_utils import (
     assign_prefix_atom_props,
@@ -207,13 +208,32 @@ class qdescp:
 
         # multiprocessing to accelerate and make QDESCP reproducible (since xTB uses 1 processor to be reproducible)
         if not self.args.debug: # errors and try/excepts are not shown in multithreading
-            with futures.ThreadPoolExecutor(
-                max_workers=self.args.nprocs,
-            ) as executor:
-                for file in qdescp_files:
-                    _ = executor.submit(
-                        self.gather_files_and_run, destination, file, descp_dict['atom_props'], smarts_targets, bar
-                        )
+            with futures.ThreadPoolExecutor(max_workers=self.args.nprocs) as executor:
+                # Submit all tasks at once
+                future_tasks = [
+                    executor.submit(
+                        blocking_wrapper,
+                        self.gather_files_and_run,
+                        destination,
+                        file,
+                        descp_dict['atom_props'],
+                        smarts_targets,
+                        bar
+                    )
+                    for file in qdescp_files
+                ]
+                
+                # Wait for all tasks to complete
+                done, _ = futures.wait(future_tasks, return_when=futures.ALL_COMPLETED)
+
+                # Handle results & exceptions
+                for future in done:
+                    try:
+                        future.result()  # Raises any exception from the thread
+                    except Exception as e:
+                        self.args.log.write(f"QDESCP raised an exception: {e}\n")
+
+                # When this point is reached, ALL tasks have finished (successfully or not)
         else:
             for file in qdescp_files:
                 _ = self.gather_files_and_run(destination, file, descp_dict['atom_props'], smarts_targets, bar)

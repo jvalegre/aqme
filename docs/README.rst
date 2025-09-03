@@ -288,11 +288,7 @@ Module on charge of conformational sampling starting from multiple input types
 RDKit-based conformational sampling
 ...................................
 
-Faster sampling, suitable especially for unimolecular systems. Options:  
-
-   *  RDKit standard sampling  
-   *  Systematic Unbounded Multiple Minimum search (SUMM)  
-   *  FullMonte sampling  
+Faster sampling, suitable especially for unimolecular systems.
 
 CREST-based conformational sampling
 ...................................
