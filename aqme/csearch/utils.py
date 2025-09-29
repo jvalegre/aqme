@@ -106,9 +106,27 @@ def prepare_smiles_from_line(line, args):
 
 
 def prepare_csv_files(args, csearch_file):
+    # Check if file is empty before reading
+    if os.path.getsize(csearch_file) == 0:
+        args.log.write(f"File {args.input} is empty!")
+        args.log.finalize()
+        sys.exit()
+    
     csv_smiles = pd.read_csv(csearch_file)
-    # avoid running calcs with special signs (i.e. *)
+    
+    # Check if DataFrame is empty
+    if csv_smiles.empty:
+        args.log.write(f"File {args.input} is empty!")
+        args.log.finalize()
+        sys.exit()
+    
+    # Check if 'code_name' exists and is entirely empty/NaN
+    elif "code_name" in csv_smiles.columns and csv_smiles["code_name"].dropna().empty:
+        args.log.write(f"File {args.input} has a 'code_name' column with no values.")
+        args.log.finalize()
+        sys.exit()
 
+    # avoid running calcs with special signs (i.e. *)
     for name_csv_indiv in csv_smiles['code_name']:
         if '*' in f'{name_csv_indiv}':
             args.log.write(f"\nx  WARNING! The names provided in the CSV contain * (i.e. {name_csv_indiv}). Please, remove all the * characters.")

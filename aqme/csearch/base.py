@@ -1147,6 +1147,25 @@ class csearch:
             total = 0
             sdwriter = Chem.SDWriter(f'{csearch_file}')
             for conf in selectedcids_rdkit:
+                total += self.genConformer_r(
+                    outmols[conf],
+                    -1,
+                    0,
+                    rotmatches,
+                    outmols[conf].GetProp("_Name"),
+                    sdwriter,
+                    update_to_rdkit,
+                    coord_Map,
+                    alg_Map,
+                    mol_template,
+                    original_atn,
+                    geom,
+                    metal_atoms,
+                    metal_idx,
+                    metal_sym,
+                    ff
+                )
+
             sdwriter.close()
             status = 1
 

@@ -10,7 +10,7 @@ Version 1.7.4 [`url <https://github.com/jvalegre/aqme/releases/tag/1.7.4>`__]
    -  Included new option --single_system for CSEARCH to avoid duplicate geometries when using --complex_type templates in complexes with 2 identical ligands
    -  Debugging multithreading to avoid QDESCP problems (includes a forced wait for all the calculations to finish before getting RDKit and atomic properties)
    -  The SUMM and FullMonte options of CSEARCH have been disabled
-   
+
 Version 1.7.3 [`url <https://github.com/jvalegre/aqme/releases/tag/1.7.3>`__]
    -  Fixed bug from QDESCP when trying to open JSON files
    -  Using libgfortran=14.2.0 to avoid issues when using xTB and CREST

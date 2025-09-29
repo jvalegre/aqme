@@ -110,33 +110,19 @@ from aqme.qdescp_utils import (
     assign_prefix_atom_props,
     get_rdkit_properties,
     convert_ndarrays,
-    read_fod,
     read_json,
-    read_xtb,
-    read_ptb,
-    read_wbo,
-    read_gfn1,
-    calculate_local_CDFT_descriptors,
-    calculate_global_CDFT_descriptors,
-    calculate_global_morfeus_descriptors,
-    calculate_local_morfeus_descriptors,
+    calculate_morfeus_descriptors,
     collect_descp_lists,
     get_boltz_props_nmr,
     fix_cols_names,
-    remove_atom_descp,
-    load_file_formats,
-    read_solv,
-    read_triplet,
     dict_to_json,
     full_level_boltz,
     get_mols_qdescp,
-    get_mol_assign,
+    get_matches_idx_n_prefix,
     auto_pattern,
     remove_invalid_smarts,
-    get_atom_matches,
-    sort_atom_types,
-    get_prefix_atom_props,
-    update_atom_props_json
+    update_atom_props_json,
+    find_level_names
 )
 
 from aqme.csearch.crest import xyzall_2_xyz
@@ -241,10 +227,8 @@ class qdescp:
         bar.finish()
 
         if self.args.boltz:
-            folder_raw = self.get_boltz_n_save_csv(destination,qdescp_files,descp_dict,boltz_dir,smarts_targets)
-
-        #AQME-ROBERT workflow: Combines the descriptor data from qdescp CSVs with the input CSV and saves the result.
-        _ = self.combine_and_save_csvs(descp_dict['qdescp_csv'], descp_dict['qdescp_denovo_csv'], descp_dict['qdescp_interpret_csv'], folder_raw)
+            #AQME-ROBERT workflow: Combines the descriptor data from qdescp CSVs with the input CSV and saves the result.
+            _ = self.get_boltz_n_save_csv(destination,qdescp_files,descp_dict,boltz_dir,smarts_targets)
 
 
     def initial_xtb_check(self):
@@ -312,17 +296,23 @@ class qdescp:
             cmd_csearch = cmd_csearch + ['--charge', f'{self.args.charge}']
         if self.args.mult is not None:
             cmd_csearch = cmd_csearch + ['--mult', f'{self.args.mult}']
-
         subprocess.run(cmd_csearch)
 
-        qdescp_files = glob.glob(f'{destination_csearch}/*.sdf')
+        # use only the molecules from the input CSV (ignore previous/unrelated CSEARCH runs that generated SDFs)
+        qdescp_files = []
+        csearch_files = glob.glob(f'{destination_csearch}/*.sdf')
+        if len(csearch_files) > 0:
+            df_qdescp = pd.read_csv(self.args.csv_name)
+            for file in csearch_files:
+                if os.path.basename(file).replace('_rdkit.sdf','') in df_qdescp['code_name'].astype(str).tolist():
+                    qdescp_files.append(file)
         if len(qdescp_files) == 0:
             self.args.log.write(f"\nx  WARNING! The CSEARCH conformational search did not produce any results.")
             self.args.log.finalize()
             sys.exit()
-        
-        return qdescp_files
 
+        return qdescp_files
+    
 
     def get_boltz_n_save_csv(self,destination,qdescp_files,descp_dict,boltz_dir,smarts_targets):
         self.args.log.write('\no  Running RDKit and collecting molecular properties (for all inputs)')
@@ -335,21 +325,11 @@ class qdescp:
                 name = '.'.join(os.path.basename(Path(file)).split(".")[:-1])
                 # to locate difficult names (i.e. with special characters), glob.glob doesn't work, this is needed:
                 json_files = [x for x in glob.glob(f"{destination}/*.json") if os.path.basename(x).startswith(f'{name}_conf_')]
-
                 # Generating the JSON files
-                all_prefixes_atoms = self.get_boltz_props(json_files, name, boltz_dir, "xtb", descp_dict_indiv, smarts_targets, mol, all_prefixes_atoms)
+                _ = self.get_boltz_props(json_files, name, boltz_dir, "xtb", descp_dict_indiv, smarts_targets, mol, all_prefixes_atoms)
             
         # Create the CSV files from the JSON files
-        folder_raw = Path(destination).joinpath(f'raw_csv_databases')
-        valid_csv = self.write_csv_boltz_data(destination, descp_dict['qdescp_csv'], folder_raw, descp_dict['atom_props'], all_prefixes_atoms, json_type="standard")  # CSV full
-        _ = self.write_csv_boltz_data(destination, descp_dict['qdescp_denovo_csv'], folder_raw, descp_dict['atom_props'], all_prefixes_atoms, json_type="denovo")  # CSV denovo
-        _ = self.write_csv_boltz_data(destination, descp_dict['qdescp_interpret_csv'], folder_raw, descp_dict['atom_props'], all_prefixes_atoms, json_type="interpret")  # CSV interpret
-        if valid_csv:
-            self.args.log.write(f"o  The {descp_dict['qdescp_denovo_csv']}, {descp_dict['qdescp_interpret_csv']} and {descp_dict['qdescp_csv']} files containing Boltzmann weighted xTB, Morfeus and RDKit descriptors were created in {self.args.initial_dir}")
-        else:
-            self.args.log.write(f"x  No descriptors were generated with QDESCP, please check the WARNINGS above.")
-
-        return folder_raw
+        _ = self.write_csv_boltz_data(destination)  # CSV full
 
 
     def get_boltz_props(self, json_files, name, boltz_dir, calc_type, descp_dict_indiv, smarts_targets, mol, all_prefixes_atoms):
@@ -360,7 +340,7 @@ class qdescp:
         if smarts_targets is None:
             smarts_targets = []
 
-        full_json_data,denovo_json_data,interpret_json_data = {},{},{}
+        full_json_data = {}
 
         energy = []
         for _, json_file in enumerate(json_files):
@@ -373,47 +353,17 @@ class qdescp:
             descp_dict_indiv['atom_props'],descp_dict_indiv['interpret_atoms'],descp_dict_indiv['denovo_atoms'] = assign_prefix_atom_props(json_data['prefixes_atom_prop'],descp_dict_indiv['atom_props'],descp_dict_indiv['interpret_atoms'],descp_dict_indiv['denovo_atoms'])
 
         # get all the properties (full level)
-        full_json_data,atomic_props = full_level_boltz(descp_dict_indiv,json_files,energy,smarts_targets,full_json_data)
-
-        # Get denovo atomic properties
-        for prop in descp_dict_indiv['denovo_atoms']:
-            if atomic_props:
-                denovo_json_data[prop] = full_json_data[prop]
-
-        # Get denovo molecular properties
-        for prop in descp_dict_indiv['denovo_mols']:
-            denovo_json_data[prop] = full_json_data[prop]
-
-        # Get interpret atomic properties
-        for prop in descp_dict_indiv['interpret_atoms']:
-            if atomic_props:
-                interpret_json_data[prop] = full_json_data[prop]
-
-        # Get interpret molecular properties
-        for prop in descp_dict_indiv['interpret_mols']:
-            interpret_json_data[prop] = full_json_data[prop]
+        full_json_data = full_level_boltz(descp_dict_indiv,json_files,energy,smarts_targets,full_json_data)
 
         # Calculate RDKit descriptors if molecule is provided
         if mol is not None:
             # Calculate all RDKit properties for full_json_data
             full_json_data = get_rdkit_properties(self,full_json_data, mol)
-            
-            # Get selected RDKit properties for denovo_json_data
-            denovo_json_data["MolLogP"] = full_json_data["MolLogP"]
-
-            # Get selected RDKit properties with interpret_json_data
-            interpret_json_data["MolLogP"] = full_json_data["MolLogP"]
 
         _ = convert_ndarrays(full_json_data)
-        _ = convert_ndarrays(denovo_json_data)
-        _ = convert_ndarrays(interpret_json_data)
 
         # Save the averaged properties to a file
-        _ = dict_to_json(os.path.join(boltz_dir, f"{name}_full_boltz.json"), full_json_data)
-        _ = dict_to_json(os.path.join(boltz_dir, f"{name}_denovo_boltz.json"), denovo_json_data)
-        _ = dict_to_json(os.path.join(boltz_dir, f"{name}_interpret_boltz.json"), interpret_json_data)
-
-        return all_prefixes_atoms
+        _ = dict_to_json(os.path.join(boltz_dir, f"{name}_boltz.json"), full_json_data)
 
 
     def qdescp_set_up(self):
@@ -474,98 +424,14 @@ class qdescp:
         return self,destination,smarts_targets,boltz_dir
 
 
-    def combine_and_save_csvs(self, qdescp_csv, qdescp_denovo_csv, qdescp_interpret_csv, folder_raw):
+    def write_csv_boltz_data(self, destination):
         """
-        AQME-ROBERT workflow
+        AQME-ROBERT workflow. 
         Combines the descriptor data from qdescp CSVs with the input CSV and saves the result.
+
         """
 
-        name_db = 'Descriptors'
-        if self.args.csv_name is not None:
-            if self.args.robert:
-                name_db = 'ROBERT'
-
-            combined_df = pd.DataFrame() #full
-            combined_denovo_df = pd.DataFrame()  # denovo
-            combined_interpret_df = pd.DataFrame()  # interpret
-
-            # Read the CSV with descriptors
-            qdescp_df = pd.read_csv(qdescp_csv)
-            qdescp_denovo_df = pd.read_csv(qdescp_denovo_csv)
-            qdescp_interpret_df = pd.read_csv(qdescp_interpret_csv)
-
-            input_df = pd.read_csv(self.args.csv_name)
-
-            # check that code_name and SMILES are written with the right format
-            input_df = fix_cols_names(input_df)
-
-            if 'code_name' not in input_df.columns:
-                self.args.log.write(f"\nx  The input csv_name provided ({self.args.csv_name}) does not contain the code_name column. A combined database for AQME-{name_db} workflows will not be created.")
-            elif 'SMILES' in input_df.columns:
-                for i, input_name in enumerate(input_df['code_name']):
-                    # concatenate with qdescp_df
-                    qdescp_col = input_df.loc[i].to_frame().T.reset_index(drop=True)
-                    input_col = qdescp_df.loc[(qdescp_df['code_name'] == f'{input_name}_rdkit') | 
-                                            (qdescp_df['code_name'] == f'{input_name}') | 
-                                            (qdescp_df['code_name'] == f'{input_name}_0_rdkit') | 
-                                            (qdescp_df['code_name'] == f'{input_name}_1_rdkit') | 
-                                            (qdescp_df['code_name'] == f'{input_name}_2_rdkit')]
-                    input_col = input_col.drop(['code_name'], axis=1).reset_index(drop=True)
-                    combined_row = pd.concat([qdescp_col, input_col], axis=1)
-                    combined_df = pd.concat([combined_df, combined_row], ignore_index=True)
-
-                    # concatenate with  qdescp_denovo_df
-                    input_col_denovo = qdescp_denovo_df.loc[(qdescp_denovo_df['code_name'] == f'{input_name}_rdkit') | 
-                                                            (qdescp_denovo_df['code_name'] == f'{input_name}') | 
-                                                            (qdescp_denovo_df['code_name'] == f'{input_name}_0_rdkit') | 
-                                                            (qdescp_denovo_df['code_name'] == f'{input_name}_1_rdkit') | 
-                                                            (qdescp_denovo_df['code_name'] == f'{input_name}_2_rdkit')]
-                    input_col_denovo = input_col_denovo.drop(['code_name'], axis=1).reset_index(drop=True)
-                    combined_row_denovo = pd.concat([qdescp_col, input_col_denovo], axis=1)
-                    combined_denovo_df = pd.concat([combined_denovo_df, combined_row_denovo], ignore_index=True)
-
-                    # concatenate with qdescp_interpret_df
-                    input_col_interpret = qdescp_interpret_df.loc[(qdescp_interpret_df['code_name'] == f'{input_name}_rdkit') | 
-                                                                (qdescp_interpret_df['code_name'] == f'{input_name}') | 
-                                                                (qdescp_interpret_df['code_name'] == f'{input_name}_0_rdkit') | 
-                                                                (qdescp_interpret_df['code_name'] == f'{input_name}_1_rdkit') | 
-                                                                (qdescp_interpret_df['code_name'] == f'{input_name}_2_rdkit')]
-                    input_col_interpret = input_col_interpret.drop(['code_name'], axis=1).reset_index(drop=True)
-                    combined_row_interpret = pd.concat([qdescp_col, input_col_interpret], axis=1)
-                    combined_interpret_df = pd.concat([combined_interpret_df, combined_row_interpret], ignore_index=True)
-
-                csv_basename = os.path.basename(self.args.csv_name)
-                csv_path = self.args.initial_dir.joinpath(f'AQME-{name_db}_full_{csv_basename}')
-                csv_path_denovo = self.args.initial_dir.joinpath(f'AQME-{name_db}_denovo_{csv_basename}')
-                csv_path_interpret = self.args.initial_dir.joinpath(f'AQME-{name_db}_interpret_{csv_basename}')
-
-                # Save concatenated DataFrames as CSV files
-                combined_df.to_csv(f'{csv_path}', index=None, header=True)
-                combined_denovo_df.to_csv(f'{csv_path_denovo}', index=None, header=True)
-                combined_interpret_df.to_csv(f'{csv_path_interpret}', index=None, header=True)
-
-                self.args.log.write(f"o  The AQME-{name_db}_full_{csv_basename}, AQME-{name_db}_denovo_{csv_basename} and AQME-{name_db}_interpret_{csv_basename} databases were created in {self.args.initial_dir} (the original QDESCP databases were moved to {folder_raw})")
-
-                # move the QDESCP CSV files into the raw data folder
-                for csv_file in [qdescp_csv, qdescp_denovo_csv, qdescp_interpret_csv]:
-                    shutil.move(csv_file, folder_raw.joinpath(csv_file))
-            else:
-                self.args.log.write(f"\nx  The input csv_name provided ({self.args.csv_name}) does not contain the SMILES column. A combined database for AQME-{name_db} workflows will not be created.")
-
-            _ = self.process_aqme_csv(name_db)
-
-
-    def write_csv_boltz_data(self, destination, qdescp_csv, folder_raw, atom_props, all_prefixes_atoms, json_type="standard"):
-        """
-        Concatenate the values for all calculations
-        """
-        
-        if json_type == "denovo":
-            json_pattern = str(destination) + "/boltz/*_denovo_boltz.json"
-        elif json_type == "interpret":
-            json_pattern = str(destination) + "/boltz/*_interpret_boltz.json"
-        else:
-            json_pattern = str(destination) + "/boltz/*_full_boltz.json"
+        json_pattern = str(destination) + "/boltz/*_boltz.json"
 
         boltz_json_files = glob.glob(json_pattern)
         dfs = [] 
@@ -578,21 +444,93 @@ class qdescp:
             data.insert(loc=0, column='code_name', value=name_indiv)
             dfs.append(data)
         if dfs != []:
-            valid_csv = True
-            temp = pd.concat(dfs, ignore_index=True)
+            df_full = pd.concat(dfs, ignore_index=True)
 
-            # first, create raw files that will store all the information, including atomic descriptors in lists
-            if not os.path.exists(folder_raw):
-                folder_raw.mkdir(exist_ok=True, parents=True)
-            temp.to_csv(folder_raw.joinpath(f'Raw_{qdescp_csv}'), index=False)
+            name_db = 'Descriptors'
+            if self.args.csv_name is not None:
+                if self.args.robert:
+                    name_db = 'ROBERT'
 
-            # in the main folder, if there were no SMARTS matches in a molecule or qdescp_atoms was not specified, remove atomic descps since they're lists
-            temp = remove_atom_descp(temp,atom_props)
-            temp.to_csv(qdescp_csv, index=False)
+                combined_full_df = pd.DataFrame() #full
+
+                # Read the CSV with descriptors
+                input_df = pd.read_csv(self.args.csv_name)
+
+                # check that code_name and SMILES are written with the right format
+                input_df = fix_cols_names(input_df)
+
+                if 'code_name' not in input_df.columns:
+                    self.args.log.write(f"\nx  The input csv_name provided ({self.args.csv_name}) does not contain the code_name column. A combined database for AQME-{name_db} workflows will not be created.")
+                elif 'SMILES' in input_df.columns:
+                    # make a normalized column in qdescp_df to match input_df['code_name']
+                    df_full["normalized_code_name"] = (
+                        df_full["code_name"].astype(str)  # ensure all entries are strings
+                        .str.replace(r"(_\d+)?_rdkit$", "", regex=True)  # remove _0_rdkit, _1_rdkit, etc.
+                        .str.replace(r"_rdkit$", "", regex=True)  # remove plain _rdkit
+    )
+
+                    # to avoid problems with names that are numbers
+                    input_df["code_name"] = input_df["code_name"].astype(str)
+
+                    # now merge on the normalized column
+                    combined_full_df = input_df.merge(
+                        df_full.drop(columns=["code_name"]),  # drop original to avoid duplicates
+                        left_on="code_name",
+                        right_on="normalized_code_name",
+                        how="left"
+                    ).drop(columns=["normalized_code_name"])
+
+                    csv_basename = os.path.basename(self.args.csv_name)
+                    csv_path = self.args.initial_dir.joinpath(f'AQME-{name_db}_full_{csv_basename}')
+                    csv_path_denovo = self.args.initial_dir.joinpath(f'AQME-{name_db}_denovo_{csv_basename}')
+                    csv_path_interpret = self.args.initial_dir.joinpath(f'AQME-{name_db}_interpret_{csv_basename}')
+
+                    # delete previous results to avoid problems
+                    for csv_path_indiv in [csv_path,csv_path_denovo,csv_path_interpret]:
+                        if os.path.exists(csv_path_indiv):
+                            os.remove(csv_path_indiv)
+
+                    # Save concatenated DataFrames as CSV files
+                    # First, if no atoms were specified in qdescp_atoms, save the atom descriptors for all atoms
+                    if len(self.args.qdescp_atoms) == 0:
+                        dat_dir = Path(destination.joinpath('raw_data'))
+                        dat_dir.mkdir(exist_ok=True, parents=True)
+
+                        combined_full_df.to_csv(f'{Path(dat_dir).joinpath(os.path.basename(csv_path))}', index=None, header=True)
+
+                        # de novo and interpret descriptors
+                        descriptors_denovo = find_level_names(combined_full_df,'denovo')
+                        descriptors_interpret = find_level_names(combined_full_df,'interpret')
+
+                        combined_denovo_df = combined_full_df[descriptors_denovo]
+                        combined_denovo_df.to_csv(f'{Path(dat_dir).joinpath(os.path.basename(csv_path_denovo))}', index=None, header=True)
+
+                        combined_interpret_df = combined_full_df[descriptors_interpret]
+                        combined_interpret_df.to_csv(f'{Path(dat_dir).joinpath(os.path.basename(csv_path_interpret))}', index=None, header=True)
+
+                    # drop lists if no atomic descriptors were selected
+                    clean_full_df = combined_full_df.drop(columns=[col for col in combined_full_df.columns if combined_full_df[col].apply(lambda x: isinstance(x, list)).any()])
+                    clean_full_df.to_csv(f'{csv_path}', index=None, header=True)
+
+                    # de novo and interpret descriptors
+                    clean_descriptors_denovo = find_level_names(clean_full_df,'denovo')
+                    clean_descriptors_interpret = find_level_names(clean_full_df,'interpret')
+
+                    clean_denovo_df = clean_full_df[clean_descriptors_denovo]
+                    clean_denovo_df.to_csv(f'{csv_path_denovo}', index=None, header=True)
+
+                    clean_interpret_df = clean_full_df[clean_descriptors_interpret]
+                    clean_interpret_df.to_csv(f'{csv_path_interpret}', index=None, header=True)
+
+                    self.args.log.write(f"o  The AQME-{name_db}_full_{csv_basename}, AQME-{name_db}_denovo_{csv_basename} and AQME-{name_db}_interpret_{csv_basename} databases were created in {self.args.initial_dir}")
+                    _ = self.process_aqme_csv(name_db)
+
+            else:
+                self.args.log.write(f"\nx  The input csv_name provided ({self.args.csv_name}) does not contain the SMILES column. A combined database for AQME-{name_db} workflows will not be created.")
+
         else:
-            valid_csv = False
-        
-        return valid_csv
+            self.args.log.write(f"x  No descriptors were generated with QDESCP, please check the WARNINGS above.")
+
 
 
     def gather_files_and_run(self, destination, file, atom_props, smarts_targets, bar):
@@ -664,19 +602,19 @@ class qdescp:
             # if xTB fails during any of the calculations (UnboundLocalError), xTB assigns weird
             # qm5 charges (i.e. > +10 or < -10, ValueError), or the json file is not created 
             # for some weird xTB error (FileNotFoundError), that molecule is not used 
-            xtb_passing,xtb_files_props = self.run_sp_xtb(file, xyz_file, charge, mult, name_xtb, destination)
+            xtb_passing,xtb_files_props = self.run_opt_xtb(file, xyz_file, charge, mult, name_xtb, destination)
             path_name = Path(os.path.dirname(file)).joinpath('.'.join(os.path.basename(Path(file)).split(".")[:-1]))
 
             if xtb_passing:
                 # collect all the properties from the output files
-                _ = self.collect_properties(path_name, atom_props, smarts_targets, xtb_files_props)
+                _ = self.morfeus_properties(path_name, atom_props, smarts_targets, xtb_files_props, charge, mult)
 
-            _ = self.cleanup(name_xtb, destination, xtb_passing, xtb_files_props, move_folder=True)
-            _ = self.merge_results(destination,xtb_files_props)
+            _ = self.cleanup(name_xtb, destination, xtb_passing, xtb_files_props)
+
         bar.next()
 
 
-    def run_sp_xtb(self, file, xyz_file, charge, mult, name, destination):
+    def run_opt_xtb(self, file, xyz_file, charge, mult, name, destination):
         """
         Runs different types of single point xTB calculations
         """
@@ -698,19 +636,7 @@ class qdescp:
             f.write("json=true\n")
 
         xtb_files_props['xtb_opt'] = str(dat_dir) + "/{0}.out".format(name+'_opt')
-        xtb_files_props['xtb_ptb'] = str(dat_dir) + "/{0}.ptb".format(name)
-        xtb_files_props['xtb_out'] = str(dat_dir) + "/{0}.out".format(name)
         xtb_files_props['xtb_json'] = str(dat_dir) + "/{0}.json".format(name)
-        xtb_files_props['xtb_wbo'] = str(dat_dir) + "/{0}.wbo".format(name)
-        xtb_files_props['xtb_gfn1'] = str(dat_dir) + "/{0}.gfn1".format(name)
-        xtb_files_props['xtb_Nminus1'] = str(dat_dir) + "/{0}.Nminus1".format(name)
-        xtb_files_props['xtb_Nminus2'] = str(dat_dir) + "/{0}.Nminus2".format(name)
-        xtb_files_props['xtb_Nplus1'] = str(dat_dir) + "/{0}.Nplus1".format(name)
-        xtb_files_props['xtb_Nplus2'] = str(dat_dir) + "/{0}.Nplus2".format(name)
-        xtb_files_props['xtb_fukui'] = str(dat_dir) + "/{0}.fukui".format(name)
-        xtb_files_props['xtb_fod'] = str(dat_dir) + "/{0}.fod".format(name)
-        xtb_files_props['xtb_solv'] = str(dat_dir) + "/{0}.solv".format(name)
-        xtb_files_props['stgap'] = str(dat_dir) + "/{0}.stgap".format(name)
 
         os.environ["OMP_STACKSIZE"] = self.args.stacksize
         # run xTB/CREST with 1 processor
@@ -764,328 +690,6 @@ class qdescp:
                 with open(final_xyz_path, "r", encoding='utf-8') as xyz_file:
                     self.xyz_coordinates = xyz_file.readlines()
 
-        if xtb_passing:
-            command_ptb = [
-                "xtb",
-                xtb_files_props['xtb_xyz_path'],
-                "--acc",
-                str(self.args.qdescp_acc),
-                "--chrg",
-                str(charge),
-                "--uhf",
-                str(mult - 1),
-                "--etemp",
-                str(self.args.qdescp_temp),
-                "--ptb",
-                "--json",
-                "-P",
-                "1",
-            ] # PTB calc
-            if self.args.qdescp_solvent is not None:
-                command_ptb.append("--alpb")
-                command_ptb.append(f"{self.args.qdescp_solvent}")
-            run_command(command_ptb, xtb_files_props['xtb_ptb'], cwd=dat_dir)
-
-            # check if the initial calculation finished OK
-            xtb_passing = self.check_xtb_errors(name,file,xtb_files_props['xtb_ptb'],xtb_passing)
-
-            try:
-                src = str(dat_dir) + "/xtbout.json"
-                dst = str(dat_dir) + "/xtbout_ptb.json"
-                if os.path.exists(src):
-                    if os.path.exists(dst):
-                        os.remove(dst)  # remove destination file if it exists
-                    os.rename(src, dst)
-            except Exception as e:
-                self.args.log.write('Error trying to rename xtbout.json:', e)
-            _ = self.cleanup(name, destination, xtb_passing, xtb_files_props)
-
-        if xtb_passing:
-            command1 = [
-                "xtb",
-                xtb_files_props['xtb_xyz_path'],
-                "--acc",
-                str(self.args.qdescp_acc),
-                "--gfn",
-                str(self.args.gfn_version),
-                "--chrg",
-                str(charge),
-                "--uhf",
-                str(mult - 1),
-                "--etemp",
-                str(self.args.qdescp_temp),
-                "--input",
-                str(xtb_input_file),
-                "-P",
-                "1",
-            ] #Single point
-            if self.args.qdescp_solvent is not None:
-                command1.append("--alpb")
-                command1.append(f"{self.args.qdescp_solvent}")
-            run_command(command1, xtb_files_props['xtb_out'], cwd=dat_dir)
-
-            # check if the initial calculation finished OK
-            xtb_passing = self.check_xtb_errors(name,file,xtb_files_props['xtb_out'],xtb_passing)
-
-            # Robust renaming for xtbout.json
-            src_xtb_json = os.path.join(str(dat_dir), "xtbout.json")
-            dst_xtb_json = xtb_files_props['xtb_json']
-            try:
-                if os.path.exists(src_xtb_json):
-                    if os.path.exists(dst_xtb_json):
-                        os.remove(dst_xtb_json)
-                    os.rename(src_xtb_json, dst_xtb_json)
-                else:
-                    self.args.log.write(f"[WARN] xtbout.json not found at {src_xtb_json}, skipping rename.")
-            except Exception as e:
-                self.args.log.write(f"[ERROR] Could not rename xtbout.json: {e}")
-
-            # Robust renaming for wbo
-            src_wbo = os.path.join(str(dat_dir), "wbo")
-            dst_wbo = xtb_files_props['xtb_wbo']
-            try:
-                if os.path.exists(src_wbo):
-                    if os.path.exists(dst_wbo):
-                        os.remove(dst_wbo)
-                    os.rename(src_wbo, dst_wbo)
-                else:
-                    self.args.log.write(f"[WARN] wbo not found at {src_wbo}, skipping rename.")
-            except Exception as e:
-                self.args.log.write(f"[ERROR] Could not rename wbo: {e}")
-            _ = self.cleanup(name, destination, xtb_passing, xtb_files_props)
-
-        if xtb_passing:
-            command2 = [
-                "xtb",
-                xtb_files_props['xtb_xyz_path'],
-                "--pop",
-                "--gfn",
-                "1",
-                "--chrg",
-                str(charge),
-                "--acc",
-                str(self.args.qdescp_acc),
-                "--uhf",
-                str(mult - 1),
-                "--etemp",
-                str(self.args.qdescp_temp),
-                "--vomega",
-                "-P",
-                "1",
-            ] #For cm5 charges and proportions (localgfn1)
-            if self.args.qdescp_solvent is not None:
-                command2.append("--alpb")
-                command2.append(f"{self.args.qdescp_solvent}")
-            run_command(command2, xtb_files_props['xtb_gfn1'], cwd=dat_dir)
-            _ = self.cleanup(name, destination, xtb_passing, xtb_files_props)
-
-
-            command3 = [
-                "xtb",
-                xtb_files_props['xtb_xyz_path'],
-                "--vfukui",
-                "--gfn",
-                str(self.args.gfn_version),
-                "--chrg",
-                str(charge),
-                "--acc",
-                str(self.args.qdescp_acc),
-                "--uhf",
-                str(mult - 1),
-                "--etemp",
-                str(self.args.qdescp_temp),
-                "-P",
-                "1",
-            ] #For fukuis
-            if self.args.qdescp_solvent is not None:
-                command3.append("--alpb")
-                command3.append(f"{self.args.qdescp_solvent}")
-            run_command(command3, xtb_files_props['xtb_fukui'], cwd=dat_dir)
-            _ = self.cleanup(name, destination, xtb_passing, xtb_files_props)
-
-            command4 = [
-                "xtb",
-                xtb_files_props['xtb_xyz_path'],
-                "--fod",
-                "--gfn",
-                str(self.args.gfn_version),
-                "--chrg",
-                str(charge),
-                "--acc",
-                str(self.args.qdescp_acc),
-                "--uhf",
-                str(mult - 1),
-                "--etemp",
-                '5000',
-                "-P",
-                "1",
-            ] # for FOD
-            if self.args.qdescp_solvent is not None:
-                command4.append("--alpb")
-                command4.append(f"{self.args.qdescp_solvent}")
-            run_command(command4, xtb_files_props['xtb_fod'], cwd=dat_dir)
-            _ = self.cleanup(name, destination, xtb_passing, xtb_files_props)
-
-            command5 = [
-                "xtb",
-                xtb_files_props['xtb_xyz_path'],
-                "--gfn",
-                str(self.args.gfn_version),
-                "--chrg",
-                str(int(charge) +1),
-                "--acc",
-                str(self.args.qdescp_acc),
-                "--uhf",
-                str(mult),
-                "--etemp",
-                str(self.args.qdescp_temp),
-                "-P",
-                "1",
-            ] #file_Nminus1 (N-1)
-            if self.args.qdescp_solvent is not None:
-                command5.append("--alpb")
-                command5.append(f"{self.args.qdescp_solvent}")
-            run_command(command5, xtb_files_props['xtb_Nminus1'], cwd=dat_dir)
-            _ = self.cleanup(name, destination, xtb_passing, xtb_files_props)
-
-            command6 = [
-                "xtb",
-                xtb_files_props['xtb_xyz_path'],
-                "--gfn",
-                str(self.args.gfn_version),
-                "--chrg",
-                str(int(charge) +2),
-                "--acc",
-                str(self.args.qdescp_acc),
-                "--uhf",
-                str(mult - 1),
-                "--etemp",
-                str(self.args.qdescp_temp),
-                "-P",
-                "1",
-            ] #file_N-2 (N-2)
-            if self.args.qdescp_solvent is not None:
-                command6.append("--alpb")
-                command6.append(f"{self.args.qdescp_solvent}")
-            run_command(command6, xtb_files_props['xtb_Nminus2'], cwd=dat_dir)
-            _ = self.cleanup(name, destination, xtb_passing, xtb_files_props)
-
-            command7 = [
-                "xtb",
-                xtb_files_props['xtb_xyz_path'],
-                "--gfn",
-                str(self.args.gfn_version),
-                "--chrg",
-                str(int(charge) -1),
-                "--acc",
-                str(self.args.qdescp_acc),
-                "--uhf",
-                str(int(mult)),
-                "--etemp",
-                str(self.args.qdescp_temp),
-                "-P",
-                "1",
-            ] #file_Nplus1 (N+1)
-            if self.args.qdescp_solvent is not None:
-                command7.append("--alpb")
-                command7.append(f"{self.args.qdescp_solvent}")
-            run_command(command7, xtb_files_props['xtb_Nplus1'], cwd=dat_dir)
-            _ = self.cleanup(name, destination, xtb_passing, xtb_files_props)
-
-            command8 = [
-                "xtb",
-                xtb_files_props['xtb_xyz_path'],
-                "--gfn",
-                str(self.args.gfn_version),
-                "--chrg",
-                str(int(charge)-2),
-                "--acc",
-                str(self.args.qdescp_acc),
-                "--uhf",
-                str(int(mult)-1),
-                "--etemp",
-                str(self.args.qdescp_temp),
-                "-P",
-                "1",
-            ] #file_Nplus2 (N+2)
-            if self.args.qdescp_solvent is not None:
-                command8.append("--alpb")
-                command8.append(f"{self.args.qdescp_solvent}")
-            run_command(command8, xtb_files_props['xtb_Nplus2'], cwd=dat_dir)
-            _ = self.cleanup(name, destination, xtb_passing, xtb_files_props)
-
-            with open(xtb_input_file, "wt", encoding='utf-8') as f:
-                f.write("$write\n")
-                f.write('gbsa=true\n')
-
-            command9 = [
-                "xtb",
-                xtb_files_props['xtb_xyz_path'],
-                "--acc",
-                str(self.args.qdescp_acc),
-                "--gfn",
-                str(self.args.gfn_version),
-                "--chrg",
-                str(charge),
-                "--uhf",
-                str(mult - 1),
-                "--etemp",
-                str(self.args.qdescp_temp),
-                "--input",
-                str(xtb_input_file),
-                "-P",
-                "1",
-                "--alpb",
-                "h2o"
-            ] # file solvation
-            run_command(command9, xtb_files_props['xtb_solv'], cwd=dat_dir)
-            _ = self.cleanup(name, destination, xtb_passing, xtb_files_props)
-
-            if int(mult) == 1:
-                command10 = [
-                    "xtb",
-                    xtb_files_props['xtb_xyz_path'],
-                    "--acc",
-                    str(self.args.qdescp_acc),
-                    "--gfn",
-                    str(self.args.gfn_version),
-                    "--chrg",
-                    str(charge),
-                    "--uhf",
-                    '2',
-                    "--etemp",
-                    str(self.args.qdescp_temp),
-                    "--input",
-                    str(xtb_input_file),
-                    "-P",
-                    "1",
-                ] # file triplet
-                run_command(command10, xtb_files_props['stgap'], cwd=dat_dir)
-                _ = self.cleanup(name, destination, xtb_passing, xtb_files_props)
-
-            elif int(mult) == 3:
-                command10 = [
-                    "xtb",
-                    xtb_files_props['xtb_xyz_path'],
-                    "--acc",
-                    str(self.args.qdescp_acc),
-                    "--gfn",
-                    str(self.args.gfn_version),
-                    "--chrg",
-                    str(charge),
-                    "--uhf",
-                    '0',
-                    "--etemp",
-                    str(self.args.qdescp_temp),
-                    "--input",
-                    str(xtb_input_file),
-                    "-P",
-                    "1",
-                ] # file triplet
-
-                run_command(command10, xtb_files_props['stgap'], cwd=dat_dir)
-                _ = self.cleanup(name, destination, xtb_passing, xtb_files_props)
-
         return xtb_passing,xtb_files_props
 
 
@@ -1106,19 +710,25 @@ class qdescp:
         return xtb_passing
 
 
-    def collect_properties(self,name_initial,atom_props,smarts_targets,xtb_files_props):
+    def morfeus_properties(self,name_initial,atom_props,smarts_targets,xtb_files_props,charge,mult):
         """
         Collects all xTB properties from the files and adds them into a JSON file
         """
 
-        # load initial json
-        json_data = read_json(xtb_files_props['xtb_json']) 
+        # load initial json and add coordinates
+        json_data = {}
+        init_path = os.getcwd()
+        morfeus_path = os.path.dirname(xtb_files_props['xtb_xyz_path'])
+        os.chdir(morfeus_path)
 
-        # add and/or update xTB properties to JSON
-        json_data = self.collect_xtb_properties(xtb_files_props,json_data)
+        with open(xtb_files_props['xtb_xyz_path'], "r", encoding='utf-8') as f:
+            inputs = f.readlines()
+        coordinates = [inputs[i].strip().split()[1:] for i in range(2, int(inputs[0].strip()) + 2)]
+        json_data["coordinates"] = coordinates
 
-        # add and/or update MORFEUS properties to JSON
-        json_data = self.collect_morfeus_properties(xtb_files_props,json_data)
+        # add MORFEUS properties to JSON
+        global_properties_morfeus = calculate_morfeus_descriptors(xtb_files_props['xtb_xyz_path'],self,charge,mult,smarts_targets,name_initial)
+        json_data.update(global_properties_morfeus)
 
         # assign atomic properties to the corresponding atoms
         json_data = self.assign_atomic_properties(json_data,name_initial,atom_props,smarts_targets)
@@ -1126,60 +736,7 @@ class qdescp:
         with open(xtb_files_props['xtb_json'], "w", encoding='utf-8') as outfile:
             json.dump(json_data, outfile)
 
-
-    def collect_xtb_properties(self,xtb_files_props,json_data):
-        '''
-        Add and/or update xTB properties to JSON
-        '''
-        
-        xtb_collected_props = {}
-        xtb_collected_props['properties_sp'] = read_xtb(xtb_files_props['xtb_out'],self)
-        xtb_collected_props['properties_ptb'] = read_ptb(xtb_files_props['xtb_ptb'],self)
-        xtb_collected_props['localgfn1'] = read_gfn1(xtb_files_props['xtb_gfn1'],self)
-        xtb_collected_props['properties_FOD'] = read_fod(xtb_files_props['xtb_fod'],self)
-        xtb_collected_props['properties_solv'] = read_solv(xtb_files_props['xtb_solv'])
-        xtb_collected_props['properties_triplet'] = read_triplet(xtb_files_props['stgap'],xtb_collected_props['properties_sp']['Total energy'])
-        xtb_collected_props['cdft_descriptors']  = calculate_global_CDFT_descriptors(xtb_files_props['xtb_out'], xtb_files_props['xtb_Nminus1'], xtb_files_props['xtb_Nminus2'], xtb_files_props['xtb_Nplus1'], xtb_files_props['xtb_Nplus2'],self)
-        xtb_collected_props['localDescriptors'] = calculate_local_CDFT_descriptors(xtb_files_props['xtb_fukui'], xtb_collected_props['cdft_descriptors'], self)
-
-        # create matrix of Wiberg bond-orders
-        bonds, wbos = read_wbo(xtb_files_props['xtb_wbo'],self)
-        atoms = xtb_collected_props['properties_sp']["atoms"]
-        nat = len(atoms)
-        wbo_matrix = np.zeros((nat, nat))
-        for i, bond in enumerate(bonds):
-            wbo_matrix[(bond[0] - 1)][(bond[1] - 1)] = wbos[i]
-            wbo_matrix[(bond[1] - 1)][(bond[0] - 1)] = wbos[i]
-        json_data["Wiberg matrix"] = wbo_matrix.tolist()
-
-        # add other descriptors to the JSON file
-        for xtb_props in xtb_collected_props:
-            if xtb_collected_props[xtb_props] is not None:
-                json_data.update(xtb_collected_props[xtb_props])
-
-        with open(xtb_files_props['xtb_xyz_path'], "r", encoding='utf-8') as f:
-            inputs = f.readlines()
-
-        coordinates = [inputs[i].strip().split()[1:] for i in range(2, int(inputs[0].strip()) + 2)]
-        json_data["coordinates"] = coordinates
-
-        return json_data
-
-
-    def collect_morfeus_properties(self,xtb_files_props,json_data):
-        """
-		Add and/or update MORFEUS properties to JSON
-		"""
-        print(self.args.charge,self.args.mult)
-        # Global descriptors
-        global_properties_morfeus = calculate_global_morfeus_descriptors(xtb_files_props['xtb_xyz_path'],self)
-        json_data.update(global_properties_morfeus)
-
-        # Local descriptors
-        local_properties_morfeus = calculate_local_morfeus_descriptors(xtb_files_props['xtb_xyz_path'],self)
-        json_data.update(local_properties_morfeus)
-
-        return json_data
+        os.chdir(init_path)
 
 
     def assign_atomic_properties(self,json_data,name_initial,atom_props,smarts_targets):
@@ -1188,32 +745,15 @@ class qdescp:
         '''
 
         prefixes_atom_prop = []
-
-        if len(smarts_targets) > 0:
-            # create mol from SMILES in SDF files generated by CSEARCH or from regular SDF files
-            mol = get_mol_assign(name_initial)
-
-            # find the target atoms or groups in the mol object
-            for pattern in smarts_targets:
-                if "'" in pattern or '"' in pattern:
-                    pattern = pattern.replace("'",'').replace('"','')
-                matches, idx_set = get_atom_matches(self,pattern,mol)
-
-                if len(matches) == 0:
-                    self.args.log.write(f"x  WARNING! SMARTS pattern {pattern} not found in {os.path.basename(name_initial)}, atomic descriptors will not be generated.")
-                elif matches[0] == -1:
-                    self.args.log.write(f"x  WARNING! Mapped atom {pattern} not found in {os.path.basename(name_initial)}, atomic descriptors will not be generated.")
-                elif len(matches) > 1:
-                    self.args.log.write(f"x  WARNING! More than one {pattern} patterns were found in {os.path.basename(name_initial)}, atomic descriptors will not be generated.")
-                elif len(matches) == 1:
-                    # get atom types and sort them to keep the same atom order among different molecules
-                    n_types, sorted_indices = sort_atom_types(matches,mol)
-
-                    # Generate unique match names for each atom type in the functional group
-                    match_names = get_prefix_atom_props(sorted_indices,mol,pattern,smarts_targets,idx_set)
-
-                    # Assign atomic descriptors to each identified atom and update database for final JSON file
-                    prefixes_atom_prop, json_data = update_atom_props_json(sorted_indices,match_names,atom_props,json_data,prefixes_atom_prop,pattern,n_types)
+        
+        pattern_dict = get_matches_idx_n_prefix(self,smarts_targets,name_initial)
+        if len(pattern_dict.keys()) > 0:
+            for pattern in pattern_dict:
+                # Assign atomic descriptors to each identified atom and update database for final JSON file
+                prefixes_atom_prop, json_data = update_atom_props_json(pattern_dict[pattern]['sorted_indices'],
+                                                    pattern_dict[pattern]['match_names'],
+                                                    atom_props,json_data,prefixes_atom_prop,pattern,
+                                                    pattern_dict[pattern]['n_types'])
 
         # updates the prefixes used for atomic props
         json_data['prefixes_atom_prop'] = prefixes_atom_prop
@@ -1221,64 +761,25 @@ class qdescp:
         return json_data
     
 
-    def cleanup(self, name, destination, xtb_passing, xtb_files_props, move_folder=False):
+    def cleanup(self, name, destination, xtb_passing, xtb_files_props):
         """
-        Removes files from the xTB calculations that are not relevant and place json files in the 
-        QDESCP folder
+        Removes files from the xTB calculations and place json files in the QDESCP folder
         """
 
-        if xtb_passing and move_folder: # only move molecules with successful xTB calcs
+        if xtb_passing: # only move molecules with successful xTB calcs
             final_json = f"{destination}/{name}.json"
             shutil.move(xtb_files_props['xtb_json'], final_json)
 
-        # delete xTB files that does not contain useful data
-        files = glob.glob(f"{destination}/{name}/*")
+            # delete xTB raw data
+            shutil.rmtree(f"{destination}/{name}")
 
-        # in case the files contain special characters such as [, ], etc.
-        if len(files) == 0:
-            files_list = os.listdir(f"{destination}/{name}")
-            files = [f"{destination}/{name}/{x}" for x in files_list]
-
-        for file in files:
-            if 'xtbout_ptb.json' not in file: # this file is removed later
-                if name not in os.path.basename(file):
-                    os.remove(file)
-                if '.inp' in os.path.basename(file):
-                    if move_folder:
-                        os.remove(file)
-        if os.path.exists(f"{destination}/{name}/.xtboptok"):
-            os.remove(f"{destination}/{name}/.xtboptok")
-
-        if move_folder:
-            if not os.path.exists(f"{destination}/xtb_data"): 
-                Path(f"{destination}/xtb_data").mkdir()
-            if os.path.exists(f"{destination}/xtb_data/{name}"): 
-                self.args.log.write(f'\nx  A previous folder of {name} already existed, it was removed and replaced with the results of this QDESCP run.')
-                shutil.rmtree(f"{destination}/xtb_data/{name}")
-            shutil.move(f"{destination}/{name}", f"{destination}/xtb_data/{name}")
-
-
-    def merge_results(self,destination,xtb_files_props):
-        # combine all the results in one single file
-        file_formats = load_file_formats()
-
-        name = '.'.join(os.path.basename(xtb_files_props['xtb_out']).split('.')[:-1])
-        raw_content = ''
-        for file_format in file_formats:
-            xtb_file = f"{destination}/xtb_data/{name}/{name}{file_format}"
-            if os.path.exists(xtb_file):
-                if raw_content != '':
-                    raw_content += '\n\n'
-                raw_content += f'----- {file_formats[file_format]} -----\n'
-                with open(xtb_file, 'r', encoding='utf-8') as file:
-                    lines = file.readlines()
-                    for line in lines:
-                        raw_content += line
-                os.remove(xtb_file)
-
-        raw_file = open(f"{destination}/xtb_data/{name}/{name}_All_Calcs.out", "w", encoding='utf-8')
-        raw_file.write(f"{raw_content}\n")
-        raw_file.close()
+        else:
+            if not os.path.exists(f"{destination}/failed"): 
+                Path(f"{destination}/failed").mkdir()
+            if os.path.exists(f"{destination}/failed/{name}"): 
+                self.args.log.write(f'\nx  A previous folder of {name} already existed in failed, it was removed and replaced with the results of this QDESCP run.')
+                shutil.rmtree(f"{destination}/failed/{name}")
+            shutil.move(f"{destination}/{name}", f"{destination}/failed/{name}")
 
 
     def get_unique_files(self):
