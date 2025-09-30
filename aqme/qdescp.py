@@ -304,8 +304,12 @@ class qdescp:
         if len(csearch_files) > 0:
             df_qdescp = pd.read_csv(self.args.csv_name)
             for file in csearch_files:
-                if os.path.basename(file).replace('_rdkit.sdf','') in df_qdescp['code_name'].astype(str).tolist():
-                    qdescp_files.append(file)
+                # Match if the SDF file starts with the code_name (handles AAA_0_rdkit.sdf for code_name AAA)
+                file_base = os.path.basename(file)
+                for code_name in df_qdescp['code_name'].astype(str).tolist():
+                    if file_base.startswith(f"{code_name}_"):
+                        qdescp_files.append(file)
+                        break
         if len(qdescp_files) == 0:
             self.args.log.write(f"\nx  WARNING! The CSEARCH conformational search did not produce any results.")
             self.args.log.finalize()
@@ -717,26 +721,34 @@ class qdescp:
 
         # load initial json and add coordinates
         json_data = {}
-        init_path = os.getcwd()
-        morfeus_path = os.path.dirname(xtb_files_props['xtb_xyz_path'])
-        os.chdir(morfeus_path)
 
-        with open(xtb_files_props['xtb_xyz_path'], "r", encoding='utf-8') as f:
-            inputs = f.readlines()
+        xyz_path = Path(xtb_files_props['xtb_xyz_path']).resolve()
+        json_path = Path(xtb_files_props['xtb_json']).resolve()
+
+        try:
+            with open(xyz_path, "r", encoding='utf-8') as f:
+                inputs = f.readlines()
+        except FileNotFoundError:
+            self.args.log.write(f"x  ERROR! The xyz file for {name_initial} was not found. No descriptors will be generated for this system.")
+            return
+        
         coordinates = [inputs[i].strip().split()[1:] for i in range(2, int(inputs[0].strip()) + 2)]
         json_data["coordinates"] = coordinates
 
         # add MORFEUS properties to JSON
-        global_properties_morfeus = calculate_morfeus_descriptors(xtb_files_props['xtb_xyz_path'],self,charge,mult,smarts_targets,name_initial)
-        json_data.update(global_properties_morfeus)
+        try:
+            global_properties_morfeus = calculate_morfeus_descriptors(str(xyz_path),self,charge,mult,smarts_targets,name_initial)
+            json_data.update(global_properties_morfeus)
+        except Exception as e:
+            self.args.log.write(f"x  ERROR! Failed to calculate MORFEUS descriptors for {name_initial}: {e}\n")
+            return
 
         # assign atomic properties to the corresponding atoms
         json_data = self.assign_atomic_properties(json_data,name_initial,atom_props,smarts_targets)
 
-        with open(xtb_files_props['xtb_json'], "w", encoding='utf-8') as outfile:
+        json_path.parent.mkdir(parents=True, exist_ok=True)
+        with json_path.open("w", encoding="utf-8") as outfile:
             json.dump(json_data, outfile)
-
-        os.chdir(init_path)
 
 
     def assign_atomic_properties(self,json_data,name_initial,atom_props,smarts_targets):

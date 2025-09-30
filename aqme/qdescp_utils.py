@@ -553,7 +553,7 @@ def morfeus_ptb_descps(self, elements, coordinates, morfeus_data, charge, n_unpa
     charges = atom_dipole_vect = bond_orders = {}
 
     try:
-        xtb_ptb = XTB(elements, coordinates, n_processes=1, charge=charge, n_unpaired=n_unpaired, solvent=None, method='ptb')
+        xtb_ptb = XTB(elements, coordinates, n_processes=0, charge=charge, n_unpaired=n_unpaired, solvent=None, method='ptb')
         homo = xtb_ptb.get_homo(unit="eV")
         lumo = xtb_ptb.get_lumo(unit="eV")
         homo_lumo_gap = xtb_ptb.get_homo_lumo_gap(unit="eV")
@@ -593,7 +593,7 @@ def morfeus_gfn2_descps(self, elements, coordinates, morfeus_data, charge, n_unp
     electrofugality = None
 
     try:
-        xtb2 = XTB(elements, coordinates, n_processes=1, charge=charge, n_unpaired=n_unpaired, solvent=getattr(self.args, "qdescp_solvent", None), method=2)
+        xtb2 = XTB(elements, coordinates, n_processes=0, charge=charge, n_unpaired=n_unpaired, solvent=getattr(self.args, "qdescp_solvent", None), method=2)
         ip = xtb2.get_ip(corrected=True)
         ea = xtb2.get_ea(corrected=True)
         electrophilicity = xtb2.get_global_descriptor("electrophilicity", corrected=True)
@@ -613,7 +613,7 @@ def morfeus_gfn2_descps(self, elements, coordinates, morfeus_data, charge, n_unp
         local_electrophil = list(xtb2.get_fukui("local_electrophilicity").values())
         energy = xtb2.get_energy()
         fermi_level = xtb2.get_fermi_level()
-        covCN = list(xtb2.get_covCN().values())
+        covCN = list(xtb2.get_covcn().values())
 
     except Exception as e:
         self.args.log.write(f"x  WARNING! Error calculating extra Morfeus descriptors with GFN2: {e}")
@@ -654,7 +654,7 @@ def morfeus_solv_descps(self, elements, coordinates, morfeus_data, charge, n_unp
     g_solv = g_solv_hb = atom_hb_terms = None
 
     try:
-        xtb2_solv = XTB(elements, coordinates, n_processes=1, charge=charge, n_unpaired=n_unpaired, solvent="h2o", method=2)
+        xtb2_solv = XTB(elements, coordinates, n_processes=0, charge=charge, n_unpaired=n_unpaired, solvent="h2o", method=2)
         g_solv = round(xtb2_solv.get_solvation_energy() * HARTREE_TO_KCAL, 2)
         g_solv_hb = round(xtb2_solv.get_solvation_h_bond_correction() * HARTREE_TO_KCAL, 2)
         atom_hb_terms = [round(v * HARTREE_TO_KCAL,2) for v in xtb2_solv.get_atomic_h_bond_corrections().values()]
@@ -678,7 +678,7 @@ def morfeus_t1_descps(self, elements, coordinates, morfeus_data, charge, n_unpai
     """
     
     # get S0-T1 gap
-    xtb2t1 = XTB(elements, coordinates, n_processes=1, charge=charge, n_unpaired=n_unpaired+2, solvent=getattr(self.args, "qdescp_solvent", None), method=2)
+    xtb2t1 = XTB(elements, coordinates, n_processes=0, charge=charge, n_unpaired=n_unpaired+2, solvent=getattr(self.args, "qdescp_solvent", None), method=2)
     energy_T1 = xtb2t1.get_energy()
     S0_T1_gap = round((energy_T1 - energy) * HARTREE_TO_KCAL,2) # in kcal/mol
     morfeus_data["S0-T1 gap"] = S0_T1_gap
@@ -1009,7 +1009,10 @@ def remove_invalid_smarts(self,mol_list,smarts_targets):
 
     # remove invalid patterns
     for pattern in patterns_remove:
-        smarts_targets.remove(pattern)
+        try:
+            smarts_targets.remove(pattern)
+        except ValueError:
+            pass
 
     # print patterns recognized automatically
     for smarts_target in smarts_targets:
