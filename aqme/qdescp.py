@@ -434,7 +434,11 @@ class qdescp:
         Combines the descriptor data from qdescp CSVs with the input CSV and saves the result.
 
         """
+        code_names = []
+        if self.args.csv_name and os.path.exists(self.args.csv_name):
+            code_names = pd.read_csv(self.args.csv_name)["code_name"].astype(str).tolist()
 
+        # Read all JSON files in the boltz directory and concatenate them into a single DataFrame
         json_pattern = str(destination) + "/boltz/*_boltz.json"
 
         boltz_json_files = glob.glob(json_pattern)
@@ -442,9 +446,17 @@ class qdescp:
         for file in boltz_json_files:
             data = pd.read_json(file, lines=True)
 
-            name_indiv = os.path.basename(file).split("_")[:-2]
-            if len(name_indiv) > 1:
-                name_indiv = ['_'.join(name_indiv)]
+            json_basename = os.path.basename(file).replace("_boltz.json", "")
+            if json_basename.endswith("_rdkit"):
+                json_basename = json_basename[:-6]
+
+            # ensure JSON names with extra suffixes when using complex_type (e.g., L1_0_rdkit_boltz) still map to the original code_name
+            name_indiv = json_basename
+            for code_name in code_names:
+                if json_basename == code_name or json_basename.startswith(f"{code_name}_"):
+                    name_indiv = code_name
+                    break
+
             data.insert(loc=0, column='code_name', value=name_indiv)
             dfs.append(data)
         if dfs != []:

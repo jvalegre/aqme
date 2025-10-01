@@ -948,7 +948,10 @@ def auto_pattern(mol_list,smarts_targets):
     Obtaing SMARTS patterns from the input files automatically if no patterns are provided
     '''
 
-    mcs = rdFMCS.FindMCS(mol_list)
+    # Adding a maximum time limit to avoid very long calculations
+    params = rdFMCS.MCSParameters()
+    params.Timeout = 30  # seconds maximum
+    mcs = rdFMCS.FindMCS(mol_list, parameters=params)
     if mcs is not None:
         common_substructure = Chem.MolFromSmarts(mcs.smartsString)
         # Filter out non-metal atoms
