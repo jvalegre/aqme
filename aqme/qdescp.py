@@ -326,9 +326,15 @@ class qdescp:
             if file not in self.args.invalid_calcs:
                 mols = load_sdf(file)
                 mol = mols[0]
-                name = '.'.join(os.path.basename(Path(file)).split(".")[:-1])
+                # Get the code_name from the original CSV for this file
+                df_qdescp = pd.read_csv(self.args.csv_name)
+                file_base = os.path.basename(file)
+                for code_name in df_qdescp['code_name'].astype(str).tolist():
+                    if file_base.startswith(f"{code_name}_"):
+                        name = code_name
+                        break
                 # to locate difficult names (i.e. with special characters), glob.glob doesn't work, this is needed:
-                json_files = [x for x in glob.glob(f"{destination}/*.json") if os.path.basename(x).startswith(f'{name}_conf_')]
+                json_files = [x for x in glob.glob(f"{destination}/*.json") if os.path.basename(x).startswith(f"{name}_") and "_conf_" in os.path.basename(x)]
                 # Generating the JSON files
                 _ = self.get_boltz_props(json_files, name, boltz_dir, "xtb", descp_dict_indiv, smarts_targets, mol, all_prefixes_atoms)
             
