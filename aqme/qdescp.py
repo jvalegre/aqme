@@ -629,7 +629,7 @@ class qdescp:
 
             if xtb_passing:
                 # collect all the properties from the output files
-                _ = self.morfeus_properties(path_name, atom_props, smarts_targets, xtb_files_props, charge, mult)
+                _ = self.morfeus_properties(path_name, atom_props, smarts_targets, xtb_files_props, charge, mult, file)
 
             _ = self.cleanup(name_xtb, destination, xtb_passing, xtb_files_props)
 
@@ -715,24 +715,7 @@ class qdescp:
         return xtb_passing,xtb_files_props
 
 
-    def check_xtb_errors(self,name,file,file_check,xtb_passing):
-        '''
-        Check if the initial calculation finished OK
-        '''
-        
-        with open(file_check, "r", encoding='utf-8') as opt_file:
-            opt_lines = opt_file.readlines()
-            for line in opt_lines:
-                if '[ERROR] Program stopped' in line:
-                    xtb_passing = False
-                    if file not in self.args.invalid_calcs:
-                        self.args.invalid_calcs.append(file)
-                    self.args.log.write(f"x  WARNING! {name} did not finish correctly and no descriptors will be generated for this system. Common causes: the CHARGE and/or MULTIPLICITY used are not correct (adjust with the --charge and --mult options).")
-
-        return xtb_passing
-
-
-    def morfeus_properties(self,name_initial,atom_props,smarts_targets,xtb_files_props,charge,mult):
+    def morfeus_properties(self,name_initial,atom_props,smarts_targets,xtb_files_props,charge,mult,file):
         """
         Collects all xTB properties from the files and adds them into a JSON file
         """
@@ -759,6 +742,8 @@ class qdescp:
             json_data.update(global_properties_morfeus)
         except Exception as e:
             self.args.log.write(f"x  ERROR! Failed to calculate MORFEUS descriptors for {name_initial}: {e}\n")
+            if file not in self.args.invalid_calcs:
+                self.args.invalid_calcs.append(file)
             return
 
         # assign atomic properties to the corresponding atoms
