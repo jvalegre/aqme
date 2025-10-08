@@ -786,7 +786,7 @@ class qdescp:
             shutil.move(xtb_files_props['xtb_json'], final_json)
 
             # delete xTB raw data
-            shutil.rmtree(f"{destination}/{name}")
+            # shutil.rmtree(f"{destination}/{name}")
 
         else:
             if not os.path.exists(f"{destination}/failed"): 
