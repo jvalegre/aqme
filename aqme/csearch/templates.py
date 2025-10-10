@@ -5,12 +5,12 @@
 
 import sys
 from pathlib import Path
-from pkg_resources import resource_filename
+from importlib.resources import files
 from rdkit.Chem import AllChem as Chem
 from rdkit.Chem import rdDistGeom, rdMolAlign
 from aqme.utils import get_conf_RMS, load_sdf
 
-TEMPLATES_PATH = Path(resource_filename("aqme", "templates"))
+TEMPLATES_PATH = files("aqme").joinpath("templates")
 
 
 def template_embed(self, mol, complex_type, metal_idx, maxsteps, heavyonly, maxmatches, name, geom):
@@ -199,7 +199,7 @@ def load_template(complex_type, log):
         log.finalize()
         sys.exit()
 
-    file_template = folder / Path(type2template[complex_type])
+    file_template = folder.joinpath(type2template[complex_type])
     templates = load_sdf(str(file_template))
     template = templates[-1]
 

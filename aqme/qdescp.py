@@ -304,8 +304,12 @@ class qdescp:
         if len(csearch_files) > 0:
             df_qdescp = pd.read_csv(self.args.csv_name)
             for file in csearch_files:
-                if os.path.basename(file).replace('_rdkit.sdf','') in df_qdescp['code_name'].astype(str).tolist():
-                    qdescp_files.append(file)
+                # Match if the SDF file starts with the code_name (handles AAA_0_rdkit.sdf for code_name AAA)
+                file_base = os.path.basename(file)
+                for code_name in df_qdescp['code_name'].astype(str).tolist():
+                    if file_base.startswith(f"{code_name}_"):
+                        qdescp_files.append(file)
+                        break
         if len(qdescp_files) == 0:
             self.args.log.write(f"\nx  WARNING! The CSEARCH conformational search did not produce any results.")
             self.args.log.finalize()
@@ -322,9 +326,15 @@ class qdescp:
             if file not in self.args.invalid_calcs:
                 mols = load_sdf(file)
                 mol = mols[0]
-                name = '.'.join(os.path.basename(Path(file)).split(".")[:-1])
+                # Get the code_name from the original CSV for this file
+                df_qdescp = pd.read_csv(self.args.csv_name)
+                file_base = os.path.basename(file)
+                for code_name in df_qdescp['code_name'].astype(str).tolist():
+                    if file_base.startswith(f"{code_name}_"):
+                        name = code_name
+                        break
                 # to locate difficult names (i.e. with special characters), glob.glob doesn't work, this is needed:
-                json_files = [x for x in glob.glob(f"{destination}/*.json") if os.path.basename(x).startswith(f'{name}_conf_')]
+                json_files = [x for x in glob.glob(f"{destination}/*.json") if os.path.basename(x).startswith(f"{name}_") and "_conf_" in os.path.basename(x)]
                 # Generating the JSON files
                 _ = self.get_boltz_props(json_files, name, boltz_dir, "xtb", descp_dict_indiv, smarts_targets, mol, all_prefixes_atoms)
             
@@ -430,7 +440,11 @@ class qdescp:
         Combines the descriptor data from qdescp CSVs with the input CSV and saves the result.
 
         """
-
+        code_names = []
+        if self.args.csv_name and os.path.exists(self.args.csv_name):
+            code_names = pd.read_csv(self.args.csv_name)["code_name"].astype(str).tolist()
+        
+        # Read all JSON files in the boltz directory and concatenate them into a single DataFrame
         json_pattern = str(destination) + "/boltz/*_boltz.json"
 
         boltz_json_files = glob.glob(json_pattern)
@@ -438,9 +452,17 @@ class qdescp:
         for file in boltz_json_files:
             data = pd.read_json(file, lines=True)
 
-            name_indiv = os.path.basename(file).split("_")[:-2]
-            if len(name_indiv) > 1:
-                name_indiv = ['_'.join(name_indiv)]
+            json_basename = os.path.basename(file).replace("_boltz.json", "")
+            if json_basename.endswith("_rdkit"):
+                json_basename = json_basename[:-6]
+
+            # ensure JSON names with extra suffixes when using complex_type (e.g., L1_0_rdkit_boltz) still map to the original code_name
+            name_indiv = json_basename
+            for code_name in code_names:
+                if json_basename == code_name or json_basename.startswith(f"{code_name}_"):
+                    name_indiv = code_name
+                    break
+
             data.insert(loc=0, column='code_name', value=name_indiv)
             dfs.append(data)
         if dfs != []:
@@ -607,7 +629,7 @@ class qdescp:
 
             if xtb_passing:
                 # collect all the properties from the output files
-                _ = self.morfeus_properties(path_name, atom_props, smarts_targets, xtb_files_props, charge, mult)
+                _ = self.morfeus_properties(path_name, atom_props, smarts_targets, xtb_files_props, charge, mult, file)
 
             _ = self.cleanup(name_xtb, destination, xtb_passing, xtb_files_props)
 
@@ -693,50 +715,43 @@ class qdescp:
         return xtb_passing,xtb_files_props
 
 
-    def check_xtb_errors(self,name,file,file_check,xtb_passing):
-        '''
-        Check if the initial calculation finished OK
-        '''
-        
-        with open(file_check, "r", encoding='utf-8') as opt_file:
-            opt_lines = opt_file.readlines()
-            for line in opt_lines:
-                if '[ERROR] Program stopped' in line:
-                    xtb_passing = False
-                    if file not in self.args.invalid_calcs:
-                        self.args.invalid_calcs.append(file)
-                    self.args.log.write(f"x  WARNING! {name} did not finish correctly and no descriptors will be generated for this system. Common causes: the CHARGE and/or MULTIPLICITY used are not correct (adjust with the --charge and --mult options).")
-
-        return xtb_passing
-
-
-    def morfeus_properties(self,name_initial,atom_props,smarts_targets,xtb_files_props,charge,mult):
+    def morfeus_properties(self,name_initial,atom_props,smarts_targets,xtb_files_props,charge,mult,file):
         """
         Collects all xTB properties from the files and adds them into a JSON file
         """
 
         # load initial json and add coordinates
         json_data = {}
-        init_path = os.getcwd()
-        morfeus_path = os.path.dirname(xtb_files_props['xtb_xyz_path'])
-        os.chdir(morfeus_path)
 
-        with open(xtb_files_props['xtb_xyz_path'], "r", encoding='utf-8') as f:
-            inputs = f.readlines()
+        xyz_path = Path(xtb_files_props['xtb_xyz_path']).resolve()
+        json_path = Path(xtb_files_props['xtb_json']).resolve()
+
+        try:
+            with open(xyz_path, "r", encoding='utf-8') as f:
+                inputs = f.readlines()
+        except FileNotFoundError:
+            self.args.log.write(f"x  ERROR! The xyz file for {name_initial} was not found. No descriptors will be generated for this system.")
+            return
+        
         coordinates = [inputs[i].strip().split()[1:] for i in range(2, int(inputs[0].strip()) + 2)]
         json_data["coordinates"] = coordinates
 
         # add MORFEUS properties to JSON
-        global_properties_morfeus = calculate_morfeus_descriptors(xtb_files_props['xtb_xyz_path'],self,charge,mult,smarts_targets,name_initial)
-        json_data.update(global_properties_morfeus)
+        try:
+            global_properties_morfeus = calculate_morfeus_descriptors(str(xyz_path),self,charge,mult,smarts_targets,name_initial)
+            json_data.update(global_properties_morfeus)
+        except Exception as e:
+            self.args.log.write(f"x  ERROR! Failed to calculate MORFEUS descriptors for {name_initial}: {e}\n")
+            if file not in self.args.invalid_calcs:
+                self.args.invalid_calcs.append(file)
+            return
 
         # assign atomic properties to the corresponding atoms
         json_data = self.assign_atomic_properties(json_data,name_initial,atom_props,smarts_targets)
 
-        with open(xtb_files_props['xtb_json'], "w", encoding='utf-8') as outfile:
+        json_path.parent.mkdir(parents=True, exist_ok=True)
+        with json_path.open("w", encoding="utf-8") as outfile:
             json.dump(json_data, outfile)
-
-        os.chdir(init_path)
 
 
     def assign_atomic_properties(self,json_data,name_initial,atom_props,smarts_targets):
@@ -771,7 +786,7 @@ class qdescp:
             shutil.move(xtb_files_props['xtb_json'], final_json)
 
             # delete xTB raw data
-            shutil.rmtree(f"{destination}/{name}")
+            # shutil.rmtree(f"{destination}/{name}")
 
         else:
             if not os.path.exists(f"{destination}/failed"): 

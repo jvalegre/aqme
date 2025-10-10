@@ -613,7 +613,7 @@ def morfeus_gfn2_descps(self, elements, coordinates, morfeus_data, charge, n_unp
         local_electrophil = list(xtb2.get_fukui("local_electrophilicity").values())
         energy = xtb2.get_energy()
         fermi_level = xtb2.get_fermi_level()
-        covCN = list(xtb2.get_covCN().values())
+        covCN = list(xtb2.get_covcn().values())
 
     except Exception as e:
         self.args.log.write(f"x  WARNING! Error calculating extra Morfeus descriptors with GFN2: {e}")
@@ -948,7 +948,10 @@ def auto_pattern(mol_list,smarts_targets):
     Obtaing SMARTS patterns from the input files automatically if no patterns are provided
     '''
 
-    mcs = rdFMCS.FindMCS(mol_list)
+    # Adding a maximum time limit to avoid very long calculations
+    params = rdFMCS.MCSParameters()
+    params.Timeout = 30  # seconds maximum
+    mcs = rdFMCS.FindMCS(mol_list, parameters=params)
     if mcs is not None:
         common_substructure = Chem.MolFromSmarts(mcs.smartsString)
         # Filter out non-metal atoms
@@ -1009,7 +1012,10 @@ def remove_invalid_smarts(self,mol_list,smarts_targets):
 
     # remove invalid patterns
     for pattern in patterns_remove:
-        smarts_targets.remove(pattern)
+        try:
+            smarts_targets.remove(pattern)
+        except ValueError:
+            pass
 
     # print patterns recognized automatically
     for smarts_target in smarts_targets:
