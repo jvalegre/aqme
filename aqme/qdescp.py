@@ -21,7 +21,7 @@ General
       Creates a database ready to use in an AQME-ROBERT machine learning workflow,
       combining the input CSV with SMILES/code_name and the calculated xTB/DBSTEP descriptors
 
-xTB descriptors
+xTB and MORFEUS descriptors
 +++++++++++++++
 
    files or input (both options are valid) : list of str, default=''
@@ -49,6 +49,8 @@ xTB descriptors
       molecular descriptors
    xtb_opt : bool, default=True
       Performs an initial xTB geometry optimization before calculating descriptors
+   vbur_radius : float, default=3.5
+      Adjusts the radius in the buried volume calculations of MORFEUS
 
 NMR simulation
 ++++++++++++++
@@ -373,7 +375,7 @@ class qdescp:
         _ = convert_ndarrays(full_json_data)
 
         # Save the averaged properties to a file
-        _ = dict_to_json(os.path.join(boltz_dir, f"{name}_boltz.json"), full_json_data)
+        _ = dict_to_json(self,os.path.join(boltz_dir, f"{name}_boltz.json"), full_json_data)
 
 
     def qdescp_set_up(self):
@@ -782,11 +784,14 @@ class qdescp:
         """
 
         if xtb_passing: # only move molecules with successful xTB calcs
+            # save JSON and XYZ files
             final_json = f"{destination}/{name}.json"
             shutil.move(xtb_files_props['xtb_json'], final_json)
+            final_xyz = f"{destination}/{name}.xyz"
+            shutil.move(xtb_files_props['xtb_xyz_path'], final_xyz)
 
             # delete xTB raw data
-            # shutil.rmtree(f"{destination}/{name}")
+            shutil.rmtree(f"{destination}/{name}")
 
         else:
             if not os.path.exists(f"{destination}/failed"): 

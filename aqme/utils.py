@@ -363,6 +363,7 @@ def command_line_args():
         "qdescp_acc",
         "dbstep_r",
         "crest_nclust",
+        "vbur_radius"
     ]
 
     for arg in var_dict:
