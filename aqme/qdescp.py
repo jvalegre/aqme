@@ -181,6 +181,8 @@ class qdescp:
         # obtaing SMARTS patterns from the input files automatically if no patterns are provided
         if len(smarts_targets) == 0 and len(qdescp_files) > 1:
             smarts_targets = auto_pattern(mol_list,smarts_targets)
+            if len(smarts_targets) > 0:
+                self.args.log.write(f"\no  Common atoms/groups found in all molecules (repeated once in each): {smarts_targets}")
 
         # Delete a SMARTS pattern if it is not compatible with more than 75% of the sdf files
         if len(smarts_targets) > 0:
@@ -329,12 +331,15 @@ class qdescp:
                 mols = load_sdf(file)
                 mol = mols[0]
                 # Get the code_name from the original CSV for this file
-                df_qdescp = pd.read_csv(self.args.csv_name)
-                file_base = os.path.basename(file)
-                for code_name in df_qdescp['code_name'].astype(str).tolist():
-                    if file_base.startswith(f"{code_name}_"):
-                        name = code_name
-                        break
+                if self.args.csv_name is not None and os.path.exists(self.args.csv_name):
+                    df_qdescp = pd.read_csv(self.args.csv_name)
+                    file_base = os.path.basename(file)
+                    for code_name in df_qdescp['code_name'].astype(str).tolist():
+                        if file_base.startswith(f"{code_name}_"):
+                            name = code_name
+                            break
+                else:
+                    name = os.path.basename(file).replace('.sdf','')
                 # to locate difficult names (i.e. with special characters), glob.glob doesn't work, this is needed:
                 json_files = [x for x in glob.glob(f"{destination}/*.json") if os.path.basename(x).startswith(f"{name}_") and "_conf_" in os.path.basename(x)]
                 # Generating the JSON files
@@ -443,9 +448,27 @@ class qdescp:
 
         """
         code_names = []
-        if self.args.csv_name and os.path.exists(self.args.csv_name):
-            code_names = pd.read_csv(self.args.csv_name)["code_name"].astype(str).tolist()
-        
+        temp_csv = f'{Path(os.getcwd()).joinpath("AQME_run.csv")}'
+        if self.args.csv_name is not None:
+            if os.path.exists(self.args.csv_name):
+                code_names = pd.read_csv(self.args.csv_name)["code_name"].astype(str).tolist()
+
+        else:
+            code_names = [os.path.basename(file).replace('.sdf','') for file in self.args.files]
+            df_name = pd.DataFrame({'code_name': code_names})
+            normalized_code_names = list(
+                df_name['code_name'].astype(str)  # ensure all entries are strings
+                .str.replace(r"(_\d+)?_rdkit$", "", regex=True)  # remove _0_rdkit, _1_rdkit, etc.
+                .str.replace(r"_rdkit$", "", regex=True)  # remove plain _rdkit
+    )
+
+            # Create a DataFrame
+            df = pd.DataFrame({'code_name': normalized_code_names,
+                                'SMILES': [np.nan] * len(code_names)})
+            # Save to CSV
+            df.to_csv(temp_csv, index=False)
+            self.args.csv_name = temp_csv
+
         # Read all JSON files in the boltz directory and concatenate them into a single DataFrame
         json_pattern = str(destination) + "/boltz/*_boltz.json"
 
@@ -471,7 +494,7 @@ class qdescp:
             df_full = pd.concat(dfs, ignore_index=True)
 
             name_db = 'Descriptors'
-            if self.args.csv_name is not None:
+            if os.path.exists(self.args.csv_name):
                 if self.args.robert:
                     name_db = 'ROBERT'
 
@@ -548,9 +571,10 @@ class qdescp:
 
                     self.args.log.write(f"o  The AQME-{name_db}_full_{csv_basename}, AQME-{name_db}_denovo_{csv_basename} and AQME-{name_db}_interpret_{csv_basename} databases were created in {self.args.initial_dir}")
                     _ = self.process_aqme_csv(name_db)
+                    os.remove(temp_csv) if os.path.exists(temp_csv) else None
 
             else:
-                self.args.log.write(f"\nx  The input csv_name provided ({self.args.csv_name}) does not contain the SMILES column. A combined database for AQME-{name_db} workflows will not be created.")
+                self.args.log.write(f"\nx  The input csv_name provided ({self.args.csv_name}) does not exist. A combined database for AQME-{name_db} workflows will not be created (but you can still check the raw descriptors in the QDESCP folder).")
 
         else:
             self.args.log.write(f"x  No descriptors were generated with QDESCP, please check the WARNINGS above.")

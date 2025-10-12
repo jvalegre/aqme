@@ -590,7 +590,6 @@ def get_matches_idx_n_prefix(
                     sorted_indices,
                     mol,
                     pattern,
-                    smarts_targets,
                     idx_set
                 )
 
@@ -946,7 +945,7 @@ def morfeus_ptb_descps(
         xtb_ptb = XTB(
             elements,
             coordinates,
-            n_processes=1,
+            n_processes='aqme',
             charge=charge,
             n_unpaired=n_unpaired,
             solvent=None,
@@ -1037,7 +1036,7 @@ def morfeus_gfn2_descps(
         xtb2 = XTB(
             elements,
             coordinates,
-            n_processes=1,
+            n_processes='aqme',
             charge=charge,
             n_unpaired=n_unpaired,
             solvent=getattr(self.args, "qdescp_solvent", None),
@@ -1149,7 +1148,7 @@ def morfeus_solv_descps(
         xtb2_solv = XTB(
             elements,
             coordinates,
-            n_processes=1,
+            n_processes='aqme',
             charge=charge,
             n_unpaired=n_unpaired,
             solvent="h2o",
@@ -1219,7 +1218,7 @@ def morfeus_t1_descps(
         xtb2t1 = XTB(
             elements, 
             coordinates, 
-            n_processes=1, 
+            n_processes='aqme', 
             charge=charge, 
             n_unpaired=n_unpaired+2,
             solvent=getattr(self.args, "qdescp_solvent", None),
@@ -1844,61 +1843,145 @@ def get_mol_assign(self,
         raise ValueError(exc_error)
 
 def auto_pattern(
-    mol_list: List[MoleculeType],
+    mol_list: List[Chem.Mol],
     smarts_targets: List[str],
-    timeout: int = 30
 ) -> List[str]:
     """
     Automatically detect common SMARTS patterns across molecules.
 
-    Uses RDKit's Maximum Common Substructure (MCS) algorithm to identify
-    shared structural elements across a list of molecules.
-
     Args:
         mol_list: List of RDKit molecule objects
-        smarts_targets: Existing SMARTS patterns (may be empty)
-        timeout: Maximum time in seconds for MCS search
+        smarts_targets: Existing SMARTS patterns or names (may be empty)
 
     Returns:
         Updated list of SMARTS patterns including automatically detected ones
 
     Notes:
-        - Uses timeout to prevent hanging on complex structures
-        - Filters out patterns containing metal atoms
-        - Only includes patterns present in all molecules
-        - Preserves existing patterns from smarts_targets
+        - Only includes functional groups or SMARTS patterns that appear exactly once per molecule
+        - Preserves and validates existing SMARTS patterns from smarts_targets
+        - idx_added_per_mol is a list of sets; each set contains atom indices
+          (for that molecule) that are already assigned to a matched pattern
     """
     if not mol_list:
         return smarts_targets
 
-    # Configure MCS parameters
-    params = rdFMCS.MCSParameters()
-    params.Timeout = timeout
-    params.AtomCompare = rdFMCS.AtomCompare.CompareElements
-    params.BondCompare = rdFMCS.BondCompare.CompareOrder
-    
-    try:
-        # Find maximum common substructure
-        mcs = rdFMCS.FindMCS(mol_list, parameters=params)
-        if mcs is None or mcs.canceled:
-            return smarts_targets
+    n_mols = len(mol_list)
 
-        # Convert to molecule object
-        common_substructure = Chem.MolFromSmarts(mcs.smartsString)
-        if common_substructure is None:
-            return smarts_targets
+    # Predefined functional groups (name -> SMARTS)
+    func_groups = {
+        'O=C[H]': '[CX3H1](=O)',
+        'O=COC':  '[CX3](=O)O[#6]',
+        'O=C[O-]': '[CX3](=O)[O-]',
+        'O=C(N)': 'C(=O)[NX3;H2,H1,H0;!$(NC=O)]',
+        'O=CO[H]': 'C(=O)[OX2H1]',
+        'C#N': '[CX2]#[NX1]',
+        'C=C': 'C=C',
+        'C#C': 'C#C',
+        'N=O': '[NX2]=[OX1]',
+        'N=N': '[NX2]=[NX2]',
+        'N#N': '[NX2]#[NX1]',
+        'S=O': '[#16X3]=O',
+        'O=S=O': 'S(=O)(=O)',
+        'O-H': '[OX2H]',
+        'N-H': '[NX3H]',
+        'S-H': '[SX2H]'
+    }
 
-        # Analyze atom types
-        atom_types = [atom.GetSymbol() for atom in common_substructure.GetAtoms()]
-        for atom_type in set(atom_types):
-            if atom_types.count(atom_type) == 1:
-                smarts_targets.append(f'{atom_type}')
-    except Exception as e:
-        # If MCS search fails, return original patterns
-        return smarts_targets
+    # Index sets per molecule to track already-assigned atom indices
+    idx_added_per_mol: List[set] = [set() for _ in range(n_mols)]
+
+    # --- Step 0: Validate existing SMARTS and collect their atom indices per molecule ---
+    validated_targets: List[str] = []
+    for target in smarts_targets:
+        smarts = func_groups.get(target, target)
+        pattern = Chem.MolFromSmarts(smarts)
+        if pattern is None:
+            continue
+
+        # must appear exactly once in every molecule
+        appear_once_in_all = True
+        all_matches_per_mol = []
+        for mol in mol_list:
+            matches = mol.GetSubstructMatches(pattern)
+            all_matches_per_mol.append(matches)
+            if len(matches) != 1:
+                appear_once_in_all = False
+                break
+
+        if not appear_once_in_all:
+            continue
+
+        # collect matching atom indices per molecule (flatten tuples)
+        for i, matches in enumerate(all_matches_per_mol):
+            for match in matches:
+                for idx in match:
+                    idx_added_per_mol[i].add(idx)
+
+        validated_targets.append(target)
+
+    smarts_targets = validated_targets.copy()
+
+    # --- Step 1: Detect predefined functional groups (only if exactly once per mol) ---
+    for group_name, smarts in func_groups.items():
+        if group_name in smarts_targets:
+            continue  # already validated/present
+
+        pattern = Chem.MolFromSmarts(smarts)
+        if pattern is None:
+            continue
+
+        appear_once_in_all = True
+        all_matches_per_mol = []
+        for mol in mol_list:
+            matches = mol.GetSubstructMatches(pattern)
+            all_matches_per_mol.append(matches)
+            if len(matches) != 1:
+                appear_once_in_all = False
+                break
+
+        if not appear_once_in_all:
+            continue
+
+        smarts_targets.append(group_name)
+        for i, matches in enumerate(all_matches_per_mol):
+            for match in matches:
+                for idx in match:
+                    idx_added_per_mol[i].add(idx)
+
+    # --- Step 2: Add individual unique atoms (atoms appearing exactly once in each mol) ---
+    unique_atoms_per_mol = []
+    for mol in mol_list:
+        symbols = [atom.GetSymbol() for atom in mol.GetAtoms()]
+        single_occurrence = {sym for sym in set(symbols) if symbols.count(sym) == 1}
+        unique_atoms_per_mol.append(single_occurrence)
+
+    if unique_atoms_per_mol:
+        common_unique_atoms = set.intersection(*unique_atoms_per_mol)
+    else:
+        common_unique_atoms = set()
+
+    for atom_symbol in common_unique_atoms:
+        if atom_symbol in smarts_targets:
+            continue
+
+        overlaps_any = False
+        for i, mol in enumerate(mol_list):
+            atom_indices = [atom.GetIdx() for atom in mol.GetAtoms() if atom.GetSymbol() == atom_symbol]
+            if len(atom_indices) != 1:
+                overlaps_any = True
+                break
+            idx = atom_indices[0]
+            if idx in idx_added_per_mol[i]:
+                overlaps_any = True
+                break
+
+        if not overlaps_any:
+            smarts_targets.append(atom_symbol)
+            for i, mol in enumerate(mol_list):
+                idx = next(atom.GetIdx() for atom in mol.GetAtoms() if atom.GetSymbol() == atom_symbol)
+                idx_added_per_mol[i].add(idx)
 
     return smarts_targets
-
 
 def remove_invalid_smarts(
     self,
@@ -2002,8 +2085,7 @@ def remove_invalid_smarts(
     for pattern in valid_patterns:
         if pattern not in self.args.qdescp_atoms:
             self.args.log.write(
-                f"\no  Pattern {pattern} shared in all input files. "
-                "Using it for atomic descriptor calculations"
+                f'o  Pattern "{pattern}" validated, it will be used for atomic descriptor calculations'
             )
 
     return valid_patterns
@@ -2123,7 +2205,6 @@ def get_prefix_atom_props(
     sorted_indices: List[int],
     mol: MoleculeType,
     pattern: str,
-    smarts_targets: List[str],
     idx_set: Optional[str]
 ) -> List[str]:
     """
@@ -2136,7 +2217,6 @@ def get_prefix_atom_props(
         sorted_indices: List of sorted atom indices from the match
         mol: RDKit molecule object containing the atoms
         pattern: Original SMARTS pattern or atom number
-        smarts_targets: List of all SMARTS patterns being searched
         idx_set: Optional explicit atom mapping number
 
     Returns:
@@ -2168,7 +2248,7 @@ def get_prefix_atom_props(
             match_name = f'Atom_{pattern}'
         else:
             # If it's a SMARTS pattern or more than one atom
-            if len(smarts_targets) == 1 and pattern in periodic_table():
+            if pattern in periodic_table():
                 # Case where it's just an atom type without SMARTS
                 if n_atoms_of_type == 1:
                     match_name = f'{atom_type}'

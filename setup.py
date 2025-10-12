@@ -35,11 +35,11 @@ setup(
         "Programming Language :: Python :: 3.12",
     ],
     install_requires=[
-        "PyYAML",
+        "PyYAML==6.0.2",
         "pandas==2.2.3",
-        "progress",
+        "progress==1.6",
         "numpy==1.26.4",
-        "rdkit==2024.3.3",
+        "rdkit==2025.9.1",
         "cclib==1.7.2",
         "cffi",
         "morfeus-ml==0.7.2"
