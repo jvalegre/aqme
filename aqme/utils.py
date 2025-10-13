@@ -34,13 +34,13 @@ crest_version = '2.12'
 RDLogger.DisableLog("rdApp.*")
 
 
-def run_command(command, outfile, cwd=None):
+def run_command(command, outfile, cwd=None, env=None):
     """
     Runs the subprocess command and saves the results in an output file (not shown in the terminal)
     """
 
     output = open(outfile, "w")
-    subprocess.run(command, stdout=output, stderr=subprocess.DEVNULL, cwd=cwd)
+    subprocess.run(command, stdout=output, stderr=subprocess.DEVNULL, cwd=cwd, env=env)
     output.close()
 
 

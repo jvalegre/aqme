@@ -673,5 +673,14 @@ def substituted_mol(mol, checkI, metal_atoms):
                 if n_neighbors > 1:
                     formal_charge = Neighbors2FormalCharge[n_neighbors]
                     atom.SetFormalCharge(formal_charge)
+                    # to avoid valence errors, try to change formal charge by 0, +1, ...
+                    for charge_adjustment in range(0, 5):
+                        atom.SetFormalCharge(formal_charge+charge_adjustment)
+                        try:
+                            mol_test = Chem.Mol(mol)
+                            Chem.SanitizeMol(mol_test)
+                            break  # If sanitization succeeds, keep this charge
+                        except Chem.AtomValenceException:
+                            continue  # Try next charge if molecule is invalid
 
     return metal_idx, complex_coord, metal_sym

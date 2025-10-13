@@ -686,10 +686,16 @@ class qdescp:
         xtb_files_props['xtb_opt'] = str(dat_dir) + "/{0}.out".format(name+'_opt')
         xtb_files_props['xtb_json'] = str(dat_dir) + "/{0}.json".format(name)
 
-        os.environ["OMP_STACKSIZE"] = self.args.stacksize
-        # run xTB/CREST with 1 processor
-        os.environ["OMP_NUM_THREADS"] = "1"
-        os.environ["MKL_NUM_THREADS"] = "1"
+        env = dict(os.environ)
+        env["OMP_STACKSIZE"] = self.args.stacksize
+        # run xTB/CREST with 1 processor and disable multithreading for reproducibility
+        env["OMP_NUM_THREADS"] = "1"
+        env["MKL_NUM_THREADS"] = "1"
+        env["OPENBLAS_NUM_THREADS"] = "1"
+        env["NUMEXPR_NUM_THREADS"] = "1"
+        env["OMP_DYNAMIC"] = "FALSE"
+        env["MKL_DYNAMIC"] = "FALSE"
+        env["BLIS_NUM_THREADS"] = "1"
 
         # this avoids problems when parsing charges and mults from SDF files
         mult = int(float(mult))
@@ -719,7 +725,7 @@ class qdescp:
             if self.args.qdescp_solvent is not None:
                 command_opt.append("--alpb")
                 command_opt.append(f"{self.args.qdescp_solvent}")
-            run_command(command_opt, xtb_files_props['xtb_opt'] , cwd=dat_dir)
+            run_command(command_opt, xtb_files_props['xtb_opt'] , cwd=dat_dir, env=env)
 
             # replaces RDKit geometries with xTB geometries
             os.remove(xtb_files_props['xtb_xyz_path'])
