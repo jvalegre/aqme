@@ -4,7 +4,6 @@
 #####################################################.
 
 import sys
-from pathlib import Path
 from importlib.resources import files
 from rdkit.Chem import AllChem as Chem
 from rdkit.Chem import rdDistGeom, rdMolAlign
@@ -13,7 +12,7 @@ from aqme.utils import get_conf_RMS, load_sdf
 TEMPLATES_PATH = files("aqme").joinpath("templates")
 
 
-def template_embed(self, mol, complex_type, metal_idx, maxsteps, heavyonly, maxmatches, name, geom):
+def template_embed(self, mol, complex_type, metal_idx, maxsteps, heavyonly, maxmatches, name):
     """
     Wrapper function to select automatically the appropiate embedding function
     depending on the number of neighbours of the metal center.
@@ -30,8 +29,8 @@ def template_embed(self, mol, complex_type, metal_idx, maxsteps, heavyonly, maxm
     # Generate the embeddings
     neighbours = calc_neighbours(mol, metal_idx)
     embed = embed_functions[len(neighbours)]
-    items = embed(mol, template, metal_idx, neighbours, name, maxsteps, self.args.log, geom)
-    
+    items = embed(mol, template, metal_idx, neighbours, name, maxsteps, self.args.log)
+
     # Filter the results
     molecules = items[0]
     if len(molecules) > 1:
@@ -242,6 +241,16 @@ def calc_neighbours(molecule, metals_idx):
             atom.SetAtomicNum(AtNum)
             if n_bonds == 5:
                 atom.SetFormalCharge(1)
+                # to avoid valence errors, try to change formal charge by 0, +1, ...
+                for charge_adjustment in range(0, 5):
+                    atom.SetFormalCharge(1+charge_adjustment)
+                    try:
+                        mol_test = Chem.Mol(molecule)
+                        Chem.SanitizeMol(mol_test)
+                        break  # If sanitization succeeds, keep this charge
+                    except Chem.AtomValenceException:
+                        continue  # Try next charge if molecule is invalid
+            
             return neighbours
     return []
 
@@ -362,7 +371,7 @@ def doc_returns(f):
 # Embedding functions
 @doc_returns
 @doc_parameters
-def two_embed(molecule, template, metal_idx, neighbours, name, maxsteps, log, geom):
+def two_embed(molecule, template, metal_idx, neighbours, name, maxsteps, log):
     """
     Embedding function for linear geometries. Requires 'linear.sdf' template.
     """
@@ -386,7 +395,7 @@ def two_embed(molecule, template, metal_idx, neighbours, name, maxsteps, log, ge
 
 @doc_returns
 @doc_parameters
-def three_embed(molecule, template, metal_idx, neighbours, name, maxsteps, log, geom):
+def three_embed(molecule, template, metal_idx, neighbours, name, maxsteps, log):
     """
     Embedding function for trigonal planar geometry. Requires
     'trigonalplanar.sdf' template.
@@ -412,7 +421,7 @@ def three_embed(molecule, template, metal_idx, neighbours, name, maxsteps, log, 
 
 @doc_returns
 @doc_parameters
-def four_embed(molecule, template, metal_idx, neighbours, name, maxsteps, log, geom):
+def four_embed(molecule, template, metal_idx, neighbours, name, maxsteps, log):
     """
     Embedding function for squareplanar geometry. Requires 'template-4-and-5.sdf'
     template. Attempts 3 embeddings.
@@ -437,17 +446,35 @@ def four_embed(molecule, template, metal_idx, neighbours, name, maxsteps, log, g
     atn2 = neighbours[2].GetAtomicNum()
     atn3 = neighbours[3].GetAtomicNum()
 
-    # there are atoms that give problems in the embedding for Ir squareplanar complexes (i.e. As).
+    # there are atoms that give problems in the embedding for Ir squareplanar complexes (i.e. carbenes, As).
     # This replaces them for P and them restore them back to normal after the embeding (in genConformer_r() from base.py)
     original_atn = None
-    if geom == ['Ir_squareplanar']:
-        invalid_atn = [33]
-        atn_list = [atn0,atn1,atn2,atn3]
-        for i,atn in enumerate(atn_list):
-            if atn in invalid_atn:
-                original_atn = [atn,neighbours[i].GetIdx()]
-                molecule.GetAtomWithIdx(neighbours[i].GetIdx()).SetAtomicNum(15)
-                atn_list[i] = 15
+    atn_list = [atn0,atn1,atn2,atn3]
+    for i,atn in enumerate(atn_list):
+        atom_neigh = molecule.GetAtomWithIdx(neighbours[i].GetIdx())
+        if atn == 33: # As ligands
+            original_atn = [atn,neighbours[i].GetIdx()]
+            molecule.GetAtomWithIdx(neighbours[i].GetIdx()).SetAtomicNum(15)
+            atn_list[i] = 15
+        elif atn == 6 and atom_neigh.GetTotalValence() == 3: # carbene ligands
+            c_neighbours = atom_neigh.GetNeighbors()
+            n_neighbours = [nbr for nbr in c_neighbours if nbr.GetAtomicNum() == 7] # number of neighbouring N atoms
+            if len(c_neighbours) == 3 and len(n_neighbours) == 2: # check whether the C is a carbene
+                # change the N-C-N carbenoid motif for N-C=N+ for RDKit compatibility
+                c_idx = atom_neigh.GetIdx()
+                n_idx = n_neighbours[0].GetIdx()
+
+                # Get the bond between the two atoms
+                bond = molecule.GetBondBetweenAtoms(c_idx, n_idx)
+                if bond is not None:
+                    bond.SetBondType(Chem.BondType.DOUBLE)  # change bond order to double
+
+                # Set formal charges directly
+                molecule.GetAtomWithIdx(c_idx).SetFormalCharge(0)
+                molecule.GetAtomWithIdx(n_idx).SetFormalCharge(+1)
+
+                # Update properties (optional but recommended)
+                Chem.SanitizeMol(molecule)
 
         atn0 = atn_list[0]
         atn1 = atn_list[1]
@@ -490,7 +517,7 @@ def four_embed(molecule, template, metal_idx, neighbours, name, maxsteps, log, g
 
 @doc_returns
 @doc_parameters
-def five_embed(molecule, template, metal_idx, neighbours, name, maxsteps, log, geom):
+def five_embed(molecule, template, metal_idx, neighbours, name, maxsteps, log):
     """
     Embedding function for squarepyramidal geometry. Requires
     'template-4-and-5.sdf' template. Attempts 15 embeddings.

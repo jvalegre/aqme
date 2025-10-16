@@ -541,7 +541,6 @@ class csearch:
                     template_kwargs["maxmatches"] = self.args.max_matches_rmsd
                     template_kwargs["mol"] = mol
                     template_kwargs["name"] = name
-                    template_kwargs["geom"] = geom
                     try:
                         items = template_embed(self, **template_kwargs)
                     except RuntimeError:
@@ -978,9 +977,8 @@ class csearch:
                     set_metal_atomic_number(mol, metal_idx, metal_sym)
 
                     # setting the problematic As atoms back when using the Ir_squareplanar geometry rule
-                    if geom == ['Ir_squareplanar']:
-                        if original_atn is not None:
-                            mol.GetAtomWithIdx(original_atn[1]).SetAtomicNum(original_atn[0])
+                    if original_atn is not None:
+                        mol.GetAtomWithIdx(original_atn[1]).SetAtomicNum(original_atn[0])
             
             sdwriter.write(mol, -1)
             return 1

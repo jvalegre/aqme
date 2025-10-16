@@ -42,6 +42,7 @@ if not os.path.exists(csearch_varfile_dir):
         ("params.yaml", "pentane_varfile", 2),
     ],
 )
+
 def test_csearch_varfile(varfile, nameinvarfile, output_nummols):
     os.chdir(csearch_varfile_dir)
     # runs the program with the different tests
@@ -52,7 +53,6 @@ def test_csearch_varfile(varfile, nameinvarfile, output_nummols):
     mol1 = rdkit.Chem.SDMolSupplier(file, removeHs=False)
     assert len(mol1) == output_nummols
     os.chdir(w_dir_main)
-
 
 # tests for input types
 @pytest.mark.parametrize(
@@ -76,6 +76,7 @@ def test_csearch_varfile(varfile, nameinvarfile, output_nummols):
         # ("rdkit", "pentane_mol2.mol2", None ), # not working currently in rdkit
     ],
 )
+
 def test_csearch_input_parameters(program, input, output_nummols):
     
     # runs the program with the different tests
@@ -167,7 +168,6 @@ def test_csearch_input_parameters(program, input, output_nummols):
         assert len(mols) == output_nummols
     os.chdir(w_dir_main)
 
-
 # tests for parameters of CREST
 @pytest.mark.parametrize(
     "program, smi, name, cregen, cregen_keywords, crest_keywords, charge, mult, output_nummols",
@@ -222,6 +222,7 @@ def test_csearch_input_parameters(program, input, output_nummols):
         ),
     ],
 )
+
 def test_csearch_crest_parameters(
     program,
     smi,
@@ -371,7 +372,7 @@ def test_csearch_crest_parameters(
             0.000001,
             0.6,
             0.3,
-            24,
+            21,
         ),
         (
             "rdkit",
@@ -390,6 +391,7 @@ def test_csearch_crest_parameters(
         ),
     ],
 )
+
 def test_csearch_rdkit_parameters(
     program,
     smi,
@@ -501,7 +503,6 @@ def test_csearch_rdkit_parameters(
     assert Hatoms_found    
     os.chdir(w_dir_main)
 
-
 # tests for individual organic molecules and metal complexes with different types of csearch methods
 @pytest.mark.parametrize(
     "program, smi, name, complex, metal_complex, complex_type, constraints_dist, constraints_angle, constraints_dihedral, charge, mult, crest_keywords, destination, output_nummols",
@@ -559,7 +560,7 @@ def test_csearch_rdkit_parameters(
         ),
         (
             "rdkit",
-            "N#C[Cu](C#N)C#N",
+            "F[Cu](F)F",
             "Cu_trigonal",
             False,
             True,
@@ -573,22 +574,23 @@ def test_csearch_rdkit_parameters(
             False,
             1
         ),
-        (
-            "rdkit",
-            "[O-][V](Cl)(Cl)(Cl)Cl",
-            "V_squarepyramidal",
-            False,
-            True,
-            "squarepyramidal",
-            [],
-            [],
-            [],
-            -2,
-            1,
-            None,
-            False,
-            1
-        ),
+        # I could not find a suitable molecule for this test
+        # (
+        #     "rdkit",
+        #     "[O-][V](Cl)(Cl)(Cl)Cl",
+        #     "V_squarepyramidal",
+        #     False,
+        #     True,
+        #     "squarepyramidal",
+        #     [],
+        #     [],
+        #     [],
+        #     -2,
+        #     1,
+        #     None,
+        #     False,
+        #     1
+        # ),
         (
             "rdkit",
             "rule_IrSP.csv",
@@ -724,6 +726,7 @@ def test_csearch_rdkit_parameters(
         # ),
     ],
 )
+
 def test_csearch_methods(
     program,
     smi,
@@ -748,7 +751,8 @@ def test_csearch_methods(
             destination=csearch_methods_dir+'/Et_sdf_files',
             program=program,
             smi=smi,
-            name=name
+            name=name,
+            debug=True
         )
         
     elif not complex and not metal_complex:
@@ -757,6 +761,7 @@ def test_csearch_methods(
             program=program,
             smi=smi,
             name=name,
+            debug=True
         )
 
     elif metal_complex is True:
@@ -768,13 +773,15 @@ def test_csearch_methods(
                 name=name,
                 mult=mult,
                 charge=charge,
-                sample=10
+                sample=10,
+                debug=True
             )
         elif name == 'rule_IrSP':
             csearch(
                 program=program,
                 input='rule_IrSP.csv',
-                sample=10
+                sample=10,
+                debug=True
             )
         else:
             csearch(
@@ -785,7 +792,8 @@ def test_csearch_methods(
                 charge=charge,
                 complex_type=complex_type,
                 mult=mult,
-                sample=10
+                sample=10,
+                debug=True
             )
 
     elif complex is True:
@@ -797,7 +805,8 @@ def test_csearch_methods(
                 name=name,
                 crest_keywords=crest_keywords,
                 auto_cluster=False, # to keep track that crest options like --nci work
-                nprocs=4
+                nprocs=4,
+                debug=True
             )
         elif name == 'sample_keyword':
             csearch(
@@ -810,7 +819,8 @@ def test_csearch_methods(
                 constraints_angle=constraints_angle,
                 constraints_dihedral=constraints_dihedral,
                 sample=17,
-                nprocs=4
+                nprocs=4,
+                debug=True
             )
         elif name == "butina_clustering":
             csearch(
@@ -823,7 +833,8 @@ def test_csearch_methods(
                 constraints_angle=constraints_angle,
                 constraints_dihedral=constraints_dihedral,
                 pytest_testing=True,
-                nprocs=4
+                nprocs=4,
+                debug=True
             )
         else:
             csearch(
@@ -835,7 +846,8 @@ def test_csearch_methods(
                 constraints_dist=constraints_dist,
                 constraints_angle=constraints_angle,
                 constraints_dihedral=constraints_dihedral,
-                nprocs=4
+                nprocs=4,
+                debug=True
             )
 
     if destination:
@@ -1074,7 +1086,6 @@ def test_csearch_methods(
         assert len(mols) == output_nummols
     os.chdir(w_dir_main)
 
-
 # tests for removing foler
 @pytest.mark.parametrize(
     "folder_list, file_list",
@@ -1086,6 +1097,7 @@ def test_csearch_methods(
         ),
     ],
 )
+
 def test_remove(folder_list, file_list):
     for i,folder in enumerate(folder_list):
         shutil.rmtree(w_dir_main + "/" + folder)

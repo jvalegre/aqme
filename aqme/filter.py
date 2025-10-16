@@ -61,7 +61,7 @@ def Ir_SP_filter(mol):
     '''
 
     # get Ir and its potential neighbours
-    smarts_list = ['[Ir][C-]','[Ir][N+]','[Ir][n+]','[Ir][N]','[Ir][n]','[Ir][P+]','[Ir][p+]','[Ir][As+]']
+    smarts_list = ['[Ir][C]','[Ir][N+]','[Ir][n+]','[Ir][N]','[Ir][n]','[Ir][P+]','[Ir][p+]','[Ir][As+]']
     Ir_neighs = []
     L_atom_1, L_atom_2, Ir_idx = None, None, None
     for smarts in smarts_list:
@@ -77,7 +77,7 @@ def Ir_SP_filter(mol):
             # find Ir
             if mol.GetAtoms()[idx].GetAtomicNum() == 77 and Ir_idx is None:
                 Ir_idx = idx
-            # find right C for lugand of type A and discard all the others from types B and C (from the Chemical Science paper)
+            # find right C for ligand of type A and discard all the others from types B and C (from the Chemical Science paper)
             elif mol.GetAtoms()[idx].GetAtomicNum() == 6:
                 N_neigh = 0
                 for C_neigh in mol.GetAtoms()[idx].GetNeighbors():
