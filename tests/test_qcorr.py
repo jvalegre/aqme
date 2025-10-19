@@ -440,6 +440,13 @@ from aqme.qcorr import qcorr
             None,
             False,
         ),  # test QCORR with command line
+        (
+            None,
+            None,
+            None,
+            None,
+            True,
+        ),  # reset the initial folder to start another set of tests
         # add genECP test
         # isomerization with csv (ongoing)
         # isomeriz with csv for TSs (ongoing)

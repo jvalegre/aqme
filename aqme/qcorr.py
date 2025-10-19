@@ -329,7 +329,7 @@ class qcorr:
         outlines = []
 
         if errortype == "no_data":
-            return termination, errortype, None, None, file 
+            return termination, errortype, None, file 
 
         # calculations with 1 atom
         if cclib_data["natom"] == 1:
