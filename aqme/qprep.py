@@ -68,7 +68,6 @@ import glob
 import time
 import json
 import pandas as pd
-from importlib.resources import files
 
 from aqme.utils import (
     cclib_atoms_coords,
@@ -88,6 +87,7 @@ from aqme.csearch.crest import xyzall_2_xyz
 from pathlib import Path
 from rdkit import Chem
 
+from importlib.resources import files
 TEMPLATES_PATH = files("aqme").joinpath("templates")
 
 class qprep:
@@ -569,10 +569,10 @@ class qprep:
         basis_set_csv = TEMPLATES_PATH.joinpath('basis_sets.csv')
 
         with functional_csv.open("rb") as fh:
-            functional_data = pd.read_csv(fh).drop_duplicates(inplace=True)
+            functional_data = pd.read_csv(fh)
 
         with basis_set_csv.open("rb") as fh:
-            basis_set_data = pd.read_csv(fh).drop_duplicates(inplace=True)
+            basis_set_data = pd.read_csv(fh)
 
         functional_list = functional_data[self.args.program].to_numpy().flatten()
         functional_list = [x for x in functional_list if str(x) != 'nan'] # remove NaN
