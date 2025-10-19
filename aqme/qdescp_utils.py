@@ -2013,7 +2013,7 @@ def remove_invalid_smarts(
         - Automatically logs warnings for invalid or inconsistent patterns
     """
     def _clean_pattern(pattern: str) -> str:
-        """Remove quotes from pattern string."""
+        """Convert lists to pattern (for direct module calls) and remove quotes from pattern string."""
         return pattern.strip("'").strip('"')
 
     def _find_mapped_atom_matches(mol: MoleculeType, atom_num: int) -> List[Tuple[int, ...]]:

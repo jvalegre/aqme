@@ -559,6 +559,10 @@ def load_variables(kwargs, aqme_module, create_dat=True):
                             cmd_print += ' '
 
                     self.log.write(f"Command line used in AQME: python -m aqme {cmd_print}\n")
+                
+                else:
+                    if isinstance(self.qdescp_atoms,list):
+                        self.qdescp_atoms = [str(pattern) for pattern in self.qdescp_atoms]
 
             if error_setup:
                 # this is added to avoid path problems in jupyter notebooks

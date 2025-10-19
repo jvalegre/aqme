@@ -6,6 +6,7 @@
 ######################################################.
 
 import os
+import subprocess
 import pytest
 import pandas as pd
 import numpy as np
@@ -41,6 +42,7 @@ full_descriptors = get_descriptors('full')
         ("test.csv"), # standard test
         ("test_atom.csv"), # test with qdescp_atoms using an atom
         ("test_idx.csv"), # test with qdescp_atoms using an atom index mapped
+        ("test_idx_cmd.csv"), # test with qdescp_atoms using an atom index mapped run through command line
         ("test_group.csv"), # test with qdescp_atoms using a functional group
         ("test_multigroup.csv"), # test with qdescp_atoms using a multiple atoms and functional groups
         ("test_robert_atom.csv"), # test for the AQME-ROBERT workflow with atomic descriptors
@@ -58,6 +60,8 @@ def test_qdescp_xtb(file):
 
     if file in ['test_multigroup.csv','test_robert_atom.csv','test_robert_mol.csv']:
         file_qdescp = 'test_atom.csv'
+    elif file in ["test_idx.csv","test_idx_cmd.csv"]:
+        file_qdescp = "test_idx.csv"
     else:
         file_qdescp = file
 
@@ -86,7 +90,7 @@ def test_qdescp_xtb(file):
         qdescp_kwargs["qdescp_atoms"] = ["P"]
     
     elif file == "test_idx.csv":
-        qdescp_kwargs["qdescp_atoms"] = ["1"]
+        qdescp_kwargs["qdescp_atoms"] = [1]
 
     elif file == 'test_group.csv':
         qdescp_kwargs["qdescp_atoms"] = ["C=O"]
@@ -101,7 +105,23 @@ def test_qdescp_xtb(file):
     elif file == 'test_robert_mol.csv':
         qdescp_kwargs["csv_name"] = f'{qdescp_input_dir}/{file_qdescp}'
 
-    qdescp(**qdescp_kwargs)
+    if file != 'test_idx_cmd.csv':
+        qdescp(**qdescp_kwargs)
+    else:
+        cmd_aqme = [
+            "python",
+            "-m",
+            "aqme",
+            "--qdescp",
+            "--input",
+            f'{qdescp_input_dir.joinpath(file_qdescp)}',
+            "--destination",
+            f'{folder_qdescp}',
+            "--qdescp_atoms",
+            '[1]',
+            '--debug'
+        ]
+        subprocess.run(cmd_aqme)
 
     #TESTING test.csv
     # 1) check if various parameters are stored correctly from xTB calculations to the generated json files
@@ -243,7 +263,7 @@ def test_qdescp_xtb(file):
             assert 'C=O_O_Partial charge' in pd_boltz_interpret
 
 
-    elif file == 'test_idx.csv':
+    elif file in ['test_idx.csv','test_idx_cmd.csv']:
         pd_boltz_interpret = pd.read_csv(file_descriptors_interpret)
         assert 'Atom_1_Partial charge' in pd_boltz_interpret
         assert round(pd_boltz_interpret['Atom_1_Partial charge'][1],1) == -0.1
