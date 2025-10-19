@@ -40,7 +40,7 @@ setup(
         "progress==1.6",
         "numpy==1.26.4",
         "rdkit==2025.9.1",
-        "cclib==1.7.2",
+        "cclib==1.8.1",
         "cffi",
         "morfeus-ml==0.7.2"
     ],

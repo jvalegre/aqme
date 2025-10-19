@@ -25,7 +25,7 @@ J_TO_AU = 4.184 * 627.509541 * 1000.0  # UNIT CONVERSION
 T = 298.15
 
 obabel_version = "3.1.1" # this MUST match the meta.yaml
-aqme_version = "1.7.4"
+aqme_version = "2.0.0"
 time_run = time.strftime("%Y/%m/%d %H:%M:%S", time.localtime())
 aqme_ref = f"AQME v {aqme_version}, Alegre-Requena, J. V.; Sowndarya, S.; Perez-Soto, R.; Alturaifi, T.; Paton, R. AQME: Automated Quantum Mechanical Environments for Researchers and Educators. Wiley Interdiscip. Rev. Comput. Mol. Sci. 2023, 13, e1663 (DOI: 10.1002/wcms.1663)."
 xtb_version = '6.7.1'
@@ -587,59 +587,13 @@ def read_file(initial_dir, w_dir, file):
     return outlines
 
 
-def QM_coords(outlines, min_RMS, n_atoms, program, keywords_line):
-    """
-    Retrieves atom types and coordinates from QM output files
-    """
-
-    atom_types, cartesians, range_lines = [], [], []
-    per_tab = periodic_table()
-    count_RMS = -1
-
-    if program == "gaussian":
-        if "nosymm" in keywords_line.lower():
-            target_ori = "Input orientation:"
-        else:
-            target_ori = "Standard orientation:"
-
-        if min_RMS > -1:
-            for i, line in enumerate(outlines):
-                if line.find(target_ori) > -1:
-                    count_RMS += 1
-                if count_RMS == min_RMS:
-                    range_lines = [i + 5, i + 5 + n_atoms]
-                    break
-        else:
-            for i in reversed(range(len(outlines))):
-                if outlines[i].find(target_ori) > -1:
-                    range_lines = [i + 5, i + 5 + n_atoms]
-                    break
-        if len(range_lines) != 0:
-            for i in range(range_lines[0], range_lines[1]):
-                massno = int(outlines[i].split()[1])
-                if massno < len(per_tab):
-                    atom_symbol = per_tab[massno]
-                else:
-                    atom_symbol = "XX"
-                atom_types.append(atom_symbol)
-                cartesians.append(
-                    [
-                        float(outlines[i].split()[3]),
-                        float(outlines[i].split()[4]),
-                        float(outlines[i].split()[5]),
-                    ]
-                )
-
-    return atom_types, cartesians
-
-
-def cclib_atoms_coords(cclib_data):
+def cclib_atoms_coords(cclib_data,geom):
     """
     Function to convert atomic numbers and coordinate arrays from cclib into
-    a format compatible with QPREP.
+    a format compatible with QPREP. Geom -1 is the last geometry of the molecule.
     """
 
-    atom_numbers = cclib_data["atoms"]["elements"]["number"]
+    atom_numbers = cclib_data["atomnos"]
     atom_types = []
     per_tab = periodic_table()
     for atom_n in atom_numbers:
@@ -649,10 +603,8 @@ def cclib_atoms_coords(cclib_data):
             atom_symbol = "XX"
         atom_types.append(atom_symbol)
 
-    cartesians_array = cclib_data["atoms"]["coords"]["3d"]
-    cartesians = [
-        cartesians_array[i : i + 3] for i in range(0, len(cartesians_array), 3)
-    ]
+    cartesians_array = cclib_data["atomcoords"]
+    cartesians = cartesians_array[geom]
 
     return atom_types, cartesians
 

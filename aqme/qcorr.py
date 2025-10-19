@@ -72,12 +72,11 @@ import glob
 import time
 import pandas as pd
 import json
-import subprocess
+import cclib
 import numpy as np
 from pathlib import Path
 from aqme.utils import (
     move_file,
-    QM_coords,
     get_info_input,
     load_variables,
     read_file,
@@ -174,7 +173,7 @@ class qcorr:
         for file in sorted(self.args.files):
             # get initial cclib data and termination/error types and discard calcs with no data
             file_name = os.path.basename(Path(file)).split(".")[0]
-            termination, errortype, cclib_data, outlines, file = self.cclib_init(
+            termination, errortype, cclib_data, file = self.cclib_init(
                 file, file_name
             )
             if errortype in ["no_data", "atomicbasiserror"]:
@@ -203,7 +202,7 @@ class qcorr:
 
             elif termination != "normal":
                 atom_types, cartesians, cclib_data = self.analyze_abnormal(
-                    errortype, cclib_data, outlines
+                    errortype, cclib_data
                 )
 
             # check for isomerization
@@ -326,31 +325,28 @@ class qcorr:
         """
 
         # cclib generation of json files with ccwrite
-        termination, errortype, cclib_data, file = self.json_gen(file, file_name)
+        termination, errortype, cclib_data, file = self.cclib_gen(file, file_name)
         outlines = []
 
         if errortype == "no_data":
             return termination, errortype, None, None, file 
 
         # calculations with 1 atom
-        if cclib_data["properties"]["number of atoms"] == 1:
-            cclib_data["vibrations"] = {"frequencies": [], "displacement": []}
-            if not "energy" in cclib_data["properties"]:
+        if cclib_data["natom"] == 1:
+            cclib_data["vibfreqs"] = {}
+            if not "scfenergies" in cclib_data:
                 termination = "other"
                 errortype = "not_specified"
-            elif not "free energy" in cclib_data["properties"]["energy"]:
+            elif not "freeenergy" in cclib_data:
                 errortype = "sp_calc"
 
         # general errors
-        elif "vibrations" not in cclib_data:
+        elif "vibfreqs" not in cclib_data:
             termination = "other"
             errortype = "not_specified"
-            if "optimization" in cclib_data:
+            if "optdone" in cclib_data:
                 # if the optimization finished, only a freq job is required
-                if (
-                    "done" in cclib_data["optimization"]
-                    and cclib_data["optimization"]["done"]
-                ):
+                if cclib_data["optdone"] in [True,'true']:
                     errortype = "no_freq"
 
             # use very short reversed loop to find basis set incompatibilities and SCF errors
@@ -377,23 +373,23 @@ class qcorr:
                     break
 
         # normal terminations
-        if "vibrations" in cclib_data or errortype == "sp_calc":
+        if "vibfreqs" in cclib_data or errortype == "sp_calc":
             # spin contamination analysis using user-defined thresholds
-            if "S2 after annihilation" in cclib_data["properties"]:
-                unpaired_e = cclib_data["properties"]["multiplicity"] - 1
+            if "S2 after annihilation" in cclib_data:
+                unpaired_e = cclib_data["mult"] - 1
                 # this first part accounts for singlet diradicals (threshold is 10% of the spin before annihilation)
                 if unpaired_e == 0:
                     if (
-                        float(cclib_data["properties"]["S2 after annihilation"])
+                        float(cclib_data["S2 after annihilation"])
                         > abs(float(self.args.s2_threshold) / 100)
-                        * cclib_data["properties"]["S2 before annihilation"]
+                        * cclib_data["S2 before annihilation"]
                     ):
                         errortype = "spin_contaminated"
                 else:
                     spin = unpaired_e * 0.5
                     s2_expected_value = spin * (spin + 1)
                     spin_diff = abs(
-                        float(cclib_data["properties"]["S2 after annihilation"])
+                        float(cclib_data["S2 after annihilation"])
                         - s2_expected_value
                     )
                     if (
@@ -402,7 +398,7 @@ class qcorr:
                     ):
                         errortype = "spin_contaminated"
 
-        return termination, errortype, cclib_data, outlines, file 
+        return termination, errortype, cclib_data, file 
 
     def analyze_normal(self, duplicate_data, errortype, cclib_data, file_name):
         """
@@ -420,13 +416,13 @@ class qcorr:
                 with open(previous_json) as json_file:
                     cclib_data_json = json.load(json_file)
                 E_json, H_json, G_json, ro_json, _ = get_cclib_params(cclib_data_json, errortype)
-                duplicate_data["File"].append(cclib_data_json["name"])
+                duplicate_data["File"].append(os.path.basename(previous_json))
                 duplicate_data["Energies"].append(E_json)
                 duplicate_data["Enthalpies"].append(H_json)
                 duplicate_data["Gibbs"].append(G_json)
                 duplicate_data["RO_constant"].append(ro_json)
 
-        atom_types, cartesians = cclib_atoms_coords(cclib_data)
+        atom_types, cartesians = cclib_atoms_coords(cclib_data,-1)
         dup_off = None
         if errortype == "none":
             E_dup, H_dup, G_dup, ro_dup, errortype = get_cclib_params(cclib_data, errortype)
@@ -456,7 +452,7 @@ class qcorr:
             duplicate_data["RO_constant"].append(ro_dup)
 
             initial_ifreqs = 0
-            for freq in cclib_data["vibrations"]["frequencies"]:
+            for freq in cclib_data["vibfreqs"]:
                 if float(freq) < 0 and abs(float(freq)) > abs(
                     float(self.args.ifreq_cutoff)
                 ):
@@ -479,13 +475,14 @@ class qcorr:
             if len(atom_types) in [3, 4]:
                 errortype = detect_linear(errortype, atom_types, cclib_data)
 
-            # detects no convergence issues during freq calcs
-            if self.args.freq_conv is not None:
-                if (
-                    errortype == "none"
-                    and cclib_data["optimization"]["times converged"] == 1
-                ):
-                    errortype = "freq_no_conv"
+            # detects no convergence issues during freq calcs (only works with Gaussian for now)
+            if "gaussian" in cclib_data["metadata"]["QM program"].lower():
+                if self.args.freq_conv is not None:
+                    if (
+                        errortype == "none"
+                        and cclib_data["opt times converged"] == 1
+                    ):
+                        errortype = "freq_no_conv"
 
         if errortype in ["extra_imag_freq", "freq_no_conv", "linear_mol_wrong"]:
             if errortype == "extra_imag_freq":
@@ -532,7 +529,7 @@ class qcorr:
 
         return atom_types, cartesians, duplicate_data, errortype, cclib_data, dup_off
 
-    def analyze_abnormal(self, errortype, cclib_data, outlines):
+    def analyze_abnormal(self, errortype, cclib_data):
         """
         Analyze errors from calculations that did not finish normally
         """
@@ -552,7 +549,7 @@ class qcorr:
                     new_keywords_line += keyword
                     new_keywords_line += " "
             cclib_data["metadata"]["keywords line"] = new_keywords_line
-            atom_types, cartesians = cclib_atoms_coords(cclib_data)
+            atom_types, cartesians = cclib_atoms_coords(cclib_data,-1)
         else:
             # help to fix SCF convergence errors
             if errortype == "SCFerror":
@@ -575,30 +572,21 @@ class qcorr:
                         cclib_data["metadata"]["keywords line"] = 'SlowConv ' + cclib_data["metadata"]["keywords line"]
 
             if errortype in ["not_specified", "SCFerror"]:
-                if "optimization" in cclib_data:
-                    if "geometric values" in cclib_data["optimization"]:
-                        RMS_forces = [
-                            row[1] for row in cclib_data["optimization"]["geometric values"]
-                        ]
-                        # cclib uses None when the values are corrupted in the output files, replace None for a large number
-                        RMS_forces = [10000 if val is None else val for val in RMS_forces]
-                        min_RMS = RMS_forces.index(min(RMS_forces))
-                    else:
-                        # for optimizations that fail in the first step
-                        min_RMS = 0
+                if "geovalues" in cclib_data:
+                    RMS_forces = [
+                        row[1] for row in cclib_data["geovalues"]
+                    ]
+                    # cclib uses None when the values are corrupted in the output files, replace None for a large number
+                    RMS_forces = [10000 if val is None else val for val in RMS_forces]
+                    min_RMS = RMS_forces.index(min(RMS_forces))
                 else:
-                    # for optimizations that fail before the first step
+                    # for optimizations that fail in the first step
                     min_RMS = 0
 
-                atom_types, cartesians = QM_coords(
-                    outlines,
-                    min_RMS,
-                    cclib_data["properties"]["number of atoms"],
-                    "gaussian",
-                    cclib_data["metadata"]["keywords line"],
-                )
+                atom_types, cartesians = cclib_atoms_coords(cclib_data,min_RMS)
 
         return atom_types, cartesians, cclib_data
+
 
     def analyze_isom(self, file, cartesians, atom_types, errortype):
         """
@@ -711,8 +699,8 @@ class qcorr:
                 destination=destination_fix,
                 w_dir_main=self.args.w_dir_main,
                 files=os.path.basename(file),
-                charge=cclib_data["properties"]["charge"],
-                mult=cclib_data["properties"]["multiplicity"],
+                charge=cclib_data["charge"],
+                mult=cclib_data["mult"],
                 program=program,
                 atom_types=atom_types,
                 cartesians=cartesians,
@@ -729,40 +717,37 @@ class qcorr:
         else:
             self.args.log.write(f"x  Couldn't create an input file to fix {os.path.basename(file)} (compatible programs: Gaussian and ORCA)\n")
 
-    def json_gen(self, file, file_name):
+    def cclib_gen(self, file, file_name):
         """
         Create a json file with cclib and load a dictionary
         """
 
         termination, errortype = "normal", "none"
-
-        command_run_1 = ["ccwrite", "json", file]
-        subprocess.run(command_run_1, capture_output=True)
-
         cclib_data = {}
+
+        if not os.path.exists(file):
+            file = f'{self.args.initial_dir}/{file}'
         try:
-            with open(file_name + ".json") as json_file:
-                cclib_data = json.load(json_file)
-        except FileNotFoundError:
-            try:
-                # this part avoids problems when using cclib from command lines (not complete file PATH)
-                file = f'{self.args.initial_dir}/{file}'
-                command_run_2 = ["ccwrite", "json", file]
-                subprocess.run(command_run_2, capture_output=True)
-                with open(file_name + ".json") as json_file:
-                    cclib_data = json.load(json_file)
-            except FileNotFoundError:
-                termination = "other"
-                errortype = "no_data"
+                cclib_data = cclib.io.ccopen(file).parse()
+                # Convert to dictionary
+                cclib_data = cclib_data.__dict__.copy()
+
+        except ValueError:
+            termination = "other"
+            errortype = "no_data"
+
+        if "natom" not in cclib_data:
+            termination = "other"
+            errortype = "no_data"
 
         # add parameters that might be missing from cclib (depends on the version)
-        if not hasattr(cclib_data, "metadata") and errortype != "no_data":
+        if errortype != "no_data":
             cclib_data = get_json_data(self, file, cclib_data)
 
         # this is just a "dirty hack" until cclib is updated to be compatible for print mini in ORCA
         if hasattr(cclib_data, "metadata"):
             if cclib_data["metadata"]["QM program"].lower().find("orca") > -1:
-                if "final single point energy" in cclib_data["properties"]["energy"]:
+                if "final single point energy" in cclib_data["energy"]:
                     termination, errortype = "normal", "none"
 
         if errortype == "no_data":
@@ -790,7 +775,7 @@ class qcorr:
         shift = []
 
         # could get rid of atomic units here, if zpe_rat definition is changed
-        for mode, _ in enumerate(cclib_data["vibrations"]["frequencies"]):
+        for mode, _ in enumerate(cclib_data["vibfreqs"]):
             # moves along all imaginary freqs (ignoring the TS imag freq, assumed to be the most negative freq)
             if (
                 mode == 0
@@ -799,17 +784,17 @@ class qcorr:
             ):
                 shift.append(0.0)
             else:
-                if cclib_data["vibrations"]["frequencies"][mode] < 0.0:
+                if cclib_data["vibfreqs"][mode] < 0.0:
                     shift.append(float(self.args.amplitude_ifreq))
                 else:
                     shift.append(0.0)
 
             # The starting geometry is displaced along each normal mode according to the random shift
-            for atom in range(0, cclib_data["properties"]["number of atoms"]):
+            for atom in range(0, cclib_data["natom"]):
                 for coord in range(0, 3):
                     cartesians[atom][coord] = (
                         cartesians[atom][coord]
-                        + cclib_data["vibrations"]["displacement"][mode][atom][coord]
+                        + cclib_data["vibdisps"][mode][atom][coord]
                         * shift[mode]
                     )
 

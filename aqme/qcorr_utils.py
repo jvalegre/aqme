@@ -151,7 +151,7 @@ def detect_linear(errortype, atom_types, cclib_data):
         for linear_3 in linear_options_3:
             if (
                 sorted(atom_types) == sorted(linear_3)
-                and len(cclib_data["vibrations"]["frequencies"]) != 4
+                and len(cclib_data["vibfreqs"]) != 4
             ):
                 errortype = "linear_mol_wrong"
                 break
@@ -159,7 +159,7 @@ def detect_linear(errortype, atom_types, cclib_data):
         for linear_4 in linear_options_4:
             if (
                 sorted(atom_types) == sorted(linear_4)
-                and len(cclib_data["vibrations"]["frequencies"]) != 7
+                and len(cclib_data["vibfreqs"]) != 7
             ):
                 errortype = "linear_mol_wrong"
                 break
@@ -401,7 +401,7 @@ def get_json_data(self, file, cclib_data):
 
     if cclib_data["metadata"]["QM program"].lower().find("gaussian") > -1:
 
-        cclib_data["properties"]["rotational"] = {}
+        cclib_data["rotational"] = {}
         for i, line in enumerate(outlines):
             # Extract memory
             if "%mem" in line:
@@ -414,7 +414,7 @@ def get_json_data(self, file, cclib_data):
                 cclib_data["metadata"]["processors"] = nprocs
 
             # Extract keywords line, solvation, dispersion and calculation type
-            elif "#" in line and not hasattr(cclib_data, "keywords_line"):
+            elif "#" in line and "keywords line" not in cclib_data["metadata"]:
                 keywords_line = ""
                 for j in range(i, i + 10):
                     if "----------" in outlines[j]:
@@ -458,7 +458,6 @@ def get_json_data(self, file, cclib_data):
                     cclib_data["metadata"]["functional"] = t1[
                         t1.index("(") + 2 : t1.rindex(")")
                     ]
-                break
 
             # Extract grid type
             elif line[1:8] == "ExpMin=":
@@ -473,16 +472,22 @@ def get_json_data(self, file, cclib_data):
                 grid = grid_lookup[IRadAn]
                 cclib_data["metadata"]["grid type"] = grid
 
+            if "functional" in cclib_data["metadata"] and "grid type" in cclib_data["metadata"]:
+                break
+
         # Keeps track of convergence during Freq calcs
-        if "optimization" in cclib_data:
-            cclib_data["optimization"]["times converged"] = 1
+        if "optdone" in cclib_data:
+            if cclib_data["optdone"] in [True,'true']:
+                cclib_data["opt times converged"] = 1
 
         # Extract <S**2> before and after spin annihilation, energy, and convergence in freq calc
         for i in reversed(range(0, len(outlines) - 30)):
             # For time dependent (TD) calculations
             if "E(TD-HF/TD-DFT)" in outlines[i]:
                 td_e = float(outlines[i].strip().split()[-1])
-                cclib_data["properties"]["energy"][
+                if not hasattr(cclib_data, "energy"):
+                    cclib_data["energy"] = {}
+                cclib_data["energy"][
                     "TD energy"
                 ] = cclib.parser.utils.convertor(td_e, "hartree", "eV")
 
@@ -492,40 +497,44 @@ def get_json_data(self, file, cclib_data):
             elif outlines[i].strip().startswith("G4(0 K)"):
                 G4_energy = float(outlines[i].strip().split()[2])
                 G4_energy -= zero_point_corr  # Remove G4 ZPE
-                cclib_data["properties"]["energy"][
+                if not hasattr(cclib_data, "energy"):
+                    cclib_data["energy"] = {}
+                cclib_data["energy"][
                     "G4 energy"
                 ] = cclib.parser.utils.convertor(G4_energy, "hartree", "eV")
 
             # For ONIOM calculations use the extrapolated value rather than SCF value
             elif "ONIOM: extrapolated energy" in outlines[i].strip():
                 oniom_e = float(outlines[i].strip().split()[4])
-                cclib_data["properties"]["energy"][
+                if not hasattr(cclib_data, "energy"):
+                    cclib_data["energy"] = {}
+                cclib_data["energy"][
                     "ONIOM energy"
                 ] = cclib.parser.utils.convertor(oniom_e, "hartree", "eV")
 
             elif "S**2 before annihilation" in outlines[i]:
-                cclib_data["properties"]["S2 after annihilation"] = float(
+                cclib_data["S2 after annihilation"] = float(
                     outlines[i].strip().split()[-1]
                 )
-                cclib_data["properties"]["S2 before annihilation"] = float(
+                cclib_data["S2 before annihilation"] = float(
                     outlines[i].strip().split()[-3][:-1]
                 )
 
             # Extract symmetry point group
             elif "Full point group" in outlines[i]:
                 point_group = outlines[i].strip().split()[3]
-                cclib_data["properties"]["rotational"][
+                cclib_data["rotational"][
                     "symmetry point group"
                 ] = point_group
                 break
 
             elif "Stationary point found" in outlines[i]:
-                cclib_data["optimization"]["times converged"] = 2
+                cclib_data["opt times converged"] = 2
 
             # Extract symmetry number, rotational constants and rotational temperatures
             elif "Rotational symmetry number" in outlines[i]:
                 symmno = int(outlines[i].strip().split()[3].split(".")[0])
-                cclib_data["properties"]["rotational"]["symmetry number"] = symmno
+                cclib_data["rotational"]["symmetry number"] = symmno
 
             elif outlines[i].find("Rotational constants (GHZ):") > -1:
                 try:
@@ -540,11 +549,11 @@ def get_json_data(self, file, cclib_data):
                             float(outlines[i].strip().replace(":", " ").split()[4]),
                             float(outlines[i].strip().replace(":", " ").split()[5]),
                         ]
-                cclib_data["properties"]["rotational"]["rotational constants"] = roconst
+                cclib_data["rotational"]["rotational constants"] = roconst
 
             elif outlines[i].find("Rotational temperature ") > -1:
                 rotemp = [float(outlines[i].strip().split()[3])]
-                cclib_data["properties"]["rotational"][
+                cclib_data["rotational"][
                     "rotational temperatures"
                 ] = rotemp
 
@@ -561,39 +570,22 @@ def get_json_data(self, file, cclib_data):
                             float(outlines[i].strip().split()[4]),
                             float(outlines[i].strip().split()[5]),
                         ]
-                cclib_data["properties"]["rotational"][
+                cclib_data["rotational"][
                     "rotational temperatures"
                 ] = rotemp
 
-            elif outlines[i].find("SCF GIAO Magnetic shielding tensor (ppm)") > -1:
-                nmr_iso = []
-                nmr_anis = []
-                nmr_eigen = []
-                cclib_data["properties"]["NMR"] = {}
-                for j in range(i, len(outlines)):
-                    if outlines[j].find("Isotropic") > -1:
-                        nmr_iso.append(float(outlines[j].split()[4]))
-                        nmr_anis.append(float(outlines[j].split()[7]))
-                    elif outlines[j].find("Eigenvalues") > -1:
-                        nmr_eigen.append(
-                            [
-                                float(outlines[j].split()[1]),
-                                float(outlines[j].split()[2]),
-                                float(outlines[j].split()[3]),
-                            ]
-                        )
-                    elif outlines[j].find("*************************") > -1:
-                        break
-                cclib_data["properties"]["NMR"]["NMR anisotopic tensors"] = nmr_anis
-                cclib_data["properties"]["NMR"]["NMR eigenvalues"] = nmr_eigen
-                cclib_data["properties"]["NMR"]["NMR isotopic tensors"] = nmr_iso
-
     elif cclib_data["metadata"]["QM program"].lower().find("orca") > -1:
+        if "optdone" in cclib_data:
+            if cclib_data["optdone"] in [True,'true']:
+                cclib_data["opt times converged"] = 1
+
         for i in reversed(range(0, len(outlines))):
             if outlines[i][:25] == "FINAL SINGLE POINT ENERGY":
                 # in eV to match the format from cclib
                 orca_e = float(outlines[i].split()[-1])
-                cclib_data["properties"]["energy"][
+                if not hasattr(cclib_data, "energy"):
+                    cclib_data["energy"] = {}
+                cclib_data["energy"][
                     "final single point energy"
                 ] = cclib.parser.utils.convertor(orca_e, "hartree", "eV")
                 break
@@ -639,6 +631,22 @@ def get_json_data(self, file, cclib_data):
         # this prevents errors when the names contain "."
         name_path = os.path.basename(Path(file))
         dir_path = os.path.dirname(Path(file))
+        # Convert NumPy arrays to lists
+        def _convert_ndarrays(obj):
+            """Recursively convert all numpy arrays to lists."""
+            if isinstance(obj, np.ndarray):
+                return obj.tolist()
+            elif isinstance(obj, dict):
+                return {k: _convert_ndarrays(v) for k, v in obj.items()}
+            elif isinstance(obj, list):
+                return [_convert_ndarrays(v) for v in obj]
+            elif isinstance(obj, tuple):
+                return tuple(_convert_ndarrays(v) for v in obj)
+            else:
+                return obj
+
+        # assuming your dict is called `data`
+        cclib_data = _convert_ndarrays(cclib_data)
         with open(f'{dir_path}/{name_path.split(".")[0]}.json', "w") as outfile:
             json.dump(cclib_data, outfile, indent=1)
 
@@ -650,21 +658,21 @@ def get_cclib_params(cclib_data, errortype):
     """
 
     # in eV, converted to hartree using the conversion factor from cclib
-    E_dup = cclib_data["properties"]["energy"]["total"]
+    E_dup = cclib_data["scfenergies"][-1]
     E_dup = cclib.parser.utils.convertor(E_dup, "eV", "hartree")
     # in hartree
     try:
-        H_dup = cclib_data["properties"]["enthalpy"]
-        G_dup = cclib_data["properties"]["energy"]["free energy"]
+        H_dup = cclib_data["enthalpy"]
+        G_dup = cclib_data["freeenergy"]
     except (AttributeError, KeyError):
-        if cclib_data["properties"]["number of atoms"] == 1:
+        if cclib_data["natom"] == 1:
             if cclib_data["metadata"]["keywords line"].find("freq") == -1:
                 errortype = "sp_calc"
                 cclib_data["metadata"]["ground or transition state"] = "SP calculation"
             H_dup = E_dup
             G_dup = E_dup
     try:
-        ro_dup = cclib_data["properties"]["rotational"]["rotational constants"]
+        ro_dup = cclib_data["rotational"]["rotational constants"]
         if len(ro_dup) != 3:
             ro_dup = None
     except:

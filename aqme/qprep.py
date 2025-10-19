@@ -72,7 +72,6 @@ from importlib.resources import files
 
 from aqme.utils import (
     cclib_atoms_coords,
-    QM_coords,
     read_file,
     move_file,
     load_variables,
@@ -81,7 +80,8 @@ from aqme.utils import (
     add_prefix_suffix,
     check_files,
     check_dependencies,
-    set_destination
+    set_destination,
+    periodic_table
 )
 
 from aqme.csearch.crest import xyzall_2_xyz
@@ -526,9 +526,9 @@ class qprep:
                 with open(file) as json_file:
                     cclib_data = json.load(json_file)
                 try:
-                    atom_types, cartesians = cclib_atoms_coords(cclib_data)
-                    charge = cclib_data["properties"]["charge"]
-                    mult = cclib_data["properties"]["multiplicity"]
+                    atom_types, cartesians = cclib_atoms_coords(cclib_data,-1)
+                    charge = cclib_data["charge"]
+                    mult = cclib_data["mult"]
                 except (AttributeError, KeyError):
                     atom_types, cartesians = [], []
 
@@ -603,3 +603,49 @@ class qprep:
 
         if not found_basis:
             self.args.log.write("x  WARNING! Verify that your basis set(s) is correct. If it is, please let us know to add it to the list of known basis sets.")
+
+
+def QM_coords(outlines, min_RMS, n_atoms, program, keywords_line):
+    """
+    Retrieves atom types and coordinates from QM output files
+    """
+
+    atom_types, cartesians, range_lines = [], [], []
+    per_tab = periodic_table()
+    count_RMS = -1
+
+    if program == "gaussian":
+        if "nosymm" in keywords_line.lower():
+            target_ori = "Input orientation:"
+        else:
+            target_ori = "Standard orientation:"
+
+        if min_RMS > -1:
+            for i, line in enumerate(outlines):
+                if line.find(target_ori) > -1:
+                    count_RMS += 1
+                if count_RMS == min_RMS:
+                    range_lines = [i + 5, i + 5 + n_atoms]
+                    break
+        else:
+            for i in reversed(range(len(outlines))):
+                if outlines[i].find(target_ori) > -1:
+                    range_lines = [i + 5, i + 5 + n_atoms]
+                    break
+        if len(range_lines) != 0:
+            for i in range(range_lines[0], range_lines[1]):
+                massno = int(outlines[i].split()[1])
+                if massno < len(per_tab):
+                    atom_symbol = per_tab[massno]
+                else:
+                    atom_symbol = "XX"
+                atom_types.append(atom_symbol)
+                cartesians.append(
+                    [
+                        float(outlines[i].split()[3]),
+                        float(outlines[i].split()[4]),
+                        float(outlines[i].split()[5]),
+                    ]
+                )
+
+    return atom_types, cartesians
