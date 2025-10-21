@@ -602,6 +602,25 @@ def get_matches_idx_n_prefix(
 
     return pattern_dict
 
+def setup_env(self):
+    """Configure environment variables for reproducible calculations.
+    
+    Returns:
+        dict: Environment variables
+    """
+    env = dict(os.environ)
+    env.update({
+        "OMP_STACKSIZE": self.args.stacksize,
+        "OMP_NUM_THREADS": "1",
+        "MKL_NUM_THREADS": "1", 
+        "OPENBLAS_NUM_THREADS": "1",
+        'OMP_MAX_ACTIVE_LEVELS': '1',
+        "NUMEXPR_NUM_THREADS": "1",
+        "OMP_DYNAMIC": "FALSE",
+        "MKL_DYNAMIC": "FALSE",
+        "BLIS_NUM_THREADS": "1"
+    })
+    return env
 
 def calculate_morfeus_descriptors(
     final_xyz_path: str,
@@ -656,6 +675,9 @@ def calculate_morfeus_descriptors(
                            f"file {final_xyz_path}: {e}")
         return morfeus_data
 
+    # Set up environment
+    env = setup_env(self)
+
     # calculate MORFEUS global descriptors that do not come from xTB
     morfeus_data = morfeus_global_descps(self, elements, coordinates, morfeus_data)
 
@@ -664,22 +686,23 @@ def calculate_morfeus_descriptors(
 
     # xTB calculations through MORFEUS (with 1 proc to be reproducible)
     # calculate PTB method for descriptors that support it
-    morfeus_data = morfeus_ptb_descps(self, elements, coordinates, morfeus_data, charge, n_unpaired)
+    morfeus_data = morfeus_ptb_descps(self, elements, coordinates, morfeus_data, charge, n_unpaired, env)
     
     # calculate GFN2 method for descriptors not included in PTB
-    morfeus_data,energy = morfeus_gfn2_descps(self, elements, coordinates, morfeus_data, charge, n_unpaired)
+    morfeus_data,energy = morfeus_gfn2_descps(self, elements, coordinates, morfeus_data, charge, n_unpaired, env)
 
     # calculate GFN2 method with ALPB H2O for descriptors related to solvation
-    morfeus_data = morfeus_solv_descps(self, elements, coordinates, morfeus_data, charge, n_unpaired)
+    morfeus_data = morfeus_solv_descps(self, elements, coordinates, morfeus_data, charge, n_unpaired, env)
 
     # calculate GFN2 method in triplet state to calculate S0 to T1 energy gaps
     if n_unpaired == 0:
-        morfeus_data = morfeus_t1_descps(self, elements, coordinates, morfeus_data, charge, n_unpaired, energy)
+        morfeus_data = morfeus_t1_descps(self, elements, coordinates, morfeus_data, charge, n_unpaired, energy, env)
 
-    # for properties that failed
+    # for atomic properties that fail
     for prop in morfeus_data:
-        if morfeus_data[prop] == []:
-            morfeus_data[prop] = [None]*len(morfeus_data["Buried volume"])
+        if isinstance(morfeus_data[prop],list):
+            if len(morfeus_data[prop]) == 0:
+                morfeus_data[prop] = [None]*len(morfeus_data["Buried volume"])
 
     return morfeus_data
 
@@ -909,7 +932,8 @@ def morfeus_ptb_descps(
     coordinates: NDArray,
     morfeus_data: Dict[str, Any],
     charge: int,
-    n_unpaired: int
+    n_unpaired: int,
+    env: Dict[str, str]
 ) -> Dict[str, Any]:
     """
     Calculate quantum chemical descriptors using PTB method.
@@ -945,7 +969,7 @@ def morfeus_ptb_descps(
         xtb_ptb = XTB(
             elements,
             coordinates,
-            n_processes='aqme',
+            env_variables=env,
             charge=charge,
             n_unpaired=n_unpaired,
             solvent=None,
@@ -993,7 +1017,8 @@ def morfeus_gfn2_descps(
     coordinates: NDArray,
     morfeus_data: Dict[str, Any],
     charge: int,
-    n_unpaired: int
+    n_unpaired: int,
+    env: Dict[str, str]
 ) -> Tuple[Dict[str, Any], float]:
     """
     Calculate electronic and structural descriptors using GFN-xTB method.
@@ -1036,7 +1061,7 @@ def morfeus_gfn2_descps(
         xtb2 = XTB(
             elements,
             coordinates,
-            n_processes='aqme',
+            env_variables=env,
             charge=charge,
             n_unpaired=n_unpaired,
             solvent=getattr(self.args, "qdescp_solvent", None),
@@ -1115,7 +1140,8 @@ def morfeus_solv_descps(
     coordinates: NDArray,
     morfeus_data: Dict[str, Any],
     charge: int,
-    n_unpaired: int
+    n_unpaired: int,
+    env: Dict[str, str]
 ) -> Dict[str, Any]:
     """
     Calculate solvation descriptors using GFN-xTB with ALPB water model.
@@ -1148,7 +1174,7 @@ def morfeus_solv_descps(
         xtb2_solv = XTB(
             elements,
             coordinates,
-            n_processes='aqme',
+            env_variables=env,
             charge=charge,
             n_unpaired=n_unpaired,
             solvent="h2o",
@@ -1187,7 +1213,8 @@ def morfeus_t1_descps(
     morfeus_data: Dict[str, Any],
     charge: int,
     n_unpaired: int,
-    energy: float
+    energy: float,
+    env: Dict[str, str]
 ) -> Dict[str, Any]:
     """
     Calculate singlet-triplet energy gap using GFN-xTB.
@@ -1218,7 +1245,7 @@ def morfeus_t1_descps(
         xtb2t1 = XTB(
             elements, 
             coordinates, 
-            n_processes='aqme', 
+            env_variables=env, 
             charge=charge, 
             n_unpaired=n_unpaired+2,
             solvent=getattr(self.args, "qdescp_solvent", None),

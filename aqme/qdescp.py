@@ -124,28 +124,187 @@ from aqme.qdescp_utils import (
     auto_pattern,
     remove_invalid_smarts,
     update_atom_props_json,
-    find_level_names
+    find_level_names,
+    setup_env
 )
 
 from aqme.csearch.crest import xyzall_2_xyz
 
 
-class qdescp:
+class PropertyCalculator:
+    """Handles quantum chemical property calculations.
+    
+    This class manages the execution of quantum chemistry calculations and property
+    collection using xTB and other tools. It handles:
+    - XYZ file preparation
+    - Charge and multiplicity assignment
+    - Property calculation execution
+    - Results collection and processing
+    
+    Attributes:
+        args: AQME arguments object with calculation settings
     """
-    Class containing all the functions from the QDESCP module
+    
+    def __init__(self, args):
+        """Initialize property calculator.
+        
+        Args:
+            args: AQME arguments object containing calculation parameters
+        """
+        self.args = args
+        
+    def calculate_properties(self, xyz_file, charge, mult, name, destination):
+        """Run property calculations for a molecule.
+        
+        Executes full quantum chemistry workflow:
+        1. Prepares input files
+        2. Runs xTB calculation
+        3. Collects properties
+        4. Processes results
+        
+        Args:
+            xyz_file (str): Path to XYZ geometry file
+            charge (int): Molecular charge
+            mult (int): Molecular multiplicity 
+            name (str): Base name for output files
+            destination (Path): Output directory
+            
+        Returns:
+            tuple: (success status, file paths dict)
+        """
+        # Prepare working directory
+        dat_dir = destination / name
+        dat_dir.mkdir(exist_ok=True, parents=True)
+        
+        # Set up file paths
+        files = {
+            'xyz': dat_dir / f"{name}.xyz",
+            'input': dat_dir / f"{name}_xtb.inp",
+            'output': dat_dir / f"{name}_opt.out",
+            'json': dat_dir / f"{name}.json"
+        }
+        
+        # Move input file
+        shutil.move(xyz_file, str(files['xyz']))
+        
+        # Create xTB input
+        self._create_xtb_input(files['input'])
+        
+        # Set up environment
+        env = setup_env(self)
+        
+        # Run calculation
+        success = self._run_xtb_calculation(
+            dat_dir, files, charge, mult, env
+        )
+        
+        return success, {k: str(v) for k,v in files.items()}
+        
+    def _create_xtb_input(self, input_file):
+        """Create xTB input file.
+        
+        Args:
+            input_file (Path): Path to write input file
+        """
+        with open(input_file, "w", encoding='utf-8') as f:
+            f.write("$write\njson=true\n")
+
+    def _run_xtb_calculation(self, dat_dir, files, charge, mult, env):
+        """Execute xTB calculation.
+        
+        Args:
+            dat_dir (Path): Working directory
+            files (dict): File path dictionary
+            charge (int): Molecular charge
+            mult (int): Molecular multiplicity
+            env (dict): Environment variables
+            
+        Returns:
+            bool: Success status
+        """
+        if not self.args.xtb_opt:
+            return True
+            
+        command = [
+            "xtb",
+            str(files['xyz']),
+            "--opt", str(self.args.qdescp_opt),
+            "--acc", str(self.args.qdescp_acc),
+            "--gfn", str(self.args.gfn_version),
+            "--chrg", str(int(float(charge))),
+            "--uhf", str(int(float(mult)) - 1),
+            "--etemp", str(self.args.qdescp_temp),
+            "-P", "1"
+        ]
+        
+        if self.args.qdescp_solvent:
+            command.extend(["--alpb", self.args.qdescp_solvent])
+            
+        run_command(command, files['output'], cwd=dat_dir, env=env)
+        
+        # Handle results
+        os.remove(files['xyz'])
+        
+        if os.path.exists(dat_dir / "xtbopt.xyz"):
+            os.rename(dat_dir / "xtbopt.xyz", files['xyz'])
+            return True
+            
+        elif os.path.exists(dat_dir / "xtblast.xyz"):
+            os.rename(dat_dir / "xtblast.xyz", files['xyz'])
+            return True
+            
+        return False
+
+
+class qdescp:
+    """Quantum Mechanical Descriptor Calculation and Processing.
+
+    This class handles the generation and processing of quantum mechanical descriptors
+    using xTB, as well as analyzes NMR data. It provides functionality for:
+    
+    - Running xTB calculations for descriptor generation
+    - Processing NMR data from Gaussian calculations 
+    - Managing Boltzmann averaging of properties
+    - Creating ROBERT-compatible descriptor databases
+    
+    The class supports both single molecule calculations and batch processing of
+    multiple structures from various input formats including SDF, PDB, XYZ and CSV files.
+
+    Attributes:
+        args: Configuration object holding all calculation parameters
+        start_time: Timestamp of calculation start
     """
 
     def __init__(self, **kwargs):
-
-        start_time_overall = time.time()
-
-        # load default and user-specified variables
+        """Initialize QDESCP calculator with provided settings.
+        
+        Args:
+            **kwargs: Keyword arguments for configuration including:
+            - w_dir_main (str): Working directory path
+            - destination (str): Output directory path  
+            - program (str): Program to use ('xtb' or 'nmr')
+            - nprocs (int): Number of parallel processes
+            - qdescp_atoms (list): Atoms/groups for atomic property calculation
+            - robert (bool): Create ROBERT-compatible database
+            - files (list): Input file paths
+            - charge (int): Molecular charge
+            - mult (int): Molecular multiplicity
+            - gfn_version (int): GFN-xTB version
+            - qdescp_solvent (str): Solvent for ALPB model
+            - qdescp_temp (float): Temperature for calculations
+            - qdescp_acc (float): Calculation accuracy  
+            - qdescp_opt (str): Optimization convergence criteria
+            - boltz (bool): Calculate Boltzmann averages
+            - xtb_opt (bool): Run xTB optimization
+        """
+        self.start_time = time.time()
+        
+        # Initialize configuration and components
         self.args = load_variables(kwargs, "qdescp")
-
-        # detects errors and updates variables before the QDESCP run
-        self,destination,smarts_targets,boltz_dir = self.qdescp_set_up()
-
-        # check whether dependencies are installed
+        self.property_calc = PropertyCalculator(self.args)
+        
+        # Set up QDESCP run and check dependencies
+        self, destination, smarts_targets, boltz_dir = self.qdescp_set_up()
         _ = check_dependencies(self)
 
         # full xTB workflow in QDESCP for descriptor generation and collection
@@ -156,15 +315,34 @@ class qdescp:
         elif self.args.program.lower() == "nmr":
             _ = self.qdescp_nmr_workflow(boltz_dir)
         
-        elapsed_time = round(time.time() - start_time_overall, 2)
+        elapsed_time = round(time.time() - self.start_time, 2)
         self.args.log.write(f"\nTime QDESCP: {elapsed_time} seconds\n")
         self.args.log.finalize()
     
 
-    def qdescp_xtb_workflow(self,boltz_dir,destination,smarts_targets):
-        '''
-        Full xTB workflow in QDESCP for descriptor generation and collection
-        '''
+    def qdescp_xtb_workflow(self, boltz_dir, destination, smarts_targets):
+        """Run the complete xTB workflow for descriptor generation and collection.
+        
+        This method handles the complete process of generating and collecting quantum
+        mechanical descriptors using xTB, including:
+        
+        1. Initial input validation and setup
+        2. Optional conformer generation for CSV inputs
+        3. Automatic SMARTS pattern detection
+        4. Parallel descriptor calculation
+        5. Results collection and processing
+        
+        Args:
+            boltz_dir (Path): Directory for Boltzmann-averaged results
+            destination (Path): Main output directory
+            smarts_targets (list): List of SMARTS patterns to match
+            
+        Note:
+            - For CSV inputs, conformers are generated before descriptor calculation
+            - When no SMARTS patterns are provided, they are auto-detected
+            - Invalid SMARTS patterns (< 75% compatibility) are removed
+            - Uses parallel processing for efficiency with reproducibility
+        """
 
         # check whether the user have chosen the "input" or "files" option (QDESCP will use "files" from this point on)
         qdescp_files = self.initial_xtb_check()
@@ -236,9 +414,19 @@ class qdescp:
 
 
     def initial_xtb_check(self):
-        '''
-        Check whether the user have chosen the "input" or "files" option (QDESCP will use "files" from this point on)
-        '''
+        """Validate and process input file selection.
+        
+        This method:
+        1. Checks if input is provided via --input or --files
+        2. Validates file formats and paths
+        3. Converts input to standardized file list
+        
+        Returns:
+            list: List of validated input file paths
+            
+        Raises:
+            SystemExit: If no valid files are found or formats are invalid
+        """
         
         valid_input = True
         if self.args.files == [] and self.args.input != '':
@@ -266,9 +454,24 @@ class qdescp:
 
 
     def initial_csearch_run(self, destination, qdescp_files):
-        '''
-        Initial conformer generation for QDESCP runs that start with SMILES strings from CSV inputs
-        '''
+        """Generate conformers from SMILES in CSV input.
+        
+        This method:
+        1. Validates CSV input file existence
+        2. Sets up conformer search parameters
+        3. Runs RDKit conformer generation
+        4. Processes and validates generated conformers
+        
+        Args:
+            destination (Path): Output directory path
+            qdescp_files (list): List of input files (expecting single CSV)
+            
+        Returns:
+            list: Paths to generated conformer files
+            
+        Raises:
+            SystemExit: If CSV file not found or conformer generation fails
+        """
         
         if not os.path.exists(qdescp_files[0]):
             self.args.log.write(f"\nx  The csv_name provided ({qdescp_files[0]}) does not exist! Please specify this name correctly")
@@ -322,36 +525,103 @@ class qdescp:
         return qdescp_files
     
 
-    def get_boltz_n_save_csv(self,destination,qdescp_files,descp_dict,boltz_dir,smarts_targets):
+    def get_boltz_n_save_csv(self, destination, qdescp_files, descp_dict, boltz_dir, smarts_targets):
+        """Process molecular properties and generate Boltzmann-averaged data files.
+        
+        This method:
+        1. Processes each valid input file to extract molecular properties
+        2. Generates Boltzmann-weighted JSON files for each molecule
+        3. Creates final CSV files with combined data
+        
+        Args:
+            destination (Path): Output directory path
+            qdescp_files (list): List of input structure files
+            descp_dict (dict): Dictionary of descriptors to calculate
+            boltz_dir (Path): Directory for Boltzmann-weighted results
+            smarts_targets (list): SMARTS patterns for atom matching
+        """
         self.args.log.write('\no  Running RDKit and collecting molecular properties (for all inputs)')
-        all_prefixes_atoms =  []
-        for _,file in enumerate(qdescp_files):
+        all_prefixes_atoms = []
+        
+        for _, file in enumerate(qdescp_files):
+            if file in self.args.invalid_calcs:
+                continue
+                
+            # Process each valid molecule
             descp_dict_indiv = descp_dict.copy()
-            if file not in self.args.invalid_calcs:
-                mols = load_sdf(file)
-                mol = mols[0]
-                # Get the code_name from the original CSV for this file
-                if self.args.csv_name is not None and os.path.exists(self.args.csv_name):
-                    df_qdescp = pd.read_csv(self.args.csv_name)
-                    file_base = os.path.basename(file)
-                    for code_name in df_qdescp['code_name'].astype(str).tolist():
-                        if file_base.startswith(f"{code_name}_"):
-                            name = code_name
-                            break
-                else:
-                    name = os.path.basename(file).replace('.sdf','')
-                # to locate difficult names (i.e. with special characters), glob.glob doesn't work, this is needed:
-                json_files = [x for x in glob.glob(f"{destination}/*.json") if os.path.basename(x).startswith(f"{name}_") and "_conf_" in os.path.basename(x)]
-                # Generating the JSON files
-                _ = self.get_boltz_props(json_files, name, boltz_dir, "xtb", descp_dict_indiv, smarts_targets, mol, all_prefixes_atoms)
+            mols = load_sdf(file)
+            mol = mols[0]
             
-        # Create the CSV files from the JSON files
-        _ = self.write_csv_boltz_data(destination)  # CSV full
+            # Get molecule name from CSV or file
+            name = self._get_molecule_name(file)
+            
+            # Find and process JSON files for each conformer
+            json_files = self._find_conformer_jsons(destination, name)
+            if json_files:
+                _ = self.get_boltz_props(
+                    json_files, name, boltz_dir, "xtb", 
+                    descp_dict_indiv, smarts_targets, mol, all_prefixes_atoms
+                )
+            
+        # Create final CSV files
+        _ = self.write_csv_boltz_data(destination)
+        
+    def _get_molecule_name(self, file):
+        """Extract molecule name from CSV if available, otherwise from filename.
+        
+        Args:
+            file (str): Path to input file
+            
+        Returns:
+            str: Molecule name/identifier
+        """
+        if self.args.csv_name and os.path.exists(self.args.csv_name):
+            df_qdescp = pd.read_csv(self.args.csv_name)
+            file_base = os.path.basename(file)
+            
+            for code_name in df_qdescp['code_name'].astype(str).tolist():
+                if file_base.startswith(f"{code_name}_"):
+                    return code_name
+                    
+        return os.path.basename(file).replace('.sdf', '')
+        
+    def _find_conformer_jsons(self, destination, name):
+        """Find JSON files for all conformers of a molecule.
+        
+        Args:
+            destination (Path): Directory containing JSON files
+            name (str): Base name of the molecule
+            
+        Returns:
+            list: Paths to conformer JSON files
+        """
+        return [x for x in glob.glob(f"{destination}/*.json") 
+                if os.path.basename(x).startswith(f"{name}_") 
+                and "_conf_" in os.path.basename(x)]
 
 
     def get_boltz_props(self, json_files, name, boltz_dir, calc_type, descp_dict_indiv, smarts_targets, mol, all_prefixes_atoms):
-        """
-        Retrieves the properties from json files and gives Boltzmann averaged properties for rdkit, NMR and morfues descriptors.
+        """Calculate Boltzmann-weighted properties from conformer results.
+        
+        This method:
+        1. Reads properties from JSON files
+        2. Calculates Boltzmann weights based on energies
+        3. Averages properties across conformers
+        4. Adds RDKit molecular descriptors
+        5. Saves results to new JSON file
+        
+        Args:
+            json_files (list): List of JSON files with conformer data
+            name (str): Base name for output files
+            boltz_dir (Path): Output directory for Boltzmann results
+            calc_type (str): Calculation type ('xtb' or 'nmr')
+            descp_dict_indiv (dict): Property dictionary for this molecule
+            smarts_targets (list): SMARTS patterns to match
+            mol: RDKit molecule object for descriptor calculation
+            all_prefixes_atoms (list): List of atomic property prefixes
+            
+        Returns:
+            None: Results are saved to JSON file
         """
         # Ensure smarts_targets is a list even if None
         if smarts_targets is None:
@@ -384,46 +654,52 @@ class qdescp:
 
 
     def qdescp_set_up(self):
-        '''
-        Detects errors and updates variables before the QDESCP run
-        '''
-
-        # most users employ QDESCP to generate descriptors with xTB
+        """Initialize and validate QDESCP run settings.
+        
+        This method performs initial setup and validation:
+        1. Sets default program to xTB if not specified
+        2. Validates program selection (xTB or NMR)
+        3. Configures parallel processing settings
+        4. Sets sampling parameters
+        5. Validates input files and directories
+        6. Creates required output directories
+        
+        Returns:
+            tuple: Contains:
+                - self: Updated QDESCP instance
+                - destination (Path): Configured output directory
+                - smarts_targets (list): SMARTS patterns to match
+                - boltz_dir (Path): Directory for Boltzmann calculations
+  
+        Raises:
+            SystemExit: If program selection or input files are invalid
+        """
+        # Program selection validation
         if self.args.program is None:
             self.args.program = "xtb"
 
         if self.args.program.lower() not in ["xtb", "nmr"]:
-            self.args.log.write(f"\nx  The program specified ({self.args.program}) is not supported for QDESCP descriptor generation! Specify: program='xtb' (or nmr)")
-            self.args.log.finalize()
-            sys.exit()
+            self._error_exit(
+                f"Program {self.args.program} not supported for QDESCP. "
+                "Use 'xtb' or 'nmr'"
+            )
 
-        # set number of processors
+        # Processing configuration
         if self.args.nprocs is None:
             self.args.nprocs = 8
 
-        # default value of auto_sample
         if self.args.auto_sample == 'auto':
             self.args.auto_sample = 'low'
 
-        # detect if the csv_name provided exists
-        if self.args.csv_name is not None and not os.path.exists(self.args.csv_name):
-            self.args.log.write(f"\nx  The csv_name provided ({self.args.csv_name}) does not exist! Please specify this name correctly")
-            self.args.log.finalize()
-            sys.exit()
-
-        if self.args.qdescp_solvent is not None:
-            self.args.log.write(f"\nx  Currently, PTB calculations do not work with solvent! Please, remove the --qdescp_solvent option")
-            self.args.log.finalize()
-            sys.exit()
-
-        if self.args.files != [] and self.args.input == '':
-            # check if the input files are valid
-            _ = check_files(self,'qdescp')
-
-            # get unique files to avoid redundancy in calculations
+        # Validate input parameters
+        self._validate_inputs()
+        
+        # Process input files if provided
+        if self.args.files and not self.args.input:
+            check_files(self, 'qdescp')
             self.args.files = self.get_unique_files()
-
-        # copy smarts patterns used to generate atomic descriptors
+            
+        # Copy SMARTS patterns for atomic descriptors
         smarts_targets = self.args.qdescp_atoms.copy()
 
         destination = set_destination(self,'QDESCP')
@@ -442,321 +718,493 @@ class qdescp:
 
 
     def write_csv_boltz_data(self, destination):
+        """Generate CSV files containing Boltzmann-averaged descriptor data.
+        
+        This method combines descriptor data from JSON files with input CSV data
+        and generates multiple output files:
+        - Full descriptor database
+        - De novo descriptor subset
+        - Interpretable descriptor subset
+        
+        The method handles both AQME-Descriptors and AQME-ROBERT workflows.
+        
+        Args:
+            destination (Path): Directory containing Boltzmann JSON files
         """
-        AQME-ROBERT workflow. 
-        Combines the descriptor data from qdescp CSVs with the input CSV and saves the result.
-
+        temp_csv = Path(os.getcwd()).joinpath("AQME_run.csv")
+        code_names = self._get_code_names(temp_csv)
+        
+        # Process JSON files
+        boltz_data = self._process_boltz_json_files(destination, code_names)
+        if boltz_data is None or boltz_data.empty:
+            self.args.log.write("x  No descriptors were generated with QDESCP, please check the WARNINGS above.")
+            return
+            
+        # Generate output files
+        name_db = 'ROBERT' if self.args.robert and os.path.exists(self.args.csv_name) else 'Descriptors'
+        self._generate_output_files(destination, boltz_data, name_db, temp_csv)
+        
+    def _get_code_names(self, temp_csv):
+        """Extract or generate code names for molecules.
+        
+        Args:
+            temp_csv (Path): Path for temporary CSV file
+            
+        Returns:
+            list: List of code names
         """
-        code_names = []
-        temp_csv = f'{Path(os.getcwd()).joinpath("AQME_run.csv")}'
-        if self.args.csv_name is not None:
-            if os.path.exists(self.args.csv_name):
-                code_names = pd.read_csv(self.args.csv_name)["code_name"].astype(str).tolist()
-
-        else:
-            code_names = [os.path.basename(file).replace('.sdf','') for file in self.args.files]
-            df_name = pd.DataFrame({'code_name': code_names})
-            normalized_code_names = list(
-                df_name['code_name'].astype(str)  # ensure all entries are strings
-                .str.replace(r"(_\d+)?_rdkit$", "", regex=True)  # remove _0_rdkit, _1_rdkit, etc.
-                .str.replace(r"_rdkit$", "", regex=True)  # remove plain _rdkit
-    )
-
-            # Create a DataFrame
-            df = pd.DataFrame({'code_name': normalized_code_names,
-                                'SMILES': [np.nan] * len(code_names)})
-            # Save to CSV
-            df.to_csv(temp_csv, index=False)
-            self.args.csv_name = temp_csv
-
-        # Read all JSON files in the boltz directory and concatenate them into a single DataFrame
+        if self.args.csv_name and os.path.exists(self.args.csv_name):
+            return pd.read_csv(self.args.csv_name)["code_name"].astype(str).tolist()
+            
+        # Generate code names from file names
+        code_names = [os.path.basename(file).replace('.sdf','') for file in self.args.files]
+        normalized_names = self._normalize_code_names(code_names)
+        
+        # Create temporary CSV
+        df = pd.DataFrame({
+            'code_name': normalized_names,
+            'SMILES': [np.nan] * len(code_names)
+        })
+        df.to_csv(temp_csv, index=False)
+        self.args.csv_name = str(temp_csv)
+        
+        return code_names
+        
+    def _normalize_code_names(self, code_names):
+        """Normalize code names by removing rdkit suffixes.
+        
+        Args:
+            code_names (list): Original code names
+            
+        Returns:
+            list: Normalized code names
+        """
+        df_name = pd.DataFrame({'code_name': code_names})
+        return list(df_name['code_name'].astype(str)
+                   .str.replace(r"(_\d+)?_rdkit$", "", regex=True)
+                   .str.replace(r"_rdkit$", "", regex=True))
+                   
+    def _process_boltz_json_files(self, destination, code_names):
+        """Process Boltzmann-weighted JSON files into DataFrame.
+        
+        Args:
+            destination (Path): Directory containing JSON files
+            code_names (list): List of molecule code names
+            
+        Returns:
+            DataFrame: Combined data from all JSON files
+        """
         json_pattern = str(destination) + "/boltz/*_boltz.json"
-
         boltz_json_files = glob.glob(json_pattern)
-        dfs = [] 
+        
+        dfs = []
         for file in boltz_json_files:
             data = pd.read_json(file, lines=True)
-
-            json_basename = os.path.basename(file).replace("_boltz.json", "")
-            if json_basename.endswith("_rdkit"):
-                json_basename = json_basename[:-6]
-
-            # ensure JSON names with extra suffixes when using complex_type (e.g., L1_0_rdkit_boltz) still map to the original code_name
-            name_indiv = json_basename
-            for code_name in code_names:
-                if json_basename == code_name or json_basename.startswith(f"{code_name}_"):
-                    name_indiv = code_name
-                    break
-
+            name_indiv = self._map_json_to_code_name(file, code_names)
             data.insert(loc=0, column='code_name', value=name_indiv)
             dfs.append(data)
-        if dfs != []:
-            df_full = pd.concat(dfs, ignore_index=True)
-
-            name_db = 'Descriptors'
-            if os.path.exists(self.args.csv_name):
-                if self.args.robert:
-                    name_db = 'ROBERT'
-
-                combined_full_df = pd.DataFrame() #full
-
-                # Read the CSV with descriptors
-                input_df = pd.read_csv(self.args.csv_name)
-
-                # check that code_name and SMILES are written with the right format
-                input_df = fix_cols_names(input_df)
-
-                if 'code_name' not in input_df.columns:
-                    self.args.log.write(f"\nx  The input csv_name provided ({self.args.csv_name}) does not contain the code_name column. A combined database for AQME-{name_db} workflows will not be created.")
-                elif 'SMILES' in input_df.columns:
-                    # make a normalized column in qdescp_df to match input_df['code_name']
-                    df_full["normalized_code_name"] = (
-                        df_full["code_name"].astype(str)  # ensure all entries are strings
-                        .str.replace(r"(_\d+)?_rdkit$", "", regex=True)  # remove _0_rdkit, _1_rdkit, etc.
-                        .str.replace(r"_rdkit$", "", regex=True)  # remove plain _rdkit
-    )
-
-                    # to avoid problems with names that are numbers
-                    input_df["code_name"] = input_df["code_name"].astype(str)
-
-                    # now merge on the normalized column
-                    combined_full_df = input_df.merge(
-                        df_full.drop(columns=["code_name"]),  # drop original to avoid duplicates
-                        left_on="code_name",
-                        right_on="normalized_code_name",
-                        how="left"
-                    ).drop(columns=["normalized_code_name"])
-
-                    csv_basename = os.path.basename(self.args.csv_name)
-                    csv_path = self.args.initial_dir.joinpath(f'AQME-{name_db}_full_{csv_basename}')
-                    csv_path_denovo = self.args.initial_dir.joinpath(f'AQME-{name_db}_denovo_{csv_basename}')
-                    csv_path_interpret = self.args.initial_dir.joinpath(f'AQME-{name_db}_interpret_{csv_basename}')
-
-                    # delete previous results to avoid problems
-                    for csv_path_indiv in [csv_path,csv_path_denovo,csv_path_interpret]:
-                        if os.path.exists(csv_path_indiv):
-                            os.remove(csv_path_indiv)
-
-                    # Save concatenated DataFrames as CSV files
-                    # First, if no atoms were specified in qdescp_atoms, save the atom descriptors for all atoms
-                    if len(self.args.qdescp_atoms) == 0:
-                        dat_dir = Path(destination.joinpath('raw_data'))
-                        dat_dir.mkdir(exist_ok=True, parents=True)
-
-                        combined_full_df.to_csv(f'{Path(dat_dir).joinpath(os.path.basename(csv_path))}', index=None, header=True)
-
-                        # de novo and interpret descriptors
-                        descriptors_denovo = find_level_names(combined_full_df,'denovo')
-                        descriptors_interpret = find_level_names(combined_full_df,'interpret')
-
-                        combined_denovo_df = combined_full_df[descriptors_denovo]
-                        combined_denovo_df.to_csv(f'{Path(dat_dir).joinpath(os.path.basename(csv_path_denovo))}', index=None, header=True)
-
-                        combined_interpret_df = combined_full_df[descriptors_interpret]
-                        combined_interpret_df.to_csv(f'{Path(dat_dir).joinpath(os.path.basename(csv_path_interpret))}', index=None, header=True)
-
-                    # drop lists if no atomic descriptors were selected
-                    clean_full_df = combined_full_df.drop(columns=[col for col in combined_full_df.columns if combined_full_df[col].apply(lambda x: isinstance(x, list)).any()])
-                    clean_full_df.to_csv(f'{csv_path}', index=None, header=True)
-
-                    # de novo and interpret descriptors
-                    clean_descriptors_denovo = find_level_names(clean_full_df,'denovo')
-                    clean_descriptors_interpret = find_level_names(clean_full_df,'interpret')
-
-                    clean_denovo_df = clean_full_df[clean_descriptors_denovo]
-                    clean_denovo_df.to_csv(f'{csv_path_denovo}', index=None, header=True)
-
-                    clean_interpret_df = clean_full_df[clean_descriptors_interpret]
-                    clean_interpret_df.to_csv(f'{csv_path_interpret}', index=None, header=True)
-
-                    self.args.log.write(f"o  The AQME-{name_db}_full_{csv_basename}, AQME-{name_db}_denovo_{csv_basename} and AQME-{name_db}_interpret_{csv_basename} databases were created in {self.args.initial_dir}")
-                    _ = self.process_aqme_csv(name_db)
-                    os.remove(temp_csv) if os.path.exists(temp_csv) else None
-
-            else:
-                self.args.log.write(f"\nx  The input csv_name provided ({self.args.csv_name}) does not exist. A combined database for AQME-{name_db} workflows will not be created (but you can still check the raw descriptors in the QDESCP folder).")
-
-        else:
-            self.args.log.write(f"x  No descriptors were generated with QDESCP, please check the WARNINGS above.")
-
+            
+        return pd.concat(dfs, ignore_index=True) if dfs else None
+        
+    def _map_json_to_code_name(self, json_file, code_names):
+        """Map JSON filename to original code name.
+        
+        Args:
+            json_file (str): Path to JSON file
+            code_names (list): List of original code names
+            
+        Returns:
+            str: Mapped code name
+        """
+        json_basename = os.path.basename(json_file).replace("_boltz.json", "")
+        if json_basename.endswith("_rdkit"):
+            json_basename = json_basename[:-6]
+            
+        for code_name in code_names:
+            if json_basename == code_name or json_basename.startswith(f"{code_name}_"):
+                return code_name
+        return json_basename
+        
+    def _generate_output_files(self, destination, df_full, name_db, temp_csv):
+        """Generate final CSV output files.
+        
+        Args:
+            destination (Path): Output directory
+            df_full (DataFrame): Combined descriptor data
+            name_db (str): Database name (ROBERT or Descriptors)
+            temp_csv (Path): Path to temporary CSV
+        """
+        if not os.path.exists(self.args.csv_name):
+            self.args.log.write(
+                f"\nx  The input csv_name provided ({self.args.csv_name}) does not exist. "
+                f"A combined database for AQME-{name_db} workflows will not be created "
+                "(but you can still check the raw descriptors in the QDESCP folder)."
+            )
+            return
+            
+        combined_df = self._prepare_combined_dataframe(df_full)
+        if combined_df is None:
+            return
+            
+        self._save_descriptor_files(destination, combined_df, name_db)
+        _ = self.process_aqme_csv(name_db)
+        os.remove(temp_csv) if os.path.exists(temp_csv) else None
+        
+    def _prepare_combined_dataframe(self, df_full):
+        """Prepare combined DataFrame with input and descriptor data.
+        
+        Args:
+            df_full (DataFrame): Descriptor data
+            
+        Returns:
+            DataFrame: Combined data, or None if invalid
+        """
+        input_df = pd.read_csv(self.args.csv_name)
+        input_df = fix_cols_names(input_df)
+        
+        if 'code_name' not in input_df.columns:
+            self.args.log.write(
+                f"\nx  The input csv_name provided ({self.args.csv_name}) does not contain "
+                "the code_name column. A combined database for AQME-{name_db} workflows "
+                "will not be created."
+            )
+            return None
+            
+        if 'SMILES' not in input_df.columns:
+            return None
+            
+        df_full["normalized_code_name"] = (
+            df_full["code_name"].astype(str)
+            .str.replace(r"(_\d+)?_rdkit$", "", regex=True)
+            .str.replace(r"_rdkit$", "", regex=True)
+        )
+        
+        input_df["code_name"] = input_df["code_name"].astype(str)
+        
+        return input_df.merge(
+            df_full.drop(columns=["code_name"]),
+            left_on="code_name",
+            right_on="normalized_code_name",
+            how="left"
+        ).drop(columns=["normalized_code_name"])
+        
+    def _save_descriptor_files(self, destination, combined_df, name_db):
+        """Save descriptor data to various output files.
+        
+        Args:
+            destination (Path): Output directory
+            combined_df (DataFrame): Combined descriptor data
+            name_db (str): Database name
+        """
+        csv_basename = os.path.basename(self.args.csv_name)
+        paths = self._setup_output_paths(name_db, csv_basename)
+        
+        # Save raw data if no specific atoms were selected
+        if len(self.args.qdescp_atoms) == 0:
+            self._save_raw_data(destination, combined_df, paths)
+            
+        # Save clean data (without list columns)
+        clean_df = combined_df.drop(columns=[
+            col for col in combined_df.columns 
+            if combined_df[col].apply(lambda x: isinstance(x, list)).any()
+        ])
+        
+        self._save_clean_data(clean_df, paths)
+        self._log_success(name_db, csv_basename)
+        
+    def _setup_output_paths(self, name_db, csv_basename):
+        """Set up paths for output files.
+        
+        Args:
+            name_db (str): Database name
+            csv_basename (str): Base name for CSV files
+            
+        Returns:
+            dict: Dictionary of output paths
+        """
+        paths = {
+            'full': self.args.initial_dir.joinpath(f'AQME-{name_db}_full_{csv_basename}'),
+            'denovo': self.args.initial_dir.joinpath(f'AQME-{name_db}_denovo_{csv_basename}'),
+            'interpret': self.args.initial_dir.joinpath(f'AQME-{name_db}_interpret_{csv_basename}')
+        }
+        
+        # Remove existing files
+        for path in paths.values():
+            if os.path.exists(path):
+                os.remove(path)
+                
+        return paths
+        
+    def _save_raw_data(self, destination, combined_df, paths):
+        """Save raw data including atomic descriptors.
+        
+        Args:
+            destination (Path): Output directory
+            combined_df (DataFrame): Combined data
+            paths (dict): Output file paths
+        """
+        dat_dir = Path(destination.joinpath('raw_data'))
+        dat_dir.mkdir(exist_ok=True, parents=True)
+        
+        # Save full data
+        combined_df.to_csv(
+            Path(dat_dir).joinpath(os.path.basename(paths['full'])),
+            index=None, header=True
+        )
+        
+        # Save descriptor subsets
+        for level in ['denovo', 'interpret']:
+            descriptors = find_level_names(combined_df, level)
+            subset_df = combined_df[descriptors]
+            subset_df.to_csv(
+                Path(dat_dir).joinpath(os.path.basename(paths[level])),
+                index=None, header=True
+            )
+            
+    def _save_clean_data(self, clean_df, paths):
+        """Save clean data without list columns.
+        
+        Args:
+            clean_df (DataFrame): Cleaned data
+            paths (dict): Output file paths
+        """
+        clean_df.to_csv(paths['full'], index=None, header=True)
+        
+        for level in ['denovo', 'interpret']:
+            descriptors = find_level_names(clean_df, level)
+            subset_df = clean_df[descriptors]
+            subset_df.to_csv(paths[level], index=None, header=True)
+            
+    def _log_success(self, name_db, csv_basename):
+        """Log successful file creation.
+        
+        Args:
+            name_db (str): Database name
+            csv_basename (str): Base name of CSV files
+        """
+        self.args.log.write(
+            f"o  The AQME-{name_db}_full_{csv_basename}, "
+            f"AQME-{name_db}_denovo_{csv_basename} and "
+            f"AQME-{name_db}_interpret_{csv_basename} databases "
+            f"were created in {self.args.initial_dir}"
+        )
 
 
     def gather_files_and_run(self, destination, file, atom_props, smarts_targets, bar):
+        """Process input file(s) through xTB calculation and property collection.
+        
+        This method handles the complete process for a single input file:
+        1. Converts input files to XYZ format if needed
+        2. Extracts charge and multiplicity information
+        3. Runs xTB calculations for each conformer
+        4. Collects and processes properties
+        5. Generates JSON output files
+        
+        Args:
+            destination (Path): Output directory path
+            file (str): Input file path (XYZ/PDB/SDF format)
+            atom_props (list): Atomic properties to collect
+            smarts_targets (list): SMARTS patterns to match
+            bar (IncrementalBar): Progress bar instance
+            
+        Note:
+            - For XYZ files, conformers are processed directly
+            - Other formats are converted to XYZ using OpenBabel
+            - Charge/multiplicity are read from files or use defaults
+            - Progress is tracked via the progress bar
         """
-        Run all the xTB calculations and collect the properties inside JSON files
-        """ 
-
-        xyz_files, xyz_charges, xyz_mults = [], [], []
+        # Get base name and extension
         name = '.'.join(os.path.basename(Path(file)).split('.')[:-1])
         ext = os.path.basename(Path(file)).split(".")[-1]
         self.args.log.write(f"\n\n   ----- {name} -----")
-        if ext.lower() == "xyz":
-            # separate the parent XYZ file into individual XYZ files
-            xyzall_2_xyz(file, name)
-            # to locate difficult names (i.e. with special characters), glob.glob doesn't work, this is needed:
-            xyz_files_list = [x for x in glob.glob(f"{os.path.dirname(Path(file))}/*.xyz") if os.path.basename(x).startswith(f'{name}_conf_')]
-
-            for conf_file in xyz_files_list:
-                if self.args.charge is None:
-                    charge_xyz, _ = read_xyz_charge_mult(conf_file)
-                else:
-                    charge_xyz = self.args.charge
-                if self.args.mult is None:
-                    _, mult_xyz = read_xyz_charge_mult(conf_file)
-                else:
-                    mult_xyz = self.args.mult
-                xyz_files.append(
-                    os.path.dirname(os.path.abspath(file)) + "/" + conf_file
-                )
-                xyz_charges.append(charge_xyz)
-                xyz_mults.append(mult_xyz)
-
-        else:
-            command_pdb = [
-                "obabel",
-                f"-i{ext.lower()}",
-                file,
-                "-oxyz",
-                f"-O{os.path.dirname(os.path.abspath(file))}/{name}_conf_.xyz",
-                "-m",
-            ]
-            subprocess.run(
-                command_pdb,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-            )
-
-            # to locate difficult names (i.e. with special characters), glob.glob doesn't work, this is needed:
-            xyz_files_list = [x for x in glob.glob(f"{os.path.dirname(Path(file))}/*.xyz") if os.path.basename(x).startswith(f'{name}_conf_')]
-
-            if self.args.charge is None:
-                _, charges, _, _ = mol_from_sdf_or_mol_or_mol2(file, "csearch", self.args)
-            else:
-                charges = [self.args.charge] * len(xyz_files_list)
-            if self.args.mult is None:
-                _, _, mults, _ = mol_from_sdf_or_mol_or_mol2(file, "csearch", self.args)
-            else:
-                mults = [self.args.mult] * len(xyz_files_list)
-
-            for count, f in enumerate(xyz_files_list):
-                xyz_files.append(f)
-                xyz_charges.append(charges[count])
-                xyz_mults.append(mults[count])
-
+        
+        # Get conformers and their properties
+        xyz_files, xyz_charges, xyz_mults = self._get_conformer_data(file, name, ext)
+        
+        # Process each conformer
         for xyz_file, charge, mult in zip(xyz_files, xyz_charges, xyz_mults):
             name_xtb = '.'.join(os.path.basename(Path(xyz_file)).split(".")[:-1])
-            self.args.log.write(f"\no  Running xTB and collecting properties ({name_xtb})")
-
-            # if xTB fails during any of the calculations (UnboundLocalError), xTB assigns weird
-            # qm5 charges (i.e. > +10 or < -10, ValueError), or the json file is not created 
-            # for some weird xTB error (FileNotFoundError), that molecule is not used 
-            xtb_passing,xtb_files_props = self.run_opt_xtb(file, xyz_file, charge, mult, name_xtb, destination)
-            path_name = Path(os.path.dirname(file)).joinpath('.'.join(os.path.basename(Path(file)).split(".")[:-1]))
-
-            if xtb_passing:
-                # collect all the properties from the output files
-                _ = self.morfeus_properties(path_name, atom_props, smarts_targets, xtb_files_props, charge, mult, file)
-
-            _ = self.cleanup(name_xtb, destination, xtb_passing, xtb_files_props)
-
+            self._process_single_conformer(
+                destination, file, xyz_file, charge, mult, name_xtb, 
+                atom_props, smarts_targets
+            )
+            
         bar.next()
+        
+    def _get_conformer_data(self, file, name, ext):
+        """Extract conformer geometries and properties.
+        
+        Args:
+            file (str): Input file path
+            name (str): Base name without extension 
+            ext (str): File extension
+            
+        Returns:
+            tuple: Lists of (xyz files, charges, multiplicities)
+        """
+        xyz_files, xyz_charges, xyz_mults = [], [], []
+        
+        if ext.lower() == "xyz":
+            xyzall_2_xyz(file, name)
+            xyz_files, xyz_charges, xyz_mults = self._process_xyz_conformers(file, name)
+        else:
+            self._convert_to_xyz(file, name, ext)
+            xyz_files, xyz_charges, xyz_mults = self._process_other_conformers(file, name)
+            
+        return xyz_files, xyz_charges, xyz_mults
+        
+    def _process_xyz_conformers(self, file, name):
+        """Process conformers from XYZ input.
+        
+        Args:
+            file (str): Input XYZ file
+            name (str): Base name for outputs
+            
+        Returns:
+            tuple: Lists of (xyz files, charges, multiplicities)
+        """
+        xyz_files, xyz_charges, xyz_mults = [], [], []
+        xyz_files_list = [
+            x for x in glob.glob(f"{os.path.dirname(Path(file))}/*.xyz") 
+            if os.path.basename(x).startswith(f'{name}_conf_')
+        ]
+        
+        for conf_file in xyz_files_list:
+            charge = (self.args.charge if self.args.charge is not None 
+                     else read_xyz_charge_mult(conf_file)[0])
+            mult = (self.args.mult if self.args.mult is not None 
+                   else read_xyz_charge_mult(conf_file)[1])
+                   
+            xyz_files.append(os.path.dirname(os.path.abspath(file)) + "/" + conf_file)
+            xyz_charges.append(charge)
+            xyz_mults.append(mult)
+            
+        return xyz_files, xyz_charges, xyz_mults
+        
+    def _process_other_conformers(self, file, name):
+        """Process conformers from non-XYZ input.
+        
+        Args:
+            file (str): Input file path
+            name (str): Base name for outputs
+            
+        Returns:
+            tuple: Lists of (xyz files, charges, multiplicities)
+        """
+        xyz_files, xyz_charges, xyz_mults = [], [], []
+        xyz_files_list = [
+            x for x in glob.glob(f"{os.path.dirname(Path(file))}/*.xyz") 
+            if os.path.basename(x).startswith(f'{name}_conf_')
+        ]
+        
+        # Get charges and multiplicities
+        charges = ([self.args.charge] * len(xyz_files_list) if self.args.charge is not None
+                  else mol_from_sdf_or_mol_or_mol2(file, "csearch", self.args)[1])
+                  
+        mults = ([self.args.mult] * len(xyz_files_list) if self.args.mult is not None
+                 else mol_from_sdf_or_mol_or_mol2(file, "csearch", self.args)[2])
+        
+        # Collect conformer data
+        for i, conf_file in enumerate(xyz_files_list):
+            xyz_files.append(conf_file)
+            xyz_charges.append(charges[i])
+            xyz_mults.append(mults[i])
+            
+        return xyz_files, xyz_charges, xyz_mults
+        
+    def _process_single_conformer(self, destination, file, xyz_file, charge, mult,
+                                name_xtb, atom_props, smarts_targets):
+        """Process a single conformer through xTB and property collection.
+        
+        Args:
+            destination (Path): Output directory
+            file (str): Original input file
+            xyz_file (str): Conformer XYZ file
+            charge (int): Molecular charge
+            mult (int): Multiplicity 
+            name_xtb (str): Base name for outputs
+            atom_props (list): Properties to collect
+            smarts_targets (list): SMARTS patterns
+        """
+        self.args.log.write(f"\no  Running xTB and collecting properties ({name_xtb})")
+        
+        xtb_passing, xtb_files_props = self.run_opt_xtb(
+            file, xyz_file, charge, mult, name_xtb, destination
+        )
+        
+        path_name = Path(os.path.dirname(file)).joinpath(
+            '.'.join(os.path.basename(Path(file)).split(".")[:-1])
+        )
+
+        if xtb_passing:
+            self.morfeus_properties(
+                path_name, atom_props, smarts_targets,
+                xtb_files_props, charge, mult, file
+            )
+
+        self.cleanup(name_xtb, destination, xtb_passing, xtb_files_props)
 
 
     def run_opt_xtb(self, file, xyz_file, charge, mult, name, destination):
+        """Run xTB property calculations for a molecule.
+
+        Args:
+            file (str): Original input file path
+            xyz_file (str): XYZ format geometry file path
+            charge (int): Molecular charge
+            mult (int): Molecular multiplicity
+            name (str): Base name for output files
+            destination (Path): Output directory path
+            
+        Returns:
+            tuple: (success status, dict of file paths)
         """
-        Runs different types of single point xTB calculations
-        """
-
-        xtb_passing = True
-
-        dat_dir = destination / name
-        dat_dir.mkdir(exist_ok=True, parents=True)
-
-        # dictionary with the PATHs to the different xTB files
-        xtb_files_props = {}
-
-        xtb_files_props['xtb_xyz_path'] = str(dat_dir) + "/{0}.xyz".format(name)
-        shutil.move(xyz_file, xtb_files_props['xtb_xyz_path'])
-
-        xtb_input_file = str(dat_dir) + "/{0}_xtb.inp".format(name)
-        with open(xtb_input_file, "wt", encoding='utf-8') as f:
-            f.write("$write\n")
-            f.write("json=true\n")
-
-        xtb_files_props['xtb_opt'] = str(dat_dir) + "/{0}.out".format(name+'_opt')
-        xtb_files_props['xtb_json'] = str(dat_dir) + "/{0}.json".format(name)
-
-        env = dict(os.environ)
-        env["OMP_STACKSIZE"] = self.args.stacksize
-        # run xTB/CREST with 1 processor and disable multithreading for reproducibility
-        env["OMP_NUM_THREADS"] = "1"
-        env["MKL_NUM_THREADS"] = "1"
-        env["OPENBLAS_NUM_THREADS"] = "1"
-        env["NUMEXPR_NUM_THREADS"] = "1"
-        env["OMP_DYNAMIC"] = "FALSE"
-        env["MKL_DYNAMIC"] = "FALSE"
-        env["BLIS_NUM_THREADS"] = "1"
-
-        # this avoids problems when parsing charges and mults from SDF files
-        mult = int(float(mult))
-        charge = int(float(charge))
-
-        # initial xTB optimization
-        if self.args.xtb_opt:
-
-            command_opt = [
-                "xtb",
-                xtb_files_props['xtb_xyz_path'],
-                "--opt",
-                str(self.args.qdescp_opt),
-                "--acc",
-                str(self.args.qdescp_acc),
-                "--gfn",
-                str(self.args.gfn_version),
-                "--chrg",
-                str(charge),
-                "--uhf",
-                str(mult - 1),
-                "--etemp",
-                str(self.args.qdescp_temp),
-                "-P",
-                "1",
-            ] # optimization
-            if self.args.qdescp_solvent is not None:
-                command_opt.append("--alpb")
-                command_opt.append(f"{self.args.qdescp_solvent}")
-            run_command(command_opt, xtb_files_props['xtb_opt'] , cwd=dat_dir, env=env)
-
-            # replaces RDKit geometries with xTB geometries
-            os.remove(xtb_files_props['xtb_xyz_path'])
-            if os.path.exists(str(dat_dir) + "/xtbopt.xyz"): # finished optimizations
-                os.rename(str(dat_dir) + "/xtbopt.xyz", xtb_files_props['xtb_xyz_path'])
-            elif os.path.exists(str(dat_dir) + "/xtblast.xyz"): # incomplete optimizations
-                os.rename(str(dat_dir) + "/xtblast.xyz", xtb_files_props['xtb_xyz_path'])
-            else: # failed optimizations
-                xtb_passing = False
-                if file not in self.args.invalid_calcs:
-                    self.args.invalid_calcs.append(file)
-                self.args.log.write(f"x  WARNING! {file} did not finish correctly and no descriptors will be generated for this system. Common causes: the CHARGE and/or MULTIPLICITY used are not correct (adjust with the --charge and --mult options).")
-
-            if xtb_passing:
-                final_xyz_path = xtb_files_props['xtb_xyz_path']
-                with open(final_xyz_path, "r", encoding='utf-8') as xyz_file:
-                    self.xyz_coordinates = xyz_file.readlines()
-
-        return xtb_passing,xtb_files_props
+        success, files = self.property_calc.calculate_properties(
+            xyz_file, charge, mult, name, destination
+        )
+        
+        if not success and file not in self.args.invalid_calcs:
+            self.args.invalid_calcs.append(file)
+            self.args.log.write(
+                f"x  WARNING! {file} did not finish correctly and no descriptors "
+                "will be generated for this system. Common causes: incorrect "
+                "CHARGE and/or MULTIPLICITY (adjust with --charge/--mult options)."
+            )
+            
+        return success, files
 
 
-    def morfeus_properties(self,name_initial,atom_props,smarts_targets,xtb_files_props,charge,mult,file):
-        """
-        Collects all xTB properties from the files and adds them into a JSON file
+    def morfeus_properties(self, name_initial, atom_props, smarts_targets, xtb_files_props, charge, mult, file):
+        """Calculate and collect MORFEUS molecular descriptors.
+        
+        This method:
+        1. Reads molecular geometry from XYZ file
+        2. Calculates MORFEUS descriptors
+        3. Assigns atomic properties based on SMARTS patterns
+        4. Saves results to JSON file
+        
+        Args:
+            name_initial (str): Base name for input/output files
+            atom_props (list): Atomic properties to calculate
+            smarts_targets (list): SMARTS patterns for atom matching
+            xtb_files_props (dict): Dictionary of file paths 
+            charge (int): Molecular charge
+            mult (int): Molecular multiplicity
+            file (str): Original input file path
+            
+        Returns:
+            None: Results are saved to JSON file
+            
+        Raises:
+            FileNotFoundError: If XYZ file is missing
+            Exception: If MORFEUS descriptor calculation fails
         """
 
         # load initial json and add coordinates
         json_data = {}
 
-        xyz_path = Path(xtb_files_props['xtb_xyz_path']).resolve()
-        json_path = Path(xtb_files_props['xtb_json']).resolve()
+        xyz_path = Path(xtb_files_props['xyz']).resolve()
+        json_path = Path(xtb_files_props['json']).resolve()
 
         try:
             with open(xyz_path, "r", encoding='utf-8') as f:
@@ -786,10 +1234,28 @@ class qdescp:
             json.dump(json_data, outfile)
 
 
-    def assign_atomic_properties(self,json_data,name_initial,atom_props,smarts_targets):
-        '''
-        Assign atomic properties to the corresponding atoms
-        '''
+    def assign_atomic_properties(self, json_data, name_initial, atom_props, smarts_targets):
+        """Assign atomic properties based on SMARTS pattern matches.
+        
+        This method:
+        1. Matches SMARTS patterns to atoms
+        2. Assigns property prefixes to matched atoms
+        3. Updates JSON data with atomic properties
+        
+        Args:
+            json_data (dict): Dictionary of molecular data
+            name_initial (str): Base name for molecule
+            atom_props (list): Atomic properties to assign
+            smarts_targets (list): SMARTS patterns to match
+            
+        Returns:
+            dict: Updated JSON data with atomic properties
+            
+        Note:
+            - Property prefixes are tracked to avoid duplicates
+            - Properties are assigned only to matched atoms
+            - Pattern matches use RDKit SMARTS matcher
+        """
 
         prefixes_atom_prop = []
         
@@ -809,16 +1275,31 @@ class qdescp:
     
 
     def cleanup(self, name, destination, xtb_passing, xtb_files_props):
-        """
-        Removes files from the xTB calculations and place json files in the QDESCP folder
+        """Clean up calculation files and organize results.
+        
+        This method:
+        1. Moves successful calculation results to destination
+        2. Moves failed calculations to failed/ subdirectory
+        3. Cleans up temporary files and directories
+        
+        Args:
+            name (str): Base name for files
+            destination (Path): Output directory path
+            xtb_passing (bool): Whether xTB calculation succeeded
+            xtb_files_props (dict): Dictionary of file paths
+            
+        Note:
+            - Successful calculations: JSON and XYZ files preserved
+            - Failed calculations: All files moved to failed/ directory
+            - Temporary directories are removed
         """
 
         if xtb_passing: # only move molecules with successful xTB calcs
             # save JSON and XYZ files
             final_json = f"{destination}/{name}.json"
-            shutil.move(xtb_files_props['xtb_json'], final_json)
+            shutil.move(xtb_files_props['json'], final_json)
             final_xyz = f"{destination}/{name}.xyz"
-            shutil.move(xtb_files_props['xtb_xyz_path'], final_xyz)
+            shutil.move(xtb_files_props['xyz'], final_xyz)
 
             # delete xTB raw data
             shutil.rmtree(f"{destination}/{name}")
@@ -833,6 +1314,22 @@ class qdescp:
 
 
     def get_unique_files(self):
+        """Filter input files to remove duplicates based on SMILES.
+        
+        This method:
+        1. Reads SMILES strings from SDF files
+        2. Identifies duplicate structures
+        3. Keeps only unique structures
+        4. Warns about duplicates
+        
+        Returns:
+            list: Paths to unique input files
+            
+        Note:
+            - Duplicates are identified by exact SMILES match
+            - Files without SMILES are kept
+            - Warning is logged for duplicate structures
+        """
         unique_files = []
         unique_smiles = []
         for file in self.args.files:
@@ -855,9 +1352,88 @@ class qdescp:
         if not unique_smiles:
             unique_files = self.args.files
         return unique_files
+        
+    def _error_exit(self, message):
+        """Log error message and exit the program.
+        
+        Args:
+            message (str): Error message to log before exiting
+        """
+        self.args.log.write(f"\nx  {message}")
+        self.args.log.finalize()
+        sys.exit()
+        
+    def _validate_inputs(self):
+        """Validate input parameters for QDESCP calculation.
+        
+        This method checks:
+        - CSV file existence
+        - Solvent compatibility
+        - Input file validity
+        
+        Raises:
+            SystemExit: If validation fails
+        """
+        # Check CSV file existence
+        if self.args.csv_name is not None:
+            csv_path = Path(self.args.csv_name)
+            if not csv_path.exists():
+                self._error_exit(
+                    f"CSV file {csv_path} not found. Please verify the path."
+                )
+                
+        # Check solvent compatibility
+        if self.args.qdescp_solvent is not None:
+            self._error_exit(
+                "PTB calculations do not support solvents. "
+                "Please remove the --qdescp_solvent option."
+            )
+        
+    def _convert_to_xyz(self, file, name, ext):
+        """Convert input file to XYZ format using OpenBabel.
+        
+        Args:
+            file (str): Input file path
+            name (str): Base name for output files
+            ext (str): Input file extension
+        """
+        command_pdb = [
+            "obabel",
+            f"-i{ext.lower()}",
+            file,
+            "-oxyz", 
+            f"-O{os.path.dirname(os.path.abspath(file))}/{name}_conf_.xyz",
+            "-m"
+        ]
+        subprocess.run(
+            command_pdb,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
     
-    def process_aqme_csv(self, name_db): 
-    # Process each of the three generated CSVs.
+    def process_aqme_csv(self, name_db):
+        """Process and update AQME CSV result files.
+        
+        This method processes three types of CSV files:
+        - full: All descriptors
+        - denovo: De novo descriptors only
+        - interpret: Interpretable descriptors only
+        
+        For each file:
+        1. Reads original and generated CSVs
+        2. Adds missing entries
+        3. Sorts according to input order
+        4. Fills missing values
+        
+        Args:
+            name_db (str): Database name prefix for output files
+            
+        Note:
+            - Missing entries are filled with group-wise first values
+            - Original file order is preserved
+            - Warns if files are not found
+        """
+        # Process each of the three generated CSVs
         for suffix in ['full', 'denovo', 'interpret']:
             # Try to read the file with the corresponding suffix
             base_filename = os.path.basename(self.args.csv_name)
@@ -890,10 +1466,21 @@ class qdescp:
                 self.args.log.write(f"Not found {csv_file}. Please check if the file was generated correctly.")
 
 
-    def qdescp_nmr_workflow(self,boltz_dir):
-        '''
-        Full NMR workflow in QDESCP for NMR prediction
-        '''
+    def qdescp_nmr_workflow(self, boltz_dir):
+        """Run NMR workflow for chemical shift prediction.
+        
+        This method:
+        1. Validates input files (must be JSON format)
+        2. Processes conformer JSON files
+        3. Calculates Boltzmann-weighted NMR properties
+        4. Applies empirical corrections if provided
+        
+        Args:
+            boltz_dir (Path): Directory for Boltzmann-averaged results
+            
+        Raises:
+            SystemExit: If input files are not in JSON format
+        """
         
         self.args.log.write(f"\nStarting QDESCP-{self.args.program} with {len(self.args.files)} job(s)\n")
 

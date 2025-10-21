@@ -91,561 +91,1076 @@ from importlib.resources import files
 TEMPLATES_PATH = files("aqme").joinpath("templates")
 
 class qprep:
+    """A class for preparing quantum chemistry input files.
+    
+    This class handles the creation of input files for various quantum chemistry 
+    programs (currently Gaussian and ORCA) from multiple input formats. It supports
+    file conversion, molecular property extraction, and conformer processing.
+    
+    Attributes:
+        args: Configuration object containing user parameters and settings
+        
+    Examples:
+        >>> prep = QPrep(program='gaussian', qm_input='B3LYP/6-31G opt freq')
+        >>> prep.process_files(['molecule.xyz'])
     """
-    Class containing all the functions from the QPREP module related to Gaussian input files
-    """
-
+    
+    SUPPORTED_FORMATS = ['sdf', 'xyz', 'pdb', 'log', 'out', 'json']
+    SUPPORTED_PROGRAMS = ['gaussian', 'orca']
+    DEFAULT_NPROCS = 8
+    
     def __init__(self, create_dat=True, **kwargs):
-
-        start_time_overall = time.time()
-
-        # load default and user-specified variables
+        """Initialize QPrep with provided configuration.
+        
+        Args:
+            create_dat (bool, optional): Whether to create data files. Defaults to True.
+            **kwargs: Configuration parameters for QM calculations.
+            
+        Raises:
+            SystemExit: If invalid configuration or missing required parameters.
+        """
+        self.start_time = time.time()
+        self.create_dat = create_dat
+        
+        # Initialize configuration
         self.args = load_variables(kwargs, "qprep", create_dat=create_dat)
-
-        # check whether dependencies are installed
-        _ = check_dependencies(self)
-
-        # retrieves the different files to run in QPREP
-        _ = check_files(self,'qprep')
-
-        file_format = os.path.basename(Path(self.args.files[0])).split('.')[-1]
-        if file_format.lower() not in ['sdf', 'xyz', 'pdb', 'log', 'out', 'json']:
-            self.args.log.write(f"\nx  The format used ({file_format}) is not compatible with QPREP! Formats accepted: sdf, xyz, pdb, log, out, json")
-            self.args.log.finalize()
-            sys.exit()
-
-        qprep_program = True
-        if self.args.program is None:
-            qprep_program = False
-        if qprep_program:
-            if self.args.program.lower() not in ["gaussian", "orca"]:
-                qprep_program = False
-        if not qprep_program:
-            self.args.log.write('\nx  Program not supported for QPREP input file creation! Specify: program="gaussian" (or "orca")')
-            self.args.log.finalize()
-            sys.exit()
-
-        # set number of processors
-        if self.args.nprocs is None:
-            self.args.nprocs = 8
-
-        destination = set_destination(self,'QCALC')
-
-        # check if qm_input is not empty
-        if self.args.qm_input == "" and create_dat:
-            self.args.log.write("x  No keywords line was specified! (i.e. qm_input=KEYWORDS_LINE).")
-            self.args.log.finalize()
-            sys.exit()
-
-        # check if functionals and basis sets used are correct
-        # so far, it only works for Gaussian
-        if self.args.program.lower() == 'gaussian' and create_dat:
-            _ = self.check_level_of_theory()
-
-        # checks for gen/genecp
-        if self.args.gen_atoms != [] and self.args.bs_nogen == "" and create_dat:
-            self.args.log.write("x  Atoms for Gen(ECP) were specified (gen_atoms=[ATOM_LIST]) but no basis set was included for non-Gen(ECP) atoms (i.e. bs_nogen=BASIS_SET).")
-            self.args.log.finalize()
-            sys.exit()
-
-        elif self.args.gen_atoms != [] and self.args.bs_gen == "" and create_dat:
-            self.args.log.write("x  Atoms for Gen(ECP) were specified (gen_atoms=[ATOM_LIST]) but no basis set was included for Gen(ECP) atoms (i.e. bs_gen=BASIS_SET).")
-            self.args.log.finalize()
-            sys.exit()
-
-        # write input files
-        for file in self.args.files:
-            name = os.path.basename(Path(file)).split(".")[0]
-            if file_format.lower() in ["sdf", "xyz", "pdb"]:
-                sdf_files = []
-                if file_format.lower() == "xyz":
-                    # separate the parent XYZ file into individual XYZ files
-                    xyzall_2_xyz(file, f"{self.args.w_dir_main}/{name}")
-                    for conf_file in glob.glob(
-                        f"{self.args.w_dir_main}/{name}_conf_*.xyz"
-                    ):
-                        if self.args.charge is None:
-                            charge_xyz, _ = read_xyz_charge_mult(conf_file)
-                        else:
-                            charge_xyz = self.args.charge
-                        if self.args.mult is None:
-                            _, mult_xyz = read_xyz_charge_mult(conf_file)
-                        else:
-                            mult_xyz = self.args.mult
-                        # generate SDF files from XYZ with Openbabel
-                        command_xyz = [
-                            "obabel",
-                            "-ixyz",
-                            conf_file,
-                            "-osdf",
-                            f"-O{conf_file.split('.xyz')[0]}.sdf",
-                            "--property",
-                            f"Real charge={str(charge_xyz)}",
-                            ";",
-                            f"Mult={str(mult_xyz)}",
-                        ]
-                        subprocess.run(
-                            command_xyz,
-                            stdout=subprocess.DEVNULL,
-                            stderr=subprocess.DEVNULL,
-                        )
-                        sdf_files.append(f"{conf_file.split('.xyz')[0]}.sdf")
-                        # delete individual XYZ files
-                        os.remove(conf_file)
-
-                elif file_format.lower() == "pdb":
-                    command_pdb = [
-                        "obabel",
-                        "-ipdb",
-                        f"{file}",
-                        "-osdf",
-                        f"-O{file.split('.pdb')[0]}.sdf",
-                    ]
-                    subprocess.run(
-                        command_pdb,
-                        stdout=subprocess.DEVNULL,
-                        stderr=subprocess.DEVNULL,
-                    )
-                    sdf_files.append(f"{file.split('.pdb')[0]}.sdf")
-
-                else:
-
-                    sdf_files.append(file)
-
-                for sdf_file in sdf_files:
-                    try:
-                        self.sdf_2_com(sdf_file, destination, file_format)
-
-                    except OSError:
-                        self.args.log.write(f"x  {name} couldn't be processed!")
-                        continue
-
-                    if create_dat:
-                        self.args.log.write(f"o  {name} successfully processed at {destination}")
-
-                    if file_format.lower() in ["xyz", "pdb"]:
-                        # delete SDF files when the input was an XYZ/PDB file
-                        os.remove(sdf_file)
-
-            # for Gaussian output files (LOG/OUT), JSON files and MOL objects
-            else:
-                atom_types, cartesians, charge, mult, found_coords = self.qprep_coords(
-                    file, None, file_format
-                )
-
-                if not found_coords:
-                    continue
-
-                qprep_data = {
-                    "atom_types": atom_types,
-                    "cartesians": cartesians,
-                    "charge": charge,
-                    "mult": mult,
-                    "name": name,
-                }
-                comfile = self.write(qprep_data)
-
-                move_file(destination, self.args.w_dir_main, comfile)
-                if create_dat:
-                    self.args.log.write(f"o  {name} successfully processed at {destination}")
-
+        self._validate_initial_setup()
+        
+        # Set up working environment
+        self._setup_environment()
+        
+        # Process input files
+        self._process_input_files()
+        
+        # Finalize
         if create_dat:
-            elapsed_time = round(time.time() - start_time_overall, 2)
-            self.args.log.write(f"\nTime QPREP: {elapsed_time} seconds\n")
+            self._finalize()
+            
+    def _validate_initial_setup(self):
+        """Validate initial configuration and dependencies.
+        
+        Raises:
+            SystemExit: If validation fails
+        """
+        # Check dependencies and files
+        check_dependencies(self)
+        check_files(self, 'qprep')
+        
+        # Validate file format
+        file_format = os.path.basename(Path(self.args.files[0])).split('.')[-1].lower()
+        if file_format not in self.SUPPORTED_FORMATS:
+            self.args.log.write(
+                f"\nx  Format {file_format} not supported! Accepted: {', '.join(self.SUPPORTED_FORMATS)}"
+            )
             self.args.log.finalize()
+            sys.exit()
+            
+        # Validate QM program
+        if not self.args.program or self.args.program.lower() not in self.SUPPORTED_PROGRAMS:
+            self.args.log.write(
+                '\nx  Specify supported program: "gaussian" or "orca"'
+            )
+            self.args.log.finalize()
+            sys.exit()
+            
+        # Validate QM input
+        if self.args.qm_input == "" and self.create_dat:
+            self.args.log.write("x  No keywords specified (qm_input=KEYWORDS_LINE).")
+            self.args.log.finalize()
+            sys.exit()
+            
+        # Validate gen/genecp setup
+        self._validate_gen_basis()
+            
+    def _validate_gen_basis(self):
+        """Validate basis set specifications for gen/genecp calculations.
+        
+        Raises:
+            SystemExit: If required basis sets are missing
+        """
+        if not self.args.gen_atoms:
+            return
+            
+        if self.args.bs_nogen == "" and self.create_dat:
+            self.args.log.write(
+                "x  Gen(ECP) atoms specified but missing bs_nogen=BASIS_SET"
+            )
+            self.args.log.finalize()
+            sys.exit()
+            
+        if self.args.bs_gen == "" and self.create_dat:
+            self.args.log.write(
+                "x  Gen(ECP) atoms specified but missing bs_gen=BASIS_SET"
+            )
+            self.args.log.finalize()
+            sys.exit()
+            
+    def _setup_environment(self):
+        """Configure working environment and parameters."""
+        # Set processors
+        self.args.nprocs = self.args.nprocs or self.DEFAULT_NPROCS
+        
+        # Set destination
+        self.destination = set_destination(self, 'QCALC')
+        
+        # Validate theory level for Gaussian
+        if self.args.program.lower() == 'gaussian' and self.create_dat:
+            self.check_level_of_theory()
+            
+    def _process_input_files(self):
+        """Process all input files and generate QM inputs."""
+        for file in self.args.files:
+            file_format = os.path.basename(Path(file)).split('.')[-1].lower()
+            name = os.path.basename(Path(file)).split('.')[0]
+            
+            if file_format in ['sdf', 'xyz', 'pdb']:
+                self._process_molecular_file(file, file_format, name)
+            else:
+                self._process_qm_file(file, name)
+                
+    def _process_molecular_file(self, file, file_format, name):
+        """Process molecular structure files (SDF/XYZ/PDB).
+        
+        Args:
+            file (str): Input file path
+            file_format (str): File format
+            name (str): Base filename
+        """
+        sdf_files = self._convert_to_sdf(file, file_format, name)
+        
+        for sdf_file in sdf_files:
+            try:
+                self.sdf_2_com(sdf_file, self.destination, file_format)
+                if self.create_dat:
+                    self.args.log.write(f"o  {name} processed at {self.destination}")
+            except OSError:
+                self.args.log.write(f"x  {name} couldn't be processed!")
+                continue
+                
+            # Cleanup temporary files
+            if file_format in ['xyz', 'pdb']:
+                os.remove(sdf_file)
+                
+    def _process_qm_file(self, file, name):
+        """Process quantum chemistry output files.
+        
+        Args:
+            file (str): Input file path
+            name (str): Base filename
+        """
+        atom_types, cartesians, charge, mult, found_coords = self.qprep_coords(
+            file, None, file.split('.')[-1]
+        )
+        
+        if not found_coords:
+            return
+            
+        qprep_data = {
+            "atom_types": atom_types,
+            "cartesians": cartesians,
+            "charge": charge,
+            "mult": mult,
+            "name": name,
+        }
+        
+        comfile = self.write(qprep_data)
+        move_file(self.destination, self.args.w_dir_main, comfile)
+        
+        if self.create_dat:
+            self.args.log.write(f"o  {name} processed at {self.destination}")
+            
+    def _convert_to_sdf(self, file, file_format, name):
+        """Convert input files to SDF format.
+        
+        Args:
+            file (str): Input file path
+            file_format (str): File format
+            name (str): Base filename
+            
+        Returns:
+            list: Paths to generated SDF files
+        """
+        sdf_files = []
+        
+        if file_format == 'xyz':
+            sdf_files = self._convert_xyz_to_sdf(file, name)
+        elif file_format == 'pdb':
+            sdf_files = self._convert_pdb_to_sdf(file)
+        else:  # Already SDF
+            sdf_files = [file]
+            
+        return sdf_files
+        
+    def _convert_xyz_to_sdf(self, file, name):
+        """Convert XYZ file to SDF format.
+        
+        Args:
+            file (str): XYZ file path
+            name (str): Base filename
+            
+        Returns:
+            list: Paths to generated SDF files
+        """
+        sdf_files = []
+        xyzall_2_xyz(file, f"{self.args.w_dir_main}/{name}")
+        
+        for conf_file in glob.glob(f"{self.args.w_dir_main}/{name}_conf_*.xyz"):
+            charge = self.args.charge if self.args.charge is not None else read_xyz_charge_mult(conf_file)[0]
+            mult = self.args.mult if self.args.mult is not None else read_xyz_charge_mult(conf_file)[1]
+            
+            # Convert to SDF using OpenBabel
+            sdf_path = f"{conf_file.split('.xyz')[0]}.sdf"
+            command = [
+                "obabel", "-ixyz", conf_file, "-osdf", f"-O{sdf_path}",
+                "--property", f"Real charge={charge}", ";", f"Mult={mult}"
+            ]
+            subprocess.run(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            
+            sdf_files.append(sdf_path)
+            os.remove(conf_file)  # Clean up XYZ file
+            
+        return sdf_files
+        
+    def _convert_pdb_to_sdf(self, file):
+        """Convert PDB file to SDF format.
+        
+        Args:
+            file (str): PDB file path
+            
+        Returns:
+            list: Path to generated SDF file
+        """
+        sdf_path = f"{file.split('.pdb')[0]}.sdf"
+        command = ["obabel", "-ipdb", file, "-osdf", f"-O{sdf_path}"]
+        subprocess.run(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        return [sdf_path]
+        
+    def _finalize(self):
+        """Finalize processing and log completion."""
+        elapsed_time = round(time.time() - self.start_time, 2)
+        self.args.log.write(f"\nTime QPREP: {elapsed_time} seconds\n")
+        self.args.log.finalize()
 
     def sdf_2_com(self, sdf_file, destination, file_format):
+        """Process SDF file to generate QM input files.
+        
+        Handles conversion of SDF structures to Gaussian/ORCA input files,
+        with support for conformer selection and energy filtering.
+        
+        Args:
+            sdf_file (str): Path to input SDF file
+            destination (Path): Output directory path
+            file_format (str): Original file format
+            
+        Note:
+            Uses lowest_only, lowest_n and e_threshold_qprep settings to
+            filter conformers if specified.
+        """
         sdf_name = os.path.basename(Path(sdf_file)).split(".")[0]
-        # get atom types, atomic coordinates, charge and multiplicity of all the mols in the SDF file
-
-        low_check = None
-        if self.args.lowest_only == True:
-            low_check='lowest_only'
-        if self.args.lowest_n is not None:
-            low_check=int(self.args.lowest_n)
-        if self.args.e_threshold_qprep is not None:
-            low_check=float(self.args.e_threshold_qprep)
-        mols = mol_from_sdf_or_mol_or_mol2(sdf_file, "qprep", self.args, low_check=low_check)
-
+        
+        # Determine conformer filtering criteria
+        low_check = self._get_conformer_filter()
+        
+        # Get filtered molecule list
+        mols = mol_from_sdf_or_mol_or_mol2(
+            sdf_file, "qprep", self.args, low_check=low_check
+        )
+        
+        # Process each molecule/conformer
         for i, mol in enumerate(mols):
-            (
-                atom_types,
-                cartesians,
-                charge,
-                mult,
-                _,
-            ) = self.qprep_coords(sdf_file, mol, file_format)
-
-            if "_conf_" not in sdf_name:
-                name_conf = f"{sdf_name}_conf_{i+1}"
-            else:
-                name_conf = sdf_name
-
-            qprep_data = {
-                "atom_types": atom_types,
-                "cartesians": cartesians,
-                "charge": charge,
-                "mult": mult,
-                "name": name_conf,
-            }
-
-            comfile = self.write(qprep_data)
-            move_file(destination, self.args.w_dir_main, comfile)
+            self._process_single_mol(
+                mol, sdf_file, file_format, sdf_name, i, destination
+            )
+            
+    def _get_conformer_filter(self):
+        """Determine conformer filtering method.
+        
+        Returns:
+            Union[str, int, float, None]: Filter criteria
+        """
+        if self.args.lowest_only:
+            return 'lowest_only'
+        if self.args.lowest_n is not None:
+            return int(self.args.lowest_n)
+        if self.args.e_threshold_qprep is not None:
+            return float(self.args.e_threshold_qprep)
+        return None
+        
+    def _process_single_mol(self, mol, sdf_file, file_format, sdf_name, idx, destination):
+        """Process single molecule/conformer from SDF.
+        
+        Args:
+            mol (rdkit.Mol): RDKit molecule object
+            sdf_file (str): Source SDF file path
+            file_format (str): Original file format
+            sdf_name (str): Base name from SDF
+            idx (int): Molecule/conformer index
+            destination (Path): Output directory
+        """
+        # Extract molecular data
+        atom_types, cartesians, charge, mult, _ = self.qprep_coords(
+            sdf_file, mol, file_format
+        )
+        
+        # Generate conformer name
+        name_conf = (
+            f"{sdf_name}_conf_{idx+1}" if "_conf_" not in sdf_name 
+            else sdf_name
+        )
+        
+        # Create and write input file
+        qprep_data = {
+            "atom_types": atom_types,
+            "cartesians": cartesians,
+            "charge": charge,
+            "mult": mult,
+            "name": name_conf,
+        }
+        
+        comfile = self.write(qprep_data)
+        move_file(destination, self.args.w_dir_main, comfile)
 
     def get_header(self, qprep_data):
+        """Generate input file header section.
+        
+        Creates program-specific header with resource specs and calculation setup.
+        
+        Args:
+            qprep_data (dict): Molecular data including name and properties
+            
+        Returns:
+            str: Formatted header text
         """
-        Gets the part of the input file above the molecular coordinates.
-        """
-
-        txt = ""
         name_file = add_prefix_suffix(qprep_data["name"], self.args)
-
+        
         if self.args.program.lower() == "gaussian":
-            if self.args.chk_path != '':
-                txt += f'%chk={self.args.chk_path}\n'
-            elif self.args.chk:
-                txt += f'%chk={name_file}.chk\n'
-            if self.args.oldchk_path != '':
-                txt += f'%oldchk={self.args.oldchk_path}\n'
-            elif self.args.oldchk:
-                txt += f'%oldchk={name_file}.chk\n'
-            txt += f"%nprocshared={self.args.nprocs}\n"
-            txt += f"%mem={self.args.mem}\n"
-            if self.args.qm_input[:2] not in ['p ','P ']:
-                txt += f"# {self.args.qm_input}\n\n"
-            else: # for #p in Gaussian inputs
-                txt += f"#{self.args.qm_input}\n\n"
-            txt += f'{name_file}\n\n'
-            txt += f'{qprep_data["charge"]} {qprep_data["mult"]}\n'
-
-        elif self.args.program.lower() == "orca":
-            txt += f'# {name_file}\n'
-            if "GB" in self.args.mem:
-                mem_orca = int(self.args.mem.split("GB")[0]) * 1000
-            elif "MB" in self.args.mem:
-                mem_orca = self.args.mem.split("MB")[0]
-            elif "MW" in self.args.mem:
-                mem_orca = self.args.mem.split("MW")[0]
-            else:
-                mem_orca = self.args.mem
-            if '%maxcore' not in self.args.qm_input:
-                txt += f"%maxcore {mem_orca}\n"
-            pal_included = False
-            pal_list = ['%pal','pal1','pal3','pal3','pal4','pal5','pal6','pal7','pal8']
-            for keyword in self.args.qm_input.split():
-                if keyword.rstrip("\n").lower() in pal_list:
-                    pal_included = True
-            if not pal_included:
-                txt += f"%pal nprocs {self.args.nprocs} end\n"
-            txt += f"! {self.args.qm_input}\n"
-            txt += f'* xyz {qprep_data["charge"]} {qprep_data["mult"]}\n'
-
-        return txt
+            return self._get_gaussian_header(name_file, qprep_data)
+        else:
+            return self._get_orca_header(name_file, qprep_data)
+            
+    def _get_gaussian_header(self, name_file, qprep_data):
+        """Generate Gaussian-specific header section.
+        
+        Args:
+            name_file (str): Base filename
+            qprep_data (dict): Molecular data
+            
+        Returns:
+            str: Formatted Gaussian header
+        """
+        header = []
+        
+        # Add checkpoint handling
+        if self.args.chk_path:
+            header.append(f'%chk={self.args.chk_path}')
+        elif self.args.chk:
+            header.append(f'%chk={name_file}.chk')
+            
+        if self.args.oldchk_path:
+            header.append(f'%oldchk={self.args.oldchk_path}')
+        elif self.args.oldchk:
+            header.append(f'%oldchk={name_file}.chk')
+            
+        # Add resource specs
+        header.extend([
+            f"%nprocshared={self.args.nprocs}",
+            f"%mem={self.args.mem}"
+        ])
+        
+        # Add calculation setup
+        if self.args.qm_input[:2] not in ['p ','P ']:
+            header.append(f"# {self.args.qm_input}")
+        else:  # Handle #p directive
+            header.append(f"#{self.args.qm_input}")
+            
+        # Add title and charge/mult
+        header.extend([
+            "",
+            name_file,
+            "",
+            f'{qprep_data["charge"]} {qprep_data["mult"]}'
+        ])
+        
+        return "\n".join(header)
+        
+    def _get_orca_header(self, name_file, qprep_data):
+        """Generate ORCA-specific header section.
+        
+        Args:
+            name_file (str): Base filename
+            qprep_data (dict): Molecular data
+            
+        Returns:
+            str: Formatted ORCA header
+        """
+        header = [f'# {name_file}']
+        
+        # Handle memory specification
+        mem_orca = self._convert_memory_to_orca()
+        if '%maxcore' not in self.args.qm_input:
+            header.append(f"%maxcore {mem_orca}")
+            
+        # Handle parallel processing
+        if not self._has_pal_directive():
+            header.append(f"%pal nprocs {self.args.nprocs} end")
+            
+        # Add calculation setup
+        header.extend([
+            f"! {self.args.qm_input}",
+            f'* xyz {qprep_data["charge"]} {qprep_data["mult"]}'
+        ])
+        
+        return "\n".join(header)
+        
+    def _convert_memory_to_orca(self):
+        """Convert memory specification to ORCA format.
+        
+        Returns:
+            str: Memory value in ORCA format
+        """
+        if "GB" in self.args.mem:
+            return str(int(self.args.mem.split("GB")[0]) * 1000)
+        elif "MB" in self.args.mem:
+            return self.args.mem.split("MB")[0]
+        elif "MW" in self.args.mem:
+            return self.args.mem.split("MW")[0]
+        return self.args.mem
+        
+    def _has_pal_directive(self):
+        """Check if ORCA parallel directive is present.
+        
+        Returns:
+            bool: True if PAL directive found
+        """
+        pal_list = ['%pal','pal1','pal3','pal3','pal4','pal5','pal6','pal7','pal8']
+        return any(
+            kw.rstrip("\n").lower() in pal_list 
+            for kw in self.args.qm_input.split()
+        )
 
 
     def get_tail(self, qprep_data):
+        """Generate input file tail section.
+        
+        Creates program-specific closing section with basis sets and modifiers.
+        
+        Args:
+            qprep_data (dict): Molecular data
+            
+        Returns:
+            str: Formatted tail section
         """
-        Gets the part of the input file below the molecular coordinates.
-        """
-
-        txt = ""
-        # if the radius is modified for SMD, it has to be after the genecp info
-        modifysph_line = "" 
-
-        if self.args.program.lower() == "gaussian":
-            # writes final section if selected
-            if self.args.qm_end != "":
-
-                qm_end_local = self.args.qm_end
-
-                # check if the 'modifysph' line is in qm_end
-                if "modifysph" in qm_end_local.lower():
-                    end_lines = qm_end_local.split("\n")
-                    for idx, line in enumerate(end_lines):
-                        if "modifysph" in line.lower():
-                            modifysph_idx = idx
-                            break
-
-                    # Remove empty lines after "modifysph"
-                    while end_lines[modifysph_idx+1].strip() == "":
-                        del end_lines[modifysph_idx+1]
-
-                    modifysph_line = end_lines[modifysph_idx] + "\n\n" + end_lines[modifysph_idx+1] + "\n\n"
-                    del end_lines[modifysph_idx:modifysph_idx+2]
-                    qm_end_local = "\n".join(end_lines)
-
-                txt += f"{qm_end_local}\n\n"
-
-            if self.args.gen_atoms != [] and len(self.args.gen_atoms) > 0:
-                # writes part for Gen/GenECP
-                ecp_used, ecp_not_used, gen_type = [], [], "gen"
-                if self.args.qm_input.lower().find("genecp") > -1:
-                    gen_type = "genecp"
-
-                for _, element_ecp in enumerate(qprep_data["atom_types"]):
-                    if (
-                        element_ecp in self.args.gen_atoms
-                        and element_ecp not in ecp_used
-                    ):
-                        ecp_used.append(element_ecp)
-                    elif (
-                        element_ecp not in self.args.gen_atoms
-                        and element_ecp not in ecp_not_used
-                    ):
-                        ecp_not_used.append(element_ecp)
-
-                if len(ecp_not_used) > 0:
-                    elements_not_used = " ".join([f"{sym}" for sym in ecp_not_used])
-                    txt += f"{elements_not_used} 0\n{self.args.bs_nogen}\n****\n"
-                if len(ecp_used) > 0:
-                    elements_used = " ".join([f"{sym}" for sym in ecp_used])
-                    txt += f"{elements_used} 0\n{self.args.bs_gen}\n****\n"
-
-                if gen_type == "genecp" and len(ecp_used) > 0:
-                    txt += "\n"
-                    txt += f"{elements_used} 0\n{self.args.bs_gen}\n"
-
-                txt += "\n"
+        if self.args.program.lower() != "gaussian":
+            return ""
+            
+        parts = []
+        modifysph_line = ""
+        
+        # Process QM end section
+        if self.args.qm_end:
+            qm_end_local = self.args.qm_end
+            if "modifysph" in qm_end_local.lower():
+                qm_end_local, modifysph_line = self._extract_modifysph(qm_end_local)
+            parts.append(f"{qm_end_local}\n")
+            
+        # Handle basis sets
+        if self.args.gen_atoms:
+            basis_section = self._generate_basis_section(qprep_data["atom_types"])
+            if basis_section:
+                if self.args.qm_end:
+                    parts.append("\n")
+                parts.append(basis_section)
                 
-        txt = txt.lstrip('\n')
-        txt += modifysph_line
+        # Combine and format
+        txt = "\n".join(part.strip() for part in parts if part)
+        if txt and modifysph_line:
+            txt = f"{txt}\n{modifysph_line}"
+            
         return txt
         
+    def _extract_modifysph(self, qm_end):
+        """Extract modifysph section from QM end text.
+        
+        Args:
+            qm_end (str): Original QM end text
+            
+        Returns:
+            tuple: (remaining_text, modifysph_section)
+        """
+        lines = qm_end.split("\n")
+        for idx, line in enumerate(lines):
+            if "modifysph" in line.lower():
+                # Get modifysph section
+                modifysph = f"{line}\n\n{lines[idx+1]}\n\n"
+                # Remove section from original
+                del lines[idx:idx+2]
+                return "\n".join(lines), modifysph
+        return qm_end, ""
+        
+    def _generate_basis_section(self, atom_types):
+        """Generate basis set specification section.
+        
+        Args:
+            atom_types (List[str]): Atomic symbols
+            
+        Returns:
+            str: Formatted basis set section
+        """
+        ecp_used = []
+        ecp_not_used = []
+        gen_type = "genecp" if "genecp" in self.args.qm_input.lower() else "gen"
+        
+        # Categorize atoms
+        for element in atom_types:
+            if element in self.args.gen_atoms and element not in ecp_used:
+                ecp_used.append(element)
+            elif element not in self.args.gen_atoms and element not in ecp_not_used:
+                ecp_not_used.append(element)
+                
+        # Build basis set blocks
+        blocks = []
+        
+        # Non-ECP atoms
+        if ecp_not_used:
+            blocks.append(
+                f"{' '.join(ecp_not_used)} 0\n{self.args.bs_nogen}\n****"
+            )
+            
+        # ECP atoms 
+        if ecp_used:
+            blocks.append(
+                f"{' '.join(ecp_used)} 0\n{self.args.bs_gen}\n****"
+            )
+            
+            # Additional block for GENECP
+            if gen_type == "genecp":
+                blocks.append(
+                    f"\n{' '.join(ecp_used)} 0\n{self.args.bs_gen}"
+                )
+                
+        return "\n".join(blocks) if blocks else ""
+        
     def write(self, qprep_data):
-
-        if self.args.program.lower() == "gaussian":
-            extension = "com"
-        elif self.args.program.lower() == "orca":
-            extension = "inp"
-
+        """Write quantum chemistry input file.
+        
+        Creates Gaussian (.com) or ORCA (.inp) input files with molecular
+        coordinates and calculation parameters.
+        
+        Args:
+            qprep_data (dict): Molecular data including:
+                - name (str): Base filename
+                - atom_types (List[str]): Atomic symbols
+                - cartesians (np.ndarray): XYZ coordinates
+                - charge (int): Molecular charge
+                - mult (int): Spin multiplicity
+                
+        Returns:
+            str: Name of created input file
+        """
+        extension = "com" if self.args.program.lower() == "gaussian" else "inp"
         name_file = add_prefix_suffix(qprep_data["name"], self.args)
         comfile = f'{name_file}.{extension}'
-
-        if os.path.exists(self.args.w_dir_main / comfile):
-            os.remove(self.args.w_dir_main / comfile)
-
+        outpath = self.args.w_dir_main / comfile
+        
+        # Remove existing file
+        if outpath.exists():
+            outpath.unlink()
+            
+        # Generate file content
         header = self.get_header(qprep_data)
+        coords = self._format_coordinates(qprep_data)
         tail = self.get_tail(qprep_data)
-
-        fileout = open(self.args.w_dir_main / comfile, "w")
-        fileout.write(header)
-
-        for atom_idx in range(0, len(qprep_data["atom_types"])):
-            fileout.write(
-                "{0:>2} {1:12.8f} {2:12.8f} {3:12.8f}".format(
-                    qprep_data["atom_types"][atom_idx],
-                    qprep_data["cartesians"][atom_idx][0],
-                    qprep_data["cartesians"][atom_idx][1],
-                    qprep_data["cartesians"][atom_idx][2],
-                )
-            )
-            if atom_idx != len(qprep_data["atom_types"]) - 1:
-                fileout.write("\n")
-
-        if self.args.program.lower() == "gaussian":
-            fileout.write("\n\n")
-        elif self.args.program.lower() == "orca":
-            fileout.write("\n*")
-
-        fileout.write(tail)
-        fileout.close()
-
+        
+        # Write file
+        with open(outpath, "w") as f:
+            f.write(header)
+            f.write("\n")
+            f.write(coords)
+            f.write("\n*" if self.args.program.lower() == "orca" else "\n\n")
+            f.write(tail)
+            f.write("\n\n")
+            
         return comfile
+        
+    def _format_coordinates(self, qprep_data):
+        """Format atomic coordinates for input file.
+        
+        Args:
+            qprep_data (dict): Molecular structure data
+            
+        Returns:
+            str: Formatted coordinate block
+        """
+        coords = []
+        for i, (atom, xyz) in enumerate(zip(
+            qprep_data["atom_types"], 
+            qprep_data["cartesians"]
+        )):
+            line = "{0:>2} {1:12.8f} {2:12.8f} {3:12.8f}".format(
+                atom, xyz[0], xyz[1], xyz[2]
+            )
+            coords.append(line)
+            
+        return "\n".join(coords)
 
     def qprep_coords(self, file, mol, file_format):
+        """Extract molecular coordinates and properties from various file formats.
+        
+        Retrieves atomic coordinates, atom types, charge and multiplicity from:
+        - RDKit mol objects 
+        - QM output files (LOG/OUT)
+        - JSON files
+        - Custom atom_types/cartesians lists
+        
+        Args:
+            file (str): Input file path
+            mol (rdkit.Mol, optional): RDKit molecule object
+            file_format (str): Input file format
+            
+        Returns:
+            tuple: (atom_types, cartesians, charge, mult, found_coords)
+            - atom_types (List[str]): Atomic symbols
+            - cartesians (np.ndarray): XYZ coordinates
+            - charge (int): Molecular charge
+            - mult (int): Spin multiplicity
+            - found_coords (bool): Whether coordinates were found
         """
-        Retrieve atom types and coordinates from multiple formats (LOG, OUT, JSON, MOL)
-        """
-
         found_coords = False
         charge, mult = None, None
-        if self.args.atom_types == [] or self.args.cartesians == []:
-            if mol is not None:
-                atom_types = []
-                atom_data = [(atom, atom.GetIsotope()) for atom in mol.GetAtoms()]
-                for atom, isotope in atom_data:
-                    if isotope:
-                        atom_types.append(atom.GetSymbol() + "(iso={})".format(isotope))
-                    else:
-                        atom_types.append(atom.GetSymbol())
-                cartesians = mol.GetConformers()[0].GetPositions()
-                try:
-                    charge = int(mol.GetProp("Real charge"))
-                except KeyError:
-                    charge = Chem.GetFormalCharge(mol)
-                try:
-                    mult = int(mol.GetProp("Mult"))
-                except KeyError:
-                    NumRadicalElectrons = 0
-                    for Atom in mol.GetAtoms():
-                        NumRadicalElectrons += Atom.GetNumRadicalElectrons()
-                    TotalElectronicSpin = NumRadicalElectrons / 2
-                    mult = int((2 * TotalElectronicSpin) + 1)
-
-            elif file_format in ["log", "out"]:
-                # detect QM program and number of atoms
-                if not self.args.command_line:
-                    outlines = read_file(os.getcwd(), self.args.w_dir_main, file)
-                else:
-                    # if command lines are used, the program is already in that folder
-                    outlines = read_file(os.getcwd(), os.getcwd(), file)
-                n_atoms = 0
-                resume_line = 0
-                found_n_atoms = False
-
-                for i, line in enumerate(outlines):
-                    if line.find("Gaussian, Inc."):
-                        program = "gaussian"
-                        resume_line = i
-                        break
-                    elif line[i].find("O   R   C   A"):
-                        program = "orca"
-                        resume_line = i
-                        break
-
-                for i in range(resume_line, len(outlines)):
-                    if program == "gaussian":
-                        # get charge and mult
-                        if outlines[i].find("Charge = ") > -1:
-                            charge = int(outlines[i].split()[2])
-                            mult = int(outlines[i].split()[5].rstrip("\n"))
-                        # get number of atoms
-                        elif outlines[i].find("Symbolic Z-matrix:") > -1:
-                            for j in range(i + 2, len(outlines)):
-                                if len(outlines[j].split()) > 0:
-                                    n_atoms += 1
-                                else:
-                                    found_n_atoms = True
-                                    break
-                        elif found_n_atoms:
-                            break
-
-                atom_types, cartesians = QM_coords(outlines, -1, n_atoms, program, "")
-
-            elif file_format == "json":
-                with open(file) as json_file:
-                    cclib_data = json.load(json_file)
-                try:
-                    atom_types, cartesians = cclib_atoms_coords(cclib_data,-1)
-                    charge = cclib_data["charge"]
-                    mult = cclib_data["mult"]
-                except (AttributeError, KeyError):
-                    atom_types, cartesians = [], []
-
+        
+        # Use provided atom lists if available
+        if self.args.atom_types and self.args.cartesians:
+            return (self.args.atom_types, self.args.cartesians, 
+                   self._get_charge_mult(None, None), True)
+                   
+        # Process based on input type
+        if mol is not None:
+            atom_types, cartesians, charge, mult = self._extract_mol_data(mol)
+        elif file_format in ['log', 'out']:
+            atom_types, cartesians, charge, mult = self._extract_qm_data(file)
+        elif file_format == 'json':
+            atom_types, cartesians, charge, mult = self._extract_json_data(file)
         else:
-            atom_types = self.args.atom_types
-            cartesians = self.args.cartesians
-
+            atom_types, cartesians = [], []
+            
+        # Validate and set defaults
         try:
-            if atom_types == [] or cartesians == []:
-                self.args.log.write(f"x  {file} does not contain coordinates and/or atom type information")
-            if atom_types != [] and cartesians != []:
+            if not (atom_types and cartesians):
+                self.args.log.write(
+                    f"x  {file} missing coordinates/atom information"
+                )
+            else:
                 found_coords = True
-        except ValueError: # avoids an issue when comparing arrays with == []
+        except ValueError:  # Array comparison issue
             found_coords = True
+            
+        charge, mult = self._get_charge_mult(charge, mult)
+        return atom_types, cartesians, charge, mult, found_coords
+        
+    def _extract_mol_data(self, mol):
+        """Extract data from RDKit molecule object.
+        
+        Args:
+            mol (rdkit.Mol): RDKit molecule
+            
+        Returns:
+            tuple: (atom_types, cartesians, charge, mult)
+        """
+        # Get atom types with isotope handling
+        atom_types = []
+        for atom in mol.GetAtoms():
+            isotope = atom.GetIsotope()
+            symbol = atom.GetSymbol()
+            atom_types.append(
+                f"{symbol}(iso={isotope})" if isotope else symbol
+            )
+            
+        # Get coordinates
+        cartesians = mol.GetConformers()[0].GetPositions()
+        
+        # Get charge
+        try:
+            charge = int(mol.GetProp("Real charge"))
+        except KeyError:
+            charge = Chem.GetFormalCharge(mol)
+            
+        # Get multiplicity
+        try:
+            mult = int(mol.GetProp("Mult"))
+        except KeyError:
+            n_radicals = sum(a.GetNumRadicalElectrons() for a in mol.GetAtoms())
+            mult = int(n_radicals / 2 * 2 + 1)
+            
+        return atom_types, cartesians, charge, mult
+        
+    def _extract_qm_data(self, file):
+        """Extract data from QM output file.
+        
+        Args:
+            file (str): Path to LOG/OUT file
+            
+        Returns:
+            tuple: (atom_types, cartesians, charge, mult)
+        """
+        # Read file
+        base_dir = os.getcwd() if self.args.command_line else self.args.w_dir_main
+        outlines = read_file(os.getcwd(), base_dir, file)
+        
+        # Detect program and find start
+        program = None
+        resume_line = 0
+        for i, line in enumerate(outlines):
+            if 'Gaussian, Inc.' in line:
+                program = 'gaussian'
+                resume_line = i
+                break
+            elif 'O   R   C   A' in line:
+                program = 'orca'
+                resume_line = i
+                break
+                
+        if not program:
+            return [], [], None, None
+            
+        # Get molecule info
+        n_atoms = 0
+        charge = mult = None
+        if program == 'gaussian':
+            n_atoms, charge, mult = self._parse_gaussian_output(
+                outlines[resume_line:]
+            )
+            
+        atom_types, cartesians = QM_coords(
+            outlines, -1, n_atoms, program, ""
+        )
+        
+        return atom_types, cartesians, charge, mult
+        
+    def _parse_gaussian_output(self, lines):
+        """Parse Gaussian output file for molecular info.
+        
+        Args:
+            lines (List[str]): File lines to parse
+            
+        Returns:
+            tuple: (n_atoms, charge, mult)
+        """
+        n_atoms = 0
+        charge = mult = None
+        found_n_atoms = False
+        resume_line = 0
 
-        # overwrite with user-defined charge and multiplicity (if any)
-        # or sets to default charge 0 and mult 1 if the parameters weren't found
+        for i, line in enumerate(lines):
+            if line.find("Gaussian, Inc."):
+                program = "gaussian"
+                resume_line = i
+                break
+            elif line[i].find("O   R   C   A"):
+                program = "orca"
+                resume_line = i
+                break
+
+        for i in range(resume_line, len(lines)):
+            if program == "gaussian":
+                # get charge and mult
+                if lines[i].find("Charge = ") > -1:
+                    charge = int(lines[i].split()[2])
+                    mult = int(lines[i].split()[5].rstrip("\n"))
+                # get number of atoms
+                elif lines[i].find("Symbolic Z-matrix:") > -1:
+                    for j in range(i + 2, len(lines)):
+                        if len(lines[j].split()) > 0:
+                            n_atoms += 1
+                        else:
+                            found_n_atoms = True
+                            break
+                elif found_n_atoms:
+                    break
+              
+        return n_atoms, charge, mult
+        
+    def _extract_json_data(self, file):
+        """Extract data from JSON file.
+        
+        Args:
+            file (str): JSON file path
+            
+        Returns:
+            tuple: (atom_types, cartesians, charge, mult)
+        """
+        try:
+            with open(file) as f:
+                data = json.load(f)
+            atom_types, cartesians = cclib_atoms_coords(data, -1)
+            charge = data['charge']
+            mult = data['mult']
+        except (AttributeError, KeyError, json.JSONDecodeError):
+            return [], [], None, None
+            
+        return atom_types, cartesians, charge, mult
+        
+    def _get_charge_mult(self, charge, mult):
+        """Get charge and multiplicity, using defaults if needed.
+        
+        Args:
+            charge (int, optional): Molecular charge
+            mult (int, optional): Spin multiplicity
+            
+        Returns:
+            tuple: (charge, mult) with defaults applied
+        """
+        # Set charge
         if self.args.charge is not None:
             charge = self.args.charge
         elif charge is None:
             charge = 0
+            
+        # Set multiplicity  
         if self.args.mult is not None:
             mult = self.args.mult
         elif mult is None:
             mult = 1
-
-        return atom_types, cartesians, charge, mult, found_coords
+            
+        return charge, mult
 
 
     def check_level_of_theory(self):
+        """Validate quantum chemistry method against known options.
+        
+        Cross checks the specified functional and basis set against predefined lists.
+        Note that these lists are not exhaustive - missing items may still be valid.
+        
+        Raises:
+            Warning: If functional or basis set not found in predefined lists
         """
-        Cross check a chosen functional and basis set against a precompiled list of available options.
-        Not necessarily a definitive list!
-        """
-
-        # read the predifined list of functionals and basis sets
-        functional_csv = TEMPLATES_PATH.joinpath('functionals.csv')
-        basis_set_csv = TEMPLATES_PATH.joinpath('basis_sets.csv')
-
-        with functional_csv.open("rb") as fh:
-            functional_data = pd.read_csv(fh)
-
-        with basis_set_csv.open("rb") as fh:
-            basis_set_data = pd.read_csv(fh)
-
-        functional_list = functional_data[self.args.program].to_numpy().flatten()
-        functional_list = [x for x in functional_list if str(x) != 'nan'] # remove NaN
-        basis_set_list = basis_set_data[self.args.program].to_numpy().flatten()
-        basis_set_list = [x for x in basis_set_list if str(x) != 'nan'] # remove NaN
-
-        found_func, found_basis = False, False
-
-        # first, look for the basis set from gen/genecp, both sets of basis sets used (i.e. for
-        # gen atoms and for other atoms)
-        if self.args.bs_gen != '':
-            if self.args.bs_gen.upper() in (bs.upper() for bs in basis_set_list):
-                if self.args.bs_nogen.upper() in (bs.upper() for bs in basis_set_list):
-                    found_basis = True
-
-        # for all the keywords in the qm_input option, check if there are compatible functionals and
-        # basis sets
-        for keyword in self.args.qm_input.split():
-            for subkey in keyword.split('/'):
-                if subkey.count('opt') == 0 and subkey.count('freq') == 0 and subkey.count('scrf') == 0 and subkey.count('pop') == 0 and subkey.count('gen') == 0:
-                    if subkey.upper() in (func.upper() for func in functional_list):
-                        found_func = True
-                    if subkey.upper() in (bs.upper() for bs in basis_set_list):
-                        found_basis = True
-
+        # Load reference data
+        functional_list = self._load_reference_data('functionals.csv')
+        basis_set_list = self._load_reference_data('basis_sets.csv')
+        
+        # Validate components
+        found_func = self._validate_functionals(functional_list)
+        found_basis = self._validate_basis_sets(basis_set_list)
+        
+        # Report warnings
         if not found_func:
-            self.args.log.write("x  WARNING! Verify that your functional is correct. If it is, please let us know to add it to the list of known functionals.")
-
+            self.args.log.write(
+                "x  WARNING! Verify functional correctness. "
+                "If valid, please report to add to known functionals."
+            )
+            
         if not found_basis:
-            self.args.log.write("x  WARNING! Verify that your basis set(s) is correct. If it is, please let us know to add it to the list of known basis sets.")
+            self.args.log.write(
+                "x  WARNING! Verify basis set(s) correctness. "
+                "If valid, please report to add to known basis sets."
+            )
+            
+    def _load_reference_data(self, filename):
+        """Load and process reference data from CSV.
+        
+        Args:
+            filename (str): Name of CSV file in templates
+            
+        Returns:
+            list: Processed reference data list
+        """
+        csv_path = TEMPLATES_PATH.joinpath(filename)
+        with csv_path.open("rb") as fh:
+            data = pd.read_csv(fh)
+            
+        # Extract and clean data
+        values = data[self.args.program].to_numpy().flatten()
+        return [x for x in values if str(x) != 'nan']
+        
+    def _validate_functionals(self, functional_list):
+        """Check if input contains known functionals.
+        
+        Args:
+            functional_list (list): Reference list of functionals
+            
+        Returns:
+            bool: True if known functional found
+        """
+        return any(
+            self._is_known_keyword(subkey, functional_list)
+            for keyword in self.args.qm_input.split()
+            for subkey in keyword.split('/')
+            if self._is_method_keyword(subkey)
+        )
+        
+    def _validate_basis_sets(self, basis_set_list):
+        """Check if basis sets are known.
+        
+        Args:
+            basis_set_list (list): Reference list of basis sets
+            
+        Returns:
+            bool: True if all basis sets are known
+        """
+        # Check gen/genecp basis sets if specified
+        if self.args.bs_gen:
+            if not (
+                self._is_known_basis(self.args.bs_gen, basis_set_list) and
+                self._is_known_basis(self.args.bs_nogen, basis_set_list)
+            ):
+                return False
+                
+        # Check basis sets in input line
+        return any(
+            self._is_known_basis(subkey, basis_set_list)
+            for keyword in self.args.qm_input.split()
+            for subkey in keyword.split('/')
+            if self._is_method_keyword(subkey)
+        )
+        
+    def _is_method_keyword(self, keyword):
+        """Check if keyword is a method specification.
+        
+        Args:
+            keyword (str): Input keyword
+            
+        Returns:
+            bool: True if keyword is method-related
+        """
+        excluded = ['opt', 'freq', 'scrf', 'pop', 'gen']
+        return not any(keyword.count(x) > 0 for x in excluded)
+        
+    def _is_known_keyword(self, keyword, reference_list):
+        """Check if keyword exists in reference list.
+        
+        Args:
+            keyword (str): Keyword to check
+            reference_list (list): List of known keywords
+            
+        Returns:
+            bool: True if keyword found in list
+        """
+        return keyword.upper() in (x.upper() for x in reference_list)
+        
+    def _is_known_basis(self, basis, basis_list):
+        """Check if basis set exists in reference list.
+        
+        Args:
+            basis (str): Basis set name
+            basis_list (list): List of known basis sets
+            
+        Returns:
+            bool: True if basis set found in list
+        """
+        if not basis:
+            return False
+        return basis.upper() in (x.upper() for x in basis_list)
 
 
 def QM_coords(outlines, min_RMS, n_atoms, program, keywords_line):
+    """Extract atomic coordinates from QM output files.
+    
+    Parses output files from quantum chemistry programs to extract atomic
+    symbols and Cartesian coordinates.
+    
+    Args:
+        outlines (List[str]): Lines from output file
+        min_RMS (int): Minimum RMS value to consider (-1 for final structure)
+        n_atoms (int): Number of atoms in system
+        program (str): QM program name ('gaussian' or 'orca')
+        keywords_line (str): QM input keywords
+        
+    Returns:
+        tuple: (atom_types, cartesians)
+        - atom_types (List[str]): List of atomic symbols 
+        - cartesians (List[List[float]]): XYZ coordinates for each atom
     """
-    Retrieves atom types and coordinates from QM output files
+    # Only Gaussian supported for now
+    if program != "gaussian":
+        return [], []
+        
+    # Get coordinate section
+    target_ori = "Input orientation:" if "nosymm" in keywords_line.lower() else "Standard orientation:"
+    range_lines = _find_coordinate_section(outlines, target_ori, min_RMS, n_atoms)
+    
+    if not range_lines:
+        return [], []
+        
+    # Parse coordinates
+    return _parse_gaussian_coordinates(outlines, range_lines[0], range_lines[1])
+    
+def _find_coordinate_section(outlines, target_ori, min_RMS, n_atoms):
+    """Locate coordinate section in output file.
+    
+    Args:
+        outlines (List[str]): File lines
+        target_ori (str): Target orientation marker
+        min_RMS (int): Minimum RMS value
+        n_atoms (int): Number of atoms
+        
+    Returns:
+        List[int]: Start and end line numbers for coordinates
     """
-
-    atom_types, cartesians, range_lines = [], [], []
-    per_tab = periodic_table()
+    if min_RMS > -1:
+        return _find_rms_coordinates(outlines, target_ori, min_RMS, n_atoms)
+    else:
+        return _find_final_coordinates(outlines, target_ori, n_atoms)
+        
+def _find_rms_coordinates(outlines, target_ori, min_RMS, n_atoms):
+    """Find coordinates for specific RMS value.
+    
+    Args:
+        outlines (List[str]): File lines
+        target_ori (str): Target orientation marker 
+        min_RMS (int): Target RMS value
+        n_atoms (int): Number of atoms
+        
+    Returns:
+        List[int]: Start and end line numbers
+    """
     count_RMS = -1
-
-    if program == "gaussian":
-        if "nosymm" in keywords_line.lower():
-            target_ori = "Input orientation:"
-        else:
-            target_ori = "Standard orientation:"
-
-        if min_RMS > -1:
-            for i, line in enumerate(outlines):
-                if line.find(target_ori) > -1:
-                    count_RMS += 1
-                if count_RMS == min_RMS:
-                    range_lines = [i + 5, i + 5 + n_atoms]
-                    break
-        else:
-            for i in reversed(range(len(outlines))):
-                if outlines[i].find(target_ori) > -1:
-                    range_lines = [i + 5, i + 5 + n_atoms]
-                    break
-        if len(range_lines) != 0:
-            for i in range(range_lines[0], range_lines[1]):
-                massno = int(outlines[i].split()[1])
-                if massno < len(per_tab):
-                    atom_symbol = per_tab[massno]
-                else:
-                    atom_symbol = "XX"
-                atom_types.append(atom_symbol)
-                cartesians.append(
-                    [
-                        float(outlines[i].split()[3]),
-                        float(outlines[i].split()[4]),
-                        float(outlines[i].split()[5]),
-                    ]
-                )
-
+    for i, line in enumerate(outlines):
+        if target_ori in line:
+            count_RMS += 1
+            if count_RMS == min_RMS:
+                return [i + 5, i + 5 + n_atoms]
+    return []
+    
+def _find_final_coordinates(outlines, target_ori, n_atoms): 
+    """Find final coordinates in output.
+    
+    Args:
+        outlines (List[str]): File lines
+        target_ori (str): Target orientation marker
+        n_atoms (int): Number of atoms
+        
+    Returns:
+        List[int]: Start and end line numbers
+    """
+    for i in reversed(range(len(outlines))):
+        if target_ori in outlines[i]:
+            return [i + 5, i + 5 + n_atoms]
+    return []
+    
+def _parse_gaussian_coordinates(outlines, start, end):
+    """Parse Gaussian coordinate block.
+    
+    Args:
+        outlines (List[str]): File lines
+        start (int): Start line number 
+        end (int): End line number
+        
+    Returns:
+        tuple: (atom_types, cartesians)
+    """
+    per_tab = periodic_table()
+    atom_types = []
+    cartesians = []
+    
+    for i in range(start, end):
+        fields = outlines[i].split()
+        
+        # Get atom symbol
+        massno = int(fields[1])
+        atom_symbol = per_tab[massno] if massno < len(per_tab) else "XX"
+        atom_types.append(atom_symbol)
+        
+        # Get coordinates
+        coords = [float(x) for x in fields[3:6]]
+        cartesians.append(coords)
+        
     return atom_types, cartesians
