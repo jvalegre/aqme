@@ -752,7 +752,6 @@ def test_csearch_methods(
             program=program,
             smi=smi,
             name=name,
-            debug=True
         )
         
     elif not complex and not metal_complex:
@@ -761,7 +760,6 @@ def test_csearch_methods(
             program=program,
             smi=smi,
             name=name,
-            debug=True
         )
 
     elif metal_complex is True:
@@ -774,14 +772,12 @@ def test_csearch_methods(
                 mult=mult,
                 charge=charge,
                 sample=10,
-                debug=True
             )
         elif name == 'rule_IrSP':
             csearch(
                 program=program,
                 input='rule_IrSP.csv',
                 sample=10,
-                debug=True
             )
         else:
             csearch(
@@ -793,7 +789,6 @@ def test_csearch_methods(
                 complex_type=complex_type,
                 mult=mult,
                 sample=10,
-                debug=True
             )
 
     elif complex is True:
@@ -806,7 +801,6 @@ def test_csearch_methods(
                 crest_keywords=crest_keywords,
                 auto_cluster=False, # to keep track that crest options like --nci work
                 nprocs=4,
-                debug=True
             )
         elif name == 'sample_keyword':
             csearch(
@@ -820,7 +814,6 @@ def test_csearch_methods(
                 constraints_dihedral=constraints_dihedral,
                 sample=17,
                 nprocs=4,
-                debug=True
             )
         elif name == "butina_clustering":
             csearch(
@@ -834,7 +827,6 @@ def test_csearch_methods(
                 constraints_dihedral=constraints_dihedral,
                 pytest_testing=True,
                 nprocs=4,
-                debug=True
             )
         else:
             csearch(
@@ -847,7 +839,6 @@ def test_csearch_methods(
                 constraints_angle=constraints_angle,
                 constraints_dihedral=constraints_dihedral,
                 nprocs=4,
-                debug=True
             )
 
     if destination:
@@ -1100,7 +1091,9 @@ def test_csearch_methods(
 
 def test_remove(folder_list, file_list):
     for i,folder in enumerate(folder_list):
-        shutil.rmtree(w_dir_main + "/" + folder)
+        if os.path.exists(w_dir_main + "/" + folder):
+            shutil.rmtree(w_dir_main + "/" + folder)
         for f in glob.glob(file_list[i]):
-            os.remove(f)
+            if os.path.exists(f):
+                os.remove(f)
     os.chdir(w_dir_main)

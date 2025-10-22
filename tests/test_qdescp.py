@@ -83,7 +83,6 @@ def test_qdescp_xtb(file):
     qdescp_kwargs = {
         "input": f'{qdescp_input_dir.joinpath(file_qdescp)}',
         "destination": f'{folder_qdescp}',
-        "debug": True
     }
 
     if file == 'test_atom.csv':
@@ -119,7 +118,6 @@ def test_qdescp_xtb(file):
             f'{folder_qdescp}',
             "--qdescp_atoms",
             '[1]',
-            '--debug'
         ]
         subprocess.run(cmd_aqme)
 
@@ -406,7 +404,6 @@ def test_qdescp_missing(
     qdescp(
         files=f'{qdescp_empty_dir}/*.sdf',
         destination=f'{folder_qdescp}',
-        debug=True
     )
 
     # checking csv file
@@ -451,7 +448,6 @@ def test_qdescp_sdf(
     qdescp(
         files=f'{qdescp_sdf_dir}/*.sdf',
         destination=f'{folder_qdescp}',
-        debug=True
     )
 
     # checking csv file
@@ -498,7 +494,6 @@ def test_qdescp_csv(
     qdescp(
         input=f'{qdescp_csv_dir}/{file}',
         destination=f'{folder_qdescp}',
-        debug=True
     )
 
     # checking csv file
@@ -565,7 +560,6 @@ def test_au_csv(
     qdescp_kwargs = {
         "input": f'{qdescp_au_dir}/{file}',
         "destination": f'{folder_qdescp}',
-        "debug": True
     }
     
     if run_test == 2:
@@ -667,7 +661,6 @@ def test_qdescp_nmr(json_files):
         nmr_slope=nmr_slope,
         nmr_intercept=nmr_intercept,
         nmr_experim=f'{qdescp_input_dir}/Experimental_NMR_shifts.csv',
-        debug=True
     )
 
     # read json files and calculate Boltzmann shifts

@@ -410,12 +410,12 @@ def xyz_2_sdf(file):
     subprocess.run(command_xyz, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
-def check_constraints(self):
+def check_constraints(constraints_atoms, constraints_dist, constraints_angle, constraints_dihedral):
     if (
-        (len(self.args.constraints_atoms) != 0)
-        or (len(self.args.constraints_dist) != 0)
-        or (len(self.args.constraints_angle) != 0)
-        or (len(self.args.constraints_dihedral) != 0)
+        (len(constraints_atoms) != 0)
+        or (len(constraints_dist) != 0)
+        or (len(constraints_angle) != 0)
+        or (len(constraints_dihedral) != 0)
     ):
         complex_ts = True
     else:
@@ -683,4 +683,4 @@ def substituted_mol(mol, checkI, metal_atoms):
                         except Chem.AtomValenceException:
                             continue  # Try next charge if molecule is invalid
 
-    return metal_idx, complex_coord, metal_sym
+    return metal_idx, metal_sym
