@@ -1046,7 +1046,7 @@ class csearch:
         charge = charge if charge is not None else Chem.GetFormalCharge(mol)
         mult = mult if mult is not None else (Descriptors.NumRadicalElectrons(mol) + 1)
         # Generate conformers using appropriate method
-        if self._should_use_crest(smi):
+        if self._should_use_crest():
             valid_structure = True
             status = self._run_crest_sampling(
                 name, charge, mult, smi, constraints_atoms,
@@ -1067,12 +1067,9 @@ class csearch:
         if self.args.crest_runs > 1:
             self._combine_crest_runs(name)
             
-    def _should_use_crest(self, smi):
-        """Determine if CREST should be used for conformer sampling.
+    def _should_use_crest(self):
+        """Determine if CREST should be used for conformer sampling directly with no RDKit sampling first.
         
-        Args:
-            smi: SMILES string or 3D structure
-            
         Returns:
             bool: True if CREST should be used
         """
