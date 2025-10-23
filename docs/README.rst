@@ -97,12 +97,12 @@ for a quick installation guide. In a nutshell, AQME and its dependencies are
 installed as follows:
 
 **1.** Create and activate the conda environment where you want to install the program. If you are not sure of what 
-this point means, check out the "Users with no Python experience" section. This is an example for Python 3.10, but 
-it also works for newer Python versions (i.e., 3.11 and 3.12):
+this point means, check out the "Users with no Python experience" section. This is an example for Python 3.12, but 
+it also works for newer Python versions (i.e., 3.11, 3.12, 3.13...):
 
 .. code-block:: shell 
    
-   conda create -n aqme python=3.10
+   conda create -n aqme python=3.12
    conda activate aqme
 
 **2.** Install AQME and OpenBabel using pip:  
@@ -175,9 +175,9 @@ you can install `Miniconda with Python 3 <https://docs.conda.io/projects/minicon
 **2.** Open an Anaconda prompt (Windows users) or a terminal (macOS and Linux).
 
 
-**3.** Create a conda environment called "aqme" with Python (:code:`conda create -n aqme python=3.10`). 
+**3.** Create a conda environment called "aqme" with Python (:code:`conda create -n aqme python=3.12`). 
 |br|
-*This is an example for Python 3.10, but it also works for newer Python versions (i.e., 3.11 and 3.12).*
+*This is an example for Python 3.12, but it also works for newer Python versions (i.e., 3.11, 3.12, 3.13...).*
 
 
 **4.** Activate the conda environment called "aqme" (:code:`conda activate aqme`).
@@ -228,7 +228,7 @@ Requirements
 Python and Python libraries
 +++++++++++++++++++++++++++
 
-*  Python >= 3.10
+*  Python >= 3.11
 *  pandas
 *  Numpy
 *  PyYAML

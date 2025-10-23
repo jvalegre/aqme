@@ -42,6 +42,6 @@ setup(
         "cffi==2.0.0",
         "morfeus-ml==0.7.2",
     ],
-    python_requires=">=3.10",
+    python_requires=">=3.11",
     include_package_data=True,
 )

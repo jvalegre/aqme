@@ -19,7 +19,7 @@ jobs:
     # These next lines defines a Docker executors: https://circleci.com/docs/2.0/executor-types/
     # You can specify an image from Dockerhub or use one of the convenience images from CircleCI's Developer Hub
     # A list of available CircleCI Docker convenience images are available here: https://circleci.com/developer/images/image/cimg/python
-    # The executor is the environment in which the steps below will be executed - below will use a python 3.10.2 container
+    # The executor is the environment in which the steps below will be executed - below will use a python 3.12 container
     # Change the version below to your required version of python
     docker:
       - image: continuumio/miniconda3
@@ -38,7 +38,7 @@ jobs:
       - run: |
           # update conda and create env
           conda update -y conda
-          conda create -n cheminf python=3.10
+          conda create -n cheminf python=3.12
           source activate base 
           conda activate cheminf
           python -m pip install --upgrade pip
@@ -71,7 +71,7 @@ jobs:
   # needs to be stored and loaded in a new job using a python docker
   codecov-coverage:
     docker:
-      - image: cimg/python:3.10
+      - image: cimg/python:3.12
     steps:
       - attach_workspace:
           at: /tmp
