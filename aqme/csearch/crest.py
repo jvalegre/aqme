@@ -760,113 +760,178 @@ def nci_ts_mol(
         - Positions fragments with 5Å spacing to avoid clashes
         - Falls back to different embedding strategies if initial attempt fails
         - Preserves constraints when atom mapping is present in SMILES
+        
+    The function performs these steps:
+    1. Convert constraints to numeric arrays
+    2. Generate 3D structures for fragments
+    3. Combine fragments with spatial offsets
+    4. Perform constrained embedding
+    5. Map atom indices for constraints
     """
+    def _convert_constraints(constraints):
+        """Convert constraint list to float array if not empty."""
+        if constraints is not None and constraints != []:
+            return np.array([[float(y) for y in x] for x in constraints])
+        return constraints
+    
+    # Convert all constraints to float arrays
     using_const = None
-    if constraints_atoms is not None and constraints_atoms != []:
-        using_const = constraints_atoms
-        constraints_atoms = [[float(y) for y in x] for x in constraints_atoms]
-        constraints_atoms = np.array(constraints_atoms)
-    if constraints_dist is not None and constraints_dist != []:
-        using_const = constraints_dist
-        constraints_dist = [[float(y) for y in x] for x in constraints_dist]
-        constraints_dist = np.array(constraints_dist)
-    if constraints_angle is not None and constraints_angle != []:
-        using_const = constraints_angle
-        constraints_angle = [[float(y) for y in x] for x in constraints_angle]
-        constraints_angle = np.array(constraints_angle)
-    if constraints_dihedral is not None and constraints_dihedral != []:
-        using_const = constraints_dihedral
-        constraints_dihedral = [[float(y) for y in x] for x in constraints_dihedral]
-        constraints_dihedral = np.array(constraints_dihedral)
+    constraint_types = [
+        (constraints_atoms, 'atoms'),
+        (constraints_dist, 'dist'),
+        (constraints_angle, 'angle'),
+        (constraints_dihedral, 'dihedral')
+    ]
+    
+    for constraint, name in constraint_types:
+        if constraint is not None and constraint != []:
+            using_const = constraint
+            globals()[f'constraints_{name}'] = _convert_constraints(constraint)
 
-    molsH = []
-    mols = []
-    for m in smi:
-        mols.append(Chem.MolFromSmiles(m))
-        molsH.append(Chem.AddHs(Chem.MolFromSmiles(m)))
-
-    for m in molsH:
-        Chem.EmbedMultipleConfs(m, numConfs=1, randomSeed=seed)
-    for m in mols:
-        Chem.EmbedMultipleConfs(m, numConfs=1, randomSeed=seed)
-
-    coord = [0.0, 0.0, 5.0]
-    molH = molsH[0]
-    for _, fragment in enumerate(molsH[1:]):
-        offset_3d = Geometry.Point3D(coord[0], coord[1], coord[2])
-        molH = Chem.CombineMols(molH, fragment, offset_3d)
-        coord[1] += 5
-        Chem.SanitizeMol(molH)
-
-    coord = [0.0, 0.0, 5.0]
-    mol = mols[0]
-    for _, fragment in enumerate(mols[1:]):
-        offset_3d = Geometry.Point3D(coord[0], coord[1], coord[2])
-        mol = Chem.CombineMols(mol, fragment, offset_3d)
-        coord[1] += 5
-        Chem.SanitizeMol(mol)
+    def _create_3d_fragments(smiles_list, with_hydrogens=False):
+        """Generate 3D structures from SMILES strings."""
+        fragments = []
+        for smiles in smiles_list:
+            mol = Chem.MolFromSmiles(smiles)
+            if with_hydrogens:
+                mol = Chem.AddHs(mol)
+            Chem.EmbedMultipleConfs(mol, numConfs=1, randomSeed=seed)
+            fragments.append(mol)
+        return fragments
+    
+    def _combine_fragments(fragments, spacing=5.0):
+        """Combine molecular fragments with spatial offsets."""
+        if not fragments:
+            return None
+            
+        combined = fragments[0]
+        coord = [0.0, 0.0, spacing]
+        
+        for fragment in fragments[1:]:
+            offset = Geometry.Point3D(coord[0], coord[1], coord[2])
+            combined = Chem.CombineMols(combined, fragment, offset)
+            coord[1] += spacing
+            Chem.SanitizeMol(combined)
+            
+        return combined
+    
+    # Generate 3D structures for both hydrogenated and non-hydrogenated molecules
+    molsH = _create_3d_fragments(smi, with_hydrogens=True)
+    mols = _create_3d_fragments(smi, with_hydrogens=False)
+    
+    # Combine fragments into single molecules
+    molH = _combine_fragments(molsH)
+    mol = _combine_fragments(mols)
     mol = Chem.AddHs(mol)
 
-    try:
-        mol = Chem.ConstrainedEmbed(mol, molH, randomseed=seed)
-    except ValueError: # removingH in the core (molH) avoids problems related to RDKit embedding
-        molH = Chem.RemoveHs(molH)
+    def _perform_constrained_embed(mol, template, seed):
+        """Try constrained embedding with fallback options."""
         try:
-            mol = Chem.ConstrainedEmbed(mol, molH, randomseed=seed)
+            return Chem.ConstrainedEmbed(mol, template, randomseed=seed)
         except ValueError:
-            log.write(f"\nx  Constrained optimization failed due to an embedding problem with RDKit that could not be fixed!")
-            pass
+            # Try again with hydrogens removed from template
+            template = Chem.RemoveHs(template)
+            try:
+                return Chem.ConstrainedEmbed(mol, template, randomseed=seed)
+            except ValueError:
+                log.write("\nx  Constrained optimization failed due to an embedding problem with RDKit that could not be fixed!")
+                return mol
 
-    atom_map = []
-    for atom in mol.GetAtoms():
-        atom_map.append(atom.GetAtomMapNum())
-
-    max_map = max(atom_map)
-    for a in mol.GetAtoms():
-        if a.GetSymbol() == "H":
-            max_map += 1
-            a.SetAtomMapNum(int(max_map))
-
-    adapted_atoms = []
-    adapted_dist = []
-    adapted_angle = []
-    adapted_dihedral = []
-    # assign constraints
-    if using_const != [] and using_const is not None:
-        for smi_part in smi:
-            if ':' not in smi_part or '[' not in smi_part: # for SMILES that are not mapped
-                log.write(f"\nx  Constraints were specified {using_const} but atoms might not be mapped in the SMILES input!")
-                adapted_atoms = constraints_atoms
-                adapted_dist = constraints_dist
-                adapted_angle = constraints_angle
-                adapted_dihedral = constraints_dihedral
-                break
-
+    def _update_atom_mapping(mol):
+        """Update atom mapping numbers for hydrogens."""
+        atom_map = [atom.GetAtomMapNum() for atom in mol.GetAtoms()]
+        max_map = max(atom_map)
+        
+        for atom in mol.GetAtoms():
+            if atom.GetSymbol() == "H":
+                max_map += 1
+                atom.SetAtomMapNum(int(max_map))
+                
+    def _adapt_constraints(mol, smi, using_const):
+        """Adapt constraints based on atom mapping."""
+        adapted = {
+            'atoms': [],
+            'dist': [],
+            'angle': [],
+            'dihedral': []
+        }
+        
+        # Check if SMILES have proper atom mapping
+        has_mapping = all(':' in s and '[' in s for s in smi)
+        if not has_mapping:
+            log.write(f"\nx  Constraints were specified {using_const} but atoms might not be mapped in the SMILES input!")
+            return {
+                'atoms': constraints_atoms,
+                'dist': constraints_dist,
+                'angle': constraints_angle,
+                'dihedral': constraints_dihedral
+            }
+            
+        # Process atom constraints
         if constraints_atoms is not None:
-            for _, ele in enumerate(constraints_atoms):
-                if adapted_atoms != []: # for mapped SMILES
-                    for atom in mol.GetAtoms():
-                        if ele == atom.GetAtomMapNum():
-                            adapted_atoms.append(float(atom.GetIdx()) + 1)
-                else:
-                    adapted_atoms = constraints_atoms
-            adapted_atoms = np.array(adapted_atoms)
+            adapted['atoms'] = _process_atom_constraints(mol, constraints_atoms)
+            
+        # Process other constraints
+        constraint_info = [
+            (constraints_dist, 'dist', 2),
+            (constraints_angle, 'angle', 3),
+            (constraints_dihedral, 'dihedral', 4)
+        ]
+        
+        for constraint, key, n_atoms in constraint_info:
+            if constraint is not None:
+                adapted[key] = _process_geometric_constraints(mol, constraint, n_atoms)
+                
+        return adapted
 
-        constraints = [constraints_dist, constraints_angle, constraints_dihedral]
-        adapted_consts = [adapted_dist, adapted_angle, adapted_dihedral]
-        n_consts= [2, 3, 4]
-        for const,adapted_const,n_const in zip(constraints,adapted_consts,n_consts):
-            if adapted_const == []: # for mapped SMILES
-                for _, r in enumerate(const):
-                    nr = []
-                    for _, ele in enumerate(r[:n_const]):
-                        if const is not None:
-                            for atom in mol.GetAtoms():
-                                if ele == atom.GetAtomMapNum():
-                                    nr.append(float(atom.GetIdx()) + 1)
-                    nr.append(r[-1])
-                    adapted_const.append(nr)
-                adapted_const = np.array(adapted_const)
+    def _process_atom_constraints(mol, constraints):
+        """Process atom-based constraints."""
+        if not constraints:
+            return np.array([])
+            
+        adapted = []
+        for atom in mol.GetAtoms():
+            for const in constraints:
+                if const == atom.GetAtomMapNum():
+                    adapted.append(float(atom.GetIdx()) + 1)
+        return np.array(adapted)
+
+    def _process_geometric_constraints(mol, constraints, n_atoms):
+        """Process geometric constraints (distances, angles, dihedrals)."""
+        if not constraints:
+            return np.array([])
+            
+        adapted = []
+        for constraint in constraints:
+            new_constraint = []
+            # Map atom indices
+            for i, atom_num in enumerate(constraint[:n_atoms]):
+                for atom in mol.GetAtoms():
+                    if atom_num == atom.GetAtomMapNum():
+                        new_constraint.append(float(atom.GetIdx()) + 1)
+            # Add constraint value
+            new_constraint.append(constraint[-1])
+            adapted.append(new_constraint)
+        return np.array(adapted)
+
+    # Perform constrained embedding
+    mol = _perform_constrained_embed(mol, molH, seed)
+    
+    # Update atom mapping for hydrogens
+    _update_atom_mapping(mol)
+    
+    # Adapt constraints based on atom mapping
+    if using_const is not None and using_const != []:
+        adapted = _adapt_constraints(mol, smi, using_const)
+        adapted_atoms = adapted['atoms']
+        adapted_dist = adapted['dist']
+        adapted_angle = adapted['angle']
+        adapted_dihedral = adapted['dihedral']
+    else:
+        adapted_atoms = []
+        adapted_dist = []
+        adapted_angle = []
+        adapted_dihedral = []
 
     return (
         mol,
