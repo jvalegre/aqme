@@ -1229,15 +1229,17 @@ class csearch:
             int: Status code (0 for success, -1 for failure)
         """
         # Initial RDKit conformer generation
-        status = self._generate_initial_conformers(
+        status, mol_crest = self._generate_initial_conformers(
             mol, name, csearch_file, charge, mult,
             coord_Map, alg_Map, mol_template, smi, geom,
             original_atn, metal_atoms, metal_idx, metal_sym,
             csearch_nprocs, sample, complex_ts
         )
-        
+
         # CREST optimization if selected
         if self.args.program.lower() == 'crest':
+            if mol_crest is not None:
+                mol = mol_crest
             status = self._run_crest_optimization(
                 mol, name, csearch_file, charge, mult,
                 constraints_atoms, constraints_dist,
@@ -1259,10 +1261,10 @@ class csearch:
             (see rdkit_search for parameter documentation)
             
         Returns:
-            tuple: (status, rotmatches, ff, mol_crest)
+            Status, mol_crest
         """
         if complex_ts:
-            return None, None, None, None
+            return None, None
             
         # Log conformer generation start
         if self.args.program.lower() == 'rdkit':
@@ -1275,12 +1277,14 @@ class csearch:
                 "\no  Starting initial RDKit-based mol generation from SMILES"
             )
             
-        return self.rdkit_to_sdf(
+        status, mol_crest = self.rdkit_to_sdf(
             mol, name, csearch_file, charge, mult,
             coord_Map, alg_Map, mol_template, smi, geom,
             original_atn, metal_atoms, metal_idx, metal_sym,
             csearch_nprocs, sample
         )
+    
+        return status, mol_crest
         
     def _needs_rdkit_init(self):
         """Check if RDKit initialization is needed for CREST.
@@ -1345,7 +1349,7 @@ class csearch:
             
         if self.args.crest_runs == 1:
             os.remove(str(csearch_file))
-            rdmolfiles.MolToXYZFile(mol[0], f"{name}_crest.xyz")
+            rdmolfiles.MolToXYZFile(mol, f"{name}_crest.xyz")
         else:
             suppl, *_ = mol_from_sdf_or_mol_or_mol2(str(csearch_file), "csearch", self.args)
             os.remove(str(csearch_file))
@@ -1525,9 +1529,9 @@ class csearch:
         return samples
 
     def genConformer_r(
-        self, mol, conf, i, matches, name, sdwriter,
+        self, mol, conf, sdwriter,
         update_to_rdkit, coord_Map, alg_Map, mol_template,
-        original_atn, geom, metal_atoms, metal_idx,
+        original_atn, metal_atoms, metal_idx,
         metal_sym, ff
     ):
         """Process and write conformer to SDF file.
@@ -1540,9 +1544,6 @@ class csearch:
         Args:
             mol: RDKit molecule object
             conf (int): Conformer ID
-            i (int): Current match index
-            matches (list): Rotatable bond matches
-            name (str): Molecule name
             sdwriter: RDKit SDWriter object
             update_to_rdkit (bool): Whether to update coordinates
             coord_Map: Coordinate mapping
@@ -1554,32 +1555,6 @@ class csearch:
             metal_idx (list): Metal atom indices
             metal_sym (list): Metal atom symbols
             ff (str): Force field to use
-            
-        Returns:
-            int: Status code (1 for success)
-        """
-        if i >= len(matches):
-            return self._process_final_conformer(
-                mol, conf, sdwriter, update_to_rdkit,
-                coord_Map, alg_Map, mol_template,
-                original_atn, metal_atoms, metal_idx,
-                metal_sym, ff
-            )
-            
-        elif self.args.program.lower() == "crest":
-            return self._process_crest_conformer(
-                mol, conf, sdwriter, metal_idx, metal_sym
-            )
-            
-    def _process_final_conformer(
-        self, mol, conf, sdwriter, update_to_rdkit,
-        coord_Map, alg_Map, mol_template, original_atn,
-        metal_atoms, metal_idx, metal_sym, ff
-    ):
-        """Process final conformer before writing.
-        
-        Args:
-            (see genConformer_r for parameters)
             
         Returns:
             int: Status code (1 for success)
@@ -1596,31 +1571,11 @@ class csearch:
                 
                 # Restore metal atoms
                 set_metal_atomic_number(mol, metal_idx, metal_sym)
-                
                 # Restore special atoms (e.g. for Ir_squareplanar)
                 if original_atn is not None:
                     mol.GetAtomWithIdx(original_atn[1]).SetAtomicNum(original_atn[0])
                     
         sdwriter.write(mol, -1)
-        return 1
-        
-    def _process_crest_conformer(
-        self, mol, conf, sdwriter, metal_idx, metal_sym
-    ):
-        """Process CREST conformer before writing.
-        
-        Args:
-            mol: RDKit molecule object
-            conf (int): Conformer ID
-            sdwriter: RDKit SDWriter object
-            metal_idx (list): Metal atom indices
-            metal_sym (list): Metal atom symbols
-            
-        Returns:
-            int: Status code (1 for success)
-        """
-        set_metal_atomic_number(mol, metal_idx, metal_sym)
-        sdwriter.write(mol, conf)
         return 1
         
     def _minimize_metal_conformer(
@@ -1888,7 +1843,7 @@ class csearch:
         passing_cids.append(conf)
 
     def min_after_embed(
-        self, mol, cids, name, csearch_file, rotmatches,
+        self, mol, cids, name, csearch_file,
         update_to_rdkit, coord_Map, alg_Map, mol_template,
         charge, mult, ff, smi, geom, original_atn,
         metal_atoms, metal_idx, metal_sym, sample
@@ -1907,7 +1862,6 @@ class csearch:
             cids (list): Conformer IDs
             name (str): Molecule name
             csearch_file (Path): Output file path
-            rotmatches: Rotatable bond matches
             update_to_rdkit (bool): Update coordinates flag
             coord_Map: Coordinate mapping
             alg_Map: Alignment mapping
@@ -1927,7 +1881,7 @@ class csearch:
             tuple: (status, output molecules)
         """
         # Process and filter conformers
-        outmols, passing_cids, cenergy = self._process_conformers(
+        outmols, cenergy = self._process_conformers(
             mol, cids, name, charge, mult, smi, geom,
             coord_Map, alg_Map, mol_template, ff,
             metal_atoms, metal_idx, metal_sym
@@ -1942,18 +1896,17 @@ class csearch:
         if self.args.program.lower() in ["rdkit", "crest"]:
             status = self._write_conformers(
                 outmols, selectedcids_rdkit, csearch_file,
-                rotmatches, update_to_rdkit, coord_Map,
-                alg_Map, mol_template, original_atn, geom,
+                update_to_rdkit, coord_Map,
+                alg_Map, mol_template, original_atn,
                 metal_atoms, metal_idx, metal_sym, ff
             )
             
             # Cluster if needed
             outmols = self._cluster_if_needed(
-                csearch_file, name, sample, outmols
+                csearch_file, name, sample
             )
         else:
             status = 1
-            
         return status, outmols
         
     def _process_conformers(
@@ -1987,7 +1940,7 @@ class csearch:
                 charge, mult, smi
             )
             
-        return outmols, passing_cids, cenergy
+        return outmols, cenergy
         
     def _select_conformers(self, outmols, cenergy, name, ff):
         """Select conformers based on energy and filtering.
@@ -2015,8 +1968,8 @@ class csearch:
         
     def _write_conformers(
         self, outmols, selected_cids, csearch_file,
-        rotmatches, update_to_rdkit, coord_Map,
-        alg_Map, mol_template, original_atn, geom,
+        update_to_rdkit, coord_Map,
+        alg_Map, mol_template, original_atn,
         metal_atoms, metal_idx, metal_sym, ff
     ):
         """Write selected conformers to SDF file.
@@ -2031,23 +1984,21 @@ class csearch:
         with Chem.SDWriter(str(csearch_file)) as sdwriter:
             for conf in selected_cids:
                 total += self.genConformer_r(
-                    outmols[conf], -1, 0, rotmatches,
-                    outmols[conf].GetProp("_Name"),
+                    outmols[conf], -1,
                     sdwriter, update_to_rdkit, coord_Map,
                     alg_Map, mol_template, original_atn,
-                    geom, metal_atoms, metal_idx,
+                    metal_atoms, metal_idx,
                     metal_sym, ff
                 )
         return 1
         
-    def _cluster_if_needed(self, csearch_file, name, sample, outmols):
+    def _cluster_if_needed(self, csearch_file, name, sample):
         """Cluster conformers if needed.
         
         Args:
             csearch_file (Path): Path to SDF file
             name (str): Molecule name
             sample (int): Target number of conformers
-            outmols: Current molecule objects
             
         Returns:
             list: Final molecule objects
@@ -2055,7 +2006,6 @@ class csearch:
         suppl, *_ = mol_from_sdf_or_mol_or_mol2(
             str(csearch_file), "csearch", self.args
         )
-        
         if len(suppl) > sample and self.args.auto_cluster:
             return cluster_conformers(
                 self, suppl, "rdkit", csearch_file,
@@ -2123,8 +2073,6 @@ class csearch:
             self.args.log.write(f"\nx  Too many torsions ({len(rotmatches)}). Skipping {name + self.args.output}")
 
         ff = self.args.ff
-        if self.args.program.lower() == "rdkit":
-            rotmatches = []
         cids = self.embed_conf(mol, initial_confs, coord_Map, alg_Map, mol_template, csearch_nprocs, name)
 
         # energy minimize all to get more realistic results
@@ -2141,7 +2089,6 @@ class csearch:
                 cids,
                 name,
                 csearch_file,
-                rotmatches,
                 update_to_rdkit,
                 coord_Map,
                 alg_Map,
@@ -2157,8 +2104,8 @@ class csearch:
                 metal_sym,
                 sample
             )
+            return status, mol_crest[0]
         except IndexError:
             status = -1
             mol_crest = None
-
-        return status, rotmatches, ff, mol_crest
+            return status, mol_crest

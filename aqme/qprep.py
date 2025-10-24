@@ -729,9 +729,10 @@ class qprep:
         charge, mult = None, None
         
         # Use provided atom lists if available
+        charge, mult = self._get_charge_mult(charge, mult)
         if self.args.atom_types and self.args.cartesians:
             return (self.args.atom_types, self.args.cartesians, 
-                   self._get_charge_mult(None, None), True)
+                   charge, mult, True)
                    
         # Process based on input type
         if mol is not None:

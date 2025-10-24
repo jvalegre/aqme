@@ -1,5 +1,3 @@
-#!/usr/bin/python
-
 #######################################################################
 #             CREST functions from the CSEARCH module                 #
 #######################################################################
@@ -21,47 +19,114 @@ from rdkit.Chem import rdMolTransforms
 
 
 def atompairs(mol, atom1, atom2, constraints):
-    active = []
-    for x in constraints:
-        active.append(x[:2])
+    """Find non-constrained atom pairs with specific elements and their distances.
+    
+    Identifies pairs of bonded atoms that are not in the constraints list and 
+    match the specified element types. Used to generate additional distance
+    constraints for geometry optimization.
 
-    for i, x in enumerate(active):
-        active[i] = [int(j) for j in x]
+    Args:
+        mol (rdkit.Chem.rdchem.Mol): Molecule to analyze
+        atom1 (str): First atom symbol ("X" for any, "H" for hydrogen)
+        atom2 (str): Second atom symbol ("X" for any, "H" for hydrogen) 
+        constraints (list): List of existing constraints, each containing
+            at least [atom1_idx, atom2_idx] as first elements
 
+    Returns:
+        list: List of [atom1_idx, atom2_idx, distance] for matching pairs.
+            Indices are 1-based, distances in Angstroms.
+
+    Note:
+        Special values for atom types:
+        - "X": Matches any atom type
+        - "H": Matches only hydrogen
+        Otherwise matches exact element symbols
+    """
+    # Extract atom index pairs from constraints (convert to 1-based)
+    active_pairs = []
+    for constraint in constraints:
+        idx1, idx2 = map(int, constraint[:2])
+        active_pairs.append([idx1, idx2])
+
+    # Find non-constrained bonds matching element types
     pairs = []
-    bonds = [(x.GetBeginAtomIdx(), x.GetEndAtomIdx()) for x in mol.GetBonds()]
-    for [a, b] in bonds:
-        if [a + 1, b + 1] not in active and [b + 1, a + 1] not in active:
-            dist = round(rdMolTransforms.GetBondLength(mol.GetConformer(), a, b), 3)
-            at_a, at_b = mol.GetAtoms()[a].GetSymbol(), mol.GetAtoms()[b].GetSymbol()
-            if atom1 == "X" and atom2 == "X":
-                pairs.append([float(a + 1), float(b + 1), dist])
-            elif atom1 == "X" and atom2 == "H":
-                if at_a == "H" or at_b == "H":
-                    pairs.append([float(a + 1), float(b + 1), dist])
-            else:
-                if (at_a == atom1 and at_b == atom2) or (
-                    at_a == atom2 and at_b == atom1
-                ):
-                    pairs.append([float(a + 1), float(b + 1), dist])
+    for bond in mol.GetBonds():
+        # Get 0-based indices and convert to 1-based
+        idx1 = bond.GetBeginAtomIdx() + 1
+        idx2 = bond.GetEndAtomIdx() + 1
+        
+        # Skip if bond is already constrained
+        if [idx1, idx2] in active_pairs or [idx2, idx1] in active_pairs:
+            continue
+        
+        # Get atoms and their symbols
+        atom1_obj = mol.GetAtomWithIdx(idx1 - 1)
+        atom2_obj = mol.GetAtomWithIdx(idx2 - 1)
+        sym1 = atom1_obj.GetSymbol()
+        sym2 = atom2_obj.GetSymbol()
+        
+        # Calculate bond distance (using 0-based indices)
+        dist = round(rdMolTransforms.GetBondLength(
+            mol.GetConformer(), idx1 - 1, idx2 - 1), 3)
+
+        # Check atom type matches
+        if atom1 == "X" and atom2 == "X":  # Any pair of atoms
+            pairs.append([float(idx1), float(idx2), dist])
+        elif atom1 == "X" and atom2 == "H":  # Any atom with hydrogen
+            if "H" in (sym1, sym2):
+                pairs.append([float(idx1), float(idx2), dist])
+        else:  # Specific atom types
+            if (sym1 == atom1 and sym2 == atom2) or \
+               (sym1 == atom2 and sym2 == atom1):
+                pairs.append([float(idx1), float(idx2), dist])
+    
     return pairs
 
 
 def get_constraint(mol, constraints):
-    # constrained optimization with xtb
+    """Get all constraints for XTB optimization, including bond distances.
+    
+    Combines user-defined constraints with all existing bond distances in the
+    molecule that are not already constrained. This ensures all bonds are
+    fixed during initial optimization steps.
+    
+    Args:
+        mol (rdkit.Chem.rdchem.Mol): Molecule to analyze
+        constraints (list): List of user-defined constraints, each containing
+            at least [atom1_idx, atom2_idx, value] (indices are 1-based)
+    
+    Returns:
+        list: Combined list of all constraints (user-defined + bond distances),
+            each containing [atom1_idx, atom2_idx, value]
+    """
+    # Get all bond pairs not in constraints
     xx_pairs = atompairs(mol, "X", "X", constraints)
-    all_fix = []
-    for x in constraints:
-        all_fix.append(list(x))
-    for x in xx_pairs:
-        all_fix.append(x)
-    return all_fix
+    
+    # Combine user constraints and bond constraints
+    all_constraints = [list(constraint) for constraint in constraints]
+    all_constraints.extend(xx_pairs)
+    
+    return all_constraints
 
 
 def xyzall_2_xyz(xyzin, name):
-    # converting multiple xyz to single
-    command_run_1 = ["obabel", xyzin, "-oxyz", "-O" + name + "_conf_.xyz", "-m"]
-    subprocess.run(command_run_1, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    """Split a multi-molecule XYZ file into individual XYZ files.
+    
+    Uses OpenBabel to convert a file containing multiple XYZ structures into 
+    separate files, one for each conformer. Output files are named with 
+    the pattern {name}_conf_.xyz.
+    
+    Args:
+        xyzin (str): Path to input XYZ file containing multiple structures
+        name (str): Base name for output files (will be appended with _conf_.xyz)
+    
+    Note:
+        Requires OpenBabel (obabel) to be installed and accessible in PATH.
+        Silently ignores any errors from OpenBabel execution.
+    """
+    # Convert multi-XYZ to separate files using OpenBabel
+    command = ["obabel", xyzin, "-oxyz", f"-O{name}_conf_.xyz", "-m"]
+    subprocess.run(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
 def xtb_opt_main(
@@ -80,11 +145,44 @@ def xtb_opt_main(
     complex_ts=False,
     mol=None,
     name_init=None,
-
 ):
-
-    """
-    Run xTB using subprocess to perform CREST/CREGEN conformer sampling
+    """Run XTB optimization and/or CREST conformer sampling with optional constraints.
+    
+    This function handles both XTB geometry optimization and CREST conformer sampling,
+    with support for various types of constraints (atoms, distances, angles, dihedrals).
+    For complex systems or transition states, it performs staged optimizations with
+    different constraint sets.
+    
+    Args:
+        name (str): Base name for input/output files
+        self (object): AQME instance containing program settings
+        charge (int): Molecular charge
+        mult (int): Spin multiplicity
+        smi (str): SMILES string of the molecule, or None
+        constraints_atoms (list): Atom indices to constrain
+        constraints_dist (list): Distance constraints [[i,j,dist], ...]
+        constraints_angle (list): Angle constraints [[i,j,k,angle], ...]
+        constraints_dihedral (list): Dihedral constraints [[i,j,k,l,angle], ...]
+        method_opt (str): Optimization method ('xtb' or 'crest')
+        geom (bool): Whether to apply geometry filters
+        sample (int): Number of conformers to generate
+        complex_ts (bool, optional): Special handling for complexes/TS. Defaults to False.
+        mol (rdkit.Mol, optional): RDKit molecule object. Defaults to None.
+        name_init (str, optional): Initial molecule name. Defaults to None.
+    
+    Returns:
+        For method_opt='crest': int (1 for success)
+        For method_opt='xtb': tuple(rdkit.Mol, float, bool) 
+            - Optimized molecule
+            - Energy in kcal/mol  
+            - Success flag
+    
+    Note:
+        The function handles several complex scenarios:
+        1. Pre-optimization with XTB before CREST
+        2. Constrained optimizations for transition states
+        3. CREGEN conformer sorting and clustering
+        4. Error recovery with different settings
     """
 
     name_no_path = os.path.basename(Path(name)).split(".xyz")[0]
@@ -484,8 +582,28 @@ def create_xcontrol(
     xyzin,
     name_constraint,
 ):
-    """
-    Function to create the .xcontrol.sample if constraints are defined
+    """Create an XTB control file for constrained optimizations.
+    
+    Generates a control file (.xcontrol) for XTB/CREST with various types of 
+    constraints including fixed atoms, distances, angles, and dihedrals. For CREST
+    sampling, also handles metadynamics settings for non-constrained atoms.
+    
+    Args:
+        args: AQME arguments object containing settings (needs crest_force)
+        constraints_atoms (list): List of atom indices to fix
+        constraints_dist (list): List of [atom1, atom2, distance] constraints
+        constraints_angle (list): List of [atom1, atom2, atom3, angle] constraints
+        constraints_dihedral (list): List of [atom1, atom2, atom3, atom4, angle] constraints
+        xyzin (str): Path to input XYZ file
+        name_constraint (str): Output filename for constraint file
+    
+    Returns:
+        bool: True if any constraints were written, False otherwise
+    
+    Note:
+        For CREST sampling (name_constraint='.xcontrol.sample'), adds metadynamics
+        settings for non-constrained atoms to enable efficient conformer sampling.
+        Uses ranges in atom lists to handle large systems efficiently.
     """
 
     constrained_sampling = False
@@ -613,6 +731,36 @@ def nci_ts_mol(
     constraints_angle,
     constraints_dihedral,
 ):
+    """Generate a 3D structure for non-covalent complexes or transition states.
+    
+    Creates a 3D structure from multiple SMILES fragments, handling atom mapping
+    and constraints properly. Suitable for building non-covalent complexes and
+    transition state geometries.
+    
+    Args:
+        smi (list): List of SMILES strings for each fragment
+        log: Logging object to write status messages
+        seed (int): Random seed for conformer generation
+        constraints_atoms (list): List of atom indices to constrain
+        constraints_dist (list): List of [atom1, atom2, distance] constraints
+        constraints_angle (list): List of [atom1, atom2, atom3, angle] constraints
+        constraints_dihedral (list): List of [atom1, atom2, atom3, atom4, angle] constraints
+    
+    Returns:
+        tuple: (
+            rdkit.Mol: Combined 3D molecule,
+            list: Adapted atom constraints,
+            list: Adapted distance constraints,
+            list: Adapted angle constraints,
+            list: Adapted dihedral constraints
+        )
+    
+    Note:
+        - Handles atom mapping between input SMILES and output structure
+        - Positions fragments with 5Å spacing to avoid clashes
+        - Falls back to different embedding strategies if initial attempt fails
+        - Preserves constraints when atom mapping is present in SMILES
+    """
     using_const = None
     if constraints_atoms is not None and constraints_atoms != []:
         using_const = constraints_atoms
