@@ -334,7 +334,7 @@ def get_conf_RMS(mol1, mol2, c1, c2, heavy, max_matches_rmsd):
         float: Best RMSD value found (Angstroms)
     
     Note:
-        numThreads must be 1 to avoid failures or significant slowdowns
+        numThreads must be 1 to not overload the multithreading
     """
     if heavy:
         mol1 = RemoveHs(mol1)

@@ -167,6 +167,7 @@ class qcorr:
             "RO_constant": [],
         }
 
+        destination_success_json = None
         self.args.log.write(f"o  Analyzing output files in {self.args.w_dir_main}\n")
         os.chdir(self.args.w_dir_main)
         # analyze files
@@ -177,11 +178,13 @@ class qcorr:
                 file, file_name
             )
             if errortype in ["no_data", "atomicbasiserror"]:
-                file_terms, _ = self.organize_outputs(
+                file_terms, destination = self.organize_outputs(
                     file, termination, errortype, file_terms
                 )
+                if os.path.exists(file_name + ".json"):
+                    destination_json = destination.joinpath("json_files/")
+                    move_file(destination_json, self.args.w_dir_main, file_name + ".json")
                 if errortype == "atomicbasiserror":
-                    os.remove(file_name + ".json")
                     self.args.log.write(f"{os.path.basename(file)}: Termination = {termination}, Error type = {errortype}")
                 continue
 
@@ -245,11 +248,11 @@ class qcorr:
                 file, termination, errortype, file_terms
             )
 
-            if errortype in ["none", "sp_calc"]:
-                destination_json = destination.joinpath("json_files/")
-                move_file(destination_json, self.args.w_dir_main, file_name + ".json")
-            else:
-                os.remove(file_name + ".json")
+            destination_json = destination.joinpath("json_files/")
+            move_file(destination_json, self.args.w_dir_main, file_name + ".json")
+
+            if errortype == "none":
+                destination_success_json = destination_json
 
             # write information about the QCORR analysis in a csv
             csv_qcorr = self.write_qcorr_csv(file_terms)
@@ -265,10 +268,10 @@ class qcorr:
             try:
                 df_qcorr = pd.read_csv(csv_qcorr)
                 if df_qcorr["Normal termination"][0] > 0:
-                    json_files = glob.glob(f"{destination_json}/*.json")
+                    json_files = glob.glob(f"{destination_success_json}/*.json")
                     full_check(
-                        w_dir_main=destination_json,
-                        destination_fullcheck=destination_json,
+                        w_dir_main=destination_success_json,
+                        destination_fullcheck=destination_success_json,
                         files=json_files,
                         log=self.args.log,
                     )
