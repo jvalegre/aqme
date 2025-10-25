@@ -259,30 +259,6 @@ def test_csearch_input_parameters(program, input, output_nummols):
             1,
             1,
         ),
-        # tests for crest_keywords
-        (
-            "crest",
-            "C",
-            "methane_solvent",
-            True,
-            "--ethr 1 --rthr 0.5 --bthr 0.7 --ewin 4 --cluster",
-            "--alpb benzene",
-            0,
-            1,
-            1,
-        ),
-        # tests for n of processors
-        (
-            "crest",
-            "C",
-            "methane_nprocs",
-            True,
-            "--ethr 1 --rthr 0.5 --bthr 0.7 --ewin 4 --cluster",
-            None,
-            0,
-            1,
-            1,
-        ),
         # test for charge and mult
         (
             "crest",
@@ -290,7 +266,7 @@ def test_csearch_input_parameters(program, input, output_nummols):
             "methane_charged",
             True,
             "--ethr 1 --rthr 0.5 --bthr 0.7 --ewin 4 --cluster",
-            None,
+            "--alpb benzene",
             1,
             2,
             1,
@@ -312,20 +288,7 @@ def test_csearch_crest_parameters(
     os.chdir(csearch_crest_dir)
 
     # runs the program with the different tests
-    if name == 'methane_nprocs':
-        csearch(
-            w_dir_main=csearch_crest_dir,
-            program=program,
-            smi=smi,
-            name=name,
-            cregen=cregen,
-            cregen_keywords=cregen_keywords,
-            crest_keywords=crest_keywords,
-            charge=charge,
-            mult=mult,
-            nprocs=14
-        )
-    elif name == 'methane_solvent':
+    if name == 'methane_charged':
         csearch(
             w_dir_main=csearch_crest_dir,
             program=program,
@@ -337,7 +300,7 @@ def test_csearch_crest_parameters(
             charge=charge,
             mult=mult,
             xtb_keywords='--alpb benzene',
-            nprocs=4
+            nprocs=14
         )        
     else:
         csearch(
@@ -360,59 +323,46 @@ def test_csearch_crest_parameters(
     mols = rdkit.Chem.SDMolSupplier(file, removeHs=False)
     assert charge == int(mols[0].GetProp("Real charge"))
     assert mult == int(mols[0].GetProp("Mult"))
-    if name == 'butane': # CREST sometimes gives 2 conformers and other times 3
-        assert len(mols) >= 1
-    else:
-        assert len(mols) == output_nummols
+    assert len(mols) == output_nummols
     os.chdir(w_dir_main)
 
     file_crest = str(csearch_crest_dir+f"/CSEARCH/crest_xyz/{name}_crest.out")
     outfile = open(file_crest, "r")
     outlines_crest = outfile.readlines()
     outfile.close()
+
     if name == 'methane_charged':
+        charge_mult_found,solvent_found,procs_found = False,False,False
         for line in outlines_crest:
-            if line.startswith(' > crest'):
-                # check if charge and mult are correct in CREST
-                assert line.find('--chrg 1 --uhf 1') > -1
+            if line.find('--chrg 1 --uhf 1') > -1:
+                charge_mult_found = True
+            if line.find('--alpb benzene') > -1:
+                solvent_found = True
+            if line.find('-T 14') > -1:
+                procs_found = True
+            if charge_mult_found and solvent_found and procs_found:
                 break
+        assert charge_mult_found
+        assert solvent_found
+        assert procs_found
 
         file_xtb2 = str(csearch_crest_dir+"/CSEARCH/crest_xyz/methane_charged_crest_xtb1.out")
         outfile_xtb2 = open(file_xtb2, "r")
         outlines_xtb2 = outfile_xtb2.readlines()
         outfile.close()
+        xtb_charge_mult_found,xtb_solvent_found,xtb_procs_found = False,False,False
         for _,line in enumerate(outlines_xtb2):
-            if line.find('program call') > -1:
-                # check if charge and mult are correct in xTB
-                assert line.find('-c 1 --uhf 1') > -1
-    elif name == 'methane_solvent':
-        for line in outlines_crest:
-            if line.startswith(' > crest'):
-                # check if crest_keywords are correct in CREST
-                assert line.find('--alpb benzene') > -1
+            if line.find('-c 1 --uhf 1') > -1:
+                xtb_charge_mult_found = True
+            if line.find('--alpb benzene') > -1:
+                xtb_solvent_found = True
+            if line.find('-P 14') > -1:
+                xtb_procs_found = True
+            if xtb_charge_mult_found and xtb_solvent_found and xtb_procs_found:
                 break
-        file_xtb2 = str(csearch_crest_dir+"/CSEARCH/crest_xyz/methane_solvent_crest_xtb1.out")
-        outfile_xtb2 = open(file_xtb2, "r")
-        outlines_xtb2 = outfile_xtb2.readlines()
-        outfile.close()
-        for _,line in enumerate(outlines_xtb2):
-            if line.find('program call') > -1:
-                # check if xtb_keywords are correct in CREST
-                assert line.find('--alpb benzene') > -1
-    elif name == 'methane_nprocs':
-        for line in outlines_crest:
-            if line.startswith(' > crest'):
-                # check if n of procs are correct in CREST
-                assert line.find('-T 14') > -1
-                break
-        file_xtb2 = str(csearch_crest_dir+"/CSEARCH/crest_xyz/methane_nprocs_crest_xtb1.out")
-        outfile_xtb2 = open(file_xtb2, "r")
-        outlines_xtb2 = outfile_xtb2.readlines()
-        outfile.close()
-        for _,line in enumerate(outlines_xtb2):
-            if line.find('program call') > -1:
-                # check if xtb_keywords are correct in CREST
-                assert line.find('-P 14') > -1
+        assert xtb_charge_mult_found
+        assert xtb_solvent_found
+        assert xtb_procs_found
 
 # tests for parameters of csearch rdkit
 @pytest.mark.parametrize(
