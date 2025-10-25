@@ -197,6 +197,7 @@ from aqme.csearch.utils import (
     realign_mol,
     smi_to_mol,
     substituted_mol,
+    set_metal_atomic_number
 )
 from aqme.csearch.templates import check_metal_neigh, template_embed
 from aqme.utils import (
@@ -209,7 +210,6 @@ from aqme.utils import (
     load_variables,
     mol_from_sdf_or_mol_or_mol2,
     set_destination,
-    set_metal_atomic_number,
 )
 from aqme.csearch.crest import xtb_opt_main
 
@@ -1570,7 +1570,7 @@ class csearch:
                 mol.SetProp("Energy", str(energy))
                 
                 # Restore metal atoms
-                set_metal_atomic_number(mol, metal_idx, metal_sym)
+                mol = set_metal_atomic_number(mol, metal_idx, metal_sym)
                 # Restore special atoms (e.g. for Ir_squareplanar)
                 if original_atn is not None:
                     mol.GetAtomWithIdx(original_atn[1]).SetAtomicNum(original_atn[0])
@@ -1780,7 +1780,7 @@ class csearch:
         """
         mol_ensemb = Chem.Mol(mol)
         if metal_atoms:
-            set_metal_atomic_number(mol_ensemb, metal_idx, metal_sym)
+            mol_ensemb = set_metal_atomic_number(mol_ensemb, metal_idx, metal_sym)
         return mol_ensemb
         
     def _passes_geometry_filters(self, mol, mol_geom, geom):

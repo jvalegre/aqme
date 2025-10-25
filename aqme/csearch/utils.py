@@ -17,6 +17,7 @@ from aqme.utils import (
     mol_from_sdf_or_mol_or_mol2,
     read_xyz_charge_mult,
     add_prefix_suffix,
+    periodic_table
 )
 from aqme.csearch.crest import nci_ts_mol
 
@@ -1011,3 +1012,26 @@ def substituted_mol(mol, checkI, metal_atoms):
                             continue  # Try next charge state
 
     return metal_idx, metal_sym
+
+def set_metal_atomic_number(mol, metal_idx, metal_sym):
+    """
+    Changes the atomic number of the metal atoms using their indices.
+
+    Parameters
+    ----------
+    mol : rdkit.Chem.Mol
+        RDKit molecule object
+    metal_idx : list
+        sorted list that contains the indices of the metal atoms in the molecule
+    metal_sym : list
+        sorted list (same order as metal_idx) that contains the symbols of the metals in the molecule
+    """
+
+    for atom in mol.GetAtoms():
+        if atom.GetIdx() in metal_idx:
+            re_symbol = metal_sym[metal_idx.index(atom.GetIdx())]
+            atomic_number = periodic_table().index(re_symbol)
+            atom.SetAtomicNum(atomic_number)
+            atom.SetFormalCharge(0)
+
+    return mol
