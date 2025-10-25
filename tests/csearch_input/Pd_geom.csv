@@ -1,0 +1,3 @@
+code_name,SMILES,charge,mult,complex_type,geom
+Pd_normal,F[Pd]([NH3])(Cl)[PH3],2,1,,
+Pd_geom,F[Pd](Br)(Cl)[PH3],5,5,squareplanar,"['[F][Pd][Br]',180]"

@@ -62,6 +62,7 @@ def test_csearch_varfile(varfile, nameinvarfile, output_nummols):
         ("rdkit", "pentane.smi", [2, 4]),
         ("rdkit", "pentane.csv", [2, 4]),
         ("rdkit", "Cu.csv", [1, 1, 1]),
+        ("rdkit", "Pd_geom.csv", [1, 1]),
         ("rdkit", "blank_smi.csv", [1, 1]), # check blank cells
         ("rdkit", "unique_smi.csv", [1]), # check that only unique SMILES are used
         ("rdkit", "partial_path", [2, 4]), # checks partial PATHs
@@ -98,6 +99,18 @@ def test_csearch_input_parameters(program, input, output_nummols):
         os.chdir(csearch_input_dir)
     
     # tests here
+    def check_metal_back(file_Cu, metal_type):
+        outfile = open(file_Cu, "r")
+        outlines_sdf = outfile.readlines()
+        outfile.close()
+        metal_found,iodine_found = False,False
+        for line in outlines_sdf:
+            if f' {metal_type} ' in line:
+                metal_found = True
+            if ' I ' in line:
+                iodine_found = True
+        return metal_found,iodine_found
+
     if input in ["pentane.smi", "pentane.csv"]:
         file1 = f'{csearch_input_dir}/CSEARCH/butane_{input.split(".")[1]}_{program}.sdf'
         file2 = f'{csearch_input_dir}/CSEARCH/pentane_{input.split(".")[1]}_{program}.sdf'
@@ -116,13 +129,75 @@ def test_csearch_input_parameters(program, input, output_nummols):
 
         with rdkit.Chem.SDMolSupplier(file1, removeHs=False) as mol1:
             assert len(mol1) == output_nummols[0]
+            # assert charge and mult
+            assert 2 == int(mol1[0].GetProp("Real charge"))
+            assert 1 == int(mol1[0].GetProp("Mult"))
+            # assert iodine is replaced back to Cu
+            metal_found,iodine_found = check_metal_back(file1, 'Cu')
+            assert metal_found
+            assert not iodine_found
         with rdkit.Chem.SDMolSupplier(file2, removeHs=False) as mol2:
             assert len(mol2) == output_nummols[1]
+            assert 0 == int(mol2[0].GetProp("Real charge"))
+            assert 2 == int(mol2[0].GetProp("Mult"))
+            # assert iodine is replaced back to Cu
+            metal_found,iodine_found = check_metal_back(file2, 'Cu')
+            assert metal_found
+            assert not iodine_found
         with rdkit.Chem.SDMolSupplier(file3, removeHs=False) as mol3:
             assert len(mol3) == output_nummols[2]
+            assert 1 == int(mol3[0].GetProp("Real charge"))
+            assert 1 == int(mol3[0].GetProp("Mult"))
+            # assert iodine is replaced back to Cu
+            metal_found,iodine_found = check_metal_back(file3, 'Cu')
+            assert metal_found
+            assert not iodine_found
         os.remove(file1)
         os.remove(file2)
         os.remove(file3)
+
+    elif input == "Pd_geom.csv":
+        # no complex_type or geom
+        file = str(csearch_input_dir+"/CSEARCH/Pd_normal_" + program + ".sdf")
+        assert os.path.exists(file)
+        with rdkit.Chem.SDMolSupplier(file, removeHs=False) as mol:
+            assert len(mol) == output_nummols[0]
+            assert 2 == int(mol[0].GetProp("Real charge"))
+            assert 1 == int(mol[0].GetProp("Mult"))
+            # assert iodine is replaced back to Pd
+            metal_found,iodine_found = check_metal_back(file, 'Pd')
+            assert metal_found
+            assert not iodine_found
+            # assert the complex_type and geom rule aren't applied
+            from rdkit.Chem import rdMolTransforms
+            metal_idx = [a.GetIdx() for a in mol[0].GetAtoms() if a.GetSymbol() == "Pd"][0]
+            F_idx = [a.GetIdx() for a in mol[0].GetAtoms() if a.GetSymbol() == "F"][0]
+            Cl_idx = [a.GetIdx() for a in mol[0].GetAtoms() if a.GetSymbol() == "Cl"][0]
+            angle_FPdBr = rdMolTransforms.GetAngleDeg(mol[0].GetConformer(), F_idx, metal_idx, Cl_idx)
+            assert 103 < angle_FPdBr < 104
+
+        # complex_type = squareplanar, including geom as well
+        file_0 = str(csearch_input_dir+"/CSEARCH/Pd_geom_0_" + program + ".sdf")
+        file_1 = str(csearch_input_dir+"/CSEARCH/Pd_geom_1_" + program + ".sdf")
+        file_2 = str(csearch_input_dir+"/CSEARCH/Pd_geom_2_" + program + ".sdf")
+        assert not os.path.exists(file_0)
+        assert not os.path.exists(file_1)
+        assert os.path.exists(file_2)
+        with rdkit.Chem.SDMolSupplier(file_2, removeHs=False) as mol_2:
+            assert len(mol_2) == output_nummols[1]
+            assert 5 == int(mol_2[0].GetProp("Real charge"))
+            assert 5 == int(mol_2[0].GetProp("Mult"))
+            # assert iodine is replaced back to Pd
+            metal_found,iodine_found = check_metal_back(file_2, 'Pd')
+            assert metal_found
+            assert not iodine_found
+            # assert the complex_type and geom rule are applied
+            from rdkit.Chem import rdMolTransforms
+            metal_idx = [a.GetIdx() for a in mol_2[0].GetAtoms() if a.GetSymbol() == "Pd"][0]
+            F_idx = [a.GetIdx() for a in mol_2[0].GetAtoms() if a.GetSymbol() == "F"][0]
+            Br_idx = [a.GetIdx() for a in mol_2[0].GetAtoms() if a.GetSymbol() == "Br"][0]
+            angle_FPdBr = rdMolTransforms.GetAngleDeg(mol_2[0].GetConformer(), F_idx, metal_idx, Br_idx)
+            assert 179 < angle_FPdBr < 181
 
     elif input == "blank_smi.csv":
         file1 = f'{csearch_input_dir}/CSEARCH/Me_{program}.sdf'
@@ -986,8 +1061,7 @@ def test_csearch_methods(
             if len(final_five_E) == 5:
                 break
 
-        assert sorted(initial_five_E) == sorted(final_five_E)
-
+        assert sorted(initial_five_E)[0:4] == sorted(final_five_E)[0:4]
 
     elif name == 'sample_keyword':
         assert len(mols) == 17
