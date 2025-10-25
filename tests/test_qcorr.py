@@ -229,6 +229,13 @@ from aqme.qcorr import qcorr
         ),  # test for correct creation of json files (all the successful terminations only)
         (
             "QCORR_1",
+            "failed_json",
+            None,
+            ["failed/run_1/error/not_specified_error/json_files","failed/run_1/extra_imag_freq/json_files","failed/run_1/ts_no_imag_freq/json_files"],
+            False,
+        ),  # test for correct creation of json files (unsuccessful terminations)
+        (
+            "QCORR_1",
             "fullcheck",
             None,
             "success/json_files",
@@ -599,6 +606,21 @@ def test_QCORR_analysis(init_folder, file, command_line, target_folder, restore_
             os.chdir(f"{w_dir_main}/{target_folder}")
             json_files = glob.glob("*.json")
             assert len(json_files) == 5
+
+        elif file == "failed_json":
+            # folders tested:
+            # 1. "failed/run_1/error/not_specified_error/json_files"
+            # 2. "failed/run_1/extra_imag_freq/json_files"
+            # 3. "failed/run_1/ts_no_imag_freq/json_files"
+            os.chdir(f"{w_dir_main}/{target_folder[0]}")
+            json_files_0 = glob.glob("*.json")
+            assert len(json_files_0) == 5
+            os.chdir(f"{w_dir_main}/{target_folder[1]}")
+            json_files_1 = glob.glob("*.json")
+            assert len(json_files_1) == 4
+            os.chdir(f"{w_dir_main}/{target_folder[2]}")
+            json_files_2 = glob.glob("*.json")
+            assert len(json_files_2) == 1
 
         elif file == "fullcheck":
             target_fullcheck = ["-- Full check analysis --\n"]
