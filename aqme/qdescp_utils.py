@@ -2043,42 +2043,12 @@ def remove_invalid_smarts(
         """Convert lists to pattern (for direct module calls) and remove quotes from pattern string."""
         return pattern.strip("'").strip('"')
 
-    def _find_mapped_atom_matches(mol: MoleculeType, atom_num: int) -> List[Tuple[int, ...]]:
-        """Find matches for a specific atom number in mapped/unmapped molecules."""
-        mol_idxs = [atom.GetAtomMapNum() for atom in mol.GetAtoms()]
-        
-        # Handle unmapped molecules (SDF files)
-        if len(set(mol_idxs)) == 1 and mol_idxs[0] == 0:
-            for i, atom in enumerate(mol.GetAtoms()):
-                if i == atom_num - 1:  # Convert from 1-based to 0-based indexing
-                    return [(int(atom.GetIdx()),)]
-        
-        # Handle mapped molecules (SMILES)
-        for atom in mol.GetAtoms():
-            if atom.GetAtomMapNum() == atom_num:
-                return [(int(atom.GetIdx()),)]
-        
-        return []
-
-    def _find_smarts_matches(mol: MoleculeType, pattern: str) -> List[Tuple[int, ...]]:
-        """Find all matches for a SMARTS pattern in a molecule."""
-        try:
-            return mol.GetSubstructMatches(Chem.MolFromSmarts(pattern))
-        except:
-            try:
-                return mol.GetSubstructMatches(Chem.MolFromSmarts(f'[{pattern}]'))
-            except:
-                return []
-
-    def _check_pattern(pattern: str, mol: MoleculeType) -> bool:
+    def _check_pattern(self, pattern: str, mol: MoleculeType) -> bool:
         """Check if pattern matches exactly once in molecule."""
         pattern = _clean_pattern(pattern)
         
         # Handle atom numbers vs SMARTS patterns
-        if pattern.isdigit():
-            matches = _find_mapped_atom_matches(mol, int(pattern))
-        else:
-            matches = _find_smarts_matches(mol, pattern)
+        matches, _ = get_atom_matches(self, pattern, mol)
         
         return len(matches) == 1
 
@@ -2088,7 +2058,7 @@ def remove_invalid_smarts(
 
     # Validate each pattern
     for pattern in smarts_targets:
-        matches_found = sum(1 for mol in mol_list if _check_pattern(pattern, mol))
+        matches_found = sum(1 for mol in mol_list if _check_pattern(self, pattern, mol))
         
         if matches_found < required_matches:
             patterns_to_remove.add(pattern)
@@ -2169,8 +2139,12 @@ def get_atom_matches(
         try:
             matches = mol.GetSubstructMatches(Chem.MolFromSmarts(pattern))
         except:
+            pass
+        if len(matches) == 0:
             try:
-                matches = mol.GetSubstructMatches(Chem.MolFromSmarts(f'[{pattern}]'))
+                # If it's a SMARTS pattern with one atom
+                if pattern in periodic_table() or (pattern[0] == '#' and len(pattern) <= 3):
+                    matches = mol.GetSubstructMatches(Chem.MolFromSmarts(f'[{pattern}]'))
             except:
                 self.args.log.write(f"x  WARNING! SMARTS pattern was not specified correctly! Make sure the qdescp_atoms option uses this format: \"[C]\" for atoms, \"[C=N]\" for bonds, and so on.")
 

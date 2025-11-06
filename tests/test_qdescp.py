@@ -21,7 +21,6 @@ from aqme.qdescp_utils import read_json, get_descriptors
 w_dir_main = os.getcwd()
 qdescp_input_dir = Path(w_dir_main).joinpath("tests/qdescp_inputs")
 qdescp_empty_dir = Path(w_dir_main).joinpath("tests/qdescp_empty")
-qdescp_sdf_dir = Path(w_dir_main).joinpath("tests/qdescp_sdf")
 qdescp_csv_dir = Path(w_dir_main).joinpath("tests/qdescp_csv")
 qdescp_au_dir = Path(w_dir_main).joinpath("tests/qdescp_au")
 
@@ -420,12 +419,17 @@ def test_qdescp_missing(
     [
         # tests for using SDF as inputs and automated detection of common atom patterns
         ("sdf_input_n_auto"),
+        ("sdf_input_[As]"),
     ],
 )
 
 def test_qdescp_sdf(
     test
 ):
+    qdescp_sdf_dir = Path(w_dir_main).joinpath("tests/qdescp_sdf")
+
+    if test == "sdf_input_[As]":
+        qdescp_sdf_dir = Path(w_dir_main).joinpath("tests/qdescp_two_sdf")
 
     # reset folder and files
     folder_qdescp = f'{qdescp_sdf_dir}/QDESCP'
@@ -445,21 +449,41 @@ def test_qdescp_sdf(
         os.remove(file_descriptors_full)
 
     # QDESCP-xTB workflow
-    qdescp(
-        files=f'{qdescp_sdf_dir}/*.sdf',
-        destination=f'{folder_qdescp}',
-    )
+    if test == "sdf_input_[As]":
+        qdescp(
+            files=f'{qdescp_sdf_dir}/*.sdf',
+            destination=f'{folder_qdescp}',
+            qdescp_atoms=['As'],
+            charge=-1,
+            mult=1
+        )
+        name_1 = 'conf_72'
+        name_2 = 'conf_73'
+        atom = 'As'
+        charge_1 = 0.35
+        charge_2 = 0.31
+
+    else:
+        qdescp(
+            files=f'{qdescp_sdf_dir}/*.sdf',
+            destination=f'{folder_qdescp}',
+        )
+        name_1 = 'mol1'
+        name_2 = 'mol_2'
+        atom = 'P'
+        charge_1 = 0.34
+        charge_2 = 0.33
 
     # checking csv file
     df_interpret = pd.read_csv(file_descriptors_interpret)
     assert len(df_interpret['code_name']) == 2
-    assert 'mol1' == df_interpret['code_name'][0]
-    assert 'mol_2' == df_interpret['code_name'][1]
+    assert name_1 == df_interpret['code_name'][0]
+    assert name_2 == df_interpret['code_name'][1]
     assert len(df_interpret.columns) == 41
 
     # check if the automated detection of common pattern works
-    assert 0.34 == round(df_interpret['P_Partial charge'][0],2)
-    assert 0.33 == round(df_interpret['P_Partial charge'][1],2)
+    assert charge_1 == round(df_interpret[f'{atom}_Partial charge'][0],2)
+    assert charge_2 == round(df_interpret[f'{atom}_Partial charge'][1],2)
 
 @pytest.mark.parametrize(
     "file",
