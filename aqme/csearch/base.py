@@ -751,9 +751,7 @@ class csearch:
             f'-i{ext}',
             f'{name}.{ext}',
             "-oxyz",
-            f"-O{os.path.dirname(Path(name))}/"
-            f"{'.'.join(os.path.basename(Path(name)).split('.')[:-1])}"
-            f"_{self.args.program.lower()}.xyz",
+            f"-O{name}_{self.args.program.lower()}.xyz"
         ]
         subprocess.run(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         

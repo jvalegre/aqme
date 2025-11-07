@@ -1011,12 +1011,13 @@ def _calculate_mults_from_mols(mols, args):
     return mults
 
 
-def _load_mols_for_csearch(input_file, args):
+def _load_mols_for_csearch(input_file, args, keep_xyz):
     """Load molecules for CSEARCH module.
     
     Args:
         input_file (str): Path to input file
         args: Arguments object
+        keep_xyz (bool): Keep XYZ input
     
     Returns:
         tuple: (suppl, charges, mults, IDs)
@@ -1032,7 +1033,7 @@ def _load_mols_for_csearch(input_file, args):
     
     # Load molecules based on format
     if extension.lower() == "sdf":
-        mols = load_sdf(input_file)
+        mols = load_sdf(input_file,keep_xyz=keep_xyz)
     elif extension.lower() == "mol":
         mols = [Chem.MolFromMolFile(input_file, removeHs=False)]
     elif extension.lower() == "mol2":
@@ -1057,7 +1058,7 @@ def _load_mols_for_csearch(input_file, args):
     return suppl, charges, mults, IDs
 
 
-def mol_from_sdf_or_mol_or_mol2(input_file, module, args, low_check=None):
+def mol_from_sdf_or_mol_or_mol2(input_file, module, args, low_check=None, keep_xyz=False):
     """Load molecule objects from SDF, MOL, or MOL2 files.
     
     Handles different file formats and modules (qprep, cmin, csearch).
@@ -1077,6 +1078,8 @@ def mol_from_sdf_or_mol_or_mol2(input_file, module, args, low_check=None):
         - int: Return first N conformers
         - float: Return conformers within energy window (kcal/mol)
         - None: Return all conformers
+    keep_xyz : bool
+        Keep the generated XYZ for CREST runs in CSEARCH when using an XYZ input
     
     Returns
     -------
@@ -1089,10 +1092,10 @@ def mol_from_sdf_or_mol_or_mol2(input_file, module, args, low_check=None):
         return _load_mols_for_qprep_cmin(input_file, low_check)
     
     elif module == "csearch":
-        return _load_mols_for_csearch(input_file, args)
+        return _load_mols_for_csearch(input_file, args, keep_xyz=keep_xyz)
 
 
-def load_sdf(input_file):
+def load_sdf(input_file, keep_xyz=False):
     """Load molecules from SDF file with error recovery.
     
     Attempts to load SDF file. If loading fails (e.g., from GaussView),
@@ -1100,6 +1103,7 @@ def load_sdf(input_file):
     
     Args:
         input_file (str): Path to SDF file
+        keep_xyz (bool): Keep XYZ input
     
     Returns:
         list: RDKit molecule objects with hydrogens preserved
@@ -1141,7 +1145,8 @@ def load_sdf(input_file):
             )
             
             mols = [Chem.rdmolfiles.MolFromXYZFile(xyz_file)]
-            os.remove(xyz_file)
+            if not keep_xyz:
+                os.remove(xyz_file)
     
     return mols
 

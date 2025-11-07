@@ -445,7 +445,6 @@ def prepare_com_files(args, csearch_file):
     """
     # Get filename and extension
     file_path = Path(csearch_file)
-    filename = file_path.name
     extension = file_path.suffix.lower()[1:]  # Remove leading dot
     
     # Process Gaussian files
@@ -463,10 +462,9 @@ def prepare_com_files(args, csearch_file):
     try:
         # Convert to SDF format
         xyz_2_sdf(xyz_file)
-        
         # Create SDF path and read molecule
         sdf_path = file_path.with_suffix('.sdf')
-        suppl, _, _, _ = mol_from_sdf_or_mol_or_mol2(str(sdf_path), "csearch", args)
+        suppl, _, _, _ = mol_from_sdf_or_mol_or_mol2(str(sdf_path), "csearch", args, keep_xyz=True)
         
         # Process name and create job configuration
         name = add_prefix_suffix(file_path.stem, args)
@@ -554,10 +552,12 @@ def prepare_sdf_files(args, csearch_file):
     sdf_path = Path(csearch_file)
     
     # Read molecules from SDF file
+    keep_xyz = True if args.program.lower() == 'crest' else False # keep XYZ as inputs for CREST runs
     suppl, charges, mults, ids = mol_from_sdf_or_mol_or_mol2(
         str(sdf_path), 
         "csearch", 
-        args
+        args,
+        keep_xyz=keep_xyz
     )
     
     # Process base names only

@@ -605,7 +605,7 @@ def xtb_opt_main(
     
     def _sort_and_cluster_conformers(self, csearch_file, sample, name):
         """Sort conformers by energy and optionally cluster them."""
-        suppl, _, _, _ = mol_from_sdf_or_mol_or_mol2(csearch_file, "csearch", self.args)
+        suppl, _, _, _ = mol_from_sdf_or_mol_or_mol2(csearch_file, "csearch", self.args, keep_xyz=True)
         os.remove(csearch_file)
         
         # Sort by energy (CREGEN sometimes fails to do this)
@@ -983,7 +983,7 @@ def nci_ts_mol(
 
     def _adapt_geometric_constraints(mol, geometric_constraints, n_atoms):
         """Map geometric constraints from SMILES atom mapping to molecule indices."""
-        if geometric_constraints is None or not geometric_constraints:
+        if geometric_constraints is None or len(geometric_constraints) == 0:
             return []
             
         adapted = []
