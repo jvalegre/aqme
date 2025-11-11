@@ -16,7 +16,7 @@ Full documentation with installation instructions, technical details and example
 Don't miss out the latest hands-on tutorials from our [YouTube channel](https://www.youtube.com/channel/UCHRqI8N61bYxWV9BjbUI4Xw)!  
 
 ## Recommended installation
-1. (Only once) Create new conda environment: `conda create -n aqme python=3.10`  
+1. (Only once) Create new conda environment: `conda create -n aqme python=3.12`  
 2. Activate conda environment: `conda activate aqme`  
 3. Install AQME using pip: `pip install aqme`  
 4. Install Open Babel: `conda install -y -c conda-forge openbabel=3.1.1`  

@@ -17,520 +17,832 @@ from aqme.utils import (
     mol_from_sdf_or_mol_or_mol2,
     read_xyz_charge_mult,
     add_prefix_suffix,
+    periodic_table
 )
 from aqme.csearch.crest import nci_ts_mol
 
 
-def csv_2_list(contraints):
+def csv_2_list(constraints):
+    """Convert CSV constraints to a list format.
+    
+    Args:
+        constraints: CSV constraint data, can be string, list or NaN
+        
+    Returns:
+        list: List of constraints, empty list if input was NaN
+    """
     try:
-        if pd.isnull(contraints):
-            contraints = []
+        if pd.isnull(constraints):
+            constraints = []
     except ValueError:
         pass
-    if not isinstance(contraints, list):
-        contraints = ast.literal_eval(contraints)
+    if not isinstance(constraints, list):
+        constraints = ast.literal_eval(constraints)
     
-    return contraints
+    return constraints
 
 
 def prepare_direct_smi(args):
-    job_inputs = []
-
-    if args.name is not None:
-        name = args.name
-        name = add_prefix_suffix(name, args)
-    else:
-        args.log.write(f"\nx  Specify a name ('name' option) when using the 'smi' option!")
+    """Prepare job inputs from a direct SMILES input.
+    
+    Args:
+        args: Arguments object containing SMILES input configuration
+        
+    Returns:
+        list: List containing single job configuration tuple
+        
+    Raises:
+        SystemExit: If no name is provided for the SMILES input
+    """
+    if args.name is None:
+        args.log.write("\nx  Specify a name ('name' option) when using the 'smi' option!")
         args.log.finalize()
         sys.exit()
 
-    obj = (
-        args.smi,
-        name,
-        args.charge,
-        args.mult,
+    name = add_prefix_suffix(args.name, args)
+    
+    # Create job configuration tuple
+    job_config = (
+        args.smi,         # SMILES string
+        name,            # Molecule name
+        args.charge,     # Charge
+        args.mult,       # Multiplicity
         args.constraints_atoms,
         args.constraints_dist,
-        args.constraints_angle,
+        args.constraints_angle, 
         args.constraints_dihedral,
         args.complex_type,
         args.geom,
         args.sample
     )
-    job_inputs.append(obj)
-
-    return job_inputs
+    
+    return [job_config]
 
 
 def prepare_smiles_files(args, csearch_file):
+    """Process SMILES data from a file into job configurations.
+
+    Reads SMILES data from a file where each line contains a SMILES string
+    followed by a molecule name. Creates job configurations for each molecule.
+
+    Args:
+        args: Configuration object containing processing parameters
+        csearch_file (str): Path to file containing SMILES data
+
+    Returns:
+        list: List of job configuration tuples for each molecule
+    """
+    # Read and filter out empty lines
     with open(csearch_file) as smifile:
         lines = [line for line in smifile if line.strip()]
+        
     job_inputs = []
-    for _, line in enumerate(lines):
-        (
-            smi,
-            name,
-        ) = prepare_smiles_from_line(line, args)
-        obj = (
-            smi,
-            name,
-            args.charge,
-            args.mult,
-            args.constraints_atoms,
-            args.constraints_dist,
-            args.constraints_angle,
-            args.constraints_dihedral,
-            args.complex_type,
-            args.geom,
-            args.sample
+    for line in lines:
+        # Process SMILES and name from each line
+        smi, name = prepare_smiles_from_line(line, args)
+        
+        # Create job configuration
+        job_config = (
+            smi,                     # SMILES string
+            name,                    # Molecule name
+            args.charge,             # Charge
+            args.mult,               # Multiplicity
+            args.constraints_atoms,  # Atom constraints
+            args.constraints_dist,   # Distance constraints
+            args.constraints_angle,  # Angle constraints
+            args.constraints_dihedral, # Dihedral constraints
+            args.complex_type,      # Complex type
+            args.geom,              # Geometry
+            args.sample             # Sample
         )
-        job_inputs.append(obj)
+        job_inputs.append(job_config)
 
     return job_inputs
 
 
 def prepare_smiles_from_line(line, args):
+    """Extract SMILES and molecule name from a line of text.
 
-    toks = line.split()
-    # editing part
-    smiles = toks[0]
-    name = toks[1]
-    name = add_prefix_suffix(name, args)
+    Processes a space-separated line where the first token is a SMILES string
+    and the second token is the molecule name. Also handles special SMILES
+    syntax for nitrogen chirality.
 
-    # Check for N@@ or N@ in SMILES
+    Args:
+        line (str): Space-separated line containing SMILES and name
+        args: Configuration object containing processing parameters
+
+    Returns:
+        tuple: (smiles, name) where:
+            - smiles (str): Processed SMILES string
+            - name (str): Processed molecule name with prefix/suffix
+            
+    Note:
+        N@@ and N@ in SMILES are replaced with N as chiral nitrogen is not supported
+    """
+    # Split line into tokens
+    tokens = line.split()
+    if len(tokens) < 2:
+        args.log.write("\nx  Error: Line must contain SMILES and name")
+        return None, None
+        
+    smiles = tokens[0]
+    name = add_prefix_suffix(tokens[1], args)
+
+    # Handle unsupported chiral nitrogen in SMILES
     if "N@@" in smiles or "N@" in smiles:
-        args.log.write(f"\nx  WARNING! AQME does not support quiral N atoms in SMILES strings (N@@ or N@). These atoms were replaced by N in the SMILES: {smiles}.")
+        args.log.write(
+            f"\nx  WARNING! AQME does not support chiral N atoms in SMILES strings "
+            f"(N@@ or N@). These atoms were replaced by N in the SMILES: {smiles}."
+        )
         smiles = smiles.replace("N@@", "N").replace("N@", "N")
 
     return smiles, name
 
 
 def prepare_csv_files(args, csearch_file):
-    csv_smiles = pd.read_csv(csearch_file)
-    # avoid running calcs with special signs (i.e. *)
+    """Process molecule data from a CSV file into job configurations.
 
-    for name_csv_indiv in csv_smiles['code_name']:
-        if '*' in f'{name_csv_indiv}':
-            args.log.write(f"\nx  WARNING! The names provided in the CSV contain * (i.e. {name_csv_indiv}). Please, remove all the * characters.")
+    Reads molecule data from a CSV file that must contain SMILES strings and molecule names.
+    Performs various validations and creates unique job configurations for each molecule.
+
+    Args:
+        args: Configuration object containing processing parameters
+        csearch_file (str): Path to CSV file containing molecule data
+
+    Returns:
+        list: List of job configuration tuples for each unique molecule
+
+    Raises:
+        SystemExit: If file is empty, missing required columns, or contains invalid data
+    """
+    # Validate file exists and is not empty
+    if os.path.getsize(csearch_file) == 0:
+        args.log.write(f"File {args.input} is empty!")
+        args.log.finalize()
+        sys.exit()
+    
+    # Read and validate CSV content
+    csv_smiles = pd.read_csv(csearch_file)
+    if csv_smiles.empty:
+        args.log.write(f"File {args.input} is empty!")
+        args.log.finalize()
+        sys.exit()
+    
+    # Validate code_name column
+    if "code_name" in csv_smiles.columns and csv_smiles["code_name"].dropna().empty:
+        args.log.write(f"File {args.input} has a 'code_name' column with no values.")
+        args.log.finalize()
+        sys.exit()
+
+    # Validate molecule names
+    for name in csv_smiles['code_name']:
+        if '*' in str(name):
+            args.log.write(
+                f"\nx  WARNING! The names provided in the CSV contain * "
+                f"(i.e. {name}). Please, remove all the * characters."
+            )
             args.log.finalize()
             sys.exit()
 
+    # Process SMILES columns and generate job configurations
     job_inputs = []
-    # run conformer searches only for unique SMILES
     unique_smiles = set()
-    smi_col = False
-    for column_index, column in enumerate(csv_smiles.columns):
-        if "SMILES" == column.upper() or "SMILES_" in column.upper():
-            smi_col = True
-            for i in range(len(csv_smiles)):
-                obj = generate_mol_from_csv(args, csv_smiles, i, column_index)
-                if obj is not None:
-                    if obj[0] not in unique_smiles:
-                        job_inputs.append(obj)
-                        unique_smiles.add(obj[0])
+    has_smiles_column = False
+    
+    for col_idx, column in enumerate(csv_smiles.columns):
+        if column.upper() == "SMILES" or "SMILES_" in column.upper():
+            has_smiles_column = True
+            
+            # Process each row in the SMILES column
+            for row_idx in range(len(csv_smiles)):
+                mol_config = generate_mol_from_csv(args, csv_smiles, row_idx, col_idx)
+                
+                if mol_config is not None:
+                    smiles, name = mol_config[0], mol_config[1]
+                    
+                    # Only add unique SMILES
+                    if smiles not in unique_smiles:
+                        job_inputs.append(mol_config)
+                        unique_smiles.add(smiles)
                     else:
-                        args.log.write(f'\nx  SMILES "{obj[0]}" used in {obj[1]} is a duplicate, it was already used with a different code_name!')
+                        args.log.write(
+                            f'\nx  SMILES "{smiles}" used in {name} is a duplicate, '
+                            'it was already used with a different code_name!'
+                        )
                        
-    if not smi_col:
-        args.log.write("\nx  Make sure the CSV file contains a column called 'SMILES', 'smiles' or 'SMILES_' with the SMILES of the molecules!")
+    if not has_smiles_column:
+        args.log.write(
+            "\nx  Make sure the CSV file contains a column called 'SMILES', "
+            "'smiles' or 'SMILES_' with the SMILES of the molecules!"
+        )
         args.log.finalize()
         sys.exit()
+        
     return job_inputs
 
 
 def generate_mol_from_csv(args, csv_smiles, index, column_index):
-    # assigning names and smi in each loop
+    """Generate molecule configuration from CSV data.
 
-    smi_valid = False
-    for column in csv_smiles.columns:
-        if column.upper() == "SMILES" or column.upper().startswith("SMILES_"):
-            column_name = csv_smiles.columns[column_index]
-            smiles = csv_smiles.loc[index, column_name]
-            # this part avoids empty cells at the end of CSV files
-            if str(smiles).lower() != 'nan':
-                smi_valid = True
-            break
+    Extracts SMILES and molecule properties from a specific row and column in the CSV data,
+    performing necessary validations and transformations. Supports optional properties
+    like charge, multiplicity, and various constraints.
 
-    if smi_valid:
-        # Check for N@@ or N@ in SMILES
-        if "N@@" in smiles or "N@" in smiles:
-            args.log.write(f"\nx  WARNING! AQME does not support quiral N atoms in SMILES strings (N@@ or N@). These atoms were replaced by N in the SMILES: {smiles}.")
-            smiles = smiles.replace("N@@", "N").replace("N@", "N")
+    Args:
+        args: Configuration object containing processing parameters
+        csv_smiles (pandas.DataFrame): DataFrame containing molecule data
+        index (int): Row index in the DataFrame
+        column_index (int): Column index for SMILES data
 
-        try:
-            name = str(csv_smiles.loc[index, "code_name"])
-            column_name = csv_smiles.columns[column_index]
-            if column_name.upper() == "SMILES" or not "_" in column_name:
-                name += ""
-            else:
-                suffix = column_name.split("_")[-1]
-                name += "_" + suffix
-        except KeyError:
-            args.log.write("\nx  Make sure the CSV file contains a column called 'code_name' with the names of the molecules!")
-            args.log.finalize()
-            sys.exit()
-
-        constraints_atoms = args.constraints_atoms
-        constraints_dist = args.constraints_dist
-        constraints_angle = args.constraints_angle
-        constraints_dihedral = args.constraints_dihedral
-
-        if "constraints_atoms" in csv_smiles.columns:
-            if str(csv_smiles.loc[index, 'constraints_atoms']).lower() != 'nan':
-                constraints_atoms = csv_smiles.loc[index, "constraints_atoms"]
-
-        if "constraints_dist" in csv_smiles.columns:
-            if str(csv_smiles.loc[index, 'constraints_dist']).lower() != 'nan':
-                constraints_dist = csv_smiles.loc[index, "constraints_dist"]
-
-        if "constraints_angle" in csv_smiles.columns:
-            if str(csv_smiles.loc[index, 'constraints_angle']).lower() != 'nan':
-                constraints_angle = csv_smiles.loc[index, "constraints_angle"]
-
-        if "constraints_dihedral" in csv_smiles.columns:
-            if str(csv_smiles.loc[index, 'constraints_dihedral']).lower() != 'nan':
-                constraints_dihedral = csv_smiles.loc[index, "constraints_dihedral"]
-
-        constraints_atoms = csv_2_list(constraints_atoms)
-        constraints_dist = csv_2_list(constraints_dist)
-        constraints_angle = csv_2_list(constraints_angle)
-        constraints_dihedral = csv_2_list(constraints_dihedral)
-
-        charge = args.charge
-        mult = args.mult
-        if "charge" in csv_smiles.columns:
-            if str(csv_smiles.loc[index, 'charge']).lower() != 'nan':
-                charge = csv_smiles.loc[index, "charge"]
-        if "mult" in csv_smiles.columns:
-            if str(csv_smiles.loc[index, 'mult']).lower() != 'nan':
-                mult = csv_smiles.loc[index, "mult"]
-
-        complex_type = args.complex_type
-        if "complex_type" in csv_smiles.columns:
-            if str(csv_smiles.loc[index, 'complex_type']).lower() != 'nan':
-                complex_type = csv_smiles.loc[index, "complex_type"]
-
-        geom = args.geom
-        if "geom" in csv_smiles.columns:
-            if str(csv_smiles.loc[index, 'geom']).lower() != 'nan':
-                geom = csv_smiles.loc[index, "geom"]
-        geom = csv_2_list(geom)
-
-        sample = args.sample
-        if "sample" in csv_smiles.columns:
-            if str(csv_smiles.loc[index, 'sample']).lower() != 'nan':
-                sample = csv_smiles.loc[index, "sample"]
-
-        obj = (
-            smiles,
-            name,
-            charge,
-            mult,
-            constraints_atoms,
-            constraints_dist,
-            constraints_angle,
-            constraints_dihedral,
-            complex_type,
-            geom,
-            sample
-        )
-
-        return obj
+    Returns:
+        tuple: Job configuration tuple if valid, None if invalid data.
+            Format: (smiles, name, charge, mult, constraints...)
+            
+    Raises:
+        SystemExit: If required 'code_name' column is missing
+    """
+    # Get SMILES from specified column
+    column_name = csv_smiles.columns[column_index]
+    smiles = csv_smiles.loc[index, column_name]
     
-    else:
+    # Skip empty or NaN SMILES
+    if pd.isna(smiles) or str(smiles).lower() == 'nan':
         return None
+        
+    # Handle unsupported chiral nitrogen in SMILES
+    if "N@@" in str(smiles) or "N@" in str(smiles):
+        args.log.write(
+            f"\nx  WARNING! AQME does not support chiral N atoms in SMILES strings "
+            f"(N@@ or N@). These atoms were replaced by N in the SMILES: {smiles}."
+        )
+        smiles = str(smiles).replace("N@@", "N").replace("N@", "N")
+
+    # Process molecule name
+    try:
+        name = str(csv_smiles.loc[index, "code_name"])
+        # Add suffix based on SMILES column name
+        if column_name.upper() != "SMILES" and "_" in column_name:
+            name += "_" + column_name.split("_")[-1]
+    except KeyError:
+        args.log.write("\nx  Make sure the CSV file contains a column called 'code_name' with the names of the molecules!")
+        args.log.finalize()
+        sys.exit()
+
+    # Initialize properties with default values
+    charge = args.charge
+    mult = args.mult
+    constraints_atoms = args.constraints_atoms
+    constraints_dist = args.constraints_dist
+    constraints_angle = args.constraints_angle
+    constraints_dihedral = args.constraints_dihedral
+    complex_type = args.complex_type
+    geom = args.geom
+    sample = args.sample
+
+    # Helper function to get non-NaN values from DataFrame
+    def get_csv_value(col_name, default_value):
+        if col_name in csv_smiles.columns:
+            value = csv_smiles.loc[index, col_name]
+            if not pd.isna(value) and str(value).lower() != 'nan':
+                return value
+        return default_value
+
+    # Get molecule properties with fallbacks to defaults
+    charge = get_csv_value("charge", charge)
+    mult = get_csv_value("mult", mult)
+    complex_type = get_csv_value("complex_type", complex_type)
+    sample = get_csv_value("sample", sample)
+
+    # Get and process constraint values
+    constraints_atoms = csv_2_list(get_csv_value("constraints_atoms", constraints_atoms))
+    constraints_dist = csv_2_list(get_csv_value("constraints_dist", constraints_dist))
+    constraints_angle = csv_2_list(get_csv_value("constraints_angle", constraints_angle))
+    constraints_dihedral = csv_2_list(get_csv_value("constraints_dihedral", constraints_dihedral))
+    geom = csv_2_list(get_csv_value("geom", geom))
+
+    # Create and return job configuration
+    return (
+        smiles,                 # SMILES string
+        name,                   # Molecule name
+        charge,                 # Charge
+        mult,                   # Multiplicity
+        constraints_atoms,      # Atom constraints
+        constraints_dist,       # Distance constraints
+        constraints_angle,      # Angle constraints
+        constraints_dihedral,   # Dihedral constraints
+        complex_type,          # Complex type
+        geom,                  # Geometry
+        sample                 # Sample
+    )
 
 
 def prepare_cdx_files(args, csearch_file):
-    # converting to smiles from chemdraw
+    """Convert ChemDraw files to SMILES and prepare job configurations.
+
+    Converts molecules from a ChemDraw file to SMILES format and creates job
+    configurations for each molecule. Names are generated based on the input
+    filename with an index suffix.
+
+    Args:
+        args: Configuration object containing processing parameters
+        csearch_file (str): Path to ChemDraw file (.cdx)
+
+    Returns:
+        list: List of job configuration tuples for each molecule
+    """
+    # Convert ChemDraw molecules to SMILES format
     molecules = generate_mol_from_cdx(csearch_file)
 
     job_inputs = []
+    # Process each molecule with an index suffix
     for i, (smiles, _) in enumerate(molecules):
-        name = f"{'.'.join(os.path.basename(Path(csearch_file)).split('.')[:-1])}_{str(i)}"
+        # Generate name from file basename with index
+        basename = '.'.join(os.path.basename(Path(csearch_file)).split('.')[:-1])
+        name = f"{basename}_{i}"
         name = add_prefix_suffix(name, args)
 
-        obj = (
-            smiles,
-            name,
-            args.charge,
-            args.mult,
-            args.constraints_atoms,
-            args.constraints_dist,
-            args.constraints_angle,
-            args.constraints_dihedral,
-            args.complex_type,
-            args.geom,
-            args.sample
+        # Create job configuration
+        job_config = (
+            smiles,                 # SMILES string
+            name,                   # Molecule name
+            args.charge,            # Charge
+            args.mult,              # Multiplicity
+            args.constraints_atoms,  # Atom constraints
+            args.constraints_dist,   # Distance constraints
+            args.constraints_angle,  # Angle constraints
+            args.constraints_dihedral, # Dihedral constraints
+            args.complex_type,      # Complex type
+            args.geom,              # Geometry
+            args.sample             # Sample
         )
-        job_inputs.append(obj)
+        job_inputs.append(job_config)
     return job_inputs
 
 
 def generate_mol_from_cdx(csearch_file):
-    cmd_cdx = ["obabel", "-icdx", csearch_file, "-osmi", "-Ocdx.smi"]
-    subprocess.run(cmd_cdx, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    with open("cdx.smi", "r") as smifile:
-        smi_lines = [str(line.strip()) for line in smifile]
-    os.remove("cdx.smi")
-    molecules = []
-    for smi in smi_lines:
-        molecule = Chem.MolFromSmiles(smi)
-        molecules.append((smi, molecule))
-    return molecules
+    """Convert ChemDraw file to SMILES format using OpenBabel.
+
+    Uses OpenBabel to convert a ChemDraw file to SMILES format and creates
+    RDKit molecules for each SMILES string.
+
+    Args:
+        csearch_file (str): Path to ChemDraw file (.cdx)
+
+    Returns:
+        list: List of tuples (smiles, rdkit_molecule) for each molecule
+
+    Note:
+        Requires OpenBabel to be installed and available in the system path
+    """
+    # Convert CDX to SMILES using OpenBabel
+    cdx_cmd = ["obabel", "-icdx", csearch_file, "-osmi", "-Ocdx.smi"]
+    try:
+        subprocess.run(
+            cdx_cmd, 
+            stdout=subprocess.DEVNULL, 
+            stderr=subprocess.DEVNULL,
+            check=True
+        )
+
+        # Read generated SMILES file
+        with open("cdx.smi", "r") as smifile:
+            smi_lines = [str(line.strip()) for line in smifile]
+
+        # Clean up temporary file
+        os.remove("cdx.smi")
+
+        # Convert SMILES to RDKit molecules
+        molecules = []
+        for smi in smi_lines:
+            mol = Chem.MolFromSmiles(smi)
+            if mol is not None:  # Check for valid molecules
+                molecules.append((smi, mol))
+
+        return molecules
+
+    except subprocess.CalledProcessError:
+        raise RuntimeError("Failed to convert ChemDraw file using OpenBabel")
+    except FileNotFoundError:
+        raise RuntimeError("OpenBabel not found. Please ensure it is installed and in your system path")
 
 
 def prepare_com_files(args, csearch_file):
-    job_inputs = []
+    """Process Gaussian input files or XYZ files into job configurations.
+    
+    Converts Gaussian (.com/.gjf) or XYZ files into a temporary SDF format,
+    extracts molecular information, and creates job configurations. Handles
+    charge and multiplicity from file or arguments.
 
-    filename = os.path.basename(Path(csearch_file))
-    if os.path.basename(Path(filename)).split('.')[-1] in ["gjf", "com"]:
-        xyz_file, _, _ = com_2_xyz(csearch_file)
-        if args.charge is None:
-            _, charge, _ = get_info_input(csearch_file)
-        else:
-            charge = args.charge
-        if args.mult is None:
-            _, _, mult = get_info_input(csearch_file)
-        else:
-            mult = args.mult
+    Args:
+        args: Configuration object containing processing parameters
+        csearch_file (str): Path to Gaussian or XYZ input file
+
+    Returns:
+        list: List containing single job configuration tuple
+        
+    Note:
+        Temporary files are created and cleaned up during processing
+    """
+    # Get filename and extension
+    file_path = Path(csearch_file)
+    extension = file_path.suffix.lower()[1:]  # Remove leading dot
+    
+    # Process Gaussian files
+    if extension in ["gjf", "com"]:
+        xyz_file, file_charge, file_mult = com_2_xyz(csearch_file)
+        charge = args.charge if args.charge is not None else file_charge
+        mult = args.mult if args.mult is not None else file_mult
+    # Process XYZ files
     else:
         xyz_file = csearch_file
-        if args.charge is None:
-            charge, _ = read_xyz_charge_mult(csearch_file)
-        else:
-            charge = args.charge
-        if args.mult is None:
-            _, mult = read_xyz_charge_mult(csearch_file)
-        else:
-            mult = args.mult
-    _ = xyz_2_sdf(xyz_file)
+        file_charge, file_mult = read_xyz_charge_mult(csearch_file)
+        charge = args.charge if args.charge is not None else file_charge
+        mult = args.mult if args.mult is not None else file_mult
 
-    sdffile = f'{os.path.dirname(Path(csearch_file))}/{".".join(filename.split(".")[:-1])}.sdf'
-    suppl, _, _, _ = mol_from_sdf_or_mol_or_mol2(sdffile, "csearch", args)
-
-    name = f'{".".join(filename.split(".")[:-1])}'
-    name = add_prefix_suffix(name, args)
-
-    obj = (
-        suppl[0],
-        name,
-        charge,
-        mult,
-        args.constraints_atoms,
-        args.constraints_dist,
-        args.constraints_angle,
-        args.constraints_dihedral,
-        args.complex_type,
-        args.geom,
-        args.sample
-    )
-    job_inputs.append(obj)
-    if os.path.basename(Path(csearch_file)).split('.')[-1] in ["gjf", "com"]:
-        os.remove(xyz_file)
-    os.remove(sdffile)
-
-    return job_inputs
+    try:
+        # Convert to SDF format
+        xyz_2_sdf(xyz_file)
+        # Create SDF path and read molecule
+        sdf_path = file_path.with_suffix('.sdf')
+        suppl, _, _, _ = mol_from_sdf_or_mol_or_mol2(str(sdf_path), "csearch", args, keep_xyz=True)
+        
+        # Process name and create job configuration
+        name = add_prefix_suffix(file_path.stem, args)
+        job_config = (
+            suppl[0],                # Molecule
+            name,                    # Name
+            charge,                  # Charge
+            mult,                    # Multiplicity
+            args.constraints_atoms,  # Atom constraints
+            args.constraints_dist,   # Distance constraints
+            args.constraints_angle,  # Angle constraints
+            args.constraints_dihedral, # Dihedral constraints
+            args.complex_type,      # Complex type
+            args.geom,              # Geometry
+            args.sample             # Sample
+        )
+        
+        return [job_config]
+        
+    finally:
+        # Clean up temporary files
+        if extension in ["gjf", "com"]:
+            os.remove(xyz_file)
+        os.remove(str(sdf_path))
 
 
 def prepare_pdb_files(args, csearch_file):
-    filename = os.path.basename(csearch_file)
-    sdffile = f'{os.path.dirname(csearch_file)}/{".".join(filename.split(".")[:-1])}.sdf'
-    command_pdb = [
-        "obabel",
-        "-ipdb",
-        csearch_file,
-        "-osdf",
-        f'-O{sdffile}',
-    ]
-    subprocess.run(command_pdb, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    job_inputs = prepare_sdf_files(args, csearch_file)
-    os.remove(sdffile)
-    return job_inputs
+    """Process PDB files into job configurations via SDF conversion.
+    
+    Converts PDB files to SDF format using OpenBabel, then processes them
+    into job configurations.
+
+    Args:
+        args: Configuration object containing processing parameters
+        csearch_file (str): Path to PDB file
+
+    Returns:
+        list: List of job configuration tuples for each molecule in PDB file
+        
+    Note:
+        Creates and cleans up temporary SDF files during processing
+    """
+    file_path = Path(csearch_file)
+    sdf_path = file_path.with_suffix('.sdf')
+    
+    try:
+        # Convert PDB to SDF using OpenBabel
+        command_pdb = [
+            "obabel",
+            "-ipdb", str(file_path),
+            "-osdf",
+            f"-O{sdf_path}"
+        ]
+        subprocess.run(
+            command_pdb, 
+            stdout=subprocess.DEVNULL, 
+            stderr=subprocess.DEVNULL,
+            check=True
+        )
+        
+        # Process the SDF file
+        return prepare_sdf_files(args, csearch_file)
+        
+    except subprocess.CalledProcessError:
+        raise RuntimeError("Failed to convert PDB file using OpenBabel")
+    finally:
+        # Clean up temporary file
+        if sdf_path.exists():
+            os.remove(sdf_path)
 
 
 def prepare_sdf_files(args, csearch_file):
-    filename = os.path.basename(csearch_file)
-    sdffile = f'{os.path.dirname(csearch_file)}/{filename}'
+    """Process SDF files into job configurations.
+    
+    Extracts molecule data from SDF files and creates job configurations
+    for each molecule found, preserving charge, multiplicity and identifiers.
 
-    suppl, charges, mults, IDs = mol_from_sdf_or_mol_or_mol2(sdffile, "csearch", args)
-    IDs = [os.path.basename(x) for x in IDs]
+    Args:
+        args: Configuration object containing processing parameters
+        csearch_file (str): Path to SDF file
 
+    Returns:
+        list: List of job configuration tuples for each molecule in SDF file
+    """
+    sdf_path = Path(csearch_file)
+    
+    # Read molecules from SDF file
+    keep_xyz = True if args.program.lower() == 'crest' else False # keep XYZ as inputs for CREST runs
+    suppl, charges, mults, ids = mol_from_sdf_or_mol_or_mol2(
+        str(sdf_path), 
+        "csearch", 
+        args,
+        keep_xyz=keep_xyz
+    )
+    
+    # Process base names only
+    mol_ids = [Path(id).name for id in ids]
+    
+    # Create job configurations for each molecule
     job_inputs = []
-    for mol, charge, mult, name in zip(suppl, charges, mults, IDs):
-        name = add_prefix_suffix(name, args)
-        obj = (
-            mol,
-            name,
-            charge,
-            mult,
-            args.constraints_atoms,
-            args.constraints_dist,
-            args.constraints_angle,
-            args.constraints_dihedral,
-            args.complex_type,
-            args.geom,
-            args.sample
+    for mol, charge, mult, mol_id in zip(suppl, charges, mults, mol_ids):
+        name = add_prefix_suffix(mol_id, args)
+        job_config = (
+            mol,                     # Molecule
+            name,                    # Name
+            charge,                  # Charge
+            mult,                    # Multiplicity
+            args.constraints_atoms,  # Atom constraints
+            args.constraints_dist,   # Distance constraints
+            args.constraints_angle,  # Angle constraints
+            args.constraints_dihedral, # Dihedral constraints
+            args.complex_type,      # Complex type
+            args.geom,              # Geometry
+            args.sample             # Sample
         )
-        job_inputs.append(obj)
+        job_inputs.append(job_config)
+        
     return job_inputs
 
 
 def xyz_2_sdf(file):
+    """Convert XYZ file to SDF format using OpenBabel.
+
+    Creates a .sdf file from a .xyz file in the same directory as the input.
+    Uses OpenBabel for the conversion.
+
+    Args:
+        file (str): Path to existing .xyz file
+        
+    Raises:
+        subprocess.CalledProcessError: If OpenBabel conversion fails
+        FileNotFoundError: If OpenBabel is not installed
     """
-    Creates a .sdf file from a .xyz in the specified directory. If no directory
-    is specified then the files are created in the current directory.
+    file_path = Path(file)
+    output_path = file_path.with_suffix('.sdf')
+    
+    try:
+        # Convert XYZ to SDF using OpenBabel
+        command = [
+            "obabel", 
+            "-ixyz", str(file_path),
+            "-osdf", 
+            f"-O{output_path}"
+        ]
+        subprocess.run(
+            command,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=True
+        )
+    except subprocess.CalledProcessError:
+        raise RuntimeError("Failed to convert XYZ file using OpenBabel")
+    except FileNotFoundError:
+        raise RuntimeError("OpenBabel not found. Please ensure it is installed")
 
-    Parameters
-    ----------
-    file : str
-        Filename and extension of an existing .xyz file
+
+def check_constraints(constraints_atoms, constraints_dist, 
+                     constraints_angle, constraints_dihedral):
+    """Check if any constraints are defined.
+
+    Determines if any type of constraint (atoms, distances, angles, dihedrals)
+    has been specified.
+
+    Args:
+        constraints_atoms (list): Atom constraints
+        constraints_dist (list): Distance constraints
+        constraints_angle (list): Angle constraints
+        constraints_dihedral (list): Dihedral angle constraints
+
+    Returns:
+        bool: True if any constraints are defined, False otherwise
     """
-
-    name = f'{os.path.dirname(Path(file))}/{os.path.basename(Path(file)).split(".xyz")[0]}'
-    command_xyz = ["obabel", "-ixyz", file, "-osdf", "-O" + name + ".sdf"]
-    subprocess.run(command_xyz, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-
-
-def check_constraints(self):
-    if (
-        (len(self.args.constraints_atoms) != 0)
-        or (len(self.args.constraints_dist) != 0)
-        or (len(self.args.constraints_angle) != 0)
-        or (len(self.args.constraints_dihedral) != 0)
-    ):
-        complex_ts = True
-    else:
-        complex_ts = False
-
-    return complex_ts
+    return any([
+        len(constraints_atoms) > 0,
+        len(constraints_dist) > 0,
+        len(constraints_angle) > 0,
+        len(constraints_dihedral) > 0
+    ])
 
 
 def com_2_xyz(input_file):
+    """Convert Gaussian input file to XYZ format.
+
+    Extracts geometry and electronic structure information from a Gaussian
+    input file (.com/.gjf) and writes it to XYZ format.
+
+    Args:
+        input_file (str): Path to Gaussian input file
+
+    Returns:
+        tuple: (xyz_path, charge, mult) where:
+            - xyz_path (str): Path to generated XYZ file
+            - charge (int): Total molecular charge
+            - mult (int): Spin multiplicity
+            
+    Note:
+        Creates a new XYZ file in the same directory as the input file
     """
-    COM to XYZ to SDF for obabel
+    # Setup paths
+    file_path = Path(input_file)
+    xyz_path = file_path.with_suffix('.xyz')
+    
+    # Extract geometry and properties
+    xyz_lines, charge, mult = get_info_input(input_file)
+    
+    # Write XYZ file
+    with open(xyz_path, "w") as f:
+        f.write(f"{len(xyz_lines)}\n")          # Number of atoms
+        f.write(f"{file_path.stem}\n")          # Comment line
+        f.write("\n".join(xyz_lines) + "\n")    # Coordinates
+
+    return str(xyz_path), charge, mult
+
+
+def realign_mol(mol, conf, coord_Map, alg_Map, mol_template, maxsteps):
+    """Minimize and align a molecule while preserving template atom positions.
+
+    Performs force field minimization and molecular alignment on a molecule,
+    keeping certain atoms fixed based on a template structure. The minimization
+    uses the UFF force field and the alignment is based on matching atoms.
+
+    Args:
+        mol (rdkit.Chem.rdchem.Mol): Molecule to be minimized and aligned
+        conf (int): Conformation ID for the minimization and alignment
+        coord_Map (list): List of atom indices for coordinate constraints
+        alg_Map (list): List of atom indices for alignment matching
+        mol_template (rdkit.Chem.rdchem.Mol): Template molecule for alignment
+        maxsteps (int): Maximum number of force field optimization steps
+
+    Returns:
+        tuple: (mol, energy) where:
+            - mol (rdkit.Chem.rdchem.Mol): Updated molecule after minimization/alignment
+            - energy (float): Final UFF force field energy
+            
+    Note:
+        This function combines minimization and alignment steps and may need
+        refactoring to separate these operations in the future.
     """
-
-    filename = '.'.join(os.path.basename(Path(input_file)).split('.')[:-1])
-    path_xyz = f'{os.path.dirname(input_file)}/{filename}.xyz'
-
-    # Create the 'xyz' file and/or get the total charge
-    xyz, charge, mult = get_info_input(input_file)
-    xyz_txt = "\n".join(xyz)
-    with open(path_xyz, "w") as F:
-        F.write(f"{len(xyz)}\n{filename}\n{xyz_txt}\n")
-
-    return path_xyz, charge, mult
-
-
-def realign_mol(
-    mol, conf, coord_Map, alg_Map, mol_template, maxsteps
-):  # RAUL: This function requires a clear separation between minimization and alignment.
-    """
-    Minimizes and aligns the molecule provided freezing the atoms that match the mol_template
-
-    Parameters
-    ----------
-    mol : RDKit mol object
-        Molecule to be minimized and aligned
-    conf : int
-        Number that indicates which conformation of the molecule will be minimized and aligned
-    coord_Map : [type]
-        [description]
-    alg_Map : [type]
-        [description]
-    mol_template : [type]
-        [description]
-    maxsteps : int
-        Maximum number of iterations in FF minimization
-
-    Returns
-    -------
-    mol,energy
-        The updated mol object and the final forcefield energy.
-    """
-
-    num_atom_match = mol.GetSubstructMatch(mol_template)
+    # Setup UFF forcefield with conformation
     forcefield = Chem.UFFGetMoleculeForceField(mol, confId=conf)
-    for i, idxI in enumerate(num_atom_match):
-        for idxJ in num_atom_match[i + 1 :]:
-            d = coord_Map[idxI].Distance(coord_Map[idxJ])
-            forcefield.AddDistanceConstraint(idxI, idxJ, d, d, 10000)
+    
+    # Find matching atoms and add distance constraints
+    matching_atoms = mol.GetSubstructMatch(mol_template)
+    for i, atom_i in enumerate(matching_atoms):
+        # Add pairwise distance constraints between matching atoms
+        for atom_j in matching_atoms[i + 1:]:
+            # Get target distance from coordinate map
+            target_dist = coord_Map[atom_i].Distance(coord_Map[atom_j])
+            # Add strong distance constraint (force constant = 10000)
+            forcefield.AddDistanceConstraint(atom_i, atom_j, target_dist, target_dist, 10000)
+    
+    # Run energy minimization
     forcefield.Initialize()
     forcefield.Minimize(maxIts=maxsteps)
-    # rotate the embedded conformation onto the core_mol:
+    
+    # Align optimized molecule to template
     rdMolAlign.AlignMol(
-        mol,
-        mol_template,
-        prbCid=conf,
-        refCid=-1,
-        atomMap=alg_Map,
-        reflect=True,
-        maxIters=100,
+        mol,                # Molecule to align
+        mol_template,       # Template to align to
+        prbCid=conf,        # Probe conformer ID
+        refCid=-1,         # Reference conformer ID (-1 = first)
+        atomMap=alg_Map,    # Atom mapping for alignment
+        reflect=True,       # Try mirror image if needed
+        maxIters=100,       # Maximum alignment iterations
     )
+    
+    # Get final energy after minimization and alignment
     energy = float(forcefield.CalcEnergy())
-
     return mol, energy
 
 
 def minimize_rdkit_energy(mol, conf, log, FF, maxsteps):
-    """
-    Minimizes a conformer of a molecule and returns the final energy.
-    """
+    """Minimize molecular energy using RDKit force fields.
+    
+    Attempts to minimize a molecule's energy using either MMFF94 or UFF force
+    fields. Falls back to UFF if MMFF fails, and handles minimization failures
+    gracefully.
 
-    forcefield = None
+    Args:
+        mol (rdkit.Chem.rdchem.Mol): Molecule to minimize
+        conf (int): Conformer ID to minimize
+        log: Logger object for status messages
+        FF (str): Force field to use ('MMFF', 'UFF', or 'NO FF')
+        maxsteps (int): Maximum number of minimization steps
+
+    Returns:
+        float: Final energy of the minimized structure, or 0 if no FF used
+        
+    Note:
+        Falls back to UFF if MMFF fails. Reports non-optimized geometries
+        if minimization fails completely.
+    """
     if FF.upper() == "NO FF":
-        energy = 0
+        return 0.0
 
-    else:
-        if FF.upper() == "MMFF":
-            properties = Chem.MMFFGetMoleculeProperties(mol)
-            forcefield = Chem.MMFFGetMoleculeForceField(mol, properties, confId=conf)
-            if forcefield is None:
-                log.write(f"x  Force field {FF} did not work! Changing to UFF.")
+    # Try MMFF94 first if requested
+    forcefield = None
+    if FF.upper() == "MMFF":
+        properties = Chem.MMFFGetMoleculeProperties(mol)
+        forcefield = Chem.MMFFGetMoleculeForceField(mol, properties, confId=conf)
+        if forcefield is None:
+            log.write(f"x  Force field {FF} did not work! Falling back to UFF.")
 
-        if FF.upper() == "UFF" or forcefield is None:
-            # if forcefield is None means that MMFF will not work. Attempt UFF.
-            forcefield = Chem.UFFGetMoleculeForceField(mol, confId=conf)
+    # Fall back to UFF if MMFF failed or was not requested
+    if FF.upper() == "UFF" or forcefield is None:
+        forcefield = Chem.UFFGetMoleculeForceField(mol, confId=conf)
 
+    # Attempt minimization
+    try:
         forcefield.Initialize()
-        try:
-            forcefield.Minimize(maxIts=maxsteps)
-        except RuntimeError:
-            log.write(f"\nx  Geometry minimization failed with {FF}, using non-optimized geometry.")
-        energy = float(forcefield.CalcEnergy())
-
-    return energy
+        forcefield.Minimize(maxIts=maxsteps)
+        return float(forcefield.CalcEnergy())
+    except RuntimeError:
+        log.write(f"\nx  Geometry minimization failed with {FF}, using non-optimized geometry.")
+        return float(forcefield.CalcEnergy())
 
 
 def getDihedralMatches(mol, heavy):
-    # this is rdkit's "strict" pattern
-    pattern = r"*~[!$(*#*)&!D1&!$(C(F)(F)F)&!$(C(Cl)(Cl)Cl)&!$(C(Br)(Br)Br)&!$(C([CH3])([CH3])[CH3])&!$([CD3](=[N,O,S])-!@[#7,O,S!D1])&!$([#7,O,S!D1]-!@[CD3]=[N,O,S])&!$([CD3](=[N+])-!@[#7!D1])&!$([#7!D1]-!@[CD3]=[N+])]-!@[!$(*#*)&!D1&!$(C(F)(F)F)&!$(C(Cl)(Cl)Cl)&!$(C(Br)(Br)Br)&!$(C([CH3])([CH3])[CH3])]~*"
-    qmol = Chem.MolFromSmarts(pattern)
-    matches = mol.GetSubstructMatches(qmol)
+    """Find unique rotatable bonds and their associated dihedral angles.
+    
+    Uses RDKit's strict rotatable bond SMARTS pattern to find all possible
+    dihedral angles in a molecule, filtering by heavy atoms if requested.
+    Excludes certain groups like CF3, CCl3, terminal atoms, etc.
 
-    # these are all sets of 4 atoms, uniquify by middle two
-    uniqmatches = []
-    seen = set()
-    for (a, b, c, d) in matches:
-        if (b, c) not in seen and (c, b) not in seen:
+    Args:
+        mol (rdkit.Chem.rdchem.Mol): Molecule to search for dihedrals
+        heavy (bool): If True, only consider dihedrals between heavy atoms
+
+    Returns:
+        list: List of 4-tuples of atom indices defining unique dihedral angles
+        
+    Note:
+        Uses RDKit's strict pattern which excludes:
+        - Triple bonds
+        - Terminal atoms
+        - CF3, CCl3, CBr3 groups
+        - t-Butyl groups
+        - Amide bonds
+    """
+    # RDKit's strict rotatable bond pattern
+    STRICT_PATTERN = (
+        r"*~[!$(*#*)&!D1&!$(C(F)(F)F)&!$(C(Cl)(Cl)Cl)&!$(C(Br)(Br)Br)"
+        r"&!$(C([CH3])([CH3])[CH3])&!$([CD3](=[N,O,S])-!@[#7,O,S!D1])"
+        r"&!$([#7,O,S!D1]-!@[CD3]=[N,O,S])&!$([CD3](=[N+])-!@[#7!D1])"
+        r"&!$([#7!D1]-!@[CD3]=[N+])]-!@[!$(*#*)&!D1&!$(C(F)(F)F)"
+        r"&!$(C(Cl)(Cl)Cl)&!$(C(Br)(Br)Br)&!$(C([CH3])([CH3])[CH3])]~*"
+    )
+    
+    # Convert SMARTS pattern to molecule query
+    query = Chem.MolFromSmarts(STRICT_PATTERN)
+    matches = mol.GetSubstructMatches(query)
+
+    # Filter and uniquify matches
+    unique_dihedrals = []
+    seen_bonds = set()  # Track unique central bonds
+    
+    for atoms in matches:
+        a, b, c, d = atoms
+        # Check if central bond is new
+        if (b, c) not in seen_bonds and (c, b) not in seen_bonds:
+            # Get atom symbols for filtering
+            a_symbol = mol.GetAtomWithIdx(a).GetSymbol()
+            c_symbol = mol.GetAtomWithIdx(c).GetSymbol()
+            d_symbol = mol.GetAtomWithIdx(d).GetSymbol()
+            
+            # Apply filters based on heavy flag
             if heavy:
-                if (
-                    mol.GetAtomWithIdx(a).GetSymbol() != "H"
-                    and mol.GetAtomWithIdx(d).GetSymbol() != "H"
-                ):
-                    seen.add((b, c))
-                    uniqmatches.append((a, b, c, d))
-            if not heavy:
-                if (
-                    mol.GetAtomWithIdx(c).GetSymbol() == "C"
-                    and mol.GetAtomWithIdx(d).GetSymbol() == "H"
-                ):
-                    pass
-                else:
-                    seen.add((b, c))
-                    uniqmatches.append((a, b, c, d))
-    return uniqmatches
+                # Only accept if both terminal atoms are non-hydrogen
+                if a_symbol != "H" and d_symbol != "H":
+                    seen_bonds.add((b, c))
+                    unique_dihedrals.append(atoms)
+            else:
+                # Skip specific C-H bonds but accept others
+                if not (c_symbol == "C" and d_symbol == "H"):
+                    seen_bonds.add((b, c))
+                    unique_dihedrals.append(atoms)
+                    
+    return unique_dihedrals
 
 
 def smi_to_mol(
@@ -543,28 +855,52 @@ def smi_to_mol(
     constraints_angle,
     constraints_dihedral,
 ):
+    """Convert SMILES to RDKit molecule with constraints handling.
+    
+    Creates an RDKit molecule from SMILES string, handling special cases like
+    complexes, transition states, and mapped atoms. Supports constraint
+    application for conformer generation.
 
+    Args:
+        smi (str): SMILES string to convert
+        program (str): Program to use for conformer generation
+        log: Logger object for status messages
+        seed (int): Random seed for reproducibility
+        constraints_atoms (list): Atom-based constraints
+        constraints_dist (list): Distance constraints
+        constraints_angle (list): Angle constraints
+        constraints_dihedral (list): Dihedral angle constraints
+
+    Returns:
+        tuple: (mol, constraints_atoms, constraints_dist, constraints_angle,
+               constraints_dihedral, complex_ts) where:
+            - mol (rdkit.Chem.rdchem.Mol): Generated molecule or None if failed
+            - constraints_*: Updated constraint lists
+            - complex_ts (bool): True if molecule is a complex/TS
+
+    Note:
+        For complexes (multi-part SMILES) or molecules with constraints,
+        only 'crest' program is supported.
+    """
     complex_ts = False
-    smi = smi.split(".")
-    if (
-        len(smi) > 1
-        or len(constraints_atoms) != 0
-        or len(constraints_dist) != 0
-        or len(constraints_angle) != 0
-        or len(constraints_dihedral) != 0
-    ):
+    smi_parts = smi.split(".")
+
+    # Handle complexes and constrained systems
+    if (len(smi_parts) > 1 or 
+        any(len(c) > 0 for c in [constraints_atoms, constraints_dist,
+                                constraints_angle, constraints_dihedral])):
+        # Validate program choice for complexes
         if program not in ["crest"]:
-            log.write(f"\nx  {program} not supported for conformer generation of complexes and TSs (your SMILES has {len(smi)} parts, separated by a period)! Specify: program='crest' for complexes")
+            log.write(
+                f"\nx  {program} not supported for conformer generation of complexes "
+                f"and TSs (your SMILES has {len(smi_parts)} parts, separated by a "
+                "period)! Specify: program='crest' for complexes"
+            )
             sys.exit()
 
-        (
-            mol,
-            constraints_atoms,
-            constraints_dist,
-            constraints_angle,
-            constraints_dihedral,
-        ) = nci_ts_mol(
-            smi,
+        # Process complex or TS molecule
+        mol_data = nci_ts_mol(
+            smi_parts,
             log,
             seed,
             constraints_atoms,
@@ -572,88 +908,130 @@ def smi_to_mol(
             constraints_angle,
             constraints_dihedral,
         )
+        mol, *constraints = mol_data
         complex_ts = True
 
     else:
+        # Process single molecule
         params = Chem.SmilesParserParams()
         params.removeHs = False
-        smi = smi[0]
-        try:
-            # fix mapped atoms
-            if ':' in smi:
-                # smi = fix_mapped_atoms(smi)
-                log.write(f"\nx  WARNING! The SMILES string provided ( {smi} ) contains mapped atoms, make sure you include their corresponding H atoms explicitly in the SMILES (otherwise they'll be omitted). For example, use [C:1]([H])([H])([H])C instead of [C:1]C.\n")
+        smi = smi_parts[0]
 
+        try:
+            # Handle mapped atoms
+            if ':' in smi:
+                log.write(
+                    f"\nx  WARNING! The SMILES string provided ({smi}) contains mapped "
+                    "atoms, make sure you include their corresponding H atoms explicitly "
+                    "in the SMILES (otherwise they'll be omitted). For example, use "
+                    "[C:1]([H])([H])([H])C instead of [C:1]C.\n"
+                )
+
+            # Create and process molecule
             mol = Chem.MolFromSmiles(smi, params)
             Chem.SanitizeMol(mol)
             mol = Chem.AddHs(mol)
+
         except Chem.AtomValenceException:
-            log.write(f"\nx  The SMILES string provided ( {smi} ) contains errors or the molecule needs to be drawn in a different way. For example, N atoms from ligands of metal complexes should be N+ since they're drawn with four bonds in ChemDraw, same for O atoms in carbonyl ligands, etc.\n")
+            log.write(
+                f"\nx  The SMILES string provided ({smi}) contains errors or the "
+                "molecule needs to be drawn differently. For example, N atoms from "
+                "ligands of metal complexes should be N+ since they're drawn with "
+                "four bonds in ChemDraw, same for O atoms in carbonyl ligands, etc.\n"
+            )
             mol = None
 
-    return (
-        mol,
-        constraints_atoms,
-        constraints_dist,
-        constraints_angle,
-        constraints_dihedral,
-        complex_ts
-    )
+        # Keep original constraints for single molecules
+        constraints = [constraints_atoms, constraints_dist,
+                      constraints_angle, constraints_dihedral]
 
-# this function was disabled to allow ROBERT users to use atom idx for atomic descriptor generation
-# def fix_mapped_atoms(smi):
-#     '''
-#     This protocol to handle mapped SMILES. Otherwise, Hs are not added right and charges/mult
-#     are not calculated correctly either.
-#     '''
-
-#     map_list = []
-#     smi_map = smi.replace(']','[').split('[')
-#     for piece in smi_map:
-#         if ':' in piece:
-#             map_list.append(f'[{piece}]')
-#     for map_atom in map_list:
-#         new_atom = map_atom.replace(':','[').split('[')
-#         while('' in new_atom):
-#             new_atom.remove('')
-#         new_atom = new_atom[0]
-#         smi = smi.replace(map_atom,new_atom)
-    
-#     return smi
+    return (mol, *constraints, complex_ts)
 
 def substituted_mol(mol, checkI, metal_atoms):
+    """Process metal atoms in a molecule, optionally replacing them with iodine.
+    
+    Identifies metal atoms in a molecule and optionally replaces them with iodine
+    atoms, adjusting formal charges to maintain valid valence states. Tracks metal
+    atom positions and coordination numbers.
+
+    Args:
+        mol (rdkit.Chem.rdchem.Mol): Input molecule
+        checkI (str): If "I", replace metals with iodine atoms
+        metal_atoms (list): List of metal element symbols to process
+
+    Returns:
+        tuple: (metal_idx, metal_sym) where:
+            - metal_idx (list): Indices of metal atoms in molecule
+            - metal_sym (list): Original symbols of metal atoms
+            
+    Note:
+        When replacing with iodine (checkI="I"), the function attempts to
+        find valid formal charges by incrementally adjusting from the base
+        coordination number derived charge.
     """
-    Returns a molecule object in which all metal atoms are replaced by Iodine
-    and the charge is set depending on the number of neighbors.
+    # Initialize tracking lists
+    metal_idx = [None] * len(metal_atoms)
+    complex_coord = [None] * len(metal_atoms)
+    metal_sym = [None] * len(metal_atoms)
 
-    """
+    # Map coordination number to base formal charge
+    coord_to_charge = {
+        coord: charge 
+        for coord, charge in zip(range(2, 9), range(-3, 4))
+    }
 
-    metal_idx = []
-    complex_coord = []
-    metal_sym = []
-
-    for _ in metal_atoms:
-        metal_idx.append(None)
-        complex_coord.append(None)
-        metal_sym.append(None)
-
-    Neighbors2FormalCharge = dict()
-    for i, j in zip(range(2, 9), range(-3, 4)):
-        Neighbors2FormalCharge[i] = j
-
+    # Process each atom in the molecule
     for atom in mol.GetAtoms():
         symbol = atom.GetSymbol()
         if symbol in metal_atoms:
-            metal_sym[metal_atoms.index(symbol)] = symbol
-            metal_idx[metal_atoms.index(symbol)] = atom.GetIdx()
-            complex_coord[metal_atoms.index(symbol)] = len(
-                atom.GetNeighbors()
-            )
+            idx = metal_atoms.index(symbol)
+            
+            # Record metal atom information
+            metal_sym[idx] = symbol
+            metal_idx[idx] = atom.GetIdx()
+            complex_coord[idx] = len(atom.GetNeighbors())
+            
+            # Replace with iodine if requested
             if checkI == "I":
-                atom.SetAtomicNum(53)
+                atom.SetAtomicNum(53)  # Atomic number of iodine
                 n_neighbors = len(atom.GetNeighbors())
+                
                 if n_neighbors > 1:
-                    formal_charge = Neighbors2FormalCharge[n_neighbors]
-                    atom.SetFormalCharge(formal_charge)
+                    # Get base charge from coordination number
+                    base_charge = coord_to_charge.get(n_neighbors, 0)
+                    
+                    # Try different charge states until molecule is valid
+                    for charge_adj in range(0, 5):
+                        atom.SetFormalCharge(base_charge + charge_adj)
+                        try:
+                            # Test if molecule is valid with this charge
+                            mol_test = Chem.Mol(mol)
+                            Chem.SanitizeMol(mol_test)
+                            break  # Valid charge found
+                        except Chem.AtomValenceException:
+                            continue  # Try next charge state
 
-    return metal_idx, complex_coord, metal_sym
+    return metal_idx, metal_sym
+
+def set_metal_atomic_number(mol, metal_idx, metal_sym):
+    """
+    Changes the atomic number of the metal atoms using their indices.
+
+    Parameters
+    ----------
+    mol : rdkit.Chem.Mol
+        RDKit molecule object
+    metal_idx : list
+        sorted list that contains the indices of the metal atoms in the molecule
+    metal_sym : list
+        sorted list (same order as metal_idx) that contains the symbols of the metals in the molecule
+    """
+
+    for atom in mol.GetAtoms():
+        if atom.GetIdx() in metal_idx:
+            re_symbol = metal_sym[metal_idx.index(atom.GetIdx())]
+            atomic_number = periodic_table().index(re_symbol)
+            atom.SetAtomicNum(atomic_number)
+            atom.SetFormalCharge(0)
+
+    return mol

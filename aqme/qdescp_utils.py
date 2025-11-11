@@ -1,31 +1,74 @@
-######################################################.
-#        This file stores QDESCP functions           #
-######################################################.
+"""
+QDESCP (Quantum Descriptor Calculator) Utility Module
 
+This module provides comprehensive functionality for calculating and analyzing quantum
+chemical descriptors for molecular systems. It integrates various computational
+chemistry tools and methods to generate meaningful molecular and atomic descriptors.
+
+Key Features:
+    - Calculation of quantum chemical descriptors using xTB methods (with MORFEUS)
+    - Boltzmann averaging of molecular properties
+    - RDKit-based molecular descriptors
+    - Processing of NMR chemical shifts
+    - MORFEUS-based geometric and electronic analysis
+    - Automated pattern recognition in molecular structures
+"""
+
+from __future__ import annotations
+from typing import Dict, List, Optional, Union, Any, Tuple
 import json
 import sys
 import os
 import re
+import ast
+import warnings
+from pathlib import Path
+
+# Scientific computing imports
 import numpy as np
 import pandas as pd
-import ast
-import math
 import rdkit
 from rdkit import Chem
-from rdkit.Chem import rdFMCS
-from rdkit.Chem import Descriptors
-import warnings
-warnings.filterwarnings('ignore')
-from morfeus import SASA, Dispersion, BuriedVolume, ConeAngle, SolidAngle, Pyramidalization, read_xyz, read_geometry
+from rdkit.Chem import rdFMCS, Descriptors
+
+# MORFEUS package imports
+from morfeus import (
+    SASA, Dispersion, BuriedVolume, ConeAngle, 
+    SolidAngle, Pyramidalization, read_xyz, 
+    read_geometry, XTB
+)
+from morfeus.data import HARTREE_TO_KCAL
 from aqme.utils import load_sdf, periodic_table
 
-GAS_CONSTANT = 8.3144621  # J / K / mol
-J_TO_AU = 4.184 * 627.509541 * 1000.0  # UNIT CONVERSION
-T = 298.15
-Hartree = 27.2114 #eV UNIT CONVERSION from 1 hatree = 27.2114 eV
+# Suppress warnings
+warnings.filterwarnings('ignore')
 
-def convert_ndarrays(data):
-    """Convert properties that are of type ndarray to lists to serialize them in JSON"""
+# Type aliases
+NDArray = np.ndarray
+MoleculeType = Union[rdkit.Chem.rdchem.Mol, None]
+
+# Physical constants and unit conversions
+GAS_CONSTANT = 8.3144621  # Gas constant in J/(K⋅mol)
+J_TO_AU = 4.184 * 627.509541 * 1000.0  # Joules to atomic units conversion
+TEMPERATURE = 298.15  # Default temperature in Kelvin
+HARTREE_TO_EV = 27.2114  # Hartree to eV conversion
+
+def convert_ndarrays(data: Dict[str, Any]) -> None:
+    """
+    Recursively convert numpy arrays to lists for JSON serialization.
+    
+    This function modifies the input dictionary in-place, converting any numpy
+    arrays to lists so they can be serialized to JSON. It recursively processes
+    nested dictionaries.
+    
+    Args:
+        data: Dictionary containing values to convert
+        
+    Notes:
+        - Modifies the dictionary in-place
+        - Handles nested dictionaries recursively
+        - Only converts numpy arrays, preserves other types
+    """
     for key, value in data.items():
         if isinstance(value, np.ndarray):
             data[key] = value.tolist()
@@ -40,42 +83,71 @@ def get_boltz(energy):
     energy (list of floats): List of energies for which Boltzmann weights will be calculated.
 
     Returns:
-    weights (list of floats): List of Boltzmann weights corresponding to the input energies.
+        List of normalized Boltzmann weights corresponding to the input energies.
+        The weights sum to 1.0.
+
+    Notes:
+        - Energies are shifted to make the minimum energy zero to prevent
+          numerical underflow in exponential calculations
+        - Uses the formula: w_i = exp(-E_i/kT) / sum(exp(-E_j/kT))
     """
-    # Shift energies so that the minimum energy is zero (to prevent negative exponents from dominating)
-    energ = [number - min(energy) for number in energy]
-
-    boltz_sum = 0.0 # Initialize the sum of Boltzmann factors to zero
-
-    # Calculate the sum of Boltzmann factors for all energies
-    for e in energ:
-        # Apply the Boltzmann factor formula: exp(-energy / (k * T))
-        # where J_TO_AU is a conversion factor, GAS_CONSTANT is the gas constant, and T is temperature
-        boltz_sum += math.exp(-e * J_TO_AU / GAS_CONSTANT / T)
+    if not energy:
+        return []
+        
+    # Shift energies to prevent numerical underflow
+    shifted_energies = np.array(energy) - min(energy)
     
-    weights = [] # Initialize the list to store Boltzmann weights
+    # Calculate Boltzmann factors
+    boltz_factors = np.exp(-shifted_energies * J_TO_AU / (GAS_CONSTANT * TEMPERATURE))
+    
+    # Normalize to get weights
+    weights = boltz_factors / np.sum(boltz_factors)
+    
+    return weights.tolist()
 
-    # Calculate each individual Boltzmann weight by normalizing with the total sum of Boltzmann factors
-    for e in energ:
-        weight = math.exp(-e * J_TO_AU / GAS_CONSTANT / T) / boltz_sum
-        weights.append(weight)
-
-    # Return the list of normalized Boltzmann weights
-    return weights
-
-
-def get_boltz_props_nmr(json_files,name,boltz_dir,self,atom_props,nmr_atoms=None,nmr_slope=None,nmr_intercept=None,nmr_experim=None):
-
+def get_boltz_props_nmr(
+    json_files: List[str],
+    name: str,
+    boltz_dir: str,
+    self,
+    atom_props: List[str],
+    nmr_atoms: Optional[List[int]] = None,
+    nmr_slope: Optional[List[float]] = None,
+    nmr_intercept: Optional[List[float]] = None,
+    nmr_experim: Optional[str] = None
+) -> Dict[str, Any]:
     """
-    Function to process NMR properties and calculate Boltzmann averaged properties.
-    """
+    Process NMR properties and calculate Boltzmann-weighted averages.
 
-    # Load experimental NMR data
-    if nmr_experim is not None:
+    This function handles the calculation and analysis of NMR chemical shifts,
+    including comparison with experimental data when available.
+
+    Args:
+        json_files: List of paths to JSON files containing conformer data
+        name: Base name for output files
+        boltz_dir: Directory for Boltzmann-weighted results
+        self: Instance containing logging capabilities
+        atom_props: List of atomic properties to process
+        nmr_atoms: List of atom indices for NMR calculation
+        nmr_slope: Slope parameters for NMR shift scaling
+        nmr_intercept: Intercept parameters for NMR shift scaling
+        nmr_experim: Path to experimental NMR data file (optional)
+
+    Returns:
+        Dictionary containing processed NMR data and Boltzmann averages
+
+    Raises:
+        FileNotFoundError: If experimental data file cannot be loaded
+        KeyError: If required JSON fields are missing
+    """
+    # Initialize experimental data
+    exp_data = None
+    if nmr_experim:
         try:
             exp_data = pd.read_csv(nmr_experim)
         except Exception as e:
-            self.args.log.write(f'\nx  Error loading experimental NMR shifts file: {nmr_experim}.\n{e}')
+            error_msg = f'Error loading NMR shifts file: {nmr_experim}.\n{e}'
+            self.args.log.write(f'\nx  {error_msg}')
             self.args.log.finalize()
             sys.exit()
 
@@ -150,107 +222,175 @@ def get_boltz_props_nmr(json_files,name,boltz_dir,self,atom_props,nmr_atoms=None
     with open(final_boltz_file, "w", encoding='utf-8') as outfile:
         json.dump(full_json_data, outfile)
 
-def get_chemical_shifts(json_data, nmr_atoms, nmr_slope, nmr_intercept):
+def get_chemical_shifts(
+    json_data: Dict[str, Any],
+    nmr_atoms: Union[List[int], str],
+    nmr_slope: Union[List[float], str],
+    nmr_intercept: Union[List[float], str]
+) -> Dict[int, float]:
     """
-    Retrieves and scales NMR shifts from json files
-    """
+    Calculate scaled NMR chemical shifts from JSON data.
 
-    if not isinstance(nmr_atoms, list):
-        nmr_atoms = ast.literal_eval(nmr_atoms)
-    if not isinstance(nmr_slope, list):
-        nmr_slope = ast.literal_eval(nmr_slope)
-    if not isinstance(nmr_intercept, list):
-        nmr_intercept = ast.literal_eval(nmr_intercept)
+    This function processes NMR tensors from quantum chemistry calculations
+    and applies appropriate scaling factors to obtain chemical shifts.
 
-    atoms = json_data["atoms"]["elements"]["number"]
-    tensor = json_data["properties"]["NMR"]["NMR isotopic tensors"]
-    shifts = {}
-    i = 0
-    for atom, ten in zip(atoms, tensor):
-        if atom in nmr_atoms:
-            # assigning values from arrays
-            index = nmr_atoms.index(atom)
-            slope_nuc = nmr_slope[index]
-            intercept_nuc = nmr_intercept[index]
-
-            scaled_nmr = (intercept_nuc - ten) / (-slope_nuc)
-            shifts[i] = scaled_nmr
-        else:
-            pass
-        i += 1
-
-    return shifts
-
-def average_prop_atom(weights, prop):
-    """
-    Returns the atomic properties averaged using the Boltzmann average.
-
-    Parameters:
-    weights (list of floats): Boltzmann weights calculated for each configuration.
-    prop (list): List of atomic properties (either floats or lists of values) for each configuration.
+    Args:
+        json_data: Dictionary containing quantum chemistry results
+        nmr_atoms: List of atomic numbers or string representation
+        nmr_slope: List of slope parameters or string representation
+        nmr_intercept: List of intercept parameters or string representation
 
     Returns:
-    boltz_res: The Boltzmann-weighted average of the atomic properties.
+        Dictionary mapping atom indices to their scaled chemical shifts
+
+    Notes:
+        - Scaling formula: shift = (intercept - tensor) / (-slope)
+        - Only processes atoms specified in nmr_atoms
+        - Handles both list and string inputs for parameters
     """
-    # List to store the Boltzmann-weighted properties
-    boltz_avg = []
+    # Convert string inputs to lists if necessary
+    def ensure_list(param):
+        return ast.literal_eval(param) if isinstance(param, str) else param
+
+    nmr_atoms = ensure_list(nmr_atoms)
+    nmr_slope = ensure_list(nmr_slope)
+    nmr_intercept = ensure_list(nmr_intercept)
+
+    # Extract required data
+    atomic_numbers = json_data["atoms"]["elements"]["number"]
+    nmr_tensors = json_data["properties"]["NMR"]["NMR isotopic tensors"]
     
-    # Loop through each property and its corresponding weight
-    if len(prop) == len(weights): # if xTB fails a calculation in a conformer, that property won't be included
-        for i, p in enumerate(prop):
-            # If the property is a single float or int, multiply it by the corresponding weight
-            if isinstance(p, (float, int)):
-                boltz_avg.append(p * weights[i])
-            # If the property is a list (e.g., multi-dimensional property), multiply each element by the weight
-            elif isinstance(p, list):
-                boltz_avg.append([0 if number is None else number * weights[i] for number in p])
-            # If the property type is not recognized, append 0 as a placeholder
-            else:
-                boltz_avg.append(np.nan)
+    # Calculate shifts
+    shifts = {}
+    for i, (atom, tensor) in enumerate(zip(atomic_numbers, nmr_tensors)):
+        if atom in nmr_atoms:
+            idx = nmr_atoms.index(atom)
+            slope = nmr_slope[idx]
+            intercept = nmr_intercept[idx]
+            
+            # Apply scaling formula
+            scaled_shift = (intercept - tensor) / (-slope)
+            shifts[i] = scaled_shift
+            
+    return shifts
 
-        # Check if the first element in the list is a list (indicating multi-dimensional properties)
-        try:
-            if isinstance(boltz_avg[0], list):
-                # If so, sum along the axis (i.e., sum element-wise for multi-dimensional properties)
-                boltz_res = np.sum(boltz_avg, axis=0)
-                # Round each element in the result to 4 decimal places if it's a NumPy array
-                boltz_res = np.round(boltz_res, 4)
-            else:
-                # Otherwise, sum all the weighted values as a scalar and round to 4 decimal places
-                boltz_res = round(sum(boltz_avg), 4)
-        except (ValueError,IndexError): # in some cases, there are atoms that are missing properties because of xTB calculation errors
-            boltz_res = np.nan
-
-    else:
-        boltz_res = np.nan
-    
-    # Return the Boltzmann-weighted result
-    return boltz_res
-
-def average_prop_atom_nmr(weights, prop):
+def average_prop_atom(
+    weights: List[float],
+    properties: List[Union[float, List[float], NDArray]]
+) -> Union[float, NDArray]:
     """
-    Returns Boltzmann averaged atomic properties
-    """
+    Calculate Boltzmann-weighted average of atomic properties.
 
-    boltz_avg = []
-    for i, p in enumerate(prop):
-        if str(p).lower() == 'nan' or p is None:
-            boltz_avg = np.nan
-            break
-        boltz_avg.append([number * weights[i] for number in p])
-    if str(p).lower() == 'nan':
-        boltz_res = np.nan
-    else:
-        boltz_res = np.sum(boltz_avg, 0)
-    return boltz_res
+    Handles both scalar and vector atomic properties, with robust error handling
+    for missing or invalid data.
+
+    Args:
+        weights: Boltzmann weights for each configuration
+        properties: List of atomic properties. Each property can be:
+                   - A single number (float/int)
+                   - A list of numbers (for multi-dimensional properties)
+                   - A numpy array
+
+    Returns:
+        For scalar properties: float (rounded to 4 decimal places)
+        For vector properties: numpy array (rounded to 4 decimal places)
+        Returns np.nan if calculation fails
+
+    Notes:
+        - Handles xTB calculation failures
+        - Supports both scalar and vector properties
+        - Automatically handles None values in lists
+        - Returns np.nan for any calculation errors
+    """
+    try:
+        # Verify input lengths match
+        if len(properties) != len(weights):
+            return np.nan
+
+        # Convert properties to weighted values
+        weighted_props = []
+        for prop, weight in zip(properties, weights):
+            if isinstance(prop, (float, int)):
+                weighted_props.append(prop * weight)
+            elif isinstance(prop, (list, np.ndarray)):
+                # Handle None values in lists
+                weighted_values = [
+                    0 if val is None else val * weight 
+                    for val in prop
+                ]
+                weighted_props.append(weighted_values)
+            else:
+                weighted_props.append(np.nan)
+
+        # Calculate final result based on property type
+        if not weighted_props:
+            return np.nan
+
+        if isinstance(weighted_props[0], (float, int)):
+            # Handle scalar properties
+            result = sum(x for x in weighted_props if not pd.isna(x))
+            return round(result, 4)
+        else:
+            # Handle vector properties
+            try:
+                result = np.sum(weighted_props, axis=0)
+                return np.round(result, 4)
+            except (ValueError, TypeError):
+                return np.nan
+
+    except Exception:
+        return np.nan
+
+def average_prop_atom_nmr(
+    weights: List[float],
+    properties: List[List[float]]
+) -> Union[NDArray, float]:
+    """
+    Calculate Boltzmann-weighted average of atomic NMR properties.
+
+    This function handles NMR-specific property averaging, with special handling
+    for missing or invalid data.
+
+    Args:
+        weights: Boltzmann weights for each configuration
+        properties: List of NMR property lists for each configuration
+
+    Returns:
+        Numpy array of averaged properties or np.nan if calculation fails
+
+    Notes:
+        - Handles NaN and None values
+        - Uses vectorized operations for efficiency
+        - Returns np.nan if any property list contains invalid values
+    """
+    try:
+        # Check for invalid values
+        for prop_list in properties:
+            if any(p is None or pd.isna(p) for p in prop_list):
+                return np.nan
+
+        # Convert to numpy array for efficient calculation
+        prop_array = np.array(properties)
+        
+        # Calculate weighted average along first axis (configurations)
+        weighted_avg = np.sum(prop_array * np.array(weights)[:, np.newaxis], axis=0)
+        
+        return weighted_avg
+        
+    except (ValueError, TypeError):
+        return np.nan
 
 def average_prop_mol(weights, prop):
     """
-    Returns Boltzmann averaged molecular properties, rounded to 4 decimal places.
+    Calculate Boltzmann-weighted average of molecular properties.
+
+    This function computes the weighted average of molecular properties using
+    Boltzmann weights from different molecular conformations.
 
     Parameters:
-    weights (list of floats): Boltzmann weights for each configuration.
-    prop (list of floats): List of molecular properties corresponding to each configuration.
+        weights (list of float): Boltzmann weights for each configuration,
+                                should sum to approximately 1.0
+        prop (list of float): List of molecular properties for each configuration
 
     Returns:
     boltz_avg (float): Boltzmann-weighted average of the molecular properties, rounded to 4 decimal places.
@@ -275,1241 +415,1709 @@ def average_prop_mol(weights, prop):
     # Return the Boltzmann-weighted average, rounded to 4 decimal places (or 'NaN' if encountered)
     return boltz_avg
 
-def get_rdkit_properties(self,full_json_data, mol):
+def get_rdkit_properties(
+    self,
+    full_json_data: Dict[str, Any],
+    mol: MoleculeType
+) -> Dict[str, Any]:
     """
-    Calculates RDKit molecular descriptors
+    Calculate and store molecular descriptors using RDKit.
+
+    Computes a comprehensive set of molecular descriptors available in RDKit,
+    handling both modern and legacy RDKit versions.
+
+    Args:
+        self: Instance containing logging capabilities
+        full_json_data: Dictionary to store calculated descriptors
+        mol: RDKit molecule object for analysis
+
+    Returns:
+        Updated dictionary containing valid RDKit descriptors
+
+    Notes:
+        - Filters out NaN values automatically
+        - Falls back to basic descriptors for older RDKit versions
+        - Warns if using legacy version with limited descriptors
     """
+    if mol is None:
+        return full_json_data
 
     try:
-        #level: full
-        descrs = Descriptors.CalcMolDescriptors(mol)
-        for descr in descrs:
-            if descrs[descr] != np.nan and str(descrs[descr]).lower() != 'nan':
-                full_json_data[descr] = descrs[descr]
+        # Calculate all available descriptors
+        descriptors = Descriptors.CalcMolDescriptors(mol)
+        
+        # Filter and store valid descriptors
+        for name, value in descriptors.items():
+            if value is not None and not pd.isna(value):
+                full_json_data[name] = value
 
-    # For older versions of RDKit 
     except AttributeError:
-        self.args.log.write(f"x  WARNING! Install a newer version of RDKit to get all the RDKit descriptors in the databse with all the descriptors. You can use: 'pip install rdkit --upgrade'.")
+        # Fallback for older RDKit versions
+        warning_msg = (
+            "WARNING! Install a newer version of RDKit to get all descriptors. "
+            "You can use: 'pip install rdkit --upgrade'."
+        )
+        self.args.log.write(f"x  {warning_msg}")
+        
+        # Calculate basic descriptor (MolLogP)
+        try:
+            full_json_data["MolLogP"] = Descriptors.MolLogP(mol)
+        except Exception as e:
+            self.args.log.write(f"x  Error calculating MolLogP: {e}")
+
+    try:
+        descrs = rdkit.Chem.Descriptors.CalcMolDescriptors(mol)
+        for descr in descrs:
+            if str(descrs[descr]).lower() != 'nan':
+                full_json_data[descr] = descrs[descr]
+    except AttributeError:
+        self.args.log.write(f"x  WARNING! Install a newer version of RDKit to get all the RDKit descriptors in the database with all the descriptors. You can use: 'pip install rdkit --upgrade'.")
         full_json_data["MolLogP"] = rdkit.Chem.Descriptors.MolLogP(mol)
 
     return full_json_data
 
 
-def read_gfn1(file,self):
+def read_json(file: Union[str, Path]) -> Optional[Dict[str, Any]]:
     """
-    Read .gfn1 output file created from xTB and return parsed data.
+    Load and parse a JSON file with robust error handling.
 
-    Parameters:
-    file (str): Path to the .gfn1 file.
+    This function attempts to read a JSON file, with special handling for
+    Windows-specific backslash escaping issues. It includes multiple fallback
+    strategies for parsing problematic JSON files.
+
+    Args:
+        file: Path to the JSON file to read
 
     Returns:
-    dict: Parsed data containing Mulliken charges, CM5 charges, and proportions.
-          Returns None if there's an issue with the file.
+        Dictionary containing the parsed JSON data, or None if parsing fails
+
+    Notes:
+        - Attempts standard JSON parsing first
+        - On failure, tries to fix common Windows path escaping issues
+        - Returns None for non-JSON files or if all parsing attempts fail
+        - Uses UTF-8 encoding for universal character support
     """
-
-    # Check if the file exists
-    if not os.path.exists(file):
-        self.args.log.write(f"x  WARNING! The file {file} does not exist.")
-        return None
-
-    # Open and read the file safely
-    with open(file, "r", encoding='utf-8') as f:
-        data = f.readlines()
-
-    # Ensure the file contains data
-    if not data:
-        self.args.log.write(f"x  WARNING! The file {file} is empty.")
-        return None
-
-    # Initialize variables for data extraction
-    start, end = None, None
-
-    # Find the start of the Mulliken/CM5 charges section
-    for i, line in enumerate(data):
-        if "Mulliken/CM5 charges" in line:
-            start = i + 1
-            break
-
-    # Find the end of the section (start of Wiberg/Mayer or generalized Born)
-    if start is not None:
-        for j in range(start, len(data)):
-            if "Wiberg/Mayer (AO) data" in data[j] or "generalized Born model" in data[j]:
-                end = j - 1
-                break
-    else:
-        self.args.log.write(f"x  WARNING! Mulliken/CM5 charges section not found in {file}.")
-        return None
-
-    # Ensure both start and end are found
-    if start is None or end is None:
-        self.args.log.write(f"x  WARNING! Required sections not found in {file}.")
-        return None
-
-    # Extract the relevant data between the start and end lines
-    pop_data = data[start:end]
-
-    # Initialize lists to store the parsed data
-    mulliken, cm5, s_prop, p_prop, d_prop = [], [], [], [], []
-
-    # Process each line in the extracted data section
-    for line in pop_data:
-        try:
-            item = line.split()
-            # Extract and round the required values from each line
-            q_mull = round(float(item[-5]), 3)
-            q_cm5 = round(float(item[-4]), 3)
-            s_prop_ind = round(float(item[-3]), 3)
-            p_prop_ind = round(float(item[-2]), 3)
-            d_prop_ind = round(float(item[-1]), 3)
-            mulliken.append(q_mull)
-            cm5.append(q_cm5)
-            s_prop.append(s_prop_ind)
-            p_prop.append(p_prop_ind)
-            d_prop.append(d_prop_ind)
-        except (ValueError, IndexError) as e:
-            # Handle errors related to parsing the line
-            self.args.log.write(f"x  WARNING! Error parsing line in {file}: {line}. Error: {e}")
-            return None
-
-    # Store the parsed data in a dictionary and return it
-    localgfn1 = {
-        "mulliken charge": mulliken,
-        "cm5 charge": cm5,
-        "s proportion": s_prop,
-        "p proportion": p_prop,
-        "d proportion": d_prop,
-    }
-
-    return localgfn1
-
-def read_wbo(file,self):
-    """
-    Read wbo output file created from xTB. Return data.
-    """
-
-    if not os.path.exists(file):
-        self.args.log.write(f"x  WARNING! The file {file} does not exist.")
-        return None
-
-    with open(file, "r", encoding='utf-8') as f:
-        data = f.readlines()
-
-    bonds, wbos = [], []
-    for line in data:
-        item = line.split()  # Split the line into components
-        bond = [int(item[0]), int(item[1])]  # Extract bond indices
-        wbo = round(float(item[2]), 3)  # Extract and round the WBO value
-        bonds.append(bond)  # Add bond to list
-        wbos.append(wbo)  # Add WBO to list
-
-    return bonds, wbos
-
-def calculate_global_CDFT_descriptors(file, file_Nminus1, file_Nminus2, file_Nplus1, file_Nplus2,self):
-    """
-    Read .gfn1 output file created from xTB and calculate CDFT descriptors with FDA approximations part 2
-    """
-    corr_xtb = 4.8455  # correction from xTB
-
-    def extract_scc_energy(lines, filename):
-        """
-        Extract SCC energy from the file. If not found, return None and log a warning.
-        """
-        for line in lines:
-            if "SCC energy" in line:
-                return float(line.split()[3])
-        
-        self.args.log.write(f"x  WARNING! Could not find SCC energy value in the file: {os.path.basename(filename)}. Some CDFT-based descriptors will be missing.")
+    if not str(file).endswith(".json"):
         return None
 
     try:
-        # Open and read files
+        # First attempt: Standard JSON parsing
         with open(file, "r", encoding='utf-8') as f:
-            data = f.readlines()
-        with open(file_Nminus1, "r", encoding='utf-8') as f1:
-            data1 = f1.readlines()
-        with open(file_Nminus2, "r", encoding='utf-8') as f2:
-            data2 = f2.readlines()
-        with open(file_Nplus1, "r", encoding='utf-8') as f3:
-            data3 = f3.readlines()
-        with open(file_Nplus2, "r", encoding='utf-8') as f4:
-            data4 = f4.readlines()
-    except Exception as e:
-        self.args.log.write(f"x  WARNING! An error occurred while processing {file}: {e}")
-        return None
-
-    # Extract SCC energies, handle cases where None is returned
-    scc_energy = extract_scc_energy(data, file)
-    scc_energy_Nminus1 = extract_scc_energy(data1, file_Nminus1)
-    scc_energy_Nminus2 = extract_scc_energy(data2, file_Nminus2)
-    scc_energy_Nplus1 = extract_scc_energy(data3, file_Nplus1)
-    scc_energy_Nplus2 = extract_scc_energy(data4, file_Nplus2)
-
-    # Convert SCC energies to Hartree
-    if scc_energy is not None:
-        scc_energy *= Hartree
-    if scc_energy_Nminus1 is not None:
-        scc_energy_Nminus1 *= Hartree
-    if scc_energy_Nminus2 is not None:
-        scc_energy_Nminus2 *= Hartree
-    if scc_energy_Nplus1 is not None:
-        scc_energy_Nplus1 *= Hartree
-    if scc_energy_Nplus2 is not None:
-        scc_energy_Nplus2 *= Hartree
-
-    # Initialize variables
-    delta_SCC_IP, delta_SCC_EA, electrophilicity_index = None, None, None
-    chemical_hardness, chemical_softness = None, None
-    chemical_potential, mulliken_electronegativity = None, None
-    electrodonating_power_index, electroaccepting_power_index = None, None
-    intrinsic_reactivity_index = None
-    electrofugality, nucleofugality, nucleophilicity_index, net_electrophilicity = None, None, None, None
-    Vertical_second_IP, Vertical_second_EA = None, None
-    hyper_hardness, Global_hypersoftness = None, None
-    Electrophilic_descriptor, w_cubic = None, None
-
-    # Calculate Global CDFT descriptors
-    if None not in [scc_energy_Nminus1,scc_energy]:
-        delta_SCC_IP = round(((scc_energy_Nminus1 - corr_xtb) - scc_energy),4)
-    if None not in [scc_energy_Nplus1,scc_energy]:
-        delta_SCC_EA = round((scc_energy - (scc_energy_Nplus1 + corr_xtb)),4)
-    if None not in [delta_SCC_IP,delta_SCC_EA]:
-        chemical_hardness = round((delta_SCC_IP - delta_SCC_EA), 4)
-        chemical_potential = round(-(delta_SCC_IP + delta_SCC_EA) / 2, 4)
-        electrophilicity_index = (chemical_potential**2)/(2*chemical_hardness)
-        mulliken_electronegativity = round(-chemical_potential, 4)
-        electrofugality = round(-delta_SCC_EA + electrophilicity_index, 4)
-        nucleofugality = round(delta_SCC_IP + electrophilicity_index, 4)
-        electrodonating_maximum_electron_flow = round((-(chemical_potential/chemical_hardness)),4)
-        electrodonating_chemical_potential = round(((1/4)*((-3*delta_SCC_IP) - delta_SCC_EA)),4)
-        electrodonating_maximum_electron_flow = round((-(electrodonating_chemical_potential/chemical_hardness)),4)
-    if None not in [scc_energy_Nminus2,scc_energy_Nminus1]:
-        Vertical_second_IP = round((((scc_energy_Nminus2 - scc_energy_Nminus1) - corr_xtb)), 4)
-    if None not in [scc_energy_Nplus1,scc_energy_Nplus2]:
-        Vertical_second_EA = round((((scc_energy_Nplus1 - scc_energy_Nplus2) + corr_xtb)), 4)
-    if None not in [delta_SCC_IP,delta_SCC_EA,Vertical_second_IP,Vertical_second_EA]:  
-        hyper_hardness = round((-((0.5) * (delta_SCC_IP + delta_SCC_EA - Vertical_second_IP - Vertical_second_EA))), 4)
-
-    if chemical_hardness is not None and chemical_hardness != 0:
-        chemical_softness = round(1 / chemical_hardness, 4)
-        electrodonating_power_index = round(((delta_SCC_IP + 3 * delta_SCC_EA)**2) / (8 * chemical_hardness), 4)
-        electroaccepting_power_index = round(((3 * delta_SCC_IP + delta_SCC_EA)**2) / (8 * chemical_hardness), 4)
-        intrinsic_reactivity_index = round((delta_SCC_IP + delta_SCC_EA) / chemical_hardness, 4)
-        if hyper_hardness is not None:
-            Global_hypersoftness = round((hyper_hardness / ((chemical_hardness) ** 3)), 4)
-
-        if electroaccepting_power_index != 0:
-            nucleophilicity_index = round(10 / electroaccepting_power_index, 4)
-
-    if None not in [electrodonating_power_index,electroaccepting_power_index]:
-        net_electrophilicity = round((electrodonating_power_index - electroaccepting_power_index), 4)
-
-    # For electrophilic descriptor calculations
-    if None not in [scc_energy_Nplus1,scc_energy,Vertical_second_IP,delta_SCC_IP]:
-        A = ((scc_energy_Nplus1 - scc_energy) + corr_xtb)
-        c = (Vertical_second_IP - (2 * delta_SCC_IP) + A) / ((2 * Vertical_second_IP) - delta_SCC_IP - A)
-        a = -((delta_SCC_IP + A) / 2) + (((delta_SCC_IP - A) / 2) * c)
-        b = ((delta_SCC_IP - A) / 2) - (((delta_SCC_IP + A) / 2) * c)
-        Gamma = (-3 * c) * (b - (a * c))
-        Eta = 2 * (b - (a * c))
-        chi = -a
-        Mu = a
-
-        discriminant = Eta ** 2 - (2 * Gamma * Mu)  # Checking the square root
-        if discriminant >= 0:
-            inter_phi = math.sqrt(discriminant)
-            Phi = inter_phi - Eta
-            Electrophilic_descriptor = round(((chi * (Phi / Gamma)) - (((Phi / Gamma) ** 2) * ((Eta / 2) + (Phi / 6)))), 4)
-
-    # For cubic electrophilicity index
-    if None not in [delta_SCC_IP,Vertical_second_IP,delta_SCC_EA]:
-        Gamma_cubic = 2 * delta_SCC_IP - Vertical_second_IP - delta_SCC_EA
-        Eta_cubic = delta_SCC_IP - delta_SCC_EA
-
-    if Eta_cubic != 0:
-        Mu_cubic = (1 / 6) * ((-2 * delta_SCC_EA) - (5 * delta_SCC_IP) + Vertical_second_IP)
-        w_cubic = round(((Mu_cubic ** 2) / (2 * Eta_cubic)) * (1 + ((Mu_cubic / (3 * (Eta_cubic) ** 2)) * Gamma_cubic)), 4)
-
-    # Return the calculated descriptors
-    cdft_descriptors = {
-        "IP": delta_SCC_IP,
-        "EA": delta_SCC_EA,
-        "Electrophil. idx": electrophilicity_index,
-        "Hardness": chemical_hardness,
-        "Softness": chemical_softness,
-        "Chem. potential": chemical_potential,
-        "Electronegativity": mulliken_electronegativity,
-        "Electrodon. power idx": electrodonating_power_index,
-        "Electroaccep. power idx": electroaccepting_power_index,
-        "Nucleophilicity idx": nucleophilicity_index,
-        "Electrofugality": electrofugality,
-        "Nucleofugality": nucleofugality,
-        "Intrinsic React. idx": intrinsic_reactivity_index,
-        "Net Electrophilicity": net_electrophilicity,
-        "Second IP": Vertical_second_IP,
-        "Second EA": Vertical_second_EA,
-        "Hyperhardness": hyper_hardness,
-        "Hypersoftness": Global_hypersoftness,
-        "Electrophilic descrip.": Electrophilic_descriptor,
-        "cub. electrophilicity idx": w_cubic,
-        "max. electron flow": electrodonating_maximum_electron_flow,
-        "Electrodon. Chem. potential": electrodonating_chemical_potential,
-        "Electrodon. max. electron flow": electrodonating_maximum_electron_flow
-    }
-
-    return cdft_descriptors
-
-def calculate_local_CDFT_descriptors(file_fukui, cdft_descriptors,self):
-    """
-    Read fukui output file created from XTB and calculate local CDFT descriptors.
-    """
-
-    with open(file_fukui, "r", encoding='utf-8') as f:
-        data = f.readlines()
-
-    # Initialize variables
-    f_pos, f_negs, f_rads = [], [], []
-    dual_descriptor,s_pos,s_negs,s_rads = None,None,None,None
-    Relative_nucleophilicity,Relative_electrophilicity,Grand_canonical_dual_descriptor = None,None,None
-    w_pos,w_negs,w_rads,Multiphilic_descriptor = None,None,None,None
-    Nu_pos,Nu_negs,Nu_rads = None,None,None
-
-    start, end = None, None
-
-    for i, line in enumerate(data):
-        if "f(+) " in line:
-            start = i + 1
-        elif "-------------" in line and start is not None:
-            end = i
-            break
-
-    if start is not None and end is not None:
-        fukui_data = data[start:end]
-        for line in fukui_data:
-            try:
-                f_po, f_neg, f_rad = map(lambda x: round(float(x), 4), line.split()[-3:])
-                f_pos.append(f_po)
-                f_negs.append(f_neg)
-                f_rads.append(f_rad)
-            except ValueError:
-                continue
-
-    if f_pos == [] or f_negs == [] or f_rads == []:
-        self.args.log.write("x  WARNING! Fukui indices did not generate, please check the '.fukui' file.")
-
-    chemical_softness = cdft_descriptors.get("Softness")
-    Global_hypersoftness = cdft_descriptors.get("Hypersoftness")
-    electrophilicity_index = cdft_descriptors.get("Electrophil. idx")
-    nucleophilicity_index = cdft_descriptors.get("Nucleophilicity idx")
-
-    # Calculating local descriptors
-    if chemical_softness is not None and f_pos != [] and f_negs != [] and f_rads != []:
-            # 1) dual descrip.
-        dual_descriptor = [round(f_po - f_neg, 4) for f_po, f_neg in zip(f_pos, f_negs)]
-            # 2) softness+, softness- and softness0
-        s_pos = [round(chemical_softness * f_po, 4) for f_po in f_pos]
-        s_negs = [round(chemical_softness * f_neg, 4) for f_neg in f_negs]
-        s_rads = [round(chemical_softness * f_rad, 4) for f_rad in f_rads]
-            # 3) Rel. nucleophilicity
-        Relative_nucleophilicity = [round(s_neg / s_po, 4) if s_po != 0 else None for s_neg, s_po in zip(s_negs, s_pos)]
-            # 4) Rel. electrophilicity
-        Relative_electrophilicity = [round(s_po / s_neg, 4) if s_neg != 0 else None for s_neg, s_po in zip(s_negs, s_pos)]
-
-    if Global_hypersoftness is not None and dual_descriptor is not None:
-            # 5) GC Dual Descrip.
-        Grand_canonical_dual_descriptor = [round(Global_hypersoftness * dual, 4) for dual in dual_descriptor]
-
-    if electrophilicity_index is not None and f_pos != [] and f_negs != [] and f_rads != []:
-            # 6) softness+, softness- and softness0
-        w_pos = [round(electrophilicity_index * f_po, 4) for f_po in f_pos]
-        w_negs = [round(electrophilicity_index * f_neg, 4) for f_neg in f_negs]
-        w_rads = [round(electrophilicity_index * f_rad, 4) for f_rad in f_rads]
-        if dual_descriptor is not None:
-                # 7) softness+, softness- and softness0
-            Multiphilic_descriptor = [round(electrophilicity_index * dual, 4) for dual in dual_descriptor]
-
-    if nucleophilicity_index is not None and f_pos != [] and f_negs != [] and f_rads != []:
-            # 8) softness+, softness- and softness0
-        Nu_pos = [round(nucleophilicity_index * f_po, 4) for f_po in f_pos]
-        Nu_negs = [round(nucleophilicity_index * f_neg, 4) for f_neg in f_negs]
-        Nu_rads = [round(nucleophilicity_index * f_rad, 4) for f_rad in f_rads]
-
-    localDescriptors = {
-        "fukui+": f_pos,
-        "fukui-": f_negs,
-        "fukui0": f_rads,
-        "dual descrip.": dual_descriptor,
-        "softness+": s_pos,  # s+
-        "softness-": s_negs,  # s-
-        "softness0": s_rads,  # srad
-        "Rel. nucleophilicity": Relative_nucleophilicity,  # s+/s-
-        "Rel. electrophilicity": Relative_electrophilicity,  # s-/s+
-        "GC Dual Descrip.": Grand_canonical_dual_descriptor,
-        "Electrophil.": w_pos,  # w+
-        "Nucleophil.": w_negs,  # w-
-        "Radical attack": w_rads,  # wrad
-        "Mult. descrip.": Multiphilic_descriptor,
-        "Nu_Electrophil.": Nu_pos,  # Nu+
-        "Nu_Nucleophil.": Nu_negs,  # Nu-
-        "Nu_Radical attack": Nu_rads  # Nurad
-    }
-
-    return localDescriptors
-
-
-def read_xtb(file,self):
-    """
-    Read xtb.out file and return a dictionary of extracted properties.
-    """
-
-    # Check if the file exists
-    if not os.path.exists(file):
-        self.args.log.write(f"x  WARNING! The file {file} does not exist.")
-        return None
-
-    with open(file, "r", encoding='utf-8') as f:
-        data = f.readlines()
-
-    # Initialize variables
-    energy, homo_lumo, homo, lumo = np.nan, np.nan, np.nan, np.nan
-    dipole_module, Fermi_level = np.nan, np.nan
-    total_charge = np.nan
-    total_C6AA, total_C8AA, total_alpha = np.nan, np.nan, np.nan
-    atoms, numbers, chrgs = [], [], []
-    covCN, C6AA, alpha = [], [], []
-
-    # Parsing file data
-    for i, line in enumerate(data):
-        if "SUMMARY" in line:
-            energy = float(data[i + 2].split()[3])
-        elif "total charge" in line:
-            total_charge = int(float(data[i].split()[3]))
-        elif "(HOMO)" in line:
-            if data[i].split()[3] != "(HOMO)":
-                homo = round(float(data[i].split()[3]), 4)
-                homo_occ = round(float(data[i].split()[1]), 4)
-            else:
-                homo = round(float(data[i].split()[2]), 4)
-                homo_occ = 0
-        elif "(LUMO)" in line:
-            if data[i].split()[3] != "(LUMO)":
-                lumo = round(float(data[i].split()[3]), 4)
-                lumo_occ = round(float(data[i].split()[1]), 4)
-            else:
-                lumo = round(float(data[i].split()[2]), 4)
-                lumo_occ = 0
-        elif "molecular dipole:" in line:
-            dipole_module = float(data[i + 3].split()[-1])
-        elif "Fermi-level" in line:
-            Fermi_level = float(data[i].split()[-2])
-
-    homo_lumo = round(float(lumo - homo), 4)
-
-    # Getting atomic properties related to charges, dispersion, etc.
-    start, end = 0, 0
-    for j in range(len(data)):
-        if "#   Z          covCN" in data[j]:
-            start = j + 1
-            break
-    for k in range(start, len(data)):
-        if "Mol. " in data[k]:
-            end = k - 1
-            total_C6AA = float(data[k].split()[-1])
-            total_C8AA = float(data[k + 1].split()[-1])
-            total_alpha = float(data[k + 2].split()[-1])
-            break
-
-    chrg_data = data[start:end]
-    for line in chrg_data:
-        item = line.split()
-        numbers.append(int(item[0]))
-        atoms.append(item[2])
-        covCN.append(float(item[3]))
-        chrgs.append(round(float(item[4]),3))
-        C6AA.append(float(item[5]))
-        alpha.append(float(item[6]))
-
-    properties_dict = {
-        "Total energy": energy,
-        "Total charge": total_charge,
-        "HOMO-LUMO gap_GFN": homo_lumo,
-        "HOMO_GFN": homo,
-        "LUMO_GFN": lumo,
-        "atoms": atoms,
-        "numbers": numbers,
-        "Partial charge_GFN": chrgs, 
-        "Dipole module_GFN": dipole_module,
-        "Fermi-level": Fermi_level,
-        "Coord. numbers": covCN,
-        "Disp. coeff. C6": C6AA,
-        "Polariz. alpha": alpha,
-        "HOMO occup.": homo_occ,
-        "LUMO occup.": lumo_occ,
-        "Total disp. C6": total_C6AA,
-        "Total disp. C8": total_C8AA,
-        "Total polariz. alpha": total_alpha, 
-    }
-
-    return properties_dict
-
-
-def read_ptb(file,self):
-    """
-    Read xtb.ptb file and return a dictionary of extracted properties.
-    """
-
-    # Check if the file exists
-    if not os.path.exists(file):
-        self.args.log.write(f"x  WARNING! The file {file} does not exist.")
-        return None
-
-    with open(file, "r", encoding='utf-8') as f:
-        data = f.readlines()
-
-    # Initialize variables
-    homo_lumo, homo, lumo = np.nan, np.nan, np.nan
-    dipole_module = np.nan
-    atom_dipoles, chrgs = [], []
-
-    # Parsing file data
-    for i, line in enumerate(data):
-        if "(HOMO)" in line:
-            if data[i].split()[3] != "(HOMO)":
-                homo = round(float(data[i].split()[3]), 4)
-            else:
-                homo = round(float(data[i].split()[2]), 4)
-        elif "(LUMO)" in line:
-            if data[i].split()[3] != "(LUMO)":
-                lumo = round(float(data[i].split()[3]), 4)
-            else:
-                lumo = round(float(data[i].split()[2]), 4)
-        elif "Total dipole moment" in line:
-            dipole_module = float(data[i + 1].split()[-1])
-
-    homo_lumo = round(float(lumo - homo), 4)
-
-    ptb_json = str(os.path.dirname(file)) + "/xtbout_ptb.json"
-    if os.path.exists(ptb_json):
-        # this part fixes a bug in xTB v1.7.1 when creating the json files
-        with open(ptb_json, 'r', encoding='utf-8') as file:
-            lines = file.readlines()
-
-        # Remove empty lines at the end of the file
-        with open(ptb_json, 'w', encoding='utf-8') as file:
-            for line in lines:
-                if line.rstrip('\n') != ',':
-                    file.write(line)
-
-        json_data = read_json(ptb_json)
-        chrgs = json_data['partial charges']
-        for dip_vector in json_data['atomic dipole moments']:
-            atom_dipoles.append(math.sqrt(sum(pow(element, 2) for element in np.array(dip_vector))))
-        os.remove(ptb_json)
-
-    properties_dict = {
-        "HOMO-LUMO gap": homo_lumo,
-        "HOMO": homo,
-        "LUMO": lumo,
-        "Partial charge": chrgs,
-        "Dipole module": dipole_module,
-        "Dipole moment": atom_dipoles,
-    }
-
-    return properties_dict
-
-
-def read_fod(file,self):
-    """
-    Read xtb.fod files. Return FOD-related properties.
-    """
-
-    # Check if the file exists
-    if not os.path.exists(file):
-        self.args.log.write(f"x  WARNING! The file {file} does not exist.")
-        return None
-
-    # Try to open the file and read its contents
-    with open(file, "r", encoding='utf-8') as f:
-        data = f.readlines()  # Read all lines from the file
-
-
-    # Initialize variables for storing FOD-related data
-    total_fod = None  # Will store the total FOD value
-    start_fod, end_fod = None, None  # Will mark the start and end of the FOD data section
-
-    # Look for the line containing 'Loewdin FODpop' to identify the start of the FOD data
-    for j, line in enumerate(data):
-        if "Loewdin FODpop" in line:
-            try:
-                # Extract the total FOD value from two lines above 'Loewdin FODpop'
-                total_fod = float(data[j - 2].split()[-1])
-                # Mark the start of FOD data, which is the next line after 'Loewdin FODpop'
-                start_fod = j + 1
-            except (IndexError, ValueError) as e:
-                # Handle potential errors from accessing invalid indices or incorrect value types
-                self.args.log.write(f"x  WARNING! Error extracting total FOD: {e}")
-                return None
-            break  # Stop the loop once 'Loewdin FODpop' is found
-
-    # If the 'Loewdin FODpop' section was not found, return None
-    if start_fod is None:
-        self.args.log.write(f"x  WARNING! 'Loewdin FODpop' not found in the file {file}.")
-        return None
-
-    # Look for the line that contains 'Wiberg/Mayer' to mark the end of the FOD data section
-    for k in range(start_fod, len(data)):
-        if "Wiberg/Mayer" in data[k]:
-            # The FOD data ends just before the 'Wiberg/Mayer' section
-            end_fod = k - 1
-            break
-
-    # If the end of the FOD section is not found, return None
-    if end_fod is None:
-        self.args.log.write(f"x  WARNING! 'Wiberg/Mayer' section not found in the file {file}.")
-        return None
-
-    # Extract and process the lines between start_fod and end_fod, which contain the FOD data
-    fod_data = data[start_fod:end_fod]
-
-    # Initialize lists to store FOD-related properties
-    fod, s_prop_fod, p_prop_fod, d_prop_fod = [], [], [], []
-
-    # Loop through each line of the FOD data and extract the relevant properties
-    for line in fod_data:
+            return json.load(f)
+    except json.JSONDecodeError:
         try:
-            item = line.split()  # Split the line into individual components
-            fod.append(float(item[1]))  # Extract the FOD value (index 1)
-            s_prop_fod.append(float(item[2]))  # Extract the s proportion (index 2)
-            p_prop_fod.append(float(item[3]))  # Extract the p proportion (index 3)
-            d_prop_fod.append(float(item[4]))  # Extract the d proportion (index 4)
-        except (IndexError, ValueError) as e:
-            # Handle cases where the line is not properly formatted or contains invalid values
-            self.args.log.write(f"x  WARNING! Error processing FOD data in line '{line.strip()}': {e}")
-            return None
-
-    # Create a dictionary to hold all the extracted FOD properties
-    properties_FOD = {
-        "Total FOD": total_fod,  # The total FOD value extracted from above
-        "FOD": fod,  # List of FOD values for individual atoms
-        "FOD s proportion": s_prop_fod,  # List of s proportion values
-        "FOD p proportion": p_prop_fod,  # List of p proportion values
-        "FOD d proportion": d_prop_fod,  # List of d proportion values
-    }
-
-    # Return the dictionary containing all FOD-related properties
-    return properties_FOD
-
-
-def read_json(file):
-    """
-    Loads JSON content from a file and returns it as a Python dictionary.
-    On Windows, if parsing fails due to invalid backslash escapes, tries to fix by doubling backslashes.
-    Returns None if the file cannot be opened or parsed.
-    """
-    if file.endswith(".json"):
-        try:
+            # Second attempt: Fix Windows backslash issues
             with open(file, "r", encoding='utf-8') as f:
-                return json.load(f)
-        except json.JSONDecodeError as e:
-                try:
-                    with open(file, "r", encoding='utf-8') as f:
-                        content = f.read()
-                        fixed_content = re.sub(r'\\(?![\\nt"rbfu/])', r'\\\\', content)
-                        return json.loads(fixed_content)
-                except Exception:
-                    return None
+                content = f.read()
+                # Fix unescaped backslashes not part of known escape sequences
+                fixed_content = re.sub(r'\\(?![\\nt"rbfu/])', r'\\\\', content)
+                return json.loads(fixed_content)
         except Exception:
             return None
-    else:
+    except Exception:
         return None
 
 
-def read_solv(file_solv):
-    '''
-    Retrieve properties from the single-point in solvent
-    '''
+def get_matches_idx_n_prefix(
+    self,
+    smarts_targets: List[str],
+    name_initial: str
+) -> Dict[str, Dict[str, Union[List[int], List[str], int]]]:
+    """
+    Locate atom indices and generate atom prefixes for given SMARTS patterns.
+
+    This function identifies specific atoms in a molecule that match given SMARTS
+    patterns and generates descriptive prefixes for them. It's used for analyzing
+    specific functional groups or atomic patterns in molecules.
+
+    Args:
+        self: Instance containing logging capabilities
+        smarts_targets: List of SMARTS patterns to search for
+        name_initial: Path to the initial molecular structure file
+
+    Returns:
+        Dictionary mapping each SMARTS pattern to its analysis results:
+        - sorted_indices: List of matched atom indices
+        - match_names: List of descriptive atom prefixes
+        - n_types: Number of unique atom types in match
+
+    Notes:
+        - Handles both CSEARCH-generated and regular SDF files
+        - Sanitizes patterns with quotes
+        - Warns about missing or multiple matches
+        - Creates unique, consistent atom naming across molecules
+    """
+    pattern_dict: Dict[str, Dict[str, Union[List[int], List[str], int]]] = {}
+
+    if len(smarts_targets) > 0:
+        # Create RDKit mol object from input file
+        mol = get_mol_assign(self,name_initial)
+
+        # Process each SMARTS pattern
+        for pattern in smarts_targets:
+            # Sanitize pattern by removing quotes
+            if "'" in pattern or '"' in pattern:
+                pattern = pattern.replace("'", "").replace('"', "")
+
+            # Find atoms matching the pattern
+            matches, idx_set = get_atom_matches(self, pattern, mol)
+
+            # Handle different match scenarios
+            if len(matches) == 0:
+                self.args.log.write(
+                    f"x  WARNING! SMARTS pattern {pattern} not found in "
+                    f"{os.path.basename(name_initial)}, atomic descriptors will "
+                    "not be generated."
+                )
+            elif matches[0] == -1:
+                self.args.log.write(
+                    f"x  WARNING! Mapped atom {pattern} not found in "
+                    f"{os.path.basename(name_initial)}, atomic descriptors will "
+                    "not be generated."
+                )
+            elif len(matches) > 1:
+                self.args.log.write(
+                    f"x  WARNING! More than one {pattern} patterns were found in "
+                    f"{os.path.basename(name_initial)}, atomic descriptors will "
+                    "not be generated."
+                )
+            elif len(matches) == 1:
+                # Get sorted atom types for consistent ordering
+                n_types, sorted_indices = sort_atom_types(matches, mol)
+
+                # Generate descriptive atom names
+                match_names = get_prefix_atom_props(
+                    sorted_indices,
+                    mol,
+                    pattern,
+                    idx_set
+                )
+
+                # Store pattern analysis results
+                pattern_dict[pattern] = {
+                    'sorted_indices': sorted_indices,
+                    'match_names': match_names,
+                    'n_types': n_types,
+                }
+
+    return pattern_dict
+
+def setup_env(self):
+    """Configure environment variables for reproducible calculations.
     
-    with open(file_solv, "r", encoding='utf-8') as f:
-        data = f.readlines()
-
-        # Get molecular properties related to solvation (in kcal/mol)
-        hartree_to_kcal = 627.509
-        g_solv, g_elec, g_sasa, g_hb, g_shift = np.nan,np.nan,np.nan,np.nan,np.nan
-        for _,line in enumerate(data):
-            if '-> Gsolv' in line:
-                g_solv = float(line.split()[3])*hartree_to_kcal
-            elif '-> Gelec' in line:
-                g_elec = float(line.split()[3])*hartree_to_kcal
-            elif '-> Gsasa' in line:
-                g_sasa = float(line.split()[3])*hartree_to_kcal
-            elif '-> Ghb' in line:
-                g_hb = float(line.split()[3])*hartree_to_kcal
-            elif '-> Gshift' in line:
-                g_shift = float(line.split()[3])*hartree_to_kcal
-
-        # getting atomic properties related to solvation
-        born_rad, atom_sasa, h_bond = [], [], []
-        start_solv, end_solv = 0, 0
-        for j in range(len(data)):
-            if "#   Z     Born rad" in data[j]:
-                start_solv = j + 1
-                break
-        for k in range(start_solv, len(data)):
-            if "total SASA " in data[k]:
-                end_solv = k - 1
-                break
-
-        solv_data = data[start_solv:end_solv]
-        for line in solv_data:
-            item = line.split()
-            born_rad.append(float(item[3]))
-            atom_sasa.append(float(item[4]))
-            try:
-                h_bond.append(float(item[5]))
-            except IndexError:
-                h_bond.append(0.0)
-
-    properties_dict = {
-        "G solv. in H2O": g_solv,
-        "G of H-bonds H2O": g_hb,
-        "G solv. elec.": g_elec,
-        "G solv. SASA": g_sasa,
-        "G solv. shift": g_shift,
-        "Born radii": born_rad, 
-        "H bond with H2O": h_bond, 
-    }
-
-    return properties_dict
-
-
-def read_triplet(file_triplet,singlet_e):
-    '''
-    Retrieve properties from the single-point in triplet
-    '''
-
-    hartree_to_kcal = 627.509
-    triplet_e, transition_dipole_moment, singlet_triplet_gap = np.nan,np.nan,np.nan
-
-    if os.path.exists(file_triplet):
-        with open(file_triplet, "r", encoding='utf-8') as f:
-            data = f.readlines()
-
-            # Get molecular properties related to solvation (in kcal/mol)
-            for i,line in enumerate(data):
-                if "transition dipole moment" in line:
-                    transition_dipole_moment = float(data[i + 2].split()[-1])
-                elif "SUMMARY" in line:
-                    triplet_e = float(data[i + 2].split()[3])
-
-        singlet_triplet_gap = (triplet_e-singlet_e)*hartree_to_kcal
-
-    properties_triplet = {
-        "S0-T1 gap": singlet_triplet_gap,
-        "Trans. dipole moment": transition_dipole_moment
-        }
-
-    return properties_triplet
-
-
-def calculate_global_morfeus_descriptors(final_xyz_path,self):
+    Returns:
+        dict: Environment variables
     """
-    Calculate global descriptors using the MORFEUS package. Return them in a structured dictionary.
+    env = dict(os.environ)
+    env.update({
+        "OMP_STACKSIZE": self.args.stacksize,
+        "OMP_NUM_THREADS": "1",
+        "MKL_NUM_THREADS": "1", 
+        "OPENBLAS_NUM_THREADS": "1",
+        'OMP_MAX_ACTIVE_LEVELS': '1',
+        "NUMEXPR_NUM_THREADS": "1",
+        "OMP_DYNAMIC": "FALSE",
+        "MKL_DYNAMIC": "FALSE",
+        "BLIS_NUM_THREADS": "1"
+    })
+    return env
+
+def calculate_morfeus_descriptors(
+    final_xyz_path: str,
+    self,
+    charge: int,
+    mult: Optional[int],
+    smarts_targets: List[str],
+    name_initial: str
+) -> Dict[str, Any]:
     """
+    Calculate comprehensive molecular descriptors using the MORFEUS package.
 
-    # Initialize the descriptor variables as None
-    sasa_area_global = None
-    disp_area_global = None
-    disp_vol_global = None
+    This function computes a wide range of molecular and atomic descriptors including:
+    - Global geometric properties (SASA, dispersion)
+    - Local atomic properties
+    - Electronic structure properties via xTB
+    - Solvation effects
+    - Excited state properties
 
-    # Try to load the molecular structure from the XYZ file
+    Args:
+        final_xyz_path: Path to XYZ coordinate file
+        self: Instance containing logging capabilities
+        charge: Molecular charge
+        mult: Spin multiplicity (None for automatic)
+        smarts_targets: SMARTS patterns for specific atom selection
+        name_initial: Base name for file operations
+
+    Returns:
+        Dictionary containing all calculated descriptors
+
+    Notes:
+        - Uses different xTB methods (PTB, GFN) for specific properties
+        - Includes error handling for each calculation type
+        - Calculates excited states only for closed-shell systems
+    """
+    morfeus_data: Dict[str, Any] = {}
+
+    # Log calculation start
+    mol_name = os.path.basename(final_xyz_path).replace('.xyz','')
+    self.args.log.write(f"\no  Running MORFEUS for {mol_name} "
+                       f"with charge {charge} and multiplicity {mult}")
+
+    # Calculate number of unpaired electrons
+    n_unpaired = int(mult) - 1 if mult is not None else 0
+
+    # Load molecular structure
     try:
         elements, coordinates = read_xyz(final_xyz_path)
         elements, coordinates = read_geometry(final_xyz_path)
     except Exception as e:
-        # Handle the error if the molecule cannot be loaded
-        self.args.log.write(f"x  WARNING! Error loading molecule from file {final_xyz_path}: {e}")
-        return {
-            "Global SASA": sasa_area_global,
-            "Dispersion area": disp_area_global,
-            "Dispersion volume": disp_vol_global,
-        }
+        self.args.log.write(f"x  WARNING! Error loading molecule from "
+                           f"file {final_xyz_path}: {e}")
+        return morfeus_data
 
-    # Calculate Global SASA (Solvent Accessible Surface Area)
+    # Set up environment
+    env = setup_env(self)
+
+    # calculate MORFEUS global descriptors that do not come from xTB
+    morfeus_data = morfeus_global_descps(self, elements, coordinates, morfeus_data)
+
+    # calculate MORFEUS local descriptors that do not come from xTB
+    morfeus_data = morfeus_local_descps(self, elements, coordinates, morfeus_data, smarts_targets, name_initial)
+
+    # xTB calculations through MORFEUS (with 1 proc to be reproducible)
+    # calculate PTB method for descriptors that support it
+    morfeus_data = morfeus_ptb_descps(self, elements, coordinates, morfeus_data, charge, n_unpaired, env)
+    
+    # calculate GFN2 method for descriptors not included in PTB
+    morfeus_data,energy = morfeus_gfn2_descps(self, elements, coordinates, morfeus_data, charge, n_unpaired, env)
+
+    # calculate GFN2 method with ALPB H2O for descriptors related to solvation
+    morfeus_data = morfeus_solv_descps(self, elements, coordinates, morfeus_data, charge, n_unpaired, env)
+
+    # calculate GFN2 method in triplet state to calculate S0 to T1 energy gaps
+    if n_unpaired == 0:
+        morfeus_data = morfeus_t1_descps(self, elements, coordinates, morfeus_data, charge, n_unpaired, energy, env)
+
+    # for atomic properties that fail
+    for prop in morfeus_data:
+        if isinstance(morfeus_data[prop],list):
+            if len(morfeus_data[prop]) == 0:
+                morfeus_data[prop] = [None]*len(morfeus_data["Buried volume"])
+
+    return morfeus_data
+
+
+def morfeus_global_descps(
+    self,
+    elements: List[str],
+    coordinates: NDArray,
+    morfeus_data: Dict[str, Any]
+) -> Dict[str, Any]:
+    """
+    Calculate global molecular descriptors using MORFEUS methods.
+
+    This function computes molecular-level geometric descriptors including
+    solvent-accessible surface area (SASA) and dispersion properties.
+    These calculations do not rely on xTB methods.
+
+    Args:
+        self: Instance containing logging capabilities
+        elements: List of atomic symbols
+        coordinates: Array of atomic coordinates
+        morfeus_data: Dictionary to store calculation results
+
+    Returns:
+        Updated morfeus_data dictionary with global descriptors added
+
+    Notes:
+        - Calculates total SASA for the molecule
+        - Computes dispersion area and volume
+        - All values rounded to 4 decimal places
+        - Returns None for failed calculations
+    """
+    # Initialize descriptor values
+    sasa_area_global = disp_area_global = disp_vol_global = None
+
+    # Calculate Global SASA
     try:
         sasa = SASA(elements, coordinates)
-        sasa_area_global = round(sasa.area, 4)  # Assign the calculated SASA value
+        sasa_area_global = round(sasa.area, 4)
     except Exception as e:
-        # Handle any errors during SASA calculation
-        self.args.log.write(f"x  WARNING! Error calculating SASA from Morfeus: {e}")
+        self.args.log.write(
+            f"x  WARNING! Error calculating SASA from Morfeus: {e}"
+        )
 
-    # Calculate Global Dispersion Area and Volume
+    # Calculate Global Dispersion properties
     try:
         disp = Dispersion(elements, coordinates)
-        disp_area_global = round(disp.area, 4)  # Assign the calculated dispersion area
-        disp_vol_global = round(disp.volume, 4)  # Assign the calculated dispersion volume
+        disp_area_global = round(disp.area, 4)
+        disp_vol_global = round(disp.volume, 4)
     except Exception as e:
-        # Handle any errors during Dispersion calculation
-        self.args.log.write(f"x  WARNING! Error calculating Global Dispersion from Morfeus: {e}")
+        self.args.log.write(
+            f"x  WARNING! Error calculating Global Dispersion from Morfeus: {e}"
+        )
 
-    # Create the final dictionary with the descriptors, even if some values are None
-    global_properties_morfeus = {
-        "Global SASA": sasa_area_global,
+    # Update dictionary with calculated descriptors
+    morfeus_data.update({
+        "SASA": sasa_area_global,
         "Dispersion area": disp_area_global,
         "Dispersion volume": disp_vol_global,
-    }
+    })
 
-    return global_properties_morfeus
+    return morfeus_data
 
 
-def calculate_local_morfeus_descriptors(final_xyz_path,self):
+def morfeus_local_descps(
+    self,
+    elements: List[str],
+    coordinates: NDArray,
+    morfeus_data: Dict[str, Any],
+    smarts_targets: List[str],
+    name_initial: str
+) -> Dict[str, Any]:
     """
-    Calculate local descriptors using the MORFEUS package. Return them in a structured dictionary.
+    Calculate atom-specific descriptors using MORFEUS methods.
+
+    This function computes various geometric properties for specified atoms in
+    the molecule. For each property, it generates a list with values for all
+    atoms, using NaN for atoms not in the target set.
+
+    Args:
+        self: Instance containing logging capabilities and settings
+        elements: List of atomic symbols
+        coordinates: Array of atomic coordinates
+        morfeus_data: Dictionary to store calculation results
+        smarts_targets: SMARTS patterns identifying atoms of interest
+        name_initial: Path to initial molecular structure file
+
+    Returns:
+        Updated morfeus_data dictionary with local descriptors added
+
+    Notes:
+        - Properties calculated only for atoms matching SMARTS patterns
+        - Lists have same length as number of atoms, with NaN for non-targets
+        - Example: For first atom only, SASA = [2.3452, NaN, NaN, ...]
+        - All values rounded to 4 decimal places (2 for buried volume)
     """
+    # Initialize all property lists
+    local_sasa_areas = local_buried_volumes = local_cone_angles = []
+    local_solid_angles = local_Pyramidalization = []
+    local_vol_Pyramidalization = local_disp = []
 
-    # Initialize variables as None
-    local_sasa_areas = None
-    local_buried_volumes = None
-    local_cone_angles = None
-    local_solid_angles = None
-    local_Pyramidalization = None
-    local_vol_Pyramidalization = None
-    local_disp = None
-
-    # Try to load the molecular structure from the XYZ file
-    try:
-        elements, coordinates = read_xyz(final_xyz_path)
-        elements, coordinates = read_geometry(final_xyz_path)
-    except Exception as e:
-        # If there's an issue loading the molecule, log the error and return an empty dictionary
-        self.args.log.write(f"x  WARNING! Error loading molecule from file {final_xyz_path}: {e}")
-        return {
-            "SASA": local_sasa_areas,
-            "Buried volume": local_buried_volumes,
-            "Cone angle": local_cone_angles,
-            "Solid angle": local_solid_angles,
-            "Pyramidalization": local_Pyramidalization,
-            "Pyramidaliz. volume": local_vol_Pyramidalization,
-            "Dispersion": local_disp
-        }
+    # Get target atom indices from SMARTS patterns
+    atom_matches = []
+    pattern_dict = get_matches_idx_n_prefix(self, smarts_targets, name_initial)
+    if pattern_dict:
+        for pattern in pattern_dict:
+            atom_matches.extend(pattern_dict[pattern]['sorted_indices'])
 
     # Calculate local SASA
     try:
         sasa = SASA(elements, coordinates)
-        local_sasa_areas = [round(area, 4) for area in sasa.atom_areas.values()]
+        local_sasa_areas = [
+            round(area, 4) for area in sasa.atom_areas.values()
+        ]
     except Exception as e:
-        self.args.log.write(f"x  WARNING! Error calculating local SASA from Morfeus: {e}")
+        self.args.log.write(
+            f"x  WARNING! Error calculating local SASA from Morfeus: {e}"
+        )
 
-    # Local buried Volume
-    try:
-        local_buried_volumes = []
-        for i in range(1,len(coordinates)+1):
-            bv = BuriedVolume(elements, coordinates, i)
-            buried_volume = round(bv.fraction_buried_volume, 4)
-            local_buried_volumes.append(buried_volume)
-    except Exception as e:
-        self.args.log.write(f"x  WARNING! Error calculating local Buried Volume from Morfeus: {e}")
-
-    # Local ConeAngle
-    try:
-        local_cone_angles = []
-        for i in range(1,len(coordinates)+1):
-            try:
-                cone_angle = ConeAngle(elements, coordinates, i)
-                local_cone_angles.append(round(cone_angle.cone_angle, 4))
-            except Exception as e:
-                local_cone_angles.append(None)  # Append None if there is an error for specific atom
-    except Exception as e:
-        self.args.log.write(f"x  WARNING! Error calculating local Cone Angle from Morfeus: {e}")
-
-    # Local Solid Angle
-    try:
-        local_solid_angles = []
-        for i in range(1,len(coordinates)+1):
-            try:
-                solid_angle = SolidAngle(elements, coordinates, i)
-                local_solid_angles.append(round(solid_angle.cone_angle, 4))
-            except Exception as e:
-                local_solid_angles.append(None)  # Append None if there is an error for specific atom
-    except Exception as e:
-        self.args.log.write(f"x  WARNING! Error calculating local Solid Angle from Morfeus: {e}")
-
-    # Pyramidalization
-    try:
-        local_Pyramidalization, local_vol_Pyramidalization = [], []
-        for i in range(1,len(coordinates)+1):
-            pyr = Pyramidalization(coordinates, i)
-            local_Pyramidalization.append(round(pyr.P, 4))
-            local_vol_Pyramidalization.append(round(pyr.P_angle, 4))
-    except Exception as e:
-        self.args.log.write(f"x  WARNING! Error calculating Pyramidalization from Morfeus: {e}")
-
-    # Local Dispersion
+    # Calculate local dispersion
     try:
         disp = Dispersion(elements, coordinates)
-        local_disp = [round(p_int, 4) for p_int in disp.atom_p_int.values()]
+        local_disp = [
+            round(p_int, 4) for p_int in disp.atom_p_int.values()
+        ]
     except Exception as e:
-        self.args.log.write(f"x  WARNING! Error calculating Local Dispersion from Morfeus: {e}")
+        self.args.log.write(
+            f"x  WARNING! Error calculating Local Dispersion from Morfeus: {e}"
+        )
 
-    # Return the dictionary with local descriptors, even if some values are None
-    local_properties_morfeus = {
-        "SASA": local_sasa_areas,
+    # Calculate buried volume for each atom
+    try:
+        local_buried_volumes = []
+        for i in range(1, len(coordinates) + 1):
+            if i - 1 in atom_matches:  # MORFEUS uses 1-based indices
+                # Create BuriedVolume instance with appropriate radius
+                if self.args.vbur_radius == 'auto':
+                    bv = BuriedVolume(
+                        elements,
+                        coordinates,
+                        i
+                    )
+                else:
+                    bv = BuriedVolume(
+                        elements,
+                        coordinates,
+                        i,
+                        radius=self.args.vbur_radius
+                    )
+                buried_volume = round(bv.fraction_buried_volume * 100, 2)
+                local_buried_volumes.append(buried_volume)
+            else:
+                local_buried_volumes.append(np.nan)
+    except Exception as e:
+        self.args.log.write(
+            f"x  WARNING! Error calculating local Buried Volume from Morfeus: {e}"
+        )
+
+    # Calculate cone angles
+    try:
+        local_cone_angles = []
+        for i in range(1, len(coordinates) + 1):
+            if i - 1 in atom_matches:
+                try:
+                    cone_angle = ConeAngle(elements, coordinates, i)
+                    local_cone_angles.append(round(cone_angle.cone_angle, 4))
+                except Exception:
+                    local_cone_angles.append(np.nan)
+            else:
+                local_cone_angles.append(np.nan)
+    except Exception as e:
+        self.args.log.write(
+            f"x  WARNING! Error calculating local Cone Angle from Morfeus: {e}"
+        )
+
+    # Calculate solid angles
+    try:
+        local_solid_angles = []
+        for i in range(1, len(coordinates) + 1):
+            if i - 1 in atom_matches:
+                try:
+                    solid_angle = SolidAngle(elements, coordinates, i)
+                    local_solid_angles.append(round(solid_angle.cone_angle, 4))
+                except Exception:
+                    local_solid_angles.append(np.nan)
+            else:
+                local_solid_angles.append(np.nan)
+    except Exception as e:
+        self.args.log.write(
+            f"x  WARNING! Error calculating local Solid Angle from Morfeus: {e}"
+        )
+
+    # Calculate pyramidalization
+    try:
+        local_Pyramidalization = []
+        local_vol_Pyramidalization = []
+        for i in range(1, len(coordinates) + 1):
+            if i - 1 in atom_matches:
+                pyr = Pyramidalization(coordinates, i)
+                local_Pyramidalization.append(round(pyr.P, 4))
+                local_vol_Pyramidalization.append(round(pyr.P_angle, 4))
+            else:
+                local_Pyramidalization.append(np.nan)
+                local_vol_Pyramidalization.append(np.nan)
+    except Exception as e:
+        self.args.log.write(
+            f"x  WARNING! Error calculating Pyramidalization from Morfeus: {e}"
+        )
+
+    # Update morfeus_data with all local descriptors
+    morfeus_data.update({
+        "Atom SASA": local_sasa_areas,
+        "Atom dispersion": local_disp,
         "Buried volume": local_buried_volumes,
         "Cone angle": local_cone_angles,
         "Solid angle": local_solid_angles,
         "Pyramidalization": local_Pyramidalization,
         "Pyramidaliz. volume": local_vol_Pyramidalization,
-        "Dispersion": local_disp
-    }
+    })
 
-    # for properties that failed in all calculations
-    for prop in local_properties_morfeus:
-        if local_properties_morfeus[prop] == []:
-            local_properties_morfeus[prop] = [None]*len(local_properties_morfeus["Buried volume"])
-
-    return local_properties_morfeus
+    return morfeus_data
 
 
-def full_level_boltz(descp_dict,json_files,energy,smarts_targets,full_json_data):
-    '''
-    Get all the Boltzmann weighted properties (full level)
-    '''
+def morfeus_ptb_descps(
+    self,
+    elements: List[str],
+    coordinates: NDArray,
+    morfeus_data: Dict[str, Any],
+    charge: int,
+    n_unpaired: int,
+    env: Dict[str, str]
+) -> Dict[str, Any]:
+    """
+    Calculate quantum chemical descriptors using PTB method.
 
-    # Calculate Boltzmann weights
+    This function computes electronic structure properties using the
+    PTB method implemented in xTB. It focuses on properties well-suited
+    for this level of theory, such as orbital energies and dipole moments.
+
+    Args:
+        self: Instance containing logging capabilities
+        elements: List of atomic symbols
+        coordinates: Array of atomic coordinates
+        morfeus_data: Dictionary to store calculation results
+        charge: Molecular charge
+        n_unpaired: Number of unpaired electrons
+
+    Returns:
+        Updated morfeus_data dictionary with PTB-based descriptors
+
+    Notes:
+        - Uses PTB method from xTB for fast calculations
+        - Orbital energies reported in eV
+        - Dipole moments in Debye
+        - Computes both molecular and atomic properties
+        - Returns None for failed calculations
+    """
+    # Initialize electronic properties
+    homo = lumo = homo_lumo_gap = dipole_moment = None
+    charges = atom_dipole_vect = bond_orders = {}
+
+    try:
+        # Initialize PTB calculation
+        xtb_ptb = XTB(
+            elements,
+            coordinates,
+            env_variables=env,
+            charge=charge,
+            n_unpaired=n_unpaired,
+            solvent=None,
+            method='ptb'
+        )
+
+        # Calculate orbital properties
+        homo = xtb_ptb.get_homo(unit="eV")
+        lumo = xtb_ptb.get_lumo(unit="eV")
+        homo_lumo_gap = xtb_ptb.get_homo_lumo_gap(unit="eV")
+
+        # Calculate electric properties
+        dipole_moment = xtb_ptb.get_dipole_moment(unit="debye")
+        atom_dipole_vect = xtb_ptb.get_atom_dipoles()
+        atom_dipole_modules = [
+            np.linalg.norm(atom_dipole_vect[i])
+            for i in atom_dipole_vect.keys()
+        ]
+
+        # Calculate atomic and bonding properties
+        charges = list(xtb_ptb.get_charges(model="Mulliken").values())
+        bond_orders = list(xtb_ptb.get_bond_orders().values())
+
+    except Exception as e:
+        self.args.log.write(
+            f"x  WARNING! Error calculating extra Morfeus descriptors with PTB: {e}"
+        )
+
+    # Update dictionary with calculated properties
+    morfeus_data.update({
+        "HOMO": homo,
+        "LUMO": lumo,
+        "HOMO-LUMO gap": homo_lumo_gap,
+        "Dipole module": dipole_moment,
+        "Dipole moment": atom_dipole_modules,
+        "Partial charge": charges,
+        "Bond orders": bond_orders,
+    })
+
+    return morfeus_data
+
+def morfeus_gfn2_descps(
+    self,
+    elements: List[str],
+    coordinates: NDArray,
+    morfeus_data: Dict[str, Any],
+    charge: int,
+    n_unpaired: int,
+    env: Dict[str, str]
+) -> Tuple[Dict[str, Any], float]:
+    """
+    Calculate electronic and structural descriptors using GFN-xTB method.
+
+    This function computes various molecular and atomic descriptors not available
+    in the PTB method, including electronic properties, reactivity indices,
+    and polarizability.
+
+    Args:
+        self: Instance containing logging capabilities and settings
+        elements: List of atomic symbols
+        coordinates: Array of atomic coordinates
+        morfeus_data: Dictionary to store calculation results
+        charge: Molecular charge
+        n_unpaired: Number of unpaired electrons
+
+    Returns:
+        Tuple containing:
+            - Updated morfeus_data dictionary with GFN2 descriptors
+            - Total energy of the system
+
+    Notes:
+        - Uses GFN2-xTB method with optional solvent
+        - Includes various reactivity indices (Fukui, HOMO/LUMO, etc.)
+        - Calculates both global and local (atomic) properties
+        - References for methods:
+            - Normalized electrophilicity: DOI: 10.1021/jp034707u
+            - Local electrophilicity: DOI: 10.1002/qua.25706
+    """
+    # Initialize all properties as None
+    ip = ea = hardness = softness = chemical_potential = None
+    polarizability = atom_polarizabilities = fod_pop = None
+    fod = fukui_plus = fukui_minus = fukui_radical = fukui_dual = None
+    electrophilicity = nucleofugality = None
+    local_electrophil = normal_electrophil = normal_nucleophil = None
+    electrofugality = energy = fermi_level = covCN = None
+
+    try:
+        # Initialize GFN2-xTB calculation
+        xtb2 = XTB(
+            elements,
+            coordinates,
+            env_variables=env,
+            charge=charge,
+            n_unpaired=n_unpaired,
+            solvent=getattr(self.args, "qdescp_solvent", None),
+            method=2
+        )
+
+        # Calculate global electronic properties
+        ip = xtb2.get_ip(corrected=True)
+        ea = xtb2.get_ea(corrected=True)
+        energy = xtb2.get_energy()
+        fermi_level = xtb2.get_fermi_level()
+
+        # Calculate global reactivity descriptors
+        electrophilicity = xtb2.get_global_descriptor("electrophilicity", corrected=True)
+        nucleofugality = xtb2.get_global_descriptor("nucleofugality", corrected=True)
+        electrofugality = xtb2.get_global_descriptor("electrofugality", corrected=True)
+        hardness = xtb2.get_hardness()
+        softness = xtb2.get_softness()
+        chemical_potential = xtb2.get_chemical_potential()
+
+        # Calculate polarizability and FOD properties
+        polarizability = xtb2.get_molecular_polarizability()
+        atom_polarizabilities = list(xtb2.get_atom_polarizabilities().values())
+        fod_pop = list(xtb2.get_fod_population().values())
+        fod = xtb2.get_nfod()
+
+        # Calculate Fukui indices and coordination numbers
+        fukui_plus = list(xtb2.get_fukui("plus").values())
+        fukui_minus = list(xtb2.get_fukui("minus").values())
+        fukui_radical = list(xtb2.get_fukui("radical").values())
+        fukui_dual = list(xtb2.get_fukui("dual").values())
+        covCN = list(xtb2.get_covcn().values())
+
+        # Calculate local reactivity descriptors
+        normal_electrophil = list(electrophilicity * np.array(fukui_plus))
+        normal_nucleophil = list(-ip * np.array(fukui_minus))
+        local_electrophil = list(xtb2.get_fukui("local_electrophilicity").values())
+
+    except Exception as e:
+        self.args.log.write(
+            f"x  WARNING! Error calculating extra Morfeus descriptors with GFN2: {e}"
+        )
+
+    # Update morfeus_data with all calculated properties
+    morfeus_data.update({
+        "total energy": energy,
+        "Fermi-level": fermi_level,
+        "Coord. numbers": covCN,
+        "IP": ip,
+        "EA": ea,
+        "Hardness": hardness,
+        "Softness": softness,
+        "Chem. potential": chemical_potential,
+        "Polarizability": polarizability,
+        "Atom Polarizability": atom_polarizabilities,
+        "Atom FOD": fod_pop,
+        "Total FOD": fod,
+        "Fukui+": fukui_plus,
+        "Fukui-": fukui_minus,
+        "Fukui_rad": fukui_radical,
+        "Fukui dual": fukui_dual,
+        "Electrophil.": local_electrophil,
+        "Normaliz. electrophil.": normal_electrophil,
+        "Normaliz. nucleophil.": normal_nucleophil,
+        "Electrophilicity": electrophilicity,
+        "Nucleofugality": nucleofugality,
+        "Electrofugality": electrofugality,
+    })
+
+    return morfeus_data, energy
+
+
+def morfeus_solv_descps(
+    self,
+    elements: List[str],
+    coordinates: NDArray,
+    morfeus_data: Dict[str, Any],
+    charge: int,
+    n_unpaired: int,
+    env: Dict[str, str]
+) -> Dict[str, Any]:
+    """
+    Calculate solvation descriptors using GFN-xTB with ALPB water model.
+
+    This function computes various solvation-related properties including
+    solvation free energy and hydrogen bonding contributions.
+
+    Args:
+        self: Instance containing logging capabilities
+        elements: List of atomic symbols
+        coordinates: Array of atomic coordinates
+        morfeus_data: Dictionary to store calculation results
+        charge: Molecular charge
+        n_unpaired: Number of unpaired electrons
+
+    Returns:
+        Updated morfeus_data dictionary with solvation descriptors
+
+    Notes:
+        - Uses ALPB implicit solvation model for water
+        - All energies converted to kcal/mol
+        - Includes both global and atom-specific properties
+        - Returns None for failed calculations
+    """
+    # Initialize solvation properties
+    g_solv = g_solv_hb = atom_hb_terms = None
+
+    try:
+        # Setup xTB calculation with water solvation
+        xtb2_solv = XTB(
+            elements,
+            coordinates,
+            env_variables=env,
+            charge=charge,
+            n_unpaired=n_unpaired,
+            solvent="h2o",
+            method=2
+        )
+        
+        # Calculate solvation energies and convert to kcal/mol
+        g_solv = round(xtb2_solv.get_solvation_energy() * HARTREE_TO_KCAL, 2)
+        g_solv_hb = round(xtb2_solv.get_solvation_h_bond_correction() * HARTREE_TO_KCAL, 2)
+        
+        # Calculate atomic H-bond contributions
+        atom_hb_terms = [
+            round(v * HARTREE_TO_KCAL, 2)
+            for v in xtb2_solv.get_atomic_h_bond_corrections().values()
+        ]
+
+    except Exception as e:
+        self.args.log.write(
+            f"x  WARNING! Error calculating solvation descriptors in MORFEUS with GFN2: {e}"
+        )
+
+    # Update morfeus_data with solvation properties
+    morfeus_data.update({
+        "G solv. in H2O": g_solv,
+        "G of H-bonds H2O": g_solv_hb,
+        "H bond H2O": atom_hb_terms,
+    })
+
+    return morfeus_data
+
+
+def morfeus_t1_descps(
+    self,
+    elements: List[str],
+    coordinates: NDArray,
+    morfeus_data: Dict[str, Any],
+    charge: int,
+    n_unpaired: int,
+    energy: float,
+    env: Dict[str, str]
+) -> Dict[str, Any]:
+    """
+    Calculate singlet-triplet energy gap using GFN-xTB.
+
+    This function computes the energy difference between the singlet ground
+    state and first triplet excited state using GFN2-xTB method.
+
+    Args:
+        self: Instance containing logging capabilities
+        elements: List of atomic symbols
+        coordinates: Array of atomic coordinates
+        morfeus_data: Dictionary to store calculation results
+        charge: Molecular charge
+        n_unpaired: Number of unpaired electrons in ground state
+        energy: Ground state energy (S0)
+
+    Returns:
+        Updated morfeus_data dictionary with S0-T1 gap added
+
+    Notes:
+        - Uses GFN2-xTB method for energy calculations
+        - Energy gap is reported in kcal/mol
+        - Triplet state uses n_unpaired + 2 electrons
+        - Includes solvent effects if specified in args
+    """
+    try:
+        # Calculate triplet state energy
+        xtb2t1 = XTB(
+            elements, 
+            coordinates, 
+            env_variables=env, 
+            charge=charge, 
+            n_unpaired=n_unpaired+2,
+            solvent=getattr(self.args, "qdescp_solvent", None),
+            method=2
+        )
+        energy_T1 = xtb2t1.get_energy()
+        
+        # Calculate and store S0-T1 gap in kcal/mol
+        S0_T1_gap = round((energy_T1 - energy) * HARTREE_TO_KCAL, 2)
+        morfeus_data["S0-T1 gap"] = S0_T1_gap
+        
+    except Exception as e:
+        self.args.log.write(f"x  WARNING! Error calculating S0-T1 gap: {e}")
+        morfeus_data["S0-T1 gap"] = None
+        
+    return morfeus_data
+
+
+def full_level_boltz(
+    descp_dict: Dict[str, List[str]],
+    json_files: List[str],
+    energy: List[float],
+    smarts_targets: List[str],
+    full_json_data: Dict[str, Any]
+) -> Dict[str, Any]:
+    """
+    Calculate Boltzmann-weighted averages for all properties at the full level.
+
+    This function processes both atomic and molecular properties, computing
+    weighted averages based on Boltzmann factors from energies.
+
+    Args:
+        descp_dict: Dictionary containing property lists by category
+        json_files: List of paths to JSON files with property data
+        energy: List of energies for Boltzmann weighting
+        smarts_targets: List of SMARTS patterns defining atom selections
+        full_json_data: Dictionary to store averaged properties
+
+    Returns:
+        Updated dictionary containing all Boltzmann-weighted properties
+
+    Notes:
+        - Handles both atomic and molecular properties
+        - Checks property availability across all molecules
+        - Uses Boltzmann weighting for averages
+        - Gracefully handles missing properties
+    """
+    # Calculate Boltzmann weights once
     boltz = get_boltz(energy)
 
-    # Get weighted atomic properties
+    # Process atomic properties
     atomic_props = False
     for i, prop in enumerate(descp_dict['atom_props']):
-        if i == 0:  # Filter to ensure all molecules have atomic properties for qdescp_atoms option
+        avg_prop = np.nan
+
+        # Check for atomic properties in first iteration
+        if i == 0:
             for json_file in json_files:
                 json_data = read_json(json_file)
-                for atom_prop in descp_dict['atom_props']:
-                    if atom_prop in json_data:
-                        atomic_props = True
-                        break
+                if any(
+                    atom_prop in json_data 
+                    for atom_prop in descp_dict['atom_props']
+                ):
+                    atomic_props = True
+                    break
+
+        # Calculate atomic property averages if available
         if atomic_props:
             try:
-                prop_list = [read_json(json_file)[prop] for json_file in json_files]
+                prop_list = [
+                    read_json(json_file)[prop]
+                    for json_file in json_files
+                ]
                 avg_prop = average_properties(boltz, prop_list)
             except KeyError:
                 full_json_data[prop] = np.nan
-            
-        else:
-            avg_prop = np.nan
-        update_full_json_data(full_json_data, prop, avg_prop, smarts_targets)
+        
+        # Update results with averaged property
+        full_json_data = update_full_json_data(
+            full_json_data,
+            prop,
+            avg_prop,
+            smarts_targets
+        )
 
-    # Get weighted molecular properties from XTB
+    # Process molecular properties
     for prop in descp_dict['mol_props']:
         try:
-            prop_list = [read_json(json_file)[prop] for json_file in json_files]
-            avg_prop = average_properties(boltz, prop_list, is_atom_prop=False)
+            # Calculate molecular property averages
+            prop_list = [
+                read_json(json_file)[prop]
+                for json_file in json_files
+            ]
+            avg_prop = average_properties(
+                boltz,
+                prop_list,
+                is_atom_prop=False
+            )
             full_json_data[prop] = avg_prop
         except KeyError:
             full_json_data[prop] = np.nan
     
-    return full_json_data,atomic_props
+    return full_json_data
 
 
-def get_descriptors(level):
+def get_descriptors(level: str) -> Dict[str, Dict[str, List[str]]]:
     """
-    Returns descriptors for a given level from XTB and Morfeus
+    Get quantum chemical descriptors categorized by analysis level.
+
+    This function provides predefined sets of molecular and atomic descriptors
+    organized by analysis level (de novo, interpret, or full).
+
+    Args:
+        level: Analysis level ('denovo', 'interpret', or 'full')
+
+    Returns:
+        Nested dictionary containing descriptor lists:
+        - Top level: Analysis level
+        - Second level: 'mol' and 'atoms' categories
+        - Values: Lists of descriptor names
+
+    Notes:
+        - De novo: Basic descriptors for initial analysis
+        - Interpret: Advanced descriptors for detailed analysis
+        - Full: Placeholder for custom descriptor sets
+        - Returns empty dict for unknown levels
+        
+    Example:
+        >>> descriptors = get_descriptors('denovo')
+        >>> descriptors['mol']  # Get molecular descriptors
+        >>> descriptors['atoms']  # Get atomic descriptors
     """
     descriptors = {
         'denovo': {
-            'mol': ["HOMO-LUMO gap", "HOMO", "LUMO", "IP", "EA", "Dipole module", "Total charge", "Global SASA", "G solv. in H2O", "G of H-bonds H2O"],
-            'atoms': ["Partial charge", "Dipole moment", "Electrophil.", "Nucleophil.", "Radical attack", "SASA", "Buried volume", "H bond with H2O"]
+            'mol': [
+                "HOMO-LUMO gap", "HOMO", "LUMO", "IP", "EA",
+                "Dipole module", "SASA", "G solv. in H2O",
+                "G of H-bonds H2O"
+            ],
+            'atoms': [
+                "Partial charge", "Atom SASA", "Buried volume",
+                "H bond H2O", "Fukui+", "Fukui-",
+                "Electrophil.", "Normaliz. electrophil.",
+                "Normaliz. nucleophil."
+            ]
         },
         'interpret': {
-            'mol': ["Fermi-level", "Total polariz. alpha", "Total FOD", "Hardness", "Softness", "Electronegativity",
-                    "Electrophil. idx", "Nucleophilicity idx", "Second IP", "Second EA", "S0-T1 gap"],
-            'atoms': ["s proportion", "p proportion", "d proportion", "Coord. numbers",
-                      "Polariz. alpha", "FOD", "Dispersion", "Pyramidalization", "Pyramidaliz. volume"]
+            'mol': [
+                "Fermi-level", "Polarizability", "Total FOD",
+                "Hardness", "Softness", "Dispersion area",
+                "Dispersion volume", "Chem. potential",
+                "Electrophilicity", "Electrofugality",
+                "Nucleofugality", "S0-T1 gap"
+            ],
+            'atoms': [
+                "Fukui_rad", "Fukui dual", "Dipole moment",
+                "Coord. numbers", "Atom Polarizability",
+                "Atom FOD", "Atom dispersion",
+                "Pyramidalization", "Pyramidaliz. volume"
+            ]
         },
         'full': {
-            'mol': ["HOMO-LUMO gap_GFN", "HOMO_GFN", "LUMO_GFN", "Dipole module_GFN", "Total energy", "Total disp. C6", "Total disp. C8", "Dispersion area", "Dispersion volume", "Chem. potential", 
-                    "Electrodon. power idx", "Electroaccep. power idx", "max. electron flow", "Electrodon. Chem. potential", "Electrodon. max. electron flow",
-                    "Electrofugality", "Nucleofugality", "Intrinsic React. idx", "Net Electrophilicity", 
-                    "Hyperhardness", "Hypersoftness", "Electrophilic descrip.", "cub. electrophilicity idx",
-                    "G solv. elec.", "G solv. SASA", "G solv. shift", "Trans. dipole moment",
-                    "HOMO occup.", "LUMO occup."],
-            'atoms': ["Partial charge_GFN", "fukui+", "fukui-", "fukui0", "dual descrip.", "softness+", "softness-", "softness0", 
-                      "Rel. nucleophilicity", "Rel. electrophilicity", "GC Dual Descrip.", "Mult. descrip.", 
-                      "Nu_Electrophil.", "Nu_Nucleophil.", "Nu_Radical attack", "Disp. coeff. C6", "Born radii",
-                      "Cone angle", "Solid angle", "FOD s proportion", "FOD p proportion", "FOD d proportion"]
+            'mol': [],
+            'atoms': []
         }
     }
 
     return descriptors.get(level, {})
 
 
-def fix_cols_names(df):
-    '''
-    Set code_name and SMILES using the right format
-    '''
+def find_level_names(
+    df_level: pd.DataFrame, 
+    level: str
+) -> List[str]:
+    """
+    Select descriptors for different analysis levels.
+
+    This function filters DataFrame columns based on the specified analysis level
+    (de novo or interpret), keeping essential descriptors and level-specific ones.
+
+    Args:
+        df_level: DataFrame containing molecular descriptors
+        level: Analysis level ('denovo' or 'interpret')
+
+    Returns:
+        List of column names to keep for the specified analysis level
+
+    Notes:
+        - Always includes 'code_name' and 'SMILES' if present
+        - De novo level includes basic descriptors
+        - Interpret level includes both basic and advanced descriptors
+        - Matches column suffixes regardless of prefix
+    """
+    # Essential descriptors always included
+    descriptors_denovo = ['code_name', 'SMILES']
     
+    # Get descriptors based on analysis level
+    if level == 'denovo':
+        descriptors = get_descriptors('denovo')
+        atom_suffixes = descriptors['atoms'] + descriptors['mol']
+    if level == 'interpret':
+        denovo_descr = get_descriptors('denovo')
+        interpret_descr = get_descriptors('interpret')
+        atom_suffixes = (
+            denovo_descr['atoms'] + interpret_descr['atoms'] +
+            denovo_descr['mol'] + interpret_descr['mol']
+        )
+
+    # Build list of columns to keep
+    cols_to_keep = [
+        c for c in descriptors_denovo 
+        if c in df_level.columns
+    ]
+    
+    # Add columns matching descriptor suffixes
+    cols_to_keep.extend(
+        col for col in df_level.columns
+        if any(col.endswith(suffix) for suffix in atom_suffixes)
+    )
+
+    return cols_to_keep
+
+
+def fix_cols_names(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Standardize column names in descriptor DataFrame.
+
+    Ensures consistent capitalization and naming conventions for key columns
+    including SMILES, code_name, charge, and multiplicity.
+
+    Args:
+        df: Input DataFrame with molecular descriptors
+
+    Returns:
+        DataFrame with standardized column names
+
+    Notes:
+        - Case-insensitive matching for column names
+        - Standardizes: SMILES, code_name, charge, mult
+        - Preserves all other column names as-is
+    """
+    name_mapping = {
+        'smiles': 'SMILES',
+        'code_name': 'code_name',
+        'charge': 'charge',
+        'mult': 'mult'
+    }
+    
+    # Create mapping of actual column names to standardized names
+    rename_dict = {}
     for col in df.columns:
-        if col.lower() == 'smiles':
-            df = df.rename(columns={col: 'SMILES'})
-        if col.lower() == 'code_name':
-            df = df.rename(columns={col: 'code_name'})
-        if col.lower() == 'charge': # to fix Charge
-            df = df.rename(columns={col: 'charge'})
-        if col.lower() == 'mult': # to fix Mult
-            df = df.rename(columns={col: 'mult'})    
-    return df
-
-
-def remove_atom_descp(df,atom_props):
-    '''
-    Remove atomic descriptors from a dataframe if they were not specified
-    '''
-    
-    for col in df.columns:
-        if col in atom_props:
-            df = df.drop([col], axis=1).reset_index(drop=True)
-
-    return df
-
-
-def load_file_formats():
-    '''
-    Load formats for xTB calculations (loaded in QDESCP and in pytest).
-    '''
-    
-    file_formats = {'_opt.out': 'Optimization',
-                    '.ptb': 'PTB',
-                    '.out': 'Single-point',
-                    '.fod': 'FOD',
-                    '.fukui': 'Fukui',
-                    '.gfn1': 'GFN1',
-                    '.Nminus1': 'Nminus1',
-                    '.Nminus2': 'Nminus2',
-                    '.Nplus1': 'Nplus1',
-                    '.Nplus2': 'Nplus2',
-                    '.wbo': 'WBO',
-                    '.solv': 'Solvation in H2O',
-                    '.stgap': 'S0-T1 (or T1-S0) gap',                    
-                    }
-
-    return file_formats
-
-
-def assign_prefix_atom_props(prefix_list,atom_props,interpret_atoms,denovo_atoms):
-    '''
-    Assign prefixes to atomic properties based on the atoms used
-    '''
-
-    atom_props = add_prefix(prefix_list, atom_props)
-    interpret_atoms = add_prefix(prefix_list, interpret_atoms)
-    denovo_atoms = add_prefix(prefix_list, denovo_atoms)
-
-    return atom_props,interpret_atoms,denovo_atoms
-
-
-def add_prefix(prefix_list, prop_list):
-    '''
-    Add prefix to each atomic property
-    '''
-    
-    new_atom_props = []
-
-    for prefix in prefix_list:
-        new_atom_props.append([f'{prefix}{ele}' for ele in prop_list])
-
-    for i,new_name in enumerate(new_atom_props):
-        if i == 0:
-            prop_list = new_name
-        else:
-            prop_list = prop_list + new_name
+        lower_col = col.lower()
+        if lower_col in name_mapping:
+            rename_dict[col] = name_mapping[lower_col]
             
-    return prop_list
+    # Apply renaming if any matches found
+    if rename_dict:
+        df = df.rename(columns=rename_dict)
+        
+    return df
 
 
-def collect_descp_lists():
-    '''
-    Retrieve all the descriptors names used in the different levels of descriptor interpretation
-    '''
-    denovo_descriptors = get_descriptors('denovo')
-    interpret_descriptors = get_descriptors('interpret')
-    full_descriptors = get_descriptors('full')
+def remove_atom_descp(
+    df: pd.DataFrame,
+    atom_props: List[str]
+) -> pd.DataFrame:
+    """
+    Remove atomic descriptors from a dataframe that weren't explicitly specified.
 
-    # Descriptors in every level
-    denovo_mols = denovo_descriptors['mol']
-    denovo_atoms = denovo_descriptors['atoms']
+    Args:
+        df: Pandas DataFrame containing molecular descriptors
+        atom_props: List of atomic property names to keep
 
-    interpret_mols = denovo_mols + interpret_descriptors['mol']
-    interpret_atoms = denovo_atoms + interpret_descriptors['atoms']
+    Returns:
+        DataFrame with unspecified atomic descriptors removed
 
-    mol_props = interpret_mols + full_descriptors['mol'] 
-    atom_props =  interpret_atoms + full_descriptors['atoms']
+    Notes:
+        - Modifies column structure but preserves row indexing
+        - Resets index after dropping columns
+        - Returns original DataFrame if no columns match atom_props
+    """
+    cols_to_drop = [col for col in df.columns if col in atom_props]
+    if cols_to_drop:
+        return df.drop(cols_to_drop, axis=1).reset_index(drop=True)
+    return df
 
-    descp_dict = {'denovo_mols': denovo_mols,
-                  'denovo_atoms': denovo_atoms,
-                  'qdescp_denovo_csv': "QDESCP_denovo_descriptors.csv",
-                  'interpret_mols': interpret_mols,
-                  'interpret_atoms': interpret_atoms,
-                  'qdescp_interpret_csv': "QDESCP_interpret_descriptors.csv",
-                  'mol_props': mol_props,
-                  'atom_props': atom_props,
-                  'qdescp_csv': "QDESCP_full_descriptors.csv",
-                  }
+def assign_prefix_atom_props(
+    prefix_list: List[str],
+    atom_props: List[str],
+    interpret_atoms: List[str],
+    denovo_atoms: List[str]
+) -> Tuple[List[str], List[str], List[str]]:
+    """
+    Assign prefixes to different sets of atomic properties.
 
-    return descp_dict
+    This function applies a set of prefixes to three different lists of
+    atomic properties, maintaining consistency across property types.
+
+    Args:
+        prefix_list: List of prefixes to apply
+        atom_props: List of general atomic properties
+        interpret_atoms: List of interpretation-level atomic properties
+        denovo_atoms: List of de novo-level atomic properties
+
+    Returns:
+        Tuple containing:
+        - Modified atom_props with prefixes
+    """
+    return (
+        add_prefix(prefix_list, atom_props),
+        add_prefix(prefix_list, interpret_atoms),
+        add_prefix(prefix_list, denovo_atoms)
+    )
 
 
-def average_properties(boltz, prop_list, is_atom_prop=True):
-    """Calculate average properties based on Boltzmann weights."""
-    return average_prop_atom(boltz, prop_list) if is_atom_prop else average_prop_mol(boltz, prop_list)
+def add_prefix(
+    prefix_list: List[str], 
+    prop_list: List[str]
+) -> List[str]:
+    """
+    Add prefixes to atomic property names.
+
+    Creates a new list of property names by combining each prefix with
+    each property name. Useful for distinguishing properties of different
+    atom types or positions.
+
+    Args:
+        prefix_list: List of prefixes to add
+        prop_list: List of property names to modify
+
+    Returns:
+        List of property names with prefixes added
+    """
+    # Create list of prefixed property names for each prefix
+    prefixed_props = [
+        [f'{prefix}{prop}' for prop in prop_list]
+        for prefix in prefix_list
+    ]
+    
+    # Flatten list of lists into single list
+    return [
+        prop for prefix_group in prefixed_props 
+        for prop in prefix_group
+    ]
 
 
-def update_full_json_data(full_json_data, prop, avg_prop, smarts_targets):
-    """Update full_json_data with averaged properties."""
+def collect_descp_lists() -> Dict[str, Union[List[str], str]]:
+    """
+    Organize descriptor names for different analysis levels.
+
+    This function collects and organizes molecular and atomic descriptors
+    into appropriate categories for different levels of analysis (de novo,
+    interpret, and full).
+
+    Returns:
+        Dictionary containing:
+        - Lists of molecular descriptors by level
+        - Lists of atomic descriptors by level
+        - CSV filename templates for each level
+        
+    Example structure:
+        {
+            'denovo_mols': ['HOMO', 'LUMO', ...],
+            'denovo_atoms': ['charge', 'SASA', ...],
+            'interpret_mols': ['polarizability', ...],
+            'interpret_atoms': ['fukui', ...],
+            'mol_props': [...],
+            'atom_props': [...],
+            'qdescp_denovo_csv': "filename.csv",
+            ...
+        }
+    """
+    # Collect descriptors for each level
+    levels = {
+        'denovo': get_descriptors('denovo'),
+        'interpret': get_descriptors('interpret'),
+        'full': get_descriptors('full')
+    }
+    
+    # Organize molecular descriptors
+    denovo_mols = levels['denovo']['mol']
+    interpret_mols = denovo_mols + levels['interpret']['mol']
+    mol_props = interpret_mols + levels['full']['mol']
+    
+    # Organize atomic descriptors
+    denovo_atoms = levels['denovo']['atoms']
+    interpret_atoms = denovo_atoms + levels['interpret']['atoms']
+    atom_props = interpret_atoms + levels['full']['atoms']
+    
+    # Return organized dictionary
+    return {
+        # Molecular descriptors by level
+        'denovo_mols': denovo_mols,
+        'interpret_mols': interpret_mols,
+        'mol_props': mol_props,
+        
+        # Atomic descriptors by level
+        'denovo_atoms': denovo_atoms,
+        'interpret_atoms': interpret_atoms,
+        'atom_props': atom_props,
+        
+        # Output file templates
+        'qdescp_denovo_csv': "QDESCP_denovo_descriptors.csv",
+        'qdescp_interpret_csv': "QDESCP_interpret_descriptors.csv",
+        'qdescp_csv': "QDESCP_full_descriptors.csv"
+    }
+
+def average_properties(
+    boltz_weights: List[float],
+    prop_list: List[Union[float, List[float], NDArray]],
+    is_atom_prop: bool = True
+) -> Union[float, NDArray]:
+    """
+    Calculate Boltzmann-weighted averages for molecular or atomic properties.
+
+    This function serves as a unified interface for averaging properties,
+    delegating to specialized functions based on property type.
+
+    Args:
+        boltz_weights: List of Boltzmann weights for each configuration
+        prop_list: List of property values (scalar or array) for each configuration
+        is_atom_prop: True for atomic properties, False for molecular properties
+
+    Returns:
+        Boltzmann-weighted average of the properties.
+        Returns scalar for molecular properties, array for atomic properties.
+    """
+    if is_atom_prop:
+        return average_prop_atom(boltz_weights, prop_list)
+    return average_prop_mol(boltz_weights, prop_list)
+
+
+def update_full_json_data(
+    full_json_data: Dict[str, Any],
+    prop: str,
+    avg_prop: Union[float, NDArray],
+    smarts_targets: List[str]
+) -> None:
+    """
+    Update JSON data structure with averaged property values.
+
+    This function handles the insertion of averaged molecular properties into
+    the JSON data structure, with special handling for array-type properties
+    and NaN values.
+
+    Args:
+        full_json_data: Dictionary to update with new property values
+        prop: Name of the property being added
+        avg_prop: Averaged property value(s)
+        smarts_targets: List of SMARTS patterns defining property scope
+
+    Notes:
+        - Preserves numpy arrays when SMARTS targets are present
+        - Converts arrays to lists for JSON compatibility otherwise
+        - Handles both scalar and array-type properties
+        - Modifies full_json_data in place
+    """
     if len(smarts_targets) > 0 or np.isnan(avg_prop).any():
         full_json_data[prop] = avg_prop
     else:
         full_json_data[prop] = avg_prop.tolist()
 
+    return full_json_data
 
-def dict_to_json(name, dict_data):
-    '''
-    Saves a dictionary as a JSON file
-    '''
+def dict_to_json(
+    self,
+    filepath: Union[str, Path],
+    data: Dict[str, Any],
+) -> None:
+    """
+    Save a dictionary to a JSON file with error handling.
+
+    Args:
+        filepath: Path to the output JSON file
+        data: Dictionary to serialize to JSON
+
+    Raises:
+        IOError: If file cannot be written
+        TypeError: If data contains non-serializable objects
+        
+    Notes:
+        - Uses UTF-8 encoding for universal character support
+        - Converts numpy arrays to lists automatically
+        - Creates parent directories if they don't exist
+    """
+    filepath = Path(filepath)
     
-    with open(name, "w", encoding='utf-8') as outfile:
-        json.dump(dict_data, outfile)
-
-
-def get_mols_qdescp(qdescp_files):
-    '''
-    Obtaining mols from input files
-    '''
+    # Create parent directories if they don't exist
+    filepath.parent.mkdir(parents=True, exist_ok=True)
     
+    try:
+        # Convert numpy arrays to lists for JSON serialization
+        converted_data = data.copy()
+        convert_ndarrays(converted_data)
+        
+        # Write to file with proper formatting
+        with open(filepath, "w", encoding='utf-8') as outfile:
+            json.dump(converted_data, outfile)
+            
+    except TypeError as e:
+        type_error = f'Data contains non-serializable objects: {e}'
+        self.args.log.write(type_error)
+        raise TypeError(type_error)
+    except IOError as e:
+        io_error = f"Error writing to file {filepath}: {e}"
+        self.args.log.write(io_error)
+        raise IOError(io_error)
+    except Exception as e:
+        exception_error = f"Unexpected error saving JSON: {e}"
+        self.args.log.write(exception_error)
+        raise Exception(exception_error)
+
+def get_mols_qdescp(qdescp_files: List[str]) -> List[MoleculeType]:
+    """
+    Extract molecule objects from input files.
+
+    This function reads molecules from either SDF files or files containing
+    SMILES strings, handling both formats transparently.
+
+    Args:
+        qdescp_files: List of paths to input files (SDF or files with SMILES)
+
+    Returns:
+        List of RDKit molecule objects with hydrogens added
+
+    Notes:
+        - First attempts to find SMILES strings in the file
+        - Falls back to SDF parsing if no SMILES found
+        - Automatically adds hydrogens to all molecules
+        - Returns empty list if no valid molecules found
+    """
     mol_list = []
+    
     for file in qdescp_files:
-        with open(file, "r", encoding='utf-8') as F:
-            lines = F.readlines()
-            smi_exist = False
-            for i, line in enumerate(lines):
-                if ">  <SMILES>" in line:
+        # Try to read file content
+        try:
+            with open(file, "r", encoding='utf-8') as f:
+                lines = f.readlines()
+        except Exception:
+            continue
+            
+        # First try to find SMILES in the file
+        smi_exist = False
+        for i, line in enumerate(lines):
+            if ">  <SMILES>" in line and i + 1 < len(lines):
+                try:
                     smi = lines[i + 1].split()[0]
-                    mol_indiv = Chem.AddHs(Chem.MolFromSmiles(smi))
-                    mol_list.append(mol_indiv)
-                    smi_exist = True
-                    break
-            if not smi_exist:
+                    mol = Chem.MolFromSmiles(smi)
+                    if mol is not None:
+                        mol_list.append(Chem.AddHs(mol))
+                        smi_exist = True
+                        break
+                except Exception:
+                    continue
+                    
+        # If no SMILES found, try reading as SDF
+        if not smi_exist:
+            try:
                 mols = load_sdf(file)
-                mol_indiv = mols[0]
-                mol_list.append(mol_indiv)
+                if mols:
+                    mol_list.append(mols[0])
+            except Exception:
+                continue
     
     return mol_list
 
 
-def get_mol_assign(name_initial):
-    '''
-    Create mol from SMILES in SDF files generated by CSEARCH or from regular SDF files
-    '''
+def get_mol_assign(self,
+        name_initial: str) -> MoleculeType:
+    """
+    Create RDKit molecule object from SDF file, supporting multiple formats.
 
-    sdf_file = f'{name_initial}.sdf'
-    with open(sdf_file, "r", encoding='utf-8') as F:
-        lines = F.readlines()
+    This function handles both CSEARCH-generated SDF files (with embedded SMILES)
+    and regular SDF files. It attempts to extract SMILES first, then falls back
+    to direct SDF parsing.
 
-    smi_exist = False
-    for i, line in enumerate(lines):
-        if ">  <SMILES>" in line:
-            smi = lines[i + 1].split()[0]
-            mol = Chem.AddHs(Chem.MolFromSmiles(smi))
-            smi_exist = True
-    if not smi_exist:
-        mols = load_sdf(sdf_file)
-        mol = mols[0]
+    Args:
+        name_initial: Base name of the SDF file (without extension)
 
-    return mol
+    Returns:
+        RDKit molecule object with hydrogen atoms added
 
+    Raises:
+        FileNotFoundError: If SDF file doesn't exist
+        ValueError: If molecule cannot be parsed from file
+        
+    Notes:
+        - Prefers SMILES representation if available
+        - Automatically adds hydrogen atoms
+        - Handles both CSEARCH and standard SDF formats
+    """
+    sdf_path = Path(f'{name_initial}.sdf')
+    
+    if not sdf_path.exists():
+        raise FileNotFoundError(f"SDF file not found: {sdf_path}")
 
-def auto_pattern(mol_list,smarts_targets):
-    '''
-    Obtaing SMARTS patterns from the input files automatically if no patterns are provided
-    '''
+    try:
+        # Read SDF file content
+        with open(sdf_path, "r", encoding='utf-8') as f:
+            lines = f.readlines()
 
-    mcs = rdFMCS.FindMCS(mol_list)
-    if mcs is not None:
-        common_substructure = Chem.MolFromSmarts(mcs.smartsString)
-        # Filter out non-metal atoms
-        atom_types = []
-        for atom in common_substructure.GetAtoms():
-            atom_types.append(atom.GetSymbol())
-        for atom_type in set(atom_types):
-            if atom_types.count(atom_type) == 1:
-                smarts_targets.append(f'{atom_type}')
+        # Try to find and use SMILES string first
+        for i, line in enumerate(lines):
+            if ">  <SMILES>" in line and i + 1 < len(lines):
+                smiles = lines[i + 1].strip().split()[0]
+                mol = Chem.MolFromSmiles(smiles)
+                if mol is not None:
+                    return Chem.AddHs(mol)
 
-    return smarts_targets
+        # Fall back to SDF parsing if no SMILES found
+        mols = load_sdf(str(sdf_path))
+        if not mols:
+            val_error = f"x  WARNING! No valid molecules found in {sdf_path}"
+            self.args.log.write(val_error)
+            raise ValueError(val_error)
+        
+        return mols[0]  # Return first molecule
 
+    except Exception as e:
+        exc_error = f"Error processing SDF file {sdf_path}: {str(e)}"
+        self.args.log.write(exc_error)
+        raise ValueError(exc_error)
 
-def remove_invalid_smarts(self,mol_list,smarts_targets):
-    '''
-    Delete a SMARTS pattern if it is not compatible with more than 75% of the sdf files
-    '''
+def auto_pattern(
+    mol_list: List[Chem.Mol],
+    smarts_targets: List[str],
+) -> List[str]:
+    """
+    Automatically detect common SMARTS patterns across molecules.
 
-    patterns_remove,matches = [],[]
-    for pattern in smarts_targets:
-        if "'" in pattern or '"' in pattern:
-            pattern = pattern.replace("'",'').replace('"','')
-        num_matches = len(mol_list)
-        for mol_indiv in mol_list:
-            try:
-                # we differentiate if the pattern is a number for mapped atom or we are looking for smarts pattern in the molecule
-                if not str(pattern).isalpha() and str(pattern).isdigit():
-                    # for non-mapped mols (i.e. SDF input files)
-                    mol_idxs = [atom.GetAtomMapNum() for atom in mol_indiv.GetAtoms()]
-                    if len(set(mol_idxs)) == 1 and mol_idxs[0] == 0:
-                        for i,atom in enumerate(mol_indiv.GetAtoms()):
-                            if i == int(pattern)-1: # atoms in SDF starts in index 1, but Python starts in idx 0
-                                pattern_idx = int(atom.GetIdx())
-                                matches = ((int(pattern_idx),),)
-                    # for mapped SMILES
-                    else:
-                        for atom in mol_indiv.GetAtoms():
-                            if atom.GetAtomMapNum() == int(pattern):
-                                pattern_idx = int(atom.GetIdx())
-                                matches = ((int(pattern_idx),),)
-                else:
-                    matches = mol_indiv.GetSubstructMatches(Chem.MolFromSmarts(pattern))
-            except:
-                try: # I tried to make this except more specific for Boost.Python.ArgumentError, but apparently it's not as simple as it looks
-                    matches = mol_indiv.GetSubstructMatches(Chem.MolFromSmarts(f'[{pattern}]'))
-                except:
-                    if pattern in self.args.qdescp_atoms:
-                        self.args.log.write(f"x  WARNING! SMARTS pattern {pattern} was not specified correctly and its corresponding atomic descriptors will not be generated! Make sure the qdescp_atoms option uses this format: \"[C]\" for atoms, \"[C=N]\" for bonds, and so on.")
-                    patterns_remove.append(pattern)
-                    break
+    Args:
+        mol_list: List of RDKit molecule objects
+        smarts_targets: Existing SMARTS patterns or names (may be empty)
+
+    Returns:
+        Updated list of SMARTS patterns including automatically detected ones
+
+    Notes:
+        - Only includes functional groups or SMARTS patterns that appear exactly once per molecule
+        - Preserves and validates existing SMARTS patterns from smarts_targets
+        - idx_added_per_mol is a list of sets; each set contains atom indices
+          (for that molecule) that are already assigned to a matched pattern
+    """
+    if not mol_list:
+        return smarts_targets
+
+    n_mols = len(mol_list)
+
+    # Predefined functional groups (name -> SMARTS)
+    func_groups = {
+        'O=C[H]': '[CX3H1](=O)',
+        'O=COC':  '[CX3](=O)O[#6]',
+        'O=C[O-]': '[CX3](=O)[O-]',
+        'O=C(N)': 'C(=O)[NX3;H2,H1,H0;!$(NC=O)]',
+        'O=CO[H]': 'C(=O)[OX2H1]',
+        'C#N': '[CX2]#[NX1]',
+        'C=C': 'C=C',
+        'C#C': 'C#C',
+        'N=O': '[NX2]=[OX1]',
+        'N=N': '[NX2]=[NX2]',
+        'N#N': '[NX2]#[NX1]',
+        'S=O': '[#16X3]=O',
+        'O=S=O': 'S(=O)(=O)',
+        'O-H': '[OX2H]',
+        'N-H': '[NX3H]',
+        'S-H': '[SX2H]'
+    }
+
+    # Index sets per molecule to track already-assigned atom indices
+    idx_added_per_mol: List[set] = [set() for _ in range(n_mols)]
+
+    # --- Step 0: Validate existing SMARTS and collect their atom indices per molecule ---
+    validated_targets: List[str] = []
+    for target in smarts_targets:
+        smarts = func_groups.get(target, target)
+        pattern = Chem.MolFromSmarts(smarts)
+        if pattern is None:
+            continue
+
+        # must appear exactly once in every molecule
+        appear_once_in_all = True
+        all_matches_per_mol = []
+        for mol in mol_list:
+            matches = mol.GetSubstructMatches(pattern)
+            all_matches_per_mol.append(matches)
             if len(matches) != 1:
-                num_matches -= 1
-            if (num_matches / len(mol_list)) < 0.75:
-                patterns_remove.append(pattern)
-                if pattern in self.args.qdescp_atoms:
-                    self.args.log.write(f"x  WARNING! SMARTS pattern {pattern} is not present (or there is more than one match) in 75% or more of the molecules. Atomic descriptors will not be generated for this pattern.")
+                appear_once_in_all = False
                 break
 
-    # remove invalid patterns
-    for pattern in patterns_remove:
-        smarts_targets.remove(pattern)
+        if not appear_once_in_all:
+            continue
 
-    # print patterns recognized automatically
-    for smarts_target in smarts_targets:
-        if smarts_target not in self.args.qdescp_atoms:
-            self.args.log.write(f"\no  Pattern {smarts_target} shared in all input files. Using it for atomic descriptor calculations")
+        # collect matching atom indices per molecule (flatten tuples)
+        for i, matches in enumerate(all_matches_per_mol):
+            for match in matches:
+                for idx in match:
+                    idx_added_per_mol[i].add(idx)
+
+        validated_targets.append(target)
+
+    smarts_targets = validated_targets.copy()
+
+    # --- Step 1: Detect predefined functional groups (only if exactly once per mol) ---
+    for group_name, smarts in func_groups.items():
+        if group_name in smarts_targets:
+            continue  # already validated/present
+
+        pattern = Chem.MolFromSmarts(smarts)
+        if pattern is None:
+            continue
+
+        appear_once_in_all = True
+        all_matches_per_mol = []
+        for mol in mol_list:
+            matches = mol.GetSubstructMatches(pattern)
+            all_matches_per_mol.append(matches)
+            if len(matches) != 1:
+                appear_once_in_all = False
+                break
+
+        if not appear_once_in_all:
+            continue
+
+        smarts_targets.append(group_name)
+        for i, matches in enumerate(all_matches_per_mol):
+            for match in matches:
+                for idx in match:
+                    idx_added_per_mol[i].add(idx)
+
+    # --- Step 2: Add individual unique atoms (atoms appearing exactly once in each mol) ---
+    unique_atoms_per_mol = []
+    for mol in mol_list:
+        symbols = [atom.GetSymbol() for atom in mol.GetAtoms()]
+        single_occurrence = {sym for sym in set(symbols) if symbols.count(sym) == 1}
+        unique_atoms_per_mol.append(single_occurrence)
+
+    if unique_atoms_per_mol:
+        common_unique_atoms = set.intersection(*unique_atoms_per_mol)
+    else:
+        common_unique_atoms = set()
+
+    for atom_symbol in common_unique_atoms:
+        if atom_symbol in smarts_targets:
+            continue
+
+        overlaps_any = False
+        for i, mol in enumerate(mol_list):
+            atom_indices = [atom.GetIdx() for atom in mol.GetAtoms() if atom.GetSymbol() == atom_symbol]
+            if len(atom_indices) != 1:
+                overlaps_any = True
+                break
+            idx = atom_indices[0]
+            if idx in idx_added_per_mol[i]:
+                overlaps_any = True
+                break
+
+        if not overlaps_any:
+            smarts_targets.append(atom_symbol)
+            for i, mol in enumerate(mol_list):
+                idx = next(atom.GetIdx() for atom in mol.GetAtoms() if atom.GetSymbol() == atom_symbol)
+                idx_added_per_mol[i].add(idx)
 
     return smarts_targets
 
+def remove_invalid_smarts(
+    self,
+    mol_list: List[MoleculeType],
+    smarts_targets: List[str],
+    min_match_percent: float = 0.75
+) -> List[str]:
+    """
+    Remove SMARTS patterns that don't match consistently across molecules.
 
-def get_atom_matches(self,pattern,mol):
-    '''
-    Find the target atoms or groups in the mol object
-    '''
+    This function validates each SMARTS pattern against a list of molecules
+    and removes patterns that:
+    1. Don't parse correctly as SMARTS
+    2. Match fewer than min_match_percent of molecules
+    3. Match multiple times in a single molecule
 
+    Args:
+        self: Instance containing logging capabilities
+        mol_list: List of RDKit molecule objects to check
+        smarts_targets: List of SMARTS patterns to validate
+        min_match_percent: Minimum fraction of molecules that must match (default: 0.75)
+
+    Returns:
+        List of validated SMARTS patterns
+
+    Notes:
+        - Handles both atom mapping numbers and SMARTS patterns
+        - Supports both mapped and unmapped molecules
+        - Automatically logs warnings for invalid or inconsistent patterns
+    """
+    def _clean_pattern(pattern: str) -> str:
+        """Convert lists to pattern (for direct module calls) and remove quotes from pattern string."""
+        return pattern.strip("'").strip('"')
+
+    def _check_pattern(self, pattern: str, mol: MoleculeType) -> bool:
+        """Check if pattern matches exactly once in molecule."""
+        pattern = _clean_pattern(pattern)
+        
+        # Handle atom numbers vs SMARTS patterns
+        matches, _ = get_atom_matches(self, pattern, mol)
+        
+        return len(matches) == 1
+
+    # Track patterns to remove
+    patterns_to_remove = set()
+    required_matches = len(mol_list) * min_match_percent
+
+    # Validate each pattern
+    for pattern in smarts_targets:
+        matches_found = sum(1 for mol in mol_list if _check_pattern(self, pattern, mol))
+        
+        if matches_found < required_matches:
+            patterns_to_remove.add(pattern)
+            if pattern in self.args.qdescp_atoms:
+                if matches_found == 0:
+                    self.args.log.write(
+                        f"x  WARNING! SMARTS pattern {pattern} was not specified correctly. "
+                        "Make sure to use proper format: \"[C]\" for atoms, \"[C=N]\" for bonds, etc."
+                    )
+                else:
+                    self.args.log.write(
+                        f"x  WARNING! SMARTS pattern {pattern} is not present (or matches "
+                        f"multiple times) in {min_match_percent*100}% or more of the molecules. "
+                        "Atomic descriptors will not be generated for this pattern."
+                    )
+
+    # Remove invalid patterns
+    valid_patterns = [p for p in smarts_targets if p not in patterns_to_remove]
+
+    # Log automatically detected patterns
+    for pattern in valid_patterns:
+        if pattern not in self.args.qdescp_atoms:
+            self.args.log.write(
+                f'o  Pattern "{pattern}" validated, it will be used for atomic descriptor calculations'
+            )
+
+    return valid_patterns
+
+
+def get_atom_matches(
+    self,
+    pattern: str,
+    mol: MoleculeType
+) -> Tuple[List[Tuple[int, ...]], Optional[str]]:
+    """
+    Find atoms or groups matching a pattern in a molecule.
+
+    This function handles both atom mapping numbers and SMARTS patterns
+    to identify specific atoms or functional groups in a molecule.
+
+    Args:
+        self: Instance containing logging capabilities
+        pattern: Either an atom mapping number or SMARTS pattern
+        mol: RDKit molecule object to search
+
+    Returns:
+        Tuple containing:
+        - List of matching atom index tuples
+        - Mapped atom number if pattern is a digit, None otherwise
+
+    Notes:
+        - Handles both mapped atoms (by number) and SMARTS patterns
+        - Returns [] for no matches
+        - Provides special handling for mapped vs unmapped molecules
+    """
     matches = []
     idx_set = None
     
-    # we differentiate if it is a number for mapped atom or we are looking for smarts pattern in the molecule
+    # Check if pattern is a number (mapped atom) or SMARTS pattern
     if not str(pattern).isalpha() and str(pattern).isdigit():
         idx_set = pattern
 
@@ -1531,49 +2139,109 @@ def get_atom_matches(self,pattern,mol):
         try:
             matches = mol.GetSubstructMatches(Chem.MolFromSmarts(pattern))
         except:
+            pass
+        if len(matches) == 0:
             try:
-                matches = mol.GetSubstructMatches(Chem.MolFromSmarts(f'[{pattern}]'))
+                # If it's a SMARTS pattern with one atom
+                if pattern in periodic_table() or (pattern[0] == '#' and len(pattern) <= 3):
+                    matches = mol.GetSubstructMatches(Chem.MolFromSmarts(f'[{pattern}]'))
             except:
                 self.args.log.write(f"x  WARNING! SMARTS pattern was not specified correctly! Make sure the qdescp_atoms option uses this format: \"[C]\" for atoms, \"[C=N]\" for bonds, and so on.")
 
     return matches, idx_set
 
 
-def sort_atom_types(matches,mol):
-    '''
-    Get atom types and sort them to keep the same atom order among different molecules
-    '''
-    
+def sort_atom_types(
+    matches: List[Tuple[int, ...]], 
+    mol: MoleculeType
+) -> Tuple[int, List[int]]:
+    """
+    Sort atoms based on their types and connectivity.
+
+    This function processes RDKit substructure matches and sorts atoms based
+    on their element type and connectivity to ensure consistent ordering
+    across different molecules.
+
+    Args:
+        matches: List of atom index tuples from RDKit substructure match
+        mol: RDKit molecule object containing the matched atoms
+
+    Returns:
+        Tuple containing:
+        - Number of unique atom types in the match
+        - List of sorted atom indices
+
+    Notes:
+        - For single atom type matches: sorts by number of neighbors
+        - For multiple atom types: sorts by atomic number
+        - Returns empty list if matches or molecule is None
+    """
+    if not matches or not mol:
+        return 0, []
+        
     atom_indices = list(matches[0])
     atom_types = []
+    
     for atom_idx in atom_indices:
         atom_types.append(mol.GetAtoms()[atom_idx].GetSymbol())
 
     n_types = len(set(atom_types))
     if n_types == 1:
-        sorted_indices = sorted(atom_indices, key=lambda idx: len(mol.GetAtoms()[idx].GetNeighbors()))
-    elif n_types > 1:
-        sorted_indices = sorted(atom_indices, key=lambda idx: mol.GetAtoms()[idx].GetAtomicNum())
+        # For single atom type, sort by connectivity
+        sorted_indices = sorted(
+            atom_indices, 
+            key=lambda idx: len(mol.GetAtoms()[idx].GetNeighbors())
+        )
+    else:
+        # For multiple atom types, sort by atomic number
+        sorted_indices = sorted(
+            atom_indices, 
+            key=lambda idx: mol.GetAtoms()[idx].GetAtomicNum()
+        )
 
     return n_types, sorted_indices
 
 
-def get_prefix_atom_props(sorted_indices,mol,pattern,smarts_targets,idx_set):
-    '''
-    Generate unique match names for each atom type in the functional group
-    '''
-    
+def get_prefix_atom_props(
+    sorted_indices: List[int],
+    mol: MoleculeType,
+    pattern: str,
+    idx_set: Optional[str]
+) -> List[str]:
+    """
+    Generate unique match names for each atom in a functional group.
+
+    This function creates unique identifiers for atoms in a matched functional
+    group, handling both mapped atoms and SMARTS patterns.
+
+    Args:
+        sorted_indices: List of sorted atom indices from the match
+        mol: RDKit molecule object containing the atoms
+        pattern: Original SMARTS pattern or atom number
+        idx_set: Optional explicit atom mapping number
+
+    Returns:
+        List of unique match names for each atom
+
+    Notes:
+        - Handles both mapped atoms and SMARTS pattern matches
+        - Creates unique names for multiple instances of same atom type
+        - Preserves atom ordering from sorted_indices
+    """
     match_names = []
     atom_counters = {}
 
-    # Separate atoms when functional groups are used
+    # Iterate through matched atoms in their sorted order
     for atom_idx in sorted_indices:
         atom_type = mol.GetAtoms()[atom_idx].GetSymbol()
 
-        # Check if there's more than one atom of the same type
-        n_atoms_of_type = sum(1 for idx in sorted_indices if mol.GetAtoms()[idx].GetSymbol() == atom_type)
+        # Count atoms of this type in the match
+        n_atoms_of_type = sum(
+            1 for idx in sorted_indices 
+            if mol.GetAtoms()[idx].GetSymbol() == atom_type
+        )
 
-        # Initialize counter if it doesn't exist for this atom type
+        # Initialize counter for new atom type
         if atom_type not in atom_counters:
             atom_counters[atom_type] = 1
         # If the pattern is a single atom number, we include that number in the match name
@@ -1581,7 +2249,7 @@ def get_prefix_atom_props(sorted_indices,mol,pattern,smarts_targets,idx_set):
             match_name = f'Atom_{pattern}'
         else:
             # If it's a SMARTS pattern or more than one atom
-            if len(smarts_targets) == 1 and pattern in periodic_table():
+            if pattern in periodic_table():
                 # Case where it's just an atom type without SMARTS
                 if n_atoms_of_type == 1:
                     match_name = f'{atom_type}'
@@ -1609,39 +2277,82 @@ def get_prefix_atom_props(sorted_indices,mol,pattern,smarts_targets,idx_set):
     return match_names
 
 
-def update_atom_props_json(sorted_indices,match_names,atom_props,json_data,prefixes_atom_prop,pattern,n_types):
-    '''
-    Assign atomic descriptors to each identified atom and update database for final JSON file
-    '''
+def update_atom_props_json(
+    sorted_indices: List[int],
+    match_names: List[str],
+    atom_props: List[str],
+    json_data: Dict[str, Any],
+    prefixes_atom_prop: List[str],
+    pattern: str,
+    n_types: int
+) -> Tuple[List[str], Dict[str, Any]]:
+    """
+    Update JSON data with atomic descriptors and derived properties.
 
+    This function assigns atomic descriptors to matched atoms and computes
+    aggregate properties (min/max) for functional groups.
+
+    Args:
+        sorted_indices: List of sorted atom indices from the match
+        match_names: List of unique identifiers for each atom
+        atom_props: List of atomic property names to process
+        json_data: Dictionary containing property values to update
+        prefixes_atom_prop: List of existing property prefixes
+        pattern: SMARTS pattern or atom number identifier
+        n_types: Number of unique atom types in the match
+
+    Returns:
+        Tuple containing:
+        - Updated list of property prefixes
+        - Updated JSON data dictionary
+
+    Notes:
+        - Assigns properties per atom with unique identifiers
+        - Computes min/max for groups with same atom type
+        - Handles missing values gracefully
+        - Preserves existing prefixes
+    """
+    # Assign properties to individual atoms
     for atom_idx, match_name in zip(sorted_indices, match_names):
         idx_xtb = atom_idx
         for prop in atom_props:
             try:
-                if json_data[prop] is not None:
-                    json_data[f'{match_name}_{prop}'] = json_data[prop][idx_xtb]
-                else:
-                    json_data[f'{match_name}_{prop}'] = None
-                if f'{match_name}_' not in prefixes_atom_prop:
-                    prefixes_atom_prop.append(f'{match_name}_')
-            except (KeyError,IndexError): # prevents missing values
-                pass
+                # Assign property value or None if not available
+                prop_key = f'{match_name}_{prop}'
+                json_data[prop_key] = (
+                    json_data[prop][idx_xtb] 
+                    if json_data[prop] is not None 
+                    else None
+                )
+                
+                # Add prefix if new
+                prefix = f'{match_name}_'
+                if prefix not in prefixes_atom_prop:
+                    prefixes_atom_prop.append(prefix)
+            except (KeyError, IndexError):
+                # Skip missing or invalid properties
+                continue
 
-    # Adding max and min values for functional groups with the same two atoms
+    # Calculate aggregate properties for groups of same atom type
     if len(match_names) > 1 and n_types == 1:
         for prop in atom_props:
-            prop_values = []
-            for prop_name in match_names:
-                prop_values.append(json_data[f'{prop_name}_{prop}'])
+            # Collect values for this property across all atoms
+            prop_values = [
+                json_data[f'{name}_{prop}']
+                for name in match_names
+            ]
+
+            # Calculate min/max if all values are valid
             if None not in prop_values:
                 json_data[f'{pattern}_max_{prop}'] = max(prop_values)
                 json_data[f'{pattern}_min_{prop}'] = min(prop_values)
             else:
                 json_data[f'{pattern}_max_{prop}'] = None
                 json_data[f'{pattern}_min_{prop}'] = None
-            if f'{pattern}_max_{prop}' not in prefixes_atom_prop:
-                prefixes_atom_prop.append(f'{pattern}_max_')
-            if f'{pattern}_min_{prop}' not in prefixes_atom_prop:
-                prefixes_atom_prop.append(f'{pattern}_min_')
+
+            # Add new prefixes if needed
+            for prefix in [f'{pattern}_max_', f'{pattern}_min_']:
+                if prefix not in prefixes_atom_prop:
+                    prefixes_atom_prop.append(prefix)
 
     return prefixes_atom_prop, json_data

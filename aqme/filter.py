@@ -13,415 +13,630 @@ from rdkit.ML.Cluster import Butina
 from aqme.utils import periodic_table, get_conf_RMS
 
 
-# Main API of the geometry filter
-def geom_filter(self,mol_ensemb,mol_geom,geom):
-    """
-    Returns whether a mol object passes all the geometric rules.
-
-    Parameters
-    ----------
-    self : argparse.args
-            Self object with the AQME arguments used
-    mol : rdkit.Chem.Mol
-            Molecule to be tested (all conformers).
-    mol_geom : 
-            Mol for the specific conformer
-
-    Returns
-    -------
-    bool
-        If True, it means that it is in accordance with the rules
-    """
-
-    # detects if the geometry rule is for atoms, bonds, angles or dihedrals
-
-    passing = True
-    if geom != []:
-        passing = False
-        if geom == ['Ir_squareplanar']:
-            new_geom = Ir_SP_filter(mol_ensemb)
-            if len(new_geom) == 0:
-                self.args.log.write(f"x  This molecule is not one of the supported Ir squareplanar complexes! It was discarded by the geom filter")
-                passing = False
-            passing = matching_fun(self,mol_ensemb,mol_geom,'Ir_squareplanar',new_geom,passing)
-
-        else:
-            if len(geom) != 2:
-                self.args.log.write(f"x  The geom option {geom} was not correctly defined, the geometric filter will be turned off! Correct format: [SMARTS,THRESHOLD], for example [CCCO,180] for a 180 degree dihedral")
-                return passing
-            passing = matching_fun(self,mol_ensemb,mol_geom,'regular_rule',geom,passing)
+def geom_filter(self, mol_ensemb, mol_geom, geom):
+    """Check if a molecule passes geometric filtering rules.
     
-    return passing
+    Applies geometry-based filters to conformers, including specialized
+    rules for specific metal complexes (e.g., Ir squareplanar).
+
+    Args:
+        self: AQME instance with arguments
+        mol_ensemb (rdkit.Chem.Mol): Molecule ensemble with all conformers
+        mol_geom (rdkit.Chem.Mol): Specific conformer to test
+        geom (list): Geometry rule specification
+            - Empty list [] means no filtering
+            - ['Ir_squareplanar'] for Ir complex special rule
+            - [SMARTS, THRESHOLD] for custom geometric constraints
+
+    Returns:
+        bool: True if molecule passes all geometric rules, False otherwise
+    """
+    if not geom:
+        return True
+    
+    # Handle Ir squareplanar special case
+    if geom == ['Ir_squareplanar']:
+        new_geom = get_ir_squareplanar_geometry(mol_ensemb)
+        if not new_geom:
+            self.args.log.write(
+                "x  This molecule is not one of the supported Ir squareplanar complexes! "
+                "It was discarded by the geom filter"
+            )
+            return False
+        return check_geometric_match(self, mol_ensemb, mol_geom, 'Ir_squareplanar', new_geom)
+    
+    # Handle custom geometry rules
+    if len(geom) != 2:
+        self.args.log.write(
+            f"x  The geom option {geom} was not correctly defined, the geometric filter will be turned off! "
+            f"Correct format: [SMARTS,THRESHOLD], for example [CCCO,180] for a 180 degree dihedral"
+        )
+        return True
+    
+    return check_geometric_match(self, mol_ensemb, mol_geom, 'regular_rule', geom)
 
 
-def Ir_SP_filter(mol):
-    '''
-    Special geometry rule designed to filter the correct conformers of Ir squareplanar complexes.
-    So far, the ligands tested are those in DOI: https://doi.org/10.1039/D0SC00445F
-    '''
-
-    # get Ir and its potential neighbours
-    smarts_list = ['[Ir][C-]','[Ir][N+]','[Ir][n+]','[Ir][N]','[Ir][n]','[Ir][P+]','[Ir][p+]','[Ir][As+]']
-    Ir_neighs = []
-    L_atom_1, L_atom_2, Ir_idx = None, None, None
-    for smarts in smarts_list:
-        pairs = list(mol.GetSubstructMatches(Chem.MolFromSmarts(smarts)))
-        if len(pairs) > 0:
-            for pair in pairs:
-                if pair not in Ir_neighs:
-                    Ir_neighs.append(pair)
-
-    for Ir_neigh in Ir_neighs:
-        for idx in Ir_neigh:
-            correct_neigh = False
-            # find Ir
-            if mol.GetAtoms()[idx].GetAtomicNum() == 77 and Ir_idx is None:
-                Ir_idx = idx
-            # find right C for lugand of type A and discard all the others from types B and C (from the Chemical Science paper)
-            elif mol.GetAtoms()[idx].GetAtomicNum() == 6:
-                N_neigh = 0
-                for C_neigh in mol.GetAtoms()[idx].GetNeighbors():
-                    if C_neigh.GetAtomicNum() == 7:
-                        N_neigh += 1
-                if N_neigh == 2:
-                    correct_neigh = True
+def get_ir_squareplanar_geometry(mol):
+    """Extract geometry parameters for Ir squareplanar complexes.
+    
+    Identifies the two ligands of type A in trans configuration
+    for Ir squareplanar complexes based on the ligands from
+    DOI: https://doi.org/10.1039/D0SC00445F
+    
+    Args:
+        mol (rdkit.Chem.Mol): Molecule to analyze
+    
+    Returns:
+        list: [L_atom_1, Ir_idx, L_atom_2, 180] if valid geometry found,
+              empty list otherwise
+    """
+    def _is_correct_carbon_neighbor(atom):
+        """Check if carbon has exactly 2 nitrogen neighbors (type A ligand)."""
+        if atom.GetAtomicNum() != 6:
+            return False
+        n_neighbors = sum(1 for neighbor in atom.GetNeighbors() 
+                         if neighbor.GetAtomicNum() == 7)
+        return n_neighbors == 2
+    
+    def _is_correct_nitrogen_neighbor(atom):
+        """Check if nitrogen has 2-3 carbon neighbors (type A ligand)."""
+        if atom.GetAtomicNum() != 7:
+            return False
+        c_neighbors = sum(1 for neighbor in atom.GetNeighbors() 
+                         if neighbor.GetAtomicNum() == 6)
+        return c_neighbors in [2, 3]
+    
+    def _is_correct_p_or_as_neighbor(atom):
+        """Check if atom is P or As (type A ligand)."""
+        return atom.GetAtomicNum() in [15, 33]
+    
+    # SMARTS patterns to find Ir and its neighbors
+    smarts_patterns = [
+        '[Ir][C]', '[Ir][N+]', '[Ir][n+]', '[Ir][N]', 
+        '[Ir][n]', '[Ir][P+]', '[Ir][p+]', '[Ir][As+]'
+    ]
+    
+    # Collect all Ir-neighbor pairs
+    ir_neighbor_pairs = []
+    for pattern in smarts_patterns:
+        pairs = mol.GetSubstructMatches(Chem.MolFromSmarts(pattern))
+        for pair in pairs:
+            if pair not in ir_neighbor_pairs:
+                ir_neighbor_pairs.append(pair)
+    
+    # Identify Ir and valid ligand atoms
+    ir_idx = None
+    ligand_atoms = []
+    
+    for pair in ir_neighbor_pairs:
+        for idx in pair:
+            atom = mol.GetAtomWithIdx(idx)
             
-            # find right N for lugand of type A and discard all the others from types B and C (from the Chemical Science paper)
-            elif mol.GetAtoms()[idx].GetAtomicNum() == 7:
-                C_neigh = 0
-                for N_neigh in mol.GetAtoms()[idx].GetNeighbors():
-                    if N_neigh.GetAtomicNum() == 6:
-                        C_neigh += 1
-                if C_neigh in [2,3]:
-                    correct_neigh = True
-
-            # find P and As atoms from ligands of type A
-            elif mol.GetAtoms()[idx].GetAtomicNum() in [15,33]:
-                correct_neigh = True
-
-            if correct_neigh == True:
-                if L_atom_1 is None:
-                    L_atom_1 = idx
-                elif L_atom_2 is None:
-                    L_atom_2 = idx
-
-    # rule: the two ligands of type A are positioned in trans to each other
-    if None not in [L_atom_1, L_atom_2, Ir_idx]:
-        new_geom = [L_atom_1, Ir_idx, L_atom_2, 180]
-    else:
-        new_geom = []
-
-    return new_geom
-
-def matching_fun(self,mol_ensemb,mol_geom,type_match,geom,passing):
-    '''
-    Checks matches and analyzed if they pass the geometry rules
-    '''
-
-    # SMARTS match to detect the atoms and calculate the geometric value. Then, check if the value
-    # is within the threshold
-
-    if type_match == 'regular_rule':
-        matches = []
-        smarts = geom[0]
-        geom_val = geom[1]
-        smarts_content = ''.join(smarts.replace('[',']').split(']')) # this way both 'ATOM' and '[ATOM]' work
-        try:
-            matches = mol_ensemb.GetSubstructMatches(Chem.MolFromSmarts(smarts))
-        except: # I tried to make this except more specific for Boost.Python.ArgumentError, but apparently it's not as simple as it looks
-            matches = mol_ensemb.GetSubstructMatches(Chem.MolFromSmarts(f'[{smarts}]'))
-        if len(matches) > 0:
-            matches = list(matches[0])
+            # Find Ir atom
+            if atom.GetAtomicNum() == 77 and ir_idx is None:
+                ir_idx = idx
+                continue
+            
+            # Check if this is a valid ligand atom
+            is_valid = (_is_correct_carbon_neighbor(atom) or
+                       _is_correct_nitrogen_neighbor(atom) or
+                       _is_correct_p_or_as_neighbor(atom))
+            
+            if is_valid and idx not in ligand_atoms:
+                ligand_atoms.append(idx)
+                if len(ligand_atoms) >= 2:
+                    break
         
-    elif type_match == 'Ir_squareplanar':
-        matches = geom[:3]
-        geom_val = geom[3]
+        if len(ligand_atoms) >= 2:
+            break
+    
+    # Return geometry if we found Ir and two ligand atoms (trans configuration)
+    if ir_idx is not None and len(ligand_atoms) >= 2:
+        return [ligand_atoms[0], ir_idx, ligand_atoms[1], 180]
+    
+    return []
+
+
+def check_geometric_match(self, mol_ensemb, mol_geom, match_type, geom):
+    """Check if molecule matches geometric constraints.
+    
+    Validates geometric parameters (bonds, angles, dihedrals) against
+    specified thresholds using SMARTS pattern matching.
+    
+    Args:
+        self: AQME instance with threshold arguments
+        mol_ensemb (rdkit.Chem.Mol): Molecule ensemble for SMARTS matching
+        mol_geom (rdkit.Chem.Mol): Specific conformer for geometry calculation
+        match_type (str): Type of matching ('regular_rule' or 'Ir_squareplanar')
+        geom (list): Geometry specification
+            For regular_rule: [SMARTS, threshold_value]
+            For Ir_squareplanar: [atom1, atom2, atom3, angle_value]
+    
+    Returns:
+        bool: True if geometry passes the constraint, False otherwise
+    """
+    def _find_smarts_matches(mol, smarts_pattern):
+        """Find SMARTS pattern matches in molecule."""
+        try:
+            matches = mol.GetSubstructMatches(Chem.MolFromSmarts(smarts_pattern))
+        except:
+            # Handle both 'ATOM' and '[ATOM]' formats
+            matches = mol.GetSubstructMatches(Chem.MolFromSmarts(f'[{smarts_pattern}]'))
+        
+        return list(matches[0]) if matches else []
+    
+    def _check_single_atom_match(smarts_content):
+        """Check if SMARTS is just a single atom."""
+        return smarts_content in periodic_table()
+    
+    def _check_bond_length(mol_geom, atom_indices, threshold, bond_thres):
+        """Check if bond length is within threshold."""
+        mol_val = rdMolTransforms.GetBondLength(mol_geom, atom_indices[0], atom_indices[1])
+        return (threshold - bond_thres) <= mol_val <= (threshold + bond_thres)
+    
+    def _check_angle(mol_geom, atom_indices, threshold, angle_thres):
+        """Check if angle is within threshold."""
+        mol_val = rdMolTransforms.GetAngleDeg(
+            mol_geom, atom_indices[0], atom_indices[1], atom_indices[2]
+        )
+        return (threshold - angle_thres) <= mol_val <= (threshold + angle_thres)
+    
+    def _check_dihedral(mol_geom, atom_indices, threshold, dihedral_thres):
+        """Check if dihedral angle is within threshold."""
+        mol_val = rdMolTransforms.GetDihedralDeg(
+            mol_geom, atom_indices[0], atom_indices[1], atom_indices[2], atom_indices[3]
+        )
+        return (threshold - dihedral_thres) <= mol_val <= (threshold + dihedral_thres)
+    
+    # Extract atom indices and threshold based on match type
+    if match_type == 'regular_rule':
+        smarts, threshold = geom
+        # Remove brackets to get clean atom content
+        smarts_content = ''.join(smarts.replace('[', ']').split(']'))
+        atom_indices = _find_smarts_matches(mol_ensemb, smarts)
+    elif match_type == 'Ir_squareplanar':
+        atom_indices = geom[:3]
+        threshold = geom[3]
         smarts_content = 'Ir_squareplanar'
-
-    if smarts_content in periodic_table():
-        if len(matches) >= 1:
-            passing = True
-    elif len(matches) == 2:
-        mol_val = rdMolTransforms.GetBondLength(mol_geom, matches[0], matches[1])
-        passing = (geom_val - self.args.bond_thres) <= mol_val <= (geom_val + self.args.bond_thres)
-    elif len(matches) == 3:
-        mol_val = rdMolTransforms.GetAngleDeg(mol_geom, matches[0], matches[1], matches[2])
-        passing = (geom_val - self.args.angle_thres) <= mol_val <= (geom_val + self.args.angle_thres)
-
-    elif len(matches) == 4:
-        mol_val = rdMolTransforms.GetDihedralDeg(mol_geom, matches[0], matches[1], matches[2], matches[3])
-        passing = (geom_val - self.args.dihedral_thres) <= mol_val <= (geom_val + self.args.dihedral_thres)
-
-    return passing
+    else:
+        return False
+    
+    # Check based on number of matched atoms
+    if _check_single_atom_match(smarts_content):
+        return len(atom_indices) >= 1
+    elif len(atom_indices) == 2:
+        return _check_bond_length(mol_geom, atom_indices, threshold, self.args.bond_thres)
+    elif len(atom_indices) == 3:
+        return _check_angle(mol_geom, atom_indices, threshold, self.args.angle_thres)
+    elif len(atom_indices) == 4:
+        return _check_dihedral(mol_geom, atom_indices, threshold, self.args.dihedral_thres)
+    
+    return False
 
 
 def filters(mol, log, molwt_cutoff):
+    """Apply basic molecular filters based on molecular weight and atom types.
+    
+    Filters molecules that exceed weight cutoff or contain unsupported atoms.
+    
+    Args:
+        mol (rdkit.Chem.Mol): Molecule to filter
+        log: Logger object for writing messages
+        molwt_cutoff (float): Maximum allowed molecular weight (0 = no limit)
+    
+    Returns:
+        bool: True if molecule passes all filters, False otherwise
     """
-    Applies some basic filters (molwt, salts[currently off], weird atom symbols)
-    that only require SMILES data from a compound and returns if the molecule
-    passes the filters or not.
-    """
-
-    # Filter 1
-    molwt_cutoff = float(molwt_cutoff)
-    if Descriptors.MolWt(mol) >= molwt_cutoff and molwt_cutoff > 0:
-        log.write(f"x  Skipping this molecule as total molar mass > {molwt_cutoff}")
+    def _check_molecular_weight(mol, cutoff, log):
+        """Check if molecular weight is below cutoff."""
+        cutoff = float(cutoff)
+        if cutoff <= 0:
+            return True
+        
+        mol_weight = Descriptors.MolWt(mol)
+        if mol_weight >= cutoff:
+            log.write(f"x  Skipping this molecule as total molar mass > {cutoff}")
+            return False
+        return True
+    
+    def _check_atom_types(mol, log):
+        """Check if all atoms are in the periodic table."""
+        symbols = [atom.GetSymbol() for atom in mol.GetAtoms()]
+        unknown_atoms = list(set(symbols) - set(periodic_table()))
+        
+        if unknown_atoms:
+            log.write(f"x  Exiting as atoms [{','.join(unknown_atoms)}] are not in the periodic table")
+            return False
+        return True
+    
+    # Apply filters
+    if not _check_molecular_weight(mol, molwt_cutoff, log):
         return False
-
-    # Filter 2
-    symbols = [atom.GetSymbol() for atom in mol.GetAtoms()]
-
-    unknown_atoms = list(set(symbols) - set(periodic_table()))
-    if unknown_atoms:
-        log.write(f"x  Exiting as atoms [{','.join(unknown_atoms)}] are not in the periodic table")
+    
+    if not _check_atom_types(mol, log):
         return False
-
-    # Passed
+    
     return True
 
 
-def conformer_filters(self,sorted_all_cids,cenergy,outmols):
-    '''
-    Sequence of three filters based on energy and RMSD
-    '''
+def conformer_filters(self, sorted_all_cids, cenergy, outmols):
+    """Apply sequential energy and RMSD-based conformer filters.
     
-    # filter based on energy window ewin_cmin
-    sortedcids = ewin_filter(
+    Three-stage filtering process:
+    1. Energy window filter (ewin_cmin)
+    2. Pre-filter based on energy differences
+    3. Combined energy and RMSD filter
+    
+    Args:
+        self: AQME instance with filter arguments
+        sorted_all_cids (list): List of conformer IDs sorted by energy
+        cenergy (dict/list): Conformer energies indexed by ID
+        outmols (dict/list): Conformer molecule objects indexed by ID
+    
+    Returns:
+        list: Selected conformer IDs that pass all filters
+    """
+    # Stage 1: Filter by energy window
+    sortedcids = apply_energy_window_filter(
         sorted_all_cids,
         cenergy,
         self.args.ewin_cmin,
     )
-    # pre-filter based on energy only
-    selectedcids_initial = pre_E_filter(
+    
+    # Stage 2: Pre-filter based on energy differences only
+    selectedcids_initial = apply_pre_energy_filter(
         sortedcids,
         cenergy,
         self.args.initial_energy_threshold,
     )
-    # filter based on energy and RMSD
-    selectedcids = RMSD_and_E_filter(
+    
+    # Stage 3: Filter based on both energy and RMSD
+    selectedcids = apply_rmsd_and_energy_filter(
         outmols,
         selectedcids_initial,
         cenergy,
         self.args,
-        self.args.program.lower(),
     )
-
+    
     return selectedcids
 
 
-def ewin_filter(
-    sorted_all_cids,
-    cenergy,
-    energy_window,
-):
+def apply_energy_window_filter(sorted_all_cids, cenergy, energy_window):
+    """Filter conformers by energy window from the lowest energy conformer.
+    
+    Discards conformers with energy higher than energy_window relative
+    to the lowest energy conformer.
+    
+    Args:
+        sorted_all_cids (list): Conformer IDs sorted by energy
+        cenergy (dict/list): Conformer energies indexed by ID
+        energy_window (float): Maximum energy difference from minimum (kcal/mol)
+    
+    Returns:
+        list: Conformer IDs within the energy window
     """
-    Given a sorted list of Compound Ids and a sorted list of their energies
-    it discards all compound Ids that have an energy higher than the
-    args.ewin_csearch with respect to the lowest one.
-
-    Parameters
-    ----------
-    sorted_all_cids : list
-            [description]
-    cenergy : list
-            [description]
-    energy_window : float
-            Minimum energy difference with respect to the lowest compound
-            discard a compound.
-
-    Returns
-    -------
-    list
-            list of cids accepted
-    """
-
-    sortedcids = []
     energy_window = float(energy_window)
-
-    cenergy_min = cenergy[sorted_all_cids[0]]
-    # Filter by Energy Window
+    min_energy = cenergy[sorted_all_cids[0]]
+    
+    filtered_cids = []
     for cid in sorted_all_cids:
-        if abs(cenergy[cid] - cenergy_min) < energy_window:
-            sortedcids.append(cid)
+        if abs(cenergy[cid] - min_energy) < energy_window:
+            filtered_cids.append(cid)
+    
+    return filtered_cids
 
-    return sortedcids
 
-
-def pre_E_filter(
-    sortedcids, cenergy, threshold
-):
+def apply_pre_energy_filter(sortedcids, cenergy, threshold):
+    """Pre-filter conformers based solely on energy differences.
+    
+    Selects conformers with energy differences greater than or equal to
+    the threshold compared to previously selected conformers. This reduces
+    the number of conformers before the more expensive RMSD filtering.
+    
+    Args:
+        sortedcids (list): Conformer IDs sorted by energy
+        cenergy (dict/list): Conformer energies indexed by ID
+        threshold (float): Minimum energy difference to consider unique (kcal/mol)
+    
+    Returns:
+        list: Selected conformer IDs passing energy pre-filter
     """
-    This filter selects the first compound that it finds with energy an energy
-    difference higher or equal to the threshold with respect to the previously
-    admitted compounds. (Thought as filter for rdkit)
-
-    Parameters
-    ----------
-    sortedcids : list or pd.Dataframe?
-            List of compound Ids.
-    cenergy : list or pd.Dataframe?
-            list of compound energies
-    threshold : float
-            Minimum energy difference to consider two compounds as different.
-            (kcal/mol)
-
-    Returns
-    -------
-    list
-            list of accepted compound Ids
-    """
-
-    selectedcids_initial = []
-    eng_dup = 0
     threshold = float(threshold)
-
-    # Add the first one
-    selectedcids_initial.append(sortedcids[0])
-    for conf in sortedcids[1:]:
+    selected_cids = [sortedcids[0]]  # Always include lowest energy
+    
+    for cid in sortedcids[1:]:
         is_unique = True
-        # check rmsd
-        for seenconf in selectedcids_initial:
-            E_diff = abs(cenergy[conf] - cenergy[seenconf])  # in kcal/mol
-            if E_diff < threshold:
-                eng_dup += 1
+        
+        # Check energy difference with all selected conformers
+        for selected_cid in selected_cids:
+            energy_diff = abs(cenergy[cid] - cenergy[selected_cid])
+            if energy_diff < threshold:
                 is_unique = False
                 break
-        if is_unique:
-            if conf not in selectedcids_initial:
-                selectedcids_initial.append(conf)
+        
+        if is_unique and cid not in selected_cids:
+            selected_cids.append(cid)
+    
+    return selected_cids
 
-    return selectedcids_initial
 
-
-def RMSD_and_E_filter(
-    outmols, selectedcids_initial, cenergy, args, calc_type
-):
+def apply_rmsd_and_energy_filter(outmols, selectedcids_initial, cenergy, args):
+    """Filter conformers based on combined energy and RMSD criteria.
+    
+    For each conformer, compares with already selected conformers. If energy
+    difference is below threshold AND RMSD is below threshold with any selected
+    conformer, the new conformer is rejected as a duplicate.
+    
+    Args:
+        outmols (dict/list): Conformer molecule objects indexed by ID
+        selectedcids_initial (list): Pre-filtered conformer IDs
+        cenergy (dict/list): Conformer energies indexed by ID
+        args: Arguments object with thresholds:
+            - energy_threshold: Energy similarity threshold (kcal/mol)
+            - rms_threshold: RMSD similarity threshold (Angstroms)
+            - heavyonly: Use only heavy atoms for RMSD
+            - max_matches_rmsd: Maximum atom matches for RMSD calculation
+    
+    Returns:
+        list: Final selected conformer IDs
     """
-    This filter selects the first compound that it finds with energy an energy
-    difference lower than the threshold with a higher than the threshold rms
-    with respect to the nearest (in energy) accepted compound.
-    """
-
-    selectedcids = []
-    eng_rms_dup = 0
-    selectedcids.append(selectedcids_initial[0])
+    selected_cids = [selectedcids_initial[0]]  # Always include lowest energy
     energy_threshold = float(args.energy_threshold)
     rms_threshold = float(args.rms_threshold)
     max_matches_rmsd = int(args.max_matches_rmsd)
-
-    for _,conf in enumerate(selectedcids_initial[1:]):
-        # This keeps track of whether or not your conformer is unique
-        excluded_conf = False
-
-        # check energy and rmsd
-        for seenconf in selectedcids:
-            E_diff = abs(cenergy[conf] - cenergy[seenconf])  # in kcal/mol
-            if E_diff < energy_threshold:
-                n_mol_1 = -1
-                n_mol_2 = -1
-                # if calc_type == "rdkit":
-                #     n_mol_1 = seenconf
-                #     n_mol_2 = conf
+    
+    for cid in selectedcids_initial[1:]:
+        is_duplicate = False
+        
+        # Check against all already selected conformers
+        for selected_cid in selected_cids:
+            energy_diff = abs(cenergy[cid] - cenergy[selected_cid])
+            
+            # Only calculate RMSD if energies are similar
+            if energy_diff < energy_threshold:
                 try:
                     rms = get_conf_RMS(
-                        outmols[seenconf],
-                        outmols[conf],
-                        n_mol_1,
-                        n_mol_2,
+                        outmols[selected_cid],
+                        outmols[cid],
+                        -1,  # n_mol_1
+                        -1,  # n_mol_2
                         args.heavyonly,
                         max_matches_rmsd
                     )
                 except RuntimeError:
+                    # Different substructures - use only energy filter
                     rms = rms_threshold + 1
-                    args.log.write('\nx  The mols loaded by RDKit from the SDF file have different substructures and the RMS filter failed. The duplicate filter will only use E on some conformers!')
+                    args.log.write(
+                        '\nx  The mols loaded by RDKit from the SDF file have different substructures '
+                        'and the RMS filter failed. The duplicate filter will only use E on some conformers!'
+                    )
+                
                 if rms < rms_threshold:
-                    excluded_conf = True
-                    eng_rms_dup += 1
+                    is_duplicate = True
                     break
-
-        if not excluded_conf:
-            if conf not in selectedcids:
-                selectedcids.append(conf)
-
-    return selectedcids
-
+        
+        if not is_duplicate and cid not in selected_cids:
+            selected_cids.append(cid)
+    
+    return selected_cids
 
 
-def cluster_conformers(self, mols, program, csearch_file, name, sample):
-    '''
-    Performs a Butina clustering based on the RMS differences of the conformers
-    '''
 
+def compute_pairwise_rms_distances(self, mols):
+    """Compute pairwise RMS distances for all conformers.
+    
+    Creates a distance matrix of RMS values between all pairs of conformers.
+    Uses only 100 atom matches since molecules are aligned with same numbering.
+    
+    Args:
+        mols (list): List of RDKit molecule objects with conformers
+    
+    Returns:
+        list: Flattened upper triangular distance matrix
+    """
     dists = []
     for i in range(len(mols)):
         for j in range(i):
             # using 100 matches only since the molecules are aligned and share the same atom numbering
-            dists.append(get_conf_RMS(mols[i], mols[j], -1, -1, self.args.heavyonly, 100))
+            rms = get_conf_RMS(mols[i], mols[j], -1, -1, self.args.heavyonly, 100)
+            dists.append(rms)
+    return dists
 
+
+def determine_cluster_points(self, program, sample, name):
+    """Determine target number of cluster points based on program and settings.
+    
+    For RDKit: Uses 80% of sample size for clustering, reserves 20% for stable conformers.
+    For CREST: Uses number of CREST runs as cluster points.
+    
+    Args:
+        program (str): Program name ('rdkit' or 'crest')
+        sample (int): Total number of conformers to select
+        name (str): Molecule name for logging
+    
+    Returns:
+        int: Target number of cluster points
+    """
     if program.lower() == 'rdkit' or self.args.crest_runs == 1:
-        # Step 1. Automatically adjust the RMS threshold to meet sample - 20% of points 
-        # that will be added later with the most stable confs from RDKit
-        stable_points = int(round(sample*0.2))
+        # Reserve 20% of points for most stable conformers
+        stable_points = int(round(sample * 0.2))
         cluster_points = sample - stable_points
+        
         if program.lower() == 'rdkit':
-            self.args.log.write(f'\no  Selecting {sample} conformers using a combination of energies and Butina RMS-based clustering. Users might disable this option with --auto_cluster False ({os.path.basename(Path(name))})')
+            self.args.log.write(
+                f'\no  Selecting {sample} conformers using a combination of energies and '
+                f'Butina RMS-based clustering. Users might disable this option with '
+                f'--auto_cluster False ({os.path.basename(Path(name))})'
+            )
         else:
-            self.args.log.write(f'\no  Selecting the most stable RDKit conformer to start a CREST search')
-
-    if program.lower() == 'crest':
-        # Step 1. Automatically adjust the RMS threshold to meet self.args.crest_runs
+            self.args.log.write(
+                f'\no  Selecting the most stable RDKit conformer to start a CREST search'
+            )
+    elif program.lower() == 'crest':
+        # Use number of CREST runs as cluster points
         cluster_points = self.args.crest_runs
-        self.args.log.write(f'\no  Selecting {self.args.crest_runs} RDKit conformers using Butina RMS-based clustering to start {self.args.crest_runs} different CREST searches')
+        self.args.log.write(
+            f'\no  Selecting {self.args.crest_runs} RDKit conformers using Butina '
+            f'RMS-based clustering to start {self.args.crest_runs} different CREST searches'
+        )
+    
+    return cluster_points
 
-    # Threshold instructions: elements within this range of each other are considered to be neighbors
-    # and, therefore, the higher the threshold the fewer number of clusters will be generated
+
+def adjust_cluster_threshold(dists, num_mols, cluster_points):
+    """Automatically adjust clustering threshold to reach target cluster count.
+    
+    Uses Butina clustering algorithm and iteratively adjusts threshold until
+    the number of clusters matches the target. Higher threshold = fewer clusters.
+    
+    Args:
+        dists (list): Pairwise RMS distances
+        num_mols (int): Number of molecules to cluster
+        cluster_points (int): Target number of clusters
+    
+    Returns:
+        tuple: (clusters, final_threshold)
+    """
+    # Threshold: elements within this range are considered neighbors
+    # Higher threshold = fewer clusters
     cluster_thr = 1.5
+    
+    clusts = Butina.ClusterData(dists, num_mols, cluster_thr, isDistData=True, reordering=True)
+    
+    # Increase threshold if too many clusters
+    while len(clusts) > cluster_points:
+        cluster_thr = cluster_thr * 1.02  # increase by 2%
+        clusts = Butina.ClusterData(dists, num_mols, cluster_thr, isDistData=True, reordering=True)
+    
+    # Decrease threshold if too few clusters
+    while len(clusts) < cluster_points:
+        cluster_thr = cluster_thr * 0.98  # decrease by 2%
+        clusts = Butina.ClusterData(dists, num_mols, cluster_thr, isDistData=True, reordering=True)
+    
+    return clusts
 
-    clusts = Butina.ClusterData(dists, len(mols), cluster_thr, isDistData=True, reordering=True)
 
-    if len(clusts) > cluster_points:
-        while len(clusts) > cluster_points:
-            cluster_thr = cluster_thr * 1.02 # each iteration the threshold is increased by 2%
-            clusts = Butina.ClusterData(dists, len(mols), cluster_thr, isDistData=True, reordering=True)
-    elif len(clusts) < cluster_points:
-        while len(clusts) < cluster_points:
-            cluster_thr = cluster_thr * 0.98 # each iteration the threshold is reduced by 2%
-            clusts = Butina.ClusterData(dists, len(mols), cluster_thr, isDistData=True, reordering=True)
-
-    # get centroids (first element of each cluster) and their corresponding mols
+def extract_cluster_centroids(mols, clusts, cluster_points):
+    """Extract centroid conformers from each cluster.
+    
+    Gets the first element (centroid) from each cluster and retrieves
+    the corresponding molecule objects.
+    
+    Args:
+        mols (list): List of all molecule objects
+        clusts (list): List of clusters from Butina clustering
+        cluster_points (int): Maximum number of centroids to extract
+    
+    Returns:
+        tuple: (cluster_mols, allenergy) - selected molecules and their energies
+    """
+    # Get centroids (first element of each cluster)
     centroids = [x[0] for x in clusts]
     cluster_mols = [mols[x] for x in centroids]
-
-    # adjust to the exact number of clusters to match sample at the end
+    
+    # Adjust to exact number of clusters
     cluster_mols = cluster_mols[:cluster_points]
-    allenergy = []
-    for mol in cluster_mols:
-        allenergy.append(float(mol.GetProp('Energy')))
+    
+    # Extract energies
+    allenergy = [float(mol.GetProp('Energy')) for mol in cluster_mols]
+    
+    return cluster_mols, allenergy
 
+
+def add_stable_conformers(mols, cluster_mols, allenergy, sample):
+    """Fill remaining slots with most stable conformers.
+    
+    After clustering, add the lowest energy conformers that weren't
+    selected as centroids to reach the target sample size.
+    
+    Args:
+        mols (list): All molecules sorted by energy
+        cluster_mols (list): Currently selected cluster centroids
+        allenergy (list): Energies of selected molecules
+        sample (int): Target total number of conformers
+    
+    Returns:
+        tuple: (updated_cluster_mols, updated_allenergy)
+    """
+    for mol in mols:  # already sorted by energy
+        energy = float(mol.GetProp('Energy'))
+        
+        if energy not in allenergy:
+            if len(cluster_mols) < sample:
+                cluster_mols.append(mol)
+                allenergy.append(energy)
+            else:
+                break
+    
+    return cluster_mols, allenergy
+
+
+def write_clustered_sdf(self, cluster_mols_sorted, csearch_file):
+    """Write clustered conformers to SDF file.
+    
+    Replaces the original SDF file with the filtered conformers.
+    In pytest mode, moves original file instead of removing it.
+    
+    Args:
+        cluster_mols_sorted (list): Molecules sorted by energy
+        csearch_file (str): Path to SDF file to write
+    """
+    # Handle original file
+    if not self.args.pytest_testing:
+        os.remove(f'{csearch_file}')
+    else:
+        backup_path = Path(str(csearch_file).replace(".sdf", "_all_confs.sdf"))
+        shutil.move(f'{csearch_file}', f'{backup_path}')
+    
+    # Write filtered conformers
+    sdwriter = Chem.SDWriter(f'{csearch_file}')
+    for mol in cluster_mols_sorted:
+        sdwriter.write(mol)
+    sdwriter.close()
+
+
+def cluster_conformers(self, mols, program, csearch_file, name, sample):
+    """Performs Butina clustering based on RMS differences of conformers.
+    
+    Uses a two-step approach for RDKit:
+    1. Cluster conformers using RMS-based Butina algorithm (80% of sample)
+    2. Fill remaining slots with lowest energy conformers (20% of sample)
+    
+    For CREST, selects conformers as starting points for CREST searches.
+    
+    Args:
+        mols (list): List of RDKit molecule objects with conformers
+        program (str): Program name ('rdkit' or 'crest')
+        csearch_file (str): Path to SDF file
+        name (str): Molecule name for logging
+        sample (int): Total number of conformers to select
+    
+    Returns:
+        list: Selected and sorted molecule objects
+    """
+    # Step 1: Compute pairwise RMS distances
+    dists = compute_pairwise_rms_distances(self,mols)
+    
+    # Step 2: Determine target number of clusters
+    cluster_points = determine_cluster_points(self,program, sample, name)
+    
+    # Step 3: Adjust threshold to reach target cluster count
+    clusts = adjust_cluster_threshold(dists, len(mols), cluster_points)
+    
+    # Step 4: Extract cluster centroids
+    cluster_mols, allenergy = extract_cluster_centroids(mols, clusts, cluster_points)
+    
+    # Step 5: For RDKit, add most stable conformers
     if program.lower() == 'rdkit':
-        # Step 2. Fill the other positions with add the most stable conformers found initially
-        for mol in mols: # already sorted by energy
-            if float(mol.GetProp('Energy')) not in allenergy:
-                if len(cluster_mols) < sample:
-                    cluster_mols.append(mol)
-                    allenergy.append(float(mol.GetProp('Energy')))
-                else:
-                    break
-
-    # sort mols by energy
+        cluster_mols, allenergy = add_stable_conformers(mols, cluster_mols, allenergy, sample)
+    
+    # Step 6: Sort molecules by energy
     cluster_mols_sorted = [mol for _, mol in sorted(zip(allenergy, cluster_mols), key=lambda pair: pair[0])]
-
+    
+    # Step 7: Write to SDF file for RDKit
     if program.lower() == 'rdkit':
-        # Step 3. Replace the original SDF with the updated SDF
-        if not self.args.pytest_testing:
-            os.remove(f'{csearch_file}')
-        else:
-            shutil.move(f'{csearch_file}',f'{Path(str(csearch_file).replace(".sdf","_all_confs.sdf"))}')
-        sdwriter = Chem.SDWriter(f'{csearch_file}')
-        for mol in cluster_mols_sorted:
-            sdwriter.write(mol)
-        sdwriter.close()
-
+        write_clustered_sdf(self, cluster_mols_sorted, csearch_file)
+    
     return cluster_mols_sorted
 
 

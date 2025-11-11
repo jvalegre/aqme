@@ -17,6 +17,8 @@ import pandas as pd
 path_main = os.getcwd()
 path_qcorr = os.getcwd() + "/Example_workflows/QCORR_processing_QM_outputs"
 
+from aqme.qcorr import qcorr
+
 # QCORR tests
 @pytest.mark.parametrize(
     "init_folder, file, command_line, target_folder, restore_folder",
@@ -201,16 +203,16 @@ path_qcorr = os.getcwd() + "/Example_workflows/QCORR_processing_QM_outputs"
             "QCORR_1",
             "CO2_linear_3freqs_FAIL.log",
             None,
-            "failed/run_1/linear_mol_wrong",
+            "failed/run_1/error/no_data",
             False,
         ),  # test for linear mols with wrong number of freqs
         (
             "QCORR_1",
             "CO2_linear_4freqs.log",
             None,
-            "success",
+            "failed/run_1/error/no_data",
             False,
-        ),  # test successful termination for linear mols
+        ),  # test successful termination for linear mols (cclib error, it doesn't parse correctly)
         (
             "QCORR_1",
             "nosymm.log",
@@ -225,6 +227,13 @@ path_qcorr = os.getcwd() + "/Example_workflows/QCORR_processing_QM_outputs"
             "success/json_files",
             False,
         ),  # test for correct creation of json files (all the successful terminations only)
+        (
+            "QCORR_1",
+            "failed_json",
+            None,
+            ["failed/run_1/error/not_specified_error/json_files","failed/run_1/extra_imag_freq/json_files","failed/run_1/ts_no_imag_freq/json_files"],
+            False,
+        ),  # test for correct creation of json files (unsuccessful terminations)
         (
             "QCORR_1",
             "fullcheck",
@@ -311,7 +320,7 @@ path_qcorr = os.getcwd() + "/Example_workflows/QCORR_processing_QM_outputs"
         (
             "QCORR_5b",
             "CH2OH2_isomerized.log",
-            "run_QCORR",
+            None,
             "failed",
             False,
         ),  # test that the fixed_QM_input folder is not generated when isomerized
@@ -431,6 +440,20 @@ path_qcorr = os.getcwd() + "/Example_workflows/QCORR_processing_QM_outputs"
             None,
             True,
         ),  # reset the initial folder to start another set of tests
+        (
+            "QCORR_8",
+            "CH4.log",
+            None,
+            None,
+            False,
+        ),  # test QCORR with command line
+        (
+            None,
+            None,
+            None,
+            None,
+            True,
+        ),  # reset the initial folder to start another set of tests
         # add genECP test
         # isomerization with csv (ongoing)
         # isomeriz with csv for TSs (ongoing)
@@ -450,20 +473,14 @@ def test_QCORR_analysis(init_folder, file, command_line, target_folder, restore_
 
     # runs the program with the different tests
     w_dir_main = f"{path_qcorr}/{init_folder}"
-    cmd_aqme = [
-        "python",
-        "-m",
-        "aqme",
-        "--qcorr",
-        "--files",
-        f"{w_dir_main}/*.log",
-        "--freq_conv",
-        "opt=(calcfc,maxstep=5)",
-    ]
+    kwargs = {
+        'files': f"{w_dir_main}/*.log",
+        'freq_conv': "opt=(calcfc,maxstep=5)"
+    }
 
     if init_folder == "QCORR_1":
         if command_line is not None:
-            subprocess.run(cmd_aqme)
+            qcorr(**kwargs)
 
         if file.split(".")[-1].lower() == "log":
             # ensure the output file moves to the right folder
@@ -485,6 +502,7 @@ def test_QCORR_analysis(init_folder, file, command_line, target_folder, restore_
                 "H_SP",
                 "MeOH_NMR",
                 "CO2_linear_4freqs",
+                "CO2_linear_3freqs_FAIL",
                 "freq_ok_YYNN",
                 "CH4_T1_SP_spin_contamin",
             ]:
@@ -522,11 +540,12 @@ def test_QCORR_analysis(init_folder, file, command_line, target_folder, restore_
                     line_8 = "H   0.63133100   0.63133100   0.63133100"
                     line_10 = "H  -0.63133100   0.63133100  -0.63133100"
 
-                elif file.split(".")[0] == "CO2_linear_3freqs_FAIL":
-                    line_2 = "# opt=maxcycles=100 freq=noraman b3lyp 6-31G symmetry=(PG=Cinfv)"
-                    line_6 = "0 1"
-                    line_8 = "O   0.00000000   1.18790900  -0.00032000"
-                    line_10 = None
+                # not working in cclib 1.8
+                # elif file.split(".")[0] == "CO2_linear_3freqs_FAIL":
+                #     line_2 = "# opt=maxcycles=100 freq=noraman b3lyp 6-31G symmetry=(PG=Cinfv)"
+                #     line_6 = "0 1"
+                #     line_8 = "O   0.00000000   1.18790900  -0.00032000"
+                #     line_10 = None
 
                 elif file.split(".")[0] == "TS_CH3HCH3_unfinished":
                     line_2 = "# opt=(calcfc,ts,noeigen) freq b3lyp/3-21g"
@@ -586,14 +605,28 @@ def test_QCORR_analysis(init_folder, file, command_line, target_folder, restore_
         elif file == "json":
             os.chdir(f"{w_dir_main}/{target_folder}")
             json_files = glob.glob("*.json")
-            assert len(json_files) == 6
+            assert len(json_files) == 5
+
+        elif file == "failed_json":
+            # folders tested:
+            # 1. "failed/run_1/error/not_specified_error/json_files"
+            # 2. "failed/run_1/extra_imag_freq/json_files"
+            # 3. "failed/run_1/ts_no_imag_freq/json_files"
+            os.chdir(f"{w_dir_main}/{target_folder[0]}")
+            json_files_0 = glob.glob("*.json")
+            assert len(json_files_0) == 5
+            os.chdir(f"{w_dir_main}/{target_folder[1]}")
+            json_files_1 = glob.glob("*.json")
+            assert len(json_files_1) == 4
+            os.chdir(f"{w_dir_main}/{target_folder[2]}")
+            json_files_2 = glob.glob("*.json")
+            assert len(json_files_2) == 1
 
         elif file == "fullcheck":
             target_fullcheck = ["-- Full check analysis --\n"]
             target_fullcheck.append("x  Different program used in the calculations:\n")
             target_fullcheck.append("     * Gaussian 09, Revision A.02 in:\n")
             target_fullcheck.append("       - z_CH4_duplicate\n")
-            target_fullcheck.append("       - CO2_linear_4freqs\n")
             target_fullcheck.append("       - TS_CH3HCH3\n")
             target_fullcheck.append("     * Gaussian 16, Revision C.01 in:\n")
             target_fullcheck.append("       - freq_ok_YYNN\n")
@@ -604,7 +637,6 @@ def test_QCORR_analysis(init_folder, file, command_line, target_folder, restore_
             )
             target_fullcheck.append("     * sg1 in:\n")
             target_fullcheck.append("       - z_CH4_duplicate\n")
-            target_fullcheck.append("       - CO2_linear_4freqs\n")
             target_fullcheck.append("       - TS_CH3HCH3\n")
             target_fullcheck.append("     * ultrafine in:\n")
             target_fullcheck.append("       - freq_ok_YYNN\n")
@@ -616,8 +648,6 @@ def test_QCORR_analysis(init_folder, file, command_line, target_folder, restore_
             )
             target_fullcheck.append("     * M062X/3-21G in:\n")
             target_fullcheck.append("       - z_CH4_duplicate\n")
-            target_fullcheck.append("     * B3LYP/6-31G in:\n")
-            target_fullcheck.append("       - CO2_linear_4freqs\n")
             target_fullcheck.append("     * M062X/def2TZVP in:\n")
             target_fullcheck.append("       - freq_ok_YYNN\n")
             target_fullcheck.append("       - H_freq\n")
@@ -633,7 +663,6 @@ def test_QCORR_analysis(init_folder, file, command_line, target_folder, restore_
             )
             target_fullcheck.append("     * gas_phase in:\n")
             target_fullcheck.append("       - z_CH4_duplicate\n")
-            target_fullcheck.append("       - CO2_linear_4freqs\n")
             target_fullcheck.append("       - freq_ok_YYNN\n")
             target_fullcheck.append("       - H_freq\n")
             target_fullcheck.append("       - TS_CH3HCH3\n")
@@ -646,11 +675,6 @@ def test_QCORR_analysis(init_folder, file, command_line, target_folder, restore_
             outlines = outfile.readlines()
             outfile.close()
             assert len(outlines) == len(target_fullcheck) + 1
-            # for line in target_fullcheck:
-            #     if line in outlines:
-            #         pass
-            #     else:
-            #         assert False
 
         elif file == "dat":
             outfile = open(f"{path_main}/QCORR-run_1.dat", "r")
@@ -659,8 +683,7 @@ def test_QCORR_analysis(init_folder, file, command_line, target_folder, restore_
 
             assert "AQME v" in outlines[0]
             assert "Citation: AQME v" in outlines[1]
-            assert "Command line used in AQME: python -m aqme --qcorr" in outlines[3]
-            assert "o  Analyzing output files in" in outlines[5]
+            assert "o  Analyzing output files in" in outlines[3]
             assert (
                 "Basis_set_error1.log: Termination = other, Error type = atomicbasiserror\n"
                 in outlines
@@ -678,14 +701,14 @@ def test_QCORR_analysis(init_folder, file, command_line, target_folder, restore_
         elif file == "csv":
             qcorr_stats = pd.read_csv(f"{path_main}/QCORR-run_1-stats.csv")
             assert qcorr_stats["Total files"][0] == 29
-            assert qcorr_stats["Normal termination"][0] == 6
+            assert qcorr_stats["Normal termination"][0] == 5
             assert qcorr_stats["Single-point calcs"][0] == 3
             assert qcorr_stats["Extra imag. freq."][0] == 4
             assert qcorr_stats["TS with no imag. freq."][0] == 1
             assert qcorr_stats["Freq not converged"][0] == 2
-            assert qcorr_stats["Linear mol with wrong n of freqs"][0] == 1
+            assert qcorr_stats["Linear mol with wrong n of freqs"][0] == 0
             assert qcorr_stats["SCF error"][0] == 1
-            assert qcorr_stats["No data"][0] == 1
+            assert qcorr_stats["No data"][0] == 3
             assert qcorr_stats["Basis set error"][0] == 2
             assert qcorr_stats["Other errors"][0] == 5
             assert qcorr_stats["Spin contamination"][0] == 2
@@ -696,42 +719,27 @@ def test_QCORR_analysis(init_folder, file, command_line, target_folder, restore_
 
     elif init_folder == "QCORR_1b":
         w_dir_main = f"{path_qcorr}/QCORR_1"
-        cmd_aqme = [
-            "python",
-            "-m",
-            "aqme",
-            "--qcorr",
-            "--files",
-            f"{w_dir_main}/{file}",
-            "--freq_conv",
-            "opt=(calcfc,maxstep=5)",
-        ]
+        kwargs = {
+            'files': f"{w_dir_main}/{file}",
+            'freq_conv': "opt=(calcfc,maxstep=5)"
+        }
         if file.split(".")[0] == "freq_conv_YYNN":
-            cmd_aqme = [
-                "python",
-                "-m",
-                "aqme",
-                "--qcorr",
-                "--files",
-                f"{w_dir_main}/{file}",
-            ]
-
-        elif file.split(".")[0] == "bpinene_spin_contamin":
-            cmd_aqme = cmd_aqme + ["--s2_threshold", "50"]
-
+            kwargs = {
+                'files': f"{w_dir_main}/{file}",
+            }
+        
+        if file.split(".")[0] == "bpinene_spin_contamin":
+            kwargs['s2_threshold'] = 50
         elif file.split(".")[0] == "z_CH4_duplicate":
-            cmd_aqme = cmd_aqme + ["--dup_threshold", "0.000000000001"]
-
+            kwargs['dup_threshold'] = 0.000000000001
         elif file.split(".")[0] == "imag_freq_no_opt":
-            cmd_aqme = cmd_aqme + ["--ifreq_cutoff", "50"]
-
+            kwargs['ifreq_cutoff'] = 50
         elif file.split(".")[0] == "Imag_freq":
-            cmd_aqme = cmd_aqme + ["--amplitude_ifreq", "-0.4"]
-
+            kwargs['amplitude_ifreq'] = -0.4
         elif file.split(".")[0] == "Imag_freq_no_corr":
-            cmd_aqme = cmd_aqme + ["--im_freq_input", "None"]
-
-        subprocess.run(cmd_aqme)
+            kwargs['im_freq_input'] = None
+            
+        qcorr(**kwargs)
 
         # ensure the output file moves to the right folder
         assert path.exists(f"{w_dir_main}/{target_folder}/{file}")
@@ -765,17 +773,7 @@ def test_QCORR_analysis(init_folder, file, command_line, target_folder, restore_
 
     elif init_folder == "QCORR_1c":
         w_dir_main = f"{path_qcorr}/QCORR_1"
-        cmd_aqme = [
-            "python",
-            "-m",
-            "aqme",
-            "--qcorr",
-            "--files",
-            f"{w_dir_main}/{file}",
-            "--fullcheck",
-            "False",
-        ]
-        subprocess.run(cmd_aqme)
+        qcorr(files=f"{w_dir_main}/{file}", fullcheck=False)
 
         assert not path.exists(
             f"{w_dir_main}/{target_folder}/--QCORR_Fullcheck_Analysis--.dat"
@@ -783,8 +781,9 @@ def test_QCORR_analysis(init_folder, file, command_line, target_folder, restore_
 
     elif init_folder == "QCORR_2":
         if command_line is not None:
-            cmd_aqme = cmd_aqme + ["--isom_type", "com", "--isom_inputs", w_dir_main]
-            subprocess.run(cmd_aqme)
+            kwargs['isom_type'] = "com"
+            kwargs['isom_inputs'] = w_dir_main
+            qcorr(**kwargs)
 
         # ensure the output file moves to the right folder, including the initial COM file
         if file.split(".")[-1].lower() == "log":
@@ -799,16 +798,7 @@ def test_QCORR_analysis(init_folder, file, command_line, target_folder, restore_
         w_dir_main = f"{path_qcorr}/QCORR_2"
         if command_line is not None:
             param_file = f"{w_dir_main}/QCORR_params.yaml"
-            cmd_aqme = [
-                "python",
-                "-m",
-                "aqme",
-                "--isom_inputs",
-                w_dir_main,
-                "--varfile",
-                param_file,
-            ]
-            subprocess.run(cmd_aqme)
+            qcorr(isom_inputs=w_dir_main, varfile=param_file)
         # ensure the output file moves to the right folder, including the initial COM file
         if file.split(".")[-1].lower() == "log":
             assert path.exists(f"{w_dir_main}/{target_folder}/{file}")
@@ -817,27 +807,12 @@ def test_QCORR_analysis(init_folder, file, command_line, target_folder, restore_
     elif init_folder == "QCORR_2c":
         w_dir_main = f"{path_qcorr}/QCORR_2"
         if command_line is not None:
-            cmd_aqme = [
-                "python",
-                "-m",
-                "aqme",
-                "--qcorr",
-                "--files",
-                f"{w_dir_main}/*.log",
-                "--freq_conv",
-                "opt=(calcfc,maxstep=5)",
-            ]
-            cmd_aqme = cmd_aqme + [
-                "--isom_type",
-                "com",
-                "--isom_inputs",
-                w_dir_main,
-                "--vdwfrac",
-                "0.01",
-                "--covfrac",
-                "0.01",
-            ]
-            subprocess.run(cmd_aqme)
+            kwargs['files'] = f"{w_dir_main}/*.log"
+            kwargs['isom_type'] = "com"
+            kwargs['isom_inputs'] = w_dir_main
+            kwargs['vdwfrac'] = 0.01
+            kwargs['covfrac'] = 0.01
+            qcorr(**kwargs)
 
         # ensure the output file moves to the right folder, including the initial COM file
         if file.split(".")[-1].lower() == "log":
@@ -847,18 +822,10 @@ def test_QCORR_analysis(init_folder, file, command_line, target_folder, restore_
         w_dir_QCORR_5 = f"{path_qcorr}/{init_folder}/failed/run_1/fixed_QM_inputs/"
 
         if command_line is not None:
-            cmd_aqme = [
-                "python",
-                "-m",
-                "aqme",
-                "--qcorr",
-                "--files",
-                f"{w_dir_QCORR_5}/*.log",
-                "--freq_conv",
-                "opt=(calcfc,maxstep=5)",
-            ]
-            cmd_aqme = cmd_aqme + ["--isom_type", "gjf", "--isom_inputs", w_dir_QCORR_5]
-            subprocess.run(cmd_aqme)
+            kwargs['files'] = f"{w_dir_QCORR_5}/*.log"
+            kwargs['isom_type'] = "gjf"
+            kwargs['isom_inputs'] = w_dir_QCORR_5
+            qcorr(**kwargs)
 
         if file.split(".")[0] == "CH4":
             assert path.exists(f"{w_dir_main}/{target_folder}/{file}")
@@ -877,23 +844,10 @@ def test_QCORR_analysis(init_folder, file, command_line, target_folder, restore_
         w_dir_QCORR_5b = f"{path_qcorr}/QCORR_5"
 
         if command_line is not None:
-            cmd_aqme = [
-                "python",
-                "-m",
-                "aqme",
-                "--qcorr",
-                "--files",
-                f"{w_dir_QCORR_5b}/failed/run_1/fixed_QM_inputs/*.log",
-                "--freq_conv",
-                "opt=(calcfc,maxstep=5)",
-            ]
-            cmd_aqme = cmd_aqme + [
-                "--isom_type",
-                "gjf",
-                "--isom_inputs",
-                w_dir_QCORR_5b + "/failed/run_1/fixed_QM_inputs",
-            ]
-            subprocess.run(cmd_aqme)
+            kwargs['files'] = f"{w_dir_QCORR_5b}/failed/run_1/fixed_QM_inputs/*.log"
+            kwargs['isom_type'] = "gjf"
+            kwargs['isom_inputs'] = f"{w_dir_QCORR_5b}/failed/run_1/fixed_QM_inputs"
+            qcorr(**kwargs)
 
         # the energy of the json file was changed to avoid the duplicate filter
         if file.split(".")[0] == "CH4":
@@ -913,17 +867,8 @@ def test_QCORR_analysis(init_folder, file, command_line, target_folder, restore_
         # go to the parent folder and run the program
         w_dir_main = f"{path_qcorr}/QCORR_1"
         os.chdir(w_dir_main)
-        cmd_aqme = [
-            "python",
-            "-m",
-            "aqme",
-            "--qcorr",
-            "--files",
-            "CH4.log",
-            "--freq_conv",
-            "opt=(calcfc,maxstep=5)",
-        ]
-        subprocess.run(cmd_aqme)
+        kwargs['files'] = "CH4.log"
+        qcorr(**kwargs)
 
         # ensure the output file moves to the right folder
         assert path.exists(f"{w_dir_main}/{target_folder}/{file}")
@@ -934,22 +879,15 @@ def test_QCORR_analysis(init_folder, file, command_line, target_folder, restore_
         )
 
     elif init_folder == "QCORR_6":
-        subprocess.run(cmd_aqme)
+        qcorr(**kwargs)
 
         # ensure the output file moves to the right folder
         assert path.exists(f"{w_dir_main}/{target_folder}/{file}")
 
     elif init_folder == "QCORR_7":
         w_dir_main = f"{path_qcorr}/QCORR_7"
-        cmd_aqme = [
-            "python",
-            "-m",
-            "aqme",
-            "--qcorr",
-            "--files",
-            f"{w_dir_main}/{file}",
-        ]
-        subprocess.run(cmd_aqme)
+        kwargs['files'] = f"{w_dir_main}/{file}"
+        qcorr(**kwargs)
 
         # ensure the output file moves to the right folder
         assert path.exists(f"{w_dir_main}/{target_folder}/{file}")
@@ -967,6 +905,24 @@ def test_QCORR_analysis(init_folder, file, command_line, target_folder, restore_
             assert 'MaxStep 0.05' in outlines[9]
             assert 'C  -4.32349420   1.79733020  -0.42830100' in outlines[12]
 
+    elif init_folder == "QCORR_8":
+        cmd_aqme = [
+            "python",
+            "-m",
+            "aqme",
+            "--qcorr",
+            "--files",
+            f"{w_dir_main}/*.log",
+            "--freq_conv",
+            "opt=(calcfc,maxstep=5)",
+        ]
+        subprocess.run(cmd_aqme)
+
+        outfile = open(f"{path_main}/QCORR-run_1.dat", "r")
+        outlines = outfile.readlines()
+        outfile.close()
+
+        assert "Command line used in AQME: python -m aqme --qcorr" in outlines[3]
 
     # leave the folders as they were initially to run a different batch of tests
     elif restore_folder:

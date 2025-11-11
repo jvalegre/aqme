@@ -11,6 +11,7 @@ import pytest
 import shutil
 import subprocess
 from pathlib import Path
+from aqme.qprep import qprep
 
 # saves the working directory
 path_main = os.getcwd()
@@ -67,6 +68,7 @@ path_qprep = path_main + "/Example_workflows/QPREP_generating_input_files"
             False,
         ),  # test genecp and final line
         ("gen", "json_files", "gen_final_files", False),  # test gen
+        ("gen_cmd", "json_files", "gen_cmd_final_files", False),  # test gen from command line
         # from YAML file (varfile=XX)
         ("yaml", "json_files", "yaml_files", False),  # test for yaml files
         # calling AQME from the parent folder where the files are located (omitting the w_dir_main keyword)
@@ -120,21 +122,10 @@ def test_QPREP_analysis(test_type, init_folder, target_folder, restore_folder):
             files = "*.pdb"
             files_assert = ["7ac8_chainsEF_conf_1.com"]
 
-        cmd_aqme = [
-            "python",
-            "-m",
-            "aqme",
-            "--qprep",
-            "--destination",
-            destination,
-            "--files",
-            f"{w_dir_main}/{files}",
-            "--program",
-            "gaussian",
-            "--qm_input",
-            qm_input,
-        ]
-        subprocess.run(cmd_aqme)
+        qprep(destination=destination,
+              files=f"{w_dir_main}/{files}",
+              program="gaussian",
+              qm_input=qm_input)
 
         if init_folder in ["xyz_files", "pdb_files"]:
             # make sure all the generated SDF files are removed
@@ -241,21 +232,10 @@ def test_QPREP_analysis(test_type, init_folder, target_folder, restore_folder):
         ORCA_SP += 'SMDsolvent "CH2Cl2"\n'
         ORCA_SP += "end"
 
-        cmd_aqme = [
-            "python",
-            "-m",
-            "aqme",
-            "--qprep",
-            "--destination",
-            destination,
-            "--files",
-            f"{w_dir_main}/CH4.log",
-            "--program",
-            "orca",
-            "--qm_input",
-            ORCA_SP,
-        ]
-        subprocess.run(cmd_aqme)
+        qprep(destination=destination,
+              files=f"{w_dir_main}/CH4.log",
+              program="orca",
+              qm_input=ORCA_SP)
 
         outfile = open(f"{destination}/CH4.inp", "r")
         outlines = outfile.readlines()
@@ -292,32 +272,16 @@ def test_QPREP_analysis(test_type, init_folder, target_folder, restore_folder):
 
     elif test_type == "input_params":
 
-        cmd_aqme = [
-            "python",
-            "-m",
-            "aqme",
-            "--qprep",
-            "--destination",
-            destination,
-            "--files",
-            f"{w_dir_main}/CH4.json",
-            "--program",
-            "gaussian",
-            "--qm_input",
-            "wb97xd/lanl2dz scrf=(smd,solvent=acetonitrile)",
-            "--charge",
-            "2",
-            "--mult",
-            "3",
-            "--suffix",
-            "params",
-            "--chk",
-            "--mem",
-            "100GB",
-            "--nprocs",
-            "32",
-        ]
-        subprocess.run(cmd_aqme)
+        qprep(destination=destination,
+              files=f"{w_dir_main}/CH4.json",
+              program="gaussian",
+              qm_input="wb97xd/lanl2dz scrf=(smd,solvent=acetonitrile)",
+              charge="2",
+              mult="3",
+              suffix="params",
+              chk=True,
+              mem="100GB",
+              nprocs="32")
 
         outfile = open(f"{destination}/CH4_params.com", "r")
         outlines = outfile.readlines()
@@ -336,26 +300,13 @@ def test_QPREP_analysis(test_type, init_folder, target_folder, restore_folder):
         assert outlines[7].strip() == line_7
 
     elif test_type == "chk_path":
-        cmd_aqme = [
-            "python",
-            "-m",
-            "aqme",
-            "--qprep",
-            "--destination",
-            destination,
-            "--files",
-            f"{w_dir_main}/CH4.json",
-            "--program",
-            "gaussian",
-            "--qm_input",
-            "wb97xd/lanl2dz scrf=(smd,solvent=acetonitrile)",
-            "--suffix",
-            "chk_path",
-            "--chk",
-            "--chk_path",
-            "test/PATH/CH4_chk_path.chk"
-        ]
-        subprocess.run(cmd_aqme)
+        qprep(destination=destination,
+              files=f"{w_dir_main}/CH4.json",
+              program="gaussian",
+              qm_input="wb97xd/lanl2dz scrf=(smd,solvent=acetonitrile)",
+              suffix="chk_path",
+              chk=True,
+              chk_path="test/PATH/CH4_chk_path.chk")
 
         outfile = open(f"{destination}/CH4_chk_path.com", "r")
         outlines = outfile.readlines()
@@ -366,25 +317,12 @@ def test_QPREP_analysis(test_type, init_folder, target_folder, restore_folder):
 
     elif test_type == "final_line":
 
-        cmd_aqme = [
-            "python",
-            "-m",
-            "aqme",
-            "--qprep",
-            "--destination",
-            destination,
-            "--files",
-            f"{w_dir_main}/CH4.json",
-            "--program",
-            "gaussian",
-            "--qm_input",
-            "pop=(nbo6read,savenbos) wb97xd/def2svp",
-            "--qm_end",
-            "$nbo bndidx $end",
-            "--suffix",
-            "final",
-        ]
-        subprocess.run(cmd_aqme)
+        qprep(destination=destination,
+              files=f"{w_dir_main}/CH4.json",
+              program="gaussian",
+              qm_input="pop=(nbo6read,savenbos) wb97xd/def2svp",
+              qm_end="$nbo bndidx $end",
+              suffix="final")
 
         outfile = open(f"{destination}/CH4_final.com", "r")
         outlines = outfile.readlines()
@@ -395,31 +333,15 @@ def test_QPREP_analysis(test_type, init_folder, target_folder, restore_folder):
         assert outlines[-1] == "\n"
 
     elif test_type == "genecp_and_final":
-        cmd_aqme = [
-            "python",
-            "-m",
-            "aqme",
-            "--qprep",
-            "--destination",
-            destination,
-            "--files",
-            f"{w_dir_main}/CH4.json",
-            "--program",
-            "gaussian",
-            "--qm_input",
-            "pop=(nbo6read,savenbos) wb97xd/genecp",
-            "--qm_end",
-            "$nbo bndidx $end",
-            "--suffix",
-            "genecp_and_final",
-            "--gen_atoms",
-            "['C']",
-            "--bs_gen",
-            "LANL2TZ",
-            "--bs_nogen",
-            "LANL2DZ",
-        ]
-        subprocess.run(cmd_aqme)
+        qprep(destination=destination,
+              files=f"{w_dir_main}/CH4.json",
+              program="gaussian",
+              qm_input="pop=(nbo6read,savenbos) wb97xd/genecp",
+              qm_end="$nbo bndidx $end",
+              suffix="genecp_and_final",
+              gen_atoms=['C'],
+              bs_gen="LANL2TZ",
+              bs_nogen="LANL2DZ")
 
         outfile = open(f"{destination}/CH4_genecp_and_final.com", "r")
         outlines = outfile.readlines()
@@ -440,6 +362,29 @@ def test_QPREP_analysis(test_type, init_folder, target_folder, restore_folder):
         assert outlines[24] == "\n"
 
     elif test_type == "gen":
+        qprep(destination=destination,
+              files=f"{w_dir_main}/CH4.json",
+              program="gaussian",
+              qm_input="wb97xd/gen",
+              suffix="gen",
+              gen_atoms=['C'],
+              bs_gen="LANL2TZ",
+              bs_nogen="LANL2DZ")
+
+        outfile = open(f"{destination}/CH4_gen.com", "r")
+        outlines = outfile.readlines()
+        outfile.close()
+
+        assert outlines[2].strip() == "# wb97xd/gen"
+        assert outlines[13].strip() == "H 0"
+        assert outlines[14].strip() == "LANL2DZ"
+        assert outlines[15].strip() == "****"
+        assert outlines[16].strip() == "C 0"
+        assert outlines[17].strip() == "LANL2TZ"
+        assert outlines[18].strip() == "****"
+        assert outlines[19] == "\n"
+
+    elif test_type == 'gen_cmd':
         cmd_aqme = [
             "python",
             "-m",
@@ -476,18 +421,10 @@ def test_QPREP_analysis(test_type, init_folder, target_folder, restore_folder):
         assert outlines[17].strip() == "LANL2TZ"
         assert outlines[18].strip() == "****"
         assert outlines[19] == "\n"
-
+    
     elif test_type == "yaml":
-        cmd_aqme = [
-            "python",
-            "-m",
-            "aqme",
-            "--destination",
-            destination,
-            "--varfile",
-            f"{w_dir_main}/pytest_varfile.yaml",
-        ]
-        subprocess.run(cmd_aqme)
+        qprep(destination=destination,
+              varfile=f"{w_dir_main}/pytest_varfile.yaml")
 
         outfile = open(f"{destination}/CH4_varfile.com", "r")
         outlines = outfile.readlines()
@@ -506,21 +443,10 @@ def test_QPREP_analysis(test_type, init_folder, target_folder, restore_folder):
     elif test_type == "parent":
         os.chdir(w_dir_main)
         file = "CH4.json"
-        cmd_aqme = [
-            "python",
-            "-m",
-            "aqme",
-            "--qprep",
-            "--destination",
-            destination,
-            "--files",
-            file,
-            "--program",
-            "gaussian",
-            "--qm_input",
-            "wb97xd/lanl2dz scrf=(smd,solvent=acetonitrile)",
-        ]
-        subprocess.run(cmd_aqme)
+        qprep(destination=destination,
+              files=file,
+              program="gaussian",
+              qm_input="wb97xd/lanl2dz scrf=(smd,solvent=acetonitrile)")
 
         assert path.exists(f'{destination}/{file.split(".")[0]}.com')
 
@@ -547,19 +473,9 @@ def test_QPREP_analysis(test_type, init_folder, target_folder, restore_folder):
 
     elif test_type == "no_dest":
         file = "CH4.json"
-        cmd_aqme = [
-            "python",
-            "-m",
-            "aqme",
-            "--qprep",
-            "--files",
-            f"{w_dir_main}/{file}",
-            "--program",
-            "gaussian",
-            "--qm_input",
-            "wb97xd/lanl2dz scrf=(smd,solvent=acetonitrile)",
-        ]
-        subprocess.run(cmd_aqme)
+        qprep(files=f"{w_dir_main}/{file}",
+              program="gaussian",
+              qm_input="wb97xd/lanl2dz scrf=(smd,solvent=acetonitrile)")
 
         assert path.exists(f'{os.getcwd()}/QCALC/{file.split(".")[0]}.com')
 

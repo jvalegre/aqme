@@ -303,6 +303,7 @@ SLURM Job Name: a-Ar_def2TZVP
  NBasis=   265 RedAO= T EigKep=  8.34D-06  NBF=   265
  NBsUse=   265 1.00D-06 EigRej= -1.00D+00 NBFU=   265
  Initial guess from the checkpoint file:  "/gpfs/summit/scratch/jvalegre@colostate.edu/9187674/Gau-254305.chk"
+ ExpMin= 1.83D-01 ExpMax= 1.72D+02 ExpMxC= 1.72D+02 IAcc=1 IRadAn=         1 AccDes= 0.00D+00
  B after Tr=    -0.000000   -0.000000    0.000000
          Rot=    1.000000    0.000000    0.000000    0.000000 Ang=   0.00 deg.
  Requested convergence on RMS density matrix=1.00D-08 within 128 cycles.

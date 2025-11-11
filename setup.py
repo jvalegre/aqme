@@ -1,5 +1,5 @@
 from setuptools import setup, find_packages
-version = "1.7.4"
+version = "2.0.0"
 setup(
     name="aqme",
     packages=find_packages(exclude=["tests"]),
@@ -27,23 +27,21 @@ setup(
         "Intended Audience :: Developers",  # Define that your audience are developers
         "Topic :: Software Development :: Build Tools",
         "License :: OSI Approved :: MIT License",
-        "Programming Language :: Python :: 3.7",  # Specify which python versions you want to support
-        "Programming Language :: Python :: 3.8",
-        "Programming Language :: Python :: 3.9",
-        "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
         "Programming Language :: Python :: 3.12",
+        "Programming Language :: Python :: 3.13",
+        "Programming Language :: Python :: 3.14",
     ],
     install_requires=[
-        "PyYAML",
-        "pandas==2.2.3",
-        "progress",
-        "numpy==1.26.4",
-        "rdkit==2024.3.3",
-        "cclib==1.7.2",
-        "cffi",
-        "morfeus-ml==0.7.2"
+        "PyYAML==6.0.3",
+        "pandas==2.3.3",
+        "progress==1.6.1",
+        "numpy==2.3.4",
+        "rdkit==2025.9.1",
+        "cclib==1.8.1",
+        "cffi==2.0.0",
+        "morfeus-ml==0.8.0",
     ],
-    python_requires=">=3.10",
+    python_requires=">=3.11",
     include_package_data=True,
 )
