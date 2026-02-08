@@ -915,10 +915,13 @@ def _load_mols_for_qprep_cmin(input_file, low_check):
         list: Molecule objects
     """
     # Use sanitize=False to avoid reading problems
-    mols = Chem.SDMolSupplier(input_file, removeHs=False, sanitize=False)
+    supplier = Chem.SDMolSupplier(input_file, removeHs=False, sanitize=False)
+    mols = [mol for mol in supplier]
+    # IMPORTANT: release file handle
+    del supplier
     
     # Transform invalid SDF files created with GaussView
-    if None in mols:
+    if any(m is None for m in mols):
         mols = load_sdf(input_file)
     
     return _filter_mols_by_criteria(mols, low_check)
@@ -1108,10 +1111,13 @@ def load_sdf(input_file, keep_xyz=False):
     Returns:
         list: RDKit molecule objects with hydrogens preserved
     """
-    mols = Chem.SDMolSupplier(input_file, removeHs=False)
+    supplier = Chem.SDMolSupplier(input_file, removeHs=False)
+    mols = [mol for mol in supplier]
+    # IMPORTANT: release file handle
+    del supplier
     
     # Some software don't generate valid mol objects (e.g., GaussView)
-    if None in mols:
+    if any(m is None for m in mols):
         # Try repairing with OpenBabel
         command_sdf = [
             "obabel",
@@ -1126,10 +1132,13 @@ def load_sdf(input_file, keep_xyz=False):
             stderr=subprocess.DEVNULL,
         )
         
-        mols = Chem.SDMolSupplier(input_file, removeHs=False)
+        supplier = Chem.SDMolSupplier(input_file, removeHs=False)
+        mols = [mol for mol in supplier]
+        # IMPORTANT: release file handle
+        del supplier
         
-        # If still failing, convert via XYZ
-        if None in mols:
+        # Transform invalid SDF files created with GaussView
+        if any(m is None for m in mols):
             xyz_file = input_file.replace('.sdf', '.xyz')
             command_xyz = [
                 "obabel",

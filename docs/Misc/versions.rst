@@ -4,12 +4,20 @@
 Versions
 ========
 
-Version 1.7.4 [`url <https://github.com/jvalegre/aqme/releases/tag/1.7.4>`__]
+Version 2.0.1 [`url <https://github.com/jvalegre/aqme/releases/tag/2.0.1>`__]
+   -  Fixed PermissionError issue in Windows related to Chem.SDMolSupplier()
+
+Version 2.0.0 [`url <https://github.com/jvalegre/aqme/releases/tag/2.0.0>`__]
    -  Amount of generated conformers (--sample) can be defined in the CSV input as a column to set individual --sample values for each molecule
    -  Multiple geometry filters allow through the --geom option (format: --geom [SMARTS1, VALUE1, SMARTS2, VALUE2...])
    -  Included new option --single_system for CSEARCH to avoid duplicate geometries when using --complex_type templates in complexes with 2 identical ligands
    -  Debugging multithreading to avoid QDESCP problems (includes a forced wait for all the calculations to finish before getting RDKit and atomic properties)
    -  The SUMM and FullMonte options of CSEARCH have been disabled
+   -  Big refactoring of the code
+   -  cclib updated version to 1.8.1 and called through cclib object (instead ob ccwrite)
+   -  RDKit updated version to 2025
+   -  numpy updated to 2.3.4
+   -  Update of QDESCP to go through MORFEUS 0.8.0
 
 Version 1.7.3 [`url <https://github.com/jvalegre/aqme/releases/tag/1.7.3>`__]
    -  Fixed bug from QDESCP when trying to open JSON files
