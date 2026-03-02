@@ -1851,10 +1851,16 @@ def get_mol_assign(self,
         for i, line in enumerate(lines):
             if ">  <SMILES>" in line and i + 1 < len(lines):
                 smiles = lines[i + 1].strip().split()[0]
-                mol = Chem.MolFromSmiles(smiles)
-                if mol is not None:
-                    return Chem.AddHs(mol)
 
+                params = Chem.SmilesParserParams()
+                params.removeHs = False
+
+                mol = Chem.MolFromSmiles(smiles, params)
+                if mol is not None:
+                    Chem.SanitizeMol(mol)
+                    mol = Chem.AddHs(mol)
+                    return mol
+                
         # Fall back to SDF parsing if no SMILES found
         mols = load_sdf(str(sdf_path))
         if not mols:
@@ -2246,7 +2252,7 @@ def get_prefix_atom_props(
             atom_counters[atom_type] = 1
         # If the pattern is a single atom number, we include that number in the match name
         if str(pattern).isdigit():  # This means the pattern is an atom number
-            match_name = f'Atom_{pattern}'
+             match_name = f'Atom_{pattern}_{atom_type}'
         else:
             # If it's a SMARTS pattern or more than one atom
             if pattern in periodic_table():
