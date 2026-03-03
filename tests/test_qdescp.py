@@ -262,8 +262,8 @@ def test_qdescp_xtb(file):
 
     elif file in ['test_idx.csv','test_idx_cmd.csv']:
         pd_boltz_interpret = pd.read_csv(file_descriptors_interpret)
-        assert 'Atom_1_Partial charge' in pd_boltz_interpret
-        assert round(pd_boltz_interpret['Atom_1_Partial charge'][1],1) == -0.1
+        assert 'Atom_1_C_Partial charge' in pd_boltz_interpret
+        assert round(pd_boltz_interpret['Atom_1_C_Partial charge'][1],1) == -0.1
 
     # Checking molecular and atomic descriptors
     def check_descriptors(pd_boltz, descriptors, excluded_descriptors, desc_type, file_test):

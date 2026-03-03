@@ -1857,7 +1857,6 @@ def get_mol_assign(self,
 
                 mol = Chem.MolFromSmiles(smiles, params)
                 if mol is not None:
-                    Chem.SanitizeMol(mol)
                     mol = Chem.AddHs(mol)
                     return mol
                 
@@ -2362,3 +2361,123 @@ def update_atom_props_json(
                     prefixes_atom_prop.append(prefix)
 
     return prefixes_atom_prop, json_data
+
+def extract_smiles_from_file(file_path):
+    """
+    Extract SMILES from an SDF file.
+    Returns the SMILES string or None if not found.
+    """
+    with open(file_path, "r", encoding="utf-8") as f:
+        lines = f.readlines()
+        for i, line in enumerate(lines):
+            if ">  <SMILES>" in line:
+                return lines[i + 1].strip().split()[0]
+    return None
+
+def extract_numeric_mapping(smarts_targets):
+    """
+    Extract numeric mapping identifiers only from smarts_targets.
+    """
+    mapping_numbers = set()
+
+    for target in smarts_targets:
+        cleaned = target.replace("'", "").strip()
+
+        if cleaned.isdigit():
+            mapping_numbers.add(int(cleaned))
+
+    return mapping_numbers
+
+def validate_atom_mapping_consistency(
+    files,
+    mapping_numbers,
+    extract_smiles_fn,
+    logger
+):
+    """
+    Validate that numeric atom mappings (1, 2, 3, ...) are consistent
+    across all input SMILES.
+
+    Returns True if validation passes, False otherwise.
+    """
+
+    # Fail fast: this function should only be called when mapping_numbers exist
+    if not mapping_numbers:
+        raise ValueError(
+            "validate_atom_mapping_consistency() was called with empty "
+            "mapping_numbers. This indicates a workflow logic error."
+        )
+
+    # Collect in set() observed symbols for each mapping number
+    # If inconsistencies arise later, the set will have more than one symbol for that mapping number
+    global_mapping = {num: set() for num in mapping_numbers}
+
+    for file in files:
+        smi = extract_smiles_fn(file)
+        if smi is None:
+            logger.write(
+                f'\nx  WARNING! No SMILES found in "{file}". '
+                "Atom mapping validation could not be performed."
+            )
+            return False
+
+        # Parse SMILES preserving explicit hydrogens
+        params = Chem.SmilesParserParams()
+        params.removeHs = False
+        mol = Chem.MolFromSmiles(smi, params)
+
+        if mol is None:
+            logger.write(
+                f'\nx  WARNING! RDKit failed to parse SMILES in "{file}". '
+                "Atom mapping validation failed."
+            )
+            return False
+        
+        # Extract mapping numbers and their corresponding symbols in this molecule.
+        # We use a set to detect duplicated mapping numbers within the same molecule.
+        local_map = {num: set() for num in mapping_numbers}
+
+        for atom in mol.GetAtoms():
+            map_num = atom.GetAtomMapNum()
+            if map_num in mapping_numbers:
+                local_map[map_num].add(atom.GetSymbol())
+
+        # Ensure requested mappings exist in this molecule
+        for num in mapping_numbers:
+
+            # Mapping requested but not present
+            if len(local_map[num]) == 0:
+                logger.write(
+                    f'\nx  WARNING! Atom mapping {num} was requested but '
+                    f'not found in the SMILES of "{file}".'
+                )
+                return False
+
+            # Mapping appears more than once in the same molecule
+            # (e.g. [C:2](=[O:2])) which is chemically inconsistent
+            if len(local_map[num]) > 1:
+                logger.write(
+                    f'\nx  WARNING! Atom mapping {num} appears multiple times '
+                    f'in "{file}" with different elements {local_map[num]}. '
+                    "Each mapping number must correspond to a single atom."
+                )
+                return False
+
+            # Add the atomic symbol for this mapping number.
+            # A set is used so identical symbols across molecules do not duplicate.
+            # If more than one symbol appears later, inconsistency is detected.
+            symbol = next(iter(local_map[num]))
+            global_mapping[num].add(symbol)
+
+    # Ensure consistency across all molecules
+    for num, symbols in global_mapping.items():
+        if len(symbols) > 1:
+            logger.write(
+                f"\nx  WARNING! Inconsistent atomic symbols detected for "
+                f"mapping {num} across input files {symbols}. "
+                "Mapped atoms must correspond to the same element "
+                "in all molecules."
+            )
+            return False
+
+    return True
