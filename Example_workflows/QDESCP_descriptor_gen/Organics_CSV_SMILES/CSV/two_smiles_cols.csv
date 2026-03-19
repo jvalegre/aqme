@@ -1,0 +1,5 @@
+code_name,SMILES_phosph,SMILES_alk
+mol_1,P,C
+mol_2,PC,CC
+mol_3,P(C)C,CCC
+mol_4,P(C)(C)C,CCCC

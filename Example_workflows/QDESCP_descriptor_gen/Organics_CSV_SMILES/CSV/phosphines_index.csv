@@ -1,0 +1,5 @@
+SMILES,code_name
+[P:1]([H])([H])([H]),mol_1
+[P:1]([H])([H])C,mol_2
+[P:1]([H])(C)C,mol_3
+[P:1](C)(C)C,mol_4
