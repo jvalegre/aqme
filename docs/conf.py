@@ -24,7 +24,7 @@ copyright = '2024, Juan V. Alegre Requena, Shree Sowndarya S. V., Alturaifi T., 
 author = '2020, Juan V. Alegre Requena, Shree Sowndarya S. V., Alturaifi T., Pérez-Soto R., Robert S. Paton'
 
 # The full version, including alpha/beta/rc tags
-release = 'v1.7.0'
+release = 'v2.0'
 
 
 # -- General configuration ---------------------------------------------------
@@ -32,7 +32,10 @@ release = 'v1.7.0'
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = ['sphinx.ext.autodoc',]
+extensions = ['sphinx.ext.autodoc',
+              'sphinx.ext.mathjax',
+              'sphinx_tabs.tabs',
+              ]
 
 # Avoid paths in class names i.e. 
 # class aqme.aqme.csearch.csearch -> class csearch
@@ -59,3 +62,13 @@ html_theme = 'sphinx_rtd_theme'
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 #html_static_path = ['_static']
+
+# Add to the top of docs/conf.py if not already present:
+# -*- coding: utf-8 -*-
+
+
+# Optional: explicit MathJax path (useful for local builds)
+mathjax_path = "https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"
+
+# Ensure source encoding is UTF-8 (usually default)
+source_encoding = 'utf-8-sig'

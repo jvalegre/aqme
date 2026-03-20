@@ -8,11 +8,11 @@ section but with their corresponding commandline instructions when possible.
 .. toctree::
     :maxdepth: 2
 
+    descriptor_generation
     conformer_search
     qm_input_generation
     correction_qm_output
     end_to_end
-    descriptor_generation
 
 
 

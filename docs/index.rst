@@ -41,6 +41,13 @@ Please report any bugs or missing details at the mailing list or open an issue a
 
    video_tutorials
 
+.. toctree:: 
+   :maxdepth: 1
+   :caption: How does AQME work?
+
+   Modules/qcorr
+   Modules/qdescp
+
 .. toctree::
     :maxdepth: 2
     :caption: Examples
