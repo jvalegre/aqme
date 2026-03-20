@@ -1,0 +1,5 @@
+code_name,SMILES,charge,mult
+mol_1,O=CC1=CN(C)[Cu]N1C,0,2
+mol_2,O=CC1=C(C)N(C)[Cu]N1C,0,2
+mol_3,O=CC1=C(N([Cu]N1C(C)(C)C)C)C,0,2
+mol_4,O=C(C)C1=C(C)N([Cu]N1C)C,0,2

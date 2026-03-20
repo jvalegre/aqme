@@ -557,10 +557,14 @@ def xtb_opt_main(
     
     def _process_sdf_file(file, self, charge, mult, smi, geom, name_init, sdwriter=None):
         """Process a single SDF file and extract molecular data."""
-        mol_supplier = rdkit.Chem.SDMolSupplier(file, removeHs=False, sanitize=False)
-        
+
+        supplier = rdkit.Chem.SDMolSupplier(file, removeHs=False, sanitize=False)
+        mol_supplier = [mol for mol in supplier]
+        # IMPORTANT: release file handle
+        del supplier
+
         # Handle invalid SDF files from GaussView
-        if None in mol_supplier:
+        if any(m is None for m in mol_supplier):
             mol_supplier = load_sdf(file)
         
         mol_rd = rdkit.Chem.RWMol(mol_supplier[0])
@@ -568,7 +572,8 @@ def xtb_opt_main(
         
         if self.args.program.lower() == "xtb":
             # Convert energy from Hartree to kcal/mol
-            energy_Eh = float(open(f'{file_nopath}.xyz', "r").readlines()[1].split()[1])
+            with open(f'{file_nopath}.xyz', "r") as F:
+                energy_Eh = float(F.readlines()[1].split()[1])
             energy_kcal = energy_Eh * 627.5
             mol_rd.SetProp("_Name", name_init)
             os.remove(file)

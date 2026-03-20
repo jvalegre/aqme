@@ -1,0 +1,5 @@
+SMILES,code_name
+P,mol_1
+PC,mol_2
+P(C)C,mol_3
+P(C)(C)C,mol_4

@@ -22,7 +22,7 @@ General
       combining the input CSV with SMILES/code_name and the calculated xTB/DBSTEP descriptors
 
 xTB and MORFEUS descriptors
-+++++++++++++++
++++++++++++++++++++++++++++
 
    files or input (both options are valid) : list of str, default=''
       Filenames of SDF/PDB/XYZ/CSV files to calculate xTB descriptors. If CSV is selected, a CSV

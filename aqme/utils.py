@@ -24,7 +24,7 @@ J_TO_AU = 4.184 * 627.509541 * 1000.0  # UNIT CONVERSION
 T = 298.15
 
 obabel_version = "3.1.1" # this MUST match the meta.yaml
-aqme_version = "2.0.0"
+aqme_version = "2.0.1"
 time_run = time.strftime("%Y/%m/%d %H:%M:%S", time.localtime())
 aqme_ref = f"AQME v {aqme_version}, Alegre-Requena, J. V.; Sowndarya, S.; Perez-Soto, R.; Alturaifi, T.; Paton, R. AQME: Automated Quantum Mechanical Environments for Researchers and Educators. Wiley Interdiscip. Rev. Comput. Mol. Sci. 2023, 13, e1663 (DOI: 10.1002/wcms.1663)."
 xtb_version = '6.7.1'
@@ -915,10 +915,13 @@ def _load_mols_for_qprep_cmin(input_file, low_check):
         list: Molecule objects
     """
     # Use sanitize=False to avoid reading problems
-    mols = Chem.SDMolSupplier(input_file, removeHs=False, sanitize=False)
+    supplier = Chem.SDMolSupplier(input_file, removeHs=False, sanitize=False)
+    mols = [mol for mol in supplier]
+    # IMPORTANT: release file handle
+    del supplier
     
     # Transform invalid SDF files created with GaussView
-    if None in mols:
+    if any(m is None for m in mols):
         mols = load_sdf(input_file)
     
     return _filter_mols_by_criteria(mols, low_check)
@@ -1108,10 +1111,13 @@ def load_sdf(input_file, keep_xyz=False):
     Returns:
         list: RDKit molecule objects with hydrogens preserved
     """
-    mols = Chem.SDMolSupplier(input_file, removeHs=False)
+    supplier = Chem.SDMolSupplier(input_file, removeHs=False)
+    mols = [mol for mol in supplier]
+    # IMPORTANT: release file handle
+    del supplier
     
     # Some software don't generate valid mol objects (e.g., GaussView)
-    if None in mols:
+    if any(m is None for m in mols):
         # Try repairing with OpenBabel
         command_sdf = [
             "obabel",
@@ -1126,10 +1132,13 @@ def load_sdf(input_file, keep_xyz=False):
             stderr=subprocess.DEVNULL,
         )
         
-        mols = Chem.SDMolSupplier(input_file, removeHs=False)
+        supplier = Chem.SDMolSupplier(input_file, removeHs=False)
+        mols = [mol for mol in supplier]
+        # IMPORTANT: release file handle
+        del supplier
         
-        # If still failing, convert via XYZ
-        if None in mols:
+        # Transform invalid SDF files created with GaussView
+        if any(m is None for m in mols):
             xyz_file = input_file.replace('.sdf', '.xyz')
             command_xyz = [
                 "obabel",
