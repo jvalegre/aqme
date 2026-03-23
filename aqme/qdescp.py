@@ -125,7 +125,10 @@ from aqme.qdescp_utils import (
     remove_invalid_smarts,
     update_atom_props_json,
     find_level_names,
-    setup_env
+    setup_env,
+    extract_smiles_from_file,
+    extract_numeric_mapping,
+    validate_atom_mapping_consistency
 )
 
 from aqme.csearch.crest import xyzall_2_xyz
@@ -365,6 +368,18 @@ class qdescp:
         # Delete a SMARTS pattern if it is not compatible with more than 75% of the sdf files
         if len(smarts_targets) > 0:
             smarts_targets = remove_invalid_smarts(self,mol_list,smarts_targets)
+        
+        # Validate atom mapping consistency only if numeric mapping mode is active
+        mapping_numbers = extract_numeric_mapping(smarts_targets)
+        if mapping_numbers:
+            if not validate_atom_mapping_consistency(
+                qdescp_files,
+                mapping_numbers,
+                extract_smiles_from_file,
+                self.args.log
+            ):
+                self.args.log.finalize()
+                sys.exit()
 
         # Get descriptors (denovo, interpret, full)
         descp_dict = collect_descp_lists()
@@ -989,7 +1004,6 @@ class qdescp:
             f"were created in {self.args.initial_dir}"
         )
 
-
     def gather_files_and_run(self, destination, file, atom_props, smarts_targets, bar):
         """Process input file(s) through xTB calculation and property collection.
         
@@ -1020,10 +1034,11 @@ class qdescp:
         
         # Get conformers and their properties
         xyz_files, xyz_charges, xyz_mults = self._get_conformer_data(file, name, ext)
-        
+
         # Process each conformer
         for xyz_file, charge, mult in zip(xyz_files, xyz_charges, xyz_mults):
             name_xtb = '.'.join(os.path.basename(Path(xyz_file)).split(".")[:-1])
+          
             self._process_single_conformer(
                 destination, file, xyz_file, charge, mult, name_xtb, 
                 atom_props, smarts_targets
