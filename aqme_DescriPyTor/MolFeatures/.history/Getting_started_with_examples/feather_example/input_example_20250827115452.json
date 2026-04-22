@@ -1,0 +1,18 @@
+{
+    "Ring Vibration atoms - by order -> Pick one  atom from a six member ring\n example: 13": [9],
+    "Stretch Threshold": [1600],
+    "Stretching Vibration atoms- enter bonded atom pairs: \n example: 1,2 4,5": [],
+    "Bend Threshold": [3000],
+    "Bending Vibration atoms - enter atom pairs that have a common atom: \n example: 4,7": [5, 6],
+    "Center_Atoms Dipole": [],
+    "Dipole atoms - indices for coordination transformation: \n example: 4,5,6 - origin, y-axis, new xy plane": [[1, 2, 19], [20, 19, 27]],
+    "Sub-Atoms NPA": [1, 3, 5, 11, 8, 12, 14, 4, 6] ,
+    "NPA manipulation atoms - Insert atoms to show NPA: \n example: 1,2,4": [[1, 2, 19], [20, 19, 27]],
+    "charges values - Insert atoms to show charge: \n example: 1,2,3,4": [3,5,11,12,4,6,20,21,22,7],
+    "charge_diff - Insert atoms to show charge difference: \n example: 1,2 3,4": [[3, 2], [29, 28], [2, 29]],
+    "Sterimol atoms - Primary axis along: \n example: 7,8": [[4,1], [1, 4]],
+    "drop_atoms - Atoms to drop: \n example: 1,2,3": [],
+    "Bond_length - Atom pairs to calculate difference: \n example: 1,2 4,5": [[1, 2], [4, 7]],
+    "Bond_angle - Atom triplets to calculate difference: \n example: 1,2,3 4,5,6": [[8, 7, 4, 1], [1, 2, 19]],\
+}
+
