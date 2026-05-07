@@ -26,6 +26,7 @@ var_dict = {
     "constraints_dist": [],
     "constraints_angle": [],
     "constraints_dihedral": [],
+    "aromatic_int": [],
     "ewin_cmin": 5.0,
     "ewin_csearch": 5.0,
     "opt_fmax": 0.05,

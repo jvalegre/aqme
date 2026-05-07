@@ -551,7 +551,7 @@ def get_matches_idx_n_prefix(
 
     if len(smarts_targets) > 0:
         # Create RDKit mol object from input file
-        mol = get_mol_assign(self,name_initial)
+        mol = get_mol_assign(name_initial)
 
         # Process each SMARTS pattern
         for pattern in smarts_targets:
@@ -1813,14 +1813,13 @@ def get_mols_qdescp(qdescp_files: List[str]) -> List[MoleculeType]:
     return mol_list
 
 
-def get_mol_assign(self,
-        name_initial: str) -> MoleculeType:
+def get_mol_assign(name_initial: str) -> MoleculeType:
     """
     Create RDKit molecule object from SDF file, supporting multiple formats.
 
     This function handles both CSEARCH-generated SDF files (with embedded SMILES)
-    and regular SDF files. It attempts to extract SMILES first, then falls back
-    to direct SDF parsing.
+    and regular SDF files. It reads directly from SDF to preserve atom ordering,
+    falling back to SMILES reconstruction only if SDF parsing fails.
 
     Args:
         name_initial: Base name of the SDF file (without extension)
@@ -1833,8 +1832,8 @@ def get_mol_assign(self,
         ValueError: If molecule cannot be parsed from file
         
     Notes:
-        - Prefers SMILES representation if available
-        - Automatically adds hydrogen atoms
+        - Prefers direct SDF parsing to preserve atom order and coordinates
+        - Falls back to SMILES reconstruction if SDF parsing fails
         - Handles both CSEARCH and standard SDF formats
     """
     sdf_path = Path(f'{name_initial}.sdf')
@@ -1843,11 +1842,15 @@ def get_mol_assign(self,
         raise FileNotFoundError(f"SDF file not found: {sdf_path}")
 
     try:
-        # Read SDF file content
+        # First try direct SDF parsing
+        mols = load_sdf(str(sdf_path))
+        if mols:
+            return mols[0]
+
+        # Fall back to SMILES reconstruction if SDF parsing fails
         with open(sdf_path, "r", encoding='utf-8') as f:
             lines = f.readlines()
 
-        # Try to find and use SMILES string first
         for i, line in enumerate(lines):
             if ">  <SMILES>" in line and i + 1 < len(lines):
                 smiles = lines[i + 1].strip().split()[0]
@@ -1855,14 +1858,9 @@ def get_mol_assign(self,
                 if mol is not None:
                     return Chem.AddHs(mol)
 
-        # Fall back to SDF parsing if no SMILES found
-        mols = load_sdf(str(sdf_path))
-        if not mols:
-            val_error = f"x  WARNING! No valid molecules found in {sdf_path}"
-            self.args.log.write(val_error)
-            raise ValueError(val_error)
-        
-        return mols[0]  # Return first molecule
+        val_error = f"x  WARNING! No valid molecules found in {sdf_path}"
+        self.args.log.write(val_error)
+        raise ValueError(val_error)
 
     except Exception as e:
         exc_error = f"Error processing SDF file {sdf_path}: {str(e)}"
@@ -2356,3 +2354,51 @@ def update_atom_props_json(
                     prefixes_atom_prop.append(prefix)
 
     return prefixes_atom_prop, json_data
+
+
+def _generate_xtb_constraints(args, map_to_idx):
+    """Format xTB input lines for constraints mapping explicit AtomMapNums to 1-based xTB indices."""
+    import sys
+
+    def _get_idx(val):
+        orig = int(val)
+        idx = map_to_idx.get(orig)
+        if idx is None:
+            log = getattr(args, 'log', None)
+            msg = (
+                f"\nx  Constraint index {orig} does not correspond to any "
+                f"atom map number in the molecule. Constraint indices must match "
+                f"atom map numbers (e.g. [C:1], [N:2]). Available map numbers: "
+                f"{sorted(map_to_idx.keys())}. Stopping."
+            )
+            if log:
+                log.write(msg)
+                log.finalize()
+            else:
+                print(msg)
+            sys.exit()
+        return idx
+
+    lines = ""
+
+    if getattr(args, 'constraints_atoms', None):
+        for c in args.constraints_atoms:
+            val = c[0] if isinstance(c, (list, tuple)) else c
+            lines += f"    atoms: {_get_idx(val)}\n"
+
+    if getattr(args, 'constraints_dist', None):
+        for c in args.constraints_dist:
+            dist_val = c[2] if len(c) > 2 else "auto"
+            lines += f"    distance: {_get_idx(c[0])}, {_get_idx(c[1])}, {dist_val}\n"
+
+    if getattr(args, 'constraints_angle', None):
+        for c in args.constraints_angle:
+            angle_val = c[3] if len(c) > 3 else "auto"
+            lines += f"    angle: {_get_idx(c[0])}, {_get_idx(c[1])}, {_get_idx(c[2])}, {angle_val}\n"
+
+    if getattr(args, 'constraints_dihedral', None):
+        for c in args.constraints_dihedral:
+            dih_val = c[4] if len(c) > 4 else "auto"
+            lines += f"    dihedral: {_get_idx(c[0])}, {_get_idx(c[1])}, {_get_idx(c[2])}, {_get_idx(c[3])}, {dih_val}\n"
+
+    return lines

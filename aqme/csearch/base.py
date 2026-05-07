@@ -119,7 +119,7 @@ Only organometallic molecules
       This option is useful to avoid repetition when the complex has two identical
       ligands (i.e. two Cl substituents).
 
-CREST only
+CREST and RDKit(only constraints)
 ++++++++++
 
    nprocs : int, default=8
@@ -632,7 +632,8 @@ class csearch:
                     constraints_atoms,
                     constraints_dist,
                     constraints_angle,
-                    constraints_dihedral
+                    constraints_dihedral,
+                    sample
                 )
             else:
                 mol = smi
@@ -1010,11 +1011,16 @@ class csearch:
         metal_sym, csearch_nprocs, sample, coord_Map=None,
         alg_Map=None, mol_template=None, original_atn=None
     ):
-        """Generate 3D conformers for a molecule.
-        
+        """
+        Generate 3D conformers for a molecule.
+
         This method handles conformer generation using either CREST or RDKit
         depending on the input type and program selection.
-        
+
+        Now supports automatic constraints for haptic rings (rings bound to a metal via 2+ atoms).
+        If such a ring is detected, constraints for the ring are automatically generated and added.
+        Hydrogens must be explicit for correct constraint application.
+
         Args:
             mol: RDKit molecule object
             name (str): Molecule identifier
@@ -1036,10 +1042,22 @@ class csearch:
             alg_Map: Alignment mapping (optional) 
             mol_template: Template molecule (optional)
             original_atn: Original atomic numbers (optional)
-            
+
         Returns:
             None: Results written to files
         """
+        # Apply automatic haptic ring constraints if needed
+        from aqme.csearch.utils import apply_haptic_constraints
+        constraints_atoms, constraints_dist, constraints_angle, constraints_dihedral = \
+            apply_haptic_constraints(
+                mol,
+                metal_idx,
+                constraints_atoms,
+                constraints_dist,
+                constraints_angle,
+                constraints_dihedral,
+                log=self.args.log,
+            )
         # Set default charge/multiplicity if not provided
         charge = charge if charge is not None else Chem.GetFormalCharge(mol)
         mult = mult if mult is not None else (Descriptors.NumRadicalElectrons(mol) + 1)
@@ -1231,7 +1249,11 @@ class csearch:
             mol, name, csearch_file, charge, mult,
             coord_Map, alg_Map, mol_template, smi, geom,
             original_atn, metal_atoms, metal_idx, metal_sym,
-            csearch_nprocs, sample, complex_ts
+            csearch_nprocs, sample, complex_ts,
+            constraints_atoms=constraints_atoms, 
+            constraints_dist=constraints_dist,    
+            constraints_angle=constraints_angle,  
+            constraints_dihedral=constraints_dihedral
         )
 
         # CREST optimization if selected
@@ -1251,7 +1273,11 @@ class csearch:
         self, mol, name, csearch_file, charge, mult,
         coord_Map, alg_Map, mol_template, smi, geom,
         original_atn, metal_atoms, metal_idx, metal_sym,
-        csearch_nprocs, sample, complex_ts
+        csearch_nprocs, sample, complex_ts,
+        constraints_atoms=None,    
+        constraints_dist=None,    
+        constraints_angle=None,   
+        constraints_dihedral=None 
     ):
         """Generate initial conformers using RDKit.
         
@@ -1261,7 +1287,7 @@ class csearch:
         Returns:
             Status, mol_crest
         """
-        if complex_ts:
+        if complex_ts and self.args.program.lower() != "rdkit":
             return None, None
             
         # Log conformer generation start
@@ -1279,7 +1305,11 @@ class csearch:
             mol, name, csearch_file, charge, mult,
             coord_Map, alg_Map, mol_template, smi, geom,
             original_atn, metal_atoms, metal_idx, metal_sym,
-            csearch_nprocs, sample
+            csearch_nprocs, sample,
+            constraints_atoms=constraints_atoms,
+            constraints_dist=constraints_dist,
+            constraints_angle=constraints_angle,
+            constraints_dihedral=constraints_dihedral
         )
     
         return status, mol_crest
@@ -1626,6 +1656,12 @@ class csearch:
         Returns:
             list: Generated conformer IDs
         """
+        # Pre-built aggregate: conformers already set by rdkit_aggregate_mol;
+        # bypass distance-geometry embedding entirely
+        if mol.HasProp("AggregateSmiles"):
+            return [conf.GetId() for conf in mol.GetConformers()]
+        
+
         # Handle special input formats
         is_3d_input = os.path.basename(Path(self.args.input)).split('.')[-1].lower() in {
             "sdf", "mol", "mol2"
@@ -1693,7 +1729,9 @@ class csearch:
         return rdDistGeom.EmbedMultipleConfs(mol, initial_confs, **embed_kwargs)
 
     def min_and_E_calc(self, mol, cids, coord_Map, alg_Map, mol_template,
-                       ff, geom, metal_atoms, metal_idx, metal_sym):
+                        ff, geom, metal_atoms, metal_idx, metal_sym,
+                        constraints_atoms=None, constraints_dist=None,
+                        constraints_angle=None, constraints_dihedral=None):
         """Energy minimization and geometry filtering of conformers.
         
         This method:
@@ -1726,7 +1764,11 @@ class csearch:
             # Minimize conformer
             mol, energy = self._minimize_conformer(
                 mol, conf, coord_Map, alg_Map,
-                mol_template, ff
+                mol_template, ff,
+                constraints_atoms=constraints_atoms,
+                constraints_dist=constraints_dist,
+                constraints_angle=constraints_angle,
+                constraints_dihedral=constraints_dihedral
             )
             
             # Process metal atoms
@@ -1746,7 +1788,9 @@ class csearch:
         return outmols, passing_cids, cenergy
         
     def _minimize_conformer(self, mol, conf, coord_Map, alg_Map,
-                          mol_template, ff):
+                            mol_template, ff,
+                            constraints_atoms=None, constraints_dist=None,
+                            constraints_angle=None, constraints_dihedral=None):
         """Minimize a single conformer.
         
         Args:
@@ -1758,13 +1802,21 @@ class csearch:
         if coord_Map is None and alg_Map is None and mol_template is None:
             energy = minimize_rdkit_energy(
                 mol, conf, self.args.log, ff,
-                self.args.opt_steps_rdkit
+                self.args.opt_steps_rdkit,
+                constraints_atoms=constraints_atoms,
+                constraints_dist=constraints_dist,
+                constraints_angle=constraints_angle,
+                constraints_dihedral=constraints_dihedral
             )
             return mol, energy
         else:
             return realign_mol(
                 mol, conf, coord_Map, alg_Map,
-                mol_template, self.args.opt_steps_rdkit
+                mol_template, self.args.opt_steps_rdkit,
+                constraints_atoms=constraints_atoms,
+                constraints_dist=constraints_dist,
+                constraints_angle=constraints_angle,
+                constraints_dihedral=constraints_dihedral
             )
             
     def _process_metal_atoms(self, mol, metal_atoms, metal_idx, metal_sym):
@@ -1844,7 +1896,9 @@ class csearch:
         self, mol, cids, name, csearch_file,
         update_to_rdkit, coord_Map, alg_Map, mol_template,
         charge, mult, ff, smi, geom, original_atn,
-        metal_atoms, metal_idx, metal_sym, sample
+        metal_atoms, metal_idx, metal_sym, sample,
+        constraints_atoms=None, constraints_dist=None,
+        constraints_angle=None, constraints_dihedral=None
     ):
         """Process embedded conformers including minimization and filtering.
         
@@ -1882,7 +1936,11 @@ class csearch:
         outmols, cenergy = self._process_conformers(
             mol, cids, name, charge, mult, smi, geom,
             coord_Map, alg_Map, mol_template, ff,
-            metal_atoms, metal_idx, metal_sym
+            metal_atoms, metal_idx, metal_sym,
+            constraints_atoms=constraints_atoms,
+            constraints_dist=constraints_dist,
+            constraints_angle=constraints_angle,
+            constraints_dihedral=constraints_dihedral
         )
         
         # Sort and select conformers
@@ -1910,7 +1968,9 @@ class csearch:
     def _process_conformers(
         self, mol, cids, name, charge, mult, smi, geom,
         coord_Map, alg_Map, mol_template, ff,
-        metal_atoms, metal_idx, metal_sym
+        metal_atoms, metal_idx, metal_sym,
+        constraints_atoms=None, constraints_dist=None,
+        constraints_angle=None, constraints_dihedral=None
     ):
         """Process and filter conformers.
         
@@ -1928,7 +1988,11 @@ class csearch:
             
         outmols, passing_cids, cenergy = self.min_and_E_calc(
             mol, cids, coord_Map, alg_Map, mol_template,
-            ff, geom, metal_atoms, metal_idx, metal_sym
+            ff, geom, metal_atoms, metal_idx, metal_sym,
+            constraints_atoms=constraints_atoms,
+            constraints_dist=constraints_dist,
+            constraints_angle=constraints_angle,
+            constraints_dihedral=constraints_dihedral
         )
         
         # Add properties to passing molecules
@@ -2048,7 +2112,11 @@ class csearch:
         metal_idx,
         metal_sym,
         csearch_nprocs,
-        sample
+        sample,
+        constraints_atoms=None,
+        constraints_dist=None,
+        constraints_angle=None,
+        constraints_dihedral=None
     ):
 
         """
@@ -2100,7 +2168,11 @@ class csearch:
                 metal_atoms,
                 metal_idx,
                 metal_sym,
-                sample
+                sample,
+                constraints_atoms=constraints_atoms,
+                constraints_dist=constraints_dist,
+                constraints_angle=constraints_angle,
+                constraints_dihedral=constraints_dihedral
             )
             return status, mol_crest[0]
         except IndexError:

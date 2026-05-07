@@ -287,7 +287,9 @@ def xtb_opt_main(
     
     if complex_ts:
         # First XTB optimization with all bonds frozen
-        all_fix = get_constraint(mol, constraints_dist)
+        constraints_dist_base1 = [[int(c[0])+1, int(c[1])+1, c[2]] 
+                           for c in (constraints_dist or [])]
+        all_fix = get_constraint(mol, constraints_dist_base1)
         
         create_xcontrol(
             self.args,
@@ -571,6 +573,7 @@ def xtb_opt_main(
             energy_Eh = float(open(f'{file_nopath}.xyz', "r").readlines()[1].split()[1])
             energy_kcal = energy_Eh * 627.5
             mol_rd.SetProp("_Name", name_init)
+            del mol_supplier
             os.remove(file)
             return mol_rd, energy_kcal
             
@@ -598,6 +601,7 @@ def xtb_opt_main(
                 sdwriter.write(mol_rd)
             
             # Clean up files
+            del mol_supplier
             os.remove(file)
             os.remove(f'{file_nopath}.xyz')
             
@@ -733,26 +737,30 @@ def create_xcontrol(
         
         # Add atoms from atom constraints
         for atom in constraints_atoms:
-            if atom not in unique_atoms:
-                unique_atoms.append(int(atom))
+            val = int(atom) + 1 
+            if val not in unique_atoms:
+                unique_atoms.append(val)
         
         # Add atoms from distance constraints (first 2 elements)
         for constraint in constraints_dist:
             for atom_idx in constraint[:2]:
-                if atom_idx not in unique_atoms:
-                    unique_atoms.append(int(atom_idx))
+                val = int(atom_idx) + 1 
+                if val not in unique_atoms:
+                    unique_atoms.append(val)
         
         # Add atoms from angle constraints (first 3 elements)
         for constraint in constraints_angle:
             for atom_idx in constraint[:3]:
-                if atom_idx not in unique_atoms:
-                    unique_atoms.append(int(atom_idx))
+                val = int(atom_idx) + 1 
+                if val not in unique_atoms:
+                    unique_atoms.append(val)
         
         # Add atoms from dihedral constraints (first 4 elements)
         for constraint in constraints_dihedral:
             for atom_idx in constraint[:4]:
-                if atom_idx not in unique_atoms:
-                    unique_atoms.append(int(atom_idx))
+                val = int(atom_idx) + 1 
+                if val not in unique_atoms:
+                    unique_atoms.append(val)
         
         return unique_atoms
     
@@ -763,7 +771,7 @@ def create_xcontrol(
         # Add fixed atoms
         if constraints_atoms:
             content += "atoms: "
-            content += ",".join(str(atom_idx) for atom_idx in constraints_atoms)
+            content += ",".join(str(int(atom_idx) + 1) for atom_idx in constraints_atoms)  
             content += "\n"
         
         # Add geometric constraints (distances, angles, dihedrals)
@@ -778,7 +786,7 @@ def create_xcontrol(
                 for constraint in constraint_list:
                     content += f"{constraint_name}: "
                     # Join atom indices
-                    content += ",".join(str(int(val)) for val in constraint[:n_indices])
+                    content += ",".join(str(int(val) + 1) for val in constraint[:n_indices])
                     # Add constraint value
                     content += f",{constraint[n_indices]}\n"
         
@@ -962,44 +970,6 @@ def nci_ts_mol(
             if atom.GetSymbol() == "H":
                 max_map += 1
                 atom.SetAtomMapNum(int(max_map))
-
-    def _check_smiles_mapping(smiles_list):
-        """Check if all SMILES have atom mapping."""
-        return all(':' in s and '[' in s for s in smiles_list)
-                
-    def _adapt_atom_constraints(mol, atom_constraints):
-        """Map atom constraints from SMILES atom mapping to molecule indices."""
-        if atom_constraints is None or not atom_constraints:
-            return []
-            
-        adapted = []
-        for atom in mol.GetAtoms():
-            atom_map_num = atom.GetAtomMapNum()
-            for constraint_value in atom_constraints:
-                if constraint_value == atom_map_num:
-                    adapted.append(float(atom.GetIdx()) + 1)
-        
-        return np.array(adapted) if adapted else []
-
-    def _adapt_geometric_constraints(mol, geometric_constraints, n_atoms):
-        """Map geometric constraints from SMILES atom mapping to molecule indices."""
-        if geometric_constraints is None or len(geometric_constraints) == 0:
-            return []
-            
-        adapted = []
-        for constraint in geometric_constraints:
-            new_constraint = []
-            # Map the first n_atoms indices
-            for atom_map_num in constraint[:n_atoms]:
-                for atom in mol.GetAtoms():
-                    if atom_map_num == atom.GetAtomMapNum():
-                        new_constraint.append(float(atom.GetIdx()) + 1)
-                        break
-            # Add the constraint value (distance, angle, or dihedral)
-            new_constraint.append(constraint[n_atoms])
-            adapted.append(new_constraint)
-        
-        return np.array(adapted) if adapted else []
     
     # Convert all constraints to numpy arrays
     using_const = None
@@ -1038,27 +1008,28 @@ def nci_ts_mol(
     adapted_dihedral = []
     
     if using_const is not None and using_const != []:
-        # Check if SMILES have proper atom mapping
-        if not _check_smiles_mapping(smi):
-            log.write(f"\nx  Constraints were specified {using_const} but atoms might not be mapped in the SMILES input!")
-            # Return original constraints without adaptation
-            adapted_atoms = constraints_atoms
-            adapted_dist = constraints_dist
-            adapted_angle = constraints_angle
-            adapted_dihedral = constraints_dihedral
+        from aqme.csearch.utils import _translate_constraint_indices
+        
+        map_to_idx = {}
+        for atom in mol.GetAtoms():
+            map_num = atom.GetAtomMapNum()
+            if map_num > 0:
+                map_to_idx[map_num] = atom.GetIdx()
+        
+        # Adapt atom constraints are different because they only have one index, so we need to handle them separately
+        if constraints_atoms is not None and len(constraints_atoms) > 0:
+            wrapped = [[a] for a in constraints_atoms]
+            adapted_atoms = [c[0] for c in _translate_constraint_indices(
+                wrapped, map_to_idx, 1, log=log)]
         else:
-            # Adapt constraints using atom mapping
-            if constraints_atoms is not None:
-                adapted_atoms = _adapt_atom_constraints(mol, constraints_atoms)
-            
-            if constraints_dist is not None:
-                adapted_dist = _adapt_geometric_constraints(mol, constraints_dist, 2)
-            
-            if constraints_angle is not None:
-                adapted_angle = _adapt_geometric_constraints(mol, constraints_angle, 3)
-            
-            if constraints_dihedral is not None:
-                adapted_dihedral = _adapt_geometric_constraints(mol, constraints_dihedral, 4)
+            adapted_atoms = []
+        
+        adapted_dist = _translate_constraint_indices(
+            constraints_dist or [], map_to_idx, 2, log=log)
+        adapted_angle = _translate_constraint_indices(
+            constraints_angle or [], map_to_idx, 3, log=log)
+        adapted_dihedral = _translate_constraint_indices(
+            constraints_dihedral or [], map_to_idx, 4, log=log)
     
     return (
         mol,

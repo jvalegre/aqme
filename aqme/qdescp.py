@@ -22,7 +22,7 @@ General
       combining the input CSV with SMILES/code_name and the calculated xTB/DBSTEP descriptors
 
 xTB and MORFEUS descriptors
-+++++++++++++++
++++++++++++++++++++++++++++
 
    files or input (both options are valid) : list of str, default=''
       Filenames of SDF/PDB/XYZ/CSV files to calculate xTB descriptors. If CSV is selected, a CSV
@@ -125,7 +125,9 @@ from aqme.qdescp_utils import (
     remove_invalid_smarts,
     update_atom_props_json,
     find_level_names,
-    setup_env
+    setup_env,
+    get_mol_assign,
+    _generate_xtb_constraints
 )
 
 from aqme.csearch.crest import xyzall_2_xyz
@@ -153,7 +155,7 @@ class PropertyCalculator:
         """
         self.args = args
         
-    def calculate_properties(self, xyz_file, charge, mult, name, destination):
+    def calculate_properties(self, xyz_file, charge, mult, name, destination, constraints="", aromatic_int_block=""):
         """Run property calculations for a molecule.
         
         Executes full quantum chemistry workflow:
@@ -188,7 +190,7 @@ class PropertyCalculator:
         shutil.move(xyz_file, str(files['xyz']))
         
         # Create xTB input
-        self._create_xtb_input(files['input'])
+        self._create_xtb_input(files['input'], constraints, aromatic_int_block)
         
         # Set up environment
         env = setup_env(self)
@@ -200,14 +202,29 @@ class PropertyCalculator:
         
         return success, {k: str(v) for k,v in files.items()}
         
-    def _create_xtb_input(self, input_file):
+    def _create_xtb_input(self, input_file, constraints, aromatic_int_block=""):
         """Create xTB input file.
         
         Args:
             input_file (Path): Path to write input file
+            constraints (str): Constraint string for xTB input (written at force constant=crest_force)
+            aromatic_int_block (str): Pre-formatted $constrain block for aromatic_int (force constant=0.1)
         """
         with open(input_file, "w", encoding='utf-8') as f:
             f.write("$write\njson=true\n")
+            if constraints:
+                f.write("$constrain\n")
+                # Default force constant if not specified in args
+                force_constant = getattr(self.args, 'crest_force', 0.5)
+                f.write(f"    force constant={force_constant}\n")
+                f.write(constraints)
+                f.write("$end\n")
+            if aromatic_int_block:
+                f.write(aromatic_int_block)
+
+        if constraints or aromatic_int_block:
+            with open(input_file, "r", encoding='utf-8') as f:
+                self.args.log.write(f"\n--- xTB Input ---\n{f.read()}\n")
 
     def _run_xtb_calculation(self, dat_dir, files, charge, mult, env):
         """Execute xTB calculation.
@@ -229,6 +246,7 @@ class PropertyCalculator:
             "xtb",
             str(files['xyz']),
             "--opt", str(self.args.qdescp_opt),
+            "--input", str(files['input']),
             "--acc", str(self.args.qdescp_acc),
             "--gfn", str(self.args.gfn_version),
             "--chrg", str(int(float(charge))),
@@ -365,6 +383,44 @@ class qdescp:
         # Delete a SMARTS pattern if it is not compatible with more than 75% of the sdf files
         if len(smarts_targets) > 0:
             smarts_targets = remove_invalid_smarts(self,mol_list,smarts_targets)
+
+        # Preflight: if constraints specified, verify atom map numbers exist in all files
+        has_const = any(getattr(self.args, f'constraints_{x}', None)
+                for x in ['atoms', 'dist', 'angle', 'dihedral']) or \
+                bool(getattr(self.args, 'aromatic_int', None))
+        if has_const:
+            for f_check in qdescp_files:
+                ref_mols = mol_from_sdf_or_mol_or_mol2(f_check, "cmin", self.args)
+                if not ref_mols:
+                    continue
+                map_to_idx_check = {
+                    atom.GetAtomMapNum(): atom.GetIdx() + 1
+                    for atom in ref_mols[0].GetAtoms()
+                    if atom.GetAtomMapNum() > 0
+                }
+                if not map_to_idx_check:
+                    self.args.log.write(
+                        "\nx  Constraints were specified but no atom map numbers were found "
+                        "in the molecule. Constraint indices must correspond to atom map numbers "
+                        "(e.g. use [C:1][N:2] and pass [1,2,...] as constraints). Stopping."
+                    )
+                    self.args.log.finalize()
+                    sys.exit()
+                for attr, n in [('constraints_atoms', 1), ('constraints_dist', 2),
+                                ('constraints_angle', 3), ('constraints_dihedral', 4)]:
+                    for c in getattr(self.args, attr, []):
+                        indices = [c[0]] if attr == 'constraints_atoms' and not isinstance(c, (list, tuple)) else \
+                                  ([c] if not isinstance(c, (list, tuple)) else list(c)[:n])
+                        for idx in indices:
+                            if int(idx) not in map_to_idx_check:
+                                self.args.log.write(
+                                    f"\nx  Constraint index {int(idx)} does not correspond to any "
+                                    f"atom map number in the molecule. Constraint indices must match "
+                                    f"atom map numbers (e.g. [C:1], [N:2]). Available map numbers: "
+                                    f"{sorted(map_to_idx_check.keys())}. Stopping."
+                                )
+                                self.args.log.finalize()
+                                sys.exit()
 
         # Get descriptors (denovo, interpret, full)
         descp_dict = collect_descp_lists()
@@ -1127,9 +1183,40 @@ class qdescp:
             smarts_targets (list): SMARTS patterns
         """
         self.args.log.write(f"\no  Running xTB and collecting properties ({name_xtb})")
+
+        path_name = Path(os.path.dirname(file)).joinpath(
+            '.'.join(os.path.basename(Path(file)).split(".")[:-1])
+        )
         
+        # 1. Generate xTB constraint string from args and file mapping
+        constraints_str = ""
+        aromatic_int_block = ""
+        has_const = any(getattr(self.args, f'constraints_{x}', None)
+                for x in ['atoms', 'dist', 'angle', 'dihedral']) or \
+                bool(getattr(self.args, 'aromatic_int', None))
+        if has_const:
+            mol = get_mol_assign(str(path_name)) 
+            
+            if mol:
+                map_to_idx = {}
+                for atom in mol.GetAtoms():
+                    map_num = atom.GetAtomMapNum()
+                    if map_num > 0:
+                        # RDKit index (0-based) to xTB index (1-based)
+                        map_to_idx[map_num] = atom.GetIdx() + 1
+                
+                if map_to_idx:
+                    # You must pass both self.args and the dictionary
+                    constraints_str = _generate_xtb_constraints(self.args, map_to_idx)
+                    # Build the separate aromatic_int block (force constant=0.1)
+                    if getattr(self.args, 'aromatic_int', None):
+                        from aqme.utils import expand_aromatic_constraints
+                        aromatic_int_block = expand_aromatic_constraints(
+                            self.args.aromatic_int, map_to_idx, self.args.log
+                        )
+
         xtb_passing, xtb_files_props = self.run_opt_xtb(
-            file, xyz_file, charge, mult, name_xtb, destination
+            file, xyz_file, charge, mult, name_xtb, destination, constraints_str, aromatic_int_block
         )
         
         path_name = Path(os.path.dirname(file)).joinpath(
@@ -1145,7 +1232,7 @@ class qdescp:
         self.cleanup(name_xtb, destination, xtb_passing, xtb_files_props)
 
 
-    def run_opt_xtb(self, file, xyz_file, charge, mult, name, destination):
+    def run_opt_xtb(self, file, xyz_file, charge, mult, name, destination, constraints="", aromatic_int_block=""):
         """Run xTB property calculations for a molecule.
 
         Args:
@@ -1160,7 +1247,7 @@ class qdescp:
             tuple: (success status, dict of file paths)
         """
         success, files = self.property_calc.calculate_properties(
-            xyz_file, charge, mult, name, destination
+            xyz_file, charge, mult, name, destination, constraints, aromatic_int_block
         )
         
         if not success and file not in self.args.invalid_calcs:
