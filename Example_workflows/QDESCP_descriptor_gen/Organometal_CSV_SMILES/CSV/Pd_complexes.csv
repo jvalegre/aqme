@@ -1,0 +1,5 @@
+code_name,SMILES,charge,mult,complex_type,geom
+mol_1,Cl[Pd]([PH3+])(Cl)[NH3+],0,1,squareplanar,"['[Cl][Pd][Cl]',180]"
+mol_2,Cl[Pd](Cl)([P+](C)(C)C)[NH3+],0,1,squareplanar,"['[Cl][Pd][Cl]',180]"
+mol_3,Cl[Pd]([PH3+])(Cl)[N+](C)(C)C,0,1,squareplanar,"['[Cl][Pd][Cl]',180]"
+mol_4,Cl[Pd](Cl)([P+](C)(C)C)[N+](C)(C)C,0,1,squareplanar,"['[Cl][Pd][Cl]',180]"
