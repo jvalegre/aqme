@@ -8,11 +8,9 @@ General
    files : str or list of str, default=None
      Input files. Formats accepted: SDF. Also, lists can be used
      (i.e. [FILE1.sdf, FILE2.sdf] or \*.sdf).
-   program : str, default='tblite'
+   program : str, default='xtb'
      QME backend used for geometry optimization.
-     Current options: 'tblite', 'aimnet2', 'mace', 'orb', 'so3lr', 'uma'
-     # method : str, default='GFN2-xTB'
-     # (Eliminado: QME no soporta argumento 'method')
+     Current options: 'xtb', 'aimnet2', 'mace', 'orb', 'so3lr', 'uma'
    w_dir_main : str, default=os.getcwd()
      Working directory
    destination : str, default=None
@@ -85,7 +83,7 @@ EV_TO_KCAL = 23.0609  # 1 eV = 23.0609 kcal/mol
 
 class cmin:
     """
-    Conformer refinement using a QME backend (default: tblite).
+    Conformer refinement using a QME backend (default: xtb).
 
     Reads conformers from SDF files, optimizes them using QME, applies 
     energy/RMSD filters, and writes the results to SDF format.
@@ -157,8 +155,8 @@ class cmin:
 
     def _validate_program(self):
         """Check that the requested QME backend (passed as program) is importable."""
-        supported = {"tblite", "aimnet2", "mace", "orb", "so3lr", "uma"}
-        program = getattr(self.args, "program", "tblite") or "tblite"
+        supported = {"xtb", "aimnet2", "mace", "orb", "so3lr", "uma"}
+        program = getattr(self.args, "program", "xtb") or "xtb"
         self.args.program = program.lower()
 
         if self.args.program not in supported:
