@@ -59,6 +59,7 @@ import sys
 import glob
 import time
 import ast
+import threading
 import numpy as np
 from pathlib import Path
 import concurrent.futures
@@ -82,6 +83,8 @@ EV_TO_KCAL = 23.0609  # 1 eV = 23.0609 kcal/mol
 
 
 class cmin:
+    _tblite_lock = threading.Lock()
+
     """
     Conformer refinement using a QME backend (default: xtb).
 
@@ -102,7 +105,7 @@ class cmin:
         start_time = time.time()
 
         self.args = load_variables(kwargs, "cmin")
-        check_dependencies(self)
+        # check_dependencies(self)
 
         # Validate program choice
         self._validate_program()
@@ -155,17 +158,22 @@ class cmin:
 
     def _validate_program(self):
         """Check that the requested QME backend (passed as program) is importable."""
-        supported = {"xtb", "aimnet2", "mace", "orb", "so3lr", "uma"}
+        supported = {"xtb", "tblite", "aimnet2", "mace", "orb", "so3lr", "uma"}
         program = getattr(self.args, "program", "xtb") or "xtb"
-        self.args.program = program.lower()
+        program = program.lower()
 
-        if self.args.program not in supported:
+        if program not in supported:
             self.args.log.write(
-                f"\nx  Program '{self.args.program}' is not supported. "
+                f"\nx  Program '{program}' is not supported. "
                 f"Choose one of: {', '.join(sorted(supported))}"
             )
             self.args.log.finalize()
             sys.exit()
+
+        if program == "xtb":
+            program = "tblite"
+
+        self.args.program = program
 
         try:
             import qme  # noqa: F401
@@ -366,12 +374,12 @@ class cmin:
             specs.append(f"fixinternals_{qme_type} {indices_str} value={target_value}")
 
     def _build_qme_constraints(self, mol):
-        """Builds QME constraints using local copies to prevent accumulation[cite: 3]."""
+        """Builds QME constraints using local copies to prevent accumulation."""
         
         # Get user-defined constraints from the command line/args
         user_dist = self._as_constraint_list(getattr(self.args, "constraints_dist", []))
         
-        # Combine with automatic haptic constraints (returned as a new list)[cite: 3]
+        # Combine with automatic haptic constraints (returned as a new list)
         constraints_dist = self._apply_automatic_metal_constraints(mol, user_dist)
         
         constraints_angle = self._as_constraint_list(getattr(self.args, "constraints_angle", []))
@@ -381,7 +389,7 @@ class cmin:
             return None
 
         n_atoms = mol.GetNumAtoms()
-        # Translate the combined list of map numbers to RDKit indices[cite: 3]
+        # Translate the combined list of map numbers to RDKit indices
         constraints_dist = self._prepare_constraint_indices(mol, constraints_dist, 2)
         constraints_angle = self._prepare_constraint_indices(mol, constraints_angle, 3)
         constraints_dihedral = self._prepare_constraint_indices(mol, constraints_dihedral, 4)
@@ -434,7 +442,12 @@ class cmin:
 
             fmax = getattr(self.args, "opt_fmax", 0.05)
             steps = getattr(self.args, "opt_steps", 1000)
-            result = explorer.run(fmax=fmax, steps=steps)
+
+            if self.args.program == "tblite":
+                with cmin._tblite_lock:
+                    result = explorer.run(fmax=fmax, steps=steps)
+            else:
+                result = explorer.run(fmax=fmax, steps=steps)
 
             optimised_atoms = result["optimized_atoms"]
             energy_ev = optimised_atoms.get_potential_energy()  # eV
@@ -547,7 +560,6 @@ class cmin:
         )
 
 
-
 # ------EXTRA THINGS------
 # List of transition metals for detection
     TRANSITION_METALS = {
@@ -610,7 +622,7 @@ class cmin:
                 metal_map = max(existing_maps) + 1 if existing_maps else 1
                 closest_metal.SetAtomMapNum(metal_map)
 
-            # Target atoms 1, 3, and 5 of the ring[cite: 2]
+            # Target atoms 1, 3, and 5 of the ring
             target_maps = [prefix, prefix + 2, prefix + 4]
             for t_map in target_maps:
                 if any(a.GetAtomMapNum() == t_map for a in atoms):
