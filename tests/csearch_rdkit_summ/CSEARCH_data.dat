@@ -1,0 +1,15 @@
+AQME v 2.1.0 2026/05/16 20:12:55 
+Citation: AQME v 2.1.0, Alegre-Requena, J. V.; Sowndarya, S.; Perez-Soto, R.; Alturaifi, T.; Paton, R. AQME: Automated Quantum Mechanical Environments for Researchers and Educators. Wiley Interdiscip. Rev. Comput. Mol. Sci. 2023, 13, e1663 (DOI: 10.1002/wcms.1663).
+
+
+Starting CSEARCH with 1 job(s) (SDF, XYZ, CSV, etc. files might contain multiple jobs/structures inside)
+
+
+   ----- charged_rdkit -----
+
+o  Starting RDKit conformer sampling (charged_rdkit)
+
+o  Applying filters to initial conformers (charged_rdkit)
+
+Time CSEARCH: 0.2 seconds
+

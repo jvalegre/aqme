@@ -20,6 +20,7 @@ csearch_crest_dir = w_dir_main + "/tests/csearch_crest"
 csearch_others_dir = w_dir_main + "/tests/csearch_others"
 csearch_input_dir = w_dir_main + "/tests/csearch_input"
 csearch_varfile_dir = w_dir_main + "/tests/csearch_varfile"
+csearch_haptic_dir = w_dir_main + "/tests/csearch_haptic"
 
 if not os.path.exists(csearch_methods_dir):
     os.mkdir(csearch_methods_dir)
@@ -33,6 +34,8 @@ if not os.path.exists(csearch_input_dir):
     os.mkdir(csearch_input_dir)
 if not os.path.exists(csearch_varfile_dir):
     os.mkdir(csearch_varfile_dir)
+if not os.path.exists(csearch_haptic_dir):
+    os.mkdir(csearch_haptic_dir)
 
 # tests for varfile
 @pytest.mark.parametrize(
@@ -285,6 +288,9 @@ def test_csearch_crest_parameters(
     mult, 
     output_nummols,
 ):
+    if not shutil.which("xtb"):
+        pytest.skip("xtb executable not found in system PATH. Skipping CREST test.")
+
     os.chdir(csearch_crest_dir)
 
     # runs the program with the different tests
@@ -768,6 +774,9 @@ def test_csearch_methods(
     destination,
     output_nummols,
 ):
+    if program == "crest" and not shutil.which("xtb"):
+        pytest.skip("xtb executable not found in system PATH. Skipping CREST test.")
+
     os.chdir(csearch_methods_dir)
     # runs the program with the different tests
     if destination:
@@ -1101,14 +1110,53 @@ def test_csearch_methods(
         assert len(mols) == output_nummols
     os.chdir(w_dir_main)
 
+
+def test_csearch_haptic_constraints():
+    os.chdir(csearch_haptic_dir)
+    
+    # Ejecuta csearch con un smiles que genera enlaces hapticos automáticos con Pd
+    csearch(
+        w_dir_main=csearch_haptic_dir,
+        program="rdkit",
+        smi="C12=CC=CC1[Pd]2",
+        name="haptic_complex",
+        charge=0,
+        mult=1
+    )
+
+    file_sdf = f"{csearch_haptic_dir}/CSEARCH/haptic_complex_rdkit.sdf"
+    file_dat = f"{csearch_haptic_dir}/CSEARCH_data.dat"
+    
+    assert os.path.exists(file_sdf)
+    assert os.path.exists(file_dat)
+    
+    with open(file_dat, "r") as f:
+        log_content = f.read()
+        
+    assert "AQME detected haptic ring binding to a metal and is applying automatic constraints" in log_content
+    assert "Automatic hapticity constraints:" in log_content
+    os.chdir(w_dir_main)
+
 # tests for removing foler
 @pytest.mark.parametrize(
     "folder_list, file_list",
     [
         # tests for conformer generation with RDKit
         (
-            ["tests/csearch_methods/CSEARCH","tests/csearch_crest/CSEARCH","tests/csearch_input/CSEARCH","tests/csearch_varfile/CSEARCH"],
-            ["tests/csearch_methods/CSEARCH*","tests/csearch_crest/CSEARCH*","tests/csearch_input/CSEARCH*","tests/csearch_varfile/CSEARCH*"]
+            [
+                "tests/csearch_methods/CSEARCH",
+                "tests/csearch_crest/CSEARCH",
+                "tests/csearch_input/CSEARCH",
+                "tests/csearch_varfile/CSEARCH",
+                "tests/csearch_haptic/CSEARCH",
+            ],
+            [
+                "tests/csearch_methods/CSEARCH*",
+                "tests/csearch_crest/CSEARCH*",
+                "tests/csearch_input/CSEARCH*",
+                "tests/csearch_varfile/CSEARCH*",
+                "tests/csearch_haptic/CSEARCH*",
+            ],
         ),
     ],
 )
