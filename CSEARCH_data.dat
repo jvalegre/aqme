@@ -1,4 +1,4 @@
-AQME v 2.1.0 2026/05/16 20:12:55 
+AQME v 2.1.0 2026/05/16 20:29:54 
 Citation: AQME v 2.1.0, Alegre-Requena, J. V.; Sowndarya, S.; Perez-Soto, R.; Alturaifi, T.; Paton, R. AQME: Automated Quantum Mechanical Environments for Researchers and Educators. Wiley Interdiscip. Rev. Comput. Mol. Sci. 2023, 13, e1663 (DOI: 10.1002/wcms.1663).
 
 
@@ -11,5 +11,5 @@ o  Starting RDKit conformer sampling (pentane_pdb)
 
 o  Applying filters to initial conformers (pentane_pdb)
 
-Time CSEARCH: 0.55 seconds
+Time CSEARCH: 0.52 seconds
 

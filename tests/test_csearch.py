@@ -55,6 +55,7 @@ def test_csearch_varfile(varfile, nameinvarfile, output_nummols):
     file = str("CSEARCH/" + nameinvarfile + "_rdkit" + ".sdf")
     mol1 = rdkit.Chem.SDMolSupplier(file, removeHs=False)
     assert len(mol1) == output_nummols
+    del mol1
     os.chdir(w_dir_main)
 
 # tests for input types
@@ -755,6 +756,22 @@ def test_csearch_rdkit_parameters(
         #     False,
         #     1,
         # ),
+        (
+                "rdkit",
+                "C.O",
+                "nci_rdkit",
+                True,
+                False,
+                None,
+                [],
+                [],
+                [],
+                0,
+                1,
+                None,
+                False,
+                1,
+        ),
     ],
 )
 
