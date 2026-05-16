@@ -1,0 +1,16 @@
+{
+    "Ring Vibration atoms - by order -> Pick primary atom and para to it: \n example: 13,17": "1,2",
+    "Stretch Threshold": 1400,
+    "Strech Vibration atoms- enter bonded atom pairs: \n example: 1,2 4,5": "",
+    "Bend Threshold": 1600,
+    "Bending Vibration atoms - enter atom pairs that have a common atom: \n example: 4,7": "",
+    "Dipole atoms - indices for coordination transformation: \n example: 4,5,6 - origin, y-axis, new xy plane": "",
+    "Sub-Atoms": "1,2,3,4,5",
+    "NPA manipulation atoms - Insert atoms to show NPA: \n example: 1,2,4": "2,3,5,6",
+    "charge values - Insert atoms to show charge: \n example: 1,2,3,4": "",
+    "charge difference - Insert atoms to show charge difference: \n example: 1,2 3,4": "",
+    "Sterimol atoms - Primary axis along: \n example: 7,8": "5,6 7,8",
+    "Bond length - Atom pairs to calculate difference: \n example: 1,2 4,5": "",
+    "Bond Angle - Insert a list of atom triads/quartets for which you wish to have angles/dihedrals: \n example: 1,3,4 5,6,7,4": ""
+}
+

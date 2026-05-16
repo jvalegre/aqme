@@ -1,22 +1,6 @@
-.. |QCORR_scheme| image:: ../images/QCORR_scheme.png
-   :width: 600
-
-=======================
-Correction of QM Output
-=======================
-
-The QCORR module focuses on the analysis and correction of the output files of 
-QM calculations. Here we refer to correction as: 
-
-*  Generate new inputs from calculations that have an error termination. 
-*  Generate new inputs for minima containing a small imaginary frequency
-*  Ensure that all provided files have the same level of theory, grid size, 
-   program, version, etc.
-
-The following scheme shows how QCORR works and how it sorts the calculations.
-
-|QCORR_scheme|
-
+========================
+Correction of QM Outputs
+========================
 
 Analyzing the output files
 --------------------------

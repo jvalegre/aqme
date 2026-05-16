@@ -1,0 +1,5 @@
+code_name,SMILES,charge,mult
+mol_1,[H][N+]1([H])[Cu][N+]([H])([H])CC1,2,2
+mol_2,[H][N+]1([H])[Cu]N([H])CC1,1,2
+mol_3,[H]N1[Cu]N([H])CC1,0,2
+mol_4,C[N+]1(C)[Cu][N+](C)(C)C=C1,2,2
