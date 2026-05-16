@@ -2402,3 +2402,22 @@ def _generate_xtb_constraints(args, map_to_idx):
             lines += f"    dihedral: {_get_idx(c[0])}, {_get_idx(c[1])}, {_get_idx(c[2])}, {_get_idx(c[3])}, {dih_val}\n"
 
     return lines
+
+
+def extract_conf_index(conf_name: str) -> int:
+    """Extract conformer index from names like 'mol_conf_3'."""
+    match = re.search(r"_conf_(\d+)$", conf_name)
+    return int(match.group(1)) if match else 0
+
+
+def read_xyz_geometry(xyz_path: str) -> List[Tuple[float, float, float]]:
+    """Read XYZ coordinates (without atom symbols)."""
+    coords: List[Tuple[float, float, float]] = []
+    with open(xyz_path, "r", encoding="utf-8") as f:
+        lines = f.readlines()
+
+    n_atoms = int(lines[0].strip())
+    for line in lines[2:2 + n_atoms]:
+        parts = line.split()
+        coords.append((float(parts[1]), float(parts[2]), float(parts[3])))
+    return coords
