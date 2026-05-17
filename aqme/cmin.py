@@ -77,7 +77,7 @@ from aqme.utils import (
     set_destination,
 )
 from aqme.csearch.utils import _translate_constraint_indices
-from aqme.filter import conformer_filters
+from aqme.filter import conformer_filters, cluster_conformers
 
 EV_TO_KCAL = 23.0609  # 1 eV = 23.0609 kcal/mol
 
@@ -550,12 +550,29 @@ class cmin:
         selected_cids = conformer_filters(self, sorted_cids, cenergy, outmols)
 
         # Write filtered conformers
-        for cid in selected_cids:
-            self.sdwriter.write(outmols[cid])
+        filtered_mols = [outmols[cid] for cid in selected_cids]
+        for mol in filtered_mols:
+            self.sdwriter.write(mol)
         self.sdwriter.close()
 
+        final_count = len(filtered_mols)
+        if (
+            self.args.auto_cluster
+            and hasattr(self.args, "sample")
+            and len(filtered_mols) > int(self.args.sample)
+        ):
+            self.args.log.write(
+                f"\no  Applying final Butina clustering after minimisation "
+                f"filters ({self.name})"
+            )
+            output_sdf = self.cmin_folder / (self.name + self.args.output)
+            clustered_mols = cluster_conformers(
+                self, filtered_mols, "rdkit", output_sdf, self.name, int(self.args.sample)
+            )
+            final_count = len(clustered_mols)
+
         self.args.log.write(
-            f"\no  {len(selected_cids)} conformer(s) written to "
+            f"\no  {final_count} conformer(s) written to "
             f"{self.cmin_folder / (self.name + self.args.output)}"
         )
 

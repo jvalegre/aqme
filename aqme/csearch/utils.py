@@ -1078,14 +1078,21 @@ def rdkit_aggregate_mol(smi_parts, seed, n_conformers):
     # Sort by heavy-atom count: largest fragment remains stationary as the base
     fragments.sort(key=lambda x: x.GetNumHeavyAtoms(), reverse=True)
 
+    # Build diverse combinations of per-fragment conformer IDs.
+    # This replaces lockstep cycling (0-0, 1-1, ...) with cross-fragment
+    # combinations to improve internal diversity in aggregates.
+    conf_counts = [frag.GetNumConformers() for frag in fragments]
+    combo_space = list(itertools.product(*(range(n) for n in conf_counts)))
+    rng = np.random.default_rng(seed)
+    rng.shuffle(combo_space)
+    selected_combos = combo_space[:n_conformers]
+
     conformer_mols = []
-    for conf_idx in range(n_conformers):
-        # Create a single-conformer copy for each fragment by cycling 
-        # through its available internal conformation pool
+    for conf_idx, combo in enumerate(selected_combos):
+        # Create a single-conformer copy for each fragment using
+        # a selected cross-fragment conformer combination.
         frag_copies = []
-        for frag in fragments:
-            n_available = frag.GetNumConformers()
-            selected_cid = conf_idx % n_available
+        for frag, selected_cid in zip(fragments, combo):
             positions = frag.GetConformer(selected_cid).GetPositions()
 
             copy = _rdChem.RWMol(frag)
@@ -1100,7 +1107,7 @@ def rdkit_aggregate_mol(smi_parts, seed, n_conformers):
         combined = frag_copies[0]
         for mobile in frag_copies[1:]:
             combined = _position_fragment_on_base(
-                combined, mobile, conf_idx, n_conformers, seed=seed
+                combined, mobile, conf_idx, len(selected_combos), seed=seed
             )
         conformer_mols.append(combined)
 

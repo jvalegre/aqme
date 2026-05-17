@@ -276,6 +276,21 @@ def conformer_filters(self, sorted_all_cids, cenergy, outmols):
     Returns:
         list: Selected conformer IDs that pass all filters
     """
+    is_dot_smiles_aggregate = any(
+        mol.HasProp("SMILES") and "." in mol.GetProp("SMILES")
+        for mol in outmols
+    )
+    is_csearch_workflow = getattr(self.args, "csearch", False)
+
+    # Dot-separated aggregates: apply coordinate-only filtering (RMSD),
+    # explicitly skipping all energy-based pruning.
+    if is_csearch_workflow and is_dot_smiles_aggregate:
+        self.args.log.write(
+            "\no  Dot-separated SMILES detected: applying coordinate-only "
+            "duplicate filtering (no energy filters)"
+        )
+        return apply_rmsd_only_filter(outmols, sorted_all_cids, self.args)
+
     # Stage 1: Filter by energy window
     sortedcids = apply_energy_window_filter(
         sorted_all_cids,
@@ -299,6 +314,51 @@ def conformer_filters(self, sorted_all_cids, cenergy, outmols):
     )
     
     return selectedcids
+
+
+def apply_rmsd_only_filter(outmols, sortedcids, args):
+    """Filter conformers only by RMSD, without any energy thresholds.
+
+    Args:
+        outmols (dict/list): Conformer molecule objects indexed by ID
+        sortedcids (list): Conformer IDs (order preserved)
+        args: Arguments object containing RMS options
+
+    Returns:
+        list: Selected conformer IDs that are geometrically distinct
+    """
+    if not sortedcids:
+        return []
+
+    selected_cids = [sortedcids[0]]
+    rms_threshold = float(args.rms_threshold)
+    max_matches_rmsd = int(args.max_matches_rmsd)
+
+    for cid in sortedcids[1:]:
+        is_duplicate = False
+        for selected_cid in selected_cids:
+            try:
+                rms = get_conf_RMS(
+                    outmols[selected_cid],
+                    outmols[cid],
+                    -1,
+                    -1,
+                    args.heavyonly,
+                    max_matches_rmsd
+                )
+            except RuntimeError:
+                # Keep conformers when RMS matching fails to avoid accidental
+                # over-pruning in aggregate systems.
+                rms = rms_threshold + 1
+
+            if rms < rms_threshold:
+                is_duplicate = True
+                break
+
+        if not is_duplicate:
+            selected_cids.append(cid)
+
+    return selected_cids
 
 
 def apply_energy_window_filter(sorted_all_cids, cenergy, energy_window):
