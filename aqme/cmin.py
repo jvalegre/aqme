@@ -210,7 +210,6 @@ class cmin:
         self.cmin_folder = set_destination(self, "CMIN")
         self.cmin_folder.mkdir(exist_ok=True, parents=True)
         self.cmin_folder.joinpath("All_confs").mkdir(exist_ok=True, parents=True)
-        self.cmin_folder.joinpath("fail").mkdir(exist_ok=True, parents=True)
 
         all_confs_path = self.cmin_folder / "All_confs" / (
             f"{self.name}_all_confs{self.args.output}"
@@ -221,11 +220,6 @@ class cmin:
             f"{self.name}{self.args.output}"
         )
         self.sdwriter = Chem.SDWriter(str(filtered_path))
-
-        failed_path = self.cmin_folder / "fail" / (
-            f"{self.name}_failed{self.args.output}"
-        )
-        self.sdwriter_failed = Chem.SDWriter(str(failed_path))
 
     # ------------------------------------------------------------------
     # Charge / multiplicity
@@ -512,9 +506,6 @@ class cmin:
             self.args.log.write(
                 f"\nx  No valid initial conformers found for {self.name}."
             )
-            self.sdwriterall.close()
-            self.sdwriter.close()
-            self.sdwriter_failed.close()
             return
 
         constraints = self._build_qme_constraints(tasks[0][0])
@@ -542,12 +533,6 @@ class cmin:
                             pmol = PropertyMol(mol)
                             outmols.append(pmol)
                             cenergy.append(energy)
-                        else:
-                            failed_mol = PropertyMol(mol)
-                            failed_mol.SetProp("Real charge", str(charge))
-                            failed_mol.SetProp("Mult", str(uhf + 1))
-                            failed_mol.SetProp("CMIN failed", "True")
-                            self.sdwriter_failed.write(failed_mol)
                 except Exception as exc:
                     self.args.log.write(f"\nx  A parallel worker crashed: {exc}")
 
@@ -557,7 +542,6 @@ class cmin:
             )
             self.sdwriterall.close()
             self.sdwriter.close()
-            self.sdwriter_failed.close()
             return
 
         # Sort by energy
@@ -587,7 +571,6 @@ class cmin:
         for mol in filtered_mols:
             self.sdwriter.write(mol)
         self.sdwriter.close()
-        self.sdwriter_failed.close()
 
         final_count = len(filtered_mols)
         if (
@@ -608,10 +591,6 @@ class cmin:
         self.args.log.write(
             f"\no  {final_count} conformer(s) written to "
             f"{self.cmin_folder / (self.name + self.args.output)}"
-        )
-        self.args.log.write(
-            f"\no  Failed conformers (if any) written to "
-            f"{self.cmin_folder / 'fail' / (self.name + '_failed' + self.args.output)}"
         )
 
 
