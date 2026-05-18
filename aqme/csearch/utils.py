@@ -555,7 +555,9 @@ def prepare_sdf_files(args, csearch_file):
     sdf_path = Path(csearch_file)
     
     # Read molecules from SDF file
-    keep_xyz = True if args.program.lower() == 'crest' else False # keep XYZ as inputs for CREST runs
+    # Default to RDKit when no program is explicitly provided.
+    program = (args.program or "rdkit").lower()
+    keep_xyz = True if program == 'crest' else False # keep XYZ as inputs for CREST runs
     suppl, charges, mults, ids = mol_from_sdf_or_mol_or_mol2(
         str(sdf_path), 
         "csearch", 

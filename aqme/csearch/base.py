@@ -11,7 +11,7 @@ General
       .csv, .com, .gjf, .mol, .mol2, .xyz, .txt, .yaml, .yml, .rtf  
       For .csv files (i.e. FILENAME.csv), two columns are required, 
       'code_name' with the names and 'SMILES' for the SMILES string  
-   program : str, default=None  
+   program : str, default='rdkit'  
       Program required in the conformational sampling. 
       Current options: 'rdkit', 'crest'  
    smi : str, default=None  
@@ -228,6 +228,7 @@ class csearch:
     """
     
     SUPPORTED_PROGRAMS = {"rdkit", "crest"}
+    DEFAULT_PROGRAM = "rdkit"
     SUPPORTED_FORCEFIELDS = {"MMFF", "UFF", "NO FF"}
     DEFAULT_NPROCS = 4
     DEFAULT_AUTO_SAMPLE = "mid"
@@ -257,6 +258,8 @@ class csearch:
         check_dependencies(self)
         
         # Set default values
+        if not self.args.program:
+            self.args.program = self.DEFAULT_PROGRAM
         if self.args.nprocs is None:
             self.args.nprocs = self.DEFAULT_NPROCS
         if self.args.auto_sample == 'auto':
@@ -275,10 +278,10 @@ class csearch:
     def _validate_program(self):
         """Verify program selection is valid."""
         program = self.args.program
-        if not program or program.lower() not in self.SUPPORTED_PROGRAMS:
+        if program.lower() not in self.SUPPORTED_PROGRAMS:
             self._error_exit(
-                'Program not specified or not supported for CSEARCH! '
-                'Specify: program="rdkit" (or "crest")'
+                'Program not supported for CSEARCH! '
+                'Current options: program="rdkit" (default) or program="crest"'
             )
             
     def _validate_forcefield(self):
