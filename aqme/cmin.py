@@ -56,9 +56,9 @@ General
 
 import os
 import sys
-import glob
 import time
 import ast
+import contextlib
 import threading
 import numpy as np
 from pathlib import Path
@@ -210,6 +210,7 @@ class cmin:
         self.cmin_folder = set_destination(self, "CMIN")
         self.cmin_folder.mkdir(exist_ok=True, parents=True)
         self.cmin_folder.joinpath("All_confs").mkdir(exist_ok=True, parents=True)
+        self.cmin_folder.joinpath("fail").mkdir(exist_ok=True, parents=True)
 
         all_confs_path = self.cmin_folder / "All_confs" / (
             f"{self.name}_all_confs{self.args.output}"
@@ -220,6 +221,11 @@ class cmin:
             f"{self.name}{self.args.output}"
         )
         self.sdwriter = Chem.SDWriter(str(filtered_path))
+
+        failed_path = self.cmin_folder / "fail" / (
+            f"{self.name}_failed{self.args.output}"
+        )
+        self.sdwriter_failed = Chem.SDWriter(str(failed_path))
 
     # ------------------------------------------------------------------
     # Charge / multiplicity
@@ -429,24 +435,37 @@ class cmin:
             mult = uhf + 1
             ase_atoms = self._mol_to_ase_atoms(mol, charge, mult)
 
-            explorer = qme.Explorer(
-                atoms=ase_atoms,
-                backend=self.args.program,
-                target="minima",
-                strategy="local",
-                default_charge=charge,
-                default_spin=mult,
-                constraints=constraints,
-                verbose=0
-            )
-
             fmax = getattr(self.args, "opt_fmax", 0.05)
             steps = getattr(self.args, "opt_steps", 1000)
 
             if self.args.program == "tblite":
                 with cmin._tblite_lock:
-                    result = explorer.run(fmax=fmax, steps=steps)
+                    # qme/tblite can print backend arrays to terminal.
+                    # Redirect to os.devnull to avoid buffering large strings.
+                    with open(os.devnull, "w", encoding="utf-8") as devnull:
+                        with contextlib.redirect_stdout(devnull), contextlib.redirect_stderr(devnull):
+                            explorer = qme.Explorer(
+                                atoms=ase_atoms,
+                                backend=self.args.program,
+                                target="minima",
+                                strategy="local",
+                                default_charge=charge,
+                                default_spin=mult,
+                                constraints=constraints,
+                                verbose=0
+                            )
+                            result = explorer.run(fmax=fmax, steps=steps)
             else:
+                explorer = qme.Explorer(
+                    atoms=ase_atoms,
+                    backend=self.args.program,
+                    target="minima",
+                    strategy="local",
+                    default_charge=charge,
+                    default_spin=mult,
+                    constraints=constraints,
+                    verbose=0
+                )
                 result = explorer.run(fmax=fmax, steps=steps)
 
             optimised_atoms = result["optimized_atoms"]
@@ -477,7 +496,11 @@ class cmin:
         )
 
         cenergy, outmols = [], []
-        nprocs = getattr(self.args, "nprocs", 8) 
+        nprocs = getattr(self.args, "nprocs", None)
+        if not nprocs:
+            nprocs = 1
+        else:
+            nprocs = max(1, int(nprocs))
 
         # Prepare the list of tasks (skipping None values)
         tasks = []
@@ -489,6 +512,9 @@ class cmin:
             self.args.log.write(
                 f"\nx  No valid initial conformers found for {self.name}."
             )
+            self.sdwriterall.close()
+            self.sdwriter.close()
+            self.sdwriter_failed.close()
             return
 
         constraints = self._build_qme_constraints(tasks[0][0])
@@ -516,6 +542,12 @@ class cmin:
                             pmol = PropertyMol(mol)
                             outmols.append(pmol)
                             cenergy.append(energy)
+                        else:
+                            failed_mol = PropertyMol(mol)
+                            failed_mol.SetProp("Real charge", str(charge))
+                            failed_mol.SetProp("Mult", str(uhf + 1))
+                            failed_mol.SetProp("CMIN failed", "True")
+                            self.sdwriter_failed.write(failed_mol)
                 except Exception as exc:
                     self.args.log.write(f"\nx  A parallel worker crashed: {exc}")
 
@@ -525,6 +557,7 @@ class cmin:
             )
             self.sdwriterall.close()
             self.sdwriter.close()
+            self.sdwriter_failed.close()
             return
 
         # Sort by energy
@@ -554,6 +587,7 @@ class cmin:
         for mol in filtered_mols:
             self.sdwriter.write(mol)
         self.sdwriter.close()
+        self.sdwriter_failed.close()
 
         final_count = len(filtered_mols)
         if (
@@ -574,6 +608,10 @@ class cmin:
         self.args.log.write(
             f"\no  {final_count} conformer(s) written to "
             f"{self.cmin_folder / (self.name + self.args.output)}"
+        )
+        self.args.log.write(
+            f"\no  Failed conformers (if any) written to "
+            f"{self.cmin_folder / 'fail' / (self.name + '_failed' + self.args.output)}"
         )
 
 

@@ -156,6 +156,7 @@ class PropertyCalculator:
             args: AQME arguments object containing calculation parameters
         """
         self.args = args
+        self._initialized_cmin_outputs = set()
         
     def calculate_properties(self, xyz_file, charge, mult, name, destination, source_sdf=None):
         """Run property calculations for a molecule.
@@ -185,7 +186,14 @@ class PropertyCalculator:
             'xyz': dat_dir / f"{name}.xyz",
             'json': dat_dir / f"{name}.json"
         }
-        files['sdf'] = self._get_cmin_sdf_path(name)
+        files['sdf_all'], files['sdf_filtered'] = self._get_cmin_sdf_paths(name)
+        files['sdf_failed'], files['xyz_failed'] = self._get_cmin_fail_paths(name)
+        self._init_cmin_output_files(
+            files['sdf_all'],
+            files['sdf_filtered'],
+            files['sdf_failed'],
+            files['xyz_failed'],
+        )
         
         # Move input file
         shutil.move(xyz_file, str(files['xyz']))
@@ -194,6 +202,11 @@ class PropertyCalculator:
         success = self._run_cmin_minimization(
             files, charge, mult, name, source_sdf
         )
+
+        # If minimization failed, discard intermediate XYZ so failed conformers
+        # are not propagated to final QDESCP outputs.
+        if not success and files['xyz'].exists():
+            files['xyz'].unlink()
         
         return success, {k: str(v) for k,v in files.items()}
         
@@ -204,6 +217,7 @@ class PropertyCalculator:
 
         mol = self._build_rdkit_mol_for_conf(str(files['xyz']), source_sdf, conf_name)
         if mol is None:
+            self._append_failed_xyz(str(files['xyz']), str(files['xyz_failed']))
             return False
 
         runner = CMIN.__new__(CMIN)
@@ -217,10 +231,30 @@ class PropertyCalculator:
             mol, conf_name, int(float(charge)), uhf, constraints
         )
         if not success:
+            self._append_cmin_failed_sdf(
+                mol,
+                str(files['sdf_failed']),
+                int(float(charge)),
+                int(float(mult))
+            )
+            self._append_failed_xyz(str(files['xyz']), str(files['xyz_failed']))
             return False
 
         self._write_xyz_from_mol(opt_mol, str(files['xyz']))
-        self._write_cmin_sdf(opt_mol, str(files['sdf']), int(float(charge)), int(float(mult)), energy_kcal)
+        self._append_cmin_sdf(
+            opt_mol,
+            str(files['sdf_all']),
+            int(float(charge)),
+            int(float(mult)),
+            energy_kcal
+        )
+        self._append_cmin_sdf(
+            opt_mol,
+            str(files['sdf_filtered']),
+            int(float(charge)),
+            int(float(mult)),
+            energy_kcal
+        )
         return True
 
     def _build_rdkit_mol_for_conf(self, xyz_path, source_sdf, conf_name):
@@ -254,20 +288,71 @@ class PropertyCalculator:
                 pos = conf.GetAtomPosition(atom.GetIdx())
                 f.write(f"{atom.GetSymbol()} {pos.x:.10f} {pos.y:.10f} {pos.z:.10f}\n")
 
-    def _get_cmin_sdf_path(self, name):
+    def _get_parent_name(self, name):
+        """Collapse conformer names (e.g., mol_conf_3) to parent molecule name (mol)."""
+        return name.rsplit("_conf_", 1)[0] if "_conf_" in name else name
+
+    def _get_cmin_sdf_paths(self, name):
         cmin_dir = set_destination(self, "CMIN")
         cmin_all_confs = cmin_dir / "All_confs"
         cmin_all_confs.mkdir(exist_ok=True, parents=True)
-        return cmin_all_confs / f"{name}_all_confs.sdf"
+        parent = self._get_parent_name(name)
+        return (
+            cmin_all_confs / f"{parent}_all_confs.sdf",
+            cmin_dir / f"{parent}.sdf",
+        )
 
-    def _write_cmin_sdf(self, mol, sdf_path, charge, mult, energy_kcal):
+    def _get_cmin_fail_paths(self, name):
+        cmin_dir = set_destination(self, "CMIN")
+        cmin_fail = cmin_dir / "fail"
+        cmin_fail.mkdir(exist_ok=True, parents=True)
+        parent = self._get_parent_name(name)
+        return (
+            cmin_fail / f"{parent}_failed.sdf",
+            cmin_fail / f"{parent}_failed.xyz",
+        )
+
+    def _append_cmin_sdf(self, mol, sdf_path, charge, mult, energy_kcal):
         pmol = PropertyMol(mol)
         pmol.SetProp("Energy", str(energy_kcal))
         pmol.SetProp("Real charge", str(charge))
         pmol.SetProp("Mult", str(mult))
-        writer = Chem.SDWriter(sdf_path)
-        writer.write(pmol)
-        writer.close()
+        with open(sdf_path, "a", encoding="utf-8") as sdf_out:
+            writer = Chem.SDWriter(sdf_out)
+            writer.write(pmol)
+            writer.close()
+
+    def _append_cmin_failed_sdf(self, mol, sdf_path, charge, mult):
+        pmol = PropertyMol(mol)
+        pmol.SetProp("Real charge", str(charge))
+        pmol.SetProp("Mult", str(mult))
+        pmol.SetProp("CMIN failed", "True")
+        with open(sdf_path, "a", encoding="utf-8") as sdf_out:
+            writer = Chem.SDWriter(sdf_out)
+            writer.write(pmol)
+            writer.close()
+
+    def _append_failed_xyz(self, xyz_in, xyz_failed_path):
+        try:
+            with open(xyz_in, "r", encoding="utf-8") as fin:
+                content = fin.read()
+            with open(xyz_failed_path, "a", encoding="utf-8") as fout:
+                fout.write(content)
+                if not content.endswith("\n"):
+                    fout.write("\n")
+        except OSError:
+            pass
+
+    def _init_cmin_output_files(self, sdf_all_path, sdf_filtered_path, sdf_failed_path, xyz_failed_path):
+        """Initialize parent CMIN SDF outputs once per QDESCP run (overwrite behavior)."""
+        key = (str(sdf_all_path), str(sdf_filtered_path))
+        if key in self._initialized_cmin_outputs:
+            return
+
+        for path in [sdf_all_path, sdf_filtered_path, sdf_failed_path, xyz_failed_path]:
+            if path.exists():
+                path.unlink()
+        self._initialized_cmin_outputs.add(key)
 
 
 class qdescp:
@@ -550,12 +635,25 @@ class qdescp:
         if self.args.single_system:
             cmd_csearch.append('--single_system')
 
+        # Propagate constraints to CSEARCH so QDESCP-generated conformers follow
+        # the same constraint behavior as standalone CSEARCH/CMIN runs.
+        for arg_name in [
+            "constraints_atoms",
+            "constraints_dist",
+            "constraints_angle",
+            "constraints_dihedral",
+            "aromatic_int",
+        ]:
+            arg_value = getattr(self.args, arg_name, None)
+            if arg_value not in (None, [], ""):
+                cmd_csearch += [f"--{arg_name}", f"{arg_value}"]
+
         # overwrites charge/mult if the user specifies values
         if self.args.charge is not None:
             cmd_csearch = cmd_csearch + ['--charge', f'{self.args.charge}']
         if self.args.mult is not None:
             cmd_csearch = cmd_csearch + ['--mult', f'{self.args.mult}']
-        subprocess.run(cmd_csearch)
+        subprocess.run(cmd_csearch, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
         # use only the molecules from the input CSV (ignore previous/unrelated CSEARCH runs that generated SDFs)
         qdescp_files = []

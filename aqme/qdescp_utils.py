@@ -93,16 +93,40 @@ def get_boltz(energy):
     """
     if not energy:
         return []
-        
+
+    # Normalize potentially invalid values (None / non-numeric) while preserving length.
+    numeric_energies = []
+    for e_val in energy:
+        try:
+            numeric_energies.append(float(e_val))
+        except (TypeError, ValueError):
+            numeric_energies.append(None)
+
+    valid_energies = [e_val for e_val in numeric_energies if e_val is not None]
+    n_items = len(numeric_energies)
+
+    # If all energies are missing, fall back to uniform weights.
+    if len(valid_energies) == 0:
+        return (np.ones(n_items) / n_items).tolist()
+
+    # Penalize missing energies so they contribute ~0 to Boltzmann average.
+    high_energy = max(valid_energies) + 1.0e6
+    completed_energies = [
+        e_val if e_val is not None else high_energy for e_val in numeric_energies
+    ]
+
     # Shift energies to prevent numerical underflow
-    shifted_energies = np.array(energy) - min(energy)
-    
+    shifted_energies = np.array(completed_energies) - min(completed_energies)
+
     # Calculate Boltzmann factors
     boltz_factors = np.exp(-shifted_energies * J_TO_AU / (GAS_CONSTANT * TEMPERATURE))
-    
-    # Normalize to get weights
-    weights = boltz_factors / np.sum(boltz_factors)
-    
+
+    # Normalize to get weights, with a defensive fallback.
+    total_weight = np.sum(boltz_factors)
+    if total_weight == 0:
+        return (np.ones(n_items) / n_items).tolist()
+
+    weights = boltz_factors / total_weight
     return weights.tolist()
 
 def get_boltz_props_nmr(
@@ -1703,10 +1727,25 @@ def update_full_json_data(
         - Handles both scalar and array-type properties
         - Modifies full_json_data in place
     """
-    if len(smarts_targets) > 0 or np.isnan(avg_prop).any():
+    # Keep behavior for SMARTS-driven outputs (arrays/dicts may be expected as-is)
+    if len(smarts_targets) > 0:
         full_json_data[prop] = avg_prop
-    else:
+        return full_json_data
+
+    # Robust NaN detection for both scalar and array-like values.
+    has_nan = False
+    try:
+        has_nan = bool(np.isnan(avg_prop).any())
+    except Exception:
+        has_nan = False
+
+    if has_nan:
+        full_json_data[prop] = avg_prop
+    elif isinstance(avg_prop, np.ndarray):
         full_json_data[prop] = avg_prop.tolist()
+    else:
+        # Scalars (int/float/bool) and native Python containers are already JSON-compatible.
+        full_json_data[prop] = avg_prop
 
     return full_json_data
 
