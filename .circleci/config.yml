@@ -49,8 +49,10 @@ jobs:
           conda install -y -c conda-forge crest=2.12
           conda install -y -c conda-forge libgfortran=14.2.0
           pip install ase==3.24.0
-          pip install torch==2.5.1 torchvision==0.20.1 torchaudio==2.5.1 --index-url https://download.pytorch.org/whl/cpu
-          pip install torchani==2.2.3
+          #install requirement for QME
+          git clone https://github.com/rlaplaza-lab/qme.git && cd qme && pip install -e .
+          conda install -c conda-forge tblite tblite-python
+          conda install pytorch torchvision torchaudio -c pytorch
           # install the dependencies of AQME with pip
           pip install .
           # install and run pytest
