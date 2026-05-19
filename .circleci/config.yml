@@ -36,24 +36,35 @@ jobs:
           # app-dir: ~/project/package-directory/  # If your requirements.txt isn't in the root directory.
           # pip-dependency-file: test-requirements.txt  # if you have a different name for your requirements file, maybe one that combines your runtime and test requirements.
       - run: |
-          # update conda and create env with Python 3.12
+          # update conda and create env
           conda update -y conda
-          conda create -y -n cheminf python=3.12
+          conda create -n cheminf python=3.12
           source activate base 
           conda activate cheminf
           python -m pip install --upgrade pip
-          
-          # install dependencies via conda-forge matching your local working environment
-          conda install -y -c conda-forge openbabel=3.1.1 xtb=6.7.1 crest=2.12 ase=3.28.0 tblite tblite-python pytorch
-          
+
+          # install OpenBabel
+          conda install -y -c conda-forge openbabel=3.1.1
+
+          # install dependencies
+          conda install -y -c conda-forge xtb=6.7.1
+          conda install -y -c conda-forge crest=2.12
+          conda install -y -c conda-forge libgfortran=14.2.0
+          pip install ase==3.28.0
+          conda install -y -c conda-forge tblite tblite-python pytorch
+          conda install -y -c conda-forge pytorch
+
           # install requirement for QME using the GITHUB_TOKEN environment variable
           git clone https://${GITHUB_TOKEN}@github.com/rlaplaza-lab/qme.git && pip install -e ./qme
-          
+
           # install the dependencies of AQME with pip
           pip install .
-          
+
           # install and run pytest
-          pip install pytest pytest-cov pytest-mock
+          pip install pytest
+          pip install pytest-cov
+          pip install pytest-mock
+          
           # the format of the codecov report has to be scpecified or it doesn't create for some reason
           python -m pytest -v --cov=aqme --cov-report=xml
           rm -r /tmp/*
@@ -76,6 +87,7 @@ jobs:
       - checkout
       - codecov/upload:
           file: /tmp/coverage.xml
+          token: CODECOV_TOKEN
 # Invoke jobs via workflows
 # See: https://circleci.com/docs/2.0/configuration-reference/#workflows
 workflows:
