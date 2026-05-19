@@ -4,6 +4,14 @@
 Versions
 ========
 
+Version 2.1.0 [`url <https://github.com/jvalegre/aqme/releases/tag/2.1.0>`__]
+   -  Adding constraints to RDKit in CSEARCH
+   -  Non covalent smiles are well treated in RDKit
+   -  Automatic recognition of haptic ligands in organometallic complexes in CSEARCH and CMIN
+   -  Adding constraints to CMIN
+   -  Minimization in CMIN are able thorugh xTB and MLPs using QME
+   -  Rework of CMIN and QDESCP modules calling xTB, implemented now with tblite
+
 Version 2.0.1 [`url <https://github.com/jvalegre/aqme/releases/tag/2.0.1>`__]
    -  Fixed PermissionError issue in Windows related to Chem.SDMolSupplier()
 

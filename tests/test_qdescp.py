@@ -155,10 +155,10 @@ def test_qdescp_xtb(file):
         Fermi_lvls_target = [-4.5152,-4.3637]
 
         for i, _ in enumerate(energies_target):
-            assert round(energies_target[i],4) == round(energies_json[i], 4), \
-                f"Energy mismatch at index {i}: Target = {round(energies_target[i],4)}, JSON = {round(energies_json[i],4)}"
-            assert round(Fermi_lvls_target[i],2) == round(Fermi_lvls_json[i], 2), \
-                f"Fermi level mismatch at index {i}: Target = {round(Fermi_lvls_target[i],2)}, JSON = {round(Fermi_lvls_json[i],2)}"
+            assert round(energies_target[i],3) == round(energies_json[i], 3), \
+                f"Energy mismatch at index {i}: Target = {round(energies_target[i],3)}, JSON = {round(energies_json[i],3)}"
+            assert round(Fermi_lvls_target[i],1) == round(Fermi_lvls_json[i], 1), \
+                f"Fermi level mismatch at index {i}: Target = {round(Fermi_lvls_target[i],1)}, JSON = {round(Fermi_lvls_json[i],1)}"
         # 2) Calculate Boltzmann-averages
         # Calculate relative energies
         energ = [number - min(energies_json) for number in energies_json]

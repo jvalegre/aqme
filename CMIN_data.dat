@@ -1,0 +1,31 @@
+AQME v 2.1.0 2026/05/19 18:53:15 
+Citation: AQME v 2.1.0, Alegre-Requena, J. V.; Sowndarya, S.; Perez-Soto, R.; Alturaifi, T.; Paton, R. AQME: Automated Quantum Mechanical Environments for Researchers and Educators. Wiley Interdiscip. Rev. Comput. Mol. Sci. 2023, 13, e1663 (DOI: 10.1002/wcms.1663).
+
+
+
+   ----- pentane_rdkit_methods -----
+
+   charge=0  uhf=0  program=tblite
+
+o  QME optimisation [tblite] (pentane_rdkit_methods_conf_0)
+
+   Converged. E = -457.951774 eV  (-10560.7801 kcal/mol)
+
+o  QME optimisation [tblite] (pentane_rdkit_methods_conf_1)
+
+   Converged. E = -457.927528 eV  (-10560.2209 kcal/mol)
+
+o  QME optimisation [tblite] (pentane_rdkit_methods_conf_2)
+
+   Converged. E = -457.900838 eV  (-10559.6054 kcal/mol)
+
+o  QME optimisation [tblite] (pentane_rdkit_methods_conf_3)
+
+   Converged. E = -457.845059 eV  (-10558.3191 kcal/mol)
+
+o  Applying filters after tblite minimisation
+
+o  4 conformer(s) written to C:\Users\javie\Documents\Trabajo\repositorio\aqme\CMIN\pentane_rdkit_methods.sdf
+
+Time CMIN: 0.13 seconds
+
