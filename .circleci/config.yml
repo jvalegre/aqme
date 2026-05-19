@@ -36,9 +36,9 @@ jobs:
           # app-dir: ~/project/package-directory/  # If your requirements.txt isn't in the root directory.
           # pip-dependency-file: test-requirements.txt  # if you have a different name for your requirements file, maybe one that combines your runtime and test requirements.
       - run: |
-          # update conda and create env with Python 3.11
+          # update conda and create env with Python 3.12
           conda update -y conda
-          conda create -y -n cheminf python=3.11
+          conda create -y -n cheminf python=3.12
           source activate base 
           conda activate cheminf
           python -m pip install --upgrade pip
