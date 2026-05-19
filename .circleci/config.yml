@@ -38,7 +38,7 @@ jobs:
       - run: |
           # update conda and create env
           conda update -y conda
-          conda create -n cheminf python=3.12
+          conda create -y -n cheminf python=3.12
           source activate base 
           conda activate cheminf
           python -m pip install --upgrade pip
@@ -50,9 +50,9 @@ jobs:
           conda install -y -c conda-forge libgfortran=14.2.0
           pip install ase==3.24.0
           #install requirement for QME
-          git clone https://github.com/rlaplaza-lab/qme.git && cd qme && pip install -e .
-          conda install -c conda-forge tblite tblite-python
-          conda install pytorch torchvision torchaudio -c pytorch
+          git clone https://github.com/rlaplaza-lab/qme.git && pip install -e ./qme
+          conda install -y -c conda-forge tblite tblite-python
+          pip install torch torchvision torchaudio
           # install the dependencies of AQME with pip
           pip install .
           # install and run pytest
