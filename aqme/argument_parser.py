@@ -115,6 +115,8 @@ var_dict = {
     "crest_nclust": 0.4,
     "debug": False,
     "pytest_testing": False,
+    "milo": False,
+    "yaml_file": None,
 }
 
 

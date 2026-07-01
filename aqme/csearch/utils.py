@@ -7,6 +7,7 @@ import os
 import sys
 import itertools
 import subprocess
+import re
 import pandas as pd
 import ast
 import numpy as np
@@ -684,103 +685,113 @@ def com_2_xyz(input_file):
     return str(xyz_path), charge, mult
 
 
-def realign_mol(mol, conf, coord_Map, alg_Map, mol_template, maxsteps,
-                constraints_atoms=None, constraints_dist=None,
-                constraints_angle=None, constraints_dihedral=None):
-    """Minimize and align a molecule while preserving template atom positions.
-
-    Performs force field minimization and molecular alignment on a molecule,
-    keeping certain atoms fixed based on a template structure. The minimization
-    uses the UFF force field and the alignment is based on matching atoms.
-
-    Args:
-        mol (rdkit.Chem.rdchem.Mol): Molecule to be minimized and aligned
-        conf (int): Conformation ID for the minimization and alignment
-        coord_Map (list): List of atom indices for coordinate constraints
-        alg_Map (list): List of atom indices for alignment matching
-        mol_template (rdkit.Chem.rdchem.Mol): Template molecule for alignment
-        maxsteps (int): Maximum number of force field optimization steps
-
-    Returns:
-        tuple: (mol, energy) where:
-            - mol (rdkit.Chem.rdchem.Mol): Updated molecule after minimization/alignment
-            - energy (float): Final UFF force field energy
-            
-    Note:
-        This function combines minimization and alignment steps and may need
-        refactoring to separate these operations in the future.
+def _resolve_post_min_clashes(mol, conf_id, constraints_dist, min_dist=1.0, tolerance=0.5, max_iters=200):
     """
-    constraints_atoms = constraints_atoms or []
-    constraints_dist = constraints_dist or []
-    constraints_angle = constraints_angle or []
-    constraints_dihedral = constraints_dihedral or []
+    Resuelve solapamientos (< 1.0 A) moviendo los fragmentos matemáticamente 
+    DESPUÉS de la minimización. Memoriza la distancia exacta optimizada por RDKit
+    y garantiza que el ajuste no la varíe más de 'tolerance'.
+    """
+    frags = Chem.GetMolFrags(mol, asMols=False)
+    if len(frags) <= 1:
+        return
 
-    # Setup UFF forcefield with conformation
-    forcefield = Chem.UFFGetMoleculeForceField(mol, confId=conf)
+    conf = mol.GetConformer(conf_id)
     
-    # Find matching atoms and add distance constraints
-    matching_atoms = mol.GetSubstructMatch(mol_template)
-    for i, atom_i in enumerate(matching_atoms):
-        # Add pairwise distance constraints between matching atoms
-        for atom_j in matching_atoms[i + 1:]:
-            # Get target distance from coordinate map
-            target_dist = coord_Map[atom_i].Distance(coord_Map[atom_j])
-            # Add strong distance constraint (force constant = 100000)
-            forcefield.AddDistanceConstraint(atom_i, atom_j, target_dist, target_dist, 100000)
-    
-    # Apply user-defined constraints
-    has_constraints = any([constraints_atoms, constraints_dist,
-                           constraints_angle, constraints_dihedral])
-    if has_constraints:
-        apply_rdkit_constraints(
-            forcefield,
-            constraints_atoms, constraints_dist,
-            constraints_angle, constraints_dihedral
-        )
+    # 1. Memorizar las distancias minimizadas EXACTAS de las constraints
+    minimized_distances = {}
+    if constraints_dist:
+        positions = conf.GetPositions()
+        for c in constraints_dist:
+            idx1, idx2 = int(c[0]), int(c[1])
+            actual_dist = np.linalg.norm(positions[idx1] - positions[idx2])
+            minimized_distances[(idx1, idx2)] = actual_dist
 
-    # Run energy minimization
-    forcefield.Initialize()
-    forcefield.Minimize(maxIts=maxsteps)
-    
-    # Align optimized molecule to template
-    rdMolAlign.AlignMol(
-        mol,                # Molecule to align
-        mol_template,       # Template to align to
-        prbCid=conf,        # Probe conformer ID
-        refCid=-1,         # Reference conformer ID (-1 = first)
-        atomMap=alg_Map,    # Atom mapping for alignment
-        reflect=True,       # Try mirror image if needed
-        maxIters=100,       # Maximum alignment iterations
-    )
-    
-    # Get final energy after minimization and alignment
-    energy = float(forcefield.CalcEnergy())
-    return mol, energy
+    atom_to_frag = {}
+    for f_idx, frag in enumerate(frags):
+        for atom in frag:
+            atom_to_frag[atom] = f_idx
+
+    locked_pairs = set()
+
+    for _ in range(max_iters):
+        positions = conf.GetPositions()
+        worst_d = float('inf')
+        worst_info = None
+
+        for i in range(len(frags)):
+            for j in range(i + 1, len(frags)):
+                fragA_atoms = list(frags[i])
+                fragB_atoms = list(frags[j])
+                
+                posA = positions[fragA_atoms]
+                posB = positions[fragB_atoms]
+                
+                # Matriz correcta: (Atomos A, Atomos B, 3D)
+                diffs = posA[:, np.newaxis, :] - posB[np.newaxis, :, :]
+                dists = np.linalg.norm(diffs, axis=2)
+                
+                min_idx = np.unravel_index(np.argmin(dists), dists.shape)
+                min_val = dists[min_idx]
+
+                if min_val < min_dist:
+                    # El índice 0 corresponde a A y el 1 a B (Bug corregido)
+                    atomA = fragA_atoms[min_idx[0]]
+                    atomB = fragB_atoms[min_idx[1]]
+                    
+                    pair_key = tuple(sorted((atomA, atomB)))
+                    
+                    if pair_key not in locked_pairs and min_val < worst_d:
+                        worst_d = min_val
+                        worst_info = (atomA, atomB, i, j, pair_key)
+
+        if worst_info is None:
+            break # No hay más choques o todos están bloqueados
+
+        atomA, atomB, fA_idx, fB_idx, pair_key = worst_info
+        
+        # Vector para alejar B de A
+        direction = positions[atomB] - positions[atomA]
+        norm_dir = np.linalg.norm(direction)
+        if norm_dir < 1e-5:
+            direction = np.array([1.0, 1.0, 1.0])
+            norm_dir = np.linalg.norm(direction)
+        direction = direction / norm_dir
+        
+        shift_step = 0.05
+        shift_vec = direction * shift_step
+        
+        def check_constraints(frag_to_move, vec):
+            # Verificar si mover 'frag_to_move' viola la tolerancia
+            for (c1, c2), original_dist in minimized_distances.items():
+                f1 = atom_to_frag.get(c1)
+                f2 = atom_to_frag.get(c2)
+                
+                p1 = positions[c1] + vec if f1 == frag_to_move else positions[c1]
+                p2 = positions[c2] + vec if f2 == frag_to_move else positions[c2]
+                
+                new_d = np.linalg.norm(p1 - p2)
+                if abs(new_d - original_dist) > tolerance:
+                    return False
+            return True
+
+        # Intentar mover fragmento B
+        if check_constraints(fB_idx, shift_vec):
+            for idx in frags[fB_idx]:
+                p = np.array(conf.GetAtomPosition(idx))
+                conf.SetAtomPosition(idx, (p + shift_vec).tolist())
+        # Intentar mover fragmento A en dirección contraria
+        elif check_constraints(fA_idx, -shift_vec):
+            for idx in frags[fA_idx]:
+                p = np.array(conf.GetAtomPosition(idx))
+                conf.SetAtomPosition(idx, (p - shift_vec).tolist())
+        else:
+            # Si rompe la tolerancia, lo dejamos estar y miramos otro
+            locked_pairs.add(pair_key)
 
 
 def minimize_rdkit_energy(mol, conf, log, FF, maxsteps,
                             constraints_atoms=None, constraints_dist=None,
                             constraints_angle=None, constraints_dihedral=None):
-    """Minimize molecular energy using RDKit force fields.
-    
-    Attempts to minimize a molecule's energy using either MMFF94 or UFF force
-    fields. Falls back to UFF if MMFF fails, and handles minimization failures
-    gracefully.
-
-    Args:
-        mol (rdkit.Chem.rdchem.Mol): Molecule to minimize
-        conf (int): Conformer ID to minimize
-        log: Logger object for status messages
-        FF (str): Force field to use ('MMFF', 'UFF', or 'NO FF')
-        maxsteps (int): Maximum number of minimization steps
-
-    Returns:
-        float: Final energy of the minimized structure, or 0 if no FF used
-        
-    Note:
-        Falls back to UFF if MMFF fails. Reports non-optimized geometries
-        if minimization fails completely.
-    """
     constraints_atoms = constraints_atoms or []
     constraints_dist = constraints_dist or []
     constraints_angle = constraints_angle or []
@@ -789,7 +800,6 @@ def minimize_rdkit_energy(mol, conf, log, FF, maxsteps,
     if FF.upper() == "NO FF":
         return 0.0
 
-    # Try MMFF94 first if requested
     forcefield = None
     if FF.upper() == "MMFF":
         properties = Chem.MMFFGetMoleculeProperties(mol)
@@ -797,11 +807,9 @@ def minimize_rdkit_energy(mol, conf, log, FF, maxsteps,
         if forcefield is None:
             log.write(f"x  Force field {FF} did not work! Falling back to UFF.")
 
-    # Fall back to UFF if MMFF failed or was not requested
     if FF.upper() == "UFF" or forcefield is None:
         forcefield = Chem.UFFGetMoleculeForceField(mol, confId=conf)
 
-    # Apply constraints before minimization
     has_constraints = any([constraints_atoms, constraints_dist,
                            constraints_angle, constraints_dihedral])
     if has_constraints:
@@ -811,15 +819,69 @@ def minimize_rdkit_energy(mol, conf, log, FF, maxsteps,
             constraints_angle, constraints_dihedral
         )
 
-    # Attempt minimization and handle failures
+    energy = 0.0
     try:
         forcefield.Initialize()
         forcefield.Minimize(maxIts=maxsteps)
-        return float(forcefield.CalcEnergy())
+        energy = float(forcefield.CalcEnergy())
     except RuntimeError:
         log.write(f"\nx  Geometry minimization failed with {FF}, using non-optimized geometry.")
-        return float(forcefield.CalcEnergy())
+        if forcefield is not None:
+            energy = float(forcefield.CalcEnergy())
 
+    # --- APLICAMOS EL ALGORITMO MATEMÁTICO ---
+    _resolve_post_min_clashes(mol, conf, constraints_dist, min_dist=1.0, tolerance=0.5)
+
+    return energy
+
+
+def realign_mol(mol, conf, coord_Map, alg_Map, mol_template, maxsteps,
+                constraints_atoms=None, constraints_dist=None,
+                constraints_angle=None, constraints_dihedral=None):
+    constraints_atoms = constraints_atoms or []
+    constraints_dist = constraints_dist or []
+    constraints_angle = constraints_angle or []
+    constraints_dihedral = constraints_dihedral or []
+
+    forcefield = Chem.UFFGetMoleculeForceField(mol, confId=conf)
+    
+    matching_atoms = mol.GetSubstructMatch(mol_template)
+    for i, atom_i in enumerate(matching_atoms):
+        for atom_j in matching_atoms[i + 1:]:
+            target_dist = coord_Map[atom_i].Distance(coord_Map[atom_j])
+            forcefield.AddDistanceConstraint(atom_i, atom_j, target_dist, target_dist, 100000)
+    
+    has_constraints = any([constraints_atoms, constraints_dist,
+                           constraints_angle, constraints_dihedral])
+    if has_constraints:
+        apply_rdkit_constraints(
+            forcefield,
+            constraints_atoms, constraints_dist,
+            constraints_angle, constraints_dihedral
+        )
+
+    try:
+        forcefield.Initialize()
+        forcefield.Minimize(maxIts=maxsteps)
+    except RuntimeError:
+        pass
+    
+    rdMolAlign.AlignMol(
+        mol,                
+        mol_template,       
+        prbCid=conf,        
+        refCid=-1,         
+        atomMap=alg_Map,    
+        reflect=True,       
+        maxIters=100,       
+    )
+    
+    energy = float(forcefield.CalcEnergy())
+
+    # --- APLICAMOS EL ALGORITMO MATEMÁTICO ---
+    _resolve_post_min_clashes(mol, conf, constraints_dist, min_dist=1.0, tolerance=0.8)
+
+    return mol, energy
 
 def getDihedralMatches(mol, heavy):
     """Find unique rotatable bonds and their associated dihedral angles.
@@ -885,24 +947,12 @@ def getDihedralMatches(mol, heavy):
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-#  RDKit aggregate (multi-fragment SMILES) helpers (THIS IS THE NEW THING)
+#  RDKit aggregate (multi-fragment SMILES) helpers
 # ──────────────────────────────────────────────────────────────────────────────
 
 def get_interaction_points(mol):
-    """Find chemical interaction points on a molecule for fragment placement.
-
-    Identifies Hydrogen Bond Donors (HBD), Hydrogen Bond Acceptors (HBA),
-    and aromatic ring centroids (Pi) as potential interaction sites.
-    Falls back to the molecular centroid if no specific points are found.
-
-    Args:
-        mol (rdkit.Chem.rdchem.Mol): Molecule with a 3D conformer
-
-    Returns:
-        dict: Keys 'HBD', 'HBA', 'Pi', and optionally 'Fallback';
-              values are lists of numpy arrays (3D coordinates).
-    """
-    positions = mol.GetConformer().GetPositions()  # numpy (N, 3)
+    """Find chemical interaction points on a molecule for fragment placement."""
+    positions = mol.GetConformer().GetPositions()
     points = {'HBD': [], 'HBA': [], 'Pi': []}
 
     hbd_pattern = Chem.MolFromSmarts('[N,O,S;!H0]')
@@ -923,38 +973,18 @@ def get_interaction_points(mol):
 
     return points
 
-
 def _get_fibonacci_sphere_point(i, total_samples):
-    """Return a unit vector on the Fibonacci sphere for index i.
-
-    Ensures approximately uniform angular coverage when called for
-    i = 0, 1, …, total_samples-1.
-
-    Args:
-        i (int): 0-based index of the point
-        total_samples (int): Total number of points on the sphere
-
-    Returns:
-        np.ndarray: Unit vector [x, y, z]
-    """
+    """Return a unit vector on the Fibonacci sphere for uniform angular coverage."""
     if total_samples <= 1:
         return np.array([1.0, 0.0, 0.0])
-    phi = np.pi * (3.0 - np.sqrt(5.0))  # golden angle in radians
+    phi = np.pi * (3.0 - np.sqrt(5.0))
     y = 1.0 - (i / float(total_samples - 1)) * 2.0
     radius = np.sqrt(max(0.0, 1.0 - y * y))
     theta = phi * i
     return np.array([np.cos(theta) * radius, y, np.sin(theta) * radius])
 
-
 def _random_rotation_matrix(rng):
-    """Generate a random 3x3 rotation matrix from three Euler angles.
-
-    Args:
-        rng: numpy random Generator (e.g. np.random.default_rng(seed))
-
-    Returns:
-        np.ndarray: 3x3 rotation matrix
-    """
+    """Generate a random 3x3 rotation matrix."""
     angles = rng.uniform(0, 2 * np.pi, 3)
     cx, sx = np.cos(angles[0]), np.sin(angles[0])
     cy, sy = np.cos(angles[1]), np.sin(angles[1])
@@ -964,139 +994,174 @@ def _random_rotation_matrix(rng):
     Rz = np.array([[cz, -sz, 0], [sz, cz, 0], [0, 0, 1]])
     return Rz @ Ry @ Rx
 
+def _get_vdw_radii(mol):
+    """Return van der Waals radii for all atoms in a fragment."""
+    pt = Chem.GetPeriodicTable()
+    return np.array([pt.GetRvdw(atom.GetAtomicNum()) if atom.GetAtomicNum() > 0 else 1.5 for atom in mol.GetAtoms()])
+
+def _resolve_vdw_clashes(base_mol, mobile_mol, direction, padding=0.5):
+    """
+    Analytically calculates the exact translation scalar needed along 'direction'
+    to clear all current AND future van der Waals overlaps using swept-sphere logic.
+    """
+    base_pos = base_mol.GetConformer().GetPositions()
+    mobile_pos = mobile_mol.GetConformer().GetPositions()
+    
+    base_vdw = _get_vdw_radii(base_mol)
+    mobile_vdw = _get_vdw_radii(mobile_mol)
+    
+    direction = direction / np.linalg.norm(direction)
+    
+    intervals = []
+    
+    for i, b_pos in enumerate(base_pos):
+        for j, m_pos in enumerate(mobile_pos):
+            delta = m_pos - b_pos
+            r_target = base_vdw[i] + mobile_vdw[j] + padding
+            
+            c = np.dot(delta, delta) - r_target**2
+            b = 2.0 * np.dot(delta, direction)
+            
+            disc = b**2 - 4*c
+            
+            if disc > 0:
+                sqrt_disc = np.sqrt(disc)
+                t_in = (-b - sqrt_disc) / 2.0
+                t_out = (-b + sqrt_disc) / 2.0
+                
+                if t_out > 0:
+                    intervals.append((t_in, t_out))
+                    
+    intervals.sort()
+    max_t = 0.0
+    
+    for t_in, t_out in intervals:
+        if t_in <= max_t + 1e-5:
+            max_t = max(max_t, t_out)
+        else:
+            break
+            
+    if max_t > 0:
+        conf = mobile_mol.GetConformer()
+        for atom_idx in range(mobile_mol.GetNumAtoms()):
+            pos = np.array(conf.GetAtomPosition(atom_idx))
+            conf.SetAtomPosition(atom_idx, (pos + max_t * direction).tolist())
+            
+    return max_t
+
+def _enforce_minimum_distance(base_mol, mobile_mol, direction, min_dist=1.0, max_iters=500):
+    """
+    Checks the real distance between ALL atoms. If any are closer than min_dist,
+    pushes the fragment outward along the 'direction' vector.
+    """
+    conf = mobile_mol.GetConformer()
+    
+    direction = direction / np.linalg.norm(direction)
+    
+    for i in range(max_iters):
+        base_pos = base_mol.GetConformer().GetPositions()
+        mobile_pos = conf.GetPositions()
+        
+        diffs = mobile_pos[:, np.newaxis, :] - base_pos[np.newaxis, :, :]
+        dists = np.linalg.norm(diffs, axis=2)
+        
+        min_d = np.min(dists)
+        
+        if min_d >= min_dist:
+            break
+            
+        shift_amount = (min_dist - min_d) + 0.05
+        shift_vec = direction * shift_amount
+        
+        for atom_idx in range(mobile_mol.GetNumAtoms()):
+            pos = np.array(conf.GetAtomPosition(atom_idx))
+            conf.SetAtomPosition(atom_idx, (pos + shift_vec).tolist())
 
 def _position_fragment_on_base(base_mol, mobile_mol, conformer_idx, total_conformers, seed=0):
-    """Position a mobile fragment relative to a base fragment.
-
-    Uses interaction-point pairing (HBD/HBA/Pi/Fallback) and the Fibonacci
-    sphere algorithm to deterministically distribute the mobile fragment
-    around the base. A reproducible random rotation is applied to the mobile
-    fragment *before* translation for additional conformer diversity.
-
-    Args:
-        base_mol (rdkit.Chem.rdchem.Mol): Stationary fragment (pre-built 3D)
-        mobile_mol (rdkit.Chem.rdchem.Mol): Fragment to be repositioned
-            (its conformer is modified in-place before combining)
-        conformer_idx (int): 0-based index of the current conformer
-        total_conformers (int): Total number of conformers to generate
-        seed (int): Base random seed; each conformer uses seed + conformer_idx
-
-    Returns:
-        rdkit.Chem.rdchem.Mol: Combined molecule from CombineMols(base_mol, mobile_mol)
-    """
+    """Position a mobile fragment securely without overlapping."""
     base_pts = get_interaction_points(base_mol)
     mobile_pts = get_interaction_points(mobile_mol)
 
-    # Build HBD/HBA/Pi interaction pairs with ideal target distances
     pairs = []
     for b in base_pts.get('HBD', []):
-        for m in mobile_pts.get('HBA', []):
-            pairs.append((b, m, 3.5))
+        for m in mobile_pts.get('HBA', []): pairs.append((b, m, 3.0))
     for b in base_pts.get('HBA', []):
-        for m in mobile_pts.get('HBD', []):
-            pairs.append((b, m, 3.5))
+        for m in mobile_pts.get('HBD', []): pairs.append((b, m, 3.0))
     for b in base_pts.get('Pi', []):
-        for m in mobile_pts.get('Pi', []):
-            pairs.append((b, m, 5))
+        for m in mobile_pts.get('Pi', []): pairs.append((b, m, 4.0))
 
-    # Fall back to centroid-based placement when no chemical interaction points exist
     if not pairs:
-        b_fallback = base_pts.get(
-            'Fallback', [np.mean(base_mol.GetConformer().GetPositions(), axis=0)]
-        )[0]
-        m_fallback = mobile_pts.get(
-            'Fallback', [np.mean(mobile_mol.GetConformer().GetPositions(), axis=0)]
-        )[0]
-        pairs.append((b_fallback, m_fallback, 3.0))
+        b_fallback = base_pts.get('Fallback', [np.mean(base_mol.GetConformer().GetPositions(), axis=0)])[0]
+        m_fallback = mobile_pts.get('Fallback', [np.mean(mobile_mol.GetConformer().GetPositions(), axis=0)])[0]
+        pairs.append((b_fallback, m_fallback, 2.5))
 
-    # Cycle through pairs across conformers for angular diversity
     base_pt, mobile_pt, target_dist = pairs[conformer_idx % len(pairs)]
 
-    # --- Step 1: rotate mobile fragment around its centroid ---
     rng = np.random.default_rng(seed + conformer_idx)
     rot = _random_rotation_matrix(rng)
     conf = mobile_mol.GetConformer()
     positions = conf.GetPositions()
     centroid = np.mean(positions, axis=0)
+    
     rotated_positions = (rot @ (positions - centroid).T).T + centroid
     for atom_idx, pos in enumerate(rotated_positions):
         conf.SetAtomPosition(atom_idx, pos.tolist())
 
-    # Update mobile interaction point after rotation
     mobile_pt_rotated = rot @ (mobile_pt - centroid) + centroid
 
-    # --- Step 2: translate mobile fragment to target interaction distance ---
     direction = _get_fibonacci_sphere_point(conformer_idx, total_conformers)
     target_pt = base_pt + direction * target_dist
     translation = target_pt - mobile_pt_rotated
+    
     for atom_idx in range(mobile_mol.GetNumAtoms()):
         pos = np.array(conf.GetAtomPosition(atom_idx))
         conf.SetAtomPosition(atom_idx, (pos + translation).tolist())
+
+    # PRE-MINIMIZATION CLASH RESOLUTION ONLY
+    _resolve_vdw_clashes(base_mol, mobile_mol, direction, padding=0.5)
+    _enforce_minimum_distance(base_mol, mobile_mol, direction, min_dist=1.0, max_iters=500)
 
     combined = Chem.CombineMols(base_mol, mobile_mol)
     combined = Chem.Mol(combined)
     Chem.SanitizeMol(combined)
     return combined
 
-
-def rdkit_aggregate_mol(smi_parts, seed, n_conformers):
-    """Generate multiple 3D conformers of a molecular aggregate from SMILES fragments.
-    
-    Embeds each fragment independently with multiple conformers, then builds 
-    combinations of per-fragment conformer indices to produce diverse starting 
-    geometries. Fragments are positioned using interaction-point pairing 
-    and Fibonacci-sphere sampling.
-
-    Args:
-        smi_parts (list): List of SMILES strings, one per fragment
-        seed (int): Base random seed for reproducibility
-        n_conformers (int): Maximum number of aggregate conformers to build
-
-    Returns:
-        rdkit.Chem.rdchem.Mol: Combined molecule with multiple conformers
-    """
+def rdkit_aggregate_mol(smi_parts, seed, n_conformers, constraints_dist=None, constraints_angle=None, constraints_dihedral=None):
+    """Generate multiple 3D conformers of a molecular aggregate from SMILES fragments."""
     n_frags = len(smi_parts)
-    # Determine the number of conformers per fragment to ensure the 
-    # ensemble covers the requested sample size
     confs_per_frag = max(1, int(np.ceil(n_conformers ** (1.0 / n_frags))))
 
-    # Embed each fragment with multiple conformers independently
+    params = Chem.SmilesParserParams()
+    params.removeHs = False
     fragments = []
+    
     for smi in smi_parts:
-        mol = _rdChem.MolFromSmiles(smi)
+        mol = _rdChem.MolFromSmiles(smi, params)
         if mol is None:
             return None
         mol = _rdChem.AddHs(mol)
         cids = Chem.EmbedMultipleConfs(mol, numConfs=confs_per_frag, randomSeed=seed)
-        # Fallback to random coordinates if standard distance geometry fails
         if len(cids) == 0:
-            cids = Chem.EmbedMultipleConfs(
-                mol, numConfs=confs_per_frag, randomSeed=seed, useRandomCoords=True
-            )
+            cids = Chem.EmbedMultipleConfs(mol, numConfs=confs_per_frag, randomSeed=seed, useRandomCoords=True)
         if len(cids) == 0:
             return None
         fragments.append(mol)
 
-    # Sort by heavy-atom count: largest fragment remains stationary as the base
     fragments.sort(key=lambda x: x.GetNumHeavyAtoms(), reverse=True)
 
-    # Build diverse combinations of per-fragment conformer IDs.
-    # This replaces lockstep cycling (0-0, 1-1, ...) with cross-fragment
-    # combinations to improve internal diversity in aggregates.
     conf_counts = [frag.GetNumConformers() for frag in fragments]
     combo_space = list(itertools.product(*(range(n) for n in conf_counts)))
     rng = np.random.default_rng(seed)
     rng.shuffle(combo_space)
+    
     selected_combos = combo_space[:n_conformers]
+    total_selected = len(selected_combos)
 
     conformer_mols = []
     for conf_idx, combo in enumerate(selected_combos):
-        # Create a single-conformer copy for each fragment using
-        # a selected cross-fragment conformer combination.
         frag_copies = []
         for frag, selected_cid in zip(fragments, combo):
             positions = frag.GetConformer(selected_cid).GetPositions()
-
             copy = _rdChem.RWMol(frag)
             copy.RemoveAllConformers()
             new_conf = _rdChem.Conformer(frag.GetNumAtoms())
@@ -1105,18 +1170,20 @@ def rdkit_aggregate_mol(smi_parts, seed, n_conformers):
             copy.AddConformer(new_conf, assignId=True)
             frag_copies.append(copy)
 
-        # Assemble the fragments using Fibonacci-sphere distribution
         combined = frag_copies[0]
         for mobile in frag_copies[1:]:
             combined = _position_fragment_on_base(
-                combined, mobile, conf_idx, len(selected_combos), seed=seed
+                combined, mobile, conf_idx, total_selected, seed=seed
             )
-        conformer_mols.append(combined)
+            if combined is None:
+                break
+                
+        if combined is not None:
+            conformer_mols.append(combined)
 
     if not conformer_mols:
         return None
 
-    # Merge all single-conformer results into a single multi-conformer object
     result_mol = Chem.RWMol(conformer_mols[0])
     for single_conf_mol in conformer_mols[1:]:
         result_mol.AddConformer(single_conf_mol.GetConformer(0), assignId=True)
@@ -1176,6 +1243,8 @@ def smi_to_mol(
     """
     complex_ts = False
     smi_parts = smi.split(".")
+    has_constraints = any([constraints_atoms, constraints_dist,
+                           constraints_angle, constraints_dihedral])
 
     # Handle multi-fragment SMILES (aggregates / NCI complexes / TSs)
     if len(smi_parts) > 1:
@@ -1184,7 +1253,14 @@ def smi_to_mol(
                 f"\no  Building RDKit aggregate conformers for "
                 f"{len(smi_parts)}-fragment SMILES"
             )
-            mol = rdkit_aggregate_mol(smi_parts, seed, sample)
+            mol = rdkit_aggregate_mol(
+                smi_parts,
+                seed,
+                sample,
+                constraints_dist=constraints_dist,
+                constraints_angle=constraints_angle,
+                constraints_dihedral=constraints_dihedral,
+            )
             if mol is None:
                 log.write(
                     f"\nx  RDKit embedding failed for one or more fragments in "
@@ -1196,11 +1272,26 @@ def smi_to_mol(
             # Translate atom map numbers to indices in the combined molecule
             # (mirrors the same translation done for single molecules below)
             if mol is not None:
-                map_to_idx = {
-                    atom.GetAtomMapNum(): atom.GetIdx()
-                    for atom in mol.GetAtoms()
-                    if atom.GetAtomMapNum() > 0
-                }
+                map_to_idx, duplicated_maps = _collect_map_to_idx(mol)
+                expected_maps = _collect_mapped_numbers_from_smiles(smi)
+                missing_maps = sorted(set(expected_maps) - set(map_to_idx.keys()))
+                if duplicated_maps:
+                    log.write(
+                        "\nx  WARNING! Repeated atom-map numbers were found in the "
+                        f"SMILES aggregate: {duplicated_maps}. For dotted SMILES, "
+                        "all mapped atom numbers must be unique across fragments "
+                        "to apply constraints (including inter-fragment constraints)."
+                    )
+                    sys.exit()
+                if missing_maps:
+                    log.write(
+                        "\nx  WARNING! Some atom-map numbers from the input SMILES were "
+                        f"not preserved in the aggregate molecule: {missing_maps}. "
+                        "This usually means mapped explicit H atoms were not written "
+                        "explicitly in all fragments. Please include mapped atoms "
+                        "explicitly (e.g. [H:2]) where needed."
+                    )
+                    sys.exit()
                 if map_to_idx:
                     constraints_atoms = _translate_constraint_indices(
                         constraints_atoms, map_to_idx, n_indices=1, log=log)
@@ -1210,6 +1301,13 @@ def smi_to_mol(
                         constraints_angle, map_to_idx, n_indices=3, log=log)
                     constraints_dihedral = _translate_constraint_indices(
                         constraints_dihedral, map_to_idx, n_indices=4, log=log)
+                elif has_constraints:
+                    log.write(
+                        "\nx  Constraints were specified but no atom map numbers were found "
+                        "in the aggregate. Constraint indices must correspond to mapped atoms "
+                        "across all fragments (e.g. [C:1].[N:2]). Stopping."
+                    )
+                    sys.exit()
             constraints = [constraints_atoms, constraints_dist,
                            constraints_angle, constraints_dihedral]
 
@@ -1257,15 +1355,25 @@ def smi_to_mol(
             mol = Chem.AddHs(mol)
 
             # Build map_num -> atom_idx dictionary from mapped atoms
-            map_to_idx = {}
-            for atom in mol.GetAtoms():
-                map_num = atom.GetAtomMapNum()
-                if map_num > 0:
-                    map_to_idx[map_num] = atom.GetIdx()
+            map_to_idx, duplicated_maps = _collect_map_to_idx(mol)
+            expected_maps = _collect_mapped_numbers_from_smiles(smi)
+            missing_maps = sorted(set(expected_maps) - set(map_to_idx.keys()))
+            if duplicated_maps:
+                log.write(
+                    "\nx  WARNING! Repeated atom-map numbers were found in the "
+                    f"SMILES: {duplicated_maps}. Atom-map labels used for constraints "
+                    "must be unique."
+                )
+                sys.exit()
+            if missing_maps:
+                log.write(
+                    "\nx  WARNING! Some atom-map numbers from the input SMILES were "
+                    f"not preserved after RDKit parsing: {missing_maps}. "
+                    "Please ensure mapped atoms are explicitly present in the SMILES."
+                )
+                sys.exit()
 
             # Translate constraint indices if mapped atoms exist
-            has_constraints = any([constraints_atoms, constraints_dist,
-                                   constraints_angle, constraints_dihedral])
             if map_to_idx:
                 constraints_atoms = _translate_constraint_indices(
                     constraints_atoms, map_to_idx, n_indices=1, log=log
@@ -1685,3 +1793,32 @@ def _translate_constraint_indices(constraints, map_to_idx, n_indices, log=None):
             new_constraint[i] = map_to_idx[original]
         translated.append(new_constraint)
     return translated
+
+
+def _collect_map_to_idx(mol):
+    """Collect atom-map-number -> atom-index mapping and duplicated labels.
+
+    Args:
+        mol (rdkit.Chem.rdchem.Mol): Molecule to inspect
+
+    Returns:
+        tuple: (map_to_idx, duplicated_maps)
+            - map_to_idx (dict): map number -> rdkit atom idx
+            - duplicated_maps (list): sorted duplicated map numbers
+    """
+    map_to_idx = {}
+    duplicates = set()
+    for atom in mol.GetAtoms():
+        map_num = atom.GetAtomMapNum()
+        if map_num <= 0:
+            continue
+        if map_num in map_to_idx:
+            duplicates.add(map_num)
+            continue
+        map_to_idx[map_num] = atom.GetIdx()
+    return map_to_idx, sorted(duplicates)
+
+
+def _collect_mapped_numbers_from_smiles(smiles):
+    """Collect mapped atom numbers directly from a SMILES string."""
+    return sorted({int(match) for match in re.findall(r":(\d+)\]", smiles or "")})

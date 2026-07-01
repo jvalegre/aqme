@@ -420,7 +420,13 @@ def apply_pre_energy_filter(sortedcids, cenergy, threshold):
     return selected_cids
 
 
-def apply_rmsd_and_energy_filter(outmols, selectedcids_initial, cenergy, args):
+def apply_rmsd_and_energy_filter(
+    outmols,
+    selectedcids_initial,
+    cenergy,
+    args,
+    rmsd_only=False,
+):
     """Filter conformers based on combined energy and RMSD criteria.
     
     For each conformer, compares with already selected conformers. If energy
@@ -437,9 +443,20 @@ def apply_rmsd_and_energy_filter(outmols, selectedcids_initial, cenergy, args):
             - heavyonly: Use only heavy atoms for RMSD
             - max_matches_rmsd: Maximum atom matches for RMSD calculation
     
+    Args (continued):
+        rmsd_only (bool, optional): Backward-compatible flag from older call
+            paths. If True, skips energy checks and applies only RMSD
+            filtering over selectedcids_initial.
+
     Returns:
         list: Final selected conformer IDs
     """
+    if not selectedcids_initial:
+        return []
+
+    if rmsd_only:
+        return apply_rmsd_only_filter(outmols, selectedcids_initial, args)
+
     selected_cids = [selectedcids_initial[0]]  # Always include lowest energy
     energy_threshold = float(args.energy_threshold)
     rms_threshold = float(args.rms_threshold)

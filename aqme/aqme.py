@@ -41,7 +41,7 @@ def main():
     args = command_line_args()
     args.command_line = True
 
-    if not args.csearch and not args.cmin and not args.qprep and not args.qcorr and not args.qdescp:
+    if not args.csearch and not args.cmin and not args.qprep and not args.qcorr and not args.qdescp and not args.milo:
         print('x  No module was specified in the command line! (i.e. --csearch for conformer generation). If you did specify a module, check that you are using quotation marks when using options (i.e. --files "*.sdf").\n')
 
     # CSEARCH
@@ -64,6 +64,10 @@ def main():
     if args.qdescp:
         qdescp(**vars(args))
 
+    # MILO
+    if args.milo:
+        from aqme.Anat_Milo.core import run_anat_milo_workflow
+        run_anat_milo_workflow(yaml_file=args.yaml_file, data_dir=args.input)
 
 if __name__ == "__main__":
     main()

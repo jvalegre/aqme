@@ -638,6 +638,14 @@ class csearch:
                     constraints_dihedral,
                     sample
                 )
+                if isinstance(smi, str) and "." in smi and check_constraints(
+                    constraints_atoms, constraints_dist, constraints_angle, constraints_dihedral
+                ):
+                    self.args.log.write(
+                        "\no  Constraints for dotted SMILES were mapped to RDKit atom "
+                        "indices. Aggregate fragments were also pre-positioned with "
+                        "outward, van der Waals-aware placement before minimization."
+                    )
             else:
                 mol = smi
                 complex_ts = check_constraints(constraints_atoms, constraints_dist, constraints_angle, constraints_dihedral)

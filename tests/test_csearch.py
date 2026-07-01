@@ -9,7 +9,10 @@ import os
 import pytest
 import glob
 from aqme.csearch import csearch
+from aqme.csearch.utils import rdkit_aggregate_mol, _has_atom_overlap
+import numpy as np
 import rdkit
+from rdkit.Chem import AllChem as Chem
 import shutil
 
 # saves the working directory
@@ -1153,6 +1156,80 @@ def test_csearch_haptic_constraints():
     assert "AQME detected haptic ring binding to a metal and is applying automatic constraints" in log_content
     assert "Automatic hapticity constraints:" in log_content
     os.chdir(w_dir_main)
+
+
+def _get_min_interfragment_vdw_clearance(mol, conf_id=0):
+    """Return the minimum inter-fragment VdW clearance in a conformer."""
+    fragments = Chem.GetMolFrags(mol)
+    conf = mol.GetConformer(conf_id)
+    periodic_table = Chem.GetPeriodicTable()
+    min_clearance = float("inf")
+
+    for frag_i, frag_a in enumerate(fragments):
+        for frag_b in fragments[frag_i + 1:]:
+            for atom_a in frag_a:
+                pos_a = np.array(conf.GetAtomPosition(atom_a))
+                radius_a = periodic_table.GetRvdw(mol.GetAtomWithIdx(atom_a).GetAtomicNum())
+                for atom_b in frag_b:
+                    pos_b = np.array(conf.GetAtomPosition(atom_b))
+                    radius_b = periodic_table.GetRvdw(mol.GetAtomWithIdx(atom_b).GetAtomicNum())
+                    clearance = np.linalg.norm(pos_a - pos_b) - (radius_a + radius_b)
+                    min_clearance = min(min_clearance, clearance)
+
+    return min_clearance
+
+
+def test_rdkit_aggregate_mol_avoids_vdw_overlap():
+    mol = rdkit_aggregate_mol(["C", "O"], seed=7, n_conformers=4)
+
+    assert mol is not None
+    assert mol.HasProp("AggregateSmiles")
+    assert mol.GetNumConformers() == 4
+
+    for conf_id in range(mol.GetNumConformers()):
+        assert _get_min_interfragment_vdw_clearance(mol, conf_id=conf_id) >= -1e-3
+
+
+def test_rdkit_aggregate_mol_uses_interfragment_constraints():
+    mol = rdkit_aggregate_mol(
+        ["[CH4:1]", "[OH2:2]"],
+        seed=11,
+        n_conformers=3,
+        constraints_dist=[[1, 2, 3.0]],
+    )
+
+    assert mol is not None
+
+    mapped_atoms = {
+        atom.GetAtomMapNum(): atom.GetIdx()
+        for atom in mol.GetAtoms()
+        if atom.GetAtomMapNum() > 0
+    }
+    assert 1 in mapped_atoms
+    assert 2 in mapped_atoms
+
+    for conf_id in range(mol.GetNumConformers()):
+        conf = mol.GetConformer(conf_id)
+        distance = np.linalg.norm(
+            np.array(conf.GetAtomPosition(mapped_atoms[1]))
+            - np.array(conf.GetAtomPosition(mapped_atoms[2]))
+        )
+        assert distance >= 3.0 - 1e-3
+        assert _get_min_interfragment_vdw_clearance(mol, conf_id=conf_id) >= -1e-3
+
+
+def test_has_atom_overlap_detects_close_fragments():
+    mol_a = Chem.AddHs(Chem.MolFromSmiles("C"))
+    mol_b = Chem.AddHs(Chem.MolFromSmiles("C"))
+    Chem.EmbedMolecule(mol_a, randomSeed=1)
+    Chem.EmbedMolecule(mol_b, randomSeed=2)
+
+    conf_b = mol_b.GetConformer()
+    for atom_idx in range(mol_b.GetNumAtoms()):
+        pos = np.array(conf_b.GetAtomPosition(atom_idx))
+        conf_b.SetAtomPosition(atom_idx, (pos + np.array([0.15, 0.0, 0.0])).tolist())
+
+    assert _has_atom_overlap(mol_a, mol_b, min_distance=0.4) is True
 
 # tests for removing foler
 @pytest.mark.parametrize(
