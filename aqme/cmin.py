@@ -43,6 +43,8 @@ General
    constraints_dihedral : list of lists, default=[]
      Dihedral constraints for FAMEX FixInternals as [[AT1,AT2,AT3,AT4,DIHEDRAL], ...].
      Dihedrals are specified in degrees.
+   frequencies : bool, default=False
+     If True, calculates vibrational frequencies for conformers surviving filters.
    prefix : str, default=''
      Prefix added to all output names.
    suffix : str, default=''
@@ -486,6 +488,95 @@ class cmin:
             )
             return mol, 0.0, False
 
+    def _calculate_frequencies(self, mol, conf_label, charge, uhf):
+        """Calculate vibrational frequencies for a given conformer using the FAMEX analysis module.
+        
+        Args:
+            mol (rdkit.Chem.PropertyMol): Conformer molecule object.
+            conf_label (str): Label used for naming the output file.
+            charge (int): Molecular charge.
+            uhf (int): Unpaired electrons (multiplicity - 1).
+        """
+        import famex
+        from famex.analysis.frequency import FrequencyAnalysis
+
+        # Define and create the 'Frequencies' subfolder inside the active CMIN folder
+        freq_folder = self.cmin_folder / "Frequencies"
+        freq_folder.mkdir(exist_ok=True, parents=True)
+
+        self.args.log.write(f"\no  FAMEX frequency calculation [{self.args.program}] ({conf_label})")
+
+        try:
+            mult = uhf + 1
+            ase_atoms = self._mol_to_ase_atoms(mol, charge, mult)
+
+            # Suppress internal FAMEX logs during calculator initialization steps
+            with open(os.devnull, "w", encoding="utf-8") as devnull:
+                with contextlib.redirect_stdout(devnull), contextlib.redirect_stderr(devnull):
+                    if self.args.program == "tblite":
+                        with cmin._tblite_lock:
+                            explorer = famex.Explorer(
+                                atoms=ase_atoms,
+                                backend=self.args.program,
+                                target="minima",
+                                strategy="local",
+                                default_charge=charge,
+                                default_spin=mult,
+                                verbose=0
+                            )
+                            # Run 1 step to ensure the result dictionary populates "optimized_atoms" with the calculator
+                            res = explorer.run(steps=1)
+                            active_atoms = res["optimized_atoms"]
+                    else:
+                        explorer = famex.Explorer(
+                            atoms=ase_atoms,
+                            backend=self.args.program,
+                            target="minima",
+                            strategy="local",
+                            default_charge=charge,
+                            default_spin=mult,
+                            verbose=0
+                        )
+                        res = explorer.run(steps=1)
+                        active_atoms = res["optimized_atoms"]
+
+            # Perform frequency and normal mode analysis
+            calc = active_atoms.calc
+            freq_analyzer = FrequencyAnalysis(active_atoms, calc)
+            frequencies = freq_analyzer.get_frequencies()
+            normal_modes = freq_analyzer.get_normal_modes() # Returns (3N x M) matrix
+
+            # Save results to a text file
+            freq_file = freq_folder / f"{conf_label}_freqs.txt"
+            with open(freq_file, "w") as f:
+                f.write(f"Frequencies (cm^-1):\n{frequencies.tolist()}\n\n")
+
+                # Analyze atoms contributing to significant imaginary frequencies
+                for i, freq in enumerate(frequencies):
+                    if freq < -0.0:  # Threshold for significant imaginary frequency
+                        f.write(f"\n--- Analysis for imaginary freq: {freq:.2f} cm^-1 ---\n")
+                        
+                        # Reshape mode vector from (3N) to (N x 3)
+                        mode_vectors = normal_modes[:, i].reshape(-1, 3)
+                        
+                        # Calculate the displacement norm for each atom
+                        displacements = np.linalg.norm(mode_vectors, axis=1)
+                        
+                        # Sort atoms by highest displacement contribution
+                        sorted_atoms = np.argsort(displacements)[::-1]
+                        
+                        f.write("Top moving atoms (Atom Index : Displacement Norm):\n")
+                        for atom_idx in sorted_atoms[:5]: # Top 5 atoms
+                            symbol = active_atoms.get_chemical_symbols()[atom_idx]
+                            f.write(f"Atom {atom_idx} ({symbol}) : {displacements[atom_idx]:.4f}\n")
+
+            self.args.log.write(f"\n   Frequencies and TS analysis saved to {freq_file}")
+
+        except Exception as exc:
+            self.args.log.write(
+                f"\nx  FAMEX frequency calculation failed for {conf_label}: {exc}"
+            )
+
     # ------------------------------------------------------------------
     # Main compute loop
     # ------------------------------------------------------------------
@@ -570,12 +661,19 @@ class cmin:
 
         # Apply energy + RMSD filters
         self.args.log.write(
-            f"\no  Applying filters after {self.args.program} minimisation"
+            f"\o  Applying filters after {self.args.program} minimisation"
         )
         selected_cids = conformer_filters(self, sorted_cids, cenergy, outmols)
 
         # Write filtered conformers
         filtered_mols = [outmols[cid] for cid in selected_cids]
+
+        # Calculate frequencies ONLY for structures that survived the filtering criteria
+        if getattr(self.args, "frequencies", False):
+            for i, mol in enumerate(filtered_mols):
+                conf_label = f"{self.name}_filtered_conf_{i}"
+                self._calculate_frequencies(mol, conf_label, charge, uhf)
+
         for mol in filtered_mols:
             self.sdwriter.write(mol)
         self.sdwriter.close()

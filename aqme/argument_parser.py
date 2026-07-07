@@ -70,6 +70,7 @@ var_dict = {
     "oldchk": False,
     "w_dir_main": os.getcwd(),
     "files": [],
+    "outputs": "",
     "atom_types": [],
     "cartesians": [],
     "dup": True,
@@ -116,6 +117,7 @@ var_dict = {
     "debug": False,
     "pytest_testing": False,
     "milo": False,
+    "frequencies": False,
     "yaml_file": None,
 }
 

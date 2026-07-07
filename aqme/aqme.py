@@ -1,5 +1,10 @@
 #!/usr/bin/env python
 
+import os
+import sys
+import time
+from pathlib import Path
+
 ###########################################################################################.
 ###########################################################################################
 ###                                                                                     ###
@@ -30,6 +35,7 @@ from aqme.qprep import qprep
 from aqme.utils import command_line_args
 from aqme.qcorr import qcorr
 from aqme.qdescp import qdescp
+from aqme.utils import Logger, aqme_ref, aqme_version, time_run, _format_command_line_for_log
 
 
 def main():
@@ -67,7 +73,42 @@ def main():
     # MILO
     if args.milo:
         from aqme.Anat_Milo.core import run_anat_milo_workflow
-        run_anat_milo_workflow(yaml_file=args.yaml_file, data_dir=args.input)
+        milo_log = Logger(Path(os.getcwd()) / "MILO", "data", verbose=True)
+        milo_log.write(f"AQME v {aqme_version} {time_run} \nCitation: {aqme_ref}\n")
+        milo_log.write(f"Command line used in AQME: python -m aqme {_format_command_line_for_log(sys.argv[1:])}\n")
+
+        start_time = time.time()
+        try:
+            if args.outputs and args.yaml_file:
+                run_anat_milo_workflow(
+                    yaml_file=args.yaml_file,
+                    outputs_dir=args.outputs,
+                    log=milo_log,
+                )
+            elif args.outputs:
+                run_anat_milo_workflow(
+                    outputs_dir=args.outputs,
+                    log=milo_log,
+                )
+            elif args.yaml_file and args.input:
+                run_anat_milo_workflow(
+                    yaml_file=args.yaml_file,
+                    data_dir=args.input,
+                    log=milo_log,
+                )
+            else:
+                milo_log.write("x  MILO needs either --outputs, or --yaml_file together with --input.")
+                raise SystemExit(1)
+        except Exception as exc:
+            milo_log.write(f"x  MILO failed: {exc}")
+            raise SystemExit(1) from exc
+        finally:
+            elapsed = round(time.time() - start_time, 2)
+            milo_log.write(f"\nTime MILO: {elapsed} seconds\n")
+            milo_log.finalize()
 
 if __name__ == "__main__":
     main()
+import os
+import time
+from pathlib import Path
