@@ -196,7 +196,7 @@ class PropertyCalculator:
         # Move input file
         shutil.move(xyz_file, str(files['xyz']))
         
-        # Run minimization through CMIN (QME/tblite backend by default)
+        # Run minimization through CMIN (FAMEX/tblite backend by default)
         success = self._run_cmin_minimization(
             files, charge, mult, name, source_sdf
         )
@@ -218,8 +218,8 @@ class PropertyCalculator:
         runner._validate_program()
 
         uhf = int(float(mult)) - 1
-        constraints = runner._build_qme_constraints(mol)
-        opt_mol, energy_kcal, success = runner._optimize_with_qme(
+        constraints = runner._build_famex_constraints(mol)
+        opt_mol, energy_kcal, success = runner._optimize_with_famex(
             mol, conf_name, int(float(charge)), uhf, constraints
         )
         if not success:

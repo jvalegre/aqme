@@ -9,7 +9,7 @@ General
      Input files. Formats accepted: SDF. Also, lists can be used
      (i.e. [FILE1.sdf, FILE2.sdf] or \*.sdf).
    program : str, default='xtb'
-     QME backend used for geometry optimization.
+     FAMEX backend used for geometry optimization.
      Current options: 'xtb', 'aimnet2', 'mace', 'orb', 'so3lr', 'uma'
    w_dir_main : str, default=os.getcwd()
      Working directory
@@ -18,11 +18,11 @@ General
    varfile : str, default=None
      Option to parse the variables using a yaml file (specify the filename)
    charge : int, default=None
-     Charge for QME calculations. If not set, read from SDF 'Real charge'
+     Charge for FAMEX calculations. If not set, read from SDF 'Real charge'
      property; if missing, defaults to 0.
    mult : int, default=None
-     Multiplicity for QME calculations. If not set, read from SDF 'Mult'
-     property; if missing, defaults to 1. uhf = mult - 1 is passed to QME.
+     Multiplicity for FAMEX calculations. If not set, read from SDF 'Mult'
+     property; if missing, defaults to 1. uhf = mult - 1 is passed to FAMEX.
    ewin_cmin : float, default=5.0
      Energy window in kcal/mol to discard conformers after optimization.
    initial_energy_threshold : float, default=0.0001
@@ -32,17 +32,19 @@ General
    rms_threshold : float, default=0.25
      RMS difference threshold for the second filter.
    opt_fmax : float, default=0.05
-     Convergence criterion (max force, eV/Å) for the BFGS optimizer in QME.
+     Convergence criterion (max force, eV/Å) for the BFGS optimizer in FAMEX.
    opt_steps : int, default=1000
      Maximum number of BFGS steps.
    constraints_dist : list of lists, default=[]
-     Distance constraints for QME FixInternals as [[AT1,AT2,DIST], ...].
+     Distance constraints for FAMEX FixInternals as [[AT1,AT2,DIST], ...].
    constraints_angle : list of lists, default=[]
-     Angle constraints for QME FixInternals as [[AT1,AT2,AT3,ANGLE], ...].
+     Angle constraints for FAMEX FixInternals as [[AT1,AT2,AT3,ANGLE], ...].
      Angles are specified in degrees.
    constraints_dihedral : list of lists, default=[]
-     Dihedral constraints for QME FixInternals as [[AT1,AT2,AT3,AT4,DIHEDRAL], ...].
+     Dihedral constraints for FAMEX FixInternals as [[AT1,AT2,AT3,AT4,DIHEDRAL], ...].
      Dihedrals are specified in degrees.
+   frequencies : bool, default=False
+     If True, calculates vibrational frequencies for conformers surviving filters.
    prefix : str, default=''
      Prefix added to all output names.
    suffix : str, default=''
@@ -51,7 +53,7 @@ General
 
 #####################################################.
 #          This file stores the CMIN class          #
-#        Conformer refinement via QME backend       #
+#        Conformer refinement via FAMEX backend       #
 #####################################################.
 
 import os
@@ -86,9 +88,9 @@ class cmin:
     _tblite_lock = threading.Lock()
 
     """
-    Conformer refinement using a QME backend (default: xtb).
+    Conformer refinement using a FAMEX backend (default: xtb).
 
-    Reads conformers from SDF files, optimizes them using QME, applies 
+    Reads conformers from SDF files, optimizes them using FAMEX, applies 
     energy/RMSD filters, and writes the results to SDF format.
 
     Parameters
@@ -157,7 +159,7 @@ class cmin:
     # ------------------------------------------------------------------
 
     def _validate_program(self):
-        """Check that the requested QME backend (passed as program) is importable."""
+        """Check that the requested FAMEX backend (passed as program) is importable."""
         supported = {"xtb", "tblite", "aimnet2", "mace", "orb", "so3lr", "uma"}
         program = getattr(self.args, "program", "xtb") or "xtb"
         program = program.lower()
@@ -176,10 +178,10 @@ class cmin:
         self.args.program = program
 
         try:
-            import qme  # noqa: F401
+            import famex 
         except ImportError:
             self.args.log.write(
-                "\nx  QME is not installed. Install it with: pip install qme-ml"
+                "\nx  FAMEX is not installed. Install it with: pip install famex"
             )
             self.args.log.finalize()
             sys.exit()
@@ -229,15 +231,24 @@ class cmin:
         """Read 'Real charge' and 'Mult' properties written by CSEARCH."""
         charge, mult = None, None
         try:
+            def _parse_int_like(raw_value):
+                """Parse numeric strings like '1', '1.0', '+1', '-1.000' into int."""
+                token = str(raw_value).strip().split()[0]
+                return int(round(float(token)))
+
             with open(sdf_file, "r") as fh:
                 lines = fh.readlines()
             charge_found = mult_found = False
             for i, line in enumerate(lines):
-                if ">  <Real charge>" in line:
-                    charge = int(lines[i + 1].split()[0])
+                # Support common SDF header variants, e.g.:
+                # >  <Real charge>  (1)
+                # > <Real charge>
+                # >  <Mult>  (1)
+                if "<Real charge>" in line:
+                    charge = _parse_int_like(lines[i + 1])
                     charge_found = True
-                if ">  <Mult>" in line:
-                    mult = int(lines[i + 1].split()[0])
+                if "<Mult>" in line:
+                    mult = _parse_int_like(lines[i + 1])
                     mult_found = True
                 if charge_found and mult_found:
                     break
@@ -246,7 +257,7 @@ class cmin:
         return charge, mult
 
     def _determine_charge_mult(self, sdf_file):
-        """Return (charge, uhf) to pass to QME.
+        """Return (charge, uhf) to pass to FAMEX.
 
         Priority: user arg > SDF property > default (0, 0).
         uhf = mult - 1 (number of unpaired electrons).
@@ -275,7 +286,7 @@ class cmin:
         return int(charge), uhf
 
     # ------------------------------------------------------------------
-    # Core QME optimisation
+    # Core FAMEX optimisation
     # ------------------------------------------------------------------
 
     def _mol_to_ase_atoms(self, mol, charge, mult):
@@ -340,9 +351,9 @@ class cmin:
         return constraints
 
     def _add_fixinternals_specs(
-        self, specs, constraints, n_indices, qme_type, arg_name, n_atoms
+        self, specs, constraints, n_indices, famex_type, arg_name, n_atoms
     ):
-        """Append validated QME FixInternals specs from AQME nested constraints."""
+        """Append validated FAMEX FixInternals specs from AQME nested constraints."""
         for constraint in constraints:
             if not isinstance(constraint, (list, tuple, np.ndarray)):
                 raise ValueError(
@@ -371,10 +382,10 @@ class cmin:
                     )
 
             indices_str = ",".join(str(idx) for idx in atom_indices)
-            specs.append(f"fixinternals_{qme_type} {indices_str} value={target_value}")
+            specs.append(f"fixinternals_{famex_type} {indices_str} value={target_value}")
 
-    def _build_qme_constraints(self, mol):
-        """Builds QME constraints using local copies to prevent accumulation."""
+    def _build_famex_constraints(self, mol):
+        """Builds FAMEX constraints using local copies to prevent accumulation."""
         
         # Get user-defined constraints from the command line/args
         user_dist = self._as_constraint_list(getattr(self.args, "constraints_dist", []))
@@ -400,11 +411,11 @@ class cmin:
         self._add_fixinternals_specs(specs, constraints_dihedral, 4, "dihedral", "constraints_dihedral", n_atoms)
 
         constraints_str = "; ".join(specs)
-        self.args.log.write(f"\n   Applying QME FixInternals constraints: {constraints_str}")
+        self.args.log.write(f"\n   Applying FAMEX FixInternals constraints: {constraints_str}")
         return constraints_str
 
-    def _optimize_with_qme(self, mol, conf_name, charge, uhf, constraints=None):
-        """Run a single QME local minimisation.
+    def _optimize_with_famex(self, mol, conf_name, charge, uhf, constraints=None):
+        """Run a single FAMEX local minimisation.
 
         Parameters
         ----------
@@ -421,9 +432,9 @@ class cmin:
         -------
         tuple : (mol, energy_kcal, success)
         """
-        import qme
+        import famex
 
-        self.args.log.write(f"\no  QME optimisation [{self.args.program}] ({conf_name})")
+        self.args.log.write(f"\no  FAMEX optimisation [{self.args.program}] ({conf_name})")
 
         try:
             mult = uhf + 1
@@ -434,11 +445,10 @@ class cmin:
 
             if self.args.program == "tblite":
                 with cmin._tblite_lock:
-                    # qme/tblite can print backend arrays to terminal.
                     # Redirect to os.devnull to avoid buffering large strings.
                     with open(os.devnull, "w", encoding="utf-8") as devnull:
                         with contextlib.redirect_stdout(devnull), contextlib.redirect_stderr(devnull):
-                            explorer = qme.Explorer(
+                            explorer = famex.Explorer(
                                 atoms=ase_atoms,
                                 backend=self.args.program,
                                 target="minima",
@@ -450,7 +460,7 @@ class cmin:
                             )
                             result = explorer.run(fmax=fmax, steps=steps)
             else:
-                explorer = qme.Explorer(
+                explorer = famex.Explorer(
                     atoms=ase_atoms,
                     backend=self.args.program,
                     target="minima",
@@ -474,9 +484,98 @@ class cmin:
 
         except Exception as exc:
             self.args.log.write(
-                f"\nx  QME optimisation failed for {conf_name}: {exc}"
+                f"\nx  FAMEX optimisation failed for {conf_name}: {exc}"
             )
             return mol, 0.0, False
+
+    def _calculate_frequencies(self, mol, conf_label, charge, uhf):
+        """Calculate vibrational frequencies for a given conformer using the FAMEX analysis module.
+        
+        Args:
+            mol (rdkit.Chem.PropertyMol): Conformer molecule object.
+            conf_label (str): Label used for naming the output file.
+            charge (int): Molecular charge.
+            uhf (int): Unpaired electrons (multiplicity - 1).
+        """
+        import famex
+        from famex.analysis.frequency import FrequencyAnalysis
+
+        # Define and create the 'Frequencies' subfolder inside the active CMIN folder
+        freq_folder = self.cmin_folder / "Frequencies"
+        freq_folder.mkdir(exist_ok=True, parents=True)
+
+        self.args.log.write(f"\no  FAMEX frequency calculation [{self.args.program}] ({conf_label})")
+
+        try:
+            mult = uhf + 1
+            ase_atoms = self._mol_to_ase_atoms(mol, charge, mult)
+
+            # Suppress internal FAMEX logs during calculator initialization steps
+            with open(os.devnull, "w", encoding="utf-8") as devnull:
+                with contextlib.redirect_stdout(devnull), contextlib.redirect_stderr(devnull):
+                    if self.args.program == "tblite":
+                        with cmin._tblite_lock:
+                            explorer = famex.Explorer(
+                                atoms=ase_atoms,
+                                backend=self.args.program,
+                                target="minima",
+                                strategy="local",
+                                default_charge=charge,
+                                default_spin=mult,
+                                verbose=0
+                            )
+                            # Run 1 step to ensure the result dictionary populates "optimized_atoms" with the calculator
+                            res = explorer.run(steps=1)
+                            active_atoms = res["optimized_atoms"]
+                    else:
+                        explorer = famex.Explorer(
+                            atoms=ase_atoms,
+                            backend=self.args.program,
+                            target="minima",
+                            strategy="local",
+                            default_charge=charge,
+                            default_spin=mult,
+                            verbose=0
+                        )
+                        res = explorer.run(steps=1)
+                        active_atoms = res["optimized_atoms"]
+
+            # Perform frequency and normal mode analysis
+            calc = active_atoms.calc
+            freq_analyzer = FrequencyAnalysis(active_atoms, calc)
+            frequencies = freq_analyzer.get_frequencies()
+            normal_modes = freq_analyzer.get_normal_modes() # Returns (3N x M) matrix
+
+            # Save results to a text file
+            freq_file = freq_folder / f"{conf_label}_freqs.txt"
+            with open(freq_file, "w") as f:
+                f.write(f"Frequencies (cm^-1):\n{frequencies.tolist()}\n\n")
+
+                # Analyze atoms contributing to significant imaginary frequencies
+                for i, freq in enumerate(frequencies):
+                    if freq < -0.0:  # Threshold for significant imaginary frequency
+                        f.write(f"\n--- Analysis for imaginary freq: {freq:.2f} cm^-1 ---\n")
+                        
+                        # Reshape mode vector from (3N) to (N x 3)
+                        mode_vectors = normal_modes[:, i].reshape(-1, 3)
+                        
+                        # Calculate the displacement norm for each atom
+                        displacements = np.linalg.norm(mode_vectors, axis=1)
+                        
+                        # Sort atoms by highest displacement contribution
+                        sorted_atoms = np.argsort(displacements)[::-1]
+                        
+                        f.write("Top moving atoms (Atom Index : Displacement Norm):\n")
+                        for atom_idx in sorted_atoms[:5]: # Top 5 atoms
+                            symbol = active_atoms.get_chemical_symbols()[atom_idx]
+                            f.write(f"Atom {atom_idx} ({symbol}) : {displacements[atom_idx]:.4f}\n")
+
+            self.args.log.write(f"\n   Frequencies and TS analysis saved to {freq_file}")
+
+        except Exception as exc:
+            self.args.log.write(
+                f"\nx  FAMEX frequency calculation failed for {conf_label}: {exc}"
+            )
 
     # ------------------------------------------------------------------
     # Main compute loop
@@ -508,12 +607,12 @@ class cmin:
             )
             return
 
-        constraints = self._build_qme_constraints(tasks[0][0])
+        constraints = self._build_famex_constraints(tasks[0][0])
         
         with concurrent.futures.ThreadPoolExecutor(max_workers=nprocs) as executor:
             futures_list = [
                 executor.submit(
-                    self._optimize_with_qme,
+                    self._optimize_with_famex,
                     task[0],
                     task[1],
                     task[2],
@@ -562,12 +661,19 @@ class cmin:
 
         # Apply energy + RMSD filters
         self.args.log.write(
-            f"\no  Applying filters after {self.args.program} minimisation"
+            f"\o  Applying filters after {self.args.program} minimisation"
         )
         selected_cids = conformer_filters(self, sorted_cids, cenergy, outmols)
 
         # Write filtered conformers
         filtered_mols = [outmols[cid] for cid in selected_cids]
+
+        # Calculate frequencies ONLY for structures that survived the filtering criteria
+        if getattr(self.args, "frequencies", False):
+            for i, mol in enumerate(filtered_mols):
+                conf_label = f"{self.name}_filtered_conf_{i}"
+                self._calculate_frequencies(mol, conf_label, charge, uhf)
+
         for mol in filtered_mols:
             self.sdwriter.write(mol)
         self.sdwriter.close()

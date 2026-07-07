@@ -51,13 +51,13 @@ jobs:
           conda install -y -c conda-forge crest=2.12
           conda install -y -c conda-forge libgfortran=14.2.0
           pip install ase==3.28.0
-          conda install -y -c conda-forge tblite tblite-python pytorch
+          conda install -y -c conda-forge tblite tblite-python
           conda install -y -c conda-forge pytorch
 
-          # install requirement for QME using the GITHUB_TOKEN environment variable
-          git clone https://${GITHUB_TOKEN}@github.com/rlaplaza-lab/qme.git && pip install -e ./qme
+          # install dependencies of FAMEX for CMIN
+          pip install famex
 
-          # install the dependencies of AQME with pip
+          # install dependencies of AQME with pip
           pip install .
 
           # install and run pytest

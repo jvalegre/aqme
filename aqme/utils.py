@@ -354,9 +354,10 @@ def _get_argument_categories():
         tuple: (bool_args, list_args, int_args, float_args)
     """
     bool_args = [
-        "csearch", "cmin", "qprep", "qcorr", "qdescp",
+        "csearch", "cmin", "qprep", "qcorr", "qdescp", "milo",
         "heavyonly", "single_system", "cregen", "lowest_only",
-        "chk", "oldchk", "nodup_check", "robert", "debug", "pytest_testing"
+        "chk", "oldchk", "nodup_check", "robert", "debug", "pytest_testing",
+        "frequencies"
     ]
     
     list_args = [
