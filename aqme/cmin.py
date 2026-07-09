@@ -43,8 +43,12 @@ General
    constraints_dihedral : list of lists, default=[]
      Dihedral constraints for FAMEX FixInternals as [[AT1,AT2,AT3,AT4,DIHEDRAL], ...].
      Dihedrals are specified in degrees.
-   frequencies : bool, default=False
+   target : str, default='minima'
+     Optimization target for FAMEX. Accepted values: 'minima' and 'ts'.
+     Command-line flag: --target.
+   freq : bool, default=False
      If True, calculates vibrational frequencies for conformers surviving filters.
+     Command-line alias: --freq.
    prefix : str, default=''
      Prefix added to all output names.
    suffix : str, default=''
@@ -108,6 +112,7 @@ class cmin:
 
         self.args = load_variables(kwargs, "cmin")
         # check_dependencies(self)
+        self._validate_target()
 
         # Validate program choice
         self._validate_program()
@@ -185,6 +190,26 @@ class cmin:
             )
             self.args.log.finalize()
             sys.exit()
+
+    def _validate_target(self):
+        """Validate and normalize the requested FAMEX optimization target."""
+        target = getattr(self.args, "target", None)
+        if target in [None, ""]:
+            target = "minima"
+
+        target = str(target).lower()
+        if target not in {"minima", "ts"}:
+            self.args.log.write(
+                "\nx  Invalid target value. Choose 'minima' or 'ts'."
+            )
+            self.args.log.finalize()
+            sys.exit()
+
+        self.args.target = target
+
+    def _get_famex_target(self):
+        """Return the FAMEX Explorer target for the current optimization mode."""
+        return "ts" if getattr(self.args, "target", "minima") == "ts" else "minima"
 
     # ------------------------------------------------------------------
     # I/O helpers
@@ -439,6 +464,7 @@ class cmin:
         try:
             mult = uhf + 1
             ase_atoms = self._mol_to_ase_atoms(mol, charge, mult)
+            target = self._get_famex_target()
 
             fmax = getattr(self.args, "opt_fmax", 0.05)
             steps = getattr(self.args, "opt_steps", 1000)
@@ -451,7 +477,7 @@ class cmin:
                             explorer = famex.Explorer(
                                 atoms=ase_atoms,
                                 backend=self.args.program,
-                                target="minima",
+                                target=target,
                                 strategy="local",
                                 default_charge=charge,
                                 default_spin=mult,
@@ -463,7 +489,7 @@ class cmin:
                 explorer = famex.Explorer(
                     atoms=ase_atoms,
                     backend=self.args.program,
-                    target="minima",
+                    target=target,
                     strategy="local",
                     default_charge=charge,
                     default_spin=mult,
@@ -500,15 +526,12 @@ class cmin:
         import famex
         from famex.analysis.frequency import FrequencyAnalysis
 
-        # Define and create the 'Frequencies' subfolder inside the active CMIN folder
-        freq_folder = self.cmin_folder / "Frequencies"
-        freq_folder.mkdir(exist_ok=True, parents=True)
-
         self.args.log.write(f"\no  FAMEX frequency calculation [{self.args.program}] ({conf_label})")
 
         try:
             mult = uhf + 1
             ase_atoms = self._mol_to_ase_atoms(mol, charge, mult)
+            target = self._get_famex_target()
 
             # Suppress internal FAMEX logs during calculator initialization steps
             with open(os.devnull, "w", encoding="utf-8") as devnull:
@@ -518,7 +541,7 @@ class cmin:
                             explorer = famex.Explorer(
                                 atoms=ase_atoms,
                                 backend=self.args.program,
-                                target="minima",
+                                target=target,
                                 strategy="local",
                                 default_charge=charge,
                                 default_spin=mult,
@@ -531,7 +554,7 @@ class cmin:
                         explorer = famex.Explorer(
                             atoms=ase_atoms,
                             backend=self.args.program,
-                            target="minima",
+                            target=target,
                             strategy="local",
                             default_charge=charge,
                             default_spin=mult,
@@ -545,37 +568,105 @@ class cmin:
             freq_analyzer = FrequencyAnalysis(active_atoms, calc)
             frequencies = freq_analyzer.get_frequencies()
             normal_modes = freq_analyzer.get_normal_modes() # Returns (3N x M) matrix
-
-            # Save results to a text file
-            freq_file = freq_folder / f"{conf_label}_freqs.txt"
-            with open(freq_file, "w") as f:
-                f.write(f"Frequencies (cm^-1):\n{frequencies.tolist()}\n\n")
-
-                # Analyze atoms contributing to significant imaginary frequencies
-                for i, freq in enumerate(frequencies):
-                    if freq < -0.0:  # Threshold for significant imaginary frequency
-                        f.write(f"\n--- Analysis for imaginary freq: {freq:.2f} cm^-1 ---\n")
-                        
-                        # Reshape mode vector from (3N) to (N x 3)
-                        mode_vectors = normal_modes[:, i].reshape(-1, 3)
-                        
-                        # Calculate the displacement norm for each atom
-                        displacements = np.linalg.norm(mode_vectors, axis=1)
-                        
-                        # Sort atoms by highest displacement contribution
-                        sorted_atoms = np.argsort(displacements)[::-1]
-                        
-                        f.write("Top moving atoms (Atom Index : Displacement Norm):\n")
-                        for atom_idx in sorted_atoms[:5]: # Top 5 atoms
-                            symbol = active_atoms.get_chemical_symbols()[atom_idx]
-                            f.write(f"Atom {atom_idx} ({symbol}) : {displacements[atom_idx]:.4f}\n")
-
-            self.args.log.write(f"\n   Frequencies and TS analysis saved to {freq_file}")
+            freq_values = [float(freq) for freq in np.asarray(frequencies).ravel()]
+            imaginary_analysis = []
+            for i, freq in enumerate(freq_values):
+                if freq < 0.0:
+                    mode_vectors = normal_modes[:, i].reshape(-1, 3)
+                    displacements = np.linalg.norm(mode_vectors, axis=1)
+                    imaginary_analysis.append(
+                        {
+                            "frequency": float(freq),
+                            "top_atoms": [
+                                {
+                                    "atom_idx": int(atom_idx),
+                                    "symbol": active_atoms.get_chemical_symbols()[atom_idx],
+                                    "displacement": float(displacements[atom_idx]),
+                                }
+                                for atom_idx in np.argsort(displacements)[::-1][:5]
+                            ],
+                        }
+                    )
+            return {
+                "conf_label": conf_label,
+                "frequencies": freq_values,
+                "n_negative": int(sum(1 for freq in freq_values if freq < 0.0)),
+                "imaginary_analysis": imaginary_analysis,
+            }
 
         except Exception as exc:
             self.args.log.write(
                 f"\nx  FAMEX frequency calculation failed for {conf_label}: {exc}"
             )
+            return None
+
+    def _write_frequencies_report(self, freq_results):
+        """Write the combined frequency report to a single file."""
+        freq_file = self.cmin_folder / "frecuencies.dat"
+        target = getattr(self.args, "target", "minima")
+
+        one_negative = [item["conf_label"] for item in freq_results if item["n_negative"] == 1]
+        two_or_more = [
+            item["conf_label"] for item in freq_results if item["n_negative"] >= 2
+        ]
+        none = [item["conf_label"] for item in freq_results if item["n_negative"] == 0]
+
+        with open(freq_file, "w", encoding="utf-8") as fh:
+            fh.write(f"CMIN frequencies report for {self.name}\n")
+            fh.write(f"Target: {target}\n")
+            fh.write(f"Program: {self.args.program}\n\n")
+
+            if target == "ts":
+                fh.write("TS frequency summary\n")
+                fh.write(
+                    f"One negative frequency: {', '.join(one_negative) if one_negative else 'none'}\n"
+                )
+                fh.write(
+                    f"Two or more negative frequencies: {', '.join(two_or_more) if two_or_more else 'none'}\n"
+                )
+                fh.write(
+                    f"No negative frequencies: {', '.join(none) if none else 'none'}\n\n"
+                )
+                self.args.log.write("\no  TS frequency summary")
+                self.args.log.write(
+                    f"\n   One negative frequency: "
+                    f"{', '.join(one_negative) if one_negative else 'none'}"
+                )
+                self.args.log.write(
+                    f"\n   Two or more negative frequencies: "
+                    f"{', '.join(two_or_more) if two_or_more else 'none'}"
+                )
+                self.args.log.write(
+                    f"\n   No negative frequencies: "
+                    f"{', '.join(none) if none else 'none'}"
+                )
+
+            if not freq_results:
+                fh.write("No frequency calculations were performed.\n")
+                self.args.log.write(
+                    f"\no  Frequencies report saved to {freq_file}"
+                )
+                return freq_file
+
+            for item in freq_results:
+                fh.write(f"Conformer: {item['conf_label']}\n")
+                fh.write(f"Negative frequencies: {item['n_negative']}\n")
+                fh.write(f"Frequencies (cm^-1): {item['frequencies']}\n")
+                if item["imaginary_analysis"]:
+                    for analysis in item["imaginary_analysis"]:
+                        fh.write(
+                            f"  Imaginary frequency: {analysis['frequency']:.2f} cm^-1\n"
+                        )
+                        fh.write("  Top moving atoms:\n")
+                        for atom in analysis["top_atoms"]:
+                            fh.write(
+                                f"    Atom {atom['atom_idx']} ({atom['symbol']}) : "
+                                f"{atom['displacement']:.4f}\n"
+                            )
+                fh.write("\n")
+
+        self.args.log.write(f"\no  Frequencies report saved to {freq_file}")
+        return freq_file
 
     # ------------------------------------------------------------------
     # Main compute loop
@@ -668,11 +759,15 @@ class cmin:
         # Write filtered conformers
         filtered_mols = [outmols[cid] for cid in selected_cids]
 
+        freq_results = []
         # Calculate frequencies ONLY for structures that survived the filtering criteria
-        if getattr(self.args, "frequencies", False):
+        if getattr(self.args, "freq", False):
             for i, mol in enumerate(filtered_mols):
                 conf_label = f"{self.name}_filtered_conf_{i}"
-                self._calculate_frequencies(mol, conf_label, charge, uhf)
+                freq_result = self._calculate_frequencies(mol, conf_label, charge, uhf)
+                if freq_result is not None:
+                    freq_results.append(freq_result)
+            self._write_frequencies_report(freq_results)
 
         for mol in filtered_mols:
             self.sdwriter.write(mol)

@@ -357,7 +357,7 @@ def _get_argument_categories():
         "csearch", "cmin", "qprep", "qcorr", "qdescp", "milo",
         "heavyonly", "single_system", "cregen", "lowest_only",
         "chk", "oldchk", "nodup_check", "robert", "debug", "pytest_testing",
-        "frequencies"
+        "freq"
     ]
     
     list_args = [

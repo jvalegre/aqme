@@ -117,7 +117,8 @@ var_dict = {
     "debug": False,
     "pytest_testing": False,
     "milo": False,
-    "frequencies": False,
+    "freq": False,
+    "target": "minima",
     "yaml_file": None,
 }
 
