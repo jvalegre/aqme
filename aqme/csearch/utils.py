@@ -120,7 +120,7 @@ def prepare_smiles_files(args, csearch_file):
             args.sample             # Sample
         )
         job_inputs.append(job_config)
-
+    # Finished building the job list.
     return job_inputs
 
 
@@ -587,8 +587,117 @@ def prepare_sdf_files(args, csearch_file):
             args.sample             # Sample
         )
         job_inputs.append(job_config)
-        
+
     return job_inputs
+
+
+def _get_input_extension(input_file):
+    """Return the lowercase extension of *input_file* without the dot."""
+    return os.path.basename(Path(input_file)).split(".")[-1].lower()
+
+
+def _parse_sdf_charge(mol):
+    """Extract the charge stored on a molecule loaded from SDF, if present."""
+    if mol is None or not mol.HasProp("Real charge"):
+        return None
+
+    try:
+        return int(mol.GetProp("Real charge"))
+    except (TypeError, ValueError):
+        return None
+
+
+def resolve_racerts_charge(args, mol, input_file, log):
+    """Resolve the charge used by the RacerTS freeze workflow."""
+    if args.charge is not None:
+        return int(args.charge)
+
+    input_ext = _get_input_extension(input_file)
+    charge = None
+
+    if input_ext == "sdf":
+        charge = _parse_sdf_charge(mol)
+        if charge is None:
+            log.write(
+                "\nx  No charge could be read from the SDF input. "
+                "It is recommended to set --charge explicitly. "
+                "Defaulting to 0."
+            )
+            return 0
+
+        return charge
+
+    if input_ext == "xyz":
+        log.write(
+            "\nx  XYZ input does not store a reliable charge. "
+            "It is recommended to set --charge explicitly. "
+            "Defaulting to 0."
+        )
+        return 0
+
+    log.write(
+        "\nx  No charge could be determined for the freeze workflow. "
+        "It is recommended to set --charge explicitly. Defaulting to 0."
+    )
+    return 0
+
+
+def resolve_racerts_reacting_atoms(args, mol, input_file, log):
+    """Translate --freeze values into the 1-based reacting atom indices used by RacerTS."""
+    freeze_atoms = getattr(args, "freeze", []) or []
+    if not freeze_atoms:
+        return []
+
+    input_ext = _get_input_extension(input_file)
+    reacting_atoms = []
+
+    if input_ext == "xyz":
+        n_atoms = mol.GetNumAtoms() if mol is not None else 0
+        for atom_num in freeze_atoms:
+            atom_idx = int(atom_num)
+            if atom_idx < 1 or atom_idx > n_atoms:
+                log.write(
+                    f"\nx  Freeze index {atom_idx} is not available in the XYZ input. "
+                    f"Available atom numbers are 1 to {n_atoms}."
+                )
+                if hasattr(log, "finalize"):
+                    log.finalize()
+                sys.exit()
+            reacting_atoms.append(atom_idx)
+        return reacting_atoms
+
+    if input_ext == "sdf":
+        map_to_idx, duplicated_maps = _collect_map_to_idx(mol)
+        if duplicated_maps:
+            log.write(
+                "\nx  Repeated atom-map numbers were found in the SDF input: "
+                f"{duplicated_maps}. Freeze indices must correspond to unique mapped atoms."
+            )
+            if hasattr(log, "finalize"):
+                log.finalize()
+            sys.exit()
+
+        if not map_to_idx:
+            log.write(
+                "\nx  Freeze indices were provided but no atom mapping was found in the SDF. "
+                "Available map numbers are: []. Freeze indices must correspond to mapped atoms "
+                "in the molecule (e.g. [C:1], [N:2]). Stopping."
+            )
+            if hasattr(log, "finalize"):
+                log.finalize()
+            sys.exit()
+
+        translated = _translate_constraint_indices(
+            freeze_atoms, map_to_idx, n_indices=1, log=log
+        )
+        return [item[0] + 1 for item in translated]
+
+    log.write(
+        "\nx  The --freeze option is only supported for SDF and XYZ inputs."
+    )
+    if hasattr(log, "finalize"):
+        log.finalize()
+    sys.exit()
 
 
 def xyz_2_sdf(file):
@@ -802,32 +911,60 @@ def minimize_rdkit_energy(mol, conf, log, FF, maxsteps,
 
     forcefield = None
     if FF.upper() == "MMFF":
-        properties = Chem.MMFFGetMoleculeProperties(mol)
-        forcefield = Chem.MMFFGetMoleculeForceField(mol, properties, confId=conf)
+        try:
+            properties = Chem.MMFFGetMoleculeProperties(mol)
+            forcefield = Chem.MMFFGetMoleculeForceField(mol, properties, confId=conf)
+        except Exception:
+            forcefield = None
         if forcefield is None:
-            log.write(f"x  Force field {FF} did not work! Falling back to UFF.")
+            log.write(
+                "\nx  MMFF could not be built for this conformer. "
+                "Using UFF directly instead."
+            )
 
     if FF.upper() == "UFF" or forcefield is None:
-        forcefield = Chem.UFFGetMoleculeForceField(mol, confId=conf)
+        try:
+            forcefield = Chem.UFFGetMoleculeForceField(mol, confId=conf)
+        except Exception:
+            forcefield = None
 
     has_constraints = any([constraints_atoms, constraints_dist,
                            constraints_angle, constraints_dihedral])
-    if has_constraints:
-        apply_rdkit_constraints(
-            forcefield,
-            constraints_atoms, constraints_dist,
-            constraints_angle, constraints_dihedral
+    if forcefield is None:
+        log.write(
+            "\nx  UFF could not be built for this conformer. "
+            "Keeping the input geometry without optimization."
         )
+        return 0.0
+
+    if has_constraints:
+        try:
+            apply_rdkit_constraints(
+                forcefield,
+                constraints_atoms, constraints_dist,
+                constraints_angle, constraints_dihedral
+            )
+        except Exception:
+            log.write(
+                "\nx  RDKit constraints could not be applied to this conformer. "
+                "Keeping the unconstrained UFF optimization."
+            )
 
     energy = 0.0
     try:
         forcefield.Initialize()
         forcefield.Minimize(maxIts=maxsteps)
         energy = float(forcefield.CalcEnergy())
-    except RuntimeError:
-        log.write(f"\nx  Geometry minimization failed with {FF}, using non-optimized geometry.")
+    except (RuntimeError, AttributeError, ValueError):
+        log.write(
+            f"\nx  Geometry minimization failed with {FF}. "
+            "Keeping the current geometry."
+        )
         if forcefield is not None:
-            energy = float(forcefield.CalcEnergy())
+            try:
+                energy = float(forcefield.CalcEnergy())
+            except Exception:
+                energy = 0.0
 
     # --- APLICAMOS EL ALGORITMO MATEMÁTICO ---
     _resolve_post_min_clashes(mol, conf, constraints_dist, min_dist=1.0, tolerance=0.5)
@@ -843,13 +980,21 @@ def realign_mol(mol, conf, coord_Map, alg_Map, mol_template, maxsteps,
     constraints_angle = constraints_angle or []
     constraints_dihedral = constraints_dihedral or []
 
-    forcefield = Chem.UFFGetMoleculeForceField(mol, confId=conf)
+    try:
+        forcefield = Chem.UFFGetMoleculeForceField(mol, confId=conf)
+    except Exception:
+        return mol, 0.0
+
+    if forcefield is None:
+        return mol, 0.0
     
     matching_atoms = mol.GetSubstructMatch(mol_template)
     for i, atom_i in enumerate(matching_atoms):
         for atom_j in matching_atoms[i + 1:]:
             target_dist = coord_Map[atom_i].Distance(coord_Map[atom_j])
-            forcefield.AddDistanceConstraint(atom_i, atom_j, target_dist, target_dist, 100000)
+            forcefield.AddDistanceConstraint(
+                atom_i, atom_j, target_dist, target_dist, 100000
+            )
     
     has_constraints = any([constraints_atoms, constraints_dist,
                            constraints_angle, constraints_dihedral])
@@ -1781,8 +1926,7 @@ def _translate_constraint_indices(constraints, map_to_idx, n_indices, log=None):
             if original not in map_to_idx:
                 if log is not None:
                     log.write(
-                        f"\nx  WARNING! Constraint index {original} is not correct. It does not "
-                        f"correspond to any mapped atom number in the molecule. "
+                        f"\nx  WARNING! Constraint index {original} does not appear in the input molecule/SDF. "
                         f"All constraint indices must match atom map numbers "
                         f"(e.g. [C:1], [N:2]). Available map numbers are: "
                         f"{sorted(map_to_idx.keys())}."

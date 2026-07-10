@@ -259,7 +259,7 @@ def filters(mol, log, molwt_cutoff):
     return True
 
 
-def conformer_filters(self, sorted_all_cids, cenergy, outmols):
+def conformer_filters(self, sorted_all_cids, cenergy, outmols, force_full_filters=False):
     """Apply sequential energy and RMSD-based conformer filters.
     
     Three-stage filtering process:
@@ -276,9 +276,11 @@ def conformer_filters(self, sorted_all_cids, cenergy, outmols):
     Returns:
         list: Selected conformer IDs that pass all filters
     """
-    is_dot_smiles_aggregate = any(
-        mol.HasProp("SMILES") and "." in mol.GetProp("SMILES")
-        for mol in outmols
+    is_dot_smiles_aggregate = (
+        not force_full_filters and any(
+            mol.HasProp("SMILES") and "." in mol.GetProp("SMILES")
+            for mol in outmols
+        )
     )
     is_csearch_workflow = getattr(self.args, "csearch", False)
 

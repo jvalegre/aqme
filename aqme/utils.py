@@ -362,7 +362,7 @@ def _get_argument_categories():
     
     list_args = [
         "files", "gen_atoms", "constraints_atoms", "constraints_dist",
-        "constraints_angle", "constraints_dihedral", "aromatic_int", "atom_types", "cartesians",
+        "constraints_angle", "constraints_dihedral", "freeze", "aromatic_int", "atom_types", "cartesians",
         "nmr_atoms", "nmr_slope", "nmr_intercept", "qdescp_atoms", "geom"
     ]
     
