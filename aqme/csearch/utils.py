@@ -17,7 +17,9 @@ from rdkit.Chem import rdMolAlign
 import rdkit.Chem as _rdChem
 
 from aqme.utils import (
+    get_input_extension,
     get_info_input,
+    _extract_sdf_properties,
     mol_from_sdf_or_mol_or_mol2,
     read_xyz_charge_mult,
     add_prefix_suffix,
@@ -591,33 +593,16 @@ def prepare_sdf_files(args, csearch_file):
     return job_inputs
 
 
-def _get_input_extension(input_file):
-    """Return the lowercase extension of *input_file* without the dot."""
-    return os.path.basename(Path(input_file)).split(".")[-1].lower()
-
-
-def _parse_sdf_charge(mol):
-    """Extract the charge stored on a molecule loaded from SDF, if present."""
-    if mol is None or not mol.HasProp("Real charge"):
-        return None
-
-    try:
-        return int(mol.GetProp("Real charge"))
-    except (TypeError, ValueError):
-        return None
-
-
 def resolve_racerts_charge(args, mol, input_file, log):
     """Resolve the charge used by the RacerTS freeze workflow."""
     if args.charge is not None:
         return int(args.charge)
 
-    input_ext = _get_input_extension(input_file)
-    charge = None
+    input_ext = get_input_extension(input_file)
 
     if input_ext == "sdf":
-        charge = _parse_sdf_charge(mol)
-        if charge is None:
+        _, charges, _ = _extract_sdf_properties(input_file)
+        if not charges:
             log.write(
                 "\nx  No charge could be read from the SDF input. "
                 "It is recommended to set --charge explicitly. "
@@ -625,7 +610,15 @@ def resolve_racerts_charge(args, mol, input_file, log):
             )
             return 0
 
-        return charge
+        try:
+            return int(charges[0])
+        except (TypeError, ValueError):
+            log.write(
+                "\nx  No charge could be read from the SDF input. "
+                "It is recommended to set --charge explicitly. "
+                "Defaulting to 0."
+            )
+            return 0
 
     if input_ext == "xyz":
         log.write(
@@ -648,7 +641,7 @@ def resolve_racerts_reacting_atoms(args, mol, input_file, log):
     if not freeze_atoms:
         return []
 
-    input_ext = _get_input_extension(input_file)
+    input_ext = get_input_extension(input_file)
     reacting_atoms = []
 
     if input_ext == "xyz":
@@ -795,18 +788,18 @@ def com_2_xyz(input_file):
 
 
 def _resolve_post_min_clashes(mol, conf_id, constraints_dist, min_dist=1.0, tolerance=0.5, max_iters=200):
-    """
-    Resuelve solapamientos (< 1.0 A) moviendo los fragmentos matemáticamente 
-    DESPUÉS de la minimización. Memoriza la distancia exacta optimizada por RDKit
-    y garantiza que el ajuste no la varíe más de 'tolerance'.
+    """Resolve clashes (< 1.0 A) by moving fragments mathematically after minimization.
+
+    The exact optimized distance produced by RDKit is preserved and the adjustment
+    is constrained so it does not vary by more than ``tolerance``.
     """
     frags = Chem.GetMolFrags(mol, asMols=False)
     if len(frags) <= 1:
         return
 
     conf = mol.GetConformer(conf_id)
-    
-    # 1. Memorizar las distancias minimizadas EXACTAS de las constraints
+
+    # 1. Store the exact minimized distances for the constraints
     minimized_distances = {}
     if constraints_dist:
         positions = conf.GetPositions()
@@ -831,70 +824,70 @@ def _resolve_post_min_clashes(mol, conf_id, constraints_dist, min_dist=1.0, tole
             for j in range(i + 1, len(frags)):
                 fragA_atoms = list(frags[i])
                 fragB_atoms = list(frags[j])
-                
+
                 posA = positions[fragA_atoms]
                 posB = positions[fragB_atoms]
-                
-                # Matriz correcta: (Atomos A, Atomos B, 3D)
+
+                # Correct matrix shape: (Atoms A, Atoms B, 3D)
                 diffs = posA[:, np.newaxis, :] - posB[np.newaxis, :, :]
                 dists = np.linalg.norm(diffs, axis=2)
-                
+
                 min_idx = np.unravel_index(np.argmin(dists), dists.shape)
                 min_val = dists[min_idx]
 
                 if min_val < min_dist:
-                    # El índice 0 corresponde a A y el 1 a B (Bug corregido)
+                    # Index 0 corresponds to A and 1 corresponds to B (fixed bug)
                     atomA = fragA_atoms[min_idx[0]]
                     atomB = fragB_atoms[min_idx[1]]
-                    
+
                     pair_key = tuple(sorted((atomA, atomB)))
-                    
+
                     if pair_key not in locked_pairs and min_val < worst_d:
                         worst_d = min_val
                         worst_info = (atomA, atomB, i, j, pair_key)
 
         if worst_info is None:
-            break # No hay más choques o todos están bloqueados
+            break  # No more clashes or all of them are locked
 
         atomA, atomB, fA_idx, fB_idx, pair_key = worst_info
-        
-        # Vector para alejar B de A
+
+        # Vector to move B away from A
         direction = positions[atomB] - positions[atomA]
         norm_dir = np.linalg.norm(direction)
         if norm_dir < 1e-5:
             direction = np.array([1.0, 1.0, 1.0])
             norm_dir = np.linalg.norm(direction)
         direction = direction / norm_dir
-        
+
         shift_step = 0.05
         shift_vec = direction * shift_step
-        
+
         def check_constraints(frag_to_move, vec):
-            # Verificar si mover 'frag_to_move' viola la tolerancia
+            # Check whether moving 'frag_to_move' violates the tolerance
             for (c1, c2), original_dist in minimized_distances.items():
                 f1 = atom_to_frag.get(c1)
                 f2 = atom_to_frag.get(c2)
-                
+
                 p1 = positions[c1] + vec if f1 == frag_to_move else positions[c1]
                 p2 = positions[c2] + vec if f2 == frag_to_move else positions[c2]
-                
+
                 new_d = np.linalg.norm(p1 - p2)
                 if abs(new_d - original_dist) > tolerance:
                     return False
             return True
 
-        # Intentar mover fragmento B
+        # Try moving fragment B
         if check_constraints(fB_idx, shift_vec):
             for idx in frags[fB_idx]:
                 p = np.array(conf.GetAtomPosition(idx))
                 conf.SetAtomPosition(idx, (p + shift_vec).tolist())
-        # Intentar mover fragmento A en dirección contraria
+        # Try moving fragment A in the opposite direction
         elif check_constraints(fA_idx, -shift_vec):
             for idx in frags[fA_idx]:
                 p = np.array(conf.GetAtomPosition(idx))
                 conf.SetAtomPosition(idx, (p - shift_vec).tolist())
         else:
-            # Si rompe la tolerancia, lo dejamos estar y miramos otro
+            # If it breaks the tolerance, keep it in place and try another pair
             locked_pairs.add(pair_key)
 
 
@@ -906,11 +899,11 @@ def minimize_rdkit_energy(mol, conf, log, FF, maxsteps,
     constraints_angle = constraints_angle or []
     constraints_dihedral = constraints_dihedral or []
 
-    if FF.upper() == "NO FF":
-        return 0.0
+    if FF.upper() == 'NO FF':
+        return 0
 
     forcefield = None
-    if FF.upper() == "MMFF":
+    if FF.upper() == 'MMFF':
         try:
             properties = Chem.MMFFGetMoleculeProperties(mol)
             forcefield = Chem.MMFFGetMoleculeForceField(mol, properties, confId=conf)
@@ -918,11 +911,11 @@ def minimize_rdkit_energy(mol, conf, log, FF, maxsteps,
             forcefield = None
         if forcefield is None:
             log.write(
-                "\nx  MMFF could not be built for this conformer. "
-                "Using UFF directly instead."
+                '\nx  MMFF could not be built for this conformer. '
+                'Using UFF directly instead.'
             )
 
-    if FF.upper() == "UFF" or forcefield is None:
+    if FF.upper() == 'UFF' or forcefield is None:
         try:
             forcefield = Chem.UFFGetMoleculeForceField(mol, confId=conf)
         except Exception:
@@ -932,10 +925,10 @@ def minimize_rdkit_energy(mol, conf, log, FF, maxsteps,
                            constraints_angle, constraints_dihedral])
     if forcefield is None:
         log.write(
-            "\nx  UFF could not be built for this conformer. "
-            "Keeping the input geometry without optimization."
+            '\nx  UFF could not be built for this conformer. '
+            'Keeping the input geometry without optimization.'
         )
-        return 0.0
+        return 0
 
     if has_constraints:
         try:
@@ -946,27 +939,27 @@ def minimize_rdkit_energy(mol, conf, log, FF, maxsteps,
             )
         except Exception:
             log.write(
-                "\nx  RDKit constraints could not be applied to this conformer. "
-                "Keeping the unconstrained UFF optimization."
+                '\nx  RDKit constraints could not be applied to this conformer. '
+                'Keeping the unconstrained UFF optimization.'
             )
 
-    energy = 0.0
+    energy = 0
     try:
         forcefield.Initialize()
         forcefield.Minimize(maxIts=maxsteps)
         energy = float(forcefield.CalcEnergy())
     except (RuntimeError, AttributeError, ValueError):
         log.write(
-            f"\nx  Geometry minimization failed with {FF}. "
-            "Keeping the current geometry."
+            f'\nx  Geometry minimization failed with {FF}. '
+            'Keeping the current geometry.'
         )
         if forcefield is not None:
             try:
                 energy = float(forcefield.CalcEnergy())
             except Exception:
-                energy = 0.0
+                energy = 0
 
-    # --- APLICAMOS EL ALGORITMO MATEMÁTICO ---
+    # --- APPLY THE MATHEMATICAL ALGORITHM ---
     _resolve_post_min_clashes(mol, conf, constraints_dist, min_dist=1.0, tolerance=0.5)
 
     return energy
@@ -983,11 +976,11 @@ def realign_mol(mol, conf, coord_Map, alg_Map, mol_template, maxsteps,
     try:
         forcefield = Chem.UFFGetMoleculeForceField(mol, confId=conf)
     except Exception:
-        return mol, 0.0
+        return mol, 0
 
     if forcefield is None:
-        return mol, 0.0
-    
+        return mol, 0
+
     matching_atoms = mol.GetSubstructMatch(mol_template)
     for i, atom_i in enumerate(matching_atoms):
         for atom_j in matching_atoms[i + 1:]:
@@ -995,7 +988,7 @@ def realign_mol(mol, conf, coord_Map, alg_Map, mol_template, maxsteps,
             forcefield.AddDistanceConstraint(
                 atom_i, atom_j, target_dist, target_dist, 100000
             )
-    
+
     has_constraints = any([constraints_atoms, constraints_dist,
                            constraints_angle, constraints_dihedral])
     if has_constraints:
@@ -1010,23 +1003,27 @@ def realign_mol(mol, conf, coord_Map, alg_Map, mol_template, maxsteps,
         forcefield.Minimize(maxIts=maxsteps)
     except RuntimeError:
         pass
-    
-    rdMolAlign.AlignMol(
-        mol,                
-        mol_template,       
-        prbCid=conf,        
-        refCid=-1,         
-        atomMap=alg_Map,    
-        reflect=True,       
-        maxIters=100,       
-    )
-    
-    energy = float(forcefield.CalcEnergy())
 
-    # --- APLICAMOS EL ALGORITMO MATEMÁTICO ---
+    rdMolAlign.AlignMol(
+        mol,
+        mol_template,
+        prbCid=conf,
+        refCid=-1,
+        atomMap=alg_Map,
+        reflect=True,
+        maxIters=100,
+    )
+
+    try:
+        energy = float(forcefield.CalcEnergy())
+    except Exception:
+        energy = 0
+
+    # --- APPLY THE MATHEMATICAL ALGORITHM ---
     _resolve_post_min_clashes(mol, conf, constraints_dist, min_dist=1.0, tolerance=0.8)
 
     return mol, energy
+
 
 def getDihedralMatches(mol, heavy):
     """Find unique rotatable bonds and their associated dihedral angles.

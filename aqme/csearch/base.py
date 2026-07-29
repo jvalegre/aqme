@@ -212,6 +212,7 @@ from aqme.utils import (
     check_crest,
     check_dependencies,
     check_xtb,
+    get_input_extension,
     get_files,
     load_sdf,
     load_variables,
@@ -270,9 +271,6 @@ class csearch:
         self.args = load_variables(kwargs, "csearch")
         check_dependencies(self)
 
-        if getattr(self.args, "freeze", []):
-            self._log_racerts_citation()
-
         # Set default values
         if not self.args.program:
             self.args.program = self.DEFAULT_PROGRAM
@@ -329,7 +327,7 @@ class csearch:
 
     def _validate_freeze_mode(self):
         """Validate the RacerTS freeze workflow options."""
-        if getattr(self.args, "freeze", []) and self.args.program.lower() == "crest":
+        if getattr(self.args, "freeze", []) != [] and self.args.program.lower() == "crest":
             self._error_exit(
                 "The --freeze option is not compatible with program='crest'. "
                 "Use program='rdkit' (or omit --program, since rdkit is the default)."
@@ -420,6 +418,10 @@ class csearch:
             f"\nStarting CSEARCH with {len(job_inputs)} job(s) "
             "(SDF, XYZ, CSV, etc. files might contain multiple jobs/structures inside)\n"
         )
+
+        if self._should_use_racerts() and not getattr(self, "_racerts_citation_logged", False):
+            self._log_racerts_citation()
+            self._racerts_citation_logged = True
 
         # Run conformer search
         self.run_csearch(job_inputs)
@@ -793,7 +795,7 @@ class csearch:
             self.args.smi is None):
 
             input_path = getattr(self, "current_input_file", self.args.input)
-            input_ext = os.path.basename(Path(input_path)).split(".")[-1].lower()
+            input_ext = get_input_extension(input_path)
 
             if input_ext in ["pdb", "mol2", "mol", "sdf"]:
                 self._convert_to_xyz_obabel(name, input_ext)
@@ -1155,7 +1157,7 @@ class csearch:
         input_path = getattr(self, "current_input_file", self.args.input)
         is_3d_input = (
             self.args.smi is None and
-            os.path.basename(Path(input_path)).split(".")[-1].lower() in
+            get_input_extension(input_path) in
             ["pdb", "mol2", "mol", "sdf", "gjf", "com", "xyz"]
         )
         return is_crest and is_3d_input
@@ -1163,9 +1165,10 @@ class csearch:
     def _freeze_input_supported(self):
         """Check whether the current input can be used with --freeze."""
         input_path = getattr(self, "current_input_file", self.args.input)
-        input_ext = os.path.basename(Path(input_path)).split(".")[-1].lower()
+        input_ext = get_input_extension(input_path)
+        freeze = getattr(self.args, "freeze", []) or []
         return (
-            bool(getattr(self.args, "freeze", []))
+            bool(freeze)
             and self.args.program.lower() != "crest"
             and input_ext in {"sdf", "xyz"}
         )
@@ -1245,11 +1248,11 @@ class csearch:
             from racerts import ConformerGenerator
         except ImportError:
             self._error_exit(
-                "RacerTS is not installed. Install the racerts package to use --freeze."
+                "RacerTS is not installed. Install it with `pip install racerts` to use --freeze."
             )
 
         input_path = getattr(self, "current_input_file", self.args.input)
-        source_ext = os.path.basename(Path(input_path)).split(".")[-1].lower()
+        source_ext = get_input_extension(input_path)
         reacting_atoms = resolve_racerts_reacting_atoms(
             self.args, mol, input_path, self.args.log
         )
@@ -1317,7 +1320,7 @@ class csearch:
                     None,
                     charge,
                     mult,
-                    "UFF",
+                    self.args.ff,
                     smi,
                     geom,
                     None,

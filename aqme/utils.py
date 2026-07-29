@@ -867,8 +867,13 @@ def read_xyz_charge_mult(file):
         charge_xyz = 0
     if mult_xyz is None:
         mult_xyz = 1
-    
+
     return charge_xyz, mult_xyz
+
+
+def get_input_extension(input_file):
+    """Return the lowercase extension of *input_file* without the dot."""
+    return os.path.basename(Path(input_file)).split(".")[-1].lower()
 
 
 def _filter_mols_by_criteria(mols, low_check):

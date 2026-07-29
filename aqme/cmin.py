@@ -44,11 +44,6 @@ General
      Dihedral constraints for FAMEX FixInternals as [[AT1,AT2,AT3,AT4,DIHEDRAL], ...].
      Dihedrals are specified in degrees.
    target : str, default='minima'
-     Optimization target for FAMEX. Accepted values: 'minima' and 'ts'.
-     Command-line flag: --target.
-   freq : bool, default=False
-     If True, calculates vibrational frequencies for conformers surviving filters.
-     Command-line alias: --freq.
    prefix : str, default=''
      Prefix added to all output names.
    suffix : str, default=''
