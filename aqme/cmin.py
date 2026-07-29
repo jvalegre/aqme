@@ -22,7 +22,7 @@ General
      property; if missing, defaults to 0.
    mult : int, default=None
      Multiplicity for FAMEX calculations. If not set, read from SDF 'Mult'
-     property; if missing, defaults to 1. uhf = mult - 1 is passed to FAMEX.
+     property; if missing, defaults to 1.
    ewin_cmin : float, default=5.0
      Energy window in kcal/mol to discard conformers after optimization.
    initial_energy_threshold : float, default=0.0001
@@ -44,6 +44,9 @@ General
      Dihedral constraints for FAMEX FixInternals as [[AT1,AT2,AT3,AT4,DIHEDRAL], ...].
      Dihedrals are specified in degrees.
    target : str, default='minima'
+     Optimization target for FAMEX. Accepted values: 'minima' and 'ts'.
+   freq : bool, default=False
+     If True, calculates vibrational frequencies for conformers surviving filters.
    prefix : str, default=''
      Prefix added to all output names.
    suffix : str, default=''
@@ -206,6 +209,18 @@ class cmin:
         """Return the FAMEX Explorer target for the current optimization mode."""
         return "ts" if getattr(self.args, "target", "minima") == "ts" else "minima"
 
+    def _log_famex_citation(self):
+        """Log the recommended FAMEX citation the first time it is used."""
+        if getattr(self, "_famex_citation_logged", False):
+            return
+
+        self.args.log.write(
+            "\n   Please cite FAMEX as:\n"
+            "   FAMEX Development Team, FAMEX: Fast Mechanistic Explorer (2026).\n"
+            "   Available at https://github.com/rlaplaza-lab/famex"
+        )
+        self._famex_citation_logged = True
+
     # ------------------------------------------------------------------
     # I/O helpers
     # ------------------------------------------------------------------
@@ -277,10 +292,9 @@ class cmin:
         return charge, mult
 
     def _determine_charge_mult(self, sdf_file):
-        """Return (charge, uhf) to pass to FAMEX.
+        """Return (charge, mult) to pass to FAMEX.
 
-        Priority: user arg > SDF property > default (0, 0).
-        uhf = mult - 1 (number of unpaired electrons).
+        Priority: user arg > SDF property > default (0, 1).
         """
         file_charge, file_mult = self._read_charge_mult_from_sdf(sdf_file)
 
@@ -290,21 +304,19 @@ class cmin:
         mult = self.args.mult if self.args.mult is not None else (
             file_mult if file_mult is not None else 1
         )
-        uhf = int(mult) - 1
 
         if self.args.charge is None and file_charge is None:
             self.args.log.write(
-                "\n   No charge found — defaulting to 0. "
+                "\n   No charge found - defaulting to 0. "
                 "Set charge= or add 'Real charge' to SDF."
             )
         if self.args.mult is None and file_mult is None:
             self.args.log.write(
-                "\n   No multiplicity found — defaulting to 1 (uhf=0). "
+                "\n   No multiplicity found - defaulting to 1. "
                 "Set mult= or add 'Mult' to SDF."
             )
 
-        return int(charge), uhf
-
+        return int(charge), int(mult)
     # ------------------------------------------------------------------
     # Core FAMEX optimisation
     # ------------------------------------------------------------------
@@ -434,7 +446,7 @@ class cmin:
         self.args.log.write(f"\n   Applying FAMEX FixInternals constraints: {constraints_str}")
         return constraints_str
 
-    def _optimize_with_famex(self, mol, conf_name, charge, uhf, constraints=None):
+    def _optimize_with_famex(self, mol, conf_name, charge, mult, constraints=None):
         """Run a single FAMEX local minimisation.
 
         Parameters
@@ -445,8 +457,8 @@ class cmin:
             Label for logging.
         charge : int
             Total molecular charge.
-        uhf : int
-            Number of unpaired electrons (mult - 1).
+        mult : int
+            Spin multiplicity.
 
         Returns
         -------
@@ -457,7 +469,6 @@ class cmin:
         self.args.log.write(f"\no  FAMEX optimisation [{self.args.program}] ({conf_name})")
 
         try:
-            mult = uhf + 1
             ase_atoms = self._mol_to_ase_atoms(mol, charge, mult)
             target = self._get_famex_target()
 
@@ -509,14 +520,14 @@ class cmin:
             )
             return mol, 0.0, False
 
-    def _calculate_frequencies(self, mol, conf_label, charge, uhf):
+    def _calculate_frequencies(self, mol, conf_label, charge, mult):
         """Calculate vibrational frequencies for a given conformer using the FAMEX analysis module.
         
         Args:
             mol (rdkit.Chem.PropertyMol): Conformer molecule object.
             conf_label (str): Label used for naming the output file.
             charge (int): Molecular charge.
-            uhf (int): Unpaired electrons (multiplicity - 1).
+            mult (int): Spin multiplicity.
         """
         import famex
         from famex.analysis.frequency import FrequencyAnalysis
@@ -524,7 +535,6 @@ class cmin:
         self.args.log.write(f"\no  FAMEX frequency calculation [{self.args.program}] ({conf_label})")
 
         try:
-            mult = uhf + 1
             ase_atoms = self._mol_to_ase_atoms(mol, charge, mult)
             target = self._get_famex_target()
 
@@ -669,9 +679,9 @@ class cmin:
 
     def compute_cmin(self, sdf_file):
         """Optimise all conformers from *sdf_file* and write results."""
-        charge, uhf = self._determine_charge_mult(sdf_file)
+        charge, mult = self._determine_charge_mult(sdf_file)
         self.args.log.write(
-            f"\n   charge={charge}  uhf={uhf}  program={self.args.program}"
+            f"\n   charge={charge}  mult={mult}  program={self.args.program}"
         )
 
         cenergy, outmols = [], []
@@ -686,13 +696,14 @@ class cmin:
         for i, mol in enumerate(self.mols):
             if mol is not None:
                 conf_name = f"{self.name}_conf_{i}"
-                tasks.append((mol, conf_name, charge, uhf))
+                tasks.append((mol, conf_name, charge, mult))
         if not tasks:
             self.args.log.write(
                 f"\nx  No valid initial conformers found for {self.name}."
             )
             return
 
+        self._log_famex_citation()
         constraints = self._build_famex_constraints(tasks[0][0])
         
         with concurrent.futures.ThreadPoolExecutor(max_workers=nprocs) as executor:
@@ -734,7 +745,6 @@ class cmin:
         sorted_cids = sorted(cids, key=lambda cid: cenergy[cid])
 
         # Add properties
-        mult = uhf + 1
         for cid in sorted_cids:
             outmols[cid].SetProp("Energy", str(cenergy[cid]))
             outmols[cid].SetProp("Real charge", str(charge))
@@ -759,7 +769,7 @@ class cmin:
         if getattr(self.args, "freq", False):
             for i, mol in enumerate(filtered_mols):
                 conf_label = f"{self.name}_filtered_conf_{i}"
-                freq_result = self._calculate_frequencies(mol, conf_label, charge, uhf)
+                freq_result = self._calculate_frequencies(mol, conf_label, charge, mult)
                 if freq_result is not None:
                     freq_results.append(freq_result)
             self._write_frequencies_report(freq_results)
