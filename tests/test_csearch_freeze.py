@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 
 import pytest
+import sys
 from types import SimpleNamespace
+from pathlib import Path
 
 from aqme.csearch.base import csearch
 from aqme.csearch.utils import (
@@ -22,6 +24,17 @@ class FakeLog:
 
     def finalize(self):
         self.finalized = True
+
+
+def _build_fake_racerts_generator(template_mol):
+    class FakeConformerGenerator:
+        def generate_conformers(self, file_name, charge, reacting_atoms):
+            generated = Chem.Mol(template_mol)
+            generated.RemoveAllConformers()
+            generated.AddConformer(Chem.Conformer(template_mol.GetNumAtoms()), assignId=True)
+            return generated
+
+    return FakeConformerGenerator
 
 
 def test_resolve_racerts_reacting_atoms_sdf_uses_atom_maps():
@@ -168,3 +181,53 @@ def test_conformer_filters_freeze_bypasses_dot_smiles_rmsd_only(monkeypatch):
     selected = conformer_filters(app, [0, 1], cenergy, outmols, force_full_filters=True)
 
     assert selected == [0, 1]
+
+
+@pytest.mark.parametrize("ff_name", ["MMFF", "UFF"])
+def test_racerts_freeze_forwards_forcefield_to_post_processing(monkeypatch, tmp_path, ff_name):
+    app = csearch.__new__(csearch)
+    template_mol = Chem.AddHs(Chem.MolFromSmiles("CC"))
+    input_xyz = Path("tests/csearch_input/pentane_xyz.xyz").resolve()
+    app.current_input_file = str(input_xyz)
+    app.csearch_folder = tmp_path
+    app.args = SimpleNamespace(
+        input=str(input_xyz),
+        freeze=[1],
+        charge=None,
+        mult=1,
+        ff=ff_name,
+        output=".sdf",
+        program="rdkit",
+        log=FakeLog(),
+    )
+
+    fake_racerts = SimpleNamespace(ConformerGenerator=_build_fake_racerts_generator(template_mol))
+    monkeypatch.setitem(sys.modules, "racerts", fake_racerts)
+    monkeypatch.setattr(app, "_copy_racerts_atom_maps", lambda source, target: target)
+
+    captured = {}
+
+    def fake_min_after_embed(*args, **kwargs):
+        captured["ff"] = args[10]
+        captured["force_filters"] = getattr(app, "_force_post_generation_filters", False)
+        return 1, [Chem.Mol(template_mol)]
+
+    monkeypatch.setattr(app, "min_after_embed", fake_min_after_embed)
+
+    app._run_racerts_sampling(
+        template_mol,
+        "example",
+        None,
+        1,
+        "CC",
+        [],
+        1,
+        [],
+        [],
+        [],
+        [],
+    )
+
+    assert captured["ff"] == ff_name
+    assert captured["force_filters"] is True
+    assert any("RacerTS conformers written" in msg for msg in app.args.log.messages)

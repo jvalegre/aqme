@@ -337,6 +337,22 @@ class csearch:
         """Write the RacerTS citation to the CSEARCH log."""
         if hasattr(self.args, "log") and self.args.log:
             self.args.log.write(f"{self.RACERTS_CITATION}\n")
+
+    def _resolve_forcefield_for_mol(self, mol, name):
+        """Resolve the force field to use for a specific molecule."""
+        ff = self.args.ff
+
+        # MMFF is the default, but molecules containing atoms beyond Kr need UFF.
+        if ff == "MMFF":
+            for atom in mol.GetAtoms():
+                if atom.GetAtomicNum() > 36:
+                    self.args.log.write(
+                        f"\nx  {self.args.ff} is not compatible with the molecule, "
+                        f"changing to UFF (({os.path.basename(Path(name))}))"
+                    )
+                    return "UFF"
+
+        return ff
             
     def _process_input_files(self):
         """Process input files and run conformer search."""
@@ -1309,6 +1325,7 @@ class csearch:
             previous_force_filters = getattr(self, "_force_post_generation_filters", False)
             self._force_post_generation_filters = True
             try:
+                ff = self._resolve_forcefield_for_mol(ts_conformers_mol, name)
                 self.min_after_embed(
                     ts_conformers_mol,
                     cids,
@@ -1320,7 +1337,7 @@ class csearch:
                     None,
                     charge,
                     mult,
-                    self.args.ff,
+                    ff,
                     smi,
                     geom,
                     None,
@@ -2387,16 +2404,8 @@ class csearch:
         if len(rotmatches) > self.args.max_torsions and self.args.max_torsions > 0:
             self.args.log.write(f"\nx  Too many torsions ({len(rotmatches)}). Skipping {name + self.args.output}")
 
-        ff = self.args.ff
+        ff = self._resolve_forcefield_for_mol(mol, name)
         cids = self.embed_conf(mol, initial_confs, coord_Map, alg_Map, mol_template, csearch_nprocs, name)
-
-        # energy minimize all to get more realistic results
-        # identify the atoms and decide Force Field
-        for atom in mol.GetAtoms():
-            if atom.GetAtomicNum() > 36 and self.args.ff == "MMFF":  # up to Kr for MMFF, if not the code will use UFF
-                self.args.log.write(f"\nx  {self.args.ff} is not compatible with the molecule, changing to UFF (({os.path.basename(Path(name))}))")
-                ff = "UFF"
-                break
 
         try:
             status, mol_crest = self.min_after_embed(
