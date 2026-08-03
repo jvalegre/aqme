@@ -13,7 +13,7 @@ import glob
 import yaml
 import ast
 from pathlib import Path
-from rdkit.Chem.rdMolAlign import GetBestRMS
+from rdkit.Chem.rdMolAlign import GetBestRMS, AlignMol
 from rdkit.Chem.rdmolops import RemoveHs
 from rdkit.Chem import AllChem as Chem
 from aqme.argument_parser import set_options, var_dict
@@ -316,7 +316,7 @@ def get_info_input(file):
     else:
         raise ValueError(f"Unsupported file extension: {file_extension}")
 
-def get_conf_RMS(mol1, mol2, c1, c2, heavy, max_matches_rmsd):
+def get_conf_RMS(mol1, mol2, c1, c2, heavy, max_matches_rmsd, threshold=None):
     """Calculate RMSD between two molecule conformations.
     
     Computes best RMSD by aligning mol1 to mol2. Note: mol1 is modified
@@ -339,7 +339,15 @@ def get_conf_RMS(mol1, mol2, c1, c2, heavy, max_matches_rmsd):
     if heavy:
         mol1 = RemoveHs(mol1)
         mol2 = RemoveHs(mol2)
-    
+
+    if threshold is not None:
+        try:
+            rms_fast = AlignMol(mol1, mol2, prbCid=c1, refCid=c2)
+            if rms_fast < float(threshold):
+                return rms_fast
+        except Exception:
+            pass
+
     return GetBestRMS(
         mol1, mol2, c1, c2, 
         maxMatches=max_matches_rmsd, 

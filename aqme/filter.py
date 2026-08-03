@@ -35,7 +35,9 @@ def check_pmi_pass(pmi1, pmi2, threshold):
 def check_rmsd_pass(mol1, mol2, threshold, heavyonly, max_matches_rmsd, log=None):
     """Return True when two conformers are distinct enough in RMSD space."""
     try:
-        rms = get_conf_RMS(mol1, mol2, -1, -1, heavyonly, max_matches_rmsd)
+        rms = get_conf_RMS(
+            mol1, mol2, -1, -1, heavyonly, max_matches_rmsd, threshold=threshold
+        )
     except RuntimeError:
         if log is not None:
             log.write(
