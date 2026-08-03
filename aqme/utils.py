@@ -373,7 +373,7 @@ def _get_argument_categories():
     
     float_args = [
         "ewin_cmin", "ewin_csearch", "opt_fmax", "rms_threshold",
-        "energy_threshold", "initial_energy_threshold", "max_mol_wt",
+        "energy_threshold", "initial_energy_threshold", "pmi_threshold", "max_mol_wt",
         "dup_threshold", "ro_threshold", "amplitude_ifreq", "ifreq_cutoff",
         "s2_threshold", "vdwfrac", "covfrac", "bond_thres", "angle_thres",
         "dihedral_thres", "crest_force", "qdescp_temp", "qdescp_acc",

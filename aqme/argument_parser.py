@@ -44,6 +44,7 @@ var_dict = {
     "max_matches_rmsd": 1000,
     "energy_threshold": 0.25,
     "initial_energy_threshold": 0.0001,
+    "pmi_threshold": 0.5,
     "max_mol_wt": 0,
     "ani_method": "ANI2x",
     "stacksize": "1G",

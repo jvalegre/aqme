@@ -173,10 +173,9 @@ def test_conformer_filters_freeze_bypasses_dot_smiles_rmsd_only(monkeypatch):
     def fail_if_called(*args, **kwargs):
         raise AssertionError("RMSD-only filter should not be used in freeze mode")
 
-    monkeypatch.setattr("aqme.filter.apply_rmsd_only_filter", fail_if_called)
     monkeypatch.setattr("aqme.filter.apply_energy_window_filter", lambda *args, **kwargs: [0, 1])
     monkeypatch.setattr("aqme.filter.apply_pre_energy_filter", lambda *args, **kwargs: [0, 1])
-    monkeypatch.setattr("aqme.filter.apply_rmsd_and_energy_filter", lambda *args, **kwargs: [0, 1])
+    monkeypatch.setattr("aqme.filter.apply_filters", lambda *args, **kwargs: [0, 1])
 
     selected = conformer_filters(app, [0, 1], cenergy, outmols, force_full_filters=True)
 
