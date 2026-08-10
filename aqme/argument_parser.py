@@ -102,6 +102,8 @@ var_dict = {
     "qdescp_opt": 'normal',
     "qdescp_solvent": None,
     "gfn_version": '2',
+    "method": "xtb",
+    "model": None,
     "vbur_radius": 'auto',
     "boltz": True,
     "nmr_atoms": [6, 1],  # [C,H]
@@ -110,7 +112,7 @@ var_dict = {
     "nmr_experim": None,
     "nodup_check": False,
     "qdescp_atoms": [],
-    "xtb_opt": True,
+    "geom_opt": True,
     "dbstep_r": 3.5,
     "robert": True,
     "csv_name": None,

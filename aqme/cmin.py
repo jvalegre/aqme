@@ -8,8 +8,9 @@ General
    files : str or list of str, default=None
      Input files. Formats accepted: SDF. Also, lists can be used
      (i.e. [FILE1.sdf, FILE2.sdf] or \*.sdf).
-   program : str, default='xtb'
-     FAMEX backend used for geometry optimization.
+   method : str, default=None
+     FAMEX backend used for geometry optimization. If omitted, the default
+     xTB/tblite backend is used.
      Current options: 'xtb', 'aimnet2', 'mace', 'orb', 'so3lr', 'uma'
    w_dir_main : str, default=os.getcwd()
      Working directory
@@ -83,14 +84,40 @@ from aqme.utils import (
 from aqme.csearch.utils import _translate_constraint_indices
 from aqme.filter import conformer_filters, cluster_conformers
 
+SUPPORTED_FAMEX_BACKENDS = {"xtb", "tblite", "aimnet2", "mace", "orb", "so3lr", "uma"}
 EV_TO_KCAL = 23.0609  # 1 eV = 23.0609 kcal/mol
+
+
+def normalize_cmin_backend(args):
+    """Normalize the requested CMIN backend and keep xtb mapped to tblite."""
+    backend = (
+        getattr(args, "method", None)
+        or getattr(args, "model", None)
+        or getattr(args, "program", None)
+        or "xtb"
+    )
+    backend = str(backend).lower()
+
+    if backend not in SUPPORTED_FAMEX_BACKENDS:
+        raise ValueError(
+            f"Method '{backend}' is not supported. "
+            f"Choose one of: {', '.join(sorted(SUPPORTED_FAMEX_BACKENDS))}"
+        )
+
+    if backend == "xtb":
+        backend = "tblite"
+
+    args.method = backend
+    args.model = backend
+    args.program = backend
+    return args
 
 
 class cmin:
     _tblite_lock = threading.Lock()
 
     """
-    Conformer refinement using a FAMEX backend (default: xtb).
+    Conformer refinement using a FAMEX backend (default: xTB/tblite).
 
     Reads conformers from SDF files, optimizes them using FAMEX, applies 
     energy/RMSD filters, and writes the results to SDF format.
@@ -112,7 +139,7 @@ class cmin:
         # check_dependencies(self)
         self._validate_target()
 
-        # Validate program choice
+        # Validate backend choice
         self._validate_program()
 
         # Check we have input files
@@ -162,23 +189,13 @@ class cmin:
     # ------------------------------------------------------------------
 
     def _validate_program(self):
-        """Check that the requested FAMEX backend (passed as program) is importable."""
-        supported = {"xtb", "tblite", "aimnet2", "mace", "orb", "so3lr", "uma"}
-        program = getattr(self.args, "program", "xtb") or "xtb"
-        program = program.lower()
-
-        if program not in supported:
-            self.args.log.write(
-                f"\nx  Program '{program}' is not supported. "
-                f"Choose one of: {', '.join(sorted(supported))}"
-            )
+        """Check that the requested FAMEX backend is importable."""
+        try:
+            self.args = normalize_cmin_backend(self.args)
+        except ValueError as exc:
+            self.args.log.write(f"\nx  {exc}")
             self.args.log.finalize()
             sys.exit()
-
-        if program == "xtb":
-            program = "tblite"
-
-        self.args.program = program
 
         try:
             import famex 
