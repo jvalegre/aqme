@@ -46,7 +46,14 @@ def check_rmsd_pass(mol1, mol2, threshold, heavyonly, max_matches_rmsd, log=None
             )
         return True
 
-    return rms >= float(threshold)
+    # Number of atoms to consider for weighting the RMSD threshold
+    num_atoms = mol1.GetNumHeavyAtoms() if heavyonly else mol1.GetNumAtoms()
+
+    # Weighting based on square root of the ratio of atomsS
+    ref_atoms = 20.0
+    weighted_threshold = float(threshold) * ((num_atoms / ref_atoms) ** 0.5)
+
+    return rms >= weighted_threshold
 
 
 def has_multiple_fragments(mol):
@@ -366,6 +373,16 @@ def conformer_filters(self, sorted_all_cids, cenergy, outmols, force_full_filter
         use_rmsd=True,
     )
 
+    # Check how many conformers are left after filtering
+    # self.args.log.write(
+    #     f"\no  Conformer filtering summary:"
+    #     f"\n   - Initial conformers: {len(sorted_all_cids)}"
+    #     f"\n   - Removed by energy window (>{self.args.ewin_cmin} kcal/mol): {len(sorted_all_cids) - len(sortedcids)}"
+    #     f"\n   - Removed by energy pre-filter (<{self.args.initial_energy_threshold} kcal/mol): {len(sortedcids) - len(selectedcids_initial)}"
+    #     f"\n   - Removed by RMSD/PMI duplicate filter (threshold={self.args.rms_threshold} Å): {len(selectedcids_initial) - len(selectedcids)}"
+    #     f"\n   - Final unique conformers: {len(selectedcids)}"
+    # )
+
     return selectedcids
 def apply_energy_window_filter(sorted_all_cids, cenergy, energy_window):
     """Filter conformers by energy window from the lowest energy conformer.
@@ -467,10 +484,27 @@ def apply_filters(
             ):
                 continue
 
-            if use_mpi and check_pmi_pass(
-                pmi_cache[cid], pmi_cache[selected_cid], pmi_threshold
-            ):
-                continue
+            # if use_mpi and check_pmi_pass(
+            #     pmi_cache[cid], pmi_cache[selected_cid], pmi_threshold
+            # ):
+            #     continue
+
+
+            # --- CONTROL Y CÁLCULO DE EXCESO EN PMI ---
+            if use_mpi:
+                pmi_diff = max(abs(a - b) for a, b in zip(pmi_cache[cid], pmi_cache[selected_cid]))
+                if pmi_diff > pmi_threshold:
+                    excess = pmi_diff - pmi_threshold
+                    msg = (
+                        f"\n   [PMI Pass] Conf {cid} vs Conf {selected_cid}: "
+                        f"Diff = {pmi_diff:.6f} | Excede el threshold ({pmi_threshold}) por: +{excess:.6f}"
+                    )
+                    if log is not None:
+                        log.write(msg)
+                    else:
+                        print(msg)
+                    continue
+            # ------------------------------------------
 
             if use_rmsd:
                 if not check_rmsd_pass(
@@ -491,6 +525,8 @@ def apply_filters(
             selected_cids.append(cid)
 
     return selected_cids
+
+    
 def compute_pairwise_rms_distances(self, mols):
     """Compute pairwise RMS distances for all conformers.
     

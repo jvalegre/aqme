@@ -28,7 +28,7 @@ var_dict = {
     "constraints_dihedral": [],
     "freeze": [],
     "aromatic_int": [],
-    "ewin_cmin": 5.0,
+    "ewin_cmin": 50.0,  #5
     "ewin_csearch": 5.0,
     "opt_fmax": 0.05,
     "opt_steps": 1000,
@@ -40,11 +40,11 @@ var_dict = {
     "auto_cluster": True,
     "ff": "MMFF",
     "seed": 62609,
-    "rms_threshold": 0.25,
+    "rms_threshold": 0.25, #0.25
     "max_matches_rmsd": 1000,
     "energy_threshold": 0.25,
     "initial_energy_threshold": 0.0001,
-    "pmi_threshold": 0.5,
+    "pmi_threshold": 500.0,
     "max_mol_wt": 0,
     "ani_method": "ANI2x",
     "stacksize": "1G",
