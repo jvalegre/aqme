@@ -1,9 +1,0 @@
-AQME v 2.1.0 2026/05/17 20:32:45 
-Citation: AQME v 2.1.0, Alegre-Requena, J. V.; Sowndarya, S.; Perez-Soto, R.; Alturaifi, T.; Paton, R. AQME: Automated Quantum Mechanical Environments for Researchers and Educators. Wiley Interdiscip. Rev. Comput. Mol. Sci. 2023, 13, e1663 (DOI: 10.1002/wcms.1663).
-
-Command line used in AQME: python -m aqme --csearch --input "Nature.csv" --program "rdkit" --constraints_dist "[[1,2,3.3]]"
-
-
-x  File Nature.csv was not found! In the "input" option, make sure that:
-1) The PATH to the files is correct
-2) The PATH doesn't start with "/"
