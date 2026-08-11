@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+#Maybe introduce this test file to test_csearch.py, but for now, keep it separate to avoid cluttering the main test file.
+
 import pytest
 import sys
 from types import SimpleNamespace
