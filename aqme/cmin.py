@@ -538,14 +538,7 @@ class cmin:
             return mol, 0.0, False
 
     def _calculate_frequencies(self, mol, conf_label, charge, mult):
-        """Calculate vibrational frequencies for a given conformer using the FAMEX analysis module.
-        
-        Args:
-            mol (rdkit.Chem.PropertyMol): Conformer molecule object.
-            conf_label (str): Label used for naming the output file.
-            charge (int): Molecular charge.
-            mult (int): Spin multiplicity.
-        """
+        """Calculate vibrational frequencies for a given conformer using the FAMEX analysis module."""
         import famex
         from famex.analysis.frequency import FrequencyAnalysis
 
@@ -555,7 +548,7 @@ class cmin:
             ase_atoms = self._mol_to_ase_atoms(mol, charge, mult)
             target = self._get_famex_target()
 
-            # Suppress internal FAMEX logs during calculator initialization steps
+            # Suppress internal FAMEX logs and raw backend outputs during the ENTIRE frequency calculation
             with open(os.devnull, "w", encoding="utf-8") as devnull:
                 with contextlib.redirect_stdout(devnull), contextlib.redirect_stderr(devnull):
                     if self.args.program == "tblite":
@@ -585,11 +578,12 @@ class cmin:
                         res = explorer.run(steps=1)
                         active_atoms = res["optimized_atoms"]
 
-            # Perform frequency and normal mode analysis
-            calc = active_atoms.calc
-            freq_analyzer = FrequencyAnalysis(active_atoms, calc)
-            frequencies = freq_analyzer.get_frequencies()
-            normal_modes = freq_analyzer.get_normal_modes() # Returns (3N x M) matrix
+                    # Perform frequency and normal mode analysis
+                    calc = active_atoms.calc
+                    freq_analyzer = FrequencyAnalysis(active_atoms, calc, verbose=0)
+                    frequencies = freq_analyzer.get_frequencies()
+                    normal_modes = freq_analyzer.get_normal_modes() # Returns (3N x M) matrix
+
             freq_values = [float(freq) for freq in np.asarray(frequencies).ravel()]
             imaginary_analysis = []
             for i, freq in enumerate(freq_values):
@@ -774,7 +768,7 @@ class cmin:
 
         # Apply energy + RMSD filters
         self.args.log.write(
-            f"\o  Applying filters after {self.args.program} minimisation"
+            f"o  Applying filters after {self.args.program} minimisation"
         )
         selected_cids = conformer_filters(self, sorted_cids, cenergy, outmols)
 
