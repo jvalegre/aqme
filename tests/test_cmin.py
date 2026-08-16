@@ -145,7 +145,7 @@ def test_cmin_invalid_backend_raises_system_exit(monkeypatch, capsys, program):
     sdf_path = _repo_path("tests", "cmin_methods", "pentane_rdkit_methods.sdf")
 
     with pytest.raises(SystemExit):
-        cmin(method=program, files=str(sdf_path))
+        cmin(program=program, files=str(sdf_path))
 
     captured = capsys.readouterr()
     assert "not supported" in captured.out
@@ -159,7 +159,7 @@ def test_cmin_rejects_non_sdf_extensions(monkeypatch, capsys, extension):
     _make_fake_famex(monkeypatch, [])
 
     with pytest.raises(SystemExit):
-        cmin(method="xtb", files=str(input_file))
+        cmin(program="xtb", files=str(input_file))
 
     captured = capsys.readouterr()
     assert "Only SDF input is supported" in captured.out
@@ -172,7 +172,7 @@ def test_cmin_rejects_invalid_target(monkeypatch, capsys, target):
     sdf_path = _repo_path("tests", "cmin_methods", "pentane_rdkit_methods.sdf")
 
     with pytest.raises(SystemExit):
-        cmin(method="xtb", files=str(sdf_path), target=target)
+        cmin(program="xtb", files=str(sdf_path), target=target)
 
     captured = capsys.readouterr()
     assert "Invalid target value" in captured.out
@@ -190,7 +190,7 @@ def test_cmin_reads_charge_and_mult_from_sdf(monkeypatch):
         lambda self, sorted_cids, cenergy, outmols: sorted_cids,
     )
 
-    cmin(method="xtb", files=str(sdf_path))
+    cmin(program="xtb", files=str(sdf_path))
 
     output_file = _repo_path("tests", "cmin_TS", "CMIN", "methyl_Cl_Br.sdf")
     assert output_file.exists()
@@ -212,7 +212,7 @@ def test_cmin_explicit_charge_and_mult_override_sdf(monkeypatch):
         lambda self, sorted_cids, cenergy, outmols: sorted_cids,
     )
 
-    cmin(method="xtb", files=str(sdf_path), charge=2, mult=3)
+    cmin(program="xtb", files=str(sdf_path), charge=2, mult=3)
 
     output_file = _repo_path("tests", "cmin_TS", "CMIN", "methyl_Cl_Br.sdf")
     assert output_file.exists()
@@ -237,7 +237,7 @@ def test_cmin_defaults_charge_and_mult_when_missing(monkeypatch):
         lambda self, sorted_cids, cenergy, outmols: sorted_cids,
     )
 
-    cmin(method="xtb", files=str(sdf_path))
+    cmin(program="xtb", files=str(sdf_path))
 
     output_file = _repo_path("tests", "cmin_methods", "CMIN", "pentane_no_charge_mult.sdf")
     assert output_file.exists()
@@ -270,7 +270,7 @@ def test_cmin_forwards_target_to_famex(monkeypatch, target, expected_famex_targe
         lambda self, sorted_cids, cenergy, outmols: sorted_cids,
     )
 
-    cmin(method="tblite", files=str(sdf_path), target=target)
+    cmin(program="tblite", files=str(sdf_path), target=target)
 
     assert explorer_calls
     assert explorer_calls[0]["target"] == expected_famex_target
@@ -293,7 +293,7 @@ def test_cmin_writes_frequencies_report_when_freq_enabled(monkeypatch):
         lambda self, sorted_cids, cenergy, outmols: sorted_cids,
     )
 
-    cmin(method="xtb", files=str(sdf_path), freq=True)
+    cmin(program="xtb", files=str(sdf_path), freq=True)
 
     freq_file = _repo_path("tests", "cmin_TS", "CMIN", "frecuencies.dat")
     assert freq_file.exists()
@@ -330,7 +330,7 @@ def test_cmin_ts_report_marks_negative_frequency_and_top_atoms(monkeypatch):
         lambda self, sorted_cids, cenergy, outmols: sorted_cids,
     )
 
-    cmin(method="xtb", files=str(sdf_path), target="ts", freq=True)
+    cmin(program="xtb", files=str(sdf_path), target="ts", freq=True)
 
     freq_file = _repo_path("tests", "cmin_TS", "CMIN", "frecuencies.dat")
     assert freq_file.exists()
@@ -359,17 +359,17 @@ def test_cmin_methods(
     os.chdir(cmin_methods_dir)
     if path == 'complete':
         file_path = os.path.normpath(f'{cmin_methods_dir}/{sdf}')
-        cmin(method=program, files=file_path)
+        cmin(program=program, files=file_path)
         os.chdir(w_dir_main)
     elif path == 'partial':
         os.chdir(w_dir_main)
         file_path = os.path.normpath(sdf)
-        cmin(method=program, files=file_path)
+        cmin(program=program, files=file_path)
         os.chdir(cmin_methods_dir)
         sdf = 'pentane_rdkit_methods.sdf'
     elif path == 'name':
         os.chdir(cmin_methods_dir) 
-        cmin(method=program, files=sdf)
+        cmin(program=program, files=sdf)
 
     file = os.path.normpath(f'{cmin_methods_dir}/CMIN/{sdf.split(".")[0]}.sdf')
     file2 = os.path.normpath(f'{cmin_methods_dir}/CMIN/All_confs/{sdf.split(".")[0]}_all_confs.sdf')
@@ -404,7 +404,7 @@ def test_cmin_constraints():
     file_path = os.path.normpath(f'{cmin_methods_dir}/{sdf}')
 
     cmin(
-        method="xtb",
+        program="xtb",
         files=file_path,
         constraints_dist=[[0, 1, 1.54]],
         constraints_angle=[[0, 1, 2, 109.5]],
@@ -429,7 +429,7 @@ def test_empty_values(
 ):
     # runs the program with the different tests
     os.chdir(cmin_empty_dir)
-    cmin(method='xtb', files=f'{cmin_empty_dir}/*.sdf')
+    cmin(program='xtb', files=f'{cmin_empty_dir}/*.sdf')
     os.chdir(w_dir_main)
 
     file = os.path.normpath(f'{cmin_empty_dir}/CMIN/a.sdf')

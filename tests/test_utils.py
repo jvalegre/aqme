@@ -91,8 +91,7 @@ def test_command_line_args_geom_opt_default(monkeypatch):
 
     args = command_line_args()
 
-    assert args.program is None
-    assert args.method == "xtb"
+    assert args.program == "xtb"
     assert args.geom_opt is True
     assert not hasattr(args, "xtb_opt")
 
@@ -105,18 +104,17 @@ def test_command_line_args_geom_opt_disable(monkeypatch):
     assert args.geom_opt is False
 
 
-def test_normalize_qdescp_runtime_options_rejects_method_without_geom_opt():
-    args = SimpleNamespace(method="mace", program="xtb", geom_opt=False)
+def test_normalize_qdescp_runtime_options_defaults_to_xtb():
+    args = SimpleNamespace(program=None, geom_opt=True)
 
-    with pytest.raises(ValueError, match="geom_opt=False cannot be combined"):
-        normalize_qdescp_runtime_options(args, method_was_provided=True)
+    normalized = normalize_qdescp_runtime_options(args)
+
+    assert normalized.program == "xtb"
 
 
 def test_normalize_cmin_backend_uses_tblite_for_xtb():
-    args = SimpleNamespace(method=None, model=None, program=None)
+    args = SimpleNamespace(program="xtb")
 
     normalized = normalize_cmin_backend(args)
 
-    assert normalized.method == "tblite"
-    assert normalized.model == "tblite"
     assert normalized.program == "tblite"

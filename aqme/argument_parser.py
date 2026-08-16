@@ -52,7 +52,7 @@ var_dict = {
     "single_system": False,
     "cregen": True,
     "cregen_keywords": None,
-    "program": None,
+    "program": "xtb",
     "nprocs": None,
     "mem": "16GB",
     "mol": None,
@@ -102,8 +102,6 @@ var_dict = {
     "qdescp_opt": 'normal',
     "qdescp_solvent": None,
     "gfn_version": '2',
-    "method": "xtb",
-    "model": None,
     "vbur_radius": 'auto',
     "boltz": True,
     "nmr_atoms": [6, 1],  # [C,H]

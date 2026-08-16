@@ -133,12 +133,12 @@ from aqme.qdescp_utils import (
     extract_conf_index,
     read_xyz_geometry,
 )
-from aqme.cmin import cmin as CMIN, normalize_cmin_backend
+from aqme.cmin import cmin as CMIN
 
 from aqme.csearch.crest import xyzall_2_xyz
 
 
-def normalize_qdescp_runtime_options(args, method_was_provided=False):
+def normalize_qdescp_runtime_options(args):
     """Normalize and validate the QDESCP workflow options."""
     program = getattr(args, "program", None) or "xtb"
     program = str(program).lower()
@@ -147,20 +147,7 @@ def normalize_qdescp_runtime_options(args, method_was_provided=False):
             f"Program {program} not supported for QDESCP. Use 'xtb' or 'nmr'"
         )
 
-    method = getattr(args, "method", None)
-    if method in [None, ""]:
-        method = "xtb"
-    else:
-        method = str(method).lower()
-
-    if not getattr(args, "geom_opt", True) and method_was_provided:
-        raise ValueError(
-            "geom_opt=False cannot be combined with --method because no geometry "
-            "optimization is performed."
-        )
-
     args.program = program
-    args.method = method
     return args
 
 
@@ -237,12 +224,12 @@ class PropertyCalculator:
         if mol is None:
             return False
 
-        backend = getattr(self.args, "method", None) or "xtb"
-
         runner = CMIN.__new__(CMIN)
         runner.args = copy.copy(self.args)
-        runner.args.method = backend
-        runner.args.program = backend
+        # QDESCP's program selects the descriptor workflow (xTB or NMR). Its
+        # initial geometry optimization always uses the default xTB/tblite
+        # CMIN backend unless optimization is disabled with geom_opt=False.
+        runner.args.program = "xtb"
         runner._validate_program()
 
         uhf = int(float(mult)) - 1
@@ -377,10 +364,8 @@ class qdescp:
             - qdescp_opt (str): Optimization convergence criteria
             - boltz (bool): Calculate Boltzmann averages
             - geom_opt (bool): Run xTB optimization
-            - method (str): Backend for the geometry optimization
         """
         self.start_time = time.time()
-        self._method_was_provided = "method" in kwargs
         
         # Initialize configuration and components
         self.args = load_variables(kwargs, "qdescp")
@@ -809,17 +794,9 @@ class qdescp:
             SystemExit: If program selection or input files are invalid
         """
         try:
-            self.args = normalize_qdescp_runtime_options(
-                self.args, method_was_provided=self._method_was_provided
-            )
+            self.args = normalize_qdescp_runtime_options(self.args)
         except ValueError as exc:
             self._error_exit(str(exc))
-
-        if self.args.geom_opt:
-            try:
-                _ = normalize_cmin_backend(copy.copy(self.args))
-            except ValueError as exc:
-                self._error_exit(str(exc))
 
         # Processing configuration
         if self.args.nprocs is None:

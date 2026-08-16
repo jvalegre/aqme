@@ -8,9 +8,8 @@ General
    files : str or list of str, default=None
      Input files. Formats accepted: SDF. Also, lists can be used
      (i.e. [FILE1.sdf, FILE2.sdf] or \*.sdf).
-   method : str, default=None
-     FAMEX backend used for geometry optimization. If omitted, the default
-     xTB/tblite backend is used.
+   program : str, default=xtb
+     FAMEX backend used for geometry optimization. xTB uses the tblite backend.
      Current options: 'xtb', 'aimnet2', 'mace', 'orb', 'so3lr', 'uma'
    w_dir_main : str, default=os.getcwd()
      Working directory
@@ -89,13 +88,8 @@ EV_TO_KCAL = 23.0609  # 1 eV = 23.0609 kcal/mol
 
 
 def normalize_cmin_backend(args):
-    """Normalize the requested CMIN backend and keep xtb mapped to tblite."""
-    backend = (
-        getattr(args, "method", None)
-        or getattr(args, "model", None)
-        or getattr(args, "program", None)
-        or "xtb"
-    )
+    """Normalize the requested CMIN program and map xtb to tblite."""
+    backend = getattr(args, "program", None) or "xtb"
     backend = str(backend).lower()
 
     if backend not in SUPPORTED_FAMEX_BACKENDS:
@@ -107,8 +101,6 @@ def normalize_cmin_backend(args):
     if backend == "xtb":
         backend = "tblite"
 
-    args.method = backend
-    args.model = backend
     args.program = backend
     return args
 
@@ -125,7 +117,7 @@ class cmin:
     Parameters
     ----------
     kwargs : keyword arguments
-        Refer to the module docstring for the full list of options (excluding 'method').
+        Refer to the module docstring for the full list of options.
     """
 
     # ------------------------------------------------------------------

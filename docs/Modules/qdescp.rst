@@ -43,7 +43,6 @@ search step is skipped, and the structures are used directly for descriptor gene
 **2. Geometry optimization within CMIN module**
 
 The resulting conformers are subsequently optimized, by default, at the GFN2-xTB level. This option can be skipped using :code:`geom_opt=False` (or :code:`--geom_opt False` in command line).
-By default, QDESCP uses the xTB/tblite backend for this step, but you can select another backend with :code:`method` (for example, :code:`--method mace` or :code:`--method uma`).
 
 **3. Descriptor generation**
 

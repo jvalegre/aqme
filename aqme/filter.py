@@ -374,14 +374,14 @@ def conformer_filters(self, sorted_all_cids, cenergy, outmols, force_full_filter
     )
 
     # Check how many conformers are left after filtering
-    # self.args.log.write(
-    #     f"\no  Conformer filtering summary:"
-    #     f"\n   - Initial conformers: {len(sorted_all_cids)}"
-    #     f"\n   - Removed by energy window (>{self.args.ewin_cmin} kcal/mol): {len(sorted_all_cids) - len(sortedcids)}"
-    #     f"\n   - Removed by energy pre-filter (<{self.args.initial_energy_threshold} kcal/mol): {len(sortedcids) - len(selectedcids_initial)}"
-    #     f"\n   - Removed by RMSD/PMI duplicate filter (threshold={self.args.rms_threshold} Å): {len(selectedcids_initial) - len(selectedcids)}"
-    #     f"\n   - Final unique conformers: {len(selectedcids)}"
-    # )
+    self.args.log.write(
+        f"\no  Conformer filtering summary:"
+        f"\n   - Initial conformers: {len(sorted_all_cids)}"
+        f"\n   - Removed by energy window (>{self.args.ewin_cmin} kcal/mol): {len(sorted_all_cids) - len(sortedcids)}"
+        f"\n   - Removed by energy pre-filter (<{self.args.initial_energy_threshold} kcal/mol): {len(sortedcids) - len(selectedcids_initial)}"
+        f"\n   - Removed by RMSD/PMI duplicate filter (threshold={self.args.rms_threshold} Å): {len(selectedcids_initial) - len(selectedcids)}"
+        f"\n   - Final unique conformers: {len(selectedcids)}"
+    )
 
     return selectedcids
 def apply_energy_window_filter(sorted_all_cids, cenergy, energy_window):
