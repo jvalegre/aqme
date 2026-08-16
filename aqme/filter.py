@@ -6,6 +6,7 @@
 import os
 import shutil
 from pathlib import Path
+import multiprocessing
 from rdkit import Chem
 from rdkit.Chem import rdMolTransforms, Descriptors, rdMolDescriptors
 from rdkit.ML.Cluster import Butina
@@ -526,11 +527,11 @@ def apply_filters(
 
     return selected_cids
 
-    
+
 def compute_pairwise_rms_distances(self, mols):
     """Compute pairwise RMS distances for all conformers.
     
-    Creates a distance matrix of RMS values between all pairs of conformers.
+    Creates a distance matrix of RMS values between all pairs of conformers using multiprocessing.
     Uses only 100 atom matches since molecules are aligned with same numbering.
     
     Args:
@@ -539,12 +540,18 @@ def compute_pairwise_rms_distances(self, mols):
     Returns:
         list: Flattened upper triangular distance matrix
     """
-    dists = []
-    for i in range(len(mols)):
-        for j in range(i):
-            # using 100 matches only since the molecules are aligned and share the same atom numbering
-            rms = get_conf_RMS(mols[i], mols[j], -1, -1, self.args.heavyonly, 100)
-            dists.append(rms)
+    
+    # Generator expression avoids creating a massive list in memory
+    args_generator = (
+        (mols[i], mols[j], -1, -1, self.args.heavyonly, 100)
+        for i in range(len(mols))
+        for j in range(i)
+    )
+    
+    # Use starmap to unpack the generator directly into get_conf_RMS arguments
+    with multiprocessing.Pool(processes=self.args.nprocs) as pool:
+        dists = pool.starmap(get_conf_RMS, args_generator)
+        
     return dists
 
 
