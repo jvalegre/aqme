@@ -1,10 +1,13 @@
-import sys
 from types import SimpleNamespace
+import os
+import sys
 
+import numpy as np
 import pytest
+from rdkit import Chem
 
 from aqme.cmin import normalize_cmin_backend
-from aqme.qdescp import normalize_qdescp_runtime_options
+from aqme.qdescp import normalize_qdescp_runtime_options, qdescp
 from aqme.utils import check_run, command_line_args
 
 
@@ -102,6 +105,25 @@ def test_command_line_args_geom_opt_disable(monkeypatch):
     args = command_line_args()
 
     assert args.geom_opt is False
+
+    input_sdf = "tests/cmin_methods/pentane_rdkit.sdf"
+    dest_dir = "tests/qdescp_inputs/QDESCP_NO_OPT"
+
+    # Read the initial coordinates before running QDESCP.
+    with Chem.SDMolSupplier(input_sdf, removeHs=False) as supplier:
+        mol_initial = next(mol for mol in supplier if mol is not None)
+        coords_initial = mol_initial.GetConformer().GetPositions()
+
+    # Run the QDESCP workflow with geometry optimization disabled.
+    qdescp(files=[input_sdf], geom_opt=args.geom_opt, destination=dest_dir)
+
+    output_sdf = os.path.join(dest_dir, "pentane_rdkit.sdf")
+    with Chem.SDMolSupplier(output_sdf, removeHs=False) as supplier:
+        mol_final = next(mol for mol in supplier if mol is not None)
+        coords_final = mol_final.GetConformer().GetPositions()
+
+    # Disabling geometry optimization must preserve the input coordinates.
+    assert np.allclose(coords_initial, coords_final, atol=1e-5)
 
 
 def test_normalize_qdescp_runtime_options_defaults_to_xtb():

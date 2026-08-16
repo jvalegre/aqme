@@ -218,6 +218,30 @@ class PropertyCalculator:
     def _run_cmin_minimization(self, files, charge, mult, conf_name, source_sdf):
         """Execute minimization using CMIN internals for one conformer."""
         if not self.args.geom_opt:
+            mol = self._build_rdkit_mol_for_conf(str(files['xyz']), source_sdf, conf_name)
+            if mol is None:
+                return False
+
+            # Preserve the input geometry while still producing the standard CMIN SDF outputs.
+            energy_kcal = (
+                float(mol.GetProp("Energy"))
+                if mol.HasProp("Energy")
+                else 0.0
+            )
+            self._append_cmin_sdf(
+                mol,
+                str(files['sdf_all']),
+                int(float(charge)),
+                int(float(mult)),
+                energy_kcal,
+            )
+            self._append_cmin_sdf(
+                mol,
+                str(files['sdf_filtered']),
+                int(float(charge)),
+                int(float(mult)),
+                energy_kcal,
+            )
             return True
 
         mol = self._build_rdkit_mol_for_conf(str(files['xyz']), source_sdf, conf_name)
