@@ -476,27 +476,10 @@ def apply_filters(
             ):
                 continue
 
-            # if use_mpi and check_pmi_pass(
-            #     pmi_cache[cid], pmi_cache[selected_cid], pmi_threshold
-            # ):
-            #     continue
-
-
-            # --- CONTROL Y CÁLCULO DE EXCESO EN PMI ---
             if use_mpi:
                 pmi_diff = max(abs(a - b) for a, b in zip(pmi_cache[cid], pmi_cache[selected_cid]))
                 if pmi_diff > pmi_threshold:
-                    excess = pmi_diff - pmi_threshold
-                    msg = (
-                        f"\n   [PMI Pass] Conf {cid} vs Conf {selected_cid}: "
-                        f"Diff = {pmi_diff:.6f} | Excede el threshold ({pmi_threshold}) por: +{excess:.6f}"
-                    )
-                    if log is not None:
-                        log.write(msg)
-                    else:
-                        print(msg)
                     continue
-            # ------------------------------------------
 
             if use_rmsd:
                 if not check_rmsd_pass(
