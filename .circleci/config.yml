@@ -38,7 +38,7 @@ jobs:
       - run: |
           # update conda and create env
           conda update -y conda
-          conda create -n cheminf python=3.12
+          conda create -y -n cheminf python=3.11
           source activate base 
           conda activate cheminf
           python -m pip install --upgrade pip
@@ -51,11 +51,15 @@ jobs:
           conda install -y -c conda-forge crest=2.12
           conda install -y -c conda-forge libgfortran=14.2.0
           pip install ase==3.28.0
-          conda install -y -c conda-forge tblite tblite-python
+          conda install -y -c conda-forge tblite=0.4.0 tblite-python=0.4.0
           conda install -y -c conda-forge pytorch
 
           # install dependencies of FAMEX for CMIN
           pip install famex
+          pip install mace-torch
+
+          # install additional test/domain dependencies
+          pip install racerts
 
           # install dependencies of AQME with pip
           pip install .
@@ -65,7 +69,7 @@ jobs:
           pip install pytest-cov
           pip install pytest-mock
           
-          # the format of the codecov report has to be scpecified or it doesn't create for some reason
+          # the format of the codecov report has to be specified or it doesn't create for some reason
           python -m pytest -v --cov=aqme --cov-report=xml
           rm -r /tmp/*
           cp -r * /tmp
