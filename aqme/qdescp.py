@@ -10,7 +10,7 @@ General
    destination : str, default=None,
       Directory to create the JSON file(s)
    program : str, default=xtb
-      Program required to create the new descriptors. Current options: 'xtb', 'nmr'
+      Program used to create the new descriptors. Current options: 'xtb', 'nmr'
    nprocs : int, default=None
       Number of xTB jobs run in parallel with 1 proc each (1 proc for reproducibility 
       in the results). Also, nprocs used in CSEARCH
@@ -47,8 +47,11 @@ xTB and MORFEUS descriptors
    boltz : bool, default=True
       Calculation of Boltzmann averaged xTB properties and addition of RDKit 
       molecular descriptors
-   xtb_opt : bool, default=True
+   geom_opt : bool, default=True
       Performs an initial xTB geometry optimization before calculating descriptors
+   method : str, default=xtb
+      Backend used for the geometry optimization. If omitted, QDESCP uses the
+      default xTB/tblite backend. Accepted values match the CMIN backend options
    vbur_radius : float, default=3.5
       Adjusts the radius in the buried volume calculations of MORFEUS
 
@@ -139,6 +142,19 @@ from aqme.cmin import cmin as CMIN
 from aqme.csearch.crest import xyzall_2_xyz
 
 
+def normalize_qdescp_runtime_options(args):
+    """Normalize and validate the QDESCP workflow options."""
+    program = getattr(args, "program", None) or "xtb"
+    program = str(program).lower()
+    if program not in {"xtb", "nmr"}:
+        raise ValueError(
+            f"Program {program} not supported for QDESCP. Use 'xtb' or 'nmr'"
+        )
+
+    args.program = program
+    return args
+
+
 class PropertyCalculator:
     """Handles quantum chemical property calculations.
     
@@ -205,7 +221,31 @@ class PropertyCalculator:
         
     def _run_cmin_minimization(self, files, charge, mult, conf_name, source_sdf):
         """Execute minimization using CMIN internals for one conformer."""
-        if not self.args.xtb_opt:
+        if not self.args.geom_opt:
+            mol = self._build_rdkit_mol_for_conf(str(files['xyz']), source_sdf, conf_name)
+            if mol is None:
+                return False
+
+            # Preserve the input geometry while still producing the standard CMIN SDF outputs.
+            energy_kcal = (
+                float(mol.GetProp("Energy"))
+                if mol.HasProp("Energy")
+                else 0.0
+            )
+            self._append_cmin_sdf(
+                mol,
+                str(files['sdf_all']),
+                int(float(charge)),
+                int(float(mult)),
+                energy_kcal,
+            )
+            self._append_cmin_sdf(
+                mol,
+                str(files['sdf_filtered']),
+                int(float(charge)),
+                int(float(mult)),
+                energy_kcal,
+            )
             return True
 
         mol = self._build_rdkit_mol_for_conf(str(files['xyz']), source_sdf, conf_name)
@@ -214,6 +254,9 @@ class PropertyCalculator:
 
         runner = CMIN.__new__(CMIN)
         runner.args = copy.copy(self.args)
+        # QDESCP's program selects the descriptor workflow (xTB or NMR). Its
+        # initial geometry optimization always uses the default xTB/tblite
+        # CMIN backend unless optimization is disabled with geom_opt=False.
         runner.args.program = "xtb"
         runner._validate_program()
 
@@ -348,7 +391,7 @@ class qdescp:
             - qdescp_acc (float): Calculation accuracy  
             - qdescp_opt (str): Optimization convergence criteria
             - boltz (bool): Calculate Boltzmann averages
-            - xtb_opt (bool): Run xTB optimization
+            - geom_opt (bool): Run xTB optimization
         """
         self.start_time = time.time()
         
@@ -361,11 +404,11 @@ class qdescp:
         _ = check_dependencies(self)
 
         # full xTB workflow in QDESCP for descriptor generation and collection
-        if self.args.program.lower() == "xtb":
+        if self.args.program == "xtb":
             _ = self.qdescp_xtb_workflow(boltz_dir,destination,smarts_targets)
 
         # full NMR workflow in QDESCP for NMR prediction
-        elif self.args.program.lower() == "nmr":
+        elif self.args.program == "nmr":
             _ = self.qdescp_nmr_workflow(boltz_dir)
         
         elapsed_time = round(time.time() - self.start_time, 2)
@@ -790,15 +833,10 @@ class qdescp:
         Raises:
             SystemExit: If program selection or input files are invalid
         """
-        # Program selection validation
-        if self.args.program is None:
-            self.args.program = "xtb"
-
-        if self.args.program.lower() not in ["xtb", "nmr"]:
-            self._error_exit(
-                f"Program {self.args.program} not supported for QDESCP. "
-                "Use 'xtb' or 'nmr'"
-            )
+        try:
+            self.args = normalize_qdescp_runtime_options(self.args)
+        except ValueError as exc:
+            self._error_exit(str(exc))
 
         # Processing configuration
         if self.args.nprocs is None:

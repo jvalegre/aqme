@@ -393,7 +393,7 @@ Conformer generation with multiple SMILES and names (i.e. from a database in CSV
 CMIN examples
 ................
 
-Geometry optimization with xTB or ANI (use xtb or ani in --program; use sdf, xyz, com/gjf or pdb in --files):
+Geometry optimization with xTB or several MLPs (use xtb or ani in --program; use sdf, xyz, com/gjf or pdb in --files):
 
 .. code-block:: shell
 

@@ -13,7 +13,7 @@ import glob
 import yaml
 import ast
 from pathlib import Path
-from rdkit.Chem.rdMolAlign import GetBestRMS
+from rdkit.Chem.rdMolAlign import GetBestRMS, AlignMol
 from rdkit.Chem.rdmolops import RemoveHs
 from rdkit.Chem import AllChem as Chem
 from aqme.argument_parser import set_options, var_dict
@@ -316,7 +316,7 @@ def get_info_input(file):
     else:
         raise ValueError(f"Unsupported file extension: {file_extension}")
 
-def get_conf_RMS(mol1, mol2, c1, c2, heavy, max_matches_rmsd):
+def get_conf_RMS(mol1, mol2, c1, c2, heavy, max_matches_rmsd, threshold=None):
     """Calculate RMSD between two molecule conformations.
     
     Computes best RMSD by aligning mol1 to mol2. Note: mol1 is modified
@@ -339,7 +339,15 @@ def get_conf_RMS(mol1, mol2, c1, c2, heavy, max_matches_rmsd):
     if heavy:
         mol1 = RemoveHs(mol1)
         mol2 = RemoveHs(mol2)
-    
+
+    if threshold is not None:
+        try:
+            rms_fast = AlignMol(mol1, mol2, prbCid=c1, refCid=c2)
+            if rms_fast < float(threshold):
+                return rms_fast
+        except Exception:
+            pass
+
     return GetBestRMS(
         mol1, mol2, c1, c2, 
         maxMatches=max_matches_rmsd, 
@@ -357,12 +365,12 @@ def _get_argument_categories():
         "csearch", "cmin", "qprep", "qcorr", "qdescp", "milo",
         "heavyonly", "single_system", "cregen", "lowest_only",
         "chk", "oldchk", "nodup_check", "robert", "debug", "pytest_testing",
-        "frequencies"
+        "freq"
     ]
     
     list_args = [
         "files", "gen_atoms", "constraints_atoms", "constraints_dist",
-        "constraints_angle", "constraints_dihedral", "aromatic_int", "atom_types", "cartesians",
+        "constraints_angle", "constraints_dihedral", "freeze", "aromatic_int", "atom_types", "cartesians",
         "nmr_atoms", "nmr_slope", "nmr_intercept", "qdescp_atoms", "geom"
     ]
     
@@ -373,7 +381,7 @@ def _get_argument_categories():
     
     float_args = [
         "ewin_cmin", "ewin_csearch", "opt_fmax", "rms_threshold",
-        "energy_threshold", "initial_energy_threshold", "max_mol_wt",
+        "energy_threshold", "initial_energy_threshold", "pmi_threshold", "max_mol_wt",
         "dup_threshold", "ro_threshold", "amplitude_ifreq", "ifreq_cutoff",
         "s2_threshold", "vdwfrac", "covfrac", "bond_thres", "angle_thres",
         "dihedral_thres", "crest_force", "qdescp_temp", "qdescp_acc",
@@ -867,8 +875,13 @@ def read_xyz_charge_mult(file):
         charge_xyz = 0
     if mult_xyz is None:
         mult_xyz = 1
-    
+
     return charge_xyz, mult_xyz
+
+
+def get_input_extension(input_file):
+    """Return the lowercase extension of *input_file* without the dot."""
+    return os.path.basename(Path(input_file)).split(".")[-1].lower()
 
 
 def _filter_mols_by_criteria(mols, low_check):
