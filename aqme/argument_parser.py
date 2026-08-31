@@ -52,7 +52,7 @@ var_dict = {
     "single_system": False,
     "cregen": True,
     "cregen_keywords": None,
-    "program": "xtb",
+    "program": None,
     "nprocs": None,
     "mem": "16GB",
     "mol": None,
