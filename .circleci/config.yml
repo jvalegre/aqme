@@ -37,7 +37,7 @@ jobs:
           # pip-dependency-file: test-requirements.txt  # if you have a different name for your requirements file, maybe one that combines your runtime and test requirements.
       - run: |
           apt-get update && apt-get install -y libgomp1
-
+          
           # update conda and create env
           conda update -y conda
           conda create -y -n cheminf python=3.11

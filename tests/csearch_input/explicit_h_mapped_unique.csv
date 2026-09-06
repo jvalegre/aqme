@@ -1,0 +1,4 @@
+﻿code_name,SMILES
+ethane_mapped,[CH3:1]C
+ethane_explicit,[H]C([H])([H])C([H])([H])[H]
+ethane_plain,CC

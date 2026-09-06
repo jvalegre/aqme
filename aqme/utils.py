@@ -1576,7 +1576,7 @@ def check_version(self, program, version_line, target_version, n_split, install_
     """
     file_txt = self.args.initial_dir.joinpath(f'{program.lower()}_internal_test.txt')
     version_found = '0.0.0'
-    
+
     # Run version command
     command_run_1 = [program.lower(), "--version", '>', f'{file_txt}']
     run_command(command_run_1, f'{file_txt}', cwd=self.args.initial_dir)
