@@ -486,6 +486,8 @@ Reference
 If you use any of the AQME modules, please include this citation:  
   * Alegre-Requena, J. V.; Sowndarya, S.; Pérez-Soto, R.; Alturaifi, T.; Paton, R. AQME: Automated Quantum Mechanical Environments for Researchers and Educators. *Wiley Interdiscip. Rev. Comput. Mol. Sci.* **2023**, *13*, e1663. (DOI: 10.1002/wcms.1663)  
   
+  * If you use QDESCP, please also include: Dalmau, D.; Jacot-Descombes, L.; Kalikadien, A.; Manzanilla, B.; Pidko, E. A.; Jorner, K.; Sigman, M. S.; Alegre-Requena, J. V. Cost-Effective Quantum-Mechanical Workflows for Molecular Machine Learning. *ACS Catal.* **2026**, *16*, 12565-12574. (DOI: 10.1021/acscatal.6c02583)  
+  
 Additionally, please include the corresponding references for the following programs:  
   * If you used CSEARCH with RDKit methods: `RDKit <https://www.rdkit.org/>`__ 
   * If you used CSEARCH with CREST methods: `CREST <https://crest-lab.github.io/crest-docs/>`__ 
