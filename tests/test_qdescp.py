@@ -15,7 +15,14 @@ import math
 import shutil
 from pathlib import Path
 from aqme.qdescp import qdescp
-from aqme.qdescp_utils import read_json, get_descriptors
+from aqme.qdescp_utils import (
+    read_json,
+    get_descriptors,
+    get_sdf_property,
+    extract_smiles_from_file,
+    validate_atom_mapping_consistency
+)
+from aqme.csearch.utils import smiles_metadata_for_csearch
 
 # saves the working directory
 w_dir_main = os.getcwd()
@@ -34,6 +41,33 @@ interpret_descriptors = get_descriptors('interpret')
 full_descriptors = get_descriptors('full')
 
 
+class CaptureLog:
+    def __init__(self):
+        self.messages = []
+
+    def write(self, message):
+        self.messages.append(message)
+
+
+def test_qdescp_rejects_repeated_atom_map_number(tmp_path):
+    sdf_file = tmp_path / "repeated_map.sdf"
+    sdf_file.write_text(
+        "\n"
+        ">  <SMILES>\n"
+        "[CH3:1][CH3:1]\n\n"
+        "$$$$\n"
+    )
+    log = CaptureLog()
+
+    assert not validate_atom_mapping_consistency(
+        [sdf_file],
+        {1},
+        extract_smiles_from_file,
+        log
+    )
+    assert "appears multiple times" in "".join(log.messages)
+
+
 # tests for QDESCP-xTB
 @pytest.mark.parametrize(
     "file",
@@ -44,6 +78,7 @@ full_descriptors = get_descriptors('full')
         ("test_idx_cmd.csv"), # test with qdescp_atoms using an atom index mapped run through command line
         ("test_group.csv"), # test with qdescp_atoms using a functional group
         ("test_multigroup.csv"), # test with qdescp_atoms using a multiple atoms and functional groups
+        ("test_mapped_duplicates.csv"), # test duplicate canonical SMILES with different mapped atoms
         ("test_robert_atom.csv"), # test for the AQME-ROBERT workflow with atomic descriptors
         ("test_robert_mol.csv") # test for the AQME-ROBERT workflow with NO atomic descriptors
     ]
@@ -55,6 +90,12 @@ def test_qdescp_xtb(file):
     folder_qdescp = f'{qdescp_input_dir}/QDESCP'
     if os.path.exists(folder_qdescp):
         shutil.rmtree(folder_qdescp)
+    folder_csearch = f'{qdescp_input_dir}/CSEARCH'
+    if os.path.exists(folder_csearch):
+        shutil.rmtree(folder_csearch)
+    if file == 'test_mapped_duplicates.csv':
+        Path(folder_csearch).mkdir(parents=True)
+        Path(folder_csearch).joinpath("stale_rdkit.sdf").write_text("stale")
     folder_boltz = f'{folder_qdescp}/boltz'
 
     if file in ['test_multigroup.csv','test_robert_atom.csv','test_robert_mol.csv']:
@@ -89,6 +130,11 @@ def test_qdescp_xtb(file):
     
     elif file == "test_idx.csv":
         qdescp_kwargs["qdescp_atoms"] = [1]
+
+    elif file == "test_mapped_duplicates.csv":
+        qdescp_kwargs["qdescp_atoms"] = [1]
+        qdescp_kwargs["sample"] = 1
+        qdescp_kwargs["nprocs"] = 1
 
     elif file == 'test_group.csv':
         qdescp_kwargs["qdescp_atoms"] = ["C=O"]
@@ -264,6 +310,29 @@ def test_qdescp_xtb(file):
         pd_boltz_interpret = pd.read_csv(file_descriptors_interpret)
         assert 'Atom_1_C_Partial charge' in pd_boltz_interpret
         assert round(pd_boltz_interpret['Atom_1_C_Partial charge'][1],1) == -0.1
+
+    elif file == 'test_mapped_duplicates.csv':
+        source_smiles = "[CH3:1]CC"
+        alias_smiles = "C[CH2:1]C"
+        source_metadata = smiles_metadata_for_csearch(source_smiles)
+        alias_metadata = smiles_metadata_for_csearch(alias_smiles)
+        source_file = Path(folder_csearch).joinpath("mol_a_rdkit.sdf")
+        alias_file = Path(folder_csearch).joinpath("mol_b_rdkit.sdf")
+        stale_file = Path(folder_csearch).joinpath("stale_rdkit.sdf")
+        pd_boltz_interpret = pd.read_csv(file_descriptors_interpret)
+        mapped_df = pd_boltz_interpret.set_index("code_name")
+
+        assert not stale_file.exists()
+        assert source_file.exists()
+        assert alias_file.exists()
+        assert get_sdf_property(source_file, "SMILES_INPUT") == source_smiles
+        assert get_sdf_property(source_file, "AQME_ATOM_MAP") == source_metadata["atom_map"]
+        assert get_sdf_property(alias_file, "SMILES_INPUT") == alias_smiles
+        assert get_sdf_property(alias_file, "AQME_ATOM_MAP") == alias_metadata["atom_map"]
+        assert get_sdf_property(alias_file, "AQME_ATOM_MAP") != source_metadata["atom_map"]
+        assert len(pd_boltz_interpret["code_name"]) == 2
+        assert not pd.isna(mapped_df.loc["mol_a", "Atom_1_C_Partial charge"])
+        assert not pd.isna(mapped_df.loc["mol_b", "Atom_1_C_Partial charge"])
 
     # Checking molecular and atomic descriptors
     def check_descriptors(pd_boltz, descriptors, excluded_descriptors, desc_type, file_test):
