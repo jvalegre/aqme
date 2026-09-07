@@ -13,7 +13,7 @@ import glob
 import yaml
 import ast
 from pathlib import Path
-from rdkit.Chem.rdMolAlign import GetBestRMS
+from rdkit.Chem.rdMolAlign import GetBestRMS, AlignMol
 from rdkit.Chem.rdmolops import RemoveHs
 from rdkit.Chem import AllChem as Chem
 from aqme.argument_parser import set_options, var_dict
@@ -24,9 +24,10 @@ J_TO_AU = 4.184 * 627.509541 * 1000.0  # UNIT CONVERSION
 T = 298.15
 
 obabel_version = "3.1.1" # this MUST match the meta.yaml
-aqme_version = "2.0.1"
+aqme_version = "2.1.0"
 time_run = time.strftime("%Y/%m/%d %H:%M:%S", time.localtime())
 aqme_ref = f"AQME v {aqme_version}, Alegre-Requena, J. V.; Sowndarya, S.; Perez-Soto, R.; Alturaifi, T.; Paton, R. AQME: Automated Quantum Mechanical Environments for Researchers and Educators. Wiley Interdiscip. Rev. Comput. Mol. Sci. 2023, 13, e1663 (DOI: 10.1002/wcms.1663)."
+qdescp_ref = "Dalmau, D.; Jacot-Descombes, L.; Kalikadien, A.; Manzanilla, B.; Pidko, E. A.; Jorner, K.; Sigman, M. S.; Alegre-Requena, J. V. Cost-Effective Quantum-Mechanical Workflows for Molecular Machine Learning. ACS Catal. 2026, 16, 12565-12574 (DOI: 10.1021/acscatal.6c02583)."
 xtb_version = '6.7.1'
 crest_version = '2.12'
 
@@ -316,7 +317,7 @@ def get_info_input(file):
     else:
         raise ValueError(f"Unsupported file extension: {file_extension}")
 
-def get_conf_RMS(mol1, mol2, c1, c2, heavy, max_matches_rmsd):
+def get_conf_RMS(mol1, mol2, c1, c2, heavy, max_matches_rmsd, threshold=None):
     """Calculate RMSD between two molecule conformations.
     
     Computes best RMSD by aligning mol1 to mol2. Note: mol1 is modified
@@ -339,7 +340,15 @@ def get_conf_RMS(mol1, mol2, c1, c2, heavy, max_matches_rmsd):
     if heavy:
         mol1 = RemoveHs(mol1)
         mol2 = RemoveHs(mol2)
-    
+
+    if threshold is not None:
+        try:
+            rms_fast = AlignMol(mol1, mol2, prbCid=c1, refCid=c2)
+            if rms_fast < float(threshold):
+                return rms_fast
+        except Exception:
+            pass
+
     return GetBestRMS(
         mol1, mol2, c1, c2, 
         maxMatches=max_matches_rmsd, 
@@ -354,14 +363,15 @@ def _get_argument_categories():
         tuple: (bool_args, list_args, int_args, float_args)
     """
     bool_args = [
-        "csearch", "cmin", "qprep", "qcorr", "qdescp",
+        "csearch", "cmin", "qprep", "qcorr", "qdescp", "milo",
         "heavyonly", "single_system", "cregen", "lowest_only",
-        "chk", "oldchk", "nodup_check", "robert", "debug", "pytest_testing"
+        "chk", "oldchk", "nodup_check", "robert", "debug", "pytest_testing",
+        "freq"
     ]
     
     list_args = [
         "files", "gen_atoms", "constraints_atoms", "constraints_dist",
-        "constraints_angle", "constraints_dihedral", "atom_types", "cartesians",
+        "constraints_angle", "constraints_dihedral", "freeze", "aromatic_int", "atom_types", "cartesians",
         "nmr_atoms", "nmr_slope", "nmr_intercept", "qdescp_atoms", "geom"
     ]
     
@@ -372,7 +382,7 @@ def _get_argument_categories():
     
     float_args = [
         "ewin_cmin", "ewin_csearch", "opt_fmax", "rms_threshold",
-        "energy_threshold", "initial_energy_threshold", "max_mol_wt",
+        "energy_threshold", "initial_energy_threshold", "pmi_threshold", "max_mol_wt",
         "dup_threshold", "ro_threshold", "amplitude_ifreq", "ifreq_cutoff",
         "s2_threshold", "vdwfrac", "covfrac", "bond_thres", "angle_thres",
         "dihedral_thres", "crest_force", "qdescp_temp", "qdescp_acc",
@@ -676,6 +686,8 @@ def _create_logger(self, aqme_module, logger_1, logger_2, txt_yaml, error_setup)
     
     # Write header
     self.log.write(f"AQME v {aqme_version} {time_run} \nCitation: {aqme_ref}\n")
+    if aqme_module == "qdescp":
+        self.log.write(f"Citation: {qdescp_ref}\n")
     
     # Log command line if used
     if self.command_line:
@@ -866,8 +878,13 @@ def read_xyz_charge_mult(file):
         charge_xyz = 0
     if mult_xyz is None:
         mult_xyz = 1
-    
+
     return charge_xyz, mult_xyz
+
+
+def get_input_extension(input_file):
+    """Return the lowercase extension of *input_file* without the dot."""
+    return os.path.basename(Path(input_file)).split(".")[-1].lower()
 
 
 def _filter_mols_by_criteria(mols, low_check):
@@ -1096,6 +1113,94 @@ def mol_from_sdf_or_mol_or_mol2(input_file, module, args, low_check=None, keep_x
     
     elif module == "csearch":
         return _load_mols_for_csearch(input_file, args, keep_xyz=keep_xyz)
+
+
+def expand_aromatic_constraints(aromatic_int, map_to_idx, log=None):
+    """Expand aromatic_int ring+metal groups into an xTB $constrain block string (force=0.1).
+
+    For each group [ring_a1, ..., ring_an, metal] (all atom map numbers):
+      - Distance: each ring atom to metal at the canonical M-C distance
+          5-ring (Cp): 2.10 Å  (ref: ferrocene Fe-C = 2.064 Å, CRC Handbook)
+          6-ring (arene): 2.15 Å (ref: bis(benzene)chromium Cr-C ≈ 2.14 Å)
+      - Angle: consecutive ring atom triplets at the ideal regular-polygon interior angle
+          5-ring: 108.0°  |  6-ring: 120.0°
+      - Dihedral: consecutive ring atom quartets at 0.0° (planarity)
+
+    Supported ring sizes: 5 and 6 only.
+    map_to_idx values must be 1-based xTB indices (as used in the qdescp path).
+
+    Args:
+        aromatic_int (list): e.g. [[1,2,3,4,5,10]] — ring atoms then metal, all atom map numbers.
+        map_to_idx (dict): {map_num: xtb_idx} where xtb_idx is 1-based.
+        log: optional logger with a .write() method for error messages.
+
+    Returns:
+        str: Complete xTB constrain block, e.g.
+             "$constrain\\n    force constant=0.1\\n    distance: ...\\n$end\\n"
+             Returns "" if aromatic_int is empty.
+
+    Raises:
+        SystemExit: on unsupported ring size or missing atom map numbers.
+    """
+    # Canonical M-C distances and ideal angles per ring size
+    _RING_PARAMS = {
+        5: {'dist': 2.10, 'angle': 108.0},
+        6: {'dist': 2.15, 'angle': 120.0},
+    }
+
+    constraint_lines = []
+
+    for group in aromatic_int:
+        group = [int(x) for x in group]
+        ring_maps = group[:-1]
+        metal_map = group[-1]
+        n_ring = len(ring_maps)
+
+        if n_ring not in _RING_PARAMS:
+            if log is not None:
+                log.write(
+                    f"\nx  aromatic_int: unsupported ring size {n_ring}. "
+                    "Only 5- and 6-membered rings are supported."
+                )
+            sys.exit()
+
+        missing = [m for m in ring_maps + [metal_map] if m not in map_to_idx]
+        if missing:
+            if log is not None:
+                log.write(
+                    f"\nx  aromatic_int: atom map numbers {missing} not found in the molecule. "
+                    f"Available map numbers: {sorted(map_to_idx.keys())}."
+                )
+            sys.exit()
+
+        ring_idx = [map_to_idx[m] for m in ring_maps]
+        metal_idx = map_to_idx[metal_map]
+        params = _RING_PARAMS[n_ring]
+
+        # Distance: each ring atom to metal
+        for ri in ring_idx:
+            constraint_lines.append(f"    distance: {ri}, {metal_idx}, {params['dist']}")
+
+        # Angle: consecutive ring atom triplets
+        for i in range(n_ring):
+            i0 = ring_idx[i % n_ring]
+            i1 = ring_idx[(i + 1) % n_ring]
+            i2 = ring_idx[(i + 2) % n_ring]
+            constraint_lines.append(f"    angle: {i0}, {i1}, {i2}, {params['angle']}")
+
+        # Dihedral: consecutive ring atom quartets (planarity)
+        for i in range(n_ring):
+            i0 = ring_idx[i % n_ring]
+            i1 = ring_idx[(i + 1) % n_ring]
+            i2 = ring_idx[(i + 2) % n_ring]
+            i3 = ring_idx[(i + 3) % n_ring]
+            constraint_lines.append(f"    dihedral: {i0}, {i1}, {i2}, {i3}, 0.0")
+
+    if not constraint_lines:
+        return ""
+
+    lines_str = "\n".join(constraint_lines)
+    return f"$constrain\n    force constant=0.1\n{lines_str}\n$end\n"
 
 
 def load_sdf(input_file, keep_xyz=False):

@@ -3,43 +3,47 @@ Parameters
 ----------
 
 General
-+++++++
+++++++
 
-   input : str, default=''  
-      (If smi is None) Optionally, file containing the SMILES strings and 
-      names of the molecules. Current file extensions: .smi, .sdf, .cdx, 
-      .csv, .com, .gjf, .mol, .mol2, .xyz, .txt, .yaml, .yml, .rtf  
-      For .csv files (i.e. FILENAME.csv), two columns are required, 
-      'code_name' with the names and 'SMILES' for the SMILES string  
-   program : str, default=None  
-      Program required in the conformational sampling. 
-      Current options: 'rdkit', 'crest'  
-   smi : str, default=None  
-      Optionally, define a SMILES string as input  
-   name : str, default=None  
-      (If smi is defined) optionally, define a name for the system  
-   w_dir_main : str, default=os.getcwd()  
-      Working directory 
+   input : str, default=''
+      (If smi is None) Optionally, file containing the SMILES strings and
+      names of the molecules. Current file extensions: .smi, .sdf, .cdx,
+      .csv, .com, .gjf, .mol, .mol2, .xyz, .txt, .yaml, .yml, .rtf
+      For .csv files (i.e. FILENAME.csv), two columns are required,
+      'code_name' with the names and 'SMILES' for the SMILES string
+   program : str, default='rdkit'
+      Program required in the conformational sampling.
+      Current options: 'rdkit', 'crest'
+   smi : str, default=None
+      Optionally, define a SMILES string as input
+   name : str, default=None
+      (If smi is defined) optionally, define a name for the system
+   w_dir_main : str, default=os.getcwd()
+      Working directory
    destination : str, default=None,
-     Directory to create the output file(s)   
-   varfile : str, default=None  
-      Option to parse the variables using a yaml file (specify the filename)  
-   charge : int, default=None  
-      Charge of the calculations used in the following input files. 
-      If charge isn't defined, it automatically reads the charge of the 
-      SMILES string  
-   mult : int, default=None  
-      Multiplicity of the calculations used in the following input files. If 
-      mult isn't defined, it automatically reads the multiplicity of the mol 
-      object created with the SMILES string. Be careful with the automated 
-      calculation of mult from mol objects when using metals!  
-   prefix : str, default=''  
-      Prefix added to all the names  
-   suffix : str, default=''  
-      Suffix added to all the names  
-   stacksize : str, default='1G'  
-      Controls the stack size used (especially relevant for xTB/CREST 
-      calculations of large systems, where high stack sizes are needed)  
+     Directory to create the output file(s)
+   varfile : str, default=None
+      Option to parse the variables using a yaml file (specify the filename)
+   charge : int, default=None
+      Charge of the calculations used in the following input files.
+      If charge isn't defined, it automatically reads the charge of the
+      SMILES string
+   mult : int, default=None
+      Multiplicity of the calculations used in the following input files. If
+      mult isn't defined, it automatically reads the multiplicity of the mol
+      object created with the SMILES string. Be careful with the automated
+      calculation of mult from mol objects when using metals!
+   freeze : list, default=[]
+      Freeze atom indices for the RacerTS workflow. For SDF input these are
+      interpreted as atom-map numbers. For XYZ input these are interpreted in
+      file order, with 1 as the first atom.
+   prefix : str, default=''
+      Prefix added to all the names
+   suffix : str, default=''
+      Suffix added to all the names
+   stacksize : str, default='1G'
+      Controls the stack size used (especially relevant for xTB/CREST
+      calculations of large systems, where high stack sizes are needed)
 
 General RDKit-based
 +++++++++++++++++++
@@ -119,7 +123,7 @@ Only organometallic molecules
       This option is useful to avoid repetition when the complex has two identical
       ligands (i.e. two Cl substituents).
 
-CREST only
+CREST and RDKit(only constraints)
 ++++++++++
 
    nprocs : int, default=8
@@ -161,6 +165,7 @@ import os
 import shutil
 import subprocess
 import sys
+import tempfile
 import time
 from pathlib import Path
 
@@ -195,6 +200,8 @@ from aqme.csearch.utils import (
     prepare_sdf_files,
     prepare_smiles_files,
     realign_mol,
+    resolve_racerts_charge,
+    resolve_racerts_reacting_atoms,
     smi_to_mol,
     substituted_mol,
     set_metal_atomic_number
@@ -205,6 +212,7 @@ from aqme.utils import (
     check_crest,
     check_dependencies,
     check_xtb,
+    get_input_extension,
     get_files,
     load_sdf,
     load_variables,
@@ -228,9 +236,16 @@ class csearch:
     """
     
     SUPPORTED_PROGRAMS = {"rdkit", "crest"}
+    DEFAULT_PROGRAM = "rdkit"
     SUPPORTED_FORCEFIELDS = {"MMFF", "UFF", "NO FF"}
     DEFAULT_NPROCS = 4
     DEFAULT_AUTO_SAMPLE = "mid"
+    RACERTS_CITATION = (
+        "Citation: Schmid, S. P.; Seng, H.; Kläy, T.; Jorner, K. Rapid "
+        "Generation of Transition-State Conformer Ensembles via Constrained "
+        "Distance Geometry. J. Chem. Inf. Model. 2026, 66, 2777-2790 "
+        "(DOI: 10.1021/acs.jcim.5c02794)."
+    )
     
     def __init__(self, **kwargs):
         """Initialize csearch with the given configuration.
@@ -255,19 +270,22 @@ class csearch:
         """
         self.args = load_variables(kwargs, "csearch")
         check_dependencies(self)
-        
+
         # Set default values
+        if not self.args.program:
+            self.args.program = self.DEFAULT_PROGRAM
         if self.args.nprocs is None:
             self.args.nprocs = self.DEFAULT_NPROCS
         if self.args.auto_sample == 'auto':
             self.args.auto_sample = self.DEFAULT_AUTO_SAMPLE
-            
+
     def _validate_configuration(self):
         """Validate program configuration and dependencies."""
         self._validate_program()
         self._validate_forcefield()
         self._validate_input()
-        
+        self._validate_freeze_mode()
+
         if self.args.program.lower() == "crest":
             check_xtb(self)
             check_crest(self)
@@ -275,10 +293,10 @@ class csearch:
     def _validate_program(self):
         """Verify program selection is valid."""
         program = self.args.program
-        if not program or program.lower() not in self.SUPPORTED_PROGRAMS:
+        if program.lower() not in self.SUPPORTED_PROGRAMS:
             self._error_exit(
-                'Program not specified or not supported for CSEARCH! '
-                'Specify: program="rdkit" (or "crest")'
+                'Program not supported for CSEARCH! '
+                'Current options: program="rdkit" (default) or program="crest"'
             )
             
     def _validate_forcefield(self):
@@ -306,6 +324,35 @@ class csearch:
         # Set dummy extension if using SMILES input
         if has_smiles:
             self.args.input = 'no_ext.no_ext'
+
+    def _validate_freeze_mode(self):
+        """Validate the RacerTS freeze workflow options."""
+        if getattr(self.args, "freeze", []) != [] and self.args.program.lower() == "crest":
+            self._error_exit(
+                "The --freeze option is not compatible with program='crest'. "
+                "Use program='rdkit' (or omit --program, since rdkit is the default)."
+            )
+
+    def _log_racerts_citation(self):
+        """Write the RacerTS citation to the CSEARCH log."""
+        if hasattr(self.args, "log") and self.args.log:
+            self.args.log.write(f"{self.RACERTS_CITATION}\n")
+
+    def _resolve_forcefield_for_mol(self, mol, name):
+        """Resolve the force field to use for a specific molecule."""
+        ff = self.args.ff
+
+        # MMFF is the default, but molecules containing atoms beyond Kr need UFF.
+        if ff == "MMFF":
+            for atom in mol.GetAtoms():
+                if atom.GetAtomicNum() > 36:
+                    self.args.log.write(
+                        f"\nx  {self.args.ff} is not compatible with the molecule, "
+                        f"changing to UFF (({os.path.basename(Path(name))}))"
+                    )
+                    return "UFF"
+
+        return ff
             
     def _process_input_files(self):
         """Process input files and run conformer search."""
@@ -370,44 +417,49 @@ class csearch:
         if not files:
             self._error_exit(f"Input file ({self.args.input}) not found!")
         return files
-        
+
     def _process_single_file(self, csearch_file):
         """Process a single input file.
-        
+
         Args:
             csearch_file: Path to input file
         """
-        
+        self.current_input_file = csearch_file
+
         # Prepare job inputs
-        job_inputs = (prepare_direct_smi(self.args) if self.args.smi is not None 
+        job_inputs = (prepare_direct_smi(self.args) if self.args.smi is not None
                      else self.load_jobs(csearch_file))
-                     
+
         self.args.log.write(
             f"\nStarting CSEARCH with {len(job_inputs)} job(s) "
             "(SDF, XYZ, CSV, etc. files might contain multiple jobs/structures inside)\n"
         )
-        
+
+        if self._should_use_racerts() and not getattr(self, "_racerts_citation_logged", False):
+            self._log_racerts_citation()
+            self._racerts_citation_logged = True
+
         # Run conformer search
         self.run_csearch(job_inputs)
-        
+
         # Clean up empty output files
         self._cleanup_empty_files()
-            
+
     def _cleanup_empty_files(self):
         """Remove any empty output SDF files."""
         for sdf_file in glob.glob(f'{self.csearch_folder}/*.sdf'):
             if os.path.getsize(sdf_file) == 0:
                 os.remove(sdf_file)
-                
+
     def _cleanup(self):
         """Perform final cleanup and logging."""
         elapsed_time = round(time.time() - self.start_time, 2)
         self.args.log.write(f"\nTime CSEARCH: {elapsed_time} seconds\n")
         self.args.log.finalize()
-        
+
         # Restore initial directory (for Jupyter notebooks)
         os.chdir(self.args.initial_dir)
-        
+
     def _error_exit(self, message):
         """Log error message and exit.
         
@@ -617,12 +669,18 @@ class csearch:
             self.args.log.write(
                 f"\n   ----- {os.path.basename(Path(name))} -----"
             )
-            
+
+            if getattr(self.args, "freeze", []):
+                if not self._freeze_input_supported():
+                    self._error_exit(
+                        "The --freeze option is only supported with SDF or XYZ inputs."
+                    )
+
             # Process molecule
             is_smiles_input = (
-            isinstance(smi,str) or 
-            self._is_smiles_format(self.args.input)
-                )
+                isinstance(smi, str)
+                or self._is_smiles_format(self.args.input)
+            )
             if is_smiles_input:
                 (
                     mol,
@@ -632,7 +690,7 @@ class csearch:
                     constraints_dihedral,
                     complex_ts
                 ) = smi_to_mol(
-                    smi, 
+                    smi,
                     self.args.program.lower(),
                     self.args.log,
                     self.args.seed,
@@ -640,16 +698,35 @@ class csearch:
                     constraints_dist,
                     constraints_angle,
                     constraints_dihedral,
-                    original_smi
+                    sample
                 )
-                if mol is not None and mol.HasProp("_AQME_CANONICAL_SMILES"):
-                    smi = mol.GetProp("_AQME_CANONICAL_SMILES")
+                if isinstance(smi, str) and "." in smi and check_constraints(
+                    constraints_atoms, constraints_dist, constraints_angle, constraints_dihedral
+                ):
+                    self.args.log.write(
+                        "\no  Constraints for dotted SMILES were mapped to RDKit atom "
+                        "indices. Aggregate fragments were also pre-positioned with "
+                        "outward, van der Waals-aware placement before minimization."
+                    )
             else:
                 mol = smi
-                complex_ts = check_constraints(constraints_atoms, constraints_dist, constraints_angle, constraints_dihedral)
-                
+                complex_ts = check_constraints(
+                    constraints_atoms,
+                    constraints_dist,
+                    constraints_angle,
+                    constraints_dihedral,
+                )
+
             # Setup for conformer generation
             self._setup_output_directory()
+            if self._should_use_racerts():
+                self._run_racerts_sampling(
+                    mol, name, charge, mult, smi, geom, sample,
+                    constraints_atoms, constraints_dist,
+                    constraints_angle, constraints_dihedral,
+                )
+                return None
+
             self._handle_3d_input(name)
 
             # Process metals if present
@@ -725,30 +802,31 @@ class csearch:
         smiles_formats = {"smi", "csv", "cdx", "txt", "yaml", "yml", "rtf"}
         ext = os.path.basename(Path(input_path)).split(".")[-1].lower()
         return ext in smiles_formats
-            
+
     def _setup_output_directory(self):
         """Create output directory for conformer files."""
         self.csearch_folder = set_destination(self, 'CSEARCH')
         self.csearch_folder.mkdir(exist_ok=True, parents=True)
-        
+
     def _handle_3d_input(self, name):
         """Process 3D input structures for CREST.
-        
+
         Args:
             name (str): Molecule name/identifier
         """
-        if (self.args.program.lower() == "crest" and 
+        if (self.args.program.lower() == "crest" and
             self.args.smi is None):
-            
-            input_ext = os.path.basename(Path(self.args.input)).split(".")[-1]
-            
+
+            input_path = getattr(self, "current_input_file", self.args.input)
+            input_ext = get_input_extension(input_path)
+
             if input_ext in ["pdb", "mol2", "mol", "sdf"]:
                 self._convert_to_xyz_obabel(name, input_ext)
             elif input_ext in ["gjf", "com"]:
                 self._convert_to_xyz_com(name, input_ext)
             elif input_ext == "xyz":
                 self._copy_xyz(name)
-                
+
     def _convert_to_xyz_obabel(self, name, ext):
         """Convert structure file to XYZ using OpenBabel.
         
@@ -1020,11 +1098,16 @@ class csearch:
         metal_sym, csearch_nprocs, sample, coord_Map=None,
         alg_Map=None, mol_template=None, original_atn=None
     ):
-        """Generate 3D conformers for a molecule.
-        
+        """
+        Generate 3D conformers for a molecule.
+
         This method handles conformer generation using either CREST or RDKit
         depending on the input type and program selection.
-        
+
+        Now supports automatic constraints for haptic rings (rings bound to a metal via 2+ atoms).
+        If such a ring is detected, constraints for the ring are automatically generated and added.
+        Hydrogens must be explicit for correct constraint application.
+
         Args:
             mol: RDKit molecule object
             name (str): Molecule identifier
@@ -1046,10 +1129,22 @@ class csearch:
             alg_Map: Alignment mapping (optional) 
             mol_template: Template molecule (optional)
             original_atn: Original atomic numbers (optional)
-            
+
         Returns:
             None: Results written to files
         """
+        # Apply automatic haptic ring constraints if needed
+        from aqme.csearch.utils import apply_haptic_constraints
+        constraints_atoms, constraints_dist, constraints_angle, constraints_dihedral = \
+            apply_haptic_constraints(
+                mol,
+                metal_idx,
+                constraints_atoms,
+                constraints_dist,
+                constraints_angle,
+                constraints_dihedral,
+                log=self.args.log,
+            )
         # Set default charge/multiplicity if not provided
         charge = charge if charge is not None else Chem.GetFormalCharge(mol)
         mult = mult if mult is not None else (Descriptors.NumRadicalElectrons(mol) + 1)
@@ -1074,21 +1169,37 @@ class csearch:
         self._handle_sampling_result(status, valid_structure, name)
         if self.args.crest_runs > 1:
             self._combine_crest_runs(name)
-            
+
     def _should_use_crest(self):
         """Determine if CREST should be used for conformer sampling directly with no RDKit sampling first.
-        
+
         Returns:
             bool: True if CREST should be used
         """
         is_crest = self.args.program.lower() == "crest"
+        input_path = getattr(self, "current_input_file", self.args.input)
         is_3d_input = (
             self.args.smi is None and
-            os.path.basename(Path(self.args.input)).split(".")[-1] in 
+            get_input_extension(input_path) in
             ["pdb", "mol2", "mol", "sdf", "gjf", "com", "xyz"]
         )
         return is_crest and is_3d_input
-        
+
+    def _freeze_input_supported(self):
+        """Check whether the current input can be used with --freeze."""
+        input_path = getattr(self, "current_input_file", self.args.input)
+        input_ext = get_input_extension(input_path)
+        freeze = getattr(self.args, "freeze", []) or []
+        return (
+            bool(freeze)
+            and self.args.program.lower() != "crest"
+            and input_ext in {"sdf", "xyz"}
+        )
+
+    def _should_use_racerts(self):
+        """Determine whether the RacerTS freeze workflow should run."""
+        return self._freeze_input_supported()
+
     def _run_crest_sampling(self, name, charge, mult, smi,
                           constraints_atoms, constraints_dist,
                           constraints_angle, constraints_dihedral,
@@ -1116,14 +1227,14 @@ class csearch:
                 constraints_dihedral, 'crest', geom,
                 sample, mol=mol
             )
-        
+
         # Multiple CREST runs
         status = None
         for pt in range(1, self.args.crest_runs + 1):
             src = f"{name}_{self.args.program.lower()}.xyz"
             dst = f"{name}_run_{pt}_{self.args.program.lower()}.xyz"
             shutil.copy(src, dst)
-            
+
             status = xtb_opt_main(
                 f"{name}_run_{pt}_{self.args.program.lower()}",
                 self, charge, mult, smi, constraints_atoms,
@@ -1132,7 +1243,173 @@ class csearch:
                 sample, mol=mol
             )
         return status
-        
+
+    def _copy_racerts_atom_maps(self, source_mol, target_mol):
+        """Copy atom-map numbers from the source input onto a RacerTS ensemble."""
+        if source_mol is None or target_mol is None:
+            return target_mol
+
+        if source_mol.GetNumAtoms() != target_mol.GetNumAtoms():
+            self._error_exit(
+                "RacerTS returned a structure with a different atom count than the input SDF/XYZ."
+            )
+
+        for atom_idx in range(source_mol.GetNumAtoms()):
+            target_mol.GetAtomWithIdx(atom_idx).SetAtomMapNum(
+                source_mol.GetAtomWithIdx(atom_idx).GetAtomMapNum()
+            )
+
+        return target_mol
+
+    def _run_racerts_sampling(
+        self, mol, name, charge, mult, smi, geom, sample,
+        constraints_atoms, constraints_dist, constraints_angle,
+        constraints_dihedral,
+    ):
+        """Run the RacerTS frozen-atom conformer generation workflow."""
+        try:
+            from racerts import ConformerGenerator
+        except ImportError:
+            self._error_exit(
+                "RacerTS is not installed. Install it with `pip install racerts` to use --freeze."
+            )
+
+        input_path = getattr(self, "current_input_file", self.args.input)
+        source_ext = get_input_extension(input_path)
+        reacting_atoms = resolve_racerts_reacting_atoms(
+            self.args, mol, input_path, self.args.log
+        )
+        charge = resolve_racerts_charge(self.args, mol, input_path, self.args.log)
+
+        if not reacting_atoms:
+            self._error_exit("The --freeze option requires at least one atom index.")
+
+        self.args.log.write(
+            f"\no  Running RacerTS with frozen atoms {reacting_atoms} "
+            f"({os.path.basename(Path(name))})"
+        )
+        if source_ext == "sdf":
+            self.args.log.write(
+                "\no  Freeze indices were read from the atom-map numbers in the input SDF "
+                "and the final output will preserve those atom-map labels."
+            )
+        else:
+            self.args.log.write(
+                "\no  Freeze indices were read in XYZ order, with 1 as the first atom."
+            )
+        self.args.log.write(
+            f"\no  Using charge {charge} for the RacerTS workflow"
+        )
+
+        temp_xyz = None
+        try:
+            if source_ext == "xyz":
+                source_xyz = Path(input_path)
+            else:
+                temp_handle = tempfile.NamedTemporaryFile(
+                    suffix=".xyz", delete=False
+                )
+                temp_handle.close()
+                temp_xyz = Path(temp_handle.name)
+                rdmolfiles.MolToXYZFile(mol, str(temp_xyz))
+                source_xyz = temp_xyz
+
+            cg = ConformerGenerator()
+            ts_conformers_mol = cg.generate_conformers(
+                file_name=str(source_xyz),
+                charge=charge,
+                reacting_atoms=reacting_atoms,
+            )
+            ts_conformers_mol = self._copy_racerts_atom_maps(mol, ts_conformers_mol)
+            output_sdf = self.csearch_folder / f"{name}_{self.args.program.lower()}{self.args.output}"
+            cids = [conf.GetId() for conf in ts_conformers_mol.GetConformers()]
+
+            if not cids:
+                self._error_exit(
+                    "RacerTS completed but no conformers were generated."
+                )
+
+            previous_force_filters = getattr(self, "_force_post_generation_filters", False)
+            self._force_post_generation_filters = True
+            try:
+                ff = self._resolve_forcefield_for_mol(ts_conformers_mol, name)
+                self.min_after_embed(
+                    ts_conformers_mol,
+                    cids,
+                    name,
+                    output_sdf,
+                    False,
+                    None,
+                    None,
+                    None,
+                    charge,
+                    mult,
+                    ff,
+                    smi,
+                    geom,
+                    None,
+                    [],
+                    [],
+                    [],
+                    sample,
+                    constraints_atoms=constraints_atoms,
+                    constraints_dist=constraints_dist,
+                    constraints_angle=constraints_angle,
+                    constraints_dihedral=constraints_dihedral,
+                )
+            finally:
+                self._force_post_generation_filters = previous_force_filters
+
+            self.args.log.write(
+                f"\no  RacerTS conformers written to {output_sdf} "
+            )
+        finally:
+            if temp_xyz is not None and temp_xyz.exists():
+                temp_xyz.unlink()
+
+    def _write_racerts_sdf(self, ts_conformers_mol, output_xyz, output_sdf, charge, mult, name):
+        """Write RacerTS conformers to the AQME SDF ensemble format."""
+        wrote_sdf = False
+
+        if hasattr(ts_conformers_mol, "GetConformers"):
+            try:
+                with Chem.SDWriter(str(output_sdf)) as sdwriter:
+                    for conf_id, conf in enumerate(ts_conformers_mol.GetConformers(), start=1):
+                        mol_copy = Chem.Mol(ts_conformers_mol)
+                        mol_copy.RemoveAllConformers()
+                        mol_copy.AddConformer(conf, assignId=True)
+                        mol_copy.SetProp("_Name", f"{name} {conf_id}")
+                        mol_copy.SetProp("Real charge", str(charge))
+                        mol_copy.SetProp("Mult", str(mult if mult is not None else 1))
+                        sdwriter.write(mol_copy)
+                wrote_sdf = True
+            except Exception:
+                wrote_sdf = False
+
+        if not wrote_sdf and output_xyz.exists():
+            command = [
+                "obabel",
+                "-ixyz",
+                str(output_xyz),
+                "-osdf",
+                f"-O{output_sdf}",
+            ]
+            try:
+                subprocess.run(
+                    command,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    check=True,
+                )
+                wrote_sdf = True
+            except (FileNotFoundError, subprocess.CalledProcessError):
+                wrote_sdf = False
+
+        if not wrote_sdf:
+            self._error_exit(
+                "RacerTS completed but AQME could not write the SDF ensemble."
+            )
+
     def _run_rdkit_sampling(self, mol, name, charge, mult,
                            *args):
         """Run conformer sampling using RDKit.
@@ -1241,7 +1518,11 @@ class csearch:
             mol, name, csearch_file, charge, mult,
             coord_Map, alg_Map, mol_template, smi, geom,
             original_atn, metal_atoms, metal_idx, metal_sym,
-            csearch_nprocs, sample, complex_ts
+            csearch_nprocs, sample, complex_ts,
+            constraints_atoms=constraints_atoms, 
+            constraints_dist=constraints_dist,    
+            constraints_angle=constraints_angle,  
+            constraints_dihedral=constraints_dihedral
         )
 
         # CREST optimization if selected
@@ -1261,7 +1542,11 @@ class csearch:
         self, mol, name, csearch_file, charge, mult,
         coord_Map, alg_Map, mol_template, smi, geom,
         original_atn, metal_atoms, metal_idx, metal_sym,
-        csearch_nprocs, sample, complex_ts
+        csearch_nprocs, sample, complex_ts,
+        constraints_atoms=None,    
+        constraints_dist=None,    
+        constraints_angle=None,   
+        constraints_dihedral=None 
     ):
         """Generate initial conformers using RDKit.
         
@@ -1271,7 +1556,7 @@ class csearch:
         Returns:
             Status, mol_crest
         """
-        if complex_ts:
+        if complex_ts and self.args.program.lower() != "rdkit":
             return None, None
             
         # Log conformer generation start
@@ -1289,7 +1574,11 @@ class csearch:
             mol, name, csearch_file, charge, mult,
             coord_Map, alg_Map, mol_template, smi, geom,
             original_atn, metal_atoms, metal_idx, metal_sym,
-            csearch_nprocs, sample
+            csearch_nprocs, sample,
+            constraints_atoms=constraints_atoms,
+            constraints_dist=constraints_dist,
+            constraints_angle=constraints_angle,
+            constraints_dihedral=constraints_dihedral
         )
     
         return status, mol_crest
@@ -1636,6 +1925,12 @@ class csearch:
         Returns:
             list: Generated conformer IDs
         """
+        # Pre-built aggregate: conformers already set by rdkit_aggregate_mol;
+        # bypass distance-geometry embedding entirely
+        if mol.HasProp("AggregateSmiles"):
+            return [conf.GetId() for conf in mol.GetConformers()]
+        
+
         # Handle special input formats
         is_3d_input = os.path.basename(Path(self.args.input)).split('.')[-1].lower() in {
             "sdf", "mol", "mol2"
@@ -1703,7 +1998,9 @@ class csearch:
         return rdDistGeom.EmbedMultipleConfs(mol, initial_confs, **embed_kwargs)
 
     def min_and_E_calc(self, mol, cids, coord_Map, alg_Map, mol_template,
-                       ff, geom, metal_atoms, metal_idx, metal_sym):
+                        ff, geom, metal_atoms, metal_idx, metal_sym,
+                        constraints_atoms=None, constraints_dist=None,
+                        constraints_angle=None, constraints_dihedral=None):
         """Energy minimization and geometry filtering of conformers.
         
         This method:
@@ -1736,7 +2033,11 @@ class csearch:
             # Minimize conformer
             mol, energy = self._minimize_conformer(
                 mol, conf, coord_Map, alg_Map,
-                mol_template, ff
+                mol_template, ff,
+                constraints_atoms=constraints_atoms,
+                constraints_dist=constraints_dist,
+                constraints_angle=constraints_angle,
+                constraints_dihedral=constraints_dihedral
             )
             
             # Process metal atoms
@@ -1756,7 +2057,9 @@ class csearch:
         return outmols, passing_cids, cenergy
         
     def _minimize_conformer(self, mol, conf, coord_Map, alg_Map,
-                          mol_template, ff):
+                            mol_template, ff,
+                            constraints_atoms=None, constraints_dist=None,
+                            constraints_angle=None, constraints_dihedral=None):
         """Minimize a single conformer.
         
         Args:
@@ -1768,13 +2071,21 @@ class csearch:
         if coord_Map is None and alg_Map is None and mol_template is None:
             energy = minimize_rdkit_energy(
                 mol, conf, self.args.log, ff,
-                self.args.opt_steps_rdkit
+                self.args.opt_steps_rdkit,
+                constraints_atoms=constraints_atoms,
+                constraints_dist=constraints_dist,
+                constraints_angle=constraints_angle,
+                constraints_dihedral=constraints_dihedral
             )
             return mol, energy
         else:
             return realign_mol(
                 mol, conf, coord_Map, alg_Map,
-                mol_template, self.args.opt_steps_rdkit
+                mol_template, self.args.opt_steps_rdkit,
+                constraints_atoms=constraints_atoms,
+                constraints_dist=constraints_dist,
+                constraints_angle=constraints_angle,
+                constraints_dihedral=constraints_dihedral
             )
             
     def _process_metal_atoms(self, mol, metal_atoms, metal_idx, metal_sym):
@@ -1854,7 +2165,9 @@ class csearch:
         self, mol, cids, name, csearch_file,
         update_to_rdkit, coord_Map, alg_Map, mol_template,
         charge, mult, ff, smi, geom, original_atn,
-        metal_atoms, metal_idx, metal_sym, sample
+        metal_atoms, metal_idx, metal_sym, sample,
+        constraints_atoms=None, constraints_dist=None,
+        constraints_angle=None, constraints_dihedral=None
     ):
         """Process embedded conformers including minimization and filtering.
         
@@ -1892,12 +2205,17 @@ class csearch:
         outmols, cenergy = self._process_conformers(
             mol, cids, name, charge, mult, smi, geom,
             coord_Map, alg_Map, mol_template, ff,
-            metal_atoms, metal_idx, metal_sym
+            metal_atoms, metal_idx, metal_sym,
+            constraints_atoms=constraints_atoms,
+            constraints_dist=constraints_dist,
+            constraints_angle=constraints_angle,
+            constraints_dihedral=constraints_dihedral
         )
         
         # Sort and select conformers
         selectedcids_rdkit = self._select_conformers(
-            outmols, cenergy, name, ff
+            outmols, cenergy, name, ff,
+            force_filters=getattr(self, "_force_post_generation_filters", False)
         )
         
         # Write selected conformers
@@ -1920,7 +2238,9 @@ class csearch:
     def _process_conformers(
         self, mol, cids, name, charge, mult, smi, geom,
         coord_Map, alg_Map, mol_template, ff,
-        metal_atoms, metal_idx, metal_sym
+        metal_atoms, metal_idx, metal_sym,
+        constraints_atoms=None, constraints_dist=None,
+        constraints_angle=None, constraints_dihedral=None
     ):
         """Process and filter conformers.
         
@@ -1938,7 +2258,11 @@ class csearch:
             
         outmols, passing_cids, cenergy = self.min_and_E_calc(
             mol, cids, coord_Map, alg_Map, mol_template,
-            ff, geom, metal_atoms, metal_idx, metal_sym
+            ff, geom, metal_atoms, metal_idx, metal_sym,
+            constraints_atoms=constraints_atoms,
+            constraints_dist=constraints_dist,
+            constraints_angle=constraints_angle,
+            constraints_dihedral=constraints_dihedral
         )
         
         # Add properties to passing molecules
@@ -1950,7 +2274,7 @@ class csearch:
             
         return outmols, cenergy
         
-    def _select_conformers(self, outmols, cenergy, name, ff):
+    def _select_conformers(self, outmols, cenergy, name, ff, force_filters=False):
         """Select conformers based on energy and filtering.
         
         Args:
@@ -1965,14 +2289,17 @@ class csearch:
         cids = list(range(len(outmols)))
         sorted_all_cids = sorted(cids, key=lambda cid: cenergy[cid])
         
-        if ff.upper() == "NO FF":
+        if ff.upper() == "NO FF" and not force_filters:
             return sorted_all_cids
             
         self.args.log.write(
             f"\no  Applying filters to initial conformers "
             f"({os.path.basename(Path(name))})"
         )
-        return conformer_filters(self, sorted_all_cids, cenergy, outmols)
+        return conformer_filters(
+            self, sorted_all_cids, cenergy, outmols,
+            force_full_filters=force_filters
+        )
         
     def _write_conformers(
         self, outmols, selected_cids, csearch_file,
@@ -2058,7 +2385,11 @@ class csearch:
         metal_idx,
         metal_sym,
         csearch_nprocs,
-        sample
+        sample,
+        constraints_atoms=None,
+        constraints_dist=None,
+        constraints_angle=None,
+        constraints_dihedral=None
     ):
 
         """
@@ -2080,16 +2411,8 @@ class csearch:
         if len(rotmatches) > self.args.max_torsions and self.args.max_torsions > 0:
             self.args.log.write(f"\nx  Too many torsions ({len(rotmatches)}). Skipping {name + self.args.output}")
 
-        ff = self.args.ff
+        ff = self._resolve_forcefield_for_mol(mol, name)
         cids = self.embed_conf(mol, initial_confs, coord_Map, alg_Map, mol_template, csearch_nprocs, name)
-
-        # energy minimize all to get more realistic results
-        # identify the atoms and decide Force Field
-        for atom in mol.GetAtoms():
-            if atom.GetAtomicNum() > 36 and self.args.ff == "MMFF":  # up to Kr for MMFF, if not the code will use UFF
-                self.args.log.write(f"\nx  {self.args.ff} is not compatible with the molecule, changing to UFF (({os.path.basename(Path(name))}))")
-                ff = "UFF"
-                break
 
         try:
             status, mol_crest = self.min_after_embed(
@@ -2110,7 +2433,11 @@ class csearch:
                 metal_atoms,
                 metal_idx,
                 metal_sym,
-                sample
+                sample,
+                constraints_atoms=constraints_atoms,
+                constraints_dist=constraints_dist,
+                constraints_angle=constraints_angle,
+                constraints_dihedral=constraints_dihedral
             )
             return status, mol_crest[0]
         except IndexError:

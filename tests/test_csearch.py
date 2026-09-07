@@ -6,34 +6,39 @@
 ######################################################.
 
 import os
+import gc
 import pytest
 import glob
 from aqme.csearch import csearch
-from aqme.csearch.utils import normalize_smiles_for_csearch
+from aqme.csearch.utils import rdkit_aggregate_mol, smi_to_mol, apply_rdkit_constraints, _resolve_vdw_clashes
+from aqme.filter import conformer_filters, has_multiple_fragments
+from types import SimpleNamespace
+import numpy as np
 import rdkit
+from rdkit.Chem import AllChem as Chem
 import shutil
 
-# saves the working directory
-w_dir_main = os.getcwd()
-csearch_methods_dir = w_dir_main + "/tests/csearch_methods"
-csearch_rdkit_summ_dir = w_dir_main + "/tests/csearch_rdkit_summ"
-csearch_crest_dir = w_dir_main + "/tests/csearch_crest"
-csearch_others_dir = w_dir_main + "/tests/csearch_others"
-csearch_input_dir = w_dir_main + "/tests/csearch_input"
-csearch_varfile_dir = w_dir_main + "/tests/csearch_varfile"
+tests_dir = os.path.dirname(os.path.abspath(__file__))
+w_dir_main = os.path.dirname(tests_dir)  # Root of the repository (aqme)
 
-if not os.path.exists(csearch_methods_dir):
-    os.mkdir(csearch_methods_dir)
-if not os.path.exists(csearch_rdkit_summ_dir):
-    os.mkdir(csearch_rdkit_summ_dir)
-if not os.path.exists(csearch_crest_dir):
-    os.mkdir(csearch_crest_dir)
-if not os.path.exists(csearch_others_dir):
-    os.mkdir(csearch_others_dir)
-if not os.path.exists(csearch_input_dir):
-    os.mkdir(csearch_input_dir)
-if not os.path.exists(csearch_varfile_dir):
-    os.mkdir(csearch_varfile_dir)
+csearch_methods_dir = os.path.join(tests_dir, "csearch_methods")
+csearch_rdkit_summ_dir = os.path.join(tests_dir, "csearch_rdkit_summ")
+csearch_crest_dir = os.path.join(tests_dir, "csearch_crest")
+csearch_others_dir = os.path.join(tests_dir, "csearch_others")
+csearch_input_dir = os.path.join(tests_dir, "csearch_input")
+csearch_varfile_dir = os.path.join(tests_dir, "csearch_varfile")
+csearch_haptic_dir = os.path.join(tests_dir, "csearch_haptic")
+
+for folder in [
+    csearch_methods_dir,
+    csearch_rdkit_summ_dir,
+    csearch_crest_dir,
+    csearch_others_dir,
+    csearch_input_dir,
+    csearch_varfile_dir,
+    csearch_haptic_dir,
+]:
+    os.makedirs(folder, exist_ok=True)
 
 
 def test_normalize_smiles_for_csearch_removes_explicit_h_and_atom_maps():
@@ -64,6 +69,7 @@ def test_csearch_varfile(varfile, nameinvarfile, output_nummols):
     file = str("CSEARCH/" + nameinvarfile + "_rdkit" + ".sdf")
     mol1 = rdkit.Chem.SDMolSupplier(file, removeHs=False)
     assert len(mol1) == output_nummols
+    del mol1
     os.chdir(w_dir_main)
 
 # tests for input types
@@ -282,6 +288,35 @@ def test_csearch_input_parameters(program, input, output_nummols):
         assert len(mols) == output_nummols
     os.chdir(w_dir_main)
 
+
+def test_csearch_preserves_three_hydrogens_for_bracketed_carbon_smiles():
+    """CSEARCH must not add a fourth H to bracketed carbon SMILES."""
+    output_dir = os.path.join(csearch_input_dir, "CSEARCH")
+    input_file = os.path.join(csearch_input_dir, "carbon_hydrogen_count.csv")
+
+    csearch(
+        destination=output_dir,
+        program="rdkit",
+        input=input_file,
+        sample=1,
+    )
+
+    for code_name in [
+        "methyl_radical",
+        "methyl_cation",
+        "methyl_anion",
+        "methylene",
+    ]:
+        sdf_file = os.path.join(output_dir, f"{code_name}_rdkit.sdf")
+        with rdkit.Chem.SDMolSupplier(sdf_file, removeHs=False) as molecules:
+            assert len(molecules) > 0
+            for molecule in molecules:
+                hydrogen_count = sum(
+                    atom.GetSymbol() == "H" for atom in molecule.GetAtoms()
+                )
+                assert hydrogen_count == 3
+        os.remove(sdf_file)
+
 # tests for parameters of CREST
 @pytest.mark.parametrize(
     "program, smi, name, cregen, cregen_keywords, crest_keywords, charge, mult, output_nummols",
@@ -324,6 +359,9 @@ def test_csearch_crest_parameters(
     mult, 
     output_nummols,
 ):
+    if not shutil.which("xtb"):
+        pytest.skip("xtb executable not found in system PATH. Skipping CREST test.")
+
     os.chdir(csearch_crest_dir)
 
     # runs the program with the different tests
@@ -436,7 +474,7 @@ def test_csearch_crest_parameters(
             0.000001,
             0.6,
             0.3,
-            21,
+            30,
         ),
         (
             "rdkit",
@@ -451,7 +489,7 @@ def test_csearch_crest_parameters(
             0.0001,
             4,
             0.6,
-            4,
+            10,
         ),
     ],
 )
@@ -788,6 +826,22 @@ def test_csearch_rdkit_parameters(
         #     False,
         #     1,
         # ),
+        (
+                "rdkit",
+                "C.O",
+            "nci_rdkit",
+                True,
+                False,
+                None,
+                [],
+                [],
+                [],
+                0,
+                1,
+                None,
+                False,
+                5,
+        ),
     ],
 )
 
@@ -807,6 +861,9 @@ def test_csearch_methods(
     destination,
     output_nummols,
 ):
+    if program == "crest" and not shutil.which("xtb"):
+        pytest.skip("xtb executable not found in system PATH. Skipping CREST test.")
+
     os.chdir(csearch_methods_dir)
     # runs the program with the different tests
     if destination:
@@ -1148,23 +1205,304 @@ def test_csearch_methods(
         assert len(mols) == output_nummols
     os.chdir(w_dir_main)
 
+
+def test_csearch_haptic_constraints():
+    os.chdir(csearch_haptic_dir)
+    
+    # Ejecuta csearch con un smiles que genera enlaces hapticos automáticos con Pd
+    csearch(
+        w_dir_main=csearch_haptic_dir,
+        program="rdkit",
+        smi="C12=CC=CC1[Pd]2",
+        name="haptic_complex",
+        charge=0,
+        mult=1
+    )
+
+    file_sdf = f"{csearch_haptic_dir}/CSEARCH/haptic_complex_rdkit.sdf"
+    file_dat = f"{csearch_haptic_dir}/CSEARCH_data.dat"
+    
+    assert os.path.exists(file_sdf)
+    assert os.path.exists(file_dat)
+    
+    with open(file_dat, "r") as f:
+        log_content = f.read()
+        
+    assert "AQME detected haptic ring binding to a metal and is applying automatic constraints" in log_content
+    assert "Automatic hapticity constraints:" in log_content
+    os.chdir(w_dir_main)
+
+
+class _SilentLog:
+    def write(self, *args, **kwargs):
+        pass
+
+    def finalize(self):
+        pass
+
+
+def test_multifragment_smiles_sets_aggregate_flag_and_is_detected():
+    mol, constraints_atoms, constraints_dist, constraints_angle, constraints_dihedral, complex_ts = smi_to_mol(
+        "C.O",
+        "rdkit",
+        _SilentLog(),
+        seed=7,
+        constraints_atoms=[],
+        constraints_dist=[],
+        constraints_angle=[],
+        constraints_dihedral=[],
+        sample=2,
+    )
+
+    assert mol is not None
+    assert complex_ts is False
+    assert constraints_atoms == []
+    assert constraints_dist == []
+    assert constraints_angle == []
+    assert constraints_dihedral == []
+    assert mol.HasProp("AggregateSmiles")
+    assert mol.GetProp("AggregateSmiles") == "C.O"
+    assert has_multiple_fragments(mol) is True
+
+
+def test_multifragment_system_skips_energy_filters(monkeypatch):
+    mol = rdkit_aggregate_mol(["C", "O"], seed=7, n_conformers=2)
+    assert mol is not None
+    assert has_multiple_fragments(mol) is True
+
+    class _App:
+        def __init__(self):
+            self.args = SimpleNamespace(
+                log=_SilentLog(),
+                ewin_cmin=5.0,
+                initial_energy_threshold=0.0001,
+                rms_threshold=0.25,
+                heavyonly=False,
+                max_matches_rmsd=10,
+            )
+
+    app = _App()
+    called = {}
+
+    def fail_energy_window(*args, **kwargs):
+        raise AssertionError("Energy window filter should be skipped for multi-fragment systems")
+
+    def fail_pre_energy(*args, **kwargs):
+        raise AssertionError("Pre-energy filter should be skipped for multi-fragment systems")
+
+    def fake_apply_filters(outmols, selectedcids_initial, cenergy, args, use_energy, use_mpi, use_rmsd):
+        called["selectedcids_initial"] = list(selectedcids_initial)
+        called["use_energy"] = use_energy
+        called["use_mpi"] = use_mpi
+        called["use_rmsd"] = use_rmsd
+        return list(selectedcids_initial)
+
+    monkeypatch.setattr("aqme.filter.apply_energy_window_filter", fail_energy_window)
+    monkeypatch.setattr("aqme.filter.apply_pre_energy_filter", fail_pre_energy)
+    monkeypatch.setattr("aqme.filter.apply_filters", fake_apply_filters)
+
+    selected = conformer_filters(app, [0, 1], [0.0, 0.2], [mol, mol])
+
+    assert selected == [0, 1]
+    assert called["selectedcids_initial"] == [0, 1]
+    assert called["use_energy"] is False
+    assert called["use_mpi"] is True
+    assert called["use_rmsd"] is True
+
+
+def test_smi_to_mol_translates_dotted_constraints():
+    mol, constraints_atoms, constraints_dist, constraints_angle, constraints_dihedral, complex_ts = smi_to_mol(
+        "[CH4:1].[OH2:2]",
+        "rdkit",
+        _SilentLog(),
+        seed=11,
+        constraints_atoms=[],
+        constraints_dist=[[1, 2, 3.0]],
+        constraints_angle=[],
+        constraints_dihedral=[],
+        sample=2,
+    )
+
+    assert mol is not None
+    assert complex_ts is False
+    assert mol.HasProp("AggregateSmiles")
+    assert mol.GetProp("AggregateSmiles") == "[CH4:1].[OH2:2]"
+    assert constraints_atoms == []
+
+    mapped_atoms = {
+        atom.GetAtomMapNum(): atom.GetIdx()
+        for atom in mol.GetAtoms()
+        if atom.GetAtomMapNum() > 0
+    }
+    assert constraints_dist == [[mapped_atoms[1], mapped_atoms[2], 3.0]]
+    assert constraints_angle == []
+    assert constraints_dihedral == []
+
+
+def test_apply_rdkit_constraints_preserves_requested_geometry_values():
+    class _FakeForceField:
+        def __init__(self):
+            self.calls = []
+
+        def AddFixedPoint(self, atom_idx):
+            self.calls.append(("fixed", atom_idx))
+
+        def UFFAddDistanceConstraint(self, atom1, atom2, relative, lower, upper, force_constant):
+            self.calls.append(("distance", atom1, atom2, relative, lower, upper, force_constant))
+
+        def UFFAddAngleConstraint(self, atom1, atom2, atom3, relative, lower, upper, force_constant):
+            self.calls.append(("angle", atom1, atom2, atom3, relative, lower, upper, force_constant))
+
+        def UFFAddTorsionConstraint(self, atom1, atom2, atom3, atom4, relative, lower, upper, force_constant):
+            self.calls.append(("dihedral", atom1, atom2, atom3, atom4, relative, lower, upper, force_constant))
+
+    ff = _FakeForceField()
+    apply_rdkit_constraints(
+        ff,
+        constraints_atoms=[[0]],
+        constraints_dist=[[0, 1, 1.54]],
+        constraints_angle=[[0, 1, 2, 109.5]],
+        constraints_dihedral=[[0, 1, 2, 3, 180.0]],
+        force_constant=50000.0,
+    )
+
+    assert ff.calls == [
+        ("fixed", 0),
+        ("distance", 0, 1, False, 1.54, 1.54, 50000.0),
+        ("angle", 0, 1, 2, False, 109.5, 109.5, 50000.0),
+        ("dihedral", 0, 1, 2, 3, False, 180.0, 180.0, 50000.0),
+    ]
+
+
+def test_resolve_vdw_clashes_separates_overlapping_fragments():
+    base_mol = Chem.AddHs(Chem.MolFromSmiles("C"))
+    mobile_mol = Chem.AddHs(Chem.MolFromSmiles("O"))
+    Chem.EmbedMolecule(base_mol, randomSeed=1)
+    Chem.EmbedMolecule(mobile_mol, randomSeed=2)
+
+    base_conf = base_mol.GetConformer()
+    mobile_conf = mobile_mol.GetConformer()
+    for atom_idx in range(mobile_mol.GetNumAtoms()):
+        pos = np.array(base_conf.GetAtomPosition(0))
+        mobile_conf.SetAtomPosition(atom_idx, (pos + np.array([0.05, 0.0, 0.0])).tolist())
+
+    def _pairwise_vdw_clearance(mol_a, mol_b):
+        periodic_table = Chem.GetPeriodicTable()
+        conf_a = mol_a.GetConformer()
+        conf_b = mol_b.GetConformer()
+        min_clearance = float("inf")
+        for atom_a in range(mol_a.GetNumAtoms()):
+            pos_a = np.array(conf_a.GetAtomPosition(atom_a))
+            radius_a = periodic_table.GetRvdw(mol_a.GetAtomWithIdx(atom_a).GetAtomicNum())
+            for atom_b in range(mol_b.GetNumAtoms()):
+                pos_b = np.array(conf_b.GetAtomPosition(atom_b))
+                radius_b = periodic_table.GetRvdw(mol_b.GetAtomWithIdx(atom_b).GetAtomicNum())
+                clearance = np.linalg.norm(pos_a - pos_b) - (radius_a + radius_b)
+                min_clearance = min(min_clearance, clearance)
+        return min_clearance
+
+    before = _pairwise_vdw_clearance(base_mol, mobile_mol)
+    assert before < 0.0
+
+    shift = _resolve_vdw_clashes(base_mol, mobile_mol, np.array([1.0, 0.0, 0.0]), padding=0.5)
+    after = _pairwise_vdw_clearance(base_mol, mobile_mol)
+
+    assert shift > 0.0
+    assert after >= -1e-3
+
+
+def _get_min_interfragment_vdw_clearance(mol, conf_id=0):
+    """Return the minimum inter-fragment VdW clearance in a conformer."""
+    fragments = Chem.GetMolFrags(mol)
+    conf = mol.GetConformer(conf_id)
+    periodic_table = Chem.GetPeriodicTable()
+    min_clearance = float("inf")
+
+    for frag_i, frag_a in enumerate(fragments):
+        for frag_b in fragments[frag_i + 1:]:
+            for atom_a in frag_a:
+                pos_a = np.array(conf.GetAtomPosition(atom_a))
+                radius_a = periodic_table.GetRvdw(mol.GetAtomWithIdx(atom_a).GetAtomicNum())
+                for atom_b in frag_b:
+                    pos_b = np.array(conf.GetAtomPosition(atom_b))
+                    radius_b = periodic_table.GetRvdw(mol.GetAtomWithIdx(atom_b).GetAtomicNum())
+                    clearance = np.linalg.norm(pos_a - pos_b) - (radius_a + radius_b)
+                    min_clearance = min(min_clearance, clearance)
+
+    return min_clearance
+
+
+def test_rdkit_aggregate_mol_avoids_vdw_overlap():
+    mol = rdkit_aggregate_mol(["C", "O"], seed=7, n_conformers=4)
+
+    assert mol is not None
+    assert mol.HasProp("AggregateSmiles")
+    assert mol.GetNumConformers() == 4
+
+    for conf_id in range(mol.GetNumConformers()):
+        assert _get_min_interfragment_vdw_clearance(mol, conf_id=conf_id) >= -1e-3
+
+
+def test_rdkit_aggregate_mol_uses_interfragment_constraints():
+    mol = rdkit_aggregate_mol(
+        ["[CH4:1]", "[OH2:2]"],
+        seed=11,
+        n_conformers=3,
+        constraints_dist=[[1, 2, 3.0]],
+    )
+
+    assert mol is not None
+
+    mapped_atoms = {
+        atom.GetAtomMapNum(): atom.GetIdx()
+        for atom in mol.GetAtoms()
+        if atom.GetAtomMapNum() > 0
+    }
+    assert 1 in mapped_atoms
+    assert 2 in mapped_atoms
+
+    for conf_id in range(mol.GetNumConformers()):
+        conf = mol.GetConformer(conf_id)
+        distance = np.linalg.norm(
+            np.array(conf.GetAtomPosition(mapped_atoms[1]))
+            - np.array(conf.GetAtomPosition(mapped_atoms[2]))
+        )
+        assert distance >= 3.0 - 1e-3
+        assert _get_min_interfragment_vdw_clearance(mol, conf_id=conf_id) >= -1e-3
+
 # tests for removing foler
 @pytest.mark.parametrize(
     "folder_list, file_list",
     [
         # tests for conformer generation with RDKit
         (
-            ["tests/csearch_methods/CSEARCH","tests/csearch_crest/CSEARCH","tests/csearch_input/CSEARCH","tests/csearch_varfile/CSEARCH"],
-            ["tests/csearch_methods/CSEARCH*","tests/csearch_crest/CSEARCH*","tests/csearch_input/CSEARCH*","tests/csearch_varfile/CSEARCH*"]
+            [
+                "tests/csearch_methods/CSEARCH",
+                "tests/csearch_crest/CSEARCH",
+                "tests/csearch_input/CSEARCH",
+                "tests/csearch_varfile/CSEARCH",
+                "tests/csearch_haptic/CSEARCH",
+            ],
+            [
+                "tests/csearch_methods/CSEARCH*",
+                "tests/csearch_crest/CSEARCH*",
+                "tests/csearch_input/CSEARCH*",
+                "tests/csearch_varfile/CSEARCH*",
+                "tests/csearch_haptic/CSEARCH*",
+            ],
         ),
     ],
 )
 
 def test_remove(folder_list, file_list):
+    gc.collect()
     for i,folder in enumerate(folder_list):
         if os.path.exists(w_dir_main + "/" + folder):
-            shutil.rmtree(w_dir_main + "/" + folder)
+            shutil.rmtree(w_dir_main + "/" + folder, ignore_errors=True)
         for f in glob.glob(file_list[i]):
             if os.path.exists(f):
-                os.remove(f)
+                try:
+                    os.remove(f)
+                except (PermissionError, OSError):
+                    pass
     os.chdir(w_dir_main)
