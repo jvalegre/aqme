@@ -250,6 +250,35 @@ def test_csearch_input_parameters(program, input, output_nummols):
         assert len(mols) == output_nummols
     os.chdir(w_dir_main)
 
+
+def test_csearch_preserves_three_hydrogens_for_bracketed_carbon_smiles():
+    """CSEARCH must not add a fourth H to bracketed carbon SMILES."""
+    output_dir = os.path.join(csearch_input_dir, "CSEARCH")
+    input_file = os.path.join(csearch_input_dir, "carbon_hydrogen_count.csv")
+
+    csearch(
+        destination=output_dir,
+        program="rdkit",
+        input=input_file,
+        sample=1,
+    )
+
+    for code_name in [
+        "methyl_radical",
+        "methyl_cation",
+        "methyl_anion",
+        "methylene",
+    ]:
+        sdf_file = os.path.join(output_dir, f"{code_name}_rdkit.sdf")
+        with rdkit.Chem.SDMolSupplier(sdf_file, removeHs=False) as molecules:
+            assert len(molecules) > 0
+            for molecule in molecules:
+                hydrogen_count = sum(
+                    atom.GetSymbol() == "H" for atom in molecule.GetAtoms()
+                )
+                assert hydrogen_count == 3
+        os.remove(sdf_file)
+
 # tests for parameters of CREST
 @pytest.mark.parametrize(
     "program, smi, name, cregen, cregen_keywords, crest_keywords, charge, mult, output_nummols",
