@@ -27,6 +27,7 @@ obabel_version = "3.1.1" # this MUST match the meta.yaml
 aqme_version = "2.1.0"
 time_run = time.strftime("%Y/%m/%d %H:%M:%S", time.localtime())
 aqme_ref = f"AQME v {aqme_version}, Alegre-Requena, J. V.; Sowndarya, S.; Perez-Soto, R.; Alturaifi, T.; Paton, R. AQME: Automated Quantum Mechanical Environments for Researchers and Educators. Wiley Interdiscip. Rev. Comput. Mol. Sci. 2023, 13, e1663 (DOI: 10.1002/wcms.1663)."
+qdescp_ref = "Dalmau, D.; Jacot-Descombes, L.; Kalikadien, A.; Manzanilla, B.; Pidko, E. A.; Jorner, K.; Sigman, M. S.; Alegre-Requena, J. V. Cost-Effective Quantum-Mechanical Workflows for Molecular Machine Learning. ACS Catal. 2026, 16, 12565-12574 (DOI: 10.1021/acscatal.6c02583)."
 xtb_version = '6.7.1'
 crest_version = '2.12'
 
@@ -685,6 +686,8 @@ def _create_logger(self, aqme_module, logger_1, logger_2, txt_yaml, error_setup)
     
     # Write header
     self.log.write(f"AQME v {aqme_version} {time_run} \nCitation: {aqme_ref}\n")
+    if aqme_module == "qdescp":
+        self.log.write(f"Citation: {qdescp_ref}\n")
     
     # Log command line if used
     if self.command_line:
