@@ -2251,6 +2251,10 @@ class csearch:
         Returns:
             tuple: (outmols, passing_cids, cenergy)
         """
+        original_smiles = None
+        if mol.HasProp("_AQME_ORIGINAL_SMILES"):
+            original_smiles = mol.GetProp("_AQME_ORIGINAL_SMILES")
+
         if geom:
             self.args.log.write(
                 f"o  Applying geometry filters ({geom}) "
@@ -2270,7 +2274,7 @@ class csearch:
         for i, _ in enumerate(passing_cids):
             self._add_mol_properties(
                 outmols[i], name, i+1, cenergy[i],
-                charge, mult, smi
+                charge, mult, smi, original_smiles
             )
             
         return outmols, cenergy
@@ -2351,7 +2355,7 @@ class csearch:
         return suppl
         
     def _add_mol_properties(self, mol, name, idx, energy,
-                          charge, mult, smi):
+                          charge, mult, smi, original_smiles=None):
         """Add properties to molecule object.
         
         Args:
@@ -2368,6 +2372,9 @@ class csearch:
         mol.SetProp("Real charge", str(charge))
         mol.SetProp("Mult", str(mult))
         mol.SetProp("SMILES", str(smi))
+        if original_smiles is not None:
+            mol.SetProp("SMILES_INPUT", str(original_smiles))
+            mol.SetProp("_AQME_ORIGINAL_SMILES", str(original_smiles))
 
     def rdkit_to_sdf(
         self,
