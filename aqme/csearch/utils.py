@@ -125,6 +125,11 @@ def normalize_smiles_for_csearch(smiles, log=None):
     return smiles_metadata_for_csearch(smiles, log)["canonical_smiles"]
 
 
+def _has_explicit_hydrogens(smiles):
+    """Return whether a bracket atom in a SMILES explicitly declares H atoms."""
+    return bool(re.search(r"\[[^\]]*H(?:\d*)[^\]]*\]", str(smiles)))
+
+
 def _set_smiles_metadata_props(mol, metadata):
     """Attach SMILES provenance and atom-map metadata to an RDKit molecule."""
     mol.SetProp("_AQME_CANONICAL_SMILES", str(metadata["canonical_smiles"]))
@@ -1622,21 +1627,31 @@ def smi_to_mol(
         smi_parts = smi.split(".")
         smi = smi_parts[0]
 
+        # Canonical SMILES are useful for duplicate detection, but they cannot
+        # represent the explicit-H intent of bracket atoms such as [CH3:1].
+        # Generate those molecules from the original mapped SMILES so RDKit
+        # does not infer an additional hydrogen after canonicalization.
+        generation_smi = (
+            original_smi
+            if _has_explicit_hydrogens(original_smi)
+            else smi
+        )
+
         try:
             # Handle mapped atoms
-            if ':' in smi:
+            if ':' in generation_smi:
                 log.write(
-                    f"\nx  WARNING! The SMILES string provided ({smi}) contains mapped "
+                    f"\nx  WARNING! The SMILES string provided ({generation_smi}) contains mapped "
                     "atoms, make sure you include their corresponding H atoms explicitly "
                     "in the SMILES (otherwise they'll be omitted). For example, use "
                     "[C:1]([H])([H])([H])C instead of [C:1]C.\n"
                 )
 
             # Create and process molecule
-            mol = Chem.MolFromSmiles(smi, params)
+            mol = Chem.MolFromSmiles(generation_smi, params)
             Chem.SanitizeMol(mol)
             mol = Chem.AddHs(mol)
-            if metadata["atom_map"]:
+            if not _has_explicit_hydrogens(original_smi) and metadata["atom_map"]:
                 for entry in metadata["atom_map"].split(";"):
                     map_num, atom_idx, _ = entry.split(":", 2)
                     mol.GetAtomWithIdx(int(atom_idx)).SetAtomMapNum(int(map_num))
@@ -1644,7 +1659,7 @@ def smi_to_mol(
 
             # Build map_num -> atom_idx dictionary from mapped atoms
             map_to_idx, duplicated_maps = _collect_map_to_idx(mol)
-            expected_maps = _collect_mapped_numbers_from_smiles(smi)
+            expected_maps = _collect_mapped_numbers_from_smiles(generation_smi)
             missing_maps = sorted(set(expected_maps) - set(map_to_idx.keys()))
             if duplicated_maps:
                 log.write(
