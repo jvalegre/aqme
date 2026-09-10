@@ -28,6 +28,112 @@ from aqme.utils import (
 from aqme.csearch.crest import nci_ts_mol
 
 
+def _strip_atom_maps_from_smiles(smiles):
+    """Remove atom-map numbers while keeping map-only atoms chemically normal."""
+    organic_subset = {"B", "C", "N", "O", "P", "S", "F", "Cl", "Br", "I",
+                      "b", "c", "n", "o", "p", "s"}
+
+    def clean_bracket(match):
+        content = re.sub(r":\d+", "", match.group(1))
+        if content in organic_subset:
+            return content
+        return f"[{content}]"
+
+    return re.sub(r"\[([^\]]+)\]", clean_bracket, str(smiles))
+
+
+def _atom_maps_from_original_smiles(smiles):
+    """Return atom-map numbers keyed by atom index from the original SMILES."""
+    params = Chem.SmilesParserParams()
+    params.removeHs = False
+    mol = Chem.MolFromSmiles(str(smiles), params)
+    if mol is None:
+        return {}
+
+    return {
+        atom.GetIdx(): atom.GetAtomMapNum()
+        for atom in mol.GetAtoms()
+        if atom.GetAtomMapNum() != 0
+    }
+
+
+def smiles_metadata_for_csearch(smiles, log=None):
+    """Build canonical generation SMILES and atom-map metadata."""
+    metadata = {
+        "canonical_smiles": smiles,
+        "original_smiles": str(smiles) if smiles is not None else smiles,
+        "atom_map": "",
+    }
+    if smiles is None:
+        return metadata
+
+    cleaned_smiles = _strip_atom_maps_from_smiles(smiles)
+    params = Chem.SmilesParserParams()
+    params.removeHs = False
+
+    try:
+        source_mol = Chem.MolFromSmiles(cleaned_smiles, params)
+        if source_mol is None:
+            return metadata
+        Chem.SanitizeMol(source_mol)
+
+        source_atom_maps = _atom_maps_from_original_smiles(smiles)
+
+        generation_mol = Chem.Mol(source_mol)
+        for atom in generation_mol.GetAtoms():
+            atom.SetAtomMapNum(0)
+        generation_mol = Chem.RemoveHs(generation_mol)
+        canonical_smiles = Chem.MolToSmiles(
+            generation_mol, canonical=True, isomericSmiles=True
+        )
+        metadata["canonical_smiles"] = canonical_smiles
+
+        if source_atom_maps:
+            canonical_mol = Chem.MolFromSmiles(canonical_smiles, params)
+            canonical_mol = Chem.AddHs(canonical_mol)
+
+            query_mol = Chem.Mol(source_mol)
+            for atom in query_mol.GetAtoms():
+                atom.SetAtomMapNum(0)
+
+            match = canonical_mol.GetSubstructMatch(query_mol)
+            if not match:
+                query_no_h = Chem.RemoveHs(query_mol)
+                match = canonical_mol.GetSubstructMatch(query_no_h)
+
+            atom_map_entries = []
+            if match:
+                for source_idx, map_num in sorted(source_atom_maps.items()):
+                    if source_idx < len(match):
+                        canon_idx = match[source_idx]
+                        symbol = canonical_mol.GetAtomWithIdx(canon_idx).GetSymbol()
+                        atom_map_entries.append(f"{map_num}:{canon_idx}:{symbol}")
+            metadata["atom_map"] = ";".join(atom_map_entries)
+
+    except (ValueError, RuntimeError):
+        if log is not None:
+            log.write(
+                f"\nx  WARNING! AQME could not canonicalize the SMILES "
+                f"({smiles}); the original string will be used."
+            )
+
+    return metadata
+
+
+def normalize_smiles_for_csearch(smiles, log=None):
+    """Canonicalize SMILES for conformer generation."""
+    return smiles_metadata_for_csearch(smiles, log)["canonical_smiles"]
+
+
+def _set_smiles_metadata_props(mol, metadata):
+    """Attach SMILES provenance and atom-map metadata to an RDKit molecule."""
+    mol.SetProp("_AQME_CANONICAL_SMILES", str(metadata["canonical_smiles"]))
+    mol.SetProp("_AQME_ORIGINAL_SMILES", str(metadata["original_smiles"]))
+    mol.SetProp("SMILES_INPUT", str(metadata["original_smiles"]))
+    if metadata["atom_map"]:
+        mol.SetProp("AQME_ATOM_MAP", metadata["atom_map"])
+
+
 def csv_2_list(constraints):
     """Convert CSV constraints to a list format.
     
@@ -66,11 +172,13 @@ def prepare_direct_smi(args):
         sys.exit()
 
     name = add_prefix_suffix(args.name, args)
+    original_smiles = args.smi
+    smiles = normalize_smiles_for_csearch(original_smiles, args.log)
     
     # Create job configuration tuple
     job_config = (
-        args.smi,         # SMILES string
-        name,            # Molecule name
+        smiles,           # SMILES string
+        name,             # Molecule name
         args.charge,     # Charge
         args.mult,       # Multiplicity
         args.constraints_atoms,
@@ -79,7 +187,8 @@ def prepare_direct_smi(args):
         args.constraints_dihedral,
         args.complex_type,
         args.geom,
-        args.sample
+        args.sample,
+        original_smiles   # Original SMILES string
     )
     
     return [job_config]
@@ -106,6 +215,8 @@ def prepare_smiles_files(args, csearch_file):
     for line in lines:
         # Process SMILES and name from each line
         smi, name = prepare_smiles_from_line(line, args)
+        original_smiles = smi
+        smi = normalize_smiles_for_csearch(original_smiles, args.log)
         
         # Create job configuration
         job_config = (
@@ -119,7 +230,8 @@ def prepare_smiles_files(args, csearch_file):
             args.constraints_dihedral, # Dihedral constraints
             args.complex_type,      # Complex type
             args.geom,              # Geometry
-            args.sample             # Sample
+            args.sample,            # Sample
+            original_smiles         # Original SMILES string
         )
         job_inputs.append(job_config)
     # Finished building the job list.
@@ -212,7 +324,7 @@ def prepare_csv_files(args, csearch_file):
 
     # Process SMILES columns and generate job configurations
     job_inputs = []
-    unique_smiles = set()
+    unique_mol_configs = set()
     has_smiles_column = False
     
     for col_idx, column in enumerate(csv_smiles.columns):
@@ -225,15 +337,19 @@ def prepare_csv_files(args, csearch_file):
                 
                 if mol_config is not None:
                     smiles, name = mol_config[0], mol_config[1]
+                    dedup_key = _dedup_key_from_mol_config(mol_config)
                     
-                    # Only add unique SMILES
-                    if smiles not in unique_smiles:
+                    # Only add unique generation jobs. Different charge,
+                    # multiplicity, constraints, template settings or sample
+                    # values must produce independent conformer jobs.
+                    if dedup_key not in unique_mol_configs:
                         job_inputs.append(mol_config)
-                        unique_smiles.add(smiles)
+                        unique_mol_configs.add(dedup_key)
                     else:
                         args.log.write(
                             f'\nx  SMILES "{smiles}" used in {name} is a duplicate, '
-                            'it was already used with a different code_name!'
+                            'it was already used with a different code_name and '
+                            'the same conformer-generation settings!'
                         )
                        
     if not has_smiles_column:
@@ -326,6 +442,9 @@ def generate_mol_from_csv(args, csv_smiles, index, column_index):
     constraints_dihedral = csv_2_list(get_csv_value("constraints_dihedral", constraints_dihedral))
     geom = csv_2_list(get_csv_value("geom", geom))
 
+    original_smiles = str(smiles)
+    smiles = normalize_smiles_for_csearch(original_smiles, args.log)
+
     # Create and return job configuration
     return (
         smiles,                 # SMILES string
@@ -338,7 +457,24 @@ def generate_mol_from_csv(args, csv_smiles, index, column_index):
         constraints_dihedral,   # Dihedral constraints
         complex_type,          # Complex type
         geom,                  # Geometry
-        sample                 # Sample
+        sample,                 # Sample
+        original_smiles         # Original SMILES string
+    )
+
+
+def _stable_csearch_setting(value):
+    """Return a stable representation for settings that affect conformer generation."""
+    if isinstance(value, list):
+        return tuple(_stable_csearch_setting(item) for item in value)
+    if isinstance(value, tuple):
+        return tuple(_stable_csearch_setting(item) for item in value)
+    return str(value)
+
+
+def _dedup_key_from_mol_config(mol_config):
+    """Build a deduplication key that keeps different generation settings separate."""
+    return (mol_config[0],) + tuple(
+        _stable_csearch_setting(value) for value in mol_config[2:11]
     )
 
 
@@ -1350,6 +1486,7 @@ def smi_to_mol(
     constraints_angle,
     constraints_dihedral,
     sample=25,
+    original_smi=None,
 ):
     """Convert SMILES to RDKit molecule with constraints handling.
 
@@ -1384,6 +1521,7 @@ def smi_to_mol(
         program='crest' uses nci_ts_mol (complex_ts=True).
     """
     complex_ts = False
+    original_smi = smi if original_smi is None else original_smi
     smi_parts = smi.split(".")
     has_constraints = any([constraints_atoms, constraints_dist,
                            constraints_angle, constraints_dihedral])
@@ -1479,6 +1617,9 @@ def smi_to_mol(
         # Process single molecule
         params = Chem.SmilesParserParams()
         params.removeHs = False
+        metadata = smiles_metadata_for_csearch(original_smi, log)
+        smi = metadata["canonical_smiles"]
+        smi_parts = smi.split(".")
         smi = smi_parts[0]
 
         try:
@@ -1495,6 +1636,11 @@ def smi_to_mol(
             mol = Chem.MolFromSmiles(smi, params)
             Chem.SanitizeMol(mol)
             mol = Chem.AddHs(mol)
+            if metadata["atom_map"]:
+                for entry in metadata["atom_map"].split(";"):
+                    map_num, atom_idx, _ = entry.split(":", 2)
+                    mol.GetAtomWithIdx(int(atom_idx)).SetAtomMapNum(int(map_num))
+            _set_smiles_metadata_props(mol, metadata)
 
             # Build map_num -> atom_idx dictionary from mapped atoms
             map_to_idx, duplicated_maps = _collect_map_to_idx(mol)

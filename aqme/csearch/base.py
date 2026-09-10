@@ -651,10 +651,17 @@ class csearch:
         """
         try:
             # Unpack job input and store as instance attributes
-            (smi, name, charge, mult, 
-             constraints_atoms, constraints_dist,
-             constraints_angle, constraints_dihedral, 
-             complex_type, geom, sample) = job_input
+            if len(job_input) == 12:
+                (smi, name, charge, mult,
+                 constraints_atoms, constraints_dist,
+                 constraints_angle, constraints_dihedral,
+                 complex_type, geom, sample, original_smi) = job_input
+            else:
+                (smi, name, charge, mult,
+                 constraints_atoms, constraints_dist,
+                 constraints_angle, constraints_dihedral,
+                 complex_type, geom, sample) = job_input
+                original_smi = smi
 
             csearch_nprocs = nprocs
             valid_template_embed = True
@@ -691,7 +698,8 @@ class csearch:
                     constraints_dist,
                     constraints_angle,
                     constraints_dihedral,
-                    sample
+                    sample,
+                    original_smi=original_smi,
                 )
                 if isinstance(smi, str) and "." in smi and check_constraints(
                     constraints_atoms, constraints_dist, constraints_angle, constraints_dihedral
