@@ -701,6 +701,11 @@ class csearch:
                     sample,
                     original_smi=original_smi,
                 )
+                # Keep the row-level SMILES available even if a later
+                # conformer-copy operation drops molecule properties.
+                self._csearch_original_smiles = original_smi
+                mol.SetProp("SMILES_INPUT", str(original_smi))
+                mol.SetProp("_AQME_ORIGINAL_SMILES", str(original_smi))
                 if isinstance(smi, str) and "." in smi and check_constraints(
                     constraints_atoms, constraints_dist, constraints_angle, constraints_dihedral
                 ):
@@ -2254,6 +2259,8 @@ class csearch:
         original_smiles = None
         if mol.HasProp("_AQME_ORIGINAL_SMILES"):
             original_smiles = mol.GetProp("_AQME_ORIGINAL_SMILES")
+        elif hasattr(self, "_csearch_original_smiles"):
+            original_smiles = self._csearch_original_smiles
 
         if geom:
             self.args.log.write(
