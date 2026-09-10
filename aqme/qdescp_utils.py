@@ -2496,6 +2496,26 @@ def get_sdf_atom_map(file_path):
     return get_sdf_property(file_path, "AQME_ATOM_MAP")
 
 
+def _get_atom_mapping_from_sdf(file_path):
+    """Read atom-map numbers directly from the first SDF molecule."""
+    try:
+        mols = load_sdf(file_path)
+    except Exception:
+        return {}
+
+    if not mols or mols[0] is None:
+        return {}
+
+    mapping = {}
+    for atom in mols[0].GetAtoms():
+        map_num = atom.GetAtomMapNum()
+        if map_num > 0:
+            mapping.setdefault(map_num, []).append(
+                (atom.GetIdx(), atom.GetSymbol())
+            )
+    return mapping
+
+
 def apply_atom_map_to_mol(mol, atom_map_text):
     """Apply ``map_number:atom_index:symbol`` metadata to an RDKit molecule."""
     if mol is None or not atom_map_text:
@@ -2602,6 +2622,18 @@ def validate_atom_mapping_consistency(
                     local_map[map_num].add(parts[2])
                     local_positions[map_num].add(atom_idx)
         else:
+            # CSEARCH stores the mapping on the SDF atoms.  Some output
+            # paths do not carry the auxiliary AQME_ATOM_MAP property, and
+            # their canonical SMILES intentionally has no map labels.  In
+            # that case the SDF atom mapping is the authoritative source.
+            sdf_mapping = _get_atom_mapping_from_sdf(file)
+            if sdf_mapping:
+                for map_num in mapping_numbers:
+                    for atom_idx, symbol in sdf_mapping.get(map_num, []):
+                        local_map[map_num].add(symbol)
+                        local_positions[map_num].add(atom_idx)
+
+        if not atom_map_text and not any(local_map.values()):
             params = Chem.SmilesParserParams()
             params.removeHs = False
             mol = Chem.MolFromSmiles(smi, params)
