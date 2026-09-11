@@ -2486,7 +2486,7 @@ def get_sdf_property(file_path, property_name):
 
     marker = f">  <{property_name}>"
     for i, line in enumerate(lines):
-        if line.strip() == marker and i + 1 < len(lines):
+        if line.strip().startswith(marker) and i + 1 < len(lines):
             return lines[i + 1].strip()
     return None
 
