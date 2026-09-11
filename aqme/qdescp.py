@@ -742,9 +742,9 @@ class qdescp:
     def _write_qdescp_alias_sdf(self, source_file, alias_file, metadata):
         """Copy conformers and replace row-specific SMILES/map metadata."""
         alias_file = Path(alias_file)
-        supplier = Chem.SDMolSupplier(
+        supplier = list(Chem.SDMolSupplier(
             str(source_file), removeHs=False, sanitize=False
-        )
+        ))
         writer = Chem.SDWriter(str(alias_file))
         source_stem = Path(source_file).stem
         alias_stem = alias_file.stem
@@ -794,6 +794,10 @@ class qdescp:
             code_name = row['code_name']
             existing = generated_by_code.get(code_name, [])
             if existing:
+                for source_file in existing:
+                    self._write_qdescp_alias_sdf(
+                        source_file, source_file, row['metadata']
+                    )
                 qdescp_files.extend(existing)
                 continue
             source_files = generation_key_to_files.get(row['generation_key'], [])
