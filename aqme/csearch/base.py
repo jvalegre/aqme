@@ -2330,6 +2330,11 @@ class csearch:
         total = 0
         with Chem.SDWriter(str(csearch_file)) as sdwriter:
             for conf in selected_cids:
+                if (hasattr(self, "_csearch_original_smiles") and
+                        not outmols[conf].HasProp("SMILES_INPUT")):
+                    outmols[conf].SetProp(
+                        "SMILES_INPUT", str(self._csearch_original_smiles)
+                    )
                 total += self.genConformer_r(
                     outmols[conf], -1,
                     sdwriter, update_to_rdkit, coord_Map,
