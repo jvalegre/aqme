@@ -134,7 +134,6 @@ from aqme.qdescp_utils import (
     read_xyz_geometry,
     setup_env,
     extract_smiles_from_file,
-    get_sdf_property,
     extract_numeric_mapping,
     validate_atom_mapping_consistency,
     apply_atom_map_to_mol,
@@ -773,28 +772,6 @@ class qdescp:
         writer.close()
 
 
-    def _ensure_qdescp_sdf_metadata(self, source_file, metadata):
-        """Ensure a CSEARCH source SDF keeps the CSV row metadata."""
-        source_file = Path(source_file)
-        if (
-            get_sdf_property(source_file, "SMILES_INPUT")
-            == str(metadata['original_smiles'])
-            and get_sdf_property(source_file, "AQME_ATOM_MAP")
-            == str(metadata['atom_map'])
-        ):
-            return
-
-        temporary_file = source_file.with_name(
-            f".{source_file.stem}.qdescp_metadata.sdf"
-        )
-        try:
-            self._write_qdescp_alias_sdf(source_file, temporary_file, metadata)
-            os.replace(temporary_file, source_file)
-        finally:
-            if temporary_file.exists():
-                temporary_file.unlink()
-
-
     def _collect_qdescp_csearch_files(self, destination_csearch, csearch_files, df_qdescp):
         """Return one SDF per CSV row, aliasing duplicate generation results."""
         input_rows = self._get_qdescp_input_rows(df_qdescp)
@@ -817,10 +794,6 @@ class qdescp:
             code_name = row['code_name']
             existing = generated_by_code.get(code_name, [])
             if existing:
-                for source_file in existing:
-                    self._ensure_qdescp_sdf_metadata(
-                        source_file, row['metadata']
-                    )
                 qdescp_files.extend(existing)
                 continue
             source_files = generation_key_to_files.get(row['generation_key'], [])
