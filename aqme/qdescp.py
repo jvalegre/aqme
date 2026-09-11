@@ -794,10 +794,6 @@ class qdescp:
             code_name = row['code_name']
             existing = generated_by_code.get(code_name, [])
             if existing:
-                for source_file in existing:
-                    self._write_qdescp_alias_sdf(
-                        source_file, source_file, row['metadata']
-                    )
                 qdescp_files.extend(existing)
                 continue
             source_files = generation_key_to_files.get(row['generation_key'], [])
