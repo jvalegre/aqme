@@ -40,9 +40,9 @@ molecule), which are stored as SDF files.
 If three-dimensional structures are provided directly (e.g., XYZ or SDF files), the conformational 
 search step is skipped, and the structures are used directly for descriptor generation.
 
-**2. Geometry optimization with GFN2-xTB**
+**2. Geometry optimization within CMIN module**
 
-The resulting conformers are subsequently optimized at the GFN2-xTB level. This option can be skipped using :code:`xtb_opt=False` (or :code:`--xtb_opt False` in command line).
+The resulting conformers are subsequently optimized, by default, at the GFN2-xTB level. This option can be skipped using :code:`geom_opt=False` (or :code:`--geom_opt False` in command line).
 
 **3. Descriptor generation**
 
