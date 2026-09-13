@@ -1835,9 +1835,8 @@ def get_mols_qdescp(qdescp_files: List[str]) -> List[MoleculeType]:
                     smi = lines[i + 1].split()[0]
                     mol = Chem.MolFromSmiles(smi)
                     if mol is not None:
-                        mol = Chem.AddHs(mol)
-                        apply_atom_map_to_mol(mol, atom_map_text)
-                        mol_list.append(mol)
+                        mol_list.append(Chem.AddHs(mol))
+                        apply_atom_map_to_mol(mol_list[-1], atom_map_text)
                         smi_exist = True
                         break
                 except Exception:
@@ -1886,14 +1885,15 @@ def get_mol_assign(name_initial: str) -> MoleculeType:
 
     try:
         # First try direct SDF parsing
+        atom_map_text = get_sdf_atom_map(str(sdf_path))
         mols = load_sdf(str(sdf_path))
         if mols:
+            apply_atom_map_to_mol(mols[0], atom_map_text)
             return mols[0]
 
         # Fall back to SMILES reconstruction if SDF parsing fails
         with open(sdf_path, "r", encoding='utf-8') as f:
             lines = f.readlines()
-        atom_map_text = get_sdf_atom_map(sdf_path)
 
         for i, line in enumerate(lines):
             if ">  <SMILES>" in line and i + 1 < len(lines):
@@ -1912,15 +1912,12 @@ def get_mol_assign(name_initial: str) -> MoleculeType:
         mols = load_sdf(str(sdf_path))
         if not mols:
             val_error = f"x  WARNING! No valid molecules found in {sdf_path}"
-            self.args.log.write(val_error)
             raise ValueError(val_error)
-        
         apply_atom_map_to_mol(mols[0], atom_map_text)
         return mols[0]  # Return first molecule
 
     except Exception as e:
         exc_error = f"Error processing SDF file {sdf_path}: {str(e)}"
-        self.args.log.write(exc_error)
         raise ValueError(exc_error)
 
 def auto_pattern(
@@ -2478,6 +2475,65 @@ def read_xyz_geometry(xyz_path: str) -> List[Tuple[float, float, float]]:
         coords.append((float(parts[1]), float(parts[2]), float(parts[3])))
     return coords
 
+
+def get_sdf_property(file_path, property_name):
+    """Read a single property from the first record in an SDF file."""
+    try:
+        with open(file_path, "r", encoding="utf-8") as f:
+            lines = f.readlines()
+    except OSError:
+        return None
+
+    marker = f">  <{property_name}>"
+    for i, line in enumerate(lines):
+        if line.strip().startswith(marker) and i + 1 < len(lines):
+            return lines[i + 1].strip()
+    return None
+
+
+def get_sdf_atom_map(file_path):
+    """Read CSEARCH atom-map metadata from an SDF file."""
+    return get_sdf_property(file_path, "AQME_ATOM_MAP")
+
+
+def _get_atom_mapping_from_sdf(file_path):
+    """Read atom-map numbers directly from the first SDF molecule."""
+    try:
+        mols = load_sdf(file_path)
+    except Exception:
+        return {}
+
+    if not mols or mols[0] is None:
+        return {}
+
+    mapping = {}
+    for atom in mols[0].GetAtoms():
+        map_num = atom.GetAtomMapNum()
+        if map_num > 0:
+            mapping.setdefault(map_num, []).append(
+                (atom.GetIdx(), atom.GetSymbol())
+            )
+    return mapping
+
+
+def apply_atom_map_to_mol(mol, atom_map_text):
+    """Apply ``map_number:atom_index:symbol`` metadata to an RDKit molecule."""
+    if mol is None or not atom_map_text:
+        return mol
+
+    for entry in str(atom_map_text).split(";"):
+        parts = entry.split(":", 2)
+        if len(parts) < 3:
+            continue
+        try:
+            map_number = int(parts[0])
+            atom_index = int(parts[1])
+            atom = mol.GetAtomWithIdx(atom_index)
+        except (TypeError, ValueError, IndexError):
+            continue
+        atom.SetAtomMapNum(map_number)
+    return mol
+
 def extract_smiles_from_file(file_path):
     """
     Extract SMILES from an SDF file.
@@ -2486,7 +2542,18 @@ def extract_smiles_from_file(file_path):
     smiles_input = get_sdf_property(file_path, "SMILES_INPUT")
     if smiles_input is not None:
         return smiles_input
-    return get_sdf_property(file_path, "SMILES")
+    smiles = get_sdf_property(file_path, "SMILES")
+    if smiles is not None:
+        return smiles
+    try:
+        with open(file_path, "r", encoding="utf-8") as f:
+            lines = f.readlines()
+        for i, line in enumerate(lines):
+            if ">  <SMILES>" in line and i + 1 < len(lines):
+                return lines[i + 1].strip().split()[0]
+    except OSError:
+        pass
+    return None
 
 def extract_numeric_mapping(smarts_targets):
     """
@@ -2530,15 +2597,20 @@ def validate_atom_mapping_consistency(
     for file in files:
         atom_map_text = get_sdf_atom_map(file)
         canonical_smiles = get_sdf_property(file, "SMILES")
+        smi = extract_smiles_fn(file)
+        if smi is None and not atom_map_text:
+            logger.write(
+                f'\nx  WARNING! No SMILES found in "{file}". '
+                "Atom mapping validation could not be performed."
+            )
+            return False
 
-        # CSEARCH stores map_number:canonical_atom_index:symbol metadata so
-        # conformer generation can use canonical unmapped SMILES while QDESCP
-        # still validates mapped atom requests against the same atom order.
+        local_map = {num: set() for num in mapping_numbers}
+        local_positions = {num: set() for num in mapping_numbers}
+
         if atom_map_text:
-            local_map = {num: set() for num in mapping_numbers}
-            local_positions = {num: set() for num in mapping_numbers}
             for entry in str(atom_map_text).split(";"):
-                parts = entry.split(":")
+                parts = entry.split(":", 2)
                 if len(parts) < 3:
                     continue
                 try:
@@ -2550,34 +2622,27 @@ def validate_atom_mapping_consistency(
                     local_map[map_num].add(parts[2])
                     local_positions[map_num].add(atom_idx)
         else:
-            local_map = None
-            local_positions = None
+            # CSEARCH stores the mapping on the SDF atoms.  Some output
+            # paths do not carry the auxiliary AQME_ATOM_MAP property, and
+            # their canonical SMILES intentionally has no map labels.  In
+            # that case the SDF atom mapping is the authoritative source.
+            sdf_mapping = _get_atom_mapping_from_sdf(file)
+            if sdf_mapping:
+                for map_num in mapping_numbers:
+                    for atom_idx, symbol in sdf_mapping.get(map_num, []):
+                        local_map[map_num].add(symbol)
+                        local_positions[map_num].add(atom_idx)
 
-        smi = extract_smiles_fn(file)
-        if smi is None and local_map is None:
-            logger.write(
-                f'\nx  WARNING! No SMILES found in "{file}". '
-                "Atom mapping validation could not be performed."
-            )
-            return False
-
-        if local_map is None:
-            # Parse SMILES preserving explicit hydrogens
+        if not atom_map_text and not any(local_map.values()):
             params = Chem.SmilesParserParams()
             params.removeHs = False
             mol = Chem.MolFromSmiles(smi, params)
-
             if mol is None:
                 logger.write(
                     f'\nx  WARNING! RDKit failed to parse SMILES in "{file}". '
                     "Atom mapping validation failed."
                 )
                 return False
-            
-            # Extract mapping numbers and their corresponding symbols in this molecule.
-            # We use a set to detect duplicated mapping numbers within the same molecule.
-            local_map = {num: set() for num in mapping_numbers}
-            local_positions = {num: set() for num in mapping_numbers}
 
             for atom in mol.GetAtoms():
                 map_num = atom.GetAtomMapNum()

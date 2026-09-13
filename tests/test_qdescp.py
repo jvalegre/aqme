@@ -20,7 +20,7 @@ from aqme.qdescp_utils import (
     get_descriptors,
     get_sdf_property,
     extract_smiles_from_file,
-    validate_atom_mapping_consistency
+    validate_atom_mapping_consistency,
 )
 from aqme.csearch.utils import smiles_metadata_for_csearch
 

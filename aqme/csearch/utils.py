@@ -121,13 +121,13 @@ def smiles_metadata_for_csearch(smiles, log=None):
 
 
 def normalize_smiles_for_csearch(smiles, log=None):
-    """Canonicalize SMILES for conformer generation.
-
-    The canonical form removes normal explicit hydrogens and atom-map numbers so
-    equivalent inputs such as CC, [H]C([H])([H])C, [CH3:1]C and [C:1]C generate
-    the same RDKit molecule and are treated as duplicates in CSV workflows.
-    """
+    """Canonicalize SMILES for conformer generation."""
     return smiles_metadata_for_csearch(smiles, log)["canonical_smiles"]
+
+
+def _has_explicit_hydrogens(smiles):
+    """Return whether a bracket atom in a SMILES explicitly declares H atoms."""
+    return bool(re.search(r"\[[^\]]*H(?:\d*)[^\]]*\]", str(smiles)))
 
 
 def _set_smiles_metadata_props(mol, metadata):
@@ -183,7 +183,7 @@ def prepare_direct_smi(args):
     # Create job configuration tuple
     job_config = (
         smiles,           # SMILES string
-        name,            # Molecule name
+        name,             # Molecule name
         args.charge,     # Charge
         args.mult,       # Multiplicity
         args.constraints_atoms,
@@ -193,7 +193,7 @@ def prepare_direct_smi(args):
         args.complex_type,
         args.geom,
         args.sample,
-        original_smiles
+        original_smiles   # Original SMILES string
     )
     
     return [job_config]
@@ -220,10 +220,12 @@ def prepare_smiles_files(args, csearch_file):
     for line in lines:
         # Process SMILES and name from each line
         smi, name = prepare_smiles_from_line(line, args)
+        original_smiles = smi
+        smi = normalize_smiles_for_csearch(original_smiles, args.log)
         
         # Create job configuration
         job_config = (
-            normalize_smiles_for_csearch(smi, args.log), # SMILES string
+            smi,                     # SMILES string
             name,                    # Molecule name
             args.charge,             # Charge
             args.mult,               # Multiplicity
@@ -234,7 +236,7 @@ def prepare_smiles_files(args, csearch_file):
             args.complex_type,      # Complex type
             args.geom,              # Geometry
             args.sample,            # Sample
-            smi                     # Original SMILES string
+            original_smiles         # Original SMILES string
         )
         job_inputs.append(job_config)
     # Finished building the job list.
@@ -366,22 +368,6 @@ def prepare_csv_files(args, csearch_file):
     return job_inputs
 
 
-def _stable_csearch_setting(value):
-    """Return a stable representation for settings that affect conformer generation."""
-    if isinstance(value, list):
-        return tuple(_stable_csearch_setting(item) for item in value)
-    if isinstance(value, tuple):
-        return tuple(_stable_csearch_setting(item) for item in value)
-    return str(value)
-
-
-def _dedup_key_from_mol_config(mol_config):
-    """Build a deduplication key that keeps different generation settings separate."""
-    return (mol_config[0],) + tuple(
-        _stable_csearch_setting(value) for value in mol_config[2:11]
-    )
-
-
 def generate_mol_from_csv(args, csv_smiles, index, column_index):
     """Generate molecule configuration from CSV data.
 
@@ -417,11 +403,6 @@ def generate_mol_from_csv(args, csv_smiles, index, column_index):
             f"(N@@ or N@). These atoms were replaced by N in the SMILES: {smiles}."
         )
         smiles = str(smiles).replace("N@@", "N").replace("N@", "N")
-    else:
-        smiles = str(smiles)
-
-    original_smiles = smiles
-    smiles = normalize_smiles_for_csearch(original_smiles, args.log)
 
     # Process molecule name
     try:
@@ -466,6 +447,9 @@ def generate_mol_from_csv(args, csv_smiles, index, column_index):
     constraints_dihedral = csv_2_list(get_csv_value("constraints_dihedral", constraints_dihedral))
     geom = csv_2_list(get_csv_value("geom", geom))
 
+    original_smiles = str(smiles)
+    smiles = normalize_smiles_for_csearch(original_smiles, args.log)
+
     # Create and return job configuration
     return (
         smiles,                 # SMILES string
@@ -478,8 +462,24 @@ def generate_mol_from_csv(args, csv_smiles, index, column_index):
         constraints_dihedral,   # Dihedral constraints
         complex_type,          # Complex type
         geom,                  # Geometry
-        sample,                # Sample
-        original_smiles        # Original SMILES string
+        sample,                 # Sample
+        original_smiles         # Original SMILES string
+    )
+
+
+def _stable_csearch_setting(value):
+    """Return a stable representation for settings that affect conformer generation."""
+    if isinstance(value, list):
+        return tuple(_stable_csearch_setting(item) for item in value)
+    if isinstance(value, tuple):
+        return tuple(_stable_csearch_setting(item) for item in value)
+    return str(value)
+
+
+def _dedup_key_from_mol_config(mol_config):
+    """Build a deduplication key that keeps different generation settings separate."""
+    return (mol_config[0],) + tuple(
+        _stable_csearch_setting(value) for value in mol_config[2:11]
     )
 
 
@@ -1491,6 +1491,7 @@ def smi_to_mol(
     constraints_angle,
     constraints_dihedral,
     sample=25,
+    original_smi=None,
 ):
     """Convert SMILES to RDKit molecule with constraints handling.
 
@@ -1623,17 +1624,42 @@ def smi_to_mol(
         params.removeHs = False
         metadata = smiles_metadata_for_csearch(original_smi, log)
         smi = metadata["canonical_smiles"]
+        smi_parts = smi.split(".")
+        smi = smi_parts[0]
+
+        # Canonical SMILES are useful for duplicate detection, but they cannot
+        # represent the explicit-H intent of bracket atoms such as [CH3:1].
+        # Generate those molecules from the original mapped SMILES so RDKit
+        # does not infer an additional hydrogen after canonicalization.
+        generation_smi = (
+            original_smi
+            if _has_explicit_hydrogens(original_smi)
+            else smi
+        )
 
         try:
+            # Handle mapped atoms
+            if ':' in generation_smi:
+                log.write(
+                    f"\nx  WARNING! The SMILES string provided ({generation_smi}) contains mapped "
+                    "atoms, make sure you include their corresponding H atoms explicitly "
+                    "in the SMILES (otherwise they'll be omitted). For example, use "
+                    "[C:1]([H])([H])([H])C instead of [C:1]C.\n"
+                )
+
             # Create and process molecule
-            mol = Chem.MolFromSmiles(smi, params)
+            mol = Chem.MolFromSmiles(generation_smi, params)
             Chem.SanitizeMol(mol)
             mol = Chem.AddHs(mol)
+            if not _has_explicit_hydrogens(original_smi) and metadata["atom_map"]:
+                for entry in metadata["atom_map"].split(";"):
+                    map_num, atom_idx, _ = entry.split(":", 2)
+                    mol.GetAtomWithIdx(int(atom_idx)).SetAtomMapNum(int(map_num))
             _set_smiles_metadata_props(mol, metadata)
 
             # Build map_num -> atom_idx dictionary from mapped atoms
             map_to_idx, duplicated_maps = _collect_map_to_idx(mol)
-            expected_maps = _collect_mapped_numbers_from_smiles(smi)
+            expected_maps = _collect_mapped_numbers_from_smiles(generation_smi)
             missing_maps = sorted(set(expected_maps) - set(map_to_idx.keys()))
             if duplicated_maps:
                 log.write(
@@ -1775,6 +1801,7 @@ def set_metal_atomic_number(mol, metal_idx, metal_sym):
             atom.SetFormalCharge(0)
 
     return mol
+
 
 def detect_haptic_rings(mol, metal_idx):
     """Detect 5- and 6-member non-metal rings bound to one metal through 2+ atoms."""

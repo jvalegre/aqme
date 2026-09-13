@@ -135,12 +135,17 @@ from aqme.qdescp_utils import (
     setup_env,
     extract_smiles_from_file,
     extract_numeric_mapping,
-    validate_atom_mapping_consistency
-
+    validate_atom_mapping_consistency,
+    apply_atom_map_to_mol,
 )
 from aqme.cmin import cmin as CMIN
 
 from aqme.csearch.crest import xyzall_2_xyz
+from aqme.csearch.utils import (
+    _dedup_key_from_mol_config,
+    generate_mol_from_csv,
+    smiles_metadata_for_csearch,
+)
 
 
 def normalize_qdescp_runtime_options(args):
@@ -642,7 +647,7 @@ class qdescp:
         if destination_csearch.exists():
             shutil.rmtree(destination_csearch)
 
-        cmd_csearch = ['python', '-m', 'aqme', '--csearch', '--program', 'rdkit', '--input',
+        cmd_csearch = ['python', '-m', 'aqme', '--csearch', '--program', 'rdkit', '--input', 
                     f'{self.args.csv_name}', '--sample', f'{sample_qdescp}', '--destination', f'{destination_csearch}',
                     '--nprocs', f'{self.args.nprocs}','--auto_sample',self.args.auto_sample, '--ff',self.args.ff]
 
@@ -669,15 +674,14 @@ class qdescp:
             cmd_csearch = cmd_csearch + ['--mult', f'{self.args.mult}']
         subprocess.run(cmd_csearch, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-        # use only the molecules from the input CSV (ignore previous/unrelated CSEARCH runs that generated SDFs)
+        # Use only molecules from the input CSV and create aliases for rows
+        # sharing canonical conformers but carrying different atom-map metadata.
         csearch_files = glob.glob(f'{destination_csearch}/*.sdf')
         qdescp_files = []
-        if len(csearch_files) > 0:
+        if csearch_files:
             df_qdescp = self._read_qdescp_csv()
             qdescp_files = self._collect_qdescp_csearch_files(
-                destination_csearch,
-                csearch_files,
-                df_qdescp
+                destination_csearch, csearch_files, df_qdescp
             )
         if len(qdescp_files) == 0:
             self.args.log.write(f"\nx  WARNING! The CSEARCH conformational search did not produce any results.")
@@ -688,84 +692,18 @@ class qdescp:
 
 
     def _read_qdescp_csv(self):
-        """Read and validate the QDESCP CSV input used for CSEARCH."""
+        """Read and validate the CSV used to generate QDESCP conformers."""
         df_qdescp = fix_cols_names(pd.read_csv(self.args.csv_name))
         if 'code_name' not in df_qdescp.columns or 'SMILES' not in df_qdescp.columns:
-            self.args.log.write(
-                "\nx  The CSV used as QDESCP input must contain code_name and SMILES columns."
+            self._error_exit(
+                "The CSV used as QDESCP input must contain code_name and SMILES columns."
             )
-            self.args.log.finalize()
-            sys.exit()
-
         df_qdescp['code_name'] = df_qdescp['code_name'].astype(str)
         return df_qdescp
 
 
-    def _collect_qdescp_csearch_files(self, destination_csearch, csearch_files, df_qdescp):
-        """Return one SDF per CSV row, creating aliases for duplicate canonical SMILES."""
-        input_rows = self._get_qdescp_input_rows(df_qdescp)
-        generated_by_code = {row['code_name']: [] for row in input_rows}
-        generation_key_to_files = {}
-        file_to_code = {}
-
-        filename_match_rows = sorted(
-            input_rows,
-            key=lambda row: len(row['code_name']),
-            reverse=True
-        )
-
-        for file in sorted(csearch_files):
-            file_base = os.path.basename(file)
-            matched_code = None
-            matched_row = None
-            for row in filename_match_rows:
-                code_name = row['code_name']
-                if file_base.startswith(f"{code_name}_"):
-                    generated_by_code.setdefault(code_name, []).append(file)
-                    matched_code = code_name
-                    matched_row = row
-                    break
-
-            if matched_code is not None and matched_row is not None:
-                generation_key_to_files.setdefault(
-                    matched_row['generation_key'], []
-                ).append(file)
-                file_to_code[file] = matched_code
-
-        qdescp_files, created_aliases = [], 0
-        for row in input_rows:
-            code_name = row['code_name']
-            if generated_by_code.get(code_name):
-                qdescp_files.extend(generated_by_code[code_name])
-                continue
-
-            source_files = generation_key_to_files.get(row['generation_key'], [])
-            if not source_files:
-                continue
-
-            for source_file in source_files:
-                source_code = file_to_code.get(source_file)
-                alias_file = self._qdescp_alias_path(
-                    destination_csearch,
-                    source_file,
-                    source_code,
-                    code_name
-                )
-                self._write_qdescp_alias_sdf(source_file, alias_file, row['metadata'])
-                qdescp_files.append(str(alias_file))
-                created_aliases += 1
-
-        if created_aliases > 0:
-            self.args.log.write(
-                f"\no  QDESCP reused CSEARCH conformers for {created_aliases} duplicate "
-                "CSV entry/entries with row-specific atom-map metadata."
-            )
-
-        return qdescp_files
-
-
     def _get_qdescp_input_rows(self, df_qdescp):
-        """Build row metadata for QDESCP CSV inputs."""
+        """Build canonical generation keys and row-specific metadata."""
         input_rows = []
         smiles_col_idx = df_qdescp.columns.get_loc('SMILES')
         for row_idx, row in df_qdescp.iterrows():
@@ -774,23 +712,25 @@ class qdescp:
                 continue
             metadata = smiles_metadata_for_csearch(str(smiles), self.args.log)
             original_sample = self.args.sample
-            self.args.sample = getattr(self.args, '_qdescp_csearch_sample', self.args.sample)
+            self.args.sample = getattr(
+                self.args, '_qdescp_csearch_sample', self.args.sample
+            )
             try:
-                mol_config = generate_mol_from_csv(self.args, df_qdescp, row_idx, smiles_col_idx)
+                mol_config = generate_mol_from_csv(
+                    self.args, df_qdescp, row_idx, smiles_col_idx
+                )
             finally:
                 self.args.sample = original_sample
-            generation_key = _dedup_key_from_mol_config(mol_config)
             input_rows.append({
                 'code_name': str(row['code_name']),
-                'canonical_smiles': metadata['canonical_smiles'],
-                'generation_key': generation_key,
-                'metadata': metadata
+                'generation_key': _dedup_key_from_mol_config(mol_config),
+                'metadata': metadata,
             })
         return input_rows
 
 
     def _qdescp_alias_path(self, destination_csearch, source_file, source_code, target_code):
-        """Create an alias SDF filename preserving CSEARCH suffixes."""
+        """Create an alias SDF path while preserving the conformer suffix."""
         source_base = os.path.basename(source_file)
         if source_code is not None and source_base.startswith(f"{source_code}_"):
             alias_base = f"{target_code}_{source_base[len(source_code) + 1:]}"
@@ -800,38 +740,73 @@ class qdescp:
 
 
     def _write_qdescp_alias_sdf(self, source_file, alias_file, metadata):
-        """Copy an SDF while replacing row-specific SMILES/map metadata."""
+        """Copy conformers and replace row-specific SMILES/map metadata."""
         alias_file = Path(alias_file)
-        alias_file.parent.mkdir(exist_ok=True, parents=True)
-
-        supplier = Chem.SDMolSupplier(str(source_file), removeHs=False, sanitize=False)
+        supplier = list(Chem.SDMolSupplier(
+            str(source_file), removeHs=False, sanitize=False
+        ))
         writer = Chem.SDWriter(str(alias_file))
         source_stem = Path(source_file).stem
         alias_stem = alias_file.stem
-
         for i, mol in enumerate(supplier):
             if mol is None:
                 continue
-
-            mol_name = mol.GetProp("_Name") if mol.HasProp("_Name") else ""
+            mol_name = mol.GetProp('_Name') if mol.HasProp('_Name') else ''
             if mol_name.startswith(source_stem):
                 mol_name = f"{alias_stem}{mol_name[len(source_stem):]}"
             else:
                 mol_name = f"{alias_stem}_conf_{i + 1}"
-
-            mol.SetProp("_Name", mol_name)
-            mol.SetProp("SMILES", str(metadata["canonical_smiles"]))
-            mol.SetProp("_AQME_CANONICAL_SMILES", str(metadata["canonical_smiles"]))
-            mol.SetProp("_AQME_ORIGINAL_SMILES", str(metadata["original_smiles"]))
-            mol.SetProp("SMILES_INPUT", str(metadata["original_smiles"]))
-            if metadata["atom_map"]:
-                mol.SetProp("AQME_ATOM_MAP", str(metadata["atom_map"]))
-            elif mol.HasProp("AQME_ATOM_MAP"):
-                mol.ClearProp("AQME_ATOM_MAP")
-
+            mol.SetProp('_Name', mol_name)
+            for atom in mol.GetAtoms():
+                atom.SetAtomMapNum(0)
+            mol.SetProp('SMILES', str(metadata['canonical_smiles']))
+            mol.SetProp('_AQME_CANONICAL_SMILES', str(metadata['canonical_smiles']))
+            mol.SetProp('_AQME_ORIGINAL_SMILES', str(metadata['original_smiles']))
+            mol.SetProp('SMILES_INPUT', str(metadata['original_smiles']))
+            if metadata['atom_map']:
+                mol.SetProp('AQME_ATOM_MAP', str(metadata['atom_map']))
+                apply_atom_map_to_mol(mol, metadata['atom_map'])
+            elif mol.HasProp('AQME_ATOM_MAP'):
+                mol.ClearProp('AQME_ATOM_MAP')
             writer.write(mol)
-
         writer.close()
+
+
+    def _collect_qdescp_csearch_files(self, destination_csearch, csearch_files, df_qdescp):
+        """Return one SDF per CSV row, aliasing duplicate generation results."""
+        input_rows = self._get_qdescp_input_rows(df_qdescp)
+        generated_by_code = {row['code_name']: [] for row in input_rows}
+        generation_key_to_files = {}
+        file_to_code = {}
+        rows_by_name = sorted(input_rows, key=lambda row: len(row['code_name']), reverse=True)
+
+        for file in sorted(csearch_files):
+            file_base = os.path.basename(file)
+            for row in rows_by_name:
+                if file_base.startswith(f"{row['code_name']}_"):
+                    generated_by_code[row['code_name']].append(file)
+                    generation_key_to_files.setdefault(row['generation_key'], []).append(file)
+                    file_to_code[file] = row['code_name']
+                    break
+
+        qdescp_files = []
+        for row in input_rows:
+            code_name = row['code_name']
+            existing = generated_by_code.get(code_name, [])
+            if existing:
+                qdescp_files.extend(existing)
+                continue
+            source_files = generation_key_to_files.get(row['generation_key'], [])
+            for source_file in source_files:
+                alias_file = self._qdescp_alias_path(
+                    destination_csearch,
+                    source_file,
+                    file_to_code.get(source_file),
+                    code_name,
+                )
+                self._write_qdescp_alias_sdf(source_file, alias_file, row['metadata'])
+                qdescp_files.append(str(alias_file))
+        return qdescp_files
     
 
     def get_boltz_n_save_csv(self, destination, qdescp_files, descp_dict, boltz_dir, smarts_targets):
@@ -1765,12 +1740,12 @@ class qdescp:
                         ignore_index=True,
                         sort=False
                     )
+                    missing_rows[['code_name', 'SMILES']].to_csv(csv_file, mode='a', header=False, index=False)
 
                     # Sort the data according to the order of 'code_name'
                     order = csv_temp['code_name'].tolist()
                     df_temp = df_temp.sort_values(by='code_name', key=lambda x: x.map({v: i for i, v in enumerate(order)}))
-                    if len(self.args.qdescp_atoms) == 0:
-                        df_temp = df_temp.fillna(df_temp.groupby('SMILES').transform('first'))
+                    df_temp = df_temp.fillna(df_temp.groupby('SMILES').transform('first'))
 
                     # Overwrite the CSV file with the processed data
                     df_temp.to_csv(csv_file, index=False)
