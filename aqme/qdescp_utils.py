@@ -2663,6 +2663,7 @@ def validate_atom_mapping_consistency(
     for file in files:
         atom_map_text = get_sdf_atom_map(file)
         canonical_smiles = get_sdf_property(file, "SMILES")
+        smi = extract_smiles_fn(file)
 
         local_map = {num: set() for num in mapping_numbers}
         local_positions = {num: set() for num in mapping_numbers}
@@ -2691,6 +2692,21 @@ def validate_atom_mapping_consistency(
                     for atom_idx, symbol in sdf_mapping.get(map_num, []):
                         local_map[map_num].add(symbol)
                         local_positions[map_num].add(atom_idx)
+
+            # A malformed/metadata-only SDF can still contain a mapped SMILES.
+            # Use it only to detect repeated map numbers; it must not make an
+            # otherwise unmapped SDF valid input.
+            if not sdf_mapping and smi is not None:
+                params = Chem.SmilesParserParams()
+                params.removeHs = False
+                mapped_smiles = Chem.MolFromSmiles(smi, params)
+                if mapped_smiles is not None:
+                    for atom in mapped_smiles.GetAtoms():
+                        map_num = atom.GetAtomMapNum()
+                        if map_num in mapping_numbers:
+                            local_positions[map_num].add(atom.GetIdx())
+                            if len(local_positions[map_num]) > 1:
+                                local_map[map_num].add(atom.GetSymbol())
 
         # Ensure requested mappings exist in this molecule
         for num in mapping_numbers:

@@ -213,6 +213,15 @@ class PropertyCalculator:
             'json': dat_dir / f"{name}.json"
         }
 
+        if not self.args.geom_opt:
+            files['sdf_all'], files['sdf_filtered'] = self._get_cmin_sdf_paths(name)
+            self._init_cmin_output_files(files['sdf_all'], files['sdf_filtered'])
+            shutil.move(xyz_file, str(files['xyz']))
+            success = self._run_cmin_minimization(
+                files, charge, mult, name, source_sdf
+            )
+            return success, {k: str(v) for k, v in files.items()}
+
         # Geometry optimization is performed once, before the descriptor
         # workers, by the regular CMIN workflow.  QDESCP only consumes the
         # resulting SDF and runs the descriptor calculation here.
@@ -701,7 +710,12 @@ class qdescp:
 
     def _run_qdescp_cmin(self, qdescp_files, destination):
         """Run the regular CMIN workflow and return its generated SDF files."""
-        cmin_destination = Path(destination).parent / "CMIN"
+        destination = Path(destination)
+        cmin_destination = (
+            destination.parent / "CMIN"
+            if destination.name.upper() == "QDESCP"
+            else destination
+        )
 
         cmin_kwargs = {
             "files": qdescp_files,
@@ -732,6 +746,16 @@ class qdescp:
         for source_file in qdescp_files:
             optimized_file = cmin_destination / f"{Path(source_file).stem}{self.args.output}"
             if optimized_file.exists():
+                try:
+                    optimized_mols = load_sdf(str(optimized_file))
+                    if not any(mol is not None for mol in optimized_mols):
+                        raise OSError("CMIN output contains no valid molecule")
+                except Exception as exc:
+                    self.args.log.write(
+                        f"\nx  WARNING! {optimized_file.name} was not a valid CMIN output "
+                        f"and will be skipped: {exc}"
+                    )
+                    continue
                 optimized_files.append(str(optimized_file))
             else:
                 self.args.log.write(
