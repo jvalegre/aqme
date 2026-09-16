@@ -545,7 +545,8 @@ def read_json(file: Union[str, Path]) -> Optional[Dict[str, Any]]:
 def get_matches_idx_n_prefix(
     self,
     smarts_targets: List[str],
-    name_initial: str
+    name_initial: str,
+    structure_file: Optional[str] = None
 ) -> Dict[str, Dict[str, Union[List[int], List[str], int]]]:
     """
     Locate atom indices and generate atom prefixes for given SMARTS patterns.
@@ -575,7 +576,7 @@ def get_matches_idx_n_prefix(
 
     if len(smarts_targets) > 0:
         # Create RDKit mol object from input file
-        mol = get_mol_assign(name_initial)
+        mol = get_mol_assign(name_initial, structure_file=structure_file)
 
         # Process each SMARTS pattern
         for pattern in smarts_targets:
@@ -652,7 +653,8 @@ def calculate_morfeus_descriptors(
     charge: int,
     mult: Optional[int],
     smarts_targets: List[str],
-    name_initial: str
+    name_initial: str,
+    structure_file: Optional[str] = None
 ) -> Dict[str, Any]:
     """
     Calculate comprehensive molecular descriptors using the MORFEUS package.
@@ -706,7 +708,15 @@ def calculate_morfeus_descriptors(
     morfeus_data = morfeus_global_descps(self, elements, coordinates, morfeus_data)
 
     # calculate MORFEUS local descriptors that do not come from xTB
-    morfeus_data = morfeus_local_descps(self, elements, coordinates, morfeus_data, smarts_targets, name_initial)
+    morfeus_data = morfeus_local_descps(
+        self,
+        elements,
+        coordinates,
+        morfeus_data,
+        smarts_targets,
+        name_initial,
+        structure_file=structure_file,
+    )
 
     # xTB calculations through MORFEUS (with 1 proc to be reproducible)
     # calculate PTB method for descriptors that support it
@@ -797,7 +807,8 @@ def morfeus_local_descps(
     coordinates: NDArray,
     morfeus_data: Dict[str, Any],
     smarts_targets: List[str],
-    name_initial: str
+    name_initial: str,
+    structure_file: Optional[str] = None
 ) -> Dict[str, Any]:
     """
     Calculate atom-specific descriptors using MORFEUS methods.
@@ -830,7 +841,12 @@ def morfeus_local_descps(
 
     # Get target atom indices from SMARTS patterns
     atom_matches = []
-    pattern_dict = get_matches_idx_n_prefix(self, smarts_targets, name_initial)
+    pattern_dict = get_matches_idx_n_prefix(
+        self,
+        smarts_targets,
+        name_initial,
+        structure_file=structure_file,
+    )
     if pattern_dict:
         for pattern in pattern_dict:
             atom_matches.extend(pattern_dict[pattern]['sorted_indices'])
@@ -1827,35 +1843,43 @@ def get_mols_qdescp(qdescp_files: List[str]) -> List[MoleculeType]:
         except Exception:
             continue
             
-        # First try to find SMILES in the file
-        smi_exist = False
+        # Prefer the molecular structure stored in the SDF.  The atom order in
+        # this structure is the authoritative order for AQME_ATOM_MAP.  In
+        # particular, rebuilding the molecule from the canonical <SMILES>
+        # property can reorder explicit hydrogens before the map metadata is
+        # applied.
+        try:
+            mols = load_sdf(file)
+            if mols and mols[0] is not None:
+                original_smiles = (
+                    get_sdf_property(file, "_AQME_ORIGINAL_SMILES")
+                    or get_sdf_property(file, "SMILES_INPUT")
+                )
+                apply_atom_map_to_mol(mols[0], atom_map_text, original_smiles)
+                mol_list.append(mols[0])
+                continue
+        except Exception:
+            pass
+
+        # Fallback for non-SDF-like inputs that only contain a SMILES property.
         for i, line in enumerate(lines):
             if ">  <SMILES>" in line and i + 1 < len(lines):
                 try:
                     smi = lines[i + 1].split()[0]
-                    mol = Chem.MolFromSmiles(smi)
+                    params = Chem.SmilesParserParams()
+                    params.removeHs = False
+                    mol = Chem.MolFromSmiles(smi, params)
                     if mol is not None:
                         mol_list.append(Chem.AddHs(mol))
                         apply_atom_map_to_mol(mol_list[-1], atom_map_text)
-                        smi_exist = True
                         break
                 except Exception:
                     continue
-                    
-        # If no SMILES found, try reading as SDF
-        if not smi_exist:
-            try:
-                mols = load_sdf(file)
-                if mols:
-                    apply_atom_map_to_mol(mols[0], atom_map_text)
-                    mol_list.append(mols[0])
-            except Exception:
-                continue
     
     return mol_list
 
 
-def get_mol_assign(name_initial: str) -> MoleculeType:
+def get_mol_assign(name_initial: str, structure_file: Optional[str] = None) -> MoleculeType:
     """
     Create RDKit molecule object from SDF file, supporting multiple formats.
 
@@ -1878,7 +1902,7 @@ def get_mol_assign(name_initial: str) -> MoleculeType:
         - Falls back to SMILES reconstruction if SDF parsing fails
         - Handles both CSEARCH and standard SDF formats
     """
-    sdf_path = Path(f'{name_initial}.sdf')
+    sdf_path = Path(structure_file) if structure_file else Path(f'{name_initial}.sdf')
     
     if not sdf_path.exists():
         raise FileNotFoundError(f"SDF file not found: {sdf_path}")
@@ -1886,9 +1910,13 @@ def get_mol_assign(name_initial: str) -> MoleculeType:
     try:
         # First try direct SDF parsing
         atom_map_text = get_sdf_atom_map(str(sdf_path))
+        original_smiles = (
+            get_sdf_property(str(sdf_path), "_AQME_ORIGINAL_SMILES")
+            or get_sdf_property(str(sdf_path), "SMILES_INPUT")
+        )
         mols = load_sdf(str(sdf_path))
         if mols:
-            apply_atom_map_to_mol(mols[0], atom_map_text)
+            apply_atom_map_to_mol(mols[0], atom_map_text, original_smiles)
             return mols[0]
 
         # Fall back to SMILES reconstruction if SDF parsing fails
@@ -1905,7 +1933,7 @@ def get_mol_assign(name_initial: str) -> MoleculeType:
                 mol = Chem.MolFromSmiles(smiles, params)
                 if mol is not None:
                     mol = Chem.AddHs(mol)
-                    apply_atom_map_to_mol(mol, atom_map_text)
+                    apply_atom_map_to_mol(mol, atom_map_text, original_smiles)
                     return mol
                 
         # Fall back to SDF parsing if no SMILES found
@@ -1913,7 +1941,7 @@ def get_mol_assign(name_initial: str) -> MoleculeType:
         if not mols:
             val_error = f"x  WARNING! No valid molecules found in {sdf_path}"
             raise ValueError(val_error)
-        apply_atom_map_to_mol(mols[0], atom_map_text)
+        apply_atom_map_to_mol(mols[0], atom_map_text, original_smiles)
         return mols[0]  # Return first molecule
 
     except Exception as e:
@@ -2172,19 +2200,29 @@ def get_atom_matches(
     if not str(pattern).isalpha() and str(pattern).isdigit():
         idx_set = pattern
 
-        # for non-mapped mols (i.e. SDF input files)
+        # Numeric qdescp_atoms refer to atom-map numbers. Do not silently
+        # reinterpret them as positional SDF indices when the SDF is unmapped.
         mol_idxs = [atom.GetAtomMapNum() for atom in mol.GetAtoms()]
         if len(set(mol_idxs)) == 1 and mol_idxs[0] == 0:
-            for i,atom in enumerate(mol.GetAtoms()):
-                if i == int(pattern)-1: # atoms in SDF starts in index 1, but Python starts in idx 0
-                    pattern_idx = int(atom.GetIdx())
-                    matches = ((int(pattern_idx),),)
-        # for mapped SMILES
+            self.args.log.write(
+                f"x  Atom number {pattern} is not found in the mapped atoms, "
+                "please check it."
+            )
+            return [-1], idx_set
+
+        # Search the requested atom-map number in the SDF molecule.
         else:
             for atom in mol.GetAtoms():
                 if atom.GetAtomMapNum() == int(pattern):
                     pattern_idx = int(atom.GetIdx())
                     matches = ((int(pattern_idx),),)
+
+        if not matches:
+            self.args.log.write(
+                f"x  Atom number {pattern} is not found in the mapped atoms, "
+                "please check it."
+            )
+            return [-1], idx_set
 
     else: 
         try:
@@ -2516,10 +2554,38 @@ def _get_atom_mapping_from_sdf(file_path):
     return mapping
 
 
-def apply_atom_map_to_mol(mol, atom_map_text):
-    """Apply ``map_number:atom_index:symbol`` metadata to an RDKit molecule."""
+def apply_atom_map_to_mol(mol, atom_map_text, original_smiles=None):
+    """Apply AQME atom maps while preserving the atom order from the SDF.
+
+    ``AQME_ATOM_MAP`` stores indices from the canonical generation molecule,
+    which are not always the indices in the final SDF.  When the original
+    mapped SMILES is available, use a substructure correspondence to transfer
+    its map labels onto the atoms actually read from the SDF.
+    """
     if mol is None or not atom_map_text:
         return mol
+
+    if original_smiles:
+        try:
+            params = Chem.SmilesParserParams()
+            params.removeHs = False
+            mapped = Chem.MolFromSmiles(str(original_smiles), params)
+            if mapped is not None:
+                query = Chem.Mol(mapped)
+                for atom in query.GetAtoms():
+                    atom.SetAtomMapNum(0)
+                target = Chem.Mol(mol)
+                for atom in target.GetAtoms():
+                    atom.SetAtomMapNum(0)
+                match = target.GetSubstructMatch(query)
+                if match and len(match) == mapped.GetNumAtoms():
+                    for source_atom, target_idx in zip(mapped.GetAtoms(), match):
+                        map_number = source_atom.GetAtomMapNum()
+                        if map_number > 0:
+                            mol.GetAtomWithIdx(target_idx).SetAtomMapNum(map_number)
+                    return mol
+        except Exception:
+            pass
 
     for entry in str(atom_map_text).split(";"):
         parts = entry.split(":", 2)
@@ -2597,13 +2663,6 @@ def validate_atom_mapping_consistency(
     for file in files:
         atom_map_text = get_sdf_atom_map(file)
         canonical_smiles = get_sdf_property(file, "SMILES")
-        smi = extract_smiles_fn(file)
-        if smi is None and not atom_map_text:
-            logger.write(
-                f'\nx  WARNING! No SMILES found in "{file}". '
-                "Atom mapping validation could not be performed."
-            )
-            return False
 
         local_map = {num: set() for num in mapping_numbers}
         local_positions = {num: set() for num in mapping_numbers}
@@ -2633,31 +2692,14 @@ def validate_atom_mapping_consistency(
                         local_map[map_num].add(symbol)
                         local_positions[map_num].add(atom_idx)
 
-        if not atom_map_text and not any(local_map.values()):
-            params = Chem.SmilesParserParams()
-            params.removeHs = False
-            mol = Chem.MolFromSmiles(smi, params)
-            if mol is None:
-                logger.write(
-                    f'\nx  WARNING! RDKit failed to parse SMILES in "{file}". '
-                    "Atom mapping validation failed."
-                )
-                return False
-
-            for atom in mol.GetAtoms():
-                map_num = atom.GetAtomMapNum()
-                if map_num in mapping_numbers:
-                    local_map[map_num].add(atom.GetSymbol())
-                    local_positions[map_num].add(atom.GetIdx())
-
         # Ensure requested mappings exist in this molecule
         for num in mapping_numbers:
 
             # Mapping requested but not present
             if len(local_map[num]) == 0:
                 logger.write(
-                    f'\nx  WARNING! Atom mapping {num} was requested but '
-                    f'not found in the SMILES of "{file}".'
+                    f'\nx  Atom number {num} is not found in the mapped atoms, '
+                    f'please check it in "{file}".'
                 )
                 return False
 
