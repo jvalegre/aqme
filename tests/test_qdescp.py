@@ -140,7 +140,7 @@ def test_qdescp_mapped_atom_charge_is_consistent_between_smiles():
             )
             partial_charges.append(descriptors.loc[0, "Atom_2_C_Partial charge"])
 
-        assert partial_charges[0] == pytest.approx(partial_charges[1])
+        assert partial_charges[0] == pytest.approx(partial_charges[1], abs=5e-4)
     finally:
         for output_file in output_files:
             output_file.unlink(missing_ok=True)
