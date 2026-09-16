@@ -68,6 +68,72 @@ def test_qdescp_rejects_repeated_atom_map_number(tmp_path):
     assert "appears multiple times" in "".join(log.messages)
 
 
+def test_qdescp_mapped_atoms_keep_partial_charge_order(tmp_path):
+    input_csv = tmp_path / "mapped_charge_order.csv"
+    input_csv.write_text(
+        "SMILES,code_name\n"
+        "[H][C:2](=[O:3])[H:1],formaldehyde\n",
+        encoding="utf-8",
+    )
+    output_files = [
+        Path(w_dir_main) / f"AQME-ROBERT_{level}_mapped_charge_order.csv"
+        for level in ("denovo", "interpret", "full")
+    ]
+
+    try:
+        qdescp(
+            input=str(input_csv),
+            destination=str(tmp_path / "QDESCP"),
+            qdescp_atoms=[1, 2, 3],
+            sample=1,
+            nprocs=1,
+        )
+
+        descriptors = pd.read_csv(output_files[1])
+        charge_carbon = descriptors.loc[0, "Atom_2_C_Partial charge"]
+        charge_hydrogen = descriptors.loc[0, "Atom_1_H_Partial charge"]
+        charge_oxygen = descriptors.loc[0, "Atom_3_O_Partial charge"]
+
+        assert charge_carbon > charge_hydrogen > charge_oxygen
+    finally:
+        for output_file in output_files:
+            output_file.unlink(missing_ok=True)
+
+
+def test_qdescp_mapped_atom_charge_is_consistent_between_smiles(tmp_path):
+    input_csv = tmp_path / "mapped_charge_consistency.csv"
+    input_csv.write_text(
+        "SMILES,code_name\n"
+        "[H][C:2](=[O:3])[H:1],mapped_formaldehyde\n"
+        "[C:2]=O,mapped_carbonyl\n",
+        encoding="utf-8",
+    )
+    output_files = [
+        Path(w_dir_main) / f"AQME-ROBERT_{level}_mapped_charge_consistency.csv"
+        for level in ("denovo", "interpret", "full")
+    ]
+
+    try:
+        qdescp(
+            input=str(input_csv),
+            destination=str(tmp_path / "QDESCP"),
+            qdescp_atoms=[2],
+            sample=1,
+            nprocs=1,
+        )
+
+        descriptors = pd.read_csv(output_files[1]).set_index("code_name")
+
+        assert descriptors.loc[
+            "mapped_formaldehyde", "Atom_2_C_Partial charge"
+        ] == pytest.approx(
+            descriptors.loc["mapped_carbonyl", "Atom_2_C_Partial charge"]
+        )
+    finally:
+        for output_file in output_files:
+            output_file.unlink(missing_ok=True)
+
+
 # tests for QDESCP-xTB
 @pytest.mark.parametrize(
     "file",
