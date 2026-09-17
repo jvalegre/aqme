@@ -67,7 +67,8 @@ jobs:
           pip install pytest-mock
           
           # the format of the codecov report has to be specified or it doesn't create for some reason
-          python -m pytest -v --cov=aqme --cov-report=xml
+          # python -m pytest -v --cov=aqme --cov-report=xml
+          python -m pytest -v --durations=20 --cov=aqme --cov-report=xml
           rm -r /tmp/*
           cp -r * /tmp
       - persist_to_workspace:
