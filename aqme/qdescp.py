@@ -720,7 +720,7 @@ class qdescp:
         cmin_kwargs = {
             "files": qdescp_files,
             "destination": str(cmin_destination),
-            "program": "xtb",
+            "program": self.args.program or "xtb",
             "charge": None,
             "mult": None,
             "nprocs": self.args.nprocs,
