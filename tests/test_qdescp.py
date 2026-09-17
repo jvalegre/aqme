@@ -203,6 +203,7 @@ def test_qdescp_xtb(file):
     qdescp_kwargs = {
         "input": f'{qdescp_input_dir.joinpath(file_qdescp)}',
         "destination": f'{folder_qdescp}',
+        "nprocs": 4,
     }
 
     if file == 'test_atom.csv':
@@ -241,6 +242,8 @@ def test_qdescp_xtb(file):
             f'{qdescp_input_dir.joinpath(file_qdescp)}',
             "--destination",
             f'{folder_qdescp}',
+            "--nprocs",
+            "4",
             "--qdescp_atoms",
             '[1]',
         ]
@@ -552,6 +555,7 @@ def test_qdescp_missing(
     qdescp(
         files=f'{qdescp_empty_dir}/*.sdf',
         destination=f'{folder_qdescp}',
+        nprocs=4,
     )
 
     # checking csv file
@@ -604,7 +608,8 @@ def test_qdescp_sdf(
             destination=f'{folder_qdescp}',
             qdescp_atoms=['As'],
             charge=-1,
-            mult=1
+            mult=1,
+            nprocs=4,
         )
         name_1 = 'conf_72'
         name_2 = 'conf_73'
@@ -616,6 +621,7 @@ def test_qdescp_sdf(
         qdescp(
             files=f'{qdescp_sdf_dir}/*.sdf',
             destination=f'{folder_qdescp}',
+            nprocs=4,
         )
         name_1 = 'mol1'
         name_2 = 'mol_2'
@@ -692,6 +698,7 @@ def test_qdescp_csv(
     qdescp(
         input=f'{qdescp_csv_dir}/{file}',
         destination=f'{folder_qdescp}',
+        nprocs=4,
     )
 
     # checking csv file
@@ -758,6 +765,7 @@ def test_au_csv(
     qdescp_kwargs = {
         "input": f'{qdescp_au_dir}/{file}',
         "destination": f'{folder_qdescp}',
+        "nprocs": 4,
     }
     
     if run_test == 2:
@@ -868,6 +876,7 @@ def test_qdescp_nmr(json_files):
         files=json_files,
         destination=qdescp_input_dir,
         program="nmr",
+        nprocs=4,
         nmr_slope=nmr_slope,
         nmr_intercept=nmr_intercept,
         nmr_experim=f'{qdescp_input_dir}/Experimental_NMR_shifts.csv',

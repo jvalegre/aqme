@@ -251,7 +251,7 @@ class cmin:
                 prepared_files.append(file)
                 continue
 
-            sdf_file = Path(self._xyz_temp_dir) / f"{Path(file).stem}.sdf"
+            sdf_file = Path(self._xyz_temp_dir) / Path(file).with_suffix(".sdf").name
             subprocess.run(
                 ["obabel", "-ixyz", file, "-osdf", f"-O{sdf_file}"],
                 stdout=subprocess.DEVNULL,
