@@ -463,6 +463,7 @@ class qdescp:
         if len(qdescp_files) == 1 and os.path.basename(qdescp_files[0]).split('.')[-1].lower() == 'csv':
             qdescp_files = self.initial_csearch_run(destination, qdescp_files)
 
+        qdescp_files = self._prepare_qdescp_cmin_files(qdescp_files, destination)
         if self.args.geom_opt:
             qdescp_files = self._run_qdescp_cmin(qdescp_files, destination)
             if len(qdescp_files) == 0:
@@ -611,8 +612,8 @@ class qdescp:
             self.args.log.write(f'\nx  No files were found! Please provide the correct PATH to your input files (i.e. --files "*.sdf")')
             valid_input = False
         else:
-            if os.path.basename(self.args.files[0]).split('.')[-1].lower() != "sdf":
-                self.args.log.write(f"\nx  The format used ({os.path.basename(self.args.files[0]).split('.')[-1]}) is not compatible with the 'files' option! Formats accepted: sdf")
+            if any(Path(file).suffix.lower() not in {".sdf", ".xyz"} for file in self.args.files):
+                self.args.log.write(f"\nx  The format used ({os.path.basename(self.args.files[0]).split('.')[-1]}) is not compatible with the 'files' option! Formats accepted: sdf, xyz")
                 valid_input = False
             qdescp_files = self.args.files
 
@@ -621,6 +622,37 @@ class qdescp:
             sys.exit()
 
         return qdescp_files
+
+
+    def _prepare_qdescp_cmin_files(self, qdescp_files, destination):
+        """Convert XYZ inputs to SDF files before running CMIN."""
+        prepared_files = []
+        cmin_destination = Path(destination).parent / "CMIN" if Path(destination).name.upper() == "QDESCP" else Path(destination)
+        xyz_destination = cmin_destination / "XYZ_inputs"
+        for file in qdescp_files:
+            if Path(file).suffix.lower() != ".xyz":
+                prepared_files.append(file)
+                continue
+
+            sdf_file = xyz_destination / f"{Path(file).stem}.sdf"
+            xyz_destination.mkdir(exist_ok=True, parents=True)
+            subprocess.run(
+                ["obabel", "-ixyz", file, "-osdf", f"-O{sdf_file}"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+            charge = self.args.charge if self.args.charge is not None else read_xyz_charge_mult(file)[0]
+            mult = self.args.mult if self.args.mult is not None else read_xyz_charge_mult(file)[1]
+            mols = load_sdf(str(sdf_file))
+            writer = Chem.SDWriter(str(sdf_file))
+            for mol in mols:
+                if mol is not None:
+                    mol.SetProp("Real charge", str(charge))
+                    mol.SetProp("Mult", str(mult))
+                    writer.write(mol)
+            writer.close()
+            prepared_files.append(str(sdf_file))
+        return prepared_files
 
 
     def initial_csearch_run(self, destination, qdescp_files):

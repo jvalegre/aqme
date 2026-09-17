@@ -633,6 +633,31 @@ def test_qdescp_sdf(
     assert charge_1 == round(df_interpret[f'{atom}_Partial charge'][0],2)
     assert charge_2 == round(df_interpret[f'{atom}_Partial charge'][1],2)
 
+
+def test_qdescp_xyz_auto_charge_mult(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    xyz_structures = {
+        'methane': '5\nmethane\nC 0.000 0.000 0.000\nH 0.629 0.629 0.629\nH -0.629 -0.629 0.629\nH -0.629 0.629 -0.629\nH 0.629 -0.629 -0.629\n',
+        'ethane': '8\nethane\nC -0.770 0.000 0.000\nC 0.770 0.000 0.000\nH -1.157 0.513 0.889\nH -1.157 0.513 -0.889\nH -1.157 -1.026 0.000\nH 1.157 -0.513 -0.889\nH 1.157 -0.513 0.889\nH 1.157 1.026 0.000\n',
+        'propane': '11\npropane\nC -1.270 0.000 0.000\nC 0.000 0.000 0.000\nC 1.270 0.000 0.000\nH -1.657 0.513 0.889\nH -1.657 0.513 -0.889\nH -1.657 -1.026 0.000\nH 0.000 0.000 1.089\nH 0.000 1.026 -0.363\nH 0.000 -1.026 -0.363\nH 1.657 0.513 0.889\nH 1.657 -0.513 0.889\n',
+    }
+    xyz_files = []
+    for name, structure in xyz_structures.items():
+        xyz_file = tmp_path / f'{name}.xyz'
+        xyz_file.write_text(structure)
+        xyz_files.append(str(xyz_file))
+
+    qdescp(
+        files=xyz_files,
+        destination=str(tmp_path / 'QDESCP'),
+        nprocs=1,
+    )
+
+    for name in xyz_structures:
+        sdf_file = tmp_path / 'CMIN' / f'{name}.sdf'
+        assert get_sdf_property(sdf_file, 'Real charge') == '0'
+        assert get_sdf_property(sdf_file, 'Mult') == '1'
+
 @pytest.mark.parametrize(
     "file",
     [
