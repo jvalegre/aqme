@@ -463,7 +463,6 @@ class qdescp:
         if len(qdescp_files) == 1 and os.path.basename(qdescp_files[0]).split('.')[-1].lower() == 'csv':
             qdescp_files = self.initial_csearch_run(destination, qdescp_files)
 
-        qdescp_files = self._prepare_qdescp_cmin_files(qdescp_files, destination)
         if self.args.geom_opt:
             qdescp_files = self._run_qdescp_cmin(qdescp_files, destination)
             if len(qdescp_files) == 0:
@@ -622,38 +621,6 @@ class qdescp:
             sys.exit()
 
         return qdescp_files
-
-
-    def _prepare_qdescp_cmin_files(self, qdescp_files, destination):
-        """Convert XYZ inputs to SDF files before running CMIN."""
-        prepared_files = []
-        cmin_destination = Path(destination).parent / "CMIN" if Path(destination).name.upper() == "QDESCP" else Path(destination)
-        xyz_destination = cmin_destination / "XYZ_inputs"
-        for file in qdescp_files:
-            if Path(file).suffix.lower() != ".xyz":
-                prepared_files.append(file)
-                continue
-
-            sdf_file = xyz_destination / f"{Path(file).stem}.sdf"
-            xyz_destination.mkdir(exist_ok=True, parents=True)
-            subprocess.run(
-                ["obabel", "-ixyz", file, "-osdf", f"-O{sdf_file}"],
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-            )
-            charge = self.args.charge if self.args.charge is not None else read_xyz_charge_mult(file)[0]
-            mult = self.args.mult if self.args.mult is not None else read_xyz_charge_mult(file)[1]
-            mols = load_sdf(str(sdf_file))
-            writer = Chem.SDWriter(str(sdf_file))
-            for mol in mols:
-                if mol is not None:
-                    mol.SetProp("Real charge", str(charge))
-                    mol.SetProp("Mult", str(mult))
-                    writer.write(mol)
-            writer.close()
-            prepared_files.append(str(sdf_file))
-        return prepared_files
-
 
     def initial_csearch_run(self, destination, qdescp_files):
         """Generate conformers from SMILES in CSV input.
@@ -1551,10 +1518,9 @@ class qdescp:
         written by that step is used instead, because it contains the final
         atom order and coordinates used by the descriptor calculation.
         """
-        if self.args.geom_opt:
-            cmin_sdf = xtb_files_props.get('sdf_filtered')
-            if cmin_sdf and os.path.exists(cmin_sdf):
-                return cmin_sdf
+        cmin_sdf = xtb_files_props.get('sdf_filtered')
+        if cmin_sdf and os.path.exists(cmin_sdf):
+            return cmin_sdf
 
         return source_sdf
 

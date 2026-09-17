@@ -64,6 +64,9 @@ import time
 import ast
 import contextlib
 import threading
+import shutil
+import tempfile
+import subprocess
 import numpy as np
 from pathlib import Path
 import concurrent.futures
@@ -78,6 +81,7 @@ from aqme.utils import (
     mol_from_sdf_or_mol_or_mol2,
     add_prefix_suffix,
     check_dependencies,
+    read_xyz_charge_mult,
     set_destination,
 )
 from aqme.csearch.utils import _translate_constraint_indices
@@ -143,7 +147,7 @@ class cmin:
             self.args.log.finalize()
             sys.exit()
 
-        # Only SDF input is supported now
+        self.args.files = self._prepare_xyz_inputs(self.args.files)
         file_format = Path(self.args.files[0]).suffix.lower().lstrip(".")
         if file_format != "sdf":
             self.args.log.write(
@@ -172,6 +176,9 @@ class cmin:
         elapsed = round(time.time() - start_time, 2)
         self.args.log.write(f"\nTime CMIN: {elapsed} seconds\n")
         self.args.log.finalize()
+
+        if self._xyz_temp_dir:
+            shutil.rmtree(self._xyz_temp_dir, ignore_errors=True)
 
         # Return to the original directory (important for Jupyter)
         os.chdir(self.args.initial_dir)
@@ -233,6 +240,35 @@ class cmin:
     # ------------------------------------------------------------------
     # I/O helpers
     # ------------------------------------------------------------------
+
+    def _prepare_xyz_inputs(self, files):
+        """Convert XYZ inputs to temporary SDF files without logging."""
+        xyz_files = [file for file in files if Path(file).suffix.lower() == ".xyz"]
+        self._xyz_temp_dir = tempfile.mkdtemp() if xyz_files else None
+        prepared_files = []
+        for file in files:
+            if Path(file).suffix.lower() != ".xyz":
+                prepared_files.append(file)
+                continue
+
+            sdf_file = Path(self._xyz_temp_dir) / f"{Path(file).stem}.sdf"
+            subprocess.run(
+                ["obabel", "-ixyz", file, "-osdf", f"-O{sdf_file}"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+            charge = self.args.charge if self.args.charge is not None else read_xyz_charge_mult(file)[0]
+            mult = self.args.mult if self.args.mult is not None else read_xyz_charge_mult(file)[1]
+            mols = [mol for mol in Chem.SDMolSupplier(str(sdf_file), removeHs=False)]
+            writer = Chem.SDWriter(str(sdf_file))
+            for mol in mols:
+                if mol is not None:
+                    mol.SetProp("Real charge", str(charge))
+                    mol.SetProp("Mult", str(mult))
+                    writer.write(mol)
+            writer.close()
+            prepared_files.append(str(sdf_file))
+        return prepared_files
 
     def _load_sdf(self, sdf_file):
         """Load molecules from an SDF file.
