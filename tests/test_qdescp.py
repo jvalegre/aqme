@@ -742,6 +742,18 @@ def test_au_csv(
 
     qdescp(**qdescp_kwargs)
 
+    expected_charge_mult = {
+        '200': ('0', '1'),
+        '201': ('2', '3'),
+    } if run_test == 1 else {
+        '200': ('0', '1'),
+        '201': ('0', '1'),
+    }
+    for code_name, (charge, mult) in expected_charge_mult.items():
+        cmin_file = f'{qdescp_au_dir}/CMIN/{code_name}_rdkit.sdf'
+        assert get_sdf_property(cmin_file, 'Real charge') == charge
+        assert get_sdf_property(cmin_file, 'Mult') == mult
+
     # Checking molecular descriptors
     descp_denovo_mol = denovo_descriptors['mol'] 
     descp_denovo_atoms = denovo_descriptors['atoms']
