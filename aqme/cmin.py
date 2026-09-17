@@ -1,5 +1,5 @@
 """
-Parameters
+Parameter
 ----------
 
 General
