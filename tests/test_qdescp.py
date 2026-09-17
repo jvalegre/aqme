@@ -93,12 +93,13 @@ def test_qdescp_mapped_atoms_keep_partial_charge_order():
             nprocs=1,
         )
 
-        descriptors = pd.read_csv(output_files[1])
-        charge_carbon = descriptors.loc[0, "Atom_2_C_Partial charge"]
-        charge_hydrogen = descriptors.loc[0, "Atom_1_H_Partial charge"]
-        charge_oxygen = descriptors.loc[0, "Atom_3_O_Partial charge"]
+        for output_file in output_files:
+            descriptors = pd.read_csv(output_file)
+            charge_carbon = descriptors.loc[0, "Atom_2_C_Partial charge"]
+            charge_hydrogen = descriptors.loc[0, "Atom_1_H_Partial charge"]
+            charge_oxygen = descriptors.loc[0, "Atom_3_O_Partial charge"]
 
-        assert charge_carbon > charge_hydrogen > charge_oxygen
+            assert charge_carbon > charge_hydrogen > charge_oxygen
     finally:
         for output_file in output_files:
             output_file.unlink(missing_ok=True)
