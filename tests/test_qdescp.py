@@ -15,6 +15,7 @@ import math
 import shutil
 from pathlib import Path
 from aqme.qdescp import qdescp
+from aqme.utils import load_sdf
 from aqme.qdescp_utils import (
     read_json,
     get_descriptors,
@@ -709,15 +710,8 @@ def test_qdescp_csv(
     assert len(df_interpret.columns) == 23
 
     # check that the number of conformers is automatically adjusted to 5
-    f = open(f'{w_dir_main}/CSEARCH_data.dat', "r")
-    data = f.readlines()
-    f.close()
-
-    conf_change = False
-    for line in data:
-        if '--sample "5"' in line:
-            conf_change = True
-    assert conf_change
+    csearch_sdf = f'{os.path.dirname(folder_qdescp)}/CSEARCH/mol_1_rdkit.sdf'
+    assert len(load_sdf(csearch_sdf)) == 5
 
     # check that the xTB version is printed
     f = open(f'{w_dir_main}/QDESCP_data.dat', "r")
