@@ -67,6 +67,7 @@ import threading
 import shutil
 import tempfile
 import subprocess
+import multiprocessing
 import numpy as np
 from pathlib import Path
 import concurrent.futures
@@ -107,6 +108,70 @@ def normalize_cmin_backend(args):
 
     args.program = backend
     return args
+
+
+def _build_ase_atoms(mol, charge, mult):
+    """Convert an RDKit Mol (single conformer) to an ASE Atoms object.
+
+    Top-level counterpart of ``cmin._mol_to_ase_atoms``, kept as a free
+    function so ``_run_famex_worker`` can call it without an instance
+    (required for it to be picklable for ``ProcessPoolExecutor``).
+    """
+    from ase import Atoms
+
+    symbols = [atom.GetSymbol() for atom in mol.GetAtoms()]
+    positions = mol.GetConformer().GetPositions()  # Å
+    atoms = Atoms(symbols=symbols, positions=positions)
+    atoms.info["charge"] = int(charge)
+    atoms.info["spin"] = int(mult)
+    return atoms
+
+
+def _run_famex_worker(mol, conf_name, charge, mult, constraints, program, target, fmax, steps):
+    """Run a single FAMEX local minimisation.
+
+    Top-level (picklable) counterpart of ``cmin._optimize_with_famex``, used
+    so that tblite optimisations can be dispatched to a ``ProcessPoolExecutor``
+    (tblite is not thread-safe within a single process, so threads cannot run
+    it concurrently; separate processes can). Takes and returns only plain/
+    RDKit objects so it can be sent across process boundaries.
+
+    Returns
+    -------
+    tuple : (mol, energy_kcal, success, log_message)
+    """
+    import famex
+
+    try:
+        ase_atoms = _build_ase_atoms(mol, charge, mult)
+
+        explorer = famex.Explorer(
+            atoms=ase_atoms,
+            backend=program,
+            target=target,
+            strategy="local",
+            default_charge=charge,
+            default_spin=mult,
+            constraints=constraints,
+            verbose=0,
+        )
+        result = explorer.run(fmax=fmax, steps=steps)
+
+        optimised_atoms = result["optimized_atoms"]
+        energy_ev = optimised_atoms.get_potential_energy()  # eV
+        energy_kcal = energy_ev * EV_TO_KCAL
+
+        positions = optimised_atoms.get_positions()  # Å
+        conf = mol.GetConformer()
+        for i, (x, y, z) in enumerate(positions):
+            conf.SetAtomPosition(i, Point3D(x, y, z))
+
+        message = f"\n   Converged. E = {energy_ev:.6f} eV  ({energy_kcal:.4f} kcal/mol)"
+        return mol, energy_kcal, True, message
+
+    except Exception as exc:
+        message = f"\nx  FAMEX optimisation failed for {conf_name}: {exc}"
+        return mol, 0.0, False, message
 
 
 class cmin:
@@ -513,57 +578,27 @@ class cmin:
 
         self.args.log.write(f"\no  FAMEX optimisation [{self.args.program}] ({conf_name})")
 
-        try:
-            ase_atoms = self._mol_to_ase_atoms(mol, charge, mult)
-            target = self._get_famex_target()
+        target = self._get_famex_target()
+        fmax = getattr(self.args, "opt_fmax", 0.05)
+        steps = getattr(self.args, "opt_steps", 1000)
 
-            fmax = getattr(self.args, "opt_fmax", 0.05)
-            steps = getattr(self.args, "opt_steps", 1000)
-
-            if self.args.program == "tblite":
-                with cmin._tblite_lock:
-                    # Redirect to os.devnull to avoid buffering large strings.
-                    with open(os.devnull, "w", encoding="utf-8") as devnull:
-                        with contextlib.redirect_stdout(devnull), contextlib.redirect_stderr(devnull):
-                            explorer = famex.Explorer(
-                                atoms=ase_atoms,
-                                backend=self.args.program,
-                                target=target,
-                                strategy="local",
-                                default_charge=charge,
-                                default_spin=mult,
-                                constraints=constraints,
-                                verbose=0
-                            )
-                            result = explorer.run(fmax=fmax, steps=steps)
-            else:
-                explorer = famex.Explorer(
-                    atoms=ase_atoms,
-                    backend=self.args.program,
-                    target=target,
-                    strategy="local",
-                    default_charge=charge,
-                    default_spin=mult,
-                    constraints=constraints,
-                    verbose=0
-                )
-                result = explorer.run(fmax=fmax, steps=steps)
-
-            optimised_atoms = result["optimized_atoms"]
-            energy_ev = optimised_atoms.get_potential_energy()  # eV
-            energy_kcal = energy_ev * EV_TO_KCAL
-
-            self._update_mol_from_ase(mol, optimised_atoms)
-            self.args.log.write(
-                f"\n   Converged. E = {energy_ev:.6f} eV  ({energy_kcal:.4f} kcal/mol)"
+        if self.args.program == "tblite":
+            with cmin._tblite_lock:
+                # Redirect to os.devnull to avoid buffering large strings.
+                with open(os.devnull, "w", encoding="utf-8") as devnull:
+                    with contextlib.redirect_stdout(devnull), contextlib.redirect_stderr(devnull):
+                        mol, energy_kcal, success, message = _run_famex_worker(
+                            mol, conf_name, charge, mult, constraints,
+                            self.args.program, target, fmax, steps
+                        )
+        else:
+            mol, energy_kcal, success, message = _run_famex_worker(
+                mol, conf_name, charge, mult, constraints,
+                self.args.program, target, fmax, steps
             )
-            return mol, energy_kcal, True
 
-        except Exception as exc:
-            self.args.log.write(
-                f"\nx  FAMEX optimisation failed for {conf_name}: {exc}"
-            )
-            return mol, 0.0, False
+        self.args.log.write(message)
+        return mol, energy_kcal, success
 
     def _calculate_frequencies(self, mol, conf_label, charge, mult):
         """Calculate vibrational frequencies for a given conformer using the FAMEX analysis module."""
@@ -744,26 +779,53 @@ class cmin:
 
         self._log_famex_citation()
         constraints = self._build_famex_constraints(tasks[0][0])
-        
-        with concurrent.futures.ThreadPoolExecutor(max_workers=nprocs) as executor:
-            futures_list = [
-                executor.submit(
-                    self._optimize_with_famex,
-                    task[0],
-                    task[1],
-                    task[2],
-                    task[3],
-                    constraints,
-                )
-                for task in tasks
-            ]
+
+        # tblite is not thread-safe within a single process (hence
+        # _tblite_lock, which fully serialises the ThreadPoolExecutor below).
+        # Separate OS processes don't share that state, so real parallelism
+        # for tblite requires a ProcessPoolExecutor. This only works with the
+        # "fork" start method (spawn would start from a blank interpreter and
+        # lose context, e.g. monkeypatched test doubles); everything else
+        # (other backends, or platforms without fork) keeps using threads.
+        use_processes = (
+            nprocs > 1
+            and self.args.program == "tblite"
+            and "fork" in multiprocessing.get_all_start_methods()
+        )
+
+        if use_processes:
+            target = self._get_famex_target()
+            fmax = getattr(self.args, "opt_fmax", 0.05)
+            steps = getattr(self.args, "opt_steps", 1000)
+            for task in tasks:
+                self.args.log.write(f"\no  FAMEX optimisation [{self.args.program}] ({task[1]})")
+
+            executor = concurrent.futures.ProcessPoolExecutor(
+                max_workers=nprocs, mp_context=multiprocessing.get_context("fork")
+            )
+            submit = lambda task: executor.submit(
+                _run_famex_worker, task[0], task[1], task[2], task[3],
+                constraints, self.args.program, target, fmax, steps
+            )
+        else:
+            executor = concurrent.futures.ThreadPoolExecutor(max_workers=nprocs)
+            submit = lambda task: executor.submit(
+                self._optimize_with_famex, task[0], task[1], task[2], task[3], constraints
+            )
+
+        with executor:
+            futures_list = [submit(task) for task in tasks]
 
             # Gather results as they complete
             for future in concurrent.futures.as_completed(futures_list):
                 try:
                     result = future.result()
                     if result is not None:
-                        mol, energy, ok = result
+                        if use_processes:
+                            mol, energy, ok, message = result
+                            self.args.log.write(message)
+                        else:
+                            mol, energy, ok = result
                         if ok:
                             pmol = PropertyMol(mol)
                             outmols.append(pmol)
