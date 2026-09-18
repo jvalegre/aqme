@@ -657,7 +657,7 @@ def test_qdescp_xyz_auto_charge_mult(tmp_path, monkeypatch):
     qdescp(
         files=xyz_files,
         destination=str(tmp_path / 'QDESCP'),
-        nprocs=1,
+        nprocs=4,
     )
 
     for name in xyz_structures:
