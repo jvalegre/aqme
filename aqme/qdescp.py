@@ -139,6 +139,7 @@ from aqme.qdescp_utils import (
     apply_atom_map_to_mol,
 )
 from aqme.cmin import cmin as CMIN
+from aqme.csearch import csearch as CSEARCH
 
 from aqme.csearch.crest import xyzall_2_xyz
 from aqme.csearch.utils import (
@@ -664,12 +665,16 @@ class qdescp:
         if destination_csearch.exists():
             shutil.rmtree(destination_csearch)
 
-        cmd_csearch = ['python', '-m', 'aqme', '--csearch', '--program', 'rdkit', '--input', 
-                    f'{self.args.csv_name}', '--sample', f'{sample_qdescp}', '--destination', f'{destination_csearch}',
-                    '--nprocs', f'{self.args.nprocs}','--auto_sample',self.args.auto_sample, '--ff',self.args.ff]
-
-        if self.args.single_system:
-            cmd_csearch.append('--single_system')
+        csearch_kwargs = {
+            "program": "rdkit",
+            "input": f'{self.args.csv_name}',
+            "sample": sample_qdescp,
+            "destination": f'{destination_csearch}',
+            "nprocs": self.args.nprocs,
+            "auto_sample": self.args.auto_sample,
+            "ff": self.args.ff,
+            "single_system": self.args.single_system,
+        }
 
         # Propagate constraints to CSEARCH so QDESCP-generated conformers follow
         # the same constraint behavior as standalone CSEARCH/CMIN runs.
@@ -682,14 +687,14 @@ class qdescp:
         ]:
             arg_value = getattr(self.args, arg_name, None)
             if arg_value not in (None, [], ""):
-                cmd_csearch += [f"--{arg_name}", f"{arg_value}"]
+                csearch_kwargs[arg_name] = arg_value
 
         # overwrites charge/mult if the user specifies values
         if self.args.charge is not None:
-            cmd_csearch = cmd_csearch + ['--charge', f'{self.args.charge}']
+            csearch_kwargs["charge"] = self.args.charge
         if self.args.mult is not None:
-            cmd_csearch = cmd_csearch + ['--mult', f'{self.args.mult}']
-        subprocess.run(cmd_csearch, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            csearch_kwargs["mult"] = self.args.mult
+        CSEARCH(**csearch_kwargs)
 
         # Use only molecules from the input CSV and create aliases for rows
         # sharing canonical conformers but carrying different atom-map metadata.
