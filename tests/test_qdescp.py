@@ -15,7 +15,7 @@ import math
 import shutil
 from pathlib import Path
 from aqme.qdescp import qdescp
-from aqme.csearch import csearch as CSEARCH
+from aqme.utils import load_sdf
 from aqme.qdescp_utils import (
     read_json,
     get_descriptors,
@@ -675,7 +675,7 @@ def test_qdescp_xyz_auto_charge_mult(tmp_path, monkeypatch):
 )
 
 def test_qdescp_csv(
-    file, monkeypatch
+    file
 ):
 
     # reset folder and files
@@ -695,15 +695,6 @@ def test_qdescp_csv(
     if os.path.exists(file_descriptors_full):
         os.remove(file_descriptors_full)
 
-    captured_kwargs = {}
-    original_csearch_init = CSEARCH.__init__
-
-    def spy_csearch_init(self, **kwargs):
-        captured_kwargs.update(kwargs)
-        return original_csearch_init(self, **kwargs)
-
-    monkeypatch.setattr(CSEARCH, "__init__", spy_csearch_init)
-
     # QDESCP-xTB workflow
     qdescp(
         input=f'{qdescp_csv_dir}/{file}',
@@ -718,8 +709,11 @@ def test_qdescp_csv(
     assert 'mol_2' == df_interpret['code_name'][1]
     assert len(df_interpret.columns) == 23
 
-    # check that the number of conformers requested from CSEARCH is automatically capped to 5
-    assert captured_kwargs.get('sample') == 5
+    # check that the number of conformers generated for mol_1 is capped to 5
+    #  Duplicate filtering can filter to 4, because is a small molecule.
+    csearch_sdf = f'{os.path.dirname(folder_qdescp)}/CSEARCH/mol_1_rdkit.sdf'
+    n_conformers = len(load_sdf(csearch_sdf))
+    assert 4 <= n_conformers <= 5
 
     # check that the xTB version is printed
     f = open(f'{w_dir_main}/QDESCP_data.dat', "r")
