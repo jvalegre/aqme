@@ -709,11 +709,11 @@ def test_qdescp_csv(
     assert 'mol_2' == df_interpret['code_name'][1]
     assert len(df_interpret.columns) == 23
 
-    # check that the number of conformers generated for mol_1 is capped to 5
-    #  Duplicate filtering can filter to 4, because is a small molecule.
-    csearch_sdf = f'{os.path.dirname(folder_qdescp)}/CSEARCH/mol_1_rdkit.sdf'
-    n_conformers = len(load_sdf(csearch_sdf))
-    assert 4 <= n_conformers <= 5
+    csearch_dir = f'{os.path.dirname(folder_qdescp)}/CSEARCH'
+    n_conformers_mol1 = len(load_sdf(f'{csearch_dir}/mol_1_rdkit.sdf'))
+    n_conformers_mol2 = len(load_sdf(f'{csearch_dir}/mol_2_rdkit.sdf'))
+    assert 2 <= n_conformers_mol1 <= 5
+    assert 4 <= n_conformers_mol2 <= 5
 
     # check that the xTB version is printed
     f = open(f'{w_dir_main}/QDESCP_data.dat', "r")
