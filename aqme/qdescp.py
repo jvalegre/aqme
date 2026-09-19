@@ -139,6 +139,7 @@ from aqme.qdescp_utils import (
     apply_atom_map_to_mol,
 )
 from aqme.cmin import cmin as CMIN
+from aqme.csearch import csearch as CSEARCH
 
 from aqme.csearch.crest import xyzall_2_xyz
 from aqme.csearch.utils import (
@@ -212,18 +213,21 @@ class PropertyCalculator:
             'xyz': dat_dir / f"{name}.xyz",
             'json': dat_dir / f"{name}.json"
         }
-        files['sdf_all'], files['sdf_filtered'] = self._get_cmin_sdf_paths(name)
-        self._init_cmin_output_files(files['sdf_all'], files['sdf_filtered'])
-        
-        # Move input file
+
+        if not self.args.geom_opt:
+            files['sdf_all'], files['sdf_filtered'] = self._get_cmin_sdf_paths(name)
+            self._init_cmin_output_files(files['sdf_all'], files['sdf_filtered'])
+            shutil.move(xyz_file, str(files['xyz']))
+            success = self._run_cmin_minimization(
+                files, charge, mult, name, source_sdf
+            )
+            return success, {k: str(v) for k, v in files.items()}
+
+        # Geometry optimization is performed once, before the descriptor
+        # workers, by the regular CMIN workflow.  QDESCP only consumes the
+        # resulting SDF and runs the descriptor calculation here.
         shutil.move(xyz_file, str(files['xyz']))
-        
-        # Run minimization through CMIN (FAMEX/tblite backend by default)
-        success = self._run_cmin_minimization(
-            files, charge, mult, name, source_sdf
-        )
-        
-        return success, {k: str(v) for k,v in files.items()}
+        return True, {k: str(v) for k, v in files.items()}
         
     def _run_cmin_minimization(self, files, charge, mult, conf_name, source_sdf):
         """Execute minimization using CMIN internals for one conformer."""
@@ -327,7 +331,12 @@ class PropertyCalculator:
         return name.rsplit("_conf_", 1)[0] if "_conf_" in name else name
 
     def _get_cmin_sdf_paths(self, name):
-        cmin_dir = set_destination(self, "CMIN")
+        # QDESCP owns its output directory, while the internal CMIN stage must
+        # still expose the same CMIN/ layout as a standalone CMIN run.
+        if self.args.destination is not None and str(self.args.destination).upper().endswith("QDESCP"):
+            cmin_dir = Path(self.args.destination).parent / "CMIN"
+        else:
+            cmin_dir = set_destination(self, "CMIN")
         cmin_all_confs = cmin_dir / "All_confs"
         cmin_all_confs.mkdir(exist_ok=True, parents=True)
         parent = self._get_parent_name(name)
@@ -455,6 +464,15 @@ class qdescp:
         if len(qdescp_files) == 1 and os.path.basename(qdescp_files[0]).split('.')[-1].lower() == 'csv':
             qdescp_files = self.initial_csearch_run(destination, qdescp_files)
 
+        if self.args.geom_opt:
+            qdescp_files = self._run_qdescp_cmin(qdescp_files, destination)
+            if len(qdescp_files) == 0:
+                self.args.log.write(
+                    "\nx  WARNING! CMIN did not produce any optimized SDF files."
+                )
+                self.args.log.finalize()
+                sys.exit()
+
         # obtaining mols from input files that will be used to set up atomic descriptors
         mol_list = get_mols_qdescp(qdescp_files)
 
@@ -464,10 +482,6 @@ class qdescp:
             if len(smarts_targets) > 0:
                 self.args.log.write(f"\no  Common atoms/groups found in all molecules (repeated once in each): {smarts_targets}")
 
-        # Delete a SMARTS pattern if it is not compatible with more than 75% of the sdf files
-        if len(smarts_targets) > 0:
-            smarts_targets = remove_invalid_smarts(self,mol_list,smarts_targets)
-        
         # Validate atom mapping consistency only if numeric mapping mode is active
         mapping_numbers = extract_numeric_mapping(smarts_targets)
         if mapping_numbers:
@@ -479,6 +493,10 @@ class qdescp:
             ):
                 self.args.log.finalize()
                 sys.exit()
+
+        # Delete a SMARTS pattern if it is not compatible with more than 75% of the sdf files
+        if len(smarts_targets) > 0:
+            smarts_targets = remove_invalid_smarts(self,mol_list,smarts_targets)
 
         # Preflight: if constraints specified, verify atom map numbers exist in all files
         has_const = any(getattr(self.args, f'constraints_{x}', None)
@@ -524,6 +542,7 @@ class qdescp:
         # run all the calculations to generate xTB outputs and JSON files with descriptors
 
         self.args.invalid_calcs = [] # keep track of unvalid calcs
+        self._descriptor_sdf_by_source = {}
         bar = IncrementalBar("\no  Number of finished jobs from QDESCP", max=len(qdescp_files))
 
         # multiprocessing to accelerate and make QDESCP reproducible (since xTB uses 1 processor to be reproducible)
@@ -593,8 +612,8 @@ class qdescp:
             self.args.log.write(f'\nx  No files were found! Please provide the correct PATH to your input files (i.e. --files "*.sdf")')
             valid_input = False
         else:
-            if os.path.basename(self.args.files[0]).split('.')[-1].lower() != "sdf":
-                self.args.log.write(f"\nx  The format used ({os.path.basename(self.args.files[0]).split('.')[-1]}) is not compatible with the 'files' option! Formats accepted: sdf")
+            if any(Path(file).suffix.lower() not in {".sdf", ".xyz"} for file in self.args.files):
+                self.args.log.write(f"\nx  The format used ({os.path.basename(self.args.files[0]).split('.')[-1]}) is not compatible with the 'files' option! Formats accepted: sdf, xyz")
                 valid_input = False
             qdescp_files = self.args.files
 
@@ -603,7 +622,6 @@ class qdescp:
             sys.exit()
 
         return qdescp_files
-
 
     def initial_csearch_run(self, destination, qdescp_files):
         """Generate conformers from SMILES in CSV input.
@@ -647,12 +665,16 @@ class qdescp:
         if destination_csearch.exists():
             shutil.rmtree(destination_csearch)
 
-        cmd_csearch = ['python', '-m', 'aqme', '--csearch', '--program', 'rdkit', '--input', 
-                    f'{self.args.csv_name}', '--sample', f'{sample_qdescp}', '--destination', f'{destination_csearch}',
-                    '--nprocs', f'{self.args.nprocs}','--auto_sample',self.args.auto_sample, '--ff',self.args.ff]
-
-        if self.args.single_system:
-            cmd_csearch.append('--single_system')
+        csearch_kwargs = {
+            "program": "rdkit",
+            "input": f'{self.args.csv_name}',
+            "sample": sample_qdescp,
+            "destination": f'{destination_csearch}',
+            "nprocs": self.args.nprocs,
+            "auto_sample": self.args.auto_sample,
+            "ff": self.args.ff,
+            "single_system": self.args.single_system,
+        }
 
         # Propagate constraints to CSEARCH so QDESCP-generated conformers follow
         # the same constraint behavior as standalone CSEARCH/CMIN runs.
@@ -665,14 +687,14 @@ class qdescp:
         ]:
             arg_value = getattr(self.args, arg_name, None)
             if arg_value not in (None, [], ""):
-                cmd_csearch += [f"--{arg_name}", f"{arg_value}"]
+                csearch_kwargs[arg_name] = arg_value
 
         # overwrites charge/mult if the user specifies values
         if self.args.charge is not None:
-            cmd_csearch = cmd_csearch + ['--charge', f'{self.args.charge}']
+            csearch_kwargs["charge"] = self.args.charge
         if self.args.mult is not None:
-            cmd_csearch = cmd_csearch + ['--mult', f'{self.args.mult}']
-        subprocess.run(cmd_csearch, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            csearch_kwargs["mult"] = self.args.mult
+        CSEARCH(**csearch_kwargs)
 
         # Use only molecules from the input CSV and create aliases for rows
         # sharing canonical conformers but carrying different atom-map metadata.
@@ -689,6 +711,62 @@ class qdescp:
             sys.exit()
 
         return qdescp_files
+
+    def _run_qdescp_cmin(self, qdescp_files, destination):
+        """Run the regular CMIN workflow and return its generated SDF files."""
+        destination = Path(destination)
+        cmin_destination = (
+            destination.parent / "CMIN"
+            if destination.name.upper() == "QDESCP"
+            else destination
+        )
+
+        cmin_kwargs = {
+            "files": qdescp_files,
+            "destination": str(cmin_destination),
+            "program": self.args.program or "xtb",
+            "charge": self.args.charge,
+            "mult": self.args.mult,
+            "nprocs": self.args.nprocs,
+            "constraints_atoms": self.args.constraints_atoms,
+            "constraints_dist": self.args.constraints_dist,
+            "constraints_angle": self.args.constraints_angle,
+            "constraints_dihedral": self.args.constraints_dihedral,
+            "aromatic_int": self.args.aromatic_int,
+            "ewin_cmin": self.args.ewin_cmin,
+            "initial_energy_threshold": self.args.initial_energy_threshold,
+            "energy_threshold": self.args.energy_threshold,
+            "rms_threshold": self.args.rms_threshold,
+            "opt_fmax": self.args.opt_fmax,
+            "opt_steps": self.args.opt_steps,
+            "heavyonly": self.args.heavyonly,
+            "auto_cluster": self.args.auto_cluster,
+            "freq": self.args.freq,
+            "target": self.args.target,
+        }
+        CMIN(**cmin_kwargs)
+
+        optimized_files = []
+        for source_file in qdescp_files:
+            optimized_file = cmin_destination / f"{Path(source_file).stem}{self.args.output}"
+            if optimized_file.exists():
+                try:
+                    optimized_mols = load_sdf(str(optimized_file))
+                    if not any(mol is not None for mol in optimized_mols):
+                        raise OSError("CMIN output contains no valid molecule")
+                except Exception as exc:
+                    self.args.log.write(
+                        f"\nx  WARNING! {optimized_file.name} was not a valid CMIN output "
+                        f"and will be skipped: {exc}"
+                    )
+                    continue
+                optimized_files.append(str(optimized_file))
+            else:
+                self.args.log.write(
+                    f"\nx  WARNING! CMIN did not generate {optimized_file.name}; "
+                    "this structure will be skipped by QDESCP."
+                )
+        return optimized_files
 
 
     def _read_qdescp_csv(self):
@@ -765,7 +843,11 @@ class qdescp:
             mol.SetProp('SMILES_INPUT', str(metadata['original_smiles']))
             if metadata['atom_map']:
                 mol.SetProp('AQME_ATOM_MAP', str(metadata['atom_map']))
-                apply_atom_map_to_mol(mol, metadata['atom_map'])
+                apply_atom_map_to_mol(
+                    mol,
+                    metadata['atom_map'],
+                    metadata.get('original_smiles'),
+                )
             elif mol.HasProp('AQME_ATOM_MAP'):
                 mol.ClearProp('AQME_ATOM_MAP')
             writer.write(mol)
@@ -833,7 +915,8 @@ class qdescp:
                 
             # Process each valid molecule
             descp_dict_indiv = descp_dict.copy()
-            mols = load_sdf(file)
+            descriptor_sdf = self._descriptor_sdf_by_source.get(file, file)
+            mols = load_sdf(descriptor_sdf)
             mol = mols[0]
             
             # Get molecule name from CSV or file
@@ -1420,12 +1503,31 @@ class qdescp:
         )
 
         if xtb_passing:
+            descriptor_sdf = self._select_descriptor_sdf(
+                file, xtb_files_props
+            )
+            self._descriptor_sdf_by_source[file] = descriptor_sdf
             self.morfeus_properties(
                 path_name, atom_props, smarts_targets,
-                xtb_files_props, charge, mult, file
+                xtb_files_props, charge, mult, file,
+                descriptor_sdf=descriptor_sdf
             )
 
         self.cleanup(name_xtb, destination, xtb_passing, xtb_files_props)
+
+    def _select_descriptor_sdf(self, source_sdf, xtb_files_props):
+        """Select the authoritative SDF for atom descriptor assignment.
+
+        CSEARCH/explicit input SDFs are used when QDESCP is instructed not to
+        optimize.  When QDESCP performs its internal CMIN step, the SDF
+        written by that step is used instead, because it contains the final
+        atom order and coordinates used by the descriptor calculation.
+        """
+        cmin_sdf = xtb_files_props.get('sdf_filtered')
+        if cmin_sdf and os.path.exists(cmin_sdf):
+            return cmin_sdf
+
+        return source_sdf
 
 
     def run_opt_xtb(self, file, xyz_file, charge, mult, name, destination):
@@ -1457,7 +1559,17 @@ class qdescp:
         return success, files
 
 
-    def morfeus_properties(self, name_initial, atom_props, smarts_targets, xtb_files_props, charge, mult, file):
+    def morfeus_properties(
+        self,
+        name_initial,
+        atom_props,
+        smarts_targets,
+        xtb_files_props,
+        charge,
+        mult,
+        file,
+        descriptor_sdf=None,
+    ):
         """Calculate and collect MORFEUS molecular descriptors.
         
         This method:
@@ -1501,7 +1613,15 @@ class qdescp:
 
         # add MORFEUS properties to JSON
         try:
-            global_properties_morfeus = calculate_morfeus_descriptors(str(xyz_path),self,charge,mult,smarts_targets,name_initial)
+            global_properties_morfeus = calculate_morfeus_descriptors(
+                str(xyz_path),
+                self,
+                charge,
+                mult,
+                smarts_targets,
+                name_initial,
+                structure_file=descriptor_sdf,
+            )
             json_data.update(global_properties_morfeus)
         except Exception as e:
             self.args.log.write(f"x  ERROR! Failed to calculate MORFEUS descriptors for {name_initial}: {e}\n")
@@ -1510,14 +1630,27 @@ class qdescp:
             return
 
         # assign atomic properties to the corresponding atoms
-        json_data = self.assign_atomic_properties(json_data,name_initial,atom_props,smarts_targets)
+        json_data = self.assign_atomic_properties(
+            json_data,
+            name_initial,
+            atom_props,
+            smarts_targets,
+            structure_file=descriptor_sdf,
+        )
 
         json_path.parent.mkdir(parents=True, exist_ok=True)
         with json_path.open("w", encoding="utf-8") as outfile:
             json.dump(json_data, outfile)
 
 
-    def assign_atomic_properties(self, json_data, name_initial, atom_props, smarts_targets):
+    def assign_atomic_properties(
+        self,
+        json_data,
+        name_initial,
+        atom_props,
+        smarts_targets,
+        structure_file=None,
+    ):
         """Assign atomic properties based on SMARTS pattern matches.
         
         This method:
@@ -1542,7 +1675,12 @@ class qdescp:
 
         prefixes_atom_prop = []
         
-        pattern_dict = get_matches_idx_n_prefix(self,smarts_targets,name_initial)
+        pattern_dict = get_matches_idx_n_prefix(
+            self,
+            smarts_targets,
+            name_initial,
+            structure_file=structure_file,
+        )
         if len(pattern_dict.keys()) > 0:
             for pattern in pattern_dict:
                 # Assign atomic descriptors to each identified atom and update database for final JSON file

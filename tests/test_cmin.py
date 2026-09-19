@@ -249,6 +249,34 @@ def test_cmin_defaults_charge_and_mult_when_missing(monkeypatch):
     sdf_path.unlink(missing_ok=True)
 
 
+def test_cmin_accepts_xyz_and_assigns_default_charge_mult(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    xyz_path = tmp_path / "methane.xyz"
+    xyz_path.write_text(
+        "5\nmethane\n"
+        "C 0.000 0.000 0.000\n"
+        "H 0.629 0.629 0.629\n"
+        "H -0.629 -0.629 0.629\n"
+        "H -0.629 0.629 -0.629\n"
+        "H 0.629 -0.629 -0.629\n",
+        encoding="utf-8",
+    )
+    _make_fake_famex(monkeypatch, [])
+    monkeypatch.setattr("aqme.cmin.cmin._optimize_with_famex", _fake_optimize_success)
+    monkeypatch.setattr(
+        "aqme.cmin.conformer_filters",
+        lambda self, sorted_cids, cenergy, outmols: sorted_cids,
+    )
+
+    cmin(program="xtb", files=str(xyz_path))
+
+    output_file = tmp_path / "CMIN" / "methane.sdf"
+    assert output_file.exists()
+    out_mol = _read_first_mol_properties(output_file)
+    assert out_mol.GetProp("Real charge") == "0"
+    assert out_mol.GetProp("Mult") == "1"
+
+
 # tests for target handling and frequency output
 @pytest.mark.parametrize(
     "target, expected_famex_target",
@@ -261,10 +289,10 @@ def test_cmin_forwards_target_to_famex(monkeypatch, target, expected_famex_targe
     explorer_calls = []
     _make_fake_famex(monkeypatch, explorer_calls)
 
-    def fake_mol_to_ase_atoms(self, mol, charge, mult):
+    def fake_build_ase_atoms(mol, charge, mult):
         return _FakeAtoms(mol)
 
-    monkeypatch.setattr("aqme.cmin.cmin._mol_to_ase_atoms", fake_mol_to_ase_atoms)
+    monkeypatch.setattr("aqme.cmin._build_ase_atoms", fake_build_ase_atoms)
     monkeypatch.setattr(
         "aqme.cmin.conformer_filters",
         lambda self, sorted_cids, cenergy, outmols: sorted_cids,
