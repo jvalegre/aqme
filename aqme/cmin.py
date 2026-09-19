@@ -127,6 +127,20 @@ def _build_ase_atoms(mol, charge, mult):
     return atoms
 
 
+def _init_worker_env():
+    """Pin each ProcessPoolExecutor worker to 1 thread for BLAS/OpenMP libs.
+
+    Without this, every forked tblite worker would default to using all
+    available cores, causing oversubscription across ``nprocs`` concurrent
+    processes and non-reproducible timing/results.
+    """
+    os.environ["OMP_NUM_THREADS"] = "1"
+    os.environ["MKL_NUM_THREADS"] = "1"
+    os.environ["OPENBLAS_NUM_THREADS"] = "1"
+    os.environ["NUMEXPR_NUM_THREADS"] = "1"
+    os.environ["BLIS_NUM_THREADS"] = "1"
+
+
 def _run_famex_worker(mol, conf_name, charge, mult, constraints, program, target, fmax, steps):
     """Run a single FAMEX local minimisation.
 
@@ -801,7 +815,8 @@ class cmin:
                 self.args.log.write(f"\no  FAMEX optimisation [{self.args.program}] ({task[1]})")
 
             executor = concurrent.futures.ProcessPoolExecutor(
-                max_workers=nprocs, mp_context=multiprocessing.get_context("fork")
+                max_workers=nprocs, mp_context=multiprocessing.get_context("fork"),
+                initializer=_init_worker_env,
             )
             submit = lambda task: executor.submit(
                 _run_famex_worker, task[0], task[1], task[2], task[3],
