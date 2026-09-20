@@ -819,13 +819,13 @@ class cmin:
                 initializer=_init_worker_env,
             )
             submit = lambda task: executor.submit(
-                _run_famex_worker, task[0], task[1], task[2], task[3],
+                _run_famex_worker, *task,
                 constraints, self.args.program, target, fmax, steps
             )
         else:
             executor = concurrent.futures.ThreadPoolExecutor(max_workers=nprocs)
             submit = lambda task: executor.submit(
-                self._optimize_with_famex, task[0], task[1], task[2], task[3], constraints
+                self._optimize_with_famex, *task, constraints
             )
 
         with executor:
