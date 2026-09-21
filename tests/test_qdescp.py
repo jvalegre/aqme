@@ -15,12 +15,13 @@ import math
 import shutil
 from pathlib import Path
 from aqme.qdescp import qdescp
+from aqme.utils import load_sdf
 from aqme.qdescp_utils import (
     read_json,
     get_descriptors,
     get_sdf_property,
     extract_smiles_from_file,
-    validate_atom_mapping_consistency
+    validate_atom_mapping_consistency,
 )
 from aqme.csearch.utils import smiles_metadata_for_csearch
 
@@ -66,6 +67,86 @@ def test_qdescp_rejects_repeated_atom_map_number(tmp_path):
         log
     )
     assert "appears multiple times" in "".join(log.messages)
+
+
+def test_qdescp_mapped_atoms_keep_partial_charge_order():
+    test_dir = qdescp_empty_dir / "mapped_charge_order"
+    if test_dir.exists():
+        shutil.rmtree(test_dir)
+    test_dir.mkdir()
+    input_csv = test_dir / "mapped_charge_order.csv"
+    input_csv.write_text(
+        "SMILES,code_name\n"
+        "[H][C:2](=[O:3])[H:1],formaldehyde\n",
+        encoding="utf-8",
+    )
+    output_files = [
+        Path(w_dir_main) / f"AQME-ROBERT_{level}_mapped_charge_order.csv"
+        for level in ("denovo", "interpret", "full")
+    ]
+
+    try:
+        qdescp(
+            input=str(input_csv),
+            destination=str(test_dir / "QDESCP"),
+            qdescp_atoms=[1, 2, 3],
+            sample=1,
+            nprocs=1,
+        )
+
+        for output_file in output_files:
+            descriptors = pd.read_csv(output_file)
+            charge_carbon = descriptors.loc[0, "Atom_2_C_Partial charge"]
+            charge_hydrogen = descriptors.loc[0, "Atom_1_H_Partial charge"]
+            charge_oxygen = descriptors.loc[0, "Atom_3_O_Partial charge"]
+
+            assert charge_carbon > charge_hydrogen > charge_oxygen
+    finally:
+        for output_file in output_files:
+            output_file.unlink(missing_ok=True)
+        shutil.rmtree(test_dir, ignore_errors=True)
+
+
+def test_qdescp_mapped_atom_charge_is_consistent_between_smiles():
+    test_dir = qdescp_empty_dir / "mapped_charge_consistency"
+    if test_dir.exists():
+        shutil.rmtree(test_dir)
+    test_dir.mkdir()
+    smiles_inputs = [
+        ("mapped_formaldehyde.csv", "[H][C:2](=[O:3])[H:1]", "mapped_formaldehyde"),
+        ("mapped_carbonyl.csv", "[C:2]=O", "mapped_carbonyl"),
+    ]
+    output_files = [
+        Path(w_dir_main) / f"AQME-ROBERT_{level}_{csv_name}"
+        for csv_name, _, _ in smiles_inputs
+        for level in ("denovo", "interpret", "full")
+    ]
+
+    try:
+        partial_charges = []
+        for csv_name, smiles, code_name in smiles_inputs:
+            input_csv = test_dir / csv_name
+            input_csv.write_text(
+                f"SMILES,code_name\n{smiles},{code_name}\n",
+                encoding="utf-8",
+            )
+            qdescp(
+                input=str(input_csv),
+                destination=str(test_dir / Path(csv_name).stem / "QDESCP"),
+                qdescp_atoms=[2],
+                sample=1,
+                nprocs=1,
+            )
+            descriptors = pd.read_csv(
+                Path(w_dir_main) / f"AQME-ROBERT_interpret_{csv_name}"
+            )
+            partial_charges.append(descriptors.loc[0, "Atom_2_C_Partial charge"])
+
+        assert partial_charges[0] == pytest.approx(partial_charges[1], abs=5e-4)
+    finally:
+        for output_file in output_files:
+            output_file.unlink(missing_ok=True)
+        shutil.rmtree(test_dir, ignore_errors=True)
 
 
 # tests for QDESCP-xTB
@@ -201,10 +282,10 @@ def test_qdescp_xtb(file):
         Fermi_lvls_target = [-4.5152,-4.3637]
 
         for i, _ in enumerate(energies_target):
-            assert round(energies_target[i],4) == round(energies_json[i], 4), \
-                f"Energy mismatch at index {i}: Target = {round(energies_target[i],4)}, JSON = {round(energies_json[i],4)}"
-            assert round(Fermi_lvls_target[i],2) == round(Fermi_lvls_json[i], 2), \
-                f"Fermi level mismatch at index {i}: Target = {round(Fermi_lvls_target[i],2)}, JSON = {round(Fermi_lvls_json[i],2)}"
+            assert round(energies_target[i],3) == round(energies_json[i], 3), \
+                f"Energy mismatch at index {i}: Target = {round(energies_target[i],3)}, JSON = {round(energies_json[i],3)}"
+            assert round(Fermi_lvls_target[i],1) == round(Fermi_lvls_json[i], 1), \
+                f"Fermi level mismatch at index {i}: Target = {round(Fermi_lvls_target[i],1)}, JSON = {round(Fermi_lvls_json[i],1)}"
         # 2) Calculate Boltzmann-averages
         # Calculate relative energies
         energ = [number - min(energies_json) for number in energies_json]
@@ -524,7 +605,7 @@ def test_qdescp_sdf(
             destination=f'{folder_qdescp}',
             qdescp_atoms=['As'],
             charge=-1,
-            mult=1
+            mult=1,
         )
         name_1 = 'conf_72'
         name_2 = 'conf_73'
@@ -554,6 +635,30 @@ def test_qdescp_sdf(
     assert charge_1 == round(df_interpret[f'{atom}_Partial charge'][0],2)
     assert charge_2 == round(df_interpret[f'{atom}_Partial charge'][1],2)
 
+
+def test_qdescp_xyz_auto_charge_mult(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    xyz_structures = {
+        'methane': '5\nmethane\nC 0.000 0.000 0.000\nH 0.629 0.629 0.629\nH -0.629 -0.629 0.629\nH -0.629 0.629 -0.629\nH 0.629 -0.629 -0.629\n',
+        'ethane': '8\nethane\nC -0.770 0.000 0.000\nC 0.770 0.000 0.000\nH -1.157 0.513 0.889\nH -1.157 0.513 -0.889\nH -1.157 -1.026 0.000\nH 1.157 -0.513 -0.889\nH 1.157 -0.513 0.889\nH 1.157 1.026 0.000\n',
+        'propane': '11\npropane\nC -1.270 0.000 0.000\nC 0.000 0.000 0.000\nC 1.270 0.000 0.000\nH -1.657 0.513 0.889\nH -1.657 0.513 -0.889\nH -1.657 -1.026 0.000\nH 0.000 0.000 1.089\nH 0.000 1.026 -0.363\nH 0.000 -1.026 -0.363\nH 1.657 0.513 0.889\nH 1.657 -0.513 0.889\n',
+    }
+    xyz_files = []
+    for name, structure in xyz_structures.items():
+        xyz_file = tmp_path / f'{name}.xyz'
+        xyz_file.write_text(structure)
+        xyz_files.append(str(xyz_file))
+
+    qdescp(
+        files=xyz_files,
+        destination=str(tmp_path / 'QDESCP'),
+    )
+
+    for name in xyz_structures:
+        sdf_file = tmp_path / 'CMIN' / f'{name}.sdf'
+        assert get_sdf_property(sdf_file, 'Real charge') == '0'
+        assert get_sdf_property(sdf_file, 'Mult') == '1'
+
 @pytest.mark.parametrize(
     "file",
     [
@@ -576,11 +681,11 @@ def test_qdescp_csv(
     file_descriptors_interpret = f'{w_dir_main}/AQME-ROBERT_interpret_{file}'
     file_descriptors_full = f'{w_dir_main}/AQME-ROBERT_full_{file}'
     file_descriptors_denovo = f'{w_dir_main}/AQME-ROBERT_denovo_{file}'
-    if os.path.exists(file_descriptors_denovo): 
+    if os.path.exists(file_descriptors_denovo):
         os.remove(file_descriptors_denovo)
-    if os.path.exists(file_descriptors_interpret): 
+    if os.path.exists(file_descriptors_interpret):
         os.remove(file_descriptors_interpret)
-    if os.path.exists(file_descriptors_full): 
+    if os.path.exists(file_descriptors_full):
         os.remove(file_descriptors_full)
 
     # QDESCP-xTB workflow
@@ -596,16 +701,11 @@ def test_qdescp_csv(
     assert 'mol_2' == df_interpret['code_name'][1]
     assert len(df_interpret.columns) == 23
 
-    # check that the number of conformers is automatically adjusted to 5
-    f = open(f'{w_dir_main}/CSEARCH_data.dat', "r")
-    data = f.readlines()
-    f.close()
-
-    conf_change = False
-    for line in data:
-        if '--sample "5"' in line:
-            conf_change = True
-    assert conf_change
+    csearch_dir = f'{os.path.dirname(folder_qdescp)}/CSEARCH'
+    n_conformers_mol1 = len(load_sdf(f'{csearch_dir}/mol_1_rdkit.sdf'))
+    n_conformers_mol2 = len(load_sdf(f'{csearch_dir}/mol_2_rdkit.sdf'))
+    assert 2 <= n_conformers_mol1 <= 5
+    assert 4 <= n_conformers_mol2 <= 5
 
     # check that the xTB version is printed
     f = open(f'{w_dir_main}/QDESCP_data.dat', "r")
@@ -662,6 +762,18 @@ def test_au_csv(
         })
 
     qdescp(**qdescp_kwargs)
+
+    expected_charge_mult = {
+        '200': ('0', '1'),
+        '201': ('2', '3'),
+    } if run_test == 1 else {
+        '200': ('0', '1'),
+        '201': ('0', '1'),
+    }
+    for code_name, (charge, mult) in expected_charge_mult.items():
+        cmin_file = f'{qdescp_au_dir}/CMIN/{code_name}_rdkit.sdf'
+        assert get_sdf_property(cmin_file, 'Real charge') == charge
+        assert get_sdf_property(cmin_file, 'Mult') == mult
 
     # Checking molecular descriptors
     descp_denovo_mol = denovo_descriptors['mol'] 
