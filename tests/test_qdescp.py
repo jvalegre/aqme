@@ -26,6 +26,8 @@ from aqme.qdescp_utils import (
 from aqme.csearch.utils import smiles_metadata_for_csearch
 from rdkit.Chem import AllChem as Chem
 from types import SimpleNamespace
+from rdkit.Chem import AllChem as Chem
+from types import SimpleNamespace
 
 # saves the working directory
 w_dir_main = os.getcwd()
@@ -50,6 +52,9 @@ class CaptureLog:
 
     def write(self, message):
         self.messages.append(message)
+
+    def finalize(self):
+        pass
 
 
 def test_qdescp_rejects_repeated_atom_map_number(tmp_path):
@@ -1006,3 +1011,64 @@ def test_qdescp_conformer_xyz_paths_are_not_duplicated(tmp_path):
         assert os.path.isfile(conf_file), f'{conf_file} is not a usable path'
     assert xyz_charges == list(range(n_confs))
     assert xyz_mults == [1] * n_confs
+
+
+def _write_qdescp_sdf(path, smiles):
+    """Write a single-molecule SDF, optionally carrying a <SMILES> property."""
+    mol = Chem.AddHs(Chem.MolFromSmiles(smiles if smiles is not None else 'C'))
+    Chem.EmbedMolecule(mol, randomSeed=1)
+    mol.SetProp('_Name', Path(path).stem)
+    if smiles is not None:
+        mol.SetProp('SMILES', smiles)
+    with Chem.SDWriter(str(path)) as writer:
+        writer.write(mol)
+
+
+def test_qdescp_stops_when_an_input_has_no_smiles(tmp_path):
+    """An input with no SMILES must stop the run instead of being dropped.
+
+    It used to be discarded silently as long as another input did have a SMILES,
+    so descriptors were generated for fewer molecules than the user asked for.
+    """
+    with_smiles = tmp_path / 'mol_1_rdkit.sdf'
+    without_smiles = tmp_path / 'mol_2_rdkit.sdf'
+    _write_qdescp_sdf(with_smiles, 'CC')
+    _write_qdescp_sdf(without_smiles, None)
+
+    processor = qdescp.__new__(qdescp)
+    log = CaptureLog()
+    processor.args = SimpleNamespace(
+        files=[str(with_smiles), str(without_smiles)], log=log
+    )
+
+    with pytest.raises(SystemExit):
+        processor.get_unique_files()
+
+    messages = ''.join(log.messages)
+    assert 'mol_2_rdkit.sdf' in messages
+    assert 'No SMILES was found' in messages
+    assert 'cells of the input are filled' in messages
+
+
+def test_qdescp_keeps_unique_smiles_and_warns_about_duplicates(tmp_path):
+    """Inputs that all carry a SMILES are deduplicated and the duplicate reported."""
+    first = tmp_path / 'mol_1_rdkit.sdf'
+    duplicate = tmp_path / 'mol_2_rdkit.sdf'
+    other = tmp_path / 'mol_3_rdkit.sdf'
+    _write_qdescp_sdf(first, 'CC')
+    _write_qdescp_sdf(duplicate, 'CC')
+    _write_qdescp_sdf(other, 'CCO')
+
+    processor = qdescp.__new__(qdescp)
+    log = CaptureLog()
+    processor.args = SimpleNamespace(
+        files=[str(first), str(duplicate), str(other)], log=log
+    )
+
+    unique_files = processor.get_unique_files()
+
+    assert unique_files == [str(first), str(other)]
+    messages = ''.join(log.messages)
+    assert 'mol_2_rdkit.sdf' in messages
+    assert 'same SMILES' in messages
+

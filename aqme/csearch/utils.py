@@ -1032,6 +1032,32 @@ def _resolve_post_min_clashes(mol, conf_id, constraints_dist, min_dist=1.0, tole
             locked_pairs.add(pair_key)
 
 
+def _calc_energy_for_conformer(forcefield, mol, conf):
+    """Return the force field energy of the current geometry of a conformer.
+
+    The force field keeps its own copy of the coordinates, so it does not see
+    the displacements applied by _resolve_post_min_clashes. The positions of the
+    conformer are passed explicitly so the energy always corresponds to the
+    geometry that is returned to the caller.
+
+    Args:
+        forcefield: RDKit force field built for mol
+        mol (rdkit.Chem.Mol): Molecule holding the conformer
+        conf (int): Conformer ID (-1 for the default conformer)
+
+    Returns:
+        float: Energy of the current geometry (0 if it cannot be computed)
+    """
+    try:
+        positions = mol.GetConformer(conf).GetPositions().flatten().tolist()
+        return float(forcefield.CalcEnergy(positions))
+    except Exception:
+        try:
+            return float(forcefield.CalcEnergy())
+        except Exception:
+            return 0
+
+
 def minimize_rdkit_energy(mol, conf, log, FF, maxsteps,
                             constraints_atoms=None, constraints_dist=None,
                             constraints_angle=None, constraints_dihedral=None):
@@ -1084,24 +1110,21 @@ def minimize_rdkit_energy(mol, conf, log, FF, maxsteps,
                 'Keeping the unconstrained UFF optimization.'
             )
 
-    energy = 0
     try:
         forcefield.Initialize()
         forcefield.Minimize(maxIts=maxsteps)
-        energy = float(forcefield.CalcEnergy())
     except (RuntimeError, AttributeError, ValueError):
         log.write(
             f'\nx  Geometry minimization failed with {FF}. '
             'Keeping the current geometry.'
         )
-        if forcefield is not None:
-            try:
-                energy = float(forcefield.CalcEnergy())
-            except Exception:
-                energy = 0
 
     # --- APPLY THE MATHEMATICAL ALGORITHM ---
     _resolve_post_min_clashes(mol, conf, constraints_dist, min_dist=1.0, tolerance=0.5)
+
+    # the energy is calculated after the displacement so that it corresponds to
+    # the geometry that is returned (it feeds the filters and Boltzmann weights)
+    energy = _calc_energy_for_conformer(forcefield, mol, conf)
 
     return energy
 
@@ -1155,13 +1178,12 @@ def realign_mol(mol, conf, coord_Map, alg_Map, mol_template, maxsteps,
         maxIters=100,
     )
 
-    try:
-        energy = float(forcefield.CalcEnergy())
-    except Exception:
-        energy = 0
-
     # --- APPLY THE MATHEMATICAL ALGORITHM ---
     _resolve_post_min_clashes(mol, conf, constraints_dist, min_dist=1.0, tolerance=0.8)
+
+    # the energy is calculated after the displacement so that it corresponds to
+    # the geometry that is returned (it feeds the filters and Boltzmann weights)
+    energy = _calc_energy_for_conformer(forcefield, mol, conf)
 
     return mol, energy
 

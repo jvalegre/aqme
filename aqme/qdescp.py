@@ -133,6 +133,7 @@ from aqme.qdescp_utils import (
     extract_conf_index,
     read_xyz_geometry,
     setup_env,
+    get_sdf_property,
     extract_smiles_from_file,
     extract_numeric_mapping,
     validate_atom_mapping_consistency,
@@ -1756,40 +1757,43 @@ class qdescp:
         """Filter input files to remove duplicates based on SMILES.
         
         This method:
-        1. Reads SMILES strings from SDF files
-        2. Identifies duplicate structures
-        3. Keeps only unique structures
-        4. Warns about duplicates
+        1. Reads the SMILES string of each input file
+        2. Stops the run if any of the inputs has no SMILES
+        3. Identifies duplicate structures
+        4. Keeps only unique structures
         
         Returns:
             list: Paths to unique input files
             
+        Raises:
+            SystemExit: If any of the input files has no SMILES
+            
         Note:
             - Duplicates are identified by exact SMILES match
-            - Files without SMILES are kept
+            - An input with no SMILES comes from an incomplete input (i.e. an
+              empty cell), so the run is stopped instead of skipping it silently
             - Warning is logged for duplicate structures
         """
         unique_files = []
         unique_smiles = []
+        
         for file in self.args.files:
-            smi = None
-            with open(file, "r", encoding='utf-8') as F:
-                lines = F.readlines()
-                smi_exist = False
-                for i, line in enumerate(lines):
-                    if ">  <SMILES>" in line:
-                        smi = lines[i + 1].split()[0]
-                        if smi not in unique_smiles:
-                            unique_smiles.append(smi)
-                            unique_files.append(file)
-                            smi_exist = True
-                if smi_exist:
-                    continue
-                elif smi is not None:
-                    self.args.log.write(f'x  WARNING! "{os.path.basename(file)}" will not be calculated since it has the same SMILES as "{os.path.basename(unique_files[unique_smiles.index(smi)])}"')
-
-        if not unique_smiles:
-            unique_files = self.args.files
+            smi = get_sdf_property(file, "SMILES")
+            smi = smi.split()[0] if smi else None
+            
+            if smi is None:
+                self._error_exit(
+                    f'No SMILES was found in "{os.path.basename(file)}"! Not all '
+                    'the cells of the input are filled, please make sure that every '
+                    'structure has its corresponding SMILES before running QDESCP.'
+                )
+            
+            if smi not in unique_smiles:
+                unique_smiles.append(smi)
+                unique_files.append(file)
+            else:
+                self.args.log.write(f'x  WARNING! "{os.path.basename(file)}" will not be calculated since it has the same SMILES as "{os.path.basename(unique_files[unique_smiles.index(smi)])}"')
+        
         return unique_files
         
     def _error_exit(self, message):

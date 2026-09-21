@@ -15,6 +15,7 @@ from aqme.csearch.utils import (
     smi_to_mol,
     apply_rdkit_constraints,
     _resolve_vdw_clashes,
+    minimize_rdkit_energy,
     normalize_smiles_for_csearch,
 )
 from aqme.filter import conformer_filters, has_multiple_fragments
@@ -22,6 +23,8 @@ from types import SimpleNamespace
 import numpy as np
 import rdkit
 from rdkit.Chem import AllChem as Chem
+from rdkit.Geometry import Point3D
+import aqme.csearch.utils as csearch_utils
 import shutil
 
 tests_dir = os.path.dirname(os.path.abspath(__file__))
@@ -1535,6 +1538,41 @@ def test_invalid_complex_type_is_reported_in_the_log():
     assert 'invalid_template_mol' in messages
     for accepted in csearch.ACCEPTED_COMPLEX_TYPES:
         assert accepted in messages
+
+
+@pytest.mark.parametrize('force_field', ['UFF', 'MMFF'])
+def test_minimized_energy_matches_the_returned_geometry(monkeypatch, force_field):
+    """The returned energy must correspond to the geometry that is returned.
+
+    _resolve_post_min_clashes runs after the minimization, and the force field
+    keeps its own copy of the coordinates, so the energy has to be recalculated
+    from the final geometry: it feeds the conformer filters and the Boltzmann
+    weights in QDESCP. The clash resolver is replaced by a known displacement so
+    the test pins this contract instead of the heuristic itself (the real resolver
+    only translates whole fragments, and RDKit ignores interfragment terms by
+    default, so on its own it does not change the energy today).
+    """
+    mol = Chem.AddHs(Chem.MolFromSmiles('CCO'))
+    Chem.EmbedMolecule(mol, randomSeed=5)
+
+    def displace_one_atom(mol_in, conf_id, *args, **kwargs):
+        conf_in = mol_in.GetConformer(conf_id)
+        pos = conf_in.GetAtomPosition(0)
+        conf_in.SetAtomPosition(0, Point3D(pos.x + 0.5, pos.y, pos.z))
+
+    monkeypatch.setattr(
+        csearch_utils, '_resolve_post_min_clashes', displace_one_atom
+    )
+
+    energy = minimize_rdkit_energy(mol, -1, _SilentLog(), force_field, 1000)
+
+    if force_field == 'UFF':
+        reference = Chem.UFFGetMoleculeForceField(mol, confId=-1)
+    else:
+        reference = Chem.MMFFGetMoleculeForceField(
+            mol, Chem.MMFFGetMoleculeProperties(mol), confId=-1
+        )
+    assert energy == pytest.approx(reference.CalcEnergy(), abs=1e-6)
 
 # tests for removing foler
 @pytest.mark.parametrize(
