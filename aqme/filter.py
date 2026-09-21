@@ -6,11 +6,65 @@
 import os
 import shutil
 from pathlib import Path
+import multiprocessing
 from rdkit import Chem
-from rdkit.Chem import rdMolTransforms, Descriptors
+from rdkit.Chem import rdMolTransforms, Descriptors, rdMolDescriptors
 from rdkit.ML.Cluster import Butina
 
 from aqme.utils import periodic_table, get_conf_RMS
+
+
+def get_pmi_tuple(mol):
+    """Return the three principal moments of inertia for a molecule."""
+    return (
+        float(rdMolDescriptors.CalcPMI1(mol)),
+        float(rdMolDescriptors.CalcPMI2(mol)),
+        float(rdMolDescriptors.CalcPMI3(mol)),
+    )
+
+
+def check_energy_pass(e1, e2, threshold):
+    """Return True when two conformers are distinct enough in energy."""
+    return abs(float(e1) - float(e2)) >= float(threshold)
+
+
+def check_pmi_pass(pmi1, pmi2, threshold):
+    """Return True when two conformers are distinct enough in PMI space."""
+    return max(abs(a - b) for a, b in zip(pmi1, pmi2)) > float(threshold)
+
+
+def check_rmsd_pass(mol1, mol2, threshold, heavyonly, max_matches_rmsd, log=None):
+    """Return True when two conformers are distinct enough in RMSD space."""
+    try:
+        rms = get_conf_RMS(
+            mol1, mol2, -1, -1, heavyonly, max_matches_rmsd, threshold=threshold
+        )
+    except RuntimeError:
+        if log is not None:
+            log.write(
+                '\nx  The mols loaded by RDKit from the SDF file have different substructures '
+                'and the RMS filter failed. The duplicate filter will only use E on some conformers!'
+            )
+        return True
+
+    # Number of atoms to consider for weighting the RMSD threshold
+    num_atoms = mol1.GetNumHeavyAtoms() if heavyonly else mol1.GetNumAtoms()
+
+    # Weighting based on square root of the ratio of atomsS
+    ref_atoms = 20.0
+    weighted_threshold = float(threshold) * ((num_atoms / ref_atoms) ** 0.5)
+
+    return rms >= weighted_threshold
+
+
+def has_multiple_fragments(mol):
+    """Return True when a molecule contains more than one disconnected fragment."""
+    try:
+        return len(Chem.GetMolFrags(mol, asMols=False, sanitizeFrags=False)) > 1
+    except Exception:
+        if mol.HasProp("SMILES"):
+            return "." in mol.GetProp("SMILES")
+        return False
 
 
 def geom_filter(self, mol_ensemb, mol_geom, geom):
@@ -259,14 +313,17 @@ def filters(mol, log, molwt_cutoff):
     return True
 
 
-def conformer_filters(self, sorted_all_cids, cenergy, outmols):
-    """Apply sequential energy and RMSD-based conformer filters.
-    
-    Three-stage filtering process:
+def conformer_filters(self, sorted_all_cids, cenergy, outmols, force_full_filters=False):
+    """Apply fragment-aware conformer filtering.
+
+    Normal systems use an energy + PMI + RMSD cascade:
     1. Energy window filter (ewin_cmin)
     2. Pre-filter based on energy differences
-    3. Combined energy and RMSD filter
-    
+    3. PMI pre-filter and RMSD duplicate check
+
+    Multi-fragment systems skip the energy-based stages and use
+    PMI + RMSD only.
+
     Args:
         self: AQME instance with filter arguments
         sorted_all_cids (list): List of conformer IDs sorted by energy
@@ -276,31 +333,49 @@ def conformer_filters(self, sorted_all_cids, cenergy, outmols):
     Returns:
         list: Selected conformer IDs that pass all filters
     """
-    # Stage 1: Filter by energy window
-    sortedcids = apply_energy_window_filter(
-        sorted_all_cids,
-        cenergy,
-        self.args.ewin_cmin,
+    is_multi_fragment_system = (
+        bool(sorted_all_cids)
+        and has_multiple_fragments(outmols[sorted_all_cids[0]])
     )
-    
-    # Stage 2: Pre-filter based on energy differences only
-    selectedcids_initial = apply_pre_energy_filter(
-        sortedcids,
-        cenergy,
-        self.args.initial_energy_threshold,
-    )
-    
-    # Stage 3: Filter based on both energy and RMSD
-    selectedcids = apply_rmsd_and_energy_filter(
+
+    if is_multi_fragment_system:
+        self.args.log.write(
+            "\no  Multi-fragment system detected: applying PMI and RMSD "
+            "filtering only (no energy filter)"
+        )
+
+    if is_multi_fragment_system:
+        selectedcids_initial = sorted_all_cids
+    else:
+        # Stage 1: Filter by energy window
+        sortedcids = apply_energy_window_filter(
+            sorted_all_cids,
+            cenergy,
+            self.args.ewin_cmin,
+        )
+
+        # Stage 2: Pre-filter based on energy differences only
+        selectedcids_initial = apply_pre_energy_filter(
+            sortedcids,
+            cenergy,
+            self.args.initial_energy_threshold,
+        )
+
+    # Final duplicate filter:
+    # - normal systems: energy + PMI + RMSD
+    # - multi-fragment systems: PMI + RMSD
+    selectedcids = apply_filters(
         outmols,
         selectedcids_initial,
         cenergy,
         self.args,
+        use_energy=not is_multi_fragment_system,
+        use_mpi=True,
+        use_rmsd=True,
     )
-    
+
+
     return selectedcids
-
-
 def apply_energy_window_filter(sorted_all_cids, cenergy, energy_window):
     """Filter conformers by energy window from the lowest energy conformer.
     
@@ -360,72 +435,77 @@ def apply_pre_energy_filter(sortedcids, cenergy, threshold):
     return selected_cids
 
 
-def apply_rmsd_and_energy_filter(outmols, selectedcids_initial, cenergy, args):
-    """Filter conformers based on combined energy and RMSD criteria.
-    
-    For each conformer, compares with already selected conformers. If energy
-    difference is below threshold AND RMSD is below threshold with any selected
-    conformer, the new conformer is rejected as a duplicate.
-    
+def apply_filters(
+    outmols,
+    selectedcids_initial,
+    cenergy,
+    args,
+    use_energy=True,
+    use_mpi=True,
+    use_rmsd=True,
+):
+    """Apply the conformer duplicate cascade.
+
     Args:
-        outmols (dict/list): Conformer molecule objects indexed by ID
-        selectedcids_initial (list): Pre-filtered conformer IDs
-        cenergy (dict/list): Conformer energies indexed by ID
-        args: Arguments object with thresholds:
-            - energy_threshold: Energy similarity threshold (kcal/mol)
-            - rms_threshold: RMSD similarity threshold (Angstroms)
-            - heavyonly: Use only heavy atoms for RMSD
-            - max_matches_rmsd: Maximum atom matches for RMSD calculation
-    
-    Returns:
-        list: Final selected conformer IDs
+        use_energy (bool): Enable the energy similarity check.
+        use_mpi (bool): Enable the PMI similarity check.
+        use_rmsd (bool): Enable the RMSD similarity check.
     """
-    selected_cids = [selectedcids_initial[0]]  # Always include lowest energy
-    energy_threshold = float(args.energy_threshold)
-    rms_threshold = float(args.rms_threshold)
-    max_matches_rmsd = int(args.max_matches_rmsd)
-    
+    if not selectedcids_initial:
+        return []
+
+    selected_cids = [selectedcids_initial[0]]
+    energy_threshold = float(getattr(args, "energy_threshold", 0.0))
+    pmi_threshold = float(getattr(args, "pmi_threshold", 0.5))
+    rms_threshold = float(getattr(args, "rms_threshold", 0.25))
+    max_matches_rmsd = int(getattr(args, "max_matches_rmsd", 1000))
+    heavyonly = getattr(args, "heavyonly", True)
+    log = getattr(args, "log", None)
+    pmi_cache = (
+        {cid: get_pmi_tuple(outmols[cid]) for cid in selectedcids_initial}
+        if use_mpi
+        else {}
+    )
+
     for cid in selectedcids_initial[1:]:
         is_duplicate = False
-        
-        # Check against all already selected conformers
+
         for selected_cid in selected_cids:
-            energy_diff = abs(cenergy[cid] - cenergy[selected_cid])
-            
-            # Only calculate RMSD if energies are similar
-            if energy_diff < energy_threshold:
-                try:
-                    rms = get_conf_RMS(
-                        outmols[selected_cid],
-                        outmols[cid],
-                        -1,  # n_mol_1
-                        -1,  # n_mol_2
-                        args.heavyonly,
-                        max_matches_rmsd
-                    )
-                except RuntimeError:
-                    # Different substructures - use only energy filter
-                    rms = rms_threshold + 1
-                    args.log.write(
-                        '\nx  The mols loaded by RDKit from the SDF file have different substructures '
-                        'and the RMS filter failed. The duplicate filter will only use E on some conformers!'
-                    )
-                
-                if rms < rms_threshold:
+            if use_energy and check_energy_pass(
+                cenergy[cid], cenergy[selected_cid], energy_threshold
+            ):
+                continue
+
+            if use_mpi:
+                pmi_diff = max(abs(a - b) for a, b in zip(pmi_cache[cid], pmi_cache[selected_cid]))
+                if pmi_diff > pmi_threshold:
+                    continue
+
+            if use_rmsd:
+                if not check_rmsd_pass(
+                    outmols[selected_cid],
+                    outmols[cid],
+                    rms_threshold,
+                    heavyonly,
+                    max_matches_rmsd,
+                    log,
+                ):
                     is_duplicate = True
                     break
-        
+            else:
+                is_duplicate = True
+                break
+
         if not is_duplicate and cid not in selected_cids:
             selected_cids.append(cid)
-    
-    return selected_cids
 
+    return selected_cids
 
 
 def compute_pairwise_rms_distances(self, mols):
     """Compute pairwise RMS distances for all conformers.
     
-    Creates a distance matrix of RMS values between all pairs of conformers.
+    Creates a distance matrix of RMS values between all pairs of conformers using multiprocessing.
     Uses only 100 atom matches since molecules are aligned with same numbering.
     
     Args:
@@ -434,12 +514,18 @@ def compute_pairwise_rms_distances(self, mols):
     Returns:
         list: Flattened upper triangular distance matrix
     """
-    dists = []
-    for i in range(len(mols)):
-        for j in range(i):
-            # using 100 matches only since the molecules are aligned and share the same atom numbering
-            rms = get_conf_RMS(mols[i], mols[j], -1, -1, self.args.heavyonly, 100)
-            dists.append(rms)
+    
+    # Generator expression avoids creating a massive list in memory
+    args_generator = (
+        (mols[i], mols[j], -1, -1, self.args.heavyonly, 100)
+        for i in range(len(mols))
+        for j in range(i)
+    )
+    
+    # Use starmap to unpack the generator directly into get_conf_RMS arguments
+    with multiprocessing.Pool(processes=self.args.nprocs) as pool:
+        dists = pool.starmap(get_conf_RMS, args_generator)
+        
     return dists
 
 
