@@ -14,6 +14,7 @@ import glob
 import math
 import shutil
 from pathlib import Path
+from types import SimpleNamespace
 from aqme.qdescp import qdescp
 from aqme.qdescp_utils import (
     read_json,
@@ -44,9 +45,43 @@ full_descriptors = get_descriptors('full')
 class CaptureLog:
     def __init__(self):
         self.messages = []
+        self.finalized = False
 
     def write(self, message):
         self.messages.append(message)
+
+    def finalize(self):
+        self.finalized = True
+
+
+def test_qdescp_initial_xtb_check_accepts_sdf_input():
+    obj = qdescp.__new__(qdescp)
+    obj.args = SimpleNamespace(
+        files=[],
+        input="tests/qdescp_sdf/mol1.sdf",
+        log=CaptureLog(),
+    )
+
+    files = obj.initial_xtb_check()
+
+    assert len(files) == 1
+    assert files[0].endswith("mol1.sdf")
+    assert obj.args.files == files
+
+
+def test_qdescp_initial_xtb_check_accepts_csv_input():
+    obj = qdescp.__new__(qdescp)
+    obj.args = SimpleNamespace(
+        files=[],
+        input="tests/qdescp_csv/smiles_workflow.csv",
+        log=CaptureLog(),
+    )
+
+    files = obj.initial_xtb_check()
+
+    assert len(files) == 1
+    assert files[0].endswith("smiles_workflow.csv")
+    assert obj.args.files == files
 
 
 def test_qdescp_rejects_repeated_atom_map_number(tmp_path):
