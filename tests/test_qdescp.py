@@ -24,6 +24,8 @@ from aqme.qdescp_utils import (
     validate_atom_mapping_consistency,
 )
 from aqme.csearch.utils import smiles_metadata_for_csearch
+from rdkit.Chem import AllChem as Chem
+from types import SimpleNamespace
 
 # saves the working directory
 w_dir_main = os.getcwd()
@@ -927,3 +929,80 @@ def test_qdescp_nmr(json_files):
     for i,_ in enumerate(error_calc):
         if str(error_calc[i]) not in ['nan']:
             assert round(error_calc[i],2) == round(error_csv[i],2)
+
+
+@pytest.mark.parametrize('program', ['rdkit', 'crest'])
+def test_qdescp_conformer_xyz_files_follow_sdf_order(tmp_path, program):
+    """Each conformer XYZ must be paired with the charge/mult of that conformer.
+
+    OpenBabel writes mol_conf_1.xyz ... mol_conf_12.xyz and glob() returns them in
+    an arbitrary (usually lexicographic) order, so _conf_10 used to be paired with
+    the charge and multiplicity of _conf_2. Checked for the SDF files produced by
+    both CSEARCH programs (rdkit and crest).
+    """
+    n_confs = 12
+    name = f'mol_{program}'
+    sdf_file = tmp_path / f'{name}.sdf'
+
+    # a different charge/mult per conformer, so any mismatch is detectable
+    charges = list(range(n_confs))
+    mults = [i + 1 for i in range(n_confs)]
+
+    with Chem.SDWriter(str(sdf_file)) as writer:
+        for i in range(n_confs):
+            mol = Chem.AddHs(Chem.MolFromSmiles('C'))
+            Chem.EmbedMolecule(mol, randomSeed=i + 1)
+            mol.SetProp('_Name', f'{name} {i + 1}')
+            mol.SetProp('Real charge', str(charges[i]))
+            mol.SetProp('Mult', str(mults[i]))
+            writer.write(mol)
+
+    # stand in for the XYZ files that OpenBabel writes with the -m option
+    for i in range(n_confs):
+        (tmp_path / f'{name}_conf_{i + 1}.xyz').write_text('1\n\nC 0.0 0.0 0.0\n')
+
+    processor = qdescp.__new__(qdescp)
+    processor.args = SimpleNamespace(charge=None, mult=None)
+
+    xyz_files, xyz_charges, xyz_mults = processor._process_other_conformers(
+        str(sdf_file), name
+    )
+
+    assert len(xyz_files) == n_confs
+    # conformer order, not lexicographic order (_conf_10 after _conf_9)
+    assert [Path(f).name for f in xyz_files] == [
+        f'{name}_conf_{i + 1}.xyz' for i in range(n_confs)
+    ]
+    assert [int(charge) for charge in xyz_charges] == charges
+    assert [int(mult) for mult in xyz_mults] == mults
+
+
+def test_qdescp_conformer_xyz_paths_are_not_duplicated(tmp_path):
+    """XYZ inputs must return usable paths.
+
+    The directory of the input file used to be prepended to paths that glob()
+    already returned as absolute, giving unusable paths such as
+    C:/dir/C:/dir/mol_conf_1.xyz.
+    """
+    n_confs = 3
+    name = 'mol_xyz'
+    xyz_file = tmp_path / f'{name}.xyz'
+    xyz_file.write_text('1\n\nC 0.0 0.0 0.0\n')
+
+    for i in range(n_confs):
+        (tmp_path / f'{name}_conf_{i + 1}.xyz').write_text(
+            f'1\ncharge={i} mult=1\nC 0.0 0.0 0.0\n'
+        )
+
+    processor = qdescp.__new__(qdescp)
+    processor.args = SimpleNamespace(charge=None, mult=None)
+
+    xyz_files, xyz_charges, xyz_mults = processor._process_xyz_conformers(
+        str(xyz_file), name
+    )
+
+    assert len(xyz_files) == n_confs
+    for conf_file in xyz_files:
+        assert os.path.isfile(conf_file), f'{conf_file} is not a usable path'
+    assert xyz_charges == list(range(n_confs))
+    assert xyz_mults == [1] * n_confs

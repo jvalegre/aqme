@@ -1478,6 +1478,64 @@ def test_rdkit_aggregate_mol_uses_interfragment_constraints():
         assert distance >= 3.0 - 1e-3
         assert _get_min_interfragment_vdw_clearance(mol, conf_id=conf_id) >= -1e-3
 
+
+# tests for the metal template validation
+class _CaptureLog:
+    """Minimal logger that stores the messages written by AQME."""
+
+    def __init__(self):
+        self.messages = []
+
+    def write(self, message):
+        self.messages.append(message)
+
+    def finalize(self):
+        pass
+
+
+def test_invalid_complex_type_is_reported_in_the_log():
+    # An unsupported complex_type must be reported through the CSEARCH log.
+    # It used to raise a TypeError that the parallel runner swallowed, so the
+    # user only saw 'CSEARCH raised an exception' instead of the actual help.
+    searcher = csearch.__new__(csearch)
+    log = _CaptureLog()
+    searcher.args = SimpleNamespace(log=log)
+
+    smi = '[NH3+][Ag][NH3+]'
+    mol = Chem.MolFromSmiles(smi)
+    metal_idx = [atom.GetIdx() for atom in mol.GetAtoms() if atom.GetSymbol() == 'Ag']
+
+    valid_template_embed = searcher._process_metal_complex(
+        mol=mol,
+        name='invalid_template_mol',
+        metal_atoms=['Ag'],
+        metal_idx=metal_idx,
+        complex_type='not_a_template',
+        metal_sym=['Ag'],
+        valid_template_embed=True,
+        constraints_atoms=[],
+        constraints_dist=[],
+        constraints_angle=[],
+        constraints_dihedral=[],
+        complex_ts=False,
+        charge=2,
+        mult=1,
+        smi=smi,
+        geom=[],
+        csearch_nprocs=1,
+        sample=1,
+    )
+
+    assert valid_template_embed is False
+
+    # the log must name the wrong template, the molecule and the valid options
+    messages = ''.join(log.messages)
+    assert 'not_a_template' in messages
+    assert 'is not valid' in messages
+    assert 'invalid_template_mol' in messages
+    for accepted in csearch.ACCEPTED_COMPLEX_TYPES:
+        assert accepted in messages
+
 # tests for removing foler
 @pytest.mark.parametrize(
     "folder_list, file_list",

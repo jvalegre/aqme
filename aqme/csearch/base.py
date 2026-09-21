@@ -904,7 +904,7 @@ class csearch:
         """
         # Validate template type
         if complex_type not in self.ACCEPTED_COMPLEX_TYPES:
-            self._log_invalid_template()
+            self._log_invalid_template(complex_type, name)
             return False
             
         # Check template applicability

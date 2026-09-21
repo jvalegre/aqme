@@ -1415,6 +1415,30 @@ class qdescp:
             
         return xyz_files, xyz_charges, xyz_mults
         
+    def _list_conformer_xyz_files(self, file, name):
+        """List the conformer XYZ files of an input, sorted by conformer index.
+        
+        The files are written by OpenBabel with the -m option, which names them
+        {name}_conf_1.xyz, {name}_conf_2.xyz, etc. glob() returns them in an
+        arbitrary order, so they are sorted by their numeric conformer index to
+        keep them aligned with the conformer order of the original file (i.e.
+        with the charges and multiplicities read from an SDF).
+        
+        Args:
+            file (str): Input file path
+            name (str): Base name without extension
+            
+        Returns:
+            list: Absolute paths of the conformer XYZ files, sorted by index
+        """
+        xyz_files_list = [
+            os.path.abspath(x)
+            for x in glob.glob(f"{os.path.dirname(Path(file))}/*.xyz")
+            if os.path.basename(x).startswith(f'{name}_conf_')
+        ]
+        
+        return sorted(xyz_files_list, key=lambda x: extract_conf_index(Path(x).stem))
+        
     def _process_xyz_conformers(self, file, name):
         """Process conformers from XYZ input.
         
@@ -1426,10 +1450,7 @@ class qdescp:
             tuple: Lists of (xyz files, charges, multiplicities)
         """
         xyz_files, xyz_charges, xyz_mults = [], [], []
-        xyz_files_list = [
-            x for x in glob.glob(f"{os.path.dirname(Path(file))}/*.xyz") 
-            if os.path.basename(x).startswith(f'{name}_conf_')
-        ]
+        xyz_files_list = self._list_conformer_xyz_files(file, name)
         
         for conf_file in xyz_files_list:
             charge = (self.args.charge if self.args.charge is not None 
@@ -1437,7 +1458,7 @@ class qdescp:
             mult = (self.args.mult if self.args.mult is not None 
                    else read_xyz_charge_mult(conf_file)[1])
                    
-            xyz_files.append(os.path.dirname(os.path.abspath(file)) + "/" + conf_file)
+            xyz_files.append(conf_file)
             xyz_charges.append(charge)
             xyz_mults.append(mult)
             
@@ -1454,10 +1475,7 @@ class qdescp:
             tuple: Lists of (xyz files, charges, multiplicities)
         """
         xyz_files, xyz_charges, xyz_mults = [], [], []
-        xyz_files_list = [
-            x for x in glob.glob(f"{os.path.dirname(Path(file))}/*.xyz") 
-            if os.path.basename(x).startswith(f'{name}_conf_')
-        ]
+        xyz_files_list = self._list_conformer_xyz_files(file, name)
         
         # Get charges and multiplicities
         charges = ([self.args.charge] * len(xyz_files_list) if self.args.charge is not None
