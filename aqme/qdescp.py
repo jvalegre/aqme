@@ -130,8 +130,7 @@ from aqme.qdescp_utils import (
     setup_env,
     extract_smiles_from_file,
     extract_numeric_mapping,
-    validate_atom_mapping_consistency,
-    get_sdf_property
+    validate_atom_mapping_consistency
 )
 
 from aqme.csearch.crest import xyzall_2_xyz
