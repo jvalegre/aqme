@@ -72,7 +72,6 @@ var_dict = {
     "oldchk": False,
     "w_dir_main": os.getcwd(),
     "files": [],
-    "outputs": "",
     "atom_types": [],
     "cartesians": [],
     "dup": True,
@@ -118,10 +117,8 @@ var_dict = {
     "crest_nclust": 0.4,
     "debug": False,
     "pytest_testing": False,
-    "milo": False,
     "freq": False,
     "target": "minima",
-    "yaml_file": None,
 }
 
 
