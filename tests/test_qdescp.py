@@ -1112,3 +1112,38 @@ def test_qdescp_csv_allows_fully_blank_rows(tmp_path):
     assert len(df_qdescp) == 3
     assert ''.join(log.messages) == ''
 
+
+@pytest.mark.parametrize(
+    "solvent_options,reported_option",
+    [
+        ({'qdescp_solvent': 'h2o'}, '--qdescp_solvent'),
+        ({'xtb_keywords': '--alpb h2o'}, '--alpb'),
+        ({'xtb_keywords': '--gbsa h2o'}, '--gbsa'),
+        ({'qdescp_solvent': 'h2o', 'xtb_keywords': '--alpb h2o'}, '--qdescp_solvent'),
+    ],
+)
+def test_qdescp_stops_when_a_solvent_is_requested(
+    tmp_path, monkeypatch, capsys, solvent_options, reported_option
+):
+    """QDESCP descriptors are calculated with PTB, which has no implicit solvation
+    model, so asking for a solvent with --qdescp_solvent or with xTB solvation
+    keywords must stop the run instead of being silently ignored.
+    """
+    monkeypatch.chdir(tmp_path)
+    xyz_file = tmp_path / 'methane.xyz'
+    xyz_file.write_text(
+        '5\nmethane\nC 0.000 0.000 0.000\nH 0.629 0.629 0.629\n'
+        'H -0.629 -0.629 0.629\nH -0.629 0.629 -0.629\nH 0.629 -0.629 -0.629\n'
+    )
+
+    with pytest.raises(SystemExit):
+        qdescp(
+            files=[str(xyz_file)],
+            destination=str(tmp_path / 'QDESCP'),
+            **solvent_options,
+        )
+
+    output = capsys.readouterr().out
+    assert 'does not support solvation' in output
+    assert reported_option in output
+

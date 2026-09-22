@@ -35,7 +35,10 @@ xTB and MORFEUS descriptors
       Multiplicity of the calculations used in the following input files 
       (multiplicities from SDF files generated in CSEARCH are read automatically).
    qdescp_solvent : str, default=None
-      Solvent used in the xTB property calculations (ALPB model)
+      Solvent used in the xTB property calculations (ALPB model). Not supported in
+      this version of AQME: descriptors are calculated with PTB, which has no
+      implicit solvation model, so setting it (or passing xTB solvation keywords
+      such as --alpb or --gbsa) stops the run.
    boltz : bool, default=True
       Calculation of Boltzmann averaged xTB properties and addition of RDKit 
       molecular descriptors
@@ -141,6 +144,11 @@ from aqme.csearch.utils import (
     generate_mol_from_csv,
     smiles_metadata_for_csearch,
 )
+
+
+# xTB flags that request an implicit solvation model, which QDESCP cannot use
+# because its descriptors are calculated with PTB (no solvation available)
+SOLVENT_KEYWORDS = ("--alpb", "--gbsa", "-g", "--cosmo", "--tmcosmo", "--cpcmx")
 
 
 def normalize_qdescp_runtime_options(args):
@@ -394,7 +402,7 @@ class qdescp:
             - files (list): Input file paths
             - charge (int): Molecular charge
             - mult (int): Molecular multiplicity
-            - qdescp_solvent (str): Solvent for ALPB model
+            - qdescp_solvent (str): Solvent for ALPB model (not supported, stops the run)
             - boltz (bool): Calculate Boltzmann averages
             - geom_opt (bool): Run xTB optimization
         """
@@ -1832,11 +1840,24 @@ class qdescp:
                     f"CSV file {csv_path} not found. Please verify the path."
                 )
                 
-        # Check solvent compatibility
+        # Check solvent compatibility. A solvent can be requested with
+        # --qdescp_solvent or with xTB solvation keywords (i.e. --alpb, --gbsa),
+        # and both must stop the run instead of being silently ignored
+        solvent_options = []
         if self.args.qdescp_solvent is not None:
+            solvent_options.append("--qdescp_solvent")
+        keywords = getattr(self.args, "xtb_keywords", None) or ""
+        solvent_options += [
+            keyword for keyword in str(keywords).split()
+            if keyword.lower() in SOLVENT_KEYWORDS
+        ]
+
+        if solvent_options:
             self._error_exit(
-                "PTB calculations do not support solvents. "
-                "Please remove the --qdescp_solvent option."
+                f"The current version of AQME does not support solvation in QDESCP "
+                f"(found {', '.join(solvent_options)})! Descriptors are calculated with "
+                "PTB, which does not include implicit solvation models. Please remove "
+                "these options and run QDESCP in gas phase."
             )
         
     def _convert_to_xyz(self, file, name, ext):
