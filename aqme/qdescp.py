@@ -111,7 +111,8 @@ from aqme.utils import (
     check_dependencies,
     set_destination,
     load_sdf,
-    blocking_wrapper
+    blocking_wrapper,
+    nested_call,
 )
 from aqme.qdescp_utils import (
     assign_prefix_atom_props,
@@ -695,7 +696,8 @@ class qdescp:
             csearch_kwargs["charge"] = self.args.charge
         if self.args.mult is not None:
             csearch_kwargs["mult"] = self.args.mult
-        CSEARCH(**csearch_kwargs)
+        with nested_call():
+            CSEARCH(**csearch_kwargs)
 
         # Use only molecules from the input CSV and create aliases for rows
         # sharing canonical conformers but carrying different atom-map metadata.
@@ -745,7 +747,8 @@ class qdescp:
             "freq": self.args.freq,
             "target": self.args.target,
         }
-        CMIN(**cmin_kwargs)
+        with nested_call():
+            CMIN(**cmin_kwargs)
 
         optimized_files = []
         for source_file in qdescp_files:

@@ -12,6 +12,7 @@ import getopt
 import glob
 import yaml
 import ast
+import contextlib
 from pathlib import Path
 from rdkit.Chem.rdMolAlign import GetBestRMS, AlignMol
 from rdkit.Chem.rdmolops import RemoveHs
@@ -28,10 +29,28 @@ aqme_version = "2.1.0"
 time_run = time.strftime("%Y/%m/%d %H:%M:%S", time.localtime())
 aqme_ref = f"AQME v {aqme_version}, Alegre-Requena, J. V.; Sowndarya, S.; Perez-Soto, R.; Alturaifi, T.; Paton, R. AQME: Automated Quantum Mechanical Environments for Researchers and Educators. Wiley Interdiscip. Rev. Comput. Mol. Sci. 2023, 13, e1663 (DOI: 10.1002/wcms.1663)."
 qdescp_ref = "Dalmau, D; Jacot-Descombes, L.; Kalikadien, A.; Manzanilla, B.; Pidko, E. A.; Jorner, K.; Sigman, M. S.; Alegre-Requena, J. V. Cost-Effective Quantum-Mechanical Workflows for Molecular Machine Learning. ACS Catal. 2026, 16, 12565-12574. (DOI: 10.1021/acscatal.6c02583)"
+famex_ref = "FAMEX Development Team, FAMEX: Fast Mechanistic Explorer (2026). Available at https://github.com/rlaplaza-lab/famex"
 xtb_version = '6.7.1'
 crest_version = '2.12'
 
 RDLogger.DisableLog("rdApp.*")
+
+_nested_call_active = False
+@contextlib.contextmanager
+def nested_call():
+    """Mark AQME modules instantiated inside this block as internally triggered."""
+    global _nested_call_active
+    previous = _nested_call_active
+    _nested_call_active = True
+    try:
+        yield
+    finally:
+        _nested_call_active = previous
+
+
+def is_nested_call():
+    """Return True while running inside a `nested_call()` block."""
+    return _nested_call_active
 
 
 def run_command(command, outfile, cwd=None, env=None):
@@ -685,9 +704,12 @@ def _create_logger(self, aqme_module, logger_1, logger_2, txt_yaml, error_setup)
         self.log = Logger(path_command / logger_1, logger_2, verbose=self.verbose)
     
     # Write header
-    self.log.write(f"AQME v {aqme_version} {time_run} \nCitation: {aqme_ref}\n")
-    if aqme_module == "qdescp":
-        self.log.write(f"QDESCP is used for descriptor generation, please cite:\n{qdescp_ref}\n")
+    if not is_nested_call():
+        self.log.write(f"AQME v {aqme_version} {time_run} \nCitation: {aqme_ref}\n")
+        if aqme_module == "qdescp":
+            self.log.write(f"QDESCP is used for descriptor generation, please cite:\n{qdescp_ref}\n")
+            if getattr(self, "geom_opt", True):
+                self.log.write(f"If you use the CMIN module, please cite:\n{famex_ref}\n")
     
     # Log command line if used
     if self.command_line:

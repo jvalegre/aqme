@@ -84,6 +84,8 @@ from aqme.utils import (
     check_dependencies,
     read_xyz_charge_mult,
     set_destination,
+    famex_ref,
+    is_nested_call,
 )
 from aqme.csearch.utils import _translate_constraint_indices
 from aqme.filter import conformer_filters, cluster_conformers
@@ -308,12 +310,11 @@ class cmin:
         """Log the recommended FAMEX citation the first time it is used."""
         if getattr(self, "_famex_citation_logged", False):
             return
+        if is_nested_call():
+            self._famex_citation_logged = True
+            return
 
-        self.args.log.write(
-            "\n   Please cite FAMEX as:\n"
-            "   FAMEX Development Team, FAMEX: Fast Mechanistic Explorer (2026).\n"
-            "   Available at https://github.com/rlaplaza-lab/famex"
-        )
+        self.args.log.write(f"\n   Please cite FAMEX as:\n   {famex_ref}")
         self._famex_citation_logged = True
 
     # ------------------------------------------------------------------
