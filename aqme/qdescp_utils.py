@@ -1548,30 +1548,6 @@ def fix_cols_names(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def remove_atom_descp(
-    df: pd.DataFrame,
-    atom_props: List[str]
-) -> pd.DataFrame:
-    """
-    Remove atomic descriptors from a dataframe that weren't explicitly specified.
-
-    Args:
-        df: Pandas DataFrame containing molecular descriptors
-        atom_props: List of atomic property names to keep
-
-    Returns:
-        DataFrame with unspecified atomic descriptors removed
-
-    Notes:
-        - Modifies column structure but preserves row indexing
-        - Resets index after dropping columns
-        - Returns original DataFrame if no columns match atom_props
-    """
-    cols_to_drop = [col for col in df.columns if col in atom_props]
-    if cols_to_drop:
-        return df.drop(cols_to_drop, axis=1).reset_index(drop=True)
-    return df
-
 def assign_prefix_atom_props(
     prefix_list: List[str],
     atom_props: List[str],
@@ -2445,54 +2421,6 @@ def update_atom_props_json(
                     prefixes_atom_prop.append(prefix)
 
     return prefixes_atom_prop, json_data
-
-
-def _generate_xtb_constraints(args, map_to_idx):
-    """Format xTB input lines for constraints mapping explicit AtomMapNums to 1-based xTB indices."""
-    import sys
-
-    def _get_idx(val):
-        orig = int(val)
-        idx = map_to_idx.get(orig)
-        if idx is None:
-            log = getattr(args, 'log', None)
-            msg = (
-                f"\nx  Constraint index {orig} does not correspond to any "
-                f"atom map number in the molecule. Constraint indices must match "
-                f"atom map numbers (e.g. [C:1], [N:2]). Available map numbers: "
-                f"{sorted(map_to_idx.keys())}. Stopping."
-            )
-            if log:
-                log.write(msg)
-                log.finalize()
-            else:
-                print(msg)
-            sys.exit()
-        return idx
-
-    lines = ""
-
-    if getattr(args, 'constraints_atoms', None):
-        for c in args.constraints_atoms:
-            val = c[0] if isinstance(c, (list, tuple)) else c
-            lines += f"    atoms: {_get_idx(val)}\n"
-
-    if getattr(args, 'constraints_dist', None):
-        for c in args.constraints_dist:
-            dist_val = c[2] if len(c) > 2 else "auto"
-            lines += f"    distance: {_get_idx(c[0])}, {_get_idx(c[1])}, {dist_val}\n"
-
-    if getattr(args, 'constraints_angle', None):
-        for c in args.constraints_angle:
-            angle_val = c[3] if len(c) > 3 else "auto"
-            lines += f"    angle: {_get_idx(c[0])}, {_get_idx(c[1])}, {_get_idx(c[2])}, {angle_val}\n"
-
-    if getattr(args, 'constraints_dihedral', None):
-        for c in args.constraints_dihedral:
-            dih_val = c[4] if len(c) > 4 else "auto"
-            lines += f"    dihedral: {_get_idx(c[0])}, {_get_idx(c[1])}, {_get_idx(c[2])}, {_get_idx(c[3])}, {dih_val}\n"
-
-    return lines
 
 
 def extract_conf_index(conf_name: str) -> int:
