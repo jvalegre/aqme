@@ -1024,11 +1024,10 @@ def _write_qdescp_sdf(path, smiles):
         writer.write(mol)
 
 
-def test_qdescp_stops_when_an_input_has_no_smiles(tmp_path):
-    """An input with no SMILES must stop the run instead of being dropped.
-
-    It used to be discarded silently as long as another input did have a SMILES,
-    so descriptors were generated for fewer molecules than the user asked for.
+def test_qdescp_keeps_files_without_smiles(tmp_path):
+    """Files with no SMILES property (xyz/json inputs, or sdf files not coming
+    from a QDESCP CSV run) must be kept as-is: SMILES-based duplicate
+    detection simply does not apply to them, and the run must not stop.
     """
     with_smiles = tmp_path / 'mol_1_rdkit.sdf'
     without_smiles = tmp_path / 'mol_2_rdkit.sdf'
@@ -1041,13 +1040,10 @@ def test_qdescp_stops_when_an_input_has_no_smiles(tmp_path):
         files=[str(with_smiles), str(without_smiles)], log=log
     )
 
-    with pytest.raises(SystemExit):
-        processor.get_unique_files()
+    unique_files = processor.get_unique_files()
 
-    messages = ''.join(log.messages)
-    assert 'mol_2_rdkit.sdf' in messages
-    assert 'No SMILES was found' in messages
-    assert 'cells of the input are filled' in messages
+    assert unique_files == [str(with_smiles), str(without_smiles)]
+    assert ''.join(log.messages) == ''
 
 
 def test_qdescp_keeps_unique_smiles_and_warns_about_duplicates(tmp_path):
@@ -1071,4 +1067,48 @@ def test_qdescp_keeps_unique_smiles_and_warns_about_duplicates(tmp_path):
     messages = ''.join(log.messages)
     assert 'mol_2_rdkit.sdf' in messages
     assert 'same SMILES' in messages
+
+
+def test_qdescp_csv_stops_when_smiles_column_has_missing_cells(tmp_path):
+    """The run must stop right after reading the CSV (before conformer
+    generation starts) if the SMILES column has fewer filled cells than
+    another column, i.e. some rows are missing their SMILES while other
+    columns of that same row are filled in.
+    """
+    csv_path = tmp_path / 'incomplete_smiles.csv'
+    pd.DataFrame({
+        'code_name': ['mol_1', 'mol_2', 'mol_3'],
+        'SMILES': ['CC', '', 'CCO'],
+    }).to_csv(csv_path, index=False)
+
+    processor = qdescp.__new__(qdescp)
+    log = CaptureLog()
+    processor.args = SimpleNamespace(csv_name=str(csv_path), log=log)
+
+    with pytest.raises(SystemExit):
+        processor._read_qdescp_csv()
+
+    messages = ''.join(log.messages)
+    assert 'mol_2' in messages
+    assert 'SMILES column are filled' in messages
+
+
+def test_qdescp_csv_allows_fully_blank_rows(tmp_path):
+    """A row that is entirely blank (e.g. a trailing empty row from Excel)
+    must not be treated as a missing-SMILES error.
+    """
+    csv_path = tmp_path / 'blank_row.csv'
+    pd.DataFrame({
+        'code_name': ['mol_1', 'mol_2', ''],
+        'SMILES': ['CC', 'CCO', ''],
+    }).to_csv(csv_path, index=False)
+
+    processor = qdescp.__new__(qdescp)
+    log = CaptureLog()
+    processor.args = SimpleNamespace(csv_name=str(csv_path), log=log)
+
+    df_qdescp = processor._read_qdescp_csv()
+
+    assert len(df_qdescp) == 3
+    assert ''.join(log.messages) == ''
 

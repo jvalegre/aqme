@@ -777,6 +777,28 @@ class qdescp:
             self._error_exit(
                 "The CSV used as QDESCP input must contain code_name and SMILES columns."
             )
+
+        # Stop right away (before conformer generation starts) if the SMILES
+        # column has fewer filled cells than any other column, i.e. some rows
+        # are missing their SMILES while other columns of that same row are
+        # filled in (a fully blank row is not treated as an error).
+        def _filled_mask(series):
+            return series.apply(
+                lambda v: not (pd.isna(v) or str(v).strip() == '' or str(v).strip().lower() == 'nan')
+            )
+
+        smiles_filled = _filled_mask(df_qdescp['SMILES'])
+        for col in df_qdescp.columns.drop('SMILES'):
+            col_filled = _filled_mask(df_qdescp[col])
+            if col_filled.sum() > smiles_filled.sum():
+                missing_rows = df_qdescp.index[~smiles_filled & col_filled]
+                code_names = df_qdescp.loc[missing_rows, 'code_name'].astype(str).tolist()
+                self._error_exit(
+                    'Not all the cells of the SMILES column are filled! Please make sure '
+                    f'that every structure in "{os.path.basename(self.args.csv_name)}" has its '
+                    f'corresponding SMILES (missing for: {", ".join(code_names)}).'
+                )
+
         df_qdescp['code_name'] = df_qdescp['code_name'].astype(str)
         return df_qdescp
 
@@ -1755,45 +1777,39 @@ class qdescp:
 
     def get_unique_files(self):
         """Filter input files to remove duplicates based on SMILES.
-        
+
         This method:
-        1. Reads the SMILES string of each input file
-        2. Stops the run if any of the inputs has no SMILES
-        3. Identifies duplicate structures
-        4. Keeps only unique structures
-        
+        1. Reads the SMILES string of each input file (when present)
+        2. Identifies duplicate structures among the files that carry a SMILES
+        3. Keeps only unique structures
+
         Returns:
             list: Paths to unique input files
-            
-        Raises:
-            SystemExit: If any of the input files has no SMILES
-            
+
         Note:
             - Duplicates are identified by exact SMILES match
-            - An input with no SMILES comes from an incomplete input (i.e. an
-              empty cell), so the run is stopped instead of skipping it silently
+            - Files without a SMILES property (e.g. xyz/json inputs, or sdf
+              files not generated from a QDESCP CSV run) are always kept:
+              SMILES-based duplicate detection simply does not apply to them
             - Warning is logged for duplicate structures
         """
         unique_files = []
         unique_smiles = []
-        
+
         for file in self.args.files:
             smi = get_sdf_property(file, "SMILES")
             smi = smi.split()[0] if smi else None
-            
+
             if smi is None:
-                self._error_exit(
-                    f'No SMILES was found in "{os.path.basename(file)}"! Not all '
-                    'the cells of the input are filled, please make sure that every '
-                    'structure has its corresponding SMILES before running QDESCP.'
-                )
-            
+                unique_files.append(file)
+                continue
+
             if smi not in unique_smiles:
                 unique_smiles.append(smi)
                 unique_files.append(file)
             else:
                 self.args.log.write(f'x  WARNING! "{os.path.basename(file)}" will not be calculated since it has the same SMILES as "{os.path.basename(unique_files[unique_smiles.index(smi)])}"')
-        
+
         return unique_files
         
     def _error_exit(self, message):
