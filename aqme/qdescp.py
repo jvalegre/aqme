@@ -34,16 +34,8 @@ xTB and MORFEUS descriptors
    mult : int, default=None
       Multiplicity of the calculations used in the following input files 
       (multiplicities from SDF files generated in CSEARCH are read automatically).
-   gfn_version : int, default="2"
-      GFN version used in QDESCP to calculate descriptors.
    qdescp_solvent : str, default=None
       Solvent used in the xTB property calculations (ALPB model)
-   qdescp_temp : float, default=300
-      Temperature required for the xTB property calculations
-   qdescp_acc : float, default=0.2
-      Accuracy required for the xTB property calculations 
-   qdescp_opt : str, default='normal'
-      Convergence criteria required for the xTB property calculations 
    boltz : bool, default=True
       Calculation of Boltzmann averaged xTB properties and addition of RDKit 
       molecular descriptors
@@ -402,11 +394,7 @@ class qdescp:
             - files (list): Input file paths
             - charge (int): Molecular charge
             - mult (int): Molecular multiplicity
-            - gfn_version (int): GFN-xTB version
             - qdescp_solvent (str): Solvent for ALPB model
-            - qdescp_temp (float): Temperature for calculations
-            - qdescp_acc (float): Calculation accuracy  
-            - qdescp_opt (str): Optimization convergence criteria
             - boltz (bool): Calculate Boltzmann averages
             - geom_opt (bool): Run xTB optimization
         """

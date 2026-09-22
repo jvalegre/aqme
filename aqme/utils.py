@@ -404,8 +404,7 @@ def _get_argument_categories():
         "energy_threshold", "initial_energy_threshold", "pmi_threshold", "max_mol_wt",
         "dup_threshold", "ro_threshold", "amplitude_ifreq", "ifreq_cutoff",
         "s2_threshold", "vdwfrac", "covfrac", "bond_thres", "angle_thres",
-        "dihedral_thres", "crest_force", "qdescp_temp", "qdescp_acc",
-        "dbstep_r", "crest_nclust", "vbur_radius"
+        "dihedral_thres", "crest_force", "crest_nclust", "vbur_radius"
     ]
     
     return bool_args, list_args, int_args, float_args
