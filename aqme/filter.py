@@ -5,6 +5,7 @@
 
 import os
 import shutil
+import threading
 from pathlib import Path
 import multiprocessing
 from rdkit import Chem
@@ -12,6 +13,11 @@ from rdkit.Chem import rdMolTransforms, Descriptors, rdMolDescriptors
 from rdkit.ML.Cluster import Butina
 
 from aqme.utils import periodic_table, get_conf_RMS
+
+# Starting a process pool re-imports RDKit in every worker and pickles the
+# molecules, which costs more than the calculation itself for small matrices
+# (measured: below this the pool is up to 6x slower, above it starts to pay off)
+MIN_PAIRS_FOR_POOL = 2000
 
 
 def get_pmi_tuple(mol):
@@ -504,29 +510,39 @@ def apply_filters(
 
 def compute_pairwise_rms_distances(self, mols):
     """Compute pairwise RMS distances for all conformers.
-    
-    Creates a distance matrix of RMS values between all pairs of conformers using multiprocessing.
+
+    Creates a distance matrix of RMS values between all pairs of conformers.
     Uses only 100 atom matches since molecules are aligned with same numbering.
-    
+
+    The calculation is only sent to a process pool when it is worth it: CSEARCH
+    and CMIN call this from worker threads, so a pool started there would spawn
+    up to nprocs^2 processes, and for small matrices the pool costs more than
+    the calculation.
+
     Args:
         mols (list): List of RDKit molecule objects with conformers
-    
+
     Returns:
         list: Flattened upper triangular distance matrix
     """
-    
-    # Generator expression avoids creating a massive list in memory
-    args_generator = (
-        (mols[i], mols[j], -1, -1, self.args.heavyonly, 100)
-        for i in range(len(mols))
-        for j in range(i)
-    )
-    
-    # Use starmap to unpack the generator directly into get_conf_RMS arguments
+    pairs = [(i, j) for i in range(len(mols)) for j in range(i)]
+    in_worker_thread = threading.current_thread() is not threading.main_thread()
+
+    if in_worker_thread or len(pairs) < MIN_PAIRS_FOR_POOL:
+        # get_conf_RMS leaves its first argument aligned to the second one. In a
+        # pool that happens on a pickled copy, so the probe is copied here to
+        # keep the caller's conformers untouched (heavyonly already copies them)
+        return [
+            get_conf_RMS(
+                mols[i] if self.args.heavyonly else Chem.Mol(mols[i]),
+                mols[j], -1, -1, self.args.heavyonly, 100
+            )
+            for i, j in pairs
+        ]
+
+    args = [(mols[i], mols[j], -1, -1, self.args.heavyonly, 100) for i, j in pairs]
     with multiprocessing.Pool(processes=self.args.nprocs) as pool:
-        dists = pool.starmap(get_conf_RMS, args_generator)
-        
-    return dists
+        return pool.starmap(get_conf_RMS, args)
 
 
 def determine_cluster_points(self, program, sample, name):
