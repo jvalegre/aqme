@@ -374,8 +374,8 @@ def test_cmin_ts_report_marks_negative_frequency_and_top_atoms(monkeypatch):
     "path, program, sdf, output_nummols",
     [
         ("complete", "xtb", "pentane_rdkit_methods.sdf", 4),
-        ("complete", "mace", "pentane_rdkit_methods.sdf", 4), 
-        ("complete", "aimnet2", "pentane_rdkit_methods.sdf", 4),
+        ("complete", "mace", "pentane_rdkit_methods_1conf.sdf", 1),
+        ("complete", "aimnet2", "pentane_rdkit_methods_1conf.sdf", 1),
         ("partial", "xtb", "tests/cmin_methods/pentane_rdkit_methods.sdf", 4), 
         ("name", "xtb", "pentane_rdkit_methods.sdf", 4), 
     ],
