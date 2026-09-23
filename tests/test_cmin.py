@@ -369,6 +369,67 @@ def test_cmin_ts_report_marks_negative_frequency_and_top_atoms(monkeypatch):
     assert any(symbol in report for symbol in ["(C)", "(Br)", "(Cl)"])
     freq_file.unlink(missing_ok=True)
 
+
+# Real (unmocked) FAMEX/tblite frequency calculations on an SN2 TS aggregate
+# (Cl- + CH3Br, see tests/cmin_TS/mol_1.sdf): target="ts" must converge to a
+# stationary point with exactly one imaginary frequency, dominated by the
+# motion of the central carbon; target="minima" must show no imaginary
+# frequencies at all.
+def test_cmin_sn2_ts_has_single_imaginary_frequency_dominated_by_carbon():
+    os.chdir(cmin_ts_dir)
+    sdf_path = _repo_path("tests", "cmin_TS", "mol_1.sdf")
+
+    cmin(
+        program="tblite",
+        files=str(sdf_path),
+        charge=-1,
+        freq=True,
+        target="ts",
+        destination="CMIN_ts",
+    )
+
+    freq_file = _repo_path("tests", "cmin_TS", "CMIN_ts", "frecuencies.dat")
+    assert freq_file.exists()
+    report = freq_file.read_text(encoding="utf-8")
+
+    assert "Negative frequencies: 1" in report
+    assert "Imaginary frequency:" in report
+
+    # the top moving atom of the imaginary mode must be the carbon
+    top_atoms_block = report.split("Top moving atoms:")[1]
+    first_atom_line = next(
+        line for line in top_atoms_block.splitlines() if line.strip()
+    )
+    assert "(C)" in first_atom_line
+
+    shutil.rmtree(_repo_path("tests", "cmin_TS", "CMIN_ts"), ignore_errors=True)
+    os.chdir(w_dir_main)
+
+
+def test_cmin_sn2_minima_has_no_imaginary_frequencies():
+    os.chdir(cmin_ts_dir)
+    sdf_path = _repo_path("tests", "cmin_TS", "mol_1.sdf")
+
+    cmin(
+        program="tblite",
+        files=str(sdf_path),
+        charge=-1,
+        freq=True,
+        target="minima",
+        destination="CMIN_minima",
+    )
+
+    freq_file = _repo_path("tests", "cmin_TS", "CMIN_minima", "frecuencies.dat")
+    assert freq_file.exists()
+    report = freq_file.read_text(encoding="utf-8")
+
+    assert "Negative frequencies: 0" in report
+    assert "Imaginary frequency:" not in report
+
+    shutil.rmtree(_repo_path("tests", "cmin_TS", "CMIN_minima"), ignore_errors=True)
+    os.chdir(w_dir_main)
+
+
 # tests of basic QME optimizations (xtb, mace, aimnet2)
 @pytest.mark.parametrize(
     "path, program, sdf, output_nummols",

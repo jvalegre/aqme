@@ -37,6 +37,7 @@ csearch_others_dir = os.path.join(tests_dir, "csearch_others")
 csearch_input_dir = os.path.join(tests_dir, "csearch_input")
 csearch_varfile_dir = os.path.join(tests_dir, "csearch_varfile")
 csearch_haptic_dir = os.path.join(tests_dir, "csearch_haptic")
+csearch_sn2_ts_dir = os.path.join(tests_dir, "csearch_sn2_ts")
 
 for folder in [
     csearch_methods_dir,
@@ -46,6 +47,7 @@ for folder in [
     csearch_input_dir,
     csearch_varfile_dir,
     csearch_haptic_dir,
+    csearch_sn2_ts_dir,
 ]:
     os.makedirs(folder, exist_ok=True)
 
@@ -1480,6 +1482,51 @@ def test_rdkit_aggregate_mol_uses_interfragment_constraints():
         )
         assert distance >= 3.0 - 1e-3
         assert _get_min_interfragment_vdw_clearance(mol, conf_id=conf_id) >= -1e-3
+
+
+# CSV-driven CSEARCH run for an SN2 transition-state aggregate (Cl- + CH3Br):
+# checks that --constraints_dist is honored within a 0.2 A tolerance for all
+# three constrained pairs (C-Br, C-Cl, and the Br...Cl through-space distance).
+def test_csearch_csv_sn2_ts_constraints_within_tolerance():
+    os.chdir(csearch_sn2_ts_dir)
+    csearch(
+        input="test.csv",
+        constraints_dist=[[1, 2, 2.4], [1, 3, 2.4], [2, 3, 4.8]],
+        charge=-1,
+    )
+
+    sdf_path = os.path.join(csearch_sn2_ts_dir, "CSEARCH", "Sn2_TS_Cl_C_Br_rdkit.sdf")
+    assert os.path.exists(sdf_path)
+
+    mols = Chem.SDMolSupplier(sdf_path, removeHs=False, sanitize=False)
+    tolerance = 0.2
+    # (atom-map-a, atom-map-b): target distance in Angstrom
+    targets = {(1, 2): 2.4, (1, 3): 2.4, (2, 3): 4.8}
+
+    n_checked = 0
+    for mol in mols:
+        assert mol is not None
+        assert mol.GetProp("Real charge") == "-1"
+
+        map_to_idx = {
+            atom.GetAtomMapNum(): atom.GetIdx()
+            for atom in mol.GetAtoms()
+            if atom.GetAtomMapNum() > 0
+        }
+        positions = mol.GetConformer().GetPositions()
+        for (map_a, map_b), target in targets.items():
+            dist = np.linalg.norm(
+                positions[map_to_idx[map_a]] - positions[map_to_idx[map_b]]
+            )
+            assert abs(dist - target) <= tolerance, (
+                f"distance map{map_a}-map{map_b} = {dist:.3f} A, "
+                f"expected {target} +/- {tolerance}"
+            )
+        n_checked += 1
+
+    del mols
+    assert n_checked >= 1
+    os.chdir(w_dir_main)
 
 
 # tests for the metal template validation
