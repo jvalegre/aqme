@@ -1549,7 +1549,11 @@ def smi_to_mol(
     """
     complex_ts = False
     original_smi = smi if original_smi is None else original_smi
-    smi_parts = smi.split(".")
+    # Canonicalization (done upstream) strips atom-map numbers, so mapped
+    # SMILES must be rebuilt from the original string or constraint atoms
+    # can no longer be matched to fragments in the aggregate below.
+    generation_smi = original_smi if ':' in str(original_smi) else smi
+    smi_parts = generation_smi.split(".")
     has_constraints = any([constraints_atoms, constraints_dist,
                            constraints_angle, constraints_dihedral])
 
@@ -1580,7 +1584,7 @@ def smi_to_mol(
             # (mirrors the same translation done for single molecules below)
             if mol is not None:
                 map_to_idx, duplicated_maps = _collect_map_to_idx(mol)
-                expected_maps = _collect_mapped_numbers_from_smiles(smi)
+                expected_maps = _collect_mapped_numbers_from_smiles(generation_smi)
                 missing_maps = sorted(set(expected_maps) - set(map_to_idx.keys()))
                 if duplicated_maps:
                     log.write(
