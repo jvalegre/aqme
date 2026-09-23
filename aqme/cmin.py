@@ -59,6 +59,7 @@ General
 #####################################################.
 
 import os
+import re
 import sys
 import time
 import ast
@@ -92,6 +93,35 @@ from aqme.filter import conformer_filters, cluster_conformers
 
 SUPPORTED_FAMEX_BACKENDS = {"xtb", "tblite", "aimnet2", "mace", "orb", "so3lr", "uma"}
 EV_TO_KCAL = 23.0609  # 1 eV = 23.0609 kcal/mol
+
+
+def parallel_start_method():
+    """Return the start method usable for a CMIN process pool, or None.
+
+    "fork" clones the running process and is always safe. "spawn"
+    (Windows/macOS) re-imports the caller's main module in every worker, so it
+    is only usable when that module guards its code with
+    ``if __name__ == "__main__":``; otherwise each worker would run the whole
+    calculation again. Interactive sessions and notebooks have no main file to
+    re-import, so they are safe.
+
+    Returns:
+        str or None: "fork", "spawn", or None when no pool can be used safely
+    """
+    if "fork" in multiprocessing.get_all_start_methods():
+        return "fork"
+
+    main_file = getattr(sys.modules.get("__main__"), "__file__", None)
+    if main_file is None:
+        return "spawn"
+
+    try:
+        with open(main_file, "r", encoding="utf-8", errors="ignore") as script:
+            guarded = re.search(r"__name__\s*==\s*['\"]__main__['\"]", script.read())
+    except OSError:
+        return None
+
+    return "spawn" if guarded else None
 
 
 def normalize_cmin_backend(args):
@@ -766,6 +796,77 @@ class cmin:
     # Main compute loop
     # ------------------------------------------------------------------
 
+    def _run_famex_tasks(self, tasks, constraints, nprocs, use_processes=True,
+                         start_method="fork"):
+        """Optimise every conformer, in separate processes or in threads.
+
+        Args:
+            tasks (list): (mol, conf_name, charge, mult) tuples
+            constraints: FAMEX constraints shared by all conformers
+            nprocs (int): Maximum number of workers
+            use_processes (bool): Run in separate processes instead of threads
+            start_method (str): Start method for the process pool
+
+        Returns:
+            tuple: (outmols, cenergy) for the conformers that converged
+
+        Raises:
+            concurrent.futures.BrokenExecutor: If the process pool cannot run
+        """
+        outmols, cenergy = [], []
+
+        if use_processes:
+            workers = min(nprocs, len(tasks))
+            target = self._get_famex_target()
+            fmax = getattr(self.args, "opt_fmax", 0.05)
+            steps = getattr(self.args, "opt_steps", 1000)
+            executor = concurrent.futures.ProcessPoolExecutor(
+                max_workers=workers,
+                mp_context=multiprocessing.get_context(start_method),
+                initializer=_init_worker_env,
+            )
+            submit = lambda task: executor.submit(
+                _run_famex_worker, *task,
+                constraints, self.args.program, target, fmax, steps
+            )
+        else:
+            executor = concurrent.futures.ThreadPoolExecutor(max_workers=nprocs)
+            submit = lambda task: executor.submit(
+                self._optimize_with_famex, *task, constraints
+            )
+
+        with executor:
+            futures_list = [submit(task) for task in tasks]
+
+            # Gather the results in the order of the conformers, not in the
+            # order they finish, so the log does not depend on the scheduling
+            for task, future in zip(tasks, futures_list):
+                try:
+                    result = future.result()
+                except concurrent.futures.BrokenExecutor:
+                    # the pool itself died: let the caller retry with threads
+                    raise
+                except Exception as exc:
+                    self.args.log.write(f"\nx  A parallel worker crashed: {exc}")
+                    continue
+
+                if result is not None:
+                    if use_processes:
+                        mol, energy, ok, message = result
+                        # the worker cannot log, so its two lines are written
+                        # here, in the same order as the sequential run
+                        self.args.log.write(
+                            f"\no  FAMEX optimisation [{self.args.program}] ({task[1]})"
+                        )
+                        self.args.log.write(message)
+                    else:
+                        mol, energy, ok = result
+                    if ok:
+                        outmols.append(PropertyMol(mol))
+                        cenergy.append(energy)
+
+        return outmols, cenergy
+
     def compute_cmin(self, sdf_file):
         """Optimise all conformers from *sdf_file* and write results."""
         charge, mult = self._determine_charge_mult(sdf_file)
@@ -795,59 +896,30 @@ class cmin:
         self._log_famex_citation()
         constraints = self._build_famex_constraints(tasks[0][0])
 
-        # tblite is not thread-safe within a single process (hence
-        # _tblite_lock, which fully serialises the ThreadPoolExecutor below).
-        # Separate OS processes don't share that state, so real parallelism
-        # for tblite requires a ProcessPoolExecutor. This only works with the
-        # "fork" start method (spawn would start from a blank interpreter and
-        # lose context, e.g. monkeypatched test doubles); everything else
-        # (other backends, or platforms without fork) keeps using threads.
+        # tblite is not thread-safe within a single process (hence _tblite_lock,
+        # which fully serialises the ThreadPoolExecutor below), so real
+        # parallelism for tblite needs separate OS processes. Tests keep using
+        # threads because spawn starts from a blank interpreter and would lose
+        # their monkeypatched doubles.
+        start_method = parallel_start_method()
         use_processes = (
             nprocs > 1
+            and len(tasks) > 1
             and self.args.program == "tblite"
-            and "fork" in multiprocessing.get_all_start_methods()
+            and start_method is not None
+            and not getattr(self.args, "pytest_testing", False)
         )
 
         if use_processes:
-            target = self._get_famex_target()
-            fmax = getattr(self.args, "opt_fmax", 0.05)
-            steps = getattr(self.args, "opt_steps", 1000)
-            for task in tasks:
-                self.args.log.write(f"\no  FAMEX optimisation [{self.args.program}] ({task[1]})")
-
-            executor = concurrent.futures.ProcessPoolExecutor(
-                max_workers=nprocs, mp_context=multiprocessing.get_context("fork"),
-                initializer=_init_worker_env,
-            )
-            submit = lambda task: executor.submit(
-                _run_famex_worker, *task,
-                constraints, self.args.program, target, fmax, steps
-            )
+            try:
+                outmols, cenergy = self._run_famex_tasks(
+                    tasks, constraints, nprocs, start_method=start_method
+                )
+            except (concurrent.futures.BrokenExecutor, OSError, RuntimeError):
+                # last resort: the pool could not run, so keep the results coming
+                outmols, cenergy = self._run_famex_tasks(tasks, constraints, nprocs, use_processes=False)
         else:
-            executor = concurrent.futures.ThreadPoolExecutor(max_workers=nprocs)
-            submit = lambda task: executor.submit(
-                self._optimize_with_famex, *task, constraints
-            )
-
-        with executor:
-            futures_list = [submit(task) for task in tasks]
-
-            # Gather results as they complete
-            for future in concurrent.futures.as_completed(futures_list):
-                try:
-                    result = future.result()
-                    if result is not None:
-                        if use_processes:
-                            mol, energy, ok, message = result
-                            self.args.log.write(message)
-                        else:
-                            mol, energy, ok = result
-                        if ok:
-                            pmol = PropertyMol(mol)
-                            outmols.append(pmol)
-                            cenergy.append(energy)
-                except Exception as exc:
-                    self.args.log.write(f"\nx  A parallel worker crashed: {exc}")
+            outmols, cenergy = self._run_famex_tasks(tasks, constraints, nprocs, use_processes=False)
 
         if not cenergy:
             self.args.log.write(
