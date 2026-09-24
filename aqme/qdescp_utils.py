@@ -21,6 +21,7 @@ import sys
 import os
 import re
 import ast
+import csv
 import warnings
 from pathlib import Path
 
@@ -1518,6 +1519,34 @@ def find_level_names(
     return cols_to_keep
 
 
+def check_duplicate_smiles_columns(csv_path) -> None:
+    """
+    Stop with a clear error if a CSV header has more than one SMILES column,
+    whether they are named identically or only differ in case (e.g. 'SMILES'
+    and 'smiles').
+
+    The header is read directly with the csv module, before pandas gets a
+    chance to parse it: pandas silently renames a literal duplicate column
+    ('SMILES,SMILES') to 'SMILES' and 'SMILES.1' while reading, which would
+    otherwise hide the duplicate instead of failing loudly.
+
+    Args:
+        csv_path: Path to the CSV file to check
+
+    Raises:
+        ValueError: If more than one column name is 'SMILES' (case-insensitive)
+    """
+    with open(csv_path, newline='', encoding='utf-8') as csv_file:
+        header = next(csv.reader(csv_file))
+
+    smiles_like_cols = [col for col in header if col.strip().lower() == 'smiles']
+    if len(smiles_like_cols) > 1:
+        raise ValueError(
+            'Se han detectado dos columnas SMILES, por favor modifica el '
+            'nombre de alguna de ellas para poder continuar.'
+        )
+
+
 def fix_cols_names(df: pd.DataFrame) -> pd.DataFrame:
     """
     Standardize column names in descriptor DataFrame.
@@ -1542,18 +1571,18 @@ def fix_cols_names(df: pd.DataFrame) -> pd.DataFrame:
         'charge': 'charge',
         'mult': 'mult'
     }
-    
+
     # Create mapping of actual column names to standardized names
     rename_dict = {}
     for col in df.columns:
         lower_col = col.lower()
         if lower_col in name_mapping:
             rename_dict[col] = name_mapping[lower_col]
-            
+
     # Apply renaming if any matches found
     if rename_dict:
         df = df.rename(columns=rename_dict)
-        
+
     return df
 
 

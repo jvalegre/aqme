@@ -118,6 +118,7 @@ from aqme.qdescp_utils import (
     collect_descp_lists,
     get_boltz_props_nmr,
     fix_cols_names,
+    check_duplicate_smiles_columns,
     dict_to_json,
     full_level_boltz,
     get_mols_qdescp,
@@ -771,6 +772,10 @@ class qdescp:
 
     def _read_qdescp_csv(self):
         """Read and validate the CSV used to generate QDESCP conformers."""
+        try:
+            check_duplicate_smiles_columns(self.args.csv_name)
+        except ValueError as exc:
+            self._error_exit(str(exc))
         df_qdescp = fix_cols_names(pd.read_csv(self.args.csv_name))
         if 'code_name' not in df_qdescp.columns or 'SMILES' not in df_qdescp.columns:
             self._error_exit(
@@ -1245,7 +1250,7 @@ class qdescp:
         """
         input_df = pd.read_csv(self.args.csv_name)
         input_df = fix_cols_names(input_df)
-        
+
         if 'code_name' not in input_df.columns:
             self.args.log.write(
                 f"\nx  The input csv_name provided ({self.args.csv_name}) does not contain "

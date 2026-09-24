@@ -375,8 +375,8 @@ def test_cmin_ts_report_marks_negative_frequency_and_top_atoms(monkeypatch):
 # stationary point with exactly one imaginary frequency, dominated by the
 # motion of the central carbon; target="minima" must show no imaginary
 # frequencies at all.
-def test_cmin_sn2_ts_has_single_imaginary_frequency_dominated_by_carbon():
-    os.chdir(cmin_ts_dir)
+def test_cmin_sn2_ts_has_single_imaginary_frequency_dominated_by_carbon(monkeypatch):
+    monkeypatch.chdir(cmin_ts_dir)
     sdf_path = _repo_path("tests", "cmin_TS", "mol_1.sdf")
 
     cmin(
@@ -403,11 +403,10 @@ def test_cmin_sn2_ts_has_single_imaginary_frequency_dominated_by_carbon():
     assert "(C)" in first_atom_line
 
     shutil.rmtree(_repo_path("tests", "cmin_TS", "CMIN_ts"), ignore_errors=True)
-    os.chdir(w_dir_main)
 
 
-def test_cmin_sn2_minima_has_no_imaginary_frequencies():
-    os.chdir(cmin_ts_dir)
+def test_cmin_sn2_minima_has_no_imaginary_frequencies(monkeypatch):
+    monkeypatch.chdir(cmin_ts_dir)
     sdf_path = _repo_path("tests", "cmin_TS", "mol_1.sdf")
 
     cmin(
@@ -427,7 +426,6 @@ def test_cmin_sn2_minima_has_no_imaginary_frequencies():
     assert "Imaginary frequency:" not in report
 
     shutil.rmtree(_repo_path("tests", "cmin_TS", "CMIN_minima"), ignore_errors=True)
-    os.chdir(w_dir_main)
 
 
 # tests of basic QME optimizations (xtb, mace, aimnet2)

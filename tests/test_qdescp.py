@@ -76,6 +76,32 @@ def test_qdescp_rejects_repeated_atom_map_number(tmp_path):
     assert "appears multiple times" in "".join(log.messages)
 
 
+@pytest.mark.parametrize(
+    "header",
+    [
+        ("SMILES,SMILES,code_name"),  # exact duplicate column name
+        ("SMILES,smiles,code_name"),  # same name, different case
+    ],
+)
+def test_qdescp_rejects_duplicate_smiles_columns(tmp_path, header):
+    """Two SMILES columns (exact duplicate or differing only in case) must
+    stop the run with a clear message instead of silently corrupting the
+    SMILES column used downstream.
+    """
+    csv_path = tmp_path / "duplicate_smiles.csv"
+    csv_path.write_text(f"{header}\nC,CC,mol_1\n", encoding="utf-8")
+
+    processor = qdescp.__new__(qdescp)
+    log = CaptureLog()
+    processor.args = SimpleNamespace(csv_name=str(csv_path), log=log)
+
+    with pytest.raises(SystemExit):
+        processor._read_qdescp_csv()
+
+    messages = "".join(log.messages)
+    assert "Se han detectado dos columnas SMILES" in messages
+
+
 def test_qdescp_mapped_atoms_keep_partial_charge_order():
     test_dir = qdescp_empty_dir / "mapped_charge_order"
     if test_dir.exists():

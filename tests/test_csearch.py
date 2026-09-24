@@ -1487,8 +1487,8 @@ def test_rdkit_aggregate_mol_uses_interfragment_constraints():
 # CSV-driven CSEARCH run for an SN2 transition-state aggregate (Cl- + CH3Br):
 # checks that --constraints_dist is honored within a 0.2 A tolerance for all
 # three constrained pairs (C-Br, C-Cl, and the Br...Cl through-space distance).
-def test_csearch_csv_sn2_ts_constraints_within_tolerance():
-    os.chdir(csearch_sn2_ts_dir)
+def test_csearch_csv_sn2_ts_constraints_within_tolerance(monkeypatch):
+    monkeypatch.chdir(csearch_sn2_ts_dir)
     csearch(
         input="test.csv",
         constraints_dist=[[1, 2, 2.4], [1, 3, 2.4], [2, 3, 4.8]],
@@ -1526,7 +1526,6 @@ def test_csearch_csv_sn2_ts_constraints_within_tolerance():
 
     del mols
     assert n_checked >= 1
-    os.chdir(w_dir_main)
 
 
 # tests for the metal template validation
