@@ -183,380 +183,277 @@ def test_qdescp_mapped_atom_charge_is_consistent_between_smiles():
 
 
 # tests for QDESCP-xTB
-@pytest.mark.parametrize(
-    "file",
-    [
-        ("test.csv"), # standard test
-        ("test_atom.csv"), # test with qdescp_atoms using an atom
-        ("test_idx.csv"), # test with qdescp_atoms using an atom index mapped
-        ("test_idx_cmd.csv"), # test with qdescp_atoms using an atom index mapped run through command line
-        ("test_group.csv"), # test with qdescp_atoms using a functional group
-        ("test_multigroup.csv"), # test with qdescp_atoms using a multiple atoms and functional groups
-        ("test_mapped_duplicates.csv"), # test duplicate canonical SMILES with different mapped atoms
-        ("test_robert_atom.csv"), # test for the AQME-ROBERT workflow with atomic descriptors
-        ("test_robert_mol.csv") # test for the AQME-ROBERT workflow with NO atomic descriptors
-    ]
-)
+def _run_qdescp_xtb(input_csv, via_cli=False, stale_csearch=False, **qdescp_kwargs):
+    """Reset the QDESCP/CSEARCH folders, run QDESCP-xTB on tests/qdescp_inputs/<input_csv>
+    and return the folders and AQME-ROBERT databases generated."""
+    folder_qdescp = qdescp_input_dir / "QDESCP"
+    folder_csearch = qdescp_input_dir / "CSEARCH"
+    for folder in (folder_qdescp, folder_csearch):
+        if folder.exists():
+            shutil.rmtree(folder)
+    if stale_csearch:
+        folder_csearch.mkdir(parents=True)
+        folder_csearch.joinpath("stale_rdkit.sdf").write_text("stale")
 
-def test_qdescp_xtb(file):
-
-    # reset folder and files
-    folder_qdescp = f'{qdescp_input_dir}/QDESCP'
-    if os.path.exists(folder_qdescp):
-        shutil.rmtree(folder_qdescp)
-    folder_csearch = f'{qdescp_input_dir}/CSEARCH'
-    if os.path.exists(folder_csearch):
-        shutil.rmtree(folder_csearch)
-    if file == 'test_mapped_duplicates.csv':
-        Path(folder_csearch).mkdir(parents=True)
-        Path(folder_csearch).joinpath("stale_rdkit.sdf").write_text("stale")
-    folder_boltz = f'{folder_qdescp}/boltz'
-
-    if file in ['test_multigroup.csv','test_robert_atom.csv','test_robert_mol.csv']:
-        file_qdescp = 'test_atom.csv'
-    elif file in ["test_idx.csv","test_idx_cmd.csv"]:
-        file_qdescp = "test_idx.csv"
-    else:
-        file_qdescp = file
-
-    file_descriptors_interpret = f'{w_dir_main}/AQME-ROBERT_interpret_{file_qdescp}'
-    file_descriptors_full = f'{w_dir_main}/AQME-ROBERT_full_{file_qdescp}'
-    file_descriptors_denovo = f'{w_dir_main}/AQME-ROBERT_denovo_{file_qdescp}'
-    file2_descriptors_interpret = f'{w_dir_main}/QDESCP_interpret_descriptors.csv'
-    file2_descriptors_full = f'{w_dir_main}/QDESCP_full_descriptors.csv'
-    file2_descriptors_denovo = f'{w_dir_main}/QDESCP_denovo_descriptors.csv'
-
-    if os.path.exists(file_descriptors_denovo): 
-        os.remove(file_descriptors_denovo)
-    if os.path.exists(file_descriptors_interpret): 
-        os.remove(file_descriptors_interpret)
-    if os.path.exists(file_descriptors_full): 
-        os.remove(file_descriptors_full)
-
-    # QDESCP-xTB workflow
-    qdescp_kwargs = {
-        "input": f'{qdescp_input_dir.joinpath(file_qdescp)}',
-        "destination": f'{folder_qdescp}',
+    outputs = {
+        level: Path(w_dir_main) / f"AQME-ROBERT_{level}_{input_csv}"
+        for level in ("denovo", "interpret", "full")
     }
+    for path in outputs.values():
+        path.unlink(missing_ok=True)
 
-    if file == 'test_atom.csv':
-        qdescp_kwargs["qdescp_atoms"] = ["P"]
-    
-    elif file == "test_idx.csv":
-        qdescp_kwargs["qdescp_atoms"] = [1]
-
-    elif file == "test_mapped_duplicates.csv":
-        qdescp_kwargs["qdescp_atoms"] = [1]
-        qdescp_kwargs["sample"] = 1
-        qdescp_kwargs["nprocs"] = 1
-
-    elif file == 'test_group.csv':
-        qdescp_kwargs["qdescp_atoms"] = ["C=O"]
-
-    elif file in ['test_multigroup.csv', 'test_robert_atom.csv']:
-        # Pd is included to check the try/except in the SMARTS pattern match,
-        # and to check if the code works even if there are atoms that aren't used
-        qdescp_kwargs["qdescp_atoms"] = ["P","CC","Pd"]
-        if file == 'test_robert_atom.csv':
-            qdescp_kwargs["csv_name"] = f'{qdescp_input_dir}/{file_qdescp}'
-    
-    elif file == 'test_robert_mol.csv':
-        qdescp_kwargs["csv_name"] = f'{qdescp_input_dir}/{file_qdescp}'
-
-    if file != 'test_idx_cmd.csv':
-        qdescp(**qdescp_kwargs)
-    else:
-        cmd_aqme = [
-            "python",
-            "-m",
-            "aqme",
-            "--qdescp",
-            "--input",
-            f'{qdescp_input_dir.joinpath(file_qdescp)}',
-            "--destination",
-            f'{folder_qdescp}',
-            "--qdescp_atoms",
-            '[1]',
-        ]
+    input_path = qdescp_input_dir / input_csv
+    if via_cli:
+        cmd_aqme = ["python", "-m", "aqme", "--qdescp",
+                    "--input", str(input_path), "--destination", str(folder_qdescp)]
+        for key, value in qdescp_kwargs.items():
+            cmd_aqme += [f"--{key}", str(value)]
         subprocess.run(cmd_aqme)
+    else:
+        qdescp(input=str(input_path), destination=str(folder_qdescp), **qdescp_kwargs)
 
-    #TESTING test.csv
-    # 1) check if various parameters are stored correctly from xTB calculations to the generated json files
-    if file == 'test.csv':
-        file_1 = "mol_1_rdkit_conf_1"
-        file_2 = "mol_1_rdkit_conf_2"
-        files_xtb = [file_1, file_2]
-        energies_json, Fermi_lvls_json = [], []
+    for path in outputs.values():
+        assert path.exists(), f"{path.name} was not generated"
 
-        # only two files should remain inside the xtb_data folders
-        xtb_data_path = f'{folder_qdescp}'
-        format_check = ['.json','.xyz']
-        for file_check in [file_1,file_2]:
-            for fmt in format_check:
-                assert os.path.exists(f'{xtb_data_path}/{file_check}{fmt}')
-        assert len(glob.glob(f'{xtb_data_path}/*.json')) == 6 # 2 confs of mol_1 and 4 confs of mol_2
-        assert len(glob.glob(f'{xtb_data_path}/*.xyz')) == 6
-
-        for file_xtb in files_xtb:
-
-            # Build the path for the JSON file (mol_1_rdkit_conf_1.json and mol_1_rdkit_conf_2.json)
-            json_file_path = f'{folder_qdescp}/{file_xtb}.json'
-
-            # Get data from the generated JSON files (mol_1_rdkit_conf_1.json and mol_1_rdkit_conf_2.json)
-            json_data = read_json(json_file_path)
-            energy_json = json_data["total energy"]
-            fermi_json = json_data["Fermi-level"]
-
-            energies_json.append(energy_json)
-            Fermi_lvls_json.append(fermi_json)
-
-        # Compare energies, Fermi level and IP values
-        energies_target = [-13.66512757,-13.66416741]
-        Fermi_lvls_target = [-4.5152,-4.3637]
-
-        for i, _ in enumerate(energies_target):
-            assert round(energies_target[i],3) == round(energies_json[i], 3), \
-                f"Energy mismatch at index {i}: Target = {round(energies_target[i],3)}, JSON = {round(energies_json[i],3)}"
-            assert round(Fermi_lvls_target[i],1) == round(Fermi_lvls_json[i], 1), \
-                f"Fermi level mismatch at index {i}: Target = {round(Fermi_lvls_target[i],1)}, JSON = {round(Fermi_lvls_json[i],1)}"
-        # 2) Calculate Boltzmann-averages
-        # Calculate relative energies
-        energ = [number - min(energies_json) for number in energies_json]
-
-        # Calculate Boltzmann sum 
-        boltz_sum = 0.0
-        for e in energ:
-            boltz_term = math.exp(-e * J_TO_AU / GAS_CONSTANT / T)
-            boltz_sum += boltz_term
-
-        # Calculate weights
-        weights = []
-        for e in energ:
-            weight = math.exp(-e * J_TO_AU / GAS_CONSTANT / T) / boltz_sum
-            weights.append(weight)
-
-        # Calculate Boltzmann-averaged energy
-        energy_boltz_calc = 0.0
-        for i, p in enumerate(energies_json):
-            energy_boltz_calc += p * weights[i]
-
-        # Calculate Boltzmann-averaged Fermi level
-        Fermi_lvl_boltz_calc = 0.0
-        for i, p in enumerate(Fermi_lvls_json):
-            Fermi_lvl_boltz_calc += p * weights[i]
-
-        # Retrieve Boltzmann-averaged values from the JSON file
-        json_data = read_json(f'{folder_boltz}/mol_1_boltz.json')
-        Fermi_lvl_boltz_file = json_data["Fermi-level"]
-
-        assert round(Fermi_lvl_boltz_calc, 1) == round(Fermi_lvl_boltz_file, 1), \
-            f"Fermi level mismatch: calculated {Fermi_lvl_boltz_calc} vs file {Fermi_lvl_boltz_file}"
-        
-        # 3) checking csv file
-        # retrieve Boltzman avg values and RDKit descriptors from the generated csv file
-        pd_boltz_interpret = pd.read_csv(file_descriptors_interpret)
-        Fermi_lvl_boltz_csv = pd_boltz_interpret["Fermi-level"][0]
-
-        assert round(Fermi_lvl_boltz_calc,1) == round(Fermi_lvl_boltz_csv,1), \
-            f"Fermi level mismatch: calculated {Fermi_lvl_boltz_calc} vs file {Fermi_lvl_boltz_csv} from CSV"
-        assert round(pd_boltz_interpret["HOMO"][0],1) == -11.4
-        assert round(pd_boltz_interpret["HOMO"][1],1)== -11.3
-
-        pd_boltz_full = pd.read_csv(file_descriptors_full)
-        assert pd_boltz_full["NumRotatableBonds"][0] == 3
-        assert pd_boltz_full["NumRotatableBonds"][1] == 4
-
-    #Checking test_atom.csv,test_group.csv, test_multigroup.csv and test_robert_atom.csv
-    elif file in ['test_atom.csv','test_group.csv','test_multigroup.csv','test_robert_atom.csv']:
-        pd_boltz_interpret = pd.read_csv(file_descriptors_interpret)
-
-        # mol_1 is methane and it doesn't have any P/O atoms or CC/C=O groups so atomic descriptors shouldn't appear
-        assert os.path.exists(f'{folder_qdescp}/mol_1_rdkit_conf_1.json') # check if exist 
-        assert os.path.exists(f'{folder_boltz}/mol_1_boltz.json') # check if exist
-        assert len(pd_boltz_interpret["HOMO"]) == 4
-        
-        count_nan = 0 # dirty hack that account for different sortings of the calcs within the CSV files
-        for val in pd_boltz_interpret["HOMO"]:
-            if str(val).lower() == 'nan':
-                count_nan += 1
-        assert count_nan == 0
-
-        if file == 'test_group.csv':
-            assert len(pd_boltz_interpret["C=O_C_Atom FOD"]) == 4
-            count_nan = 0 # dirty hack that account for different sortings of the calcs within the CSV files
-            for val in pd_boltz_interpret["C=O_C_Atom FOD"]:
-                if str(val).lower() == 'nan':
-                    count_nan += 1
-            assert count_nan == 1
-        else:
-            # from xTB
-            assert len(pd_boltz_interpret["P_Atom FOD"]) == 4
-            count_nan = 0 # dirty hack that account for different sortings of the calcs within the CSV files
-            for val in pd_boltz_interpret["P_Atom FOD"]:
-                if str(val).lower() == 'nan':
-                    count_nan += 1
-            assert count_nan == 1
-
-            # from MORFEUS
-            assert len(pd_boltz_interpret["P_Buried volume"]) == 4
-            count_nan = 0 # dirty hack that account for different sortings of the calcs within the CSV files
-            for val in pd_boltz_interpret["P_Buried volume"]:
-                if str(val).lower() == 'nan':
-                    count_nan += 1
-            assert count_nan == 1
-
-        # check variables and X_ prefixes in variable names
-        if file in ['test_atom.csv','test_multigroup.csv','test_robert_atom.csv']:
-            assert 'P_Electrophil.' in pd_boltz_interpret
-            
-            if file == 'test_atom.csv':
-                assert round(pd_boltz_interpret["HOMO"][0],1) == -13.1
-
-            if file == 'test_robert_atom.csv':
-                assert 'Name' not in pd_boltz_interpret
-
-        elif file == 'test_group.csv':
-            assert 'C=O_C_Partial charge' in pd_boltz_interpret
-            assert 'C=O_O_Partial charge' in pd_boltz_interpret
+    return SimpleNamespace(
+        qdescp=folder_qdescp,
+        csearch=folder_csearch,
+        boltz=folder_qdescp / "boltz",
+        input_cols=len(pd.read_csv(input_path).columns),
+        **outputs,
+    )
 
 
-    elif file in ['test_idx.csv','test_idx_cmd.csv']:
-        pd_boltz_interpret = pd.read_csv(file_descriptors_interpret)
-        assert 'Atom_1_C_Partial charge' in pd_boltz_interpret
-        assert round(pd_boltz_interpret['Atom_1_C_Partial charge'][1],1) == -0.1
+def _expected_descriptors(atom_prefix="P_"):
+    """Molecular and atomic (with SMARTS prefix) descriptors expected at each level."""
+    mol = {"denovo": denovo_descriptors["mol"]}
+    mol["interpret"] = mol["denovo"] + interpret_descriptors["mol"]
+    mol["full"] = mol["interpret"] + full_descriptors["mol"]
 
-    elif file == 'test_mapped_duplicates.csv':
-        source_smiles = "[CH3:1]CC"
-        alias_smiles = "C[CH2:1]C"
-        source_metadata = smiles_metadata_for_csearch(source_smiles)
-        alias_metadata = smiles_metadata_for_csearch(alias_smiles)
-        source_file = Path(folder_csearch).joinpath("mol_a_rdkit.sdf")
-        alias_file = Path(folder_csearch).joinpath("mol_b_rdkit.sdf")
-        stale_file = Path(folder_csearch).joinpath("stale_rdkit.sdf")
-        pd_boltz_interpret = pd.read_csv(file_descriptors_interpret)
-        mapped_df = pd_boltz_interpret.set_index("code_name")
+    atoms = {"denovo": denovo_descriptors["atoms"]}
+    atoms["interpret"] = atoms["denovo"] + interpret_descriptors["atoms"]
+    atoms["full"] = atoms["interpret"] + full_descriptors["atoms"]
+    atoms = {level: [f"{atom_prefix}{d}" for d in descps] for level, descps in atoms.items()}
+    return mol, atoms
 
-        assert not stale_file.exists()
-        assert source_file.exists()
-        assert alias_file.exists()
-        assert get_sdf_property(source_file, "SMILES_INPUT") == source_smiles
-        assert get_sdf_property(source_file, "AQME_ATOM_MAP") == source_metadata["atom_map"]
-        assert get_sdf_property(alias_file, "SMILES_INPUT") == alias_smiles
-        assert get_sdf_property(alias_file, "AQME_ATOM_MAP") == alias_metadata["atom_map"]
-        assert get_sdf_property(alias_file, "AQME_ATOM_MAP") != source_metadata["atom_map"]
-        assert len(pd_boltz_interpret["code_name"]) == 2
-        assert not pd.isna(mapped_df.loc["mol_a", "Atom_1_C_Partial charge"])
-        assert not pd.isna(mapped_df.loc["mol_b", "Atom_1_C_Partial charge"])
 
-    # Checking molecular and atomic descriptors
-    def check_descriptors(pd_boltz, descriptors, excluded_descriptors, desc_type, file_test):
-        """
-        Function to check the presence and absence of descriptors in the DataFrame.
-        pd_boltz: Pandas DataFrame with the calculated descriptors.
-        descriptors: List of descriptors that should be present.
-        excluded_descriptors: List of descriptors that should not be present.
-        desc_type: Type of descriptors ('mol' or 'atoms') for printing in messages.
-        """
-        # Check for the presence of descriptors
-        for descp in descriptors:
-            for i,val in enumerate(pd_boltz[descp]):
-                if file_test in ['test.csv','test_robert_mol.csv']:
-                    assert str(val).lower() != 'nan'
-                elif file_test == 'test_robert_atom.csv':
-                    if descp in ['P_Partial charge','P_Buried volume','P_H bond H2O']:
-                        if i == 0:
-                            assert str(val).lower() == 'nan'
-                        else:
-                            assert str(val).lower() != 'nan'
-                assert descp in pd_boltz.columns, f"{desc_type.capitalize()} descriptor {descp} is missing from columns!"
+def _check_levels(run, expected, desc_type, require_values=False, first_row_nan=()):
+    """Each level must contain its descriptors and none of the higher-level ones.
 
-        # Check for the absence of descriptors that should not be present
-        for descp in excluded_descriptors:
-            assert descp not in pd_boltz.columns, f"{desc_type.capitalize()} descriptor {descp} should not be present in columns!"
+    require_values: every value of the expected descriptors must be filled.
+    first_row_nan: descriptors that must be NaN for the first molecule only.
+    """
+    for level in ("denovo", "interpret", "full"):
+        df = pd.read_csv(getattr(run, level))
+        for descp in expected[level]:
+            assert descp in df.columns, f"{desc_type.capitalize()} descriptor {descp} is missing from {level}!"
+            for i, val in enumerate(df[descp]):
+                if require_values or (descp in first_row_nan and i > 0):
+                    assert not pd.isna(val), f"{descp} is empty in row {i} of {level}"
+                elif descp in first_row_nan:
+                    assert pd.isna(val), f"{descp} should be empty in row {i} of {level}"
+        for descp in expected["full"]:
+            if descp not in expected[level]:
+                assert descp not in df.columns, f"{desc_type.capitalize()} descriptor {descp} should not be in {level}!"
 
-    # Checking molecular descriptors
-    descp_denovo_mol = denovo_descriptors['mol'] 
-    descp_denovo_atoms = denovo_descriptors['atoms']
 
-    descp_interpret_mol = descp_denovo_mol + interpret_descriptors['mol']
-    descp_interpret_atoms = descp_denovo_atoms + interpret_descriptors['atoms']
+def _check_methane_without_targets(run, target_columns):
+    """test_atom.csv/test_group.csv contain 4 molecules and mol_1 (methane) has none of
+    the targeted atoms/groups, so only its atomic descriptors must be empty."""
+    assert (run.qdescp / "mol_1_rdkit_conf_1.json").exists()
+    assert (run.boltz / "mol_1_boltz.json").exists()
 
-    descp_full_mol = descp_interpret_mol + full_descriptors['mol']
-    descp_full_atoms = descp_interpret_atoms + full_descriptors['atoms']
+    df = pd.read_csv(run.interpret)
+    assert len(df["HOMO"]) == 4
+    assert df["HOMO"].isna().sum() == 0
+    for col in target_columns:
+        assert len(df[col]) == 4
+        assert df[col].isna().sum() == 1, f"{col} should only be empty for methane"
+    return df
 
-    # add P_ prefix for SMARTS pattern
-    descp_denovo_atoms = [f'P_{descp}' for descp in descp_denovo_atoms]
-    descp_interpret_atoms = [f'P_{descp}' for descp in descp_interpret_atoms]
-    descp_full_atoms = [f'P_{descp}' for descp in descp_full_atoms]
 
-    # Read the CSV files
-    pd_boltz_denovo = pd.read_csv(file_descriptors_denovo)
-    pd_boltz_interpret = pd.read_csv(file_descriptors_interpret)
-    pd_boltz_full = pd.read_csv(file_descriptors_full)
+def _check_atom_index(run):
+    df = pd.read_csv(run.interpret)
+    assert 'Atom_1_C_Partial charge' in df
+    assert round(df['Atom_1_C_Partial charge'][1], 1) == -0.1
 
-    # number of columns in the original input CSV (code_name/SMILES plus any
-    # extra columns, e.g. a target column), which denovo/interpret/full must
-    # all preserve on top of the calculated descriptors
-    input_cols = len(pd.read_csv(qdescp_input_dir.joinpath(file_qdescp)).columns)
 
-    # Check molecular and atomic descriptors in the QDESCP_ files
-    if file == 'test.csv':
-        assert 'code_name' in pd_boltz_interpret.columns
-        check_descriptors(pd_boltz_denovo, descp_denovo_mol, [d for d in descp_full_mol if d not in descp_denovo_mol], 'mol', file)
-        check_descriptors(pd_boltz_interpret, descp_interpret_mol, [d for d in descp_full_mol if d not in descp_interpret_mol], 'mol', file)
-        check_descriptors(pd_boltz_full, descp_full_mol, [], 'mol', file)
-        assert len(pd_boltz_denovo.columns) == 11 == len(descp_denovo_mol)+input_cols # descps + input CSV columns (code_name and SMILES)
-        assert len(pd_boltz_interpret.columns) == 23 == len(descp_interpret_mol)+input_cols
-        assert len(pd_boltz_full.columns) == 240 # this might change in future RDKit versions
+def _check_robert_outputs(run):
+    """AQME-ROBERT databases start with code_name/SMILES and the raw QDESCP files are removed."""
+    for level in ("denovo", "interpret", "full"):
+        df = pd.read_csv(getattr(run, level))
+        assert sorted(df.columns[:2].tolist(), key=str.lower) == ['code_name', 'SMILES']
+        assert not (run.qdescp / "raw_data" / f"QDESCP_{level}_descriptors.csv").exists()
 
-        # check whether the QDESCP original and raw files were moved to the raw_csv_databases folder
-        for file_csv in [file_descriptors_denovo, file_descriptors_interpret,file_descriptors_full]:
-            raw_csv = f'{folder_qdescp}/raw_data/{os.path.basename(file_csv)}'
-            assert os.path.exists(raw_csv)
-            raw_df = pd.read_csv(raw_csv)
-            assert 'code_name' in raw_df.columns
-            for raw_atom_val in ["Partial charge", "Electrophil.", "Normaliz. nucleophil.", "Fukui+", "Atom SASA", "Buried volume", "H bond H2O"]:
-                assert str(raw_df[raw_atom_val][0])[0] == '['
-            if file_csv in [file_descriptors_interpret,file_descriptors_full]:
-                for raw_atom_val in ["Atom FOD", "Coord. numbers",
-                      "Atom Polarizability", "Atom dispersion", "Pyramidalization", "Pyramidaliz. volume"]:
-                    assert str(raw_df[raw_atom_val][0])[0] == '['
 
-    # Check molecular and atomic descriptors in the AQME-ROBERT files
-    elif file in ['test_robert_mol.csv','test_robert_atom.csv']:
-        assert 'SMILES' in pd_boltz_interpret.columns
-        # molecular descriptors must be in both cases
-        check_descriptors(pd_boltz_denovo, descp_denovo_mol, [d for d in descp_full_mol if d not in descp_denovo_mol], 'mol', file)
-        check_descriptors(pd_boltz_interpret, descp_interpret_mol, [d for d in descp_full_mol if d not in descp_interpret_mol], 'mol', file)
-        check_descriptors(pd_boltz_full, descp_full_mol, [], 'mol', file)
+def test_qdescp_xtb_standard():
+    run = _run_qdescp_xtb("test.csv")
 
-        # atomic descriptors must be here
-        if file == 'test_robert_atom.csv':
-            check_descriptors(pd_boltz_denovo, descp_denovo_atoms, [d for d in descp_full_atoms if d not in descp_denovo_atoms], 'atoms', file)
-            check_descriptors(pd_boltz_interpret, descp_interpret_atoms, [d for d in descp_full_atoms if d not in descp_interpret_atoms], 'atoms', file)
-            check_descriptors(pd_boltz_full, descp_full_atoms, [], 'atoms', file)
-            assert sorted(pd_boltz_denovo.columns[:2].tolist(), key=str.lower) == ['code_name','SMILES']
-            assert len(pd_boltz_denovo.columns) == 20 == len(descp_denovo_mol)+len(descp_denovo_atoms)+input_cols # input CSV columns: SMILES and code_name
-            assert sorted(pd_boltz_interpret.columns[:2].tolist(), key=str.lower) == ['code_name','SMILES']
-            assert len(pd_boltz_interpret.columns) == 41 == len(descp_interpret_mol)+len(descp_interpret_atoms)+input_cols
-            assert sorted(pd_boltz_full.columns[:2].tolist(), key=str.lower) == ['code_name','SMILES']
-            assert len(pd_boltz_full.columns) == 258 # bunch of RDKit descps
+    # 1) xTB parameters are stored correctly in the JSON files
+    # 2 confs of mol_1 and 4 confs of mol_2
+    assert len(glob.glob(f'{run.qdescp}/*.json')) == 6
+    assert len(glob.glob(f'{run.qdescp}/*.xyz')) == 6
 
-        # atomic descriptors must not be here
-        elif file == 'test_robert_mol.csv':
-            assert sorted(pd_boltz_denovo.columns[:2].tolist(), key=str.lower) == ['code_name','SMILES']
-            assert len(pd_boltz_denovo.columns) == 11 == len(descp_denovo_mol)+input_cols # input CSV columns: SMILES and code_name
-            assert sorted(pd_boltz_interpret.columns[:2].tolist(), key=str.lower) == ['code_name','SMILES']
-            assert len(pd_boltz_interpret.columns) == 23 == len(descp_interpret_mol)+input_cols
-            assert sorted(pd_boltz_full.columns[:2].tolist(), key=str.lower) == ['code_name','SMILES']
-            assert len(pd_boltz_full.columns) == 240 # this might change in future RDKit versions
+    energies_json, fermi_lvls_json = [], []
+    for conf in ("mol_1_rdkit_conf_1", "mol_1_rdkit_conf_2"):
+        assert (run.qdescp / f"{conf}.xyz").exists()
+        json_data = read_json(run.qdescp / f"{conf}.json")
+        energies_json.append(json_data["total energy"])
+        fermi_lvls_json.append(json_data["Fermi-level"])
 
-        # check whether the QDESCP original and raw files were deleted
-        for file_csv in [file_descriptors_denovo, file_descriptors_interpret,file_descriptors_full]:
-            assert os.path.exists(file_csv)
-        for file_csv2 in [file2_descriptors_denovo, file2_descriptors_interpret, file2_descriptors_full]:
-            raw_csv = f'{folder_qdescp}/raw_data/{os.path.basename(file_csv2)}'
-            assert not os.path.exists(raw_csv)
+    energies_target = [-13.66512757, -13.66416741]
+    fermi_lvls_target = [-4.5152, -4.3637]
+    for i, _ in enumerate(energies_target):
+        assert round(energies_target[i], 3) == round(energies_json[i], 3), \
+            f"Energy mismatch at index {i}: Target = {round(energies_target[i],3)}, JSON = {round(energies_json[i],3)}"
+        assert round(fermi_lvls_target[i], 1) == round(fermi_lvls_json[i], 1), \
+            f"Fermi level mismatch at index {i}: Target = {round(fermi_lvls_target[i],1)}, JSON = {round(fermi_lvls_json[i],1)}"
+
+    # 2) Boltzmann-averaged Fermi level matches the boltz JSON and the CSV
+    boltz_terms = [
+        math.exp(-(e - min(energies_json)) * J_TO_AU / GAS_CONSTANT / T)
+        for e in energies_json
+    ]
+    fermi_lvl_boltz_calc = sum(
+        fermi * term / sum(boltz_terms) for fermi, term in zip(fermi_lvls_json, boltz_terms)
+    )
+    fermi_lvl_boltz_file = read_json(run.boltz / "mol_1_boltz.json")["Fermi-level"]
+    assert round(fermi_lvl_boltz_calc, 1) == round(fermi_lvl_boltz_file, 1), \
+        f"Fermi level mismatch: calculated {fermi_lvl_boltz_calc} vs file {fermi_lvl_boltz_file}"
+
+    # 3) CSV databases
+    pd_boltz_interpret = pd.read_csv(run.interpret)
+    assert round(fermi_lvl_boltz_calc, 1) == round(pd_boltz_interpret["Fermi-level"][0], 1)
+    assert round(pd_boltz_interpret["HOMO"][0], 1) == -11.4
+    assert round(pd_boltz_interpret["HOMO"][1], 1) == -11.3
+    assert 'code_name' in pd_boltz_interpret.columns
+
+    pd_boltz_full = pd.read_csv(run.full)
+    assert pd_boltz_full["NumRotatableBonds"][0] == 3
+    assert pd_boltz_full["NumRotatableBonds"][1] == 4
+
+    mol, _ = _expected_descriptors()
+    _check_levels(run, mol, 'mol', require_values=True)
+    assert len(pd.read_csv(run.denovo).columns) == 11 == len(mol["denovo"]) + run.input_cols
+    assert len(pd_boltz_interpret.columns) == 23 == len(mol["interpret"]) + run.input_cols
+    assert len(pd_boltz_full.columns) == 240 # this might change in future RDKit versions
+
+    # 4) raw databases (with atomic lists) are stored in the raw_data folder
+    for level in ("denovo", "interpret", "full"):
+        raw_csv = run.qdescp / "raw_data" / getattr(run, level).name
+        assert raw_csv.exists()
+        raw_df = pd.read_csv(raw_csv)
+        assert 'code_name' in raw_df.columns
+        raw_atom_vals = ["Partial charge", "Electrophil.", "Normaliz. nucleophil.", "Fukui+",
+                         "Atom SASA", "Buried volume", "H bond H2O"]
+        if level != "denovo":
+            raw_atom_vals += ["Atom FOD", "Coord. numbers", "Atom Polarizability",
+                              "Atom dispersion", "Pyramidalization", "Pyramidaliz. volume"]
+        for raw_atom_val in raw_atom_vals:
+            assert str(raw_df[raw_atom_val][0])[0] == '['
+
+
+def test_qdescp_xtb_atom():
+    run = _run_qdescp_xtb("test_atom.csv", qdescp_atoms=["P"])
+
+    df = _check_methane_without_targets(run, ["P_Atom FOD", "P_Buried volume"])
+    assert 'P_Electrophil.' in df
+    assert round(df["HOMO"][0], 1) == -13.1
+
+
+def test_qdescp_xtb_atom_index():
+    run = _run_qdescp_xtb("test_idx.csv", qdescp_atoms=[1])
+    _check_atom_index(run)
+
+
+def test_qdescp_xtb_atom_index_command_line():
+    run = _run_qdescp_xtb("test_idx.csv", via_cli=True, qdescp_atoms=[1])
+    _check_atom_index(run)
+
+
+def test_qdescp_xtb_group():
+    run = _run_qdescp_xtb("test_group.csv", qdescp_atoms=["C=O"])
+
+    df = _check_methane_without_targets(run, ["C=O_C_Atom FOD"])
+    assert 'C=O_C_Partial charge' in df
+    assert 'C=O_O_Partial charge' in df
+
+
+def test_qdescp_xtb_multigroup():
+    # Pd is included to check the try/except in the SMARTS pattern match,
+    # and to check if the code works even if there are atoms that aren't used
+    run = _run_qdescp_xtb("test_atom.csv", qdescp_atoms=["P", "CC", "Pd"])
+
+    df = _check_methane_without_targets(run, ["P_Atom FOD", "P_Buried volume"])
+    assert 'P_Electrophil.' in df
+
+
+def test_qdescp_xtb_mapped_duplicates():
+    # duplicate canonical SMILES with different mapped atoms
+    run = _run_qdescp_xtb(
+        "test_mapped_duplicates.csv", stale_csearch=True,
+        qdescp_atoms=[1], sample=1, nprocs=1,
+    )
+
+    source_smiles = "[CH3:1]CC"
+    alias_smiles = "C[CH2:1]C"
+    source_metadata = smiles_metadata_for_csearch(source_smiles)
+    alias_metadata = smiles_metadata_for_csearch(alias_smiles)
+    source_file = run.csearch / "mol_a_rdkit.sdf"
+    alias_file = run.csearch / "mol_b_rdkit.sdf"
+
+    assert not (run.csearch / "stale_rdkit.sdf").exists()
+    assert source_file.exists()
+    assert alias_file.exists()
+    assert get_sdf_property(source_file, "SMILES_INPUT") == source_smiles
+    assert get_sdf_property(source_file, "AQME_ATOM_MAP") == source_metadata["atom_map"]
+    assert get_sdf_property(alias_file, "SMILES_INPUT") == alias_smiles
+    assert get_sdf_property(alias_file, "AQME_ATOM_MAP") == alias_metadata["atom_map"]
+    assert get_sdf_property(alias_file, "AQME_ATOM_MAP") != source_metadata["atom_map"]
+
+    pd_boltz_interpret = pd.read_csv(run.interpret)
+    mapped_df = pd_boltz_interpret.set_index("code_name")
+    assert len(pd_boltz_interpret["code_name"]) == 2
+    assert not pd.isna(mapped_df.loc["mol_a", "Atom_1_C_Partial charge"])
+    assert not pd.isna(mapped_df.loc["mol_b", "Atom_1_C_Partial charge"])
+
+
+def test_qdescp_xtb_robert_atom():
+    # AQME-ROBERT workflow with atomic descriptors
+    run = _run_qdescp_xtb(
+        "test_atom.csv", qdescp_atoms=["P", "CC", "Pd"],
+        csv_name=str(qdescp_input_dir / "test_atom.csv"),
+    )
+
+    df = _check_methane_without_targets(run, ["P_Atom FOD", "P_Buried volume"])
+    assert 'P_Electrophil.' in df
+    assert 'Name' not in df
+    assert 'SMILES' in df.columns
+
+    mol, atoms = _expected_descriptors()
+    _check_levels(run, mol, 'mol')
+    _check_levels(run, atoms, 'atoms',
+                  first_row_nan=('P_Partial charge', 'P_Buried volume', 'P_H bond H2O'))
+    _check_robert_outputs(run)
+
+    assert len(pd.read_csv(run.denovo).columns) == 20 == len(mol["denovo"]) + len(atoms["denovo"]) + run.input_cols
+    assert len(df.columns) == 41 == len(mol["interpret"]) + len(atoms["interpret"]) + run.input_cols
+    assert len(pd.read_csv(run.full).columns) == 258 # bunch of RDKit descps
+
+
+def test_qdescp_xtb_robert_mol():
+    # AQME-ROBERT workflow with NO atomic descriptors
+    run = _run_qdescp_xtb("test_atom.csv", csv_name=str(qdescp_input_dir / "test_atom.csv"))
+
+    assert 'SMILES' in pd.read_csv(run.interpret).columns
+
+    mol, _ = _expected_descriptors()
+    _check_levels(run, mol, 'mol', require_values=True)
+    _check_robert_outputs(run)
+
+    assert len(pd.read_csv(run.denovo).columns) == 11 == len(mol["denovo"]) + run.input_cols
+    assert len(pd.read_csv(run.interpret).columns) == 23 == len(mol["interpret"]) + run.input_cols
+    assert len(pd.read_csv(run.full).columns) == 240 # this might change in future RDKit versions
 
 
 def test_qdescp_extra_column():
