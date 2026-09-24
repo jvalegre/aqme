@@ -98,10 +98,9 @@ EV_TO_KCAL = 23.0609  # 1 eV = 23.0609 kcal/mol
 
 @functools.lru_cache(maxsize=1)
 def _spawn_is_safe():
-    """Whether "spawn"/"forkserver" can start a process pool without re-running the caller.
+    """Whether "spawn" can start a process pool without re-running the caller.
 
-    Both start methods re-import the caller's main script in every worker
-    ("spawn" on Windows, "forkserver" on Linux/macOS), so it is only safe when that script
+    "spawn" re-imports the caller's main script in every worker, so it is only safe when that script
     guards its code with ``if __name__ == "__main__":``; otherwise each worker
     would redo the whole calculation. Interactive sessions/notebooks have no
     main file to re-import, so they are always safe. Cached because this only
@@ -822,18 +821,12 @@ class cmin:
         # tblite is not thread-safe within a single process (hence
         # _tblite_lock, which fully serialises the ThreadPoolExecutor below).
         # Separate OS processes don't share that state, so real parallelism
-        # for tblite requires a ProcessPoolExecutor. "fork" is never used: a
-        # process that already ran tblite has live OpenMP/BLAS threads, and
-        # forking it can deadlock the workers forever. "forkserver"
-        # (Linux/macOS) forks workers from a clean server process instead,
-        # and "spawn" (Windows) starts them from scratch. Both re-import the
-        # caller's main script in every worker, so processes are only used
-        # when that script guards its code with `if __name__ == "__main__":`.
-        # Everything else keeps using threads.
-        start_method = (
-            "forkserver" if "forkserver" in multiprocessing.get_all_start_methods()
-            else "spawn"
-        )
+        # for tblite requires a ProcessPoolExecutor. "spawn" is used on every
+        # platform: "fork" deadlocks the workers when the process already ran
+        # tblite (live OpenMP/BLAS threads are inherited half-copied). "spawn"
+        # re-imports the caller's main script in every worker, so processes
+        # are only used when that script guards its code with
+        # `if __name__ == "__main__":`. Everything else keeps using threads.
         use_processes = (
             nprocs > 1
             and self.args.program == "tblite"
@@ -848,7 +841,7 @@ class cmin:
                 self.args.log.write(f"\no  FAMEX optimisation [{self.args.program}] ({task[1]})")
 
             executor = concurrent.futures.ProcessPoolExecutor(
-                max_workers=nprocs, mp_context=multiprocessing.get_context(start_method),
+                max_workers=nprocs, mp_context=multiprocessing.get_context("spawn"),
                 initializer=_init_worker_env,
             )
             submit = lambda task: executor.submit(
