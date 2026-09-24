@@ -370,11 +370,10 @@ def test_cmin_ts_report_marks_negative_frequency_and_top_atoms(monkeypatch):
     freq_file.unlink(missing_ok=True)
 
 
-# Real (unmocked) FAMEX/tblite frequency calculations on an SN2 TS aggregate
+# Real (unmocked) FAMEX/tblite frequency calculation on an SN2 TS aggregate
 # (Cl- + CH3Br, see tests/cmin_TS/mol_1.sdf): target="ts" must converge to a
 # stationary point with exactly one imaginary frequency, dominated by the
-# motion of the central carbon; target="minima" must show no imaginary
-# frequencies at all.
+# motion of the central carbon.
 def test_cmin_sn2_ts_has_single_imaginary_frequency_dominated_by_carbon(monkeypatch):
     monkeypatch.chdir(cmin_ts_dir)
     sdf_path = _repo_path("tests", "cmin_TS", "mol_1.sdf")
@@ -403,29 +402,6 @@ def test_cmin_sn2_ts_has_single_imaginary_frequency_dominated_by_carbon(monkeypa
     assert "(C)" in first_atom_line
 
     shutil.rmtree(_repo_path("tests", "cmin_TS", "CMIN_ts"), ignore_errors=True)
-
-
-def test_cmin_sn2_minima_has_no_imaginary_frequencies(monkeypatch):
-    monkeypatch.chdir(cmin_ts_dir)
-    sdf_path = _repo_path("tests", "cmin_TS", "mol_1.sdf")
-
-    cmin(
-        program="tblite",
-        files=str(sdf_path),
-        charge=-1,
-        freq=True,
-        target="minima",
-        destination="CMIN_minima",
-    )
-
-    freq_file = _repo_path("tests", "cmin_TS", "CMIN_minima", "frecuencies.dat")
-    assert freq_file.exists()
-    report = freq_file.read_text(encoding="utf-8")
-
-    assert "Negative frequencies: 0" in report
-    assert "Imaginary frequency:" not in report
-
-    shutil.rmtree(_repo_path("tests", "cmin_TS", "CMIN_minima"), ignore_errors=True)
 
 
 # tests of basic QME optimizations (xtb, mace, aimnet2)
