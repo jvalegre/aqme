@@ -1256,7 +1256,13 @@ class qdescp:
             
         if 'SMILES' not in input_df.columns:
             return None
-            
+
+        # Any column beyond code_name/SMILES (e.g. a target/y column) is kept
+        # in every output level, not just "full"
+        self._input_extra_cols = [
+            c for c in input_df.columns if c not in ('code_name', 'SMILES')
+        ]
+
         df_full["normalized_code_name"] = (
             df_full["code_name"].astype(str)
             .str.replace(r"(_\d+)?_rdkit$", "", regex=True)
@@ -1338,7 +1344,7 @@ class qdescp:
         
         # Save descriptor subsets
         for level in ['denovo', 'interpret']:
-            descriptors = find_level_names(combined_df, level)
+            descriptors = find_level_names(combined_df, level, extra_cols=getattr(self, '_input_extra_cols', None))
             subset_df = combined_df[descriptors]
             subset_df.to_csv(
                 Path(dat_dir).joinpath(os.path.basename(paths[level])),
@@ -1353,9 +1359,9 @@ class qdescp:
             paths (dict): Output file paths
         """
         clean_df.to_csv(paths['full'], index=None, header=True)
-        
+
         for level in ['denovo', 'interpret']:
-            descriptors = find_level_names(clean_df, level)
+            descriptors = find_level_names(clean_df, level, extra_cols=getattr(self, '_input_extra_cols', None))
             subset_df = clean_df[descriptors]
             subset_df.to_csv(paths[level], index=None, header=True)
             

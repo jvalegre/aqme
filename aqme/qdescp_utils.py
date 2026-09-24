@@ -1457,8 +1457,9 @@ def get_descriptors(level: str) -> Dict[str, Dict[str, List[str]]]:
 
 
 def find_level_names(
-    df_level: pd.DataFrame, 
-    level: str
+    df_level: pd.DataFrame,
+    level: str,
+    extra_cols: Optional[List[str]] = None
 ) -> List[str]:
     """
     Select descriptors for different analysis levels.
@@ -1469,18 +1470,26 @@ def find_level_names(
     Args:
         df_level: DataFrame containing molecular descriptors
         level: Analysis level ('denovo' or 'interpret')
+        extra_cols: Additional input CSV columns (e.g. a target/y column) to
+            keep regardless of the descriptor suffix matching, mirroring what
+            the 'full' output already preserves
 
     Returns:
         List of column names to keep for the specified analysis level
 
     Notes:
         - Always includes 'code_name' and 'SMILES' if present
+        - Also includes any column listed in extra_cols if present
         - De novo level includes basic descriptors
         - Interpret level includes both basic and advanced descriptors
         - Matches column suffixes regardless of prefix
     """
     # Essential descriptors always included
     descriptors_denovo = ['code_name', 'SMILES']
+    if extra_cols:
+        descriptors_denovo = descriptors_denovo + [
+            c for c in extra_cols if c not in descriptors_denovo
+        ]
     
     # Get descriptors based on analysis level
     if level == 'denovo':

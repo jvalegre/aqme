@@ -463,10 +463,15 @@ def test_qdescp_xtb(file):
     descp_interpret_atoms = [f'P_{descp}' for descp in descp_interpret_atoms]
     descp_full_atoms = [f'P_{descp}' for descp in descp_full_atoms]
 
-    # Read the CSV files   
+    # Read the CSV files
     pd_boltz_denovo = pd.read_csv(file_descriptors_denovo)
     pd_boltz_interpret = pd.read_csv(file_descriptors_interpret)
     pd_boltz_full = pd.read_csv(file_descriptors_full)
+
+    # number of columns in the original input CSV (code_name/SMILES plus any
+    # extra columns, e.g. a target column), which denovo/interpret/full must
+    # all preserve on top of the calculated descriptors
+    input_cols = len(pd.read_csv(qdescp_input_dir.joinpath(file_qdescp)).columns)
 
     # Check molecular and atomic descriptors in the QDESCP_ files
     if file == 'test.csv':
@@ -474,8 +479,8 @@ def test_qdescp_xtb(file):
         check_descriptors(pd_boltz_denovo, descp_denovo_mol, [d for d in descp_full_mol if d not in descp_denovo_mol], 'mol', file)
         check_descriptors(pd_boltz_interpret, descp_interpret_mol, [d for d in descp_full_mol if d not in descp_interpret_mol], 'mol', file)
         check_descriptors(pd_boltz_full, descp_full_mol, [], 'mol', file)
-        assert len(pd_boltz_denovo.columns) == 11 == len(descp_denovo_mol)+2 # descps + 2 extra: code_name and SMILES
-        assert len(pd_boltz_interpret.columns) == 23 == len(descp_interpret_mol)+2
+        assert len(pd_boltz_denovo.columns) == 11 == len(descp_denovo_mol)+input_cols # descps + input CSV columns (code_name and SMILES)
+        assert len(pd_boltz_interpret.columns) == 23 == len(descp_interpret_mol)+input_cols
         assert len(pd_boltz_full.columns) == 240 # this might change in future RDKit versions
 
         # check whether the QDESCP original and raw files were moved to the raw_csv_databases folder
@@ -505,18 +510,18 @@ def test_qdescp_xtb(file):
             check_descriptors(pd_boltz_interpret, descp_interpret_atoms, [d for d in descp_full_atoms if d not in descp_interpret_atoms], 'atoms', file)
             check_descriptors(pd_boltz_full, descp_full_atoms, [], 'atoms', file)
             assert sorted(pd_boltz_denovo.columns[:2].tolist(), key=str.lower) == ['code_name','SMILES']
-            assert len(pd_boltz_denovo.columns) == 20 == len(descp_denovo_mol)+len(descp_denovo_atoms)+2 # 2 extra: SMILES and code_name
+            assert len(pd_boltz_denovo.columns) == 20 == len(descp_denovo_mol)+len(descp_denovo_atoms)+input_cols # input CSV columns: SMILES and code_name
             assert sorted(pd_boltz_interpret.columns[:2].tolist(), key=str.lower) == ['code_name','SMILES']
-            assert len(pd_boltz_interpret.columns) == 41 == len(descp_interpret_mol)+len(descp_interpret_atoms)+2
+            assert len(pd_boltz_interpret.columns) == 41 == len(descp_interpret_mol)+len(descp_interpret_atoms)+input_cols
             assert sorted(pd_boltz_full.columns[:2].tolist(), key=str.lower) == ['code_name','SMILES']
             assert len(pd_boltz_full.columns) == 258 # bunch of RDKit descps
 
         # atomic descriptors must not be here
         elif file == 'test_robert_mol.csv':
             assert sorted(pd_boltz_denovo.columns[:2].tolist(), key=str.lower) == ['code_name','SMILES']
-            assert len(pd_boltz_denovo.columns) == 11 == len(descp_denovo_mol)+2 # 2 extra: SMILES and code_name
+            assert len(pd_boltz_denovo.columns) == 11 == len(descp_denovo_mol)+input_cols # input CSV columns: SMILES and code_name
             assert sorted(pd_boltz_interpret.columns[:2].tolist(), key=str.lower) == ['code_name','SMILES']
-            assert len(pd_boltz_interpret.columns) == 23 == len(descp_interpret_mol)+2
+            assert len(pd_boltz_interpret.columns) == 23 == len(descp_interpret_mol)+input_cols
             assert sorted(pd_boltz_full.columns[:2].tolist(), key=str.lower) == ['code_name','SMILES']
             assert len(pd_boltz_full.columns) == 240 # this might change in future RDKit versions
 
@@ -526,6 +531,50 @@ def test_qdescp_xtb(file):
         for file_csv2 in [file2_descriptors_denovo, file2_descriptors_interpret, file2_descriptors_full]:
             raw_csv = f'{folder_qdescp}/raw_data/{os.path.basename(file_csv2)}'
             assert not os.path.exists(raw_csv)
+
+
+def test_qdescp_extra_column():
+    """
+    Extra columns in the input CSV besides code_name/SMILES (e.g. a target
+    column used for AQME-ROBERT workflows) must be kept in the full, denovo
+    and interpret output files, not just in full.
+    """
+
+    file = 'test_extra_column.csv'
+    folder_qdescp = f'{qdescp_input_dir}/QDESCP_extra_column'
+    if os.path.exists(folder_qdescp):
+        shutil.rmtree(folder_qdescp)
+
+    file_descriptors_interpret = f'{w_dir_main}/AQME-ROBERT_interpret_{file}'
+    file_descriptors_full = f'{w_dir_main}/AQME-ROBERT_full_{file}'
+    file_descriptors_denovo = f'{w_dir_main}/AQME-ROBERT_denovo_{file}'
+    for file_out in [file_descriptors_denovo, file_descriptors_interpret, file_descriptors_full]:
+        if os.path.exists(file_out):
+            os.remove(file_out)
+
+    # QDESCP-xTB workflow with a methane input CSV that has an extra "my_target" column
+    qdescp(
+        input=f'{qdescp_input_dir}/{file}',
+        destination=f'{folder_qdescp}',
+    )
+
+    input_cols = len(pd.read_csv(f'{qdescp_input_dir}/{file}').columns)
+
+    for path in [file_descriptors_full, file_descriptors_denovo, file_descriptors_interpret]:
+        df = pd.read_csv(path)
+        assert 'code_name' in df.columns
+        assert 'SMILES' in df.columns
+        assert 'my_target' in df.columns, f"my_target column missing from {os.path.basename(path)}"
+        assert df['my_target'][0] == 1.5
+
+    # denovo/interpret must keep exactly descriptors + input CSV columns (code_name, SMILES, my_target)
+    df_denovo = pd.read_csv(file_descriptors_denovo)
+    df_interpret = pd.read_csv(file_descriptors_interpret)
+    descp_denovo_mol = denovo_descriptors['mol']
+    descp_interpret_mol = descp_denovo_mol + interpret_descriptors['mol']
+    assert len(df_denovo.columns) == len(descp_denovo_mol) + input_cols
+    assert len(df_interpret.columns) == len(descp_interpret_mol) + input_cols
+
 
 @pytest.mark.parametrize(
     "test",
@@ -808,7 +857,8 @@ def test_au_csv(
     elif run_test == 2:
         assert round(df_interpret['HOMO'][1],1) == -8.1
 
-    assert len(df_interpret.columns) == 41 == len(descp_interpret_mol)+len(descp_interpret_atoms)+2 # 2 extra: SMILES and code_name
+    input_cols = len(pd.read_csv(f'{qdescp_au_dir}/{file}').columns)
+    assert len(df_interpret.columns) == 41 == len(descp_interpret_mol)+len(descp_interpret_atoms)+input_cols # input CSV columns: SMILES and code_name
 
     # Checking molecular and atomic descriptors
     def check_descriptors_Au(pd_boltz, descriptors, excluded_descriptors, desc_type):
