@@ -100,7 +100,8 @@ EV_TO_KCAL = 23.0609  # 1 eV = 23.0609 kcal/mol
 def _spawn_is_safe():
     """Whether "spawn" can start a process pool without re-running the caller.
 
-    "spawn" re-imports the caller's main script in every worker, so it is only safe when that script
+    "spawn" (used on Windows/macOS, where "fork" is unavailable) re-imports the
+    caller's main script in every worker, so it is only safe when that script
     guards its code with ``if __name__ == "__main__":``; otherwise each worker
     would redo the whole calculation. Interactive sessions/notebooks have no
     main file to re-import, so they are always safe. Cached because this only
@@ -155,7 +156,7 @@ def _build_ase_atoms(mol, charge, mult):
 def _init_worker_env():
     """Pin each ProcessPoolExecutor worker to 1 thread for BLAS/OpenMP libs.
 
-    Without this, every tblite worker would default to using all
+    Without this, every forked tblite worker would default to using all
     available cores, causing oversubscription across ``nprocs`` concurrent
     processes and non-reproducible timing/results.
     """
@@ -821,16 +822,17 @@ class cmin:
         # tblite is not thread-safe within a single process (hence
         # _tblite_lock, which fully serialises the ThreadPoolExecutor below).
         # Separate OS processes don't share that state, so real parallelism
-        # for tblite requires a ProcessPoolExecutor. "spawn" is used on every
-        # platform: "fork" deadlocks the workers when the process already ran
-        # tblite (live OpenMP/BLAS threads are inherited half-copied). "spawn"
-        # re-imports the caller's main script in every worker, so processes
-        # are only used when that script guards its code with
-        # `if __name__ == "__main__":`. Everything else keeps using threads.
+        # for tblite requires a ProcessPoolExecutor. "fork" (Linux/HPC) is
+        # always safe; "spawn" (Windows/macOS) re-imports the caller's main
+        # script in every worker, so it is only used when that script guards
+        # its code with `if __name__ == "__main__":` (_spawn_is_safe() is
+        # never even called on platforms with fork, short-circuited by the
+        # "or" below). Everything else keeps using threads.
+        start_method = "fork" if "fork" in multiprocessing.get_all_start_methods() else "spawn"
         use_processes = (
             nprocs > 1
             and self.args.program == "tblite"
-            and _spawn_is_safe()
+            and (start_method == "fork" or _spawn_is_safe())
         )
 
         if use_processes:
@@ -841,7 +843,7 @@ class cmin:
                 self.args.log.write(f"\no  FAMEX optimisation [{self.args.program}] ({task[1]})")
 
             executor = concurrent.futures.ProcessPoolExecutor(
-                max_workers=nprocs, mp_context=multiprocessing.get_context("spawn"),
+                max_workers=nprocs, mp_context=multiprocessing.get_context(start_method),
                 initializer=_init_worker_env,
             )
             submit = lambda task: executor.submit(
