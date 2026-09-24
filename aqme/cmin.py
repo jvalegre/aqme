@@ -98,10 +98,10 @@ EV_TO_KCAL = 23.0609  # 1 eV = 23.0609 kcal/mol
 
 @functools.lru_cache(maxsize=1)
 def _spawn_is_safe():
-    """Whether "spawn" can start a process pool without re-running the caller.
+    """Whether "spawn"/"forkserver" can start a process pool without re-running the caller.
 
-    "spawn" (used on Windows/macOS, where "fork" is unavailable) re-imports the
-    caller's main script in every worker, so it is only safe when that script
+    Both start methods re-import the caller's main script in every worker
+    ("spawn" on Windows, "forkserver" on Linux/macOS), so it is only safe when that script
     guards its code with ``if __name__ == "__main__":``; otherwise each worker
     would redo the whole calculation. Interactive sessions/notebooks have no
     main file to re-import, so they are always safe. Cached because this only
@@ -156,7 +156,7 @@ def _build_ase_atoms(mol, charge, mult):
 def _init_worker_env():
     """Pin each ProcessPoolExecutor worker to 1 thread for BLAS/OpenMP libs.
 
-    Without this, every forked tblite worker would default to using all
+    Without this, every tblite worker would default to using all
     available cores, causing oversubscription across ``nprocs`` concurrent
     processes and non-reproducible timing/results.
     """
@@ -822,17 +822,22 @@ class cmin:
         # tblite is not thread-safe within a single process (hence
         # _tblite_lock, which fully serialises the ThreadPoolExecutor below).
         # Separate OS processes don't share that state, so real parallelism
-        # for tblite requires a ProcessPoolExecutor. "fork" (Linux/HPC) is
-        # always safe; "spawn" (Windows/macOS) re-imports the caller's main
-        # script in every worker, so it is only used when that script guards
-        # its code with `if __name__ == "__main__":` (_spawn_is_safe() is
-        # never even called on platforms with fork, short-circuited by the
-        # "or" below). Everything else keeps using threads.
-        start_method = "fork" if "fork" in multiprocessing.get_all_start_methods() else "spawn"
+        # for tblite requires a ProcessPoolExecutor. "fork" is never used: a
+        # process that already ran tblite has live OpenMP/BLAS threads, and
+        # forking it can deadlock the workers forever. "forkserver"
+        # (Linux/macOS) forks workers from a clean server process instead,
+        # and "spawn" (Windows) starts them from scratch. Both re-import the
+        # caller's main script in every worker, so processes are only used
+        # when that script guards its code with `if __name__ == "__main__":`.
+        # Everything else keeps using threads.
+        start_method = (
+            "forkserver" if "forkserver" in multiprocessing.get_all_start_methods()
+            else "spawn"
+        )
         use_processes = (
             nprocs > 1
             and self.args.program == "tblite"
-            and (start_method == "fork" or _spawn_is_safe())
+            and _spawn_is_safe()
         )
 
         if use_processes:
