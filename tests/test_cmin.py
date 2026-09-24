@@ -385,6 +385,7 @@ def test_cmin_sn2_ts_has_single_imaginary_frequency_dominated_by_carbon(monkeypa
         freq=True,
         target="ts",
         destination="CMIN_ts",
+        nprocs=4,
     )
 
     freq_file = _repo_path("tests", "cmin_TS", "CMIN_ts", "frecuencies.dat")
