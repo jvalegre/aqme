@@ -115,7 +115,7 @@ def test_command_line_args_geom_opt_disable(monkeypatch):
         coords_initial = mol_initial.GetConformer().GetPositions()
 
     # Run the QDESCP workflow with geometry optimization disabled.
-    qdescp(files=[input_sdf], geom_opt=args.geom_opt, destination=dest_dir)
+    qdescp(files=[input_sdf], geom_opt=args.geom_opt, destination=dest_dir, nprocs=1)
 
     output_sdf = os.path.join(dest_dir, "pentane_rdkit.sdf")
     with Chem.SDMolSupplier(output_sdf, removeHs=False) as supplier:
@@ -141,7 +141,7 @@ def test_command_line_args_geom_opt_enable_changes_coordinates(monkeypatch):
         coords_initial = mol_initial.GetConformer().GetPositions()
 
     # geom_opt defaults to True, so QDESCP must optimize the input geometry.
-    qdescp(files=[input_sdf], geom_opt=args.geom_opt, destination=dest_dir)
+    qdescp(files=[input_sdf], geom_opt=args.geom_opt, destination=dest_dir, nprocs=1)
 
     output_sdf = os.path.join(dest_dir, "pentane_rdkit.sdf")
     with Chem.SDMolSupplier(output_sdf, removeHs=False) as supplier:
