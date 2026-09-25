@@ -67,11 +67,6 @@ jobs:
           pip install pytest-mock
           pip install pytest-timer
           
-          # the format of the codecov report has to be specified or it doesn't create for some reason
-          # python -m pytest -v --cov=aqme --cov-report=xml
-          # tblite/xtb run inside the pytest process: without this, OpenMP (and
-          # OpenBLAS/MKL/torch, which fall back to it) sizes its thread pool from
-          # the host's cores instead of the vCPUs assigned to the container
           export OMP_NUM_THREADS=1
           echo "nproc: $(nproc)"; python -c "import os; print('cpu_count:', os.cpu_count())"
           python -m pytest -v --durations=20 --cov=aqme --cov-report=xml
