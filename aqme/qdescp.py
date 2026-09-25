@@ -108,6 +108,7 @@ from aqme.utils import (
     load_sdf,
     blocking_wrapper,
     nested_call,
+    get_files,
 )
 from aqme.qdescp_utils import (
     assign_prefix_atom_props,
@@ -599,27 +600,56 @@ class qdescp:
         """
         
         valid_input = True
+        qdescp_files = []
+        valid_extensions = ["csv", "sdf", "pdb", "xyz"]
+
         if self.args.files == [] and self.args.input != '':
-            if os.path.basename(self.args.input).split('.')[-1].lower() != "csv":
-                self.args.log.write(f"\nx  The format used ({os.path.basename(self.args.input).split('.')[-1]}) is not compatible with the 'input' option! Formats accepted: csv")
-                valid_input = False
             if self.args.input[0] == '[' or isinstance(self.args.input, list):
                 self.args.log.write(f"\nx  The 'input' option was specified as a list! Please provide only the PATH or name of the CSV (i.e. --input test.csv)")
                 valid_input = False
-            qdescp_files = [self.args.input]
+            # Normalize `input` so it can behave like `files` for structure inputs.
+            qdescp_files = get_files(self.args.input)
         elif self.args.files == []:
-            self.args.log.write(f'\nx  No files were found! Please provide the correct PATH to your input files (i.e. --files "*.sdf")')
+            self.args.log.write(
+                f'\nx  No files were found! Please provide the correct PATH to your input files '
+                f'(i.e. --files "*.sdf")'
+            )
             valid_input = False
         else:
-            if any(Path(file).suffix.lower() not in {".sdf", ".xyz"} for file in self.args.files):
-                self.args.log.write(f"\nx  The format used ({os.path.basename(self.args.files[0]).split('.')[-1]}) is not compatible with the 'files' option! Formats accepted: sdf, xyz")
-                valid_input = False
             qdescp_files = self.args.files
+
+        if valid_input:
+            if len(qdescp_files) == 0:
+                self.args.log.write(
+                    f'\nx  No files were found! Please provide the correct PATH to your input files '
+                    f'(i.e. --files "*.sdf")'
+                )
+                valid_input = False
+            else:
+                file_extensions = {
+                    os.path.basename(file).split('.')[-1].lower()
+                    for file in qdescp_files
+                }
+                if not file_extensions.issubset(valid_extensions):
+                    first_ext = os.path.basename(qdescp_files[0]).split('.')[-1].lower()
+                    self.args.log.write(
+                        f"\nx  The format used ({first_ext}) is not compatible with QDESCP! "
+                        f"Formats accepted: csv, sdf, pdb, xyz"
+                    )
+                    valid_input = False
+                if "csv" in file_extensions and len(qdescp_files) != 1:
+                    self.args.log.write(
+                        f"\nx  The CSV input option accepts a single file only! "
+                        f"Please provide one CSV with code_name and SMILES columns "
+                        f"(i.e. --input test.csv)"
+                    )
+                    valid_input = False
 
         if not valid_input:
             self.args.log.finalize()
             sys.exit()
 
+        self.args.files = qdescp_files
         return qdescp_files
 
     def initial_csearch_run(self, destination, qdescp_files):
