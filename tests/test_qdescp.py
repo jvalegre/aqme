@@ -789,7 +789,7 @@ def test_au_csv(
         assert round(df_interpret['HOMO'][1],1) == -8.1
 
     input_cols = len(pd.read_csv(f'{qdescp_au_dir}/{file}').columns)
-    assert len(df_interpret.columns) == 41 == len(descp_interpret_mol)+len(descp_interpret_atoms)+input_cols # input CSV columns: SMILES and code_name
+    assert len(df_interpret.columns) == 43 == len(descp_interpret_mol)+len(descp_interpret_atoms)+input_cols # input CSV columns: code_name, SMILES, charge and mult
 
     # Checking molecular and atomic descriptors
     def check_descriptors_Au(pd_boltz, descriptors, excluded_descriptors, desc_type):
