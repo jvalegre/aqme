@@ -202,7 +202,7 @@ def _run_qdescp_xtb(input_csv, via_cli=False, stale_csearch=False, **qdescp_kwar
     for path in outputs.values():
         path.unlink(missing_ok=True)
 
-    qdescp_kwargs.setdefault("nprocs", 4)
+    qdescp_kwargs.setdefault("nprocs", 1)
     input_path = qdescp_input_dir / input_csv
     if via_cli:
         cmd_aqme = ["python", "-m", "aqme", "--qdescp",
@@ -480,7 +480,7 @@ def test_qdescp_extra_column():
     qdescp(
         input=f'{qdescp_input_dir}/{file}',
         destination=f'{folder_qdescp}',
-        nprocs=4,
+        nprocs=1,
     )
 
     input_cols = len(pd.read_csv(f'{qdescp_input_dir}/{file}').columns)
@@ -534,7 +534,7 @@ def test_qdescp_missing(
     qdescp(
         files=f'{qdescp_empty_dir}/*.sdf',
         destination=f'{folder_qdescp}',
-        nprocs=4,
+        nprocs=1,
     )
 
     # checking csv file
@@ -585,7 +585,7 @@ def test_qdescp_sdf(
         qdescp(
             files=f'{qdescp_sdf_dir}/*.sdf',
             destination=f'{folder_qdescp}',
-            nprocs=4,
+            nprocs=1,
             qdescp_atoms=['As'],
             charge=-1,
             mult=1,
@@ -600,7 +600,7 @@ def test_qdescp_sdf(
         qdescp(
             files=f'{qdescp_sdf_dir}/*.sdf',
             destination=f'{folder_qdescp}',
-            nprocs=4,
+            nprocs=1,
         )
         name_1 = 'mol1'
         name_2 = 'mol_2'
@@ -636,7 +636,7 @@ def test_qdescp_xyz_auto_charge_mult(tmp_path, monkeypatch):
     qdescp(
         files=xyz_files,
         destination=str(tmp_path / 'QDESCP'),
-        nprocs=4,
+        nprocs=1,
     )
 
     for name in xyz_structures:
@@ -677,7 +677,7 @@ def test_qdescp_csv(
     qdescp(
         input=f'{qdescp_csv_dir}/{file}',
         destination=f'{folder_qdescp}',
-        nprocs=4,
+        nprocs=1,
     )
 
     # checking csv file
@@ -739,7 +739,7 @@ def test_au_csv(
     qdescp_kwargs = {
         "input": f'{qdescp_au_dir}/{file}',
         "destination": f'{folder_qdescp}',
-        "nprocs": 4,
+        "nprocs": 1,
     }
     
     if run_test == 2:
