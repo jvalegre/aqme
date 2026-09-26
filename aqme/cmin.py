@@ -59,10 +59,12 @@ General
 #####################################################.
 
 import os
+import re
 import sys
 import time
 import ast
 import contextlib
+import functools
 import threading
 import shutil
 import tempfile
@@ -84,12 +86,36 @@ from aqme.utils import (
     check_dependencies,
     read_xyz_charge_mult,
     set_destination,
+    famex_ref,
+    is_nested_call,
 )
 from aqme.csearch.utils import _translate_constraint_indices
 from aqme.filter import conformer_filters, cluster_conformers
 
 SUPPORTED_FAMEX_BACKENDS = {"xtb", "tblite", "aimnet2", "mace", "orb", "so3lr", "uma"}
 EV_TO_KCAL = 23.0609  # 1 eV = 23.0609 kcal/mol
+
+
+@functools.lru_cache(maxsize=1)
+def _spawn_is_safe():
+    """Whether "spawn" can start a process pool without re-running the caller.
+
+    "spawn" (used on Windows/macOS, where "fork" is unavailable) re-imports the
+    caller's main script in every worker, so it is only safe when that script
+    guards its code with ``if __name__ == "__main__":``; otherwise each worker
+    would redo the whole calculation. Interactive sessions/notebooks have no
+    main file to re-import, so they are always safe. Cached because this only
+    needs to be answered once per run, not once per input file.
+    """
+    main_file = getattr(sys.modules.get("__main__"), "__file__", None)
+    if main_file is None:
+        return True
+
+    try:
+        with open(main_file, "r", encoding="utf-8", errors="ignore") as script:
+            return re.search(r"__name__\s*==\s*['\"]__main__['\"]", script.read()) is not None
+    except OSError:
+        return False
 
 
 def normalize_cmin_backend(args):
@@ -308,12 +334,11 @@ class cmin:
         """Log the recommended FAMEX citation the first time it is used."""
         if getattr(self, "_famex_citation_logged", False):
             return
+        if is_nested_call():
+            self._famex_citation_logged = True
+            return
 
-        self.args.log.write(
-            "\n   Please cite FAMEX as:\n"
-            "   FAMEX Development Team, FAMEX: Fast Mechanistic Explorer (2026).\n"
-            "   Available at https://github.com/rlaplaza-lab/famex"
-        )
+        self.args.log.write(f"\n   Please cite FAMEX as:\n   {famex_ref}")
         self._famex_citation_logged = True
 
     # ------------------------------------------------------------------
@@ -797,14 +822,17 @@ class cmin:
         # tblite is not thread-safe within a single process (hence
         # _tblite_lock, which fully serialises the ThreadPoolExecutor below).
         # Separate OS processes don't share that state, so real parallelism
-        # for tblite requires a ProcessPoolExecutor. This only works with the
-        # "fork" start method (spawn would start from a blank interpreter and
-        # lose context, e.g. monkeypatched test doubles); everything else
-        # (other backends, or platforms without fork) keeps using threads.
+        # for tblite requires a ProcessPoolExecutor. "fork" (Linux/HPC) is
+        # always safe; "spawn" (Windows/macOS) re-imports the caller's main
+        # script in every worker, so it is only used when that script guards
+        # its code with `if __name__ == "__main__":` (_spawn_is_safe() is
+        # never even called on platforms with fork, short-circuited by the
+        # "or" below). Everything else keeps using threads.
+        start_method = "fork" if "fork" in multiprocessing.get_all_start_methods() else "spawn"
         use_processes = (
             nprocs > 1
             and self.args.program == "tblite"
-            and "fork" in multiprocessing.get_all_start_methods()
+            and (start_method == "fork" or _spawn_is_safe())
         )
 
         if use_processes:
@@ -815,7 +843,7 @@ class cmin:
                 self.args.log.write(f"\no  FAMEX optimisation [{self.args.program}] ({task[1]})")
 
             executor = concurrent.futures.ProcessPoolExecutor(
-                max_workers=nprocs, mp_context=multiprocessing.get_context("fork"),
+                max_workers=nprocs, mp_context=multiprocessing.get_context(start_method),
                 initializer=_init_worker_env,
             )
             submit = lambda task: executor.submit(

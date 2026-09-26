@@ -840,8 +840,12 @@ class qprep:
     def _parse_gaussian_output(self, lines):
         """Parse Gaussian output file for molecular info.
         
+        The QM program is already detected in _extract_qm_data, which passes
+        the lines starting at the Gaussian header, so this function only
+        reads the charge/multiplicity and the number of atoms.
+        
         Args:
-            lines (List[str]): File lines to parse
+            lines (List[str]): Gaussian output lines, starting at the header
             
         Returns:
             tuple: (n_atoms, charge, mult)
@@ -849,35 +853,23 @@ class qprep:
         n_atoms = 0
         charge = mult = None
         found_n_atoms = False
-        resume_line = 0
 
         for i, line in enumerate(lines):
-            if line.find("Gaussian, Inc."):
-                program = "gaussian"
-                resume_line = i
-                break
-            elif line[i].find("O   R   C   A"):
-                program = "orca"
-                resume_line = i
+            # get charge and mult
+            if line.find("Charge = ") > -1:
+                charge = int(line.split()[2])
+                mult = int(line.split()[5].rstrip("\n"))
+            # get number of atoms
+            elif line.find("Symbolic Z-matrix:") > -1:
+                for j in range(i + 2, len(lines)):
+                    if len(lines[j].split()) > 0:
+                        n_atoms += 1
+                    else:
+                        found_n_atoms = True
+                        break
+            elif found_n_atoms:
                 break
 
-        for i in range(resume_line, len(lines)):
-            if program == "gaussian":
-                # get charge and mult
-                if lines[i].find("Charge = ") > -1:
-                    charge = int(lines[i].split()[2])
-                    mult = int(lines[i].split()[5].rstrip("\n"))
-                # get number of atoms
-                elif lines[i].find("Symbolic Z-matrix:") > -1:
-                    for j in range(i + 2, len(lines)):
-                        if len(lines[j].split()) > 0:
-                            n_atoms += 1
-                        else:
-                            found_n_atoms = True
-                            break
-                elif found_n_atoms:
-                    break
-              
         return n_atoms, charge, mult
         
     def _extract_json_data(self, file):
