@@ -26,6 +26,7 @@ from rdkit.Chem import AllChem as Chem
 from rdkit.Geometry import Point3D
 import aqme.csearch.utils as csearch_utils
 import shutil
+from pathlib import Path
 
 tests_dir = os.path.dirname(os.path.abspath(__file__))
 w_dir_main = os.path.dirname(tests_dir)  # Root of the repository (aqme)
@@ -1656,3 +1657,75 @@ def test_remove(folder_list, file_list):
                 except (PermissionError, OSError):
                     pass
     os.chdir(w_dir_main)
+
+
+# tests for CSVs with several SMILES_<name> columns
+def _canonical(smiles):
+    return Chem.MolToSmiles(Chem.MolFromSmiles(smiles))
+
+
+def test_csearch_csv_with_several_smiles_columns():
+    """A CSV with SMILES_react and SMILES_prod columns must generate the
+    conformers of every molecule of both columns, named
+    <code_name>_<text after SMILES_>_rdkit.sdf. A SMILES repeated in the same
+    column is generated only once (r2 has the same reactant as r1)."""
+    test_dir = Path(w_dir_main) / "tests" / "csearch_multi_smiles"
+    if test_dir.exists():
+        shutil.rmtree(test_dir)
+    test_dir.mkdir()
+    csv_path = test_dir / "multi_smiles.csv"
+    csv_path.write_text(
+        "code_name,SMILES_react,SMILES_prod,target\n"
+        "r1,CC(=O)O,CC(=O)OC,1.5\n"
+        "r2,CC(=O)O,CC(=O)OCC,2.5\n"
+        "r3,CCC(=O)O,CCC(=O)OC,3.5\n",
+        encoding="utf-8",
+    )
+    expected = {
+        "r1_react_rdkit.sdf": "CC(=O)O",
+        "r3_react_rdkit.sdf": "CCC(=O)O",
+        "r1_prod_rdkit.sdf": "CC(=O)OC",
+        "r2_prod_rdkit.sdf": "CC(=O)OCC",
+        "r3_prod_rdkit.sdf": "CCC(=O)OC",
+    }
+    try:
+        csearch(input=str(csv_path), program="rdkit", sample=1,
+                destination=str(test_dir / "CSEARCH"), nprocs=1)
+
+        sdf_files = sorted(p.name for p in (test_dir / "CSEARCH").glob("*.sdf"))
+        assert sdf_files == sorted(expected)
+        for sdf_name, smiles in expected.items():
+            mols = [m for m in Chem.SDMolSupplier(str(test_dir / "CSEARCH" / sdf_name)) if m is not None]
+            assert mols, f"{sdf_name} has no conformers"
+            assert Chem.MolToSmiles(Chem.RemoveHs(mols[0])) == _canonical(smiles)
+    finally:
+        shutil.rmtree(test_dir, ignore_errors=True)
+
+
+@pytest.mark.parametrize(
+    "header",
+    [
+        "code_name,SMILES,SMILES_prod,target",  # plain SMILES mixed with SMILES_<name>
+        "code_name,SMILES,smiles,target",  # two plain SMILES columns
+    ],
+)
+def test_csearch_csv_invalid_smiles_columns_stop_the_run(capsys, header):
+    """CSEARCH must stop, telling the user to name the SMILES columns
+    SMILES_<name>, and must not generate any conformer."""
+    test_dir = Path(w_dir_main) / "tests" / "csearch_multi_smiles_invalid"
+    if test_dir.exists():
+        shutil.rmtree(test_dir)
+    test_dir.mkdir()
+    csv_path = test_dir / "invalid_smiles.csv"
+    csv_path.write_text(f"{header}\nr1,CC(=O)O,CC(=O)OC,1.5\n", encoding="utf-8")
+    try:
+        with pytest.raises(SystemExit):
+            csearch(input=str(csv_path), program="rdkit", sample=1,
+                    destination=str(test_dir / "CSEARCH"), nprocs=1)
+
+        output = capsys.readouterr().out
+        assert "To use several SMILES columns at the same time" in output
+        assert "SMILES_1, SMILES_2" in output
+        assert not list(test_dir.glob("CSEARCH/*.sdf"))
+    finally:
+        shutil.rmtree(test_dir, ignore_errors=True)

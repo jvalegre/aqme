@@ -109,6 +109,8 @@ from aqme.utils import (
     blocking_wrapper,
     nested_call,
     get_files,
+    get_smiles_columns,
+    read_csv_header,
 )
 from aqme.qdescp_utils import (
     assign_prefix_atom_props,
@@ -151,6 +153,13 @@ from aqme.csearch.utils import (
 # xTB flags that request an implicit solvation model, which QDESCP cannot use
 # because its descriptors are calculated with PTB (no solvation available)
 SOLVENT_KEYWORDS = ("--alpb", "--gbsa", "-g", "--cosmo", "--tmcosmo", "--cpcmx")
+
+# per-row CSEARCH settings of a CSV that are copied to the CSV of each
+# SMILES_<name> column when QDESCP runs a CSV with several SMILES columns
+MULTI_SMILES_SETTINGS_COLS = (
+    "charge", "mult", "constraints_atoms", "constraints_dist",
+    "constraints_angle", "constraints_dihedral", "complex_type", "geom", "sample",
+)
 
 
 def normalize_qdescp_runtime_options(args):
@@ -462,6 +471,14 @@ class qdescp:
 
         # if the files input is a CSV, first the program generates conformers
         if len(qdescp_files) == 1 and os.path.basename(qdescp_files[0]).split('.')[-1].lower() == 'csv':
+            # CSVs with several SMILES_<name> columns run each column separately
+            # and concatenate the descriptors at the end
+            smiles_groups = self._get_csv_smiles_groups(qdescp_files[0])
+            if smiles_groups:
+                self.qdescp_multi_smiles_workflow(
+                    qdescp_files[0], destination, boltz_dir, smarts_targets, smiles_groups
+                )
+                return
             qdescp_files = self.initial_csearch_run(destination, qdescp_files)
 
         if self.args.geom_opt:
@@ -473,6 +490,18 @@ class qdescp:
                 self.args.log.finalize()
                 sys.exit()
 
+        self.qdescp_descriptor_workflow(qdescp_files, destination, boltz_dir, smarts_targets)
+
+
+    def qdescp_descriptor_workflow(self, qdescp_files, destination, boltz_dir, smarts_targets):
+        """Calculate the descriptors of a set of structure files and collect them.
+
+        Args:
+            qdescp_files (list): SDF/PDB/XYZ files used to calculate descriptors
+            destination (Path): Folder where the xTB/JSON results are stored
+            boltz_dir (Path): Directory for Boltzmann-averaged results
+            smarts_targets (list): List of SMARTS patterns to match
+        """
         # obtaining mols from input files that will be used to set up atomic descriptors
         mol_list = get_mols_qdescp(qdescp_files)
 
@@ -652,7 +681,219 @@ class qdescp:
         self.args.files = qdescp_files
         return qdescp_files
 
-    def initial_csearch_run(self, destination, qdescp_files):
+    def _get_csv_smiles_groups(self, csv_path):
+        """Return the SMILES_<name> columns of a CSV as (column, suffix) tuples.
+
+        An empty list means that the CSV uses a single plain SMILES column.
+        The run stops if the SMILES columns cannot be handled (i.e. several
+        plain SMILES columns, or a plain SMILES column mixed with SMILES_<name>).
+        """
+        if not os.path.exists(csv_path):
+            self._error_exit(
+                f"The csv_name provided ({csv_path}) does not exist! Please specify this name correctly"
+            )
+        try:
+            _, suffixed_cols = get_smiles_columns(read_csv_header(csv_path))
+        except ValueError as exc:
+            self._error_exit(str(exc))
+        return suffixed_cols
+
+
+    def _default_csearch_destination(self, destination):
+        """CSEARCH folder used for the conformers generated from a QDESCP CSV."""
+        if f'{os.path.basename(destination).upper()}' == 'QDESCP':
+            return Path(os.path.dirname(destination)).joinpath('CSEARCH')
+        return Path(destination).joinpath('CSEARCH')
+
+
+    def _default_cmin_destination(self, destination):
+        """CMIN folder used for the geometries optimized inside QDESCP."""
+        destination = Path(destination)
+        if destination.name.upper() == "QDESCP":
+            return destination.parent / "CMIN"
+        return destination
+
+
+    def _prepare_multi_smiles_groups(self, input_csv, destination, smiles_groups):
+        """Write one single-SMILES CSV per SMILES_<name> column.
+
+        Rows with the same SMILES (and the same per-row CSEARCH settings) are
+        calculated only once, and their descriptors are later copied to all
+        the rows that share them.
+
+        Returns:
+            list: One dict per SMILES column with the information of its run
+        """
+        df_input = fix_cols_names(pd.read_csv(input_csv))
+        if 'code_name' not in df_input.columns:
+            self._error_exit("The CSV used as QDESCP input must contain a code_name column.")
+        df_input['code_name'] = df_input['code_name'].astype(str)
+        settings_cols = [col for col in MULTI_SMILES_SETTINGS_COLS if col in df_input.columns]
+
+        def _is_filled(value):
+            return not (pd.isna(value) or str(value).strip() == '' or str(value).strip().lower() == 'nan')
+
+        groups = []
+        for smiles_col, suffix in smiles_groups:
+            missing = [
+                row['code_name'] for _, row in df_input.iterrows()
+                if _is_filled(row['code_name']) and not _is_filled(row[smiles_col])
+            ]
+            if missing:
+                self._error_exit(
+                    f'Not all the cells of the {smiles_col} column are filled! Please make sure '
+                    f'that every structure in "{os.path.basename(input_csv)}" has its '
+                    f'corresponding SMILES (missing for: {", ".join(missing)}).'
+                )
+
+            group_dest = Path(destination).joinpath(suffix)
+            if group_dest.exists():
+                shutil.rmtree(group_dest)
+            group_dest.mkdir(parents=True)
+
+            key_to_code, group_rows, row_codes = {}, [], []
+            for _, row in df_input.iterrows():
+                # fully blank rows (i.e. trailing empty rows from Excel) are skipped
+                if not _is_filled(row[smiles_col]):
+                    row_codes.append(None)
+                    continue
+                smiles = str(row[smiles_col]).strip()
+                key = (smiles,) + tuple(str(row[col]) for col in settings_cols)
+                if key not in key_to_code:
+                    key_to_code[key] = row['code_name']
+                    group_rows.append(
+                        {'code_name': row['code_name'], 'SMILES': smiles,
+                         **{col: row[col] for col in settings_cols}}
+                    )
+                row_codes.append(key_to_code[key])
+
+            input_cols = ['code_name', 'SMILES'] + settings_cols
+            group_csv = group_dest.joinpath(f"{Path(input_csv).stem}_{suffix}.csv")
+            pd.DataFrame(group_rows, columns=input_cols).to_csv(group_csv, index=False)
+
+            groups.append({
+                'column': smiles_col,
+                'suffix': suffix,
+                'csv': str(group_csv),
+                'destination': group_dest,
+                'boltz_dir': group_dest.joinpath('boltz'),
+                'input_cols': input_cols,
+                'row_codes': row_codes,
+            })
+        return groups
+
+
+    def qdescp_multi_smiles_workflow(self, input_csv, destination, boltz_dir, smarts_targets, smiles_groups):
+        """Run QDESCP on a CSV with several SMILES_<name> columns.
+
+        The structures of each SMILES column are generated (CSEARCH) and
+        optimized (CMIN, if geom_opt) one column after the other, then the
+        descriptors of each column are calculated and saved in separate CSVs
+        (inside QDESCP/<name>). Finally, the descriptors of all the columns are
+        concatenated next to the original CSV columns, adding the _<name>
+        suffix of their SMILES column (i.e. 'HOMO' from SMILES_sub -> 'HOMO_sub').
+
+        Args:
+            input_csv (str): CSV with code_name and SMILES_<name> columns
+            destination (Path): Main QDESCP output directory
+            boltz_dir (Path): Main Boltzmann directory (unused, each column has its own)
+            smarts_targets (list): SMARTS patterns requested by the user
+            smiles_groups (list): (column, suffix) tuples of the SMILES columns
+        """
+        self.args.log.write(
+            f"\no  {len(smiles_groups)} SMILES columns found "
+            f"({', '.join(col for col, _ in smiles_groups)}), their descriptors will be "
+            "calculated separately and concatenated at the end"
+        )
+        groups = self._prepare_multi_smiles_groups(input_csv, destination, smiles_groups)
+
+        # 1. generate the structures of each SMILES column
+        csearch_root = self._default_csearch_destination(destination)
+        if csearch_root.exists():
+            shutil.rmtree(csearch_root)
+        for group in groups:
+            self.args.log.write(f"\n   ----- CSEARCH for {group['column']} -----")
+            group['files'] = self.initial_csearch_run(
+                group['destination'], [group['csv']],
+                destination_csearch=csearch_root.joinpath(group['suffix']),
+            )
+
+        # 2. optimize the structures of each SMILES column with CMIN
+        if self.args.geom_opt:
+            cmin_root = self._default_cmin_destination(destination)
+            for group in groups:
+                self.args.log.write(f"\n   ----- CMIN for {group['column']} -----")
+                group['files'] = self._run_qdescp_cmin(
+                    group['files'], group['destination'],
+                    cmin_destination=cmin_root.joinpath(group['suffix']),
+                )
+                if len(group['files']) == 0:
+                    self.args.log.write(
+                        f"\nx  WARNING! CMIN did not produce any optimized SDF files for {group['column']}."
+                    )
+                    self.args.log.finalize()
+                    sys.exit()
+
+        # 3. calculate the descriptors and write the CSVs of each SMILES column
+        # (inside its QDESCP/<name> folder)
+        for group in groups:
+            self.args.log.write(f"\n   ----- Descriptors for {group['column']} -----")
+            group['boltz_dir'].mkdir(exist_ok=True, parents=True)
+            self.args.csv_name = group['csv']
+            self._qdescp_output_dir = group['destination']
+            try:
+                self.qdescp_descriptor_workflow(
+                    group['files'], group['destination'], group['boltz_dir'],
+                    list(smarts_targets),
+                )
+            finally:
+                self._qdescp_output_dir = None
+
+        # 4. concatenate the descriptors of all the SMILES columns
+        self.args.csv_name = input_csv
+        if Path(boltz_dir).exists() and not any(Path(boltz_dir).iterdir()):
+            Path(boltz_dir).rmdir()
+        if self.args.boltz:
+            self._merge_multi_smiles_outputs(input_csv, groups)
+
+
+    def _merge_multi_smiles_outputs(self, input_csv, groups):
+        """Concatenate the descriptor CSVs of each SMILES_<name> column.
+
+        All the columns of the original CSV are kept, and the descriptors of
+        each SMILES column are added with the _<name> suffix.
+        """
+        name_db = 'ROBERT' if self.args.robert else 'Descriptors'
+        input_df = pd.read_csv(input_csv)
+        csv_basename = os.path.basename(input_csv)
+        paths = self._setup_output_paths(name_db, csv_basename)
+
+        for level in ['full', 'denovo', 'interpret']:
+            merged_df = input_df.copy()
+            for group in groups:
+                level_csv = Path(group['destination']).joinpath(
+                    f"AQME-{name_db}_{level}_{os.path.basename(group['csv'])}"
+                )
+                if not level_csv.exists():
+                    self.args.log.write(
+                        f"\nx  WARNING! {level_csv.name} was not generated, no descriptors "
+                        f"from {group['column']} will be included in {os.path.basename(paths[level])}."
+                    )
+                    continue
+                group_df = pd.read_csv(level_csv)
+                group_df['code_name'] = group_df['code_name'].astype(str)
+                descp_cols = [col for col in group_df.columns if col not in group['input_cols']]
+                group_df = group_df.drop_duplicates('code_name').set_index('code_name')[descp_cols]
+                group_df.columns = [f"{col}_{group['suffix']}" for col in descp_cols]
+                group_df = group_df.reindex(group['row_codes'])
+                group_df.index = merged_df.index
+                merged_df = pd.concat([merged_df, group_df], axis=1)
+            merged_df.to_csv(paths[level], index=None, header=True)
+
+        self._log_success(name_db, csv_basename)
+
+
+    def initial_csearch_run(self, destination, qdescp_files, destination_csearch=None):
         """Generate conformers from SMILES in CSV input.
         
         This method:
@@ -664,6 +905,8 @@ class qdescp:
         Args:
             destination (Path): Output directory path
             qdescp_files (list): List of input files (expecting single CSV)
+            destination_csearch (Path, optional): CSEARCH folder (by default,
+                CSEARCH next to the QDESCP folder)
             
         Returns:
             list: Paths to generated conformer files
@@ -686,10 +929,8 @@ class qdescp:
         self.args.csv_name = qdescp_files[0]
         self.args._qdescp_csearch_sample = sample_qdescp
 
-        if f'{os.path.basename(destination).upper()}' == 'QDESCP':
-            destination_csearch = Path(os.path.dirname(destination)).joinpath('CSEARCH')
-        else:
-            destination_csearch = destination.joinpath('CSEARCH')
+        if destination_csearch is None:
+            destination_csearch = self._default_csearch_destination(destination)
 
         if destination_csearch.exists():
             shutil.rmtree(destination_csearch)
@@ -742,14 +983,11 @@ class qdescp:
 
         return qdescp_files
 
-    def _run_qdescp_cmin(self, qdescp_files, destination):
+    def _run_qdescp_cmin(self, qdescp_files, destination, cmin_destination=None):
         """Run the regular CMIN workflow and return its generated SDF files."""
-        destination = Path(destination)
-        cmin_destination = (
-            destination.parent / "CMIN"
-            if destination.name.upper() == "QDESCP"
-            else destination
-        )
+        if cmin_destination is None:
+            cmin_destination = self._default_cmin_destination(destination)
+        cmin_destination = Path(cmin_destination)
 
         cmin_kwargs = {
             "files": qdescp_files,
@@ -1347,10 +1585,11 @@ class qdescp:
         Returns:
             dict: Dictionary of output paths
         """
+        output_dir = self._get_output_dir()
         paths = {
-            'full': self.args.initial_dir.joinpath(f'AQME-{name_db}_full_{csv_basename}'),
-            'denovo': self.args.initial_dir.joinpath(f'AQME-{name_db}_denovo_{csv_basename}'),
-            'interpret': self.args.initial_dir.joinpath(f'AQME-{name_db}_interpret_{csv_basename}')
+            'full': output_dir.joinpath(f'AQME-{name_db}_full_{csv_basename}'),
+            'denovo': output_dir.joinpath(f'AQME-{name_db}_denovo_{csv_basename}'),
+            'interpret': output_dir.joinpath(f'AQME-{name_db}_interpret_{csv_basename}')
         }
         
         # Remove existing files
@@ -1411,8 +1650,14 @@ class qdescp:
             f"o  The AQME-{name_db}_full_{csv_basename}, "
             f"AQME-{name_db}_denovo_{csv_basename} and "
             f"AQME-{name_db}_interpret_{csv_basename} databases "
-            f"were created in {self.args.initial_dir}"
+            f"were created in {self._get_output_dir()}"
         )
+
+    def _get_output_dir(self):
+        """Folder of the AQME-ROBERT/Descriptors CSVs (the initial folder by
+        default, or QDESCP/<name> for each column of a multi-SMILES CSV)."""
+        output_dir = getattr(self, '_qdescp_output_dir', None)
+        return Path(output_dir) if output_dir is not None else Path(self.args.initial_dir)
 
     def gather_files_and_run(self, destination, file, atom_props, smarts_targets, bar):
         """Process input file(s) through xTB calculation and property collection.
@@ -1949,7 +2194,7 @@ class qdescp:
         for suffix in ['full', 'denovo', 'interpret']:
             # Try to read the file with the corresponding suffix
             base_filename = os.path.basename(self.args.csv_name)
-            csv_file = self.args.initial_dir.joinpath(f'AQME-{name_db}_{suffix}_{base_filename}')
+            csv_file = self._get_output_dir().joinpath(f'AQME-{name_db}_{suffix}_{base_filename}')
             csv_file = f'{csv_file}'
             
             try:

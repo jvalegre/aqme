@@ -21,7 +21,6 @@ import sys
 import os
 import re
 import ast
-import csv
 import warnings
 from pathlib import Path
 
@@ -39,7 +38,7 @@ from morfeus import (
     read_geometry, XTB
 )
 from morfeus.data import HARTREE_TO_KCAL
-from aqme.utils import load_sdf, periodic_table
+from aqme.utils import load_sdf, periodic_table, get_smiles_columns, read_csv_header
 
 # Suppress warnings
 warnings.filterwarnings('ignore')
@@ -1521,9 +1520,10 @@ def find_level_names(
 
 def check_duplicate_smiles_columns(csv_path) -> None:
     """
-    Stop with a clear error if a CSV header has more than one SMILES column,
-    whether they are named identically or only differ in case (e.g. 'SMILES'
-    and 'smiles').
+    Stop with a clear error if a CSV header has more than one plain SMILES
+    column, whether they are named identically or only differ in case (e.g.
+    'SMILES' and 'smiles'), or mixes a plain SMILES column with SMILES_<name>
+    columns. Several SMILES columns must be called SMILES_<name>.
 
     The header is read directly with the csv module, before pandas gets a
     chance to parse it: pandas silently renames a literal duplicate column
@@ -1534,17 +1534,9 @@ def check_duplicate_smiles_columns(csv_path) -> None:
         csv_path: Path to the CSV file to check
 
     Raises:
-        ValueError: If more than one column name is 'SMILES' (case-insensitive)
+        ValueError: If the SMILES columns cannot be handled unambiguously
     """
-    with open(csv_path, newline='', encoding='utf-8') as csv_file:
-        header = next(csv.reader(csv_file))
-
-    smiles_like_cols = [col for col in header if col.strip().lower() == 'smiles']
-    if len(smiles_like_cols) > 1:
-        raise ValueError(
-            'Se han detectado dos columnas SMILES, por favor modifica el '
-            'nombre de alguna de ellas para poder continuar.'
-        )
+    get_smiles_columns(read_csv_header(csv_path))
 
 
 def fix_cols_names(df: pd.DataFrame) -> pd.DataFrame:

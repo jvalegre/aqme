@@ -130,7 +130,145 @@ def test_qdescp_rejects_duplicate_smiles_columns(tmp_path, header):
         processor._read_qdescp_csv()
 
     messages = "".join(log.messages)
-    assert "Se han detectado dos columnas SMILES" in messages
+    assert "More than one SMILES column was found" in messages
+    assert "SMILES_1, SMILES_2" in messages
+
+
+# tests for CSVs with several SMILES_<name> columns
+MULTI_SMILES_HEADER = ["code_name", "SMILES_react", "SMILES_prod", "target"]
+MULTI_SMILES_ROWS = [
+    # r1 and r2 share the same reactant
+    ["r1", "CC(=O)O", "CC(=O)OC", 1.5],
+    ["r2", "CC(=O)O", "CC(=O)OCC", 2.5],
+    ["r3", "CCC(=O)O", "CCC(=O)OC", 3.5],
+]
+
+
+def _run_qdescp_csv(csv_path, **qdescp_kwargs):
+    """Run the full QDESCP workflow on a CSV and return its three output
+    databases (denovo, interpret, full) as DataFrames."""
+    outputs = {
+        level: Path(w_dir_main) / f"AQME-ROBERT_{level}_{csv_path.name}"
+        for level in ("denovo", "interpret", "full")
+    }
+    for path in outputs.values():
+        path.unlink(missing_ok=True)
+    try:
+        qdescp(
+            input=str(csv_path),
+            destination=str(csv_path.parent / "QDESCP"),
+            sample=1,
+            nprocs=1,
+            **qdescp_kwargs,
+        )
+        for path in outputs.values():
+            assert path.exists(), f"{path.name} was not generated"
+        return {level: pd.read_csv(path) for level, path in outputs.items()}
+    finally:
+        for path in outputs.values():
+            path.unlink(missing_ok=True)
+
+
+def test_qdescp_multi_smiles_csv_output():
+    """A CSV with code_name,SMILES_react,SMILES_prod,target must give databases
+    with those 4 columns, followed by all the descriptors of SMILES_react (with
+    the _react suffix) and then all the descriptors of SMILES_prod (_prod).
+
+    The reference descriptors are those of regular QDESCP runs with a single
+    SMILES column containing the reactants or the products, so each block must
+    have the same descriptors, in the same order and with the same values.
+    """
+    test_dir = qdescp_empty_dir / "multi_smiles"
+    if test_dir.exists():
+        shutil.rmtree(test_dir)
+    input_df = pd.DataFrame(MULTI_SMILES_ROWS, columns=MULTI_SMILES_HEADER)
+
+    try:
+        # reference runs, one per SMILES column (regular single-SMILES CSVs)
+        reference = {}
+        for suffix in ("react", "prod"):
+            ref_csv = test_dir / f"ref_{suffix}" / f"ref_{suffix}.csv"
+            ref_csv.parent.mkdir(parents=True)
+            input_df[["code_name", f"SMILES_{suffix}"]].rename(
+                columns={f"SMILES_{suffix}": "SMILES"}
+            ).to_csv(ref_csv, index=False)
+            reference[suffix] = _run_qdescp_csv(ref_csv, qdescp_atoms=["C=O"])
+
+        # multi-SMILES run
+        multi_csv = test_dir / "multi" / "multi_smiles.csv"
+        multi_csv.parent.mkdir(parents=True)
+        input_df.to_csv(multi_csv, index=False)
+        results = _run_qdescp_csv(multi_csv, qdescp_atoms=["C=O"])
+
+        for level, df in results.items():
+            ref_cols = {
+                suffix: [c for c in reference[suffix][level].columns if c not in ("code_name", "SMILES")]
+                for suffix in ("react", "prod")
+            }
+            # sanity check: the reference runs include molecular and atomic descriptors
+            assert "HOMO" in ref_cols["react"] and "C=O_C_Partial charge" in ref_cols["react"]
+
+            # columns: the 4 input columns, then all the _react descriptors, then all the _prod ones
+            expected_columns = (
+                MULTI_SMILES_HEADER
+                + [f"{c}_react" for c in ref_cols["react"]]
+                + [f"{c}_prod" for c in ref_cols["prod"]]
+            )
+            assert list(df.columns) == expected_columns, f"Wrong columns in {level}"
+
+            # the input columns are kept untouched, in the same row order
+            pd.testing.assert_frame_equal(df[MULTI_SMILES_HEADER], input_df, check_dtype=False)
+
+            # each block has the values of its molecule in the reference runs
+            for suffix in ("react", "prod"):
+                block = df[[f"{c}_{suffix}" for c in ref_cols[suffix]]]
+                block.columns = ref_cols[suffix]
+                pd.testing.assert_frame_equal(
+                    block, reference[suffix][level][ref_cols[suffix]],
+                    check_dtype=False, rtol=1e-3, atol=1e-4,
+                    obj=f"{suffix} descriptors in {level}",
+                )
+            if level != "full":
+                assert not df.isna().any().any(), f"Empty cells in {level}"
+    finally:
+        shutil.rmtree(test_dir, ignore_errors=True)
+
+
+@pytest.mark.parametrize(
+    "header",
+    [
+        "code_name,SMILES,SMILES_prod,target",  # plain SMILES mixed with SMILES_<name>
+        "code_name,smiles,SMILES_react,SMILES_prod",  # same, in lowercase
+        "code_name,SMILES_react,smiles_REACT,target",  # same <name> twice
+    ],
+)
+def test_qdescp_multi_smiles_invalid_columns_stop_the_run(capsys, header):
+    """QDESCP must stop before any calculation, telling the user to name the
+    SMILES columns SMILES_<name>, and must not generate any database."""
+    test_dir = qdescp_empty_dir / "multi_smiles_invalid"
+    if test_dir.exists():
+        shutil.rmtree(test_dir)
+    test_dir.mkdir(parents=True)
+    csv_path = test_dir / "invalid_smiles.csv"
+    csv_path.write_text(f"{header}\nr1,CC(=O)O,CC(=O)OC,1.5\n", encoding="utf-8")
+    outputs = [
+        Path(w_dir_main) / f"AQME-ROBERT_{level}_invalid_smiles.csv"
+        for level in ("denovo", "interpret", "full")
+    ]
+    try:
+        with pytest.raises(SystemExit):
+            qdescp(input=str(csv_path), destination=str(test_dir / "QDESCP"), nprocs=1)
+
+        output = capsys.readouterr().out
+        assert "To use several SMILES columns at the same time" in output
+        assert "SMILES_1, SMILES_2" in output
+        assert not (test_dir / "CSEARCH").exists()
+        for path in outputs:
+            assert not path.exists()
+    finally:
+        for path in outputs:
+            path.unlink(missing_ok=True)
+        shutil.rmtree(test_dir, ignore_errors=True)
 
 
 def test_qdescp_mapped_atoms_keep_partial_charge_order():

@@ -5,6 +5,7 @@
 
 import os
 import re
+import csv
 import subprocess
 import sys
 import time
@@ -1385,7 +1386,73 @@ def check_crest(self):
         )
         self.args.log.finalize()
         sys.exit()
- 
+
+
+MULTI_SMILES_HELP = (
+    "To use several SMILES columns at the same time, name all of them "
+    "SMILES_<name> (i.e. SMILES_1, SMILES_2, ... or SMILES_sub, SMILES_cat)."
+)
+
+
+def get_smiles_columns(columns):
+    """Classify the SMILES columns of a CSV header.
+
+    A CSV can contain either one plain SMILES column (called 'SMILES',
+    'smiles', 'Smiles', ...) or one or more SMILES_<name> columns, where
+    <name> is used as the suffix of the molecules/descriptors of that column.
+
+    Args:
+        columns (list): Column names of the CSV (preferably read directly
+            from the header, since pandas renames literal duplicates to
+            'SMILES.1')
+
+    Returns:
+        tuple: (plain_col, suffixed_cols), where plain_col is the name of the
+            plain SMILES column (or None) and suffixed_cols is a list of
+            (column_name, suffix) tuples in the order of the CSV
+
+    Raises:
+        ValueError: If the SMILES columns cannot be handled unambiguously
+    """
+    plain_cols, suffixed_cols = [], []
+    for col in columns:
+        col_clean = str(col).strip()
+        if re.fullmatch(r"smiles(\.\d+)?", col_clean.lower()):
+            plain_cols.append(col)
+        elif col_clean.lower().startswith("smiles_") and len(col_clean) > len("smiles_"):
+            suffixed_cols.append((col, col_clean[len("smiles_"):]))
+
+    if len(plain_cols) > 1:
+        raise ValueError(
+            f"More than one SMILES column was found ({', '.join(map(str, plain_cols))})! "
+            f"{MULTI_SMILES_HELP}"
+        )
+    if plain_cols and suffixed_cols:
+        found = ", ".join(map(str, plain_cols + [col for col, _ in suffixed_cols]))
+        raise ValueError(
+            f"Several SMILES columns were found ({found}) and one of them is a plain "
+            f"SMILES column ('SMILES', 'smiles', ...). Several SMILES columns cannot be "
+            f"used together with a plain SMILES column. {MULTI_SMILES_HELP}"
+        )
+
+    seen_suffixes = {}
+    for col, suffix in suffixed_cols:
+        if suffix.lower() in seen_suffixes:
+            raise ValueError(
+                f"The SMILES columns {seen_suffixes[suffix.lower()]} and {col} use the "
+                f"same name after 'SMILES_'! Please use a different name for each "
+                f"SMILES column. {MULTI_SMILES_HELP}"
+            )
+        seen_suffixes[suffix.lower()] = col
+
+    return (plain_cols[0] if plain_cols else None), suffixed_cols
+
+
+def read_csv_header(csv_path):
+    """Return the raw header of a CSV (without pandas renaming duplicates)."""
+    with open(csv_path, newline="", encoding="utf-8-sig") as csv_file:
+        return next(csv.reader(csv_file), [])
+
 
 def get_files(value):
     """Process and expand file path specifications.
