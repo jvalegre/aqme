@@ -182,15 +182,24 @@ def test_cmin_rejects_invalid_target(monkeypatch, capsys, target):
 def test_cmin_reads_charge_and_mult_from_sdf(monkeypatch):
     monkeypatch.chdir(cmin_ts_dir)
     sdf_path = _repo_path("tests", "cmin_TS", "methyl_Cl_Br.sdf")
-    _make_fake_famex(monkeypatch, [])
+    explorer_calls = []
+    _make_fake_famex(monkeypatch, explorer_calls)
 
-    monkeypatch.setattr("aqme.cmin.cmin._optimize_with_famex", _fake_optimize_success)
+    monkeypatch.setattr(
+        "aqme.cmin._build_ase_atoms", lambda mol, charge, mult: _FakeAtoms(mol)
+    )
     monkeypatch.setattr(
         "aqme.cmin.conformer_filters",
         lambda self, sorted_cids, cenergy, outmols: sorted_cids,
     )
 
     cmin(program="xtb", files=str(sdf_path))
+
+    # the charge and mult of the SDF must reach FAMEX
+    assert explorer_calls
+    for call in explorer_calls:
+        assert call["charge"] == -1
+        assert call["spin"] == 1
 
     output_file = _repo_path("tests", "cmin_TS", "CMIN", "methyl_Cl_Br.sdf")
     assert output_file.exists()
@@ -204,15 +213,24 @@ def test_cmin_reads_charge_and_mult_from_sdf(monkeypatch):
 def test_cmin_explicit_charge_and_mult_override_sdf(monkeypatch):
     monkeypatch.chdir(cmin_ts_dir)
     sdf_path = _repo_path("tests", "cmin_TS", "methyl_Cl_Br.sdf")
-    _make_fake_famex(monkeypatch, [])
+    explorer_calls = []
+    _make_fake_famex(monkeypatch, explorer_calls)
 
-    monkeypatch.setattr("aqme.cmin.cmin._optimize_with_famex", _fake_optimize_success)
+    monkeypatch.setattr(
+        "aqme.cmin._build_ase_atoms", lambda mol, charge, mult: _FakeAtoms(mol)
+    )
     monkeypatch.setattr(
         "aqme.cmin.conformer_filters",
         lambda self, sorted_cids, cenergy, outmols: sorted_cids,
     )
 
     cmin(program="xtb", files=str(sdf_path), charge=2, mult=3)
+
+    # FAMEX must receive the explicit charge and mult, not the ones of the SDF (-1 and 1)
+    assert explorer_calls
+    for call in explorer_calls:
+        assert call["charge"] == 2
+        assert call["spin"] == 3
 
     output_file = _repo_path("tests", "cmin_TS", "CMIN", "methyl_Cl_Br.sdf")
     assert output_file.exists()
