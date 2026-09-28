@@ -15,7 +15,6 @@ from aqme.csearch.utils import (
     smi_to_mol,
     apply_rdkit_constraints,
     _resolve_vdw_clashes,
-    minimize_rdkit_energy,
     normalize_smiles_for_csearch,
 )
 from aqme.filter import conformer_filters, has_multiple_fragments
@@ -23,8 +22,6 @@ from types import SimpleNamespace
 import numpy as np
 import rdkit
 from rdkit.Chem import AllChem as Chem
-from rdkit.Geometry import Point3D
-import aqme.csearch.utils as csearch_utils
 import shutil
 from pathlib import Path
 
@@ -1588,38 +1585,87 @@ def test_invalid_complex_type_is_reported_in_the_log():
 
 
 @pytest.mark.parametrize('force_field', ['UFF', 'MMFF'])
-def test_minimized_energy_matches_the_returned_geometry(monkeypatch, force_field):
-    """The returned energy must correspond to the geometry that is returned.
+def test_minimized_energy_matches_the_returned_geometry(tmp_path, monkeypatch, force_field):
+    """The energy written by CSEARCH must correspond to the geometry it writes.
 
     _resolve_post_min_clashes runs after the minimization, and the force field
     keeps its own copy of the coordinates, so the energy has to be recalculated
     from the final geometry: it feeds the conformer filters and the Boltzmann
-    weights in QDESCP. The clash resolver is replaced by a known displacement so
-    the test pins this contract instead of the heuristic itself (the real resolver
-    only translates whole fragments, and RDKit ignores interfragment terms by
-    default, so on its own it does not change the energy today).
+    weights in QDESCP. The resolver only translates whole fragments and RDKit
+    ignores interfragment terms by default, so the clash only changes the energy
+    when a distance constraint joins the two fragments. Here a H of one water is
+    constrained at 0.8 A from the O of the other one, so every minimized
+    conformer has a real clash (< 1.0 A) that the resolver moves apart.
     """
-    mol = Chem.AddHs(Chem.MolFromSmiles('CCO'))
-    Chem.EmbedMolecule(mol, randomSeed=5)
+    monkeypatch.chdir(tmp_path)
+    target = 0.8
 
-    def displace_one_atom(mol_in, conf_id, *args, **kwargs):
-        conf_in = mol_in.GetConformer(conf_id)
-        pos = conf_in.GetAtomPosition(0)
-        conf_in.SetAtomPosition(0, Point3D(pos.x + 0.5, pos.y, pos.z))
-
-    monkeypatch.setattr(
-        csearch_utils, '_resolve_post_min_clashes', displace_one_atom
+    csearch(
+        smi='[H:3][O:1][H:4].[H:5][O:2][H:6]',
+        name='water_dimer',
+        program='rdkit',
+        ff=force_field,
+        sample=5,
+        constraints_dist=[[3, 2, target]],
+        nprocs=1,
     )
 
-    energy = minimize_rdkit_energy(mol, -1, _SilentLog(), force_field, 1000)
+    sdf_path = tmp_path / 'CSEARCH' / 'water_dimer_rdkit.sdf'
+    assert sdf_path.exists()
 
-    if force_field == 'UFF':
-        reference = Chem.UFFGetMoleculeForceField(mol, confId=-1)
-    else:
-        reference = Chem.MMFFGetMoleculeForceField(
-            mol, Chem.MMFFGetMoleculeProperties(mol), confId=-1
+    n_checked = 0
+    for mol in Chem.SDMolSupplier(str(sdf_path), removeHs=False):
+        assert mol is not None
+        map_to_idx = {
+            atom.GetAtomMapNum(): atom.GetIdx()
+            for atom in mol.GetAtoms()
+            if atom.GetAtomMapNum() > 0
+        }
+        constraint = [[map_to_idx[3], map_to_idx[2], target]]
+        positions = mol.GetConformer().GetPositions()
+        dist = np.linalg.norm(positions[map_to_idx[3]] - positions[map_to_idx[2]])
+
+        # the stiff constraint keeps the distance at the target after the minimization,
+        # so a different distance means that the resolver moved a fragment afterwards
+        assert abs(dist - target) > 0.01, (
+            f'the resolver did not act or did not move the fragments enough '
+            f'(distance = {dist:.3f} A, target = {target} A)'
         )
-    assert energy == pytest.approx(reference.CalcEnergy(), abs=1e-6)
+
+        def energy_of(constraints_dist):
+            if force_field == 'UFF':
+                reference = Chem.UFFGetMoleculeForceField(mol)
+            else:
+                reference = Chem.MMFFGetMoleculeForceField(mol, Chem.MMFFGetMoleculeProperties(mol))
+            apply_rdkit_constraints(reference, [], constraints_dist, [], [])
+            return reference.CalcEnergy()
+
+        # the resolver only translates whole fragments and the interfragment terms
+        # are ignored, so the only term that changes with its movement is the
+        # constraint, which is satisfied right after the minimization. Then the
+        # energy before the movement is the energy of this geometry without the
+        # constraint, and the energy after the movement is the one with it
+        energy_before = energy_of([])
+        energy_after = energy_of(constraint)
+        energy = float(mol.GetProp('Energy'))
+
+        # the SDF keeps 4 decimals in the coordinates and the constraint is very
+        # stiff, so the energies are compared with a relative tolerance
+        assert energy_after != pytest.approx(energy_before, rel=1e-2, abs=1.0), (
+            f'the energy did not change with the movement of the resolver '
+            f'(before = {energy_before:.4f}, after = {energy_after:.4f} kcal/mol)'
+        )
+        assert energy != pytest.approx(energy_before, rel=1e-2, abs=1.0), (
+            f'the written energy is the one before the movement of the resolver '
+            f'(written = {energy:.4f}, before = {energy_before:.4f} kcal/mol)'
+        )
+        assert energy == pytest.approx(energy_after, rel=1e-2), (
+            f'the written energy does not correspond to the written geometry '
+            f'(written = {energy:.4f}, after = {energy_after:.4f} kcal/mol)'
+        )
+        n_checked += 1
+
+    assert n_checked >= 1
 
 # tests for removing foler
 @pytest.mark.parametrize(
