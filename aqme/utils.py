@@ -5,6 +5,7 @@
 
 import os
 import re
+import csv
 import subprocess
 import sys
 import time
@@ -12,6 +13,7 @@ import getopt
 import glob
 import yaml
 import ast
+import contextlib
 from pathlib import Path
 from rdkit.Chem.rdMolAlign import GetBestRMS, AlignMol
 from rdkit.Chem.rdmolops import RemoveHs
@@ -28,10 +30,28 @@ aqme_version = "2.1.0"
 time_run = time.strftime("%Y/%m/%d %H:%M:%S", time.localtime())
 aqme_ref = f"AQME v {aqme_version}, Alegre-Requena, J. V.; Sowndarya, S.; Perez-Soto, R.; Alturaifi, T.; Paton, R. AQME: Automated Quantum Mechanical Environments for Researchers and Educators. Wiley Interdiscip. Rev. Comput. Mol. Sci. 2023, 13, e1663 (DOI: 10.1002/wcms.1663)."
 qdescp_ref = "Dalmau, D; Jacot-Descombes, L.; Kalikadien, A.; Manzanilla, B.; Pidko, E. A.; Jorner, K.; Sigman, M. S.; Alegre-Requena, J. V. Cost-Effective Quantum-Mechanical Workflows for Molecular Machine Learning. ACS Catal. 2026, 16, 12565-12574. (DOI: 10.1021/acscatal.6c02583)"
+famex_ref = "FAMEX Development Team, FAMEX: Fast Mechanistic Explorer (2026). Available at https://github.com/rlaplaza-lab/famex"
 xtb_version = '6.7.1'
 crest_version = '2.12'
 
 RDLogger.DisableLog("rdApp.*")
+
+_nested_call_active = False
+@contextlib.contextmanager
+def nested_call():
+    """Mark AQME modules instantiated inside this block as internally triggered."""
+    global _nested_call_active
+    previous = _nested_call_active
+    _nested_call_active = True
+    try:
+        yield
+    finally:
+        _nested_call_active = previous
+
+
+def is_nested_call():
+    """Return True while running inside a `nested_call()` block."""
+    return _nested_call_active
 
 
 def run_command(command, outfile, cwd=None, env=None):
@@ -385,8 +405,7 @@ def _get_argument_categories():
         "energy_threshold", "initial_energy_threshold", "pmi_threshold", "max_mol_wt",
         "dup_threshold", "ro_threshold", "amplitude_ifreq", "ifreq_cutoff",
         "s2_threshold", "vdwfrac", "covfrac", "bond_thres", "angle_thres",
-        "dihedral_thres", "crest_force", "qdescp_temp", "qdescp_acc",
-        "dbstep_r", "crest_nclust", "vbur_radius"
+        "dihedral_thres", "crest_force", "crest_nclust", "vbur_radius"
     ]
     
     return bool_args, list_args, int_args, float_args
@@ -685,9 +704,12 @@ def _create_logger(self, aqme_module, logger_1, logger_2, txt_yaml, error_setup)
         self.log = Logger(path_command / logger_1, logger_2, verbose=self.verbose)
     
     # Write header
-    self.log.write(f"AQME v {aqme_version} {time_run} \nCitation: {aqme_ref}\n")
-    if aqme_module == "qdescp":
-        self.log.write(f"QDESCP is used for descriptor generation, please cite:\n{qdescp_ref}\n")
+    if not is_nested_call():
+        self.log.write(f"AQME v {aqme_version} {time_run} \nCitation: {aqme_ref}\n")
+        if aqme_module == "qdescp":
+            self.log.write(f"QDESCP is used for descriptor generation, please cite:\n{qdescp_ref}\n")
+            if getattr(self, "geom_opt", True):
+                self.log.write(f"If you use the CMIN module, please cite:\n{famex_ref}\n")
     
     # Log command line if used
     if self.command_line:
@@ -1364,7 +1386,73 @@ def check_crest(self):
         )
         self.args.log.finalize()
         sys.exit()
- 
+
+
+MULTI_SMILES_HELP = (
+    "To use several SMILES columns at the same time, name all of them "
+    "SMILES_<name> (i.e. SMILES_1, SMILES_2, ... or SMILES_sub, SMILES_cat)."
+)
+
+
+def get_smiles_columns(columns):
+    """Classify the SMILES columns of a CSV header.
+
+    A CSV can contain either one plain SMILES column (called 'SMILES',
+    'smiles', 'Smiles', ...) or one or more SMILES_<name> columns, where
+    <name> is used as the suffix of the molecules/descriptors of that column.
+
+    Args:
+        columns (list): Column names of the CSV (preferably read directly
+            from the header, since pandas renames literal duplicates to
+            'SMILES.1')
+
+    Returns:
+        tuple: (plain_col, suffixed_cols), where plain_col is the name of the
+            plain SMILES column (or None) and suffixed_cols is a list of
+            (column_name, suffix) tuples in the order of the CSV
+
+    Raises:
+        ValueError: If the SMILES columns cannot be handled unambiguously
+    """
+    plain_cols, suffixed_cols = [], []
+    for col in columns:
+        col_clean = str(col).strip()
+        if re.fullmatch(r"smiles(\.\d+)?", col_clean.lower()):
+            plain_cols.append(col)
+        elif col_clean.lower().startswith("smiles_") and len(col_clean) > len("smiles_"):
+            suffixed_cols.append((col, col_clean[len("smiles_"):]))
+
+    if len(plain_cols) > 1:
+        raise ValueError(
+            f"More than one SMILES column was found ({', '.join(map(str, plain_cols))})! "
+            f"{MULTI_SMILES_HELP}"
+        )
+    if plain_cols and suffixed_cols:
+        found = ", ".join(map(str, plain_cols + [col for col, _ in suffixed_cols]))
+        raise ValueError(
+            f"Several SMILES columns were found ({found}) and one of them is a plain "
+            f"SMILES column ('SMILES', 'smiles', ...). Several SMILES columns cannot be "
+            f"used together with a plain SMILES column. {MULTI_SMILES_HELP}"
+        )
+
+    seen_suffixes = {}
+    for col, suffix in suffixed_cols:
+        if suffix.lower() in seen_suffixes:
+            raise ValueError(
+                f"The SMILES columns {seen_suffixes[suffix.lower()]} and {col} use the "
+                f"same name after 'SMILES_'! Please use a different name for each "
+                f"SMILES column. {MULTI_SMILES_HELP}"
+            )
+        seen_suffixes[suffix.lower()] = col
+
+    return (plain_cols[0] if plain_cols else None), suffixed_cols
+
+
+def read_csv_header(csv_path):
+    """Return the raw header of a CSV (without pandas renaming duplicates)."""
+    with open(csv_path, newline="", encoding="utf-8-sig") as csv_file:
+        return next(csv.reader(csv_file), [])
+
 
 def get_files(value):
     """Process and expand file path specifications.

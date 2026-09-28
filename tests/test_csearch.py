@@ -23,6 +23,7 @@ import numpy as np
 import rdkit
 from rdkit.Chem import AllChem as Chem
 import shutil
+from pathlib import Path
 
 tests_dir = os.path.dirname(os.path.abspath(__file__))
 w_dir_main = os.path.dirname(tests_dir)  # Root of the repository (aqme)
@@ -34,6 +35,7 @@ csearch_others_dir = os.path.join(tests_dir, "csearch_others")
 csearch_input_dir = os.path.join(tests_dir, "csearch_input")
 csearch_varfile_dir = os.path.join(tests_dir, "csearch_varfile")
 csearch_haptic_dir = os.path.join(tests_dir, "csearch_haptic")
+csearch_sn2_ts_dir = os.path.join(tests_dir, "csearch_sn2_ts")
 
 for folder in [
     csearch_methods_dir,
@@ -43,6 +45,7 @@ for folder in [
     csearch_input_dir,
     csearch_varfile_dir,
     csearch_haptic_dir,
+    csearch_sn2_ts_dir,
 ]:
     os.makedirs(folder, exist_ok=True)
 
@@ -1478,6 +1481,192 @@ def test_rdkit_aggregate_mol_uses_interfragment_constraints():
         assert distance >= 3.0 - 1e-3
         assert _get_min_interfragment_vdw_clearance(mol, conf_id=conf_id) >= -1e-3
 
+
+# CSV-driven CSEARCH run for an SN2 transition-state aggregate (Cl- + CH3Br):
+# checks that --constraints_dist is honored within a 0.2 A tolerance for all
+# three constrained pairs (C-Br, C-Cl, and the Br...Cl through-space distance).
+def test_csearch_csv_sn2_ts_constraints_within_tolerance(monkeypatch):
+    monkeypatch.chdir(csearch_sn2_ts_dir)
+    csearch(
+        input="test.csv",
+        constraints_dist=[[1, 2, 2.4], [1, 3, 2.4], [2, 3, 4.8]],
+        charge=-1,
+    )
+
+    sdf_path = os.path.join(csearch_sn2_ts_dir, "CSEARCH", "Sn2_TS_Cl_C_Br_rdkit.sdf")
+    assert os.path.exists(sdf_path)
+
+    mols = Chem.SDMolSupplier(sdf_path, removeHs=False, sanitize=False)
+    tolerance = 0.2
+    # (atom-map-a, atom-map-b): target distance in Angstrom
+    targets = {(1, 2): 2.4, (1, 3): 2.4, (2, 3): 4.8}
+
+    n_checked = 0
+    for mol in mols:
+        assert mol is not None
+        assert mol.GetProp("Real charge") == "-1"
+
+        map_to_idx = {
+            atom.GetAtomMapNum(): atom.GetIdx()
+            for atom in mol.GetAtoms()
+            if atom.GetAtomMapNum() > 0
+        }
+        positions = mol.GetConformer().GetPositions()
+        for (map_a, map_b), target in targets.items():
+            dist = np.linalg.norm(
+                positions[map_to_idx[map_a]] - positions[map_to_idx[map_b]]
+            )
+            assert abs(dist - target) <= tolerance, (
+                f"distance map{map_a}-map{map_b} = {dist:.3f} A, "
+                f"expected {target} +/- {tolerance}"
+            )
+        n_checked += 1
+
+    del mols
+    assert n_checked >= 1
+
+
+# tests for the metal template validation
+class _CaptureLog:
+    """Minimal logger that stores the messages written by AQME."""
+
+    def __init__(self):
+        self.messages = []
+
+    def write(self, message):
+        self.messages.append(message)
+
+    def finalize(self):
+        pass
+
+
+def test_invalid_complex_type_is_reported_in_the_log():
+    # An unsupported complex_type must be reported through the CSEARCH log.
+    # It used to raise a TypeError that the parallel runner swallowed, so the
+    # user only saw 'CSEARCH raised an exception' instead of the actual help.
+    searcher = csearch.__new__(csearch)
+    log = _CaptureLog()
+    searcher.args = SimpleNamespace(log=log)
+
+    smi = '[NH3+][Ag][NH3+]'
+    mol = Chem.MolFromSmiles(smi)
+    metal_idx = [atom.GetIdx() for atom in mol.GetAtoms() if atom.GetSymbol() == 'Ag']
+
+    valid_template_embed = searcher._process_metal_complex(
+        mol=mol,
+        name='invalid_template_mol',
+        metal_atoms=['Ag'],
+        metal_idx=metal_idx,
+        complex_type='not_a_template',
+        metal_sym=['Ag'],
+        valid_template_embed=True,
+        constraints_atoms=[],
+        constraints_dist=[],
+        constraints_angle=[],
+        constraints_dihedral=[],
+        complex_ts=False,
+        charge=2,
+        mult=1,
+        smi=smi,
+        geom=[],
+        csearch_nprocs=1,
+        sample=1,
+    )
+
+    assert valid_template_embed is False
+
+    # the log must name the wrong template, the molecule and the valid options
+    messages = ''.join(log.messages)
+    assert 'not_a_template' in messages
+    assert 'is not valid' in messages
+    assert 'invalid_template_mol' in messages
+    for accepted in csearch.ACCEPTED_COMPLEX_TYPES:
+        assert accepted in messages
+
+
+@pytest.mark.parametrize('force_field', ['UFF', 'MMFF'])
+def test_minimized_energy_matches_the_returned_geometry(tmp_path, monkeypatch, force_field):
+    """The energy written by CSEARCH must correspond to the geometry it writes.
+
+    _resolve_post_min_clashes runs after the minimization, and the force field
+    keeps its own copy of the coordinates, so the energy has to be recalculated
+    from the final geometry: it feeds the conformer filters and the Boltzmann
+    weights in QDESCP. The resolver only translates whole fragments and RDKit
+    ignores interfragment terms by default, so the clash only changes the energy
+    when a distance constraint joins the two fragments. Here a H of one water is
+    constrained at 0.8 A from the O of the other one, so every minimized
+    conformer has a real clash (< 1.0 A) that the resolver moves apart.
+    """
+    monkeypatch.chdir(tmp_path)
+    target = 0.8
+
+    csearch(
+        smi='[H:3][O:1][H:4].[H:5][O:2][H:6]',
+        name='water_dimer',
+        program='rdkit',
+        ff=force_field,
+        sample=5,
+        constraints_dist=[[3, 2, target]],
+        nprocs=1,
+    )
+
+    sdf_path = tmp_path / 'CSEARCH' / 'water_dimer_rdkit.sdf'
+    assert sdf_path.exists()
+
+    n_checked = 0
+    for mol in Chem.SDMolSupplier(str(sdf_path), removeHs=False):
+        assert mol is not None
+        map_to_idx = {
+            atom.GetAtomMapNum(): atom.GetIdx()
+            for atom in mol.GetAtoms()
+            if atom.GetAtomMapNum() > 0
+        }
+        constraint = [[map_to_idx[3], map_to_idx[2], target]]
+        positions = mol.GetConformer().GetPositions()
+        dist = np.linalg.norm(positions[map_to_idx[3]] - positions[map_to_idx[2]])
+
+        # the stiff constraint keeps the distance at the target after the minimization,
+        # so a different distance means that the resolver moved a fragment afterwards
+        assert abs(dist - target) > 0.01, (
+            f'the resolver did not act or did not move the fragments enough '
+            f'(distance = {dist:.3f} A, target = {target} A)'
+        )
+
+        def energy_of(constraints_dist):
+            if force_field == 'UFF':
+                reference = Chem.UFFGetMoleculeForceField(mol)
+            else:
+                reference = Chem.MMFFGetMoleculeForceField(mol, Chem.MMFFGetMoleculeProperties(mol))
+            apply_rdkit_constraints(reference, [], constraints_dist, [], [])
+            return reference.CalcEnergy()
+
+        # the resolver only translates whole fragments and the interfragment terms
+        # are ignored, so the only term that changes with its movement is the
+        # constraint, which is satisfied right after the minimization. Then the
+        # energy before the movement is the energy of this geometry without the
+        # constraint, and the energy after the movement is the one with it
+        energy_before = energy_of([])
+        energy_after = energy_of(constraint)
+        energy = float(mol.GetProp('Energy'))
+
+        # the SDF keeps 4 decimals in the coordinates and the constraint is very
+        # stiff, so the energies are compared with a relative tolerance
+        assert energy_after != pytest.approx(energy_before, rel=1e-2, abs=1.0), (
+            f'the energy did not change with the movement of the resolver '
+            f'(before = {energy_before:.4f}, after = {energy_after:.4f} kcal/mol)'
+        )
+        assert energy != pytest.approx(energy_before, rel=1e-2, abs=1.0), (
+            f'the written energy is the one before the movement of the resolver '
+            f'(written = {energy:.4f}, before = {energy_before:.4f} kcal/mol)'
+        )
+        assert energy == pytest.approx(energy_after, rel=1e-2), (
+            f'the written energy does not correspond to the written geometry '
+            f'(written = {energy:.4f}, after = {energy_after:.4f} kcal/mol)'
+        )
+        n_checked += 1
+
+    assert n_checked >= 1
+
 # tests for removing foler
 @pytest.mark.parametrize(
     "folder_list, file_list",
@@ -1514,3 +1703,75 @@ def test_remove(folder_list, file_list):
                 except (PermissionError, OSError):
                     pass
     os.chdir(w_dir_main)
+
+
+# tests for CSVs with several SMILES_<name> columns
+def _canonical(smiles):
+    return Chem.MolToSmiles(Chem.MolFromSmiles(smiles))
+
+
+def test_csearch_csv_with_several_smiles_columns():
+    """A CSV with SMILES_react and SMILES_prod columns must generate the
+    conformers of every molecule of both columns, named
+    <code_name>_<text after SMILES_>_rdkit.sdf. A SMILES repeated in the same
+    column is generated only once (r2 has the same reactant as r1)."""
+    test_dir = Path(w_dir_main) / "tests" / "csearch_multi_smiles"
+    if test_dir.exists():
+        shutil.rmtree(test_dir)
+    test_dir.mkdir()
+    csv_path = test_dir / "multi_smiles.csv"
+    csv_path.write_text(
+        "code_name,SMILES_react,SMILES_prod,target\n"
+        "r1,CC(=O)O,CC(=O)OC,1.5\n"
+        "r2,CC(=O)O,CC(=O)OCC,2.5\n"
+        "r3,CCC(=O)O,CCC(=O)OC,3.5\n",
+        encoding="utf-8",
+    )
+    expected = {
+        "r1_react_rdkit.sdf": "CC(=O)O",
+        "r3_react_rdkit.sdf": "CCC(=O)O",
+        "r1_prod_rdkit.sdf": "CC(=O)OC",
+        "r2_prod_rdkit.sdf": "CC(=O)OCC",
+        "r3_prod_rdkit.sdf": "CCC(=O)OC",
+    }
+    try:
+        csearch(input=str(csv_path), program="rdkit", sample=1,
+                destination=str(test_dir / "CSEARCH"), nprocs=1)
+
+        sdf_files = sorted(p.name for p in (test_dir / "CSEARCH").glob("*.sdf"))
+        assert sdf_files == sorted(expected)
+        for sdf_name, smiles in expected.items():
+            mols = [m for m in Chem.SDMolSupplier(str(test_dir / "CSEARCH" / sdf_name)) if m is not None]
+            assert mols, f"{sdf_name} has no conformers"
+            assert Chem.MolToSmiles(Chem.RemoveHs(mols[0])) == _canonical(smiles)
+    finally:
+        shutil.rmtree(test_dir, ignore_errors=True)
+
+
+@pytest.mark.parametrize(
+    "header",
+    [
+        "code_name,SMILES,SMILES_prod,target",  # plain SMILES mixed with SMILES_<name>
+        "code_name,SMILES,smiles,target",  # two plain SMILES columns
+    ],
+)
+def test_csearch_csv_invalid_smiles_columns_stop_the_run(capsys, header):
+    """CSEARCH must stop, telling the user to name the SMILES columns
+    SMILES_<name>, and must not generate any conformer."""
+    test_dir = Path(w_dir_main) / "tests" / "csearch_multi_smiles_invalid"
+    if test_dir.exists():
+        shutil.rmtree(test_dir)
+    test_dir.mkdir()
+    csv_path = test_dir / "invalid_smiles.csv"
+    csv_path.write_text(f"{header}\nr1,CC(=O)O,CC(=O)OC,1.5\n", encoding="utf-8")
+    try:
+        with pytest.raises(SystemExit):
+            csearch(input=str(csv_path), program="rdkit", sample=1,
+                    destination=str(test_dir / "CSEARCH"), nprocs=1)
+
+        output = capsys.readouterr().out
+        assert "To use several SMILES columns at the same time" in output
+        assert "SMILES_1, SMILES_2" in output
+        assert not list(test_dir.glob("CSEARCH/*.sdf"))
+    finally:
+        shutil.rmtree(test_dir, ignore_errors=True)

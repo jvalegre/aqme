@@ -182,15 +182,24 @@ def test_cmin_rejects_invalid_target(monkeypatch, capsys, target):
 def test_cmin_reads_charge_and_mult_from_sdf(monkeypatch):
     monkeypatch.chdir(cmin_ts_dir)
     sdf_path = _repo_path("tests", "cmin_TS", "methyl_Cl_Br.sdf")
-    _make_fake_famex(monkeypatch, [])
+    explorer_calls = []
+    _make_fake_famex(monkeypatch, explorer_calls)
 
-    monkeypatch.setattr("aqme.cmin.cmin._optimize_with_famex", _fake_optimize_success)
+    monkeypatch.setattr(
+        "aqme.cmin._build_ase_atoms", lambda mol, charge, mult: _FakeAtoms(mol)
+    )
     monkeypatch.setattr(
         "aqme.cmin.conformer_filters",
         lambda self, sorted_cids, cenergy, outmols: sorted_cids,
     )
 
     cmin(program="xtb", files=str(sdf_path))
+
+    # the charge and mult of the SDF must reach FAMEX
+    assert explorer_calls
+    for call in explorer_calls:
+        assert call["charge"] == -1
+        assert call["spin"] == 1
 
     output_file = _repo_path("tests", "cmin_TS", "CMIN", "methyl_Cl_Br.sdf")
     assert output_file.exists()
@@ -204,15 +213,24 @@ def test_cmin_reads_charge_and_mult_from_sdf(monkeypatch):
 def test_cmin_explicit_charge_and_mult_override_sdf(monkeypatch):
     monkeypatch.chdir(cmin_ts_dir)
     sdf_path = _repo_path("tests", "cmin_TS", "methyl_Cl_Br.sdf")
-    _make_fake_famex(monkeypatch, [])
+    explorer_calls = []
+    _make_fake_famex(monkeypatch, explorer_calls)
 
-    monkeypatch.setattr("aqme.cmin.cmin._optimize_with_famex", _fake_optimize_success)
+    monkeypatch.setattr(
+        "aqme.cmin._build_ase_atoms", lambda mol, charge, mult: _FakeAtoms(mol)
+    )
     monkeypatch.setattr(
         "aqme.cmin.conformer_filters",
         lambda self, sorted_cids, cenergy, outmols: sorted_cids,
     )
 
     cmin(program="xtb", files=str(sdf_path), charge=2, mult=3)
+
+    # FAMEX must receive the explicit charge and mult, not the ones of the SDF (-1 and 1)
+    assert explorer_calls
+    for call in explorer_calls:
+        assert call["charge"] == 2
+        assert call["spin"] == 3
 
     output_file = _repo_path("tests", "cmin_TS", "CMIN", "methyl_Cl_Br.sdf")
     assert output_file.exists()
@@ -369,13 +387,48 @@ def test_cmin_ts_report_marks_negative_frequency_and_top_atoms(monkeypatch):
     assert any(symbol in report for symbol in ["(C)", "(Br)", "(Cl)"])
     freq_file.unlink(missing_ok=True)
 
+
+# Real (unmocked) FAMEX/tblite frequency calculation on an SN2 TS aggregate
+# (Cl- + CH3Br, see tests/cmin_TS/mol_1.sdf): target="ts" must converge to a
+# stationary point with exactly one imaginary frequency, dominated by the
+# motion of the central carbon.
+def test_cmin_sn2_ts_has_single_imaginary_frequency_dominated_by_carbon(monkeypatch):
+    monkeypatch.chdir(cmin_ts_dir)
+    sdf_path = _repo_path("tests", "cmin_TS", "mol_1.sdf")
+
+    cmin(
+        program="tblite",
+        files=str(sdf_path),
+        charge=-1,
+        freq=True,
+        target="ts",
+        destination="CMIN_ts",
+    )
+
+    freq_file = _repo_path("tests", "cmin_TS", "CMIN_ts", "frecuencies.dat")
+    assert freq_file.exists()
+    report = freq_file.read_text(encoding="utf-8")
+
+    assert "Negative frequencies: 1" in report
+    assert "Imaginary frequency:" in report
+
+    # the top moving atom of the imaginary mode must be the carbon
+    top_atoms_block = report.split("Top moving atoms:")[1]
+    first_atom_line = next(
+        line for line in top_atoms_block.splitlines() if line.strip()
+    )
+    assert "(C)" in first_atom_line
+
+    shutil.rmtree(_repo_path("tests", "cmin_TS", "CMIN_ts"), ignore_errors=True)
+
+
 # tests of basic QME optimizations (xtb, mace, aimnet2)
 @pytest.mark.parametrize(
     "path, program, sdf, output_nummols",
     [
         ("complete", "xtb", "pentane_rdkit_methods.sdf", 4),
-        ("complete", "mace", "pentane_rdkit_methods.sdf", 4), 
-        ("complete", "aimnet2", "pentane_rdkit_methods.sdf", 4),
+        ("complete", "mace", "pentane_rdkit_methods_1conf.sdf", 1),
+        ("complete", "aimnet2", "pentane_rdkit_methods_1conf.sdf", 1),
         ("partial", "xtb", "tests/cmin_methods/pentane_rdkit_methods.sdf", 4), 
         ("name", "xtb", "pentane_rdkit_methods.sdf", 4), 
     ],

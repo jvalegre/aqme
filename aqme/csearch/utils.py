@@ -23,7 +23,9 @@ from aqme.utils import (
     mol_from_sdf_or_mol_or_mol2,
     read_xyz_charge_mult,
     add_prefix_suffix,
-    periodic_table
+    periodic_table,
+    get_smiles_columns,
+    read_csv_header,
 )
 from aqme.csearch.crest import nci_ts_mol
 
@@ -327,15 +329,23 @@ def prepare_csv_files(args, csearch_file):
             args.log.finalize()
             sys.exit()
 
+    # Validate the SMILES columns: either one plain SMILES column or one or
+    # more SMILES_<name> columns (processed one after the other)
+    try:
+        plain_col, suffixed_cols = get_smiles_columns(read_csv_header(csearch_file))
+    except ValueError as exc:
+        args.log.write(f"\nx  {exc}")
+        args.log.finalize()
+        sys.exit()
+    smiles_cols = [plain_col] if plain_col is not None else [col for col, _ in suffixed_cols]
+    has_smiles_column = len(smiles_cols) > 0
+
     # Process SMILES columns and generate job configurations
     job_inputs = []
     unique_mol_configs = set()
-    has_smiles_column = False
-    
+
     for col_idx, column in enumerate(csv_smiles.columns):
-        if column.upper() == "SMILES" or "SMILES_" in column.upper():
-            has_smiles_column = True
-            
+        if column in smiles_cols:
             # Process each row in the SMILES column
             for row_idx in range(len(csv_smiles)):
                 mol_config = generate_mol_from_csv(args, csv_smiles, row_idx, col_idx)
@@ -359,8 +369,9 @@ def prepare_csv_files(args, csearch_file):
                        
     if not has_smiles_column:
         args.log.write(
-            "\nx  Make sure the CSV file contains a column called 'SMILES', "
-            "'smiles' or 'SMILES_' with the SMILES of the molecules!"
+            "\nx  Make sure the CSV file contains a column called 'SMILES' (or "
+            "several columns called SMILES_<name>, i.e. SMILES_1, SMILES_2) with "
+            "the SMILES of the molecules!"
         )
         args.log.finalize()
         sys.exit()
@@ -407,9 +418,9 @@ def generate_mol_from_csv(args, csv_smiles, index, column_index):
     # Process molecule name
     try:
         name = str(csv_smiles.loc[index, "code_name"])
-        # Add suffix based on SMILES column name
-        if column_name.upper() != "SMILES" and "_" in column_name:
-            name += "_" + column_name.split("_")[-1]
+        # Add suffix based on SMILES column name (SMILES_<suffix>)
+        if str(column_name).strip().lower().startswith("smiles_"):
+            name += "_" + str(column_name).strip()[len("smiles_"):]
     except KeyError:
         args.log.write("\nx  Make sure the CSV file contains a column called 'code_name' with the names of the molecules!")
         args.log.finalize()
@@ -1032,6 +1043,32 @@ def _resolve_post_min_clashes(mol, conf_id, constraints_dist, min_dist=1.0, tole
             locked_pairs.add(pair_key)
 
 
+def _calc_energy_for_conformer(forcefield, mol, conf):
+    """Return the force field energy of the current geometry of a conformer.
+
+    The force field keeps its own copy of the coordinates, so it does not see
+    the displacements applied by _resolve_post_min_clashes. The positions of the
+    conformer are passed explicitly so the energy always corresponds to the
+    geometry that is returned to the caller.
+
+    Args:
+        forcefield: RDKit force field built for mol
+        mol (rdkit.Chem.Mol): Molecule holding the conformer
+        conf (int): Conformer ID (-1 for the default conformer)
+
+    Returns:
+        float: Energy of the current geometry (0 if it cannot be computed)
+    """
+    try:
+        positions = mol.GetConformer(conf).GetPositions().flatten().tolist()
+        return float(forcefield.CalcEnergy(positions))
+    except Exception:
+        try:
+            return float(forcefield.CalcEnergy())
+        except Exception:
+            return 0
+
+
 def minimize_rdkit_energy(mol, conf, log, FF, maxsteps,
                             constraints_atoms=None, constraints_dist=None,
                             constraints_angle=None, constraints_dihedral=None):
@@ -1084,24 +1121,21 @@ def minimize_rdkit_energy(mol, conf, log, FF, maxsteps,
                 'Keeping the unconstrained UFF optimization.'
             )
 
-    energy = 0
     try:
         forcefield.Initialize()
         forcefield.Minimize(maxIts=maxsteps)
-        energy = float(forcefield.CalcEnergy())
     except (RuntimeError, AttributeError, ValueError):
         log.write(
             f'\nx  Geometry minimization failed with {FF}. '
             'Keeping the current geometry.'
         )
-        if forcefield is not None:
-            try:
-                energy = float(forcefield.CalcEnergy())
-            except Exception:
-                energy = 0
 
     # --- APPLY THE MATHEMATICAL ALGORITHM ---
     _resolve_post_min_clashes(mol, conf, constraints_dist, min_dist=1.0, tolerance=0.5)
+
+    # the energy is calculated after the displacement so that it corresponds to
+    # the geometry that is returned (it feeds the filters and Boltzmann weights)
+    energy = _calc_energy_for_conformer(forcefield, mol, conf)
 
     return energy
 
@@ -1155,13 +1189,12 @@ def realign_mol(mol, conf, coord_Map, alg_Map, mol_template, maxsteps,
         maxIters=100,
     )
 
-    try:
-        energy = float(forcefield.CalcEnergy())
-    except Exception:
-        energy = 0
-
     # --- APPLY THE MATHEMATICAL ALGORITHM ---
     _resolve_post_min_clashes(mol, conf, constraints_dist, min_dist=1.0, tolerance=0.8)
+
+    # the energy is calculated after the displacement so that it corresponds to
+    # the geometry that is returned (it feeds the filters and Boltzmann weights)
+    energy = _calc_energy_for_conformer(forcefield, mol, conf)
 
     return mol, energy
 
@@ -1527,7 +1560,11 @@ def smi_to_mol(
     """
     complex_ts = False
     original_smi = smi if original_smi is None else original_smi
-    smi_parts = smi.split(".")
+    # Canonicalization (done upstream) strips atom-map numbers, so mapped
+    # SMILES must be rebuilt from the original string or constraint atoms
+    # can no longer be matched to fragments in the aggregate below.
+    generation_smi = original_smi if ':' in str(original_smi) else smi
+    smi_parts = generation_smi.split(".")
     has_constraints = any([constraints_atoms, constraints_dist,
                            constraints_angle, constraints_dihedral])
 
@@ -1558,7 +1595,7 @@ def smi_to_mol(
             # (mirrors the same translation done for single molecules below)
             if mol is not None:
                 map_to_idx, duplicated_maps = _collect_map_to_idx(mol)
-                expected_maps = _collect_mapped_numbers_from_smiles(smi)
+                expected_maps = _collect_mapped_numbers_from_smiles(generation_smi)
                 missing_maps = sorted(set(expected_maps) - set(map_to_idx.keys()))
                 if duplicated_maps:
                     log.write(

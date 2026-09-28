@@ -904,7 +904,7 @@ class csearch:
         """
         # Validate template type
         if complex_type not in self.ACCEPTED_COMPLEX_TYPES:
-            self._log_invalid_template()
+            self._log_invalid_template(complex_type, name)
             return False
             
         # Check template applicability
@@ -1372,49 +1372,6 @@ class csearch:
         finally:
             if temp_xyz is not None and temp_xyz.exists():
                 temp_xyz.unlink()
-
-    def _write_racerts_sdf(self, ts_conformers_mol, output_xyz, output_sdf, charge, mult, name):
-        """Write RacerTS conformers to the AQME SDF ensemble format."""
-        wrote_sdf = False
-
-        if hasattr(ts_conformers_mol, "GetConformers"):
-            try:
-                with Chem.SDWriter(str(output_sdf)) as sdwriter:
-                    for conf_id, conf in enumerate(ts_conformers_mol.GetConformers(), start=1):
-                        mol_copy = Chem.Mol(ts_conformers_mol)
-                        mol_copy.RemoveAllConformers()
-                        mol_copy.AddConformer(conf, assignId=True)
-                        mol_copy.SetProp("_Name", f"{name} {conf_id}")
-                        mol_copy.SetProp("Real charge", str(charge))
-                        mol_copy.SetProp("Mult", str(mult if mult is not None else 1))
-                        sdwriter.write(mol_copy)
-                wrote_sdf = True
-            except Exception:
-                wrote_sdf = False
-
-        if not wrote_sdf and output_xyz.exists():
-            command = [
-                "obabel",
-                "-ixyz",
-                str(output_xyz),
-                "-osdf",
-                f"-O{output_sdf}",
-            ]
-            try:
-                subprocess.run(
-                    command,
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL,
-                    check=True,
-                )
-                wrote_sdf = True
-            except (FileNotFoundError, subprocess.CalledProcessError):
-                wrote_sdf = False
-
-        if not wrote_sdf:
-            self._error_exit(
-                "RacerTS completed but AQME could not write the SDF ensemble."
-            )
 
     def _run_rdkit_sampling(self, mol, name, charge, mult,
                            *args):
