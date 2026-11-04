@@ -5,6 +5,7 @@
 
 import os
 import re
+import csv
 import subprocess
 import sys
 import time
@@ -12,8 +13,9 @@ import getopt
 import glob
 import yaml
 import ast
+import contextlib
 from pathlib import Path
-from rdkit.Chem.rdMolAlign import GetBestRMS
+from rdkit.Chem.rdMolAlign import GetBestRMS, AlignMol
 from rdkit.Chem.rdmolops import RemoveHs
 from rdkit.Chem import AllChem as Chem
 from aqme.argument_parser import set_options, var_dict
@@ -24,13 +26,32 @@ J_TO_AU = 4.184 * 627.509541 * 1000.0  # UNIT CONVERSION
 T = 298.15
 
 obabel_version = "3.1.1" # this MUST match the meta.yaml
-aqme_version = "2.0.1"
+aqme_version = "2.1.0"
 time_run = time.strftime("%Y/%m/%d %H:%M:%S", time.localtime())
 aqme_ref = f"AQME v {aqme_version}, Alegre-Requena, J. V.; Sowndarya, S.; Perez-Soto, R.; Alturaifi, T.; Paton, R. AQME: Automated Quantum Mechanical Environments for Researchers and Educators. Wiley Interdiscip. Rev. Comput. Mol. Sci. 2023, 13, e1663 (DOI: 10.1002/wcms.1663)."
+qdescp_ref = "Dalmau, D; Jacot-Descombes, L.; Kalikadien, A.; Manzanilla, B.; Pidko, E. A.; Jorner, K.; Sigman, M. S.; Alegre-Requena, J. V. Cost-Effective Quantum-Mechanical Workflows for Molecular Machine Learning. ACS Catal. 2026, 16, 12565-12574. (DOI: 10.1021/acscatal.6c02583)"
+famex_ref = "FAMEX Development Team, FAMEX: Fast Mechanistic Explorer (2026). Available at https://github.com/rlaplaza-lab/famex"
 xtb_version = '6.7.1'
 crest_version = '2.12'
 
 RDLogger.DisableLog("rdApp.*")
+
+_nested_call_active = False
+@contextlib.contextmanager
+def nested_call():
+    """Mark AQME modules instantiated inside this block as internally triggered."""
+    global _nested_call_active
+    previous = _nested_call_active
+    _nested_call_active = True
+    try:
+        yield
+    finally:
+        _nested_call_active = previous
+
+
+def is_nested_call():
+    """Return True while running inside a `nested_call()` block."""
+    return _nested_call_active
 
 
 def run_command(command, outfile, cwd=None, env=None):
@@ -316,7 +337,7 @@ def get_info_input(file):
     else:
         raise ValueError(f"Unsupported file extension: {file_extension}")
 
-def get_conf_RMS(mol1, mol2, c1, c2, heavy, max_matches_rmsd):
+def get_conf_RMS(mol1, mol2, c1, c2, heavy, max_matches_rmsd, threshold=None):
     """Calculate RMSD between two molecule conformations.
     
     Computes best RMSD by aligning mol1 to mol2. Note: mol1 is modified
@@ -339,7 +360,15 @@ def get_conf_RMS(mol1, mol2, c1, c2, heavy, max_matches_rmsd):
     if heavy:
         mol1 = RemoveHs(mol1)
         mol2 = RemoveHs(mol2)
-    
+
+    if threshold is not None:
+        try:
+            rms_fast = AlignMol(mol1, mol2, prbCid=c1, refCid=c2)
+            if rms_fast < float(threshold):
+                return rms_fast
+        except Exception:
+            pass
+
     return GetBestRMS(
         mol1, mol2, c1, c2, 
         maxMatches=max_matches_rmsd, 
@@ -356,12 +385,13 @@ def _get_argument_categories():
     bool_args = [
         "csearch", "cmin", "qprep", "qcorr", "qdescp",
         "heavyonly", "single_system", "cregen", "lowest_only",
-        "chk", "oldchk", "nodup_check", "robert", "debug", "pytest_testing"
+        "chk", "oldchk", "nodup_check", "robert", "debug", "pytest_testing",
+        "freq"
     ]
     
     list_args = [
         "files", "gen_atoms", "constraints_atoms", "constraints_dist",
-        "constraints_angle", "constraints_dihedral", "atom_types", "cartesians",
+        "constraints_angle", "constraints_dihedral", "freeze", "aromatic_int", "atom_types", "cartesians",
         "nmr_atoms", "nmr_slope", "nmr_intercept", "qdescp_atoms", "geom"
     ]
     
@@ -372,11 +402,10 @@ def _get_argument_categories():
     
     float_args = [
         "ewin_cmin", "ewin_csearch", "opt_fmax", "rms_threshold",
-        "energy_threshold", "initial_energy_threshold", "max_mol_wt",
+        "energy_threshold", "initial_energy_threshold", "pmi_threshold", "max_mol_wt",
         "dup_threshold", "ro_threshold", "amplitude_ifreq", "ifreq_cutoff",
         "s2_threshold", "vdwfrac", "covfrac", "bond_thres", "angle_thres",
-        "dihedral_thres", "crest_force", "qdescp_temp", "qdescp_acc",
-        "dbstep_r", "crest_nclust", "vbur_radius"
+        "dihedral_thres", "crest_force", "crest_nclust", "vbur_radius"
     ]
     
     return bool_args, list_args, int_args, float_args
@@ -675,7 +704,12 @@ def _create_logger(self, aqme_module, logger_1, logger_2, txt_yaml, error_setup)
         self.log = Logger(path_command / logger_1, logger_2, verbose=self.verbose)
     
     # Write header
-    self.log.write(f"AQME v {aqme_version} {time_run} \nCitation: {aqme_ref}\n")
+    if not is_nested_call():
+        self.log.write(f"AQME v {aqme_version} {time_run} \nCitation: {aqme_ref}\n")
+        if aqme_module == "qdescp":
+            self.log.write(f"QDESCP is used for descriptor generation, please cite:\n{qdescp_ref}\n")
+            if getattr(self, "geom_opt", True):
+                self.log.write(f"If you use the CMIN module, please cite:\n{famex_ref}\n")
     
     # Log command line if used
     if self.command_line:
@@ -866,8 +900,13 @@ def read_xyz_charge_mult(file):
         charge_xyz = 0
     if mult_xyz is None:
         mult_xyz = 1
-    
+
     return charge_xyz, mult_xyz
+
+
+def get_input_extension(input_file):
+    """Return the lowercase extension of *input_file* without the dot."""
+    return os.path.basename(Path(input_file)).split(".")[-1].lower()
 
 
 def _filter_mols_by_criteria(mols, low_check):
@@ -1098,6 +1137,94 @@ def mol_from_sdf_or_mol_or_mol2(input_file, module, args, low_check=None, keep_x
         return _load_mols_for_csearch(input_file, args, keep_xyz=keep_xyz)
 
 
+def expand_aromatic_constraints(aromatic_int, map_to_idx, log=None):
+    """Expand aromatic_int ring+metal groups into an xTB $constrain block string (force=0.1).
+
+    For each group [ring_a1, ..., ring_an, metal] (all atom map numbers):
+      - Distance: each ring atom to metal at the canonical M-C distance
+          5-ring (Cp): 2.10 Å  (ref: ferrocene Fe-C = 2.064 Å, CRC Handbook)
+          6-ring (arene): 2.15 Å (ref: bis(benzene)chromium Cr-C ≈ 2.14 Å)
+      - Angle: consecutive ring atom triplets at the ideal regular-polygon interior angle
+          5-ring: 108.0°  |  6-ring: 120.0°
+      - Dihedral: consecutive ring atom quartets at 0.0° (planarity)
+
+    Supported ring sizes: 5 and 6 only.
+    map_to_idx values must be 1-based xTB indices (as used in the qdescp path).
+
+    Args:
+        aromatic_int (list): e.g. [[1,2,3,4,5,10]] — ring atoms then metal, all atom map numbers.
+        map_to_idx (dict): {map_num: xtb_idx} where xtb_idx is 1-based.
+        log: optional logger with a .write() method for error messages.
+
+    Returns:
+        str: Complete xTB constrain block, e.g.
+             "$constrain\\n    force constant=0.1\\n    distance: ...\\n$end\\n"
+             Returns "" if aromatic_int is empty.
+
+    Raises:
+        SystemExit: on unsupported ring size or missing atom map numbers.
+    """
+    # Canonical M-C distances and ideal angles per ring size
+    _RING_PARAMS = {
+        5: {'dist': 2.10, 'angle': 108.0},
+        6: {'dist': 2.15, 'angle': 120.0},
+    }
+
+    constraint_lines = []
+
+    for group in aromatic_int:
+        group = [int(x) for x in group]
+        ring_maps = group[:-1]
+        metal_map = group[-1]
+        n_ring = len(ring_maps)
+
+        if n_ring not in _RING_PARAMS:
+            if log is not None:
+                log.write(
+                    f"\nx  aromatic_int: unsupported ring size {n_ring}. "
+                    "Only 5- and 6-membered rings are supported."
+                )
+            sys.exit()
+
+        missing = [m for m in ring_maps + [metal_map] if m not in map_to_idx]
+        if missing:
+            if log is not None:
+                log.write(
+                    f"\nx  aromatic_int: atom map numbers {missing} not found in the molecule. "
+                    f"Available map numbers: {sorted(map_to_idx.keys())}."
+                )
+            sys.exit()
+
+        ring_idx = [map_to_idx[m] for m in ring_maps]
+        metal_idx = map_to_idx[metal_map]
+        params = _RING_PARAMS[n_ring]
+
+        # Distance: each ring atom to metal
+        for ri in ring_idx:
+            constraint_lines.append(f"    distance: {ri}, {metal_idx}, {params['dist']}")
+
+        # Angle: consecutive ring atom triplets
+        for i in range(n_ring):
+            i0 = ring_idx[i % n_ring]
+            i1 = ring_idx[(i + 1) % n_ring]
+            i2 = ring_idx[(i + 2) % n_ring]
+            constraint_lines.append(f"    angle: {i0}, {i1}, {i2}, {params['angle']}")
+
+        # Dihedral: consecutive ring atom quartets (planarity)
+        for i in range(n_ring):
+            i0 = ring_idx[i % n_ring]
+            i1 = ring_idx[(i + 1) % n_ring]
+            i2 = ring_idx[(i + 2) % n_ring]
+            i3 = ring_idx[(i + 3) % n_ring]
+            constraint_lines.append(f"    dihedral: {i0}, {i1}, {i2}, {i3}, 0.0")
+
+    if not constraint_lines:
+        return ""
+
+    lines_str = "\n".join(constraint_lines)
+    return f"$constrain\n    force constant=0.1\n{lines_str}\n$end\n"
+
+
 def load_sdf(input_file, keep_xyz=False):
     """Load molecules from SDF file with error recovery.
     
@@ -1259,7 +1386,73 @@ def check_crest(self):
         )
         self.args.log.finalize()
         sys.exit()
- 
+
+
+MULTI_SMILES_HELP = (
+    "To use several SMILES columns at the same time, name all of them "
+    "SMILES_<name> (i.e. SMILES_1, SMILES_2, ... or SMILES_sub, SMILES_cat)."
+)
+
+
+def get_smiles_columns(columns):
+    """Classify the SMILES columns of a CSV header.
+
+    A CSV can contain either one plain SMILES column (called 'SMILES',
+    'smiles', 'Smiles', ...) or one or more SMILES_<name> columns, where
+    <name> is used as the suffix of the molecules/descriptors of that column.
+
+    Args:
+        columns (list): Column names of the CSV (preferably read directly
+            from the header, since pandas renames literal duplicates to
+            'SMILES.1')
+
+    Returns:
+        tuple: (plain_col, suffixed_cols), where plain_col is the name of the
+            plain SMILES column (or None) and suffixed_cols is a list of
+            (column_name, suffix) tuples in the order of the CSV
+
+    Raises:
+        ValueError: If the SMILES columns cannot be handled unambiguously
+    """
+    plain_cols, suffixed_cols = [], []
+    for col in columns:
+        col_clean = str(col).strip()
+        if re.fullmatch(r"smiles(\.\d+)?", col_clean.lower()):
+            plain_cols.append(col)
+        elif col_clean.lower().startswith("smiles_") and len(col_clean) > len("smiles_"):
+            suffixed_cols.append((col, col_clean[len("smiles_"):]))
+
+    if len(plain_cols) > 1:
+        raise ValueError(
+            f"More than one SMILES column was found ({', '.join(map(str, plain_cols))})! "
+            f"{MULTI_SMILES_HELP}"
+        )
+    if plain_cols and suffixed_cols:
+        found = ", ".join(map(str, plain_cols + [col for col, _ in suffixed_cols]))
+        raise ValueError(
+            f"Several SMILES columns were found ({found}) and one of them is a plain "
+            f"SMILES column ('SMILES', 'smiles', ...). Several SMILES columns cannot be "
+            f"used together with a plain SMILES column. {MULTI_SMILES_HELP}"
+        )
+
+    seen_suffixes = {}
+    for col, suffix in suffixed_cols:
+        if suffix.lower() in seen_suffixes:
+            raise ValueError(
+                f"The SMILES columns {seen_suffixes[suffix.lower()]} and {col} use the "
+                f"same name after 'SMILES_'! Please use a different name for each "
+                f"SMILES column. {MULTI_SMILES_HELP}"
+            )
+        seen_suffixes[suffix.lower()] = col
+
+    return (plain_cols[0] if plain_cols else None), suffixed_cols
+
+
+def read_csv_header(csv_path):
+    """Return the raw header of a CSV (without pandas renaming duplicates)."""
+    with open(csv_path, newline="", encoding="utf-8-sig") as csv_file:
+        return next(csv.reader(csv_file), [])
+
 
 def get_files(value):
     """Process and expand file path specifications.
@@ -1474,7 +1667,7 @@ def check_version(self, program, version_line, target_version, n_split, install_
     """
     file_txt = self.args.initial_dir.joinpath(f'{program.lower()}_internal_test.txt')
     version_found = '0.0.0'
-
+    
     # Run version command
     command_run_1 = [program.lower(), "--version", '>', f'{file_txt}']
     run_command(command_run_1, f'{file_txt}', cwd=self.args.initial_dir)

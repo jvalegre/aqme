@@ -5,12 +5,72 @@
 
 import os
 import shutil
+import threading
 from pathlib import Path
+import multiprocessing
 from rdkit import Chem
-from rdkit.Chem import rdMolTransforms, Descriptors
+from rdkit.Chem import rdMolTransforms, Descriptors, rdMolDescriptors
 from rdkit.ML.Cluster import Butina
 
 from aqme.utils import periodic_table, get_conf_RMS
+
+# Starting a process pool re-imports RDKit in every worker and pickles the
+# molecules, which costs more than the calculation itself for small matrices
+# (measured: below this the pool is up to 6x slower, above it starts to pay off)
+MIN_PAIRS_FOR_POOL = 2000
+
+
+def get_pmi_tuple(mol):
+    """Return the three principal moments of inertia for a molecule."""
+    return (
+        float(rdMolDescriptors.CalcPMI1(mol)),
+        float(rdMolDescriptors.CalcPMI2(mol)),
+        float(rdMolDescriptors.CalcPMI3(mol)),
+    )
+
+
+def check_energy_pass(e1, e2, threshold):
+    """Return True when two conformers are distinct enough in energy."""
+    return abs(float(e1) - float(e2)) >= float(threshold)
+
+
+def check_pmi_pass(pmi1, pmi2, threshold):
+    """Return True when two conformers are distinct enough in PMI space."""
+    return max(abs(a - b) for a, b in zip(pmi1, pmi2)) > float(threshold)
+
+
+def check_rmsd_pass(mol1, mol2, threshold, heavyonly, max_matches_rmsd, log=None):
+    """Return True when two conformers are distinct enough in RMSD space."""
+    try:
+        rms = get_conf_RMS(
+            mol1, mol2, -1, -1, heavyonly, max_matches_rmsd, threshold=threshold
+        )
+    except RuntimeError:
+        if log is not None:
+            log.write(
+                '\nx  The mols loaded by RDKit from the SDF file have different substructures '
+                'and the RMS filter failed. The duplicate filter will only use E on some conformers!'
+            )
+        return True
+
+    # Number of atoms to consider for weighting the RMSD threshold
+    num_atoms = mol1.GetNumHeavyAtoms() if heavyonly else mol1.GetNumAtoms()
+
+    # Weighting based on square root of the ratio of atomsS
+    ref_atoms = 20.0
+    weighted_threshold = float(threshold) * ((num_atoms / ref_atoms) ** 0.5)
+
+    return rms >= weighted_threshold
+
+
+def has_multiple_fragments(mol):
+    """Return True when a molecule contains more than one disconnected fragment."""
+    try:
+        return len(Chem.GetMolFrags(mol, asMols=False, sanitizeFrags=False)) > 1
+    except Exception:
+        if mol.HasProp("SMILES"):
+            return "." in mol.GetProp("SMILES")
+        return False
 
 
 def geom_filter(self, mol_ensemb, mol_geom, geom):
@@ -259,14 +319,17 @@ def filters(mol, log, molwt_cutoff):
     return True
 
 
-def conformer_filters(self, sorted_all_cids, cenergy, outmols):
-    """Apply sequential energy and RMSD-based conformer filters.
-    
-    Three-stage filtering process:
+def conformer_filters(self, sorted_all_cids, cenergy, outmols, force_full_filters=False):
+    """Apply fragment-aware conformer filtering.
+
+    Normal systems use an energy + PMI + RMSD cascade:
     1. Energy window filter (ewin_cmin)
     2. Pre-filter based on energy differences
-    3. Combined energy and RMSD filter
-    
+    3. PMI pre-filter and RMSD duplicate check
+
+    Multi-fragment systems skip the energy-based stages and use
+    PMI + RMSD only.
+
     Args:
         self: AQME instance with filter arguments
         sorted_all_cids (list): List of conformer IDs sorted by energy
@@ -276,31 +339,49 @@ def conformer_filters(self, sorted_all_cids, cenergy, outmols):
     Returns:
         list: Selected conformer IDs that pass all filters
     """
-    # Stage 1: Filter by energy window
-    sortedcids = apply_energy_window_filter(
-        sorted_all_cids,
-        cenergy,
-        self.args.ewin_cmin,
+    is_multi_fragment_system = (
+        bool(sorted_all_cids)
+        and has_multiple_fragments(outmols[sorted_all_cids[0]])
     )
-    
-    # Stage 2: Pre-filter based on energy differences only
-    selectedcids_initial = apply_pre_energy_filter(
-        sortedcids,
-        cenergy,
-        self.args.initial_energy_threshold,
-    )
-    
-    # Stage 3: Filter based on both energy and RMSD
-    selectedcids = apply_rmsd_and_energy_filter(
+
+    if is_multi_fragment_system:
+        self.args.log.write(
+            "\no  Multi-fragment system detected: applying PMI and RMSD "
+            "filtering only (no energy filter)"
+        )
+
+    if is_multi_fragment_system:
+        selectedcids_initial = sorted_all_cids
+    else:
+        # Stage 1: Filter by energy window
+        sortedcids = apply_energy_window_filter(
+            sorted_all_cids,
+            cenergy,
+            self.args.ewin_cmin,
+        )
+
+        # Stage 2: Pre-filter based on energy differences only
+        selectedcids_initial = apply_pre_energy_filter(
+            sortedcids,
+            cenergy,
+            self.args.initial_energy_threshold,
+        )
+
+    # Final duplicate filter:
+    # - normal systems: energy + PMI + RMSD
+    # - multi-fragment systems: PMI + RMSD
+    selectedcids = apply_filters(
         outmols,
         selectedcids_initial,
         cenergy,
         self.args,
+        use_energy=not is_multi_fragment_system,
+        use_mpi=True,
+        use_rmsd=True,
     )
-    
+
+
     return selectedcids
-
-
 def apply_energy_window_filter(sorted_all_cids, cenergy, energy_window):
     """Filter conformers by energy window from the lowest energy conformer.
     
@@ -360,87 +441,108 @@ def apply_pre_energy_filter(sortedcids, cenergy, threshold):
     return selected_cids
 
 
-def apply_rmsd_and_energy_filter(outmols, selectedcids_initial, cenergy, args):
-    """Filter conformers based on combined energy and RMSD criteria.
-    
-    For each conformer, compares with already selected conformers. If energy
-    difference is below threshold AND RMSD is below threshold with any selected
-    conformer, the new conformer is rejected as a duplicate.
-    
+def apply_filters(
+    outmols,
+    selectedcids_initial,
+    cenergy,
+    args,
+    use_energy=True,
+    use_mpi=True,
+    use_rmsd=True,
+):
+    """Apply the conformer duplicate cascade.
+
     Args:
-        outmols (dict/list): Conformer molecule objects indexed by ID
-        selectedcids_initial (list): Pre-filtered conformer IDs
-        cenergy (dict/list): Conformer energies indexed by ID
-        args: Arguments object with thresholds:
-            - energy_threshold: Energy similarity threshold (kcal/mol)
-            - rms_threshold: RMSD similarity threshold (Angstroms)
-            - heavyonly: Use only heavy atoms for RMSD
-            - max_matches_rmsd: Maximum atom matches for RMSD calculation
-    
-    Returns:
-        list: Final selected conformer IDs
+        use_energy (bool): Enable the energy similarity check.
+        use_mpi (bool): Enable the PMI similarity check.
+        use_rmsd (bool): Enable the RMSD similarity check.
     """
-    selected_cids = [selectedcids_initial[0]]  # Always include lowest energy
-    energy_threshold = float(args.energy_threshold)
-    rms_threshold = float(args.rms_threshold)
-    max_matches_rmsd = int(args.max_matches_rmsd)
-    
+    if not selectedcids_initial:
+        return []
+
+    selected_cids = [selectedcids_initial[0]]
+    energy_threshold = float(getattr(args, "energy_threshold", 0.0))
+    pmi_threshold = float(getattr(args, "pmi_threshold", 0.5))
+    rms_threshold = float(getattr(args, "rms_threshold", 0.25))
+    max_matches_rmsd = int(getattr(args, "max_matches_rmsd", 1000))
+    heavyonly = getattr(args, "heavyonly", True)
+    log = getattr(args, "log", None)
+    pmi_cache = (
+        {cid: get_pmi_tuple(outmols[cid]) for cid in selectedcids_initial}
+        if use_mpi
+        else {}
+    )
+
     for cid in selectedcids_initial[1:]:
         is_duplicate = False
-        
-        # Check against all already selected conformers
+
         for selected_cid in selected_cids:
-            energy_diff = abs(cenergy[cid] - cenergy[selected_cid])
-            
-            # Only calculate RMSD if energies are similar
-            if energy_diff < energy_threshold:
-                try:
-                    rms = get_conf_RMS(
-                        outmols[selected_cid],
-                        outmols[cid],
-                        -1,  # n_mol_1
-                        -1,  # n_mol_2
-                        args.heavyonly,
-                        max_matches_rmsd
-                    )
-                except RuntimeError:
-                    # Different substructures - use only energy filter
-                    rms = rms_threshold + 1
-                    args.log.write(
-                        '\nx  The mols loaded by RDKit from the SDF file have different substructures '
-                        'and the RMS filter failed. The duplicate filter will only use E on some conformers!'
-                    )
-                
-                if rms < rms_threshold:
+            if use_energy and check_energy_pass(
+                cenergy[cid], cenergy[selected_cid], energy_threshold
+            ):
+                continue
+
+            if use_mpi:
+                pmi_diff = max(abs(a - b) for a, b in zip(pmi_cache[cid], pmi_cache[selected_cid]))
+                if pmi_diff > pmi_threshold:
+                    continue
+
+            if use_rmsd:
+                if not check_rmsd_pass(
+                    outmols[selected_cid],
+                    outmols[cid],
+                    rms_threshold,
+                    heavyonly,
+                    max_matches_rmsd,
+                    log,
+                ):
                     is_duplicate = True
                     break
-        
+            else:
+                is_duplicate = True
+                break
+
         if not is_duplicate and cid not in selected_cids:
             selected_cids.append(cid)
-    
-    return selected_cids
 
+    return selected_cids
 
 
 def compute_pairwise_rms_distances(self, mols):
     """Compute pairwise RMS distances for all conformers.
-    
+
     Creates a distance matrix of RMS values between all pairs of conformers.
     Uses only 100 atom matches since molecules are aligned with same numbering.
-    
+
+    The calculation is only sent to a process pool when it is worth it: CSEARCH
+    and CMIN call this from worker threads, so a pool started there would spawn
+    up to nprocs^2 processes, and for small matrices the pool costs more than
+    the calculation.
+
     Args:
         mols (list): List of RDKit molecule objects with conformers
-    
+
     Returns:
         list: Flattened upper triangular distance matrix
     """
-    dists = []
-    for i in range(len(mols)):
-        for j in range(i):
-            # using 100 matches only since the molecules are aligned and share the same atom numbering
-            rms = get_conf_RMS(mols[i], mols[j], -1, -1, self.args.heavyonly, 100)
-            dists.append(rms)
-    return dists
+    pairs = [(i, j) for i in range(len(mols)) for j in range(i)]
+    in_worker_thread = threading.current_thread() is not threading.main_thread()
+
+    if in_worker_thread or len(pairs) < MIN_PAIRS_FOR_POOL:
+        # get_conf_RMS leaves its first argument aligned to the second one. In a
+        # pool that happens on a pickled copy, so the probe is copied here to
+        # keep the caller's conformers untouched (heavyonly already copies them)
+        return [
+            get_conf_RMS(
+                mols[i] if self.args.heavyonly else Chem.Mol(mols[i]),
+                mols[j], -1, -1, self.args.heavyonly, 100
+            )
+            for i, j in pairs
+        ]
+
+    args = [(mols[i], mols[j], -1, -1, self.args.heavyonly, 100) for i, j in pairs]
+    with multiprocessing.Pool(processes=self.args.nprocs) as pool:
+        return pool.starmap(get_conf_RMS, args)
 
 
 def determine_cluster_points(self, program, sample, name):
@@ -638,218 +740,3 @@ def cluster_conformers(self, mols, program, csearch_file, name, sample):
         write_clustered_sdf(self, cluster_mols_sorted, csearch_file)
     
     return cluster_mols_sorted
-
-
-# Aux functions of the geometry filter
-# def is_carbene_like(neighbours):
-#     """
-#     Takes a list of the metal neighbour atoms and returns True if they can be considered as if it were a carbene.
-
-#     Parameters
-#     ----------
-#     neighbors : list
-#         list of neighbour atoms of the metal.
-
-#     Returns
-#     -------
-#     bool
-#     """
-
-#     carbene_like = False
-#     N_group = ["N", "P", "As"]
-#     for inside_neighbour in neighbours:
-#         if inside_neighbour.GetSymbol() in N_group:
-#             if inside_neighbour.GetTotalValence() == 4:
-#                 carbene_like = True
-#     return carbene_like
-
-
-# def get_fragmented_versions(mol, atom_i, atom_j, metal_idx):
-#     """
-#     Creates two copies of the mol object where in the first one the atom_i and
-#     in the second the atom_j are not bonded to the metal.
-
-#     Parameters
-#     ----------
-#     mol : rdkit.Chem.Mol
-#             The molecule to fragment.
-#     atom_i : int
-#             Idx of the first atom
-#     atom_j : int
-#             Idx of the second atom
-#     metal_idx : int
-#             Idx of the metal
-
-#     Returns
-#     -------
-#     tuple
-#             mol_i, mol_j
-#     """
-
-#     bond_i = mol.GetBondBetweenAtoms(atom_i, metal_idx)
-#     mol_i = Chem.FragmentOnBonds(
-#         mol, [bond_i.GetIdx()], addDummies=True, dummyLabels=[(atom_i, metal_idx)]
-#     )
-#     bond_j = mol.GetBondBetweenAtoms(atom_j, metal_idx)
-#     mol_j = Chem.FragmentOnBonds(
-#         mol, [bond_j.GetIdx()], addDummies=True, dummyLabels=[(atom_j, metal_idx)]
-#     )
-#     return mol_i, mol_j
-
-
-# def is_around_angle(test, angle, offset):
-#     """
-#     Checks if a test angle is close to the angle or not.
-
-#     Parameters
-#     ----------
-#     test : float
-#             Angle to test in Degrees.
-#     angle : float
-#             Angle to compare in Degrees.
-#     offset : float
-#             Tolerance around 'angle' in degrees.
-
-#     Returns
-#     -------
-#     bool
-#             True if it is in the range [angle-offset,angle+offset].
-#     """
-
-#     return (angle - offset) <= test <= (angle + offset)
-
-
-# def passes_Ir_bidentate_x3_rule_angle_requirements(
-#     ligand_atoms, mol, metal_idx, offset
-# ):
-#     """
-#     Checks if for complexes with Ph_Py ligands if the angles between the N
-#     atoms are acceptable. Linear when there are 2 Ph_Py and not linear when
-#     there are 3 Ph_Py Ligands.
-
-#     Parameters
-#     ----------
-#     ligand_atoms : list
-#             A list of tuples where the second value of each tuple is the Idx in the
-#             provided mol of the N atom of that ligand.
-#     mol : rdkit.Chem.Mol
-#             The molcule object of the complex
-#     metal_idx : int
-#             Idx of the metal atom
-#     offset : float
-#             Angle error in degrees to consider or not an angle to be linear.
-
-#     Returns
-#     -------
-#     bool
-#             Whether it passes the angle requirements or not
-#     """
-
-#     from functools import partial
-
-#     is_lineal = partial(is_around_angle, angle=180, offset=offset)
-#     get_angle = lambda i, j: rdMolTransforms.GetAngleDeg(mol, i, metal_idx, j)
-#     passing = True
-
-#     if len(ligand_atoms) == 3:  # For complexes with 3 Ph_Py ligands:
-#         i, j, k = ligand_atoms
-#         angles = [get_angle(a[1], b[1]) for a, b in [(i, j), (i, k), (j, k)]]
-#         passing = not any([is_lineal(angle) for angle in angles])
-
-#     if (
-#         len(ligand_atoms) == 2
-#     ):  # For complexes with 2 Ph_Py ligands + 1 ligand that is not Ph_Py
-#         (i, i2), (j, j2) = ligand_atoms
-#         angle = get_angle(i2, j2)
-#         passing = is_lineal(angle)
-
-#     return passing
-
-
-# def passes_Ir_bidentate_x3_rule(mol, angle_thres):
-#     """
-#     Checks if a mol containing an Ir metal complex passes the bidentate x3
-#     rule or not.
-
-#     Parameters
-#     ----------
-#     mol : rdkit.Chem.Mol
-#             The molecule to be tested.
-#     angle_thres : float
-#             Angle in degrees that acts as tolerance around 180º
-
-#     Returns
-#     -------
-#     bool
-#             True if it has passed the rule
-#     """
-
-#     bond_threshold = 2.60  # based on observation from DFT optimized geometries
-#     ligand_links = []
-#     atom_indexes = []
-
-#     passing = True
-#     # Finds the Ir atom and gets the atom types and indexes of all its neighbours
-#     # the filter is compatible with molecules that do not contain Ir (always passing)
-#     metal_idx = None
-#     for atom in mol.GetAtoms():
-#         if atom.GetAtomicNum() == 77:
-#             metal_idx = atom.GetIdx()
-#             for x in atom.GetNeighbors():
-#                 ligand_links.append(x.GetSymbol())
-#                 atom_indexes.append(x.GetIdx())
-
-#     # I need to get the only 3D conformer generated in that mol object for rdMolTransforms
-#     mol_conf = mol.GetConformer(0)
-#     # This part will identify the pairs of C and N atoms that are part of the same Ph_Py ligand.
-#     # The shape of the atom pairs is '[[C1_ATOM_NUMBER, N1_ATOM_NUMBER],[C2, N2],...]'.
-#     # This information is required for the subsequent filtering process based on angles
-
-#     # it filters off molecules that the SDF only detects 5 Ir neighbours
-#     if len(atom_indexes) != 6:
-#         if metal_idx is not None:
-#             passing = False
-#         return passing
-
-#     # Filter by distance of the neighbour atoms and the metal
-#     for atom_idx in atom_indexes:
-#         bond_length = rdMolTransforms.GetBondLength(mol_conf, metal_idx, atom_idx)
-#         if bond_length > bond_threshold:
-#             return False
-
-#     ligand_atoms = []
-#     for atom_i, sym_i in zip(atom_indexes, ligand_links):
-#         # This is a filter that excludes molecules that fell apart during DFT geometry
-#         # optimization (i.e. a N atom from one of the ligands separated from Ir). The
-#         # max distance allowed can be tuned in length_filter
-#         for atom_j in atom_indexes:
-#             # Avoid combinations of the same atom with itself
-#             if atom_i != atom_j and sym_i == "C":
-#                 # We know that the ligands never have 2 carbon atoms bonding the Ir atom except
-#                 # for carbenes. We only use atom_indexes[i] for C atoms, and atom_indexes[j] for the potential
-#                 # N atoms that are part of the same Ph_Py ligand
-#                 neighbours = mol.GetAtoms()[atom_i].GetNeighbors()
-#                 if not is_carbene_like(neighbours):
-#                     # This part detects the Ir-C bond and breaks it, breaking the Ph_Py ring
-#                     mol_i, mol_j = get_fragmented_versions(
-#                         mol, atom_i, atom_j, metal_idx
-#                     )
-#                     # identify whether or not the initial 5-membered ring formed between [-Ir-C-C-C-N-] is broken when we break the Ir-C bond. This works
-#                     # because Ph_Py units bind Ir in the same way always, through 1 C and 1 N that are in the same position, forming a 5-membered ring.
-#                     # If this ring is broken, atom_indexes[j] will not be part of a 5-membered ring (atom.IsInRingSize(5) == False) which means that
-#                     # this atom was initially inside the same ligand as the parent C of atom_indexes[i])
-#                     if not mol_i.GetAtomWithIdx(atom_i).IsInRingSize(5):
-#                         # doing backwards as well eg. Ir N bond
-#                         if not mol_j.GetAtomWithIdx(atom_i).IsInRingSize(5):
-#                             ligand_atoms.append([atom_i, atom_j])
-#                             break
-#                     else:
-#                         if not mol_i.GetAtomWithIdx(atom_j).IsInRingSize(5):
-#                             if mol.GetAtomWithIdx(atom_j).IsInRingSize(5):
-#                                 ligand_atoms.append([atom_i, atom_j])
-#                                 break
-#     # Check Angles
-#     passing = passing and passes_Ir_bidentate_x3_rule_angle_requirements(
-#         ligand_atoms, mol_conf, metal_idx, angle_thres
-#     )
-#     return passing

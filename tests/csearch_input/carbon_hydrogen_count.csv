@@ -1,0 +1,5 @@
+code_name,smiles
+methyl_radical,[H][C]([H])[H]
+methyl_cation,[H][C+]([H])[H]
+methyl_anion,[H][C-]([H])[H]
+methylene,[H][CH][H]
